@@ -1105,43 +1105,8 @@ def quantreg(
     fit.summary()
     ```
 
-    The employed type of inference can be specified via the `vcov` argument. Currently,
-    only "nid" (non-IID) and cluster robust errors as in Parente and Santos Silva (2016) are supported.
-
-    ```{python}
-    fit_nid = pf.quantreg("Y ~ X1 + X2", data.dropna(), quantile=0.5, vcov="nid")
-    fit_crv = pf.quantreg("Y ~ X1 + X2", data.dropna(), quantile=0.5, vcov = {"CRV1": "f1"})
-    pf.etable([fit_nid, fit_crv])
-    ```
-
-    After fitting a model via `quantreg()`, you can use the `predict()` method to
-    get the predicted values:
-
-    ```{python}
-    fit = pf.quantreg("Y ~ X1 + X2", data, quantile=0.5)
-    fit.predict()[0:5]
-    ```
-
-    The `predict()` method also supports a `newdata` argument to predict on new data:
-
-    ```{python}
-    fit = pf.quantreg("Y ~ X1 + X2", data, quantile=0.5)
-    fit.predict(newdata=data)[0:5]
-    ```
-
-    Last, you can plot the results of a model via the `coefplot()` method:
-
-    ```{python}
-    fit = pf.quantreg("Y ~ X1 + X2", data, quantile=0.5)
-    fit.coefplot()
-    ```
-
-    You can visualize the quantile regression process via the `qplot()` function:
-
-    ```{python}
-    fit_process = [pf.quantreg("Y ~ X1 + X2", data, quantile=q) for q in [0.1, 0.25, 0.5, 0.75, 0.9]]
-    pf.qplot(fit_process)
-    ```
+    For details around inference, estimation techniques, (fast) fitting and visualizing the full quantile regression
+    process, please take a look at the dedicated [vignette](https://py-econometrics.github.io/pyfixest/quantile-regression.html).
     """
     # WLS currently not supported for quantile regression
     weights = None
@@ -1389,8 +1354,15 @@ def _quantreg_input_checks(quantile: float, tol: float, maxiter: Optional[int]):
         if not all(isinstance(q, float) for q in quantile):
             raise ValueError("quantile must be a list of floats")
     else:
-        if not 0.0 < tol < 1.0:
-            raise ValueError("tol must be in (0, 1)")
+        # single quantile provided
+        if not isinstance(quantile, float):
+            raise TypeError("quantile must be a float")
+        if not 0.0 < quantile < 1.0:
+            raise ValueError("quantile must be between 0 and 1")
+
+    # tol must always be in (0, 1)
+    if not 0.0 < tol < 1.0:
+        raise ValueError("tol must be in (0, 1)")
 
     if maxiter is not None and maxiter <= 0:
         raise ValueError("maxiter must be greater than 0")

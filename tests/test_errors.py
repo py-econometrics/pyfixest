@@ -795,9 +795,7 @@ def test_errors_quantreg(data):
 
     # error if list provided and quantile is 0, 1, or outside
     with pytest.raises(ValueError, match="quantile must be a list of floats"):
-        pf.quantreg("Y ~ X1", data=data, quantile=[0.0, 0.1, 0.2])
-    with pytest.raises(ValueError, match="quantile must be a list of floats"):
-        pf.quantreg("Y ~ X1", data=data, quantile=[1.0])
+        pf.quantreg("Y ~ X1", data=data, quantile=["0.1", "0.2"])
 
     # error when fixed effects in formula
     with pytest.raises(NotImplementedError):

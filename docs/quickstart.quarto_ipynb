@@ -1,0 +1,1212 @@
+{
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "---\n",
+        "title: \"Getting Started with PyFixest\"\n",
+        "format:\n",
+        "  html:\n",
+        "    html-table-processing: none\n",
+        "toc: true\n",
+        "toc-title: \"On this page\"\n",
+        "toc-location: left\n",
+        "---\n",
+        "\n",
+        "\n",
+        "\n",
+        "\n",
+        "# OLS with Fixed Effects\n",
+        "\n",
+        "## What is a fixed effect model?\n",
+        "\n",
+        "A fixed effect model is a statistical model that includes fixed effects, which are parameters that are estimated to be constant across different groups.\n",
+        "\n",
+        "**Example [Panel Data]:** In the context of panel data, fixed effects are parameters that are constant across different individuals or time. The typical model example is given by the following equation:\n",
+        "\n",
+        "$$\n",
+        "Y_{it} = \\beta X_{it} + \\alpha_i + \\psi_t + \\varepsilon_{it}\n",
+        "$$\n",
+        "\n",
+        "where $Y_{it}$ is the dependent variable for individual $i$ at time $t$, $X_{it}$ is the independent variable, $\\beta$ is the coefficient of the independent variable, $\\alpha_i$ is the individual fixed effect, $\\psi_t$ is the time fixed effect, and $\\varepsilon_{it}$ is the error term. The individual fixed effect $\\alpha_i$ is a parameter that is constant across time for each individual, while the time fixed effect $\\psi_t$ is a parameter that is constant across individuals for each time period.\n",
+        "\n",
+        "Note however that, despite the fact that fixed effects are commonly used in panel setting, one does not need a panel data set to work with fixed effects. For example, cluster randomized trials with cluster fixed effects, or wage regressions with worker and firm fixed effects.\n",
+        "\n",
+        "In this \"quick start\" guide, we will show you how to estimate a fixed effect model using the `PyFixest` package. We do not go into the details of the theory behind fixed effect models, but we focus on how to estimate them using `PyFixest`.\n",
+        "\n",
+        "## Read Sample Data\n",
+        "\n",
+        "In a first step, we load the module and some synthetic example data:\n"
+      ],
+      "id": "26529bb2"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "import matplotlib.pyplot as plt\n",
+        "import numpy as np\n",
+        "import pandas as pd\n",
+        "try:\n",
+        "    from lets_plot import LetsPlot\n",
+        "    _HAS_LETS_PLOT = True\n",
+        "except ImportError:\n",
+        "    _HAS_LETS_PLOT = False\n",
+        "\n",
+        "from marginaleffects import slopes, avg_slopes\n",
+        "\n",
+        "import pyfixest as pf\n",
+        "\n",
+        "if _HAS_LETS_PLOT:\n",
+        "    LetsPlot.setup_html()\n",
+        "\n",
+        "plt.style.use(\"seaborn-v0_8\")\n",
+        "\n",
+        "%load_ext watermark\n",
+        "%config InlineBackend.figure_format = \"retina\"\n",
+        "%watermark --iversions\n",
+        "\n",
+        "data = pf.get_data()\n",
+        "\n",
+        "data.head()"
+      ],
+      "id": "fd7703ed",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "data.info()"
+      ],
+      "id": "5bc1c50c",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "We see that some of our columns have missing data.\n",
+        "\n",
+        "## OLS Estimation\n",
+        "\n",
+        "We are interested in the relation between the dependent variable `Y` and the independent variables `X1` using a fixed effect model for `group_id`. Let's see how the data looks like:\n"
+      ],
+      "id": "32bcd170"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "ax = data.plot(kind=\"scatter\", x=\"X1\", y=\"Y\", c=\"group_id\", colormap=\"viridis\")"
+      ],
+      "id": "6d695216",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "We can estimate a fixed effects regression via the `feols()` function. `feols()` has three arguments: a two-sided model formula, the data, and optionally, the type of inference.\n"
+      ],
+      "id": "9b98c831"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "fit = pf.feols(fml=\"Y ~ X1 | group_id\", data=data, vcov=\"HC1\")\n",
+        "type(fit)"
+      ],
+      "id": "14337e61",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "The first part of the formula contains the dependent variable and \"regular\" covariates, while the second part contains fixed effects.\n",
+        "\n",
+        "`feols()` returns an instance of the `Fixest` class.\n",
+        "\n",
+        "## Inspecting Model Results\n",
+        "\n",
+        "To inspect the results, we can use a summary function or method:\n"
+      ],
+      "id": "c1d14632"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "fit.summary()"
+      ],
+      "id": "b88496ba",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "Or display a formatted regression table:\n"
+      ],
+      "id": "6897f20e"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "pf.etable(fit)"
+      ],
+      "id": "218ed205",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "Alternatively, the `.summarize` module contains a `summary` function, which can be applied on instances of regression model objects or lists of regression model objects. For details on how to customize `etable()`, please take a look at the [dedicated vignette](https://py-econometrics.github.io/pyfixest/table-layout.html).\n"
+      ],
+      "id": "fee9d4c9"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "pf.summary(fit)"
+      ],
+      "id": "435565cb",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "You can access individual elements of the summary via dedicated methods: `.tidy()` returns a \"tidy\" `pd.DataFrame`,\n",
+        "`.coef()` returns estimated parameters, and `se()` estimated standard errors. Other methods include `pvalue()`, `confint()`\n",
+        "and `tstat()`.\n"
+      ],
+      "id": "ea5c210f"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "fit.tidy()"
+      ],
+      "id": "dd36a7a7",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "fit.coef()"
+      ],
+      "id": "561f59f0",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "fit.se()"
+      ],
+      "id": "cf076f9d",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "fit.tstat()"
+      ],
+      "id": "95322e25",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "fit.confint()"
+      ],
+      "id": "e2c6e8fd",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "Last, model results can be visualized via dedicated methods for plotting:\n"
+      ],
+      "id": "e73771bf"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "fit.coefplot()\n",
+        "# or pf.coefplot([fit])"
+      ],
+      "id": "5c28f70c",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "## How to interpret the results?\n",
+        "\n",
+        "Let's have a quick d-tour on the intuition behind fixed effects models using the example above. To do so, let us begin by comparing it with a simple OLS model.\n"
+      ],
+      "id": "bac869e5"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "fit_simple = pf.feols(\"Y ~ X1\", data=data, vcov=\"HC1\")\n",
+        "\n",
+        "fit_simple.summary()"
+      ],
+      "id": "6aad5f58",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "We can compare both models side by side in a regression table:\n"
+      ],
+      "id": "4a6213ac"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "pf.etable([fit, fit_simple])"
+      ],
+      "id": "44ac7181",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "We see that the `X1` coefficient is `-1.019`, which is less than the value from the OLS model in column (2). Where is the difference coming from?\n",
+        "Well, in the fixed effect model we are interested in controlling for the feature `group_id`. One possibility to do this is by adding a simple dummy variable for each level of `group_id`.\n"
+      ],
+      "id": "3d659b8d"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "fit_dummy = pf.feols(\"Y ~ X1 + C(group_id) \", data=data, vcov=\"HC1\")\n",
+        "\n",
+        "fit_dummy.summary()"
+      ],
+      "id": "3e6a35ee",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "This is does not scale well! Imagine you have 1000 different levels of `group_id`. You would need to add 1000 dummy variables to your model. This is where fixed effect models come in handy. They allow you to control for these fixed effects without adding all these dummy variables. The way to do it is by a *demeaning procedure*. The idea is to subtract the average value of each level of `group_id` from the respective observations. This way, we control for the fixed effects without adding all these dummy variables. Let's try to do this manually:\n"
+      ],
+      "id": "7d21cc17"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "def _demean_column(df: pd.DataFrame, column: str, by: str) -> pd.Series:\n",
+        "    return df[column] - df.groupby(by)[column].transform(\"mean\")\n",
+        "\n",
+        "\n",
+        "fit_demeaned = pf.feols(\n",
+        "    fml=\"Y_demeaned ~ X1_demeaned\",\n",
+        "    data=data.assign(\n",
+        "        Y_demeaned=lambda df: _demean_column(df, \"Y\", \"group_id\"),\n",
+        "        X1_demeaned=lambda df: _demean_column(df, \"X1\", \"group_id\"),\n",
+        "    ),\n",
+        "    vcov=\"HC1\",\n",
+        ")\n",
+        "\n",
+        "fit_demeaned.summary()"
+      ],
+      "id": "c05fd79c",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "We get the same results as the fixed effect model `Y1 ~ X | group_id` above. The `PyFixest` package uses a more efficient algorithm to estimate the fixed effect model, but the intuition is the same.\n",
+        "\n",
+        "## Updating Regression Coefficients\n",
+        "\n",
+        "You can update the coefficients of a model object via the `update()` method, which may be useful in an online learning setting where data arrives sequentially.\n",
+        "\n",
+        "To see this in action, let us first fit a model on a subset of the data:\n"
+      ],
+      "id": "79188c82"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "data_subsample = data.sample(frac=0.5)\n",
+        "m = pf.feols(\"Y ~ X1 + X2\", data=data_subsample)\n",
+        "# current coefficient vector\n",
+        "m._beta_hat"
+      ],
+      "id": "96ede47f",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "Then sample 5 new observations and update the model with the new data. The update rule is\n",
+        "\n",
+        "$$\n",
+        "\\hat{\\beta}_{n+1} = \\hat{\\beta}_n + (X_{n+1}' X_{n+1})^{-1} x_{n+1} + (y_{n+1} - x_{n+1} \\hat{\\beta}_n)\n",
+        "$$\n",
+        "\n",
+        "for a new observation $(x_{n+1}, y_{n+1})$.\n"
+      ],
+      "id": "4d7dfb61"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "new_points_id = np.random.choice(list(set(data.index) - set(data_subsample.index)), 5)\n",
+        "X_new, y_new = (\n",
+        "    np.c_[np.ones(len(new_points_id)), data.loc[new_points_id][[\"X1\", \"X2\"]].values],\n",
+        "    data.loc[new_points_id][\"Y\"].values,\n",
+        ")\n",
+        "m.update(X_new, y_new)"
+      ],
+      "id": "3670f9e9",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "We verify that we get the same results if we had estimated the model on the appended data.\n"
+      ],
+      "id": "a7167ed7"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "pf.feols(\n",
+        "    \"Y ~ X1 + X2\", data=data.loc[data_subsample.index.append(pd.Index(new_points_id))]\n",
+        ").coef().values"
+      ],
+      "id": "66776e77",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "# Standard Errors and Inference\n",
+        "\n",
+        "Supported covariance types are \"iid\", \"HC1-3\", CRV1 and CRV3 (up to two-way clustering).\n",
+        "\n",
+        "**Why do we have so many different types of standard errors?**\n",
+        "\n",
+        "The standard errors of the coefficients are crucial for inference. They tell us how certain we can be about the estimated coefficients. In the presence of heteroskedasticity (a situation which typically arises with cross-sectional data), the standard OLS standard errors are biased. The `pyfixest` package provides several types of standard errors that are robust to heteroskedasticity.\n",
+        "\n",
+        "- `iid`: assumes that the error variance is spherical, i.e. errors are homoskedastic and not correlated (independent and identically distributed errors have a spherical error variance).\n",
+        "- `HC1-3`: heteroskedasticity-robust standard errors according to White (1980) and MacKinnon and White (1985). See [Econometric Computing with HC and HAC\n",
+        "Covariance Matrix Estimators](https://cran.r-project.org/web/packages/sandwich/vignettes/sandwich.pdf) from the [`sandwich`](https://cran.r-project.org/web/packages/sandwich/) package for more details.\n",
+        "- `CRV1` and `CRV3`: cluster robust standard errors according to Cameron, Gelbach, and Miller (2011). See [A Practitioner's Guide to Cluster-Robust Inference](https://cameron.econ.ucdavis.edu/research/Cameron_Miller_JHR_2015_February.pdf).  For   `CRV1` and `CRV3` one should pass a dictionaty of the form `{\"CRV1\": \"clustervar\"}`.\n",
+        "\n",
+        "Inference can be adjusted \"on-the-fly\" via the `.vcov()` method:\n"
+      ],
+      "id": "f52e5c8d"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "fit.vcov({\"CRV1\": \"group_id + f2\"}).summary()\n",
+        "\n",
+        "fit.vcov({\"CRV3\": \"group_id\"}).summary()"
+      ],
+      "id": "b04a6580",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "The estimated covariance matrix is available as an attribute of the `Feols` object called `._vcov`.\n",
+        "\n",
+        "## Inference via the Wild Bootstrap\n",
+        "\n",
+        "It is also possible to run a wild (cluster) bootstrap after estimation (via the [wildboottest module](https://github.com/py-econometrics/wildboottest), see [MacKinnon, J. G., Nielsen, M. Ø., & Webb, M. D. (2023). Fast and reliable jackknife and bootstrap methods for cluster-robust inference. Journal of Applied Econometrics, 38(5), 671–694.](http://qed.econ.queensu.ca/pub/faculty/mackinnon/working-papers/qed_wp_1485.pdf)):\n"
+      ],
+      "id": "9884f96b"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "fit2 = pf.feols(fml=\"Y ~ X1\", data=data, vcov={\"CRV1\": \"group_id\"})\n",
+        "fit2.wildboottest(param=\"X1\", reps=999)"
+      ],
+      "id": "a17c0fa4",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "## The Causal Cluster Variance Estimator\n",
+        "\n",
+        "Additionally, `PyFixest` supports the causal cluster variance estimator following [Abadie et al. (2023)](https://academic.oup.com/qje/article/138/1/1/6750017). Let's look into it with another data set:\n"
+      ],
+      "id": "c96ef83a"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "df = pd.read_stata(\"http://www.damianclarke.net/stata/census2000_5pc.dta\")\n",
+        "\n",
+        "df.head()"
+      ],
+      "id": "75ccf71e",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "axes = df.plot.hist(column=[\"ln_earnings\"], by=[\"college\"])"
+      ],
+      "id": "bffe6908",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "Now we can estimate the model `ln_earnings ~ college` where we cluster the standard errors at the state level:\n"
+      ],
+      "id": "c8816bd1"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "fit3 = pf.feols(\"ln_earnings ~ college\", vcov={\"CRV1\": \"state\"}, data=df)\n",
+        "fit3.ccv(treatment=\"college\", pk=0.05, n_splits=2, seed=929)"
+      ],
+      "id": "14de9873",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "## Randomization Inference\n",
+        "\n",
+        "You can also conduct inference via randomization inference [(see Heß, Stata Journal 2017)](https://hesss.org/ritest.pdf).\n",
+        "`PyFixest` supports random and cluster random sampling.\n"
+      ],
+      "id": "87148ee7"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "fit2.ritest(resampvar=\"X1=0\", reps=1000, cluster=\"group_id\")"
+      ],
+      "id": "159c9650",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "## Multiple Testing Corrections: Bonferroni and Romano-Wolf\n",
+        "\n",
+        "To correct for multiple testing, p-values can be adjusted via either the [Bonferroni](https://en.wikipedia.org/wiki/Bonferroni_correction), the method by Romano and Wolf (2005), see for example [The Romano-Wolf Multiple Hypothesis\n",
+        "Correction in Stata](https://docs.iza.org/dp12845.pdf), and the method by Westfall & Young (see [here](https://www.jstor.org/stable/2532216)).\n"
+      ],
+      "id": "8e4d0d16"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "pf.bonferroni([fit, fit2], param=\"X1\").round(3)"
+      ],
+      "id": "d49d2354",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "pf.rwolf([fit, fit2], param=\"X1\", reps=9999, seed=1234).round(3)"
+      ],
+      "id": "2df1ce22",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "pf.wyoung([fit, fit2], param=\"X1\", reps=9999, seed=1234).round(3)"
+      ],
+      "id": "8f396cc6",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "## Joint Confidence Intervals\n",
+        "\n",
+        "Simultaneous confidence bands for a vector of parameters can be computed via the `joint_confint()` method. See [Simultaneous confidence bands: Theory, implementation, and an application to SVARs](https://onlinelibrary.wiley.com/doi/abs/10.1002/jae.2656) for background.\n"
+      ],
+      "id": "9b8a430c"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "fit_ci = pf.feols(\"Y ~ X1+ C(f1)\", data=data)\n",
+        "fit_ci.confint(joint=True).head()"
+      ],
+      "id": "f42b2233",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "# Panel Data Example: Causal Inference for the Brave and True\n",
+        "\n",
+        "In this example we replicate the results of the great (freely available reference!) [Causal Inference for the Brave and True - Chapter 14](https://matheusfacure.github.io/python-causality-handbook/14-Panel-Data-and-Fixed-Effects.html). Please refer to the original text for a detailed explanation of the data.\n"
+      ],
+      "id": "4fca3ec2"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "data_path = \"https://raw.githubusercontent.com/bashtage/linearmodels/main/linearmodels/datasets/wage_panel/wage_panel.csv.bz2\"\n",
+        "data_df = pd.read_csv(data_path)\n",
+        "\n",
+        "data_df.head()"
+      ],
+      "id": "d40879a5",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "The objective is to estimate the effect of the variable `married` on the variable `lwage` using a fixed effect model on the entity variable `nr` and the time variable `year`.\n"
+      ],
+      "id": "06cec89b"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "panel_fit = pf.feols(\n",
+        "    fml=\"lwage ~ expersq + union + married + hours | nr + year\",\n",
+        "    data=data_df,\n",
+        "    vcov={\"CRV1\": \"nr + year\"},\n",
+        ")\n",
+        "\n",
+        "pf.etable(panel_fit)"
+      ],
+      "id": "56351762",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "We obtain the same results as in the book!\n",
+        "\n",
+        "# Instrumental Variables (IV) Estimation\n",
+        "\n",
+        "It is also possible to estimate [instrumental variable models](https://en.wikipedia.org/wiki/Instrumental_variables_estimation) with *one* endogenous variable and (potentially multiple) instruments.\n",
+        "\n",
+        "In general, the syntax for IV is `depvar ~ exog.vars | fixef effects | endog.vars ~ instruments`.\n"
+      ],
+      "id": "ec304b09"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "iv_fit = pf.feols(fml=\"Y2 ~ 1 | f1 + f2 | X1 ~ Z1 + Z2\", data=data)\n",
+        "iv_fit.summary()"
+      ],
+      "id": "dd1b2358",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "If the model does not contain any fixed effects, just drop the second part of the formula above:\n"
+      ],
+      "id": "b7ca50f5"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "pf.feols(fml=\"Y ~ 1 | X1 ~ Z1 + Z2\", data=data).summary()"
+      ],
+      "id": "c78d6681",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "You can access the first stage regression object via the `._model_1st_stage` attribute:\n"
+      ],
+      "id": "8ce67d02"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "pf.etable([iv_fit._model_1st_stage, iv_fit])"
+      ],
+      "id": "46e1ed9c",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "You can access the F-Statistic of the first stage via the `_f_stat_1st_stage` attribute:\n"
+      ],
+      "id": "9e0cdf7e"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "iv_fit._f_stat_1st_stage"
+      ],
+      "id": "8a70412c",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "Via the `IV_Diag` method, you can compute additional IV Diagnostics, as the **effective F-statistic** following Olea & Pflueger (2013):\n"
+      ],
+      "id": "1161d133"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "iv_fit.IV_Diag()\n",
+        "iv_fit._eff_F"
+      ],
+      "id": "a8e5901c",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "IV estimation with multiple endogenous variables and multiple estimation syntax is currently not supported.\n",
+        "\n",
+        "# Poisson Regression\n",
+        "\n",
+        "It is possible to estimate Poisson Regressions (for example, to model count data). We can showcase this feature with another synthetic data set.\n"
+      ],
+      "id": "1aba225b"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "pois_data = pf.get_data(model=\"Fepois\")\n",
+        "\n",
+        "ax = pois_data.plot(\n",
+        "    kind=\"scatter\",\n",
+        "    x=\"X1\",\n",
+        "    y=\"Y\",\n",
+        "    c=\"group_id\",\n",
+        "    colormap=\"viridis\",\n",
+        "    s=\"f2\",\n",
+        ")"
+      ],
+      "id": "5d68dc0b",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "pois_fit = pf.fepois(fml=\"Y ~ X1 | group_id\", data=pois_data, vcov={\"CRV1\": \"group_id\"})\n",
+        "pois_fit.summary()"
+      ],
+      "id": "cda3a2b2",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "# Quantile Regression\n",
+        "\n",
+        "You can fit a quantile regression via the `quantreg` function:\n"
+      ],
+      "id": "452f3e4b"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "fit_qr = pf.quantreg(\"Y ~ X1 + X2\", data = data, quantile = [0.1, 0.5, 0.9])\n",
+        "pf.qplot(fit_qr)"
+      ],
+      "id": "659fbcc7",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "# Tests of Multiple Hypothesis / Wald Tests\n",
+        "\n",
+        "You can test multiple hypotheses simultaneously via the `wald_test` method.\n"
+      ],
+      "id": "f527ac7b"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "fit = pf.feols(\"Y ~ X1 + X2 | f1\", data=data)"
+      ],
+      "id": "e3de83a4",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "For example, to test the joint null hypothesis of $X_{1} = 0$ and $X_{2} = 0$ vs the alternative that $X_{1} \\neq 0$ or $X_{2} \\neq 0$, we would run\n"
+      ],
+      "id": "d24c93cf"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "fit.wald_test(R=np.eye(2))"
+      ],
+      "id": "e5fcff97",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "Alternatively, suppose we wanted to test a more complicated joint null hypothesis:  $X_{1} + 2X_{2} = 2.0$ and $X_{2} = 1.0$. To do so, we would define $R$ and $q$ as\n"
+      ],
+      "id": "b4f85f12"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "R1 = np.array([[1, 2], [0, 1]])\n",
+        "q1 = np.array([2.0, 1.0])\n",
+        "fit.wald_test(R=R1, q=q1)"
+      ],
+      "id": "1f5fc38d",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "# Other GLMs (without fixed effects)\n",
+        "\n",
+        "`PyFixest` experimentally supports a range of other GLMs without fixed effects (adding fixed effect support is WIP) via the `pf.feglm()` function. Full support with all bells and whistles (in particular, fixed effects demeaning) is planned for PyFixest 0.29.\n"
+      ],
+      "id": "7004d854"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "data_glm = pf.get_data(N=100, seed = 170)\n",
+        "data_glm[\"Y\"] = np.where(data_glm[\"Y\"] > 0, 1, 0)\n",
+        "\n",
+        "fit_gaussian = pf.feglm(fml = \"Y~X1\", data = data_glm, family = \"gaussian\")\n",
+        "fit_logit = pf.feglm(fml = \"Y~X1\", data = data_glm, family = \"logit\")\n",
+        "fit_probit = pf.feglm(fml = \"Y~X1\", data = data_glm, family = \"probit\")\n",
+        "\n",
+        "pf.etable([\n",
+        "    fit_gaussian,\n",
+        "    fit_logit,\n",
+        "    fit_probit,\n",
+        "])"
+      ],
+      "id": "174de4ac",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "You can make predictions on the `response` and `link` scale via the `predict()` method:\n"
+      ],
+      "id": "2c442c38"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "fit_logit.predict(type = \"response\")[0:5]\n",
+        "fit_logit.predict(type = \"link\")[0:5]"
+      ],
+      "id": "4aa27bcb",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "You can compute the **average marginal effect** via the [marginaleffects package](https://github.com/vincentarelbundock/pymarginaleffects):\n"
+      ],
+      "id": "cb30e7a2"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "avg_slopes(fit_logit, variables = \"X1\")"
+      ],
+      "id": "c4acd16f",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "Please take a look at the [marginaleffects book](https://marginaleffects.com/) to learn about other transformations that the `marginaleffects` package supports.\n",
+        "\n",
+        "# Multiple Estimation\n",
+        "\n",
+        "`PyFixest` supports a range of multiple estimation functionality: `sw`, `sw0`, `csw`, `csw0`, and multiple dependent variables. The meaning of these options is explained in the [Multiple Estimations](https://lrberge.github.io/fixest/articles/multiple_estimations.html) vignette of the `fixest` package:\n",
+        "\n",
+        "> - `sw`: this function is replaced sequentially by each of its arguments. For example, `y ~ x1 + sw(x2, x3)` leads to two estimations: `y ~ x1 + x2` and `y ~ x1 + x3`.\n",
+        "> - `sw0`: identical to sw but first adds the empty element. E.g. `y ~ x1 + sw0(x2, x3)` leads to three estimations: `y ~ x1`, `y ~ x1 + x2` and `y ~ x1 + x3`.\n",
+        "> - `csw`: it stands for cumulative stepwise. It adds to the formula each of its arguments sequentially. E.g. `y ~ x1 + csw(x2, x3)` will become `y ~ x1 + x2` and `y ~ x1 + x2 + x3`.\n",
+        "> - `csw0`: identical to csw but first adds the empty element. E.g. `y ~ x1 + csw0(x2, x3)` leads to three estimations: `y ~ x1`, `y ~ x1 + x`2 and `y ~ x1 + x2 + x3`.\n",
+        "\n",
+        "Additionally, we support `split` and `fsplit` function arguments.\n",
+        "> - `split` allows to split a sample by a given variable. If specified, `pf.feols()` and `pf.fepois()` will loop through all resulting sample splits.\n",
+        "> - `fsplit` works just as `split`, but fits the model on the full sample as well.\n",
+        "\n",
+        "If multiple regression syntax is used,\n",
+        "`feols()` and `fepois` returns an instance of a `FixestMulti` object, which essentially consists of a dicionary of `Fepois` or [Feols](/reference/Feols.qmd) instances.\n"
+      ],
+      "id": "5f1f3273"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "multi_fit = pf.feols(fml=\"Y ~ X1 | csw0(f1, f2)\", data=data, vcov=\"HC1\")\n",
+        "multi_fit"
+      ],
+      "id": "bc701c39",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "multi_fit.etable()"
+      ],
+      "id": "5e5a0388",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "You can access an individual model by its name - i.e. a formula - via the `all_fitted_models` attribute.\n"
+      ],
+      "id": "17ed5a96"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "multi_fit.all_fitted_models[\"Y~X1\"].tidy()"
+      ],
+      "id": "d02801df",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "or equivalently via the `fetch_model` method:\n"
+      ],
+      "id": "04ddf005"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "multi_fit.fetch_model(0).tidy()"
+      ],
+      "id": "dfeb4ef5",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "Here, `0` simply fetches the first model stored in the `all_fitted_models` dictionary, `1` the second etc.\n",
+        "\n",
+        "Objects of type `Fixest` come with a range of additional methods: `tidy()`, `coef()`, `vcov()` etc, which\n",
+        "essentially loop over the equivalent methods of all fitted models. E.g. `Fixest.vcov()` updates inference for all\n",
+        "models stored in `Fixest`.\n"
+      ],
+      "id": "d3cdbc47"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "multi_fit.vcov(\"iid\").summary()"
+      ],
+      "id": "1dfea1d9",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "You can summarize multiple models at once via `etable()`. `etable()` has many options to customize the output to obtain publication-ready tables.\n"
+      ],
+      "id": "916c5177"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "pf.etable(\n",
+        "    [fit, fit2],\n",
+        "    labels={\"Y\": \"Wage\", \"X1\": \"Age\", \"X2\": \"Years of Schooling\"},\n",
+        "    felabels={\"f1\": \"Industry Fixed Effects\"},\n",
+        "    caption=\"Regression Results\",\n",
+        ")"
+      ],
+      "id": "6efa2e78",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "You can also visualize multiple estimation results via `iplot()` and `coefplot()`:\n"
+      ],
+      "id": "7c6b5397"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "multi_fit.coefplot().show()"
+      ],
+      "id": "54101a5b",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "# Difference-in-Differences / Event Study Designs\n",
+        "\n",
+        "`PyFixest` supports eventy study designs via two-way fixed effects, Gardner's 2-stage estimator, and the linear projections estimator.\n"
+      ],
+      "id": "d1356f0d"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "url = \"https://raw.githubusercontent.com/py-econometrics/pyfixest/master/pyfixest/did/data/df_het.csv\"\n",
+        "df_het = pd.read_csv(url)\n",
+        "\n",
+        "df_het.head()"
+      ],
+      "id": "91728874",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "fit_did2s = pf.did2s(\n",
+        "    df_het,\n",
+        "    yname=\"dep_var\",\n",
+        "    first_stage=\"~ 0 | state + year\",\n",
+        "    second_stage=\"~i(rel_year,ref= -1.0)\",\n",
+        "    treatment=\"treat\",\n",
+        "    cluster=\"state\",\n",
+        ")\n",
+        "\n",
+        "\n",
+        "fit_twfe = pf.feols(\n",
+        "    \"dep_var ~ i(rel_year,ref = -1.0) | state + year\",\n",
+        "    df_het,\n",
+        "    vcov={\"CRV1\": \"state\"},\n",
+        ")\n",
+        "\n",
+        "from pyfixest.report.utils import rename_categoricals\n",
+        "pf.iplot(\n",
+        "    [fit_did2s, fit_twfe], coord_flip=False, figsize=(900, 400), title=\"TWFE vs DID2S\", rotate_xticks=90,\n",
+        "    labels= rename_categoricals(fit_did2s._coefnames, template=\"{value_int}\")\n",
+        ")"
+      ],
+      "id": "956acb67",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "The `event_study()` function provides a common API for several event study estimators.\n"
+      ],
+      "id": "3d2cc4a7"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "fit_twfe = pf.event_study(\n",
+        "    data=df_het,\n",
+        "    yname=\"dep_var\",\n",
+        "    idname=\"state\",\n",
+        "    tname=\"year\",\n",
+        "    gname=\"g\",\n",
+        "    estimator=\"twfe\",\n",
+        ")\n",
+        "\n",
+        "fit_did2s = pf.event_study(\n",
+        "    data=df_het,\n",
+        "    yname=\"dep_var\",\n",
+        "    idname=\"state\",\n",
+        "    tname=\"year\",\n",
+        "    gname=\"g\",\n",
+        "    estimator=\"did2s\",\n",
+        ")\n",
+        "\n",
+        "pf.etable([fit_twfe, fit_did2s])"
+      ],
+      "id": "de5488b3",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "For more details see the vignette on [Difference-in-Differences Estimation](https://py-econometrics.github.io/pyfixest/difference-in-differences.html)."
+      ],
+      "id": "752ac043"
+    }
+  ],
+  "metadata": {
+    "kernelspec": {
+      "name": "python3",
+      "language": "python",
+      "display_name": "Python 3 (ipykernel)",
+      "path": "C:\\Users\\alexa\\Documents\\pyfixest\\.pixi\\envs\\docs\\share\\jupyter\\kernels\\python3"
+    }
+  },
+  "nbformat": 4,
+  "nbformat_minor": 5
+}
