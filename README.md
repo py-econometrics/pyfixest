@@ -95,6 +95,8 @@ All non-pyfixest timings are taken from the `fixest` benchmarks.
 
 ![](benchmarks/lets-plot-images/benchmarks_ols.svg)
 ![](benchmarks/lets-plot-images/benchmarks_poisson.svg)
+![](benchmarks/quantreg_benchmarks.png)
+
 
 ## Quickstart
 
@@ -228,6 +230,12 @@ fit_iv.summary()
     |:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
     | X1            |     -1.025 |        0.115 |    -8.930 |      0.000 | -1.259 |  -0.790 |
     ---
+
+## Quantile Regression via `pf.quantreg`
+
+```python
+fit_qr = pf.quantreg("Y ~ X1 + X2", data = data, quantile = 0.5)
+```
 
 ## Call for Contributions
 
