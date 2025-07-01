@@ -802,7 +802,7 @@ def test_errors_quantreg(data):
         pf.quantreg("Y ~ X1 | f1", data=data)
 
     # error for invalid method
-    with pytest.raises(ValueError, match="`method` must be one of {fn}"):
+    with pytest.raises(ValueError, match="`method` must be one of {fn, pfn}"):
         pf.quantreg("Y ~ X1", data=data, method="invalid_method")
 
     # error for invalid tolerance
