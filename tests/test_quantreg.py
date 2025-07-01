@@ -253,6 +253,7 @@ def test_pfn_seed():
     )
 
 
+@pytest.mark.against_r_core
 @pytest.mark.parametrize(
     "fml",
     [
