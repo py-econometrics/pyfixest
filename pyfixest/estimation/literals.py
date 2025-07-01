@@ -1,7 +1,7 @@
 from typing import Any, Literal, get_args
 
 PredictionType = Literal["response", "link"]
-VcovTypeOptions = Literal["iid", "hetero", "HC1", "HC2", "HC3", "nid", "iid"]
+VcovTypeOptions = Literal["iid", "hetero", "HC1", "HC2", "HC3", "nid"]
 WeightsTypeOptions = Literal["aweights", "fweights"]
 FixedRmOptions = Literal["singleton", "none"]
 SolverOptions = Literal[
