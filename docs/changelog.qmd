@@ -11,6 +11,114 @@ fit2 = pf.feols("Y ~ X1 + X2", data = df)
 fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 ```
 
+## PyFixest 0.30.0
+
+### New Features
+
+- We have created a **Rust** backend for all performance critical algorithms, with pretty great performance improvements! You can use the Rust backend by setting `demeaner_options = "rust"`.
+
+We find pretty great performance improvements and want to make the Rust backend the default in PyFixest 0.31.0.
+
+To back up the performance claim, here is a benchmark:
+
+```{python}
+import pyfixest as pf
+import numpy as np
+import pandas as pd
+import time
+
+rng = np.random.default_rng(737)
+
+N = 10_000_000
+benchmark_data = pd.DataFrame({
+  "Y": rng.normal(0, 1, N),
+  "X1": rng.normal(0, 1, N),
+  "X2": rng.normal(0, 1, N),
+  "X3": rng.normal(0, 1, N),
+  "f1": rng.integers(0, 10_000, N),
+  "f2": rng.integers(0, 1_000, N),
+  "f3": rng.integers(0, 10, N),
+})
+
+# burn-in for numba
+fit_nb = pf.feols(
+  fml = "Y ~ X1 + X2 + X3 | f1 + f2 + f3", data = benchmark_data[:100_000]
+)
+
+# benchmark for numba backend
+tic = time.time()
+fit_rust = pf.feols(
+  fml = "Y ~ X1 + X2 + X3 | f1 + f2 + f3", data = benchmark_data
+)
+toc = time.time()
+print(f"Numba backend took {tic-toc}.")
+
+# benchmark for rust backend
+tic = time.time()
+fit_rust = pf.feols(
+  fml = "Y ~ X1 + X2 + X3 | f1 + f2 + f3", data = benchmark_data,
+  demeaner_backend = "rust"
+)
+toc = time.time()
+print(f"Rust backend took {tic-toc}.")
+```
+
+Results are also matching =)
+
+```{python}
+pf.etable([fit_nb, fit_rust])
+```
+
+- We now support **quantile regression**, including a Frisch-Newton Interior Point Solver with and without preprocessing, iid, heteroskedastic and cluster robust standard errors, fast algorithms for the entire quantile regression process, and some visualisations. In particular the algorithms for the quantile regression process show excellent performance.
+
+```{python}
+fit_qr = pf.quantreg(
+  fml = "Y ~ X1 + X2",
+  data = df,
+  quantile = [0.1, 0.2, 0.5, 0.7, 0.9],
+  method = "fn",
+  multi_method = "cfm2"
+)
+pf.qplot(fit_qr)
+```
+
+- We have switched the **default solver** to `scipy.linalg.solve()`: [link](https://github.com/py-econometrics/pyfixest/pull/904)
+
+- You can now set the **maximum number of iterations** for the demeaning algo via a `fixef_maxiter` argument: [link](https://github.com/py-econometrics/pyfixest/pull/944)
+
+### Bug Fixes
+
+- We fixed a bug in internal renaming of categoricals: [link](https://github.com/py-econometrics/pyfixest/pull/886)
+- We fixed a bug in etable arguments [link](https://github.com/py-econometrics/pyfixest/pull/889)
+- We stopped casting dependent variable to integer to void Information Loss in Poisson Regression: [link](https://github.com/py-econometrics/pyfixest/pull/900)
+
+
+### Documentation
+
+- We have added a guide on how to replicate Stata results with pyfixest: [link](https://github.com/py-econometrics/pyfixest/pull/897)
+- We improved the documentation on how to relabel variable names in the plotting and etable functions: [link](https://github.com/py-econometrics/pyfixest/pull/895)
+
+## Infrastructure
+
+- We have reorganized our tests and rely more on conda environments for making R package test dependencies available: [link](https://github.com/py-econometrics/pyfixest/pull/906)
+
+### Community
+
+- We have added a Code of Conduct.
+- We have opened our discord community. Please join us there to discuss pyfixest and other py-econometrics projects! Link [here](https://discord.com/invite/gBAydeDMVK).
+
+## New Contributors
+* @FuZhiyu made their first contribution in https://github.com/py-econometrics/pyfixest/pull/886
+* @mortizm1988 made their first contribution in https://github.com/py-econometrics/pyfixest/pull/895
+* @jestover made their first contribution in https://github.com/py-econometrics/pyfixest/pull/897
+* @JaapCTJ made their first contribution in https://github.com/py-econometrics/pyfixest/pull/900
+* @shapiromh made their first contribution in https://github.com/py-econometrics/pyfixest/pull/906
+* @schroedk made their first contribution in https://github.com/py-econometrics/pyfixest/pull/905
+* @WiktorTheScriptor made their first contribution in https://github.com/py-econometrics/pyfixest/pull/938
+* @damandhaliwal made their first contribution in https://github.com/py-econometrics/pyfixest/pull/944
+
+**Full Changelog**: https://github.com/py-econometrics/pyfixest/compare/v0.29.0...v0.30.0
+
 ## PyFixest 0.29.0
 
 - We add options `fixef_k = "nested"` and `fixef_k = "full"` for computing small sample corrections via `pf.ssc()`. We set the defaults for `pf.feols()` and other estimation functions to `fixef_k = "nested"` to 100% mimic the defaults of `r-fixest`. This is a "breaking change" in the sense that it might (slightly) impact the standard errors of your estimations.
