@@ -66,7 +66,7 @@ print(f"Rust backend took {toc-tic}.")
 Results are also matching =)
 
 ```{python}
-pf.etable([fit_nb, fit_rust])
+pf.etable([fit_nb, fit_rust], digits = 8)
 ```
 
 - We now support **quantile regression**, including a Frisch-Newton Interior Point Solver with and without preprocessing, iid, heteroskedastic and cluster robust standard errors, fast algorithms for the entire quantile regression process, and some visualisations. In particular the algorithms for the quantile regression process show excellent performance.
