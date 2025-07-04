@@ -47,7 +47,7 @@ fit_nb = pf.feols(
 
 # benchmark for numba backend
 tic = time.time()
-fit_rust = pf.feols(
+fit_nb = pf.feols(
   fml = "Y ~ X1 + X2 + X3 | f1 + f2 + f3", data = benchmark_data
 )
 toc = time.time()
