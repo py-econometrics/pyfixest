@@ -51,7 +51,7 @@ fit_rust = pf.feols(
   fml = "Y ~ X1 + X2 + X3 | f1 + f2 + f3", data = benchmark_data
 )
 toc = time.time()
-print(f"Numba backend took {tic-toc}.")
+print(f"Numba backend took {toc-tic}.")
 
 # benchmark for rust backend
 tic = time.time()
@@ -60,13 +60,13 @@ fit_rust = pf.feols(
   demeaner_backend = "rust"
 )
 toc = time.time()
-print(f"Rust backend took {tic-toc}.")
+print(f"Rust backend took {toc-tic}.")
 ```
 
 Results are also matching =)
 
 ```{python}
-pf.etable([fit_nb, fit_rust])
+pf.etable([fit_nb, fit_rust], digits = 8)
 ```
 
 - We now support **quantile regression**, including a Frisch-Newton Interior Point Solver with and without preprocessing, iid, heteroskedastic and cluster robust standard errors, fast algorithms for the entire quantile regression process, and some visualisations. In particular the algorithms for the quantile regression process show excellent performance.
