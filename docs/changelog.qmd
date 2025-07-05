@@ -73,7 +73,7 @@ pf.etable([fit_nb, fit_rust], digits = 8)
 learn more about all features and take a look at more systematic benchmarks in the [quantreg vignette](https://py-econometrics.github.io/pyfixest/quantile-regression.html).
 
 ```{python}
-N_qr = 100_000
+N_qr = 10_000
 rng = np.random.default_rng(929)
 
 df_qr = pd.DataFrame({
@@ -82,7 +82,6 @@ df_qr = pd.DataFrame({
 })
 df_qr["Y"] = -0.5 + -2 * df_qr["X1"] + 1.9 * df_qr["X1"] ** 4 + df_qr["X2"] - 0.4 * df_qr["X2"] **7 + rng.normal(0, 1, N_qr)
 
-tic = time.time()
 fit_qr = pf.quantreg(
   fml = "Y ~ X1 + X2",
   data = df_qr,
@@ -90,8 +89,6 @@ fit_qr = pf.quantreg(
   method = "pfn",
   multi_method = "cfm2"
 )
-toc = time.time()
-print(f"Fit the entire quantile regression process with {N_qr} obs and k = 3 in {np.round(toc-tic)} seconds.")
 
 pf.qplot(fit_qr, figsize = [7,3])
 ```
