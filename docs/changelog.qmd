@@ -41,7 +41,7 @@ benchmark_data = pd.DataFrame({
 })
 
 # burn-in for numba
-fit_nb = pf.feols(
+fit_nb_warmup = pf.feols(
   fml = "Y ~ X1 + X2 + X3 | f1 + f2 + f3", data = benchmark_data[:100_000]
 )
 
@@ -69,17 +69,31 @@ Results are also matching =)
 pf.etable([fit_nb, fit_rust], digits = 8)
 ```
 
-- We now support **quantile regression**, including a Frisch-Newton Interior Point Solver with and without preprocessing, iid, heteroskedastic and cluster robust standard errors, fast algorithms for the entire quantile regression process, and some visualisations. In particular the algorithms for the quantile regression process show excellent performance.
+- We now support **quantile regression**, including a Frisch-Newton Interior Point Solver with and without preprocessing, iid, heteroskedastic and cluster robust standard errors, fast algorithms for the entire quantile regression process, and some visualisations. In particular the algorithms for the quantile regression process show excellent performance. You can
+learn more about all features and take a look at more systematic benchmarks in the [quantreg vignette](https://py-econometrics.github.io/pyfixest/quantile-regression.html).
 
 ```{python}
+N_qr = 100_000
+rng = np.random.default_rng(929)
+
+df_qr = pd.DataFrame({
+  "X1": rng.normal(0, 1, N_qr),
+  "X2": rng.normal(0, 1, N_qr)
+})
+df_qr["Y"] = -0.5 + -2 * df_qr["X1"] + 1.9 * df_qr["X1"] ** 4 + df_qr["X2"] - 0.4 * df_qr["X2"] **7 + rng.normal(0, 1, N_qr)
+
+tic = time.time()
 fit_qr = pf.quantreg(
   fml = "Y ~ X1 + X2",
-  data = df,
-  quantile = [0.1, 0.2, 0.5, 0.7, 0.9],
-  method = "fn",
+  data = df_qr,
+  quantile = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
+  method = "pfn",
   multi_method = "cfm2"
 )
-pf.qplot(fit_qr)
+toc = time.time()
+print(f"Fit the entire quantile regression process with {N_qr} obs and k = 3 in {np.round(toc-tic)} seconds.")
+
+pf.qplot(fit_qr, figsize = [7,3])
 ```
 
 - We have switched the **default solver** to `scipy.linalg.solve()`: [link](https://github.com/py-econometrics/pyfixest/pull/904)

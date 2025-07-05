@@ -95,5 +95,5 @@ pub fn _crv1_meat_loop_rs(
         &clustid.as_array(),
         &cluster_col.as_array(),
     );
-    Ok(meat.into_pyarray(py).to_owned())
+    Ok(meat.into_pyarray(py).to_owned().into())
 }

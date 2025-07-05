@@ -215,5 +215,5 @@ pub fn _demean_rs(
         py.allow_threads(|| demean_impl(&x_arr, &flist_arr, &weights_arr, tol, maxiter));
 
     let pyarray = PyArray2::from_owned_array(py, out);
-    Ok((pyarray.into_py(py), success))
+    Ok((pyarray.into(), success))
 }
