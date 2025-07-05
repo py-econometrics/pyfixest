@@ -156,7 +156,7 @@ pub fn _find_collinear_variables_rs(
     let x = x.as_array();
     // Call the implementation and convert any errors to Python ValueError
     match find_collinear_variables_impl(x, tol) {
-        Ok((arr, n_excl, flag)) => Ok((arr.into_pyarray(py).to_owned(), n_excl, flag)),
+        Ok((arr, n_excl, flag)) => Ok((arr.into_pyarray(py).to_owned().into(), n_excl, flag)),
         Err(err) => {
             // Convert Rust errors to Python ValueError
             Err(PyValueError::new_err(err.to_string()))
