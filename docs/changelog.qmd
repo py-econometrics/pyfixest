@@ -72,13 +72,17 @@ pf.etable([fit_nb, fit_rust], digits = 8)
 - We now support **quantile regression**, including a Frisch-Newton Interior Point Solver with and without preprocessing, iid, heteroskedastic and cluster robust standard errors, fast algorithms for the entire quantile regression process, and some visualisations. In particular the algorithms for the quantile regression process show excellent performance.
 
 ```{python}
+tic = time.time()
 fit_qr = pf.quantreg(
   fml = "Y ~ X1 + X2",
-  data = df,
-  quantile = [0.1, 0.2, 0.5, 0.7, 0.9],
+  data = pf.get_data(N = 1_000_000),
+  quantile = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
   method = "fn",
   multi_method = "cfm2"
 )
+toc = time.time()
+print(f"Fit the entire quantile regression process with 1Mio obs and k = 3 in {toc-tic}.")
+
 pf.qplot(fit_qr)
 ```
 
