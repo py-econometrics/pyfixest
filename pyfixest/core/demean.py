@@ -6,7 +6,7 @@ from ._core_impl import _demean_rs
 
 def demean(
     x: NDArray[np.float64],
-    flist: NDArray[np.uint],
+    flist: NDArray[np.uint64],
     weights: NDArray[np.float64],
     tol: float = 1e-08,
     maxiter: int = 100_000,
@@ -70,4 +70,4 @@ def demean(
     print(pf.feols(fml, data).coef())
     ```
     """
-    return _demean_rs(x, flist.astype(np.uint), weights, tol, maxiter)
+    return _demean_rs(x, flist.astype(np.uint64), weights, tol, maxiter)
