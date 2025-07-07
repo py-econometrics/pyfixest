@@ -8,6 +8,7 @@ from numpy.typing import NDArray
 from scipy.sparse import hstack, spmatrix, vstack
 from scipy.sparse.linalg import lsqr
 from tqdm import tqdm
+import re
 
 
 @dataclass
