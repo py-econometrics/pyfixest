@@ -389,10 +389,11 @@ class GelbachDecomposition2:
         # For decomp_var and other X1 variables, mark all related coefficients
         for var in self.x1_vars:
             if var.startswith('C('):
-                # For categorical variables, match the exact C() wrapper plus any treatment indicators
-                base_pattern = f"^{var}\\[T\\."
+                # Extract the base variable name from C(...)
+                base_var = var.split('[')[0] if '[' in var else var
+                # Match any coefficient that starts with the base variable name
                 var_indices = [i for i, coef in enumerate(self.coefnames) 
-                             if var == coef or re.match(base_pattern, coef)]
+                             if coef.startswith(base_var)]
             else:
                 # For non-categorical variables, match exact name only
                 var_indices = [i for i, coef in enumerate(self.coefnames) 
