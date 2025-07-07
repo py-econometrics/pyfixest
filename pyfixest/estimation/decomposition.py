@@ -399,6 +399,8 @@ class GelbachDecomposition2:
                              if coef == var]
                 
             if not var_indices:
+                print("x1_vars:", self.x1_vars)
+                print("coefnames:", self.coefnames)
                 raise ValueError(f"Could not find variable {var} in coefficient names")
             # Mark these indices in the mask
             for idx in var_indices:
