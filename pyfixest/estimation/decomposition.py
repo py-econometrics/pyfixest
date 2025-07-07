@@ -45,11 +45,20 @@ class GelbachDecomposition:
         self.intercept_idx = self.coefnames.index("Intercept")
         self.coefnames_no_intercept = self.coefnames[~self.intercept_idx]
         self.mask = np.ones(len(self.coefnames), dtype=bool)
-        self.mask[param_idx] = False
+        
+        # For decomp_var and other X1 variables, mark all related coefficients
+        for var in self.x1_vars:
+            # Find all coefficients that match this variable
+            var_indices = [i for i, coef in enumerate(self.coefnames) 
+                          if coef == var or (var.startswith('C(') and var in coef)]
+            if not var_indices:
+                raise ValueError(f"Could not find variable {var} in coefficient names")
+            # Mark these indices in the mask
+            for idx in var_indices:
+                self.mask[idx] = False
 
-        self.mediator_names = [
-            name for name in self.coefnames if self.param not in name
-        ]
+        # Mediator names are all names that aren't X1 variables
+        self.mediator_names = [name for name in self.coefnames if self.mask[self.coefnames.index(name)]]
         self.intercept_in_mediator_idx = self.mediator_names.index("Intercept")
 
         # Handle clustering setup if cluster_df is provided
