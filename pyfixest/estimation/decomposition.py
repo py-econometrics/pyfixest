@@ -383,6 +383,9 @@ class GelbachDecomposition2:
         self.coefnames_no_intercept = self.coefnames[~self.intercept_idx]
         self.mask = np.ones(len(self.coefnames), dtype=bool)
 
+        print("x1_vars:", self.x1_vars)
+        print("coefnames:", self.coefnames)
+
         # For decomp_var and other X1 variables, mark all related coefficients
         for var in self.x1_vars:
             if var.startswith('C('):
