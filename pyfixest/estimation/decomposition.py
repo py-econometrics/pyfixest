@@ -45,20 +45,11 @@ class GelbachDecomposition:
         self.intercept_idx = self.coefnames.index("Intercept")
         self.coefnames_no_intercept = self.coefnames[~self.intercept_idx]
         self.mask = np.ones(len(self.coefnames), dtype=bool)
-        
-        # For decomp_var and other X1 variables, mark all related coefficients
-        for var in self.x1_vars:
-            # Find all coefficients that match this variable
-            var_indices = [i for i, coef in enumerate(self.coefnames) 
-                          if coef == var or (var.startswith('C(') and var in coef)]
-            if not var_indices:
-                raise ValueError(f"Could not find variable {var} in coefficient names")
-            # Mark these indices in the mask
-            for idx in var_indices:
-                self.mask[idx] = False
+        self.mask[param_idx] = False
 
-        # Mediator names are all names that aren't X1 variables
-        self.mediator_names = [name for name in self.coefnames if self.mask[self.coefnames.index(name)]]
+        self.mediator_names = [
+            name for name in self.coefnames if self.param not in name
+        ]
         self.intercept_in_mediator_idx = self.mediator_names.index("Intercept")
 
         # Handle clustering setup if cluster_df is provided
@@ -80,6 +71,7 @@ class GelbachDecomposition:
             self.combine_covariates_dict = self.combine_covariates
 
         self._check_combine_covariates()
+
 
     def _check_combine_covariates(self):
         # Check that each value in self.combine_covariates_dict is in self.mediator_names
@@ -385,23 +377,31 @@ class GelbachDecomposition2:
             raise ValueError("decomp_var must be one of x1_vars")
             
         # Create mask and handle decomp_var and other X1 variables
-        param_idx = self.coefnames.index(self.decomp_var)
+        # param_idx = self.coefnames.index(self.decomp_var)
         self.intercept_idx = self.coefnames.index("Intercept")
         self.coefnames_no_intercept = self.coefnames[~self.intercept_idx]
         self.mask = np.ones(len(self.coefnames), dtype=bool)
-        self.mask[param_idx] = False
-    
-        # Keep other X1 variables in both regressions
+
+        # For decomp_var and other X1 variables, mark all related coefficients
         for var in self.x1_vars:
-            if var != self.decomp_var:
-                var_idx = self.coefnames.index(var)
-                self.mask[var_idx] = False
+            if var.startswith('C('):
+                # For categorical variables, match the exact C() wrapper plus any treatment indicators
+                base_pattern = f"^{var}\\[T\\."
+                var_indices = [i for i, coef in enumerate(self.coefnames) 
+                             if var == coef or re.match(base_pattern, coef)]
+            else:
+                # For non-categorical variables, match exact name only
+                var_indices = [i for i, coef in enumerate(self.coefnames) 
+                             if coef == var]
+                
+            if not var_indices:
+                raise ValueError(f"Could not find variable {var} in coefficient names")
+            # Mark these indices in the mask
+            for idx in var_indices:
+                self.mask[idx] = False
     
         # Mediator names are all names that aren't X1 variables
-        self.mediator_names = [
-            name for name in self.coefnames 
-            if not any(p in name for p in self.x1_vars)
-        ]
+        self.mediator_names = [name for name in self.coefnames if self.mask[self.coefnames.index(name)]]
         self.intercept_in_mediator_idx = self.mediator_names.index("Intercept")
     
         # Handle clustering setup if cluster_df is provided
