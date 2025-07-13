@@ -147,6 +147,33 @@ def model_matrix_fixest(
     if weights is not None:
         weights_df = mm["weights"]
 
+    # drop infinite values
+    inf_idx_list = []
+    for df in [Y, X, Z, endogvar, weights_df]:
+        if df is not None:
+            inf_idx = np.where(df.isin([np.inf, -np.inf]).any(axis=1))[0].tolist()
+            inf_idx_list.extend(inf_idx)
+
+    inf_idx = list(set(inf_idx_list))
+    if len(inf_idx) > 0:
+        warnings.warn(
+            f"{len(inf_idx)} rows with infinite values detected. These rows are dropped from the model."
+        )
+
+        keep_mask = np.ones(Y.shape[0], dtype=bool)
+        keep_mask[inf_idx] = False
+
+        Y, X, Z, endogvar, weights_df, fe = _drop_rows(
+            idx=keep_mask,
+            X_is_empty=X_is_empty,
+            Y=Y,
+            fe=fe,
+            X=X,
+            Z=Z,
+            endogvar=endogvar,
+            weights_df=weights_df,
+        )
+
     for df in [Y, X, Z, endogvar, weights_df]:
         if df is not None:
             cols_to_convert = df.select_dtypes(exclude=["int64", "float64"]).columns
@@ -190,16 +217,16 @@ def model_matrix_fixest(
             )
 
         if not np.all(keep_idx):
-            Y = Y[keep_idx]
-            if not X_is_empty:
-                X = X.iloc[keep_idx]
-            fe = fe[keep_idx]
-            if Z is not None:
-                Z = Z[keep_idx]
-            if endogvar is not None:
-                endogvar = endogvar[keep_idx]
-            if weights_df is not None:
-                weights_df = weights_df[keep_idx]
+            Y, X, Z, endogvar, weights_df, fe = _drop_rows(
+                idx=keep_idx,
+                X_is_empty=X_is_empty,
+                Y=Y,
+                fe=fe,
+                X=X,
+                Z=Z,
+                endogvar=endogvar,
+                weights_df=weights_df,
+            )
 
     na_index = _get_na_index(data.shape[0], Y.index)
     na_index_str = ",".join(str(x) for x in na_index)
@@ -223,6 +250,68 @@ def model_matrix_fixest(
         "X_is_empty": X_is_empty,
         "model_spec": model_spec,
     }
+
+
+def _drop_rows(
+    idx: np.ndarray,
+    X_is_empty: bool,
+    Y: pd.DataFrame,
+    fe: Optional[pd.DataFrame],
+    X: pd.DataFrame,
+    Z: Optional[pd.DataFrame],
+    endogvar: Optional[pd.DataFrame],
+    weights_df: Optional[pd.DataFrame],
+) -> tuple[
+    pd.DataFrame,
+    pd.DataFrame,
+    Optional[pd.DataFrame],
+    Optional[pd.DataFrame],
+    Optional[pd.DataFrame],
+    Optional[pd.DataFrame],
+]:
+    """
+    Drop rows from dataframes.
+
+    Drop rows from dataframes based on either a list of indices to drop or a
+    boolean array of indices to keep.
+
+    Parameters
+    ----------
+    Y : pd.DataFrame
+        The dependent variable.
+    X : pd.DataFrame
+        The regressors.
+    Z : Optional[pd.DataFrame]
+        The instruments.
+    endogvar : Optional[pd.DataFrame]
+        The endogenous variables.
+    weights_df : Optional[pd.DataFrame]
+        The weights.
+    fe : Optional[pd.DataFrame]
+        The fixed effects.
+    idx_to_drop : Optional[list[int]], optional
+        A list of integer indices to drop. The default is None.
+    idx_to_keep : Optional[np.ndarray], optional
+        A boolean numpy array indicating which rows to keep. The default is None.
+
+    Returns
+    -------
+    A tuple of the dataframes with the rows dropped.
+
+    """
+    Y = Y[idx]
+    if fe is not None:
+        fe = fe[idx]
+    if not X_is_empty:
+        X = X.iloc[idx]
+    if Z is not None:
+        Z = Z[idx]
+    if endogvar is not None:
+        endogvar = endogvar[idx]
+    if weights_df is not None:
+        weights_df = weights_df[idx]
+
+    return Y, X, Z, endogvar, weights_df, fe
 
 
 def _get_na_index(N: int, Y_index: pd.Index) -> np.ndarray:
@@ -327,7 +416,7 @@ def _fixef_interactions(fval: str, data: pd.DataFrame) -> tuple[str, pd.DataFram
     return fval.replace("^", "_"), data
 
 
-def _get_ivars_dict(fml: str, pattern: str) -> Union[list[dict]]:
+def _get_ivars_dict(fml: str, pattern: str) -> list[dict]:
     matches = re.finditer(pattern, fml)
 
     res = []
@@ -462,7 +551,7 @@ def _is_finite_positive(x: Union[pd.DataFrame, pd.Series, np.ndarray]) -> bool:
     if np.isinf(x).any():
         return False
 
-    return (x[~np.isnan(x)] > 0).all()
+    return bool((x[~np.isnan(x)] > 0).all())
 
 
 def factorize(fe: pd.DataFrame) -> pd.DataFrame:

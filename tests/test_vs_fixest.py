@@ -1466,6 +1466,29 @@ def test_ssc(fml, dropna, weights, vcov, adj, cluster_adj, fixef_k, model):
     )
 
 
+@pytest.mark.against_r_core
+@pytest.mark.parametrize(
+    "fml", ["log(Y) ~ X1", "log(Y) ~ X1 | f1", "log(Y) ~ 1 | X1 ~ Z1"]
+)
+@pytest.mark.parametrize("weights", [None, "weights"])
+def test_inf_dropping(fml, weights):
+    "Test that infinite values are dropped correctly."
+    data = pf.get_data(model="Fepois").dropna()
+    data["Y"].iloc[0] = 0
+
+    # test that two 0's in dependent variable are dropped
+    # and that warning is triggered
+    n_zeros = (data.Y == 0).sum()
+    with pytest.warns(
+        UserWarning,
+        match=f"{n_zeros} rows with infinite values detected. These rows are dropped from the model.",
+    ):
+        fit_py = feols(fml=fml, data=data, weights=weights)
+
+    assert int(data.shape[0] - n_zeros) == fit_py._N
+    assert np.all(fit_py._na_index == np.where(data.Y == 0)[0].tolist())
+
+
 def _convert_f3(data, f3_type):
     """Convert f3 to the desired type."""
     if f3_type == "categorical":
