@@ -163,7 +163,7 @@ def model_matrix_fixest(
         keep_mask = np.ones(Y.shape[0], dtype=bool)
         keep_mask[inf_idx] = False
 
-        Y, X, Z, endogvar, weights_df = _drop_rows(
+        Y, X, Z, endogvar, weights_df, fe = _drop_rows(
             idx=keep_mask,
             X_is_empty=X_is_empty,
             Y=Y,
@@ -217,8 +217,7 @@ def model_matrix_fixest(
             )
 
         if not np.all(keep_idx):
-            fe = fe[keep_idx]
-            Y, X, Z, endogvar, weights_df = _drop_rows(
+            Y, X, Z, endogvar, weights_df, fe = _drop_rows(
                 idx=keep_idx,
                 X_is_empty=X_is_empty,
                 Y=Y,
@@ -268,6 +267,7 @@ def _drop_rows(
     Optional[pd.DataFrame],
     Optional[pd.DataFrame],
     Optional[pd.DataFrame],
+    Optional[pd.DataFrame],
 ]:
     """
     Drop rows from dataframes.
@@ -311,7 +311,7 @@ def _drop_rows(
     if weights_df is not None:
         weights_df = weights_df[idx]
 
-    return Y, X, Z, endogvar, weights_df
+    return Y, X, Z, endogvar, weights_df, fe
 
 
 def _get_na_index(N: int, Y_index: pd.Index) -> np.ndarray:
