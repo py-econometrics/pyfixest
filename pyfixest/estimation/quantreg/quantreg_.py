@@ -75,11 +75,12 @@ class Quantreg(Feols):
         )
 
         warnings.warn(
-            "The Quantile Regression implementation is experimental and may change in future releases.",
+            """
+           The Quantile Regression implementation is experimental and may change in future releases.
+           But mostly, we expect the API to remain unchanged.
+           """,
             FutureWarning,
         )
-
-        assert isinstance(quantile, float), "quantile must be a float."
 
         self._supports_wildboottest = False
         self._support_crv3_inference = False
@@ -124,6 +125,14 @@ class Quantreg(Feols):
             "fn": partial(
                 self.fit_qreg_fn,
                 q=self._quantile,
+                tol=self._quantile_tol,
+                maxiter=self._quantile_maxiter,
+                beta_init=None,
+            ),
+            "pfn": partial(
+                self.fit_qreg_pfn,
+                q=self._quantile,
+                rng=np.random.default_rng(self._seed),
                 tol=self._quantile_tol,
                 maxiter=self._quantile_maxiter,
                 beta_init=None,
@@ -199,11 +208,12 @@ class Quantreg(Feols):
             maxiter = N
 
         # compute cholesky once outside of FN loop
-        if self._chol is None or self._P is None:
-            self._chol, _ = cho_factor(X.T @ X, lower=True, check_finite=False)
-            self._P = solve_triangular(self._chol, X.T, lower=True, check_finite=False)
-        if self._chol is None or self._P is None:
-            raise ValueError("...")
+        # if self._chol is None or self._P is None:
+        _chol, _ = cho_factor(X.T @ X, lower=True, check_finite=False)
+        _chol = np.atleast_2d(_chol)
+        _P = solve_triangular(_chol, X.T, lower=True, check_finite=False)
+        # if self._chol is None or self._P is None:
+        #    raise ValueError("...")
 
         fn_res = frisch_newton_solver(
             A=X.T,
@@ -215,8 +225,8 @@ class Quantreg(Feols):
             max_iter=maxiter,
             backoff=0.9995,
             beta_init=beta_init,
-            chol=cast(np.ndarray, self._chol),
-            P=cast(np.ndarray, self._P),
+            chol=cast(np.ndarray, _chol),
+            P=cast(np.ndarray, _P),
         )
 
         has_converged = fn_res[1]
@@ -228,6 +238,170 @@ class Quantreg(Feols):
             )
 
         return fn_res
+
+    def fit_qreg_pfn(
+        self,
+        X: np.ndarray,
+        Y: np.ndarray,
+        q: float,
+        m: Optional[float] = None,
+        tol: Optional[float] = None,
+        maxiter: Optional[int] = None,
+        beta_init: Optional[np.ndarray] = None,
+        rng: Optional[np.random.Generator] = None,
+        eta: Optional[float] = None,
+    ) -> tuple[
+        np.ndarray,
+        bool,
+        int,
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+    ]:
+        """Fit a quantile regression model using the Frisch-Newton Interior Point Solver with pre-processing."""
+        N, k = X.shape
+        if tol is None:
+            tol = 1e-06
+        if maxiter is None:
+            maxiter = N
+        if rng is None:
+            rng = np.random.default_rng()
+        if beta_init is None:
+            beta_init = np.zeros(k)
+        if m is None:
+            m = 0.8
+        if eta is None:
+            eta = 2 / 3
+
+        max_bad_fixups = 3
+        n_bad_fixups = 0
+
+        has_converged = False
+        compute_beta_init = beta_init is None
+
+        # m constant should be set by user
+        m = 0.8
+        n_init = int(np.ceil((k * N) ** (eta)))
+        M = int(np.maximum(N, np.ceil(m * n_init)))
+
+        while not has_converged:
+            if compute_beta_init:
+                # get initial sample
+                idx_init = rng.choice(N, size=n_init, replace=False)
+                beta_hat_init = self.fit_qreg_fn(
+                    X[idx_init, :], Y[idx_init], q=q, tol=tol, maxiter=maxiter
+                )[0]
+
+            else:
+                beta_hat_init = beta_init
+
+            r_init = Y.flatten() - X @ beta_hat_init
+            # conservative estimate of sigma^2
+            z = np.sqrt(np.dot(r_init, r_init) / (N - k))
+            rz = r_init / z
+
+            ql = max(0, q - M / (2 * N))
+            qu = min(1, q + M / (2 * N))
+
+            JL = rz < np.quantile(rz, ql)
+            JH = rz > np.quantile(rz, qu)
+
+            while not has_converged and n_bad_fixups < max_bad_fixups:
+                keep = ~(JL | JH)
+                X_sub = X[keep, :]
+                Y_sub = Y[keep, :]
+
+                if np.any(JL):
+                    X_neg = np.sum(X[JL, :], axis=0)
+                    Y_neg = np.sum(Y[JL])
+                    X_sub = np.concatenate([X_sub, X_neg.reshape((1, self._k))], axis=0)
+                    Y_sub = np.concatenate([Y_sub, Y_neg.reshape((1, 1))], axis=0)
+                if np.any(JH):
+                    X_pos = np.sum(X[JH, :], axis=0)
+                    Y_pos = np.sum(Y[JH])
+                    X_sub = np.concatenate([X_sub, X_pos.reshape(1, self._k)], axis=0)
+                    Y_sub = np.concatenate([Y_sub, Y_pos.reshape((1, 1))], axis=0)
+
+                # solve the modified problem
+                fn_res = self.fit_qreg_fn(X=X_sub, Y=Y_sub, q=q)
+                beta_hat = fn_res[0]
+
+                r = Y.flatten() - X @ beta_hat
+
+                # count wrong predictions and get their indices
+                mis_L = JL & (r > 0)
+                mis_H = JH & (r < 0)
+                n_bad = np.sum(mis_L) + np.sum(mis_H)
+
+                if n_bad == 0:
+                    has_converged = True
+                    break
+                elif n_bad > 0.1 * M:
+                    warnings.warn("Too many bad fixups. Doubling m.")
+                    n_init = min(N, 2 * n_init)
+                    M = int(np.ceil(m * n_init))
+                    n_bad_fixups += 1
+                    compute_beta_init = True
+                    break
+
+                else:
+                    JL = JL & ~mis_L
+                    JH = JH & ~mis_H
+
+        if not has_converged:
+            warnings.warn(
+                "The Frisch-Newton Interior Point solver with preprocessing has not converged after 3 bad fixups."
+            )
+
+        return fn_res
+
+    def _vcov_iid(self):
+        "Implement the kernel-based sandwich estimator from Powell (1991)."
+        q = self._quantile
+        N = self._N
+        X = self._X
+        Y = self._Y
+        u_hat = self._u_hat
+
+        h = get_hall_sheather_bandwidth(q=q, N=N)
+        # interquartile range of u_hat - this is what both quantreg and statsmodels use
+        # (all three logical lines below in fact)
+        rq = np.quantile(np.abs(u_hat), 0.75) - np.quantile(np.abs(u_hat), 0.25)
+        sigma = np.std(Y)
+        hk = np.minimum(sigma, rq / 1.34) * (norm.ppf(q + h) - norm.ppf(q - h))
+
+        # uniform kernel
+        f = 1 / (2 * N * hk) * np.sum(np.abs(u_hat) < hk)
+
+        D = X.T @ X
+        Dinv = np.linalg.inv(D)
+
+        return 1 / (f**2) * q * (1 - q) * Dinv
+
+    def _vcov_hetero(self):
+        "Implement the kernel-based sandwich estimator from Powell (1991) for heteroskedasticity robust inference."
+        q = self._quantile
+        N = self._N
+        X = self._X
+        Y = self._Y
+        u_hat = self._u_hat
+
+        h = get_hall_sheather_bandwidth(q=q, N=N)
+        # interquartile range of u_hat
+        rq = np.quantile(np.abs(u_hat), 0.75) - np.quantile(np.abs(u_hat), 0.25)
+        sigma = np.std(Y)
+        hk = np.minimum(sigma, rq / 1.34) * (norm.ppf(q + h) - norm.ppf(q - h))
+
+        # uniform kernel
+        f = 1 / (2 * N * hk) * np.sum(np.abs(u_hat) < hk)
+
+        D = X.T @ X
+        C = f * D
+        Cinv = np.linalg.inv(C)
+
+        return q * (1 - q) * Cinv @ D @ Cinv
 
     def _vcov_nid(self) -> np.ndarray:
         """
@@ -243,8 +417,18 @@ class Quantreg(Feols):
 
         h = get_hall_sheather_bandwidth(q=q, N=N)
 
-        beta_hat_plus = self.fit_qreg_fn(X=self._X, Y=self._Y, q=self._quantile + h)[0]
-        beta_hat_minus = self.fit_qreg_fn(X=self._X, Y=self._Y, q=self._quantile - h)[0]
+        beta_hat_plus = self._fit(
+            X=self._X,
+            Y=self._Y,
+            q=self._quantile + h,
+            beta_init=self._beta_hat if self._method == "pfn" else None,
+        )[0]
+        beta_hat_minus = self._fit(
+            X=self._X,
+            Y=self._Y,
+            q=self._quantile - h,
+            beta_init=self._beta_hat if self._method == "pfn" else None,
+        )[0]
 
         # eps: small tolerance parameter to avoid division by zero
         # when di = 0; set to sqrt of machine epsilon in quantreg
@@ -261,15 +445,6 @@ class Quantreg(Feols):
         Hinv = np.linalg.inv(H)
 
         return q * (1 - q) * Hinv @ J @ Hinv
-
-    def _vcov_hetero(self) -> np.ndarray:
-        return self._vcov_nid()
-
-    def _vcov_iid(self) -> np.ndarray:
-        raise NotImplementedError(
-            "The 'iid' vcov is not implemented for quantile regression. "
-            "Please use 'nid' instead, which is heteroskedasticity robust."
-        )
 
     def _vcov_crv1(self, clustid: np.ndarray, cluster_col: np.ndarray):
         """
@@ -301,6 +476,12 @@ class Quantreg(Feols):
     def objective_value(self):
         "Compute the total loss of the quantile regression model."
         return np.sum(np.abs(self._u_hat) * (self._quantile - (self._u_hat < 0)))
+
+    def get_performance(self):
+        "Compute performance metrics for the quantile regression model."
+        # self._pseudo_r2 = 1 -
+        pass
+        # self.objective_value
 
 
 @nb.njit(parallel=False)

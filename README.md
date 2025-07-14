@@ -95,6 +95,8 @@ All non-pyfixest timings are taken from the `fixest` benchmarks.
 
 ![](benchmarks/lets-plot-images/benchmarks_ols.svg)
 ![](benchmarks/lets-plot-images/benchmarks_poisson.svg)
+![](benchmarks/quantreg_benchmarks.png)
+
 
 ## Quickstart
 
@@ -229,6 +231,12 @@ fit_iv.summary()
     | X1            |     -1.025 |        0.115 |    -8.930 |      0.000 | -1.259 |  -0.790 |
     ---
 
+## Quantile Regression via `pf.quantreg`
+
+```python
+fit_qr = pf.quantreg("Y ~ X1 + X2", data = data, quantile = 0.5)
+```
+
 ## Call for Contributions
 
 Thanks for showing interest in contributing to `pyfixest`! We appreciate all
@@ -294,6 +302,7 @@ Thanks goes to these wonderful people:
       <td align="center" valign="top" width="12.5%"><a href="https://github.com/schroedk"><img src="https://avatars.githubusercontent.com/u/38397037?v=4?s=100" width="100px;" alt="Kristof Schröder"/><br /><sub><b>Kristof Schröder</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=schroedk" title="Code">💻</a></td>
       <td align="center" valign="top" width="12.5%"><a href="https://github.com/WiktorTheScriptor"><img src="https://avatars.githubusercontent.com/u/162815872?v=4?s=100" width="100px;" alt="Wiktor "/><br /><sub><b>Wiktor </b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=WiktorTheScriptor" title="Code">💻</a></td>
       <td align="center" valign="top" width="12.5%"><a href="https://damandhaliwal.me"><img src="https://avatars.githubusercontent.com/u/48694192?v=4?s=100" width="100px;" alt="Daman Dhaliwal"/><br /><sub><b>Daman Dhaliwal</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=damandhaliwal" title="Code">💻</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="https://markkaj.github.io/"><img src="https://avatars.githubusercontent.com/u/24573803?v=4?s=100" width="100px;" alt="Jaakko Markkanen"/><br /><sub><b>Jaakko Markkanen</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/issues?q=author%3Amarkkaj" title="Bug reports">🐛</a></td>
     </tr>
   </tbody>
 </table>

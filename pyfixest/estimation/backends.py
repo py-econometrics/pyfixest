@@ -3,7 +3,6 @@ from pyfixest.core.crv1 import crv1_meat_loop
 from pyfixest.core.demean import demean
 from pyfixest.core.nested_fixed_effects import count_fixef_fully_nested_all
 from pyfixest.estimation.demean_ import demean as demean_nb
-from pyfixest.estimation.jax.demean_jax_ import demean_jax as demean_jax_fn
 from pyfixest.estimation.numba.find_collinear_variables_nb import (
     _find_collinear_variables_nb as find_collinear_variables_nb,
 )
@@ -11,6 +10,16 @@ from pyfixest.estimation.numba.nested_fixef_nb import (
     _count_fixef_fully_nested_all as count_fixef_fully_nested_all_nb,
 )
 from pyfixest.estimation.vcov_utils import _crv1_meat_loop as crv1_meat_loop_nb
+
+# Try to import JAX functions, fall back to numba if not available
+try:
+    from pyfixest.estimation.jax.demean_jax_ import demean_jax as demean_jax_fn
+
+    JAX_AVAILABLE = True
+except ImportError:
+    # Fall back to numba implementation if JAX is not available
+    demean_jax_fn = demean_nb
+    JAX_AVAILABLE = False
 
 find_collinear_variables_jax = find_collinear_variables_nb
 crv1_meat_loop_jax = crv1_meat_loop_nb

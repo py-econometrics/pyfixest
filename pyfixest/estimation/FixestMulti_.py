@@ -16,9 +16,11 @@ from pyfixest.estimation.FormulaParser import FixestFormulaParser
 from pyfixest.estimation.literals import (
     DemeanerBackendOptions,
     QuantregMethodOptions,
+    QuantregMultiOptions,
     SolverOptions,
 )
 from pyfixest.estimation.quantreg.quantreg_ import Quantreg
+from pyfixest.estimation.quantreg.QuantregMulti import QuantregMulti
 from pyfixest.estimation.vcov_utils import _get_vcov_type
 from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
 from pyfixest.utils.utils import capture_context
@@ -44,6 +46,7 @@ class FixestMulti:
         separation_check: Optional[list[str]] = None,
         context: Union[int, Mapping[str, Any]] = 0,
         quantreg_method: QuantregMethodOptions = "fn",
+        quantreg_multi_method: QuantregMultiOptions = "cfm1",
     ) -> None:
         """
         Initialize a class for multiple fixed effect estimations.
@@ -104,6 +107,7 @@ class FixestMulti:
         self._separation_check = separation_check
         self._context = capture_context(context)
         self._quantreg_method = quantreg_method
+        self._quantreg_multi_method = quantreg_multi_method
 
         self._run_split = split is not None or fsplit is not None
         self._run_full = not (split and not fsplit)
@@ -152,6 +156,9 @@ class FixestMulti:
         ssc: Optional[dict[str, Union[str, bool]]] = None,
         fixef_rm: str = "none",
         drop_intercept: bool = False,
+        quantile: Optional[float] = None,
+        quantile_tol: float = 1e-06,
+        quantile_maxiter: Optional[int] = None,
     ) -> None:
         """
         Prepare model for estimation.
@@ -182,6 +189,15 @@ class FixestMulti:
             singleton fixed effects are dropped.
         drop_intercept : bool, optional
             Whether to drop the intercept. Default is False.
+        quantile: Optional[float]
+            The quantile to use for quantile regression. Default is None.
+        quantile_tol: float, optional
+            The tolerance for the quantile regression FN algorithm.
+            Default is 1e-06.
+        quantile_maxiter: int, optional
+            The maximum number of iterations for the quantile regression FN algorithm.
+            If None, maxiter = the number of observations in the model
+            (as in R's quantreg package via nit(3) = n).
 
         Returns
         -------
@@ -201,10 +217,17 @@ class FixestMulti:
             self._has_weights = True
 
         self._drop_intercept = drop_intercept
+        self._quantile = quantile
+        self._quantile_tol = quantile_tol
+        self._quantile_maxiter = quantile_maxiter
 
         FML = FixestFormulaParser(fml)
         FML.set_fixest_multi_flag()
-        self._is_multiple_estimation = FML._is_multiple_estimation or self._run_split
+        self._is_multiple_estimation = (
+            FML._is_multiple_estimation
+            or self._run_split
+            or (isinstance(quantile, list) and len(quantile) > 1)
+        )
         self.FixestFormulaDict = FML.FixestFormulaDict
         self._method = estimation
         self._is_iv = FML.is_iv
@@ -222,9 +245,6 @@ class FixestMulti:
         iwls_maxiter: int = 25,
         iwls_tol: float = 1e-08,
         separation_check: Optional[list[str]] = None,
-        quantile: Optional[float] = None,
-        quantile_tol: float = 1e-06,
-        quantile_maxiter: Optional[int] = None,
     ) -> None:
         """
         Estimate multiple regression models.
@@ -253,17 +273,6 @@ class FixestMulti:
         separation_check: list[str], optional
             Only used in "fepois". Methods to identify and drop separated observations.
             Either "fe" or "ir". Executes both by default.
-        quantile: float
-            The quantile to use for quantile regression. Default is None.
-            Only relevant for "quantreg" estimation.
-        quantile_tol: float, optional
-            The tolerance for the quantile regression FN algorithm.
-            Default is 1e-06.
-        quantile_maxiter: int, optional
-            The maximum number of iterations for the quantile regression FN algorithm.
-            If None, maxiter = the number of observations in the model
-            (as in R's quantreg package via nit(3) = n).
-
 
         Returns
         -------
@@ -287,9 +296,10 @@ class FixestMulti:
         _splitvar = self._splitvar
         _context = self._context
         _quantreg_method = self._quantreg_method
-        _quantiles = quantile
-        _quantile_tol = quantile_tol
-        _quantile_maxiter = quantile_maxiter
+        _quantreg_multi_method = self._quantreg_multi_method
+        _quantile = self._quantile
+        _quantile_tol = self._quantile_tol
+        _quantile_maxiter = self._quantile_maxiter
 
         FixestFormulaDict = self.FixestFormulaDict
         _fixef_keys = list(FixestFormulaDict.keys())
@@ -319,6 +329,7 @@ class FixestMulti:
                         Feprobit,
                         FeolsCompressed,
                         Quantreg,
+                        QuantregMulti,
                     ]
 
                     model_kwargs = {
@@ -363,14 +374,20 @@ class FixestMulti:
                             }
                         )
 
-                    if _method == "quantreg":
+                    if _method in ["quantreg", "quantreg_multi"]:
                         model_kwargs.update(
                             {
-                                "quantile": _quantiles,
+                                "quantile": _quantile,
                                 "method": _quantreg_method,
                                 "quantile_tol": _quantile_tol,
                                 "quantile_maxiter": _quantile_maxiter,
                                 "seed": self._seed,
+                            }
+                        )
+                    if _method == "quantreg_multi":
+                        model_kwargs.update(
+                            {
+                                "multi_method": _quantreg_multi_method,
                             }
                         )
 
@@ -383,6 +400,7 @@ class FixestMulti:
                         ("feglm-gaussian", None): Fegaussian,
                         ("compression", None): FeolsCompressed,
                         ("quantreg", None): Quantreg,
+                        ("quantreg_multi", None): QuantregMulti,
                     }
 
                     if _method == "compression":
@@ -414,7 +432,12 @@ class FixestMulti:
                     if not FIT._X_is_empty:
                         # inference
                         vcov_type = _get_vcov_type(vcov, fval)
-                        FIT.vcov(vcov=vcov_type, data=FIT._data)
+                        FIT.vcov(
+                            vcov=vcov_type,
+                            data=FIT._data
+                            if not isinstance(FIT, QuantregMulti)
+                            else FIT.all_quantregs[FIT.quantiles[0]]._data,
+                        )  #  a little hacky, but works
 
                         FIT.get_inference()
                         if _method == "feols" and not FIT._is_iv:
@@ -424,7 +447,11 @@ class FixestMulti:
                     # delete large attributes
                     FIT._clear_attributes()
 
-                    self.all_fitted_models[FIT._model_name] = FIT
+                    if isinstance(FIT, QuantregMulti):
+                        for q_model in FIT.all_quantregs.values():
+                            self.all_fitted_models[q_model._model_name] = q_model
+                    else:
+                        self.all_fitted_models[FIT._model_name] = FIT
 
     def to_list(self) -> list[Union[Feols, Fepois, Feiv]]:
         """

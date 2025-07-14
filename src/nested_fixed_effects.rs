@@ -78,12 +78,14 @@ fn count_fixef_fully_nested_impl(
 
 #[pyfunction]
 pub fn _count_fixef_fully_nested_all_rs(
-    py: Python<'_>,
-    all_fixef_array: &PyAny,
-    cluster_colnames: &PyAny,
+    all_fixef_array: &Bound<'_, PyAny>,
+    cluster_colnames: &Bound<'_, PyAny>,
     cluster_data: PyReadonlyArray2<usize>,
     fe_data: PyReadonlyArray2<usize>,
 ) -> PyResult<(Py<PyArray1<bool>>, usize)> {
+    // Get Python token from one of the bound parameters
+    let py = all_fixef_array.py();
+
     // Extract Python data into Rust types
     let all_fe: Vec<String> = all_fixef_array.extract()?;
     let cluster_names: Vec<String> = cluster_colnames.extract()?;
@@ -94,6 +96,6 @@ pub fn _count_fixef_fully_nested_all_rs(
     let (mask, count) = count_fixef_fully_nested_impl(&all_fe, &cluster_names, cdata, fdata);
 
     // Convert back to Python objects
-    let py_mask: Py<PyArray1<bool>> = mask.into_pyarray(py).to_owned();
+    let py_mask: Py<PyArray1<bool>> = mask.into_pyarray(py).to_owned().into();
     Ok((py_mask, count))
 }

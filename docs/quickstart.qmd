@@ -394,6 +394,17 @@ pois_fit = pf.fepois(fml="Y ~ X1 | group_id", data=pois_data, vcov={"CRV1": "gro
 pois_fit.summary()
 ```
 
+# Quantile Regression
+
+You can fit a quantile regression via the `quantreg` function:
+
+```{python}
+fit_qr = pf.quantreg("Y ~ X1 + X2", data = data, quantile = [0.1, 0.5, 0.9])
+pf.qplot(fit_qr)
+```
+
+For details, take a look at the dedicated [quantreg vignette](https://py-econometrics.github.io/pyfixest/quantile-regression.html).
+
 # Tests of Multiple Hypothesis / Wald Tests
 
 You can test multiple hypotheses simultaneously via the `wald_test` method.
