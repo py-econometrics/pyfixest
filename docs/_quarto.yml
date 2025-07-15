@@ -1,6 +1,10 @@
 project:
   type: website
   output-dir: _site
+  freeze: auto
+
+exclude:
+  - "compare-fixest-pyfixest.qmd"
 
 metadata-files:
   - _sidebar.yml
@@ -43,8 +47,6 @@ website:
           text: "On Small Sample Corrections"
         - file: quantile-regression.qmd
           text: "Quantile Regression"
-        - text: "Compare fixest & PyFixest"
-          file: compare-fixest-pyfixest.qmd
         - text: "Compare Stata & PyFixest"
           file: stata-2-pyfixest.qmd
         - text: "PyFixest on the GPU"
