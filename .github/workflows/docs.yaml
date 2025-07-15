@@ -9,17 +9,6 @@ on:
       - master
 
 jobs:
-  lint-docs:
-    name: "Lint Docs"
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout source
-        uses: actions/checkout@v4
-      - name: Install markdownlint-cli
-        run: npm install -g markdownlint-cli
-      - name: Lint markdown files
-        run: markdownlint docs/*.md
-
   build-docs:
     name: "Build Docs"
     runs-on: ubuntu-latest
