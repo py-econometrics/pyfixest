@@ -514,7 +514,12 @@ def etable(
                     + f"Format of coefficient cell: {coef_fmt_title}"
                 )
         return make_table(
-            res_all, type=type, notes=notes, rgroup_display=False, **kwargs
+            res_all,
+            type=type,
+            notes=notes,
+            rgroup_display=False,
+            file_name=file_name,
+            **kwargs,
         )
 
     return None
