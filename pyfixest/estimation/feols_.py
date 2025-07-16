@@ -68,37 +68,59 @@ class Feols:
     Non user-facing class to estimate a linear regression via OLS.
 
     Users should not directly instantiate this class,
-    but rather use the [feols()](/reference/estimation.feols.qmd) function. Note that
+    but rather use the [feols()](estimation.feols) function. Note that
     no demeaning is performed in this class: demeaning is performed in the
-    [FixestMulti](/reference/estimation.fixest_multi.qmd) class (to allow for caching
+    [FixestMulti](estimation.fixest_multi) class (to allow for caching
     of demeaned variables for multiple estimation).
 
     Parameters
     ----------
-    Y : np.ndarray
-        Dependent variable, a two-dimensional numpy array.
-    X : np.ndarray
-        Independent variables, a two-dimensional numpy array.
-    weights : np.ndarray
-        Weights, a one-dimensional numpy array.
-    collin_tol : float
-        Tolerance level for collinearity checks.
-    coefnames : list[str]
-        Names of the coefficients (of the design matrix X).
-    weights_name : Optional[str]
-        Name of the weights variable.
+    FixestFormula : FixestFormula
+        A formula object describing the model to be estimated.
+    data : pd.DataFrame
+        The dataframe containing the data.
+    ssc_dict : dict[str, Union[str, bool]]
+        A dictionary specifying the small sample correction to use.
+    drop_singletons : bool
+        Whether to drop singleton fixed effects.
+    drop_intercept : bool
+        Whether to drop the intercept.
+    weights : Optional[str]
+        The name of the weights column.
     weights_type : Optional[str]
-        Type of the weights variable. Either "aweights" for analytic weights or
-        "fweights" for frequency weights.
-    solver : str, optional.
+        The type of weights to use.
+    collin_tol : float
+        The tolerance for collinearity detection.
+    fixef_tol : float
+        The tolerance for the fixed effects algorithm.
+    fixef_maxiter : int
+        The maximum number of iterations for the fixed effects algorithm.
+    lookup_demeaned_data : dict[str, pd.DataFrame]
+        A dictionary of demeaned data.
+    solver : str, optional
         The solver to use for the regression. Can be "np.linalg.lstsq",
         "np.linalg.solve", "scipy.linalg.solve", "scipy.sparse.linalg.lsqr" and "jax".
         Defaults to "scipy.linalg.solve".
+    demeaner_backend : str, optional
+        The backend to use for demeaning. Can be "numba" or "jax".
+        Defaults to "numba".
+    store_data : bool, optional
+        Whether to store the data in the model object. Defaults to True.
+    copy_data : bool, optional
+        Whether to copy the data before estimation. Defaults to True.
+    lean : bool, optional
+        Whether to use a lean estimation, which stores less data in the model object.
+        Defaults to False.
     context : int or Mapping[str, Any]
         A dictionary containing additional context variables to be used by
         formulaic during the creation of the model matrix. This can include
         custom factorization functions, transformations, or any other
         variables that need to be available in the formula environment.
+    sample_split_var : Optional[str], optional
+        The name of the variable to use for sample splitting. Defaults to None.
+    sample_split_value : Optional[Union[str, int, float]], optional
+        The value of the sample splitting variable to use for the current model.
+        Defaults to None.
 
     Attributes
     ----------
@@ -535,11 +557,9 @@ class Feols:
 
     def get_fit(self) -> None:
         """
-        Fit an OLS model.
+        Fit the regression model.
 
-        Returns
-        -------
-        None
+        This method estimates the regression coefficients and computes the residuals.
         """
         if self._X_is_empty:
             self._u_hat = self._Y
@@ -589,7 +609,7 @@ class Feols:
         Returns
         -------
         Feols
-            An instance of class [Feols(/reference/Feols.qmd) with updated inference.
+            An instance of class Feols with updated inference.
         """
         # Assuming `data` is the DataFrame in question
 
@@ -1088,10 +1108,10 @@ class Feols:
 
         Parameters
         ----------
-        R : array-like, optional
+        R : np.ndarray, optional
             The matrix R of the linear hypothesis.
             If None, defaults to an identity matrix.
-        q : array-like, optional
+        q : np.ndarray, optional
             The vector q of the linear hypothesis.
             If None, defaults to a vector of zeros.
         distribution : str, optional

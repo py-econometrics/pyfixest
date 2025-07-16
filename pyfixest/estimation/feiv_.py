@@ -18,40 +18,58 @@ class Feiv(Feols):
     Non user-facing class to estimate an IV model using a 2SLS estimator.
 
     Inherits from the Feols class. Users should not directly instantiate this class,
-    but rather use the [feols()](/reference/estimation.feols.qmd) function. Note that
+    but rather use the [feols()](estimation.feols) function. Note that
     no demeaning is performed in this class: demeaning is performed in the
-    [FixestMulti](/reference/estimation.fixest_multi.qmd) class (to allow for caching
+    [FixestMulti](estimation.fixest_multi) class (to allow for caching
     of demeaned variables for multiple estimation).
 
     Parameters
     ----------
-    Y : np.ndarray
-        Dependent variable, a two-dimensional np.array.
-    X : np.ndarray
-        Independent variables, a two-dimensional np.array.
-    endgvar : np.ndarray
-        Endogenous Indenpendent variables, a two-dimensional np.array.
-    Z : np.ndarray
-        Instruments, a two-dimensional np.array.
-    weights : np.ndarray
-        Weights, a one-dimensional np.array.
-    coefnames_x : list
-        Names of the coefficients of X.
-    coefnames_z : list
-        Names of the coefficients of Z.
+    FixestFormula : FixestFormula
+        A formula object describing the model to be estimated.
+    data : pd.DataFrame
+        The dataframe containing the data.
+    ssc_dict : dict[str, Union[str, bool]]
+        A dictionary specifying the small sample correction to use.
+    drop_singletons : bool
+        Whether to drop singleton fixed effects.
+    drop_intercept : bool
+        Whether to drop the intercept.
+    weights : Optional[str]
+        The name of the weights column.
+    weights_type : Optional[str]
+        The type of weights to use.
     collin_tol : float
-        Tolerance for collinearity check.
+        The tolerance for collinearity detection.
+    fixef_tol : float
+        The tolerance for the fixed effects algorithm.
+    fixef_maxiter : int
+        The maximum number of iterations for the fixed effects algorithm.
+    lookup_demeaned_data : dict[str, pd.DataFrame]
+        A dictionary of demeaned data.
     solver: Literal["np.linalg.lstsq", "np.linalg.solve", "scipy.linalg.solve",
         "scipy.sparse.linalg.lsqr", "jax"],
         default is "scipy.linalg.solve". Solver to use for the estimation.
     demeaner_backend: DemeanerBackendOptions, optional
         The backend to use for demeaning. Can be either "numba", "jax", or "rust".
         Defaults to "numba".
-    weights_name : Optional[str]
-        Name of the weights variable.
-    weights_type : Optional[str]
-        Type of the weights variable. Either "aweights" for analytic weights
-        or "fweights" for frequency weights.
+    store_data : bool, optional
+        Whether to store the data in the model object. Defaults to True.
+    copy_data : bool, optional
+        Whether to copy the data before estimation. Defaults to True.
+    lean : bool, optional
+        Whether to use a lean estimation, which stores less data in the model object.
+        Defaults to False.
+    context : int or Mapping[str, Any]
+        A dictionary containing additional context variables to be used by
+        formulaic during the creation of the model matrix. This can include
+        custom factorization functions, transformations, or any other
+        variables that need to be available in the formula environment.
+    sample_split_var : Optional[str], optional
+        The name of the variable to use for sample splitting. Defaults to None.
+    sample_split_value : Optional[Union[str, int]], optional
+        The value of the sample splitting variable to use for the current model.
+        Defaults to None.
 
     Attributes
     ----------
