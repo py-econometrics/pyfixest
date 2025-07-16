@@ -72,7 +72,7 @@ pf.etable([fit1, fit2, fit3, fit4, fit5, fit6], drop=["X1"])
 ```
 
 ## Hide fixed effects or SE-type rows
-We can hide the rows showing the relevant fixed effects and those showing the S.E. type by setting `show_fe=False` and `show_setype=False` (for instance when the set of fixed effects or the estimation method for the std. errors is the same for all models and you want to describe this in the text or table notes rather than displaying it in the table).
+We can hide the rows showing the relevant fixed effects and those showing the S.E. type by setting `show_fe=False` and `show_se_type=False` (for instance when the set of fixed effects or the estimation method for the std. errors is the same for all models and you want to describe this in the text or table notes rather than displaying it in the table).
 
 ```{python}
 pf.etable([fit1, fit2, fit3, fit4, fit5, fit6], show_fe=False, show_se_type=False)
