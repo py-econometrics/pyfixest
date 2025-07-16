@@ -4,7 +4,7 @@ import re
 import warnings
 from collections.abc import Mapping
 from importlib import import_module
-from typing import Any, Callable, Literal, Optional, Union
+from typing import Any, Callable, Literal, Optional, Union, cast
 
 import numpy as np
 import pandas as pd
@@ -15,7 +15,7 @@ from scipy.stats import chi2, f, norm, t
 
 from pyfixest.errors import EmptyVcovError, VcovTypeNotSupportedError
 from pyfixest.estimation.backends import BACKENDS
-from pyfixest.estimation.decomposition import GelbachDecomposition, GelbachDecomposition2, _decompose_arg_check
+from pyfixest.estimation.decomposition import GelbachDecomposition, _decompose_arg_check
 from pyfixest.estimation.demean_ import demean_model
 from pyfixest.estimation.FormulaParser import FixestFormula
 from pyfixest.estimation.literals import (
@@ -1654,7 +1654,9 @@ class Feols:
 
     def decompose(
         self,
-        param: str,
+        param: Optional[str] = None,
+        x1_vars: Optional[list[str]] = None,
+        decomp_var: Optional[str] = None,
         type: decomposition_type = "gelbach",
         cluster: Optional[str] = None,
         combine_covariates: Optional[dict[str, list[str]]] = None,
@@ -1679,6 +1681,12 @@ class Feols:
         Parameters
         ----------
         param : str
+            The name of the focal covariate whose effect is to be decomposed into direct
+            and indirect components with respect to the rest of the right-hand side.
+        x1_vars : list[str]
+            A list of covariates that are included in both the baseline and the full
+            regressions.
+        decomp_var : str
             The name of the focal covariate whose effect is to be decomposed into direct
             and indirect components with respect to the rest of the right-hand side.
         type : str, optional
@@ -1723,17 +1731,27 @@ class Feols:
         fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
 
         # simple decomposition
-        res = fit.decompose(param = "x1")
+        res = fit.decompose(decomp_var = "x1")
+        pf.make_table(res)
+
+        # include additional covariates
+        res = fit.decompose(decomp_var = "x1", x1_vars = ["x21", "x22", "x23"])
         pf.make_table(res)
 
         # group covariates via "combine_covariates" argument
-        res = fit.decompose(param = "x1", combine_covariates={"g1": ["x21", "x22"], "g2": ["x23"]})
+        res = fit.decompose(decomp_var = "x1", combine_covariates={"g1": ["x21", "x22"], "g2": ["x23"]})
         pf.make_table(res)
 
         # group covariates via regex
-        res = fit.decompose(param="x1", combine_covariates={"g1": re.compile("x2[1-2]"), "g2": re.compile("x23")})
+        res = fit.decompose(decomp_var="x1", combine_covariates={"g1": re.compile("x2[1-2]"), "g2": re.compile("x23")})
         ```
         """
+        if param is not None:
+            warnings.warn(
+                "The 'param' argument is deprecated. Please use 'decomp_var' instead."
+            )
+            decomp_var = param
+
         _decompose_arg_check(
             type=type,
             has_weights=self._has_weights,
@@ -1769,154 +1787,8 @@ class Feols:
                     combine_covariates[key] = matched
 
         med = GelbachDecomposition(
-            param=param,
-            coefnames=xnames,
-            cluster_df=cluster_df,
-            nthreads=nthreads_int,
-            combine_covariates=combine_covariates,
-            agg_first=agg_first,
-            only_coef=only_coef,
-            atol=1e-12,
-            btol=1e-12,
-        )
-
-        med.fit(
-            X=X,
-            Y=Y,
-        )
-
-        if not only_coef:
-            med.bootstrap(rng=rng, B=reps)
-
-        med.summary(digits=digits)
-
-        self.GelbachDecompositionResults = med
-
-        return med.summary_table.T
-
-    def decompose_x1(
-        self,
-        x1_vars: list[str],
-        decomp_var: str,
-        type: decomposition_type = "gelbach",
-        cluster: Optional[str] = None,
-        combine_covariates: Optional[dict[str, list[str]]] = None,
-        reps: int = 1000,
-        seed: Optional[int] = None,
-        nthreads: Optional[int] = None,
-        agg_first: Optional[bool] = None,
-        only_coef: bool = False,
-        digits=4,
-    ) -> pd.DataFrame:
-        """
-        Implement the Gelbach (2016) decomposition method for mediation analysis.
-
-        Compares a short model `depvar on param` with the long model
-        specified in the original feols() call.
-
-        For details, take a look at
-        "When do covariates matter?" by Gelbach (2016, JoLe). You can find
-        an ungated version of the paper on SSRN under the following link:
-        https://papers.ssrn.com/sol3/papers.cfm?abstract_id=1425737 .
-
-        Parameters
-        ----------
-        x1_vars : list[str]
-            A list of covariates that are included in both the baseline and the full 
-            regressions.
-        decomp_var : str
-            The name of the focal covariate whose effect is to be decomposed into direct
-            and indirect components with respect to the rest of the right-hand side.
-        type : str, optional
-            The type of decomposition method to use. Defaults to "gelbach", which
-            currently is the only supported option.
-        cluster: Optional
-            The name of the cluster variable. If None, uses the cluster variable
-            from the model fit. Defaults to None.
-        combine_covariates: Optional.
-            A dictionary that specifies which covariates to combine into groups.
-            See the example for how to use this argument. Defaults to None.
-        reps : int, optional
-            The number of bootstrap iterations to run. Defaults to 1000.
-        seed : int, optional
-            An integer to set the random seed. Defaults to None.
-        nthreads : int, optional
-            The number of threads to use for the bootstrap. Defaults to None.
-            If None, uses all available threads minus one.
-        agg_first : bool, optional
-            If True, use the 'aggregate first' algorithm described in Gelbach (2016).
-            Recommended in cases with many (potentially high-dimensional) covariates.
-            False by default if the 'combine_covariates' argument is None, True otherwise.
-        only_coef : bool, optional
-            Indicates whether to compute inference for the decomposition. Defaults to False.
-            If True, skips the inference step and only returns the decomposition results.
-        digits : int, optional
-            The number of digits to round the results to. Defaults to 4.
-
-        Returns
-        -------
-        pd.DataFrame
-            A DataFrame with the decomposition results.
-
-        Examples
-        --------
-        ```{python}
-        import re
-        import pyfixest as pf
-        from pyfixest.utils.dgps import gelbach_data
-
-        data = gelbach_data(nobs = 1000)
-        fit = pf.feols("y ~ x11 + x12 + x21 + x22 + x23", data=data)
-
-        # simple decomposition
-        res = fit.decompose_x1(x1_vars = ['x12'], decomp_var = 'x11')
-        pf.make_table(res)
-
-        # group covariates via "combine_covariates" argument
-        res = fit.decompose_x1(x1_vars = ['x12'], decomp_var = 'x11', combine_covariates={"g1": ["x21", "x22"], "g2": ["x23"]})
-        pf.make_table(res)
-
-        # group covariates via regex
-        res = fit.decompose_x1(x1_vars = ['x12'], decomp_var = 'x11', combine_covariates={"g1": re.compile("x2[1-2]"), "g2": re.compile("x23")})
-        ```
-        """
-        _decompose_arg_check(
-            type=type,
-            has_weights=self._has_weights,
-            is_iv=self._is_iv,
-            method=self._method,
-        )
-
-        nthreads_int = -1 if nthreads is None else nthreads
-
-        rng = (
-            np.random.default_rng(seed) if seed is not None else np.random.default_rng()
-        )
-
-        if agg_first is None:
-            agg_first = combine_covariates is not None
-
-        cluster_df: Optional[pd.Series] = None
-        if cluster is not None:
-            cluster_df = self._data[cluster]
-        elif self._is_clustered:
-            cluster_df = self._data[self._clustervar[0]]
-        else:
-            cluster_df = None
-
-        Y, X, xnames = self._model_matrix_one_hot(output="sparse")
-
-        if combine_covariates is not None:
-            for key, value in combine_covariates.items():
-                if isinstance(value, re.Pattern):
-                    matched = [x for x in xnames if value.search(x)]
-                    if len(matched) == 0:
-                        raise ValueError(f"No covariates match the regex {value}.")
-                    combine_covariates[key] = matched
-
-        med = GelbachDecomposition2(
+            decomp_var=cast(str, decomp_var),
             x1_vars=x1_vars,
-            decomp_var=decomp_var,
             coefnames=xnames,
             cluster_df=cluster_df,
             nthreads=nthreads_int,
