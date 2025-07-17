@@ -77,7 +77,20 @@ class GelbachDecomposition:
         else:
             self.combine_covariates_dict = self.combine_covariates
 
+        self._check_covariates()
         self._check_combine_covariates()
+
+    def _check_covariates(self):
+        if self.decomp_var not in self.coefnames:
+            raise ValueError(f"{self.decomp_var} is not in the coefnames.")
+        if self.x1_vars is not None:
+            for var in self.x1_vars:
+                if var not in self.coefnames:
+                    raise ValueError(f"{var} is not in the coefnames.")
+        if self.x1_vars is not None and self.decomp_var in self.x1_vars:
+            raise ValueError(
+                "The decomposition variable cannot be included in the x1_vars argument."
+            )
 
     def _check_combine_covariates(self):
         # Check that each value in self.combine_covariates_dict is in self.mediator_names
