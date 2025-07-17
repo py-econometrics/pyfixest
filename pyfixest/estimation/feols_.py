@@ -1655,7 +1655,7 @@ class Feols:
     def decompose(
         self,
         param: Optional[str] = None,
-        x1_vars: Optional[list[str]] = None,
+        x1_vars: Optional[Union[list[str], str]] = None,
         decomp_var: Optional[str] = None,
         type: decomposition_type = "gelbach",
         cluster: Optional[str] = None,
@@ -1684,7 +1684,7 @@ class Feols:
             The name of the focal covariate whose effect is to be decomposed into direct
             and indirect components with respect to the rest of the right-hand side.
         x1_vars : list[str]
-            A list of covariates that are included in both the baseline and the full
+            A list of covariates or a string of covariates separated by "+" that are included in both the baseline and the full
             regressions.
         decomp_var : str
             The name of the focal covariate whose effect is to be decomposed into direct
@@ -1751,6 +1751,12 @@ class Feols:
                 "The 'param' argument is deprecated. Please use 'decomp_var' instead."
             )
             decomp_var = param
+
+        if x1_vars is not None:
+            if isinstance(x1_vars, str):
+                x1_vars = [x.strip() for x in x1_vars.split("+")]
+            else:
+                x1_vars = list(x1_vars)
 
         _decompose_arg_check(
             type=type,
