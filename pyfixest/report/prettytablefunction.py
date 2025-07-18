@@ -113,7 +113,12 @@ def run_decomposition(data, y, x1_vars, x2_dict, decomp_var_dict, ref_cat, decim
     x2_string = ' + '.join(x2_vars)
     
     # Create the full formula
-    formula = f"{y} ~ C({decomp_var_base}, Treatment(reference='{ref_cat}'))"
+    if isinstance(ref_cat, (int, float)):
+        print('NUMERIC')
+        formula = f"{y} ~ C({decomp_var_base}, Treatment(reference={ref_cat}))"
+    else:
+        print('STRING')
+        formula = f"{y} ~ C({decomp_var_base}, Treatment(reference='{ref_cat}'))"
     
     # Only add x1_string if it's not empty
     if x1_string:
@@ -129,8 +134,11 @@ def run_decomposition(data, y, x1_vars, x2_dict, decomp_var_dict, ref_cat, decim
     #model_table = pft.make_table(model)
     
     # Get the values our decomposition variable takes, and the other x1 vars
-    decomp_coefs = [coef for coef in model.coef().index.tolist() 
-                    if f"C({decomp_var_base}, Treatment(reference='{ref_cat}'))[T." in coef]
+    if isinstance(ref_cat, (int, float)):
+        decomp_coefs = [coef for coef in model.coef().index.tolist() if f"C({decomp_var_base}, Treatment(reference={ref_cat}))[T." in coef]
+        
+    else:
+        decomp_coefs = [coef for coef in model.coef().index.tolist() if f"C({decomp_var_base}, Treatment(reference='{ref_cat}'))[T." in coef]
     
     other_x1_vars = [var for var in x1_vars 
                      if (var.split('(')[1].split(')')[0] if var.startswith('C(') else var) != decomp_var_base]
