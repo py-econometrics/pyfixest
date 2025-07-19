@@ -1808,6 +1808,17 @@ class Feols:
         - `_sumFE` (np.array): An array with the sum of fixed effects for each
         observation (i = 1, ..., N).
 
+        Parameters
+        ----------
+        atol : Float, default 1e-6
+            Stopping tolerance for scipy.sparse.linalg.lsqr().
+            See https://docs.scipy.org/doc/
+                scipy/reference/generated/scipy.sparse.linalg.lsqr.html
+        btol : Float, default 1e-6
+            Another stopping tolerance for scipy.sparse.linalg.lsqr().
+            See https://docs.scipy.org/doc/
+                scipy/reference/generated/scipy.sparse.linalg.lsqr.html
+
         Returns
         -------
         dict[str, dict[str, float]]
