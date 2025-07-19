@@ -193,6 +193,8 @@ class Feols:
         F-statistic for the model, set in get_Ftest().
     _fixef_dict : dict
         dictionary containing fixed effects estimates.
+    _alpha : pd.DataFrame
+        A DataFrame with the estimated fixed effects.
     _sumFE : np.ndarray
         Sum of all fixed effects for each observation.
     _rmse : float
@@ -358,6 +360,7 @@ class Feols:
 
         # set in fixef()
         self._fixef_dict: dict[str, dict[str, float]] = {}
+        self._alpha = None
         self._sumFE = None
 
         # set in get_performance()
@@ -1801,13 +1804,14 @@ class Feols:
         Compute the coefficients of (swept out) fixed effects for a regression model.
 
         This method creates the following attributes:
-        - `alphaDF` (pd.DataFrame): A DataFrame with the estimated fixed effects.
-        - `sumFE` (np.array): An array with the sum of fixed effects for each
+        - `_alpha` (pd.DataFrame): A DataFrame with the estimated fixed effects.
+        - `_sumFE` (np.array): An array with the sum of fixed effects for each
         observation (i = 1, ..., N).
 
         Returns
         -------
-        None
+        dict[str, dict[str, float]]
+            A dictionary with the estimated fixed effects.
         """
         _has_fixef = self._has_fixef
         _is_iv = self._is_iv
