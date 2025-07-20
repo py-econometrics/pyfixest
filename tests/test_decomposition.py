@@ -309,3 +309,33 @@ def smoke_test_only_coef():
     data = pf.get_data()
     fit = pf.feols("Y~X1 + X2 | f1", data=data)
     fit.decompose(param="X1", only_coef=True)
+
+
+def test_x1_vars():
+    "Test Gelbach decomposition with x1_vars."
+    data = pd.read_csv("tests/data/gelbach.csv")
+
+    fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
+
+    fit.decompose(
+        param="x1",
+        x1_vars=["x21"],
+        seed=3,
+        only_coef=True,
+        combine_covariates={"ALL": ["x22", "x23"]},
+    )
+    # test that param ALL is .5024257
+    np.testing.assert_allclose(
+        fit.GelbachDecompositionResults.contribution_dict["ALL"], 0.5024257
+    )
+
+    fit.decompose(
+        param="x1",
+        x1_vars=["x21", "x22"],
+        combine_covariates={"ALL": ["x23"]},
+        seed=3,
+        only_coef=True,
+    )
+    np.testing.assert_allclose(
+        fit.GelbachDecompositionResults.contribution_dict["ALL"], 0.3149754
+    )

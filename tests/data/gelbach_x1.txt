@@ -25,13 +25,13 @@ all files already exist and are up to date.
 
 . clear all
 
-. 
+.
 . set seed 0
 
 . set obs 500
 Number of observations (_N) was 0, now 500.
 
-. 
+.
 . gen double x1 = invnorm(uniform())
 
 . gen double x21 = x1*1 + invnorm(uniform())
@@ -44,7 +44,7 @@ Number of observations (_N) was 0, now 500.
 
 . gen cluster = floor((_n - 1) / 50) + 1
 
-. 
+.
 . b1x2 y, x1all(x1 x21) x2all(x22 x23) x1only(x1)
 
                                                       Number of obs = 500
@@ -52,7 +52,7 @@ Number of observations (_N) was 0, now 500.
 
 Restricted regression:
 
-. b1x2: reg y x1 x21      
+. b1x2: reg y x1 x21
 
 ------------------------------------------------------------------------------
            y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
@@ -64,7 +64,7 @@ Restricted regression:
 
 Unrestricted regression:
 
-. b1x2: reg y x1 x21  x22 x23      
+. b1x2: reg y x1 x21  x22 x23
 ------------------------------------------------------------------------------
            y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
 -------------+----------------------------------------------------------------
@@ -105,7 +105,7 @@ Done with -b1x2-.
 
 Restricted regression:
 
-. b1x2: reg y x1 x21 x22      
+. b1x2: reg y x1 x21 x22
 
 ------------------------------------------------------------------------------
            y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
@@ -118,7 +118,7 @@ Restricted regression:
 
 Unrestricted regression:
 
-. b1x2: reg y x1 x21 x22  x23      
+. b1x2: reg y x1 x21 x22  x23
 ------------------------------------------------------------------------------
            y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
 -------------+----------------------------------------------------------------
@@ -159,7 +159,7 @@ Done with -b1x2-.
 
 Restricted regression:
 
-. b1x2: reg y x1 x21      
+. b1x2: reg y x1 x21
 
 ------------------------------------------------------------------------------
            y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
@@ -171,7 +171,7 @@ Restricted regression:
 
 Unrestricted regression:
 
-. b1x2: reg y x1 x21  x22 x23      
+. b1x2: reg y x1 x21  x22 x23
 ------------------------------------------------------------------------------
            y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
 -------------+----------------------------------------------------------------
