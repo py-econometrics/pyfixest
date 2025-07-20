@@ -1,10 +1,17 @@
 import functools
+import warnings
 from collections.abc import Mapping
 from importlib import import_module
 from typing import Any, Optional, Union
 
+import numpy as np
 import pandas as pd
 
+from pyfixest.errors import (
+    DepvarIsNotNumericError,
+    FeatureDeprecationError,
+    NanInClusterVarError,
+)
 from pyfixest.estimation.fegaussian_ import Fegaussian
 from pyfixest.estimation.feiv_ import Feiv
 from pyfixest.estimation.felogit_ import Felogit
@@ -12,7 +19,7 @@ from pyfixest.estimation.feols_ import Feols, _check_vcov_input, _deparse_vcov_i
 from pyfixest.estimation.feols_compressed_ import FeolsCompressed
 from pyfixest.estimation.fepois_ import Fepois
 from pyfixest.estimation.feprobit_ import Feprobit
-from pyfixest.estimation.FormulaParser import FixestFormulaParser
+from pyfixest.estimation.formula import FixestFormulaParser
 from pyfixest.estimation.literals import (
     DemeanerBackendOptions,
     QuantregMethodOptions,
@@ -23,7 +30,7 @@ from pyfixest.estimation.quantreg.quantreg_ import Quantreg
 from pyfixest.estimation.quantreg.QuantregMulti import QuantregMulti
 from pyfixest.estimation.vcov_utils import _get_vcov_type
 from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
-from pyfixest.utils.utils import capture_context
+from pyfixest.utils.utils import capture_context, get_ssc
 
 
 class FixestMulti:
@@ -44,7 +51,7 @@ class FixestMulti:
         split: Optional[str],
         fsplit: Optional[str],
         separation_check: Optional[list[str]] = None,
-        context: Union[int, Mapping[str, Any]] = 0,
+        context: Union[int, dict[str, Any]] = 0,
         quantreg_method: QuantregMethodOptions = "fn",
         quantreg_multi_method: QuantregMultiOptions = "cfm1",
     ) -> None:

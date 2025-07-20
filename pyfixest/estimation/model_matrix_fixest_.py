@@ -93,7 +93,7 @@ def model_matrix_fixest(
     mm
     ```
     """
-    FixestFormula.check_syntax()
+    #FixestFormula.check_syntax()
 
     fml_second_stage = FixestFormula.fml_second_stage
     fml_first_stage = FixestFormula.fml_first_stage
