@@ -1071,7 +1071,7 @@ def make_table(
             # Store the mapping of column numbers to column names
             col_dict = dict(zip(col_numbers, col_names))
             # Modify the last elements in each tuple in dfcols
-            dfcols = [(t[:-1] + (col_numbers[i],)) for i, t in enumerate(dfcols)]
+            dfcols = [(*t[:-1], col_numbers[i]) for i, t in enumerate(dfcols)]
             # And drop the first column as we don't want table spanners on top of the variables
             # WE DON'T NEED THIS WITH ROW INDEX dfcols = dfcols[1:]
         else:
