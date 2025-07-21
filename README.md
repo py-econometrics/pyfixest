@@ -303,6 +303,10 @@ Thanks goes to these wonderful people:
       <td align="center" valign="top" width="12.5%"><a href="https://github.com/WiktorTheScriptor"><img src="https://avatars.githubusercontent.com/u/162815872?v=4?s=100" width="100px;" alt="Wiktor "/><br /><sub><b>Wiktor </b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=WiktorTheScriptor" title="Code">💻</a></td>
       <td align="center" valign="top" width="12.5%"><a href="https://damandhaliwal.me"><img src="https://avatars.githubusercontent.com/u/48694192?v=4?s=100" width="100px;" alt="Daman Dhaliwal"/><br /><sub><b>Daman Dhaliwal</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=damandhaliwal" title="Code">💻</a></td>
       <td align="center" valign="top" width="12.5%"><a href="https://markkaj.github.io/"><img src="https://avatars.githubusercontent.com/u/24573803?v=4?s=100" width="100px;" alt="Jaakko Markkanen"/><br /><sub><b>Jaakko Markkanen</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/issues?q=author%3Amarkkaj" title="Bug reports">🐛</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="https://jsr-p.github.io/"><img src="https://avatars.githubusercontent.com/u/49307119?v=4?s=100" width="100px;" alt="Jonas Skjold Raaschou-Pedersen"/><br /><sub><b>Jonas Skjold Raaschou-Pedersen</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=jsr-p" title="Code">💻</a> <a href="https://github.com/py-econometrics/pyfixest/commits?author=jsr-p" title="Documentation">📖</a></td>
+    </tr>
+    <tr>
+      <td align="center" valign="top" width="12.5%"><a href="http://bobbyho.me"><img src="https://avatars.githubusercontent.com/u/10739091?v=4?s=100" width="100px;" alt="Bobby Ho"/><br /><sub><b>Bobby Ho</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=bobby1030" title="Documentation">📖</a></td>
     </tr>
   </tbody>
 </table>
