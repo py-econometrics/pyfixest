@@ -149,10 +149,10 @@ class Fepois(Feols):
         # check that self._Y is a pandas Series or DataFrame
         self._Y = _check_series_or_dataframe(self._Y)
 
-        # check that self._Y is a weakly positive integer
+        # check that self._Y is a weakly positive number
         if np.any(self._Y < 0):
             raise ValueError(
-                "The dependent variable must be a weakly positive integer."
+                "The dependent variable must be a weakly positive number."
             )
 
         # check for separation
