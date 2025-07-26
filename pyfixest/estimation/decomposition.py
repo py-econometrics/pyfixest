@@ -19,9 +19,14 @@ class GelbachDecomposition:
     https://gist.github.com/apoorvalal/e7dc9f3e52dcd9d51854b28b3e8a7ba4.
     """
 
-    param: str
+    # Either use the original single-parameter approach
+    # param: Optional[str] = None
+
+    # Or use the new multi-parameter approach
+    decomp_var: str
     coefnames: list[str]
     nthreads: int = -1
+    x1_vars: Optional[list[str]] = None
     cluster_df: Optional[pd.Series] = None
     combine_covariates: Optional[dict[str, list[str]]] = None
     agg_first: Optional[bool] = False
@@ -40,14 +45,17 @@ class GelbachDecomposition:
     Y_dict: dict[Any, Any] = field(init=False, default_factory=dict)
 
     def __post_init__(self):
-        param_idx = self.coefnames.index(self.param)
-        self.intercept_idx = self.coefnames.index("Intercept")
-        self.coefnames_no_intercept = self.coefnames[~self.intercept_idx]
+        if self.x1_vars is None:
+            x1_variables = [self.decomp_var]
+        else:
+            x1_variables = [self.decomp_var, *self.x1_vars]
+
+        x1_indices = [self.coefnames.index(var) for var in x1_variables]
         self.mask = np.ones(len(self.coefnames), dtype=bool)
-        self.mask[param_idx] = False
+        self.mask[x1_indices] = False
 
         self.mediator_names = [
-            name for name in self.coefnames if self.param not in name
+            name for name in self.coefnames if self.mask[self.coefnames.index(name)]
         ]
         self.intercept_in_mediator_idx = self.mediator_names.index("Intercept")
 
@@ -69,7 +77,20 @@ class GelbachDecomposition:
         else:
             self.combine_covariates_dict = self.combine_covariates
 
+        self._check_covariates()
         self._check_combine_covariates()
+
+    def _check_covariates(self):
+        if self.decomp_var not in self.coefnames:
+            raise ValueError(f"{self.decomp_var} is not in the coefnames.")
+        if self.x1_vars is not None:
+            for var in self.x1_vars:
+                if var not in self.coefnames:
+                    raise ValueError(f"{var} is not in the coefnames.")
+        if self.x1_vars is not None and self.decomp_var in self.x1_vars:
+            raise ValueError(
+                "The decomposition variable cannot be included in the x1_vars argument."
+            )
 
     def _check_combine_covariates(self):
         # Check that each value in self.combine_covariates_dict is in self.mediator_names
@@ -99,8 +120,8 @@ class GelbachDecomposition:
 
             self.X1 = self.X[:, ~self.mask]
             self.X1 = hstack([np.ones((self.N, 1)), self.X1])
-            self.names_X1 = ["Intercept", self.param]
-            self.param_in_X1_idx = self.names_X1.index(self.param)
+            self.names_X1 = ["Intercept", self.decomp_var]
+            self.decomp_var_in_X1_idx = self.names_X1.index(self.decomp_var)
 
             self.X2 = self.X[:, self.mask]
             self.Y = Y
@@ -229,11 +250,11 @@ class GelbachDecomposition:
                 )
 
         if not self.only_coef:
-            index = [self.param, ""] + [
+            index = [self.decomp_var, ""] + [
                 item for mediator in mediators for item in [f"{mediator}", ""]
             ]
         else:
-            index = [self.param] + [mediator for mediator in mediators]
+            index = [self.decomp_var] + [mediator for mediator in mediators]
 
         columns = ["direct_effect", "full_effect", "explained_effect"]
 
@@ -278,7 +299,7 @@ class GelbachDecomposition:
 
         # Compute direct effect
         direct_effect = lsqr(X1, Y, atol=self.atol, btol=self.btol)[0]
-        direct_effect_array = np.array([direct_effect[self.param_in_X1_idx]])
+        direct_effect_array = np.array([direct_effect[self.decomp_var_in_X1_idx]])
 
         # Compute beta_full and beta2
         beta_full = lsqr(X, Y, atol=self.atol, btol=self.btol)[0]
@@ -299,7 +320,7 @@ class GelbachDecomposition:
             # Compute delta
             delta = np.array(
                 [
-                    lsqr(X1, Hg[:, j])[0][self.param_in_X1_idx]
+                    lsqr(X1, Hg[:, j])[0][self.decomp_var_in_X1_idx]
                     for j in range(Hg.shape[1])
                 ]
             )
@@ -309,7 +330,7 @@ class GelbachDecomposition:
         else:
             gamma = np.array(
                 [
-                    lsqr(X1, X2[:, j].toarray().flatten())[0][self.param_in_X1_idx]
+                    lsqr(X1, X2[:, j].toarray().flatten())[0][self.decomp_var_in_X1_idx]
                     for j in range(X2.shape[1])
                 ]
             )
@@ -328,7 +349,9 @@ class GelbachDecomposition:
             direct_effect_array - contribution_dict["explained_effect"]
         ).flatten()
         contribution_dict["direct_effect"] = direct_effect_array
-        contribution_dict["full_effect"] = beta_full[self.param_in_X1_idx].flatten()
+        contribution_dict["full_effect"] = beta_full[
+            self.decomp_var_in_X1_idx
+        ].flatten()
 
         # Collect all created elements into a tuple
         results = (

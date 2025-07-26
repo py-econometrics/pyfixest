@@ -4,7 +4,7 @@ import re
 import warnings
 from collections.abc import Mapping
 from importlib import import_module
-from typing import Any, Callable, Literal, Optional, Union
+from typing import Any, Callable, Literal, Optional, Union, cast
 
 import numpy as np
 import pandas as pd
@@ -1657,7 +1657,9 @@ class Feols:
 
     def decompose(
         self,
-        param: str,
+        param: Optional[str] = None,
+        x1_vars: Optional[Union[list[str], str]] = None,
+        decomp_var: Optional[str] = None,
         type: decomposition_type = "gelbach",
         cluster: Optional[str] = None,
         combine_covariates: Optional[dict[str, list[str]]] = None,
@@ -1682,6 +1684,12 @@ class Feols:
         Parameters
         ----------
         param : str
+            The name of the focal covariate whose effect is to be decomposed into direct
+            and indirect components with respect to the rest of the right-hand side.
+        x1_vars : list[str]
+            A list of covariates or a string of covariates separated by "+" that are included in both the baseline and the full
+            regressions.
+        decomp_var : str
             The name of the focal covariate whose effect is to be decomposed into direct
             and indirect components with respect to the rest of the right-hand side.
         type : str, optional
@@ -1726,17 +1734,33 @@ class Feols:
         fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
 
         # simple decomposition
-        res = fit.decompose(param = "x1")
+        res = fit.decompose(decomp_var = "x1")
+        pf.make_table(res)
+
+        # include additional covariates
+        res = fit.decompose(decomp_var = "x1", x1_vars = ["x21", "x22", "x23"])
         pf.make_table(res)
 
         # group covariates via "combine_covariates" argument
-        res = fit.decompose(param = "x1", combine_covariates={"g1": ["x21", "x22"], "g2": ["x23"]})
+        res = fit.decompose(decomp_var = "x1", combine_covariates={"g1": ["x21", "x22"], "g2": ["x23"]})
         pf.make_table(res)
 
         # group covariates via regex
-        res = fit.decompose(param="x1", combine_covariates={"g1": re.compile("x2[1-2]"), "g2": re.compile("x23")})
+        res = fit.decompose(decomp_var="x1", combine_covariates={"g1": re.compile("x2[1-2]"), "g2": re.compile("x23")})
         ```
         """
+        if param is not None:
+            warnings.warn(
+                "The 'param' argument is deprecated. Please use 'decomp_var' instead."
+            )
+            decomp_var = param
+
+        if x1_vars is not None:
+            if isinstance(x1_vars, str):
+                x1_vars = [x.strip() for x in x1_vars.split("+")]
+            else:
+                x1_vars = list(x1_vars)
+
         _decompose_arg_check(
             type=type,
             has_weights=self._has_weights,
@@ -1772,7 +1796,8 @@ class Feols:
                     combine_covariates[key] = matched
 
         med = GelbachDecomposition(
-            param=param,
+            decomp_var=cast(str, decomp_var),
+            x1_vars=x1_vars,
             coefnames=xnames,
             cluster_df=cluster_df,
             nthreads=nthreads_int,
