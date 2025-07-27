@@ -1666,7 +1666,7 @@ class Feols:
         agg_first: Optional[bool] = None,
         only_coef: bool = False,
         digits=4,
-    ) -> pd.DataFrame:
+    ) -> GelbachDecomposition:
         """
         Implement the Gelbach (2016) decomposition method for mediation analysis.
 
@@ -1717,8 +1717,9 @@ class Feols:
 
         Returns
         -------
-        pd.DataFrame
-            A DataFrame with the decomposition results.
+        GelbachDecomposition
+            A GelbachDecomposition object with the decomposition results.
+            Use `summary()`, `tidy()`, and `etable()` to access the estimation results.
 
         Examples
         --------
@@ -1808,16 +1809,15 @@ class Feols:
         med.fit(
             X=X,
             Y=Y,
+            store=True,
         )
 
         if not only_coef:
             med.bootstrap(rng=rng, B=reps)
 
-        med.summary(digits=digits)
-
         self.GelbachDecompositionResults = med
 
-        return med.summary_table.T
+        return med
 
     def fixef(
         self, atol: float = 1e-06, btol: float = 1e-06

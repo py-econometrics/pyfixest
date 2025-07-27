@@ -50,6 +50,7 @@ class GelbachDecomposition:
         else:
             x1_variables = [self.decomp_var, *self.x1_vars]
 
+        # build index for all variables in X1: decomp_var, x1_vars
         x1_indices = [self.coefnames.index(var) for var in x1_variables]
         self.mask = np.ones(len(self.coefnames), dtype=bool)
         self.mask[x1_indices] = False
@@ -121,7 +122,11 @@ class GelbachDecomposition:
             self.X1 = self.X[:, ~self.mask]
             self.X1 = hstack([np.ones((self.N, 1)), self.X1])
             self.names_X1 = ["Intercept", self.decomp_var]
+            if self.x1_vars is not None:
+                self.names_X1 += self.x1_vars
+            self.names_X = list(self.coefnames)
             self.decomp_var_in_X1_idx = self.names_X1.index(self.decomp_var)
+            self.decomp_var_in_X_idx = self.names_X.index(self.decomp_var)
 
             self.X2 = self.X[:, self.mask]
             self.Y = Y
@@ -139,6 +144,8 @@ class GelbachDecomposition:
                 self.beta_full,
                 self.beta2,
                 self.contribution_dict,
+                self.contribution_dict_relative_explained,
+                self.contribution_dict_relative_direct,
             ) = results
 
             # Prepare cluster bootstrap if relevant
@@ -151,7 +158,11 @@ class GelbachDecomposition:
                     self.X_dict[g] = self.X[cluster_idx]
                     self.Y_dict[g] = self.Y[cluster_idx]
 
-            return self.contribution_dict
+            return {
+                "contribution_dict": self.contribution_dict,
+                "contribution_dict_relative_explained": self.contribution_dict_relative_explained,
+                "contribution_dict_relative_direct": self.contribution_dict_relative_direct,
+            }
 
         else:
             # need to compute X1, X2 in bootstrap sample
@@ -167,9 +178,20 @@ class GelbachDecomposition:
                 agg_first=self.agg_first,
             )
 
-            _, _, _, contribution_dict = results
+            (
+                _,
+                _,
+                _,
+                contribution_dict,
+                contribution_dict_relative_explained,
+                contribution_dict_relative_direct,
+            ) = results
 
-            return contribution_dict
+            return {
+                "contribution_dict": contribution_dict,
+                "contribution_dict_relative_explained": contribution_dict_relative_explained,
+                "contribution_dict_relative_direct": contribution_dict_relative_direct,
+            }
 
     def bootstrap(self, rng: np.random.Generator, B: int = 1_000, alpha: float = 0.05):
         "Bootstrap Confidence Intervals for Total, Mediated and Direct Effects."
@@ -184,85 +206,56 @@ class GelbachDecomposition:
             delayed(self._bootstrap)(rng=rng) for _ in tqdm(range(B))
         )
 
-        self._bootstrapped = {
-            key: np.concatenate([d[key] for d in _bootstrapped])
-            for key in _bootstrapped[0]
-        }
-
-        self.ci = {
-            key: np.percentile(
-                self._bootstrapped[key],
-                100 * np.array([alpha / 2, 1 - alpha / 2]),
-                axis=0,
-            )
-            for key in self._bootstrapped
-        }
-
-    def summary(self, digits: int = 4) -> pd.DataFrame:
-        """
-        Summary Table for Total, Mediated and Direct Effects.
-
-        Parameters
-        ----------
-        digits : int, optional
-            Number of digits to display in the summary table, by default 4.
-        """
-        mediators = list(self.combine_covariates_dict.keys())
-
-        # round all values in self.contribution_dict and self.ci to the specified number of digits
-
-        contribution_dict = self.contribution_dict.copy()
-
-        for key in contribution_dict:
-            contribution_dict[key] = np.round(contribution_dict[key], digits)
-
-        rows = []
-        rows.append(
-            [
-                f"{contribution_dict['direct_effect'].item():.{digits}f}",
-                f"{contribution_dict['full_effect'].item():.{digits}f}",
-                f"{contribution_dict['explained_effect'].item():.{digits}f}",
-            ]
+        # unpack
+        self._bootstrap_absolute_df = pd.DataFrame(
+            [d["contribution_dict"] for d in _bootstrapped]
+        )
+        self._bootstrap_relative_explained_df = pd.DataFrame(
+            [d["contribution_dict_relative_explained"] for d in _bootstrapped]
+        )
+        self._bootstrap_relative_direct_df = pd.DataFrame(
+            [d["contribution_dict_relative_direct"] for d in _bootstrapped]
         )
 
-        if not self.only_coef:
-            ci = self.ci.copy()
-            for key in contribution_dict:
-                ci[key] = np.round(ci[key], digits)
-
-            rows.append(
-                [
-                    f"[{ci['direct_effect'][0]:.{digits}f}, {ci['direct_effect'][1]:.{digits}f}]",
-                    f"[{ci['full_effect'][0]:.{digits}f}, {ci['full_effect'][1]:.{digits}f}]",
-                    f"[{ci['explained_effect'][0]:.{digits}f}, {ci['explained_effect'][1]:.{digits}f}]",
-                ]
-            )
-
-        for mediator in mediators:
-            rows.append(["", "", f"{contribution_dict[mediator].item():.{digits}f}"])
-            if not self.only_coef:
-                rows.append(
-                    [
-                        "",
-                        "",
-                        f"[{ci[mediator][0]:.{digits}f}, {ci[mediator][1]:.{digits}f}]",
-                    ]
-                )
-
-        if not self.only_coef:
-            index = [self.decomp_var, ""] + [
-                item for mediator in mediators for item in [f"{mediator}", ""]
-            ]
-        else:
-            index = [self.decomp_var] + [mediator for mediator in mediators]
-
-        columns = ["direct_effect", "full_effect", "explained_effect"]
-
-        self.summary_table = (
-            pd.DataFrame(rows, index=index, columns=columns).fillna("").T
+        # compute ci
+        self._absolute_ci = pd.DataFrame(
+            {
+                "ci_lower": np.percentile(
+                    self._bootstrap_absolute_df, 100 * (alpha / 2), axis=0
+                ),
+                "ci_upper": np.percentile(
+                    self._bootstrap_absolute_df, 100 * (1 - alpha / 2), axis=0
+                ),
+            },
+            index=self._bootstrap_absolute_df.columns,
         )
+        self._absolute_ci = self._absolute_ci.astype(float)
 
-        return self.summary_table
+        self._relative_explained_ci = pd.DataFrame(
+            {
+                "ci_lower": np.percentile(
+                    self._bootstrap_relative_explained_df, 100 * (alpha / 2), axis=0
+                ),
+                "ci_upper": np.percentile(
+                    self._bootstrap_relative_explained_df, 100 * (1 - alpha / 2), axis=0
+                ),
+            },
+            index=self._bootstrap_relative_explained_df.columns,
+        )
+        self._relative_explained_ci = self._relative_explained_ci.astype(float)
+
+        self._relative_direct_ci = pd.DataFrame(
+            {
+                "ci_lower": np.percentile(
+                    self._bootstrap_relative_direct_df, 100 * (alpha / 2), axis=0
+                ),
+                "ci_upper": np.percentile(
+                    self._bootstrap_relative_direct_df, 100 * (1 - alpha / 2), axis=0
+                ),
+            },
+            index=self._bootstrap_relative_direct_df.columns,
+        )
+        self._relative_direct_ci = self._relative_direct_ci.astype(float)
 
     def _bootstrap(self, rng: np.random.Generator):
         "Run a single bootstrap iteration."
@@ -293,6 +286,8 @@ class GelbachDecomposition:
         np.ndarray,
         np.ndarray,
         dict[str, np.ndarray],
+        dict[str, np.ndarray],
+        dict[str, np.ndarray],
     ]:
         "Run the Gelbach decomposition."
         N = X1.shape[0]
@@ -305,8 +300,12 @@ class GelbachDecomposition:
         beta_full = lsqr(X, Y, atol=self.atol, btol=self.btol)[0]
         beta2 = beta_full[self.mask]
 
-        # Initialize contribution_dict: a dictionary to store the contribution of each covariate
-        contribution_dict = {}
+        # Initialize contribution_dict: a dictionary to store the absolute and relative contributions of each covariate
+        (
+            contribution_dict,
+            contribution_dict_relative_explained,
+            contribution_dict_relative_direct,
+        ) = {}, {}, {}
 
         if agg_first:
             # Compute H and Hg
@@ -349,9 +348,24 @@ class GelbachDecomposition:
             direct_effect_array - contribution_dict["explained_effect"]
         ).flatten()
         contribution_dict["direct_effect"] = direct_effect_array
-        contribution_dict["full_effect"] = beta_full[
-            self.decomp_var_in_X1_idx
-        ].flatten()
+
+        # Get the correct index for decomp_var in the full design matrix X
+        contribution_dict["full_effect"] = beta_full[self.decomp_var_in_X_idx].flatten()
+
+        for name, value in contribution_dict.items():
+            if contribution_dict["explained_effect"] != 0:
+                contribution_dict_relative_explained[name] = (
+                    value / contribution_dict["explained_effect"]
+                )
+            else:
+                contribution_dict_relative_explained[name] = np.nan
+
+            if contribution_dict["direct_effect"] != 0:
+                contribution_dict_relative_direct[name] = (
+                    value / contribution_dict["direct_effect"]
+                )
+            else:
+                contribution_dict_relative_direct[name] = np.nan
 
         # Collect all created elements into a tuple
         results = (
@@ -359,9 +373,277 @@ class GelbachDecomposition:
             beta_full,
             beta2,
             contribution_dict,
+            contribution_dict_relative_explained,
+            contribution_dict_relative_direct,
         )
 
         return results
+
+    def tidy(self, stats="all") -> pd.DataFrame:
+        """
+        Tidy the Gelbach decomposition output into a DataFrame.
+
+        Args
+        ----
+        stats : str, optional
+            Which stats of summary to include. One of 'all', 'absolute', 'relative (vs explained)', 'relative (vs full)'
+            "all" includes all of the ladder statistics. "absolute" includes only the absolute differences of the short and
+            long regression as well as contributions of mediatios. "relative (vs explained)" normalizes all contributions
+            relative to the "explained" effect. "relative (vs full)" normalizes all contributions relative to the "full" effect.
+
+        Returns
+        -------
+        pd.DataFrame
+            DataFrame with the tidy Gelbach decomposition output.
+        """
+        contribution_df = pd.DataFrame(self.contribution_dict).T
+        contribution_relative_explained_df = pd.DataFrame(
+            self.contribution_dict_relative_explained
+        ).T
+        contribution_relative_direct_df = pd.DataFrame(
+            self.contribution_dict_relative_direct
+        ).T
+
+        contribution_df.columns = ["coefficients"]
+        contribution_relative_explained_df.columns = ["coefficients"]
+        contribution_relative_direct_df.columns = ["coefficients"]
+
+        if not self.only_coef:
+            contribution_df = pd.concat([contribution_df, self._absolute_ci], axis=1)
+            contribution_relative_explained_df = pd.concat(
+                [contribution_relative_explained_df, self._relative_explained_ci],
+                axis=1,
+            )
+            contribution_relative_direct_df = pd.concat(
+                [contribution_relative_direct_df, self._relative_direct_ci], axis=1
+            )
+
+        contribution_df["stats"] = np.repeat("absolute", len(contribution_df))
+        contribution_relative_explained_df["stats"] = np.repeat(
+            "relative (vs explained)", len(contribution_relative_explained_df)
+        )
+        contribution_relative_direct_df["stats"] = np.repeat(
+            "relative (vs full)", len(contribution_relative_direct_df)
+        )
+
+        if stats == "all":
+            return pd.concat(
+                [
+                    contribution_df,
+                    contribution_relative_direct_df,
+                    contribution_relative_explained_df,
+                ],
+                axis=0,
+            )
+        elif stats == "absolute":
+            return contribution_df
+        elif stats == "relative (vs explained)":
+            return contribution_relative_explained_df
+        elif stats == "relative (vs full)":
+            return contribution_relative_direct_df
+        else:
+            raise ValueError(
+                f"stats must be one of 'all', 'absolute', 'relative (vs explained)', 'relative (vs full)', got {stats}"
+            )
+
+    def summary(self, digits: int = 4, stats="all") -> dict:
+        """
+        Summary Table for Total, Mediated and Direct Effects.
+
+        Parameters
+        ----------
+        digits : int, optional
+            Number of digits to display in the summary table, by default 4.
+        stats : str, optional
+            Which stats of summary to include. One of 'all', 'absolute', 'relative (vs explained)', 'relative (vs full)'
+
+        Returns
+        -------
+        dict
+            DataFrame with estimated coefficients with the following columns:
+            "direct_effect", "full_effect", "explained_effect"
+            If `only_coef` is False, also includes "ci_lower" and "ci_upper" for the confidence intervals.
+            Returns a multi-index DataFrame with the first level being the 'stats' (absolute, relative vs explained, relative vs full)
+            and the second level being the covariates / groups of covariates.
+        """
+
+        import pdb; pdb.set_trace()
+        mediators = list(self.combine_covariates_dict.keys())
+        df = self.tidy(stats="all").round(digits)
+
+        # Filter types based on stats parameter
+        stats_to_include = df["stats"].unique() if stats == "all" else [stats]
+
+        results = {}
+
+        for stats_name in stats_to_include:
+            df_sub = df[df["stats"] == stats_name].copy()
+
+            # Create the summary table structure with ordered data
+            summary_data = {}
+
+            # First: Add the main effects row (direct_effect, full_effect, explained_effect coefficients)
+            main_effects_row = {}
+            main_effects_ci_row = {}
+
+            for effect in ["direct_effect", "full_effect", "explained_effect"]:
+                if effect in df_sub.index:
+                    coef = df_sub.loc[effect, "coefficients"]
+                    main_effects_row[effect] = f"{coef:.{digits}f}"
+
+                    if not self.only_coef and "ci_lower" in df_sub.columns:
+                        ci_lower = df_sub.loc[effect, "ci_lower"]
+                        ci_upper = df_sub.loc[effect, "ci_upper"]
+                        main_effects_ci_row[effect] = (
+                            f"[{ci_lower:.{digits}f}, {ci_upper:.{digits}f}]"
+                        )
+                    else:
+                        main_effects_ci_row[effect] = "-"
+                else:
+                    main_effects_row[effect] = "-"
+                    main_effects_ci_row[effect] = "-"
+
+            # Use the decomposition variable name for the main effects row
+            summary_data[self.decomp_var] = main_effects_row
+            if not self.only_coef:
+                summary_data[""] = main_effects_ci_row  # Empty name for CI row
+
+            # Then: Add each mediator (coefficient in explained_effect column only, empty for others)
+            for mediator in mediators:
+                if mediator in df_sub.index:
+                    coef = df_sub.loc[mediator, "coefficients"]
+
+                    summary_data[mediator] = {
+                        "direct_effect": "-",
+                        "full_effect": "-",
+                        "explained_effect": f"{coef:.{digits}f}",
+                    }
+
+                    if not self.only_coef and "ci_lower" in df_sub.columns:
+                        ci_lower = df_sub.loc[mediator, "ci_lower"]
+                        ci_upper = df_sub.loc[mediator, "ci_upper"]
+                        ci_str = f"[{ci_lower:.{digits}f}, {ci_upper:.{digits}f}]"
+
+                        summary_data[f"{mediator}_ci"] = {
+                            "direct_effect": "-",
+                            "full_effect": "-",
+                            "explained_effect": ci_str,
+                        }
+
+            # Convert to DataFrame
+            summary_df = pd.DataFrame(summary_data).T
+            summary_df.columns = ["direct_effect", "full_effect", "explained_effect"]
+
+            summary_df.index = pd.Index(
+                ["" if name.endswith("_ci") else name for name in summary_df.index]
+            )
+            results[stats_name] = summary_df
+
+        return (
+            pd.concat(results, axis=0)
+            if stats == "all"
+            else pd.concat(results[stats], axis=0)
+        )
+
+    def etable(
+        self,
+        stats: str = "all",
+        caption: Optional[str] = None,
+        model_heads: Optional[dict[str, str]] = None,
+        rgroup_sep: Optional[str] = None,
+        add_notes: Optional[str] = None,
+        **kwargs,
+    ) -> pd.DataFrame:
+        """
+        Create a GT (great tables) or tex table for the Gelbach decomposition output.
+
+        Args
+        ----
+        stats : str, optional
+            Which stats of summary to include. One of 'all', 'absolute', 'relative (vs explained)', 'relative (vs full)'
+        caption: str, optional
+            Caption for the table.
+        model_heads: dict[str, str], optional
+            Add custom headlines to models when output as df or latex.
+        rgroup_sep : Optional[str]
+            Whether group names are separated by lines. The default is "t".
+            When output type = 'gt', the options are 'tb', 't', 'b', or '', i.e.
+            you can specify whether to have a line above, below, both or none.
+            When output type = 'tex' no line will be added between the row groups
+            when rgroup_sep is '' and otherwise a line before the group name will be added.
+        add_notes : str, optional
+            Additional notes to add to the table.
+        **kwargs : dict, optional
+            Additional arguments to pass to the make_table function. You can add table notes, captions, etc.
+            See the make_table function for more details.
+
+        Returns
+        -------
+        A table in the specified format.
+
+        Examples
+        --------
+        ```{python}
+        import pyfixest as pf
+        data = pf.gelbach_data(nobs=500)
+        fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
+        gb = fit.decompose(decomp_var = "x1", x1_vars = ["x21"],reps = 10, nthreads = 1)
+        gb.etable()
+        ```
+
+        We can change the column headers:
+
+        ```{python}
+        gb.etable(model_heads = ["Full Difference", "Unexplained Difference", "Explained Difference"])
+        """
+        from pyfixest.report.make_table import make_table
+
+        res = self.summary(stats=stats)
+        if model_heads is not None:
+            res.columns = model_heads
+
+        notes = f"""
+        Decomposition variable: {self.decomp_var}.
+        """
+
+        if self.x1_vars is not None:
+            notes += f"""
+            Control Variables: {", ".join(self.x1_vars)}.
+            """
+        if add_notes is not None:
+            notes += f"""
+            {add_notes}
+            """
+
+        notes += f"""
+        Column 1 shows the estimate on {self.decomp_var} in the short regression.
+        Column 2 shows the estimate on {self.decomp_var} in the long regression, which can be labeled as the 'remaining' variation in {self.decomp_var} after accounting for the control variables ('unexplained').
+        Column 3 shows the difference in the coefficient on {self.decomp_var} between the short and long regression, which can be labeled as the 'explained' contribution of the covariates.
+        """
+        if stats == "all":
+            stats = ["absolute", "relative (vs explained)", "relative (vs full)"]
+        else:
+            stats = [stats]
+
+        if "relative (vs full)" in stats:
+            notes += f"""
+            'relative (vs full)' reports the absolute coefficients, normalized by the full effect - the
+            effect on {self.decomp_var} in the long regression.
+            """
+
+        if "relative (vs explained)" in stats:
+            notes += f"""'
+                relative (vs explained)' reports the absolute coefficients, normalized by the explained effect - the
+                difference between the coefficient on {self.decomp_var} in the short and long regression.
+                """
+
+        kwargs["notes"] = notes
+        if caption is not None:
+            kwargs["caption"] = caption
+
+        kwargs["rgroup_sep"] = "t" if rgroup_sep is None else rgroup_sep
+
+        return make_table(res, **kwargs)
 
 
 def _decompose_arg_check(

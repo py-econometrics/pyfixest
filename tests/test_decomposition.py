@@ -136,25 +136,28 @@ def test_against_stata(stata_results, combine_covariates, se, agg_first):
             cluster=cluster,
             agg_first=agg_first,
         )
-        results = fit.GelbachDecompositionResults
-        contribution_dict = results.contribution_dict
-        ci = results.ci
+
+        results = fit.GelbachDecompositionResults.tidy(stats="absolute")
+        coefficients = results.coefficients
+        ci_lower = results.ci_lower
+        ci_upper = results.ci_upper
+
         filtered_df = stata_results.query(f"model == '{model}' and se == '{se}'")
 
         for g in ["g1", "g2", "explained_effect"]:
-            coef_diff = filtered_df.xs(g).Coefficient - contribution_dict[g]
-            lower_diff = filtered_df.xs(g)["CI Lower"] - ci[g][0]
-            upper_diff = filtered_df.xs(g)["CI Upper"] - ci[g][1]
+            coef_diff = filtered_df.xs(g).Coefficient - coefficients.xs(g)
+            lower_diff = filtered_df.xs(g)["CI Lower"] - ci_lower.xs(g)
+            upper_diff = filtered_df.xs(g)["CI Upper"] - ci_upper.xs(g)
 
             assert np.all(np.abs(coef_diff) < 1e-6), (
-                f"Failed for {g} with values from Stata of {filtered_df.xs(g).Coefficient} and Python of {contribution_dict[g]}"
+                f"Failed for {g} with values from Stata of {filtered_df.xs(g).Coefficient} and Python of {coefficients.xs(g)}"
             )
             if False:
                 assert np.all(np.abs(lower_diff) < 1e-4), (
-                    f"Failed for {g} with values {filtered_df.xs(g)['CI Lower']} and {ci[g][0]}"
+                    f"Failed for {g} with values {filtered_df.xs(g)['CI Lower']} and {ci_lower.xs(g)}"
                 )
                 assert np.all(np.abs(upper_diff) < 1e-4), (
-                    f"Failed for {g} with values {filtered_df.xs(g)['CI Upper']} and {ci[g][1]}"
+                    f"Failed for {g} with values {filtered_df.xs(g)['CI Upper']} and {ci_upper.xs(g)}"
                 )
 
     decompose_and_compare(
