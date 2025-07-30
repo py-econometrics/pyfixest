@@ -340,7 +340,6 @@ class GelbachDecomposition:
                 variable_idx = [self.mediator_names.index(cov) for cov in covariates]
                 contribution_dict[name] = np.array([np.sum(delta[variable_idx])])
 
-        # Compute explained and unexplained effects
         contribution_dict["explained_effect"] = np.sum(
             list(contribution_dict.values()), keepdims=True
         ).flatten()
@@ -349,7 +348,6 @@ class GelbachDecomposition:
         ).flatten()
         contribution_dict["direct_effect"] = direct_effect_array
 
-        # Get the correct index for decomp_var in the full design matrix X
         contribution_dict["full_effect"] = beta_full[self.decomp_var_in_X_idx].flatten()
 
         for name, value in contribution_dict.items():
@@ -367,7 +365,6 @@ class GelbachDecomposition:
             else:
                 contribution_dict_relative_direct[name] = np.nan
 
-        # Collect all created elements into a tuple
         results = (
             direct_effect_array,
             beta_full,
@@ -418,12 +415,12 @@ class GelbachDecomposition:
                 [contribution_relative_direct_df, self._relative_direct_ci], axis=1
             )
 
-        contribution_df["stats"] = np.repeat("absolute", len(contribution_df))
+        contribution_df["stats"] = np.repeat("Levels (units)", len(contribution_df))
         contribution_relative_explained_df["stats"] = np.repeat(
-            "relative (vs explained)", len(contribution_relative_explained_df)
+            "Share of Explained Effect", len(contribution_relative_explained_df)
         )
         contribution_relative_direct_df["stats"] = np.repeat(
-            "relative (vs full)", len(contribution_relative_direct_df)
+            "Share of Full Effect", len(contribution_relative_direct_df)
         )
 
         if stats == "all":
@@ -435,15 +432,15 @@ class GelbachDecomposition:
                 ],
                 axis=0,
             )
-        elif stats == "absolute":
+        elif stats == "Levels (units)":
             return contribution_df
-        elif stats == "relative (vs explained)":
+        elif stats == "Share of Explained Effect":
             return contribution_relative_explained_df
-        elif stats == "relative (vs full)":
+        elif stats == "Share of Full Effect":
             return contribution_relative_direct_df
         else:
             raise ValueError(
-                f"stats must be one of 'all', 'absolute', 'relative (vs explained)', 'relative (vs full)', got {stats}"
+                f"stats must be one of 'all', 'Levels (units)', 'Share of Explained Effect', 'Share of Full Effect', got {stats}"
             )
 
     def summary(self, digits: int = 4, stats="all") -> dict:
@@ -466,12 +463,9 @@ class GelbachDecomposition:
             Returns a multi-index DataFrame with the first level being the 'stats' (absolute, relative vs explained, relative vs full)
             and the second level being the covariates / groups of covariates.
         """
-
-        import pdb; pdb.set_trace()
         mediators = list(self.combine_covariates_dict.keys())
         df = self.tidy(stats="all").round(digits)
 
-        # Filter types based on stats parameter
         stats_to_include = df["stats"].unique() if stats == "all" else [stats]
 
         results = {}
@@ -479,10 +473,8 @@ class GelbachDecomposition:
         for stats_name in stats_to_include:
             df_sub = df[df["stats"] == stats_name].copy()
 
-            # Create the summary table structure with ordered data
             summary_data = {}
 
-            # First: Add the main effects row (direct_effect, full_effect, explained_effect coefficients)
             main_effects_row = {}
             main_effects_ci_row = {}
 
@@ -503,12 +495,11 @@ class GelbachDecomposition:
                     main_effects_row[effect] = "-"
                     main_effects_ci_row[effect] = "-"
 
-            # Use the decomposition variable name for the main effects row
             summary_data[self.decomp_var] = main_effects_row
-            if not self.only_coef:
-                summary_data[""] = main_effects_ci_row  # Empty name for CI row
 
-            # Then: Add each mediator (coefficient in explained_effect column only, empty for others)
+            if not self.only_coef:
+                summary_data[f"{self.decomp_var}_ci"] = main_effects_ci_row  # Empty name for CI row
+
             for mediator in mediators:
                 if mediator in df_sub.index:
                     coef = df_sub.loc[mediator, "coefficients"]
@@ -529,6 +520,20 @@ class GelbachDecomposition:
                             "full_effect": "-",
                             "explained_effect": ci_str,
                         }
+
+
+            # replace
+            if stats_name == "Share of Full Effect" and not self.only_coef:
+                # don't print CIs as they are [1,1]
+                summary_data[f"{self.decomp_var}_ci"]["direct_effect"] = "-"
+            elif stats_name == "Share of Explained Effect":
+
+                summary_data[self.decomp_var]["direct_effect"] = "-"
+                summary_data[self.decomp_var]["full_effect"] = "-"
+
+                # delete CIs fully
+                if not self.only_coef:
+                    summary_data.pop(f"{self.decomp_var}_ci")
 
             # Convert to DataFrame
             summary_df = pd.DataFrame(summary_data).T
@@ -600,10 +605,16 @@ class GelbachDecomposition:
 
         res = self.summary(stats=stats)
         if model_heads is not None:
-            res.columns = model_heads
+            res.columns = [model_heads.get(col, col) for col in res.columns]
+        else:
+            res.columns = [
+                f"Raw Difference (Direct Effect): Coefficient on {self.decomp_var} in short regression",
+                f"Adjusted Difference (Full Effect): Coefficient on {self.decomp_var} in long regression",
+                f"Explained Difference (Explained Effect): Difference in coefficients of {self.decomp_var} in short and long regression",
+            ]
 
         notes = f"""
-        Decomposition variable: {self.decomp_var}.
+            Decomposition variable: {self.decomp_var}.
         """
 
         if self.x1_vars is not None:
@@ -615,33 +626,24 @@ class GelbachDecomposition:
             {add_notes}
             """
 
-        notes += f"""
-        Column 1 shows the estimate on {self.decomp_var} in the short regression.
-        Column 2 shows the estimate on {self.decomp_var} in the long regression, which can be labeled as the 'remaining' variation in {self.decomp_var} after accounting for the control variables ('unexplained').
-        Column 3 shows the difference in the coefficient on {self.decomp_var} between the short and long regression, which can be labeled as the 'explained' contribution of the covariates.
-        """
+        if not self.only_coef:
+            notes += f"""
+                CIs are computed using B = {self.B} bootstrap replications
+            """
+            if self.cluster_df is None:
+                notes += " using iid sampling."
+            else:
+                notes += f" using clustered sampling by {self.cluster_var.columns}."
+
         if stats == "all":
             stats = ["absolute", "relative (vs explained)", "relative (vs full)"]
         else:
             stats = [stats]
 
-        if "relative (vs full)" in stats:
-            notes += f"""
-            'relative (vs full)' reports the absolute coefficients, normalized by the full effect - the
-            effect on {self.decomp_var} in the long regression.
-            """
-
-        if "relative (vs explained)" in stats:
-            notes += f"""'
-                relative (vs explained)' reports the absolute coefficients, normalized by the explained effect - the
-                difference between the coefficient on {self.decomp_var} in the short and long regression.
-                """
-
-        kwargs["notes"] = notes
-        if caption is not None:
-            kwargs["caption"] = caption
 
         kwargs["rgroup_sep"] = "t" if rgroup_sep is None else rgroup_sep
+        kwargs["caption"] = caption
+        kwargs["notes"] = notes
 
         return make_table(res, **kwargs)
 
