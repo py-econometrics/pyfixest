@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -443,25 +443,24 @@ class GelbachDecomposition:
                 f"stats must be one of 'all', 'Levels (units)', 'Share of Explained Effect', 'Share of Full Effect', got {stats}"
             )
 
-    def summary(self, digits: int = 4, stats="all") -> dict:
+    def _prepare_etable_df(self, digits: int = 4, stats="all") -> pd.DataFrame:
         """
-        Summary Table for Total, Mediated and Direct Effects.
+        Prepare a DataFrame formatted for etable output.
 
         Parameters
         ----------
         digits : int, optional
             Number of digits to display in the summary table, by default 4.
         stats : str, optional
-            Which stats of summary to include. One of 'all', 'absolute', 'relative (vs explained)', 'relative (vs full)'
+            Which stats to include. One of 'all', 'Levels (units)', 'Share of Explained Effect', 'Share of Full Effect'
 
         Returns
         -------
-        dict
-            DataFrame with estimated coefficients with the following columns:
+        pd.DataFrame
+            Multi-index DataFrame with estimated coefficients with the following columns:
             "direct_effect", "full_effect", "explained_effect"
             If `only_coef` is False, also includes "ci_lower" and "ci_upper" for the confidence intervals.
-            Returns a multi-index DataFrame with the first level being the 'stats' (absolute, relative vs explained, relative vs full)
-            and the second level being the covariates / groups of covariates.
+            First level of index is the 'stats' type, second level is the covariates/groups.
         """
         mediators = list(self.combine_covariates_dict.keys())
         df = self.tidy(stats="all").round(digits)
@@ -544,11 +543,33 @@ class GelbachDecomposition:
             )
             results[stats_name] = summary_df
 
-        return (
-            pd.concat(results, axis=0)
-            if stats == "all"
-            else pd.concat(results[stats], axis=0)
-        )
+        if stats == "all":
+            return pd.concat(results, axis=0)
+        else:
+            return results[stats]
+
+    def summary(self, digits: int = 3, stats: str = "all") -> None:
+        """
+        Print summary of Gelbach decomposition results.
+
+        Parameters
+        ----------
+        digits : int, optional
+            Number of digits to display, by default 3.
+        stats : str, optional
+            Which stats to include. One of 'all', 'Levels (units)', 'Share of Explained Effect', 'Share of Full Effect'
+        """
+        print("###")
+        print("")
+        print("Gelbach Decomposition Results")
+        print(f"Decomposition variable: {self.decomp_var}")
+        if self.x1_vars is not None:
+            print(f"Control variables: {', '.join(self.x1_vars)}")
+        print("")
+
+        df = self._prepare_etable_df(digits=digits, stats=stats)
+        print(df.to_markdown(floatfmt=f".{digits}f"))
+        print("---")
 
     def etable(
         self,
@@ -558,7 +579,7 @@ class GelbachDecomposition:
         rgroup_sep: Optional[str] = None,
         add_notes: Optional[str] = None,
         **kwargs,
-    ) -> pd.DataFrame:
+    ) -> Union[pd.DataFrame, str, None]:
         """
         Create a GT (great tables) or tex table for the Gelbach decomposition output.
 
@@ -619,8 +640,16 @@ class GelbachDecomposition:
             if stat not in ["Levels (units)", "Share of Full Effect", "Share of Explained Effect"]:
                 raise ValueError(f"stats must be one or more of 'Levels (units)', 'Share of Full Effect', 'Share of Explained Effect'. Got {stat}.")
 
-        res = self.summary(stats="all")
-        res_sub = res.loc[:, res.columns.get_level_values(0).isin(stats_list)]
+        res = self._prepare_etable_df(stats="all")
+
+        # Filter by stats types (which are in the index, not columns)
+        if isinstance(res.index, pd.MultiIndex):
+            # Filter rows by stats type (first level of index)
+            mask = res.index.get_level_values(0).isin(stats_list)
+            res_sub = res.loc[mask, :]
+        else:
+            # If not MultiIndex, return the full result
+            res_sub = res
 
         if self.x1_vars is not None:
             default_model_notes = [
@@ -636,9 +665,10 @@ class GelbachDecomposition:
                 f"Col 3: Explained Difference (Explained Effect): Difference in coefficients of {self.decomp_var} in short and long regression.",
             ]
 
+        panel = 0
         if "Levels (units)" in stats_list:
-            default_model_notes.append("Panel 1: Levels (units).")
-            panel = 1
+            panel += 1
+            default_model_notes.append(f"Panel {panel}: Levels (units).")
         if "Share of Full Effect" in stats_list:
             panel += 1
             default_model_notes.append(f"Panel {panel}: Share of Full Effect: Levels normalized by coefficient of the short regression.")
@@ -652,7 +682,7 @@ class GelbachDecomposition:
             "Explained Difference",
         ]
 
-        res.columns = model_heads if model_heads is not None else default_model_heads
+        res_sub.columns = model_heads if model_heads is not None else default_model_heads
 
 
         notes = f"""
@@ -678,7 +708,7 @@ class GelbachDecomposition:
             if self.cluster_df is None:
                 notes += " using iid sampling."
             else:
-                notes += f" using clustered sampling by {self.cluster_var.columns}."
+                notes += f" using clustered sampling by {self.cluster_df.name}."
 
         kwargs["rgroup_sep"] = "t" if rgroup_sep is None else rgroup_sep
         kwargs["caption"] = caption
