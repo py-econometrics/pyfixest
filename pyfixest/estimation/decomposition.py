@@ -15,14 +15,90 @@ class GelbachDecomposition:
     """
     Linear Mediation Model.
 
+    Implements the Gelbach (2016) decomposition method to decompose the effect of a
+    treatment variable into direct and indirect (mediated) components. The method
+    compares coefficients from a "short" regression (outcome on treatment) with a
+    "long" regression (outcome on treatment plus mediators).
+
     Initial implementation by Apoorva Lal at
     https://gist.github.com/apoorvalal/e7dc9f3e52dcd9d51854b28b3e8a7ba4.
+
+
+    This class performs the statistical decomposition and provides methods for
+    summarizing and displaying results via `tidy()`, `summary()`, and `etable()`.
+
+    Parameters
+    ----------
+    decomp_var : str
+        The focal variable whose effect is to be decomposed.
+    coefnames : list[str]
+        Names of all coefficients in the regression model.
+    nthreads : int, optional
+        Number of threads for bootstrap inference, by default -1 (use all available).
+    x1_vars : list[str], optional
+        Additional variables to include in both short and long regressions, by default None.
+    cluster_df : pd.Series, optional
+        Cluster variable for bootstrap inference, by default None.
+    combine_covariates : dict[str, list[str]], optional
+        Dictionary grouping mediator variables for analysis, by default None.
+    agg_first : bool, optional
+        Whether to use aggregate-first algorithm for high-dimensional mediators, by default False.
+    only_coef : bool, optional
+        If True, skip bootstrap inference and only compute point estimates, by default True.
+    atol : float, optional
+        Absolute tolerance for linear solver, by default None.
+    btol : float, optional
+        Relative tolerance for linear solver, by default None.
+
+    Attributes
+    ----------
+    contribution_dict : dict
+        Point estimates of direct, indirect, and total effects.
+    contribution_dict_relative_explained : dict
+        Effects relative to explained effect.
+    contribution_dict_relative_direct : dict
+        Effects relative to direct effect.
+
+    References
+    ----------
+    Gelbach, J. B. (2016). When do covariates matter? And which ones, and how much?
+    Journal of Labor Economics, 34(2), 509-543.
+
+    Examples
+    --------
+    We can fit a simple model and decompose it as follows:
+    ```{python}
+    import pyfixest as pf
+    from pyfixest.utils.dgps import gelbach_data
+
+    # Fit regression model
+    data = gelbach_data(nobs=500)
+    fit = pf.feols("Y ~ x1 + x21 + x22 + x23", data=data)
+
+    # Perform decomposition
+    decomp = fit.decompose(decomp_var="x1")
+
+    # View results
+    decomp.summary()
+    decomp.tidy()
+    decomp.etable()
+    ```
+    We can also add additional covariates to the decomposition:
+    ```{python}
+    decomp = fit.decompose(decomp_var="x1", x1_vars=["x21])
+    ```
+
+    We can aggregate individual covariates via the `combine_covariates` argument:
+    ```{python}
+    decomp = fit.decompose(decomp_var="x1", combine_covariates={"x2": ["x22", "x23"]})
+    ```
+    We can ask not to compute inference by setting `only_coef=True`:
+    ```{python}
+    decomp = fit.decompose(decomp_var="x1", only_coef=True)
+    ```
     """
 
-    # Either use the original single-parameter approach
-    # param: Optional[str] = None
-
-    # Or use the new multi-parameter approach
+    # Core parameters
     decomp_var: str
     coefnames: list[str]
     nthreads: int = -1
@@ -83,14 +159,14 @@ class GelbachDecomposition:
 
     def _check_covariates(self):
         if self.decomp_var not in self.coefnames:
-            raise ValueError(f"{self.decomp_var} is not in the coefnames.")
+            raise ValueError(f"The decomposition variable '{self.decomp_var}' is not in the coefficient names.")
         if self.x1_vars is not None:
             for var in self.x1_vars:
                 if var not in self.coefnames:
-                    raise ValueError(f"{var} is not in the coefnames.")
+                    raise ValueError(f"The variable '{var}' is not in the coefficient names.")
         if self.x1_vars is not None and self.decomp_var in self.x1_vars:
             raise ValueError(
-                "The decomposition variable cannot be included in the x1_vars argument."
+                f"The decomposition variable '{self.decomp_var}' cannot be included in the x1_vars argument."
             )
 
     def _check_combine_covariates(self):
@@ -100,7 +176,7 @@ class GelbachDecomposition:
                 raise TypeError("Values in combine_covariates_dict must be lists.")
             for v in values:
                 if v not in self.mediator_names:
-                    raise ValueError(f"{v} is not in the mediator names.")
+                    raise ValueError(f"The variable '{v}' is not in the mediator names.")
 
         # Check for overlap in values between different keys
         all_values = {
@@ -111,7 +187,7 @@ class GelbachDecomposition:
             for key2, values2 in all_values.items():
                 if key1 != key2 and values1 & values2:
                     overlap = values1 & values2
-                    raise ValueError(f"{overlap} is in both {key1} and {key2}.")
+                    raise ValueError(f"Variables {overlap} are in both '{key1}' and '{key2}' groups.")
 
     def fit(self, X: spmatrix, Y: np.ndarray, store: bool = True):
         "Fit Linear Mediation Model."
@@ -376,22 +452,26 @@ class GelbachDecomposition:
 
         return results
 
-    def tidy(self, stats="all") -> pd.DataFrame:
+    def tidy(self, alpha: float = 0.05, stats: str = "all") -> pd.DataFrame:
         """
         Tidy the Gelbach decomposition output into a DataFrame.
 
-        Args
-        ----
+        Return a tidy pd.DataFrame with the decomposition results, including
+        point estimates and confidence intervals.
+
+        Parameters
+        ----------
+        alpha : float, optional
+            The significance level for the confidence intervals, by default 0.05.
+            Computes a 95% confidence interval when alpha = 0.05.
         stats : str, optional
-            Which stats of summary to include. One of 'all', 'absolute', 'relative (vs explained)', 'relative (vs full)'
-            "all" includes all of the ladder statistics. "absolute" includes only the absolute differences of the short and
-            long regression as well as contributions of mediatios. "relative (vs explained)" normalizes all contributions
-            relative to the "explained" effect. "relative (vs full)" normalizes all contributions relative to the "full" effect.
+            Which stats to include. One of 'all', 'Levels (units)',
+            'Share of Explained Effect', 'Share of Full Effect', by default "all".
 
         Returns
         -------
         pd.DataFrame
-            DataFrame with the tidy Gelbach decomposition output.
+            A tidy DataFrame with the decomposition results.
         """
         contribution_df = pd.DataFrame(self.contribution_dict).T
         contribution_relative_explained_df = pd.DataFrame(
@@ -440,17 +520,17 @@ class GelbachDecomposition:
             return contribution_relative_direct_df
         else:
             raise ValueError(
-                f"stats must be one of 'all', 'Levels (units)', 'Share of Explained Effect', 'Share of Full Effect', got {stats}"
+                f"The 'stats' parameter must be one of 'all', 'Levels (units)', 'Share of Explained Effect', 'Share of Full Effect'. Got '{stats}'."
             )
 
-    def _prepare_etable_df(self, digits: int = 4, stats="all") -> pd.DataFrame:
+    def _prepare_etable_df(self, digits: int = 3, stats: str = "all") -> pd.DataFrame:
         """
         Prepare a DataFrame formatted for etable output.
 
         Parameters
         ----------
         digits : int, optional
-            Number of digits to display in the summary table, by default 4.
+            Number of digits to display in the summary table, by default 3.
         stats : str, optional
             Which stats to include. One of 'all', 'Levels (units)', 'Share of Explained Effect', 'Share of Full Effect'
 
@@ -548,64 +628,43 @@ class GelbachDecomposition:
         else:
             return results[stats]
 
-    def summary(self, digits: int = 3, stats: str = "all") -> None:
-        """
-        Print summary of Gelbach decomposition results.
-
-        Parameters
-        ----------
-        digits : int, optional
-            Number of digits to display, by default 3.
-        stats : str, optional
-            Which stats to include. One of 'all', 'Levels (units)', 'Share of Explained Effect', 'Share of Full Effect'
-        """
-        print("###")
-        print("")
-        print("Gelbach Decomposition Results")
-        print(f"Decomposition variable: {self.decomp_var}")
-        if self.x1_vars is not None:
-            print(f"Control variables: {', '.join(self.x1_vars)}")
-        print("")
-
-        df = self._prepare_etable_df(digits=digits, stats=stats)
-        print(df.to_markdown(floatfmt=f".{digits}f"))
-        print("---")
-
     def etable(
         self,
         stats: str = "all",
         caption: Optional[str] = None,
-        model_heads: Optional[list[str]] = None,
+        column_heads: Optional[list[str]] = None,
+        panel_heads: Optional[list[str]] = None,
         rgroup_sep: Optional[str] = None,
         add_notes: Optional[str] = None,
         **kwargs,
     ) -> Union[pd.DataFrame, str, None]:
         """
-        Create a GT (great tables) or tex table for the Gelbach decomposition output.
+        Generate a table summarizing the Gelbach decomposition results.
 
-        Args
-        ----
-        stats : Union[str, list[str]], optional
-            Which stats of summary to include. One or more of 'Levels (units)', 'Share of Full Effect', 'Share of Explained Effect'.
-        caption: str, optional
-            Caption for the table.
-        model_heads: list[str], optional
-            A list of length 3 with the column names. If None, the default column names are used.
-        rgroup_sep : Optional[str]
-            Whether group names are separated by lines. The default is "t".
-            When output type = 'gt', the options are 'tb', 't', 'b', or '', i.e.
-            you can specify whether to have a line above, below, both or none.
-            When output type = 'tex' no line will be added between the row groups
-            when rgroup_sep is '' and otherwise a line before the group name will be added.
+        Supports various output formats including html (via great tables), markdown, and LaTeX.
+
+        Parameters
+        ----------
+        stats : str, optional
+            Which stats to include. One of 'all', 'Levels (units)',
+            'Share of Full Effect', 'Share of Explained Effect', by default "all".
+        caption : str, optional
+            Caption for the table, by default None.
+        column_heads : list[str], optional
+            Column names for the table. Must be length 3 if provided, by default None.
+        panel_heads : list[str], optional
+            Custom names for the panel sections. Length must match number of stats shown, by default None.
+        rgroup_sep : str, optional
+            Row group separator style. Options: 'tb', 't', 'b', '', by default "t".
         add_notes : str, optional
-            Additional notes to add to the table.
+            Additional notes to append to the table, by default None.
         **kwargs : dict, optional
-            Additional arguments to pass to the make_table function. You can add table notes, captions, etc.
-            See the make_table function for more details.
+            Additional arguments passed to make_table function (type, digits, etc.).
 
         Returns
         -------
-        A table in the specified format.
+        Union[pd.DataFrame, str, None]
+            Formatted table. Type depends on output format specified in kwargs.
 
         Examples
         --------
@@ -620,13 +679,13 @@ class GelbachDecomposition:
         We can change the column headers:
 
         ```{python}
-        gb.etable(model_heads = ["Full Difference", "Unexplained Difference", "Explained Difference"])
+        gb.etable(column_heads = ["Full Difference", "Unexplained Difference", "Explained Difference"])
         """
         from pyfixest.report.make_table import make_table
 
-        if model_heads is not None:
-            if len(model_heads) != 3:
-                raise ValueError("model_heads must be a list of length 3.")
+        if column_heads is not None:
+            if len(column_heads) != 3:
+                raise ValueError("The 'column_heads' parameter must be a list of length 3.")
 
         if stats == "all":
             stats_list = ["Levels (units)", "Share of Full Effect", "Share of Explained Effect"]
@@ -638,31 +697,32 @@ class GelbachDecomposition:
 
         for stat in stats_list:
             if stat not in ["Levels (units)", "Share of Full Effect", "Share of Explained Effect"]:
-                raise ValueError(f"stats must be one or more of 'Levels (units)', 'Share of Full Effect', 'Share of Explained Effect'. Got {stat}.")
+                raise ValueError(f"The 'stats' parameter must be one of 'Levels (units)', 'Share of Full Effect', 'Share of Explained Effect'. Got '{stat}'.")
+
+        if panel_heads is not None:
+            if len(panel_heads) != len(stats_list):
+                raise ValueError(f"The 'panel_heads' parameter must have length {len(stats_list)} to match the number of stats panels. Got {len(panel_heads)}.")
 
         res = self._prepare_etable_df(stats="all")
 
-        # Filter by stats types (which are in the index, not columns)
         if isinstance(res.index, pd.MultiIndex):
-            # Filter rows by stats type (first level of index)
             mask = res.index.get_level_values(0).isin(stats_list)
             res_sub = res.loc[mask, :]
         else:
-            # If not MultiIndex, return the full result
             res_sub = res
 
         if self.x1_vars is not None:
             default_model_notes = [
-                f"Col 1: Adjusted Difference (by { "+".join(self.x1_vars)}) (Direct Effect): Coefficient on {self.decomp_var} in short regression.",
-                f"Col 2: Adjusted Difference (Full Effect): Coefficient on {self.decomp_var} in long regression.",
-                f"Col 3: Explained Difference (Explained Effect): Difference in coefficients of {self.decomp_var} in short and long regression.",
+                f"Col 1: Adjusted Difference (by { "+".join(self.x1_vars)}): Coefficient on {self.decomp_var} in short regression (direct effect in mediation analysis).",
+                f"Col 2: Adjusted Difference: Coefficient on {self.decomp_var} in long regression (full effect in mediation analysis).",
+                f"Col 3: Explained Difference: Difference in coefficients of {self.decomp_var} in short and long regression.",
             ]
 
         else:
             default_model_notes = [
-                f"Col 1: Raw Difference (Direct Effect): Coefficient on {self.decomp_var} in short regression.",
-                f"Col 2: Adjusted Difference (Full Effect): Coefficient on {self.decomp_var} in long regression.",
-                f"Col 3: Explained Difference (Explained Effect): Difference in coefficients of {self.decomp_var} in short and long regression.",
+                f"Col 1: Raw Difference: Coefficient on {self.decomp_var} in short regression (direct effect in mediation analysis).",
+                f"Col 2: Adjusted Difference: Coefficient on {self.decomp_var} in long regression (full effect in mediation analysis).",
+                f"Col 3: Explained Difference: Difference in coefficients of {self.decomp_var} in short and long regression.",
             ]
 
         panel = 0
@@ -682,7 +742,17 @@ class GelbachDecomposition:
             "Explained Difference",
         ]
 
-        res_sub.columns = model_heads if model_heads is not None else default_model_heads
+        res_sub.columns = column_heads if column_heads is not None else default_model_heads
+
+        if panel_heads is not None and isinstance(res_sub.index, pd.MultiIndex):
+            panel_mapping = {stats_list[i]: panel_heads[i] for i in range(len(stats_list))}
+
+            new_index_level_0 = [panel_mapping.get(x, x) for x in res_sub.index.get_level_values(0)]
+            new_index = pd.MultiIndex.from_arrays([
+                new_index_level_0,
+                res_sub.index.get_level_values(1)
+            ], names=res_sub.index.names)
+            res_sub.index = new_index
 
 
         notes = f"""
