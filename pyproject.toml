@@ -101,12 +101,6 @@ pyfixest = { path = ".", editable = true }
 
 [tool.pixi.environments]
 default = { solve-group = "default" }
-dev = { features = ["dev"], solve-group = "default" }
-build = { features = ["build"], solve-group = "default" }
-lint = { features = ["lint"], solve-group = "default" }
-docs = { features = ["docs"], solve-group = "default" }
-jax = { features = ["jax"], solve-group = "default" }
-plots = { features = ["plots"], solve-group = "default" }
 
 [tool.pixi.feature.dev.tasks]
 tests = "pytest -rs -n 4 --cov-report=term tests"
@@ -118,7 +112,6 @@ tests-fixest = "pytest -rs tests/test_vs_fixest.py -n 4 --cov=pyfixest --cov-rep
 tests-plots-dev = "pixi run --environment dev pytest tests/test_plots.py -n 4"
 tests-plots = "pixi run --environment plots pytest tests/test_plots.py -n 4"
 tests-rerun = "pytest --lf -n 4"
-debug = "python pyfixest/debug.py"
 update-test-data = "Rscript tests/r_test_comparisons.R"
 install-r-extended = "Rscript r_test_requirements.R"
 render-notebooks = "python scripts/run_notebooks.py"

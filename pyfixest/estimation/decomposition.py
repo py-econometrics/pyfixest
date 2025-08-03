@@ -554,7 +554,7 @@ class GelbachDecomposition:
         self,
         stats: str = "all",
         caption: Optional[str] = None,
-        model_heads: Optional[dict[str, str]] = None,
+        model_heads: Optional[list[str]] = None,
         rgroup_sep: Optional[str] = None,
         add_notes: Optional[str] = None,
         **kwargs,
@@ -564,12 +564,12 @@ class GelbachDecomposition:
 
         Args
         ----
-        stats : str, optional
-            Which stats of summary to include. One of 'all', 'absolute', 'relative (vs explained)', 'relative (vs full)'
+        stats : Union[str, list[str]], optional
+            Which stats of summary to include. One or more of 'Levels (units)', 'Share of Full Effect', 'Share of Explained Effect'.
         caption: str, optional
             Caption for the table.
-        model_heads: dict[str, str], optional
-            Add custom headlines to models when output as df or latex.
+        model_heads: list[str], optional
+            A list of length 3 with the column names. If None, the default column names are used.
         rgroup_sep : Optional[str]
             Whether group names are separated by lines. The default is "t".
             When output type = 'gt', the options are 'tb', 't', 'b', or '', i.e.
@@ -603,15 +603,57 @@ class GelbachDecomposition:
         """
         from pyfixest.report.make_table import make_table
 
-        res = self.summary(stats=stats)
         if model_heads is not None:
-            res.columns = [model_heads.get(col, col) for col in res.columns]
+            if len(model_heads) != 3:
+                raise ValueError("model_heads must be a list of length 3.")
+
+        if stats == "all":
+            stats_list = ["Levels (units)", "Share of Full Effect", "Share of Explained Effect"]
         else:
-            res.columns = [
-                f"Raw Difference (Direct Effect): Coefficient on {self.decomp_var} in short regression",
-                f"Adjusted Difference (Full Effect): Coefficient on {self.decomp_var} in long regression",
-                f"Explained Difference (Explained Effect): Difference in coefficients of {self.decomp_var} in short and long regression",
+            if isinstance(stats, str):
+                stats_list = [stats]
+            else:
+                stats_list = stats
+
+        for stat in stats_list:
+            if stat not in ["Levels (units)", "Share of Full Effect", "Share of Explained Effect"]:
+                raise ValueError(f"stats must be one or more of 'Levels (units)', 'Share of Full Effect', 'Share of Explained Effect'. Got {stat}.")
+
+        res = self.summary(stats="all")
+        res_sub = res.loc[:, res.columns.get_level_values(0).isin(stats_list)]
+
+        if self.x1_vars is not None:
+            default_model_notes = [
+                f"Col 1: Adjusted Difference (by { "+".join(self.x1_vars)}) (Direct Effect): Coefficient on {self.decomp_var} in short regression.",
+                f"Col 2: Adjusted Difference (Full Effect): Coefficient on {self.decomp_var} in long regression.",
+                f"Col 3: Explained Difference (Explained Effect): Difference in coefficients of {self.decomp_var} in short and long regression.",
             ]
+
+        else:
+            default_model_notes = [
+                f"Col 1: Raw Difference (Direct Effect): Coefficient on {self.decomp_var} in short regression.",
+                f"Col 2: Adjusted Difference (Full Effect): Coefficient on {self.decomp_var} in long regression.",
+                f"Col 3: Explained Difference (Explained Effect): Difference in coefficients of {self.decomp_var} in short and long regression.",
+            ]
+
+        if "Levels (units)" in stats_list:
+            default_model_notes.append("Panel 1: Levels (units).")
+            panel = 1
+        if "Share of Full Effect" in stats_list:
+            panel += 1
+            default_model_notes.append(f"Panel {panel}: Share of Full Effect: Levels normalized by coefficient of the short regression.")
+        if "Share of Explained Effect" in stats_list:
+            panel += 1
+            default_model_notes.append(f"Panel {panel}: Share of Explained Effect: Levels normalized by coefficient of the long regression.")
+
+        default_model_heads = [
+            "Initial Difference",
+            "Adjusted Difference",
+            "Explained Difference",
+        ]
+
+        res.columns = model_heads if model_heads is not None else default_model_heads
+
 
         notes = f"""
             Decomposition variable: {self.decomp_var}.
@@ -621,6 +663,9 @@ class GelbachDecomposition:
             notes += f"""
             Control Variables: {", ".join(self.x1_vars)}.
             """
+
+        notes += "\n".join(default_model_notes)
+
         if add_notes is not None:
             notes += f"""
             {add_notes}
@@ -635,17 +680,11 @@ class GelbachDecomposition:
             else:
                 notes += f" using clustered sampling by {self.cluster_var.columns}."
 
-        if stats == "all":
-            stats = ["absolute", "relative (vs explained)", "relative (vs full)"]
-        else:
-            stats = [stats]
-
-
         kwargs["rgroup_sep"] = "t" if rgroup_sep is None else rgroup_sep
         kwargs["caption"] = caption
         kwargs["notes"] = notes
 
-        return make_table(res, **kwargs)
+        return make_table(res_sub, **kwargs)
 
 
 def _decompose_arg_check(
