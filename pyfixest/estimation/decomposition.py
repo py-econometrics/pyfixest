@@ -11,6 +11,81 @@ from tqdm import tqdm
 
 
 @dataclass
+class GelbachResults:
+    """Container for all Gelbach decomposition results."""
+
+    direct_effect: float
+    full_effect: float
+    explained_effect: float
+    unexplained_effect: float
+    mediator_effects: dict[str, float]
+
+    def __post_init__(self):
+        """Validate that explained_effect equals sum of mediator effects."""
+        computed_explained = sum(self.mediator_effects.values())
+        if not np.isclose(self.explained_effect, computed_explained, atol=1e-10):
+            raise ValueError(f"Explained effect {self.explained_effect} != sum of mediators {computed_explained}")
+
+    @property
+    def absolute(self) -> dict[str, float]:
+        """Absolute levels (backward compatibility with contribution_dict)."""
+        return {
+            "direct_effect": self.direct_effect,
+            "full_effect": self.full_effect,
+            "explained_effect": self.explained_effect,
+            "unexplained_effect": self.unexplained_effect,
+            **self.mediator_effects
+        }
+
+    @property
+    def relative_to_explained(self) -> dict[str, float]:
+        """Relative to explained effect (backward compatibility)."""
+        if self.explained_effect == 0:
+            return {name: np.nan for name in self.absolute.keys()}
+        return {name: value / self.explained_effect for name, value in self.absolute.items()}
+
+    @property
+    def relative_to_direct(self) -> dict[str, float]:
+        """Relative to direct effect (backward compatibility)."""
+        if self.direct_effect == 0:
+            return {name: np.nan for name in self.absolute.keys()}
+        return {name: value / self.direct_effect for name, value in self.absolute.items()}
+
+    @property
+    def all_effect_names(self) -> list[str]:
+        """All effect names (core + mediators)."""
+        return ["direct_effect", "full_effect", "explained_effect", "unexplained_effect"] + list(self.mediator_effects.keys())
+
+    def to_dict(self, relative_to: Optional[str] = None) -> dict[str, float]:
+        """
+        Convert to dictionary format.
+
+        Parameters
+        ----------
+        relative_to : str, optional
+            If None, returns absolute values.
+            If "explained", returns values relative to explained effect.
+            If "direct", returns values relative to direct effect.
+        """
+        if relative_to is None:
+            return self.absolute
+        elif relative_to == "explained":
+            return self.relative_to_explained
+        elif relative_to == "direct":
+            return self.relative_to_direct
+        else:
+            raise ValueError(f"relative_to must be None, 'explained', or 'direct'. Got {relative_to}")
+
+    def summary_df(self) -> pd.DataFrame:
+        """Create a summary DataFrame with all three formats."""
+        return pd.DataFrame({
+            "Absolute": self.to_dict(),
+            "Relative to Explained": self.to_dict("explained"),
+            "Relative to Direct": self.to_dict("direct")
+        })
+
+
+@dataclass
 class GelbachDecomposition:
     """
     Linear Mediation Model.
@@ -219,10 +294,13 @@ class GelbachDecomposition:
                 self.direct_effect,
                 self.beta_full,
                 self.beta2,
-                self.contribution_dict,
-                self.contribution_dict_relative_explained,
-                self.contribution_dict_relative_direct,
+                self.results,
             ) = results
+
+            # Backward compatibility - provide the old dictionary interface
+            self.contribution_dict = self.results.absolute
+            self.contribution_dict_relative_explained = self.results.relative_to_explained
+            self.contribution_dict_relative_direct = self.results.relative_to_direct
 
             # Prepare cluster bootstrap if relevant
             self.X_dict = {}
@@ -238,6 +316,7 @@ class GelbachDecomposition:
                 "contribution_dict": self.contribution_dict,
                 "contribution_dict_relative_explained": self.contribution_dict_relative_explained,
                 "contribution_dict_relative_direct": self.contribution_dict_relative_direct,
+                "results": self.results,
             }
 
         else:
@@ -258,15 +337,13 @@ class GelbachDecomposition:
                 _,
                 _,
                 _,
-                contribution_dict,
-                contribution_dict_relative_explained,
-                contribution_dict_relative_direct,
+                bootstrap_results,
             ) = results
 
             return {
-                "contribution_dict": contribution_dict,
-                "contribution_dict_relative_explained": contribution_dict_relative_explained,
-                "contribution_dict_relative_direct": contribution_dict_relative_direct,
+                "contribution_dict": bootstrap_results.absolute,
+                "contribution_dict_relative_explained": bootstrap_results.relative_to_explained,
+                "contribution_dict_relative_direct": bootstrap_results.relative_to_direct,
             }
 
     def bootstrap(self, rng: np.random.Generator, B: int = 1_000, alpha: float = 0.05):
@@ -361,9 +438,7 @@ class GelbachDecomposition:
         np.ndarray,
         np.ndarray,
         np.ndarray,
-        dict[str, np.ndarray],
-        dict[str, np.ndarray],
-        dict[str, np.ndarray],
+        GelbachResults,
     ]:
         "Run the Gelbach decomposition."
         N = X1.shape[0]
@@ -376,12 +451,7 @@ class GelbachDecomposition:
         beta_full = lsqr(X, Y, atol=self.atol, btol=self.btol)[0]
         beta2 = beta_full[self.mask]
 
-        # Initialize contribution_dict: a dictionary to store the absolute and relative contributions of each covariate
-        (
-            contribution_dict,
-            contribution_dict_relative_explained,
-            contribution_dict_relative_direct,
-        ) = {}, {}, {}
+        mediator_effects = {}
 
         if agg_first:
             # Compute H and Hg
@@ -401,7 +471,7 @@ class GelbachDecomposition:
             )
 
             for i, (name, _) in enumerate(self.combine_covariates_dict.items()):
-                contribution_dict[name] = np.array([delta[i]])
+                mediator_effects[name] = float(delta[i])
         else:
             gamma = np.array(
                 [
@@ -414,43 +484,31 @@ class GelbachDecomposition:
 
             for name, covariates in self.combine_covariates_dict.items():
                 variable_idx = [self.mediator_names.index(cov) for cov in covariates]
-                contribution_dict[name] = np.array([np.sum(delta[variable_idx])])
+                mediator_effects[name] = float(np.sum(delta[variable_idx]))
 
-        contribution_dict["explained_effect"] = np.sum(
-            list(contribution_dict.values()), keepdims=True
-        ).flatten()
-        contribution_dict["unexplained_effect"] = (
-            direct_effect_array - contribution_dict["explained_effect"]
-        ).flatten()
-        contribution_dict["direct_effect"] = direct_effect_array
+        direct_effect = float(direct_effect_array[0])
+        full_effect = float(beta_full[self.decomp_var_in_X_idx])
+        explained_effect = sum(mediator_effects.values())
+        unexplained_effect = direct_effect - explained_effect
 
-        contribution_dict["full_effect"] = beta_full[self.decomp_var_in_X_idx].flatten()
-
-        for name, value in contribution_dict.items():
-            if contribution_dict["explained_effect"] != 0:
-                contribution_dict_relative_explained[name] = (
-                    value / contribution_dict["explained_effect"]
-                )
-            else:
-                contribution_dict_relative_explained[name] = np.nan
-
-            if contribution_dict["direct_effect"] != 0:
-                contribution_dict_relative_direct[name] = (
-                    value / contribution_dict["direct_effect"]
-                )
-            else:
-                contribution_dict_relative_direct[name] = np.nan
+        # Create structured results
+        gelbach_results = GelbachResults(
+            direct_effect=direct_effect,
+            full_effect=full_effect,
+            explained_effect=explained_effect,
+            unexplained_effect=unexplained_effect,
+            mediator_effects=mediator_effects
+        )
 
         results = (
             direct_effect_array,
             beta_full,
             beta2,
-            contribution_dict,
-            contribution_dict_relative_explained,
-            contribution_dict_relative_direct,
+            gelbach_results,
         )
 
         return results
+
 
     def tidy(self, alpha: float = 0.05, stats: str = "all") -> pd.DataFrame:
         """
@@ -473,17 +531,21 @@ class GelbachDecomposition:
         pd.DataFrame
             A tidy DataFrame with the decomposition results.
         """
-        contribution_df = pd.DataFrame(self.contribution_dict).T
-        contribution_relative_explained_df = pd.DataFrame(
-            self.contribution_dict_relative_explained
-        ).T
-        contribution_relative_direct_df = pd.DataFrame(
-            self.contribution_dict_relative_direct
-        ).T
+        # Convert scalar dictionaries to DataFrames with proper index
+        contribution_df = pd.DataFrame(
+            list(self.contribution_dict.items()),
+            columns=["effect", "coefficients"]
+        ).set_index("effect")
 
-        contribution_df.columns = ["coefficients"]
-        contribution_relative_explained_df.columns = ["coefficients"]
-        contribution_relative_direct_df.columns = ["coefficients"]
+        contribution_relative_explained_df = pd.DataFrame(
+            list(self.contribution_dict_relative_explained.items()),
+            columns=["effect", "coefficients"]
+        ).set_index("effect")
+
+        contribution_relative_direct_df = pd.DataFrame(
+            list(self.contribution_dict_relative_direct.items()),
+            columns=["effect", "coefficients"]
+        ).set_index("effect")
 
         if not self.only_coef:
             contribution_df = pd.concat([contribution_df, self._absolute_ci], axis=1)
