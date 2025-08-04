@@ -9,6 +9,15 @@ from pyfixest.utils.dgps import gelbach_data
 
 
 @pytest.fixture
+def gelbach_decomposition():
+    """Fixture providing a standard Gelbach decomposition for testing."""
+    data = gelbach_data(nobs=200)
+    fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
+    gb = fit.decompose(param="x1", seed=98765, reps=25)
+    return gb
+
+
+@pytest.fixture
 def stata_results():
     # Define the data
     data = {
@@ -342,3 +351,43 @@ def test_x1_vars():
     np.testing.assert_allclose(
         fit.GelbachDecompositionResults.contribution_dict["ALL"], 0.3149754
     )
+
+
+def test_tidy_snapshot(snapshot, gelbach_decomposition):
+    """Snapshot test for tidy() output using syrupy."""
+    tidy_result = gelbach_decomposition.tidy(alpha=0.05, stats="all")
+    tidy_string = tidy_result.round(6).to_string()
+
+    assert tidy_string == snapshot
+
+
+@pytest.mark.parametrize("stats", ["all", "Levels (units)", "Share of Full Effect", "Share of Explained Effect"])
+@pytest.mark.parametrize("caption", [None, "Test Caption"])
+@pytest.mark.parametrize("column_heads", [None, ["Total", "Direct", "Mediated"]])
+@pytest.mark.parametrize("use_panel_heads", [False, True])
+@pytest.mark.parametrize("rgroup_sep", [None, "tb", "t", "b", ""])
+@pytest.mark.parametrize("add_notes", [None, "Custom test note"])
+def test_etable_snapshot(snapshot, gelbach_decomposition, stats, caption, column_heads, use_panel_heads, rgroup_sep, add_notes):
+    """Comprehensive snapshot test for etable() with all parameter combinations."""
+
+    if use_panel_heads:
+        if stats == "all":
+            panel_heads = ["Absolute", "Share of Total", "Share of Explained"]
+        else:
+            panel_heads = ["Custom Panel"]
+    else:
+        panel_heads = None
+
+    etable_result = gelbach_decomposition.etable(
+        stats=stats,
+        caption=caption,
+        column_heads=column_heads,
+        panel_heads=panel_heads,
+        rgroup_sep=rgroup_sep,
+        add_notes=add_notes,
+        digits=3,
+        type="gt"
+    ).as_raw_html()
+
+    assert etable_result == snapshot
+
