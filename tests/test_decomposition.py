@@ -146,7 +146,7 @@ def test_against_stata(stata_results, combine_covariates, se, agg_first):
             agg_first=agg_first,
         )
 
-        results = fit.GelbachDecompositionResults.tidy(stats="absolute")
+        results = fit.GelbachDecompositionResults.tidy(stats="Levels (units)")
         coefficients = results.coefficients
         ci_lower = results.ci_lower
         ci_upper = results.ci_upper
