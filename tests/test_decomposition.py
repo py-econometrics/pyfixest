@@ -361,15 +361,26 @@ def test_tidy_snapshot(snapshot, gelbach_decomposition):
     assert tidy_string == snapshot
 
 
-@pytest.mark.parametrize("stats", ["all", "Levels (units)", "Share of Full Effect", "Share of Explained Effect"])
+@pytest.mark.parametrize(
+    "stats",
+    ["all", "Levels (units)", "Share of Full Effect", "Share of Explained Effect"],
+)
 @pytest.mark.parametrize("caption", [None, "Test Caption"])
 @pytest.mark.parametrize("column_heads", [None, ["Total", "Direct", "Mediated"]])
 @pytest.mark.parametrize("use_panel_heads", [False, True])
 @pytest.mark.parametrize("rgroup_sep", [None, "tb", "t", "b", ""])
 @pytest.mark.parametrize("add_notes", [None, "Custom test note"])
-def test_etable_snapshot(snapshot, gelbach_decomposition, stats, caption, column_heads, use_panel_heads, rgroup_sep, add_notes):
+def test_etable_snapshot(
+    snapshot,
+    gelbach_decomposition,
+    stats,
+    caption,
+    column_heads,
+    use_panel_heads,
+    rgroup_sep,
+    add_notes,
+):
     """Comprehensive snapshot test for etable() with all parameter combinations."""
-
     if use_panel_heads:
         if stats == "all":
             panel_heads = ["Absolute", "Share of Total", "Share of Explained"]
@@ -386,8 +397,7 @@ def test_etable_snapshot(snapshot, gelbach_decomposition, stats, caption, column
         rgroup_sep=rgroup_sep,
         add_notes=add_notes,
         digits=3,
-        type="gt"
+        type="gt",
     ).as_raw_html()
 
     assert etable_result == snapshot
-

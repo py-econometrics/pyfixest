@@ -24,7 +24,9 @@ class GelbachResults:
         """Validate that explained_effect equals sum of mediator effects."""
         computed_explained = sum(self.mediator_effects.values())
         if not np.isclose(self.explained_effect, computed_explained, atol=1e-10):
-            raise ValueError(f"Explained effect {self.explained_effect} != sum of mediators {computed_explained}")
+            raise ValueError(
+                f"Explained effect {self.explained_effect} != sum of mediators {computed_explained}"
+            )
 
     @property
     def absolute(self) -> dict[str, float]:
@@ -34,27 +36,34 @@ class GelbachResults:
             "full_effect": self.full_effect,
             "explained_effect": self.explained_effect,
             "unexplained_effect": self.unexplained_effect,
-            **self.mediator_effects
+            **self.mediator_effects,
         }
 
     @property
     def relative_to_explained(self) -> dict[str, float]:
         """Relative to explained effect (backward compatibility)."""
         if self.explained_effect == 0:
-            return {name: np.nan for name in self.absolute.keys()}
-        return {name: value / self.explained_effect for name, value in self.absolute.items()}
+            return {name: np.nan for name in self.absolute}
+        return {
+            name: value / self.explained_effect for name, value in self.absolute.items()
+        }
 
     @property
     def relative_to_direct(self) -> dict[str, float]:
         """Relative to direct effect (backward compatibility)."""
         if self.direct_effect == 0:
-            return {name: np.nan for name in self.absolute.keys()}
-        return {name: value / self.direct_effect for name, value in self.absolute.items()}
+            return {name: np.nan for name in self.absolute}
+        return {
+            name: value / self.direct_effect for name, value in self.absolute.items()
+        }
 
     @property
     def all_effect_names(self) -> list[str]:
         """All effect names (core + mediators)."""
-        return ["direct_effect", "full_effect", "explained_effect", "unexplained_effect"] + list(self.mediator_effects.keys())
+        return [
+            *["direct_effect", "full_effect", "explained_effect", "unexplained_effect"],
+            *self.mediator_effects.keys(),
+        ]
 
     def to_dict(self, relative_to: Optional[str] = None) -> dict[str, float]:
         """
@@ -74,15 +83,19 @@ class GelbachResults:
         elif relative_to == "direct":
             return self.relative_to_direct
         else:
-            raise ValueError(f"relative_to must be None, 'explained', or 'direct'. Got {relative_to}")
+            raise ValueError(
+                f"relative_to must be None, 'explained', or 'direct'. Got {relative_to}"
+            )
 
     def summary_df(self) -> pd.DataFrame:
         """Create a summary DataFrame with all three formats."""
-        return pd.DataFrame({
-            "Absolute": self.to_dict(),
-            "Relative to Explained": self.to_dict("explained"),
-            "Relative to Direct": self.to_dict("direct")
-        })
+        return pd.DataFrame(
+            {
+                "Absolute": self.to_dict(),
+                "Relative to Explained": self.to_dict("explained"),
+                "Relative to Direct": self.to_dict("direct"),
+            }
+        )
 
 
 @dataclass
@@ -234,11 +247,15 @@ class GelbachDecomposition:
 
     def _check_covariates(self):
         if self.decomp_var not in self.coefnames:
-            raise ValueError(f"The decomposition variable '{self.decomp_var}' is not in the coefficient names.")
+            raise ValueError(
+                f"The decomposition variable '{self.decomp_var}' is not in the coefficient names."
+            )
         if self.x1_vars is not None:
             for var in self.x1_vars:
                 if var not in self.coefnames:
-                    raise ValueError(f"The variable '{var}' is not in the coefficient names.")
+                    raise ValueError(
+                        f"The variable '{var}' is not in the coefficient names."
+                    )
         if self.x1_vars is not None and self.decomp_var in self.x1_vars:
             raise ValueError(
                 f"The decomposition variable '{self.decomp_var}' cannot be included in the x1_vars argument."
@@ -251,7 +268,9 @@ class GelbachDecomposition:
                 raise TypeError("Values in combine_covariates_dict must be lists.")
             for v in values:
                 if v not in self.mediator_names:
-                    raise ValueError(f"The variable '{v}' is not in the mediator names.")
+                    raise ValueError(
+                        f"The variable '{v}' is not in the mediator names."
+                    )
 
         # Check for overlap in values between different keys
         all_values = {
@@ -262,7 +281,9 @@ class GelbachDecomposition:
             for key2, values2 in all_values.items():
                 if key1 != key2 and values1 & values2:
                     overlap = values1 & values2
-                    raise ValueError(f"Variables {overlap} are in both '{key1}' and '{key2}' groups.")
+                    raise ValueError(
+                        f"Variables {overlap} are in both '{key1}' and '{key2}' groups."
+                    )
 
     def fit(self, X: spmatrix, Y: np.ndarray, store: bool = True):
         "Fit Linear Mediation Model."
@@ -299,7 +320,9 @@ class GelbachDecomposition:
 
             # Backward compatibility - provide the old dictionary interface
             self.contribution_dict = self.results.absolute
-            self.contribution_dict_relative_explained = self.results.relative_to_explained
+            self.contribution_dict_relative_explained = (
+                self.results.relative_to_explained
+            )
             self.contribution_dict_relative_direct = self.results.relative_to_direct
 
             # Prepare cluster bootstrap if relevant
@@ -497,7 +520,7 @@ class GelbachDecomposition:
             full_effect=full_effect,
             explained_effect=explained_effect,
             unexplained_effect=unexplained_effect,
-            mediator_effects=mediator_effects
+            mediator_effects=mediator_effects,
         )
 
         results = (
@@ -508,7 +531,6 @@ class GelbachDecomposition:
         )
 
         return results
-
 
     def tidy(self, alpha: float = 0.05, stats: str = "all") -> pd.DataFrame:
         """
@@ -533,18 +555,17 @@ class GelbachDecomposition:
         """
         # Convert scalar dictionaries to DataFrames with proper index
         contribution_df = pd.DataFrame(
-            list(self.contribution_dict.items()),
-            columns=["effect", "coefficients"]
+            list(self.contribution_dict.items()), columns=["effect", "coefficients"]
         ).set_index("effect")
 
         contribution_relative_explained_df = pd.DataFrame(
             list(self.contribution_dict_relative_explained.items()),
-            columns=["effect", "coefficients"]
+            columns=["effect", "coefficients"],
         ).set_index("effect")
 
         contribution_relative_direct_df = pd.DataFrame(
             list(self.contribution_dict_relative_direct.items()),
-            columns=["effect", "coefficients"]
+            columns=["effect", "coefficients"],
         ).set_index("effect")
 
         if not self.only_coef:
@@ -639,7 +660,9 @@ class GelbachDecomposition:
             summary_data[self.decomp_var] = main_effects_row
 
             if not self.only_coef:
-                summary_data[f"{self.decomp_var}_ci"] = main_effects_ci_row  # Empty name for CI row
+                summary_data[f"{self.decomp_var}_ci"] = (
+                    main_effects_ci_row  # Empty name for CI row
+                )
 
             for mediator in mediators:
                 if mediator in df_sub.index:
@@ -662,13 +685,11 @@ class GelbachDecomposition:
                             "explained_effect": ci_str,
                         }
 
-
             # replace
             if stats_name == "Share of Full Effect" and not self.only_coef:
                 # don't print CIs as they are [1,1]
                 summary_data[f"{self.decomp_var}_ci"]["direct_effect"] = "-"
             elif stats_name == "Share of Explained Effect":
-
                 summary_data[self.decomp_var]["direct_effect"] = "-"
                 summary_data[self.decomp_var]["full_effect"] = "-"
 
@@ -745,25 +766,32 @@ class GelbachDecomposition:
         """
         from pyfixest.report.make_table import make_table
 
-        if column_heads is not None:
-            if len(column_heads) != 3:
-                raise ValueError("The 'column_heads' parameter must be a list of length 3.")
+        if column_heads is not None and len(column_heads) != 3:
+            raise ValueError("The 'column_heads' parameter must be a list of length 3.")
 
         if stats == "all":
-            stats_list = ["Levels (units)", "Share of Full Effect", "Share of Explained Effect"]
+            stats_list = [
+                "Levels (units)",
+                "Share of Full Effect",
+                "Share of Explained Effect",
+            ]
         else:
-            if isinstance(stats, str):
-                stats_list = [stats]
-            else:
-                stats_list = stats
+            stats_list = [stats] if isinstance(stats, str) else stats
 
         for stat in stats_list:
-            if stat not in ["Levels (units)", "Share of Full Effect", "Share of Explained Effect"]:
-                raise ValueError(f"The 'stats' parameter must be one of 'Levels (units)', 'Share of Full Effect', 'Share of Explained Effect'. Got '{stat}'.")
+            if stat not in [
+                "Levels (units)",
+                "Share of Full Effect",
+                "Share of Explained Effect",
+            ]:
+                raise ValueError(
+                    f"The 'stats' parameter must be one of 'Levels (units)', 'Share of Full Effect', 'Share of Explained Effect'. Got '{stat}'."
+                )
 
-        if panel_heads is not None:
-            if len(panel_heads) != len(stats_list):
-                raise ValueError(f"The 'panel_heads' parameter must have length {len(stats_list)} to match the number of stats panels. Got {len(panel_heads)}.")
+        if panel_heads is not None and len(panel_heads) != len(stats_list):
+            raise ValueError(
+                f"The 'panel_heads' parameter must have length {len(stats_list)} to match the number of stats panels. Got {len(panel_heads)}."
+            )
 
         res = self._prepare_etable_df(stats="all")
 
@@ -775,7 +803,7 @@ class GelbachDecomposition:
 
         if self.x1_vars is not None:
             default_model_notes = [
-                f"Col 1: Adjusted Difference (by { "+".join(self.x1_vars)}): Coefficient on {self.decomp_var} in short regression (direct effect in mediation analysis).",
+                f"Col 1: Adjusted Difference (by {'+'.join(self.x1_vars)}): Coefficient on {self.decomp_var} in short regression (direct effect in mediation analysis).",
                 f"Col 2: Adjusted Difference: Coefficient on {self.decomp_var} in long regression (full effect in mediation analysis).",
                 f"Col 3: Explained Difference: Difference in coefficients of {self.decomp_var} in short and long regression.",
             ]
@@ -793,10 +821,14 @@ class GelbachDecomposition:
             default_model_notes.append(f"Panel {panel}: Levels (units).")
         if "Share of Full Effect" in stats_list:
             panel += 1
-            default_model_notes.append(f"Panel {panel}: Share of Full Effect: Levels normalized by coefficient of the short regression.")
+            default_model_notes.append(
+                f"Panel {panel}: Share of Full Effect: Levels normalized by coefficient of the short regression."
+            )
         if "Share of Explained Effect" in stats_list:
             panel += 1
-            default_model_notes.append(f"Panel {panel}: Share of Explained Effect: Levels normalized by coefficient of the long regression.")
+            default_model_notes.append(
+                f"Panel {panel}: Share of Explained Effect: Levels normalized by coefficient of the long regression."
+            )
 
         default_model_heads = [
             "Initial Difference",
@@ -804,18 +836,23 @@ class GelbachDecomposition:
             "Explained Difference",
         ]
 
-        res_sub.columns = column_heads if column_heads is not None else default_model_heads
+        res_sub.columns = (
+            column_heads if column_heads is not None else default_model_heads
+        )
 
         if panel_heads is not None and isinstance(res_sub.index, pd.MultiIndex):
-            panel_mapping = {stats_list[i]: panel_heads[i] for i in range(len(stats_list))}
+            panel_mapping = {
+                stats_list[i]: panel_heads[i] for i in range(len(stats_list))
+            }
 
-            new_index_level_0 = [panel_mapping.get(x, x) for x in res_sub.index.get_level_values(0)]
-            new_index = pd.MultiIndex.from_arrays([
-                new_index_level_0,
-                res_sub.index.get_level_values(1)
-            ], names=res_sub.index.names)
+            new_index_level_0 = [
+                panel_mapping.get(x, x) for x in res_sub.index.get_level_values(0)
+            ]
+            new_index = pd.MultiIndex.from_arrays(
+                [new_index_level_0, res_sub.index.get_level_values(1)],
+                names=res_sub.index.names,
+            )
             res_sub.index = new_index
-
 
         notes = f"""
             Decomposition variable: {self.decomp_var}.
