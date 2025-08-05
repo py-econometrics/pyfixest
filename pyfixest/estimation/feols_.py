@@ -1735,16 +1735,18 @@ class Feols:
         fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
 
         # simple decomposition
-        res = fit.decompose(decomp_var = "x1")
-        pf.make_table(res)
+        gb = fit.decompose(decomp_var = "x1", reps = 10, nthreads = 1)
+        type(gb)
 
-        # include additional covariates
-        res = fit.decompose(decomp_var = "x1", x1_vars = ["x21", "x22", "x23"])
-        pf.make_table(res)
-
-        # group covariates via "combine_covariates" argument
-        res = fit.decompose(decomp_var = "x1", combine_covariates={"g1": ["x21", "x22"], "g2": ["x23"]})
-        pf.make_table(res)
+        gb.tidy()
+        gb.tidy().xs("direct_effect")
+        gb = fit.decompose(decomp_var = "x1", reps = 10, nthreads = 1, x1_vars = ["x21"])
+        # combine covariates
+        gb = fit.decompose(decomp_var = "x1", reps = 10, nthreads = 1, combine_covariates = {"g1": ["x21", "x22"], "g2": ["x23"]})
+        # supress inference
+        gb = fit.decompose(decomp_var = "x1", reps = 10, nthreads = 1, combine_covariates = {"g1": ["x21", "x22"], "g2": ["x23"]}, only_coef = True)
+        # print results
+        gb.etable()
 
         # group covariates via regex
         res = fit.decompose(decomp_var="x1", combine_covariates={"g1": re.compile("x2[1-2]"), "g2": re.compile("x23")})

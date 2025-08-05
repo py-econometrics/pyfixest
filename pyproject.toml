@@ -47,8 +47,7 @@ dev = [
   "pyarrow>=14.0",
   "jax>=0.4.15",
   "jaxlib>=0.4.15",
-  "pytest-benchmark>=5.1.0,<6",
-  "syrupy>=0.4.0"
+  "pytest-benchmark>=5.1.0,<6"
 ]
 
 lint = [
