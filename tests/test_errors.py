@@ -696,7 +696,9 @@ def test_gelbach_errors():
 
     fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
 
-    with pytest.raises(ValueError, match=r"x32 is not in the mediator names."):
+    with pytest.raises(
+        ValueError, match=r"The variable 'x32' is not in the mediator names."
+    ):
         fit.decompose(param="x1", combine_covariates={"g1": ["x32"]})
 
     with pytest.raises(ValueError, match=r"{'x21'} is in both g1 and g2."):
