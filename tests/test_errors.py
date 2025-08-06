@@ -701,7 +701,9 @@ def test_gelbach_errors():
     ):
         fit.decompose(param="x1", combine_covariates={"g1": ["x32"]})
 
-    with pytest.raises(ValueError, match=r"{'x21'} is in both g1 and g2."):
+    with pytest.raises(
+        ValueError, match=r"Variables {'x21'} are in both 'g1' and 'g2' groups."
+    ):
         fit.decompose(param="x1", combine_covariates={"g1": ["x21"], "g2": ["x21"]})
 
     # error with IV
