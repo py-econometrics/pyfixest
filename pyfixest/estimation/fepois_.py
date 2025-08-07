@@ -151,9 +151,7 @@ class Fepois(Feols):
 
         # check that self._Y is a weakly positive number
         if np.any(self._Y < 0):
-            raise ValueError(
-                "The dependent variable must be a weakly positive number."
-            )
+            raise ValueError("The dependent variable must be a weakly positive number.")
 
         # check for separation
         na_separation: list[int] = []
