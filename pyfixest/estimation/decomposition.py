@@ -803,16 +803,16 @@ class GelbachDecomposition:
 
         if self.x1_vars is not None:
             default_model_notes = [
-                f"Col 1: Adjusted Difference (by {'+'.join(self.x1_vars)}): Coefficient on {self.decomp_var} in short regression (direct effect in mediation analysis).",
-                f"Col 2: Adjusted Difference: Coefficient on {self.decomp_var} in long regression (full effect in mediation analysis).",
-                f"Col 3: Explained Difference: Difference in coefficients of {self.decomp_var} in short and long regression.",
+                f"Col 1: Adjusted Difference (by {'+'.join(self.x1_vars)}) - Coefficient on {self.decomp_var} in short regression.",
+                f"Col 2: Adjusted Difference - Coefficient on {self.decomp_var} in long regression.",
+                f"Col 3: Explained Difference - Difference in coefficients of {self.decomp_var} in short and long regression.",
             ]
 
         else:
             default_model_notes = [
-                f"Col 1: Raw Difference: Coefficient on {self.decomp_var} in short regression (direct effect in mediation analysis).",
-                f"Col 2: Adjusted Difference: Coefficient on {self.decomp_var} in long regression (full effect in mediation analysis).",
-                f"Col 3: Explained Difference: Difference in coefficients of {self.decomp_var} in short and long regression.",
+                f"Col 1: Raw Difference - Coefficient on {self.decomp_var} in short regression .",
+                f"Col 2: Adjusted Difference - Coefficient on {self.decomp_var} in long regression.",
+                f"Col 3: Explained Difference - Difference in coefficients of {self.decomp_var} in short and long regression.",
             ]
 
         panel = 0
@@ -863,13 +863,6 @@ class GelbachDecomposition:
             Control Variables: {", ".join(self.x1_vars)}.
             """
 
-        notes += "\n".join(default_model_notes)
-
-        if add_notes is not None:
-            notes += f"""
-            {add_notes}
-            """
-
         if not self.only_coef:
             notes += f"""
                 CIs are computed using B = {self.B} bootstrap replications
@@ -878,6 +871,13 @@ class GelbachDecomposition:
                 notes += " using iid sampling."
             else:
                 notes += f" using clustered sampling by {self.cluster_df.name}."
+
+        notes += "\n".join(default_model_notes)
+
+        if add_notes is not None:
+            notes += f"""
+            {add_notes}
+            """
 
         kwargs["rgroup_sep"] = "t" if rgroup_sep is None else rgroup_sep
         kwargs["caption"] = caption
