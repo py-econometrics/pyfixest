@@ -706,19 +706,32 @@ def test_gelbach_errors():
     ):
         fit.decompose(param="x1", combine_covariates={"g1": ["x21"], "g2": ["x21"]})
 
-    # error with IV
+    with pytest.raises(TypeError, match=r"combine_covariates_dict must be lists"):
+        fit.decompose(param="x1", combine_covariates={"g1": "x21"})
+
+    with pytest.raises(ValueError, match=r"'x99' is not in list"):
+        fit.decompose(param="x99")
+
+    with pytest.raises(ValueError, match=r"cannot be included in the x1_vars argument"):
+        fit.decompose(decomp_var="x1", x1_vars=["x1"])
+
+    med = fit.decompose(param="x1", only_coef=True)
+    with pytest.raises(ValueError, match=r"relative_to must be None"):
+        med.results.to_dict(relative_to="bogus")
+
+    with pytest.raises(ValueError, match=r"The 'stats' parameter must be one of"):
+        med.tidy(stats="bogus")
+
     with pytest.raises(NotImplementedError):
         pf.feols("y ~ 1 | x1 ~ x21", data=data).decompose(
             param="x1", combine_covariates={"g1": ["x21"]}
         )
 
-    # error with WLS
     with pytest.raises(NotImplementedError):
         pf.feols("y ~ x1", data=data, weights="weights").decompose(
             param="x1", combine_covariates={"g1": ["x21"]}
         )
 
-    # error with Poisson
     with pytest.raises(NotImplementedError):
         dt = pf.get_data(model="Fepois")
         pf.fepois("Y ~ X1", data=dt).decompose(
