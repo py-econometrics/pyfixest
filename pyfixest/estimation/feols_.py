@@ -1687,7 +1687,7 @@ class Feols:
             The name of the focal covariate whose effect is to be decomposed into direct
             and indirect components with respect to the rest of the right-hand side.
         x1_vars : list[str]
-            A list of covariates or a string of covariates separated by "+" that are included in both the baseline and the full
+            A list of covariates that are included in both the baseline and the full
             regressions.
         decomp_var : str
             The name of the focal covariate whose effect is to be decomposed into direct
@@ -1722,7 +1722,7 @@ class Feols:
         -------
         GelbachDecomposition
             A GelbachDecomposition object with the decomposition results.
-            Use `summary()`, `tidy()`, and `etable()` to access the estimation results.
+            Use `tidy()` and `etable()` to access the estimation results.
 
         Examples
         --------
@@ -1739,7 +1739,6 @@ class Feols:
         type(gb)
 
         gb.tidy()
-        gb.tidy().xs("direct_effect")
         gb = fit.decompose(decomp_var = "x1", reps = 10, nthreads = 1, x1_vars = ["x21"])
         # combine covariates
         gb = fit.decompose(decomp_var = "x1", reps = 10, nthreads = 1, combine_covariates = {"g1": ["x21", "x22"], "g2": ["x23"]})
