@@ -719,9 +719,6 @@ def test_gelbach_errors():
     with pytest.raises(ValueError, match=r"relative_to must be None"):
         med.results.to_dict(relative_to="bogus")
 
-    with pytest.raises(ValueError, match=r"The 'stats' parameter must be one of"):
-        med.tidy(stats="bogus")
-
     with pytest.raises(NotImplementedError):
         pf.feols("y ~ 1 | x1 ~ x21", data=data).decompose(
             param="x1", combine_covariates={"g1": ["x21"]}

@@ -146,7 +146,8 @@ def test_against_stata(stata_results, combine_covariates, se, agg_first):
             agg_first=agg_first,
         )
 
-        results = fit.GelbachDecompositionResults.tidy(stats="Levels (units)")
+        results = fit.GelbachDecompositionResults.tidy()
+        results = results.query("panels == 'Levels (units)'")
         coefficients = results.coefficients
         ci_lower = results.ci_lower
         ci_upper = results.ci_upper
@@ -355,15 +356,17 @@ def test_x1_vars():
 
 def test_tidy_snapshot(gelbach_decomposition):
     "Mock test for tidy()."
-    tidy_result = gelbach_decomposition.tidy(alpha=0.05, stats="all")
+    tidy_result = gelbach_decomposition.tidy(alpha=0.05).query(
+        "panels == 'Levels (units)'"
+    )
     tidy_result.round(6).to_string()
 
     return tidy_result
 
 
 @pytest.mark.parametrize(
-    "stats",
-    ["all", "Levels (units)", "Share of Full Effect", "Share of Explained Effect"],
+    "panels",
+    ["all", "levels", "share_full", "share_explained", ["levels", "share_full"]],
 )
 @pytest.mark.parametrize("caption", [None, "Test Caption"])
 @pytest.mark.parametrize("column_heads", [None, ["Total", "Direct", "Mediated"]])
@@ -372,7 +375,7 @@ def test_tidy_snapshot(gelbach_decomposition):
 @pytest.mark.parametrize("add_notes", [None, "Custom test note"])
 def test_etable_snapshot(
     gelbach_decomposition,
-    stats,
+    panels,
     caption,
     column_heads,
     use_panel_heads,
@@ -380,15 +383,17 @@ def test_etable_snapshot(
     add_notes,
 ):
     if use_panel_heads:
-        if stats == "all":
+        if panels == "all":
             panel_heads = ["Absolute", "Share of Total", "Share of Explained"]
+        elif panels == ["levels", "share_full"]:
+            panel_heads = ["Absolute", "Share of Total"]
         else:
             panel_heads = ["Custom Panel"]
     else:
         panel_heads = None
 
     gelbach_decomposition.etable(
-        stats=stats,
+        panels=panels,
         caption=caption,
         column_heads=column_heads,
         panel_heads=panel_heads,

@@ -532,7 +532,7 @@ class GelbachDecomposition:
 
         return results
 
-    def tidy(self, alpha: float = 0.05, stats: str = "all") -> pd.DataFrame:
+    def tidy(self, alpha: float = 0.05, panels: str = "all") -> pd.DataFrame:
         """
         Tidy the Gelbach decomposition output into a DataFrame.
 
@@ -544,8 +544,8 @@ class GelbachDecomposition:
         alpha : float, optional
             The significance level for the confidence intervals, by default 0.05.
             Computes a 95% confidence interval when alpha = 0.05.
-        stats : str, optional
-            Which stats to include. One of 'all', 'Levels (units)',
+        panels : str, optional
+            Which panels to include. One of 'all', 'Levels (units)',
             'Share of Explained Effect', 'Share of Full Effect', by default "all".
 
         Returns
@@ -578,15 +578,15 @@ class GelbachDecomposition:
                 [contribution_relative_direct_df, self._relative_direct_ci], axis=1
             )
 
-        contribution_df["stats"] = np.repeat("Levels (units)", len(contribution_df))
-        contribution_relative_explained_df["stats"] = np.repeat(
+        contribution_df["panels"] = np.repeat("Levels (units)", len(contribution_df))
+        contribution_relative_explained_df["panels"] = np.repeat(
             "Share of Explained Effect", len(contribution_relative_explained_df)
         )
-        contribution_relative_direct_df["stats"] = np.repeat(
+        contribution_relative_direct_df["panels"] = np.repeat(
             "Share of Full Effect", len(contribution_relative_direct_df)
         )
 
-        if stats == "all":
+        if panels == "all":
             return pd.concat(
                 [
                     contribution_df,
@@ -595,18 +595,18 @@ class GelbachDecomposition:
                 ],
                 axis=0,
             )
-        elif stats == "Levels (units)":
+        elif panels == "Levels (units)":
             return contribution_df
-        elif stats == "Share of Explained Effect":
+        elif panels == "Share of Explained Effect":
             return contribution_relative_explained_df
-        elif stats == "Share of Full Effect":
+        elif panels == "Share of Full Effect":
             return contribution_relative_direct_df
         else:
             raise ValueError(
-                f"The 'stats' parameter must be one of 'all', 'Levels (units)', 'Share of Explained Effect', 'Share of Full Effect'. Got '{stats}'."
+                f"The 'panels' parameter must be one of 'all', 'Levels (units)', 'Share of Explained Effect', 'Share of Full Effect'. Got '{panels}'."
             )
 
-    def _prepare_etable_df(self, digits: int = 3, stats: str = "all") -> pd.DataFrame:
+    def _prepare_etable_df(self, digits: int = 3, panels: str = "all") -> pd.DataFrame:
         """
         Prepare a DataFrame formatted for etable output.
 
@@ -614,8 +614,8 @@ class GelbachDecomposition:
         ----------
         digits : int, optional
             Number of digits to display in the summary table, by default 3.
-        stats : str, optional
-            Which stats to include. One of 'all', 'Levels (units)', 'Share of Explained Effect', 'Share of Full Effect'
+        panels : str, optional
+            Which panels to include. One of 'all', 'Levels (units)', 'Share of Explained Effect', 'Share of Full Effect'
 
         Returns
         -------
@@ -623,17 +623,17 @@ class GelbachDecomposition:
             Multi-index DataFrame with estimated coefficients with the following columns:
             "direct_effect", "full_effect", "explained_effect"
             If `only_coef` is False, also includes "ci_lower" and "ci_upper" for the confidence intervals.
-            First level of index is the 'stats' type, second level is the covariates/groups.
+            First level of index is the 'panels' type, second level is the covariates/groups.
         """
         mediators = list(self.combine_covariates_dict.keys())
-        df = self.tidy(stats="all").round(digits)
+        df = self.tidy(panels="all").round(digits)
 
-        stats_to_include = df["stats"].unique() if stats == "all" else [stats]
+        panels_to_include = df["panels"].unique() if panels == "all" else [panels]
 
         results = {}
 
-        for stats_name in stats_to_include:
-            df_sub = df[df["stats"] == stats_name].copy()
+        for panels_name in panels_to_include:
+            df_sub = df[df["panels"] == panels_name].copy()
 
             summary_data = {}
 
@@ -686,10 +686,10 @@ class GelbachDecomposition:
                         }
 
             # replace
-            if stats_name == "Share of Full Effect" and not self.only_coef:
+            if panels_name == "Share of Full Effect" and not self.only_coef:
                 # don't print CIs as they are [1,1]
                 summary_data[f"{self.decomp_var}_ci"]["direct_effect"] = "-"
-            elif stats_name == "Share of Explained Effect":
+            elif panels_name == "Share of Explained Effect":
                 summary_data[self.decomp_var]["direct_effect"] = "-"
                 summary_data[self.decomp_var]["full_effect"] = "-"
 
@@ -704,16 +704,16 @@ class GelbachDecomposition:
             summary_df.index = pd.Index(
                 ["" if name.endswith("_ci") else name for name in summary_df.index]
             )
-            results[stats_name] = summary_df
+            results[panels_name] = summary_df
 
-        if stats == "all":
+        if panels == "all":
             return pd.concat(results, axis=0)
         else:
-            return results[stats]
+            return results[panels]
 
     def etable(
         self,
-        stats: str = "all",
+        panels: str = "all",
         caption: Optional[str] = None,
         column_heads: Optional[list[str]] = None,
         panel_heads: Optional[list[str]] = None,
@@ -728,15 +728,14 @@ class GelbachDecomposition:
 
         Parameters
         ----------
-        stats : str, optional
-            Which stats to include. One of 'all', 'Levels (units)',
-            'Share of Full Effect', 'Share of Explained Effect', by default "all".
+        panels : str, optional
+            Which panels to include. One of 'all', 'levels', 'share_full', 'share_explained'.
         caption : str, optional
             Caption for the table, by default None.
         column_heads : list[str], optional
             Column names for the table. Must be length 3 if provided, by default None.
         panel_heads : list[str], optional
-            Custom names for the panel sections. Length must match number of stats shown, by default None.
+            Custom names for the panel sections. Length must match number of panels shown, by default None.
         rgroup_sep : str, optional
             Row group separator style. Options: 'tb', 't', 'b', '', by default "t".
         add_notes : str, optional
@@ -769,34 +768,44 @@ class GelbachDecomposition:
         if column_heads is not None and len(column_heads) != 3:
             raise ValueError("The 'column_heads' parameter must be a list of length 3.")
 
-        if stats == "all":
-            stats_list = [
+        panels_arg_to_label = {
+            "levels": "Levels (units)",
+            "share_full": "Share of Full Effect",
+            "share_explained": "Share of Explained Effect",
+        }
+
+        if panels == "all":
+            panel_list = [
                 "Levels (units)",
                 "Share of Full Effect",
                 "Share of Explained Effect",
             ]
         else:
-            stats_list = [stats] if isinstance(stats, str) else stats
+            panel_list = (
+                [panels_arg_to_label[panels]]
+                if isinstance(panels, str)
+                else [panels_arg_to_label[panel] for panel in panels]
+            )
 
-        for stat in stats_list:
-            if stat not in [
+        for panel in panel_list:
+            if panel not in [
                 "Levels (units)",
                 "Share of Full Effect",
                 "Share of Explained Effect",
             ]:
                 raise ValueError(
-                    f"The 'stats' parameter must be one of 'Levels (units)', 'Share of Full Effect', 'Share of Explained Effect'. Got '{stat}'."
+                    f"The 'panels' parameter must be one of 'Levels (units)', 'Share of Full Effect', 'Share of Explained Effect'. Got '{panel}'."
                 )
 
-        if panel_heads is not None and len(panel_heads) != len(stats_list):
+        if panel_heads is not None and len(panel_heads) != len(panel_list):
             raise ValueError(
-                f"The 'panel_heads' parameter must have length {len(stats_list)} to match the number of stats panels. Got {len(panel_heads)}."
+                f"The 'panel_heads' parameter must have length {len(panel_list)} to match the number of panels panels. Got {len(panel_heads)}."
             )
 
-        res = self._prepare_etable_df(stats="all")
+        res = self._prepare_etable_df(panels="all")
 
         if isinstance(res.index, pd.MultiIndex):
-            mask = res.index.get_level_values(0).isin(stats_list)
+            mask = res.index.get_level_values(0).isin(panel_list)
             res_sub = res.loc[mask, :]
         else:
             res_sub = res
@@ -815,19 +824,19 @@ class GelbachDecomposition:
                 f"Col 3: Explained Difference - Difference in coefficients of {self.decomp_var} in short and long regression.",
             ]
 
-        panel = 0
-        if "Levels (units)" in stats_list:
-            panel += 1
-            default_model_notes.append(f"Panel {panel}: Levels (units).")
-        if "Share of Full Effect" in stats_list:
-            panel += 1
+        panel_num = 0
+        if "Levels (units)" in panel_list:
+            panel_num += 1
+            default_model_notes.append(f"Panel {panel_num}: Levels (units).")
+        if "Share of Full Effect" in panel_list:
+            panel_num += 1
             default_model_notes.append(
-                f"Panel {panel}: Share of Full Effect: Levels normalized by coefficient of the short regression."
+                f"Panel {panel_num}: Share of Full Effect: Levels normalized by coefficient of the short regression."
             )
-        if "Share of Explained Effect" in stats_list:
-            panel += 1
+        if "Share of Explained Effect" in panel_list:
+            panel_num += 1
             default_model_notes.append(
-                f"Panel {panel}: Share of Explained Effect: Levels normalized by coefficient of the long regression."
+                f"Panel {panel_num}: Share of Explained Effect: Levels normalized by coefficient of the long regression."
             )
 
         default_model_heads = [
@@ -842,7 +851,7 @@ class GelbachDecomposition:
 
         if panel_heads is not None and isinstance(res_sub.index, pd.MultiIndex):
             panel_mapping = {
-                stats_list[i]: panel_heads[i] for i in range(len(stats_list))
+                panel_list[i]: panel_heads[i] for i in range(len(panel_list))
             }
 
             new_index_level_0 = [
