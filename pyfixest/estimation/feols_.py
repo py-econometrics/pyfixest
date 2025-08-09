@@ -1751,9 +1751,21 @@ class Feols:
         res = fit.decompose(decomp_var="x1", combine_covariates={"g1": re.compile("x2[1-2]"), "g2": re.compile("x23")})
         ```
         """
-        if param is not None:
+        has_param = param is not None
+        has_decomp = decomp_var is not None
+
+        if not has_param and not has_decomp:
+            raise ValueError("Either 'param' or 'decomp_var' must be provided.")
+
+        if has_param and has_decomp:
+            raise ValueError(
+                "The 'param' and 'decomp_var' arguments cannot be provided at the same time."
+            )
+
+        if has_param:
             warnings.warn(
-                "The 'param' argument is deprecated. Please use 'decomp_var' instead."
+                "The 'param' argument is deprecated. Please use 'decomp_var' instead.",
+                UserWarning,
             )
             decomp_var = param
 

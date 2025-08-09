@@ -152,38 +152,6 @@ class GelbachDecomposition:
     Gelbach, J. B. (2016). When do covariates matter? And which ones, and how much?
     Journal of Labor Economics, 34(2), 509-543.
 
-    Examples
-    --------
-    We can fit a simple model and decompose it as follows:
-    ```{python}
-    import pyfixest as pf
-    from pyfixest.utils.dgps import gelbach_data
-
-    # Fit regression model
-    data = gelbach_data(nobs=500)
-    fit = pf.feols("Y ~ x1 + x21 + x22 + x23", data=data)
-
-    # Perform decomposition
-    decomp = fit.decompose(decomp_var="x1")
-
-    # View results
-    decomp.summary()
-    decomp.tidy()
-    decomp.etable()
-    ```
-    We can also add additional covariates to the decomposition:
-    ```{python}
-    decomp = fit.decompose(decomp_var="x1", x1_vars=["x21])
-    ```
-
-    We can aggregate individual covariates via the `combine_covariates` argument:
-    ```{python}
-    decomp = fit.decompose(decomp_var="x1", combine_covariates={"x2": ["x22", "x23"]})
-    ```
-    We can ask not to compute inference by setting `only_coef=True`:
-    ```{python}
-    decomp = fit.decompose(decomp_var="x1", only_coef=True)
-    ```
     """
 
     # Core parameters

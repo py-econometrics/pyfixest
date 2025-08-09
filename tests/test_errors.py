@@ -735,6 +735,23 @@ def test_gelbach_errors():
             param="X1", combine_covariates={"g1": ["x21"]}
         )
 
+    with pytest.raises(
+        ValueError, match=r"Either 'param' or 'decomp_var' must be provided\."
+    ):
+        fit.decompose()
+
+    with pytest.raises(
+        ValueError,
+        match=r"The 'param' and 'decomp_var' arguments cannot be provided at the same time\.",
+    ):
+        fit.decompose(param="x1", decomp_var="x1")
+
+    with pytest.warns(
+        UserWarning,
+        match=r"The 'param' argument is deprecated. Please use 'decomp_var' instead.",
+    ):
+        fit.decompose(param="x1")
+
 
 def test_glm_errors():
     "Test that dependent variable must be binary for probit and logit models."
