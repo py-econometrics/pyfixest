@@ -388,11 +388,11 @@ def feols(
 
     # simple decomposition
     res = fit.decompose(param = "x1")
-    pf.make_table(res)
+    res.etable()
 
     # group covariates via "combine_covariates" argument
     res = fit.decompose(param = "x1", combine_covariates={"g1": ["x21", "x22"], "g2": ["x23"]})
-    pf.make_table(res)
+    res.etable()
 
     # group covariates via regex
     res = fit.decompose(param="x1", combine_covariates={"g1": re.compile("x2[1-2]"), "g2": re.compile("x23")})
