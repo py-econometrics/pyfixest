@@ -206,9 +206,9 @@ def test_regex():
         reps=100,
     )
 
-    for key, value in fit1.GelbachDecompositionResults.contribution_dict.items():
+    for key, value in fit1.GelbachDecompositionResults.results.absolute.items():
         np.testing.assert_allclose(
-            value, fit2.GelbachDecompositionResults.contribution_dict.get(key)
+            value, fit2.GelbachDecompositionResults.results.absolute.get(key)
         )
 
 
@@ -242,11 +242,11 @@ def test_agg_first():
         seed=123,
     )
 
-    for key, value in fit1.GelbachDecompositionResults.contribution_dict.items():
+    for key, value in fit1.GelbachDecompositionResults.results.absolute.items():
         assert (
-            value - fit2.GelbachDecompositionResults.contribution_dict.get(key) < 1e-08
+            value - fit2.GelbachDecompositionResults.results.absolute.get(key) < 1e-08
         ), (
-            f"Failed for {key} with values {value} and {fit2.GelbachDecompositionResults.contribution_dict.get(key)}"
+            f"Failed for {key} with values {value} and {fit2.GelbachDecompositionResults.results.absolute.get(key)}"
         )
 
 
@@ -269,9 +269,9 @@ def test_cluster():
         cluster="cluster",
     )
 
-    for key, value in fit1.GelbachDecompositionResults.contribution_dict.items():
+    for key, value in fit1.GelbachDecompositionResults.results.absolute.items():
         np.testing.assert_allclose(
-            value, fit2.GelbachDecompositionResults.contribution_dict.get(key)
+            value, fit2.GelbachDecompositionResults.results.absolute.get(key)
         )
 
 
@@ -291,9 +291,9 @@ def test_fixef():
         param="x1", combine_covariates={"g1": ["x21", "x22"], "g2": ["x23"]}, digits=6
     )
 
-    for key, value in fit1.GelbachDecompositionResults.contribution_dict.items():
+    for key, value in fit1.GelbachDecompositionResults.results.absolute.items():
         np.testing.assert_allclose(
-            value, fit2.GelbachDecompositionResults.contribution_dict.get(key)
+            value, fit2.GelbachDecompositionResults.results.absolute.get(key)
         )
 
 
@@ -312,9 +312,9 @@ def test_combine_covariates_vs_none(agg_first):
         agg_first=agg_first,
     )
 
-    for key, value in fit1.GelbachDecompositionResults.contribution_dict.items():
+    for key, value in fit1.GelbachDecompositionResults.results.absolute.items():
         np.testing.assert_allclose(
-            value, fit2.GelbachDecompositionResults.contribution_dict.get(key)
+            value, fit2.GelbachDecompositionResults.results.absolute.get(key)
         )
 
 
@@ -339,7 +339,7 @@ def test_x1_vars():
     )
     # test that param ALL is .5024257
     np.testing.assert_allclose(
-        fit.GelbachDecompositionResults.contribution_dict["ALL"], 0.5024257
+        fit.GelbachDecompositionResults.results.absolute["ALL"], 0.5024257
     )
 
     fit.decompose(
@@ -350,7 +350,7 @@ def test_x1_vars():
         only_coef=True,
     )
     np.testing.assert_allclose(
-        fit.GelbachDecompositionResults.contribution_dict["ALL"], 0.3149754
+        fit.GelbachDecompositionResults.results.absolute["ALL"], 0.3149754
     )
 
 

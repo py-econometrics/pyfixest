@@ -286,13 +286,6 @@ class GelbachDecomposition:
                 self.results,
             ) = results
 
-            # Backward compatibility - provide the old dictionary interface
-            self.contribution_dict = self.results.absolute
-            self.contribution_dict_relative_explained = (
-                self.results.relative_to_explained
-            )
-            self.contribution_dict_relative_direct = self.results.relative_to_direct
-
             # Prepare cluster bootstrap if relevant
             self.X_dict = {}
             self.Y_dict = {}
@@ -303,12 +296,7 @@ class GelbachDecomposition:
                     self.X_dict[g] = self.X[cluster_idx]
                     self.Y_dict[g] = self.Y[cluster_idx]
 
-            return {
-                "contribution_dict": self.contribution_dict,
-                "contribution_dict_relative_explained": self.contribution_dict_relative_explained,
-                "contribution_dict_relative_direct": self.contribution_dict_relative_direct,
-                "results": self.results,
-            }
+            return self.results
 
         else:
             # need to compute X1, X2 in bootstrap sample
@@ -331,11 +319,7 @@ class GelbachDecomposition:
                 bootstrap_results,
             ) = results
 
-            return {
-                "contribution_dict": bootstrap_results.absolute,
-                "contribution_dict_relative_explained": bootstrap_results.relative_to_explained,
-                "contribution_dict_relative_direct": bootstrap_results.relative_to_direct,
-            }
+            return bootstrap_results
 
     def bootstrap(self, rng: np.random.Generator, B: int = 1_000, alpha: float = 0.05):
         "Bootstrap Confidence Intervals for Total, Mediated and Direct Effects."
@@ -351,55 +335,68 @@ class GelbachDecomposition:
         )
 
         # unpack
-        self._bootstrap_absolute_df = pd.DataFrame(
-            [d["contribution_dict"] for d in _bootstrapped]
-        )
-        self._bootstrap_relative_explained_df = pd.DataFrame(
-            [d["contribution_dict_relative_explained"] for d in _bootstrapped]
-        )
-        self._bootstrap_relative_direct_df = pd.DataFrame(
-            [d["contribution_dict_relative_direct"] for d in _bootstrapped]
-        )
+        (
+            self._bootstrap_absolute_df,
+            self._bootstrap_relative_explained_df,
+            self._bootstrap_relative_direct_df,
+        ) = self._unpack_bootstrap_results(_bootstrapped)
 
         # compute ci
-        self._absolute_ci = pd.DataFrame(
-            {
-                "ci_lower": np.percentile(
-                    self._bootstrap_absolute_df, 100 * (alpha / 2), axis=0
-                ),
-                "ci_upper": np.percentile(
-                    self._bootstrap_absolute_df, 100 * (1 - alpha / 2), axis=0
-                ),
-            },
-            index=self._bootstrap_absolute_df.columns,
+        self._absolute_ci = self._compute_ci(self._bootstrap_absolute_df, alpha)
+        self._relative_explained_ci = self._compute_ci(
+            self._bootstrap_relative_explained_df, alpha
         )
-        self._absolute_ci = self._absolute_ci.astype(float)
+        self._relative_direct_ci = self._compute_ci(
+            self._bootstrap_relative_direct_df, alpha
+        )
 
-        self._relative_explained_ci = pd.DataFrame(
-            {
-                "ci_lower": np.percentile(
-                    self._bootstrap_relative_explained_df, 100 * (alpha / 2), axis=0
-                ),
-                "ci_upper": np.percentile(
-                    self._bootstrap_relative_explained_df, 100 * (1 - alpha / 2), axis=0
-                ),
-            },
-            index=self._bootstrap_relative_explained_df.columns,
-        )
-        self._relative_explained_ci = self._relative_explained_ci.astype(float)
+    def _compute_ci(self, bootstrap_df: pd.DataFrame, alpha: float) -> pd.DataFrame:
+        """Compute confidence intervals from bootstrap DataFrame.
 
-        self._relative_direct_ci = pd.DataFrame(
+        Parameters
+        ----------
+        bootstrap_df : pd.DataFrame
+            DataFrame with bootstrap replications (rows) and effects (columns).
+        alpha : float
+            Significance level for confidence intervals.
+
+        Returns
+        -------
+        pd.DataFrame
+            DataFrame with ci_lower and ci_upper columns.
+        """
+        ci_df = pd.DataFrame(
             {
-                "ci_lower": np.percentile(
-                    self._bootstrap_relative_direct_df, 100 * (alpha / 2), axis=0
-                ),
-                "ci_upper": np.percentile(
-                    self._bootstrap_relative_direct_df, 100 * (1 - alpha / 2), axis=0
-                ),
+                "ci_lower": np.percentile(bootstrap_df, 100 * (alpha / 2), axis=0),
+                "ci_upper": np.percentile(bootstrap_df, 100 * (1 - alpha / 2), axis=0),
             },
-            index=self._bootstrap_relative_direct_df.columns,
+            index=bootstrap_df.columns,
         )
-        self._relative_direct_ci = self._relative_direct_ci.astype(float)
+        return ci_df.astype(float)
+
+    def _unpack_bootstrap_results(
+        self, bootstrapped: list
+    ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+        """Unpack bootstrap results into DataFrames for different effect types.
+
+        Parameters
+        ----------
+        bootstrapped : list
+            List of GelbachResults from bootstrap iterations.
+
+        Returns
+        -------
+        tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]
+            DataFrames for absolute, relative_to_explained, and relative_to_direct effects.
+        """
+        absolute_df = pd.DataFrame([res.absolute for res in bootstrapped])
+        relative_explained_df = pd.DataFrame(
+            [res.relative_to_explained for res in bootstrapped]
+        )
+        relative_direct_df = pd.DataFrame(
+            [res.relative_to_direct for res in bootstrapped]
+        )
+        return absolute_df, relative_explained_df, relative_direct_df
 
     def _bootstrap(self, rng: np.random.Generator):
         "Run a single bootstrap iteration."
@@ -500,6 +497,15 @@ class GelbachDecomposition:
 
         return results
 
+    def _dict_to_df(self, data: dict[str, float]) -> pd.DataFrame:
+        """Convert a mapping of effects to a tidy 2-column DataFrame.
+
+        Returns a DataFrame with index 'effect' and a single column 'coefficients'.
+        """
+        return pd.DataFrame(
+            list(data.items()), columns=["effect", "coefficients"]
+        ).set_index("effect")
+
     def tidy(self, alpha: float = 0.05, panels: str = "all") -> pd.DataFrame:
         """
         Tidy the Gelbach decomposition output into a DataFrame.
@@ -521,54 +527,44 @@ class GelbachDecomposition:
         pd.DataFrame
             A tidy DataFrame with the decomposition results.
         """
-        # Convert scalar dictionaries to DataFrames with proper index
-        contribution_df = pd.DataFrame(
-            list(self.contribution_dict.items()), columns=["effect", "coefficients"]
-        ).set_index("effect")
-
-        contribution_relative_explained_df = pd.DataFrame(
-            list(self.contribution_dict_relative_explained.items()),
-            columns=["effect", "coefficients"],
-        ).set_index("effect")
-
-        contribution_relative_direct_df = pd.DataFrame(
-            list(self.contribution_dict_relative_direct.items()),
-            columns=["effect", "coefficients"],
-        ).set_index("effect")
+        # Build DataFrames directly from results
+        absolute_df = self._dict_to_df(self.results.absolute)
+        relative_explained_df = self._dict_to_df(self.results.relative_to_explained)
+        relative_direct_df = self._dict_to_df(self.results.relative_to_direct)
 
         if not self.only_coef:
-            contribution_df = pd.concat([contribution_df, self._absolute_ci], axis=1)
-            contribution_relative_explained_df = pd.concat(
-                [contribution_relative_explained_df, self._relative_explained_ci],
+            absolute_df = pd.concat([absolute_df, self._absolute_ci], axis=1)
+            relative_explained_df = pd.concat(
+                [relative_explained_df, self._relative_explained_ci],
                 axis=1,
             )
-            contribution_relative_direct_df = pd.concat(
-                [contribution_relative_direct_df, self._relative_direct_ci], axis=1
+            relative_direct_df = pd.concat(
+                [relative_direct_df, self._relative_direct_ci], axis=1
             )
 
-        contribution_df["panels"] = np.repeat("Levels (units)", len(contribution_df))
-        contribution_relative_explained_df["panels"] = np.repeat(
-            "Share of Explained Effect", len(contribution_relative_explained_df)
+        absolute_df["panels"] = np.repeat("Levels (units)", len(absolute_df))
+        relative_explained_df["panels"] = np.repeat(
+            "Share of Explained Effect", len(relative_explained_df)
         )
-        contribution_relative_direct_df["panels"] = np.repeat(
-            "Share of Full Effect", len(contribution_relative_direct_df)
+        relative_direct_df["panels"] = np.repeat(
+            "Share of Full Effect", len(relative_direct_df)
         )
 
         if panels == "all":
             return pd.concat(
                 [
-                    contribution_df,
-                    contribution_relative_direct_df,
-                    contribution_relative_explained_df,
+                    absolute_df,
+                    relative_direct_df,
+                    relative_explained_df,
                 ],
                 axis=0,
             )
         elif panels == "Levels (units)":
-            return contribution_df
+            return absolute_df
         elif panels == "Share of Explained Effect":
-            return contribution_relative_explained_df
+            return relative_explained_df
         elif panels == "Share of Full Effect":
-            return contribution_relative_direct_df
+            return relative_direct_df
         else:
             raise ValueError(
                 f"The 'panels' parameter must be one of 'all', 'Levels (units)', 'Share of Explained Effect', 'Share of Full Effect'. Got '{panels}'."
