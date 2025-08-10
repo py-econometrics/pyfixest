@@ -1,3 +1,4 @@
+import itertools
 from dataclasses import dataclass, field
 from typing import Any, Optional, Union
 
@@ -8,6 +9,13 @@ from numpy.typing import NDArray
 from scipy.sparse import hstack, spmatrix, vstack
 from scipy.sparse.linalg import lsqr
 from tqdm import tqdm
+
+# Panel name mappings for consistent API
+PANEL_ALIASES = {
+    "levels": "Levels (units)",
+    "share_full": "Share of Full Effect",
+    "share_explained": "Share of Explained Effect",
+}
 
 
 @dataclass
@@ -140,12 +148,9 @@ class GelbachDecomposition:
 
     Attributes
     ----------
-    contribution_dict : dict
-        Point estimates of direct, indirect, and total effects.
-    contribution_dict_relative_explained : dict
-        Effects relative to explained effect.
-    contribution_dict_relative_direct : dict
-        Effects relative to direct effect.
+    results : GelbachResults
+        Container with all decomposition results including direct, indirect, and total effects.
+        Provides access to absolute effects and relative effects via properties.
 
     References
     ----------
@@ -228,6 +233,18 @@ class GelbachDecomposition:
             raise ValueError(
                 f"The decomposition variable '{self.decomp_var}' cannot be included in the x1_vars argument."
             )
+
+        # Check x1_vars don't overlap with combine_covariates keys
+        if self.x1_vars is not None and self.combine_covariates is not None:
+            combine_values = set(
+                list(itertools.chain.from_iterable(self.combine_covariates.values()))
+            )
+            x1_set = set(self.x1_vars)
+            overlap = x1_set & combine_values
+            if overlap:
+                raise ValueError(
+                    f"Variables {sorted(overlap)} cannot be in both x1_vars and combine_covariates keys."
+                )
 
     def _check_combine_covariates(self):
         # Check that each value in self.combine_covariates_dict is in self.mediator_names
@@ -479,7 +496,6 @@ class GelbachDecomposition:
         explained_effect = sum(mediator_effects.values())
         unexplained_effect = direct_effect - explained_effect
 
-        # Create structured results
         gelbach_results = GelbachResults(
             direct_effect=direct_effect,
             full_effect=full_effect,
@@ -519,15 +535,14 @@ class GelbachDecomposition:
             The significance level for the confidence intervals, by default 0.05.
             Computes a 95% confidence interval when alpha = 0.05.
         panels : str, optional
-            Which panels to include. One of 'all', 'Levels (units)',
-            'Share of Explained Effect', 'Share of Full Effect', by default "all".
+            Which panels to include. One of 'all', 'levels', 'share_explained',
+            'share_full', by default "all". Also accepts full names for backward compatibility.
 
         Returns
         -------
         pd.DataFrame
             A tidy DataFrame with the decomposition results.
         """
-        # Build DataFrames directly from results
         absolute_df = self._dict_to_df(self.results.absolute)
         relative_explained_df = self._dict_to_df(self.results.relative_to_explained)
         relative_direct_df = self._dict_to_df(self.results.relative_to_direct)
@@ -550,6 +565,8 @@ class GelbachDecomposition:
             "Share of Full Effect", len(relative_direct_df)
         )
 
+        normalized_panels = PANEL_ALIASES.get(panels, panels)
+
         if panels == "all":
             return pd.concat(
                 [
@@ -559,15 +576,16 @@ class GelbachDecomposition:
                 ],
                 axis=0,
             )
-        elif panels == "Levels (units)":
+        elif normalized_panels == "Levels (units)":
             return absolute_df
-        elif panels == "Share of Explained Effect":
+        elif normalized_panels == "Share of Explained Effect":
             return relative_explained_df
-        elif panels == "Share of Full Effect":
+        elif normalized_panels == "Share of Full Effect":
             return relative_direct_df
         else:
+            valid_options = ["all", *PANEL_ALIASES.keys(), *PANEL_ALIASES.values()]
             raise ValueError(
-                f"The 'panels' parameter must be one of 'all', 'Levels (units)', 'Share of Explained Effect', 'Share of Full Effect'. Got '{panels}'."
+                f"The 'panels' parameter must be one of {valid_options}. Got '{panels}'."
             )
 
     def _build_panel_summary(
@@ -739,11 +757,7 @@ class GelbachDecomposition:
         if column_heads is not None and len(column_heads) != 3:
             raise ValueError("The 'column_heads' parameter must be a list of length 3.")
 
-        panels_arg_to_label = {
-            "levels": "Levels (units)",
-            "share_full": "Share of Full Effect",
-            "share_explained": "Share of Explained Effect",
-        }
+        panels_arg_to_label = PANEL_ALIASES
 
         if panels == "all":
             panel_list = [

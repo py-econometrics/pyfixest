@@ -715,6 +715,13 @@ def test_gelbach_errors():
     with pytest.raises(ValueError, match=r"cannot be included in the x1_vars argument"):
         fit.decompose(decomp_var="x1", x1_vars=["x1"])
 
+    with pytest.raises(
+        ValueError, match=r"cannot be in both x1_vars and combine_covariates keys"
+    ):
+        fit.decompose(
+            decomp_var="x1", x1_vars=["x21"], combine_covariates={"g1": ["x21"]}
+        )
+
     med = fit.decompose(param="x1", only_coef=True)
     with pytest.raises(ValueError, match=r"relative_to must be None"):
         med.results.to_dict(relative_to="bogus")
