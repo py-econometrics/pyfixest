@@ -570,110 +570,117 @@ class GelbachDecomposition:
                 f"The 'panels' parameter must be one of 'all', 'Levels (units)', 'Share of Explained Effect', 'Share of Full Effect'. Got '{panels}'."
             )
 
-    def _prepare_etable_df(self, digits: int = 3, panels: str = "all") -> pd.DataFrame:
-        """
-        Prepare a DataFrame formatted for etable output.
+    def _build_panel_summary(
+        self, panel_df: pd.DataFrame, panel_name: str, digits: int
+    ) -> pd.DataFrame:
+        """Build summary DataFrame for a single panel."""
+        summary_data = {}
 
-        Parameters
-        ----------
-        digits : int, optional
-            Number of digits to display in the summary table, by default 3.
-        panels : str, optional
-            Which panels to include. One of 'all', 'Levels (units)', 'Share of Explained Effect', 'Share of Full Effect'
+        summary_data[self.decomp_var] = self._format_main_effects_row(panel_df, digits)
 
-        Returns
-        -------
-        pd.DataFrame
-            Multi-index DataFrame with estimated coefficients with the following columns:
-            "direct_effect", "full_effect", "explained_effect"
-            If `only_coef` is False, also includes "ci_lower" and "ci_upper" for the confidence intervals.
-            First level of index is the 'panels' type, second level is the covariates/groups.
-        """
-        mediators = list(self.combine_covariates_dict.keys())
-        df = self.tidy(panels="all").round(digits)
-
-        panels_to_include = df["panels"].unique() if panels == "all" else [panels]
-
-        results = {}
-
-        for panels_name in panels_to_include:
-            df_sub = df[df["panels"] == panels_name].copy()
-
-            summary_data = {}
-
-            main_effects_row = {}
-            main_effects_ci_row = {}
-
-            for effect in ["direct_effect", "full_effect", "explained_effect"]:
-                if effect in df_sub.index:
-                    coef = df_sub.loc[effect, "coefficients"]
-                    main_effects_row[effect] = f"{coef:.{digits}f}"
-
-                    if not self.only_coef and "ci_lower" in df_sub.columns:
-                        ci_lower = df_sub.loc[effect, "ci_lower"]
-                        ci_upper = df_sub.loc[effect, "ci_upper"]
-                        main_effects_ci_row[effect] = (
-                            f"[{ci_lower:.{digits}f}, {ci_upper:.{digits}f}]"
-                        )
-                    else:
-                        main_effects_ci_row[effect] = "-"
-                else:
-                    main_effects_row[effect] = "-"
-                    main_effects_ci_row[effect] = "-"
-
-            summary_data[self.decomp_var] = main_effects_row
-
-            if not self.only_coef:
-                summary_data[f"{self.decomp_var}_ci"] = (
-                    main_effects_ci_row  # Empty name for CI row
-                )
-
-            for mediator in mediators:
-                if mediator in df_sub.index:
-                    coef = df_sub.loc[mediator, "coefficients"]
-
-                    summary_data[mediator] = {
-                        "direct_effect": "-",
-                        "full_effect": "-",
-                        "explained_effect": f"{coef:.{digits}f}",
-                    }
-
-                    if not self.only_coef and "ci_lower" in df_sub.columns:
-                        ci_lower = df_sub.loc[mediator, "ci_lower"]
-                        ci_upper = df_sub.loc[mediator, "ci_upper"]
-                        ci_str = f"[{ci_lower:.{digits}f}, {ci_upper:.{digits}f}]"
-
-                        summary_data[f"{mediator}_ci"] = {
-                            "direct_effect": "-",
-                            "full_effect": "-",
-                            "explained_effect": ci_str,
-                        }
-
-            # replace
-            if panels_name == "Share of Full Effect" and not self.only_coef:
-                # don't print CIs as they are [1,1]
-                summary_data[f"{self.decomp_var}_ci"]["direct_effect"] = "-"
-            elif panels_name == "Share of Explained Effect":
-                summary_data[self.decomp_var]["direct_effect"] = "-"
-                summary_data[self.decomp_var]["full_effect"] = "-"
-
-                # delete CIs fully
-                if not self.only_coef:
-                    summary_data.pop(f"{self.decomp_var}_ci")
-
-            # Convert to DataFrame
-            summary_df = pd.DataFrame(summary_data).T
-            summary_df.columns = ["direct_effect", "full_effect", "explained_effect"]
-
-            summary_df.index = pd.Index(
-                ["" if name.endswith("_ci") else name for name in summary_df.index]
+        if not self.only_coef:
+            summary_data[f"{self.decomp_var}_ci"] = self._format_main_effects_ci_row(
+                panel_df, digits
             )
-            results[panels_name] = summary_df
 
-        if panels == "all":
-            return pd.concat(results, axis=0)
-        else:
-            return results[panels]
+        for mediator in self.combine_covariates_dict:
+            if mediator in panel_df.index:
+                summary_data[mediator] = self._format_mediator_row(
+                    panel_df, mediator, digits
+                )
+                if not self.only_coef and "ci_lower" in panel_df.columns:
+                    summary_data[f"{mediator}_ci"] = self._format_mediator_ci_row(
+                        panel_df, mediator, digits
+                    )
+
+        summary_data = self._apply_panel_specific_rules(summary_data, panel_name)
+
+        return self._convert_to_dataframe(summary_data)
+
+    def _format_main_effects_row(
+        self, panel_df: pd.DataFrame, digits: int
+    ) -> dict[str, str]:
+        """Format the main decomp_var effects row."""
+        return {
+            effect: self._format_effect_value(panel_df, effect, digits)
+            for effect in ["direct_effect", "full_effect", "explained_effect"]
+        }
+
+    def _format_main_effects_ci_row(
+        self, panel_df: pd.DataFrame, digits: int
+    ) -> dict[str, str]:
+        """Format the CI row for main effects."""
+        return {
+            effect: self._format_ci_value(panel_df, effect, digits)
+            for effect in ["direct_effect", "full_effect", "explained_effect"]
+        }
+
+    def _format_mediator_row(
+        self, panel_df: pd.DataFrame, mediator: str, digits: int
+    ) -> dict[str, str]:
+        """Format a mediator effects row."""
+        coef = panel_df.loc[mediator, "coefficients"]
+        return {
+            "direct_effect": "-",
+            "full_effect": "-",
+            "explained_effect": f"{coef:.{digits}f}",
+        }
+
+    def _format_mediator_ci_row(
+        self, panel_df: pd.DataFrame, mediator: str, digits: int
+    ) -> dict[str, str]:
+        """Format a mediator CI row."""
+        ci_str = self._format_ci_value(panel_df, mediator, digits)
+        return {
+            "direct_effect": "-",
+            "full_effect": "-",
+            "explained_effect": ci_str,
+        }
+
+    def _format_effect_value(
+        self, panel_df: pd.DataFrame, effect: str, digits: int
+    ) -> str:
+        """Format a single effect value."""
+        if effect in panel_df.index:
+            coef = panel_df.loc[effect, "coefficients"]
+            return f"{coef:.{digits}f}"
+        return "-"
+
+    def _format_ci_value(self, panel_df: pd.DataFrame, effect: str, digits: int) -> str:
+        """Format a confidence interval value."""
+        if (
+            effect in panel_df.index
+            and not self.only_coef
+            and "ci_lower" in panel_df.columns
+        ):
+            ci_lower = panel_df.loc[effect, "ci_lower"]
+            ci_upper = panel_df.loc[effect, "ci_upper"]
+            return f"[{ci_lower:.{digits}f}, {ci_upper:.{digits}f}]"
+        return "-"
+
+    def _apply_panel_specific_rules(self, summary_data: dict, panel_name: str) -> dict:
+        """Apply panel-specific formatting rules."""
+        if panel_name == "Share of Full Effect" and not self.only_coef:
+            # Don't print CIs as they are [1,1]
+            summary_data[f"{self.decomp_var}_ci"]["direct_effect"] = "-"
+        elif panel_name == "Share of Explained Effect":
+            summary_data[self.decomp_var]["direct_effect"] = "-"
+            summary_data[self.decomp_var]["full_effect"] = "-"
+            # Remove CIs entirely
+            if not self.only_coef:
+                summary_data.pop(f"{self.decomp_var}_ci", None)
+
+        return summary_data
+
+    def _convert_to_dataframe(self, summary_data: dict) -> pd.DataFrame:
+        """Convert summary data dict to DataFrame with proper formatting."""
+        df = pd.DataFrame(summary_data).T
+        df.columns = ["direct_effect", "full_effect", "explained_effect"]
+
+        # Clean up CI row names
+        df.index = pd.Index(["" if name.endswith("_ci") else name for name in df.index])
+
+        return df
 
     def etable(
         self,
@@ -766,7 +773,19 @@ class GelbachDecomposition:
                 f"The 'panel_heads' parameter must have length {len(panel_list)} to match the number of panels panels. Got {len(panel_heads)}."
             )
 
-        res = self._prepare_etable_df(panels="all")
+        # Build formatted DataFrame directly
+        digits = kwargs.get("digits", 3)  # Default to 3 if not specified
+        df = self.tidy(panels="all").round(digits)
+        panels_to_include = df["panels"].unique()
+
+        results = {}
+        for panel_name in panels_to_include:
+            panel_df = df[df["panels"] == panel_name].copy()
+            results[panel_name] = self._build_panel_summary(
+                panel_df, panel_name, digits
+            )
+
+        res = pd.concat(results, axis=0)
 
         if isinstance(res.index, pd.MultiIndex):
             mask = res.index.get_level_values(0).isin(panel_list)
