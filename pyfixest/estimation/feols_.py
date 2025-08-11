@@ -1710,8 +1710,10 @@ class Feols:
             If None, uses all available threads minus one.
         agg_first : bool, optional
             If True, use the 'aggregate first' algorithm described in Gelbach (2016).
-            Recommended in cases with many (potentially high-dimensional) covariates.
-            False by default if the 'combine_covariates' argument is None, True otherwise.
+            False by default, unless combine_covariates is provided.
+            Recommended to set to True if combine_covariates is argument is provided.
+            As a rule of thumb, the more covariates are combined, the larger the performance
+            improvement.
         only_coef : bool, optional
             Indicates whether to compute inference for the decomposition. Defaults to False.
             If True, skips the inference step and only returns the decomposition results.

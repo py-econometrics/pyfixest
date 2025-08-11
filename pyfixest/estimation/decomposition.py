@@ -1,4 +1,5 @@
 import itertools
+import warnings
 from dataclasses import dataclass, field
 from typing import Any, Optional, Union
 
@@ -201,6 +202,11 @@ class GelbachDecomposition:
             }
         else:
             self.combine_covariates_dict = self.combine_covariates
+
+        if self.combine_covariates is not None and not self.agg_first:
+            warnings.warn(
+                "You have provided combine_covariates, but agg_first is False. We recommend setting agg_first=True as this might massively decrease the computation time (in particular when boostrapping CIs)."
+            )
 
         self._check_covariates()
         self._check_combine_covariates()

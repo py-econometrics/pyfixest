@@ -759,6 +759,14 @@ def test_gelbach_errors():
     ):
         fit.decompose(param="x1")
 
+    with pytest.warns(
+        UserWarning,
+        match=r"You have provided combine_covariates, but agg_first is False. We recommend setting agg_first=True as this might massively decrease the computation time \(in particular when boostrapping CIs\)\.",
+    ):
+        fit.decompose(
+            decomp_var="x1", combine_covariates={"g1": ["x21"]}, agg_first=False
+        )
+
 
 def test_glm_errors():
     "Test that dependent variable must be binary for probit and logit models."
