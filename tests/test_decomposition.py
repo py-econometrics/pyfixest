@@ -353,6 +353,17 @@ def test_x1_vars():
         fit.GelbachDecompositionResults.results.absolute["ALL"], 0.3149754
     )
 
+    fit.decompose(
+        param="x1",
+        x1_vars="x21+x22",
+        combine_covariates={"ALL": ["x23"]},
+        seed=3,
+        only_coef=True,
+    )
+    np.testing.assert_allclose(
+        fit.GelbachDecompositionResults.results.absolute["ALL"], 0.3149754
+    )
+
 
 def test_tidy_snapshot(gelbach_decomposition):
     "Mock test for tidy()."
