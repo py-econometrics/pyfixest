@@ -297,25 +297,51 @@ def test_fixef():
         )
 
 
-@pytest.mark.parametrize("agg_first", [True, False])
-def test_combine_covariates_vs_none(agg_first):
-    df = pd.read_stata("tests/data/gelbach.dta")
-    fit1 = pf.feols("y ~ x1 + x21 + x22 + x23", data=df)
-    fit2 = pf.feols("y ~ x1 + x21 + x22 + x23", data=df)
+@pytest.mark.parametrize(
+    "combine_config,x1_vars",
+    [
+        ({"g1": ["x21", "x22"], "g2": ["x23"]}, None),
+        ({"mixed": ["x21"], "other": ["x22", "x23"]}, None),
+        ({"all": ["x21", "x22", "x23"]}, None),
+        ({"g1": ["x22"], "g2": ["x23"]}, ["x21"]),
+        ({"remaining": ["x22", "x23"]}, ["x21"]),
+        ({"g1": ["x23"]}, ["x21", "x22"]),
+        ({"single": ["x23"]}, ["x21", "x22"]),
+    ],
+)
+def test_agg_first_equivalence(combine_config, x1_vars):
+    """
+    Test that agg_first=True and agg_first=False produce identical tidy() DataFrames.
+    Tests both scenarios with and without x1_vars (background controls).
+    """
+    data = gelbach_data(nobs=150)
 
-    fit1.decompose(param="x1", seed=3, reps=10, agg_first=agg_first)
-    fit2.decompose(
-        param="x1",
-        combine_covariates={"x21": ["x21"], "x22": ["x22"], "x23": ["x23"]},
-        seed=3,
-        reps=10,
-        agg_first=agg_first,
+    results = {}
+    for agg_first in [True, False]:
+        fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
+
+        decomp_kwargs = {
+            "decomp_var": "x1",
+            "combine_covariates": combine_config,
+            "seed": 123,
+            "agg_first": agg_first,
+            "only_coef": True,
+        }
+
+        if x1_vars is not None:
+            decomp_kwargs["x1_vars"] = x1_vars
+
+        fit.decompose(**decomp_kwargs)
+        results[agg_first] = fit.GelbachDecompositionResults.tidy()
+
+    pd.testing.assert_frame_equal(
+        results[True],
+        results[False],
+        check_exact=False,
+        rtol=1e-10,
+        atol=1e-10,
+        obj=f"tidy() DataFrames for agg_first=True vs agg_first=False with combine_config={combine_config}, x1_vars={x1_vars}",
     )
-
-    for key, value in fit1.GelbachDecompositionResults.results.absolute.items():
-        np.testing.assert_allclose(
-            value, fit2.GelbachDecompositionResults.results.absolute.get(key)
-        )
 
 
 def smoke_test_only_coef():

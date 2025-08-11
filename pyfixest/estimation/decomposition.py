@@ -68,10 +68,7 @@ class GelbachResults:
     @property
     def all_effect_names(self) -> list[str]:
         """All effect names (core + mediators)."""
-        return [
-            *["direct_effect", "full_effect", "explained_effect", "unexplained_effect"],
-            *self.mediator_effects.keys(),
-        ]
+        return list(self.absolute.keys())
 
     def to_dict(self, relative_to: Optional[str] = None) -> dict[str, float]:
         """
@@ -95,26 +92,16 @@ class GelbachResults:
                 f"relative_to must be None, 'explained', or 'direct'. Got {relative_to}"
             )
 
-    def summary_df(self) -> pd.DataFrame:
-        """Create a summary DataFrame with all three formats."""
-        return pd.DataFrame(
-            {
-                "Absolute": self.to_dict(),
-                "Relative to Explained": self.to_dict("explained"),
-                "Relative to Direct": self.to_dict("direct"),
-            }
-        )
-
 
 @dataclass
 class GelbachDecomposition:
     """
-    Linear Mediation Model.
+    Gelbach Decomposition (equivalent to a Linear Mediation Model).
 
     Implements the Gelbach (2016) decomposition method to decompose the effect of a
-    treatment variable into direct and indirect (mediated) components. The method
+    focal variable into explained and unexplained components. The method
     compares coefficients from a "short" regression (outcome on treatment) with a
-    "long" regression (outcome on treatment plus mediators).
+    "long" regression (outcome on focal variable plus covariates).
 
     Initial implementation by Apoorva Lal at
     https://gist.github.com/apoorvalal/e7dc9f3e52dcd9d51854b28b3e8a7ba4.
@@ -182,10 +169,11 @@ class GelbachDecomposition:
     Y_dict: dict[Any, Any] = field(init=False, default_factory=dict)
 
     def __post_init__(self):
-        if self.x1_vars is None:
-            x1_variables = [self.decomp_var]
-        else:
-            x1_variables = [self.decomp_var, *self.x1_vars]
+        x1_variables = (
+            [self.decomp_var]
+            if self.x1_vars is None
+            else [self.decomp_var, *self.x1_vars]
+        )
 
         # build index for all variables in X1: decomp_var, x1_vars
         x1_indices = [self.coefnames.index(var) for var in x1_variables]
@@ -195,7 +183,6 @@ class GelbachDecomposition:
         self.mediator_names = [
             name for name in self.coefnames if self.mask[self.coefnames.index(name)]
         ]
-        self.intercept_in_mediator_idx = self.mediator_names.index("Intercept")
 
         # Handle clustering setup if cluster_df is provided
         if self.cluster_df is not None and not self.only_coef:
