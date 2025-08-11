@@ -4,7 +4,7 @@ import re
 import warnings
 from collections.abc import Mapping
 from importlib import import_module
-from typing import Any, Callable, Literal, Optional, Union
+from typing import Any, Callable, Literal, Optional, Union, cast
 
 import numpy as np
 import pandas as pd
@@ -1657,7 +1657,9 @@ class Feols:
 
     def decompose(
         self,
-        param: str,
+        param: Optional[str] = None,
+        x1_vars: Optional[Union[list[str], str]] = None,
+        decomp_var: Optional[str] = None,
         type: decomposition_type = "gelbach",
         cluster: Optional[str] = None,
         combine_covariates: Optional[dict[str, list[str]]] = None,
@@ -1667,7 +1669,7 @@ class Feols:
         agg_first: Optional[bool] = None,
         only_coef: bool = False,
         digits=4,
-    ) -> pd.DataFrame:
+    ) -> GelbachDecomposition:
         """
         Implement the Gelbach (2016) decomposition method for mediation analysis.
 
@@ -1682,6 +1684,12 @@ class Feols:
         Parameters
         ----------
         param : str
+            The name of the focal covariate whose effect is to be decomposed into direct
+            and indirect components with respect to the rest of the right-hand side.
+        x1_vars : list[str]
+            A list of covariates that are included in both the baseline and the full
+            regressions.
+        decomp_var : str
             The name of the focal covariate whose effect is to be decomposed into direct
             and indirect components with respect to the rest of the right-hand side.
         type : str, optional
@@ -1702,8 +1710,10 @@ class Feols:
             If None, uses all available threads minus one.
         agg_first : bool, optional
             If True, use the 'aggregate first' algorithm described in Gelbach (2016).
-            Recommended in cases with many (potentially high-dimensional) covariates.
-            False by default if the 'combine_covariates' argument is None, True otherwise.
+            False by default, unless combine_covariates is provided.
+            Recommended to set to True if combine_covariates is argument is provided.
+            As a rule of thumb, the more covariates are combined, the larger the performance
+            improvement.
         only_coef : bool, optional
             Indicates whether to compute inference for the decomposition. Defaults to False.
             If True, skips the inference step and only returns the decomposition results.
@@ -1712,8 +1722,9 @@ class Feols:
 
         Returns
         -------
-        pd.DataFrame
-            A DataFrame with the decomposition results.
+        GelbachDecomposition
+            A GelbachDecomposition object with the decomposition results.
+            Use `tidy()` and `etable()` to access the estimation results.
 
         Examples
         --------
@@ -1726,17 +1737,46 @@ class Feols:
         fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
 
         # simple decomposition
-        res = fit.decompose(param = "x1")
-        pf.make_table(res)
+        gb = fit.decompose(decomp_var = "x1", reps = 10, nthreads = 1)
+        type(gb)
 
-        # group covariates via "combine_covariates" argument
-        res = fit.decompose(param = "x1", combine_covariates={"g1": ["x21", "x22"], "g2": ["x23"]})
-        pf.make_table(res)
+        gb.tidy()
+        gb = fit.decompose(decomp_var = "x1", reps = 10, nthreads = 1, x1_vars = ["x21"])
+        # combine covariates
+        gb = fit.decompose(decomp_var = "x1", reps = 10, nthreads = 1, combine_covariates = {"g1": ["x21", "x22"], "g2": ["x23"]})
+        # supress inference
+        gb = fit.decompose(decomp_var = "x1", reps = 10, nthreads = 1, combine_covariates = {"g1": ["x21", "x22"], "g2": ["x23"]}, only_coef = True)
+        # print results
+        gb.etable()
 
         # group covariates via regex
-        res = fit.decompose(param="x1", combine_covariates={"g1": re.compile("x2[1-2]"), "g2": re.compile("x23")})
+        res = fit.decompose(decomp_var="x1", combine_covariates={"g1": re.compile("x2[1-2]"), "g2": re.compile("x23")})
         ```
         """
+        has_param = param is not None
+        has_decomp = decomp_var is not None
+
+        if not has_param and not has_decomp:
+            raise ValueError("Either 'param' or 'decomp_var' must be provided.")
+
+        if has_param and has_decomp:
+            raise ValueError(
+                "The 'param' and 'decomp_var' arguments cannot be provided at the same time."
+            )
+
+        if has_param:
+            warnings.warn(
+                "The 'param' argument is deprecated. Please use 'decomp_var' instead.",
+                UserWarning,
+            )
+            decomp_var = param
+
+        if x1_vars is not None:
+            if isinstance(x1_vars, str):
+                x1_vars = [x.strip() for x in x1_vars.split("+")]
+            else:
+                x1_vars = list(x1_vars)
+
         _decompose_arg_check(
             type=type,
             has_weights=self._has_weights,
@@ -1772,7 +1812,8 @@ class Feols:
                     combine_covariates[key] = matched
 
         med = GelbachDecomposition(
-            param=param,
+            decomp_var=cast(str, decomp_var),
+            x1_vars=x1_vars,
             coefnames=xnames,
             cluster_df=cluster_df,
             nthreads=nthreads_int,
@@ -1786,16 +1827,15 @@ class Feols:
         med.fit(
             X=X,
             Y=Y,
+            store=True,
         )
 
         if not only_coef:
             med.bootstrap(rng=rng, B=reps)
 
-        med.summary(digits=digits)
-
         self.GelbachDecompositionResults = med
 
-        return med.summary_table.T
+        return med
 
     def fixef(
         self, atol: float = 1e-06, btol: float = 1e-06

@@ -696,29 +696,75 @@ def test_gelbach_errors():
 
     fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
 
-    with pytest.raises(ValueError, match=r"x32 is not in the mediator names."):
+    with pytest.raises(
+        ValueError, match=r"The variable 'x32' is not in the mediator names."
+    ):
         fit.decompose(param="x1", combine_covariates={"g1": ["x32"]})
 
-    with pytest.raises(ValueError, match=r"{'x21'} is in both g1 and g2."):
+    with pytest.raises(
+        ValueError, match=r"Variables {'x21'} are in both 'g1' and 'g2' groups."
+    ):
         fit.decompose(param="x1", combine_covariates={"g1": ["x21"], "g2": ["x21"]})
 
-    # error with IV
+    with pytest.raises(TypeError, match=r"combine_covariates_dict must be lists"):
+        fit.decompose(param="x1", combine_covariates={"g1": "x21"})
+
+    with pytest.raises(ValueError, match=r"'x99' is not in list"):
+        fit.decompose(param="x99")
+
+    with pytest.raises(ValueError, match=r"cannot be included in the x1_vars argument"):
+        fit.decompose(decomp_var="x1", x1_vars=["x1"])
+
+    with pytest.raises(
+        ValueError, match=r"cannot be in both x1_vars and combine_covariates keys"
+    ):
+        fit.decompose(
+            decomp_var="x1", x1_vars=["x21"], combine_covariates={"g1": ["x21"]}
+        )
+
+    med = fit.decompose(param="x1", only_coef=True)
+    with pytest.raises(ValueError, match=r"relative_to must be None"):
+        med.results.to_dict(relative_to="bogus")
+
     with pytest.raises(NotImplementedError):
         pf.feols("y ~ 1 | x1 ~ x21", data=data).decompose(
             param="x1", combine_covariates={"g1": ["x21"]}
         )
 
-    # error with WLS
     with pytest.raises(NotImplementedError):
         pf.feols("y ~ x1", data=data, weights="weights").decompose(
             param="x1", combine_covariates={"g1": ["x21"]}
         )
 
-    # error with Poisson
     with pytest.raises(NotImplementedError):
         dt = pf.get_data(model="Fepois")
         pf.fepois("Y ~ X1", data=dt).decompose(
             param="X1", combine_covariates={"g1": ["x21"]}
+        )
+
+    with pytest.raises(
+        ValueError, match=r"Either 'param' or 'decomp_var' must be provided\."
+    ):
+        fit.decompose()
+
+    with pytest.raises(
+        ValueError,
+        match=r"The 'param' and 'decomp_var' arguments cannot be provided at the same time\.",
+    ):
+        fit.decompose(param="x1", decomp_var="x1")
+
+    with pytest.warns(
+        UserWarning,
+        match=r"The 'param' argument is deprecated. Please use 'decomp_var' instead.",
+    ):
+        fit.decompose(param="x1")
+
+    with pytest.warns(
+        UserWarning,
+        match=r"You have provided combine_covariates, but agg_first is False. We recommend setting agg_first=True as this might massively decrease the computation time \(in particular when boostrapping CIs\)\.",
+    ):
+        fit.decompose(
+            decomp_var="x1", combine_covariates={"g1": ["x21"]}, agg_first=False
         )
 
 
