@@ -350,7 +350,8 @@ def smoke_test_only_coef():
     fit.decompose(param="X1", only_coef=True)
 
 
-def test_x1_vars():
+@pytest.mark.parametrize("agg_first", [True, False])
+def test_x1_vars(agg_first):
     "Test Gelbach decomposition with x1_vars."
     data = pd.read_csv("tests/data/gelbach.csv")
 
@@ -361,6 +362,7 @@ def test_x1_vars():
         x1_vars=["x21"],
         seed=3,
         only_coef=True,
+        agg_first=agg_first,
         combine_covariates={"ALL": ["x22", "x23"]},
     )
     # test that param ALL is .5024257
@@ -373,6 +375,7 @@ def test_x1_vars():
         x1_vars=["x21", "x22"],
         combine_covariates={"ALL": ["x23"]},
         seed=3,
+        agg_first=agg_first,
         only_coef=True,
     )
     np.testing.assert_allclose(
@@ -384,6 +387,7 @@ def test_x1_vars():
         x1_vars="x21+x22",
         combine_covariates={"ALL": ["x23"]},
         seed=3,
+        agg_first=agg_first,
         only_coef=True,
     )
     np.testing.assert_allclose(
