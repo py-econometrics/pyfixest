@@ -11,6 +11,48 @@ fit2 = pf.feols("Y ~ X1 + X2", data = df)
 fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 ```
 
+## PyFixest 0.31.0
+
+### Updates to Gelbach Decomposition
+
+We have reworked the Gelbach Decomposition method, with some breaking changes: by default, calling `Feols.decompose()` now returns a `GelbachDecomposition` instance - before, we'd return a `pd.DataFrame`. The `param` argument has been renamed to `decomp_var`, but is not yet deprecated.
+
+The class now comes with new `tidy()` and `etable()` methods.
+
+```{python}
+from pyfixest.utils.dgps import gelbach_data
+import numpy as np
+import pyfixest as pf
+
+# Generate test data using gelbach_data
+data = gelbach_data(nobs=500)
+data["w"] = np.random.rand(500)
+fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
+gb = fit.decompose(decomp_var = "x1", x1_vars = ["x21"],reps = 10, nthreads = 1)
+print(type(gb))
+```
+
+It is now also possible to add background variables that are included in both the long and short regressions via the `x1_vars` function argument.
+
+We can inspect results as a `pd.DataFrame`
+
+```{python}
+gb.tidy()
+```
+
+or produce a `GT` table:
+
+```{python}
+gb.etable(
+    stats = "all",
+    caption = "Gelbach Decomposition"
+)
+```
+
+As can be seen, we by default now return normalized (and not just absolute) effects.
+
+Additionally, some house keeping and interal refactoring of the `GelbachDecomposition` class.
+
 ## PyFixest 0.30.0
 
 ### New Features
