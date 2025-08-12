@@ -1833,6 +1833,7 @@ class Feols:
         if not only_coef:
             med.bootstrap(rng=rng, B=reps)
 
+        med.depvar = self._depvar
         self.GelbachDecompositionResults = med
 
         return med
