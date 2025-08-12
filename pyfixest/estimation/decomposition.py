@@ -1307,7 +1307,7 @@ class GelbachDecomposition:
         ax.set_xticklabels(plot_labels, rotation=45, ha="right")
 
         if title is None:
-            title = f"Decomposition of {self.depvar} on {self.decomp_var} and Mediators"
+            title = f"Decomposition of {self.depvar} on {self.decomp_var} by Covariates"
 
         if annotate_shares:
             title += (
