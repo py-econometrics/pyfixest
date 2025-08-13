@@ -1064,7 +1064,7 @@ class GelbachDecomposition:
             cumulative_position -= val
             bar_bottoms.append(min(old_pos, cumulative_position))
             bar_heights.append(abs(val))
-            
+
             # Set bar type for coloring based on the sign product rule
             if (np.sign(direct_effect) * np.sign(val)) >= 0:
                 bar_types.append("mediator_green") # Moves toward zero
@@ -1075,7 +1075,7 @@ class GelbachDecomposition:
         bar_bottoms.append(min(0, full_effect))
         bar_heights.append(abs(full_effect))
         bar_types.append("final")
-        
+
         # Colors based on whether effects move toward or away from zero
         colors = []
         for bar_type in bar_types:
@@ -1109,17 +1109,17 @@ class GelbachDecomposition:
         # Calculate the range of all bar positions
         all_bar_tops = [bottom + height for bottom, height in zip(bar_bottoms, bar_heights)]
         all_bar_bottoms = bar_bottoms
-        
+
         y_min = min(min(all_bar_bottoms), 0) * 1.15
         y_max = max(max(all_bar_tops), 0) * 1.15
-        
+
         # Ensure we have some padding even if all values are close to zero
         if abs(y_max - y_min) < 0.1:
             if y_max >= 0:
                 y_max += 0.1
             if y_min <= 0:
                 y_min -= 0.1
-                
+
         ax.set_ylim(y_min, y_max)
 
         # Add spanner above mediator bars to show explained effect
@@ -1127,7 +1127,7 @@ class GelbachDecomposition:
             # Calculate spanner position and height
             mediator_start = 1  # First mediator position
             mediator_end = n_components  # Last mediator position
-            
+
             # Position spanner appropriately based on the chart orientation
             if direct_effect >= 0:
                 # For positive initial difference, place spanner above highest bar
