@@ -885,6 +885,485 @@ class GelbachDecomposition:
         return make_table(res_sub, **kwargs)
 
 
+    def coefplot(
+        self,
+        components_order: Optional[list[str]] = None,
+        annotate_shares: bool = True,
+        title: Optional[str] = None,
+        figsize: Optional[tuple[int, int]] = None,
+        keep: Optional[Union[list, str]] = None,
+        drop: Optional[Union[list, str]] = None,
+        exact_match: bool = False,
+        labels: Optional[dict] = None,
+        notes: Optional[str] = None,
+    ):
+        """
+        Create a waterfall chart showing Gelbach decomposition results.
+        The chart shows the transition from the initial difference (direct effect)
+        through individual mediator contributions to the full effect, with a spanner
+        showing the total explained effect above the mediator bars.
+        Parameters
+        ----------
+        components_order : Optional[list[str]], optional
+            Order of mediator components to display. If None, uses natural order from tidy().
+        annotate_shares : bool, optional
+            Whether to show percentage shares in parentheses. Default True.
+        title : Optional[str], optional
+            Chart title. If None, uses default title with decomposition variable.
+        figsize : Optional[tuple[int, int]], optional
+            Figure size (width, height) in inches. Default (12, 8).
+        keep : Optional[Union[list, str]], optional
+            The pattern for retaining mediator names. You can pass a string (one
+            pattern) or a list (multiple patterns). Default is keeping all mediators.
+            Uses regular expressions to select mediators.
+        drop : Optional[Union[list, str]], optional
+            The pattern for excluding mediator names. You can pass a string (one
+            pattern) or a list (multiple patterns). Syntax is the same as for `keep`.
+            Default is keeping all mediators. Can be used simultaneously with `keep`.
+        exact_match : bool, optional
+            Whether to use exact match for `keep` and `drop`. Default is False.
+            If True, patterns will be matched exactly instead of using regex.
+        labels : Optional[dict], optional
+            Dictionary to relabel mediator variables. Keys are original names,
+            values are new display names. Applied after `keep` and `drop`.
+        notes : Optional[str], optional
+            Custom notes to display below the chart. If None, shows default
+            decomposition information.
+        Examples
+        --------
+        ```python
+        import pyfixest as pf
+        data = pf.gelbach_data(nobs=500)
+        fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
+        gb = fit.decompose(decomp_var="x1", only_coef=True)
+        # Basic waterfall chart
+        gb.coefplot()
+        # Custom ordering and labels
+        gb.coefplot(
+            components_order=["x22", "x21", "x23"],
+            labels={"x21": "Education", "x22": "Experience", "x23": "Age"},
+            figsize=(14, 8),
+            notes="Custom decomposition analysis",
+        )
+        # With filtering
+        gb.coefplot(
+            keep=["x2.*"],  # Keep only variables starting with x2
+            drop=["x23"],  # But exclude x23
+            exact_match=False,
+        )
+        ```
+        """
+        try:
+            import matplotlib.pyplot as plt
+        except ImportError:
+            raise ImportError(
+                "matplotlib is required for coefplot. Install with: pip install matplotlib"
+            )
+
+        # Import the filtering function from pyfixest
+        from pyfixest.utils.dev_utils import _select_order_coefs
+
+        df = self.tidy()
+        levels = df[df["panels"].str.lower().eq("levels (units)".lower())].copy()
+
+        if levels.empty:
+            raise ValueError("No rows found with panels == 'Levels (units)'.")
+        if "direct_effect" not in levels.index or "full_effect" not in levels.index:
+            raise ValueError(
+                "Expected 'direct_effect' and 'full_effect' in 'Levels (units)'."
+            )
+
+        # Extract key values
+        direct_effect = float(levels.loc["direct_effect", "coefficients"])
+        full_effect = float(levels.loc["full_effect", "coefficients"])
+
+        # Get mediator components (exclude the key summary effects)
+        exclude = {
+            "direct_effect",
+            "full_effect",
+            "unexplained_effect",
+            "explained_effect",
+        }
+        mediators = [e for e in levels.index if e not in exclude]
+
+        # Apply keep/drop filtering
+        if keep is not None or drop is not None:
+            keep_list = keep if isinstance(keep, list) else ([keep] if keep else [])
+            drop_list = drop if isinstance(drop, list) else ([drop] if drop else [])
+            mediators = _select_order_coefs(
+                mediators, keep_list, drop_list, exact_match
+            )
+
+        # Apply user-specified order if provided
+        if components_order:
+            # Keep only valid mediators, maintain order, add any missing ones at end
+            ordered_mediators = [c for c in components_order if c in mediators]
+            ordered_mediators.extend(
+                [c for c in mediators if c not in components_order]
+            )
+        else:
+            ordered_mediators = mediators
+
+        # Apply labels if provided
+        display_labels = {}
+        if labels:
+            for med in ordered_mediators:
+                display_labels[med] = labels.get(med, med)
+        else:
+            display_labels = {med: med for med in ordered_mediators}
+
+        # Get mediator values
+        mediator_data = [
+            (med, float(levels.loc[med, "coefficients"])) for med in ordered_mediators
+        ]
+
+        # Separate red (move away from zero) and green (move toward zero) effects
+        red_effects = []
+        green_effects = []
+        for name, val in mediator_data:
+            # sign_product > 0 means signs are the same, which moves toward zero
+            # We use a small epsilon to handle val == 0 correctly
+            if (np.sign(direct_effect) * np.sign(val)) >= 0:
+                green_effects.append((name, val))
+            else:
+                red_effects.append((name, val))
+
+        # Sort by decreasing absolute value
+        red_effects.sort(key=lambda x: abs(x[1]), reverse=True)
+        green_effects.sort(key=lambda x: abs(x[1]), reverse=True)
+
+        # Reorder mediators: red first (away from zero), then green (toward zero)
+        reordered_mediators = red_effects + green_effects
+        ordered_mediator_names = [name for name, _ in reordered_mediators]
+        mediator_values = [val for _, val in reordered_mediators]
+
+        # Calculate explained effect
+        explained_effect = sum(val for _, val in mediator_data)
+
+        # Create waterfall positions
+        n_components = len(reordered_mediators)
+        positions = list(range(n_components + 2))
+
+        # Values for each bar
+        bar_values = [direct_effect] + mediator_values + [full_effect]
+
+        # Calculate cumulative positions for proper waterfall
+        bar_bottoms = []
+        bar_heights = []
+        bar_types = []
+
+        # Initial bar
+        bar_bottoms.append(min(0, direct_effect))
+        bar_heights.append(abs(direct_effect))
+        bar_types.append("initial")
+
+        # Mediator bars
+        cumulative_position = direct_effect
+        for name, val in reordered_mediators:
+            old_pos = cumulative_position
+            cumulative_position -= val
+            bar_bottoms.append(min(old_pos, cumulative_position))
+            bar_heights.append(abs(val))
+
+            # Set bar type for coloring based on the sign product rule
+            if (np.sign(direct_effect) * np.sign(val)) >= 0:
+                bar_types.append("mediator_green") # Moves toward zero
+            else:
+                bar_types.append("mediator_red")   # Moves away from zero
+
+        # Final bar (full effect)
+        bar_bottoms.append(min(0, full_effect))
+        bar_heights.append(abs(full_effect))
+        bar_types.append("final")
+
+        # Colors based on whether effects move toward or away from zero
+        colors = []
+        for bar_type in bar_types:
+            if bar_type == "initial":
+                colors.append("#1f77b4")  # Blue for initial
+            elif bar_type == "mediator_green":
+                colors.append("#2ca02c")  # Green (reducing effect)
+            elif bar_type == "mediator_red":
+                colors.append("#d62728")  # Red (increasing effect)
+            elif bar_type == "final":
+                colors.append("#1f77b4")  # Blue for final
+
+        # Set default figsize
+        if figsize is None:
+            figsize = (12, 8)
+
+        # Create the plot
+        fig, ax = plt.subplots(figsize=figsize)
+
+        # Draw bars
+        bars = ax.bar(
+            positions,
+            bar_heights,
+            bottom=bar_bottoms,
+            width=0.6,
+            color=colors,
+            alpha=0.8,
+        )
+
+        # Set y-axis limits to handle both positive and negative values
+        # Calculate the range of all bar positions
+        all_bar_tops = [bottom + height for bottom, height in zip(bar_bottoms, bar_heights)]
+        all_bar_bottoms = bar_bottoms
+
+        y_min = min(min(all_bar_bottoms), 0) * 1.15
+        y_max = max(max(all_bar_tops), 0) * 1.15
+
+        # Ensure we have some padding even if all values are close to zero
+        if abs(y_max - y_min) < 0.1:
+            if y_max >= 0:
+                y_max += 0.1
+            if y_min <= 0:
+                y_min -= 0.1
+
+        ax.set_ylim(y_min, y_max)
+
+        # Add spanner above mediator bars to show explained effect
+        if n_components > 0:
+            # Calculate spanner position and height
+            mediator_start = 1  # First mediator position
+            mediator_end = n_components  # Last mediator position
+
+            # Position spanner appropriately based on the chart orientation
+            if direct_effect >= 0:
+                # For positive initial difference, place spanner above highest bar
+                highest_bar_top = max([bottom + height for bottom, height in zip(bar_bottoms, bar_heights)])
+                spanner_y = highest_bar_top + (y_max - highest_bar_top) * 0.2
+            else:
+                # For negative initial difference, place spanner below lowest bar
+                lowest_bar_bottom = min(bar_bottoms)
+                spanner_y = lowest_bar_bottom + (y_min - lowest_bar_bottom) * 0.2
+
+            # Draw horizontal line spanning mediator bars
+            ax.plot(
+                [mediator_start - 0.3, mediator_end + 0.3],
+                [spanner_y, spanner_y],
+                color="#2E4A87",
+                linewidth=2,
+            )  # Navy blue for better appearance
+
+            # Draw vertical lines at ends
+            tick_height = (y_max - y_min) * 0.015
+            ax.plot(
+                [mediator_start - 0.3, mediator_start - 0.3],
+                [spanner_y - tick_height, spanner_y + tick_height],
+                color="#2E4A87",
+                linewidth=2,
+            )
+            ax.plot(
+                [mediator_end + 0.3, mediator_end + 0.3],
+                [spanner_y - tick_height, spanner_y + tick_height],
+                color="#2E4A87",
+                linewidth=2,
+            )
+
+            # Add explained effect label
+            spanner_center = (mediator_start + mediator_end) / 2
+            if annotate_shares:
+                share_of_direct = (explained_effect / direct_effect) * 100
+                spanner_label = (
+                    f"Explained Effect: {explained_effect:.3f} ({share_of_direct:.1f}%)"
+                )
+            else:
+                spanner_label = f"Explained Effect: {explained_effect:.3f}"
+
+            ax.text(
+                spanner_center,
+                spanner_y + tick_height * 2.5 if direct_effect >=0 else spanner_y - tick_height * 2.5,
+                spanner_label,
+                ha="center",
+                va="bottom" if direct_effect >= 0 else "top",
+                color="#2E4A87",
+                fontweight="bold",
+                fontsize=10,
+            )
+
+        # Compute a spacing unit in data coordinates to make label spacing robust
+        spacing_unit = (y_max - y_min) * 0.03
+
+        # Add value labels on bars
+        for i, (pos, height, bottom, val, bar_type) in enumerate(
+            zip(positions, bar_heights, bar_bottoms, bar_values, bar_types)
+        ):
+            # Calculate label position (middle of bar)
+            label_y = bottom + height / 2
+
+            # Format label based on bar type
+            if bar_type == "initial":
+                label = f"{val:.3f}"
+                ax.text(
+                    pos,
+                    label_y,
+                    label,
+                    ha="center",
+                    va="center",
+                    color="black",
+                    fontweight="bold",
+                    fontsize=10,
+                )
+
+            elif bar_type in ["mediator_green", "mediator_red"]:
+                if annotate_shares:
+                    # Create multi-line label: Absolute - Total % - Explained %
+                    lines = [f"{val:.3f}"]
+
+                    if direct_effect != 0:
+                        total_share = (val / direct_effect) * 100
+                        lines.append(f"({total_share:.1f}%)")
+
+                    if explained_effect != 0:
+                        explained_share = (val / explained_effect) * 100
+                        lines.append(f"({explained_share:.1f}%)")
+
+                    # Decide whether labels fit inside the bar; otherwise place outside
+                    min_needed_height = spacing_unit * (2 if len(lines) == 2 else 3)
+                    fits_inside = height >= min_needed_height
+
+                    if fits_inside:
+                        actual_spacing = min(spacing_unit, height * 0.35)
+                        if len(lines) == 1:
+                            ax.text(pos, label_y, lines[0], ha="center", va="center", color="black", fontweight="bold", fontsize=10)
+                        elif len(lines) == 2:
+                            ax.text(pos, label_y + actual_spacing / 2, lines[0], ha="center", va="center", color="black", fontweight="bold", fontsize=10)
+                            ax.text(pos, label_y - actual_spacing / 2, lines[1], ha="center", va="center", color="black", fontweight="bold", fontsize=10)
+                        else:
+                            ax.text(pos, label_y + actual_spacing, lines[0], ha="center", va="center", color="black", fontweight="bold", fontsize=10)
+                            ax.text(pos, label_y, lines[1], ha="center", va="center", color="black", fontweight="bold", fontsize=10)
+                            ax.text(pos, label_y - actual_spacing, lines[2], ha="center", va="center", color="#2E4A87", fontweight="bold", fontsize=10)
+                    else:
+                        # Place outside the bar to avoid overlap
+                        # Always maintain order: absolute, relative (black), relative (navy)
+                        # For positive bars, place labels below to avoid spanner
+                        # For negative bars, place labels above
+                        if val >= 0:
+                            direction = -1  # Place below positive bars
+                            start_y = bottom - (spacing_unit * 0.6)
+                        else:
+                            direction = 1   # Place above negative bars
+                            start_y = (bottom + height) + (spacing_unit * 0.6)
+
+                                                # Always want: absolute, black%, navy% (in that visual order from bar outward)
+                        # For positive bars (direction = -1, going down), we need normal order
+                        # For negative bars (direction = 1, going up), we need normal order
+                        label_order = lines  # Always: absolute, black%, navy%
+
+                        for j, text in enumerate(label_order):
+                            y = start_y + direction * (j * spacing_unit)
+                            # Color: absolute (black), first % (black), second % (navy)
+                            if j == 0:  # Absolute value
+                                color = "black"
+                            elif j == 1:  # First percentage (total effect)
+                                color = "black"
+                            else:  # Second percentage (explained effect) - navy
+                                color = "#2E4A87"
+                            ax.text(
+                                pos,
+                                y,
+                                text,
+                                ha="center",
+                                va="bottom" if direction > 0 else "top",
+                                color=color,
+                                fontweight="bold",
+                                fontsize=10,
+                            )
+                else:
+                    ax.text(pos, label_y, f"{val:.3f}", ha="center", va="center", color="black", fontweight="bold", fontsize=10)
+
+            elif bar_type == "final":
+                if annotate_shares:
+                    share_of_direct = (full_effect / direct_effect) * 100
+                    label = f"{val:.3f}\n({share_of_direct:.1f}%)"
+                else:
+                    label = f"{val:.3f}"
+                ax.text(
+                    pos,
+                    label_y,
+                    label,
+                    ha="center",
+                    va="center",
+                    color="black",
+                    fontweight="bold",
+                    fontsize=10,
+                )
+
+            else:
+                label = f"{val:.3f}"
+                ax.text(
+                    pos,
+                    label_y,
+                    label,
+                    ha="center",
+                    va="center",
+                    color="black",
+                    fontweight="bold",
+                    fontsize=10,
+                )
+
+        # Customize the plot with reordered labels
+        plot_labels = (
+            ["Initial Difference"]
+            + [display_labels.get(med, med).replace("_", " ") for med in ordered_mediator_names]
+            + ["Final Difference"]
+        )
+        ax.set_xticks(positions)
+        ax.set_xticklabels(plot_labels, rotation=45, ha="right")
+
+        if title is None:
+            title = f"Decomposition of {self.decomp_var} by Covariates"
+
+        if annotate_shares:
+            title += (
+                "\n(Normalized shares in parentheses for the decomposition section)"
+            )
+
+        ax.set_title(title, fontsize=14, pad=20)
+        ax.set_ylabel("Difference (units)", fontsize=12)
+        ax.grid(axis="y", alpha=0.3)
+        ax.axhline(y=0, color="black", linewidth=0.8)
+
+        # Add notes if provided
+        if notes is not None:
+            plt.figtext(
+                0.02,
+                0.02,
+                notes,
+                fontsize=9,
+                style="italic",
+                wrap=True,
+                ha="left",
+                va="bottom",
+            )
+            # Adjust layout to make room for notes
+            plt.tight_layout()
+            plt.subplots_adjust(bottom=0.15)
+        elif annotate_shares:
+            # Default explanation note when showing shares
+            default_note = "Mediator bars show: Absolute effect, (% of total effect), (% of explained effect in navy)."
+            plt.figtext(
+                0.02,
+                0.02,
+                default_note,
+                fontsize=9,
+                style="italic",
+                wrap=True,
+                ha="left",
+                va="bottom",
+            )
+            plt.tight_layout()
+            plt.subplots_adjust(
+                bottom=0.20
+            )  # More space to avoid overlap with x-labels
+        else:
+            # No notes by default
+            plt.tight_layout()
+        plt.show()
+
+
+
 def _decompose_arg_check(
     type: str,
     has_weights: bool,
