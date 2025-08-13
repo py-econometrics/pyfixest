@@ -1,4 +1,6 @@
-![](figures/pyfixest-logo.png)
+# PyFixest
+
+![PyFixest Logo](figures/pyfixest-logo.png)
 
 # PyFixest: Fast High-Dimensional Fixed Effects Regression in Python
 
@@ -17,75 +19,94 @@
 [![Citation](https://img.shields.io/badge/Cite%20as-PyFixest-blue)](https://github.com/py-econometrics/pyfixest?tab=readme-ov-file#how-to-cite)
 [![Donate | GiveDirectly](https://img.shields.io/static/v1?label=GiveDirectly&message=Donate&color=blue&style=flat-square)](https://github.com/py-econometrics/pyfixest?tab=readme-ov-file#support-pyfixest)
 
-[pixi-badge]:https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/prefix-dev/pixi/main/assets/badge/v0.json&style=flat-square
+[pixi-badge]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/prefix-dev/pixi/main/assets/badge/v0.json&style=flat-square
 [pixi-url]: https://pixi.sh
 
 [chat-badge]: https://img.shields.io/discord/1259933360726216754.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2&style=flat-square
 [chat-url]: https://discord.gg/gBAydeDMVK
 
-`PyFixest` is a Python implementation of the formidable [fixest](https://github.com/lrberge/fixest) package for fast high-dimensional fixed effects regression.
+`PyFixest` is a Python implementation of the formidable
+[fixest](https://github.com/lrberge/fixest) package for fast high-dimensional
+fixed effects regression.
 
-The package aims to mimic `fixest` syntax and functionality as closely as Python allows: if you know `fixest` well, the goal is that you won't have to read the docs to get started! In particular, this means that all of `fixest's` defaults are mirrored by `PyFixest`.
+The package aims to mimic `fixest` syntax and functionality as closely as Python
+allows: if you know `fixest` well, the goal is that you won't have to read the
+docs to get started! In particular, this means that all of `fixest's` defaults
+are mirrored by `PyFixest`.
 
-Nevertheless, for a quick introduction, you can take a look at the [quickstart](https://py-econometrics.github.io/pyfixest/quickstart.html) or the regression chapter of [Arthur Turrell's](https://github.com/aeturrell) book on [Coding for Economists](https://aeturrell.github.io/coding-for-economists/econmt-regression.html#imports).
+Nevertheless, for a quick introduction, you can take a look at the
+[quickstart](https://py-econometrics.github.io/pyfixest/quickstart.html) or the
+regression chapter of [Arthur Turrell's](https://github.com/aeturrell) book on
+[Coding for Economists](https://aeturrell.github.io/coding-for-economists/econmt-regression.html#imports).
 
-For questions on `PyFixest`, head on over to our [github discussions](https://github.com/py-econometrics/pyfixest/discussions), or (more informally) join our [Discord server](https://discord.gg/gBAydeDMVK).
+For questions on `PyFixest`, head on over to our
+[github discussions](https://github.com/py-econometrics/pyfixest/discussions),
+or (more informally) join our [Discord server](https://discord.gg/gBAydeDMVK).
 
 ## Support PyFixest
 
-If you enjoy using `PyFixest`, please consider donating to [GiveDirectly](https://donate.givedirectly.org/dedicate) and dedicating your donation to `pyfixest.dev@gmail.com`.
-You can also leave a message through the donation form - your support and encouragement mean a lot to the developers!
+If you enjoy using `PyFixest`, please consider donating to
+[GiveDirectly](https://donate.givedirectly.org/dedicate) and dedicating your
+donation to `pyfixest.dev@gmail.com`. You can also leave a message through the
+donation form - your support and encouragement mean a lot to the developers!
 
 ## Features
 
--   **OLS**, **WLS** and **IV** Regression with Fixed-Effects Demeaning via [Frisch-Waugh-Lovell](https://bookdown.org/ts_robinson1994/10EconometricTheorems/frisch.html)
--   **Poisson Regression** following the [pplmhdfe algorithm](https://journals.sagepub.com/doi/full/10.1177/1536867X20909691)
--   Probit, Logit and Gaussian Family **GLMs** (currently without fixed effects demeaning, this is WIP)
--   **Quantile Regression** using an Interior Point Solver
--   Multiple Estimation Syntax
--   Several **Robust** and **Cluster Robust Variance-Covariance** Estimators
-
--   **Wild Cluster Bootstrap** Inference (via
-    [wildboottest](https://github.com/py-econometrics/wildboottest))
--   **Difference-in-Differences** Estimators:
-    -   The canonical Two-Way Fixed Effects Estimator
-    -   [Gardner's two-stage
-        ("`Did2s`")](https://jrgcmu.github.io/2sdd_current.pdf)
-        estimator
-    -   Basic Versions of the Local Projections estimator following
-        [Dube et al (2023)](https://www.nber.org/papers/w31184)
-    - The fully saturated Event-Study estimator following [Sun & Abraham (2021)](https://www.sciencedirect.com/science/article/abs/pii/S030440762030378X)
-- **Multiple Hypothesis Corrections** following the Procedure by [Romano and Wolf](https://journals.sagepub.com/doi/pdf/10.1177/1536867X20976314) and **Simultaneous Confidence Intervals** using a **Multiplier Bootstrap**
-- The **Causal Cluster Variance Estimator (CCV)** following [Abadie et al.](https://economics.mit.edu/sites/default/files/2022-09/When%20Should%20You%20Adjust%20Standard%20Errors%20for%20Clustering.pdf)
-- Regression **Decomposition** following [Gelbach (2016)](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=1425737)
-- **Publication-ready tables** with [Great Tables](https://posit-dev.github.io/great-tables/articles/intro.html) or LaTex booktabs
+- **OLS**, **WLS** and **IV** Regression with Fixed-Effects Demeaning via
+  [Frisch-Waugh-Lovell](https://bookdown.org/ts_robinson1994/10EconometricTheorems/frisch.html)
+- **Poisson Regression** following the
+  [pplmhdfe algorithm](https://journals.sagepub.com/doi/full/10.1177/1536867X20909691)
+- Probit, Logit and Gaussian Family **GLMs** (currently without fixed effects
+  demeaning, this is WIP)
+- **Quantile Regression** using an Interior Point Solver
+- Multiple Estimation Syntax
+- Several **Robust** and **Cluster Robust Variance-Covariance** Estimators
+- **Wild Cluster Bootstrap** Inference (via
+  [wildboottest](https://github.com/py-econometrics/wildboottest))
+- **Difference-in-Differences** Estimators:
+  - The canonical Two-Way Fixed Effects Estimator
+  - [Gardner's two-stage
+    ("`Did2s`")](https://jrgcmu.github.io/2sdd_current.pdf) estimator
+  - Basic Versions of the Local Projections estimator following
+    [Dube et al (2023)](https://www.nber.org/papers/w31184)
+  - The fully saturated Event-Study estimator following
+    [Sun & Abraham (2021)](https://www.sciencedirect.com/science/article/abs/pii/S030440762030378X)
+- **Multiple Hypothesis Corrections** following the Procedure by
+  [Romano and Wolf](https://journals.sagepub.com/doi/pdf/10.1177/1536867X20976314)
+  and **Simultaneous Confidence Intervals** using a **Multiplier Bootstrap**
+- The **Causal Cluster Variance Estimator (CCV)** following
+  [Abadie et al.](https://economics.mit.edu/sites/default/files/2022-09/When%20Should%20You%20Adjust%20Standard%20Errors%20for%20Clustering.pdf)
+- Regression **Decomposition** following
+  [Gelbach (2016)](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=1425737)
+- **Publication-ready tables** with
+  [Great Tables](https://posit-dev.github.io/great-tables/articles/intro.html) or
+  LaTex booktabs
 
 ## Installation
 
 You can install the release version from `PyPi` by running
 
-``` py
+```py
 pip install -U pyfixest
 ```
 
 or the development version from github by running
 
-``` py
+```py
 pip install git+https://github.com/py-econometrics/pyfixest.git
 ```
 
 ## Benchmarks
 
-All benchmarks follow the [fixest
-benchmarks](https://github.com/lrberge/fixest/tree/master/_BENCHMARK).
+All benchmarks follow the
+[fixest benchmarks](https://github.com/lrberge/fixest/tree/master/_BENCHMARK).
 All non-pyfixest timings are taken from the `fixest` benchmarks.
 
-![](figures/benchmarks_ols.svg)
-![](figures/benchmarks_poisson.svg)
-![](figures/quantreg_benchmarks.png)
+![OLS Benchmarks](figures/benchmarks_ols.svg)
+![Poisson Benchmarks](figures/benchmarks_poisson.svg)
+![Quantile Regression Benchmarks](figures/quantreg_benchmarks.png)
 
 ## Quickstart
-
 
 ```python
 import pyfixest as pf
@@ -94,26 +115,25 @@ data = pf.get_data()
 pf.feols("Y ~ X1 | f1 + f2", data=data).summary()
 ```
 
-    ###
+```
+###
 
-    Estimation:  OLS
-    Dep. var.: Y, Fixed effects: f1+f2
-    Inference:  CRV1
-    Observations:  997
+Estimation:  OLS
+Dep. var.: Y, Fixed effects: f1+f2
+Inference:  CRV1
+Observations:  997
 
-    | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5% |   97.5% |
-    |:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
-    | X1            |     -0.919 |        0.065 |   -14.057 |      0.000 | -1.053 |  -0.786 |
-    ---
-    RMSE: 1.441   R2: 0.609   R2 Within: 0.2
-
+| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5% |   97.5% |
+|:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
+| X1            |     -0.919 |        0.065 |   -14.057 |      0.000 | -1.053 |  -0.786 |
+---
+RMSE: 1.441   R2: 0.609   R2 Within: 0.2
+```
 
 ### Multiple Estimation
 
-You can estimate multiple models at once by using [multiple estimation
-syntax](https://aeturrell.github.io/coding-for-economists/econmt-regression.html#multiple-regression-models):
-
-
+You can estimate multiple models at once by using
+[multiple estimation syntax](https://aeturrell.github.io/coding-for-economists/econmt-regression.html#multiple-regression-models):
 
 ```python
 # OLS Estimation: estimate multiple models at once
@@ -122,6 +142,7 @@ fit = pf.feols("Y + Y2 ~X1 | csw0(f1, f2)", data = data, vcov = {'CRV1':'group_i
 fit.etable()
 ```
 
+```
                                est1               est2               est3               est4               est5               est6
     ------------  -----------------  -----------------  -----------------  -----------------  -----------------  -----------------
     depvar                        Y                 Y2                  Y                 Y2                  Y                 Y2
@@ -139,20 +160,18 @@ fit.etable()
     Significance levels: * p < 0.05, ** p < 0.01, *** p < 0.001
     Format of coefficient cell:
     Coefficient (Std. Error)
-
-
-
+```
 
 ### Adjust Standard Errors "on-the-fly"
 
 Standard Errors can be adjusted after estimation, "on-the-fly":
-
 
 ```python
 fit1 = fit.fetch_model(0)
 fit1.vcov("hetero").summary()
 ```
 
+```
     Model:  Y~X1
     ###
 
@@ -167,18 +186,18 @@ fit1.vcov("hetero").summary()
     | X1            |     -1.000 |        0.082 |   -12.134 |      0.000 | -1.162 |  -0.838 |
     ---
     RMSE: 2.158   R2: 0.123
-
+```
 
 ### Poisson Regression via `fepois()`
 
 You can estimate Poisson Regressions via the `fepois()` function:
-
 
 ```python
 poisson_data = pf.get_data(model = "Fepois")
 pf.fepois("Y ~ X1 + X2 | f1 + f2", data = poisson_data).summary()
 ```
 
+```
     ###
 
     Estimation:  Poisson
@@ -192,23 +211,22 @@ pf.fepois("Y ~ X1 + X2 | f1 + f2", data = poisson_data).summary()
     | X2            |     -0.015 |        0.010 |    -1.449 |      0.147 | -0.035 |   0.005 |
     ---
     Deviance: 1068.169
-
+```
 
 ### IV Estimation via three-part formulas
 
-Last, `PyFixest` also supports IV estimation via three part formula
-syntax:
-
+Last, `PyFixest` also supports IV estimation via three part formula syntax:
 
 ```python
 fit_iv = pf.feols("Y ~ 1 | f1 | X1 ~ Z1", data = data)
 fit_iv.summary()
 ```
 
+```
     ###
 
     Estimation:  IV
-    Dep. var.: Y, Fixed effects: f1
+    Dep.var.: Y, Fixed effects: f1
     Inference:  CRV1
     Observations:  997
 
@@ -216,6 +234,7 @@ fit_iv.summary()
     |:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
     | X1            |     -1.025 |        0.115 |    -8.930 |      0.000 | -1.259 |  -0.790 |
     ---
+```
 
 ## Quantile Regression via `pf.quantreg`
 
@@ -223,15 +242,18 @@ fit_iv.summary()
 fit_qr = pf.quantreg("Y ~ X1 + X2", data = data, quantile = 0.5)
 ```
 
-
 ## Call for Contributions
 
 Thanks for showing interest in contributing to `pyfixest`! We appreciate all
-contributions and constructive feedback, whether that be reporting bugs, requesting
-new features, or suggesting improvements to documentation.
+contributions and constructive feedback, whether that be reporting bugs,
+requesting new features, or suggesting improvements to documentation.
 
-If you'd like to get involved, but are not yet sure how, please feel free to send us an [email](alexander-fischer1801@t-online.de). Some familiarity with
-either Python or econometrics will help, but you really don't need to be a `numpy` core developer or have published in [Econometrica](https://onlinelibrary.wiley.com/journal/14680262) =) We'd be more than happy to invest time to help you get started!
+If you'd like to get involved, but are not yet sure how, please feel free to
+send us an [email](alexander-fischer1801@t-online.de). Some familiarity with
+either Python or econometrics will help, but you really don't need to be a
+`numpy` core developer or have published in
+[Econometrica](https://onlinelibrary.wiley.com/journal/14680262) =) We'd be more
+than happy to invest time to help you get started!
 
 ## Contributors ✨
 
@@ -259,14 +281,15 @@ Thanks goes to these wonderful people:
 
 <!-- ALL-CONTRIBUTORS-LIST:END -->
 
-This project follows the [all-contributors](https://github.com/all-contributors/all-contributors) specification. Contributions of any kind welcome!
+This project follows the
+[all-contributors](https://github.com/all-contributors/all-contributors)
+specification. Contributions of any kind welcome!
 
 ## Acknowledgements
 
 We thank all institutions that have funded or supported work on PyFixest!
 
-<img src="../figures/aai-institute-logo.svg" width="185">
-
+![AAI Institute Logo](../figures/aai-institute-logo.svg)
 
 ## How to Cite
 
