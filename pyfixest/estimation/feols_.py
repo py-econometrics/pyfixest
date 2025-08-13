@@ -1751,6 +1751,9 @@ class Feols:
 
         # group covariates via regex
         res = fit.decompose(decomp_var="x1", combine_covariates={"g1": re.compile("x2[1-2]"), "g2": re.compile("x23")})
+
+        # waterfall plot
+        res.coefplot()
         ```
         """
         has_param = param is not None
@@ -1831,7 +1834,9 @@ class Feols:
         )
 
         if not only_coef:
-            med.bootstrap(rng=rng, B=reps)
+            med.bootstrap(rng=rng, B=reps)#
+
+        med.depvar = self._depvar
 
         self.GelbachDecompositionResults = med
 
