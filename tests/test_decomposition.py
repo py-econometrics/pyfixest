@@ -7,6 +7,17 @@ import pytest
 import pyfixest as pf
 from pyfixest.utils.dgps import gelbach_data
 
+# Set matplotlib backend for headless testing
+try:
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    HAS_MATPLOTLIB = True
+except ImportError:
+    HAS_MATPLOTLIB = False
+
 
 @pytest.fixture
 def gelbach_decomposition():
@@ -445,3 +456,76 @@ def test_etable_snapshot(
     ).as_raw_html()
 
     assert 0 == 0
+
+
+@pytest.mark.skipif(not HAS_MATPLOTLIB, reason="matplotlib not available")
+@pytest.mark.parametrize(
+    "data_transform",
+    [
+        "base",  # No transformation
+        "neg_y_plus_2x23",  # y = -y + 2*x23
+        "tiny_f1_effect",  # y += 0.0001 * f1 (tests small effects)
+        "neg_y",  # y = -y
+    ],
+)
+@pytest.mark.parametrize("annotate_shares", [True, False])
+def test_coefplot_comprehensive(data_transform, annotate_shares):
+    "Comprehensive smoke test for coefplot covering all parameters and data transformations."
+    rng = np.random.default_rng(12345)
+    data = gelbach_data(nobs=200)
+    data["f1"] = rng.normal(size=200)
+
+    if data_transform == "neg_y_plus_2x23":
+        data["y"] = -data["y"] + 2 * data["x23"]
+    elif data_transform == "tiny_f1_effect":
+        data["y"] += 0.0001 * data["f1"]
+    elif data_transform == "neg_y":
+        data["y"] = -data["y"]
+
+    fit = pf.feols("y ~ x1 + x21 + x22 + x23 + f1", data=data, demeaner_backend="rust")
+    gb = fit.decompose(  # type: ignore[attr-defined]
+        decomp_var="x1",
+        combine_covariates={"g1": ["x21"], "g2": ["x22", "x23", "f1"]},
+        only_coef=True,
+    )
+
+    gb.coefplot(annotate_shares=annotate_shares)
+    plt.close("all")
+
+    gb.coefplot(
+        title="Custom Test Title", figsize=(10, 6), annotate_shares=annotate_shares
+    )
+    plt.close("all")
+
+    gb.coefplot(components_order=["g2", "g1"], annotate_shares=annotate_shares)
+    plt.close("all")
+
+    gb.coefplot(keep=["g1", "g2"], annotate_shares=annotate_shares)
+    plt.close("all")
+
+    gb.coefplot(drop=["f1"], annotate_shares=annotate_shares)
+    plt.close("all")
+
+    gb.coefplot(keep=["g1"], exact_match=True, annotate_shares=annotate_shares)
+    plt.close("all")
+
+    gb.coefplot(
+        labels={"g1": "Group One", "g2": "Group Two"}, annotate_shares=annotate_shares
+    )
+    plt.close("all")
+
+    gb.coefplot(
+        notes="Custom test note for validation", annotate_shares=annotate_shares
+    )
+    plt.close("all")
+
+    gb.coefplot(
+        components_order=["g2", "g1"],
+        title="Complex Test",
+        figsize=(14, 8),
+        keep=["g1", "g2"],
+        labels={"g1": "First Group", "g2": "Second Group"},
+        notes="Testing multiple parameters together",
+        annotate_shares=annotate_shares,
+    )
+    plt.close("all")
