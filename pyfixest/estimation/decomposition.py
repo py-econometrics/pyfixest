@@ -889,7 +889,6 @@ class GelbachDecomposition:
 
     def coefplot(
         self,
-        components_order: Optional[list[str]] = None,
         annotate_shares: bool = True,
         title: Optional[str] = None,
         figsize: Optional[tuple[int, int]] = None,
@@ -907,8 +906,6 @@ class GelbachDecomposition:
 
         Parameters
         ----------
-        components_order : Optional[list[str]], optional
-            Order of mediator components to display. If None, uses natural order from tidy().
         annotate_shares : bool, optional
             Whether to show percentage shares in parentheses. Default True.
         title : Optional[str], optional
@@ -918,11 +915,13 @@ class GelbachDecomposition:
         keep : Optional[Union[list, str]], optional
             The pattern for retaining mediator names. You can pass a string (one
             pattern) or a list (multiple patterns). Default is keeping all mediators.
-            Uses regular expressions to select mediators.
+            Uses regular expressions to select mediators. Note: is applied before the
+            labels argument.
         drop : Optional[Union[list, str]], optional
             The pattern for excluding mediator names. You can pass a string (one
             pattern) or a list (multiple patterns). Syntax is the same as for `keep`.
             Default is keeping all mediators. Can be used simultaneously with `keep`.
+            Note: is applied after the labels argument.
         exact_match : bool, optional
             Whether to use exact match for `keep` and `drop`. Default is False.
             If True, patterns will be matched exactly instead of using regex.
@@ -943,9 +942,8 @@ class GelbachDecomposition:
         gb = fit.decompose(decomp_var="x1", only_coef=True)
         # Basic waterfall chart
         gb.coefplot()
-        # Custom ordering and labels
+        # Custom labels and styling
         gb.coefplot(
-            components_order=["x22", "x21", "x23"],
             labels={"x21": "Education", "x22": "Experience", "x23": "Age"},
             figsize=(14, 8),
             notes="Custom decomposition analysis",
@@ -968,7 +966,6 @@ class GelbachDecomposition:
             decomposition_data=df,
             depvarname=self.depvarname,
             decomp_var=self.decomp_var,
-            components_order=components_order,
             annotate_shares=annotate_shares,
             title=title,
             figsize=figsize,

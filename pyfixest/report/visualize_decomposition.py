@@ -72,7 +72,6 @@ def create_decomposition_plot(
     decomposition_data: pd.DataFrame,
     depvarname: str,
     decomp_var: str,
-    components_order: Optional[list[str]] = None,
     annotate_shares: bool = True,
     title: Optional[str] = None,
     figsize: Optional[tuple[int, int]] = None,
@@ -96,8 +95,6 @@ def create_decomposition_plot(
         Name of the dependent variable.
     decomp_var : str
         Name of the decomposition variable.
-    components_order : Optional[list[str]], optional
-        Order of mediator components to display.
     annotate_shares : bool, optional
         Whether to show percentage shares in parentheses. Default True.
     title : Optional[str], optional
@@ -126,9 +123,7 @@ def create_decomposition_plot(
     config = PlotConfig(figsize=figsize or (12, 8))
 
     # Prepare data for plotting
-    plot_data = _prepare_plot_data(
-        decomposition_data, components_order, keep, drop, exact_match, labels
-    )
+    plot_data = _prepare_plot_data(decomposition_data, keep, drop, exact_match, labels)
 
     # Create and configure the plot
     fig, ax = plt.subplots(figsize=config.figsize)
@@ -148,7 +143,6 @@ def create_decomposition_plot(
 
 def _prepare_plot_data(
     decomposition_data: pd.DataFrame,
-    components_order: Optional[list[str]],
     keep: Optional[Union[list, str]],
     drop: Optional[Union[list, str]],
     exact_match: bool,
@@ -174,7 +168,7 @@ def _prepare_plot_data(
 
     # Filter and order mediators
     mediators = _filter_and_order_mediators(
-        levels, components_order, keep, drop, exact_match, _select_order_coefs
+        levels, keep, drop, exact_match, _select_order_coefs
     )
 
     # Apply labels
@@ -204,13 +198,12 @@ def _prepare_plot_data(
 
 def _filter_and_order_mediators(
     levels: pd.DataFrame,
-    components_order: Optional[list[str]],
     keep: Optional[Union[list, str]],
     drop: Optional[Union[list, str]],
     exact_match: bool,
     select_order_coefs_func,
 ) -> list[str]:
-    """Filter and order mediator variables."""
+    """Filter mediator variables."""
     # Get mediator components (exclude the key summary effects)
     exclude = {
         "direct_effect",
@@ -228,14 +221,7 @@ def _filter_and_order_mediators(
             mediators, keep_list, drop_list, exact_match
         )
 
-    # Apply user-specified order if provided
-    if components_order:
-        ordered_mediators = [c for c in components_order if c in mediators]
-        ordered_mediators.extend([c for c in mediators if c not in components_order])
-    else:
-        ordered_mediators = mediators
-
-    return ordered_mediators
+    return mediators
 
 
 def _apply_labels(mediators: list[str], labels: Optional[dict]) -> dict[str, str]:
