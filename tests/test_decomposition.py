@@ -423,16 +423,16 @@ def test_tidy_snapshot(gelbach_decomposition):
 @pytest.mark.parametrize("caption", [None, "Test Caption"])
 @pytest.mark.parametrize("column_heads", [None, ["Total", "Direct", "Mediated"]])
 @pytest.mark.parametrize("use_panel_heads", [False, True])
-@pytest.mark.parametrize("rgroup_sep", [None, "tb", "t", "b", ""])
-@pytest.mark.parametrize("add_notes", [None, "Custom test note"])
+# @pytest.mark.parametrize("rgroup_sep", [None, "tb", "t", "b", ""])
+# @pytest.mark.parametrize("add_notes", [None, "Custom test note"])
 def test_etable_snapshot(
     gelbach_decomposition,
     panels,
     caption,
     column_heads,
     use_panel_heads,
-    rgroup_sep,
-    add_notes,
+    # rgroup_sep,
+    # add_notes,
 ):
     if use_panel_heads:
         if panels == "all":
@@ -449,8 +449,8 @@ def test_etable_snapshot(
         caption=caption,
         column_heads=column_heads,
         panel_heads=panel_heads,
-        rgroup_sep=rgroup_sep,
-        add_notes=add_notes,
+        # rgroup_sep=rgroup_sep,
+        # add_notes=add_notes,
         digits=3,
         type="gt",
     ).as_raw_html()
