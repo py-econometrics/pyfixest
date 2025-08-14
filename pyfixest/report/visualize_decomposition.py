@@ -553,12 +553,12 @@ def _add_mediator_label(
     fits_inside = bar.height >= min_needed_height
 
     if fits_inside:
-        _place_labels_inside(ax, bar, lines, label_y, spacing_unit, config)
+        _position_internal_labels(ax, bar, lines, label_y, spacing_unit, config)
     else:
-        _place_labels_outside(ax, bar, lines, spacing_unit, config)
+        _position_labels_to_avoid_overlap(ax, bar, lines, spacing_unit, config)
 
 
-def _place_labels_inside(
+def _position_internal_labels(
     ax,
     bar: BarData,
     lines: list[str],
@@ -566,7 +566,7 @@ def _place_labels_inside(
     spacing_unit: float,
     config: PlotConfig,
 ) -> None:
-    """Place labels inside the bar."""
+    """Position labels inside the bar when there's enough space."""
     actual_spacing = min(spacing_unit, bar.height * config.max_bar_spacing_factor)
 
     if len(lines) == 1:
@@ -634,24 +634,34 @@ def _place_labels_inside(
         )
 
 
-def _place_labels_outside(
+def _position_labels_to_avoid_overlap(
     ax, bar: BarData, lines: list[str], spacing_unit: float, config: PlotConfig
 ) -> None:
-    """Place labels outside the bar to avoid overlap."""
+    """Position labels outside the bar to avoid overlap, with smart ordering for readability."""
     # Determine direction and starting position
     if bar.value >= 0:
         direction = -1  # Place below positive bars
         start_y = bar.bottom - (spacing_unit * config.outside_label_offset)
+        # For positive bars going down, we want normal order (absolute closest to bar)
+        label_order = lines
     else:
         direction = 1  # Place above negative bars
         start_y = (bar.bottom + bar.height) + (
             spacing_unit * config.outside_label_offset
         )
+        # For negative bars going up, reverse the order so absolute is closest to bar
+        label_order = lines[::-1]
 
     # Place labels in order
-    for j, text in enumerate(lines):
+    for j, text in enumerate(label_order):
         y = start_y + direction * (j * spacing_unit)
-        color = "black" if j == 0 or j == 1 else config.color_explained_text
+        # Adjust color index based on original position in lines array
+        original_idx = len(lines) - 1 - j if bar.value < 0 else j
+        color = (
+            "black"
+            if original_idx == 0 or original_idx == 1
+            else config.color_explained_text
+        )
 
         ax.text(
             bar.position,
