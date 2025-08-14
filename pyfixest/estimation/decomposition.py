@@ -117,6 +117,8 @@ class GelbachDecomposition:
         The focal variable whose effect is to be decomposed.
     coefnames : list[str]
         Names of all coefficients in the regression model.
+    depvarname : str
+        Name of the dependent variable.
     nthreads : int, optional
         Number of threads for bootstrap inference, by default -1 (use all available).
     x1_vars : list[str], optional
@@ -150,6 +152,7 @@ class GelbachDecomposition:
     # Core parameters
     decomp_var: str
     coefnames: list[str]
+    depvarname: str
     nthreads: int = -1
     x1_vars: Optional[list[str]] = None
     cluster_df: Optional[pd.Series] = None
@@ -884,7 +887,6 @@ class GelbachDecomposition:
 
         return make_table(res_sub, **kwargs)
 
-
     def coefplot(
         self,
         components_order: Optional[list[str]] = None,
@@ -902,6 +904,7 @@ class GelbachDecomposition:
         The chart shows the transition from the initial difference (direct effect)
         through individual mediator contributions to the full effect, with a spanner
         showing the total explained effect above the mediator bars.
+
         Parameters
         ----------
         components_order : Optional[list[str]], optional
@@ -929,10 +932,12 @@ class GelbachDecomposition:
         notes : Optional[str], optional
             Custom notes to display below the chart. If None, shows default
             decomposition information.
+
         Examples
         --------
         ```python
         import pyfixest as pf
+
         data = pf.gelbach_data(nobs=500)
         fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
         gb = fit.decompose(decomp_var="x1", only_coef=True)
@@ -974,8 +979,8 @@ class GelbachDecomposition:
             )
 
         # Extract key values
-        direct_effect = float(levels.loc["direct_effect", "coefficients"])
-        full_effect = float(levels.loc["full_effect", "coefficients"])
+        direct_effect = pd.to_numeric(levels.loc["direct_effect", "coefficients"])
+        full_effect = pd.to_numeric(levels.loc["full_effect", "coefficients"])
 
         # Get mediator components (exclude the key summary effects)
         exclude = {
@@ -1014,7 +1019,8 @@ class GelbachDecomposition:
 
         # Get mediator values
         mediator_data = [
-            (med, float(levels.loc[med, "coefficients"])) for med in ordered_mediators
+            (med, pd.to_numeric(levels.loc[med, "coefficients"]))
+            for med in ordered_mediators
         ]
 
         # Separate red (move away from zero) and green (move toward zero) effects
@@ -1045,7 +1051,7 @@ class GelbachDecomposition:
         positions = list(range(n_components + 2))
 
         # Values for each bar
-        bar_values = [direct_effect] + mediator_values + [full_effect]
+        bar_values = [direct_effect, *mediator_values, full_effect]
 
         # Calculate cumulative positions for proper waterfall
         bar_bottoms = []
@@ -1059,7 +1065,7 @@ class GelbachDecomposition:
 
         # Mediator bars
         cumulative_position = direct_effect
-        for name, val in reordered_mediators:
+        for _, val in reordered_mediators:
             old_pos = cumulative_position
             cumulative_position -= val
             bar_bottoms.append(min(old_pos, cumulative_position))
@@ -1067,9 +1073,9 @@ class GelbachDecomposition:
 
             # Set bar type for coloring based on the sign product rule
             if (np.sign(direct_effect) * np.sign(val)) >= 0:
-                bar_types.append("mediator_green") # Moves toward zero
+                bar_types.append("mediator_green")  # Moves toward zero
             else:
-                bar_types.append("mediator_red")   # Moves away from zero
+                bar_types.append("mediator_red")  # Moves away from zero
 
         # Final bar (full effect)
         bar_bottoms.append(min(0, full_effect))
@@ -1096,7 +1102,7 @@ class GelbachDecomposition:
         fig, ax = plt.subplots(figsize=figsize)
 
         # Draw bars
-        bars = ax.bar(
+        ax.bar(
             positions,
             bar_heights,
             bottom=bar_bottoms,
@@ -1107,7 +1113,9 @@ class GelbachDecomposition:
 
         # Set y-axis limits to handle both positive and negative values
         # Calculate the range of all bar positions
-        all_bar_tops = [bottom + height for bottom, height in zip(bar_bottoms, bar_heights)]
+        all_bar_tops = [
+            bottom + height for bottom, height in zip(bar_bottoms, bar_heights)
+        ]
         all_bar_bottoms = bar_bottoms
 
         y_min = min(min(all_bar_bottoms), 0) * 1.15
@@ -1131,7 +1139,12 @@ class GelbachDecomposition:
             # Position spanner appropriately based on the chart orientation
             if direct_effect >= 0:
                 # For positive initial difference, place spanner above highest bar
-                highest_bar_top = max([bottom + height for bottom, height in zip(bar_bottoms, bar_heights)])
+                highest_bar_top = max(
+                    [
+                        bottom + height
+                        for bottom, height in zip(bar_bottoms, bar_heights)
+                    ]
+                )
                 spanner_y = highest_bar_top + (y_max - highest_bar_top) * 0.2
             else:
                 # For negative initial difference, place spanner below lowest bar
@@ -1173,7 +1186,9 @@ class GelbachDecomposition:
 
             ax.text(
                 spanner_center,
-                spanner_y + tick_height * 2.5 if direct_effect >=0 else spanner_y - tick_height * 2.5,
+                spanner_y + tick_height * 2.5
+                if direct_effect >= 0
+                else spanner_y - tick_height * 2.5,
                 spanner_label,
                 ha="center",
                 va="bottom" if direct_effect >= 0 else "top",
@@ -1186,7 +1201,7 @@ class GelbachDecomposition:
         spacing_unit = (y_max - y_min) * 0.03
 
         # Add value labels on bars
-        for i, (pos, height, bottom, val, bar_type) in enumerate(
+        for _, (pos, height, bottom, val, bar_type) in enumerate(
             zip(positions, bar_heights, bar_bottoms, bar_values, bar_types)
         ):
             # Calculate label position (middle of bar)
@@ -1211,12 +1226,20 @@ class GelbachDecomposition:
                     # Create multi-line label: Absolute - Total % - Explained %
                     lines = [f"{val:.3f}"]
 
-                    if direct_effect != 0:
-                        total_share = (val / direct_effect) * 100
+                    if (
+                        abs(direct_effect) > 1e-10
+                    ):  # Use small epsilon instead of exact 0
+                        total_share = (
+                            val / direct_effect
+                        ) * 100.0  # Force float with 100.0
                         lines.append(f"({total_share:.1f}%)")
 
-                    if explained_effect != 0:
-                        explained_share = (val / explained_effect) * 100
+                    if (
+                        abs(explained_effect) > 1e-10
+                    ):  # Use small epsilon instead of exact 0
+                        explained_share = (
+                            val / explained_effect
+                        ) * 100.0  # Force float with 100.0
                         lines.append(f"({explained_share:.1f}%)")
 
                     # Decide whether labels fit inside the bar; otherwise place outside
@@ -1226,14 +1249,68 @@ class GelbachDecomposition:
                     if fits_inside:
                         actual_spacing = min(spacing_unit, height * 0.35)
                         if len(lines) == 1:
-                            ax.text(pos, label_y, lines[0], ha="center", va="center", color="black", fontweight="bold", fontsize=10)
+                            ax.text(
+                                pos,
+                                label_y,
+                                lines[0],
+                                ha="center",
+                                va="center",
+                                color="black",
+                                fontweight="bold",
+                                fontsize=10,
+                            )
                         elif len(lines) == 2:
-                            ax.text(pos, label_y + actual_spacing / 2, lines[0], ha="center", va="center", color="black", fontweight="bold", fontsize=10)
-                            ax.text(pos, label_y - actual_spacing / 2, lines[1], ha="center", va="center", color="black", fontweight="bold", fontsize=10)
+                            ax.text(
+                                pos,
+                                label_y + actual_spacing / 2,
+                                lines[0],
+                                ha="center",
+                                va="center",
+                                color="black",
+                                fontweight="bold",
+                                fontsize=10,
+                            )
+                            ax.text(
+                                pos,
+                                label_y - actual_spacing / 2,
+                                lines[1],
+                                ha="center",
+                                va="center",
+                                color="black",
+                                fontweight="bold",
+                                fontsize=10,
+                            )
                         else:
-                            ax.text(pos, label_y + actual_spacing, lines[0], ha="center", va="center", color="black", fontweight="bold", fontsize=10)
-                            ax.text(pos, label_y, lines[1], ha="center", va="center", color="black", fontweight="bold", fontsize=10)
-                            ax.text(pos, label_y - actual_spacing, lines[2], ha="center", va="center", color="#2E4A87", fontweight="bold", fontsize=10)
+                            ax.text(
+                                pos,
+                                label_y + actual_spacing,
+                                lines[0],
+                                ha="center",
+                                va="center",
+                                color="black",
+                                fontweight="bold",
+                                fontsize=10,
+                            )
+                            ax.text(
+                                pos,
+                                label_y,
+                                lines[1],
+                                ha="center",
+                                va="center",
+                                color="black",
+                                fontweight="bold",
+                                fontsize=10,
+                            )
+                            ax.text(
+                                pos,
+                                label_y - actual_spacing,
+                                lines[2],
+                                ha="center",
+                                va="center",
+                                color="#2E4A87",
+                                fontweight="bold",
+                                fontsize=10,
+                            )
                     else:
                         # Place outside the bar to avoid overlap
                         # Always maintain order: absolute, relative (black), relative (navy)
@@ -1243,10 +1320,10 @@ class GelbachDecomposition:
                             direction = -1  # Place below positive bars
                             start_y = bottom - (spacing_unit * 0.6)
                         else:
-                            direction = 1   # Place above negative bars
+                            direction = 1  # Place above negative bars
                             start_y = (bottom + height) + (spacing_unit * 0.6)
 
-                                                # Always want: absolute, black%, navy% (in that visual order from bar outward)
+                            # Always want: absolute, black%, navy% (in that visual order from bar outward)
                         # For positive bars (direction = -1, going down), we need normal order
                         # For negative bars (direction = 1, going up), we need normal order
                         label_order = lines  # Always: absolute, black%, navy%
@@ -1254,12 +1331,7 @@ class GelbachDecomposition:
                         for j, text in enumerate(label_order):
                             y = start_y + direction * (j * spacing_unit)
                             # Color: absolute (black), first % (black), second % (navy)
-                            if j == 0:  # Absolute value
-                                color = "black"
-                            elif j == 1:  # First percentage (total effect)
-                                color = "black"
-                            else:  # Second percentage (explained effect) - navy
-                                color = "#2E4A87"
+                            color = "black" if j == 0 or j == 1 else "#2E4A87"
                             ax.text(
                                 pos,
                                 y,
@@ -1271,7 +1343,16 @@ class GelbachDecomposition:
                                 fontsize=10,
                             )
                 else:
-                    ax.text(pos, label_y, f"{val:.3f}", ha="center", va="center", color="black", fontweight="bold", fontsize=10)
+                    ax.text(
+                        pos,
+                        label_y,
+                        f"{val:.3f}",
+                        ha="center",
+                        va="center",
+                        color="black",
+                        fontweight="bold",
+                        fontsize=10,
+                    )
 
             elif bar_type == "final":
                 if annotate_shares:
@@ -1306,14 +1387,19 @@ class GelbachDecomposition:
         # Customize the plot with reordered labels
         plot_labels = (
             ["Initial Difference"]
-            + [display_labels.get(med, med).replace("_", " ") for med in ordered_mediator_names]
+            + [
+                display_labels.get(med, med).replace("_", " ")
+                for med in ordered_mediator_names
+            ]
             + ["Final Difference"]
         )
         ax.set_xticks(positions)
         ax.set_xticklabels(plot_labels, rotation=45, ha="right")
 
         if title is None:
-            title = f"Decomposition of {self.decomp_var} by Covariates"
+            title = (
+                f"Decomposition of {self.depvarname} on {self.decomp_var} by Covariates"
+            )
 
         if annotate_shares:
             title += (
@@ -1361,7 +1447,6 @@ class GelbachDecomposition:
             # No notes by default
             plt.tight_layout()
         plt.show()
-
 
 
 def _decompose_arg_check(
