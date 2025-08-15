@@ -526,6 +526,56 @@ You can also visualize multiple estimation results via `iplot()` and `coefplot()
 multi_fit.coefplot().show()
 ```
 
+# Testing for Treatment Effect Heterogeneity
+
+`PyFixest` provides the Ding, Feller, Miratrix (2018) omnibus test for systematic treatment effect heterogeneity via the `dfm_test()` method.
+
+This test evaluates whether treatment effects vary systematically across observable characteristics by testing the joint significance of treatment-covariate interactions.
+
+```{python}
+# Generate synthetic data with heterogeneous treatment effects
+np.random.seed(42)
+n = 1000
+age = np.random.uniform(20, 60, n)
+income = np.random.normal(50000, 15000, n)
+treatment = np.random.binomial(1, 0.5, n)
+
+# Treatment effect varies with age: stronger for older people
+treatment_effect = 1000 + 50 * (age - 40) 
+outcome = 20000 + 500 * age + 0.1 * income + treatment * treatment_effect + np.random.normal(0, 5000, n)
+
+data_het = pd.DataFrame({
+    'outcome': outcome,
+    'treatment': treatment, 
+    'age': age,
+    'income': income
+})
+
+# Fit model without interactions
+fit_het = pf.feols('outcome ~ treatment + age + income', data=data_het)
+
+# Test for treatment effect heterogeneity
+dfm_result = fit_het.dfm_test()
+print(f"Test statistic: {dfm_result['statistic']:.3f}")
+print(f"P-value: {dfm_result['pvalue']:.6f}")
+print(f"Treatment variables: {dfm_result['treatment_vars']}")
+print(f"Interaction variables: {dfm_result['interaction_vars']}")
+```
+
+The test automatically detects treatment variables based on common naming patterns (treatment, treat, policy, intervention, etc.) and tests interactions with all other covariates in the model.
+
+You can also specify variables explicitly:
+
+```{python}
+# Test specific interactions
+dfm_result_custom = fit_het.dfm_test(
+    treatment_vars='treatment', 
+    interaction_vars=['age'], 
+    distribution='chi2'
+)
+print(f"Custom test p-value: {dfm_result_custom['pvalue']:.6f}")
+```
+
 # Difference-in-Differences / Event Study Designs
 
 `PyFixest` supports eventy study designs via two-way fixed effects, Gardner's 2-stage estimator, and the linear projections estimator.

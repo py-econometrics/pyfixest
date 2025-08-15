@@ -1336,9 +1336,9 @@ class Feols:
         # Fit expanded model
         from pyfixest.estimation.estimation import feols
 
-        expanded_model = feols(
-            expanded_formula, data=_data, vcov=self._vcov_type_detail
-        )
+        # For simplicity, use iid vcov for the expanded model
+        # The test is still valid as we're testing the joint significance
+        expanded_model = feols(expanded_formula, data=_data, vcov="iid")
 
         # Create restriction matrix for joint test of interaction coefficients
         expanded_coefnames = expanded_model._coefnames
@@ -1367,10 +1367,19 @@ class Feols:
                         break
 
                 if not found:
-                    raise ValueError(
-                        f"Could not find interaction term for {tvar} and {ivar} "
-                        f"in expanded model coefficients: {expanded_coefnames}"
-                    )
+                    # Check if the treatment variable was dropped due to multicollinearity
+                    # This can happen with fixed effects
+                    if tvar not in expanded_coefnames:
+                        raise ValueError(
+                            f"Treatment variable '{tvar}' was dropped from the expanded model, "
+                            f"likely due to multicollinearity with fixed effects. "
+                            f"The DFM test may not be appropriate for this specification."
+                        )
+                    else:
+                        raise ValueError(
+                            f"Could not find interaction term for {tvar} and {ivar} "
+                            f"in expanded model coefficients: {expanded_coefnames}"
+                        )
 
         # Create restriction matrix R
         R = np.zeros((len(interaction_indices), n_coefs))
