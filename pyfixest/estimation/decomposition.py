@@ -117,6 +117,8 @@ class GelbachDecomposition:
         The focal variable whose effect is to be decomposed.
     coefnames : list[str]
         Names of all coefficients in the regression model.
+    depvarname : str
+        Name of the dependent variable.
     nthreads : int, optional
         Number of threads for bootstrap inference, by default -1 (use all available).
     x1_vars : list[str], optional
@@ -150,6 +152,7 @@ class GelbachDecomposition:
     # Core parameters
     decomp_var: str
     coefnames: list[str]
+    depvarname: str
     nthreads: int = -1
     x1_vars: Optional[list[str]] = None
     cluster_df: Optional[pd.Series] = None
@@ -883,6 +886,95 @@ class GelbachDecomposition:
         kwargs["notes"] = notes
 
         return make_table(res_sub, **kwargs)
+
+    def coefplot(
+        self,
+        annotate_shares: bool = True,
+        title: Optional[str] = None,
+        figsize: Optional[tuple[int, int]] = None,
+        keep: Optional[Union[list, str]] = None,
+        drop: Optional[Union[list, str]] = None,
+        exact_match: bool = False,
+        labels: Optional[dict] = None,
+        notes: Optional[str] = None,
+    ):
+        """
+        Create a waterfall chart showing Gelbach decomposition results.
+        The chart shows the transition from the initial difference (direct effect)
+        through individual mediator contributions to the full effect, with a spanner
+        showing the total explained effect above the mediator bars.
+
+        Parameters
+        ----------
+        annotate_shares : bool, optional
+            Whether to show percentage shares in parentheses. Default True.
+        title : Optional[str], optional
+            Chart title. If None, uses default title with decomposition variable.
+        figsize : Optional[tuple[int, int]], optional
+            Figure size (width, height) in inches. Default (12, 8).
+        keep : Optional[Union[list, str]], optional
+            The pattern for retaining mediator names. You can pass a string (one
+            pattern) or a list (multiple patterns). Default is keeping all mediators.
+            Uses regular expressions to select mediators. Note: is applied before the
+            labels argument.
+        drop : Optional[Union[list, str]], optional
+            The pattern for excluding mediator names. You can pass a string (one
+            pattern) or a list (multiple patterns). Syntax is the same as for `keep`.
+            Default is keeping all mediators. Can be used simultaneously with `keep`.
+            Note: is applied after the labels argument.
+        exact_match : bool, optional
+            Whether to use exact match for `keep` and `drop`. Default is False.
+            If True, patterns will be matched exactly instead of using regex.
+        labels : Optional[dict], optional
+            Dictionary to relabel mediator variables. Keys are original names,
+            values are new display names. Applied after `keep` and `drop`.
+        notes : Optional[str], optional
+            Custom notes to display below the chart. If None, shows default
+            decomposition information.
+
+        Examples
+        --------
+        ```python
+        import pyfixest as pf
+
+        data = pf.gelbach_data(nobs=500)
+        fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
+        gb = fit.decompose(decomp_var="x1", only_coef=True)
+        # Basic waterfall chart
+        gb.coefplot()
+        # Custom labels and styling
+        gb.coefplot(
+            labels={"x21": "Education", "x22": "Experience", "x23": "Age"},
+            figsize=(14, 8),
+            notes="Custom decomposition analysis",
+        )
+        # With filtering
+        gb.coefplot(
+            keep=["x2.*"],  # Keep only variables starting with x2
+            drop=["x23"],  # But exclude x23
+            exact_match=False,
+        )
+        ```
+        """
+        from pyfixest.report.visualize_decomposition import create_decomposition_plot
+
+        # Get the decomposition data
+        df = self.tidy()
+
+        # Call the standalone plotting function
+        create_decomposition_plot(
+            decomposition_data=df,
+            depvarname=self.depvarname,
+            decomp_var=self.decomp_var,
+            annotate_shares=annotate_shares,
+            title=title,
+            figsize=figsize,
+            keep=keep,
+            drop=drop,
+            exact_match=exact_match,
+            labels=labels,
+            notes=notes,
+        )
 
 
 def _decompose_arg_check(
