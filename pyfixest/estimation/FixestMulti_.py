@@ -148,6 +148,7 @@ class FixestMulti:
         estimation: str,
         fml: str,
         vcov: Union[None, str, dict[str, str]] = None,
+        vcov_kwargs: dict[str, Any]= None,
         weights: Union[None, str] = None,
         ssc: Optional[dict[str, Union[str, bool]]] = None,
         fixef_rm: str = "none",
@@ -169,6 +170,9 @@ class FixestMulti:
         vcov : Union[None, str, dict[str, str]], optional
             A string or dictionary specifying the type of variance-covariance
             matrix to use for inference.
+            See `feols()` or `fepois()`.
+        vcov_kwargs : dict[str, Any], optional
+            Additional keyword arguments for the variance-covariance matrix.
             See `feols()` or `fepois()`.
         weights : Union[None, np.ndarray], optional
             An array of weights.
@@ -216,6 +220,7 @@ class FixestMulti:
     def _estimate_all_models(
         self,
         vcov: Union[str, dict[str, str], None],
+        vcov_kwargs: dict[str, Any],
         solver: SolverOptions,
         demeaner_backend: DemeanerBackendOptions = "numba",
         collin_tol: float = 1e-6,
@@ -234,9 +239,11 @@ class FixestMulti:
         vcov : Union[str, dict[str, str]]
             A string or dictionary specifying the type of variance-covariance
             matrix to use for inference.
-            - If a string, can be one of "iid", "hetero", "HC1", "HC2", "HC3".
+            - If a string, can be one of "iid", "hetero", "HC1", "HC2", "HC3", "NW", "DK".
             - If a dictionary, it should have the format {"CRV1": "clustervar"}
             for CRV1 inference or {"CRV3": "clustervar"} for CRV3 inference.
+        vcov_kwargs : dict[str, Any]
+            Additional keyword arguments for the variance-covariance matrix.
         solver: SolverOptions
             Solver to use for the estimation.
         demeaner_backend: DemeanerBackendOptions, optional

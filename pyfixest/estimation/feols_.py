@@ -536,7 +536,7 @@ class Feols:
         self._get_predictors()
 
     def vcov(
-        self, vcov: Union[str, dict[str, str]], data: Optional[DataFrameType] = None
+        self, vcov: Union[str, dict[str, str]], vcov_kwargs: dict[str, any], data: Optional[DataFrameType] = None
     ) -> "Feols":
         """
         Compute covariance matrices for an estimated regression model.
@@ -546,11 +546,13 @@ class Feols:
         vcov : Union[str, dict[str, str]]
             A string or dictionary specifying the type of variance-covariance matrix
             to use for inference.
-            If a string, it can be one of "iid", "hetero", "HC1", "HC2", "HC3".
+            If a string, it can be one of "iid", "hetero", "HC1", "HC2", "HC3", "NW", "DK".
             If a dictionary, it should have the format {"CRV1": "clustervar"} for
             CRV1 inference or {"CRV3": "clustervar"}
             for CRV3 inference. Note that CRV3 inference is currently not supported
             for IV estimation.
+        vcov_kwargs : dict[str, any]
+            Additional keyword arguments for the variance-covariance matrix.
         data: Optional[DataFrameType], optional
             The data used for estimation. If None, tries to fetch the data from the
             model object. Defaults to None.
@@ -2730,8 +2732,10 @@ def _check_vcov_input(vcov: Union[str, dict[str, str]], data: pd.DataFrame):
             "HC1",
             "HC2",
             "HC3",
+            "NW",
+            "DK",
             "nid",
-        ], "vcov string must be iid, hetero, HC1, HC2, or HC3"
+        ], "vcov string must be iid, hetero, HC1, HC2, HC3, NW, or DK."
 
 
 def _deparse_vcov_input(vcov: Union[str, dict[str, str]], has_fixef: bool, is_iv: bool):
@@ -2785,6 +2789,9 @@ def _deparse_vcov_input(vcov: Union[str, dict[str, str]], has_fixef: bool, is_iv
                 raise VcovTypeNotSupportedError(
                     "HC2 and HC3 inference types are not supported for IV regressions."
                 )
+    elif vcov_type_detail in ["NW", "DK"]:
+        vcov_type = "HAC"
+        is_clustered = False
     elif vcov_type_detail in ["CRV1", "CRV3"]:
         vcov_type = "CRV"
         is_clustered = True

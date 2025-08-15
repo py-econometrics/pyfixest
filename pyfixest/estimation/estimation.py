@@ -23,6 +23,7 @@ def feols(
     fml: str,
     data: DataFrameType,  # type: ignore
     vcov: Optional[Union[VcovTypeOptions, dict[str, str]]] = None,
+    vcov_kwargs: dict[str,any],
     weights: Union[None, str] = None,
     ssc: Optional[dict[str, Union[str, bool]]] = None,
     fixef_rm: FixedRmOptions = "none",
@@ -60,7 +61,15 @@ def feols(
 
     vcov : Union[VcovTypeOptions, dict[str, str]]
         Type of variance-covariance matrix for inference. Options include "iid",
-        "hetero", "HC1", "HC2", "HC3", or a dictionary for CRV1/CRV3 inference.
+        "hetero", "HC1", "HC2", "HC3", "NW" for Newey-West HAC standard errors,
+        "DK" for Driscoll-Kraay HAC standard errors, or a dictionary for CRV1/CRV3 inference.
+        Note that NW and DK require to pass additional keyword arguments via the `vcov_kwargs` argument.
+
+    vcov_kwargs : dict[str, any]
+         Additional keyword arguments to pass to the vcov function. These keywoards include
+        "lags" for the number of lags to use in the Newey-West (NW) and Driscoll-Kraay (DK) HAC standard errors.
+        "time_id" for the time ID used for NW and DK standard errors, and "panel_id" for the panel
+        identifier used for NW and DK standard errors.
 
     weights : Union[None, str], optional.
         Default is None. Weights for WLS estimation. If None, all observations
@@ -439,6 +448,7 @@ def feols(
         fml=fml,
         data=data,
         vcov=vcov,
+        vcov_kwargs=vcov_kwargs,
         weights=weights,
         ssc=ssc,
         fixef_rm=fixef_rm,
@@ -475,12 +485,13 @@ def feols(
     estimation = "feols" if not use_compression else "compression"
 
     fixest._prepare_estimation(
-        estimation, fml, vcov, weights, ssc, fixef_rm, drop_intercept
+        estimation, fml, vcov, vcov_kwargs, weights, ssc, fixef_rm, drop_intercept
     )
 
     # demean all models: based on fixed effects x split x missing value combinations
     fixest._estimate_all_models(
         vcov,
+        vcov_kwargs,
         collin_tol=collin_tol,
         solver=solver,
         demeaner_backend=demeaner_backend,
