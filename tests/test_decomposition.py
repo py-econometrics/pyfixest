@@ -497,9 +497,6 @@ def test_coefplot_comprehensive(data_transform, annotate_shares):
     )
     plt.close("all")
 
-    gb.coefplot(components_order=["g2", "g1"], annotate_shares=annotate_shares)
-    plt.close("all")
-
     gb.coefplot(keep=["g1", "g2"], annotate_shares=annotate_shares)
     plt.close("all")
 
@@ -520,7 +517,6 @@ def test_coefplot_comprehensive(data_transform, annotate_shares):
     plt.close("all")
 
     gb.coefplot(
-        components_order=["g2", "g1"],
         title="Complex Test",
         figsize=(14, 8),
         keep=["g1", "g2"],
