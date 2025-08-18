@@ -277,9 +277,8 @@ def etable(
     assert isinstance(model_stats, (list, tuple)), "model_stats must be list-like"
     model_stats = list(model_stats)
     assert all(isinstance(s, str) for s in model_stats), "model_stats entries must be strings"
-    # Preserve order but drop duplicates
-    seen = set()
-    model_stats = [s for s in model_stats if not (s in seen or seen.add(s))]
+    # Assert that there are no duplicates in model_stats
+    assert len(model_stats) == len(set(model_stats)), "model_stats contains duplicate entries"
 
     # Default labels by output type
     def _default_label(stat: str) -> str:
@@ -309,32 +308,10 @@ def etable(
             }
         return mapping.get(stat, stat)
 
-    # Value extractors / formatters
-    def _extract(model, key: str):
-        if key == "se_type":
-            if getattr(model, "_vcov_type", "") == "CRV":
-                return "by: " + "+".join(getattr(model, "_clustervar", []))
-            return getattr(model, "_vcov_type", None)
-        attr_name = f"_{key}"
-        return getattr(model, attr_name, None)
-
-    def _format_value(val, key: str):
-        if val is None:
-            return "-"
-        if isinstance(val, (int, np.integer)):
-            return _number_formatter(int(val), integer=True, **kwargs)
-        if isinstance(val, (float, np.floating)):
-            if math.isnan(val):
-                return "-"
-            # N treated as integer
-            if key.lower() in ("n", "nobs"):
-                return _number_formatter(val, integer=True, **kwargs)
-            return _number_formatter(val, **kwargs)
-        return str(val)
 
     model_stats_rows: dict[str, list[str]] = {}
     for stat in model_stats:
-        values = [_format_value(_extract(m, stat), stat) for m in models]
+        values = [_extract(m, stat) for m in models]
         label = _default_label(stat)
         if model_stats_labels and stat in model_stats_labels:
             label = model_stats_labels[stat]
@@ -889,6 +866,41 @@ def _number_formatter(x: float, **kwargs) -> str:
     _int, _float = str(x_str).split(".")
     _float = _float.ljust(digits, "0")
     return _int if digits == 0 else f"{_int}.{_float}"
+
+
+def _extract(model, key: str, **kwargs):
+    """
+    Extract the value of a model statistics from a model.
+
+    Parameters
+    ----------
+    model: Any
+        The model from which to extract the value.
+    key: str
+        The name of the statistic to extract. The method adds _ to the key and calls getattr on the model.
+
+    Returns
+    -------
+    value: Any
+        The extracted and formatted value.
+    """
+    if key == "se_type":
+        if getattr(model, "_vcov_type", "") == "CRV":
+            return "by: " + "+".join(getattr(model, "_clustervar", []))
+        return getattr(model, "_vcov_type", None)
+    attr_name = f"_{key}"
+    val = getattr(model, attr_name, None)
+    if val is None:
+        return "-"
+    if isinstance(val, (int, np.integer)):
+        return _number_formatter(float(val), integer=True, **kwargs)
+    if isinstance(val, (float, np.floating)):
+        if math.isnan(val):
+            return "-"
+        return _number_formatter(float(val), **kwargs)
+    if isinstance(val, bool):
+        return str(val)
+    return str(val)
 
 
 def _relabel_index(index, labels=None, stats_labels=None):
