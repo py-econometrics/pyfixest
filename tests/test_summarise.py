@@ -145,6 +145,7 @@ def test_summary():
         model_stats_labels={"N": "Obs.", "r2": "R²"},
     )
 
+
 @pytest.mark.skip("Pyfixest PR is not yet merged into stargazer.")
 def test_stargazer():
     data = pf.get_data()

@@ -265,7 +265,8 @@ def etable(
     # Determine default model stats (legacy emulation) if user did not provide any
     if model_stats is None:
         any_within = any(
-            hasattr(m, "_r2_within") and not math.isnan(getattr(m, "_r2_within", float("nan")))
+            hasattr(m, "_r2_within")
+            and not math.isnan(getattr(m, "_r2_within", float("nan")))
             for m in models
         )
         # Legacy order
@@ -276,9 +277,13 @@ def etable(
 
     assert isinstance(model_stats, (list, tuple)), "model_stats must be list-like"
     model_stats = list(model_stats)
-    assert all(isinstance(s, str) for s in model_stats), "model_stats entries must be strings"
+    assert all(isinstance(s, str) for s in model_stats), (
+        "model_stats entries must be strings"
+    )
     # Assert that there are no duplicates in model_stats
-    assert len(model_stats) == len(set(model_stats)), "model_stats contains duplicate entries"
+    assert len(model_stats) == len(set(model_stats)), (
+        "model_stats contains duplicate entries"
+    )
 
     # Default labels by output type
     def _default_label(stat: str) -> str:
@@ -307,7 +312,6 @@ def etable(
                 "r2_within": "R2 Within",
             }
         return mapping.get(stat, stat)
-
 
     model_stats_rows: dict[str, list[str]] = {}
     for stat in model_stats:
@@ -480,7 +484,9 @@ def etable(
     # In that case model_stats_df is (0, 0) and assigning columns would raise a length mismatch.
     if model_stats_df.shape[1] == 0:
         # Create an empty frame with the correct columns so later concatenation works.
-        model_stats_df = pd.DataFrame(index=pd.Index([], name=res.index.name), columns=res.columns)
+        model_stats_df = pd.DataFrame(
+            index=pd.Index([], name=res.index.name), columns=res.columns
+        )
     else:
         model_stats_df.columns = res.columns
     # Also align fixed effects dataframe columns
