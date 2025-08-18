@@ -1,7 +1,6 @@
+import math
 import re
 import warnings
-import math
-
 from collections import Counter
 from collections.abc import ValuesView
 from typing import Optional, Union
