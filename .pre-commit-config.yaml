@@ -3,7 +3,7 @@ ci:
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
       - id: debug-statements
       - id: trailing-whitespace
@@ -14,13 +14,13 @@ repos:
       - id: check-added-large-files
         exclude: pixi.lock
   - repo: https://github.com/python-jsonschema/check-jsonschema
-    rev: 0.33.2
+    rev: 0.33.3
     hooks:
       - id: check-github-workflows
         args: ["--verbose"]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.12.4
+    rev: v0.12.9
     hooks:
       - id: ruff
         args: ["--fix", "--output-format=full"]
@@ -34,7 +34,7 @@ repos:
         files: ^docs/.*\.ipynb$
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.17.0
+    rev: v1.17.1
     hooks:
       - id: mypy
         args: [--ignore-missing-imports]
