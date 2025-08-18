@@ -1815,6 +1815,7 @@ class Feols:
             decomp_var=cast(str, decomp_var),
             x1_vars=x1_vars,
             coefnames=xnames,
+            depvarname=self._depvar,
             cluster_df=cluster_df,
             nthreads=nthreads_int,
             combine_covariates=combine_covariates,
