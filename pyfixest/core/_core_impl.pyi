@@ -20,3 +20,10 @@ def _count_fixef_fully_nested_all_rs(
     cluster_data: NDArray[np.uint64],
     fe_data: NDArray[np.uint64],
 ) -> tuple[np.ndarray, int]: ...
+def _demean_accelerated_rs(
+    x: NDArray[np.float64],
+    flist: NDArray[np.uint64],
+    weights: NDArray[np.float64],
+    tol: float = 1e-08,
+    maxiter: int = 100_000,
+) -> tuple[np.ndarray, bool]: ...
