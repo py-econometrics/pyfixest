@@ -4,6 +4,7 @@ mod collinear;
 mod crv1;
 mod demean;
 mod nested_fixed_effects;
+mod demean_accelerated;
 
 #[pymodule]
 fn _core_impl(m: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -13,5 +14,6 @@ fn _core_impl(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_wrapped(wrap_pyfunction!(
         nested_fixed_effects::_count_fixef_fully_nested_all_rs
     ))?;
+    m.add_wrapped(wrap_pyfunction!(demean_accelerated::_demean_accelerated_rs))?;
     Ok(())
 }

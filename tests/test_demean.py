@@ -4,14 +4,15 @@ import pyhdfe
 import pytest
 
 from pyfixest.core import demean as demean_rs
+from pyfixest.core.demean_accelerated import demean_accelerated
 from pyfixest.estimation.demean_ import _set_demeaner_backend, demean, demean_model
 from pyfixest.estimation.jax.demean_jax_ import demean_jax
 
 
 @pytest.mark.parametrize(
     argnames="demean_func",
-    argvalues=[demean, demean_jax, demean_rs],
-    ids=["demean_numba", "demean_jax", "demean_rs"],
+    argvalues=[demean, demean_jax, demean_rs, demean_accelerated],
+    ids=["demean_numba", "demean_jax", "demean_rs", "demean_accelerated"],
 )
 def test_demean(benchmark, demean_func):
     rng = np.random.default_rng(929291)
