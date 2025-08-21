@@ -369,3 +369,56 @@ def test_feols_integration_maxiter():
     # Should work with default
     model = pf.feols("y ~ x | fe", data=data)
     assert model is not None
+
+
+@pytest.mark.parametrize(
+    argnames="demean_func",
+    argvalues=[demean_rs, demean_accelerated],
+    ids=["demean_rs", "demean_accelerated"],
+)
+def test_demean_complex_fixed_effects(benchmark, demean_func):
+    """Benchmark demean functions with complex multi-level fixed effects."""
+    X, flist, weights = generate_complex_fixed_effects_data()
+
+    X_demeaned, success = benchmark(demean_func, X, flist, weights, tol=1e-10)
+
+    assert success, "Benchmarked demeaning should succeed"
+    assert X_demeaned.shape == X.shape
+
+
+def generate_complex_fixed_effects_data():
+    """
+    Complex fixed effects example ported from fixest R-implementation:
+    https://github.com/lrberge/fixest/blob/ac1be27fda5fc381c0128b861eaf5bda88af846c/_BENCHMARK/Data%20generation.R#L125 .
+
+    """
+    rng = np.random.default_rng(42)
+    n = 10**5  # Large dataset for benchmarking
+    nb_indiv = n // 20
+    nb_firm = max(1, round(n / 160))
+    nb_year = max(1, round(n**0.3))
+    # Generate fixed effect IDs
+    id_indiv = rng.choice(nb_indiv, n, replace=True)
+    id_firm_base = rng.integers(0, 21, n) + np.maximum(1, id_indiv // 8 - 10)
+    id_firm = np.minimum(id_firm_base, nb_firm - 1)
+    id_year = rng.choice(nb_year, n, replace=True)
+    # Create variables
+    x1 = (
+        5 * np.cos(id_indiv)
+        + 5 * np.sin(id_firm)
+        + 5 * np.sin(id_year)
+        + rng.uniform(0, 1, n)
+    )
+    x2 = np.cos(id_indiv) + np.sin(id_firm) + np.sin(id_year) + rng.normal(0, 1, n)
+    y = (
+        3 * x1
+        + 5 * x2
+        + np.cos(id_indiv)
+        + np.cos(id_firm) ** 2
+        + np.sin(id_year)
+        + rng.normal(0, 1, n)
+    )
+    X = np.column_stack([x1, x2, y])
+    flist = np.column_stack([id_indiv, id_firm, id_year]).astype(np.uint64)
+    weights = rng.uniform(0.5, 2.0, n)
+    return X, flist, weights
