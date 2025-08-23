@@ -2,8 +2,8 @@
 title: 'PyFixest: A Python Port of fixest for High-Dimensional Fixed-Effects Regression'
 date: 8 August 2025
 author:
-  - name: Alexander Fischer
-    affiliation: Trivago
+  - name: The PyFixest Authors
+    affiliation: Py-Econometrics
 ---
 
 
