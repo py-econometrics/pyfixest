@@ -135,7 +135,7 @@ def _nw_meat(scores, time_var=None, lags=None, data=None, is_iv=False,
         ordered_scores = scores
         n_time = len(ordered_scores)
     else:
-        time_data = data[time_var].to_numpy() # need to ensure that this is datetime format
+        time_data = data[time_var].to_numpy() # need to ensure that this is datetime format - might have to write an internal converter for pf.
         order = np.argsort(time_data)
         ordered_scores = scores[order]
         n_time = len(np.unique(time_data))
@@ -145,19 +145,19 @@ def _nw_meat(scores, time_var=None, lags=None, data=None, is_iv=False,
         lags = int(np.floor(n_time ** (1 / 4)))
 
     # bartlett kernel weights
-    weights = np.linspace(1, 0, lags + 2)[:-1]
+    weights = np.array([1 - j/(lags + 1) for j in range(lags + 1)])
     weights[0] = 0.5  # Halve first weight
 
     n, k = ordered_scores.shape
     meat = np.zeros((k, k))
 
     for j in range(lags + 1):
-    if j == 0:
-        gamma_j = ordered_scores.T @ ordered_scores
-        meat += weights[j] * gamma_j
-    else:
-        gamma_j = ordered_scores[j:].T @ ordered_scores[:-j]
-        meat += weights[j] * (gamma_j + gamma_j.T)
+        if j == 0:
+            gamma_j = ordered_scores.T @ ordered_scores
+            meat += weights[j] * gamma_j
+        else:
+            gamma_j = ordered_scores[j:].T @ ordered_scores[:-j]
+            meat += weights[j] * (gamma_j + gamma_j.T)
 
     meat = meat / n
 
@@ -166,7 +166,25 @@ def _nw_meat(scores, time_var=None, lags=None, data=None, is_iv=False,
 
     return meat
 
-        
+@nb.njit(parallel=False)
+def _dk_meat(scores, time_var=None, lags=None, data=None, is_iv=False, 
+             tXZ=None, tZZinv=None, tZX=None):
+    """
+    Compute Driscoll-Kraay HAC meat matrix.
+
+    Parameters
+    ----------
+    vcov : Union[str, dict[str, str], None]
+        The specified vcov type.
+    fval : str
+        The specified fixed effects. (i.e. "X1+X2")
+
+    Returns
+    -------
+    str
+        vcov_type (str) : The specified vcov type.
+    """
+    
 
 
 def _prepare_twoway_clustering(clustervar: list, cluster_df: pd.DataFrame):
