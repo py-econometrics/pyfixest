@@ -421,7 +421,7 @@ class FixestMulti:
                     if not FIT._X_is_empty:
                         # inference
                         vcov_type = _get_vcov_type(vcov, fval)
-                        FIT.vcov(vcov=vcov_type, data=FIT._data)
+                        FIT.vcov(vcov=vcov_type, vcov_kwargs=vcov_kwargs, data=FIT._data)
 
                         FIT.get_inference()
                         if _method == "feols" and not FIT._is_iv:
