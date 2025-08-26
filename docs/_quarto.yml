@@ -1,10 +1,10 @@
 project:
   type: website
   output-dir: _site
+  freeze: auto
 
-execute:
-  # point quarto to the correct python environment
-  python: "/pyfixest/.pixi/envs/docs/Scripts/python.exe"
+exclude:
+  - "compare-fixest-pyfixest.qmd"
 
 metadata-files:
   - _sidebar.yml
@@ -47,8 +47,6 @@ website:
           text: "On Small Sample Corrections"
         - file: quantile-regression.qmd
           text: "Quantile Regression"
-        - text: "Compare fixest & PyFixest"
-          file: compare-fixest-pyfixest.qmd
         - text: "Compare Stata & PyFixest"
           file: stata-2-pyfixest.qmd
         - text: "PyFixest on the GPU"
@@ -103,7 +101,6 @@ quartodoc:
         - report.dtable
         - report.coefplot
         - report.iplot
-        - did.visualize.panelview
     - title: Misc / Utilities
       desc: |
         PyFixest internals and utilities
