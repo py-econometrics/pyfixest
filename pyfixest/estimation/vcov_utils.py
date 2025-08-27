@@ -97,7 +97,7 @@ def _get_vcov_type(
     return vcov_type  # type: ignore
 
 @nb.njit(parallel=False)
-def _nw_meat(scores, time_var=None, lags=None, data=None, is_iv=False, 
+def _nw_meat(scores, time_var=None, lags=None, data=None, is_iv=False,
              tXZ=None, tZZinv=None, tZX=None):
     """
     Compute Newey-West HAC meat matrix.
@@ -114,8 +114,8 @@ def _nw_meat(scores, time_var=None, lags=None, data=None, is_iv=False,
     is_iv: bool, optional
         Whether the model is an instrumental variable model. Default is False.
     tXZ: np.ndarray, optional
-        The t(X)'Z matrix for IV models. Default is None.   
-    
+        The t(X)'Z matrix for IV models. Default is None.
+
     tZZinv: np.ndarray, optional
         The (Z'Z)^(-1) matrix for IV models. Default is None.
     tZX: np.ndarray, optional
@@ -134,6 +134,8 @@ def _nw_meat(scores, time_var=None, lags=None, data=None, is_iv=False,
 
     # resolve lags
     if lags is None:
+        # these are the fixest default lags for HAC
+        # see https://lrberge.github.io/fixest/reference/vcov_hac.html
         lags = int(np.floor(n_time ** (1 / 4)))
 
     # bartlett kernel weights
@@ -161,7 +163,7 @@ def _nw_meat(scores, time_var=None, lags=None, data=None, is_iv=False,
     return meat
 
 @nb.njit(parallel=False)
-def _dk_meat(scores, time_var=None, lags=None, data=None, is_iv=False, 
+def _dk_meat(scores, time_var=None, lags=None, data=None, is_iv=False,
              tXZ=None, tZZinv=None, tZX=None):
     """
     Compute Driscoll-Kraay HAC meat matrix.
