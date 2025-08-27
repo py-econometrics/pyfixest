@@ -569,7 +569,7 @@ class Feols:
         self._get_predictors()
 
     def vcov(
-        self, vcov: Union[str, dict[str, str]], data: Optional[DataFrameType] = None
+        self, vcov: Union[str, dict[str, str]], vcov_kwargs: dict[str, any], data: Optional[DataFrameType] = None
     ) -> "Feols":
         """
         Compute covariance matrices for an estimated regression model.
@@ -579,11 +579,13 @@ class Feols:
         vcov : Union[str, dict[str, str]]
             A string or dictionary specifying the type of variance-covariance matrix
             to use for inference.
-            If a string, it can be one of "iid", "hetero", "HC1", "HC2", "HC3".
+            If a string, it can be one of "iid", "hetero", "HC1", "HC2", "HC3", "NW", "DK".
             If a dictionary, it should have the format {"CRV1": "clustervar"} for
             CRV1 inference or {"CRV3": "clustervar"}
             for CRV3 inference. Note that CRV3 inference is currently not supported
             for IV estimation.
+        vcov_kwargs : dict[str, any]
+             Additional keyword arguments for the variance-covariance matrix.
         data: Optional[DataFrameType], optional
             The data used for estimation. If None, tries to fetch the data from the
             model object. Defaults to None.
@@ -667,6 +669,20 @@ class Feols:
             all_kwargs = {**ssc_kwargs, **ssc_kwargs_hetero}
             self._ssc, self._dof_k, self._df_t = get_ssc(**all_kwargs)
             self._vcov = self._ssc * self._vcov_hetero()
+
+         elif self._vcov_type == "HAC":
+            ssc_kwargs_hac = {
+                "k_fe_nested": 0,
+                "n_fe_fully_nested": 0,
+                "vcov_sign": 1,
+                "vcov_type": "HAC",
+                "G": self._N,
+            }
+
+            all_kwargs = {**ssc_kwargs, **ssc_kwargs_hac}
+            self._ssc, self._dof_k, self._df_t = get_ssc(**all_kwargs)
+
+            self._vcov = self._ssc * self._vcov_hac()
 
         elif self._vcov_type == "nid":
             ssc_kwargs_hetero = {
@@ -824,6 +840,28 @@ class Feols:
 
         _meat = _tXZ @ _tZZinv @ Omega @ _tZZinv @ _tZX if _is_iv else Omega
         _vcov = _bread @ _meat @ _bread
+
+        return _vcov
+    
+    def _vcov_hac(self):
+        _scores = self._scores
+        _bread = self._bread
+        _tXZ = self._tXZ 
+        _tZZinv = self._tZZinv
+        _tZX = self._tZX
+        _is_iv = self._is_iv
+        _vcov_type_detail = self._vcov_type_detail
+
+        if _vcov_type_detail == "NW":
+            #Newey-West
+            _meat = _nw_meat()
+        elif _vcov_type_detail == "DK":
+            #Driscoll-Kraay
+            _meat = _dk_meat()
+
+         _vcov = _bread @ _meat @ _bread
+
+
 
         return _vcov
 
@@ -2816,9 +2854,11 @@ def _check_vcov_input(vcov: Union[str, dict[str, str]], data: pd.DataFrame):
             "HC1",
             "HC2",
             "HC3",
+            "NW",
+            "DK",
             "nid",
         ], (
-            "vcov string must be iid, hetero, HC1, HC2, or HC3, or for quantile regression, 'nid'."
+            "vcov string must be iid, hetero, HC1, HC2, HC3, NW, or DK, or for quantile regression, 'nid'."
         )
 
 
@@ -2873,6 +2913,10 @@ def _deparse_vcov_input(vcov: Union[str, dict[str, str]], has_fixef: bool, is_iv
                 raise VcovTypeNotSupportedError(
                     "HC2 and HC3 inference types are not supported for IV regressions."
                 )
+    elif vcov_type_detail in ["NW", "DK"]:
+        vcov_type = "HAC"
+        is_clustered = False        
+
     elif vcov_type_detail in ["CRV1", "CRV3"]:
         vcov_type = "CRV"
         is_clustered = True
