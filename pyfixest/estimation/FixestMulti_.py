@@ -152,7 +152,7 @@ class FixestMulti:
         estimation: str,
         fml: str,
         vcov: Union[None, str, dict[str, str]] = None,
-        vcov_kwargs: dict[str, Any]= None,
+        vcov_kwargs: Optional[dict[str, Any]] = None,
         weights: Union[None, str] = None,
         ssc: Optional[dict[str, Union[str, bool]]] = None,
         fixef_rm: str = "none",

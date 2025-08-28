@@ -569,7 +569,10 @@ class Feols:
         self._get_predictors()
 
     def vcov(
-        self, vcov: Union[str, dict[str, str]], vcov_kwargs: dict[str, any], data: Optional[DataFrameType] = None
+        self,
+        vcov: Union[str, dict[str, str]],
+        vcov_kwargs: Optional[dict[str, any]] = None,
+        data: Optional[DataFrameType] = None,
     ) -> "Feols":
         """
         Compute covariance matrices for an estimated regression model.
@@ -584,7 +587,7 @@ class Feols:
             CRV1 inference or {"CRV3": "clustervar"}
             for CRV3 inference. Note that CRV3 inference is currently not supported
             for IV estimation.
-        vcov_kwargs : dict[str, any]
+        vcov_kwargs : Optional[dict[str, any]]
              Additional keyword arguments for the variance-covariance matrix.
         data: Optional[DataFrameType], optional
             The data used for estimation. If None, tries to fetch the data from the
@@ -670,7 +673,7 @@ class Feols:
             self._ssc, self._dof_k, self._df_t = get_ssc(**all_kwargs)
             self._vcov = self._ssc * self._vcov_hetero()
 
-         elif self._vcov_type == "HAC":
+        elif self._vcov_type == "HAC":
             ssc_kwargs_hac = {
                 "k_fe_nested": 0,
                 "n_fe_fully_nested": 0,
@@ -842,28 +845,24 @@ class Feols:
         _vcov = _bread @ _meat @ _bread
 
         return _vcov
-    
+
     def _vcov_hac(self):
         _scores = self._scores
         _bread = self._bread
-        _tXZ = self._tXZ 
+        _tXZ = self._tXZ
         _tZZinv = self._tZZinv
         _tZX = self._tZX
         _is_iv = self._is_iv
         _vcov_type_detail = self._vcov_type_detail
 
         if _vcov_type_detail == "NW":
-            #Newey-West
-            _meat = _nw_meat()
+            # Newey-West
+            raise NotImplementedError("Newey-West HAC standard errors are not yet implemented")
         elif _vcov_type_detail == "DK":
-            #Driscoll-Kraay
-            _meat = _dk_meat()
-
-         _vcov = _bread @ _meat @ _bread
-
-
-
-        return _vcov
+            # Driscoll-Kraay
+            raise NotImplementedError("Driscoll-Kraay HAC standard errors are not yet implemented")
+        else:
+            raise ValueError(f"Unknown HAC type: {_vcov_type_detail}")
 
     def _vcov_nid(self):
         raise NotImplementedError(
@@ -2915,7 +2914,7 @@ def _deparse_vcov_input(vcov: Union[str, dict[str, str]], has_fixef: bool, is_iv
                 )
     elif vcov_type_detail in ["NW", "DK"]:
         vcov_type = "HAC"
-        is_clustered = False        
+        is_clustered = False
 
     elif vcov_type_detail in ["CRV1", "CRV3"]:
         vcov_type = "CRV"

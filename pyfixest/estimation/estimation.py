@@ -24,7 +24,7 @@ def feols(
     fml: str,
     data: DataFrameType,  # type: ignore
     vcov: Optional[Union[VcovTypeOptions, dict[str, str]]] = None,
-    vcov_kwargs: dict[str,any],
+    vcov_kwargs: Optional[dict[str, any]] = None,
     weights: Union[None, str] = None,
     ssc: Optional[dict[str, Union[str, bool]]] = None,
     fixef_rm: FixedRmOptions = "none",
@@ -66,7 +66,7 @@ def feols(
         "DK" for Driscoll-Kraay HAC standard errors, or a dictionary for CRV1/CRV3 inference.
         Note that NW and DK require to pass additional keyword arguments via the `vcov_kwargs` argument.
 
-    vcov_kwargs : dict[str, any]
+    vcov_kwargs : Optional[dict[str, any]]
          Additional keyword arguments to pass to the vcov function. These keywoards include
         "lags" for the number of lags to use in the Newey-West (NW) and Driscoll-Kraay (DK) HAC standard errors.
         "time_id" for the time ID used for NW and DK standard errors, and "panel_id" for the panel
@@ -508,6 +508,7 @@ def fepois(
     fml: str,
     data: DataFrameType,  # type: ignore
     vcov: Optional[Union[VcovTypeOptions, dict[str, str]]] = None,
+    vcov_kwargs: Optional[dict[str, any]] = None,
     ssc: Optional[dict[str, Union[str, bool]]] = None,
     fixef_rm: FixedRmOptions = "none",
     fixef_tol: float = 1e-08,
@@ -546,9 +547,15 @@ def fepois(
     data : DataFrameType
         A pandas or polars dataframe containing the variables in the formula.
 
-    vcov : Union[VcovTypeOptions, dict[str, str]]
-        Type of variance-covariance matrix for inference. Options include "iid",
-        "hetero", "HC1", "HC2", "HC3", or a dictionary for CRV1/CRV3 inference.
+    vcov_kwargs : Optional[dict[str, any]]
+         Additional keyword arguments to pass to the vcov function. These keywoards include
+        "lags" for the number of lags to use in the Newey-West (NW) and Driscoll-Kraay (DK) HAC standard errors.
+        "time_id" for the time ID used for NW and DK standard errors, and "panel_id" for the panel
+         identifier used for NW and DK standard errors.
+
+    vcov_kwargs : Optional[dict[str, any]]
+        Additional keyword arguments for the variance-covariance matrix.
+        For example, "lags" for the Newey-West estimator.
 
     ssc : str
         A ssc object specifying the small sample correction for inference.
@@ -663,6 +670,7 @@ def fepois(
         fml=fml,
         data=data,
         vcov=vcov,
+        vcov_kwargs=vcov_kwargs,
         weights=weights,
         ssc=ssc,
         fixef_rm=fixef_rm,
@@ -726,6 +734,7 @@ def feglm(
     data: DataFrameType,  # type: ignore
     family: str,
     vcov: Optional[Union[VcovTypeOptions, dict[str, str]]] = None,
+    vcov_kwargs: Optional[dict[str, any]] = None,
     ssc: Optional[dict[str, Union[str, bool]]] = None,
     fixef_rm: FixedRmOptions = "none",
     fixef_tol: float = 1e-08,
@@ -770,6 +779,12 @@ def feglm(
     vcov : Union[VcovTypeOptions, dict[str, str]]
         Type of variance-covariance matrix for inference. Options include "iid",
         "hetero", "HC1", "HC2", "HC3", or a dictionary for CRV1/CRV3 inference.
+
+    vcov_kwargs : Optional[dict[str, any]]
+         Additional keyword arguments to pass to the vcov function. These keywoards include
+        "lags" for the number of lags to use in the Newey-West (NW) and Driscoll-Kraay (DK) HAC standard errors.
+        "time_id" for the time ID used for NW and DK standard errors, and "panel_id" for the panel
+         identifier used for NW and DK standard errors.
 
     ssc : str
         A ssc object specifying the small sample correction for inference.
@@ -914,6 +929,7 @@ def feglm(
         fml=fml,
         data=data,
         vcov=vcov,
+        vcov_kwargs=vcov_kwargs,
         weights=weights,
         ssc=ssc,
         fixef_rm=fixef_rm,
@@ -1143,7 +1159,8 @@ def quantreg(
     _estimation_input_checks(
         fml=fml,
         data=data,
-        vcov=vcov,
+        vcov=vcov_type,
+        vcov_kwargs=None,
         weights=weights,
         ssc=ssc,
         fixef_rm=fixef_rm,
@@ -1217,6 +1234,7 @@ def _estimation_input_checks(
     fml: str,
     data: DataFrameType,
     vcov: Optional[Union[str, dict[str, str]]],
+    vcov_kwargs: Optional[dict[str, any]],
     weights: Union[None, str],
     ssc: dict[str, Union[str, bool]],
     fixef_rm: str,
@@ -1355,6 +1373,28 @@ def _estimation_input_checks(
             raise ValueError(
                 "The function argument `separation_check` must be a list of strings containing 'fe' and/or 'ir'."
             )
+
+    if vcov_kwargs is not None:
+        # check that dict keys are either "lags", "time_id", or "panel_id"
+        if not all(key in ["lags", "time_id", "panel_id"] for key in vcov_kwargs.keys()):
+            raise ValueError("The function argument `vcov_kwargs` must be a dictionary with keys 'lags', 'time_id', or 'panel_id'.")
+
+    # if lag provided, check that it is an int
+    if "lags" in vcov_kwargs:
+        if not isinstance(vcov_kwargs["lags"], int):
+            raise ValueError("The function argument `vcov_kwargs` must be a dictionary with integer values for 'lags'.")
+
+    if "time_id" in vcov_kwargs:
+        if not isinstance(vcov_kwargs["time_id"], str):
+            raise ValueError("The function argument `vcov_kwargs` must be a dictionary with string values for 'time_id'.")
+        if vcov_kwargs["time_id"] not in data.columns:
+            raise ValueError("The function argument `vcov_kwargs` must be a dictionary with string values for 'time_id'.")
+
+    if "panel_id" in vcov_kwargs:
+        if not isinstance(vcov_kwargs["panel_id"], str):
+            raise ValueError("The function argument `vcov_kwargs` must be a dictionary with string values for 'panel_id'.")
+        if vcov_kwargs["panel_id"] not in data.columns:
+            raise ValueError("The function argument `vcov_kwargs` must be a dictionary with string values for 'panel_id'.")
 
 
 def _quantreg_input_checks(quantile: float, tol: float, maxiter: Optional[int]):
