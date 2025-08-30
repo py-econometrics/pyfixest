@@ -861,8 +861,6 @@ class Feols:
 
          _vcov = _bread @ _meat @ _bread
 
-
-
         return _vcov
 
     def _vcov_nid(self):

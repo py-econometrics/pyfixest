@@ -146,8 +146,6 @@ def _nw_meat(scores, time_var=None, lags=None, data=None, is_iv=False,
     for j in range(lags + 1):
         if j == 0:
             gamma_j = ordered_scores.T @ ordered_scores
-
-
             meat += weights[j] * gamma_j
         else:
             gamma_j = ordered_scores[j:].T @ ordered_scores[:-j]
