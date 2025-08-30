@@ -133,22 +133,21 @@ def _nw_meat(scores, time_var=None, lags=None, data=None):
         lags = int(np.floor(n_time ** (1 / 4)))
 
     # bartlett kernel weights
-    weights = np.array([1 - j / (lags + 1) for j in range(lags + 1)])
+    weights = np.array([1 - j / (lags + 1) for j in range(lags+1)])
     weights[0] = 0.5  # Halve first weight
 
     n, k = ordered_scores.shape
     meat = np.zeros((k, k))
 
-    for j in range(lags + 1):
-        if j == 0:
-            gamma_j = ordered_scores.T @ ordered_scores
+    # this implementation follows the same that fixest does in R
+    for l in range(lags + 1):
+        weight = weights[l]
+        gamma_l = np.zeros((k, k))
 
-            meat += weights[j] * gamma_j
-        else:
-            gamma_j = ordered_scores[j:].T @ ordered_scores[:-j]
-            meat += weights[j] * (gamma_j + gamma_j.T)
-
-    meat = meat / n
+        for t in range(l, n_time):
+            gamma_l += np.outer(ordered_scores[t, :], ordered_scores[t - l, :])
+        
+        meat += weight * (gamma_l + gamma_l.T)
 
     return meat
 
