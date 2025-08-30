@@ -9,13 +9,11 @@
 [![image](https://codecov.io/gh/py-econometrics/pyfixest/branch/master/graph/badge.svg)](https://codecov.io/gh/py-econometrics/pyfixest)
 [![Known Bugs](https://img.shields.io/github/issues/py-econometrics/pyfixest/bug?color=red&label=Bugs)](https://github.com/py-econometrics/pyfixest/issues?q=is%3Aissue+is%3Aopen+label%3Abug)
 [![File an Issue](https://img.shields.io/github/issues/py-econometrics/pyfixest)](https://github.com/py-econometrics/pyfixest/issues)
-[![All Contributors](https://img.shields.io/badge/all_contributors-27-green.svg?style=flat-square)](#contributors-)
-[![Downloads](https://static.pepy.tech/badge/pyfixest)](https://pepy.tech/project/pyfixest)
-[![Downloads](https://static.pepy.tech/badge/pyfixest/month)](https://pepy.tech/project/pyfixest)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![Pixi Badge][pixi-badge]][pixi-url]
-[![Citation](https://img.shields.io/badge/Cite%20as-PyFixest-blue)](https://github.com/py-econometrics/pyfixest?tab=readme-ov-file#how-to-cite)
 [![Donate | GiveDirectly](https://img.shields.io/static/v1?label=GiveDirectly&message=Donate&color=blue&style=flat-square)](https://github.com/py-econometrics/pyfixest?tab=readme-ov-file#support-pyfixest)
+[![PyPI](https://img.shields.io/pypi/v/pyfixest)](https://pypi.org/project/pyfixest)
+[![Citation](https://img.shields.io/badge/Cite%20as-PyFixest-blue)](https://github.com/py-econometrics/pyfixest?tab=readme-ov-file#how-to-cite)
 
 [pixi-badge]:https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/prefix-dev/pixi/main/assets/badge/v0.json&style=flat-square
 [pixi-url]: https://pixi.sh
