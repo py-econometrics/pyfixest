@@ -166,4 +166,9 @@ def rename_event_study_coefs(coef_names_list: list):
             'Intercept': 'Intercept'
         }
     """
+    # add a deprecation warning
+    warnings.warn(
+        "rename_event_study_coefs is deprecated and will be removed in a future version. Please use the cat_template argument instead."
+    )
+
     return {col: _rename_event_study_coefs(col) for col in coef_names_list}

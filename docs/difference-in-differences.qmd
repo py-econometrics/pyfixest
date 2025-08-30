@@ -186,7 +186,7 @@ fit_dynamic_twfe.iplot(
     figsize=[1200, 400],
     yintercept=0,
     xintercept=13.5,
-    labels=rename_event_study_coefs(fit_dynamic_twfe._coefnames),
+    cat_template="{variable}::{value}"
 )
 ```
 
@@ -218,7 +218,7 @@ fit_dynamic_twfe.iplot(
     yintercept=0,
     xintercept=13.5,
     joint="both",
-    labels=rename_event_study_coefs(fit_dynamic_twfe._coefnames),
+    cat_template="{variable}::{value}"
 )
 ```
 
@@ -348,7 +348,7 @@ fit_twfe.iplot(
     figsize=figsize,
     xintercept=18.5,
     yintercept=0,
-    labels=rename_event_study_coefs(fit_twfe._coefnames),  # rename coefficients
+    cat_template="{variable}::{value}"
 ).show()
 ```
 
