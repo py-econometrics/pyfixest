@@ -34,7 +34,7 @@ from pyfixest.estimation.fepois_ import Fepois
 from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.quantreg.quantreg_ import Quantreg
 from pyfixest.report.summarize import _post_processing_input_checks
-from pyfixest.report.utils import _relabel_expvar
+from pyfixest.report.utils import _check_label_keys_in_covars, _relabel_expvar
 from pyfixest.utils.dev_utils import _select_order_coefs
 
 ModelInputType = Union[
@@ -241,6 +241,13 @@ def iplot(
     # keep only coefficients interacted via the i() syntax
     df = df[df["Coefficient"].isin(all_icovars)].reset_index()
 
+    # check that labels match the coef names
+    if labels is not None:
+        _check_label_keys_in_covars(
+            label_keys=list(labels.keys()),
+            covariate_names=df["Coefficient"].unique().tolist(),
+        )
+
     return _coefplot(
         plot_backend=plot_backend,
         df=df,
@@ -397,6 +404,13 @@ def coefplot(
     else:
         idxs = df.index
     df = df.loc[idxs, :].reset_index()
+
+    # check that labels match the coef names
+    if labels is not None:
+        _check_label_keys_in_covars(
+            label_keys=list(labels.keys()),
+            covariate_names=df["Coefficient"].unique().tolist(),
+        )
 
     return _coefplot(
         plot_backend=plot_backend,
@@ -619,7 +633,7 @@ def _coefplot_matplotlib(
         A matplotlib Figure object.
     """
     if labels is not None:
-        interactionSymbol = " x "
+        interactionSymbol = ":"
         df["Coefficient"] = df["Coefficient"].apply(
             lambda x: _relabel_expvar(x, labels, interactionSymbol)
         )
