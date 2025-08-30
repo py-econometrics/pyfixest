@@ -35,7 +35,7 @@ def _relabel_expvar(
     str
         The relabeled variable
     """
-    if labels == {} and cat_template != "" and ("C(" in varname or "[" in varname):
+    if not labels and cat_template != "" and ("C(" in varname or "[" in varname):
         v = _rename_categorical(varname, template=cat_template, labels=labels)
     else:
         v = labels.get(varname, varname)
