@@ -45,6 +45,7 @@ from pyfixest.estimation.vcov_utils import (
     _count_G_for_ssc_correction,
     _get_cluster_df,
     _prepare_twoway_clustering,
+    _nw_meat
 )
 from pyfixest.utils.dev_utils import (
     DataFrameType,
@@ -635,6 +636,22 @@ class Feols:
 
         # compute vcov
 
+        # check if vcov_kwargs is empty
+        if vcov_kwargs is None:
+            vcov_kwargs = {}
+        
+        # Extract time variable and lag from vcov_kwargs
+        time_var_name = vcov_kwargs.get('time_var', None)
+        lags = vcov_kwargs.get('lags', None)
+
+        if time_var_name is not None:
+            if time_var_name not in _data.columns:
+                raise ValueError(f"Time variable '{time_var_name}' not found in data columns.")
+            else:
+                self._time_var = _data[time_var_name].to_numpy()
+        
+        self._lags = lags
+
         ssc_kwargs = {
             "ssc_dict": self._ssc_dict,
             "N": self._N,
@@ -854,15 +871,22 @@ class Feols:
         _tZX = self._tZX
         _is_iv = self._is_iv
         _vcov_type_detail = self._vcov_type_detail
+        _time_var = self._time_var
+        _lags = self._lags
+        _data = self._data
 
         if _vcov_type_detail == "NW":
             # Newey-West
-            raise NotImplementedError("Newey-West HAC standard errors are not yet implemented")
+            newey_west_meat = _nw_meat(_scores, _time_var, _lags, _data)
+            _meat = _tXZ @ _tZZinv @ newey_west_meat @ _tZZinv @ _tZX if _is_iv else newey_west_meat
+            _vcov = _bread @ _meat @ _bread
         elif _vcov_type_detail == "DK":
             # Driscoll-Kraay
             raise NotImplementedError("Driscoll-Kraay HAC standard errors are not yet implemented")
         else:
             raise ValueError(f"Unknown HAC type: {_vcov_type_detail}")
+        
+        return _vcov
 
     def _vcov_nid(self):
         raise NotImplementedError(

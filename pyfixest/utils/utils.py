@@ -141,7 +141,7 @@ def get_ssc(
     vcov_sign : array-like
         A vector that helps create the covariance matrix.
     vcov_type : str
-        The type of covariance matrix. Must be one of "iid", "hetero", or "CRV".
+        The type of covariance matrix. Must be one of "iid", "hetero", "HAC", or "CRV".
 
     Returns
     -------
@@ -151,7 +151,7 @@ def get_ssc(
     Raises
     ------
     ValueError
-        If vcov_type is not "iid", "hetero", or "CRV", or if cluster_df is neither
+        If vcov_type is not "iid", "hetero", "HAC", or "CRV", or if cluster_df is neither
         "conventional" nor "min".
     """
     adj = ssc_dict["adj"]
@@ -190,7 +190,7 @@ def get_ssc(
         adj_value = (N - 1) / (N - dof_k)
 
     # cluster_adj applied with G = N for hetero but not for iid
-    if vcov_type in ["hetero", "CRV"] and cluster_adj:
+    if vcov_type in ["hetero", "HAC", "CRV"] and cluster_adj:
         if cluster_df == "conventional":
             cluster_adj_value = G / (G - 1)
         elif cluster_df == "min":
@@ -199,7 +199,7 @@ def get_ssc(
         else:
             raise ValueError("cluster_df is neither conventional nor min.")
 
-    df_t = N - dof_k if vcov_type in ["iid", "hetero"] else G - 1
+    df_t = N - dof_k if vcov_type in ["iid", "hetero", "HAC"] else G - 1
 
     return np.array([adj_value * cluster_adj_value * vcov_sign]), dof_k, df_t
 
