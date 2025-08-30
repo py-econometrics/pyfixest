@@ -18,7 +18,7 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 For easier encoding of categorical variables in relation to the `iplot()` and `coefplot()` functions, we add a new function argument, cat_template:
 
 ```{python}
-fit_c = pf.feols(fml = "Y ~ i(X1, f1)", data = data)
+fit_c = pf.feols(fml = "Y ~ i(X1, f1)", data = df)
 fit_c.iplot(cat_template = "{variable}::{value}")
 ```
 
