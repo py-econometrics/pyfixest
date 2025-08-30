@@ -9,13 +9,11 @@
 [![image](https://codecov.io/gh/py-econometrics/pyfixest/branch/master/graph/badge.svg)](https://codecov.io/gh/py-econometrics/pyfixest)
 [![Known Bugs](https://img.shields.io/github/issues/py-econometrics/pyfixest/bug?color=red&label=Bugs)](https://github.com/py-econometrics/pyfixest/issues?q=is%3Aissue+is%3Aopen+label%3Abug)
 [![File an Issue](https://img.shields.io/github/issues/py-econometrics/pyfixest)](https://github.com/py-econometrics/pyfixest/issues)
-[![All Contributors](https://img.shields.io/badge/all_contributors-27-green.svg?style=flat-square)](#contributors-)
-[![Downloads](https://static.pepy.tech/badge/pyfixest)](https://pepy.tech/project/pyfixest)
-[![Downloads](https://static.pepy.tech/badge/pyfixest/month)](https://pepy.tech/project/pyfixest)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![Pixi Badge][pixi-badge]][pixi-url]
-[![Citation](https://img.shields.io/badge/Cite%20as-PyFixest-blue)](https://github.com/py-econometrics/pyfixest?tab=readme-ov-file#how-to-cite)
 [![Donate | GiveDirectly](https://img.shields.io/static/v1?label=GiveDirectly&message=Donate&color=blue&style=flat-square)](https://github.com/py-econometrics/pyfixest?tab=readme-ov-file#support-pyfixest)
+[![PyPI](https://img.shields.io/pypi/v/pyfixest)](https://pypi.org/project/pyfixest)
+[![Citation](https://img.shields.io/badge/Cite%20as-PyFixest-blue)](https://github.com/py-econometrics/pyfixest?tab=readme-ov-file#how-to-cite)
 
 [pixi-badge]:https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/prefix-dev/pixi/main/assets/badge/v0.json&style=flat-square
 [pixi-url]: https://pixi.sh
@@ -23,11 +21,11 @@
 [chat-badge]: https://img.shields.io/discord/1259933360726216754.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2&style=flat-square
 [chat-url]: https://discord.gg/gBAydeDMVK
 
-`PyFixest` is a Python implementation of the formidable [fixest](https://github.com/lrberge/fixest) package for fast high-dimensional fixed effects regression.
+`PyFixest` is a Python package for fast high-dimensional fixed effects regression.
 
-The package aims to mimic `fixest` syntax and functionality as closely as Python allows: if you know `fixest` well, the goal is that you won't have to read the docs to get started! In particular, this means that all of `fixest's` defaults are mirrored by `PyFixest`.
+The package aims to mimic the syntax and functionality of the formidable [fixest](https://github.com/lrberge/fixest) package as closely as Python allows: if you know `fixest` well, the goal is that you won't have to read the docs to get started! In particular, this means that all of `fixest's` defaults are mirrored by `PyFixest`.
 
-Nevertheless, for a quick introduction, you can take a look at the [quickstart](https://py-econometrics.github.io/pyfixest/quickstart.html) or the regression chapter of [Arthur Turrell's](https://github.com/aeturrell) book on [Coding for Economists](https://aeturrell.github.io/coding-for-economists/econmt-regression.html#imports).
+For a quick introduction, you can take a look at the [quickstart](https://py-econometrics.github.io/pyfixest/quickstart.html) or the regression chapter of [Arthur Turrell's](https://github.com/aeturrell) book on [Coding for Economists](https://aeturrell.github.io/coding-for-economists/econmt-regression.html#imports).
 
 For questions on `PyFixest`, head on over to our [github discussions](https://github.com/py-econometrics/pyfixest/discussions), or (more informally) join our [Discord server](https://discord.gg/gBAydeDMVK).
 
