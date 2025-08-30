@@ -13,6 +13,19 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ## PyFixest 0.31.0 (In Dev, Install from Github)
 
+### `cat_template` argument for plotting functions
+
+For easier encoding of categorical variables in relation to the `iplot()` and `coefplot()` functions, we add a new function argument, cat_template:
+
+```{python}
+fit_c = pf.feols(fml = "Y ~ i(X1, f1)", data = data)
+fit_c.iplot(cat_template = "{variable}::{value}")
+```
+
+This is particularly useful for Difference-in-Differences and event studies. You can find an example use case in the DiD [vignette](https://py-econometrics.github.io/pyfixest/difference-in-differences.html#one-shot-adoption-static-and-dynamic-specifications).
+
+Going forward, we will deprecate the `rename_event_study_coefs` function, which is no longer needed (and did not work anyways).
+
 ### Updates to Gelbach Decomposition
 
 We have reworked the Gelbach Decomposition method, with some breaking changes: by default, calling `Feols.decompose()` now returns a `GelbachDecomposition` instance - before, we'd return a `pd.DataFrame`. The `param` argument has been renamed to `decomp_var`, but is not yet deprecated.
