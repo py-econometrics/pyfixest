@@ -187,8 +187,16 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
  <span class="dropdown-text">PyFixest on the GPU</span></a>
   </li>  
         <li>
+    <a class="dropdown-item" href="./resources.html">
+ <span class="dropdown-text">Other Resources around PyFixest</span></a>
+  </li>  
+        <li>
     <a class="dropdown-item" href="./replicating-the-effect.html">
  <span class="dropdown-text">Replicating ‘The Effect’ with PyFixest</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./mixtape.html">
+ <span class="dropdown-text">Replicating ‘The Mixtape’ with PyFixest</span></a>
   </li>  
     </ul>
   </li>
@@ -235,17 +243,15 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <p>In this notebook, we translate some of the Python code in <a href="https://mixtape.scunning.com/">Scott Cunningham’s mixtape</a> to PyFixest.</p>
 <div id="15b9d555" class="cell" data-execution_count="1">
-<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> re</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
 <span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>config InlineBackend.figure_format <span class="op">=</span> <span class="st">"retina"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>config InlineBackend.figure_format <span class="op">=</span> <span class="st">"retina"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 
-            <div id="5ILl4U"></div>
+            <div id="D8gaTz"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -269,9 +275,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("5ILl4U").appendChild(div);
+                        document.getElementById("D8gaTz").appendChild(div);
                     };
-                    var e = document.getElementById("5ILl4U");
+                    var e = document.getElementById("D8gaTz");
                     e.appendChild(script);
                 })()
             </script>
@@ -279,7 +285,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <div class="cell-output cell-output-display">
 
-            <div id="Y8BnSv"></div>
+            <div id="TJf5uP"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -303,9 +309,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("Y8BnSv").appendChild(div);
+                        document.getElementById("TJf5uP").appendChild(div);
                     };
-                    var e = document.getElementById("Y8BnSv");
+                    var e = document.getElementById("TJf5uP");
                     e.appendChild(script);
                 })()
             </script>
@@ -533,52 +539,52 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>    digits<span class="op">=</span><span class="dv">6</span>,</span>
 <span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="6">
-<div id="sdomesmiqj" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<div id="rrykpubkcs" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
 <style>
-#sdomesmiqj table {
+#rrykpubkcs table {
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
           -webkit-font-smoothing: antialiased;
           -moz-osx-font-smoothing: grayscale;
         }
 
-#sdomesmiqj thead, tbody, tfoot, tr, td, th { border-style: none !important; }
+#rrykpubkcs thead, tbody, tfoot, tr, td, th { border-style: none !important; }
  tr { background-color: transparent !important; }
-#sdomesmiqj p { margin: 0 !important; padding: 0 !important; }
- #sdomesmiqj .gt_table { display: table !important; border-collapse: collapse !important; line-height: normal !important; margin-left: auto !important; margin-right: auto !important; color: #333333 !important; font-size: 16px !important; font-weight: normal !important; font-style: normal !important; background-color: #FFFFFF !important; width: auto !important; border-top-style: solid !important; border-top-width: 2px !important; border-top-color: #A8A8A8 !important; border-right-style: none !important; border-right-width: 2px !important; border-right-color: #D3D3D3 !important; border-bottom-style: hidden !important; border-bottom-width: 2px !important; border-bottom-color: #A8A8A8 !important; border-left-style: none !important; border-left-width: 2px !important; border-left-color: #D3D3D3 !important; }
- #sdomesmiqj .gt_caption { padding-top: 4px !important; padding-bottom: 4px !important; }
- #sdomesmiqj .gt_title { color: #333333 !important; font-size: 125% !important; font-weight: initial !important; padding-top: 4px !important; padding-bottom: 4px !important; padding-left: 5px !important; padding-right: 5px !important; border-bottom-color: #FFFFFF !important; border-bottom-width: 0 !important; }
- #sdomesmiqj .gt_subtitle { color: #333333 !important; font-size: 85% !important; font-weight: initial !important; padding-top: 3px !important; padding-bottom: 5px !important; padding-left: 5px !important; padding-right: 5px !important; border-top-color: #FFFFFF !important; border-top-width: 0 !important; }
- #sdomesmiqj .gt_heading { background-color: #FFFFFF !important; text-align: center !important; border-bottom-color: #FFFFFF !important; border-left-style: none !important; border-left-width: 1px !important; border-left-color: #D3D3D3 !important; border-right-style: none !important; border-right-width: 1px !important; border-right-color: #D3D3D3 !important; }
- #sdomesmiqj .gt_bottom_border { border-bottom-style: solid !important; border-bottom-width: 2px !important; border-bottom-color: #D3D3D3 !important; }
- #sdomesmiqj .gt_col_headings { border-top-style: solid !important; border-top-width: 2px !important; border-top-color: black !important; border-bottom-style: solid !important; border-bottom-width: 0.5px !important; border-bottom-color: black !important; border-left-style: none !important; border-left-width: 1px !important; border-left-color: #D3D3D3 !important; border-right-style: none !important; border-right-width: 1px !important; border-right-color: #D3D3D3 !important; }
- #sdomesmiqj .gt_col_heading { color: #333333 !important; background-color: #FFFFFF !important; font-size: 100% !important; font-weight: normal !important; text-transform: inherit !important; border-left-style: none !important; border-left-width: 0px !important; border-left-color: white !important; border-right-style: none !important; border-right-width: 0px !important; border-right-color: white !important; vertical-align: bottom !important; padding-top: 4px !important; padding-bottom: 5px !important; padding-left: 5px !important; padding-right: 5px !important; overflow-x: hidden !important; }
- #sdomesmiqj .gt_column_spanner_outer { color: #333333 !important; background-color: #FFFFFF !important; font-size: 100% !important; font-weight: normal !important; text-transform: inherit !important; padding-top: 0 !important; padding-bottom: 0 !important; padding-left: 4px !important; padding-right: 4px !important; }
- #sdomesmiqj .gt_column_spanner_outer:first-child { padding-left: 0 !important; }
- #sdomesmiqj .gt_column_spanner_outer:last-child { padding-right: 0 !important; }
- #sdomesmiqj .gt_column_spanner { border-bottom-style: solid !important; border-bottom-width: 0.5px !important; border-bottom-color: black !important; vertical-align: bottom !important; padding-top: 4px !important; padding-bottom: 4px !important; overflow-x: hidden !important; display: inline-block !important; width: 100% !important; }
- #sdomesmiqj .gt_spanner_row { border-bottom-style: hidden !important; }
- #sdomesmiqj .gt_group_heading { padding-top: 0px !important; padding-bottom: 0px !important; padding-left: 5px !important; padding-right: 5px !important; color: #333333 !important; background-color: #FFFFFF !important; font-size: 0px !important; font-weight: initial !important; text-transform: inherit !important; border-top-style: solid !important; border-top-width: 0.5px !important; border-top-color: black !important; border-bottom-style: solid !important; border-bottom-width: 0.5px !important; border-bottom-color: black !important; border-left-style: none !important; border-left-width: 1px !important; border-left-color: white !important; border-right-style: none !important; border-right-width: 1px !important; border-right-color: white !important; vertical-align: middle !important; text-align: left !important; }
- #sdomesmiqj .gt_empty_group_heading { padding: 0.5px !important; color: #333333 !important; background-color: #FFFFFF !important; font-size: 0px !important; font-weight: initial !important; border-top-style: solid !important; border-top-width: 0.5px !important; border-top-color: black !important; border-bottom-style: solid !important; border-bottom-width: 0.5px !important; border-bottom-color: black !important; vertical-align: middle !important; }
- #sdomesmiqj .gt_from_md> :first-child { margin-top: 0 !important; }
- #sdomesmiqj .gt_from_md> :last-child { margin-bottom: 0 !important; }
- #sdomesmiqj .gt_row { padding-top: 4px !important; padding-bottom: 4px !important; padding-left: 5px !important; padding-right: 5px !important; margin: 10px !important; border-top-style: none !important; border-top-width: 1px !important; border-top-color: #D3D3D3 !important; border-left-style: none !important; border-left-width: 0px !important; border-left-color: white !important; border-right-style: none !important; border-right-width: 0px !important; border-right-color: white !important; vertical-align: middle !important; overflow-x: hidden !important; }
- #sdomesmiqj .gt_stub { color: #333333 !important; background-color: #FFFFFF !important; font-size: 100% !important; font-weight: initial !important; text-transform: inherit !important; border-right-style: hidden !important; border-right-width: 2px !important; border-right-color: #D3D3D3 !important; padding-left: 5px !important; padding-right: 5px !important; }
- #sdomesmiqj .gt_stub_row_group { color: #333333 !important; background-color: #FFFFFF !important; font-size: 100% !important; font-weight: initial !important; text-transform: inherit !important; border-right-style: solid !important; border-right-width: 2px !important; border-right-color: #D3D3D3 !important; padding-left: 5px !important; padding-right: 5px !important; vertical-align: top !important; }
- #sdomesmiqj .gt_row_group_first td { border-top-width: 0.5px !important; }
- #sdomesmiqj .gt_row_group_first th { border-top-width: 0.5px !important; }
- #sdomesmiqj .gt_striped { background-color: rgba(128,128,128,0.05) !important; }
- #sdomesmiqj .gt_table_body { border-top-style: solid !important; border-top-width: 0.5px !important; border-top-color: black !important; border-bottom-style: solid !important; border-bottom-width: 2px !important; border-bottom-color: black !important; }
- #sdomesmiqj .gt_sourcenotes { color: #333333 !important; background-color: #FFFFFF !important; border-bottom-style: none !important; border-bottom-width: 2px !important; border-bottom-color: #D3D3D3 !important; border-left-style: none !important; border-left-width: 2px !important; border-left-color: #D3D3D3 !important; border-right-style: none !important; border-right-width: 2px !important; border-right-color: #D3D3D3 !important; }
- #sdomesmiqj .gt_sourcenote { font-size: 90% !important; padding-top: 4px !important; padding-bottom: 4px !important; padding-left: 5px !important; padding-right: 5px !important; text-align: left !important; }
- #sdomesmiqj .gt_left { text-align: left !important; }
- #sdomesmiqj .gt_center { text-align: center !important; }
- #sdomesmiqj .gt_right { text-align: right !important; font-variant-numeric: tabular-nums !important; }
- #sdomesmiqj .gt_font_normal { font-weight: normal !important; }
- #sdomesmiqj .gt_font_bold { font-weight: bold !important; }
- #sdomesmiqj .gt_font_italic { font-style: italic !important; }
- #sdomesmiqj .gt_super { font-size: 65% !important; }
- #sdomesmiqj .gt_footnote_marks { font-size: 75% !important; vertical-align: 0.4em !important; position: initial !important; }
- #sdomesmiqj .gt_asterisk { font-size: 100% !important; vertical-align: 0 !important; }
+#rrykpubkcs p { margin: 0 !important; padding: 0 !important; }
+ #rrykpubkcs .gt_table { display: table !important; border-collapse: collapse !important; line-height: normal !important; margin-left: auto !important; margin-right: auto !important; color: #333333 !important; font-size: 16px !important; font-weight: normal !important; font-style: normal !important; background-color: #FFFFFF !important; width: auto !important; border-top-style: solid !important; border-top-width: 2px !important; border-top-color: #A8A8A8 !important; border-right-style: none !important; border-right-width: 2px !important; border-right-color: #D3D3D3 !important; border-bottom-style: hidden !important; border-bottom-width: 2px !important; border-bottom-color: #A8A8A8 !important; border-left-style: none !important; border-left-width: 2px !important; border-left-color: #D3D3D3 !important; }
+ #rrykpubkcs .gt_caption { padding-top: 4px !important; padding-bottom: 4px !important; }
+ #rrykpubkcs .gt_title { color: #333333 !important; font-size: 125% !important; font-weight: initial !important; padding-top: 4px !important; padding-bottom: 4px !important; padding-left: 5px !important; padding-right: 5px !important; border-bottom-color: #FFFFFF !important; border-bottom-width: 0 !important; }
+ #rrykpubkcs .gt_subtitle { color: #333333 !important; font-size: 85% !important; font-weight: initial !important; padding-top: 3px !important; padding-bottom: 5px !important; padding-left: 5px !important; padding-right: 5px !important; border-top-color: #FFFFFF !important; border-top-width: 0 !important; }
+ #rrykpubkcs .gt_heading { background-color: #FFFFFF !important; text-align: center !important; border-bottom-color: #FFFFFF !important; border-left-style: none !important; border-left-width: 1px !important; border-left-color: #D3D3D3 !important; border-right-style: none !important; border-right-width: 1px !important; border-right-color: #D3D3D3 !important; }
+ #rrykpubkcs .gt_bottom_border { border-bottom-style: solid !important; border-bottom-width: 2px !important; border-bottom-color: #D3D3D3 !important; }
+ #rrykpubkcs .gt_col_headings { border-top-style: solid !important; border-top-width: 2px !important; border-top-color: black !important; border-bottom-style: solid !important; border-bottom-width: 0.5px !important; border-bottom-color: black !important; border-left-style: none !important; border-left-width: 1px !important; border-left-color: #D3D3D3 !important; border-right-style: none !important; border-right-width: 1px !important; border-right-color: #D3D3D3 !important; }
+ #rrykpubkcs .gt_col_heading { color: #333333 !important; background-color: #FFFFFF !important; font-size: 100% !important; font-weight: normal !important; text-transform: inherit !important; border-left-style: none !important; border-left-width: 0px !important; border-left-color: white !important; border-right-style: none !important; border-right-width: 0px !important; border-right-color: white !important; vertical-align: bottom !important; padding-top: 4px !important; padding-bottom: 5px !important; padding-left: 5px !important; padding-right: 5px !important; overflow-x: hidden !important; }
+ #rrykpubkcs .gt_column_spanner_outer { color: #333333 !important; background-color: #FFFFFF !important; font-size: 100% !important; font-weight: normal !important; text-transform: inherit !important; padding-top: 0 !important; padding-bottom: 0 !important; padding-left: 4px !important; padding-right: 4px !important; }
+ #rrykpubkcs .gt_column_spanner_outer:first-child { padding-left: 0 !important; }
+ #rrykpubkcs .gt_column_spanner_outer:last-child { padding-right: 0 !important; }
+ #rrykpubkcs .gt_column_spanner { border-bottom-style: solid !important; border-bottom-width: 0.5px !important; border-bottom-color: black !important; vertical-align: bottom !important; padding-top: 4px !important; padding-bottom: 4px !important; overflow-x: hidden !important; display: inline-block !important; width: 100% !important; }
+ #rrykpubkcs .gt_spanner_row { border-bottom-style: hidden !important; }
+ #rrykpubkcs .gt_group_heading { padding-top: 0px !important; padding-bottom: 0px !important; padding-left: 5px !important; padding-right: 5px !important; color: #333333 !important; background-color: #FFFFFF !important; font-size: 0px !important; font-weight: initial !important; text-transform: inherit !important; border-top-style: solid !important; border-top-width: 0.5px !important; border-top-color: black !important; border-bottom-style: solid !important; border-bottom-width: 0.5px !important; border-bottom-color: black !important; border-left-style: none !important; border-left-width: 1px !important; border-left-color: white !important; border-right-style: none !important; border-right-width: 1px !important; border-right-color: white !important; vertical-align: middle !important; text-align: left !important; }
+ #rrykpubkcs .gt_empty_group_heading { padding: 0.5px !important; color: #333333 !important; background-color: #FFFFFF !important; font-size: 0px !important; font-weight: initial !important; border-top-style: solid !important; border-top-width: 0.5px !important; border-top-color: black !important; border-bottom-style: solid !important; border-bottom-width: 0.5px !important; border-bottom-color: black !important; vertical-align: middle !important; }
+ #rrykpubkcs .gt_from_md> :first-child { margin-top: 0 !important; }
+ #rrykpubkcs .gt_from_md> :last-child { margin-bottom: 0 !important; }
+ #rrykpubkcs .gt_row { padding-top: 4px !important; padding-bottom: 4px !important; padding-left: 5px !important; padding-right: 5px !important; margin: 10px !important; border-top-style: none !important; border-top-width: 1px !important; border-top-color: #D3D3D3 !important; border-left-style: none !important; border-left-width: 0px !important; border-left-color: white !important; border-right-style: none !important; border-right-width: 0px !important; border-right-color: white !important; vertical-align: middle !important; overflow-x: hidden !important; }
+ #rrykpubkcs .gt_stub { color: #333333 !important; background-color: #FFFFFF !important; font-size: 100% !important; font-weight: initial !important; text-transform: inherit !important; border-right-style: hidden !important; border-right-width: 2px !important; border-right-color: #D3D3D3 !important; padding-left: 5px !important; padding-right: 5px !important; }
+ #rrykpubkcs .gt_stub_row_group { color: #333333 !important; background-color: #FFFFFF !important; font-size: 100% !important; font-weight: initial !important; text-transform: inherit !important; border-right-style: solid !important; border-right-width: 2px !important; border-right-color: #D3D3D3 !important; padding-left: 5px !important; padding-right: 5px !important; vertical-align: top !important; }
+ #rrykpubkcs .gt_row_group_first td { border-top-width: 0.5px !important; }
+ #rrykpubkcs .gt_row_group_first th { border-top-width: 0.5px !important; }
+ #rrykpubkcs .gt_striped { background-color: rgba(128,128,128,0.05) !important; }
+ #rrykpubkcs .gt_table_body { border-top-style: solid !important; border-top-width: 0.5px !important; border-top-color: black !important; border-bottom-style: solid !important; border-bottom-width: 2px !important; border-bottom-color: black !important; }
+ #rrykpubkcs .gt_sourcenotes { color: #333333 !important; background-color: #FFFFFF !important; border-bottom-style: none !important; border-bottom-width: 2px !important; border-bottom-color: #D3D3D3 !important; border-left-style: none !important; border-left-width: 2px !important; border-left-color: #D3D3D3 !important; border-right-style: none !important; border-right-width: 2px !important; border-right-color: #D3D3D3 !important; }
+ #rrykpubkcs .gt_sourcenote { font-size: 90% !important; padding-top: 4px !important; padding-bottom: 4px !important; padding-left: 5px !important; padding-right: 5px !important; text-align: left !important; }
+ #rrykpubkcs .gt_left { text-align: left !important; }
+ #rrykpubkcs .gt_center { text-align: center !important; }
+ #rrykpubkcs .gt_right { text-align: right !important; font-variant-numeric: tabular-nums !important; }
+ #rrykpubkcs .gt_font_normal { font-weight: normal !important; }
+ #rrykpubkcs .gt_font_bold { font-weight: bold !important; }
+ #rrykpubkcs .gt_font_italic { font-style: italic !important; }
+ #rrykpubkcs .gt_super { font-size: 65% !important; }
+ #rrykpubkcs .gt_footnote_marks { font-size: 75% !important; vertical-align: 0.4em !important; position: initial !important; }
+ #rrykpubkcs .gt_asterisk { font-size: 100% !important; vertical-align: 0 !important; }
  
 </style>
 
@@ -685,7 +691,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>abortion_bf15 <span class="op">=</span> abortion[abortion.bf15 <span class="op">==</span> <span class="dv">1</span>]</span>
 <span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="co"># pf throws error when weights are 0</span></span>
 <span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>abortion_bf15 <span class="op">=</span> abortion_bf15[abortion_bf15.totpop <span class="op">&gt;</span> <span class="dv">0</span>]</span>
-<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>abortion_bf15.head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>abortion_bf15[<span class="st">"year"</span>] <span class="op">=</span> abortion_bf15[<span class="st">"year"</span>].astype(<span class="bu">int</span>)</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>abortion_bf15.head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="7">
 <div>
 
@@ -723,7 +730,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td>1.0</td>
 <td>15.0</td>
 <td>2.0</td>
-<td>1985.0</td>
+<td>1985</td>
 <td>2</td>
 <td>5683.0</td>
 <td>106187</td>
@@ -747,7 +754,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td>1.0</td>
 <td>15.0</td>
 <td>2.0</td>
-<td>1986.0</td>
+<td>1986</td>
 <td>2</td>
 <td>5344.0</td>
 <td>106831</td>
@@ -771,7 +778,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td>1.0</td>
 <td>15.0</td>
 <td>2.0</td>
-<td>1987.0</td>
+<td>1987</td>
 <td>2</td>
 <td>4983.0</td>
 <td>106496</td>
@@ -795,7 +802,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td>1.0</td>
 <td>15.0</td>
 <td>2.0</td>
-<td>1988.0</td>
+<td>1988</td>
 <td>2</td>
 <td>5276.0</td>
 <td>105238</td>
@@ -819,7 +826,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td>1.0</td>
 <td>15.0</td>
 <td>2.0</td>
-<td>1989.0</td>
+<td>1989</td>
 <td>2</td>
 <td>5692.0</td>
 <td>102956</td>
@@ -845,39 +852,23 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 </div>
-<div id="8b880c1d" class="cell" data-execution_count="11">
-<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> _extract_bracket_numbers(str_list) <span class="op">-&gt;</span> <span class="bu">dict</span>:</span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">"Extract time from event study coefficients and store in dict."</span></span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    out <span class="op">=</span> {}</span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    pattern <span class="op">=</span> re.<span class="bu">compile</span>(<span class="vs">r"</span><span class="ch">\[</span><span class="kw">(</span><span class="dv">\d</span><span class="op">+</span><span class="ch">\.</span><span class="op">?</span><span class="dv">\d</span><span class="op">*</span><span class="kw">)</span><span class="ch">\]</span><span class="vs">"</span>)  <span class="co"># capture numbers inside []</span></span>
-<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> s <span class="kw">in</span> str_list:</span>
-<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>        match <span class="op">=</span> pattern.search(<span class="bu">str</span>(s))  <span class="co"># convert np.str_ -&gt; str</span></span>
-<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> match:</span>
-<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>            num_str <span class="op">=</span> match.group(<span class="dv">1</span>)</span>
-<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>            <span class="co"># Convert to int if it's whole, else keep as string</span></span>
-<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> num_str.endswith(<span class="st">".0"</span>):</span>
-<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>                num_str <span class="op">=</span> <span class="bu">str</span>(<span class="bu">int</span>(<span class="bu">float</span>(num_str)))</span>
-<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>            out[s] <span class="op">=</span> num_str</span>
-<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> out</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<div id="913e912c" class="cell" data-execution_count="12">
-<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># we use the i() operator pyfixest provides, as it allows us to easily set the</span></span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="co"># reference year, and works smoothly with the iplot() method</span></span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>fml <span class="op">=</span> <span class="st">"""lnr ~ i(year, repeal, ref = 1985) + C(repeal) + C(year) + C(fip)</span></span>
-<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="st">        + acc + ir + pi + alcohol + crack + poverty + income + ur</span></span>
-<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="st">"""</span></span>
-<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(fml<span class="op">=</span>fml, data<span class="op">=</span>abortion_bf15, weights<span class="op">=</span><span class="st">"totpop"</span>, vcov<span class="op">=</span>{<span class="st">"CRV1"</span>: <span class="st">"fip"</span>})</span>
-<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>pf.iplot(</span>
-<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>    fit,</span>
-<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>    coord_flip<span class="op">=</span><span class="va">False</span>,</span>
-<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>    plot_backend<span class="op">=</span><span class="st">"matplotlib"</span>,</span>
-<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>    title<span class="op">=</span><span class="st">"Event Study Estimate"</span>,</span>
-<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>    labels<span class="op">=</span>_extract_bracket_numbers(fit._coefnames),</span>
-<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="913e912c" class="cell" data-execution_count="9">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># we use the i() operator pyfixest provides, as it allows us to easily set the</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="co"># reference year, and works smoothly with the iplot() method</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>fml <span class="op">=</span> <span class="st">"""lnr ~ i(year, repeal, ref = 1985) + C(repeal) + C(year) + C(fip)</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="st">        + acc + ir + pi + alcohol + crack + poverty + income + ur</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a><span class="st">"""</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(fml<span class="op">=</span>fml, data<span class="op">=</span>abortion_bf15, weights<span class="op">=</span><span class="st">"totpop"</span>, vcov<span class="op">=</span>{<span class="st">"CRV1"</span>: <span class="st">"fip"</span>})</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>pf.iplot(</span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>    fit,</span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>    coord_flip<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>    plot_backend<span class="op">=</span><span class="st">"matplotlib"</span>,</span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>    title<span class="op">=</span><span class="st">"Event Study Estimate"</span>,</span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>    cat_template<span class="op">=</span><span class="st">"</span><span class="sc">{value}</span><span class="st">"</span>,</span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stderr">
 <pre><code>C:\Users\alexa\Documents\pyfixest\pyfixest\estimation\feols_.py:2759: UserWarning: 
             1 variables dropped due to multicollinearity.
@@ -885,10 +876,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
             
   warnings.warn(</code></pre>
 </div>
-<div class="cell-output cell-output-display" data-execution_count="12">
+<div class="cell-output cell-output-display" data-execution_count="9">
 <div>
 <figure class="figure">
-<p><img src="mixtape_files/figure-html/cell-10-output-2.png" width="990" height="588" class="figure-img"></p>
+<p><img src="mixtape_files/figure-html/cell-9-output-2.png" width="990" height="588" class="figure-img"></p>
 </figure>
 </div>
 </div>

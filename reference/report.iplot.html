@@ -187,8 +187,16 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
  <span class="dropdown-text">PyFixest on the GPU</span></a>
   </li>  
         <li>
+    <a class="dropdown-item" href="../resources.html">
+ <span class="dropdown-text">Other Resources around PyFixest</span></a>
+  </li>  
+        <li>
     <a class="dropdown-item" href="../replicating-the-effect.html">
  <span class="dropdown-text">Replicating ‘The Effect’ with PyFixest</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../mixtape.html">
+ <span class="dropdown-text">Replicating ‘The Mixtape’ with PyFixest</span></a>
   </li>  
     </ul>
   </li>
@@ -470,11 +478,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    exact_match<span class="op">=</span><span class="va">False</span>,</span>
 <span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    plot_backend<span class="op">=</span><span class="st">'lets_plot'</span> <span class="cf">if</span> _HAS_LETS_PLOT <span class="cf">else</span> <span class="st">'matplotlib'</span>,</span>
 <span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    labels<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    rename_models<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    ax<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    joint<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    seed<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    cat_template<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    rename_models<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    ax<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    joint<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    seed<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Plot model coefficients for variables interacted via “i()” syntax, with confidence intervals.</p>
 <section id="parameters" class="level2 doc-section doc-section-parameters">
 <h2 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters">Parameters</h2>
@@ -579,12 +588,18 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td><code>None</code></td>
 </tr>
 <tr class="odd">
+<td>cat_template</td>
+<td>Optional[str]</td>
+<td>Template to relabel categorical variables. None by default, which applies no relabeling. Other options include combinations of “{variable}” and “{value}”, e.g.&nbsp;“{variable}::{value}” to mimic fixest encoding. But “{variable}–{value}” or “{variable}{value}” or just “{value}” are also possible.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="even">
 <td>joint</td>
 <td>Optional[Union[str, bool]]</td>
 <td>Whether to plot simultaneous confidence bands for the coefficients. If True, simultaneous confidence bands are plotted. If False, “standard” confidence intervals are plotted. If “both”, both are plotted in one figure. Default is None, which returns the standard confidence intervals. Note that this option is not available for objects of type <code>FixestMulti</code>, i.e.&nbsp;multiple estimation.</td>
 <td><code>None</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>seed</td>
 <td>Optional[int]</td>
 <td>The seed for the random number generator. Default is None. Only required / used when <code>joint</code> is True.</td>
@@ -614,7 +629,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="examples" class="level2 doc-section doc-section-examples">
 <h2 class="doc-section doc-section-examples anchored" data-anchor-id="examples">Examples</h2>
-<div id="4134ebb5" class="cell" data-execution_count="1">
+<div id="8fc48bd8" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.report.utils <span class="im">import</span> rename_categoricals</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -647,7 +662,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>pf.iplot([fit1], joint <span class="op">=</span> <span class="st">"both"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 
-            <div id="FqUsrk"></div>
+            <div id="g7Ep0W"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -671,9 +686,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("FqUsrk").appendChild(div);
+                        document.getElementById("g7Ep0W").appendChild(div);
                     };
-                    var e = document.getElementById("FqUsrk");
+                    var e = document.getElementById("g7Ep0W");
                     e.appendChild(script);
                 })()
             </script>
@@ -681,7 +696,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <div class="cell-output cell-output-display">
 
-            <div id="GJCs77"></div>
+            <div id="SWaTrw"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -705,9 +720,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("GJCs77").appendChild(div);
+                        document.getElementById("SWaTrw").appendChild(div);
                     };
-                    var e = document.getElementById("GJCs77");
+                    var e = document.getElementById("SWaTrw");
                     e.appendChild(script);
                 })()
             </script>
@@ -720,7 +735,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   warnings.warn(f"The label key '{label_key}' is not in the covariate names.")</code></pre>
 </div>
 <div class="cell-output cell-output-display" data-execution_count="1">
-   <div id="ufXeN5"></div>
+   <div id="2w5gU4"></div>
    <script type="text/javascript" data-lets-plot-script="plot">
    
    (function() {
@@ -745,7 +760,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
        };
    }
    
-   const containerDiv = document.getElementById("ufXeN5");
+   const containerDiv = document.getElementById("2w5gU4");
    let fig = null;
    
    function renderPlot() {
@@ -754,8 +769,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 "data":{
 "Coefficient":["C(f1)[T.1.0]","C(f1)[T.2.0]","C(f1)[T.3.0]","C(f1)[T.4.0]","C(f1)[T.5.0]","C(f1)[T.6.0]","C(f1)[T.7.0]","C(f1)[T.8.0]","C(f1)[T.9.0]","C(f1)[T.10.0]","C(f1)[T.11.0]","C(f1)[T.12.0]","C(f1)[T.13.0]","C(f1)[T.14.0]","C(f1)[T.15.0]","C(f1)[T.16.0]","C(f1)[T.17.0]","C(f1)[T.18.0]","C(f1)[T.19.0]","C(f1)[T.20.0]","C(f1)[T.21.0]","C(f1)[T.22.0]","C(f1)[T.23.0]","C(f1)[T.24.0]","C(f1)[T.25.0]","C(f1)[T.26.0]","C(f1)[T.27.0]","C(f1)[T.28.0]","C(f1)[T.29.0]","C(f1)[T.1.0]","C(f1)[T.2.0]","C(f1)[T.3.0]","C(f1)[T.4.0]","C(f1)[T.5.0]","C(f1)[T.6.0]","C(f1)[T.7.0]","C(f1)[T.8.0]","C(f1)[T.9.0]","C(f1)[T.10.0]","C(f1)[T.11.0]","C(f1)[T.12.0]","C(f1)[T.13.0]","C(f1)[T.14.0]","C(f1)[T.15.0]","C(f1)[T.16.0]","C(f1)[T.17.0]","C(f1)[T.18.0]","C(f1)[T.19.0]","C(f1)[T.20.0]","C(f1)[T.21.0]","C(f1)[T.22.0]","C(f1)[T.23.0]","C(f1)[T.24.0]","C(f1)[T.25.0]","C(f1)[T.26.0]","C(f1)[T.27.0]","C(f1)[T.28.0]","C(f1)[T.29.0]"],
 "Estimate":[2.5442879837380556,-1.6346807837677435,-0.4639805415936472,-1.7627122198272636,1.4348086119364796,-0.8992225420858178,0.890191696353664,-0.470811979425131,0.08392895661938211,0.28878174380848437,1.2881639264088722,0.6873080715508435,1.804300973899593,-0.2165668418938769,1.3903698819526813,2.240478065436785,-0.3263697830683047,1.6520823541202092,0.5883570616384419,2.7916074868998466,-1.4464082114876389,-1.0659170994410558,-0.548090534683836,-0.977560174083431,-1.7019175178822936,1.0750127541094736,-0.48200420903080166,1.5173786526283053,0.21151214409505403,2.5442879837380556,-1.6346807837677435,-0.4639805415936472,-1.7627122198272636,1.4348086119364796,-0.8992225420858178,0.890191696353664,-0.470811979425131,0.08392895661938211,0.28878174380848437,1.2881639264088722,0.6873080715508435,1.804300973899593,-0.2165668418938769,1.3903698819526813,2.240478065436785,-0.3263697830683047,1.6520823541202092,0.5883570616384419,2.7916074868998466,-1.4464082114876389,-1.0659170994410558,-0.548090534683836,-0.977560174083431,-1.7019175178822936,1.0750127541094736,-0.48200420903080166,1.5173786526283053,0.21151214409505403],
-"2.5%":[1.6988810797044178,-2.521351025022357,-1.377939306539814,-2.655693360946177,0.4770952921754975,-1.8291701365228197,-0.009423320741524965,-1.3574822206797448,-0.796729891653331,-0.5978884974461296,0.388548909313683,-0.24263952288615853,0.8825710451114392,-1.155219283789314,0.4604222875156794,1.353807824182171,-1.274260142446293,0.759101213001296,-0.3415905327985601,1.9622034224441072,-2.3393893526065526,-1.9301363487581429,-1.5394180012195635,-1.8771751911786199,-2.70609209657718,0.11729943434849133,-1.4119518034678036,0.6675596211308417,-0.7363782152829341,1.2431412737935035,-2.9993349659250716,-1.8706338754625342,-3.1370793657137077,-0.03918637099010236,-2.3304839230248255,-0.49438549851573454,-1.8354661615824592,-1.271473226100439,-1.075872438348844,-0.09641326846052656,-0.7439533093881643,0.3856872169288865,-1.6612256573429078,-0.04089149898632627,0.8758238832794565,-1.7852464690857104,0.2777152082337653,-0.8429043193005659,1.5150903866346173,-2.8207753573740835,-2.396017465968151,-2.0738202932254195,-2.3621373689528298,-3.2474199771652854,-0.39898222881710854,-1.9132655899698094,0.2094413367565695,-1.2473645419223516],
-"97.5%":[3.3896948877716935,-0.7480105425131297,0.4499782233525196,-0.8697310787083502,2.3925219316974617,0.03072505235118428,1.789806713448853,0.4158582618294828,0.9645878048920953,1.1754519850630982,2.1877789435040613,1.6172556659878454,2.7260309026877465,0.7220856000015603,2.3203174763896834,3.1271483066913985,0.6215205763096834,2.5450634952391225,1.5183046560754438,3.6210115513555863,-0.5534270703687254,-0.2016978501239689,0.4432369318518916,-0.077945156988242,-0.6977429391874075,2.032726073870456,0.4479433854062004,2.367197684125769,1.1594025034730422,3.845434693682608,-0.27002660161041536,0.9426727922752399,-0.3883450739408194,2.9088035948630617,0.53203883885319,2.2747688912230624,0.8938422027321972,1.4393311393392032,1.6534359259658127,2.6727411212782712,2.1185694524898513,3.2229147308702997,1.228091973555154,2.821631262891689,3.6051322475941134,1.1325069029491008,3.0264495000066534,2.0196184425774497,4.068124587165076,-0.0720410656011945,0.2641832670860389,0.9776392238577475,0.4070170207859676,-0.15641505859930183,2.5490077370360558,0.9492571719082061,2.825315968500041,1.6703888301124596],
+"2.5%":[1.6988810797044178,-2.521351025022357,-1.377939306539814,-2.655693360946177,0.4770952921754975,-1.8291701365228197,-0.009423320741524965,-1.3574822206797448,-0.796729891653331,-0.5978884974461296,0.388548909313683,-0.24263952288615853,0.8825710451114392,-1.155219283789314,0.4604222875156794,1.353807824182171,-1.274260142446293,0.759101213001296,-0.3415905327985601,1.9622034224441072,-2.3393893526065526,-1.9301363487581429,-1.5394180012195635,-1.8771751911786199,-2.70609209657718,0.11729943434849133,-1.4119518034678036,0.6675596211308417,-0.7363782152829341,1.2438037385134377,-2.9986401670652043,-1.8699176931905863,-3.1363796216038176,-0.038435902448710424,-2.329755211832898,-0.4936805560702622,-1.8347713627225914,-1.2707831377956296,-1.0751776394889765,-0.09570832601505419,-0.7432245981962367,0.3864094887203946,-1.6604901249926642,-0.040162787794398636,0.876518682139324,-1.78450369786104,0.2784149523436552,-0.8421756081086382,1.5157403114562038,-2.8200756132641933,-2.3953402598083366,-2.0730434844847427,-2.361432426507357,-3.2466331013687117,-0.3982317602757166,-1.9125368787778818,0.21010725883978143,-1.2466217706976812],
+"97.5%":[3.3896948877716935,-0.7480105425131297,0.4499782233525196,-0.8697310787083502,2.3925219316974617,0.03072505235118428,1.789806713448853,0.4158582618294828,0.9645878048920953,1.1754519850630982,2.1877789435040613,1.6172556659878454,2.7260309026877465,0.7220856000015603,2.3203174763896834,3.1271483066913985,0.6215205763096834,2.5450634952391225,1.5183046560754438,3.6210115513555863,-0.5534270703687254,-0.2016978501239689,0.4432369318518916,-0.077945156988242,-0.6977429391874075,2.032726073870456,0.4479433854062004,2.367197684125769,1.1594025034730422,3.8447722289626736,-0.2707214004702829,0.9419566100032918,-0.38904481805070956,2.9080531263216693,0.5313101276612624,2.27406394877759,0.8931474038723296,1.4386410510343939,1.6527411271059451,2.6720361788327986,2.1178407412979237,3.2221924590787916,1.2273564412049105,2.8209025516997612,3.6044374487342457,1.1317641317244305,3.025749755896763,2.018889731385522,4.067474662343489,-0.07274080971108465,0.2635060609262252,0.976862415117071,0.4063120783404952,-0.15720193439587526,2.548257268494664,0.9485284607162785,2.824650046416829,1.6696460588877893],
 "Model":["Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1) (joint CIs)","Y~i(f1) (joint CIs)","Y~i(f1) (joint CIs)","Y~i(f1) (joint CIs)","Y~i(f1) (joint CIs)","Y~i(f1) (joint CIs)","Y~i(f1) (joint CIs)","Y~i(f1) (joint CIs)","Y~i(f1) (joint CIs)","Y~i(f1) (joint CIs)","Y~i(f1) (joint CIs)","Y~i(f1) (joint CIs)","Y~i(f1) (joint CIs)","Y~i(f1) (joint CIs)","Y~i(f1) (joint CIs)","Y~i(f1) (joint CIs)","Y~i(f1) (joint CIs)","Y~i(f1) (joint CIs)","Y~i(f1) (joint CIs)","Y~i(f1) (joint CIs)","Y~i(f1) (joint CIs)","Y~i(f1) (joint CIs)","Y~i(f1) (joint CIs)","Y~i(f1) (joint CIs)","Y~i(f1) (joint CIs)","Y~i(f1) (joint CIs)","Y~i(f1) (joint CIs)","Y~i(f1) (joint CIs)","Y~i(f1) (joint CIs)"]
 },
 "mapping":{
