@@ -53,6 +53,8 @@ website:
           file: stata-2-pyfixest.qmd
         - text: "PyFixest on the GPU"
           file: pyfixest_gpu.ipynb
+        - text: "Learnings Econometrics with PyFixest"
+          file: textbooks.qmd
         - text: "Replicating 'The Effect' with PyFixest"
           file: replicating-the-effect.qmd
 
