@@ -856,3 +856,129 @@ def test_errors_quantreg(data):
     def test_invalid_tolerance(tol):
         with pytest.raises(ValueError, match=r"tol must be in \(0, 1\)"):
             pf.quantreg("Y ~ X1", data=data, tol=tol)
+
+
+def test_errors_vcov_kwargs():
+    """Test all error conditions for vcov_kwargs in _estimation_input_checks."""
+    data = pf.get_data()
+
+    # Error 1: Invalid keys in vcov_kwargs
+    with pytest.raises(
+        ValueError,
+        match="must be a dictionary with keys 'lags', 'time_id', or 'panel_id'",
+    ):
+        pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs={"invalid_key": 5})
+
+    # Error 2: Multiple invalid keys
+    with pytest.raises(
+        ValueError,
+        match="must be a dictionary with keys 'lags', 'time_id', or 'panel_id'",
+    ):
+        pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs={"wrong1": 1, "wrong2": 2})
+
+    # Error 3: Mix of valid and invalid keys
+    with pytest.raises(
+        ValueError,
+        match="must be a dictionary with keys 'lags', 'time_id', or 'panel_id'",
+    ):
+        pf.feols(
+            "Y ~ X1",
+            data=data,
+            vcov="NW",
+            vcov_kwargs={"lags": 5, "invalid_key": "test"},
+        )
+
+    # Error 4: lags value is not an integer (string)
+    with pytest.raises(
+        ValueError, match="must be a dictionary with integer values for 'lags'"
+    ):
+        pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs={"lags": "5"})
+
+    # Error 5: lags value is not an integer (float)
+    with pytest.raises(
+        ValueError, match="must be a dictionary with integer values for 'lags'"
+    ):
+        pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs={"lags": 5.5})
+
+    # Error 6: lags value is not an integer (None)
+    with pytest.raises(
+        ValueError, match="must be a dictionary with integer values for 'lags'"
+    ):
+        pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs={"lags": None})
+
+    # Error 7: time_id value is not a string (integer)
+    with pytest.raises(
+        ValueError, match="must be a dictionary with string values for 'time_id'"
+    ):
+        pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs={"time_id": 123})
+
+    # Error 8: time_id value is not a string (None)
+    with pytest.raises(
+        ValueError, match="must be a dictionary with string values for 'time_id'"
+    ):
+        pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs={"time_id": None})
+
+    # Error 9: time_id column does not exist in data
+    with pytest.raises(
+        ValueError, match="must be a dictionary with string values for 'time_id'"
+    ):
+        pf.feols(
+            "Y ~ X1",
+            data=data,
+            vcov="NW",
+            vcov_kwargs={"time_id": "nonexistent_column"},
+        )
+
+    # Error 10: panel_id value is not a string (integer)
+    with pytest.raises(
+        ValueError, match="must be a dictionary with string values for 'panel_id'"
+    ):
+        pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs={"panel_id": 456})
+
+    # Error 11: panel_id value is not a string (list)
+    with pytest.raises(
+        ValueError, match="must be a dictionary with string values for 'panel_id'"
+    ):
+        pf.feols(
+            "Y ~ X1", data=data, vcov="NW", vcov_kwargs={"panel_id": ["col1", "col2"]}
+        )
+
+    # Error 12: panel_id column does not exist in data
+    with pytest.raises(
+        ValueError, match="must be a dictionary with string values for 'panel_id'"
+    ):
+        pf.feols(
+            "Y ~ X1",
+            data=data,
+            vcov="NW",
+            vcov_kwargs={"panel_id": "missing_panel_column"},
+        )
+
+
+def test_errors_hac():
+    """Test all error conditions for HAC (Heteroskedasticity and Autocorrelation Consistent) standard errors."""
+    data = pf.get_data()
+    # Add a time variable for testing
+    data["time"] = np.arange(len(data))
+    data["panel"] = np.repeat(np.arange(len(data) // 10), 10)[: len(data)]
+
+    # Error 1: Driscoll-Kraay HAC not implemented
+    with pytest.raises(
+        NotImplementedError,
+        match="Driscoll-Kraay HAC standard errors are not yet implemented",
+    ):
+        pf.feols(
+            "Y ~ X1", data=data, vcov="DK", vcov_kwargs={"time_id": "time", "lags": 3}
+        )
+
+    # Error 2: Panel-clustered Newey-West HAC not implemented
+    with pytest.raises(
+        NotImplementedError,
+        match="Panel-clustered Newey-West HAC standard errors are not yet implemented",
+    ):
+        pf.feols(
+            "Y ~ X1",
+            data=data,
+            vcov="NW",
+            vcov_kwargs={"time_id": "time", "panel_id": "panel", "lags": 3},
+        )
