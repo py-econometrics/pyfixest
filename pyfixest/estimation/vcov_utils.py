@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Optional, Union
 
 import numba as nb
 import numpy as np
@@ -98,7 +98,7 @@ def _get_vcov_type(
 
 
 @nb.njit(parallel=False)
-def _nw_meat(scores: np.ndarray, time_arr: np.ndarray, lags: int):
+def _nw_meat(scores: np.ndarray, time_arr: np.ndarray, lags: Optional[int] = None):
     """
     Compute Newey-West HAC meat matrix.
 
