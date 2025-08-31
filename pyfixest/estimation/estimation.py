@@ -24,7 +24,7 @@ def feols(
     fml: str,
     data: DataFrameType,  # type: ignore
     vcov: Optional[Union[VcovTypeOptions, dict[str, str]]] = None,
-    vcov_kwargs: Optional[dict[str, any]] = None,
+    vcov_kwargs: Optional[dict[str, Union[str, int]]] = None,
     weights: Union[None, str] = None,
     ssc: Optional[dict[str, Union[str, bool]]] = None,
     fixef_rm: FixedRmOptions = "none",
@@ -486,7 +486,14 @@ def feols(
     estimation = "feols" if not use_compression else "compression"
 
     fixest._prepare_estimation(
-        estimation = estimation, fml = fml, vcov = vcov, vcov_kwargs = vcov_kwargs, weights = weights, ssc = ssc, fixef_rm = fixef_rm, drop_intercept = drop_intercept
+        estimation=estimation,
+        fml=fml,
+        vcov=vcov,
+        vcov_kwargs=vcov_kwargs,
+        weights=weights,
+        ssc=ssc,
+        fixef_rm=fixef_rm,
+        drop_intercept=drop_intercept,
     )
 
     # demean all models: based on fixed effects x split x missing value combinations
@@ -508,7 +515,7 @@ def fepois(
     fml: str,
     data: DataFrameType,  # type: ignore
     vcov: Optional[Union[VcovTypeOptions, dict[str, str]]] = None,
-    vcov_kwargs: Optional[dict[str, any]] = None,
+    vcov_kwargs: Optional[dict[str, Union[str, int]]] = None,
     ssc: Optional[dict[str, Union[str, bool]]] = None,
     fixef_rm: FixedRmOptions = "none",
     fixef_tol: float = 1e-08,
@@ -706,7 +713,14 @@ def fepois(
     )
 
     fixest._prepare_estimation(
-        estimation = "fepois", fml = fml, vcov = vcov, vcov_kwargs = vcov_kwargs, weights = weights, ssc = ssc, fixef_rm = fixef_rm, drop_intercept = drop_intercept
+        estimation="fepois",
+        fml=fml,
+        vcov=vcov,
+        vcov_kwargs=vcov_kwargs,
+        weights=weights,
+        ssc=ssc,
+        fixef_rm=fixef_rm,
+        drop_intercept=drop_intercept,
     )
     if fixest._is_iv:
         raise NotImplementedError(
@@ -735,7 +749,7 @@ def feglm(
     data: DataFrameType,  # type: ignore
     family: str,
     vcov: Optional[Union[VcovTypeOptions, dict[str, str]]] = None,
-    vcov_kwargs: Optional[dict[str, any]] = None,
+    vcov_kwargs: Optional[dict[str, Union[str, int]]] = None,
     ssc: Optional[dict[str, Union[str, bool]]] = None,
     fixef_rm: FixedRmOptions = "none",
     fixef_tol: float = 1e-08,
@@ -967,7 +981,14 @@ def feglm(
 
     # same checks as for Poisson regression
     fixest._prepare_estimation(
-        estimation = f"feglm-{family}", fml = fml, vcov = vcov, vcov_kwargs = vcov_kwargs, weights = weights, ssc = ssc, fixef_rm = fixef_rm, drop_intercept = drop_intercept
+        estimation=f"feglm-{family}",
+        fml=fml,
+        vcov=vcov,
+        vcov_kwargs=vcov_kwargs,
+        weights=weights,
+        ssc=ssc,
+        fixef_rm=fixef_rm,
+        drop_intercept=drop_intercept,
     )
     if fixest._is_iv:
         raise NotImplementedError(
@@ -1238,7 +1259,7 @@ def _estimation_input_checks(
     fml: str,
     data: DataFrameType,
     vcov: Optional[Union[str, dict[str, str]]],
-    vcov_kwargs: Optional[dict[str, any]],
+    vcov_kwargs: Optional[dict[str, Union[str, int]]],
     weights: Union[None, str],
     ssc: dict[str, Union[str, bool]],
     fixef_rm: str,
@@ -1380,19 +1401,16 @@ def _estimation_input_checks(
 
     if vcov_kwargs is not None:
         # check that dict keys are either "lags", "time_id", or "panel_id"
-        if not all(
-            key in ["lags", "time_id", "panel_id"] for key in vcov_kwargs.keys()
-        ):
+        if not all(key in ["lags", "time_id", "panel_id"] for key in vcov_kwargs):
             raise ValueError(
                 "The function argument `vcov_kwargs` must be a dictionary with keys 'lags', 'time_id', or 'panel_id'."
             )
 
         # if lag provided, check that it is an int
-        if "lags" in vcov_kwargs:
-            if not isinstance(vcov_kwargs["lags"], int):
-                raise ValueError(
-                    "The function argument `vcov_kwargs` must be a dictionary with integer values for 'lags'."
-                )
+        if "lags" in vcov_kwargs and not isinstance(vcov_kwargs["lags"], int):
+            raise ValueError(
+                "The function argument `vcov_kwargs` must be a dictionary with integer values for 'lags'."
+            )
 
         if "time_id" in vcov_kwargs:
             if not isinstance(vcov_kwargs["time_id"], str):

@@ -572,7 +572,7 @@ class Feols:
     def vcov(
         self,
         vcov: Union[str, dict[str, str]],
-        vcov_kwargs: Optional[dict[str, any]] = None,
+        vcov_kwargs: Optional[dict[str, Union[str, int]]] = None,
         data: Optional[DataFrameType] = None,
     ) -> "Feols":
         """
@@ -636,8 +636,12 @@ class Feols:
 
         # HAC attributes
         self._lags = vcov_kwargs.get("lags", None) if vcov_kwargs is not None else None
-        self._time_id = vcov_kwargs.get("time_id", None) if vcov_kwargs is not None else None
-        self._panel_id = vcov_kwargs.get("panel_id", None) if vcov_kwargs is not None else None
+        self._time_id = (
+            vcov_kwargs.get("time_id", None) if vcov_kwargs is not None else None
+        )
+        self._panel_id = (
+            vcov_kwargs.get("panel_id", None) if vcov_kwargs is not None else None
+        )
 
         ssc_kwargs = {
             "ssc_dict": self._ssc_dict,

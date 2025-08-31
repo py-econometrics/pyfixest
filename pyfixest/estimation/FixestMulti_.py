@@ -475,7 +475,11 @@ class FixestMulti:
         """
         return list(self.all_fitted_models.values())
 
-    def vcov(self, vcov: Union[str, dict[str, str]], vcov_kwargs: Optional[dict[str, any]] = None):
+    def vcov(
+        self,
+        vcov: Union[str, dict[str, str]],
+        vcov_kwargs: Optional[dict[str, Union[str, int]]] = None,
+    ):
         """
         Update regression inference "on the fly".
 
