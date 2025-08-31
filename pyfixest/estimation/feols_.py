@@ -634,23 +634,10 @@ class Feols:
 
         self._bread = _compute_bread(_is_iv, _tXZ, _tZZinv, _tZX, _hessian)
 
-        # compute vcov
-
-        # check if vcov_kwargs is empty
-        if vcov_kwargs is None:
-            vcov_kwargs = {}
-        
-        # Extract time variable and lag from vcov_kwargs
-        time_var_name = vcov_kwargs.get('time_var', None)
-        lags = vcov_kwargs.get('lags', None)
-
-        if time_var_name is not None:
-            if time_var_name not in _data.columns:
-                raise ValueError(f"Time variable '{time_var_name}' not found in data columns.")
-            else:
-                self._time_var = _data[time_var_name].to_numpy()
-        
-        self._lags = lags
+        # HAC attributes
+        self._lags = vcov_kwargs.get('lags', None)
+        self._time_id = vcov_kwargs.get('time_id', None)
+        self._panel_id = vcov_kwargs.get('panel_id', None)
 
         ssc_kwargs = {
             "ssc_dict": self._ssc_dict,
@@ -871,21 +858,29 @@ class Feols:
         _tZX = self._tZX
         _is_iv = self._is_iv
         _vcov_type_detail = self._vcov_type_detail
-        _time_var = self._time_var
+        _time_id = self._time_id
+        _panel_id = self._panel_id
         _lags = self._lags
         _data = self._data
 
+        _time_arr = _data[_time_id].to_numpy()
+        _panel_arr = _data[_panel_id].to_numpy() if _panel_id is not None else None
+
         if _vcov_type_detail == "NW":
             # Newey-West
-            newey_west_meat = _nw_meat(_scores, _time_var, _lags, _data)
-            _meat = _tXZ @ _tZZinv @ newey_west_meat @ _tZZinv @ _tZX if _is_iv else newey_west_meat
-            _vcov = _bread @ _meat @ _bread
+            if _panel_id is None:
+                newey_west_meat = _nw_meat(scores = _scores, time_arr = _time_arr, lags = _lags)
+            else:
+                raise NotImplementedError("Panel-clustered Newey-West HAC standard errors are not yet implemented")
         elif _vcov_type_detail == "DK":
             # Driscoll-Kraay
             raise NotImplementedError("Driscoll-Kraay HAC standard errors are not yet implemented")
         else:
             raise ValueError(f"Unknown HAC type: {_vcov_type_detail}")
-        
+
+        _meat = _tXZ @ _tZZinv @ newey_west_meat @ _tZZinv @ _tZX if _is_iv else newey_west_meat
+        _vcov = _bread @ _meat @ _bread
+
         return _vcov
 
     def _vcov_nid(self):
