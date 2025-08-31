@@ -635,9 +635,9 @@ class Feols:
         self._bread = _compute_bread(_is_iv, _tXZ, _tZZinv, _tZX, _hessian)
 
         # HAC attributes
-        self._lags = vcov_kwargs.get("lags", None)
-        self._time_id = vcov_kwargs.get("time_id", None)
-        self._panel_id = vcov_kwargs.get("panel_id", None)
+        self._lags = vcov_kwargs.get("lags", None) if vcov_kwargs is not None else None
+        self._time_id = vcov_kwargs.get("time_id", None) if vcov_kwargs is not None else None
+        self._panel_id = vcov_kwargs.get("panel_id", None) if vcov_kwargs is not None else None
 
         ssc_kwargs = {
             "ssc_dict": self._ssc_dict,
