@@ -235,7 +235,7 @@ class FeolsCompressed(Feols):
         self._data = compressed_dict.df_compressed.to_pandas()
 
     def vcov(
-        self, vcov: Union[str, dict[str, str]], data: Optional[DataFrameType] = None
+        self, vcov: Union[str, dict[str, str]], vcov_kwargs: Optional[dict[str, Any]] = None, data: Optional[DataFrameType] = None
     ):
         "Compute the variance-covariance matrix for the compressed regression."
         if self._use_mundlak and vcov in ["iid", "hetero", "HC1", "HC2", "HC3"]:

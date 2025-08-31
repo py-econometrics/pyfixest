@@ -491,8 +491,8 @@ def feols(
 
     # demean all models: based on fixed effects x split x missing value combinations
     fixest._estimate_all_models(
-        vcov,
-        vcov_kwargs,
+        vcov = vcov,
+        vcov_kwargs=vcov_kwargs,
         collin_tol=collin_tol,
         solver=solver,
         demeaner_backend=demeaner_backend,
@@ -715,6 +715,7 @@ def fepois(
 
     fixest._estimate_all_models(
         vcov=vcov,
+        vcov_kwargs=vcov_kwargs,
         iwls_tol=iwls_tol,
         iwls_maxiter=iwls_maxiter,
         collin_tol=collin_tol,
@@ -975,6 +976,7 @@ def feglm(
 
     fixest._estimate_all_models(
         vcov=vcov,
+        vcov_kwargs=vcov_kwargs,
         iwls_tol=iwls_tol,
         iwls_maxiter=iwls_maxiter,
         collin_tol=collin_tol,
@@ -1217,6 +1219,7 @@ def quantreg(
 
     fixest._estimate_all_models(
         vcov=vcov,
+        vcov_kwargs=vcov_kwargs,
         iwls_tol=iwls_tol,
         iwls_maxiter=iwls_maxiter,
         collin_tol=collin_tol,
