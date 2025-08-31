@@ -255,7 +255,7 @@ class FeolsCompressed(Feols):
                     f"The only supported clustered vcov type for compressed regression is CRV1, but {vcov} was specified."
                 )
 
-        super().vcov(vcov, data)
+        super().vcov(vcov = vcov, vcov_kwargs = vcov_kwargs, data = data)
 
     def _vcov_iid(self):
         _N = self._N

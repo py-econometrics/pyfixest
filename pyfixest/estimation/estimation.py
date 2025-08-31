@@ -486,15 +486,15 @@ def feols(
     estimation = "feols" if not use_compression else "compression"
 
     fixest._prepare_estimation(
-        estimation, fml, vcov, vcov_kwargs, weights, ssc, fixef_rm, drop_intercept
+        estimation = estimation, fml = fml, vcov = vcov, vcov_kwargs = vcov_kwargs, weights = weights, ssc = ssc, fixef_rm = fixef_rm, drop_intercept = drop_intercept
     )
 
     # demean all models: based on fixed effects x split x missing value combinations
     fixest._estimate_all_models(
-        vcov = vcov,
+        vcov=vcov,
+        solver=solver,
         vcov_kwargs=vcov_kwargs,
         collin_tol=collin_tol,
-        solver=solver,
         demeaner_backend=demeaner_backend,
     )
 
@@ -706,7 +706,7 @@ def fepois(
     )
 
     fixest._prepare_estimation(
-        "fepois", fml, vcov, weights, ssc, fixef_rm, drop_intercept
+        estimation = "fepois", fml = fml, vcov = vcov, vcov_kwargs = vcov_kwargs, weights = weights, ssc = ssc, fixef_rm = fixef_rm, drop_intercept = drop_intercept
     )
     if fixest._is_iv:
         raise NotImplementedError(
@@ -715,12 +715,12 @@ def fepois(
 
     fixest._estimate_all_models(
         vcov=vcov,
+        solver=solver,
         vcov_kwargs=vcov_kwargs,
         iwls_tol=iwls_tol,
         iwls_maxiter=iwls_maxiter,
         collin_tol=collin_tol,
         separation_check=separation_check,
-        solver=solver,
         demeaner_backend=demeaner_backend,
     )
 
@@ -967,7 +967,7 @@ def feglm(
 
     # same checks as for Poisson regression
     fixest._prepare_estimation(
-        f"feglm-{family}", fml, vcov, weights, ssc, fixef_rm, drop_intercept
+        estimation = f"feglm-{family}", fml = fml, vcov = vcov, vcov_kwargs = vcov_kwargs, weights = weights, ssc = ssc, fixef_rm = fixef_rm, drop_intercept = drop_intercept
     )
     if fixest._is_iv:
         raise NotImplementedError(
@@ -976,12 +976,12 @@ def feglm(
 
     fixest._estimate_all_models(
         vcov=vcov,
+        solver=solver,
         vcov_kwargs=vcov_kwargs,
         iwls_tol=iwls_tol,
         iwls_maxiter=iwls_maxiter,
         collin_tol=collin_tol,
         separation_check=separation_check,
-        solver=solver,
     )
 
     if fixest._is_multiple_estimation:
@@ -1161,7 +1161,7 @@ def quantreg(
     _estimation_input_checks(
         fml=fml,
         data=data,
-        vcov=vcov_type,
+        vcov=vcov,
         vcov_kwargs=None,
         weights=weights,
         ssc=ssc,
@@ -1204,6 +1204,7 @@ def quantreg(
         estimation="quantreg" if not isinstance(quantile, list) else "quantreg_multi",
         fml=fml,
         vcov=vcov,
+        vcov_kwargs=None,
         weights=weights,
         ssc=ssc,
         fixef_rm=fixef_rm,
@@ -1219,12 +1220,12 @@ def quantreg(
 
     fixest._estimate_all_models(
         vcov=vcov,
-        vcov_kwargs=vcov_kwargs,
+        solver=solver,
+        vcov_kwargs=None,
         iwls_tol=iwls_tol,
         iwls_maxiter=iwls_maxiter,
         collin_tol=collin_tol,
         separation_check=separation_check,
-        solver=solver,
     )
 
     if fixest._is_multiple_estimation:

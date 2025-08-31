@@ -243,8 +243,8 @@ class FixestMulti:
     def _estimate_all_models(
         self,
         vcov: Union[str, dict[str, str], None],
-        vcov_kwargs: dict[str, Any],
         solver: SolverOptions,
+        vcov_kwargs: Optional[dict[str, Any]] = None,
         demeaner_backend: DemeanerBackendOptions = "numba",
         collin_tol: float = 1e-6,
         iwls_maxiter: int = 25,
@@ -262,8 +262,8 @@ class FixestMulti:
             - If a string, can be one of "iid", "hetero", "HC1", "HC2", "HC3", "NW", "DK".
             - If a dictionary, it should have the format {"CRV1": "clustervar"}
             for CRV1 inference or {"CRV3": "clustervar"} for CRV3 inference.
-         vcov_kwargs : dict[str, Any]
-             Additional keyword arguments for the variance-covariance matrix.
+         vcov_kwargs : Optional[dict[str, Any]], optional
+             Additional keyword arguments for the variance-covariance matrix. Defaults to None.
         solver: SolverOptions
             Solver to use for the estimation.
         demeaner_backend: DemeanerBackendOptions, optional
@@ -475,7 +475,7 @@ class FixestMulti:
         """
         return list(self.all_fitted_models.values())
 
-    def vcov(self, vcov: Union[str, dict[str, str]]):
+    def vcov(self, vcov: Union[str, dict[str, str]], vcov_kwargs: Optional[dict[str, any]] = None):
         """
         Update regression inference "on the fly".
 
@@ -491,6 +491,8 @@ class FixestMulti:
             - If a string, can be one of "iid", "hetero", "HC1", "HC2", "HC3".
             - If a dictionary, it should have the format {"CRV1": "clustervar"}
             for CRV1 inference or {"CRV3": "clustervar"} for CRV3 inference.
+        vcov_kwargs : Optional[dict[str, any]]
+             Additional keyword arguments for the variance-covariance matrix.
 
         Returns
         -------
@@ -508,7 +510,7 @@ class FixestMulti:
                 _,
             ) = _deparse_vcov_input(vcov, False, False)
 
-            fxst.vcov(vcov=vcov)
+            fxst.vcov(vcov=vcov, vcov_kwargs=vcov_kwargs)
             fxst.get_inference()
 
         return self
