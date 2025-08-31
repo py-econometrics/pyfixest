@@ -1379,22 +1379,22 @@ def _estimation_input_checks(
         if not all(key in ["lags", "time_id", "panel_id"] for key in vcov_kwargs.keys()):
             raise ValueError("The function argument `vcov_kwargs` must be a dictionary with keys 'lags', 'time_id', or 'panel_id'.")
 
-    # if lag provided, check that it is an int
-    if "lags" in vcov_kwargs:
-        if not isinstance(vcov_kwargs["lags"], int):
-            raise ValueError("The function argument `vcov_kwargs` must be a dictionary with integer values for 'lags'.")
+        # if lag provided, check that it is an int
+        if "lags" in vcov_kwargs:
+            if not isinstance(vcov_kwargs["lags"], int):
+                raise ValueError("The function argument `vcov_kwargs` must be a dictionary with integer values for 'lags'.")
 
-    if "time_id" in vcov_kwargs:
-        if not isinstance(vcov_kwargs["time_id"], str):
-            raise ValueError("The function argument `vcov_kwargs` must be a dictionary with string values for 'time_id'.")
-        if vcov_kwargs["time_id"] not in data.columns:
-            raise ValueError("The function argument `vcov_kwargs` must be a dictionary with string values for 'time_id'.")
+        if "time_id" in vcov_kwargs:
+            if not isinstance(vcov_kwargs["time_id"], str):
+                raise ValueError("The function argument `vcov_kwargs` must be a dictionary with string values for 'time_id'.")
+            if vcov_kwargs["time_id"] not in data.columns:
+                raise ValueError("The function argument `vcov_kwargs` must be a dictionary with string values for 'time_id'.")
 
-    if "panel_id" in vcov_kwargs:
-        if not isinstance(vcov_kwargs["panel_id"], str):
-            raise ValueError("The function argument `vcov_kwargs` must be a dictionary with string values for 'panel_id'.")
-        if vcov_kwargs["panel_id"] not in data.columns:
-            raise ValueError("The function argument `vcov_kwargs` must be a dictionary with string values for 'panel_id'.")
+        if "panel_id" in vcov_kwargs:
+            if not isinstance(vcov_kwargs["panel_id"], str):
+                raise ValueError("The function argument `vcov_kwargs` must be a dictionary with string values for 'panel_id'.")
+            if vcov_kwargs["panel_id"] not in data.columns:
+                raise ValueError("The function argument `vcov_kwargs` must be a dictionary with string values for 'panel_id'.")
 
 
 def _quantreg_input_checks(quantile: float, tol: float, maxiter: Optional[int]):
