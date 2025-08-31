@@ -44,8 +44,8 @@ from pyfixest.estimation.vcov_utils import (
     _compute_bread,
     _count_G_for_ssc_correction,
     _get_cluster_df,
+    _nw_meat,
     _prepare_twoway_clustering,
-    _nw_meat
 )
 from pyfixest.utils.dev_utils import (
     DataFrameType,
@@ -635,9 +635,9 @@ class Feols:
         self._bread = _compute_bread(_is_iv, _tXZ, _tZZinv, _tZX, _hessian)
 
         # HAC attributes
-        self._lags = vcov_kwargs.get('lags', None)
-        self._time_id = vcov_kwargs.get('time_id', None)
-        self._panel_id = vcov_kwargs.get('panel_id', None)
+        self._lags = vcov_kwargs.get("lags", None)
+        self._time_id = vcov_kwargs.get("time_id", None)
+        self._panel_id = vcov_kwargs.get("panel_id", None)
 
         ssc_kwargs = {
             "ssc_dict": self._ssc_dict,
@@ -869,16 +869,26 @@ class Feols:
         if _vcov_type_detail == "NW":
             # Newey-West
             if _panel_id is None:
-                newey_west_meat = _nw_meat(scores = _scores, time_arr = _time_arr, lags = _lags)
+                newey_west_meat = _nw_meat(
+                    scores=_scores, time_arr=_time_arr, lags=_lags
+                )
             else:
-                raise NotImplementedError("Panel-clustered Newey-West HAC standard errors are not yet implemented")
+                raise NotImplementedError(
+                    "Panel-clustered Newey-West HAC standard errors are not yet implemented"
+                )
         elif _vcov_type_detail == "DK":
             # Driscoll-Kraay
-            raise NotImplementedError("Driscoll-Kraay HAC standard errors are not yet implemented")
+            raise NotImplementedError(
+                "Driscoll-Kraay HAC standard errors are not yet implemented"
+            )
         else:
             raise ValueError(f"Unknown HAC type: {_vcov_type_detail}")
 
-        _meat = _tXZ @ _tZZinv @ newey_west_meat @ _tZZinv @ _tZX if _is_iv else newey_west_meat
+        _meat = (
+            _tXZ @ _tZZinv @ newey_west_meat @ _tZZinv @ _tZX
+            if _is_iv
+            else newey_west_meat
+        )
         _vcov = _bread @ _meat @ _bread
 
         return _vcov

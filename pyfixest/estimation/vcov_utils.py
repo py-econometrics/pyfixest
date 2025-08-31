@@ -97,7 +97,6 @@ def _get_vcov_type(
     return vcov_type  # type: ignore
 
 
-
 @nb.njit(parallel=False)
 def _nw_meat(scores: np.ndarray, time_arr: np.ndarray, lags: int):
     """
@@ -128,23 +127,22 @@ def _nw_meat(scores: np.ndarray, time_arr: np.ndarray, lags: int):
         lags = int(np.floor(time_periods ** (1 / 4)))
 
     # bartlett kernel weights
-    weights = np.array([1 - j / (lags + 1) for j in range(lags+1)])
+    weights = np.array([1 - j / (lags + 1) for j in range(lags + 1)])
     weights[0] = 0.5  # Halve first weight
 
     meat = np.zeros((k, k))
 
     # this implementation follows the same that fixest does in R
-    for l in range(lags + 1):
-        weight = weights[l]
-        gamma_l = np.zeros((k, k))
+    for lag in range(lags + 1):
+        weight = weights[lag]
+        gamma_lag = np.zeros((k, k))
 
-        for t in range(l, time_periods):
-            gamma_l += np.outer(ordered_scores[t, :], ordered_scores[t - l, :])
+        for t in range(lag, time_periods):
+            gamma_lag += np.outer(ordered_scores[t, :], ordered_scores[t - lag, :])
 
-        meat += weight * (gamma_l + gamma_l.T)
+        meat += weight * (gamma_lag + gamma_lag.T)
 
     return meat
-
 
 
 def _prepare_twoway_clustering(clustervar: list, cluster_df: pd.DataFrame):
