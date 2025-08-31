@@ -1,7 +1,4 @@
-import re
-
 import numpy as np
-import pandas as pd
 import pytest
 import rpy2.robjects as ro
 from rpy2.robjects import pandas2ri
@@ -10,9 +7,8 @@ from rpy2.robjects import pandas2ri
 from rpy2.robjects.packages import importr
 
 import pyfixest as pf
-from pyfixest.utils.utils import get_data, ssc
-
-from tests.test_vs_fixest import _convert_f3, _get_r_inference, get_data_r, _c_to_as_factor
+from pyfixest.utils.utils import ssc
+from tests.test_vs_fixest import _c_to_as_factor, get_data_r
 
 pandas2ri.activate()
 
@@ -34,9 +30,10 @@ ols_fmls = [
     ("Y~X1|f2+f3"),
 ]
 
+
 @pytest.fixture(scope="module")
 def data_feols(N=1000, seed=76540251, beta_type="2", error_type="2"):
-    data =  pf.get_data(
+    data = pf.get_data(
         N=N, seed=seed, beta_type=beta_type, error_type=error_type, model="Feols"
     )
 
@@ -45,6 +42,7 @@ def data_feols(N=1000, seed=76540251, beta_type="2", error_type="2"):
 
 
 rng = np.random.default_rng(875)
+
 
 def check_absolute_diff(x1, x2, tol, msg=None):
     "Check for absolute differences."
@@ -83,17 +81,23 @@ ALL_F3 = ["str", "object", "int", "categorical", "float"]
 SINGLE_F3 = ALL_F3[0]
 BACKEND_F3 = [
     *[("numba", t) for t in ALL_F3],
-    #*[(b, SINGLE_F3) for b in ("jax", "rust")],
+    # *[(b, SINGLE_F3) for b in ("jax", "rust")],
 ]
 
 
 @pytest.mark.against_r_core
 @pytest.mark.parametrize("dropna", [False, True])
 @pytest.mark.parametrize("inference", ["NW"])
-@pytest.mark.parametrize("vcov_kwargs", [
-    {"lags": 2, "time_id": "time"},
-    {"lags": 5, "time_id": "time"}
-])
+@pytest.mark.parametrize(
+    "vcov_kwargs",
+    [
+        # {},   # default lags, assume sorting
+        # {"lags":7},
+        # {"time_id": "time"},
+        {"lags": 2, "time_id": "time"},
+        {"lags": 5, "time_id": "time"},
+    ],
+)
 @pytest.mark.parametrize("weights", [None, "weights"])
 @pytest.mark.parametrize("fml", ols_fmls)
 def test_single_fit_feols_hac(
@@ -113,7 +117,7 @@ def test_single_fit_feols_hac(
 
     lags = vcov_kwargs.get("lags", None)
     time_id = vcov_kwargs.get("time_id", None)
-    panel_id = vcov_kwargs.get("panel_id", None)
+    # panel_id = vcov_kwargs.get("panel_id", None)
 
     data = data_feols.copy()
 
@@ -127,8 +131,6 @@ def test_single_fit_feols_hac(
     data_r = get_data_r(fml, data)
     r_fml = _c_to_as_factor(fml)
 
-    r_inference = _get_r_inference(inference)
-
     mod = pf.feols(
         fml=fml,
         data=data,
@@ -140,7 +142,12 @@ def test_single_fit_feols_hac(
     if weights is not None:
         r_fixest = fixest.feols(
             ro.Formula(r_fml),
-            vcov=fixest.vcov_NW(lag=lags, time=time_id),
+            vcov=fixest.vcov_NW(
+                **{
+                    **({} if lags is None else {"lag": lags}),
+                    **({} if time_id is None else {"time": time_id}),
+                }
+            ),
             data=data_r,
             ssc=fixest.ssc(adj, "nested", cluster_adj, "min", "min", False),
             weights=ro.Formula("~" + weights),
@@ -148,7 +155,12 @@ def test_single_fit_feols_hac(
     else:
         r_fixest = fixest.feols(
             ro.Formula(r_fml),
-            vcov=fixest.vcov_NW(lag=lags, time=time_id),
+            vcov=fixest.vcov_NW(
+                **{
+                    **({} if lags is None else {"lag": lags}),
+                    **({} if time_id is None else {"time": time_id}),
+                }
+            ),
             data=data_r,
             ssc=fixest.ssc(adj, "nested", cluster_adj, "min", "min", False),
         )
@@ -161,3 +173,16 @@ def test_single_fit_feols_hac(
     r_vcov = stats.vcov(r_fixest)[0, 0]
 
     check_absolute_diff(py_vcov, r_vcov, 1e-08, "py_vcov != r_vcov")
+
+
+def test_vcov_updating(data_feols):
+    fit_hetero = pf.feols("Y ~ X1", data=data_feols, vcov="hetero")
+    fit_nw = pf.feols(
+        "Y ~ X1", data=data_feols, vcov="NW", vcov_kwargs={"time_id": "time", "lags": 7}
+    )
+
+    fit_hetero.vcov(vcov="NW", vcov_kwargs={"lags": 7, "time_id": "time"})
+
+    assert fit_hetero._vcov_type == "HAC"
+    assert fit_hetero._vcov_type_detail == "NW"
+    check_absolute_diff(fit_hetero._vcov, fit_nw._vcov, 1e-08, "py_vcov != r_vcov")

@@ -1409,27 +1409,27 @@ def _estimation_input_checks(
         # if lag provided, check that it is an int
         if "lags" in vcov_kwargs and not isinstance(vcov_kwargs["lags"], int):
             raise ValueError(
-                "The function argument `vcov_kwargs` must be a dictionary with integer values for 'lags'."
+                "The function argument `vcov_kwargs` must be a dictionary with integer values for 'lags' if explicitly provided."
             )
 
         if "time_id" in vcov_kwargs:
             if not isinstance(vcov_kwargs["time_id"], str):
                 raise ValueError(
-                    "The function argument `vcov_kwargs` must be a dictionary with string values for 'time_id'."
+                    "The function argument `vcov_kwargs` must be a dictionary with string values for 'time_id' if explicitly provided."
                 )
             if vcov_kwargs["time_id"] not in data.columns:
                 raise ValueError(
-                    "The function argument `vcov_kwargs` must be a dictionary with string values for 'time_id'."
+                    "The function argument `vcov_kwargs` must be a dictionary with string values for 'time_id' if explicitly provided."
                 )
 
         if "panel_id" in vcov_kwargs:
             if not isinstance(vcov_kwargs["panel_id"], str):
                 raise ValueError(
-                    "The function argument `vcov_kwargs` must be a dictionary with string values for 'panel_id'."
+                    "The function argument `vcov_kwargs` must be a dictionary with string values for 'panel_id' if explicitly provided."
                 )
             if vcov_kwargs["panel_id"] not in data.columns:
                 raise ValueError(
-                    "The function argument `vcov_kwargs` must be a dictionary with string values for 'panel_id'."
+                    "The function argument `vcov_kwargs` must be a dictionary with string values for 'panel_id' if explicitly provided."
                 )
 
 
