@@ -81,6 +81,7 @@ quartodoc:
         - did.estimation.event_study
         - estimation.bonferroni
         - estimation.rwolf
+        - estimation.estimation.quantreg
     - title: Estimation Classes
       desc: |
         Details on Methods and Attributes

@@ -11,6 +11,7 @@ website:
       - reference/did.estimation.event_study.qmd
       - reference/estimation.bonferroni.qmd
       - reference/estimation.rwolf.qmd
+      - reference/estimation.estimation.quantreg.qmd
       section: Estimation Functions
     - contents:
       - reference/estimation.feols_.Feols.qmd
