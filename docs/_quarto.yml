@@ -59,7 +59,8 @@ website:
           file: replicating-the-effect.qmd
         - text: "Replicating 'The Mixtape' with PyFixest"
           file: mixtape.ipynb
-
+        - text: "Replicating 'Causal Inference for the Brave and True' with PyFixest"
+          file: brave_true.ipynb
 
 quartodoc:
   package: pyfixest
