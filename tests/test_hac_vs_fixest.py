@@ -91,11 +91,11 @@ BACKEND_F3 = [
 @pytest.mark.parametrize(
     "vcov_kwargs",
     [
-        # {},   # default lags, assume sorting
-        # {"lags":7},
+        # {},   # default lag, assume sorting
+        # {"lag":7},
         # {"time_id": "time"},
-        {"lags": 2, "time_id": "time"},
-        {"lags": 5, "time_id": "time"},
+        {"lag": 2, "time_id": "time"},
+        {"lag": 5, "time_id": "time"},
     ],
 )
 @pytest.mark.parametrize("weights", [None, "weights"])
@@ -115,7 +115,7 @@ def test_single_fit_feols_hac(
     cluster_adj = True
     ssc_ = ssc(adj=adj, cluster_adj=cluster_adj)
 
-    lags = vcov_kwargs.get("lags", None)
+    lag = vcov_kwargs.get("lag", None)
     time_id = vcov_kwargs.get("time_id", None)
     # panel_id = vcov_kwargs.get("panel_id", None)
 
@@ -144,7 +144,7 @@ def test_single_fit_feols_hac(
             ro.Formula(r_fml),
             vcov=fixest.vcov_NW(
                 **{
-                    **({} if lags is None else {"lag": lags}),
+                    **({} if lag is None else {"lag": lag}),
                     **({} if time_id is None else {"time": time_id}),
                 }
             ),
@@ -157,7 +157,7 @@ def test_single_fit_feols_hac(
             ro.Formula(r_fml),
             vcov=fixest.vcov_NW(
                 **{
-                    **({} if lags is None else {"lag": lags}),
+                    **({} if lag is None else {"lag": lag}),
                     **({} if time_id is None else {"time": time_id}),
                 }
             ),
@@ -178,10 +178,10 @@ def test_single_fit_feols_hac(
 def test_vcov_updating(data_feols):
     fit_hetero = pf.feols("Y ~ X1", data=data_feols, vcov="hetero")
     fit_nw = pf.feols(
-        "Y ~ X1", data=data_feols, vcov="NW", vcov_kwargs={"time_id": "time", "lags": 7}
+        "Y ~ X1", data=data_feols, vcov="NW", vcov_kwargs={"time_id": "time", "lag": 7}
     )
 
-    fit_hetero.vcov(vcov="NW", vcov_kwargs={"lags": 7, "time_id": "time"})
+    fit_hetero.vcov(vcov="NW", vcov_kwargs={"lag": 7, "time_id": "time"})
 
     assert fit_hetero._vcov_type == "HAC"
     assert fit_hetero._vcov_type_detail == "NW"

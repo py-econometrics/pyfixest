@@ -635,7 +635,7 @@ class Feols:
         self._bread = _compute_bread(_is_iv, _tXZ, _tZZinv, _tZX, _hessian)
 
         # HAC attributes
-        self._lags = vcov_kwargs.get("lags", None) if vcov_kwargs is not None else None
+        self._lag = vcov_kwargs.get("lag", None) if vcov_kwargs is not None else None
         self._time_id = (
             vcov_kwargs.get("time_id", None) if vcov_kwargs is not None else None
         )
@@ -864,7 +864,7 @@ class Feols:
         _vcov_type_detail = self._vcov_type_detail
         _time_id = self._time_id
         _panel_id = self._panel_id
-        _lags = self._lags
+        _lag = self._lag
         _data = self._data
 
         _time_arr = _data[_time_id].to_numpy()
@@ -873,9 +873,7 @@ class Feols:
         if _vcov_type_detail == "NW":
             # Newey-West
             if _panel_id is None:
-                newey_west_meat = _nw_meat(
-                    scores=_scores, time_arr=_time_arr, lags=_lags
-                )
+                newey_west_meat = _nw_meat(scores=_scores, time_arr=_time_arr, lag=_lag)
             else:
                 raise NotImplementedError(
                     "Panel-clustered Newey-West HAC standard errors are not yet implemented"

@@ -865,46 +865,46 @@ def test_errors_vcov_kwargs():
     # Error 1: Invalid keys in vcov_kwargs
     with pytest.raises(
         ValueError,
-        match="must be a dictionary with keys 'lags', 'time_id', or 'panel_id'",
+        match="must be a dictionary with keys 'lag', 'time_id', or 'panel_id'",
     ):
         pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs={"invalid_key": 5})
 
     # Error 2: Multiple invalid keys
     with pytest.raises(
         ValueError,
-        match="must be a dictionary with keys 'lags', 'time_id', or 'panel_id'",
+        match="must be a dictionary with keys 'lag', 'time_id', or 'panel_id'",
     ):
         pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs={"wrong1": 1, "wrong2": 2})
 
     # Error 3: Mix of valid and invalid keys
     with pytest.raises(
         ValueError,
-        match="must be a dictionary with keys 'lags', 'time_id', or 'panel_id'",
+        match="must be a dictionary with keys 'lag', 'time_id', or 'panel_id'",
     ):
         pf.feols(
             "Y ~ X1",
             data=data,
             vcov="NW",
-            vcov_kwargs={"lags": 5, "invalid_key": "test"},
+            vcov_kwargs={"lag": 5, "invalid_key": "test"},
         )
 
-    # Error 4: lags value is not an integer (string)
+    # Error 4: lag value is not an integer (string)
     with pytest.raises(
-        ValueError, match="must be a dictionary with integer values for 'lags'"
+        ValueError, match="must be a dictionary with integer values for 'lag'"
     ):
-        pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs={"lags": "5"})
+        pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs={"lag": "5"})
 
-    # Error 5: lags value is not an integer (float)
+    # Error 5: lag value is not an integer (float)
     with pytest.raises(
-        ValueError, match="must be a dictionary with integer values for 'lags'"
+        ValueError, match="must be a dictionary with integer values for 'lag'"
     ):
-        pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs={"lags": 5.5})
+        pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs={"lag": 5.5})
 
-    # Error 6: lags value is not an integer (None)
+    # Error 6: lag value is not an integer (None)
     with pytest.raises(
-        ValueError, match="must be a dictionary with integer values for 'lags'"
+        ValueError, match="must be a dictionary with integer values for 'lag'"
     ):
-        pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs={"lags": None})
+        pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs={"lag": None})
 
     # Error 7: time_id value is not a string (integer)
     with pytest.raises(
@@ -968,7 +968,7 @@ def test_errors_hac():
         match="Driscoll-Kraay HAC standard errors are not yet implemented",
     ):
         pf.feols(
-            "Y ~ X1", data=data, vcov="DK", vcov_kwargs={"time_id": "time", "lags": 3}
+            "Y ~ X1", data=data, vcov="DK", vcov_kwargs={"time_id": "time", "lag": 3}
         )
 
     # Error 2: Panel-clustered Newey-West HAC not implemented
@@ -980,5 +980,5 @@ def test_errors_hac():
             "Y ~ X1",
             data=data,
             vcov="NW",
-            vcov_kwargs={"time_id": "time", "panel_id": "panel", "lags": 3},
+            vcov_kwargs={"time_id": "time", "panel_id": "panel", "lag": 3},
         )

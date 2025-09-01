@@ -98,7 +98,7 @@ def _get_vcov_type(
 
 
 @nb.njit(parallel=False)
-def _nw_meat(scores: np.ndarray, time_arr: np.ndarray, lags: Optional[int] = None):
+def _nw_meat(scores: np.ndarray, time_arr: np.ndarray, lag: Optional[int] = None):
     """
     Compute Newey-West HAC meat matrix.
 
@@ -108,8 +108,8 @@ def _nw_meat(scores: np.ndarray, time_arr: np.ndarray, lags: Optional[int] = Non
         The scores matrix.
     time_arr: np.ndarray, optional
         The time variable for clustering.
-    lags: int, optional
-        The number of lags for the HAC estimator. Defaults to floor (# of time periods)^(1/4).
+    lag: int, optional
+        The number of lag for the HAC estimator. Defaults to floor (# of time periods)^(1/4).
     """
     # Determine whether data is time ordered or not - if not provided, data is assumed to be time ordered
     if time_arr is None:
@@ -120,25 +120,27 @@ def _nw_meat(scores: np.ndarray, time_arr: np.ndarray, lags: Optional[int] = Non
 
     time_periods, k = ordered_scores.shape
 
-    # resolve lags
-    if lags is None:
-        # these are the fixest default lags for HAC
+    # resolve lag
+    if lag is None:
+        # these are the fixest default lag for HAC
         # see https://lrberge.github.io/fixest/reference/vcov_hac.html
-        lags = int(np.floor(time_periods ** (1 / 4)))
+        lag = int(np.floor(time_periods ** (1 / 4)))
 
     # bartlett kernel weights
-    weights = np.array([1 - j / (lags + 1) for j in range(lags + 1)])
+    weights = np.array([1 - j / (lag + 1) for j in range(lag + 1)])
     weights[0] = 0.5  # Halve first weight
 
     meat = np.zeros((k, k))
 
     # this implementation follows the same that fixest does in R
-    for lag in range(lags + 1):
-        weight = weights[lag]
+    for lag_value in range(lag + 1):
+        weight = weights[lag_value]
         gamma_lag = np.zeros((k, k))
 
-        for t in range(lag, time_periods):
-            gamma_lag += np.outer(ordered_scores[t, :], ordered_scores[t - lag, :])
+        for t in range(lag_value, time_periods):
+            gamma_lag += np.outer(
+                ordered_scores[t, :], ordered_scores[t - lag_value, :]
+            )
 
         meat += weight * (gamma_lag + gamma_lag.T)
 

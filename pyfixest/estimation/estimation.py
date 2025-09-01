@@ -68,7 +68,7 @@ def feols(
 
     vcov_kwargs : Optional[dict[str, any]]
          Additional keyword arguments to pass to the vcov function. These keywoards include
-        "lags" for the number of lags to use in the Newey-West (NW) and Driscoll-Kraay (DK) HAC standard errors.
+        "lag" for the number of lag to use in the Newey-West (NW) and Driscoll-Kraay (DK) HAC standard errors.
         "time_id" for the time ID used for NW and DK standard errors, and "panel_id" for the panel
          identifier used for NW and DK standard errors.
 
@@ -556,13 +556,13 @@ def fepois(
 
     vcov_kwargs : Optional[dict[str, any]]
          Additional keyword arguments to pass to the vcov function. These keywoards include
-        "lags" for the number of lags to use in the Newey-West (NW) and Driscoll-Kraay (DK) HAC standard errors.
+        "lag" for the number of lag to use in the Newey-West (NW) and Driscoll-Kraay (DK) HAC standard errors.
         "time_id" for the time ID used for NW and DK standard errors, and "panel_id" for the panel
          identifier used for NW and DK standard errors.
 
     vcov_kwargs : Optional[dict[str, any]]
         Additional keyword arguments for the variance-covariance matrix.
-        For example, "lags" for the Newey-West estimator.
+        For example, "lag" for the Newey-West estimator.
 
     ssc : str
         A ssc object specifying the small sample correction for inference.
@@ -797,7 +797,7 @@ def feglm(
 
     vcov_kwargs : Optional[dict[str, any]]
          Additional keyword arguments to pass to the vcov function. These keywoards include
-        "lags" for the number of lags to use in the Newey-West (NW) and Driscoll-Kraay (DK) HAC standard errors.
+        "lag" for the number of lag to use in the Newey-West (NW) and Driscoll-Kraay (DK) HAC standard errors.
         "time_id" for the time ID used for NW and DK standard errors, and "panel_id" for the panel
          identifier used for NW and DK standard errors.
 
@@ -1400,16 +1400,16 @@ def _estimation_input_checks(
             )
 
     if vcov_kwargs is not None:
-        # check that dict keys are either "lags", "time_id", or "panel_id"
-        if not all(key in ["lags", "time_id", "panel_id"] for key in vcov_kwargs):
+        # check that dict keys are either "lag", "time_id", or "panel_id"
+        if not all(key in ["lag", "time_id", "panel_id"] for key in vcov_kwargs):
             raise ValueError(
-                "The function argument `vcov_kwargs` must be a dictionary with keys 'lags', 'time_id', or 'panel_id'."
+                "The function argument `vcov_kwargs` must be a dictionary with keys 'lag', 'time_id', or 'panel_id'."
             )
 
         # if lag provided, check that it is an int
-        if "lags" in vcov_kwargs and not isinstance(vcov_kwargs["lags"], int):
+        if "lag" in vcov_kwargs and not isinstance(vcov_kwargs["lag"], int):
             raise ValueError(
-                "The function argument `vcov_kwargs` must be a dictionary with integer values for 'lags' if explicitly provided."
+                "The function argument `vcov_kwargs` must be a dictionary with integer values for 'lag' if explicitly provided."
             )
 
         if "time_id" in vcov_kwargs:
