@@ -77,6 +77,7 @@ quartodoc:
         - estimation.estimation.feols
         - estimation.estimation.fepois
         - estimation.estimation.feglm
+        - estimation.estimation.quantreg
         - did.estimation.did2s
         - did.estimation.lpdid
         - did.estimation.event_study
