@@ -6,12 +6,12 @@ website:
       - reference/estimation.estimation.feols.qmd
       - reference/estimation.estimation.fepois.qmd
       - reference/estimation.estimation.feglm.qmd
+      - reference/estimation.estimation.quantreg.qmd
       - reference/did.estimation.did2s.qmd
       - reference/did.estimation.lpdid.qmd
       - reference/did.estimation.event_study.qmd
       - reference/estimation.bonferroni.qmd
       - reference/estimation.rwolf.qmd
-      - reference/estimation.estimation.quantreg.qmd
       section: Estimation Functions
     - contents:
       - reference/estimation.feols_.Feols.qmd
