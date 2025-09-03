@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
 from numpy.typing import NDArray
-from scipy.sparse import hstack, spmatrix, vstack
+from scipy.sparse import hstack, spmatrix, vstack, diags
 from scipy.sparse.linalg import lsqr
 from tqdm import tqdm
 
@@ -266,14 +266,26 @@ class GelbachDecomposition:
                         f"Variables {overlap} are in both '{key1}' and '{key2}' groups."
                     )
 
-    def fit(self, X: spmatrix, Y: np.ndarray, store: bool = True):
+    def fit(self, X: spmatrix, Y: np.ndarray, weights: Optional[np.ndarray] = None, store: bool = True):
         "Fit Linear Mediation Model."
         if store:
             self.X = X
-            self.N = X.shape[0]
+            self.Y = Y
 
             self.X1 = self.X[:, ~self.mask]
-            self.X1 = hstack([np.ones((self.N, 1)), self.X1])
+            self.X1 = hstack([np.ones((self.X1.shape[0], 1)), self.X1])
+
+            if weights is not None:
+                weights_sqrt = np.sqrt(weights)
+                S = diags(weights_sqrt.flatten(), 0)
+                self.X  = S @ self.X
+                self.X1 = S @ self.X1
+                self.Y = self.Y * weights_sqrt
+                # treat weights as frequency weights
+                self.N = np.sum(weights)
+            else:
+                self.N = X.shape[0]
+
             self.names_X1 = ["Intercept", self.decomp_var]
             if self.x1_vars is not None:
                 self.names_X1 += self.x1_vars
@@ -980,8 +992,10 @@ class GelbachDecomposition:
 def _decompose_arg_check(
     type: str,
     has_weights: bool,
+    weights_type: str,
     is_iv: bool,
     method: str,
+    only_coef: bool,
 ) -> None:
     "Check arguments for decomposition."
     supported_decomposition_types = ["gelbach"]
@@ -992,9 +1006,14 @@ def _decompose_arg_check(
         )
 
     if has_weights:
-        raise NotImplementedError(
-            "Decomposition is currently not supported for models with weights."
-        )
+        if not only_coef:
+            raise NotImplementedError(
+                "Decomposition is currently not supported for models with weights when only_coef is False."
+            )
+        if weights_type != "fweights":
+            raise NotImplementedError(
+                "Decomposition is currently only supported for models with frequency weights."
+            )
 
     if is_iv:
         raise NotImplementedError(

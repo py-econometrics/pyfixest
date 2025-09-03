@@ -525,3 +525,55 @@ def test_coefplot_comprehensive(data_transform, annotate_shares):
         annotate_shares=annotate_shares,
     )
     plt.close("all")
+
+
+def test_weights():
+
+    rng = np.random.default_rng(123)
+    N = 1000
+    Y = rng.choice(range(10), N)
+    x1 = rng.choice(range(2), N)
+    x11 = rng.choice(range(2), N)
+    x12 = rng.choice(range(2), N)
+    x13 = rng.choice(range(5), N)
+
+    data = pd.DataFrame({"Y": Y, "x1": x1, "x11": x11, "x12": x12, "x13": x13})
+    data_agg = (
+        data.groupby(["Y", "x1", "x11", "x12", "x13"])
+            .size()
+            .reset_index()
+            .rename(columns={0: 'count'})
+    )
+
+    fit = pf.feols("Y ~ x1 + x11 + x12 + x13", data=data)
+    fit_agg = pf.feols("Y ~ x1 + x11 + x12 + x13", data=data_agg, weights="count", weights_type="fweights")
+
+    # test that coefs() are identical
+    np.testing.assert_allclose(fit.coef(), fit_agg.coef())
+
+    # decomposition without combine_covariates:
+    decompse_kwargs_1 = {
+        "param": "x1",
+        "only_coef": True
+    }
+    # with combine covariates 1:
+    decompse_kwargs_2 = {
+        "param": "x1",
+        "only_coef": True,
+        "combine_covariates": {"g1": ["x11"], "g2": ["x12", "x13"]}
+    }
+    # with combine covariates 2:
+    decompse_kwargs_3 = {
+        "param": "x1",
+        "only_coef": True,
+        "combine_covariates": {"g1": ["x11", "x12"], "g2": ["x13"]}
+    }
+
+    for kwargs in [decompse_kwargs_1, decompse_kwargs_2, decompse_kwargs_3]:
+        gb = fit.decompose(**kwargs)
+        gb_agg = fit_agg.decompose(**kwargs)
+        #import pdb; pdb.set_trace()
+        tidy_orig = gb.tidy()
+        tidy_agg = gb_agg.tidy()
+        np.testing.assert_allclose(tidy_orig.select_dtypes(include=[np.number]), tidy_agg.select_dtypes(include=[np.number]))
+

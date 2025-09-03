@@ -1681,6 +1681,9 @@ class Feols:
         an ungated version of the paper on SSRN under the following link:
         https://papers.ssrn.com/sol3/papers.cfm?abstract_id=1425737 .
 
+        When the initial regression is weighted, weights are interpreted as frequency
+        weights. Inference is not yet supported for weighted models.
+
         Parameters
         ----------
         param : str
@@ -1780,8 +1783,10 @@ class Feols:
         _decompose_arg_check(
             type=type,
             has_weights=self._has_weights,
+            weights_type=self._weights_type,
             is_iv=self._is_iv,
             method=self._method,
+            only_coef=only_coef,
         )
 
         nthreads_int = -1 if nthreads is None else nthreads
@@ -1828,6 +1833,7 @@ class Feols:
         med.fit(
             X=X,
             Y=Y,
+            weights = self._weights,
             store=True,
         )
 
