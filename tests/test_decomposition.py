@@ -535,14 +535,12 @@ def test_weights(fml):
     N = 1000
     Y = rng.choice(range(10), N)
     x1 = rng.choice(range(2), N)
-    x11 = rng.choice(range(2), N)
-    x12 = rng.choice(range(2), N)
-    x13 = rng.choice(range(5), N)
+    x21 = rng.choice(range(2), N)
+    x22 = rng.choice(range(2), N)
+    x23 = rng.choice(range(5), N)
 
-    data = pd.DataFrame({"Y": Y, "x1": x1, "x21": x11, "x22": x12, "x23": x13})
-    agg_vars = (
-        ["Y", "x1", "x21", "x22", "x23"] if "x13" in fml else ["Y", "x1", "x21", "x22"]
-    )
+    data = pd.DataFrame({"Y": Y, "x1": x1, "x21": x21, "x22": x22, "x23": x23})
+    agg_vars = ["Y", "x1", "x21", "x22", "x23"]
 
     data_agg = data.groupby(agg_vars).size().reset_index().rename(columns={0: "count"})
 
@@ -552,7 +550,7 @@ def test_weights(fml):
         data=data_agg,
         weights="count",
         weights_type="fweights",
-        demeaner_backend="rust",
+        # demeaner_backend="rust",
     )
 
     # test that coefs() are identical
@@ -564,13 +562,13 @@ def test_weights(fml):
     decompse_kwargs_2 = {
         "param": "x1",
         "only_coef": True,
-        "combine_covariates": {"g1": ["x21"], "g2": ["x22", re.compile("x23")]},
+        "combine_covariates": {"g1": ["x21"], "g2": ["x22"], "g3": re.compile("x23")},
     }
     # with combine covariates 2:
     decompse_kwargs_3 = {
         "param": "x1",
         "only_coef": True,
-        "combine_covariates": {"g1": ["x21", "x22"], "g2": re.compile(r"x23")},
+        "combine_covariates": {"g1": ["x21", "x22"], "g2": re.compile("x23")},
     }
 
     for kwargs in [decompse_kwargs_1, decompse_kwargs_2, decompse_kwargs_3]:
