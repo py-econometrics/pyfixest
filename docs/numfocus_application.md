@@ -56,7 +56,7 @@ Alexander Fischer (@s3alfisc), Trivago, August 2025
 
 - Apoorva Lal (@apoorvalal), Amazon, August 2025
 - Juan Orduz (@juanitorduz), Delivery Hero & PyMC Labs, [Jan 2025](https://github.com/py-econometrics/pyfixest/pull/773)
-- Dirk Sliwka (dsliwka), University of Cologne, August 2025
+- Dirk Sliwka (@dsliwka), University of Cologne, August 2025
 - Kristof Schröder (@schroedk), AppliedAI Institute, August 2025
 
 15. What is your project doing to attract and/or mentor new contributors and maintainers?This question is required.*
