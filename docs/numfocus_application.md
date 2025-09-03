@@ -46,7 +46,9 @@ We heavily rely on the core scientific Python ecosystem: pandas for handling of 
 
 12. Describe how your project furthers the NumFOCUS mission:This question is required.*
 
-PyFixest advances the NumFOCUS mission by providing an open-source, high-performance alternative to proprietary econometric software, which is still widely used in economics/social science research. By integrating seamlessly with the scientific Python ecosystem, PyFixest enables large-scale, modern econometric research using free and community-driven tools. Additionally, it allows lecturers to teach modern econometric methods end-to-end in Python. This improves transparency, accessibility, and reproducibility in applied research. We also put a lot of effort in engaging students, fostering contributions to open-source software with a range of good first issues and regular pair-programming session with new contributors (~10 in the last 18 months).
+PyFixest advances the NumFOCUS mission by providing a free, high-performance alternative to the proprietary econometric software that still dominates economics and social science research. Its seamless integration with the scientific Python ecosystem enables large-scale, modern econometric analysis using open, community-driven tools. PyFixest also empowers educators to teach end-to-end econometric workflows entirely in Python, fostering transparency, accessibility, and reproducibility in both research and teaching.
+
+The econometric methods implemented in PyFixest are widely used not only in academic research but also across industry and tech companies, where the package has already seen promising adoption. In addition, we actively engage students and new contributors through mentorship, pair-programming sessions, and well-curated starter issues (we have been supporting around 10 new contributors in the past 18 months) and building a diverse and sustainable open-source community.
 
 13. Please list your project's maintainers (i.e., anyone with write access to the repository). This question is required.*
 
