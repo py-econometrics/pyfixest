@@ -65,7 +65,7 @@ We regularly talk about PyFixest at Python conferences (PyData Berlin 2024, Euro
 
 16. Where do you host conversations about project development and governance (e.g. mailing lists, forums, etc.), and how many participants do you have?
 
-We communicate in an open discord channel that is open to everyone and linked on top of the github repository.
+We communicate in a discord channel that is open to everyone and linked on top of the github repository.
 
 17. What license(s) does your project currently use?This question is required.*
 
