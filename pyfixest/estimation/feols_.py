@@ -1647,8 +1647,8 @@ class Feols:
             X = csc_matrix(X) if output == "sparse" else X
 
         else:
-            Y = self._Y.flatten()
-            X = self._X
+            Y = self._Y.flatten() / np.sqrt(self._weights.flatten())
+            X = self._X / np.sqrt(self._weights)
             xnames = self._coefnames
 
         X = csc_matrix(X) if output == "sparse" else X
@@ -1833,7 +1833,7 @@ class Feols:
         med.fit(
             X=X,
             Y=Y,
-            weights = self._weights,
+            weights=self._weights,
             store=True,
         )
 

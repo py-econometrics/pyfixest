@@ -64,6 +64,8 @@ gb.etable(
 
 As can be seen, we by default now return normalized (and not just absolute) effects.
 
+We are now also supporting frequency weights for the decomposition (currently without inference).
+
 Additionally, some house keeping and interal refactoring of the `GelbachDecomposition` class.
 
 ## PyFixest 0.30.0

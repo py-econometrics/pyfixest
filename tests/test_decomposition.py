@@ -527,8 +527,10 @@ def test_coefplot_comprehensive(data_transform, annotate_shares):
     plt.close("all")
 
 
-def test_weights():
-
+@pytest.mark.parametrize(
+    "fml", ["Y ~ x1 + x21 + x22 + x23", "Y ~ x1 + x21 + x22 | x23"]
+)
+def test_weights(fml):
     rng = np.random.default_rng(123)
     N = 1000
     Y = rng.choice(range(10), N)
@@ -537,43 +539,46 @@ def test_weights():
     x12 = rng.choice(range(2), N)
     x13 = rng.choice(range(5), N)
 
-    data = pd.DataFrame({"Y": Y, "x1": x1, "x11": x11, "x12": x12, "x13": x13})
-    data_agg = (
-        data.groupby(["Y", "x1", "x11", "x12", "x13"])
-            .size()
-            .reset_index()
-            .rename(columns={0: 'count'})
+    data = pd.DataFrame({"Y": Y, "x1": x1, "x21": x11, "x22": x12, "x23": x13})
+    agg_vars = (
+        ["Y", "x1", "x21", "x22", "x23"] if "x13" in fml else ["Y", "x1", "x21", "x22"]
     )
 
-    fit = pf.feols("Y ~ x1 + x11 + x12 + x13", data=data)
-    fit_agg = pf.feols("Y ~ x1 + x11 + x12 + x13", data=data_agg, weights="count", weights_type="fweights")
+    data_agg = data.groupby(agg_vars).size().reset_index().rename(columns={0: "count"})
+
+    fit = pf.feols(fml=fml, data=data)
+    fit_agg = pf.feols(
+        fml=fml,
+        data=data_agg,
+        weights="count",
+        weights_type="fweights",
+        demeaner_backend="rust",
+    )
 
     # test that coefs() are identical
     np.testing.assert_allclose(fit.coef(), fit_agg.coef())
 
     # decomposition without combine_covariates:
-    decompse_kwargs_1 = {
-        "param": "x1",
-        "only_coef": True
-    }
+    decompse_kwargs_1 = {"param": "x1", "only_coef": True}
     # with combine covariates 1:
     decompse_kwargs_2 = {
         "param": "x1",
         "only_coef": True,
-        "combine_covariates": {"g1": ["x11"], "g2": ["x12", "x13"]}
+        "combine_covariates": {"g1": ["x21"], "g2": ["x22", re.compile("x23")]},
     }
     # with combine covariates 2:
     decompse_kwargs_3 = {
         "param": "x1",
         "only_coef": True,
-        "combine_covariates": {"g1": ["x11", "x12"], "g2": ["x13"]}
+        "combine_covariates": {"g1": ["x21", "x22"], "g2": re.compile(r"x23")},
     }
 
     for kwargs in [decompse_kwargs_1, decompse_kwargs_2, decompse_kwargs_3]:
         gb = fit.decompose(**kwargs)
         gb_agg = fit_agg.decompose(**kwargs)
-        #import pdb; pdb.set_trace()
         tidy_orig = gb.tidy()
         tidy_agg = gb_agg.tidy()
-        np.testing.assert_allclose(tidy_orig.select_dtypes(include=[np.number]), tidy_agg.select_dtypes(include=[np.number]))
-
+        np.testing.assert_allclose(
+            tidy_orig.select_dtypes(include=[np.number]),
+            tidy_agg.select_dtypes(include=[np.number]),
+        )
