@@ -34,7 +34,7 @@ None.
 
 9. Why do you want your project to join NumFOCUS?This question is required.*
 
-We would like to join NumFocus because we want to push PyFixest to the next level. We believe that we will benefit from being part of the NumFocus network for it's experience in professionalising and maintaining scientific open source software. Additionally, we regularly work with university students with an interest in open source and econometrics and would like to offer them to participate in google summer of code.
+We would like to join NumFocus because we believe that we will benefit from being part of the NumFocus network for it's experience in professionalising and maintaining scientific open source software. Additionally, we regularly work with university students with an interest in open source and econometrics and would like to offer them to participate in google summer of code.
 
 10. Are you applying for Fiscal Sponsorship or Affiliation?This question is required.*
 
