@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
 from numpy.typing import NDArray
-from scipy.sparse import hstack, spmatrix, vstack
+from scipy.sparse import diags, hstack, spmatrix, vstack
 from scipy.sparse.linalg import lsqr
 from tqdm import tqdm
 
@@ -266,23 +266,46 @@ class GelbachDecomposition:
                         f"Variables {overlap} are in both '{key1}' and '{key2}' groups."
                     )
 
-    def fit(self, X: spmatrix, Y: np.ndarray, store: bool = True):
+    def fit(
+        self,
+        X: spmatrix,
+        Y: np.ndarray,
+        weights: Optional[np.ndarray] = None,
+        store: bool = True,
+    ):
         "Fit Linear Mediation Model."
         if store:
             self.X = X
-            self.N = X.shape[0]
+            self.Y = Y
 
             self.X1 = self.X[:, ~self.mask]
-            self.X1 = hstack([np.ones((self.N, 1)), self.X1])
+            self.X1 = hstack([np.ones((self.X1.shape[0], 1)), self.X1])
+            self.X2 = self.X[:, self.mask]
+
+            if weights is not None:
+                weights_sqrt = np.sqrt(weights.flatten())
+                S = diags(weights_sqrt, 0)
+                self.X = S @ self.X
+                self.X1 = S @ self.X1
+                self.X2 = S @ self.X2
+                self.Y = self.Y * weights_sqrt
+                # treat weights as frequency weights
+                N = np.sum(weights)
+                if N.is_integer():
+                    self.N = int(N)
+                else:
+                    raise ValueError(
+                        "The sum of weights is not an integer, which is not supported with frequency weights."
+                    )
+            else:
+                self.N = X.shape[0]
+
             self.names_X1 = ["Intercept", self.decomp_var]
             if self.x1_vars is not None:
                 self.names_X1 += self.x1_vars
             self.names_X = list(self.coefnames)
             self.decomp_var_in_X1_idx = self.names_X1.index(self.decomp_var)
             self.decomp_var_in_X_idx = self.names_X.index(self.decomp_var)
-
-            self.X2 = self.X[:, self.mask]
-            self.Y = Y
 
             results = self.compute_gelbach(
                 X1=self.X1,
@@ -980,8 +1003,10 @@ class GelbachDecomposition:
 def _decompose_arg_check(
     type: str,
     has_weights: bool,
+    weights_type: Union[str, None],
     is_iv: bool,
     method: str,
+    only_coef: bool,
 ) -> None:
     "Check arguments for decomposition."
     supported_decomposition_types = ["gelbach"]
@@ -991,9 +1016,13 @@ def _decompose_arg_check(
             f"'type' {type} is not in supported types {supported_decomposition_types}."
         )
 
-    if has_weights:
+    if has_weights and weights_type != "fweights":
         raise NotImplementedError(
-            "Decomposition is currently not supported for models with weights."
+            "Decomposition is currently only supported for models with frequency weights."
+        )
+    if has_weights and not only_coef:
+        raise NotImplementedError(
+            "Decomposition is currently only supported for models with frequency weights when only_coef is False."
         )
 
     if is_iv:

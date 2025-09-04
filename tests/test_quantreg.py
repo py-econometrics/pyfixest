@@ -90,6 +90,7 @@ def test_quantreg_vs_r(data, fml, vcov, quantile, method):
         method=method,
         tol=tol,
         ssc=pf.ssc(adj=False, cluster_adj=False),
+        seed=83838,
     )
 
     # Fit model in R
@@ -156,6 +157,7 @@ def test_quantreg_crv(data, fml, quantile, stata_results_crv):
         vcov={"CRV1": "f1"},
         quantile=quantile,
         ssc=pf.ssc(adj=False, cluster_adj=False),
+        seed=9389323,
     )
 
     coef = fit.coef().to_numpy()
@@ -289,6 +291,7 @@ def test_quantreg_vs_statsmodels(data, fml, vcov, quantile, method):
         quantile=quantile,
         method=method,
         ssc=pf.ssc(adj=False, cluster_adj=False),
+        seed=383838,
     )
 
     fit_sm = smf.quantreg(fml, data=data).fit(q=quantile)

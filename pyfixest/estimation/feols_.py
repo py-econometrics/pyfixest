@@ -1647,8 +1647,8 @@ class Feols:
             X = csc_matrix(X) if output == "sparse" else X
 
         else:
-            Y = self._Y.flatten()
-            X = self._X
+            Y = self._Y.flatten() / np.sqrt(self._weights.flatten())
+            X = self._X / np.sqrt(self._weights)
             xnames = self._coefnames
 
         X = csc_matrix(X) if output == "sparse" else X
@@ -1680,6 +1680,9 @@ class Feols:
         "When do covariates matter?" by Gelbach (2016, JoLe). You can find
         an ungated version of the paper on SSRN under the following link:
         https://papers.ssrn.com/sol3/papers.cfm?abstract_id=1425737 .
+
+        When the initial regression is weighted, weights are interpreted as frequency
+        weights. Inference is not yet supported for weighted models.
 
         Parameters
         ----------
@@ -1780,8 +1783,10 @@ class Feols:
         _decompose_arg_check(
             type=type,
             has_weights=self._has_weights,
+            weights_type=self._weights_type,
             is_iv=self._is_iv,
             method=self._method,
+            only_coef=only_coef,
         )
 
         nthreads_int = -1 if nthreads is None else nthreads
@@ -1828,6 +1833,7 @@ class Feols:
         med.fit(
             X=X,
             Y=Y,
+            weights=self._weights,
             store=True,
         )
 

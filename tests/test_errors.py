@@ -767,6 +767,28 @@ def test_gelbach_errors():
             decomp_var="x1", combine_covariates={"g1": ["x21"]}, agg_first=False
         )
 
+    # error for WLS and aweights
+    with pytest.raises(
+        NotImplementedError,
+        match=r"Decomposition is currently only supported for models with frequency weights.",
+    ):
+        fit = pf.feols(
+            "y ~ x1 + x21", data=data, weights="weights", weights_type="aweights"
+        )
+        fit.decompose(decomp_var="x1", combine_covariates={"g1": ["x21"]})
+
+    # error with fweights and only_coef=False
+    with pytest.raises(
+        NotImplementedError,
+        match=r"Decomposition is currently only supported for models with frequency weights when only_coef is False.",
+    ):
+        fit = pf.feols(
+            "y ~ x1 + x21", data=data, weights="weights", weights_type="fweights"
+        )
+        fit.decompose(
+            decomp_var="x1", combine_covariates={"g1": ["x21"]}, only_coef=False
+        )
+
 
 def test_glm_errors():
     "Test that dependent variable must be binary for probit and logit models."
