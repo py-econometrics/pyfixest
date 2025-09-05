@@ -91,11 +91,10 @@ BACKEND_F3 = [
 @pytest.mark.parametrize(
     "vcov_kwargs",
     [
-        # {},   # default lag, assume sorting
-        # {"lag":7},
-        # {"time_id": "time"},
         {"lag": 2, "time_id": "time"},
-        {"lag": 5, "time_id": "time"},
+        {"lag": 2, "time_id": "time"},
+        {"lag": 8, "time_id": "time"},
+        {"lag": 8, "time_id": "time"},
     ],
 )
 @pytest.mark.parametrize("weights", [None, "weights"])
@@ -139,31 +138,16 @@ def test_single_fit_feols_hac(
         weights=weights,
         ssc=ssc_,
     )
-    if weights is not None:
-        r_fixest = fixest.feols(
-            ro.Formula(r_fml),
-            vcov=fixest.vcov_NW(
-                **{
-                    **({} if lag is None else {"lag": lag}),
-                    **({} if time_id is None else {"time": time_id}),
-                }
-            ),
-            data=data_r,
-            ssc=fixest.ssc(adj, "nested", cluster_adj, "min", "min", False),
-            weights=ro.Formula("~" + weights),
-        )
-    else:
-        r_fixest = fixest.feols(
-            ro.Formula(r_fml),
-            vcov=fixest.vcov_NW(
-                **{
-                    **({} if lag is None else {"lag": lag}),
-                    **({} if time_id is None else {"time": time_id}),
-                }
-            ),
-            data=data_r,
-            ssc=fixest.ssc(adj, "nested", cluster_adj, "min", "min", False),
-        )
+
+    r_fixest = fixest.feols(
+        ro.Formula(r_fml),
+        vcov=fixest.vcov_NW(
+            **({"time": time_id} | ({"lag": lag} if lag is not None else {}))
+        ),
+        data=data_r,
+        ssc=fixest.ssc(adj, "nested", cluster_adj, "min", "min", False),
+        **({"weights": ro.Formula(f"~{weights}")} if weights is not None else {}),
+    )
 
     # r_fixest to global r env, needed for
     # operations as in dof.K

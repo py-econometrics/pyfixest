@@ -624,7 +624,8 @@ class Feols:
         # assign estimated fixed effects, and fixed effects nested within cluster.
 
         # deparse vcov input
-        _check_vcov_input(vcov, _data)
+        _check_vcov_input(vcov=vcov, vcov_kwargs=vcov_kwargs, data=_data)
+
         (
             self._vcov_type,
             self._vcov_type_detail,
@@ -641,6 +642,9 @@ class Feols:
         )
         self._panel_id = (
             vcov_kwargs.get("panel_id", None) if vcov_kwargs is not None else None
+        )
+        self._is_sorted = (
+            vcov_kwargs.get("is_sorted", None) if vcov_kwargs is not None else None
         )
 
         ssc_kwargs = {
@@ -2845,7 +2849,11 @@ def _drop_multicollinear_variables(
     return X, list(names_array), collin_vars, collin_index
 
 
-def _check_vcov_input(vcov: Union[str, dict[str, str]], data: pd.DataFrame):
+def _check_vcov_input(
+    vcov: Union[str, dict[str, str]],
+    vcov_kwargs: Optional[dict[str, Any]],
+    data: pd.DataFrame,
+):
     """
     Check the input for the vcov argument in the Feols class.
 
@@ -2853,6 +2861,8 @@ def _check_vcov_input(vcov: Union[str, dict[str, str]], data: pd.DataFrame):
     ----------
     vcov : Union[str, dict[str, str]]
         The vcov argument passed to the Feols class.
+    vcov_kwargs : Optional[dict[str, Any]]
+        The vcov_kwargs argument passed to the Feols class.
     data : pd.DataFrame
         The data passed to the Feols class.
 
@@ -2890,6 +2900,14 @@ def _check_vcov_input(vcov: Union[str, dict[str, str]], data: pd.DataFrame):
         ], (
             "vcov string must be iid, hetero, HC1, HC2, HC3, NW, or DK, or for quantile regression, 'nid'."
         )
+
+        # check that time_id is provided if vcov is NW or DK
+        if (
+            vcov in {"NW", "DK"}
+            and vcov_kwargs is not None
+            and "time_id" not in vcov_kwargs
+        ):
+            raise ValueError("Missing required 'time_id' for NW/DK vcov")
 
 
 def _deparse_vcov_input(vcov: Union[str, dict[str, str]], has_fixef: bool, is_iv: bool):

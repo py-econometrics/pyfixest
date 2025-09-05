@@ -111,20 +111,16 @@ def _nw_meat(scores: np.ndarray, time_arr: np.ndarray, lag: Optional[int] = None
     lag: int, optional
         The number of lag for the HAC estimator. Defaults to floor (# of time periods)^(1/4).
     """
-    # Determine whether data is time ordered or not - if not provided, data is assumed to be time ordered
-    if time_arr is None:
-        ordered_scores = scores
-    else:
-        order = np.argsort(time_arr)
-        ordered_scores = scores[order]
+    order = np.argsort(time_arr)
+    ordered_scores = scores[order]
 
     time_periods, k = ordered_scores.shape
 
     # resolve lag
     if lag is None:
-        # these are the fixest default lag for HAC
-        # see https://lrberge.github.io/fixest/reference/vcov_hac.html
-        lag = int(np.floor(time_periods ** (1 / 4)))
+        raise ValueError(
+            "We still have not implemented the default Newey-West HAC lag. Please provide a lag value via the `vcov_kwargs`."
+        )
 
     # bartlett kernel weights
     weights = np.array([1 - j / (lag + 1) for j in range(lag + 1)])

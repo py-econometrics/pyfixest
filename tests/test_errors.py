@@ -982,3 +982,23 @@ def test_errors_hac():
             vcov="NW",
             vcov_kwargs={"time_id": "time", "panel_id": "panel", "lag": 3},
         )
+
+    # Error 3: time_id is not provided if vcov is NW or DK
+    with pytest.raises(
+        ValueError, match="time_id must be provided if vcov is NW or DK"
+    ):
+        pf.feols(
+            "Y ~ X1",
+            data=data,
+            vcov="NW",
+            vcov_kwargs={"lag": 3},
+        )
+
+    # Error 4: lag is not provided if vcov is NW or DK
+    with pytest.raises(ValueError, match="lag must be provided if vcov is NW or DK"):
+        pf.feols(
+            "Y ~ X1",
+            data=data,
+            vcov="NW",
+            vcov_kwargs={"time_id": "time"},
+        )

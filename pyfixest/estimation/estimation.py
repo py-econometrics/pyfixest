@@ -65,6 +65,8 @@ def feols(
           "hetero", "HC1", "HC2", "HC3", "NW" for Newey-West HAC standard errors,
         "DK" for Driscoll-Kraay HAC standard errors, or a dictionary for CRV1/CRV3 inference.
         Note that NW and DK require to pass additional keyword arguments via the `vcov_kwargs` argument.
+        For time-series HAC, you need to pass the 'time_id' column. For panel-HAC, you need to add
+        pass both 'time_id' and 'panel_id'. See `vcov_kwargs` for details.
 
     vcov_kwargs : Optional[dict[str, any]]
          Additional keyword arguments to pass to the vcov function. These keywoards include
@@ -554,15 +556,19 @@ def fepois(
     data : DataFrameType
         A pandas or polars dataframe containing the variables in the formula.
 
+    vcov : Union[VcovTypeOptions, dict[str, str]]
+        Type of variance-covariance matrix for inference. Options include "iid",
+          "hetero", "HC1", "HC2", "HC3", "NW" for Newey-West HAC standard errors,
+        "DK" for Driscoll-Kraay HAC standard errors, or a dictionary for CRV1/CRV3 inference.
+        Note that NW and DK require to pass additional keyword arguments via the `vcov_kwargs` argument.
+        For time-series HAC, you need to pass the 'time_id' column. For panel-HAC, you need to add
+        pass both 'time_id' and 'panel_id'. See `vcov_kwargs` for details.
+
     vcov_kwargs : Optional[dict[str, any]]
          Additional keyword arguments to pass to the vcov function. These keywoards include
         "lag" for the number of lag to use in the Newey-West (NW) and Driscoll-Kraay (DK) HAC standard errors.
         "time_id" for the time ID used for NW and DK standard errors, and "panel_id" for the panel
          identifier used for NW and DK standard errors.
-
-    vcov_kwargs : Optional[dict[str, any]]
-        Additional keyword arguments for the variance-covariance matrix.
-        For example, "lag" for the Newey-West estimator.
 
     ssc : str
         A ssc object specifying the small sample correction for inference.
@@ -793,7 +799,11 @@ def feglm(
 
     vcov : Union[VcovTypeOptions, dict[str, str]]
         Type of variance-covariance matrix for inference. Options include "iid",
-        "hetero", "HC1", "HC2", "HC3", or a dictionary for CRV1/CRV3 inference.
+          "hetero", "HC1", "HC2", "HC3", "NW" for Newey-West HAC standard errors,
+        "DK" for Driscoll-Kraay HAC standard errors, or a dictionary for CRV1/CRV3 inference.
+        Note that NW and DK require to pass additional keyword arguments via the `vcov_kwargs` argument.
+        For time-series HAC, you need to pass the 'time_id' column. For panel-HAC, you need to add
+        pass both 'time_id' and 'panel_id'. See `vcov_kwargs` for details.
 
     vcov_kwargs : Optional[dict[str, any]]
          Additional keyword arguments to pass to the vcov function. These keywoards include

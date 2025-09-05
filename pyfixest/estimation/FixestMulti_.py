@@ -506,7 +506,7 @@ class FixestMulti:
             fxst = self.all_fitted_models[model]
             _data = fxst._data
 
-            _check_vcov_input(vcov, _data)
+            _check_vcov_input(vcov=vcov, vcov_kwargs=vcov_kwargs, data=_data)
             (
                 fxst._vcov_type,
                 fxst._vcov_type_detail,
