@@ -393,3 +393,32 @@ def capture_context(context: Union[int, Mapping[str, Any]]) -> Mapping[str, Any]
         procedure like: `.get_model_matrix(..., context=<this object>)`.
     """
     return _capture_context(context + 2) if isinstance(context, int) else context
+
+def _check_balanced(panel_arr: np.ndarray, time_arr: np.ndarray) -> bool:
+    """
+    Check if the panel data is balanced.
+
+    Parameters
+    ----------
+    panel_arr: np.ndarray
+        The panel variable for clustering.
+    time_arr: np.ndarray
+        The time variable for clustering.
+
+    Returns
+    -------
+    bool
+        True if the panel data is balanced, False otherwise.
+    """
+    unique_panels = np.unique(panel_arr)
+    unique_times = np.unique(time_arr)
+    expected_time_count = len(unique_times)
+
+    for panel_id in unique_panels:
+        mask = panel_arr == panel_id
+        panel_times = np.unique(time_arr[mask])
+
+        if len(panel_times) != expected_time_count:
+            return False
+    
+    return True
