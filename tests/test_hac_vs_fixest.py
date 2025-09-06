@@ -9,8 +9,6 @@ from rpy2.robjects.packages import importr
 
 import pyfixest as pf
 from pyfixest.utils.utils import ssc
-from pyfixest.utils.dgps import get_sharkfin
-
 
 pandas2ri.activate()
 
@@ -34,35 +32,47 @@ ols_fmls = [
 
 
 @pytest.fixture(scope="module")
-def data_panel(N=100,T=15,seed=42):
+def data_panel(N=100, T=15, seed=42):
     np.random.seed(seed)
-    units=np.repeat(np.arange(N),T)
-    time=np.tile(np.arange(T),N)
-    treated_units=np.random.choice(N,size=N//2,replace=False)
-    treat=np.zeros(N*T,dtype=int)
-    midpoint=T//2
-    treat[(np.isin(units,treated_units))&(time>=midpoint)]=1
-    ever_treated=np.isin(units,treated_units).astype(int)
-    alpha=np.random.normal(0,1,N)
-    gamma=np.random.normal(0,0.5,T)
-    epsilon=np.random.normal(0,0.5,N*T)
-    Y=alpha[units]+gamma[time]+treat+epsilon
-    weights=np.random.uniform(0,1,N*T)
-    return pd.DataFrame({"unit":units,"year":time,"treat":treat, "ever_treated":ever_treated,"Y":Y,"weights":weights})
+    units = np.repeat(np.arange(N), T)
+    time = np.tile(np.arange(T), N)
+    treated_units = np.random.choice(N, size=N // 2, replace=False)
+    treat = np.zeros(N * T, dtype=int)
+    midpoint = T // 2
+    treat[(np.isin(units, treated_units)) & (time >= midpoint)] = 1
+    ever_treated = np.isin(units, treated_units).astype(int)
+    alpha = np.random.normal(0, 1, N)
+    gamma = np.random.normal(0, 0.5, T)
+    epsilon = np.random.normal(0, 0.5, N * T)
+    Y = alpha[units] + gamma[time] + treat + epsilon
+    weights = np.random.uniform(0, 1, N * T)
+    return pd.DataFrame(
+        {
+            "unit": units,
+            "year": time,
+            "treat": treat,
+            "ever_treated": ever_treated,
+            "Y": Y,
+            "weights": weights,
+        }
+    )
+
 
 @pytest.fixture(scope="module")
 def data_time():
-
     N = 200
     rng = np.random.default_rng(9291)
-    data = pd.DataFrame({
-        "unit": rng.normal(0, 1, N),
-        "year": np.arange(N),
-        "treat": rng.choice([0, 1], N),
-        "weights": rng.uniform(0, 1, N),
-    })
-    data["Y"] = data["unit"] - data["year"] + 0.5 *data["treat"] + rng.normal(0, 1, N)
+    data = pd.DataFrame(
+        {
+            "unit": rng.normal(0, 1, N),
+            "year": np.arange(N),
+            "treat": rng.choice([0, 1], N),
+            "weights": rng.uniform(0, 1, N),
+        }
+    )
+    data["Y"] = data["unit"] - data["year"] + 0.5 * data["treat"] + rng.normal(0, 1, N)
     return data
+
 
 def check_absolute_diff(x1, x2, tol, msg=None):
     "Check for absolute differences."
@@ -92,6 +102,7 @@ def check_relative_diff(x1, x2, tol, msg=None):
     msg = "" if msg is None else msg
     assert np.all(np.abs(x1 - x2) / np.abs(x1) < tol), msg
 
+
 ALL_F3 = ["str", "object", "int", "categorical", "float"]
 SINGLE_F3 = ALL_F3[0]
 BACKEND_F3 = [
@@ -115,6 +126,7 @@ BACKEND_F3 = [
         {"time_id": "year", "panel_id": "unit"},
     ],
 )
+@pytest.mark.parametrize("balanced", ["yes", "no-consecutive", "no-non-consecutive"])
 @pytest.mark.parametrize("weights", [None, "weights"])
 @pytest.mark.parametrize("fml", ols_fmls)
 def test_single_fit_feols_hac_panel(
@@ -125,7 +137,12 @@ def test_single_fit_feols_hac_panel(
     vcov_kwargs,
     weights,
     fml,
+    balanced,
 ):
+    if balanced == "non-non-consecutive":
+        pytest.skip(
+            "Non-non-consecutive balanced panels are not supported yet and therefore not tested."
+        )
 
     adj = False
     cluster_adj = False
@@ -136,20 +153,24 @@ def test_single_fit_feols_hac_panel(
     panel_id = vcov_kwargs.get("panel_id", None)
     data = data_panel if panel_id is not None else data_time
 
+    if balanced in ["no-consecutive", "no-non-consecutive"] and panel_id is None:
+        # drop some units to make data non-balanced
+        rng = np.random.default_rng(42)
+        idx_to_drop = rng.choice([True, False], size=len(data), replace=True)
+        data = data[idx_to_drop]
+
     if "|" in fml and panel_id is None:
         pytest.skip("Don't run fixed effect test when data is not a panel.")
 
     r_panel_kwars = (
-        ({"time": time_id} if time_id is not None else {}) |
-        ({"lag": lag} if lag is not None else {}) |
-        ({"unit": panel_id} if panel_id is not None else {})
+        ({"time": time_id} if time_id is not None else {})
+        | ({"lag": lag} if lag is not None else {})
+        | ({"unit": panel_id} if panel_id is not None else {})
     )
 
     r_fixest = fixest.feols(
         ro.Formula(fml),
-        vcov=fixest.vcov_NW(
-            **r_panel_kwars
-        ),
+        vcov=fixest.vcov_NW(**r_panel_kwars),
         data=data,
         ssc=fixest.ssc(adj, "nested", cluster_adj, "min", "min", False),
         **({"weights": ro.Formula(f"~{weights}")} if weights is not None else {}),
@@ -164,7 +185,6 @@ def test_single_fit_feols_hac_panel(
         ssc=ssc_,
     )
 
-
     # r_fixest to global r env, needed for
     # operations as in dof.K
     ro.globalenv["r_fixest"] = r_fixest
@@ -174,11 +194,15 @@ def test_single_fit_feols_hac_panel(
 
     check_absolute_diff(py_vcov, r_vcov, 1e-08, "py_vcov != r_vcov")
 
+
 @pytest.mark.against_r_core
 def test_vcov_updating(data_panel):
     fit_hetero = pf.feols("Y ~ treat", data=data_panel, vcov="hetero")
     fit_nw = pf.feols(
-        "Y ~ treat", data=data_panel, vcov="NW", vcov_kwargs={"time_id": "year", "lag": 7}
+        "Y ~ treat",
+        data=data_panel,
+        vcov="NW",
+        vcov_kwargs={"time_id": "year", "lag": 7},
     )
 
     fit_hetero.vcov(vcov="NW", vcov_kwargs={"lag": 7, "time_id": "year"})
