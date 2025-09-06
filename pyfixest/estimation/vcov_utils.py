@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Optional, Tuple, Union
 
 import numba as nb
 import numpy as np
@@ -95,6 +95,146 @@ def _get_vcov_type(
         vcov_type = vcov  # type: ignore
 
     return vcov_type  # type: ignore
+
+
+@nb.njit(parallel=False)
+def _nw_meat(scores: np.ndarray, time_arr: np.ndarray, lag: Optional[int] = None):
+    """
+    Compute Newey-West HAC meat matrix.
+
+    Parameters
+    ----------
+    scores: np.ndarray
+        The scores matrix.
+    time_arr: np.ndarray, optional
+        The time variable for clustering.
+    lag: int, optional
+        The number of lag for the HAC estimator. Defaults to floor (# of time periods)^(1/4).
+    """
+    order = np.argsort(time_arr)
+    ordered_scores = scores[order]
+
+    time_periods, k = ordered_scores.shape
+
+    # resolve lag
+    if lag is None:
+        raise ValueError(
+            "We still have not implemented the default Newey-West HAC lag. Please provide a lag value via the `vcov_kwargs`."
+        )
+
+    # bartlett kernel weights
+    weights = np.array([1 - j / (lag + 1) for j in range(lag + 1)])
+    weights[0] = 0.5  # Halve first weight
+
+    meat = np.zeros((k, k))
+
+    # this implementation follows the same that fixest does in R
+    for lag_value in range(lag + 1):
+        weight = weights[lag_value]
+        gamma_lag = np.zeros((k, k))
+
+        for t in range(lag_value, time_periods):
+            gamma_lag += np.outer(
+                ordered_scores[t, :], ordered_scores[t - lag_value, :]
+            )
+
+        meat += weight * (gamma_lag + gamma_lag.T)
+
+    return meat
+
+
+def _get_panel_idx(
+    panel_id: np.ndarray, time_id: np.ndarray
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Get indices for each unit. I.e. the first value ("starts") and how many
+    observations ("counts") each unit has.
+
+    Parameters
+    ----------
+    panel_id : ndarray, shape (N*T,)
+        Panel ID variable.
+    time_id : ndarray, shape (N*T,)
+        Time ID variable.
+
+    Returns
+    -------
+      order  : indices that sort by (panel, time)
+      units  : unique panel ids in sorted order
+      starts : start index of each unit slice in the sorted arrays
+      counts : length of each unit slice
+    """
+    order = np.lexsort((time_id, panel_id))  # sort by panel, then time
+    p_sorted = panel_id[order]
+    units, starts, counts = np.unique(p_sorted, return_index=True, return_counts=True)
+    return order, units, starts, counts
+
+
+def _nw_meat_panel(
+    X: np.ndarray,
+    u_hat: np.ndarray,
+    time_id: np.ndarray,
+    panel_id: np.ndarray,
+    lag: Optional[int] = None,
+):
+    """
+    Computes the panel Newey-West (HAC) covariance estimator.
+
+    Parameters
+    ----------
+    X : ndarray, shape (N*T, k)
+        Stacked regressor matrix, where each block of T rows corresponds to one panel unit.
+    u_hat : ndarray, shape (N*T,)
+        Residuals from the panel regression.
+    time_id : ndarray, shape (N*T,)
+        Time ID variable.
+    panel_id : ndarray, shape (N*T,)
+        Panel ID variable.
+    lag : int
+        Maximum lag for autocovariance. If not provided, defaults to floor(N**0.25), where
+        N is the number of time periods.
+
+    Returns
+    -------
+    vcov_nw : ndarray, shape (k, k)
+        HAC Newey-West covariance matrix.
+    """
+    if lag is None:
+        lag = int(np.floor(len(np.unique(time_id)) ** 0.25))
+
+    # order the data by (panel, time)
+    order, units, starts, counts = _get_panel_idx(panel_id, time_id)
+
+    X_sorted = X[order]
+    u_sorted = u_hat[order]
+
+    k = X.shape[1]
+
+    meat_nw_panel = np.zeros((k, k))
+
+    for start, count in zip(starts, counts):
+        end = start + count
+        gamma0 = np.zeros((k, k))
+        for t in range(start, end):
+            xi = X_sorted[t, :]
+            gamma0 += np.outer(xi, xi) * u_sorted[t] ** 2
+
+        gamma_l_sum = np.zeros((k, k))
+        Lmax = min(lag, count - 1)
+        for l in range(1, Lmax + 1):
+            w = 1 - l / (lag + 1)
+            gamma_l = np.zeros((k, k))
+            for t in range(l, count):
+                curr_t = start + t
+                prev_t = start + t - l
+                xi1 = X_sorted[curr_t, :] * u_sorted[curr_t]
+                xi2 = X_sorted[prev_t, :] * u_sorted[prev_t]
+                gamma_l += np.outer(xi1, xi2)
+            gamma_l_sum += w * (gamma_l + gamma_l.T)
+
+        meat_nw_panel += gamma0 + gamma_l_sum
+
+    return meat_nw_panel
 
 
 def _prepare_twoway_clustering(clustervar: list, cluster_df: pd.DataFrame):

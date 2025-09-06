@@ -44,6 +44,8 @@ from pyfixest.estimation.vcov_utils import (
     _compute_bread,
     _count_G_for_ssc_correction,
     _get_cluster_df,
+    _nw_meat,
+    _nw_meat_panel,
     _prepare_twoway_clustering,
 )
 from pyfixest.utils.dev_utils import (
@@ -569,7 +571,10 @@ class Feols:
         self._get_predictors()
 
     def vcov(
-        self, vcov: Union[str, dict[str, str]], data: Optional[DataFrameType] = None
+        self,
+        vcov: Union[str, dict[str, str]],
+        vcov_kwargs: Optional[dict[str, Union[str, int]]] = None,
+        data: Optional[DataFrameType] = None,
     ) -> "Feols":
         """
         Compute covariance matrices for an estimated regression model.
@@ -579,11 +584,13 @@ class Feols:
         vcov : Union[str, dict[str, str]]
             A string or dictionary specifying the type of variance-covariance matrix
             to use for inference.
-            If a string, it can be one of "iid", "hetero", "HC1", "HC2", "HC3".
+            If a string, it can be one of "iid", "hetero", "HC1", "HC2", "HC3", "NW", "DK".
             If a dictionary, it should have the format {"CRV1": "clustervar"} for
             CRV1 inference or {"CRV3": "clustervar"}
             for CRV3 inference. Note that CRV3 inference is currently not supported
             for IV estimation.
+        vcov_kwargs : Optional[dict[str, any]]
+             Additional keyword arguments for the variance-covariance matrix.
         data: Optional[DataFrameType], optional
             The data used for estimation. If None, tries to fetch the data from the
             model object. Defaults to None.
@@ -618,7 +625,8 @@ class Feols:
         # assign estimated fixed effects, and fixed effects nested within cluster.
 
         # deparse vcov input
-        _check_vcov_input(vcov, _data)
+        _check_vcov_input(vcov=vcov, vcov_kwargs=vcov_kwargs, data=_data)
+
         (
             self._vcov_type,
             self._vcov_type_detail,
@@ -628,7 +636,17 @@ class Feols:
 
         self._bread = _compute_bread(_is_iv, _tXZ, _tZZinv, _tZX, _hessian)
 
-        # compute vcov
+        # HAC attributes
+        self._lag = vcov_kwargs.get("lag", None) if vcov_kwargs is not None else None
+        self._time_id = (
+            vcov_kwargs.get("time_id", None) if vcov_kwargs is not None else None
+        )
+        self._panel_id = (
+            vcov_kwargs.get("panel_id", None) if vcov_kwargs is not None else None
+        )
+        self._is_sorted = (
+            vcov_kwargs.get("is_sorted", None) if vcov_kwargs is not None else None
+        )
 
         ssc_kwargs = {
             "ssc_dict": self._ssc_dict,
@@ -667,6 +685,20 @@ class Feols:
             all_kwargs = {**ssc_kwargs, **ssc_kwargs_hetero}
             self._ssc, self._dof_k, self._df_t = get_ssc(**all_kwargs)
             self._vcov = self._ssc * self._vcov_hetero()
+
+        elif self._vcov_type == "HAC":
+            ssc_kwargs_hac = {
+                "k_fe_nested": 0,
+                "n_fe_fully_nested": 0,
+                "vcov_sign": 1,
+                "vcov_type": "HAC",
+                "G": self._N,
+            }
+
+            all_kwargs = {**ssc_kwargs, **ssc_kwargs_hac}
+            self._ssc, self._dof_k, self._df_t = get_ssc(**all_kwargs)
+
+            self._vcov = self._ssc * self._vcov_hac()
 
         elif self._vcov_type == "nid":
             ssc_kwargs_hetero = {
@@ -823,6 +855,55 @@ class Feols:
         Omega = transformed_scores.T @ transformed_scores
 
         _meat = _tXZ @ _tZZinv @ Omega @ _tZZinv @ _tZX if _is_iv else Omega
+        _vcov = _bread @ _meat @ _bread
+
+        return _vcov
+
+    def _vcov_hac(self):
+        _scores = self._scores
+        _bread = self._bread
+        _tXZ = self._tXZ
+        _tZZinv = self._tZZinv
+        _tZX = self._tZX
+        _is_iv = self._is_iv
+        _vcov_type_detail = self._vcov_type_detail
+        _time_id = self._time_id
+        _panel_id = self._panel_id
+        _lag = self._lag
+        _data = self._data
+
+        _time_arr = _data[_time_id].to_numpy()
+        _panel_arr = _data[_panel_id].to_numpy() if _panel_id is not None else None
+
+        if _vcov_type_detail == "NW":
+            # Newey-West
+            if _panel_id is None:
+                newey_west_meat = _nw_meat(
+                    scores=_scores,
+                    time_arr=_time_arr,
+                    lag=_lag
+                )
+            else:
+                newey_west_meat = _nw_meat_panel(
+                    X=self._X,
+                    u_hat=self._u_hat,
+                    time_id=_time_arr,
+                    panel_id=_panel_arr,
+                    lag =_lag
+                )
+        elif _vcov_type_detail == "DK":
+            # Driscoll-Kraay
+            raise NotImplementedError(
+                "Driscoll-Kraay HAC standard errors are not yet implemented"
+            )
+        else:
+            raise ValueError(f"Unknown HAC type: {_vcov_type_detail}")
+
+        _meat = (
+            _tXZ @ _tZZinv @ newey_west_meat @ _tZZinv @ _tZX
+            if _is_iv
+            else newey_west_meat
+        )
         _vcov = _bread @ _meat @ _bread
 
         return _vcov
@@ -2783,7 +2864,11 @@ def _drop_multicollinear_variables(
     return X, list(names_array), collin_vars, collin_index
 
 
-def _check_vcov_input(vcov: Union[str, dict[str, str]], data: pd.DataFrame):
+def _check_vcov_input(
+    vcov: Union[str, dict[str, str]],
+    vcov_kwargs: Optional[dict[str, Any]],
+    data: pd.DataFrame,
+):
     """
     Check the input for the vcov argument in the Feols class.
 
@@ -2791,6 +2876,8 @@ def _check_vcov_input(vcov: Union[str, dict[str, str]], data: pd.DataFrame):
     ----------
     vcov : Union[str, dict[str, str]]
         The vcov argument passed to the Feols class.
+    vcov_kwargs : Optional[dict[str, Any]]
+        The vcov_kwargs argument passed to the Feols class.
     data : pd.DataFrame
         The data passed to the Feols class.
 
@@ -2822,10 +2909,20 @@ def _check_vcov_input(vcov: Union[str, dict[str, str]], data: pd.DataFrame):
             "HC1",
             "HC2",
             "HC3",
+            "NW",
+            "DK",
             "nid",
         ], (
-            "vcov string must be iid, hetero, HC1, HC2, or HC3, or for quantile regression, 'nid'."
+            "vcov string must be iid, hetero, HC1, HC2, HC3, NW, or DK, or for quantile regression, 'nid'."
         )
+
+        # check that time_id is provided if vcov is NW or DK
+        if (
+            vcov in {"NW", "DK"}
+            and vcov_kwargs is not None
+            and "time_id" not in vcov_kwargs
+        ):
+            raise ValueError("Missing required 'time_id' for NW/DK vcov")
 
 
 def _deparse_vcov_input(vcov: Union[str, dict[str, str]], has_fixef: bool, is_iv: bool):
@@ -2879,6 +2976,10 @@ def _deparse_vcov_input(vcov: Union[str, dict[str, str]], has_fixef: bool, is_iv
                 raise VcovTypeNotSupportedError(
                     "HC2 and HC3 inference types are not supported for IV regressions."
                 )
+    elif vcov_type_detail in ["NW", "DK"]:
+        vcov_type = "HAC"
+        is_clustered = False
+
     elif vcov_type_detail in ["CRV1", "CRV3"]:
         vcov_type = "CRV"
         is_clustered = True
