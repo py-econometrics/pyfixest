@@ -143,6 +143,69 @@ def _nw_meat(scores: np.ndarray, time_arr: np.ndarray, lag: Optional[int] = None
     return meat
 
 
+def _nw_meat_panel(
+    X: np.ndarray, u_hat: np.ndarray, time_id: np.ndarray, panel_id: np.ndarray, lag: Optional[int] = None
+):
+    """
+    Computes the panel Newey-West (HAC) covariance estimator.
+
+    Parameters
+    ----------
+    X : ndarray, shape (N*T, k)
+        Stacked regressor matrix, where each block of T rows corresponds to one panel unit.
+    u_hat : ndarray, shape (N*T,)
+        Residuals from the panel regression.
+    time_id : ndarray, shape (N*T,)
+        Time ID variable.
+    panel_id : ndarray, shape (N*T,)
+        Panel ID variable.
+    lag : int
+        Maximum lag for autocovariance. If not provided, defaults to floor(N**0.25), where
+        N is the number of time periods.
+    Returns
+    -------
+    vcov_nw : ndarray, shape (k, k)
+        HAC Newey-West covariance matrix.
+    """
+
+    if lag is None:
+        lag = int(np.floor(len(np.unique(time_id)) ** 0.25))
+
+    order = np.lexsort((time_id, panel_id))
+    X_sorted = X[order]
+    u_sorted = u_hat[order]
+
+    N = len(np.unique(panel_id))
+    T = len(np.unique(time_id))
+    k = X.shape[1]
+
+    meat_nw_panel = np.zeros((k, k))
+
+    for i in range(N):
+        gamma0 = np.zeros((k, k))
+        for t in range(T):
+            idx = i * T + t
+            xi = X_sorted[idx, :]
+            gamma0 += np.outer(xi, xi) * u_sorted[idx] ** 2
+
+        gamma_l_sum = np.zeros((k, k))
+        for l in range(1, lag + 1):
+            w = 1 - l / (lag + 1)
+            gamma_l = np.zeros((k, k))
+            for t in range(l, T):
+                idx1 = i * T + t
+                idx2 = i * T + t - l
+                xi1 = X_sorted[idx1, :] * u_sorted[idx1]
+                xi2 = X_sorted[idx2, :] * u_sorted[idx2]
+                gamma_l += np.outer(xi1, xi2)
+            gamma_l_sum += w * (gamma_l + gamma_l.T)
+
+        meat_nw_panel += gamma0 + gamma_l_sum
+
+    return meat_nw_panel
+
+
+
 def _prepare_twoway_clustering(clustervar: list, cluster_df: pd.DataFrame):
     cluster_one = clustervar[0]
     cluster_two = clustervar[1]

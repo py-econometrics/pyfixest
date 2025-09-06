@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import pytest
 import rpy2.robjects as ro
 from rpy2.robjects import pandas2ri
@@ -8,7 +9,8 @@ from rpy2.robjects.packages import importr
 
 import pyfixest as pf
 from pyfixest.utils.utils import ssc
-from tests.test_vs_fixest import _c_to_as_factor, get_data_r
+from pyfixest.utils.dgps import get_sharkfin
+
 
 pandas2ri.activate()
 
@@ -24,25 +26,43 @@ rtol = 1e-08
 atol = 1e-08
 
 ols_fmls = [
-    ("Y~X1"),
-    ("Y~X1+X2"),
-    ("Y~X1|f2"),
-    ("Y~X1|f2+f3"),
+    ("Y~treat"),
+    ("Y~treat + unit"),
+    ("Y~treat | unit"),
+    ("Y~treat | unit + year"),
 ]
 
 
 @pytest.fixture(scope="module")
-def data_feols(N=1000, seed=76540251, beta_type="2", error_type="2"):
-    data = pf.get_data(
-        N=N, seed=seed, beta_type=beta_type, error_type=error_type, model="Feols"
-    )
+def data_panel(N=100,T=15,seed=42):
+    np.random.seed(seed)
+    units=np.repeat(np.arange(N),T)
+    time=np.tile(np.arange(T),N)
+    treated_units=np.random.choice(N,size=N//2,replace=False)
+    treat=np.zeros(N*T,dtype=int)
+    midpoint=T//2
+    treat[(np.isin(units,treated_units))&(time>=midpoint)]=1
+    ever_treated=np.isin(units,treated_units).astype(int)
+    alpha=np.random.normal(0,1,N)
+    gamma=np.random.normal(0,0.5,T)
+    epsilon=np.random.normal(0,0.5,N*T)
+    Y=alpha[units]+gamma[time]+treat+epsilon
+    weights=np.random.uniform(0,1,N*T)
+    return pd.DataFrame({"unit":units,"year":time,"treat":treat, "ever_treated":ever_treated,"Y":Y,"weights":weights})
 
-    data["time"] = np.arange(data.shape[0])
+@pytest.fixture(scope="module")
+def data_time():
+
+    N = 200
+    rng = np.random.default_rng(9291)
+    data = pd.DataFrame({
+        "unit": rng.normal(0, 1, N),
+        "year": np.arange(N),
+        "treat": rng.choice([0, 1], N),
+        "weights": rng.uniform(0, 1, N),
+    })
+    data["Y"] = data["unit"] - data["year"] + 0.5 *data["treat"] + rng.normal(0, 1, N)
     return data
-
-
-rng = np.random.default_rng(875)
-
 
 def check_absolute_diff(x1, x2, tol, msg=None):
     "Check for absolute differences."
@@ -72,11 +92,6 @@ def check_relative_diff(x1, x2, tol, msg=None):
     msg = "" if msg is None else msg
     assert np.all(np.abs(x1 - x2) / np.abs(x1) < tol), msg
 
-
-test_counter_feols = 0
-test_counter_fepois = 0
-test_counter_feiv = 0
-
 ALL_F3 = ["str", "object", "int", "categorical", "float"]
 SINGLE_F3 = ALL_F3[0]
 BACKEND_F3 = [
@@ -91,44 +106,54 @@ BACKEND_F3 = [
 @pytest.mark.parametrize(
     "vcov_kwargs",
     [
-        {"lag": 2, "time_id": "time"},
-        {"lag": 2, "time_id": "time"},
-        {"lag": 8, "time_id": "time"},
-        {"lag": 8, "time_id": "time"},
+        {"lag": 2, "time_id": "year"},
+        {"lag": 8, "time_id": "year"},
+        # now add panel id
+        {"lag": 2, "time_id": "year", "panel_id": "unit"},
+        {"lag": 8, "time_id": "year", "panel_id": "unit"},
+        # lag not required when panel_id is provided
+        {"time_id": "year", "panel_id": "unit"},
     ],
 )
 @pytest.mark.parametrize("weights", [None, "weights"])
 @pytest.mark.parametrize("fml", ols_fmls)
-def test_single_fit_feols_hac(
-    data_feols,
+def test_single_fit_feols_hac_panel(
+    data_panel,
+    data_time,
     dropna,
     inference,
     vcov_kwargs,
     weights,
     fml,
 ):
-    global test_counter_feols
-    test_counter_feols += 1
 
-    adj = True
-    cluster_adj = True
+    adj = False
+    cluster_adj = False
     ssc_ = ssc(adj=adj, cluster_adj=cluster_adj)
 
     lag = vcov_kwargs.get("lag", None)
     time_id = vcov_kwargs.get("time_id", None)
-    # panel_id = vcov_kwargs.get("panel_id", None)
+    panel_id = vcov_kwargs.get("panel_id", None)
+    data = data_panel if panel_id is not None else data_time
 
-    data = data_feols.copy()
+    if "|" in fml and panel_id is None:
+        pytest.skip("Don't run fixed effect test when data is not a panel.")
 
-    if dropna:
-        data = data.dropna()
+    r_panel_kwars = (
+        ({"time": time_id} if time_id is not None else {}) |
+        ({"lag": lag} if lag is not None else {}) |
+        ({"unit": panel_id} if panel_id is not None else {})
+    )
 
-    # long story, but categories need to be strings to be converted to R factors,
-    # this then produces 'nan' values in the pd.DataFrame ...
-    data[data == "nan"] = np.nan
-
-    data_r = get_data_r(fml, data)
-    r_fml = _c_to_as_factor(fml)
+    r_fixest = fixest.feols(
+        ro.Formula(fml),
+        vcov=fixest.vcov_NW(
+            **r_panel_kwars
+        ),
+        data=data,
+        ssc=fixest.ssc(adj, "nested", cluster_adj, "min", "min", False),
+        **({"weights": ro.Formula(f"~{weights}")} if weights is not None else {}),
+    )
 
     mod = pf.feols(
         fml=fml,
@@ -139,15 +164,6 @@ def test_single_fit_feols_hac(
         ssc=ssc_,
     )
 
-    r_fixest = fixest.feols(
-        ro.Formula(r_fml),
-        vcov=fixest.vcov_NW(
-            **({"time": time_id} | ({"lag": lag} if lag is not None else {}))
-        ),
-        data=data_r,
-        ssc=fixest.ssc(adj, "nested", cluster_adj, "min", "min", False),
-        **({"weights": ro.Formula(f"~{weights}")} if weights is not None else {}),
-    )
 
     # r_fixest to global r env, needed for
     # operations as in dof.K
@@ -158,14 +174,14 @@ def test_single_fit_feols_hac(
 
     check_absolute_diff(py_vcov, r_vcov, 1e-08, "py_vcov != r_vcov")
 
-
-def test_vcov_updating(data_feols):
-    fit_hetero = pf.feols("Y ~ X1", data=data_feols, vcov="hetero")
+@pytest.mark.against_r_core
+def test_vcov_updating(data_panel):
+    fit_hetero = pf.feols("Y ~ treat", data=data_panel, vcov="hetero")
     fit_nw = pf.feols(
-        "Y ~ X1", data=data_feols, vcov="NW", vcov_kwargs={"time_id": "time", "lag": 7}
+        "Y ~ treat", data=data_panel, vcov="NW", vcov_kwargs={"time_id": "year", "lag": 7}
     )
 
-    fit_hetero.vcov(vcov="NW", vcov_kwargs={"lag": 7, "time_id": "time"})
+    fit_hetero.vcov(vcov="NW", vcov_kwargs={"lag": 7, "time_id": "year"})
 
     assert fit_hetero._vcov_type == "HAC"
     assert fit_hetero._vcov_type_detail == "NW"

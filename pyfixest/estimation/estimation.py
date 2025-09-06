@@ -1429,7 +1429,7 @@ def _estimation_input_checks(
                 )
             if vcov_kwargs["time_id"] not in data.columns:
                 raise ValueError(
-                    "The function argument `vcov_kwargs` must be a dictionary with string values for 'time_id' if explicitly provided."
+                    f"The variable '{vcov_kwargs['time_id']}' is not in the data."
                 )
 
         if "panel_id" in vcov_kwargs:
@@ -1439,7 +1439,7 @@ def _estimation_input_checks(
                 )
             if vcov_kwargs["panel_id"] not in data.columns:
                 raise ValueError(
-                    "The function argument `vcov_kwargs` must be a dictionary with string values for 'panel_id' if explicitly provided."
+                    f"The variable '{vcov_kwargs['panel_id']}' is not in the data."
                 )
 
 
