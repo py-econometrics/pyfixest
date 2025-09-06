@@ -971,21 +971,9 @@ def test_errors_hac():
             "Y ~ X1", data=data, vcov="DK", vcov_kwargs={"time_id": "time", "lag": 3}
         )
 
-    # Error 2: Panel-clustered Newey-West HAC not implemented
-    with pytest.raises(
-        NotImplementedError,
-        match="Panel-clustered Newey-West HAC standard errors are not yet implemented",
-    ):
-        pf.feols(
-            "Y ~ X1",
-            data=data,
-            vcov="NW",
-            vcov_kwargs={"time_id": "time", "panel_id": "panel", "lag": 3},
-        )
-
     # Error 3: time_id is not provided if vcov is NW or DK
     with pytest.raises(
-        ValueError, match="time_id must be provided if vcov is NW or DK"
+        ValueError, match="Missing required 'time_id' for NW/DK vcov"
     ):
         pf.feols(
             "Y ~ X1",
@@ -995,10 +983,28 @@ def test_errors_hac():
         )
 
     # Error 4: lag is not provided if vcov is NW or DK
-    with pytest.raises(ValueError, match="lag must be provided if vcov is NW or DK"):
+    with pytest.raises(ValueError, match="We still have not implemented the default Newey-West HAC lag. Please provide a lag value via the `vcov_kwargs`."):
         pf.feols(
             "Y ~ X1",
             data=data,
             vcov="NW",
             vcov_kwargs={"time_id": "time"},
+        )
+
+    # Error 5: time_id column does not exist in data
+    with pytest.raises(ValueError, match="The variable 'nonexistent_column' is not in the data."):
+        pf.feols(
+            "Y ~ X1",
+            data=data,
+            vcov="NW",
+            vcov_kwargs={"time_id": "nonexistent_column", "panel_id": "panel", "lag": 5},
+        )
+
+    # Error 6: panel_id column does not exist in data
+    with pytest.raises(ValueError, match="The variable 'nonexistent_column' is not in the data."):
+        pf.feols(
+            "Y ~ X1",
+            data=data,
+            vcov="NW",
+            vcov_kwargs={"panel_id": "nonexistent_column", "time_id": "time", "lag": 5},
         )

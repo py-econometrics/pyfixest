@@ -45,6 +45,7 @@ from pyfixest.estimation.vcov_utils import (
     _count_G_for_ssc_correction,
     _get_cluster_df,
     _nw_meat,
+    _nw_meat_panel,
     _prepare_twoway_clustering,
 )
 from pyfixest.utils.dev_utils import (
@@ -877,10 +878,18 @@ class Feols:
         if _vcov_type_detail == "NW":
             # Newey-West
             if _panel_id is None:
-                newey_west_meat = _nw_meat(scores=_scores, time_arr=_time_arr, lag=_lag)
+                newey_west_meat = _nw_meat(
+                    scores=_scores,
+                    time_arr=_time_arr,
+                    lag=_lag
+                )
             else:
-                raise NotImplementedError(
-                    "Panel-clustered Newey-West HAC standard errors are not yet implemented"
+                newey_west_meat = _nw_meat_panel(
+                    X=self._X,
+                    u_hat=self._u_hat,
+                    time_id=_time_arr,
+                    panel_id=_panel_arr,
+                    lag =_lag
                 )
         elif _vcov_type_detail == "DK":
             # Driscoll-Kraay
