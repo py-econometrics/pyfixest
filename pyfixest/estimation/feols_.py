@@ -43,12 +43,11 @@ from pyfixest.estimation.vcov_utils import (
     _check_cluster_df,
     _compute_bread,
     _count_G_for_ssc_correction,
+    _dk_meat_panel,
     _get_cluster_df,
     _get_panel_idx,
-    _get_scores_time,
     _nw_meat_panel,
     _nw_meat_time,
-    _dk_meat_panel,
     _prepare_twoway_clustering,
 )
 from pyfixest.utils.dev_utils import (
@@ -881,9 +880,7 @@ class Feols:
         if _vcov_type_detail == "NW":
             # Newey-West
             if _panel_id is None:
-                hac_meat = _nw_meat_time(
-                    scores=_scores, time_arr=_time_arr, lag=_lag
-                )
+                hac_meat = _nw_meat_time(scores=_scores, time_arr=_time_arr, lag=_lag)
             else:
                 # order the data by (panel, time)
                 order, _, starts, counts = _get_panel_idx(
@@ -903,16 +900,19 @@ class Feols:
         elif _vcov_type_detail == "DK":
             # Driscoll-Kraay
 
-            scores_time = _get_scores_time(scores = _scores, time_arr = _time_arr)
+            order = np.argsort(_time_arr)
+            time_arr_sorted = _time_arr[order]
+            scores_sorted = _scores[order]
+
+            idx = np.unique(time_arr_sorted, return_index=True)[1]
+
+            # idx = np.unique(t, return_index=True)[1]
+
             hac_meat = _dk_meat_panel(
-                scores_time=scores_time, time_arr=_time_arr, lag=_lag
+                scores=scores_sorted, time_arr=time_arr_sorted, idx=idx, lag=_lag
             )
 
-        _meat = (
-            _tXZ @ _tZZinv @ hac_meat @ _tZZinv @ _tZX
-            if _is_iv
-            else hac_meat
-        )
+        _meat = _tXZ @ _tZZinv @ hac_meat @ _tZZinv @ _tZX if _is_iv else hac_meat
         _vcov = _bread @ _meat @ _bread
 
         return _vcov

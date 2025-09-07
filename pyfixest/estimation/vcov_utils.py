@@ -239,51 +239,35 @@ def _nw_meat_panel(
     return meat_nw_panel
 
 
-def _get_scores_time(scores: np.ndarray, time_arr: np.ndarray) -> np.ndarray:
-    """
-
-    Get the time-aggregated scores needed for Driscoll-Kraay HAC.
-
-    Parameters
-    ----------
-    scores: np.ndarray
-        The scores matrix.
-    time_arr: np.ndarray
-        The time variable.
-
-    Returns
-    -------
-    scores_time: np.ndarray
-        The time-aggregated scores.
-    """
-    order = np.argsort(time_arr)
-    t = time_arr[order]
-    S = scores[order]
-    idx = np.unique(t, return_index=True)[1]
-    scores_time = np.add.reduceat(S, idx, axis=0)
-    return scores_time
-
 @nb.njit(parallel=False)
 def _dk_meat_panel(
-    scores_time: np.ndarray,
+    scores: np.ndarray,
     time_arr: np.ndarray,
+    idx: np.ndarray,
     lag: Optional[int] = None,
 ):
     """Compute Driscoll-Kraay HAC meat matrix.
 
     Parameters
     ----------
-    scores_time: np.ndarray
-        The time-aggregated scores.
+    scores: np.ndarray
+        The time-aggregated scores. Is assumed to be sorted by time.
     time_arr: np.ndarray, optional
         The time variable for clustering. Assume that there are no duplicate time periods.
+        Is assumed to be sorted by time.
+    idx: np.ndarray, optional
+        The indices of the unique time periods.
     lag: int, optional
         The number of lag for the HAC estimator. Defaults to floor (# of time periods)^(1/4).
     """
-
     # Set lag if not provided
     if lag is None:
-        lag = int(np.floor(np.unique(time_arr).shape[0]**0.25))
+        lag = int(np.floor(np.unique(time_arr).shape[0] ** 0.25))
+
+    scores_time = np.zeros((len(idx), scores.shape[1]))
+    for t in range(len(idx) - 1):
+        scores_time[t, :] = scores[idx[t] : idx[t + 1], :].sum(axis=0)
+    scores_time[-1, :] = scores[idx[-1] :, :].sum(axis=0)
 
     time_periods, k = scores_time.shape
 
@@ -295,7 +279,7 @@ def _dk_meat_panel(
     weights[0] = 0.5  # Halve first weight
 
     meat = np.zeros((k, k))
-    gamma_lag = np.zeros((k,k))
+    gamma_lag = np.zeros((k, k))
 
     # note: just the same as for time series HAC
     # only difference is computation on time scores
