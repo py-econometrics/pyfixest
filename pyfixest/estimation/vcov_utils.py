@@ -109,7 +109,7 @@ def _nw_meat(scores: np.ndarray, time_arr: np.ndarray, lag: Optional[int] = None
     time_arr: np.ndarray, optional
         The time variable for clustering.
     lag: int, optional
-        The number of lag for the HAC estimator. Defaults to floor (# of time periods)^(1/4).
+        The number of lag for the HAC estimator.
     """
     order = np.argsort(time_arr)
     ordered_scores = scores[order]
@@ -144,7 +144,7 @@ def _nw_meat(scores: np.ndarray, time_arr: np.ndarray, lag: Optional[int] = None
 
 
 def _get_panel_idx(
-    panel_id: np.ndarray, time_id: np.ndarray
+    panel_arr: np.ndarray, time_arr: np.ndarray
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
     Get indices for each unit. I.e. the first value ("starts") and how many
@@ -152,9 +152,9 @@ def _get_panel_idx(
 
     Parameters
     ----------
-    panel_id : ndarray, shape (N*T,)
+    panel_arr : ndarray, shape (N*T,)
         Panel ID variable.
-    time_id : ndarray, shape (N*T,)
+    time_arr : ndarray, shape (N*T,)
         Time ID variable.
 
     Returns
@@ -164,7 +164,7 @@ def _get_panel_idx(
       starts : start index of each unit slice in the sorted arrays
       counts : length of each unit slice
     """
-    order = np.lexsort((time_id, panel_id))  # sort by panel, then time
+    order = np.lexsort((time_arr, panel_arr))  # sort by panel, then time
     p_sorted = panel_id[order]
     units, starts, counts = np.unique(p_sorted, return_index=True, return_counts=True)
     return order, units, starts, counts
@@ -173,8 +173,8 @@ def _get_panel_idx(
 def _nw_meat_panel(
     X: np.ndarray,
     u_hat: np.ndarray,
-    time_id: np.ndarray,
-    panel_id: np.ndarray,
+    time_arr: np.ndarray,
+    panel_arr: np.ndarray,
     lag: Optional[int] = None,
 ):
     """
@@ -186,10 +186,10 @@ def _nw_meat_panel(
         Stacked regressor matrix, where each block of T rows corresponds to one panel unit.
     u_hat : ndarray, shape (N*T,)
         Residuals from the panel regression.
-    time_id : ndarray, shape (N*T,)
-        Time ID variable.
-    panel_id : ndarray, shape (N*T,)
-        Panel ID variable.
+    time_arr : ndarray, shape (N*T,)
+        The time variable for clustering.
+    panel_arr : ndarray, shape (N*T,)
+        The panel variable for clustering.
     lag : int
         Maximum lag for autocovariance. If not provided, defaults to floor(N**0.25), where
         N is the number of time periods.
@@ -200,10 +200,10 @@ def _nw_meat_panel(
         HAC Newey-West covariance matrix.
     """
     if lag is None:
-        lag = int(np.floor(len(np.unique(time_id)) ** 0.25))
+        lag = int(np.floor(len(np.unique(time_arr)) ** 0.25))
 
     # order the data by (panel, time)
-    order, units, starts, counts = _get_panel_idx(panel_id, time_id)
+    order, units, starts, counts = _get_panel_idx(panel_arr, time_arr)
 
     X_sorted = X[order]
     u_sorted = u_hat[order]
@@ -235,6 +235,55 @@ def _nw_meat_panel(
         meat_nw_panel += gamma0 + gamma_l_sum
 
     return meat_nw_panel
+
+@nb.njit(parallel=False)
+def _dk_meat(
+    scores: np.ndarray,
+    time_arr: np.ndarray,
+    lag: Optional[int] = None,
+)
+    """ Compute Driscoll-Kraay HAC meat matrix.
+
+    Parameters
+    ----------
+    scores: np.ndarray
+        The scores matrix.
+    time_arr: np.ndarray, optional
+        The time variable for clustering. Assume that there are no duplicate time periods.
+    lag: int, optional
+        The number of lag for the HAC estimator. Defaults to floor (# of time periods)^(1/4).
+    """
+    order = np.argsort(time_arr)
+    ordered_scores = scores[order]
+
+    time_periods, k = ordered_scores.shape
+    time_scores = np.zeros((time_periods, k))
+
+    for t in range(time_periods):
+        time_scores[t,:] += ordered_scores[t,:]
+
+    # Set lag if not provided
+    if lag is None:
+        lag = int(np.floor(T ** 0.25))
+
+    # bartlett kernel weights
+    weights = np.array([1 - j / (lag + 1) for j in range(lag + 1)])
+    weights[0] = 0.5  # Halve first weight
+
+    meat = np.zeros((k, k))
+
+    for lag_value in range(lag + 1):
+        weight = weights[lag_value]
+        gamma_lag = np.zeros((k, k))
+
+        for t in range(lag_value, time_periods):
+            gamma_lag += np.outer(
+                time_scores[t, :], time_scores[t - lag_value, :]
+            )
+
+        meat += weight * (gamma_lag + gamma_lag.T)
+
+    return meat
 
 
 def _prepare_twoway_clustering(clustervar: list, cluster_df: pd.DataFrame):

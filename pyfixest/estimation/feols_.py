@@ -887,8 +887,8 @@ class Feols:
                 newey_west_meat = _nw_meat_panel(
                     X=self._X,
                     u_hat=self._u_hat,
-                    time_id=_time_arr,
-                    panel_id=_panel_arr,
+                    time_arr=_time_arr,
+                    panel_arr=_panel_arr,
                     lag =_lag
                 )
         elif _vcov_type_detail == "DK":
