@@ -44,6 +44,7 @@ from pyfixest.estimation.vcov_utils import (
     _compute_bread,
     _count_G_for_ssc_correction,
     _get_cluster_df,
+    _get_panel_idx,
     _nw_meat,
     _nw_meat_panel,
     _prepare_twoway_clustering,
@@ -878,19 +879,23 @@ class Feols:
         if _vcov_type_detail == "NW":
             # Newey-West
             if _panel_id is None:
-                newey_west_meat = _nw_meat(
-                    scores=_scores,
-                    time_arr=_time_arr,
-                    lag=_lag
-                )
+                newey_west_meat = _nw_meat(scores=_scores, time_arr=_time_arr, lag=_lag)
             else:
-                newey_west_meat = _nw_meat_panel(
-                    X=self._X,
-                    u_hat=self._u_hat,
-                    time_arr=_time_arr,
-                    panel_arr=_panel_arr,
-                    lag =_lag
+                # order the data by (panel, time)
+                order, _, starts, counts = _get_panel_idx(
+                    panel_arr=_panel_arr, time_arr=_time_arr
                 )
+
+                newey_west_meat = _nw_meat_panel(
+                    X=self._X[order],
+                    u_hat=self._u_hat[order],
+                    time_arr=_time_arr[order],
+                    panel_arr=_panel_arr[order],
+                    starts=starts,
+                    counts=counts,
+                    lag=_lag,
+                )
+
         elif _vcov_type_detail == "DK":
             # Driscoll-Kraay
             raise NotImplementedError(

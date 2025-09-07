@@ -1,4 +1,4 @@
-from typing import Optional, Tuple, Union
+from typing import Optional, Union
 
 import numba as nb
 import numpy as np
@@ -145,7 +145,7 @@ def _nw_meat(scores: np.ndarray, time_arr: np.ndarray, lag: Optional[int] = None
 
 def _get_panel_idx(
     panel_arr: np.ndarray, time_arr: np.ndarray
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
     Get indices for each unit. I.e. the first value ("starts") and how many
     observations ("counts") each unit has.
@@ -165,20 +165,23 @@ def _get_panel_idx(
       counts : length of each unit slice
     """
     order = np.lexsort((time_arr, panel_arr))  # sort by panel, then time
-    p_sorted = panel_id[order]
+    p_sorted = panel_arr[order]
     units, starts, counts = np.unique(p_sorted, return_index=True, return_counts=True)
     return order, units, starts, counts
 
 
+@nb.njit(parallel=False)
 def _nw_meat_panel(
     X: np.ndarray,
     u_hat: np.ndarray,
     time_arr: np.ndarray,
     panel_arr: np.ndarray,
+    starts: np.ndarray,
+    counts: np.ndarray,
     lag: Optional[int] = None,
 ):
     """
-    Computes the panel Newey-West (HAC) covariance estimator.
+    Compute the panel Newey-West (HAC) covariance estimator.
 
     Parameters
     ----------
@@ -190,6 +193,10 @@ def _nw_meat_panel(
         The time variable for clustering.
     panel_arr : ndarray, shape (N*T,)
         The panel variable for clustering.
+    starts : np.ndarray
+        The start index of each unit slice in the sorted arrays.
+    counts : np.ndarray
+        The length of each unit slice.
     lag : int
         Maximum lag for autocovariance. If not provided, defaults to floor(N**0.25), where
         N is the number of time periods.
@@ -202,12 +209,6 @@ def _nw_meat_panel(
     if lag is None:
         lag = int(np.floor(len(np.unique(time_arr)) ** 0.25))
 
-    # order the data by (panel, time)
-    order, units, starts, counts = _get_panel_idx(panel_arr, time_arr)
-
-    X_sorted = X[order]
-    u_sorted = u_hat[order]
-
     k = X.shape[1]
 
     meat_nw_panel = np.zeros((k, k))
@@ -216,19 +217,19 @@ def _nw_meat_panel(
         end = start + count
         gamma0 = np.zeros((k, k))
         for t in range(start, end):
-            xi = X_sorted[t, :]
-            gamma0 += np.outer(xi, xi) * u_sorted[t] ** 2
+            xi = X[t, :]
+            gamma0 += np.outer(xi, xi) * u_hat[t] ** 2
 
         gamma_l_sum = np.zeros((k, k))
         Lmax = min(lag, count - 1)
-        for l in range(1, Lmax + 1):
-            w = 1 - l / (lag + 1)
+        for lag_value in range(1, Lmax + 1):
+            w = 1 - lag_value / (lag + 1)
             gamma_l = np.zeros((k, k))
-            for t in range(l, count):
+            for t in range(lag_value, count):
                 curr_t = start + t
-                prev_t = start + t - l
-                xi1 = X_sorted[curr_t, :] * u_sorted[curr_t]
-                xi2 = X_sorted[prev_t, :] * u_sorted[prev_t]
+                prev_t = start + t - lag_value
+                xi1 = X[curr_t, :] * u_hat[curr_t]
+                xi2 = X[prev_t, :] * u_hat[prev_t]
                 gamma_l += np.outer(xi1, xi2)
             gamma_l_sum += w * (gamma_l + gamma_l.T)
 
@@ -236,13 +237,14 @@ def _nw_meat_panel(
 
     return meat_nw_panel
 
+
 @nb.njit(parallel=False)
 def _dk_meat(
     scores: np.ndarray,
     time_arr: np.ndarray,
     lag: Optional[int] = None,
-)
-    """ Compute Driscoll-Kraay HAC meat matrix.
+):
+    """Compute Driscoll-Kraay HAC meat matrix.
 
     Parameters
     ----------
@@ -260,11 +262,11 @@ def _dk_meat(
     time_scores = np.zeros((time_periods, k))
 
     for t in range(time_periods):
-        time_scores[t,:] += ordered_scores[t,:]
+        time_scores[t, :] += ordered_scores[t, :]
 
     # Set lag if not provided
     if lag is None:
-        lag = int(np.floor(T ** 0.25))
+        lag = int(np.floor(time_periods**0.25))
 
     # bartlett kernel weights
     weights = np.array([1 - j / (lag + 1) for j in range(lag + 1)])
@@ -277,9 +279,7 @@ def _dk_meat(
         gamma_lag = np.zeros((k, k))
 
         for t in range(lag_value, time_periods):
-            gamma_lag += np.outer(
-                time_scores[t, :], time_scores[t - lag_value, :]
-            )
+            gamma_lag += np.outer(time_scores[t, :], time_scores[t - lag_value, :])
 
         meat += weight * (gamma_lag + gamma_lag.T)
 
