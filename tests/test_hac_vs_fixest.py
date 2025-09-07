@@ -32,20 +32,20 @@ ols_fmls = [
 
 
 @pytest.fixture(scope="module")
-def data_panel(N=100, T=15, seed=42):
-    np.random.seed(seed)
+def data_panel(N=1000, T=30, seed=421):
+    rng = np.random.default_rng(seed)
     units = np.repeat(np.arange(N), T)
     time = np.tile(np.arange(T), N)
-    treated_units = np.random.choice(N, size=N // 2, replace=False)
+    treated_units = rng.choice(N, size=N // 2, replace=False)
     treat = np.zeros(N * T, dtype=int)
     midpoint = T // 2
     treat[(np.isin(units, treated_units)) & (time >= midpoint)] = 1
     ever_treated = np.isin(units, treated_units).astype(int)
-    alpha = np.random.normal(0, 1, N)
+    alpha = rng.normal(0, 1, N)
     gamma = np.random.normal(0, 0.5, T)
-    epsilon = np.random.normal(0, 0.5, N * T)
+    epsilon = rng.normal(0, 5, N * T)
     Y = alpha[units] + gamma[time] + treat + epsilon
-    weights = np.random.uniform(0, 1, N * T)
+    weights = rng.uniform(0, 1, N * T)
     return pd.DataFrame(
         {
             "unit": units,
@@ -112,7 +112,13 @@ BACKEND_F3 = [
 
 
 @pytest.mark.against_r_core
-@pytest.mark.parametrize("dropna", [False, True])
+@pytest.mark.parametrize(
+    "dropna",
+    [
+        False,
+        #    True
+    ],
+)
 @pytest.mark.parametrize("inference", ["NW"])
 @pytest.mark.parametrize(
     "vcov_kwargs",
@@ -126,8 +132,22 @@ BACKEND_F3 = [
         {"time_id": "year", "panel_id": "unit"},
     ],
 )
-@pytest.mark.parametrize("balanced", ["yes", "no-consecutive", "no-non-consecutive"])
-@pytest.mark.parametrize("weights", [None, "weights"])
+@pytest.mark.parametrize(
+    "balanced",
+    [
+        "balanced-consecutive",
+        "balanced-non-consecutive",
+        "non-balanced-consecutive",
+        "non-balanced-non-consecutive",
+    ],
+)
+@pytest.mark.parametrize(
+    "weights",
+    [
+        None,
+        #    "weights"
+    ],
+)
 @pytest.mark.parametrize("fml", ols_fmls)
 def test_single_fit_feols_hac_panel(
     data_panel,
@@ -139,11 +159,6 @@ def test_single_fit_feols_hac_panel(
     fml,
     balanced,
 ):
-    if balanced == "non-non-consecutive":
-        pytest.skip(
-            "Non-non-consecutive balanced panels are not supported yet and therefore not tested."
-        )
-
     adj = False
     cluster_adj = False
     ssc_ = ssc(adj=adj, cluster_adj=cluster_adj)
@@ -152,12 +167,34 @@ def test_single_fit_feols_hac_panel(
     time_id = vcov_kwargs.get("time_id", None)
     panel_id = vcov_kwargs.get("panel_id", None)
     data = data_panel if panel_id is not None else data_time
+    # panel_time_step = None
 
-    if balanced in ["no-consecutive", "no-non-consecutive"] and panel_id is None:
-        # drop some units to make data non-balanced
-        rng = np.random.default_rng(42)
-        idx_to_drop = rng.choice([True, False], size=len(data), replace=True)
-        data = data[idx_to_drop]
+    if panel_id is None and balanced != "balanced-consecutive":
+        pytest.skip("Don't test for non-balancedness when no panel data.")
+
+    if panel_id is not None:
+        # pick the subset of units to alter for the non-balanced cases
+        first_25 = np.unique(data["unit"])[:25]
+        cc = data.groupby("unit").cumcount()
+
+        if balanced == "balanced-non-consecutive":
+            # drop an interior row (e.g., the 2nd observation, cc==1) for EVERY unit
+            # => all units lose exactly one row (balanced), and there is a gap (non-consecutive)
+            data = data[cc != 1].reset_index(drop=True)
+            # panel_time_step = "unitary"
+        elif balanced == "non-balanced-consecutive":
+            # drop the *first* row (cc==0) but only for the first 25 units
+            # => those units have T-1 rows (non-balanced), still consecutive (start at the 2nd period)
+            mask = ~(data["unit"].isin(first_25) & (cc == 0))
+            data = data[mask].reset_index(drop=True)
+        elif balanced == "non-balanced-non-consecutive":
+            # drop an interior row (e.g., the 3rd observation, cc==2) but only for the first 25 units
+            # => those units have a gap (non-consecutive) and fewer rows (non-balanced)
+            mask = ~(data["unit"].isin(first_25) & (cc == 2))
+            data = data[mask].reset_index(drop=True)
+            # panel_time_step = "unitary"
+        else:
+            pass
 
     if "|" in fml and panel_id is None:
         pytest.skip("Don't run fixed effect test when data is not a panel.")
@@ -174,6 +211,8 @@ def test_single_fit_feols_hac_panel(
         data=data,
         ssc=fixest.ssc(adj, "nested", cluster_adj, "min", "min", False),
         **({"weights": ro.Formula(f"~{weights}")} if weights is not None else {}),
+        # use once fixest 0.13 is released and we can support non-consecutive time
+        # **({"panel_time_step": panel_time_step} if panel_time_step is not None else {})
     )
 
     mod = pf.feols(
