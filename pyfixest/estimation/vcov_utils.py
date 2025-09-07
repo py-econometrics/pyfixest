@@ -98,48 +98,49 @@ def _get_vcov_type(
 
 
 @nb.njit(parallel=False)
-def _nw_meat(scores: np.ndarray, time_arr: np.ndarray, lag: Optional[int] = None):
-    """
-    Compute Newey-West HAC meat matrix.
-
-    Parameters
-    ----------
-    scores: np.ndarray
-        The scores matrix.
-    time_arr: np.ndarray, optional
-        The time variable for clustering.
-    lag: int, optional
-        The number of lag for the HAC estimator.
-    """
-    order = np.argsort(time_arr)
-    ordered_scores = scores[order]
+def _nw_meat_time(scores: np.ndarray, time_arr: np.ndarray, lag: int):
+    if time_arr is None:
+        ordered_scores = scores
+    else:
+        order = np.argsort(time_arr)
+        ordered_scores = scores[order]
 
     time_periods, k = ordered_scores.shape
 
-    # resolve lag
-    if lag is None:
-        raise ValueError(
-            "We still have not implemented the default Newey-West HAC lag. Please provide a lag value via the `vcov_kwargs`."
-        )
+    # resolve lags
+    # if lag is None:
+    # these are the fixest default lags for HAC
+    # see https://lrberge.github.io/fixest/reference/vcov_hac.html
+    # lag = int(np.floor(time_periods ** (1 / 4)))
 
-    # bartlett kernel weights
-    weights = np.array([1 - j / (lag + 1) for j in range(lag + 1)])
+    # Pre-compute bartlett kernel weights more efficiently
+    weights = np.empty(lag + 1)
+    lag_plus_one = lag + 1
+    for j in range(lag + 1):
+        weights[j] = 1.0 - j / lag_plus_one
     weights[0] = 0.5  # Halve first weight
 
+    # Pre-allocate arrays to avoid repeated memory allocation
     meat = np.zeros((k, k))
+    gamma_lag = np.zeros((k, k))
 
     # this implementation follows the same that fixest does in R
     for lag_value in range(lag + 1):
         weight = weights[lag_value]
-        gamma_lag = np.zeros((k, k))
 
+        gamma_lag.fill(0.0)
         for t in range(lag_value, time_periods):
-            gamma_lag += np.outer(
-                ordered_scores[t, :], ordered_scores[t - lag_value, :]
-            )
+            scores_t = ordered_scores[t, :]
+            scores_t_lag = ordered_scores[t - lag_value, :]
 
-        meat += weight * (gamma_lag + gamma_lag.T)
+            for i in range(k):
+                scores_t_i = scores_t[i]
+                for j in range(k):
+                    gamma_lag[i, j] += scores_t_i * scores_t_lag[j]
 
+        for i in range(k):
+            for j in range(k):
+                meat[i, j] += weight * (gamma_lag[i, j] + gamma_lag[j, i])
     return meat
 
 

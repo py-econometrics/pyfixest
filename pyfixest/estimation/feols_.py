@@ -45,8 +45,8 @@ from pyfixest.estimation.vcov_utils import (
     _count_G_for_ssc_correction,
     _get_cluster_df,
     _get_panel_idx,
-    _nw_meat,
     _nw_meat_panel,
+    _nw_meat_time,
     _prepare_twoway_clustering,
 )
 from pyfixest.utils.dev_utils import (
@@ -879,7 +879,9 @@ class Feols:
         if _vcov_type_detail == "NW":
             # Newey-West
             if _panel_id is None:
-                newey_west_meat = _nw_meat(scores=_scores, time_arr=_time_arr, lag=_lag)
+                newey_west_meat = _nw_meat_time(
+                    scores=_scores, time_arr=_time_arr, lag=_lag
+                )
             else:
                 # order the data by (panel, time)
                 order, _, starts, counts = _get_panel_idx(
