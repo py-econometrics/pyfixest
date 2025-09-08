@@ -957,24 +957,21 @@ def test_errors_vcov_kwargs():
 
 def test_errors_hac():
     """Test all error conditions for HAC (Heteroskedasticity and Autocorrelation Consistent) standard errors."""
-    data = pf.get_data()
-    # Add a time variable for testing
-    data["time"] = np.arange(len(data))
-    data["panel"] = np.repeat(np.arange(len(data) // 10), 10)[: len(data)]
-
-    # Error 1: Driscoll-Kraay HAC not implemented
-    with pytest.raises(
-        NotImplementedError,
-        match="Driscoll-Kraay HAC standard errors are not yet implemented",
-    ):
-        pf.feols(
-            "Y ~ X1", data=data, vcov="DK", vcov_kwargs={"time_id": "time", "lag": 3}
-        )
+    rng = np.random.default_rng(123)
+    N = 100
+    T = 10
+    n_panels = N // T
+    data = pd.DataFrame(
+        {
+            "time": np.tile(np.arange(T), n_panels),
+            "panel": np.repeat(np.arange(n_panels), T),
+            "Y": rng.normal(0, 1, N),
+            "X1": rng.normal(0, 1, N),
+        }
+    )
 
     # Error 3: time_id is not provided if vcov is NW or DK
-    with pytest.raises(
-        ValueError, match="Missing required 'time_id' for NW/DK vcov"
-    ):
+    with pytest.raises(ValueError, match="Missing required 'time_id' for NW/DK vcov"):
         pf.feols(
             "Y ~ X1",
             data=data,
@@ -983,28 +980,68 @@ def test_errors_hac():
         )
 
     # Error 4: lag is not provided if vcov is NW or DK
-    with pytest.raises(ValueError, match="We still have not implemented the default Newey-West HAC lag. Please provide a lag value via the `vcov_kwargs`."):
+    with pytest.raises(
+        ValueError,
+        match="We have not yet implemented the default Newey-West HAC lag. Please provide a lag value via the `vcov_kwargs`.",
+    ):
         pf.feols(
             "Y ~ X1",
-            data=data,
+            data=data[data.panel == 0],
             vcov="NW",
             vcov_kwargs={"time_id": "time"},
         )
 
     # Error 5: time_id column does not exist in data
-    with pytest.raises(ValueError, match="The variable 'nonexistent_column' is not in the data."):
+    with pytest.raises(
+        ValueError, match="The variable 'nonexistent_column' is not in the data."
+    ):
         pf.feols(
             "Y ~ X1",
             data=data,
             vcov="NW",
-            vcov_kwargs={"time_id": "nonexistent_column", "panel_id": "panel", "lag": 5},
+            vcov_kwargs={
+                "time_id": "nonexistent_column",
+                "panel_id": "panel",
+                "lag": 5,
+            },
         )
 
     # Error 6: panel_id column does not exist in data
-    with pytest.raises(ValueError, match="The variable 'nonexistent_column' is not in the data."):
+    with pytest.raises(
+        ValueError, match="The variable 'nonexistent_column' is not in the data."
+    ):
         pf.feols(
             "Y ~ X1",
             data=data,
             vcov="NW",
             vcov_kwargs={"panel_id": "nonexistent_column", "time_id": "time", "lag": 5},
         )
+
+    # Error 7: duplicate time periods in data
+    data["time2"] = data["time"]
+    data["time2"][0] = data["time2"][1]
+    with pytest.raises(
+        ValueError,
+        match="There are duplicate time periods in the data. This is not supported for HAC SEs.",
+    ):
+        pf.feols(
+            "Y ~ X1",
+            data=data,
+            vcov="NW",
+            vcov_kwargs={"time_id": "time2", "lag": 5},
+        )
+
+    # Error 8: duplicate time periods for the same panel id
+    data["time3"] = data["time"]
+    data["time3"][0] = data["time3"][1]
+    for vcov in ["NW", "DK"]:
+        with pytest.raises(
+            ValueError,
+            match="There are duplicate time periods for the same panel id. This is not supported for HAC SEs.",
+        ):
+            pf.feols(
+                "Y ~ X1",
+                data=data,
+                vcov=vcov,
+                vcov_kwargs={"time_id": "time3", "panel_id": "panel", "lag": 5},
+            )

@@ -98,40 +98,41 @@ def _get_vcov_type(
 
 
 @nb.njit(parallel=False)
-def _nw_meat_time(scores: np.ndarray, time_arr: np.ndarray, lag: int):
-    if time_arr is None:
-        ordered_scores = scores
-    else:
-        order = np.argsort(time_arr)
-        ordered_scores = scores[order]
+def _hac_meat_loop(
+    scores: np.ndarray, weights: np.ndarray, time_periods: int, k: int, lag: int
+):
+    """
+    Compute the HAC meat matrix. Used for both time series and DK HAC.
 
-    time_periods, k = ordered_scores.shape
+    Parameters
+    ----------
+    scores: np.ndarray
+        The scores matrix.
+    weights: np.ndarray
+        The weights matrix.
+    time_periods: int
+        The number of time periods.
+    k: int
+        The number of regressors.
+    lag: int
+        The number of lag for the HAC estimator.
 
-    # resolve lags
-    # if lag is None:
-    # these are the fixest default lags for HAC
-    # see https://lrberge.github.io/fixest/reference/vcov_hac.html
-    # lag = int(np.floor(time_periods ** (1 / 4)))
-
-    # Pre-compute bartlett kernel weights more efficiently
-    weights = np.empty(lag + 1)
-    lag_plus_one = lag + 1
-    for j in range(lag + 1):
-        weights[j] = 1.0 - j / lag_plus_one
-    weights[0] = 0.5  # Halve first weight
-
-    # Pre-allocate arrays to avoid repeated memory allocation
+    Returns
+    -------
+    meat: np.ndarray
+        The HAC meat matrix.
+    """
     meat = np.zeros((k, k))
     gamma_lag = np.zeros((k, k))
 
-    # this implementation follows the same that fixest does in R
+    # note: just the same as for time series HAC
+    # only difference is computation on time scores
     for lag_value in range(lag + 1):
         weight = weights[lag_value]
-
         gamma_lag.fill(0.0)
         for t in range(lag_value, time_periods):
-            scores_t = ordered_scores[t, :]
-            scores_t_lag = ordered_scores[t - lag_value, :]
+            scores_t = scores[t, :]
+            scores_t_lag = scores[t - lag_value, :]
 
             for i in range(k):
                 scores_t_i = scores_t[i]
@@ -141,12 +142,41 @@ def _nw_meat_time(scores: np.ndarray, time_arr: np.ndarray, lag: int):
         for i in range(k):
             for j in range(k):
                 meat[i, j] += weight * (gamma_lag[i, j] + gamma_lag[j, i])
+
     return meat
+
+
+@nb.njit(parallel=False)
+def _get_bartlett_weights(lag: int):
+    # Pre-compute bartlett kernel weights more efficiently
+    weights = np.empty(lag + 1)
+    lag_plus_one = lag + 1
+    for j in range(lag + 1):
+        weights[j] = 1.0 - j / lag_plus_one
+    weights[0] = 0.5  # Halve first weight
+
+    return weights
+
+
+@nb.njit(parallel=False)
+def _nw_meat_time(scores: np.ndarray, time_arr: np.ndarray, lag: int):
+    if time_arr is None:
+        ordered_scores = scores
+    else:
+        order = np.argsort(time_arr)
+        ordered_scores = scores[order]
+
+    time_periods, k = ordered_scores.shape
+    weights = _get_bartlett_weights(lag=lag)
+
+    return _hac_meat_loop(
+        scores=ordered_scores, weights=weights, time_periods=time_periods, k=k, lag=lag
+    )
 
 
 def _get_panel_idx(
     panel_arr: np.ndarray, time_arr: np.ndarray
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
     Get indices for each unit. I.e. the first value ("starts") and how many
     observations ("counts") each unit has.
@@ -164,11 +194,20 @@ def _get_panel_idx(
       units  : unique panel ids in sorted order
       starts : start index of each unit slice in the sorted arrays
       counts : length of each unit slice
+      panel_arr_sorted : panel variable in sorted order
+      time_arr_sorted : time variable in sorted order
     """
     order = np.lexsort((time_arr, panel_arr))  # sort by panel, then time
     p_sorted = panel_arr[order]
     units, starts, counts = np.unique(p_sorted, return_index=True, return_counts=True)
-    return order, units, starts, counts
+    panel_arr_sorted = panel_arr[order]
+    time_arr_sorted = time_arr[order]
+    duplicate_mask = (np.diff(panel_arr_sorted) == 0) & (np.diff(time_arr_sorted) == 0)
+    if np.any(duplicate_mask):
+        raise ValueError(
+            "There are duplicate time periods for the same panel id. This is not supported for HAC SEs."
+        )
+    return order, units, starts, counts, panel_arr_sorted, time_arr_sorted
 
 
 @nb.njit(parallel=False)
@@ -210,9 +249,13 @@ def _nw_meat_panel(
     if lag is None:
         lag = int(np.floor(len(np.unique(time_arr)) ** 0.25))
 
+    weights = _get_bartlett_weights(lag=lag)
+
     k = X.shape[1]
 
     meat_nw_panel = np.zeros((k, k))
+    gamma_l = np.zeros((k, k))
+    gamma_l_sum = np.zeros((k, k))
 
     for start, count in zip(starts, counts):
         end = start + count
@@ -221,18 +264,17 @@ def _nw_meat_panel(
             xi = X[t, :]
             gamma0 += np.outer(xi, xi) * u_hat[t] ** 2
 
-        gamma_l_sum = np.zeros((k, k))
+        gamma_l_sum.fill(0.0)
         Lmax = min(lag, count - 1)
         for lag_value in range(1, Lmax + 1):
-            w = 1 - lag_value / (lag + 1)
-            gamma_l = np.zeros((k, k))
+            gamma_l.fill(0.0)
             for t in range(lag_value, count):
                 curr_t = start + t
                 prev_t = start + t - lag_value
                 xi1 = X[curr_t, :] * u_hat[curr_t]
                 xi2 = X[prev_t, :] * u_hat[prev_t]
                 gamma_l += np.outer(xi1, xi2)
-            gamma_l_sum += w * (gamma_l + gamma_l.T)
+            gamma_l_sum += weights[lag_value] * (gamma_l + gamma_l.T)
 
         meat_nw_panel += gamma0 + gamma_l_sum
 
@@ -271,36 +313,11 @@ def _dk_meat_panel(
 
     time_periods, k = scores_time.shape
 
-    # Pre-compute bartlett kernel weights more efficiently
-    weights = np.empty(lag + 1)
-    lag_plus_one = lag + 1
-    for j in range(lag + 1):
-        weights[j] = 1.0 - j / lag_plus_one
-    weights[0] = 0.5  # Halve first weight
+    weights = _get_bartlett_weights(lag=lag)
 
-    meat = np.zeros((k, k))
-    gamma_lag = np.zeros((k, k))
-
-    # note: just the same as for time series HAC
-    # only difference is computation on time scores
-    for lag_value in range(lag + 1):
-        weight = weights[lag_value]
-
-        gamma_lag.fill(0.0)
-        for t in range(lag_value, time_periods):
-            scores_t = scores_time[t, :]
-            scores_t_lag = scores_time[t - lag_value, :]
-
-            for i in range(k):
-                scores_t_i = scores_t[i]
-                for j in range(k):
-                    gamma_lag[i, j] += scores_t_i * scores_t_lag[j]
-
-        for i in range(k):
-            for j in range(k):
-                meat[i, j] += weight * (gamma_lag[i, j] + gamma_lag[j, i])
-
-    return meat
+    return _hac_meat_loop(
+        scores=scores_time, weights=weights, time_periods=time_periods, k=k, lag=lag
+    )
 
 
 def _prepare_twoway_clustering(clustervar: list, cluster_df: pd.DataFrame):

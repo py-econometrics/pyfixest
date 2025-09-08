@@ -880,18 +880,26 @@ class Feols:
         if _vcov_type_detail == "NW":
             # Newey-West
             if _panel_id is None:
+                if _lag is None:
+                    raise ValueError(
+                        "We have not yet implemented the default Newey-West HAC lag. Please provide a lag value via the `vcov_kwargs`."
+                    )
+                if len(np.unique(_time_arr)) != len(_time_arr):
+                    raise ValueError(
+                        "There are duplicate time periods in the data. This is not supported for HAC SEs."
+                    )
                 hac_meat = _nw_meat_time(scores=_scores, time_arr=_time_arr, lag=_lag)
             else:
                 # order the data by (panel, time)
-                order, _, starts, counts = _get_panel_idx(
-                    panel_arr=_panel_arr, time_arr=_time_arr
+                order, _, starts, counts, panel_arr_sorted, time_arr_sorted = (
+                    _get_panel_idx(panel_arr=_panel_arr, time_arr=_time_arr)
                 )
 
                 hac_meat = _nw_meat_panel(
                     X=self._X[order],
                     u_hat=self._u_hat[order],
-                    time_arr=_time_arr[order],
-                    panel_arr=_panel_arr[order],
+                    time_arr=time_arr_sorted,
+                    panel_arr=panel_arr_sorted,
                     starts=starts,
                     counts=counts,
                     lag=_lag,
@@ -900,16 +908,19 @@ class Feols:
         elif _vcov_type_detail == "DK":
             # Driscoll-Kraay
 
-            order = np.argsort(_time_arr)
-            time_arr_sorted = _time_arr[order]
+            order, _, starts, counts, time_arr_sorted, panel_arr_sorted = (
+                _get_panel_idx(
+                    # hack: sort first by time, than panel
+                    # we need the data sorted by time, but sort by
+                    # panel too to check for duplicate time periods
+                    # per panel
+                    panel_arr=_time_arr,
+                    time_arr=_panel_arr,
+                )
+            )
             scores_sorted = _scores[order]
-
-            idx = np.unique(time_arr_sorted, return_index=True)[1]
-
-            # idx = np.unique(t, return_index=True)[1]
-
             hac_meat = _dk_meat_panel(
-                scores=scores_sorted, time_arr=time_arr_sorted, idx=idx, lag=_lag
+                scores=scores_sorted, time_arr=time_arr_sorted, idx=starts, lag=_lag
             )
 
         _meat = _tXZ @ _tZZinv @ hac_meat @ _tZZinv @ _tZX if _is_iv else hac_meat
