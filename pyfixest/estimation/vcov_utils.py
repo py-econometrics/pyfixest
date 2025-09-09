@@ -3,6 +3,7 @@ from typing import Optional, Union
 import numba as nb
 import numpy as np
 import pandas as pd
+from numba import types as nb_types
 
 from pyfixest.errors import NanInClusterVarError
 from pyfixest.utils.dev_utils import _narwhals_to_pandas
@@ -123,25 +124,21 @@ def _hac_meat_loop(
         The HAC meat matrix.
     """
     meat = np.zeros((k, k))
-    gamma_lag = np.zeros((k, k))
 
-    # note: just the same as for time series HAC
-    # only difference is computation on time scores
+    # Vectorized computation for all lag values
     for lag_value in range(lag + 1):
         weight = weights[lag_value]
-        gamma_lag.fill(0.0)
-        for t in range(lag_value, time_periods):
-            scores_t = scores[t, :]
-            scores_t_lag = scores[t - lag_value, :]
 
-            for i in range(k):
-                scores_t_i = scores_t[i]
-                for j in range(k):
-                    gamma_lag[i, j] += scores_t_i * scores_t_lag[j]
+        # Vectorized computation: scores[t] @ scores[t-lag_value].T for all t
+        # This replaces the nested loops with matrix operations
+        scores_current = scores[lag_value:time_periods]  # Shape: (time_periods-lag_value, k)
+        scores_lagged = scores[:time_periods-lag_value]  # Shape: (time_periods-lag_value, k)
 
-        for i in range(k):
-            for j in range(k):
-                meat[i, j] += weight * (gamma_lag[i, j] + gamma_lag[j, i])
+        # Compute gamma_lag = sum_t scores[t] @ scores[t-lag_value].T
+        gamma_lag = scores_current.T @ scores_lagged
+
+        # Add weighted contribution to meat matrix
+        meat += weight * (gamma_lag + gamma_lag.T)
 
     return meat
 
@@ -209,9 +206,28 @@ def _get_panel_idx(
         )
     return order, units, starts, counts, panel_arr_sorted, time_arr_sorted
 
-
 @nb.njit(parallel=False)
+def _binary_search_time(time_arr: np.ndarray, start: int, end: int, target_time: int) -> int:
+    """Binary search for exact time match. Returns -1 if not found."""
+    left, right = start, end - 1
+
+    while left <= right:
+        mid = (left + right) // 2
+        mid_time = time_arr[mid]
+
+        if mid_time == target_time:
+            return mid
+        elif mid_time < target_time:
+            left = mid + 1
+        else:
+            right = mid - 1
+
+    return -1  # Not found
+
+
+@nb.njit(parallel=True)
 def _nw_meat_panel(
+
     X: np.ndarray,
     u_hat: np.ndarray,
     time_arr: np.ndarray,
@@ -250,33 +266,67 @@ def _nw_meat_panel(
         lag = int(np.floor(len(np.unique(time_arr)) ** 0.25))
 
     weights = _get_bartlett_weights(lag=lag)
-
     k = X.shape[1]
+    n_panels = len(starts)
 
+    # Pre-allocate all arrays outside loops
     meat_nw_panel = np.zeros((k, k))
-    gamma_l = np.zeros((k, k))
-    gamma_l_sum = np.zeros((k, k))
+    gamma_l_panel = np.zeros((n_panels, k, k))
+    gamma_l_sum_panel = np.zeros((n_panels, k, k))
 
-    for start, count in zip(starts, counts):
+    # Parallel processing over panels
+    for panel_id in nb.prange(n_panels):
+        start = starts[panel_id]
+        count = counts[panel_id]
         end = start + count
-        gamma0 = np.zeros((k, k))
-        for t in range(start, end):
-            xi = X[t, :]
-            gamma0 += np.outer(xi, xi) * u_hat[t] ** 2
 
-        gamma_l_sum.fill(0.0)
+        # Pre-sort time indices for fast lookup (eliminates binary search)
+        time_panel = time_arr[start:end]
+        time_sorted_idx = np.argsort(time_panel)
+        time_sorted = time_panel[time_sorted_idx]
+
+        # Fully vectorized gamma0 computation
+        X_panel = X[start:end]  # Shape: (count, k)
+        u_hat_panel = u_hat[start:end]  # Shape: (count,)
+        # Vectorized computation: sum over t of (X[t,:] * u[t]^2) @ X[t,:].T
+        u_hat_sq = u_hat_panel ** 2
+        gamma0 = (X_panel.T * u_hat_sq) @ X_panel
+
+        # Pre-allocate arrays for this panel
+        gamma_l_sum = np.zeros((k, k))
+
         Lmax = min(lag, count - 1)
         for lag_value in range(1, Lmax + 1):
-            gamma_l.fill(0.0)
-            for t in range(lag_value, count):
-                curr_t = start + t
-                prev_t = start + t - lag_value
-                xi1 = X[curr_t, :] * u_hat[curr_t]
-                xi2 = X[prev_t, :] * u_hat[prev_t]
-                gamma_l += np.outer(xi1, xi2)
-            gamma_l_sum += weights[lag_value] * (gamma_l + gamma_l.T)
+            # Vectorized approach: compute all pairs for this lag
+            gamma_l_current = np.zeros((k, k))
 
-        meat_nw_panel += gamma0 + gamma_l_sum
+            # Pre-compute target times for all t in this lag
+            t_indices = np.arange(lag_value, count)
+            curr_t_indices = start + t_indices
+            target_times = time_arr[curr_t_indices] - lag_value
+
+            # Vectorized search for all target times
+            insert_indices = np.searchsorted(time_sorted, target_times)
+            valid_mask = (insert_indices < len(time_sorted)) & (time_sorted[insert_indices] == target_times)
+
+            # Process valid pairs more efficiently
+            for idx in range(len(t_indices)):
+                if valid_mask[idx]:
+                    curr_t = start + t_indices[idx]
+                    prev_t = start + time_sorted_idx[insert_indices[idx]]
+
+                    # Compute outer product contribution
+                    xi1 = X[curr_t] * u_hat[curr_t]
+                    xi2 = X[prev_t] * u_hat[prev_t]
+                    gamma_l_current += np.outer(xi1, xi2)
+
+            gamma_l_sum += weights[lag_value] * (gamma_l_current + gamma_l_current.T)
+
+        gamma_l_panel[panel_id] = gamma0
+        gamma_l_sum_panel[panel_id] = gamma_l_sum
+
+    # Vectorized accumulation of results from all panels
+    meat_nw_panel = np.sum(gamma_l_panel + gamma_l_sum_panel, axis=0)
 
     return meat_nw_panel
 

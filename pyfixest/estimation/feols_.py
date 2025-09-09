@@ -896,6 +896,8 @@ class Feols:
                 )
 
                 hac_meat = _nw_meat_panel(
+                    #X=np.ascontiguousarray(self._X[order]),
+                    #u_hat=np.ascontiguousarray(self._u_hat[order]),
                     X=self._X[order],
                     u_hat=self._u_hat[order],
                     time_arr=time_arr_sorted,
