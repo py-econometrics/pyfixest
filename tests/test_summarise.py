@@ -112,7 +112,6 @@ def test_summary():
     ]
 
     # API tests for new tex args
-
     etable([fit1, fit2], type="tex")
     etable([fit1, fit2], type="tex", print_tex=True)
 
@@ -133,6 +132,18 @@ def test_summary():
 
     summary(fit_qreg)
     etable(fit_qreg)
+
+    # Tests for model_stats argument
+    # Basic explicit stats
+    etable([fit1, fit3], model_stats=["N", "r2"])
+    # Empty list (no built-in stats)
+    etable([fit1, fit3], model_stats=[])
+    # With custom labels
+    etable(
+        [fit1, fit3],
+        model_stats=["N", "r2"],
+        model_stats_labels={"N": "Obs.", "r2": "R²"},
+    )
 
 
 @pytest.mark.skip("Pyfixest PR is not yet merged into stargazer.")
