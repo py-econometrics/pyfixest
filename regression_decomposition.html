@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.7.34">
+<meta name="generator" content="quarto-1.8.24">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -58,7 +58,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </style>
 
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg==" crossorigin="anonymous"></script><script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" integrity="sha384-ZvpUoO/+PpLXR1lu4jmpXWu80pZlYUAfxl5NsBMWOEPSjUn/6Z/hRTt8+pR6L4N2" crossorigin="anonymous"></script><script src="site_libs/quarto-nav/quarto-nav.js"></script>
 <script src="site_libs/quarto-nav/headroom.min.js"></script>
 <script src="site_libs/clipboard/clipboard.min.js"></script>
 <script src="site_libs/quarto-search/autocomplete.umd.js"></script>
@@ -67,14 +67,15 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <meta name="quarto:offset" content="./">
 <script src="site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="site_libs/quarto-html/axe/axe-check.js" type="module"></script>
 <script src="site_libs/quarto-html/popper.min.js"></script>
 <script src="site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="site_libs/quarto-html/anchor.min.js"></script>
 <link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="site_libs/quarto-html/quarto-syntax-highlighting-c8ad9e5dbd60b7b70b38521ab19b7da4.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-dc55a5b9e770e841cd82e46aadbfb9b0.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="site_libs/bootstrap/bootstrap-496fe84c207e48339a4f0fe0f76bf4ef.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-19c6f25d9c793ca7e0d0ad6a6391bd12.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -102,7 +103,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     "search-label": "Search"
   }
 }</script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" integrity="sha512-c3Nl8+7g4LMSTdrm621y7kf9v3SDPnhxLNhcjFJbKECVnmZHTdo+IRO05sNLTH/D3vA6u1X32ehoLC7WFVdheg==" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/requirejs@2.3.6/require.min.js" integrity="sha384-c9c+LnTbwQ3aujuU7ULEPVvgLs+Fn6fJUvIGTsuu1ZcCf11fiEubah0ttpca4ntM sha384-6V1/AdqZRWk1KAlWbKBlGhN7VG4iE/yAZcO6NZPMF8od0vukrvr0tg4qY6NSrItx" crossorigin="anonymous"></script>
 
 <script type="application/javascript">define('jquery', [],function() {return window.jQuery;})</script>
 
@@ -120,7 +121,7 @@ const typesetMath = (el) => {
     var macros = [];
     for (var i = 0; i < mathElements.length; i++) {
       var texText = mathElements[i].firstChild;
-      if (mathElements[i].tagName == "SPAN") {
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
         window.katex.render(texText.data, mathElements[i], {
           displayMode: mathElements[i].classList.contains('display'),
           throwOnError: false,
@@ -144,6 +145,10 @@ window.Quarto = {
   <header id="quarto-header" class="headroom fixed-top">
     <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
       <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a href="./index.html" class="navbar-brand navbar-brand-logo">
+    </a>
+  </div>
             <div id="quarto-search" class="" title="Search"></div>
           <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
   <span class="navbar-toggler-icon"></span>
@@ -281,7 +286,7 @@ window.Quarto = {
 <p>In this notebook, we will compute and decompose the gender wage gab based on a subset of the PSID data set using a method commonly known as the “Gelbach Decomposition” (<a href="https://papers.ssrn.com/sol3/papers.cfm?abstract_id=1425737">Gelbach, JoLE 2016</a>).</p>
 <p>We start with loading a subset of the PSID data provided by the AER R package.</p>
 <div id="cell-3" class="cell" data-execution_count="1">
-<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> re</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> re</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
@@ -292,12 +297,12 @@ window.Quarto = {
 <span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>psid[<span class="st">"experience"</span>] <span class="op">=</span> pd.Categorical(psid[<span class="st">"experience"</span>])</span>
 <span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>psid[<span class="st">"year"</span>] <span class="op">=</span> pd.Categorical(psid[<span class="st">"year"</span>])</span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>psid.head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>psid.head()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="1">
 <div>
 
 
-<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<table class="dataframe caption-top table table-sm table-striped small" data-border="1">
 <thead>
 <tr class="header">
 <th data-quarto-table-cell-role="th"></th>
@@ -320,7 +325,7 @@ window.Quarto = {
 </thead>
 <tbody>
 <tr class="odd">
-<td data-quarto-table-cell-role="th">0</td>
+<th data-quarto-table-cell-role="th">0</th>
 <td>1</td>
 <td>3</td>
 <td>32</td>
@@ -338,7 +343,7 @@ window.Quarto = {
 <td>1</td>
 </tr>
 <tr class="even">
-<td data-quarto-table-cell-role="th">1</td>
+<th data-quarto-table-cell-role="th">1</th>
 <td>2</td>
 <td>4</td>
 <td>43</td>
@@ -356,7 +361,7 @@ window.Quarto = {
 <td>1</td>
 </tr>
 <tr class="odd">
-<td data-quarto-table-cell-role="th">2</td>
+<th data-quarto-table-cell-role="th">2</th>
 <td>3</td>
 <td>5</td>
 <td>40</td>
@@ -374,7 +379,7 @@ window.Quarto = {
 <td>1</td>
 </tr>
 <tr class="even">
-<td data-quarto-table-cell-role="th">3</td>
+<th data-quarto-table-cell-role="th">3</th>
 <td>4</td>
 <td>6</td>
 <td>39</td>
@@ -392,7 +397,7 @@ window.Quarto = {
 <td>1</td>
 </tr>
 <tr class="odd">
-<td data-quarto-table-cell-role="th">4</td>
+<th data-quarto-table-cell-role="th">4</th>
 <td>5</td>
 <td>7</td>
 <td>42</td>
@@ -417,8 +422,8 @@ window.Quarto = {
 </div>
 <p>Computing a first correlation between gender and wage, we find that males earn on average 0.474 log points more than women.</p>
 <div id="cell-5" class="cell" data-execution_count="2">
-<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>fit_base <span class="op">=</span> pf.feols(<span class="st">"log(wage) ~ gender"</span>, data<span class="op">=</span>psid, vcov<span class="op">=</span><span class="st">"hetero"</span>)</span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>fit_base.summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>fit_base <span class="op">=</span> pf.feols(<span class="st">"log(wage) ~ gender"</span>, data<span class="op">=</span>psid, vcov<span class="op">=</span><span class="st">"hetero"</span>)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>fit_base.summary()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>###
 
@@ -446,11 +451,11 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 </ul>
 <p>We can do so by using <strong>multiple estimation syntax</strong>:</p>
 <div id="cell-7" class="cell" data-execution_count="3">
-<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>fit_stepwise1 <span class="op">=</span> pf.feols(</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>fit_stepwise1 <span class="op">=</span> pf.feols(</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">"log(wage) ~ gender + csw0(education, experience, occupation, industry, year, ethnicity)"</span>,</span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    data<span class="op">=</span>psid,</span>
 <span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>pf.etable(fit_stepwise1)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>pf.etable(fit_stepwise1)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="3">
 <div id="wisdpvlafv" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
 <style>
@@ -501,7 +506,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
  
 </style>
 
-<table class="gt_table caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
+<table class="gt_table caption-top table table-sm table-striped small" data-quarto-bootstrap="false">
 <colgroup>
 <col style="width: 12%">
 <col style="width: 12%">
@@ -529,10 +534,10 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 </thead>
 <tbody class="gt_table_body">
 <tr class="gt_group_heading_row odd">
-<td colspan="8" class="gt_group_heading" data-quarto-table-cell-role="th">coef</td>
+<th colspan="8" class="gt_group_heading" data-quarto-table-cell-role="th">coef</th>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">gender[T.male]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">gender[T.male]</th>
 <td class="gt_row gt_center">0.474***<br>
 (0.021)</td>
 <td class="gt_row gt_center">0.474***<br>
@@ -549,7 +554,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.017)</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">education</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">education</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center">0.065***<br>
 (0.002)</td>
@@ -565,7 +570,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.002)</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.2]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.2]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center">0.147<br>
@@ -580,7 +585,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.136)</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.3]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.3]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center">0.273<br>
@@ -595,7 +600,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.122)</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.4]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.4]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center">0.377**<br>
@@ -610,7 +615,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.120)</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.5]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.5]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center">0.452***<br>
@@ -625,7 +630,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.118)</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.6]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.6]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center">0.483***<br>
@@ -640,7 +645,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.118)</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.7]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.7]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center">0.591***<br>
@@ -655,7 +660,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.117)</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.8]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.8]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center">0.624***<br>
@@ -670,7 +675,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.117)</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.9]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.9]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center">0.667***<br>
@@ -685,7 +690,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.117)</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.10]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.10]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center">0.632***<br>
@@ -700,7 +705,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.117)</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.11]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.11]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center">0.673***<br>
@@ -715,7 +720,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.117)</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.12]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.12]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center">0.689***<br>
@@ -730,7 +735,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.117)</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.13]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.13]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center">0.750***<br>
@@ -745,7 +750,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.117)</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.14]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.14]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center">0.744***<br>
@@ -760,7 +765,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.117)</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.15]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.15]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center">0.770***<br>
@@ -775,7 +780,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.117)</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.16]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.16]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center">0.808***<br>
@@ -790,7 +795,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.117)</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.17]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.17]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center">0.803***<br>
@@ -805,7 +810,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.118)</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.18]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.18]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center">0.829***<br>
@@ -820,7 +825,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.118)</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.19]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.19]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center">0.866***<br>
@@ -835,7 +840,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.119)</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.20]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.20]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center">0.820***<br>
@@ -850,7 +855,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.119)</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.21]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.21]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center">0.828***<br>
@@ -865,7 +870,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.119)</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.22]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.22]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center">0.834***<br>
@@ -880,7 +885,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.119)</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.23]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.23]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center">0.823***<br>
@@ -895,7 +900,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.119)</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.24]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.24]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center">0.834***<br>
@@ -910,7 +915,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.119)</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.25]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.25]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center">0.876***<br>
@@ -925,7 +930,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.119)</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.26]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.26]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center">0.898***<br>
@@ -940,7 +945,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.119)</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.27]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.27]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center">0.901***<br>
@@ -955,7 +960,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.119)</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.28]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.28]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center">0.867***<br>
@@ -970,7 +975,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.119)</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.29]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.29]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center">0.897***<br>
@@ -985,7 +990,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.119)</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.30]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.30]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center">0.878***<br>
@@ -1000,7 +1005,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.119)</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.31]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.31]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center">0.928***<br>
@@ -1015,7 +1020,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.118)</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.32]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.32]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center">0.936***<br>
@@ -1030,7 +1035,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.119)</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.33]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.33]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center">0.970***<br>
@@ -1045,7 +1050,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.119)</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.34]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.34]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center">0.942***<br>
@@ -1060,7 +1065,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.119)</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.35]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.35]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center">0.960***<br>
@@ -1075,7 +1080,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.119)</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.36]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.36]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center">1.004***<br>
@@ -1090,7 +1095,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.120)</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.37]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.37]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center">0.951***<br>
@@ -1105,7 +1110,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.121)</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.38]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.38]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center">0.895***<br>
@@ -1120,7 +1125,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.122)</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.39]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.39]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center">0.884***<br>
@@ -1135,7 +1140,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.123)</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.40]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.40]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center">0.815***<br>
@@ -1150,7 +1155,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.123)</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.41]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.41]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center">0.775***<br>
@@ -1165,7 +1170,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.127)</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.42]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.42]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center">0.827***<br>
@@ -1180,7 +1185,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.131)</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.43]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.43]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center">0.844***<br>
@@ -1195,7 +1200,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.136)</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.44]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.44]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center">0.756***<br>
@@ -1210,7 +1215,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.145)</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.45]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.45]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center">0.733***<br>
@@ -1225,7 +1230,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.150)</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.46]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.46]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center">0.751***<br>
@@ -1240,7 +1245,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.157)</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.47]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.47]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center">0.435<br>
@@ -1255,7 +1260,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.218)</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.48]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.48]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center">0.675**<br>
@@ -1270,7 +1275,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.218)</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.49]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.49]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center">1.007***<br>
@@ -1285,7 +1290,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.218)</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.50]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.50]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center">0.920***<br>
@@ -1300,7 +1305,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.218)</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.51]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.51]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center">0.390<br>
@@ -1315,7 +1320,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.341)</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">occupation[T.white]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">occupation[T.white]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
@@ -1329,7 +1334,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.013)</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">industry[T.yes]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">industry[T.yes]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
@@ -1342,7 +1347,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.011)</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">year[T.1977]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">year[T.1977]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
@@ -1354,7 +1359,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.019)</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">year[T.1978]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">year[T.1978]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
@@ -1366,7 +1371,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.019)</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">year[T.1979]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">year[T.1979]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
@@ -1378,7 +1383,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.019)</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">year[T.1980]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">year[T.1980]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
@@ -1390,7 +1395,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.019)</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">year[T.1981]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">year[T.1981]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
@@ -1402,7 +1407,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.019)</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">year[T.1982]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">year[T.1982]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
@@ -1414,7 +1419,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.019)</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">ethnicity[T.other]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">ethnicity[T.other]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
@@ -1425,7 +1430,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.020)</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">Intercept</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">Intercept</th>
 <td class="gt_row gt_center">6.255***<br>
 (0.020)</td>
 <td class="gt_row gt_center">5.419***<br>
@@ -1442,10 +1447,10 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.118)</td>
 </tr>
 <tr class="gt_group_heading_row even">
-<td colspan="8" class="gt_group_heading" data-quarto-table-cell-role="th">stats</td>
+<th colspan="8" class="gt_group_heading" data-quarto-table-cell-role="th">stats</th>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">Observations</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">Observations</th>
 <td class="gt_row gt_center">4165</td>
 <td class="gt_row gt_center">4165</td>
 <td class="gt_row gt_center">4165</td>
@@ -1455,7 +1460,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 <td class="gt_row gt_center">4165</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">S.E. type</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">S.E. type</th>
 <td class="gt_row gt_center">iid</td>
 <td class="gt_row gt_center">iid</td>
 <td class="gt_row gt_center">iid</td>
@@ -1465,7 +1470,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 <td class="gt_row gt_center">iid</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">R<sup>2</sup></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">R<sup>2</sup></th>
 <td class="gt_row gt_center">0.106</td>
 <td class="gt_row gt_center">0.260</td>
 <td class="gt_row gt_center">0.376</td>
@@ -1475,7 +1480,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 <td class="gt_row gt_center">0.525</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">Adj. R<sup>2</sup></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">Adj. R<sup>2</sup></th>
 <td class="gt_row gt_center">0.105</td>
 <td class="gt_row gt_center">0.260</td>
 <td class="gt_row gt_center">0.368</td>
@@ -1498,7 +1503,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 </div>
 <p>Because the table is so long that it’s hard to see anything, we restrict it to display only a few variables:</p>
 <div id="cell-9" class="cell" data-execution_count="4">
-<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>pf.etable(fit_stepwise1, keep<span class="op">=</span>[<span class="st">"gender"</span>, <span class="st">"ethnicity"</span>, <span class="st">"education"</span>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>pf.etable(fit_stepwise1, keep<span class="op">=</span>[<span class="st">"gender"</span>, <span class="st">"ethnicity"</span>, <span class="st">"education"</span>])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="4">
 <div id="bzzlmkjcvp" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
 <style>
@@ -1549,7 +1554,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
  
 </style>
 
-<table class="gt_table caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
+<table class="gt_table caption-top table table-sm table-striped small" data-quarto-bootstrap="false">
 <colgroup>
 <col style="width: 12%">
 <col style="width: 12%">
@@ -1577,10 +1582,10 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 </thead>
 <tbody class="gt_table_body">
 <tr class="gt_group_heading_row odd">
-<td colspan="8" class="gt_group_heading" data-quarto-table-cell-role="th">coef</td>
+<th colspan="8" class="gt_group_heading" data-quarto-table-cell-role="th">coef</th>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">gender[T.male]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">gender[T.male]</th>
 <td class="gt_row gt_center">0.474***<br>
 (0.021)</td>
 <td class="gt_row gt_center">0.474***<br>
@@ -1597,7 +1602,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.017)</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">ethnicity[T.other]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">ethnicity[T.other]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
@@ -1608,7 +1613,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.020)</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">education</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">education</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center">0.065***<br>
 (0.002)</td>
@@ -1624,10 +1629,10 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.002)</td>
 </tr>
 <tr class="gt_group_heading_row odd">
-<td colspan="8" class="gt_group_heading" data-quarto-table-cell-role="th">stats</td>
+<th colspan="8" class="gt_group_heading" data-quarto-table-cell-role="th">stats</th>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">Observations</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">Observations</th>
 <td class="gt_row gt_center">4165</td>
 <td class="gt_row gt_center">4165</td>
 <td class="gt_row gt_center">4165</td>
@@ -1637,7 +1642,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 <td class="gt_row gt_center">4165</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">S.E. type</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">S.E. type</th>
 <td class="gt_row gt_center">iid</td>
 <td class="gt_row gt_center">iid</td>
 <td class="gt_row gt_center">iid</td>
@@ -1647,7 +1652,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 <td class="gt_row gt_center">iid</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">R<sup>2</sup></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">R<sup>2</sup></th>
 <td class="gt_row gt_center">0.106</td>
 <td class="gt_row gt_center">0.260</td>
 <td class="gt_row gt_center">0.376</td>
@@ -1657,7 +1662,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 <td class="gt_row gt_center">0.525</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">Adj. R<sup>2</sup></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">Adj. R<sup>2</sup></th>
 <td class="gt_row gt_center">0.105</td>
 <td class="gt_row gt_center">0.260</td>
 <td class="gt_row gt_center">0.368</td>
@@ -1683,11 +1688,11 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 <p>Additionally, note that while we have only computed 6 additional models with covariates, the number of possible models is much larger. If I did the math correctly, simply by additively and incrementally adding covariates, we could have computed <span class="math inline">\(57\)</span> different models (not all of which would have included <code>education</code> as a control).</p>
 <p>As it turns out, different models <strong>will lead to different point estimates</strong>. The order of incrementally adding covariates <strong>might</strong> impact our conclusion. To illustrate this, we keep the same ordering as before, but start with <code>ethnicity</code> as our first variable:</p>
 <div id="cell-11" class="cell" data-execution_count="5">
-<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>fit_stepwise2 <span class="op">=</span> pf.feols(</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>fit_stepwise2 <span class="op">=</span> pf.feols(</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">"log(wage) ~ gender + csw0(ethnicity, education, experience, occupation, industry, year)"</span>,</span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    data<span class="op">=</span>psid,</span>
 <span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>pf.etable(fit_stepwise2, keep<span class="op">=</span>[<span class="st">"gender"</span>, <span class="st">"ethnicity"</span>, <span class="st">"education"</span>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>pf.etable(fit_stepwise2, keep<span class="op">=</span>[<span class="st">"gender"</span>, <span class="st">"ethnicity"</span>, <span class="st">"education"</span>])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="5">
 <div id="shduerdzxe" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
 <style>
@@ -1738,7 +1743,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
  
 </style>
 
-<table class="gt_table caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
+<table class="gt_table caption-top table table-sm table-striped small" data-quarto-bootstrap="false">
 <colgroup>
 <col style="width: 12%">
 <col style="width: 12%">
@@ -1766,10 +1771,10 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 </thead>
 <tbody class="gt_table_body">
 <tr class="gt_group_heading_row odd">
-<td colspan="8" class="gt_group_heading" data-quarto-table-cell-role="th">coef</td>
+<th colspan="8" class="gt_group_heading" data-quarto-table-cell-role="th">coef</th>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">gender[T.male]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">gender[T.male]</th>
 <td class="gt_row gt_center">0.474***<br>
 (0.021)</td>
 <td class="gt_row gt_center">0.436***<br>
@@ -1786,7 +1791,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.017)</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">ethnicity[T.other]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">ethnicity[T.other]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center">0.227***<br>
 (0.026)</td>
@@ -1802,7 +1807,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.020)</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">education</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">education</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center">0.064***<br>
@@ -1817,10 +1822,10 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 (0.002)</td>
 </tr>
 <tr class="gt_group_heading_row odd">
-<td colspan="8" class="gt_group_heading" data-quarto-table-cell-role="th">stats</td>
+<th colspan="8" class="gt_group_heading" data-quarto-table-cell-role="th">stats</th>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">Observations</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">Observations</th>
 <td class="gt_row gt_center">4165</td>
 <td class="gt_row gt_center">4165</td>
 <td class="gt_row gt_center">4165</td>
@@ -1830,7 +1835,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 <td class="gt_row gt_center">4165</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">S.E. type</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">S.E. type</th>
 <td class="gt_row gt_center">iid</td>
 <td class="gt_row gt_center">iid</td>
 <td class="gt_row gt_center">iid</td>
@@ -1840,7 +1845,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 <td class="gt_row gt_center">iid</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">R<sup>2</sup></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">R<sup>2</sup></th>
 <td class="gt_row gt_center">0.106</td>
 <td class="gt_row gt_center">0.121</td>
 <td class="gt_row gt_center">0.266</td>
@@ -1850,7 +1855,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 <td class="gt_row gt_center">0.525</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">Adj. R<sup>2</sup></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">Adj. R<sup>2</sup></th>
 <td class="gt_row gt_center">0.105</td>
 <td class="gt_row gt_center">0.121</td>
 <td class="gt_row gt_center">0.266</td>
@@ -1914,14 +1919,14 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 <h2 class="anchored" data-anchor-id="pyfixest-example"><code>PyFixest</code> Example</h2>
 <p>To employ Gelbach’s decomposition in <code>pyfixest</code>, we start with the <strong>full</strong> regression model that contains <strong>all variables of interest</strong>:</p>
 <div id="cell-17" class="cell" data-execution_count="6">
-<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>fit_full <span class="op">=</span> pf.feols(</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>fit_full <span class="op">=</span> pf.feols(</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">"log(wage) ~ gender + ethnicity + education + experience + occupation + industry +year"</span>,</span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    data<span class="op">=</span>psid,</span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>After fitting the <strong>full model</strong>, we can run the decomposition procedure by calling the <code>decompose()</code> method. The only required argument is to specify the focal variable <code>decomp_var</code>, which in this case is “gender”. Inference is conducted via a non-parametric bootstrap and can optionally be turned off.</p>
 <div id="cell-19" class="cell" data-execution_count="7">
-<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>gb <span class="op">=</span> fit_full.decompose(decomp_var<span class="op">=</span><span class="st">"gender[T.male]"</span>, digits<span class="op">=</span><span class="dv">5</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>gb <span class="op">=</span> fit_full.decompose(decomp_var<span class="op">=</span><span class="st">"gender[T.male]"</span>, digits<span class="op">=</span><span class="dv">5</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stderr">
 <pre><code>100%|██████████| 1000/1000 [00:58&lt;00:00, 17.00it/s]</code></pre>
 </div>
@@ -1930,9 +1935,9 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 <p>For our example at hand, the additional covariates only explain a tiny fraction of the differences in log wages between men and women - 0.064 points. Of these, around one third can be attributed to ethnicity, 0.00064 to years of eduaction, etc.</p>
 <p>Note that for now, we ask <code>etable()</code> to only report effects in levels. By switching to <code>panels = "all"</code>, we would also report normalized coefficient; but we decided not to do so here as otherwise the table would have turned out even longer than it already has.</p>
 <div id="cell-22" class="cell" data-execution_count="8">
-<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>gb.etable(</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>gb.etable(</span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>    panels<span class="op">=</span><span class="st">"levels"</span>,</span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="8">
 <div id="uwydoellkc" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
 <style>
@@ -1983,7 +1988,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
  
 </style>
 
-<table class="gt_table caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
+<table class="gt_table caption-top table table-sm table-striped small" data-quarto-bootstrap="false">
 <thead>
 <tr class="gt_col_headings header">
 <th class="gt_col_heading gt_columns_bottom_border gt_left" data-quarto-table-cell-role="th" scope="col"></th>
@@ -1994,736 +1999,736 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 </thead>
 <tbody class="gt_table_body">
 <tr class="gt_group_heading_row odd">
-<td colspan="4" class="gt_group_heading" data-quarto-table-cell-role="th">Levels (units)</td>
+<th colspan="4" class="gt_group_heading" data-quarto-table-cell-role="th">Levels (units)</th>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">gender[T.male]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">gender[T.male]</th>
 <td class="gt_row gt_center">0.474</td>
 <td class="gt_row gt_center">0.410</td>
 <td class="gt_row gt_center">0.064</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">[0.469, 0.469]</td>
 <td class="gt_row gt_center">[0.409, 0.409]</td>
 <td class="gt_row gt_center">[0.060, 0.060]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">ethnicity[T.other]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">ethnicity[T.other]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">0.023</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[0.021, 0.021]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">education</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">education</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">0.001</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[0.007, 0.007]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.2]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.2]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-0.000</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[0.000, 0.000]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.3]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.3]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-0.002</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[-0.003, -0.003]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.4]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.4]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-0.004</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[-0.003, -0.003]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.5]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.5]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-0.003</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[-0.001, -0.001]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.6]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.6]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-0.001</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[-0.005, -0.005]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.7]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.7]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">0.000</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[0.000, 0.000]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.8]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.8]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">0.002</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[0.004, 0.004]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.9]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.9]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-0.003</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[-0.008, -0.008]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.10]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.10]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-0.004</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[-0.001, -0.001]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.11]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.11]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-0.002</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[-0.003, -0.003]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.12]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.12]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-0.001</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[-0.001, -0.001]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.13]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.13]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-0.006</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[-0.003, -0.003]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.14]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.14]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-0.010</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[-0.010, -0.010]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.15]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.15]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-0.009</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[-0.009, -0.009]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.16]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.16]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-0.006</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[-0.004, -0.004]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.17]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.17]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-0.000</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[-0.003, -0.003]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.18]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.18]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-0.002</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[0.004, 0.004]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.19]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.19]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-0.006</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[-0.002, -0.002]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.20]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.20]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-0.008</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[-0.010, -0.010]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.21]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.21]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-0.004</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[-0.006, -0.006]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.22]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.22]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-0.006</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[-0.004, -0.004]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.23]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.23]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-0.002</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[-0.010, -0.010]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.24]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.24]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-0.003</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[-0.003, -0.003]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.25]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.25]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-0.001</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[0.002, 0.002]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.26]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.26]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">0.002</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[0.009, 0.009]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.27]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.27]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">0.010</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[0.011, 0.011]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.28]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.28]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">0.009</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[-0.000, -0.000]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.29]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.29]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">0.013</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[0.013, 0.013]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.30]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.30]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">0.012</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[0.011, 0.011]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.31]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.31]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">0.014</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[0.012, 0.012]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.32]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.32]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">0.012</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[0.005, 0.005]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.33]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.33]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">0.012</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[0.011, 0.011]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.34]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.34]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">0.011</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[0.005, 0.005]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.35]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.35]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">0.009</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[0.008, 0.008]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.36]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.36]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">0.007</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[0.011, 0.011]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.37]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.37]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">0.006</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[-0.001, -0.001]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.38]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.38]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">0.006</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[0.008, 0.008]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.39]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.39]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">0.003</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[0.009, 0.009]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.40]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.40]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">0.002</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[0.003, 0.003]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.41]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.41]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-0.000</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[0.001, 0.001]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.42]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.42]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-0.000</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[0.001, 0.001]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.43]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.43]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">0.000</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[0.001, 0.001]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.44]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.44]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-0.002</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[-0.003, -0.003]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.45]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.45]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-0.002</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[-0.000, -0.000]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.46]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.46]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-0.001</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[-0.000, -0.000]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.47]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.47]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-0.000</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[0.000, 0.000]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.48]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.48]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-0.001</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[-0.002, -0.002]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.49]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.49]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-0.001</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[-0.001, -0.001]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.50]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.50]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-0.001</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[-0.001, -0.001]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.51]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience[T.51]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-0.000</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[-0.000, -0.000]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">occupation[T.white]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">occupation[T.white]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-0.016</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[-0.020, -0.020]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">industry[T.yes]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">industry[T.yes]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">0.018</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[0.014, 0.014]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">year[T.1977]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">year[T.1977]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">0.000</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[-0.001, -0.001]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">year[T.1978]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">year[T.1978]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">0.000</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[-0.002, -0.002]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">year[T.1979]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">year[T.1979]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">0.000</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[0.003, 0.003]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">year[T.1980]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">year[T.1980]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">0.000</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[-0.005, -0.005]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">year[T.1981]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">year[T.1981]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">0.000</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[0.008, 0.008]</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">year[T.1982]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">year[T.1982]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">0.000</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th"></th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">[0.000, 0.000]</td>
@@ -2742,12 +2747,12 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 </div>
 <p>Note: we can also return the decomposition results as a pd.DataFrame via the <code>tidy</code> method.</p>
 <div id="cell-24" class="cell" data-execution_count="9">
-<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>gb.tidy().head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>gb.tidy().head()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="9">
 <div>
 
 
-<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<table class="dataframe caption-top table table-sm table-striped small" data-border="1">
 <thead>
 <tr class="header">
 <th data-quarto-table-cell-role="th"></th>
@@ -2759,35 +2764,35 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 </thead>
 <tbody>
 <tr class="odd">
-<td data-quarto-table-cell-role="th">direct_effect</td>
+<th data-quarto-table-cell-role="th">direct_effect</th>
 <td>0.474466</td>
 <td>0.469132</td>
 <td>0.469132</td>
 <td>Levels (units)</td>
 </tr>
 <tr class="even">
-<td data-quarto-table-cell-role="th">full_effect</td>
+<th data-quarto-table-cell-role="th">full_effect</th>
 <td>0.410338</td>
 <td>0.409346</td>
 <td>0.409346</td>
 <td>Levels (units)</td>
 </tr>
 <tr class="odd">
-<td data-quarto-table-cell-role="th">explained_effect</td>
+<th data-quarto-table-cell-role="th">explained_effect</th>
 <td>0.064129</td>
 <td>0.059785</td>
 <td>0.059785</td>
 <td>Levels (units)</td>
 </tr>
 <tr class="even">
-<td data-quarto-table-cell-role="th">unexplained_effect</td>
+<th data-quarto-table-cell-role="th">unexplained_effect</th>
 <td>0.410338</td>
 <td>0.409346</td>
 <td>0.409346</td>
 <td>Levels (units)</td>
 </tr>
 <tr class="odd">
-<td data-quarto-table-cell-role="th">ethnicity[T.other]</td>
+<th data-quarto-table-cell-role="th">ethnicity[T.other]</th>
 <td>0.022749</td>
 <td>0.021393</td>
 <td>0.021393</td>
@@ -2801,7 +2806,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 </div>
 <p>Because experience is a categorical variable, the table gets pretty unhandy: we produce one estimate for “each” level. Luckily, Gelbach’s decomposition allows us to group individual contributions into a single number. In the <code>decompose()</code> method, we can combine variables via the <code>combine_covariates</code> argument:</p>
 <div id="cell-26" class="cell" data-execution_count="10">
-<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>gb2 <span class="op">=</span> fit_full.decompose(</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>gb2 <span class="op">=</span> fit_full.decompose(</span>
 <span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>    decomp_var<span class="op">=</span><span class="st">"gender[T.male]"</span>,</span>
 <span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>    combine_covariates<span class="op">=</span>{</span>
 <span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>        <span class="st">"experience"</span>: re.<span class="bu">compile</span>(<span class="st">"experience"</span>),</span>
@@ -2811,13 +2816,13 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 <span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>        <span class="st">"ethnicity"</span>: re.<span class="bu">compile</span>(<span class="st">"ethnicity"</span>),</span>
 <span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>    },</span>
 <span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>    only_coef<span class="op">=</span><span class="va">True</span>,  <span class="co"># suppress bootstrap for inference</span></span>
-<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>We now report a single value for “experience”, which explains a good chunk - around half - of the explained part of the gender wage gap.</p>
 <div id="cell-28" class="cell" data-execution_count="11">
-<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>gb2.etable(</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>gb2.etable(</span>
 <span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>    panels<span class="op">=</span><span class="st">"levels"</span>,</span>
-<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="11">
 <div id="kysfnhfrlz" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
 <style>
@@ -2868,7 +2873,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
  
 </style>
 
-<table class="gt_table caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
+<table class="gt_table caption-top table table-sm table-striped small" data-quarto-bootstrap="false">
 <thead>
 <tr class="gt_col_headings header">
 <th class="gt_col_heading gt_columns_bottom_border gt_left" data-quarto-table-cell-role="th" scope="col"></th>
@@ -2879,40 +2884,40 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 </thead>
 <tbody class="gt_table_body">
 <tr class="gt_group_heading_row odd">
-<td colspan="4" class="gt_group_heading" data-quarto-table-cell-role="th">Levels (units)</td>
+<th colspan="4" class="gt_group_heading" data-quarto-table-cell-role="th">Levels (units)</th>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">gender[T.male]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">gender[T.male]</th>
 <td class="gt_row gt_center">0.474</td>
 <td class="gt_row gt_center">0.410</td>
 <td class="gt_row gt_center">0.063</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">experience</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">0.039</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">occupation</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">occupation</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-0.016</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">industry</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">industry</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">0.018</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">year</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">year</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">0.000</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">ethnicity</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">ethnicity</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">0.023</td>
@@ -2931,7 +2936,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 </div>
 <p>We can aggregate even more to “individual level” and “job” level variables:</p>
 <div id="cell-30" class="cell" data-execution_count="12">
-<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>gb3 <span class="op">=</span> fit_full.decompose(</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>gb3 <span class="op">=</span> fit_full.decompose(</span>
 <span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>    decomp_var<span class="op">=</span><span class="st">"gender[T.male]"</span>,</span>
 <span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>    combine_covariates<span class="op">=</span>{</span>
 <span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>        <span class="st">"job"</span>: re.<span class="bu">compile</span>(<span class="vs">r"</span><span class="dv">.</span><span class="op">*</span><span class="kw">(</span><span class="vs">occupation</span><span class="cf">|</span><span class="vs">industry</span><span class="kw">)</span><span class="dv">.</span><span class="op">*</span><span class="vs">"</span>),</span>
@@ -2939,10 +2944,10 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 <span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>        <span class="st">"year"</span>: re.<span class="bu">compile</span>(<span class="st">"year"</span>),</span>
 <span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>    },</span>
 <span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>    only_coef<span class="op">=</span><span class="va">True</span>,  <span class="co"># suppress inference</span></span>
-<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <div id="cell-31" class="cell" data-execution_count="13">
-<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>gb3.etable(panels<span class="op">=</span><span class="st">"levels"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>gb3.etable(panels<span class="op">=</span><span class="st">"levels"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="13">
 <div id="gmvsxidmyy" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
 <style>
@@ -2993,7 +2998,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
  
 </style>
 
-<table class="gt_table caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
+<table class="gt_table caption-top table table-sm table-striped small" data-quarto-bootstrap="false">
 <thead>
 <tr class="gt_col_headings header">
 <th class="gt_col_heading gt_columns_bottom_border gt_left" data-quarto-table-cell-role="th" scope="col"></th>
@@ -3004,28 +3009,28 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 </thead>
 <tbody class="gt_table_body">
 <tr class="gt_group_heading_row odd">
-<td colspan="4" class="gt_group_heading" data-quarto-table-cell-role="th">Levels (units)</td>
+<th colspan="4" class="gt_group_heading" data-quarto-table-cell-role="th">Levels (units)</th>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">gender[T.male]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">gender[T.male]</th>
 <td class="gt_row gt_center">0.474</td>
 <td class="gt_row gt_center">0.410</td>
 <td class="gt_row gt_center">0.064</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">job</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">job</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">0.002</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">personal</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">personal</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">0.062</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">year</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">year</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">0.000</td>
@@ -3044,13 +3049,13 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 </div>
 <p>We can easily change multiple aspects of the GT table that <code>etable</code> returns. If we set <code>panels = "all"</code>, <code>etable()</code> will also report normalized coefficients.</p>
 <div id="cell-33" class="cell" data-execution_count="14">
-<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>gb3.etable(</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>gb3.etable(</span>
 <span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>    column_heads<span class="op">=</span>[<span class="st">"Column A"</span>, <span class="st">"Column B"</span>, <span class="st">"Column C"</span>],</span>
 <span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>    panel_heads<span class="op">=</span>[<span class="st">"Panel A"</span>, <span class="st">"Panel B"</span>, <span class="st">"Panel C"</span>],</span>
 <span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>    panels<span class="op">=</span><span class="st">"all"</span>,</span>
 <span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>    add_notes<span class="op">=</span><span class="st">"We add more notes."</span>,</span>
 <span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>    caption<span class="op">=</span><span class="st">"Gelbach Decomposition"</span>,</span>
-<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="14">
 <div id="aznlegldzv" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
 <style>
@@ -3101,10 +3106,10 @@ RMSE: 0.436 R2: 0.106 </code></pre>
  
 </style>
 
-<table class="gt_table caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
+<table class="gt_table caption-top table table-sm table-striped small" data-quarto-bootstrap="false">
 <thead>
 <tr class="gt_heading header">
-<th colspan="4" class="gt_heading gt_title gt_font_normal">Gelbach Decomposition</th>
+<td colspan="4" class="gt_heading gt_title gt_font_normal">Gelbach Decomposition</td>
 </tr>
 <tr class="gt_col_headings even">
 <th class="gt_col_heading gt_columns_bottom_border gt_left" data-quarto-table-cell-role="th" scope="col"></th>
@@ -3115,82 +3120,82 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 </thead>
 <tbody class="gt_table_body">
 <tr class="gt_group_heading_row odd">
-<td colspan="4" class="gt_group_heading" data-quarto-table-cell-role="th">Panel A</td>
+<th colspan="4" class="gt_group_heading" data-quarto-table-cell-role="th">Panel A</th>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">gender[T.male]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">gender[T.male]</th>
 <td class="gt_row gt_center">0.474</td>
 <td class="gt_row gt_center">0.410</td>
 <td class="gt_row gt_center">0.064</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">job</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">job</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">0.002</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">personal</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">personal</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">0.062</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">year</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">year</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">0.000</td>
 </tr>
 <tr class="gt_group_heading_row even">
-<td colspan="4" class="gt_group_heading" data-quarto-table-cell-role="th">Panel B</td>
+<th colspan="4" class="gt_group_heading" data-quarto-table-cell-role="th">Panel B</th>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">gender[T.male]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">gender[T.male]</th>
 <td class="gt_row gt_center">1.000</td>
 <td class="gt_row gt_center">0.865</td>
 <td class="gt_row gt_center">0.135</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">job</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">job</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">0.004</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">personal</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">personal</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">0.132</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">year</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">year</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">0.000</td>
 </tr>
 <tr class="gt_group_heading_row odd">
-<td colspan="4" class="gt_group_heading" data-quarto-table-cell-role="th">Panel C</td>
+<th colspan="4" class="gt_group_heading" data-quarto-table-cell-role="th">Panel C</th>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">gender[T.male]</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">gender[T.male]</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">1.000</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">job</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">job</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">0.026</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">personal</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">personal</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">0.974</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">year</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">year</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">0.000</td>
@@ -3209,7 +3214,7 @@ RMSE: 0.436 R2: 0.106 </code></pre>
 </div>
 <p>We can visualise the Gelbach decomposition using the <code>coefplot</code> method.</p>
 <div id="cell-35" class="cell" data-execution_count="15">
-<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>gb3.coefplot()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>gb3.coefplot()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
@@ -3280,13 +3285,14 @@ RMSE: 0.436 R2: 0.106 </code></pre>
       e.clearSelection();
     }
     const getTextToCopy = function(trigger) {
-        const codeEl = trigger.previousElementSibling.cloneNode(true);
-        for (const childEl of codeEl.children) {
-          if (isCodeAnnotation(childEl)) {
-            childEl.remove();
-          }
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
         }
-        return codeEl.innerText;
+      }
+      return codeEl.innerText;
     }
     const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
       text: getTextToCopy

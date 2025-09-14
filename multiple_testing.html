@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.7.34">
+<meta name="generator" content="quarto-1.8.24">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -58,7 +58,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </style>
 
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg==" crossorigin="anonymous"></script><script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" integrity="sha384-ZvpUoO/+PpLXR1lu4jmpXWu80pZlYUAfxl5NsBMWOEPSjUn/6Z/hRTt8+pR6L4N2" crossorigin="anonymous"></script><script src="site_libs/quarto-nav/quarto-nav.js"></script>
 <script src="site_libs/quarto-nav/headroom.min.js"></script>
 <script src="site_libs/clipboard/clipboard.min.js"></script>
 <script src="site_libs/quarto-search/autocomplete.umd.js"></script>
@@ -67,14 +67,15 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <meta name="quarto:offset" content="./">
 <script src="site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="site_libs/quarto-html/axe/axe-check.js" type="module"></script>
 <script src="site_libs/quarto-html/popper.min.js"></script>
 <script src="site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="site_libs/quarto-html/anchor.min.js"></script>
 <link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="site_libs/quarto-html/quarto-syntax-highlighting-c8ad9e5dbd60b7b70b38521ab19b7da4.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-dc55a5b9e770e841cd82e46aadbfb9b0.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="site_libs/bootstrap/bootstrap-496fe84c207e48339a4f0fe0f76bf4ef.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-19c6f25d9c793ca7e0d0ad6a6391bd12.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -102,7 +103,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     "search-label": "Search"
   }
 }</script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" integrity="sha512-c3Nl8+7g4LMSTdrm621y7kf9v3SDPnhxLNhcjFJbKECVnmZHTdo+IRO05sNLTH/D3vA6u1X32ehoLC7WFVdheg==" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/requirejs@2.3.6/require.min.js" integrity="sha384-c9c+LnTbwQ3aujuU7ULEPVvgLs+Fn6fJUvIGTsuu1ZcCf11fiEubah0ttpca4ntM sha384-6V1/AdqZRWk1KAlWbKBlGhN7VG4iE/yAZcO6NZPMF8od0vukrvr0tg4qY6NSrItx" crossorigin="anonymous"></script>
 
 <script type="application/javascript">define('jquery', [],function() {return window.jQuery;})</script>
 
@@ -120,7 +121,7 @@ const typesetMath = (el) => {
     var macros = [];
     for (var i = 0; i < mathElements.length; i++) {
       var texText = mathElements[i].firstChild;
-      if (mathElements[i].tagName == "SPAN") {
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
         window.katex.render(texText.data, mathElements[i], {
           displayMode: mathElements[i].classList.contains('display'),
           throwOnError: false,
@@ -144,6 +145,10 @@ window.Quarto = {
   <header id="quarto-header" class="headroom fixed-top">
     <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
       <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a href="./index.html" class="navbar-brand navbar-brand-logo">
+    </a>
+  </div>
             <div id="quarto-search" class="" title="Search"></div>
           <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
   <span class="navbar-toggler-icon"></span>
@@ -298,7 +303,7 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 <h2 class="anchored" data-anchor-id="setup">Setup</h2>
 <p>In a first step, we create a data set with multiple (potentially correlated) dependent variables that share a common set of covariates. All simulations in this notebook are greatly inspired by Clarke, Romano &amp; Wolf (Stata Journal, 2020).</p>
 <div id="cell-7" class="cell" data-execution_count="29">
-<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>load_ext autoreload</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>load_ext autoreload</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>autoreload <span class="dv">2</span></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
@@ -308,19 +313,19 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 <span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> joblib <span class="im">import</span> Parallel, delayed</span>
 <span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> tqdm <span class="im">import</span> tqdm</span>
 <span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>The autoreload extension is already loaded. To reload it, use:
   %reload_ext autoreload</code></pre>
 </div>
 </div>
 <div id="cell-8" class="cell" data-execution_count="30">
-<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>N <span class="op">=</span> <span class="dv">100</span></span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>N <span class="op">=</span> <span class="dv">100</span></span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>n_covariates <span class="op">=</span> <span class="dv">5</span></span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>n_depvars <span class="op">=</span> <span class="dv">20</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>n_depvars <span class="op">=</span> <span class="dv">20</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <div id="cell-9" class="cell">
-<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> get_data(N, n_covariates, n_depvars, rho, seed):</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> get_data(N, n_covariates, n_depvars, rho, seed):</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">"Simulate data with true nulls."</span></span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    rng <span class="op">=</span> np.random.default_rng(seed)</span>
 <span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    Omega <span class="op">=</span> np.eye(n_depvars)</span>
@@ -332,18 +337,18 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 <span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    data <span class="op">=</span> pd.DataFrame(X, columns<span class="op">=</span>[<span class="ss">f"X</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">"</span> <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(n_covariates)])</span>
 <span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    data <span class="op">=</span> data.assign(<span class="op">**</span>{<span class="ss">f"y</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">"</span>: y[:, i] <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(n_depvars)})</span>
 <span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> data</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> data</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <div id="cell-10" class="cell" data-execution_count="32">
-<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> get_data(</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> get_data(</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    N<span class="op">=</span>N, n_covariates<span class="op">=</span>n_covariates, n_depvars<span class="op">=</span>n_depvars, rho<span class="op">=</span><span class="fl">0.5</span>, seed<span class="op">=</span><span class="dv">12345</span></span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>data.head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>data.head()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="32">
 <div>
 
 
-<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<table class="dataframe caption-top table table-sm table-striped small" data-border="1">
 <thead>
 <tr class="header">
 <th data-quarto-table-cell-role="th"></th>
@@ -372,7 +377,7 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 </thead>
 <tbody>
 <tr class="odd">
-<td data-quarto-table-cell-role="th">0</td>
+<th data-quarto-table-cell-role="th">0</th>
 <td>-1.423825</td>
 <td>1.263728</td>
 <td>-0.870662</td>
@@ -396,7 +401,7 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 <td>0.298878</td>
 </tr>
 <tr class="even">
-<td data-quarto-table-cell-role="th">1</td>
+<th data-quarto-table-cell-role="th">1</th>
 <td>-0.740885</td>
 <td>-1.367793</td>
 <td>0.648893</td>
@@ -420,7 +425,7 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 <td>0.279370</td>
 </tr>
 <tr class="odd">
-<td data-quarto-table-cell-role="th">2</td>
+<th data-quarto-table-cell-role="th">2</th>
 <td>2.347410</td>
 <td>0.968497</td>
 <td>-0.759387</td>
@@ -444,7 +449,7 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 <td>0.027789</td>
 </tr>
 <tr class="even">
-<td data-quarto-table-cell-role="th">3</td>
+<th data-quarto-table-cell-role="th">3</th>
 <td>-0.060690</td>
 <td>0.788844</td>
 <td>-1.256668</td>
@@ -468,7 +473,7 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 <td>-0.033194</td>
 </tr>
 <tr class="odd">
-<td data-quarto-table-cell-role="th">4</td>
+<th data-quarto-table-cell-role="th">4</th>
 <td>1.322298</td>
 <td>-0.299699</td>
 <td>0.902919</td>
@@ -500,15 +505,15 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 </div>
 <p>Now that we have our data set at hand, we can fit 20 regression models - one for each dependent variable. To do so, we will use pyfixest’s multiple estimation syntax.</p>
 <div id="cell-12" class="cell" data-execution_count="33">
-<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>dependent_vars <span class="op">=</span> <span class="st">" + "</span>.join([<span class="ss">f"y</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">"</span> <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">20</span>)])</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>dependent_vars <span class="op">=</span> <span class="st">" + "</span>.join([<span class="ss">f"y</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">"</span> <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">20</span>)])</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>independent_vars <span class="op">=</span> <span class="st">" + "</span>.join([<span class="ss">f"X</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">"</span> <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">5</span>)])</span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>fml <span class="op">=</span> <span class="ss">f"</span><span class="sc">{</span>dependent_vars<span class="sc">}</span><span class="ss"> ~ </span><span class="sc">{</span>independent_vars<span class="sc">}</span><span class="ss">"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>fml <span class="op">=</span> <span class="ss">f"</span><span class="sc">{</span>dependent_vars<span class="sc">}</span><span class="ss"> ~ </span><span class="sc">{</span>independent_vars<span class="sc">}</span><span class="ss">"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <div id="cell-13" class="cell" data-execution_count="34">
-<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(fml, data<span class="op">=</span>data, vcov<span class="op">=</span><span class="st">"hetero"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(fml, data<span class="op">=</span>data, vcov<span class="op">=</span><span class="st">"hetero"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <div id="cell-14" class="cell" data-execution_count="35">
-<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>(pf.etable(fit).tab_style(style<span class="op">=</span>style.fill(color<span class="op">=</span><span class="st">"yellow"</span>), locations<span class="op">=</span>loc.body(rows<span class="op">=</span><span class="dv">1</span>)))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>(pf.etable(fit).tab_style(style<span class="op">=</span>style.fill(color<span class="op">=</span><span class="st">"yellow"</span>), locations<span class="op">=</span>loc.body(rows<span class="op">=</span><span class="dv">1</span>)))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="35">
 <div id="vfsdazjkcr" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
 <style>
@@ -559,7 +564,7 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
  
 </style>
 
-<table class="gt_table caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
+<table class="gt_table caption-top table table-sm table-striped small" data-quarto-bootstrap="false">
 <colgroup>
 <col style="width: 4%">
 <col style="width: 4%">
@@ -632,10 +637,10 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 </thead>
 <tbody class="gt_table_body">
 <tr class="gt_group_heading_row odd">
-<td colspan="21" class="gt_group_heading" data-quarto-table-cell-role="th">coef</td>
+<th colspan="21" class="gt_group_heading" data-quarto-table-cell-role="th">coef</th>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">X0</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">X0</th>
 <td class="gt_row gt_center">0.079<br>
 (0.119)</td>
 <td class="gt_row gt_center">0.111<br>
@@ -678,7 +683,7 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 (0.079)</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">X1</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">X1</th>
 <td class="gt_row gt_center" style="background-color: yellow">-0.064<br>
 (0.093)</td>
 <td class="gt_row gt_center" style="background-color: yellow">-0.065<br>
@@ -721,7 +726,7 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 (0.088)</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">X2</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">X2</th>
 <td class="gt_row gt_center">-0.165<br>
 (0.116)</td>
 <td class="gt_row gt_center">-0.181<br>
@@ -764,7 +769,7 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 (0.095)</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">X3</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">X3</th>
 <td class="gt_row gt_center">-0.110<br>
 (0.089)</td>
 <td class="gt_row gt_center">0.133<br>
@@ -807,7 +812,7 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 (0.088)</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">X4</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">X4</th>
 <td class="gt_row gt_center">0.017<br>
 (0.114)</td>
 <td class="gt_row gt_center">0.124<br>
@@ -850,7 +855,7 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 (0.084)</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">Intercept</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">Intercept</th>
 <td class="gt_row gt_center">0.121<br>
 (0.101)</td>
 <td class="gt_row gt_center">0.020<br>
@@ -893,10 +898,10 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 (0.090)</td>
 </tr>
 <tr class="gt_group_heading_row even">
-<td colspan="21" class="gt_group_heading" data-quarto-table-cell-role="th">stats</td>
+<th colspan="21" class="gt_group_heading" data-quarto-table-cell-role="th">stats</th>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">Observations</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">Observations</th>
 <td class="gt_row gt_center">100</td>
 <td class="gt_row gt_center">100</td>
 <td class="gt_row gt_center">100</td>
@@ -919,7 +924,7 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 <td class="gt_row gt_center">100</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">S.E. type</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">S.E. type</th>
 <td class="gt_row gt_center">hetero</td>
 <td class="gt_row gt_center">hetero</td>
 <td class="gt_row gt_center">hetero</td>
@@ -942,7 +947,7 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 <td class="gt_row gt_center">hetero</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">R<sup>2</sup></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">R<sup>2</sup></th>
 <td class="gt_row gt_center">0.039</td>
 <td class="gt_row gt_center">0.068</td>
 <td class="gt_row gt_center">0.037</td>
@@ -979,7 +984,7 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 <p>We see that our estimation produces multiple false positives for the effect of X1 on multiple dependent variables. Recall that we had simulated X1 to have <strong>no effect</strong> on any of the dependent variables. Still, the estimation procedure produces a significant effect for X1 on multiple dependent variables.</p>
 <p><code>PyFixest</code> provides three functions to adjust inference for multiple testing: <code>pf.bonferroni()</code>, <code>pf.rwolf()</code>, and <code>pf.wyoung()</code>. All three share a common API.</p>
 <div id="cell-17" class="cell" data-execution_count="11">
-<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>pval_bonferroni <span class="op">=</span> (</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>pval_bonferroni <span class="op">=</span> (</span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>    pf.bonferroni(fit.to_list(), param<span class="op">=</span><span class="st">"X1"</span>).xs(<span class="st">"Bonferroni Pr(&gt;|t|)"</span>).values</span>
 <span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a></span>
@@ -989,10 +994,10 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 <span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>pval_wyoung <span class="op">=</span> (</span>
 <span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>    pf.wyoung(fit.to_list(), param<span class="op">=</span><span class="st">"X1"</span>, reps<span class="op">=</span><span class="dv">1000</span>, seed<span class="op">=</span><span class="dv">22</span>).xs(<span class="st">"WY Pr(&gt;|t|)"</span>).values</span>
-<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <div id="cell-18" class="cell" data-execution_count="12">
-<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>(</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>(</span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>    pf.etable(</span>
 <span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>        fit,</span>
 <span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>        custom_model_stats<span class="op">=</span>{</span>
@@ -1001,7 +1006,7 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 <span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>            <span class="st">"WY: pval(X1)"</span>: pval_wyoung.<span class="bu">round</span>(<span class="dv">4</span>).tolist(),</span>
 <span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>        },</span>
 <span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>    ).tab_style(style<span class="op">=</span>style.fill(color<span class="op">=</span><span class="st">"yellow"</span>), locations<span class="op">=</span>loc.body(rows<span class="op">=</span>[<span class="dv">6</span>, <span class="dv">7</span>, <span class="dv">8</span>]))</span>
-<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="12">
 <div id="flwngzppzp" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
 <style>
@@ -1052,7 +1057,7 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
  
 </style>
 
-<table class="gt_table caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
+<table class="gt_table caption-top table table-sm table-striped small" data-quarto-bootstrap="false">
 <colgroup>
 <col style="width: 4%">
 <col style="width: 4%">
@@ -1125,10 +1130,10 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 </thead>
 <tbody class="gt_table_body">
 <tr class="gt_group_heading_row odd">
-<td colspan="21" class="gt_group_heading" data-quarto-table-cell-role="th">coef</td>
+<th colspan="21" class="gt_group_heading" data-quarto-table-cell-role="th">coef</th>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">X0</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">X0</th>
 <td class="gt_row gt_center">0.192<br>
 (0.105)</td>
 <td class="gt_row gt_center">-0.125<br>
@@ -1171,7 +1176,7 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 (0.092)</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">X1</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">X1</th>
 <td class="gt_row gt_center">0.053<br>
 (0.104)</td>
 <td class="gt_row gt_center">0.030<br>
@@ -1214,7 +1219,7 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 (0.088)</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">X2</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">X2</th>
 <td class="gt_row gt_center">-0.164<br>
 (0.095)</td>
 <td class="gt_row gt_center">0.140<br>
@@ -1257,7 +1262,7 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 (0.100)</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">X3</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">X3</th>
 <td class="gt_row gt_center">0.022<br>
 (0.108)</td>
 <td class="gt_row gt_center">-0.041<br>
@@ -1300,7 +1305,7 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 (0.093)</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">X4</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">X4</th>
 <td class="gt_row gt_center">-0.109<br>
 (0.099)</td>
 <td class="gt_row gt_center">-0.071<br>
@@ -1343,7 +1348,7 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 (0.092)</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">Intercept</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">Intercept</th>
 <td class="gt_row gt_center">0.169<br>
 (0.105)</td>
 <td class="gt_row gt_center">0.094<br>
@@ -1386,10 +1391,10 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 (0.097)</td>
 </tr>
 <tr class="gt_group_heading_row even">
-<td colspan="21" class="gt_group_heading" data-quarto-table-cell-role="th">stats</td>
+<th colspan="21" class="gt_group_heading" data-quarto-table-cell-role="th">stats</th>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">Bonferroni: pval(X1)</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">Bonferroni: pval(X1)</th>
 <td class="gt_row gt_center" style="background-color: yellow">1.0</td>
 <td class="gt_row gt_center" style="background-color: yellow">1.0</td>
 <td class="gt_row gt_center" style="background-color: yellow">1.0</td>
@@ -1412,7 +1417,7 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 <td class="gt_row gt_center" style="background-color: yellow">1.0</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">RW: pval(X1)</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">RW: pval(X1)</th>
 <td class="gt_row gt_center" style="background-color: yellow">1.0</td>
 <td class="gt_row gt_center" style="background-color: yellow">1.0</td>
 <td class="gt_row gt_center" style="background-color: yellow">0.7273</td>
@@ -1435,7 +1440,7 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 <td class="gt_row gt_center" style="background-color: yellow">0.954</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">WY: pval(X1)</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">WY: pval(X1)</th>
 <td class="gt_row gt_center" style="background-color: yellow">1.0</td>
 <td class="gt_row gt_center" style="background-color: yellow">1.0</td>
 <td class="gt_row gt_center" style="background-color: yellow">0.727</td>
@@ -1458,7 +1463,7 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 <td class="gt_row gt_center" style="background-color: yellow">0.954</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">Observations</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">Observations</th>
 <td class="gt_row gt_center">100</td>
 <td class="gt_row gt_center">100</td>
 <td class="gt_row gt_center">100</td>
@@ -1481,7 +1486,7 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 <td class="gt_row gt_center">100</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">S.E. type</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">S.E. type</th>
 <td class="gt_row gt_center">hetero</td>
 <td class="gt_row gt_center">hetero</td>
 <td class="gt_row gt_center">hetero</td>
@@ -1504,7 +1509,7 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 <td class="gt_row gt_center">hetero</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">R<sup>2</sup></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">R<sup>2</sup></th>
 <td class="gt_row gt_center">0.078</td>
 <td class="gt_row gt_center">0.030</td>
 <td class="gt_row gt_center">0.063</td>
@@ -1544,7 +1549,7 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 <h2 class="anchored" data-anchor-id="controlling-for-the-familiy-wise-error-rate-fwer">Controlling for the Familiy-Wise Error Rate (FWER)</h2>
 <p>We now show by means of simulation that the three methods control the family-wise error rate (FWER). To do so, we simulate 1000 data sets imposing true nulls for the effect of X1 on all of 20 created dependent variables. For each simulation, we then count if the methods flag more than one false positive and report our results.</p>
 <div id="cell-22" class="cell">
-<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> compute_family_rejection(seed, rho):</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> compute_family_rejection(seed, rho):</span>
 <span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">"Simulate data, estimate models, and compute family rejection rates."</span></span>
 <span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>    data <span class="op">=</span> get_data(N, n_covariates, n_depvars, rho, seed<span class="op">=</span>seed)</span>
 <span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>    fit <span class="op">=</span> pf.feols(fml<span class="op">=</span>fml, data<span class="op">=</span>data, vcov<span class="op">=</span><span class="st">"hetero"</span>)</span>
@@ -1571,18 +1576,18 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 <span id="cb11-25"><a href="#cb11-25" aria-hidden="true" tabindex="-1"></a>        <span class="st">"wyoung reject family"</span>: df[<span class="st">"wyoung reject"</span>].<span class="bu">sum</span>() <span class="op">&gt;</span> <span class="dv">0</span>,</span>
 <span id="cb11-26"><a href="#cb11-26" aria-hidden="true" tabindex="-1"></a>    }</span>
 <span id="cb11-27"><a href="#cb11-27" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-28"><a href="#cb11-28" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> pd.Series(family_rejection)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb11-28"><a href="#cb11-28" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> pd.Series(family_rejection)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <div id="cell-23" class="cell">
-<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> run_fwer_simulation(n_iter, rho):</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> run_fwer_simulation(n_iter, rho):</span>
 <span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">"Run simulation for family-wise error rate."</span></span>
 <span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>    results <span class="op">=</span> Parallel(n_jobs<span class="op">=-</span><span class="dv">1</span>)(</span>
 <span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>        delayed(compute_family_rejection)(seed, rho<span class="op">=</span>rho) <span class="cf">for</span> seed <span class="kw">in</span> tqdm(<span class="bu">range</span>(n_iter))</span>
 <span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> pd.concat(results).reset_index().groupby(<span class="st">"index"</span>).mean()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> pd.concat(results).reset_index().groupby(<span class="st">"index"</span>).mean()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <div id="cell-24" class="cell" data-execution_count="15">
-<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>run_fwer_simulation(n_iter<span class="op">=</span><span class="dv">1000</span>, rho<span class="op">=</span><span class="fl">0.5</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>run_fwer_simulation(n_iter<span class="op">=</span><span class="dv">1000</span>, rho<span class="op">=</span><span class="fl">0.5</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stderr">
 <pre><code>100%|██████████| 1000/1000 [19:03&lt;00:00,  1.14s/it]</code></pre>
 </div>
@@ -1590,7 +1595,7 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 <div>
 
 
-<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<table class="dataframe caption-top table table-sm table-striped small" data-border="1">
 <thead>
 <tr class="header">
 <th data-quarto-table-cell-role="th"></th>
@@ -1603,19 +1608,19 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 </thead>
 <tbody>
 <tr class="odd">
-<td data-quarto-table-cell-role="th">Bonferroni reject family</td>
+<th data-quarto-table-cell-role="th">Bonferroni reject family</th>
 <td>0.069</td>
 </tr>
 <tr class="even">
-<td data-quarto-table-cell-role="th">Pr(&gt;|t|) reject family</td>
+<th data-quarto-table-cell-role="th">Pr(&gt;|t|) reject family</th>
 <td>0.694</td>
 </tr>
 <tr class="odd">
-<td data-quarto-table-cell-role="th">rwolf reject family</td>
+<th data-quarto-table-cell-role="th">rwolf reject family</th>
 <td>0.043</td>
 </tr>
 <tr class="even">
-<td data-quarto-table-cell-role="th">wyoung reject family</td>
+<th data-quarto-table-cell-role="th">wyoung reject family</th>
 <td>0.043</td>
 </tr>
 </tbody>
@@ -1631,7 +1636,7 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 <p>Now that we’ve seen that all three methods effectively handle false positives, let’s see how well they avoid <strong>false negatives</strong>. In other words, we will study how powerful all three methods are in detecting true effects.</p>
 <p>To do so, we slightly have to adjust the data generating process. Instead of simulating the impact of X1 on all dependent variables to be zero (a true null effect), we will now simulate the impact of X1 to be <span class="math inline">\(0.5\)</span> for all dependent variables. Hence we simulate <strong>true positives</strong> and count how often we correctly detect the true effect, or, equivalently stated, how often we correctly reject the null of no treatment effect.</p>
 <div id="cell-27" class="cell">
-<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> get_data_true_effect(N, n_covariates, n_depvars, rho<span class="op">=</span><span class="fl">0.5</span>, seed<span class="op">=</span><span class="dv">12345</span>, effect<span class="op">=</span><span class="fl">0.1</span>):</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> get_data_true_effect(N, n_covariates, n_depvars, rho<span class="op">=</span><span class="fl">0.5</span>, seed<span class="op">=</span><span class="dv">12345</span>, effect<span class="op">=</span><span class="fl">0.1</span>):</span>
 <span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">"Generate data with true positives."</span></span>
 <span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>    rng <span class="op">=</span> np.random.default_rng(seed)</span>
 <span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>    Omega <span class="op">=</span> np.eye(n_depvars)</span>
@@ -1645,20 +1650,20 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 <span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a>    data <span class="op">=</span> pd.DataFrame(X, columns<span class="op">=</span>[<span class="ss">f"X</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">"</span> <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(n_covariates)])</span>
 <span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a>    data <span class="op">=</span> data.assign(<span class="op">**</span>{<span class="ss">f"y</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">"</span>: y[:, i] <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(n_depvars)})</span>
 <span id="cb15-14"><a href="#cb15-14" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-15"><a href="#cb15-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> data</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb15-15"><a href="#cb15-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> data</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <div id="cell-28" class="cell" data-execution_count="37">
-<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>data_true <span class="op">=</span> get_data_true_effect(</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>data_true <span class="op">=</span> get_data_true_effect(</span>
 <span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>    N<span class="op">=</span>N, n_covariates<span class="op">=</span>n_covariates, n_depvars<span class="op">=</span>n_depvars, rho<span class="op">=</span><span class="fl">0.5</span>, seed<span class="op">=</span><span class="dv">12345</span>, effect<span class="op">=</span><span class="fl">0.5</span></span>
 <span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(fml, data<span class="op">=</span>data_true)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(fml, data<span class="op">=</span>data_true)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <div id="cell-29" class="cell" data-execution_count="38">
-<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>(</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>(</span>
 <span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>    pf.etable(fit).tab_style(</span>
 <span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>        style<span class="op">=</span>style.fill(color<span class="op">=</span><span class="st">"yellow"</span>), locations<span class="op">=</span>loc.body(rows<span class="op">=</span>[<span class="dv">1</span>])</span>
 <span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="38">
 <div id="tnfyjezzch" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
 <style>
@@ -1709,7 +1714,7 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
  
 </style>
 
-<table class="gt_table caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
+<table class="gt_table caption-top table table-sm table-striped small" data-quarto-bootstrap="false">
 <colgroup>
 <col style="width: 4%">
 <col style="width: 4%">
@@ -1782,10 +1787,10 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 </thead>
 <tbody class="gt_table_body">
 <tr class="gt_group_heading_row odd">
-<td colspan="21" class="gt_group_heading" data-quarto-table-cell-role="th">coef</td>
+<th colspan="21" class="gt_group_heading" data-quarto-table-cell-role="th">coef</th>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">X0</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">X0</th>
 <td class="gt_row gt_center">-0.108<br>
 (0.103)</td>
 <td class="gt_row gt_center">-0.152<br>
@@ -1828,7 +1833,7 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 (0.098)</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">X1</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">X1</th>
 <td class="gt_row gt_center" style="background-color: yellow">0.538***<br>
 (0.099)</td>
 <td class="gt_row gt_center" style="background-color: yellow">0.493***<br>
@@ -1871,7 +1876,7 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 (0.095)</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">X2</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">X2</th>
 <td class="gt_row gt_center">0.081<br>
 (0.101)</td>
 <td class="gt_row gt_center">0.026<br>
@@ -1914,7 +1919,7 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 (0.097)</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">X3</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">X3</th>
 <td class="gt_row gt_center">-0.068<br>
 (0.104)</td>
 <td class="gt_row gt_center">-0.110<br>
@@ -1957,7 +1962,7 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 (0.099)</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">X4</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">X4</th>
 <td class="gt_row gt_center">-0.063<br>
 (0.101)</td>
 <td class="gt_row gt_center">0.013<br>
@@ -2000,7 +2005,7 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 (0.096)</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">Intercept</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">Intercept</th>
 <td class="gt_row gt_center">-0.007<br>
 (0.100)</td>
 <td class="gt_row gt_center">-0.061<br>
@@ -2043,10 +2048,10 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 (0.096)</td>
 </tr>
 <tr class="gt_group_heading_row even">
-<td colspan="21" class="gt_group_heading" data-quarto-table-cell-role="th">stats</td>
+<th colspan="21" class="gt_group_heading" data-quarto-table-cell-role="th">stats</th>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">Observations</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">Observations</th>
 <td class="gt_row gt_center">100</td>
 <td class="gt_row gt_center">100</td>
 <td class="gt_row gt_center">100</td>
@@ -2069,7 +2074,7 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 <td class="gt_row gt_center">100</td>
 </tr>
 <tr class="even">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">S.E. type</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">S.E. type</th>
 <td class="gt_row gt_center">iid</td>
 <td class="gt_row gt_center">iid</td>
 <td class="gt_row gt_center">iid</td>
@@ -2092,7 +2097,7 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 <td class="gt_row gt_center">iid</td>
 </tr>
 <tr class="odd">
-<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">R<sup>2</sup></td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">R<sup>2</sup></th>
 <td class="gt_row gt_center">0.259</td>
 <td class="gt_row gt_center">0.202</td>
 <td class="gt_row gt_center">0.264</td>
@@ -2128,7 +2133,7 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 </div>
 <p>We will now study power more systematically via a simulation. More concretely, we will compute how often we detect the <strong>true effect</strong> of <strong>X1 on Y1, Y2, …, etc</strong> given a fixed sample size <span class="math inline">\(N\)</span> using “uncorrected” p-values, the Bonferroni, Romano-Wolf and Westfall-Young methods.</p>
 <div id="cell-31" class="cell">
-<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> compute_power(seed, rho, effect):</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> compute_power(seed, rho, effect):</span>
 <span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">"Simulate data, estimate models, and compute power."</span></span>
 <span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>    data <span class="op">=</span> get_data_true_effect(</span>
 <span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>        N, n_covariates, n_depvars, rho, seed<span class="op">=</span>seed, effect<span class="op">=</span>effect</span>
@@ -2160,20 +2165,20 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 <span id="cb18-30"><a href="#cb18-30" aria-hidden="true" tabindex="-1"></a>    }</span>
 <span id="cb18-31"><a href="#cb18-31" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb18-32"><a href="#cb18-32" aria-hidden="true" tabindex="-1"></a>    detect_effect_df <span class="op">=</span> pd.DataFrame(detect_effect, index<span class="op">=</span>[effect])</span>
-<span id="cb18-33"><a href="#cb18-33" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> detect_effect_df</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb18-33"><a href="#cb18-33" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> detect_effect_df</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <div id="cell-32" class="cell">
-<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> run_power_simulation(n_iter, rho, effect, nthreads<span class="op">=-</span><span class="dv">1</span>):</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> run_power_simulation(n_iter, rho, effect, nthreads<span class="op">=-</span><span class="dv">1</span>):</span>
 <span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">"Run simulation for power."</span></span>
 <span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>    seeds <span class="op">=</span> <span class="bu">list</span>(<span class="bu">range</span>(n_iter))</span>
 <span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>    results <span class="op">=</span> Parallel(n_jobs<span class="op">=</span>nthreads)(</span>
 <span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>        delayed(compute_power)(seed, rho<span class="op">=</span>rho, effect<span class="op">=</span>effect) <span class="cf">for</span> seed <span class="kw">in</span> tqdm(seeds)</span>
 <span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>    )</span>
 <span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> pd.concat(results).mean()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> pd.concat(results).mean()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <div id="cell-33" class="cell" data-execution_count="41">
-<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>run_power_simulation(n_iter<span class="op">=</span><span class="dv">1000</span>, rho<span class="op">=</span><span class="fl">0.5</span>, effect<span class="op">=</span><span class="fl">0.4</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>run_power_simulation(n_iter<span class="op">=</span><span class="dv">1000</span>, rho<span class="op">=</span><span class="fl">0.5</span>, effect<span class="op">=</span><span class="fl">0.4</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stderr">
 <pre><code>  0%|          | 0/1000 [00:00&lt;?, ?it/s]c:\Users\alexa\Documents\pyfixest\.pixi\envs\dev\Lib\site-packages\joblib\externals\loky\process_executor.py:752: UserWarning: A worker stopped while some jobs were given to the executor. This can be caused by a too short worker timeout or by a memory leak.
   warnings.warn(
@@ -2191,7 +2196,7 @@ dtype: float64</code></pre>
 <p>Additionally, it looks as if the rwolf and wyoung methods detect the true positives at a slightly higher rate than the Bonferroni method.</p>
 <p>Do these findings generalize to other effect sizes? We can check this by simply imposing different effects on the data generating process and repeating the previous exercise multiple times.</p>
 <div id="cell-36" class="cell">
-<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> run_power_simulation_vary_effect():</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> run_power_simulation_vary_effect():</span>
 <span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">"Run power simulations with varying effect sizes."</span></span>
 <span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>    n_points <span class="op">=</span> <span class="dv">10</span></span>
 <span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>    max_val <span class="op">=</span> <span class="fl">0.7</span></span>
@@ -2210,7 +2215,7 @@ dtype: float64</code></pre>
 <span id="cb23-17"><a href="#cb23-17" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> pd.concat(res_list, axis<span class="op">=</span><span class="dv">1</span>).T.set_index(<span class="st">"effect"</span>)</span>
 <span id="cb23-18"><a href="#cb23-18" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb23-19"><a href="#cb23-19" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb23-20"><a href="#cb23-20" aria-hidden="true" tabindex="-1"></a>res <span class="op">=</span> run_power_simulation_vary_effect()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb23-20"><a href="#cb23-20" aria-hidden="true" tabindex="-1"></a>res <span class="op">=</span> run_power_simulation_vary_effect()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stderr">
 <pre><code>100%|██████████| 1000/1000 [10:54&lt;00:00,  1.53it/s]
 100%|██████████| 1000/1000 [10:17&lt;00:00,  1.62it/s]
@@ -2226,7 +2231,7 @@ dtype: float64</code></pre>
 </div>
 </div>
 <div id="cell-37" class="cell" data-execution_count="42">
-<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>column_to_label_dict <span class="op">=</span> {</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb25"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>column_to_label_dict <span class="op">=</span> {</span>
 <span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Pr(&gt;|t|) detect effect"</span>: <span class="st">"Unadjusted"</span>,</span>
 <span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Bonferroni detect effect"</span>: <span class="st">"Bonferroni"</span>,</span>
 <span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>    <span class="st">"rwolf detect effect"</span>: <span class="st">"RW"</span>,</span>
@@ -2245,7 +2250,7 @@ dtype: float64</code></pre>
 <span id="cb25-17"><a href="#cb25-17" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="st">"Proportion of correctly detected effects"</span>)</span>
 <span id="cb25-18"><a href="#cb25-18" aria-hidden="true" tabindex="-1"></a>plt.legend()</span>
 <span id="cb25-19"><a href="#cb25-19" aria-hidden="true" tabindex="-1"></a>plt.grid()</span>
-<span id="cb25-20"><a href="#cb25-20" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb25-20"><a href="#cb25-20" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
@@ -2319,13 +2324,14 @@ dtype: float64</code></pre>
       e.clearSelection();
     }
     const getTextToCopy = function(trigger) {
-        const codeEl = trigger.previousElementSibling.cloneNode(true);
-        for (const childEl of codeEl.children) {
-          if (isCodeAnnotation(childEl)) {
-            childEl.remove();
-          }
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
         }
-        return codeEl.innerText;
+      }
+      return codeEl.innerText;
     }
     const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
       text: getTextToCopy
