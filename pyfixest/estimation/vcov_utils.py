@@ -331,28 +331,41 @@ def _nw_meat_panel(
 
                 meat[k1, k2] += weights[l] * tmp
     else:
-        # Unbalanced panel case: use the complex matching logic
-        # Pre-compute time period start/end indices (more efficient than storing arrays)
+        # Unbalanced panel case: use optimized matching logic
+        # Since data is sorted by panel+time, we can find time boundaries more efficiently
         time_starts = np.zeros(T, dtype=np.int32)
         time_ends = np.zeros(T, dtype=np.int32)
 
+        # Optimized boundary finding using sorted property
+        current_pos = 0
         for t in range(T):
-            mask = (time_arr == unique_times[t])
-            indices = np.where(mask)[0]
-            time_starts[t] = indices[0] if len(indices) > 0 else 0
-            time_ends[t] = indices[-1] + 1 if len(indices) > 0 else 0
+            target_time = unique_times[t]
 
+            # Find start: scan forward from current position
+            while current_pos < N and time_arr[current_pos] < target_time:
+                current_pos += 1
+            time_starts[t] = current_pos
+
+            # Find end: continue scanning
+            while current_pos < N and time_arr[current_pos] == target_time:
+                current_pos += 1
+            time_ends[t] = current_pos
+
+        # Pre-allocate maximum possible buffer size across all lags (reuse buffers)
+        total_max_matches = 0
         for l in range(1, lag + 1):
-            # Estimate maximum possible matches to pre-allocate arrays
-            max_matches = 0
+            lag_max = 0
             for t_idx in range(l, T):
                 curr_count = time_ends[t_idx] - time_starts[t_idx]
                 lag_count = time_ends[t_idx - l] - time_starts[t_idx - l]
-                max_matches += min(curr_count, lag_count)
+                lag_max += min(curr_count, lag_count)
+            total_max_matches = max(total_max_matches, lag_max)
 
-            # Pre-allocate arrays instead of using lists
-            curr_obs_buffer = np.empty(max_matches, dtype=np.int32)
-            lag_obs_buffer = np.empty(max_matches, dtype=np.int32)
+        # Reusable buffers across all lags
+        curr_obs_buffer = np.empty(total_max_matches, dtype=np.int32)
+        lag_obs_buffer = np.empty(total_max_matches, dtype=np.int32)
+
+        for l in range(1, lag + 1):
             match_count = 0
 
             for t_idx in range(l, T):
@@ -397,9 +410,11 @@ def _nw_meat_panel(
                     meat[k1, k2] += weights[l] * tmp
 
     # Final step: Add transpose (like C++ finishing step)
+    # Use a temporary copy to avoid race conditions in parallel execution
+    meat_copy = meat.copy()
     for k1 in nb.prange(k):
         for k2 in range(k):
-            meat[k1, k2] += meat[k2, k1]
+            meat[k1, k2] += meat_copy[k2, k1]
 
     return meat
 
