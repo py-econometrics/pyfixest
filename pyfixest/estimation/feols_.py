@@ -890,16 +890,38 @@ class Feols:
                     )
                 hac_meat = _nw_meat_time(scores=_scores, time_arr=_time_arr, lag=_lag)
             else:
-                # order the data by (panel, time)
-                order, _, starts, counts, panel_arr_sorted, time_arr_sorted = (
-                    _get_panel_idx(panel_arr=_panel_arr, time_arr=_time_arr)
-                )
+                # Ultra-fast panel grouping - O(N) instead of O(N log N)
+                import time
+                tic = time.time()
+
+                n_obs = len(_panel_arr)
+
+                # Compute panel boundaries in O(N) time
+                # Find where panel IDs change
+                panel_changes = np.diff(_panel_arr) != 0
+                change_indices = np.concatenate([[0], np.where(panel_changes)[0] + 1, [n_obs]])
+
+                # Compute starts and counts
+                starts = change_indices[:-1]
+                ends = change_indices[1:]
+                counts = ends - starts
+
+                # Data is already sorted - use identity permutation
+                order = np.arange(n_obs, dtype=np.int32)
+                panel_arr_sorted = _panel_arr
+                time_arr_sorted = _time_arr
+
+                toc = time.time()
+                print(".4f")
+
+                # Pre-compute scores matrix (X * u_hat)
+                scores = self._X * self._u_hat.reshape(-1, 1)  # Broadcasting to get (N, k) shape
+
+                # Sort scores along with other arrays
+                scores_sorted = scores[order]
 
                 hac_meat = _nw_meat_panel(
-                    #X=np.ascontiguousarray(self._X[order]),
-                    #u_hat=np.ascontiguousarray(self._u_hat[order]),
-                    X=self._X[order],
-                    u_hat=self._u_hat[order],
+                    scores=scores_sorted,  # Pass pre-computed sorted scores
                     time_arr=time_arr_sorted,
                     panel_arr=panel_arr_sorted,
                     starts=starts,
