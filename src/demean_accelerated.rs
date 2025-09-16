@@ -328,8 +328,7 @@ pub fn _demean_accelerated_rs(
     let flist_arr = flist.as_array();
     let weights_arr = weights.as_array();
 
-    let (out, success) =
-        py.allow_threads(|| demean_impl(&x_arr, &flist_arr, &weights_arr, tol, maxiter));
+    let (out, success) = py.detach(|| demean_impl(&x_arr, &flist_arr, &weights_arr, tol, maxiter));
 
     let pyarray = PyArray2::from_owned_array(py, out);
     Ok((pyarray.into(), success))
