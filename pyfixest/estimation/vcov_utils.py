@@ -224,6 +224,169 @@ def _binary_search_time(time_arr: np.ndarray, start: int, end: int, target_time:
 
     return -1  # Not found
 
+@nb.njit
+def is_balanced_panel(time_arr: np.ndarray, starts: np.ndarray, counts: np.ndarray) -> bool:
+    "Check if we have a balanced panel."
+    unique_times = np.unique(time_arr)
+    T = len(unique_times)
+    n_panels = len(starts)
+
+    # basic check, fails for non-consecutive panels, or panels with duplicates
+    if not (n_panels > 0 and np.all(counts == counts[0]) and counts[0] == T):
+        return False
+
+    for i in range(n_panels):
+        start_idx = starts[i]
+        for j in range(T):
+            if time_arr[start_idx + j] != unique_times[j]:
+                return False
+
+    return True
+
+@nb.njit
+def get_time_period_boundaries(
+    time_arr: np.ndarray,
+    unique_times: np.ndarray
+) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Compute start and end indices for each time period in a sorted time array.
+
+    Parameters
+    ----------
+    time_arr : np.ndarray
+        Time variable array, sorted by (panel, time).
+    unique_times : np.ndarray
+        Unique time values in sorted order.
+
+    Returns
+    -------
+    time_starts : np.ndarray
+        Start index of each time period in time_arr.
+    time_ends : np.ndarray
+        End index (exclusive) of each time period in time_arr.
+
+    Notes
+    -----
+    For time period t, observations are in time_arr[time_starts[t]:time_ends[t]].
+    Uses linear scan optimization since time_arr is pre-sorted.
+    """
+    T = len(unique_times)
+    N = len(time_arr)
+
+    time_starts = np.zeros(T, dtype=np.int32)
+    time_ends = np.zeros(T, dtype=np.int32)
+
+    current_pos = 0
+
+    for t in range(T):
+        target_time = unique_times[t]
+
+        while current_pos < N and time_arr[current_pos] < target_time:
+            current_pos += 1
+        time_starts[t] = current_pos
+
+        while current_pos < N and time_arr[current_pos] == target_time:
+            current_pos += 1
+        time_ends[t] = current_pos
+
+    return time_starts, time_ends
+
+@nb.njit
+def compute_max_lag_matches_for_buffer_allocation(
+    time_starts: np.ndarray,
+    time_ends: np.ndarray,
+    T: int,
+    max_lag: int
+) -> int:
+    """
+    Compute the maximum number of observation pairs needed across all lags
+    for pre-allocating reusable buffers in unbalanced panel HAC estimation.
+
+    Parameters
+    ----------
+    time_starts : np.ndarray
+        Start indices for each time period in the sorted data array.
+    time_ends : np.ndarray
+        End indices (exclusive) for each time period in the sorted data array.
+    T : int
+        Total number of unique time periods.
+    max_lag : int
+        Maximum lag to consider for autocovariance computation.
+
+    Returns
+    -------
+    int
+        Maximum number of valid observation pairs across all feasible lags.
+        Used to size buffers for efficient lag computation.
+
+    Notes
+    -----
+    For each lag l, computes the total number of valid pairs:
+    sum_{t=l}^{T-1} min(n_t, n_{t-l})
+    where n_t is the number of observations at time t.
+
+    The minimum is taken because we can only form pairs between observations
+    that exist in both time periods (current and lagged).
+    """
+    total_max_matches = 0
+
+    for l in range(1, max_lag + 1):
+        if l >= T:
+            break
+
+        lag_max = 0
+        for t_idx in range(l, T):
+            # Number of observations at current time period t
+            curr_count = time_ends[t_idx] - time_starts[t_idx]
+            # Number of observations at lagged time period t-l
+            lag_count = time_ends[t_idx - l] - time_starts[t_idx - l]
+            # Valid pairs limited by smaller count
+            lag_max += min(curr_count, lag_count)
+
+        total_max_matches = max(total_max_matches, lag_max)
+
+    return total_max_matches
+
+@nb.njit
+def find_panel_matches_across_time_periods(
+    panel_arr: np.ndarray,
+    curr_start: int,
+    curr_end: int,
+    lag_start: int,
+    lag_end: int,
+    curr_obs_buffer: np.ndarray,
+    lag_obs_buffer: np.ndarray,
+    buffer_offset: int = 0
+) -> int:
+    """
+    Find matching panel observations between current and lagged time periods
+    using an efficient two-pointer algorithm.
+
+    Uses two-pointer technique to efficiently find observations from the same
+    panel across different time periods. Assumes panel_arr is sorted within
+    each time period.
+    """
+    match_count = 0
+    i_curr = curr_start
+    i_lag = lag_start
+
+    # Two-pointer matching using sorted panel property
+    while i_curr < curr_end and i_lag < lag_end:
+        if panel_arr[i_curr] == panel_arr[i_lag]:
+            # Match found! Store indices in pre-allocated buffers
+            curr_obs_buffer[buffer_offset + match_count] = i_curr
+            lag_obs_buffer[buffer_offset + match_count] = i_lag
+            match_count += 1
+            i_curr += 1
+            i_lag += 1
+        elif panel_arr[i_curr] < panel_arr[i_lag]:
+            # Current panel ID is smaller, advance current pointer
+            i_curr += 1
+        else:
+            # Lagged panel ID is smaller, advance lagged pointer
+            i_lag += 1
+
+    return match_count
 
 @nb.njit(parallel=True)
 def _nw_meat_panel(
@@ -259,7 +422,10 @@ def _nw_meat_panel(
     vcov_nw : ndarray, shape (k, k)
         HAC Newey-West covariance matrix.
     """
-    N, k = scores.shape
+    _, k = scores.shape
+    unique_times = np.unique(time_arr)
+    T = len(unique_times)
+    n_panels = len(starts)
 
     if lag is None:
         lag = int(np.floor(len(np.unique(time_arr)) ** 0.25))
@@ -267,105 +433,57 @@ def _nw_meat_panel(
     weights = _get_bartlett_weights(lag=lag)
     meat = np.zeros((k, k))
 
-    # Pre-compute all k1, k2 pairs for parallel processing
-    k_sq = k * k
+    # lag 0
+    meat[:, :] = weights[0] * (scores.T @ scores)
 
-    # LAG 0: Exactly like C++ - parallel over K×K matrix elements
-    # l == 0 => easy: parallel over all matrix elements
-    for index in nb.prange(k_sq):
-        k1 = index // k
-        k2 = index % k
-
-        if k1 > k2:
-            continue
-
-        # Compute sum_i scores[i, k1] * scores[i, k2] for lag 0
-        tmp = 0.0
-        for i in range(N):
-            tmp += scores[i, k1] * scores[i, k2]
-
-        meat[k1, k2] = weights[0] * tmp
-        if k1 != k2:
-            meat[k2, k1] = weights[0] * tmp
-
-    # LAG > 0: Check if panel is balanced for optimization
-    unique_times = np.unique(time_arr)
-    T = len(unique_times)
-
-    # Auto-detect balanced panels if not specified
     if balanced is None:
-        # Check if all panels have the same count and data is consecutive
-        n_panels = len(starts)
-        if n_panels > 0:
-            first_count = counts[0]
-            balanced = np.all(counts == first_count) and (first_count == T)
-        else:
-            balanced = False
+        balanced = is_balanced_panel(
+            time_arr = time_arr,
+            starts = starts,
+            counts = counts
+        )
 
     if balanced:
-        # C++ balanced panel optimization: much simpler and faster
-        G = len(starts)  # number of panels
 
-        for l in range(1, lag + 1):
-            # For balanced panels, we can use simple indexing
-            if l >= T:
-                continue
+        for l in nb.prange(1, min(lag+1,T)):
 
-            # Number of observations per time period in balanced case
-            obs_per_t = G
-            start_curr = l * obs_per_t  # Start of current period observations
-            start_lag = 0  # Start of lagged period observations
-
+            weights_l = weights[l]
+            observations_per_time_period = n_panels
+            # start of current period observations
+            start_curr = l * observations_per_time_period
+            # start of lagged period observations
+            start_lag = 0
+            # valid periods at lag l
             n_valid_periods = T - l
-            nmax = n_valid_periods * obs_per_t
+            # at lag l, we have n_valid_periods * observations_per_time_period valid matches
+            nmax = n_valid_periods * observations_per_time_period
+            curr_obs = np.arange(start_curr, start_curr + nmax)
+            lag_obs = np.arange(start_lag, start_lag + nmax)
 
-            # Parallel over K×K elements for balanced case
-            for index in nb.prange(k_sq):
-                k1 = index // k
-                k2 = index % k
+            meat += weights_l * (scores[curr_obs, :].T @ scores[lag_obs, :])
 
-                # Simple vectorized computation for balanced panels
-                tmp = 0.0
-                for i in range(nmax):
-                    tmp += scores[start_curr + i, k1] * scores[start_lag + i, k2]
-
-                meat[k1, k2] += weights[l] * tmp
     else:
         # Unbalanced panel case: use optimized matching logic
-        # Since data is sorted by panel+time, we can find time boundaries more efficiently
-        time_starts = np.zeros(T, dtype=np.int32)
-        time_ends = np.zeros(T, dtype=np.int32)
 
-        # Optimized boundary finding using sorted property
-        current_pos = 0
-        for t in range(T):
-            target_time = unique_times[t]
+        time_starts, time_ends = get_time_period_boundaries(
+            time_arr = time_arr,
+            unique_times = unique_times
+        )
 
-            # Find start: scan forward from current position
-            while current_pos < N and time_arr[current_pos] < target_time:
-                current_pos += 1
-            time_starts[t] = current_pos
+        total_max_matches = compute_max_lag_matches_for_buffer_allocation(
+            time_starts = time_starts,
+            time_ends = time_ends,
+            T = T,
+            max_lag = lag,
 
-            # Find end: continue scanning
-            while current_pos < N and time_arr[current_pos] == target_time:
-                current_pos += 1
-            time_ends[t] = current_pos
+        )
 
-        # Pre-allocate maximum possible buffer size across all lags (reuse buffers)
-        total_max_matches = 0
-        for l in range(1, lag + 1):
-            lag_max = 0
-            for t_idx in range(l, T):
-                curr_count = time_ends[t_idx] - time_starts[t_idx]
-                lag_count = time_ends[t_idx - l] - time_starts[t_idx - l]
-                lag_max += min(curr_count, lag_count)
-            total_max_matches = max(total_max_matches, lag_max)
-
-        # Reusable buffers across all lags
         curr_obs_buffer = np.empty(total_max_matches, dtype=np.int32)
         lag_obs_buffer = np.empty(total_max_matches, dtype=np.int32)
 
-        for l in range(1, lag + 1):
+        for l in nb.prange(1,min(lag+1,T)):
+
+            weights_l = weights[l]
             match_count = 0
 
             for t_idx in range(l, T):
@@ -378,44 +496,25 @@ def _nw_meat_panel(
                 if curr_start >= curr_end or lag_start >= lag_end:
                     continue
 
-                # Two-pointer matching using direct array access
-                i_curr = curr_start
-                i_lag = lag_start
+                match_count = find_panel_matches_across_time_periods(
+                    panel_arr = panel_arr,
+                    curr_start = curr_start,
+                    curr_end = curr_end,
+                    lag_start = lag_start,
+                    lag_end = lag_end,
+                    curr_obs_buffer = curr_obs_buffer,
+                    lag_obs_buffer = lag_obs_buffer,
+                )
 
-                while i_curr < curr_end and i_lag < lag_end:
-                    if panel_arr[i_curr] == panel_arr[i_lag]:
-                        # Match found! Store in pre-allocated buffers
-                        curr_obs_buffer[match_count] = i_curr
-                        lag_obs_buffer[match_count] = i_lag
-                        match_count += 1
-                        i_curr += 1
-                        i_lag += 1
-                    elif panel_arr[i_curr] < panel_arr[i_lag]:
-                        i_curr += 1
-                    else:
-                        i_lag += 1
-
-            # Use only the filled portion of buffers
             if match_count > 0:
+                # Use only the filled portion of buffers
                 curr_obs = curr_obs_buffer[:match_count]
                 lag_obs = lag_obs_buffer[:match_count]
 
-                # Now parallel over K×K elements with pre-computed matches
-                for index in nb.prange(k_sq):
-                    k1 = index // k
-                    k2 = index % k
 
-                    # Vectorized computation over all matches for this (k1, k2) pair
-                    tmp = np.sum(scores[curr_obs, k1] * scores[lag_obs, k2])
-                    meat[k1, k2] += weights[l] * tmp
+                meat += weights_l * (scores[curr_obs, :].T @ scores[lag_obs, :])
 
-    # Final step: Add transpose (like C++ finishing step)
-    # Use a temporary copy to avoid race conditions in parallel execution
-    meat_copy = meat.copy()
-    for k1 in nb.prange(k):
-        for k2 in range(k):
-            meat[k1, k2] += meat_copy[k2, k1]
-
+    meat += meat.T
     return meat
 
 
