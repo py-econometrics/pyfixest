@@ -139,16 +139,16 @@ BACKEND_F3 = [
     "balanced",
     [
         "balanced-consecutive",
-    #    "balanced-non-consecutive",
-    #    "non-balanced-consecutive",
-    #    "non-balanced-non-consecutive",
+        "balanced-non-consecutive",
+        "non-balanced-consecutive",
+        "non-balanced-non-consecutive",
     ],
 )
 @pytest.mark.parametrize(
     "weights",
     [
         None,
-        #    "weights"
+        "weights"
     ],
 )
 @pytest.mark.parametrize("fml", ols_fmls)

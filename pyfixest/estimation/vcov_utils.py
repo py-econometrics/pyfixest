@@ -124,9 +124,11 @@ def _hac_meat_loop(
         The HAC meat matrix.
     """
     meat = np.zeros((k, k))
+    gamma_buffer = np.zeros((k, k))
 
     # Vectorized computation for all lag values
     for lag_value in range(lag + 1):
+        gamma_buffer.fill(0.0)
         weight = weights[lag_value]
 
         # Vectorized computation: scores[t] @ scores[t-lag_value].T for all t
@@ -135,10 +137,8 @@ def _hac_meat_loop(
         scores_lagged = scores[:time_periods-lag_value]  # Shape: (time_periods-lag_value, k)
 
         # Compute gamma_lag = sum_t scores[t] @ scores[t-lag_value].T
-        gamma_lag = scores_current.T @ scores_lagged
-
-        # Add weighted contribution to meat matrix
-        meat += weight * (gamma_lag + gamma_lag.T)
+        gamma_buffer[:, :] = scores_current.T @ scores_lagged
+        meat += weight * (gamma_buffer + gamma_buffer.T)
 
     return meat
 
@@ -434,7 +434,7 @@ def _nw_meat_panel(
     meat = np.zeros((k, k))
 
     # lag 0
-    meat[:, :] = weights[0] * (scores.T @ scores)
+    meat[:, :] = (scores.T @ scores)
 
     if balanced is None:
         balanced = is_balanced_panel(
@@ -444,23 +444,27 @@ def _nw_meat_panel(
         )
 
     if balanced:
+        gamma_buffer = np.zeros((k, k))
 
-        for l in nb.prange(1, min(lag+1,T)):
-
+        for l in range(1, min(lag + 1, T)):
             weights_l = weights[l]
-            observations_per_time_period = n_panels
-            # start of current period observations
-            start_curr = l * observations_per_time_period
-            # start of lagged period observations
-            start_lag = 0
-            # valid periods at lag l
             n_valid_periods = T - l
-            # at lag l, we have n_valid_periods * observations_per_time_period valid matches
-            nmax = n_valid_periods * observations_per_time_period
-            curr_obs = np.arange(start_curr, start_curr + nmax)
-            lag_obs = np.arange(start_lag, start_lag + nmax)
+            total_pairs = n_panels * n_valid_periods
 
-            meat += weights_l * (scores[curr_obs, :].T @ scores[lag_obs, :])
+            curr_indices = np.empty(total_pairs, dtype=np.int64)
+            lag_indices = np.empty(total_pairs, dtype=np.int64)
+
+            for panel in range(n_panels):
+                panel_start = starts[panel]
+                start_idx = panel * n_valid_periods
+                end_idx = start_idx + n_valid_periods
+
+                base_indices = np.arange(n_valid_periods, dtype=np.int64)
+                curr_indices[start_idx:end_idx] = panel_start + base_indices + l
+                lag_indices[start_idx:end_idx] = panel_start + base_indices
+
+            gamma_buffer[:, :] = scores[curr_indices, :].T @ scores[lag_indices, :]
+            meat += weights_l * (gamma_buffer + gamma_buffer.T)
 
     else:
         # Unbalanced panel case: use optimized matching logic
@@ -480,6 +484,7 @@ def _nw_meat_panel(
 
         curr_obs_buffer = np.empty(total_max_matches, dtype=np.int32)
         lag_obs_buffer = np.empty(total_max_matches, dtype=np.int32)
+        gamma_buffer = np.zeros((k, k))
 
         for l in nb.prange(1,min(lag+1,T)):
 
@@ -511,10 +516,10 @@ def _nw_meat_panel(
                 curr_obs = curr_obs_buffer[:match_count]
                 lag_obs = lag_obs_buffer[:match_count]
 
+                gamma_buffer[:, :] = scores[curr_obs, :].T @ scores[lag_obs, :]
 
-                meat += weights_l * (scores[curr_obs, :].T @ scores[lag_obs, :])
+                meat += weights_l * (gamma_buffer + gamma_buffer.T)
 
-    meat += meat.T
     return meat
 
 
@@ -549,7 +554,6 @@ def _dk_meat_panel(
     scores_time[-1, :] = scores[idx[-1] :, :].sum(axis=0)
 
     time_periods, k = scores_time.shape
-
     weights = _get_bartlett_weights(lag=lag)
 
     return _hac_meat_loop(
