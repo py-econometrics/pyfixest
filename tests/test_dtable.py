@@ -327,20 +327,20 @@ def test_two_bycol_groups(sample_df):
 
 def test_invalid_dataframe():
     """Test with an invalid dataframe and ensure it raises an error."""
-    with pytest.raises(AssertionError, match="df must be a pandas DataFrame."):
+    with pytest.raises(AssertionError, match=r"df must be a pandas DataFrame\."):
         pf.dtable("not_a_dataframe", vars=["var1"])
 
 
 def test_non_numeric_column(sample_df):
     """Test with non-numeric column and ensure it raises an error."""
-    with pytest.raises(AssertionError, match="Variables must be numerical."):
+    with pytest.raises(AssertionError, match=r"Variables must be numerical\."):
         pf.dtable(sample_df, vars=["group"])
 
 
 def test_invalid_byrow(sample_df):
     """Test with an invalid `byrow` column that doesn't exist."""
     with pytest.raises(
-        AssertionError, match="byrow must be a column in the DataFrame."
+        AssertionError, match=r"byrow must be a column in the DataFrame\."
     ):
         pf.dtable(sample_df, vars=["var1"], byrow="non_existent_column")
 
@@ -348,6 +348,6 @@ def test_invalid_byrow(sample_df):
 def test_invalid_bycol(sample_df):
     """Test with an invalid `bycol` column that doesn't exist."""
     with pytest.raises(
-        AssertionError, match="bycol must be a list of columns in the DataFrame."
+        AssertionError, match=r"bycol must be a list of columns in the DataFrame\."
     ):
         pf.dtable(sample_df, vars=["var1"], bycol=["non_existent_column"])
