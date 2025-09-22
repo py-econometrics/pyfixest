@@ -201,10 +201,10 @@ def feols(
     `fit.tstat()` for the t-statistics, and `fit.pval()` for the p-values, and
     `fit.confint()` for the confidence intervals.
 
-    The employed type of inference can be specified via the `vcov` argument. If
-    vcov is not provided, `PyFixest` employs the `fixest` default of iid inference,
-    unless there are fixed effects in the model, in which case `feols()` clusters
-    the standard error by the first fixed effect (CRV1 inference).
+    The employed type of inference can be specified via the `vcov` argument. For compatibility
+    with `fixest`, if vcov is not provided, `PyFixest` always employs "iid" inference by default
+    starting with pyfixest 0.33.0. Prior to pyfixest 0.33.0, if vcov was not provided, `PyFixest`
+    would cluster by the first fixed effect if no vcov was provided.
 
     ```{python}
     fit1 = pf.feols("Y ~ X1 + X2 | f1 + f2", data, vcov="iid")

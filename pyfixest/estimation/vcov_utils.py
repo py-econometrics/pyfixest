@@ -67,9 +67,8 @@ def _get_vcov_type(
     """
     Pass the specified vcov type.
 
-    Passes the specified vcov type. If no vcov type specified, sets the default
-    vcov type as iid if no fixed effect is included in the model, and CRV1
-    clustered by the first fixed effect if a fixed effect is included in the model.
+    Passes the specified vcov type. If no vcov type specified, always defaults
+    to "iid" inference, regardless of whether fixed effects are included in the model.
 
     Parameters
     ----------
@@ -81,20 +80,9 @@ def _get_vcov_type(
     Returns
     -------
     str
-        vcov_type (str) : The specified vcov type.
+        vcov_type (str) : The specified vcov type, or "iid" by default.
     """
-    if vcov is None:
-        # iid if no fixed effects
-        if fval == "0":
-            vcov_type = "iid"  # type: ignore
-        else:
-            # CRV1 inference, clustered by first fixed effect
-            first_fe = fval.split("+")[0]
-            vcov_type = {"CRV1": first_fe}  # type: ignore
-    else:
-        vcov_type = vcov  # type: ignore
-
-    return vcov_type  # type: ignore
+    return vcov if vcov is not None else "iid"
 
 
 def _prepare_twoway_clustering(clustervar: list, cluster_df: pd.DataFrame):
