@@ -5,6 +5,7 @@ Simple script to check cached R results status.
 
 import sys
 from pathlib import Path
+
 import pandas as pd
 
 
@@ -23,7 +24,7 @@ def check_cache_status():
         "iv_results.csv",
         "glm_results.csv",
         "fepois_results.csv",
-        "metadata.csv"
+        "metadata.csv",
     ]
 
     existing_files = []
@@ -49,7 +50,9 @@ def check_cache_status():
                     print(f"   - {filename}: {len(df)} rows")
                 else:
                     df = pd.read_csv(filepath)
-                    print(f"   - {filename}: generated at {df['generated_at'].iloc[0] if 'generated_at' in df.columns else 'unknown'}")
+                    print(
+                        f"   - {filename}: generated at {df['generated_at'].iloc[0] if 'generated_at' in df.columns else 'unknown'}"
+                    )
             except Exception as e:
                 print(f"   - {filename}: ⚠️  Error reading file ({e})")
 

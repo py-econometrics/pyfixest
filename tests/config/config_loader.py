@@ -6,9 +6,9 @@ that's used by both Python tests and R result generation.
 """
 
 import json
-import os
 from pathlib import Path
-from typing import Dict, List, Any, Union
+from typing import Any, Dict, List, Union
+
 import pandas as pd
 
 
@@ -34,18 +34,20 @@ class TestConfigLoader:
         if not self.config_path.exists():
             raise FileNotFoundError(f"Configuration file not found: {self.config_path}")
 
-        with open(self.config_path, 'r') as f:
+        with open(self.config_path) as f:
             return json.load(f)
 
     def get_data_params(self, test_type: str = "feols") -> Dict[str, Any]:
         """Get data generation parameters for a specific test type."""
-        return self.config["data_generation"].get(f"{test_type}_params",
-                                                 self.config["data_generation"]["default_params"])
+        return self.config["data_generation"].get(
+            f"{test_type}_params", self.config["data_generation"]["default_params"]
+        )
 
     def get_tolerance(self, test_type: str = "default") -> Dict[str, float]:
         """Get tolerance settings for a specific test type."""
-        return self.config["tolerance_settings"].get(test_type,
-                                                    self.config["tolerance_settings"]["default"])
+        return self.config["tolerance_settings"].get(
+            test_type, self.config["tolerance_settings"]["default"]
+        )
 
     def get_formulas(self, test_type: str) -> List[str]:
         """Get formulas for a specific test type."""
@@ -107,22 +109,26 @@ class TestConfigLoader:
                     for dropna in dropna_options:
                         if families[0] is not None:  # GLM case
                             for family in families:
-                                combinations.append({
+                                combinations.append(
+                                    {
+                                        "formula": formula,
+                                        "inference": inference,
+                                        "weights": weight,
+                                        "dropna": dropna,
+                                        "family": family,
+                                        "test_type": test_type,
+                                    }
+                                )
+                        else:
+                            combinations.append(
+                                {
                                     "formula": formula,
                                     "inference": inference,
                                     "weights": weight,
                                     "dropna": dropna,
-                                    "family": family,
-                                    "test_type": test_type
-                                })
-                        else:
-                            combinations.append({
-                                "formula": formula,
-                                "inference": inference,
-                                "weights": weight,
-                                "dropna": dropna,
-                                "test_type": test_type
-                            })
+                                    "test_type": test_type,
+                                }
+                            )
 
         return combinations
 
@@ -150,7 +156,8 @@ class CachedResultsLoader:
         Args:
             test_type: Type of test (feols, iv, glm, fepois)
 
-        Returns:
+        Returns
+        -------
             DataFrame with cached R results
         """
         if test_type not in self._cached_results:
@@ -170,9 +177,15 @@ class CachedResultsLoader:
 
         return self._cached_results[test_type]
 
-    def get_result(self, test_type: str, formula: str, inference: str,
-                   weights: str = "none", dropna: bool = False,
-                   family: str = "none") -> pd.Series:
+    def get_result(
+        self,
+        test_type: str,
+        formula: str,
+        inference: str,
+        weights: str = "none",
+        dropna: bool = False,
+        family: str = "none",
+    ) -> pd.Series:
         """Get a specific cached result.
 
         Args:
@@ -183,7 +196,8 @@ class CachedResultsLoader:
             dropna: Whether dropna was applied
             family: Family for GLM models
 
-        Returns:
+        Returns
+        -------
             Series with the cached result
         """
         df = self.load_results(test_type)

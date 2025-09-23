@@ -8,13 +8,12 @@ all work together correctly.
 
 import sys
 from pathlib import Path
-import time
 
 # Add config directory to path
 config_dir = Path(__file__).parent.parent / "config"
 sys.path.insert(0, str(config_dir))
 
-from config_loader import TestConfigLoader, CachedResultsLoader
+from config_loader import CachedResultsLoader, TestConfigLoader
 from run_r_generation import check_r_available, check_results_generated
 
 
@@ -30,7 +29,9 @@ def test_config_loader():
         assert len(feols_formulas) > 0, "No FEOLS formulas found"
 
         feols_config = config.get_test_config("feols")
-        assert "inference_types" in feols_config, "Missing inference_types in FEOLS config"
+        assert "inference_types" in feols_config, (
+            "Missing inference_types in FEOLS config"
+        )
 
         tolerance = config.get_tolerance("default")
         assert "rtol" in tolerance, "Missing rtol in tolerance"
@@ -39,7 +40,9 @@ def test_config_loader():
         combinations = config.generate_test_combinations("feols")
         assert len(combinations) > 0, "No test combinations generated"
 
-        print(f"✓ Config loader works. Found {len(feols_formulas)} FEOLS formulas, {len(combinations)} test combinations")
+        print(
+            f"✓ Config loader works. Found {len(feols_formulas)} FEOLS formulas, {len(combinations)} test combinations"
+        )
         return True
 
     except Exception as e:
@@ -65,7 +68,9 @@ def test_cache_loader():
 
             return True
         else:
-            print("! Cache not found (this is OK if R results haven't been generated yet)")
+            print(
+                "! Cache not found (this is OK if R results haven't been generated yet)"
+            )
             return True  # Not an error
 
     except Exception as e:
@@ -125,7 +130,7 @@ def main():
         ("Configuration Loading", test_config_loader),
         ("Cache Loading", test_cache_loader),
         ("R Environment", test_r_environment),
-        ("Python Testing", run_mini_python_test)
+        ("Python Testing", run_mini_python_test),
     ]
 
     results = []
@@ -166,4 +171,5 @@ def main():
 
 if __name__ == "__main__":
     import pandas as pd  # Import here to avoid issues if not available
+
     sys.exit(main())

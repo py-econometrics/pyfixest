@@ -19,7 +19,7 @@ def test_config_file():
         return False
 
     try:
-        with open(config_path, 'r') as f:
+        with open(config_path) as f:
             config = json.load(f)
 
         # Basic validation
@@ -41,7 +41,9 @@ def test_config_file():
                 print(f"✗ Missing formulas in {test_type}")
                 return False
 
-        print(f"✓ Configuration file valid with {len(config['test_configurations'])} test types")
+        print(
+            f"✓ Configuration file valid with {len(config['test_configurations'])} test types"
+        )
         return True
 
     except json.JSONDecodeError as e:
@@ -58,6 +60,7 @@ def test_pyfixest_import():
 
     try:
         import pyfixest as pf
+
         print("✓ pyfixest imported successfully")
 
         # Test basic data generation
@@ -91,7 +94,7 @@ def test_r_script_exists():
 
     # Basic validation - check it's an R script
     try:
-        with open(r_script, 'r') as f:
+        with open(r_script) as f:
             content = f.read()
 
         if "library(fixest)" not in content:
@@ -115,12 +118,7 @@ def test_directory_structure():
     print("Testing directory structure...")
 
     base_dir = Path(__file__).parent.parent
-    required_dirs = [
-        "config",
-        "scripts",
-        "data",
-        "data/cached_results"
-    ]
+    required_dirs = ["config", "scripts", "data", "data/cached_results"]
 
     missing_dirs = []
     for dir_name in required_dirs:
@@ -146,7 +144,7 @@ def main():
         ("Directory Structure", test_directory_structure),
         ("Configuration File", test_config_file),
         ("R Script", test_r_script_exists),
-        ("PyFixest Import", test_pyfixest_import)
+        ("PyFixest Import", test_pyfixest_import),
     ]
 
     results = []
