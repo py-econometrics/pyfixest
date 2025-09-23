@@ -2670,41 +2670,6 @@ def _feols_input_checks(Y: np.ndarray, X: np.ndarray, weights: np.ndarray):
         raise ValueError("weights must be a 2D array")
 
 
-def _get_vcov_type(vcov: str, fval: str):
-    """
-    Get variance-covariance matrix type.
-
-    Passes the specified vcov type and sets the default vcov type based on the
-    inclusion of fixed effects in the model.
-
-    Parameters
-    ----------
-    vcov : str
-        The specified vcov type.
-    fval : str
-        The specified fixed effects, formatted as a string (e.g., "X1+X2").
-
-    Returns
-    -------
-    vcov_type : str
-        The specified or default vcov type. Defaults to 'iid' if no fixed effect
-        is included in the model, and 'CRV1' clustered by the first fixed effect
-        if a fixed effect is included.
-    """
-    if vcov is None:
-        # iid if no fixed effects
-        if fval == "0":
-            vcov_type = "iid"
-        else:
-            # CRV1 inference, clustered by first fixed effect
-            first_fe = fval.split("+")[0]
-            vcov_type = {"CRV1": first_fe}
-    else:
-        vcov_type = vcov
-
-    return vcov_type
-
-
 def _drop_multicollinear_variables(
     X: np.ndarray,
     names: list[str],
