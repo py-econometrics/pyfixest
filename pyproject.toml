@@ -32,6 +32,9 @@ r-sandwich = ">=3.0_2,<4"
 r-broom = ">=1.0.5,<2"
 r-car = ">=3.1_2,<4"
 r-quantreg = ">=5.0"
+r-jsonlite = "*"
+r-reticulate = "*"
+
 
 [project.optional-dependencies]
 dev = [
@@ -126,6 +129,8 @@ debug = "python pyfixest/debug.py"
 update-test-data = "Rscript tests/r_test_comparisons.R"
 install-r-extended = "Rscript r_test_requirements.R"
 render-notebooks = "python scripts/run_notebooks.py"
+tests-cached = "pytest -rs tests/test_vs_fixest_cached.py -n 4 --cov=pyfixest --cov-report=xml"
+generate-r-results = "Rscript tests/scripts/generate_r_results.R"
 
 [tool.pixi.feature.lint.tasks]
 lint = "pre-commit run ruff --all-files"
