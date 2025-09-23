@@ -108,6 +108,9 @@ docs = { features = ["docs"], solve-group = "default" }
 jax = { features = ["jax"], solve-group = "default" }
 plots = { features = ["plots"], solve-group = "default" }
 
+[tool.pixi.dependencies]
+r-stringmagic = "*"
+
 [tool.pixi.feature.dev.tasks]
 tests = "pytest -rs -n 4 --cov-report=term tests"
 tests-against-r-core = "pytest -rs tests -n 4 -m \"against_r_core\" --cov=pyfixest --cov-report=xml"
@@ -141,6 +144,7 @@ docs-preview = "quarto preview docs"
 rpy2 = ">=3.5.11,<4"
 r = "*"
 r-fixest = ">=0.13,<0.14"
+r-stringmagic = ">=1.2.0"
 r-broom = ">=1.0.5,<2"
 
 [tool.pytest.ini_options]

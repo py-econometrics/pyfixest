@@ -203,7 +203,7 @@ def feols(
 
     The employed type of inference can be specified via the `vcov` argument. For compatibility
     with `fixest`, if vcov is not provided, `PyFixest` always employs "iid" inference by default
-    starting with pyfixest 0.33.0. Prior to pyfixest 0.33.0, if vcov was not provided, `PyFixest`
+    starting with pyfixest 0.31.0. Prior to pyfixest 0.31.0, if vcov was not provided, `PyFixest`
     would cluster by the first fixed effect if no vcov was provided.
 
     ```{python}
