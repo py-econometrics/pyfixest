@@ -102,7 +102,7 @@ def detect_singletons_jax(ids: np.ndarray) -> np.ndarray:
             return prev_n != curr_carry[1]
 
         def body_fun(state):
-            prev_n, curr_carry = state
+            _, curr_carry = state
             new_carry = _process_features_jax(
                 ids, curr_carry[0], curr_carry[1], n_samples, n_features, max_fixef
             )

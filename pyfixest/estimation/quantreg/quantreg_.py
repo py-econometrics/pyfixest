@@ -201,7 +201,7 @@ class Quantreg(Feols):
         np.ndarray,
     ]:
         """Fit a quantile regression model using the Frisch-Newton Interior Point Solver."""
-        N, k = X.shape
+        N, _ = X.shape
         if tol is None:
             tol = 1e-06
         if maxiter is None:

@@ -70,4 +70,10 @@ def demean(
     print(pf.feols(fml, data).coef())
     ```
     """
-    return _demean_rs(x, flist.astype(np.uint64), weights, tol, maxiter)
+    return _demean_rs(
+        x.astype(np.float64, copy=False),
+        flist.astype(np.uint64, copy=False),
+        weights.astype(np.float64, copy=False),
+        tol,
+        maxiter,
+    )

@@ -55,8 +55,6 @@ dev = [
 
 lint = [
   "pre-commit==3.6.0",
-  "ruff>=0.4.0",
-  "mypy>=1.10.0",
 ]
 
 build = [
@@ -133,8 +131,7 @@ tests-cached = "pytest -rs tests/test_vs_fixest_cached.py -n 4 --cov=pyfixest --
 generate-r-results = "Rscript tests/scripts/generate_r_results.R"
 
 [tool.pixi.feature.lint.tasks]
-lint = "pre-commit run ruff --all-files"
-mypy = "pre-commit run mypy --all-files"
+pre-commit = "pre-commit run --all-files"
 
 [tool.pixi.feature.build.tasks]
 build-pip = 'python -m build .'
