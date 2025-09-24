@@ -30,7 +30,7 @@ repos:
     rev: 1.9.1
     hooks:
       - id: nbqa-ruff
-        args: ["--fix", "--output-format=full"]
+        args: ["--fix", "--output-format=full", "--ignore=B018"]
         files: ^docs/.*\.ipynb$
 
   - repo: https://github.com/pre-commit/mirrors-mypy
