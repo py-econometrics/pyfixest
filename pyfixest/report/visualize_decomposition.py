@@ -126,7 +126,7 @@ def create_decomposition_plot(
     plot_data = _prepare_plot_data(decomposition_data, keep, drop, exact_match, labels)
 
     # Create and configure the plot
-    fig, ax = plt.subplots(figsize=config.figsize)
+    _, ax = plt.subplots(figsize=config.figsize)
 
     # Draw the chart components
     _draw_bars(ax, plot_data, config)

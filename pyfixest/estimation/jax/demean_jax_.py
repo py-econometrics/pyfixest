@@ -45,7 +45,7 @@ def _demean_jax_impl(
     @jax.jit
     def _body_fun(state):
         """Body function for while_loop."""
-        i, x_curr, x_prev, converged = state
+        i, x_curr, _, _ = state
         x_new = _demean_step(x_curr)
         max_diff = jnp.max(jnp.abs(x_new - x_curr))
         has_converged = max_diff < tol
@@ -59,9 +59,7 @@ def _demean_jax_impl(
 
     # Run the iteration loop using while_loop
     init_state = (0, x, x - 1.0, False)
-    final_i, final_x, _, converged = jax.lax.while_loop(
-        _cond_fun, _body_fun, init_state
-    )
+    _, final_x, _, converged = jax.lax.while_loop(_cond_fun, _body_fun, init_state)
 
     return final_x, converged
 
