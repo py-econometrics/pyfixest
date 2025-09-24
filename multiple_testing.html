@@ -302,7 +302,7 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 <section id="setup" class="level2">
 <h2 class="anchored" data-anchor-id="setup">Setup</h2>
 <p>In a first step, we create a data set with multiple (potentially correlated) dependent variables that share a common set of covariates. All simulations in this notebook are greatly inspired by Clarke, Romano &amp; Wolf (Stata Journal, 2020).</p>
-<div id="cell-7" class="cell" data-execution_count="29">
+<div id="cell-7" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>load_ext autoreload</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>autoreload <span class="dv">2</span></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -314,37 +314,33 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 <span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> tqdm <span class="im">import</span> tqdm</span>
 <span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>The autoreload extension is already loaded. To reload it, use:
-  %reload_ext autoreload</code></pre>
 </div>
+<div id="cell-8" class="cell" data-execution_count="4">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>N <span class="op">=</span> <span class="dv">100</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>n_covariates <span class="op">=</span> <span class="dv">5</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>n_depvars <span class="op">=</span> <span class="dv">20</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<div id="cell-8" class="cell" data-execution_count="30">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>N <span class="op">=</span> <span class="dv">100</span></span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>n_covariates <span class="op">=</span> <span class="dv">5</span></span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>n_depvars <span class="op">=</span> <span class="dv">20</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div id="cell-9" class="cell" data-execution_count="5">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> get_data(N, n_covariates, n_depvars, rho, seed):</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">"Simulate data with true nulls."</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    rng <span class="op">=</span> np.random.default_rng(seed)</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    Omega <span class="op">=</span> np.eye(n_depvars)</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    X <span class="op">=</span> rng.standard_normal((N, n_covariates))</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    u_joint <span class="op">=</span> np.random.multivariate_normal(np.zeros(n_depvars), Omega, N)</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    beta <span class="op">=</span> np.zeros((n_covariates, n_depvars))</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    y <span class="op">=</span> X <span class="op">@</span> beta <span class="op">+</span> u_joint</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    data <span class="op">=</span> pd.DataFrame(X, columns<span class="op">=</span>[<span class="ss">f"X</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">"</span> <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(n_covariates)])</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    data <span class="op">=</span> data.assign(<span class="op">**</span>{<span class="ss">f"y</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">"</span>: y[:, i] <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(n_depvars)})</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> data</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<div id="cell-9" class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> get_data(N, n_covariates, n_depvars, rho, seed):</span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">"Simulate data with true nulls."</span></span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    rng <span class="op">=</span> np.random.default_rng(seed)</span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    Omega <span class="op">=</span> np.eye(n_depvars)</span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    X <span class="op">=</span> rng.standard_normal((N, n_covariates))</span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    u_joint <span class="op">=</span> np.random.multivariate_normal(np.zeros(n_depvars), Omega, N)</span>
-<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    beta <span class="op">=</span> np.zeros((n_covariates, n_depvars))</span>
-<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    y <span class="op">=</span> X <span class="op">@</span> beta <span class="op">+</span> u_joint</span>
-<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    data <span class="op">=</span> pd.DataFrame(X, columns<span class="op">=</span>[<span class="ss">f"X</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">"</span> <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(n_covariates)])</span>
-<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    data <span class="op">=</span> data.assign(<span class="op">**</span>{<span class="ss">f"y</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">"</span>: y[:, i] <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(n_depvars)})</span>
-<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> data</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</div>
-<div id="cell-10" class="cell" data-execution_count="32">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> get_data(</span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    N<span class="op">=</span>N, n_covariates<span class="op">=</span>n_covariates, n_depvars<span class="op">=</span>n_depvars, rho<span class="op">=</span><span class="fl">0.5</span>, seed<span class="op">=</span><span class="dv">12345</span></span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>data.head()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display" data-execution_count="32">
+<div id="cell-10" class="cell" data-execution_count="6">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> get_data(</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    N<span class="op">=</span>N, n_covariates<span class="op">=</span>n_covariates, n_depvars<span class="op">=</span>n_depvars, rho<span class="op">=</span><span class="fl">0.5</span>, seed<span class="op">=</span><span class="dv">12345</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>data.head()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="6">
 <div>
 
 
@@ -383,22 +379,22 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 <td>-0.870662</td>
 <td>-0.259173</td>
 <td>-0.075343</td>
-<td>0.285444</td>
-<td>-0.613527</td>
-<td>1.064762</td>
-<td>0.941035</td>
-<td>-0.188382</td>
+<td>1.555991</td>
+<td>0.761234</td>
+<td>1.888281</td>
+<td>-0.614546</td>
+<td>0.179550</td>
 <td>...</td>
-<td>0.947734</td>
-<td>0.505579</td>
-<td>-2.838629</td>
-<td>-0.563997</td>
-<td>1.757725</td>
-<td>-0.187876</td>
-<td>2.554182</td>
-<td>-2.486495</td>
-<td>0.216818</td>
-<td>0.298878</td>
+<td>0.142083</td>
+<td>1.689619</td>
+<td>-0.425871</td>
+<td>0.421775</td>
+<td>-0.241513</td>
+<td>-0.770971</td>
+<td>-0.822431</td>
+<td>-1.358922</td>
+<td>0.817455</td>
+<td>0.163253</td>
 </tr>
 <tr class="even">
 <th data-quarto-table-cell-role="th">1</th>
@@ -407,22 +403,22 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 <td>0.648893</td>
 <td>0.361058</td>
 <td>-1.952863</td>
-<td>1.365574</td>
-<td>0.404626</td>
-<td>-1.869440</td>
-<td>-0.008121</td>
-<td>2.129185</td>
+<td>-0.053753</td>
+<td>0.043408</td>
+<td>0.563138</td>
+<td>1.088257</td>
+<td>-0.219516</td>
 <td>...</td>
-<td>0.439416</td>
-<td>-1.992477</td>
-<td>-0.002794</td>
-<td>1.603059</td>
-<td>-0.244048</td>
-<td>0.880147</td>
-<td>0.700935</td>
-<td>-0.375832</td>
-<td>1.113939</td>
-<td>0.279370</td>
+<td>-0.882320</td>
+<td>0.641363</td>
+<td>-0.253652</td>
+<td>0.888703</td>
+<td>0.699996</td>
+<td>0.984490</td>
+<td>0.324864</td>
+<td>-1.463119</td>
+<td>-1.755173</td>
+<td>-0.656597</td>
 </tr>
 <tr class="odd">
 <th data-quarto-table-cell-role="th">2</th>
@@ -431,22 +427,22 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 <td>-0.759387</td>
 <td>0.902198</td>
 <td>-0.466953</td>
-<td>0.215444</td>
-<td>-0.282206</td>
-<td>0.720051</td>
-<td>0.366021</td>
-<td>1.051319</td>
+<td>-0.933649</td>
+<td>0.481619</td>
+<td>0.793995</td>
+<td>1.191231</td>
+<td>-2.087805</td>
 <td>...</td>
-<td>0.272646</td>
-<td>-0.507247</td>
-<td>-0.784782</td>
-<td>-1.007066</td>
-<td>0.840372</td>
-<td>-1.150062</td>
-<td>2.082881</td>
-<td>0.583346</td>
-<td>1.077486</td>
-<td>0.027789</td>
+<td>0.962981</td>
+<td>3.198808</td>
+<td>0.901849</td>
+<td>-0.045545</td>
+<td>-0.408414</td>
+<td>-0.127183</td>
+<td>0.624903</td>
+<td>1.565282</td>
+<td>-0.480614</td>
+<td>0.607006</td>
 </tr>
 <tr class="even">
 <th data-quarto-table-cell-role="th">3</th>
@@ -455,22 +451,22 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 <td>-1.256668</td>
 <td>0.575858</td>
 <td>1.398979</td>
-<td>-1.065016</td>
-<td>1.185823</td>
-<td>0.970361</td>
-<td>-0.765870</td>
-<td>0.479013</td>
+<td>-0.135890</td>
+<td>0.329208</td>
+<td>0.304811</td>
+<td>-1.102051</td>
+<td>0.800707</td>
 <td>...</td>
-<td>-1.007019</td>
-<td>0.924188</td>
-<td>1.949084</td>
-<td>-1.560250</td>
-<td>1.167244</td>
-<td>-0.837087</td>
-<td>0.360323</td>
-<td>0.640585</td>
-<td>0.527408</td>
-<td>-0.033194</td>
+<td>2.080769</td>
+<td>1.058883</td>
+<td>-1.672165</td>
+<td>-1.443892</td>
+<td>-0.250928</td>
+<td>-1.014871</td>
+<td>-2.315505</td>
+<td>2.250437</td>
+<td>1.324270</td>
+<td>0.369040</td>
 </tr>
 <tr class="odd">
 <th data-quarto-table-cell-role="th">4</th>
@@ -479,22 +475,22 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 <td>0.902919</td>
 <td>-1.621583</td>
 <td>-0.158189</td>
-<td>0.664518</td>
-<td>1.456532</td>
-<td>1.858938</td>
-<td>-0.285083</td>
-<td>-0.379121</td>
+<td>-1.426639</td>
+<td>-0.986879</td>
+<td>-0.140158</td>
+<td>0.986182</td>
+<td>1.498658</td>
 <td>...</td>
-<td>-0.960765</td>
-<td>-0.238118</td>
-<td>-1.055520</td>
-<td>-0.486306</td>
-<td>0.583903</td>
-<td>0.718977</td>
-<td>-0.122756</td>
-<td>0.545447</td>
-<td>0.174667</td>
-<td>0.926524</td>
+<td>0.109724</td>
+<td>-0.463974</td>
+<td>1.094400</td>
+<td>1.542634</td>
+<td>-0.336492</td>
+<td>-1.932564</td>
+<td>0.669541</td>
+<td>-0.373858</td>
+<td>-0.619859</td>
+<td>-0.233117</td>
 </tr>
 </tbody>
 </table>
@@ -504,63 +500,63 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 </div>
 </div>
 <p>Now that we have our data set at hand, we can fit 20 regression models - one for each dependent variable. To do so, we will use pyfixest’s multiple estimation syntax.</p>
-<div id="cell-12" class="cell" data-execution_count="33">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>dependent_vars <span class="op">=</span> <span class="st">" + "</span>.join([<span class="ss">f"y</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">"</span> <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">20</span>)])</span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>independent_vars <span class="op">=</span> <span class="st">" + "</span>.join([<span class="ss">f"X</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">"</span> <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">5</span>)])</span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>fml <span class="op">=</span> <span class="ss">f"</span><span class="sc">{</span>dependent_vars<span class="sc">}</span><span class="ss"> ~ </span><span class="sc">{</span>independent_vars<span class="sc">}</span><span class="ss">"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div id="cell-12" class="cell" data-execution_count="7">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>dependent_vars <span class="op">=</span> <span class="st">" + "</span>.join([<span class="ss">f"y</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">"</span> <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">20</span>)])</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>independent_vars <span class="op">=</span> <span class="st">" + "</span>.join([<span class="ss">f"X</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">"</span> <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">5</span>)])</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>fml <span class="op">=</span> <span class="ss">f"</span><span class="sc">{</span>dependent_vars<span class="sc">}</span><span class="ss"> ~ </span><span class="sc">{</span>independent_vars<span class="sc">}</span><span class="ss">"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<div id="cell-13" class="cell" data-execution_count="34">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(fml, data<span class="op">=</span>data, vcov<span class="op">=</span><span class="st">"hetero"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div id="cell-13" class="cell" data-execution_count="8">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(fml, data<span class="op">=</span>data, vcov<span class="op">=</span><span class="st">"hetero"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<div id="cell-14" class="cell" data-execution_count="35">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>(pf.etable(fit).tab_style(style<span class="op">=</span>style.fill(color<span class="op">=</span><span class="st">"yellow"</span>), locations<span class="op">=</span>loc.body(rows<span class="op">=</span><span class="dv">1</span>)))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display" data-execution_count="35">
-<div id="vfsdazjkcr" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<div id="cell-14" class="cell" data-execution_count="9">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>(pf.etable(fit).tab_style(style<span class="op">=</span>style.fill(color<span class="op">=</span><span class="st">"yellow"</span>), locations<span class="op">=</span>loc.body(rows<span class="op">=</span><span class="dv">1</span>)))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="9">
+<div id="gxewrwqzwa" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
 <style>
-#vfsdazjkcr table {
+#gxewrwqzwa table {
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
           -webkit-font-smoothing: antialiased;
           -moz-osx-font-smoothing: grayscale;
         }
 
-#vfsdazjkcr thead, tbody, tfoot, tr, td, th { border-style: none !important; }
+#gxewrwqzwa thead, tbody, tfoot, tr, td, th { border-style: none !important; }
  tr { background-color: transparent !important; }
-#vfsdazjkcr p { margin: 0 !important; padding: 0 !important; }
- #vfsdazjkcr .gt_table { display: table !important; border-collapse: collapse !important; line-height: normal !important; margin-left: auto !important; margin-right: auto !important; color: #333333 !important; font-size: 16px !important; font-weight: normal !important; font-style: normal !important; background-color: #FFFFFF !important; width: auto !important; border-top-style: solid !important; border-top-width: 2px !important; border-top-color: #A8A8A8 !important; border-right-style: none !important; border-right-width: 2px !important; border-right-color: #D3D3D3 !important; border-bottom-style: hidden !important; border-bottom-width: 2px !important; border-bottom-color: #A8A8A8 !important; border-left-style: none !important; border-left-width: 2px !important; border-left-color: #D3D3D3 !important; }
- #vfsdazjkcr .gt_caption { padding-top: 4px !important; padding-bottom: 4px !important; }
- #vfsdazjkcr .gt_title { color: #333333 !important; font-size: 125% !important; font-weight: initial !important; padding-top: 4px !important; padding-bottom: 4px !important; padding-left: 5px !important; padding-right: 5px !important; border-bottom-color: #FFFFFF !important; border-bottom-width: 0 !important; }
- #vfsdazjkcr .gt_subtitle { color: #333333 !important; font-size: 85% !important; font-weight: initial !important; padding-top: 3px !important; padding-bottom: 5px !important; padding-left: 5px !important; padding-right: 5px !important; border-top-color: #FFFFFF !important; border-top-width: 0 !important; }
- #vfsdazjkcr .gt_heading { background-color: #FFFFFF !important; text-align: center !important; border-bottom-color: #FFFFFF !important; border-left-style: none !important; border-left-width: 1px !important; border-left-color: #D3D3D3 !important; border-right-style: none !important; border-right-width: 1px !important; border-right-color: #D3D3D3 !important; }
- #vfsdazjkcr .gt_bottom_border { border-bottom-style: solid !important; border-bottom-width: 2px !important; border-bottom-color: #D3D3D3 !important; }
- #vfsdazjkcr .gt_col_headings { border-top-style: solid !important; border-top-width: 2px !important; border-top-color: black !important; border-bottom-style: solid !important; border-bottom-width: 0.5px !important; border-bottom-color: black !important; border-left-style: none !important; border-left-width: 1px !important; border-left-color: #D3D3D3 !important; border-right-style: none !important; border-right-width: 1px !important; border-right-color: #D3D3D3 !important; }
- #vfsdazjkcr .gt_col_heading { color: #333333 !important; background-color: #FFFFFF !important; font-size: 100% !important; font-weight: normal !important; text-transform: inherit !important; border-left-style: none !important; border-left-width: 0px !important; border-left-color: white !important; border-right-style: none !important; border-right-width: 0px !important; border-right-color: white !important; vertical-align: bottom !important; padding-top: 4px !important; padding-bottom: 5px !important; padding-left: 5px !important; padding-right: 5px !important; overflow-x: hidden !important; }
- #vfsdazjkcr .gt_column_spanner_outer { color: #333333 !important; background-color: #FFFFFF !important; font-size: 100% !important; font-weight: normal !important; text-transform: inherit !important; padding-top: 0 !important; padding-bottom: 0 !important; padding-left: 4px !important; padding-right: 4px !important; }
- #vfsdazjkcr .gt_column_spanner_outer:first-child { padding-left: 0 !important; }
- #vfsdazjkcr .gt_column_spanner_outer:last-child { padding-right: 0 !important; }
- #vfsdazjkcr .gt_column_spanner { border-bottom-style: solid !important; border-bottom-width: 0.5px !important; border-bottom-color: black !important; vertical-align: bottom !important; padding-top: 4px !important; padding-bottom: 4px !important; overflow-x: hidden !important; display: inline-block !important; width: 100% !important; }
- #vfsdazjkcr .gt_spanner_row { border-bottom-style: hidden !important; }
- #vfsdazjkcr .gt_group_heading { padding-top: 0px !important; padding-bottom: 0px !important; padding-left: 5px !important; padding-right: 5px !important; color: #333333 !important; background-color: #FFFFFF !important; font-size: 0px !important; font-weight: initial !important; text-transform: inherit !important; border-top-style: solid !important; border-top-width: 0.5px !important; border-top-color: black !important; border-bottom-style: solid !important; border-bottom-width: 0.5px !important; border-bottom-color: black !important; border-left-style: none !important; border-left-width: 1px !important; border-left-color: white !important; border-right-style: none !important; border-right-width: 1px !important; border-right-color: white !important; vertical-align: middle !important; text-align: left !important; }
- #vfsdazjkcr .gt_empty_group_heading { padding: 0.5px !important; color: #333333 !important; background-color: #FFFFFF !important; font-size: 0px !important; font-weight: initial !important; border-top-style: solid !important; border-top-width: 0.5px !important; border-top-color: black !important; border-bottom-style: solid !important; border-bottom-width: 0.5px !important; border-bottom-color: black !important; vertical-align: middle !important; }
- #vfsdazjkcr .gt_from_md> :first-child { margin-top: 0 !important; }
- #vfsdazjkcr .gt_from_md> :last-child { margin-bottom: 0 !important; }
- #vfsdazjkcr .gt_row { padding-top: 4px !important; padding-bottom: 4px !important; padding-left: 5px !important; padding-right: 5px !important; margin: 10px !important; border-top-style: none !important; border-top-width: 1px !important; border-top-color: #D3D3D3 !important; border-left-style: none !important; border-left-width: 0px !important; border-left-color: white !important; border-right-style: none !important; border-right-width: 0px !important; border-right-color: white !important; vertical-align: middle !important; overflow-x: hidden !important; }
- #vfsdazjkcr .gt_stub { color: #333333 !important; background-color: #FFFFFF !important; font-size: 100% !important; font-weight: initial !important; text-transform: inherit !important; border-right-style: hidden !important; border-right-width: 2px !important; border-right-color: #D3D3D3 !important; padding-left: 5px !important; padding-right: 5px !important; }
- #vfsdazjkcr .gt_stub_row_group { color: #333333 !important; background-color: #FFFFFF !important; font-size: 100% !important; font-weight: initial !important; text-transform: inherit !important; border-right-style: solid !important; border-right-width: 2px !important; border-right-color: #D3D3D3 !important; padding-left: 5px !important; padding-right: 5px !important; vertical-align: top !important; }
- #vfsdazjkcr .gt_row_group_first td { border-top-width: 0.5px !important; }
- #vfsdazjkcr .gt_row_group_first th { border-top-width: 0.5px !important; }
- #vfsdazjkcr .gt_striped { background-color: rgba(128,128,128,0.05) !important; }
- #vfsdazjkcr .gt_table_body { border-top-style: solid !important; border-top-width: 0.5px !important; border-top-color: black !important; border-bottom-style: solid !important; border-bottom-width: 2px !important; border-bottom-color: black !important; }
- #vfsdazjkcr .gt_sourcenotes { color: #333333 !important; background-color: #FFFFFF !important; border-bottom-style: none !important; border-bottom-width: 2px !important; border-bottom-color: #D3D3D3 !important; border-left-style: none !important; border-left-width: 2px !important; border-left-color: #D3D3D3 !important; border-right-style: none !important; border-right-width: 2px !important; border-right-color: #D3D3D3 !important; }
- #vfsdazjkcr .gt_sourcenote { font-size: 90% !important; padding-top: 4px !important; padding-bottom: 4px !important; padding-left: 5px !important; padding-right: 5px !important; text-align: left !important; }
- #vfsdazjkcr .gt_left { text-align: left !important; }
- #vfsdazjkcr .gt_center { text-align: center !important; }
- #vfsdazjkcr .gt_right { text-align: right !important; font-variant-numeric: tabular-nums !important; }
- #vfsdazjkcr .gt_font_normal { font-weight: normal !important; }
- #vfsdazjkcr .gt_font_bold { font-weight: bold !important; }
- #vfsdazjkcr .gt_font_italic { font-style: italic !important; }
- #vfsdazjkcr .gt_super { font-size: 65% !important; }
- #vfsdazjkcr .gt_footnote_marks { font-size: 75% !important; vertical-align: 0.4em !important; position: initial !important; }
- #vfsdazjkcr .gt_asterisk { font-size: 100% !important; vertical-align: 0 !important; }
+#gxewrwqzwa p { margin: 0 !important; padding: 0 !important; }
+ #gxewrwqzwa .gt_table { display: table !important; border-collapse: collapse !important; line-height: normal !important; margin-left: auto !important; margin-right: auto !important; color: #333333 !important; font-size: 16px !important; font-weight: normal !important; font-style: normal !important; background-color: #FFFFFF !important; width: auto !important; border-top-style: solid !important; border-top-width: 2px !important; border-top-color: #A8A8A8 !important; border-right-style: none !important; border-right-width: 2px !important; border-right-color: #D3D3D3 !important; border-bottom-style: hidden !important; border-bottom-width: 2px !important; border-bottom-color: #A8A8A8 !important; border-left-style: none !important; border-left-width: 2px !important; border-left-color: #D3D3D3 !important; }
+ #gxewrwqzwa .gt_caption { padding-top: 4px !important; padding-bottom: 4px !important; }
+ #gxewrwqzwa .gt_title { color: #333333 !important; font-size: 125% !important; font-weight: initial !important; padding-top: 4px !important; padding-bottom: 4px !important; padding-left: 5px !important; padding-right: 5px !important; border-bottom-color: #FFFFFF !important; border-bottom-width: 0 !important; }
+ #gxewrwqzwa .gt_subtitle { color: #333333 !important; font-size: 85% !important; font-weight: initial !important; padding-top: 3px !important; padding-bottom: 5px !important; padding-left: 5px !important; padding-right: 5px !important; border-top-color: #FFFFFF !important; border-top-width: 0 !important; }
+ #gxewrwqzwa .gt_heading { background-color: #FFFFFF !important; text-align: center !important; border-bottom-color: #FFFFFF !important; border-left-style: none !important; border-left-width: 1px !important; border-left-color: #D3D3D3 !important; border-right-style: none !important; border-right-width: 1px !important; border-right-color: #D3D3D3 !important; }
+ #gxewrwqzwa .gt_bottom_border { border-bottom-style: solid !important; border-bottom-width: 2px !important; border-bottom-color: #D3D3D3 !important; }
+ #gxewrwqzwa .gt_col_headings { border-top-style: solid !important; border-top-width: 2px !important; border-top-color: black !important; border-bottom-style: solid !important; border-bottom-width: 0.5px !important; border-bottom-color: black !important; border-left-style: none !important; border-left-width: 1px !important; border-left-color: #D3D3D3 !important; border-right-style: none !important; border-right-width: 1px !important; border-right-color: #D3D3D3 !important; }
+ #gxewrwqzwa .gt_col_heading { color: #333333 !important; background-color: #FFFFFF !important; font-size: 100% !important; font-weight: normal !important; text-transform: inherit !important; border-left-style: none !important; border-left-width: 0px !important; border-left-color: white !important; border-right-style: none !important; border-right-width: 0px !important; border-right-color: white !important; vertical-align: bottom !important; padding-top: 4px !important; padding-bottom: 5px !important; padding-left: 5px !important; padding-right: 5px !important; overflow-x: hidden !important; }
+ #gxewrwqzwa .gt_column_spanner_outer { color: #333333 !important; background-color: #FFFFFF !important; font-size: 100% !important; font-weight: normal !important; text-transform: inherit !important; padding-top: 0 !important; padding-bottom: 0 !important; padding-left: 4px !important; padding-right: 4px !important; }
+ #gxewrwqzwa .gt_column_spanner_outer:first-child { padding-left: 0 !important; }
+ #gxewrwqzwa .gt_column_spanner_outer:last-child { padding-right: 0 !important; }
+ #gxewrwqzwa .gt_column_spanner { border-bottom-style: solid !important; border-bottom-width: 0.5px !important; border-bottom-color: black !important; vertical-align: bottom !important; padding-top: 4px !important; padding-bottom: 4px !important; overflow-x: hidden !important; display: inline-block !important; width: 100% !important; }
+ #gxewrwqzwa .gt_spanner_row { border-bottom-style: hidden !important; }
+ #gxewrwqzwa .gt_group_heading { padding-top: 0px !important; padding-bottom: 0px !important; padding-left: 5px !important; padding-right: 5px !important; color: #333333 !important; background-color: #FFFFFF !important; font-size: 0px !important; font-weight: initial !important; text-transform: inherit !important; border-top-style: solid !important; border-top-width: 0.5px !important; border-top-color: black !important; border-bottom-style: solid !important; border-bottom-width: 0.5px !important; border-bottom-color: black !important; border-left-style: none !important; border-left-width: 1px !important; border-left-color: white !important; border-right-style: none !important; border-right-width: 1px !important; border-right-color: white !important; vertical-align: middle !important; text-align: left !important; }
+ #gxewrwqzwa .gt_empty_group_heading { padding: 0.5px !important; color: #333333 !important; background-color: #FFFFFF !important; font-size: 0px !important; font-weight: initial !important; border-top-style: solid !important; border-top-width: 0.5px !important; border-top-color: black !important; border-bottom-style: solid !important; border-bottom-width: 0.5px !important; border-bottom-color: black !important; vertical-align: middle !important; }
+ #gxewrwqzwa .gt_from_md> :first-child { margin-top: 0 !important; }
+ #gxewrwqzwa .gt_from_md> :last-child { margin-bottom: 0 !important; }
+ #gxewrwqzwa .gt_row { padding-top: 4px !important; padding-bottom: 4px !important; padding-left: 5px !important; padding-right: 5px !important; margin: 10px !important; border-top-style: none !important; border-top-width: 1px !important; border-top-color: #D3D3D3 !important; border-left-style: none !important; border-left-width: 0px !important; border-left-color: white !important; border-right-style: none !important; border-right-width: 0px !important; border-right-color: white !important; vertical-align: middle !important; overflow-x: hidden !important; }
+ #gxewrwqzwa .gt_stub { color: #333333 !important; background-color: #FFFFFF !important; font-size: 100% !important; font-weight: initial !important; text-transform: inherit !important; border-right-style: hidden !important; border-right-width: 2px !important; border-right-color: #D3D3D3 !important; padding-left: 5px !important; padding-right: 5px !important; }
+ #gxewrwqzwa .gt_stub_row_group { color: #333333 !important; background-color: #FFFFFF !important; font-size: 100% !important; font-weight: initial !important; text-transform: inherit !important; border-right-style: solid !important; border-right-width: 2px !important; border-right-color: #D3D3D3 !important; padding-left: 5px !important; padding-right: 5px !important; vertical-align: top !important; }
+ #gxewrwqzwa .gt_row_group_first td { border-top-width: 0.5px !important; }
+ #gxewrwqzwa .gt_row_group_first th { border-top-width: 0.5px !important; }
+ #gxewrwqzwa .gt_striped { background-color: rgba(128,128,128,0.05) !important; }
+ #gxewrwqzwa .gt_table_body { border-top-style: solid !important; border-top-width: 0.5px !important; border-top-color: black !important; border-bottom-style: solid !important; border-bottom-width: 2px !important; border-bottom-color: black !important; }
+ #gxewrwqzwa .gt_sourcenotes { color: #333333 !important; background-color: #FFFFFF !important; border-bottom-style: none !important; border-bottom-width: 2px !important; border-bottom-color: #D3D3D3 !important; border-left-style: none !important; border-left-width: 2px !important; border-left-color: #D3D3D3 !important; border-right-style: none !important; border-right-width: 2px !important; border-right-color: #D3D3D3 !important; }
+ #gxewrwqzwa .gt_sourcenote { font-size: 90% !important; padding-top: 4px !important; padding-bottom: 4px !important; padding-left: 5px !important; padding-right: 5px !important; text-align: left !important; }
+ #gxewrwqzwa .gt_left { text-align: left !important; }
+ #gxewrwqzwa .gt_center { text-align: center !important; }
+ #gxewrwqzwa .gt_right { text-align: right !important; font-variant-numeric: tabular-nums !important; }
+ #gxewrwqzwa .gt_font_normal { font-weight: normal !important; }
+ #gxewrwqzwa .gt_font_bold { font-weight: bold !important; }
+ #gxewrwqzwa .gt_font_italic { font-style: italic !important; }
+ #gxewrwqzwa .gt_super { font-size: 65% !important; }
+ #gxewrwqzwa .gt_footnote_marks { font-size: 75% !important; vertical-align: 0.4em !important; position: initial !important; }
+ #gxewrwqzwa .gt_asterisk { font-size: 100% !important; vertical-align: 0 !important; }
  
 </style>
 
@@ -613,26 +609,26 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 <th id="y19" class="gt_center gt_columns_top_border gt_column_spanner_outer" data-quarto-table-cell-role="th" scope="col"><span class="gt_column_spanner">y19</span></th>
 </tr>
 <tr class="gt_col_headings even">
-<th id="(1)" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(1)</th>
-<th id="(2)" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(2)</th>
-<th id="(3)" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(3)</th>
-<th id="(4)" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(4)</th>
-<th id="(5)" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(5)</th>
-<th id="(6)" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(6)</th>
-<th id="(7)" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(7)</th>
-<th id="(8)" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(8)</th>
-<th id="(9)" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(9)</th>
-<th id="(10)" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(10)</th>
-<th id="(11)" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(11)</th>
-<th id="(12)" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(12)</th>
-<th id="(13)" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(13)</th>
-<th id="(14)" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(14)</th>
-<th id="(15)" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(15)</th>
-<th id="(16)" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(16)</th>
-<th id="(17)" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(17)</th>
-<th id="(18)" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(18)</th>
-<th id="(19)" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(19)</th>
-<th id="(20)" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(20)</th>
+<th id="0" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(1)</th>
+<th id="1" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(2)</th>
+<th id="2" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(3)</th>
+<th id="3" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(4)</th>
+<th id="4" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(5)</th>
+<th id="5" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(6)</th>
+<th id="6" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(7)</th>
+<th id="7" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(8)</th>
+<th id="8" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(9)</th>
+<th id="9" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(10)</th>
+<th id="10" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(11)</th>
+<th id="11" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(12)</th>
+<th id="12" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(13)</th>
+<th id="13" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(14)</th>
+<th id="14" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(15)</th>
+<th id="15" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(16)</th>
+<th id="16" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(17)</th>
+<th id="17" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(18)</th>
+<th id="18" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(19)</th>
+<th id="19" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(20)</th>
 </tr>
 </thead>
 <tbody class="gt_table_body">
@@ -641,261 +637,261 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 </tr>
 <tr class="even">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">X0</th>
-<td class="gt_row gt_center">0.079<br>
-(0.119)</td>
-<td class="gt_row gt_center">0.111<br>
-(0.108)</td>
-<td class="gt_row gt_center">0.088<br>
-(0.105)</td>
-<td class="gt_row gt_center">0.158<br>
-(0.094)</td>
-<td class="gt_row gt_center">0.033<br>
-(0.112)</td>
+<td class="gt_row gt_center">-0.069<br>
+(0.104)</td>
+<td class="gt_row gt_center">-0.019<br>
+(0.111)</td>
+<td class="gt_row gt_center">0.090<br>
+(0.093)</td>
+<td class="gt_row gt_center">0.070<br>
+(0.118)</td>
 <td class="gt_row gt_center">-0.011<br>
-(0.100)</td>
-<td class="gt_row gt_center">-0.223*<br>
-(0.100)</td>
-<td class="gt_row gt_center">0.020<br>
-(0.117)</td>
-<td class="gt_row gt_center">-0.172*<br>
-(0.083)</td>
-<td class="gt_row gt_center">0.068<br>
-(0.082)</td>
-<td class="gt_row gt_center">0.009<br>
-(0.114)</td>
-<td class="gt_row gt_center">0.023<br>
-(0.106)</td>
-<td class="gt_row gt_center">0.002<br>
-(0.099)</td>
-<td class="gt_row gt_center">0.100<br>
-(0.092)</td>
-<td class="gt_row gt_center">-0.068<br>
-(0.098)</td>
-<td class="gt_row gt_center">-0.022<br>
-(0.100)</td>
-<td class="gt_row gt_center">0.153<br>
-(0.123)</td>
-<td class="gt_row gt_center">0.231*<br>
-(0.095)</td>
-<td class="gt_row gt_center">0.113<br>
 (0.120)</td>
-<td class="gt_row gt_center">-0.051<br>
-(0.079)</td>
+<td class="gt_row gt_center">0.061<br>
+(0.102)</td>
+<td class="gt_row gt_center">0.008<br>
+(0.107)</td>
+<td class="gt_row gt_center">-0.103<br>
+(0.138)</td>
+<td class="gt_row gt_center">0.023<br>
+(0.099)</td>
+<td class="gt_row gt_center">0.097<br>
+(0.091)</td>
+<td class="gt_row gt_center">0.116<br>
+(0.086)</td>
+<td class="gt_row gt_center">0.070<br>
+(0.139)</td>
+<td class="gt_row gt_center">-0.169<br>
+(0.099)</td>
+<td class="gt_row gt_center">0.152<br>
+(0.112)</td>
+<td class="gt_row gt_center">0.031<br>
+(0.099)</td>
+<td class="gt_row gt_center">0.147<br>
+(0.106)</td>
+<td class="gt_row gt_center">-0.085<br>
+(0.109)</td>
+<td class="gt_row gt_center">0.266*<br>
+(0.126)</td>
+<td class="gt_row gt_center">0.103<br>
+(0.096)</td>
+<td class="gt_row gt_center">0.171<br>
+(0.098)</td>
 </tr>
 <tr class="odd">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">X1</th>
-<td class="gt_row gt_center" style="background-color: yellow">-0.064<br>
-(0.093)</td>
-<td class="gt_row gt_center" style="background-color: yellow">-0.065<br>
-(0.108)</td>
-<td class="gt_row gt_center" style="background-color: yellow">-0.055<br>
-(0.107)</td>
-<td class="gt_row gt_center" style="background-color: yellow">-0.055<br>
-(0.097)</td>
-<td class="gt_row gt_center" style="background-color: yellow">-0.013<br>
-(0.101)</td>
-<td class="gt_row gt_center" style="background-color: yellow">0.036<br>
+<td class="gt_row gt_center" style="background-color: yellow">0.119<br>
 (0.092)</td>
-<td class="gt_row gt_center" style="background-color: yellow">-0.038<br>
+<td class="gt_row gt_center" style="background-color: yellow">0.182<br>
+(0.118)</td>
+<td class="gt_row gt_center" style="background-color: yellow">0.052<br>
+(0.094)</td>
+<td class="gt_row gt_center" style="background-color: yellow">0.096<br>
+(0.119)</td>
+<td class="gt_row gt_center" style="background-color: yellow">-0.036<br>
+(0.109)</td>
+<td class="gt_row gt_center" style="background-color: yellow">-0.036<br>
+(0.095)</td>
+<td class="gt_row gt_center" style="background-color: yellow">0.024<br>
 (0.100)</td>
-<td class="gt_row gt_center" style="background-color: yellow">-0.052<br>
-(0.112)</td>
-<td class="gt_row gt_center" style="background-color: yellow">0.080<br>
-(0.084)</td>
-<td class="gt_row gt_center" style="background-color: yellow">0.072<br>
-(0.088)</td>
-<td class="gt_row gt_center" style="background-color: yellow">0.002<br>
-(0.092)</td>
-<td class="gt_row gt_center" style="background-color: yellow">0.049<br>
-(0.124)</td>
-<td class="gt_row gt_center" style="background-color: yellow">-0.017<br>
+<td class="gt_row gt_center" style="background-color: yellow">0.113<br>
+(0.119)</td>
+<td class="gt_row gt_center" style="background-color: yellow">0.188<br>
+(0.105)</td>
+<td class="gt_row gt_center" style="background-color: yellow">-0.027<br>
+(0.096)</td>
+<td class="gt_row gt_center" style="background-color: yellow">0.085<br>
+(0.087)</td>
+<td class="gt_row gt_center" style="background-color: yellow">-0.148<br>
 (0.102)</td>
-<td class="gt_row gt_center" style="background-color: yellow">0.061<br>
-(0.099)</td>
-<td class="gt_row gt_center" style="background-color: yellow">-0.023<br>
-(0.086)</td>
-<td class="gt_row gt_center" style="background-color: yellow">-0.017<br>
-(0.090)</td>
-<td class="gt_row gt_center" style="background-color: yellow">0.159<br>
-(0.113)</td>
-<td class="gt_row gt_center" style="background-color: yellow">0.032<br>
-(0.122)</td>
-<td class="gt_row gt_center" style="background-color: yellow">-0.144<br>
+<td class="gt_row gt_center" style="background-color: yellow">0.148<br>
 (0.100)</td>
-<td class="gt_row gt_center" style="background-color: yellow">0.064<br>
+<td class="gt_row gt_center" style="background-color: yellow">-0.043<br>
+(0.121)</td>
+<td class="gt_row gt_center" style="background-color: yellow">-0.225*<br>
+(0.097)</td>
+<td class="gt_row gt_center" style="background-color: yellow">-0.116<br>
+(0.115)</td>
+<td class="gt_row gt_center" style="background-color: yellow">-0.088<br>
 (0.088)</td>
+<td class="gt_row gt_center" style="background-color: yellow">0.098<br>
+(0.110)</td>
+<td class="gt_row gt_center" style="background-color: yellow">-0.106<br>
+(0.101)</td>
+<td class="gt_row gt_center" style="background-color: yellow">-0.092<br>
+(0.112)</td>
 </tr>
 <tr class="even">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">X2</th>
-<td class="gt_row gt_center">-0.165<br>
-(0.116)</td>
-<td class="gt_row gt_center">-0.181<br>
-(0.125)</td>
-<td class="gt_row gt_center">0.107<br>
-(0.090)</td>
-<td class="gt_row gt_center">-0.027<br>
+<td class="gt_row gt_center">0.067<br>
+(0.088)</td>
+<td class="gt_row gt_center">0.088<br>
 (0.094)</td>
-<td class="gt_row gt_center">-0.080<br>
-(0.111)</td>
-<td class="gt_row gt_center">0.009<br>
-(0.079)</td>
-<td class="gt_row gt_center">0.185<br>
-(0.098)</td>
-<td class="gt_row gt_center">-0.023<br>
-(0.108)</td>
-<td class="gt_row gt_center">0.025<br>
-(0.075)</td>
-<td class="gt_row gt_center">-0.155<br>
-(0.086)</td>
-<td class="gt_row gt_center">-0.008<br>
-(0.095)</td>
-<td class="gt_row gt_center">0.175<br>
-(0.116)</td>
-<td class="gt_row gt_center">0.153<br>
-(0.091)</td>
-<td class="gt_row gt_center">0.127<br>
-(0.090)</td>
+<td class="gt_row gt_center">0.082<br>
+(0.071)</td>
+<td class="gt_row gt_center">0.037<br>
+(0.106)</td>
 <td class="gt_row gt_center">0.042<br>
+(0.103)</td>
+<td class="gt_row gt_center">0.123<br>
+(0.110)</td>
+<td class="gt_row gt_center">0.040<br>
+(0.086)</td>
+<td class="gt_row gt_center">0.099<br>
 (0.105)</td>
-<td class="gt_row gt_center">0.142<br>
-(0.094)</td>
-<td class="gt_row gt_center">-0.081<br>
-(0.116)</td>
-<td class="gt_row gt_center">-0.195<br>
-(0.105)</td>
-<td class="gt_row gt_center">-0.200<br>
+<td class="gt_row gt_center">-0.131<br>
+(0.100)</td>
+<td class="gt_row gt_center">0.001<br>
 (0.107)</td>
-<td class="gt_row gt_center">0.015<br>
-(0.095)</td>
+<td class="gt_row gt_center">-0.171*<br>
+(0.075)</td>
+<td class="gt_row gt_center">-0.198<br>
+(0.109)</td>
+<td class="gt_row gt_center">0.116<br>
+(0.101)</td>
+<td class="gt_row gt_center">0.024<br>
+(0.109)</td>
+<td class="gt_row gt_center">-0.118<br>
+(0.092)</td>
+<td class="gt_row gt_center">0.013<br>
+(0.126)</td>
+<td class="gt_row gt_center">-0.005<br>
+(0.107)</td>
+<td class="gt_row gt_center">-0.103<br>
+(0.119)</td>
+<td class="gt_row gt_center">-0.018<br>
+(0.109)</td>
+<td class="gt_row gt_center">-0.003<br>
+(0.100)</td>
 </tr>
 <tr class="odd">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">X3</th>
-<td class="gt_row gt_center">-0.110<br>
-(0.089)</td>
-<td class="gt_row gt_center">0.133<br>
-(0.108)</td>
-<td class="gt_row gt_center">0.018<br>
-(0.110)</td>
-<td class="gt_row gt_center">0.006<br>
-(0.090)</td>
-<td class="gt_row gt_center">0.036<br>
-(0.100)</td>
-<td class="gt_row gt_center">-0.083<br>
-(0.105)</td>
-<td class="gt_row gt_center">0.202*<br>
-(0.094)</td>
-<td class="gt_row gt_center">0.105<br>
-(0.118)</td>
-<td class="gt_row gt_center">0.005<br>
-(0.081)</td>
-<td class="gt_row gt_center">-0.003<br>
-(0.113)</td>
-<td class="gt_row gt_center">0.015<br>
-(0.115)</td>
-<td class="gt_row gt_center">0.095<br>
-(0.093)</td>
-<td class="gt_row gt_center">0.030<br>
-(0.103)</td>
-<td class="gt_row gt_center">0.076<br>
+<td class="gt_row gt_center">0.113<br>
+(0.111)</td>
+<td class="gt_row gt_center">0.100<br>
+(0.119)</td>
+<td class="gt_row gt_center">0.012<br>
+(0.082)</td>
+<td class="gt_row gt_center">-0.006<br>
+(0.101)</td>
+<td class="gt_row gt_center">-0.072<br>
+(0.111)</td>
+<td class="gt_row gt_center">-0.127<br>
 (0.112)</td>
-<td class="gt_row gt_center">-0.080<br>
+<td class="gt_row gt_center">0.132<br>
+(0.114)</td>
+<td class="gt_row gt_center">0.206<br>
+(0.147)</td>
+<td class="gt_row gt_center">-0.019<br>
+(0.101)</td>
+<td class="gt_row gt_center">0.027<br>
+(0.108)</td>
+<td class="gt_row gt_center">-0.067<br>
 (0.085)</td>
-<td class="gt_row gt_center">0.067<br>
-(0.106)</td>
-<td class="gt_row gt_center">-0.057<br>
-(0.127)</td>
-<td class="gt_row gt_center">-0.016<br>
-(0.106)</td>
-<td class="gt_row gt_center">0.051<br>
-(0.102)</td>
-<td class="gt_row gt_center">-0.003<br>
+<td class="gt_row gt_center">0.033<br>
+(0.108)</td>
+<td class="gt_row gt_center">0.023<br>
+(0.109)</td>
+<td class="gt_row gt_center">0.021<br>
+(0.100)</td>
+<td class="gt_row gt_center">0.057<br>
+(0.104)</td>
+<td class="gt_row gt_center">-0.011<br>
+(0.134)</td>
+<td class="gt_row gt_center">-0.098<br>
+(0.099)</td>
+<td class="gt_row gt_center">0.079<br>
+(0.099)</td>
+<td class="gt_row gt_center">0.019<br>
 (0.088)</td>
+<td class="gt_row gt_center">-0.097<br>
+(0.091)</td>
 </tr>
 <tr class="even">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">X4</th>
-<td class="gt_row gt_center">0.017<br>
-(0.114)</td>
-<td class="gt_row gt_center">0.124<br>
-(0.128)</td>
-<td class="gt_row gt_center">0.126<br>
-(0.107)</td>
-<td class="gt_row gt_center">-0.014<br>
-(0.085)</td>
-<td class="gt_row gt_center">-0.120<br>
-(0.100)</td>
-<td class="gt_row gt_center">0.067<br>
-(0.094)</td>
-<td class="gt_row gt_center">0.118<br>
+<td class="gt_row gt_center">-0.027<br>
 (0.105)</td>
-<td class="gt_row gt_center">-0.035<br>
-(0.107)</td>
-<td class="gt_row gt_center">-0.127<br>
-(0.075)</td>
-<td class="gt_row gt_center">0.126<br>
-(0.094)</td>
-<td class="gt_row gt_center">0.004<br>
-(0.101)</td>
-<td class="gt_row gt_center">0.035<br>
-(0.120)</td>
-<td class="gt_row gt_center">0.200*<br>
-(0.098)</td>
-<td class="gt_row gt_center">0.011<br>
-(0.119)</td>
-<td class="gt_row gt_center">-0.222**<br>
-(0.083)</td>
-<td class="gt_row gt_center">-0.131<br>
-(0.095)</td>
-<td class="gt_row gt_center">-0.029<br>
-(0.113)</td>
-<td class="gt_row gt_center">0.146<br>
-(0.106)</td>
-<td class="gt_row gt_center">-0.104<br>
-(0.109)</td>
-<td class="gt_row gt_center">0.018<br>
+<td class="gt_row gt_center">0.043<br>
 (0.084)</td>
+<td class="gt_row gt_center">-0.005<br>
+(0.074)</td>
+<td class="gt_row gt_center">0.090<br>
+(0.114)</td>
+<td class="gt_row gt_center">-0.198*<br>
+(0.094)</td>
+<td class="gt_row gt_center">0.097<br>
+(0.099)</td>
+<td class="gt_row gt_center">-0.102<br>
+(0.100)</td>
+<td class="gt_row gt_center">-0.031<br>
+(0.110)</td>
+<td class="gt_row gt_center">-0.024<br>
+(0.103)</td>
+<td class="gt_row gt_center">0.094<br>
+(0.111)</td>
+<td class="gt_row gt_center">0.220*<br>
+(0.093)</td>
+<td class="gt_row gt_center">0.164<br>
+(0.117)</td>
+<td class="gt_row gt_center">-0.201<br>
+(0.122)</td>
+<td class="gt_row gt_center">-0.025<br>
+(0.120)</td>
+<td class="gt_row gt_center">-0.069<br>
+(0.095)</td>
+<td class="gt_row gt_center">-0.146<br>
+(0.100)</td>
+<td class="gt_row gt_center">-0.037<br>
+(0.096)</td>
+<td class="gt_row gt_center">-0.030<br>
+(0.109)</td>
+<td class="gt_row gt_center">0.076<br>
+(0.108)</td>
+<td class="gt_row gt_center">0.001<br>
+(0.090)</td>
 </tr>
 <tr class="odd">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">Intercept</th>
-<td class="gt_row gt_center">0.121<br>
-(0.101)</td>
-<td class="gt_row gt_center">0.020<br>
-(0.115)</td>
-<td class="gt_row gt_center">0.191<br>
-(0.108)</td>
-<td class="gt_row gt_center">0.103<br>
-(0.086)</td>
-<td class="gt_row gt_center">-0.069<br>
-(0.103)</td>
-<td class="gt_row gt_center">-0.090<br>
-(0.096)</td>
-<td class="gt_row gt_center">-0.010<br>
-(0.099)</td>
-<td class="gt_row gt_center">0.021<br>
-(0.103)</td>
-<td class="gt_row gt_center">-0.024<br>
-(0.082)</td>
-<td class="gt_row gt_center">-0.026<br>
-(0.102)</td>
-<td class="gt_row gt_center">0.103<br>
-(0.111)</td>
-<td class="gt_row gt_center">-0.130<br>
-(0.112)</td>
-<td class="gt_row gt_center">0.132<br>
-(0.098)</td>
-<td class="gt_row gt_center">0.004<br>
-(0.104)</td>
-<td class="gt_row gt_center">-0.043<br>
-(0.088)</td>
-<td class="gt_row gt_center">-0.046<br>
-(0.100)</td>
-<td class="gt_row gt_center">0.115<br>
-(0.111)</td>
-<td class="gt_row gt_center">-0.084<br>
-(0.114)</td>
-<td class="gt_row gt_center">0.066<br>
-(0.109)</td>
-<td class="gt_row gt_center">0.014<br>
+<td class="gt_row gt_center">-0.136<br>
+(0.105)</td>
+<td class="gt_row gt_center">-0.091<br>
 (0.090)</td>
+<td class="gt_row gt_center">0.041<br>
+(0.086)</td>
+<td class="gt_row gt_center">-0.246*<br>
+(0.106)</td>
+<td class="gt_row gt_center">0.064<br>
+(0.106)</td>
+<td class="gt_row gt_center">0.174<br>
+(0.112)</td>
+<td class="gt_row gt_center">-0.053<br>
+(0.101)</td>
+<td class="gt_row gt_center">-0.016<br>
+(0.120)</td>
+<td class="gt_row gt_center">0.037<br>
+(0.106)</td>
+<td class="gt_row gt_center">0.100<br>
+(0.096)</td>
+<td class="gt_row gt_center">0.052<br>
+(0.087)</td>
+<td class="gt_row gt_center">-0.095<br>
+(0.099)</td>
+<td class="gt_row gt_center">-0.036<br>
+(0.106)</td>
+<td class="gt_row gt_center">-0.090<br>
+(0.111)</td>
+<td class="gt_row gt_center">-0.076<br>
+(0.097)</td>
+<td class="gt_row gt_center">0.150<br>
+(0.114)</td>
+<td class="gt_row gt_center">0.062<br>
+(0.095)</td>
+<td class="gt_row gt_center">-0.082<br>
+(0.107)</td>
+<td class="gt_row gt_center">-0.139<br>
+(0.102)</td>
+<td class="gt_row gt_center">0.053<br>
+(0.098)</td>
 </tr>
 <tr class="gt_group_heading_row even">
 <th colspan="21" class="gt_group_heading" data-quarto-table-cell-role="th">stats</th>
@@ -948,26 +944,49 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 </tr>
 <tr class="odd">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">R<sup>2</sup></th>
-<td class="gt_row gt_center">0.039</td>
-<td class="gt_row gt_center">0.068</td>
-<td class="gt_row gt_center">0.037</td>
-<td class="gt_row gt_center">0.033</td>
-<td class="gt_row gt_center">0.022</td>
-<td class="gt_row gt_center">0.015</td>
-<td class="gt_row gt_center">0.144</td>
-<td class="gt_row gt_center">0.015</td>
-<td class="gt_row gt_center">0.063</td>
-<td class="gt_row gt_center">0.051</td>
-<td class="gt_row gt_center">0.000</td>
+<td class="gt_row gt_center">0.026</td>
+<td class="gt_row gt_center">0.050</td>
+<td class="gt_row gt_center">0.026</td>
+<td class="gt_row gt_center">0.024</td>
+<td class="gt_row gt_center">0.047</td>
 <td class="gt_row gt_center">0.035</td>
+<td class="gt_row gt_center">0.024</td>
+<td class="gt_row gt_center">0.046</td>
+<td class="gt_row gt_center">0.059</td>
+<td class="gt_row gt_center">0.020</td>
+<td class="gt_row gt_center">0.122</td>
+<td class="gt_row gt_center">0.076</td>
 <td class="gt_row gt_center">0.068</td>
-<td class="gt_row gt_center">0.037</td>
-<td class="gt_row gt_center">0.079</td>
-<td class="gt_row gt_center">0.040</td>
-<td class="gt_row gt_center">0.057</td>
-<td class="gt_row gt_center">0.078</td>
-<td class="gt_row gt_center">0.069</td>
+<td class="gt_row gt_center">0.023</td>
+<td class="gt_row gt_center">0.080</td>
+<td class="gt_row gt_center">0.049</td>
+<td class="gt_row gt_center">0.028</td>
+<td class="gt_row gt_center">0.083</td>
+<td class="gt_row gt_center">0.024</td>
+<td class="gt_row gt_center">0.045</td>
+</tr>
+<tr class="even">
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">Adj. R<sup>2</sup></th>
+<td class="gt_row gt_center">-0.025</td>
+<td class="gt_row gt_center">-0.001</td>
+<td class="gt_row gt_center">-0.025</td>
+<td class="gt_row gt_center">-0.028</td>
+<td class="gt_row gt_center">-0.004</td>
+<td class="gt_row gt_center">-0.016</td>
+<td class="gt_row gt_center">-0.028</td>
+<td class="gt_row gt_center">-0.005</td>
 <td class="gt_row gt_center">0.009</td>
+<td class="gt_row gt_center">-0.032</td>
+<td class="gt_row gt_center">0.075</td>
+<td class="gt_row gt_center">0.027</td>
+<td class="gt_row gt_center">0.018</td>
+<td class="gt_row gt_center">-0.029</td>
+<td class="gt_row gt_center">0.031</td>
+<td class="gt_row gt_center">-0.002</td>
+<td class="gt_row gt_center">-0.024</td>
+<td class="gt_row gt_center">0.035</td>
+<td class="gt_row gt_center">-0.028</td>
+<td class="gt_row gt_center">-0.005</td>
 </tr>
 </tbody><tfoot class="gt_sourcenotes">
 <tr class="odd">
@@ -983,77 +1002,77 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 </div>
 <p>We see that our estimation produces multiple false positives for the effect of X1 on multiple dependent variables. Recall that we had simulated X1 to have <strong>no effect</strong> on any of the dependent variables. Still, the estimation procedure produces a significant effect for X1 on multiple dependent variables.</p>
 <p><code>PyFixest</code> provides three functions to adjust inference for multiple testing: <code>pf.bonferroni()</code>, <code>pf.rwolf()</code>, and <code>pf.wyoung()</code>. All three share a common API.</p>
-<div id="cell-17" class="cell" data-execution_count="11">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>pval_bonferroni <span class="op">=</span> (</span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>    pf.bonferroni(fit.to_list(), param<span class="op">=</span><span class="st">"X1"</span>).xs(<span class="st">"Bonferroni Pr(&gt;|t|)"</span>).values</span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>pval_rwolf <span class="op">=</span> (</span>
-<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>    pf.rwolf(fit.to_list(), param<span class="op">=</span><span class="st">"X1"</span>, reps<span class="op">=</span><span class="dv">1000</span>, seed<span class="op">=</span><span class="dv">22</span>).xs(<span class="st">"RW Pr(&gt;|t|)"</span>).values</span>
-<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>pval_wyoung <span class="op">=</span> (</span>
-<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>    pf.wyoung(fit.to_list(), param<span class="op">=</span><span class="st">"X1"</span>, reps<span class="op">=</span><span class="dv">1000</span>, seed<span class="op">=</span><span class="dv">22</span>).xs(<span class="st">"WY Pr(&gt;|t|)"</span>).values</span>
-<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div id="cell-17" class="cell" data-execution_count="10">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>pval_bonferroni <span class="op">=</span> (</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    pf.bonferroni(fit.to_list(), param<span class="op">=</span><span class="st">"X1"</span>).xs(<span class="st">"Bonferroni Pr(&gt;|t|)"</span>).values</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>pval_rwolf <span class="op">=</span> (</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    pf.rwolf(fit.to_list(), param<span class="op">=</span><span class="st">"X1"</span>, reps<span class="op">=</span><span class="dv">1000</span>, seed<span class="op">=</span><span class="dv">22</span>).xs(<span class="st">"RW Pr(&gt;|t|)"</span>).values</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>pval_wyoung <span class="op">=</span> (</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>    pf.wyoung(fit.to_list(), param<span class="op">=</span><span class="st">"X1"</span>, reps<span class="op">=</span><span class="dv">1000</span>, seed<span class="op">=</span><span class="dv">22</span>).xs(<span class="st">"WY Pr(&gt;|t|)"</span>).values</span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<div id="cell-18" class="cell" data-execution_count="12">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>(</span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>    pf.etable(</span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>        fit,</span>
-<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>        custom_model_stats<span class="op">=</span>{</span>
-<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>            <span class="st">"Bonferroni: pval(X1)"</span>: pval_bonferroni.<span class="bu">round</span>(<span class="dv">4</span>).tolist(),</span>
-<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>            <span class="st">"RW: pval(X1)"</span>: pval_rwolf.<span class="bu">round</span>(<span class="dv">4</span>).tolist(),</span>
-<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>            <span class="st">"WY: pval(X1)"</span>: pval_wyoung.<span class="bu">round</span>(<span class="dv">4</span>).tolist(),</span>
-<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>        },</span>
-<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>    ).tab_style(style<span class="op">=</span>style.fill(color<span class="op">=</span><span class="st">"yellow"</span>), locations<span class="op">=</span>loc.body(rows<span class="op">=</span>[<span class="dv">6</span>, <span class="dv">7</span>, <span class="dv">8</span>]))</span>
-<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display" data-execution_count="12">
-<div id="flwngzppzp" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<div id="cell-18" class="cell" data-execution_count="11">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>(</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>    pf.etable(</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>        fit,</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>        custom_model_stats<span class="op">=</span>{</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>            <span class="st">"Bonferroni: pval(X1)"</span>: pval_bonferroni.<span class="bu">round</span>(<span class="dv">4</span>).tolist(),</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>            <span class="st">"RW: pval(X1)"</span>: pval_rwolf.<span class="bu">round</span>(<span class="dv">4</span>).tolist(),</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>            <span class="st">"WY: pval(X1)"</span>: pval_wyoung.<span class="bu">round</span>(<span class="dv">4</span>).tolist(),</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>        },</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>    ).tab_style(style<span class="op">=</span>style.fill(color<span class="op">=</span><span class="st">"yellow"</span>), locations<span class="op">=</span>loc.body(rows<span class="op">=</span>[<span class="dv">6</span>, <span class="dv">7</span>, <span class="dv">8</span>]))</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="11">
+<div id="lrhddanovd" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
 <style>
-#flwngzppzp table {
+#lrhddanovd table {
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
           -webkit-font-smoothing: antialiased;
           -moz-osx-font-smoothing: grayscale;
         }
 
-#flwngzppzp thead, tbody, tfoot, tr, td, th { border-style: none !important; }
+#lrhddanovd thead, tbody, tfoot, tr, td, th { border-style: none !important; }
  tr { background-color: transparent !important; }
-#flwngzppzp p { margin: 0 !important; padding: 0 !important; }
- #flwngzppzp .gt_table { display: table !important; border-collapse: collapse !important; line-height: normal !important; margin-left: auto !important; margin-right: auto !important; color: #333333 !important; font-size: 16px !important; font-weight: normal !important; font-style: normal !important; background-color: #FFFFFF !important; width: auto !important; border-top-style: solid !important; border-top-width: 2px !important; border-top-color: #A8A8A8 !important; border-right-style: none !important; border-right-width: 2px !important; border-right-color: #D3D3D3 !important; border-bottom-style: hidden !important; border-bottom-width: 2px !important; border-bottom-color: #A8A8A8 !important; border-left-style: none !important; border-left-width: 2px !important; border-left-color: #D3D3D3 !important; }
- #flwngzppzp .gt_caption { padding-top: 4px !important; padding-bottom: 4px !important; }
- #flwngzppzp .gt_title { color: #333333 !important; font-size: 125% !important; font-weight: initial !important; padding-top: 4px !important; padding-bottom: 4px !important; padding-left: 5px !important; padding-right: 5px !important; border-bottom-color: #FFFFFF !important; border-bottom-width: 0 !important; }
- #flwngzppzp .gt_subtitle { color: #333333 !important; font-size: 85% !important; font-weight: initial !important; padding-top: 3px !important; padding-bottom: 5px !important; padding-left: 5px !important; padding-right: 5px !important; border-top-color: #FFFFFF !important; border-top-width: 0 !important; }
- #flwngzppzp .gt_heading { background-color: #FFFFFF !important; text-align: center !important; border-bottom-color: #FFFFFF !important; border-left-style: none !important; border-left-width: 1px !important; border-left-color: #D3D3D3 !important; border-right-style: none !important; border-right-width: 1px !important; border-right-color: #D3D3D3 !important; }
- #flwngzppzp .gt_bottom_border { border-bottom-style: solid !important; border-bottom-width: 2px !important; border-bottom-color: #D3D3D3 !important; }
- #flwngzppzp .gt_col_headings { border-top-style: solid !important; border-top-width: 2px !important; border-top-color: black !important; border-bottom-style: solid !important; border-bottom-width: 0.5px !important; border-bottom-color: black !important; border-left-style: none !important; border-left-width: 1px !important; border-left-color: #D3D3D3 !important; border-right-style: none !important; border-right-width: 1px !important; border-right-color: #D3D3D3 !important; }
- #flwngzppzp .gt_col_heading { color: #333333 !important; background-color: #FFFFFF !important; font-size: 100% !important; font-weight: normal !important; text-transform: inherit !important; border-left-style: none !important; border-left-width: 0px !important; border-left-color: white !important; border-right-style: none !important; border-right-width: 0px !important; border-right-color: white !important; vertical-align: bottom !important; padding-top: 4px !important; padding-bottom: 5px !important; padding-left: 5px !important; padding-right: 5px !important; overflow-x: hidden !important; }
- #flwngzppzp .gt_column_spanner_outer { color: #333333 !important; background-color: #FFFFFF !important; font-size: 100% !important; font-weight: normal !important; text-transform: inherit !important; padding-top: 0 !important; padding-bottom: 0 !important; padding-left: 4px !important; padding-right: 4px !important; }
- #flwngzppzp .gt_column_spanner_outer:first-child { padding-left: 0 !important; }
- #flwngzppzp .gt_column_spanner_outer:last-child { padding-right: 0 !important; }
- #flwngzppzp .gt_column_spanner { border-bottom-style: solid !important; border-bottom-width: 0.5px !important; border-bottom-color: black !important; vertical-align: bottom !important; padding-top: 4px !important; padding-bottom: 4px !important; overflow-x: hidden !important; display: inline-block !important; width: 100% !important; }
- #flwngzppzp .gt_spanner_row { border-bottom-style: hidden !important; }
- #flwngzppzp .gt_group_heading { padding-top: 0px !important; padding-bottom: 0px !important; padding-left: 5px !important; padding-right: 5px !important; color: #333333 !important; background-color: #FFFFFF !important; font-size: 0px !important; font-weight: initial !important; text-transform: inherit !important; border-top-style: solid !important; border-top-width: 0.5px !important; border-top-color: black !important; border-bottom-style: solid !important; border-bottom-width: 0.5px !important; border-bottom-color: black !important; border-left-style: none !important; border-left-width: 1px !important; border-left-color: white !important; border-right-style: none !important; border-right-width: 1px !important; border-right-color: white !important; vertical-align: middle !important; text-align: left !important; }
- #flwngzppzp .gt_empty_group_heading { padding: 0.5px !important; color: #333333 !important; background-color: #FFFFFF !important; font-size: 0px !important; font-weight: initial !important; border-top-style: solid !important; border-top-width: 0.5px !important; border-top-color: black !important; border-bottom-style: solid !important; border-bottom-width: 0.5px !important; border-bottom-color: black !important; vertical-align: middle !important; }
- #flwngzppzp .gt_from_md> :first-child { margin-top: 0 !important; }
- #flwngzppzp .gt_from_md> :last-child { margin-bottom: 0 !important; }
- #flwngzppzp .gt_row { padding-top: 4px !important; padding-bottom: 4px !important; padding-left: 5px !important; padding-right: 5px !important; margin: 10px !important; border-top-style: none !important; border-top-width: 1px !important; border-top-color: #D3D3D3 !important; border-left-style: none !important; border-left-width: 0px !important; border-left-color: white !important; border-right-style: none !important; border-right-width: 0px !important; border-right-color: white !important; vertical-align: middle !important; overflow-x: hidden !important; }
- #flwngzppzp .gt_stub { color: #333333 !important; background-color: #FFFFFF !important; font-size: 100% !important; font-weight: initial !important; text-transform: inherit !important; border-right-style: hidden !important; border-right-width: 2px !important; border-right-color: #D3D3D3 !important; padding-left: 5px !important; padding-right: 5px !important; }
- #flwngzppzp .gt_stub_row_group { color: #333333 !important; background-color: #FFFFFF !important; font-size: 100% !important; font-weight: initial !important; text-transform: inherit !important; border-right-style: solid !important; border-right-width: 2px !important; border-right-color: #D3D3D3 !important; padding-left: 5px !important; padding-right: 5px !important; vertical-align: top !important; }
- #flwngzppzp .gt_row_group_first td { border-top-width: 0.5px !important; }
- #flwngzppzp .gt_row_group_first th { border-top-width: 0.5px !important; }
- #flwngzppzp .gt_striped { background-color: rgba(128,128,128,0.05) !important; }
- #flwngzppzp .gt_table_body { border-top-style: solid !important; border-top-width: 0.5px !important; border-top-color: black !important; border-bottom-style: solid !important; border-bottom-width: 2px !important; border-bottom-color: black !important; }
- #flwngzppzp .gt_sourcenotes { color: #333333 !important; background-color: #FFFFFF !important; border-bottom-style: none !important; border-bottom-width: 2px !important; border-bottom-color: #D3D3D3 !important; border-left-style: none !important; border-left-width: 2px !important; border-left-color: #D3D3D3 !important; border-right-style: none !important; border-right-width: 2px !important; border-right-color: #D3D3D3 !important; }
- #flwngzppzp .gt_sourcenote { font-size: 90% !important; padding-top: 4px !important; padding-bottom: 4px !important; padding-left: 5px !important; padding-right: 5px !important; text-align: left !important; }
- #flwngzppzp .gt_left { text-align: left !important; }
- #flwngzppzp .gt_center { text-align: center !important; }
- #flwngzppzp .gt_right { text-align: right !important; font-variant-numeric: tabular-nums !important; }
- #flwngzppzp .gt_font_normal { font-weight: normal !important; }
- #flwngzppzp .gt_font_bold { font-weight: bold !important; }
- #flwngzppzp .gt_font_italic { font-style: italic !important; }
- #flwngzppzp .gt_super { font-size: 65% !important; }
- #flwngzppzp .gt_footnote_marks { font-size: 75% !important; vertical-align: 0.4em !important; position: initial !important; }
- #flwngzppzp .gt_asterisk { font-size: 100% !important; vertical-align: 0 !important; }
+#lrhddanovd p { margin: 0 !important; padding: 0 !important; }
+ #lrhddanovd .gt_table { display: table !important; border-collapse: collapse !important; line-height: normal !important; margin-left: auto !important; margin-right: auto !important; color: #333333 !important; font-size: 16px !important; font-weight: normal !important; font-style: normal !important; background-color: #FFFFFF !important; width: auto !important; border-top-style: solid !important; border-top-width: 2px !important; border-top-color: #A8A8A8 !important; border-right-style: none !important; border-right-width: 2px !important; border-right-color: #D3D3D3 !important; border-bottom-style: hidden !important; border-bottom-width: 2px !important; border-bottom-color: #A8A8A8 !important; border-left-style: none !important; border-left-width: 2px !important; border-left-color: #D3D3D3 !important; }
+ #lrhddanovd .gt_caption { padding-top: 4px !important; padding-bottom: 4px !important; }
+ #lrhddanovd .gt_title { color: #333333 !important; font-size: 125% !important; font-weight: initial !important; padding-top: 4px !important; padding-bottom: 4px !important; padding-left: 5px !important; padding-right: 5px !important; border-bottom-color: #FFFFFF !important; border-bottom-width: 0 !important; }
+ #lrhddanovd .gt_subtitle { color: #333333 !important; font-size: 85% !important; font-weight: initial !important; padding-top: 3px !important; padding-bottom: 5px !important; padding-left: 5px !important; padding-right: 5px !important; border-top-color: #FFFFFF !important; border-top-width: 0 !important; }
+ #lrhddanovd .gt_heading { background-color: #FFFFFF !important; text-align: center !important; border-bottom-color: #FFFFFF !important; border-left-style: none !important; border-left-width: 1px !important; border-left-color: #D3D3D3 !important; border-right-style: none !important; border-right-width: 1px !important; border-right-color: #D3D3D3 !important; }
+ #lrhddanovd .gt_bottom_border { border-bottom-style: solid !important; border-bottom-width: 2px !important; border-bottom-color: #D3D3D3 !important; }
+ #lrhddanovd .gt_col_headings { border-top-style: solid !important; border-top-width: 2px !important; border-top-color: black !important; border-bottom-style: solid !important; border-bottom-width: 0.5px !important; border-bottom-color: black !important; border-left-style: none !important; border-left-width: 1px !important; border-left-color: #D3D3D3 !important; border-right-style: none !important; border-right-width: 1px !important; border-right-color: #D3D3D3 !important; }
+ #lrhddanovd .gt_col_heading { color: #333333 !important; background-color: #FFFFFF !important; font-size: 100% !important; font-weight: normal !important; text-transform: inherit !important; border-left-style: none !important; border-left-width: 0px !important; border-left-color: white !important; border-right-style: none !important; border-right-width: 0px !important; border-right-color: white !important; vertical-align: bottom !important; padding-top: 4px !important; padding-bottom: 5px !important; padding-left: 5px !important; padding-right: 5px !important; overflow-x: hidden !important; }
+ #lrhddanovd .gt_column_spanner_outer { color: #333333 !important; background-color: #FFFFFF !important; font-size: 100% !important; font-weight: normal !important; text-transform: inherit !important; padding-top: 0 !important; padding-bottom: 0 !important; padding-left: 4px !important; padding-right: 4px !important; }
+ #lrhddanovd .gt_column_spanner_outer:first-child { padding-left: 0 !important; }
+ #lrhddanovd .gt_column_spanner_outer:last-child { padding-right: 0 !important; }
+ #lrhddanovd .gt_column_spanner { border-bottom-style: solid !important; border-bottom-width: 0.5px !important; border-bottom-color: black !important; vertical-align: bottom !important; padding-top: 4px !important; padding-bottom: 4px !important; overflow-x: hidden !important; display: inline-block !important; width: 100% !important; }
+ #lrhddanovd .gt_spanner_row { border-bottom-style: hidden !important; }
+ #lrhddanovd .gt_group_heading { padding-top: 0px !important; padding-bottom: 0px !important; padding-left: 5px !important; padding-right: 5px !important; color: #333333 !important; background-color: #FFFFFF !important; font-size: 0px !important; font-weight: initial !important; text-transform: inherit !important; border-top-style: solid !important; border-top-width: 0.5px !important; border-top-color: black !important; border-bottom-style: solid !important; border-bottom-width: 0.5px !important; border-bottom-color: black !important; border-left-style: none !important; border-left-width: 1px !important; border-left-color: white !important; border-right-style: none !important; border-right-width: 1px !important; border-right-color: white !important; vertical-align: middle !important; text-align: left !important; }
+ #lrhddanovd .gt_empty_group_heading { padding: 0.5px !important; color: #333333 !important; background-color: #FFFFFF !important; font-size: 0px !important; font-weight: initial !important; border-top-style: solid !important; border-top-width: 0.5px !important; border-top-color: black !important; border-bottom-style: solid !important; border-bottom-width: 0.5px !important; border-bottom-color: black !important; vertical-align: middle !important; }
+ #lrhddanovd .gt_from_md> :first-child { margin-top: 0 !important; }
+ #lrhddanovd .gt_from_md> :last-child { margin-bottom: 0 !important; }
+ #lrhddanovd .gt_row { padding-top: 4px !important; padding-bottom: 4px !important; padding-left: 5px !important; padding-right: 5px !important; margin: 10px !important; border-top-style: none !important; border-top-width: 1px !important; border-top-color: #D3D3D3 !important; border-left-style: none !important; border-left-width: 0px !important; border-left-color: white !important; border-right-style: none !important; border-right-width: 0px !important; border-right-color: white !important; vertical-align: middle !important; overflow-x: hidden !important; }
+ #lrhddanovd .gt_stub { color: #333333 !important; background-color: #FFFFFF !important; font-size: 100% !important; font-weight: initial !important; text-transform: inherit !important; border-right-style: hidden !important; border-right-width: 2px !important; border-right-color: #D3D3D3 !important; padding-left: 5px !important; padding-right: 5px !important; }
+ #lrhddanovd .gt_stub_row_group { color: #333333 !important; background-color: #FFFFFF !important; font-size: 100% !important; font-weight: initial !important; text-transform: inherit !important; border-right-style: solid !important; border-right-width: 2px !important; border-right-color: #D3D3D3 !important; padding-left: 5px !important; padding-right: 5px !important; vertical-align: top !important; }
+ #lrhddanovd .gt_row_group_first td { border-top-width: 0.5px !important; }
+ #lrhddanovd .gt_row_group_first th { border-top-width: 0.5px !important; }
+ #lrhddanovd .gt_striped { background-color: rgba(128,128,128,0.05) !important; }
+ #lrhddanovd .gt_table_body { border-top-style: solid !important; border-top-width: 0.5px !important; border-top-color: black !important; border-bottom-style: solid !important; border-bottom-width: 2px !important; border-bottom-color: black !important; }
+ #lrhddanovd .gt_sourcenotes { color: #333333 !important; background-color: #FFFFFF !important; border-bottom-style: none !important; border-bottom-width: 2px !important; border-bottom-color: #D3D3D3 !important; border-left-style: none !important; border-left-width: 2px !important; border-left-color: #D3D3D3 !important; border-right-style: none !important; border-right-width: 2px !important; border-right-color: #D3D3D3 !important; }
+ #lrhddanovd .gt_sourcenote { font-size: 90% !important; padding-top: 4px !important; padding-bottom: 4px !important; padding-left: 5px !important; padding-right: 5px !important; text-align: left !important; }
+ #lrhddanovd .gt_left { text-align: left !important; }
+ #lrhddanovd .gt_center { text-align: center !important; }
+ #lrhddanovd .gt_right { text-align: right !important; font-variant-numeric: tabular-nums !important; }
+ #lrhddanovd .gt_font_normal { font-weight: normal !important; }
+ #lrhddanovd .gt_font_bold { font-weight: bold !important; }
+ #lrhddanovd .gt_font_italic { font-style: italic !important; }
+ #lrhddanovd .gt_super { font-size: 65% !important; }
+ #lrhddanovd .gt_footnote_marks { font-size: 75% !important; vertical-align: 0.4em !important; position: initial !important; }
+ #lrhddanovd .gt_asterisk { font-size: 100% !important; vertical-align: 0 !important; }
  
 </style>
 
@@ -1106,26 +1125,26 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 <th id="y19" class="gt_center gt_columns_top_border gt_column_spanner_outer" data-quarto-table-cell-role="th" scope="col"><span class="gt_column_spanner">y19</span></th>
 </tr>
 <tr class="gt_col_headings even">
-<th id="(1)" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(1)</th>
-<th id="(2)" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(2)</th>
-<th id="(3)" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(3)</th>
-<th id="(4)" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(4)</th>
-<th id="(5)" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(5)</th>
-<th id="(6)" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(6)</th>
-<th id="(7)" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(7)</th>
-<th id="(8)" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(8)</th>
-<th id="(9)" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(9)</th>
-<th id="(10)" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(10)</th>
-<th id="(11)" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(11)</th>
-<th id="(12)" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(12)</th>
-<th id="(13)" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(13)</th>
-<th id="(14)" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(14)</th>
-<th id="(15)" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(15)</th>
-<th id="(16)" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(16)</th>
-<th id="(17)" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(17)</th>
-<th id="(18)" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(18)</th>
-<th id="(19)" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(19)</th>
-<th id="(20)" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(20)</th>
+<th id="0" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(1)</th>
+<th id="1" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(2)</th>
+<th id="2" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(3)</th>
+<th id="3" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(4)</th>
+<th id="4" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(5)</th>
+<th id="5" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(6)</th>
+<th id="6" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(7)</th>
+<th id="7" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(8)</th>
+<th id="8" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(9)</th>
+<th id="9" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(10)</th>
+<th id="10" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(11)</th>
+<th id="11" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(12)</th>
+<th id="12" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(13)</th>
+<th id="13" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(14)</th>
+<th id="14" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(15)</th>
+<th id="15" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(16)</th>
+<th id="16" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(17)</th>
+<th id="17" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(18)</th>
+<th id="18" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(19)</th>
+<th id="19" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(20)</th>
 </tr>
 </thead>
 <tbody class="gt_table_body">
@@ -1134,261 +1153,261 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 </tr>
 <tr class="even">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">X0</th>
-<td class="gt_row gt_center">0.192<br>
-(0.105)</td>
-<td class="gt_row gt_center">-0.125<br>
-(0.122)</td>
-<td class="gt_row gt_center">-0.184<br>
-(0.095)</td>
-<td class="gt_row gt_center">0.067<br>
-(0.110)</td>
-<td class="gt_row gt_center">-0.279*<br>
-(0.118)</td>
-<td class="gt_row gt_center">-0.064<br>
-(0.123)</td>
-<td class="gt_row gt_center">-0.041<br>
-(0.093)</td>
-<td class="gt_row gt_center">0.079<br>
-(0.089)</td>
-<td class="gt_row gt_center">0.050<br>
-(0.107)</td>
-<td class="gt_row gt_center">0.075<br>
-(0.113)</td>
-<td class="gt_row gt_center">0.059<br>
-(0.096)</td>
-<td class="gt_row gt_center">-0.163<br>
-(0.094)</td>
-<td class="gt_row gt_center">0.172<br>
-(0.110)</td>
-<td class="gt_row gt_center">0.090<br>
-(0.122)</td>
-<td class="gt_row gt_center">0.032<br>
+<td class="gt_row gt_center">-0.069<br>
 (0.104)</td>
-<td class="gt_row gt_center">0.025<br>
+<td class="gt_row gt_center">-0.019<br>
+(0.111)</td>
+<td class="gt_row gt_center">0.090<br>
+(0.093)</td>
+<td class="gt_row gt_center">0.070<br>
+(0.118)</td>
+<td class="gt_row gt_center">-0.011<br>
+(0.120)</td>
+<td class="gt_row gt_center">0.061<br>
+(0.102)</td>
+<td class="gt_row gt_center">0.008<br>
+(0.107)</td>
+<td class="gt_row gt_center">-0.103<br>
+(0.138)</td>
+<td class="gt_row gt_center">0.023<br>
+(0.099)</td>
+<td class="gt_row gt_center">0.097<br>
+(0.091)</td>
+<td class="gt_row gt_center">0.116<br>
+(0.086)</td>
+<td class="gt_row gt_center">0.070<br>
+(0.139)</td>
+<td class="gt_row gt_center">-0.169<br>
+(0.099)</td>
+<td class="gt_row gt_center">0.152<br>
+(0.112)</td>
+<td class="gt_row gt_center">0.031<br>
+(0.099)</td>
+<td class="gt_row gt_center">0.147<br>
 (0.106)</td>
-<td class="gt_row gt_center">0.075<br>
-(0.092)</td>
-<td class="gt_row gt_center">0.055<br>
+<td class="gt_row gt_center">-0.085<br>
+(0.109)</td>
+<td class="gt_row gt_center">0.266*<br>
 (0.126)</td>
-<td class="gt_row gt_center">-0.142<br>
-(0.101)</td>
-<td class="gt_row gt_center">-0.027<br>
-(0.092)</td>
+<td class="gt_row gt_center">0.103<br>
+(0.096)</td>
+<td class="gt_row gt_center">0.171<br>
+(0.098)</td>
 </tr>
 <tr class="odd">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">X1</th>
-<td class="gt_row gt_center">0.053<br>
-(0.104)</td>
-<td class="gt_row gt_center">0.030<br>
-(0.124)</td>
-<td class="gt_row gt_center">0.162<br>
-(0.084)</td>
-<td class="gt_row gt_center">0.024<br>
-(0.111)</td>
-<td class="gt_row gt_center">-0.037<br>
-(0.104)</td>
-<td class="gt_row gt_center">0.087<br>
-(0.088)</td>
-<td class="gt_row gt_center">-0.011<br>
-(0.089)</td>
-<td class="gt_row gt_center">-0.075<br>
-(0.091)</td>
-<td class="gt_row gt_center">0.039<br>
-(0.102)</td>
-<td class="gt_row gt_center">0.083<br>
-(0.112)</td>
-<td class="gt_row gt_center">-0.060<br>
-(0.101)</td>
-<td class="gt_row gt_center">0.139<br>
-(0.089)</td>
-<td class="gt_row gt_center">-0.183<br>
+<td class="gt_row gt_center">0.119<br>
+(0.092)</td>
+<td class="gt_row gt_center">0.182<br>
+(0.118)</td>
+<td class="gt_row gt_center">0.052<br>
+(0.094)</td>
+<td class="gt_row gt_center">0.096<br>
+(0.119)</td>
+<td class="gt_row gt_center">-0.036<br>
 (0.109)</td>
-<td class="gt_row gt_center">-0.038<br>
-(0.117)</td>
-<td class="gt_row gt_center">-0.038<br>
-(0.112)</td>
-<td class="gt_row gt_center">-0.191<br>
-(0.108)</td>
-<td class="gt_row gt_center">-0.016<br>
+<td class="gt_row gt_center">-0.036<br>
 (0.095)</td>
-<td class="gt_row gt_center">0.128<br>
-(0.099)</td>
-<td class="gt_row gt_center">0.074<br>
-(0.099)</td>
-<td class="gt_row gt_center">0.120<br>
+<td class="gt_row gt_center">0.024<br>
+(0.100)</td>
+<td class="gt_row gt_center">0.113<br>
+(0.119)</td>
+<td class="gt_row gt_center">0.188<br>
+(0.105)</td>
+<td class="gt_row gt_center">-0.027<br>
+(0.096)</td>
+<td class="gt_row gt_center">0.085<br>
+(0.087)</td>
+<td class="gt_row gt_center">-0.148<br>
+(0.102)</td>
+<td class="gt_row gt_center">0.148<br>
+(0.100)</td>
+<td class="gt_row gt_center">-0.043<br>
+(0.121)</td>
+<td class="gt_row gt_center">-0.225*<br>
+(0.097)</td>
+<td class="gt_row gt_center">-0.116<br>
+(0.115)</td>
+<td class="gt_row gt_center">-0.088<br>
 (0.088)</td>
+<td class="gt_row gt_center">0.098<br>
+(0.110)</td>
+<td class="gt_row gt_center">-0.106<br>
+(0.101)</td>
+<td class="gt_row gt_center">-0.092<br>
+(0.112)</td>
 </tr>
 <tr class="even">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">X2</th>
-<td class="gt_row gt_center">-0.164<br>
-(0.095)</td>
-<td class="gt_row gt_center">0.140<br>
-(0.112)</td>
-<td class="gt_row gt_center">0.058<br>
+<td class="gt_row gt_center">0.067<br>
+(0.088)</td>
+<td class="gt_row gt_center">0.088<br>
+(0.094)</td>
+<td class="gt_row gt_center">0.082<br>
+(0.071)</td>
+<td class="gt_row gt_center">0.037<br>
+(0.106)</td>
+<td class="gt_row gt_center">0.042<br>
 (0.103)</td>
-<td class="gt_row gt_center">-0.065<br>
-(0.095)</td>
-<td class="gt_row gt_center">0.003<br>
-(0.113)</td>
-<td class="gt_row gt_center">0.282**<br>
-(0.098)</td>
-<td class="gt_row gt_center">0.077<br>
+<td class="gt_row gt_center">0.123<br>
 (0.110)</td>
-<td class="gt_row gt_center">0.081<br>
-(0.110)</td>
-<td class="gt_row gt_center">0.125<br>
+<td class="gt_row gt_center">0.040<br>
+(0.086)</td>
+<td class="gt_row gt_center">0.099<br>
 (0.105)</td>
-<td class="gt_row gt_center">-0.011<br>
-(0.105)</td>
-<td class="gt_row gt_center">0.116<br>
-(0.109)</td>
-<td class="gt_row gt_center">0.003<br>
+<td class="gt_row gt_center">-0.131<br>
+(0.100)</td>
+<td class="gt_row gt_center">0.001<br>
 (0.107)</td>
-<td class="gt_row gt_center">-0.138<br>
+<td class="gt_row gt_center">-0.171*<br>
+(0.075)</td>
+<td class="gt_row gt_center">-0.198<br>
 (0.109)</td>
-<td class="gt_row gt_center">-0.138<br>
-(0.091)</td>
-<td class="gt_row gt_center">0.053<br>
-(0.093)</td>
-<td class="gt_row gt_center">0.011<br>
+<td class="gt_row gt_center">0.116<br>
+(0.101)</td>
+<td class="gt_row gt_center">0.024<br>
 (0.109)</td>
-<td class="gt_row gt_center">0.046<br>
-(0.103)</td>
-<td class="gt_row gt_center">0.073<br>
-(0.121)</td>
-<td class="gt_row gt_center">0.079<br>
-(0.134)</td>
-<td class="gt_row gt_center">0.187<br>
+<td class="gt_row gt_center">-0.118<br>
+(0.092)</td>
+<td class="gt_row gt_center">0.013<br>
+(0.126)</td>
+<td class="gt_row gt_center">-0.005<br>
+(0.107)</td>
+<td class="gt_row gt_center">-0.103<br>
+(0.119)</td>
+<td class="gt_row gt_center">-0.018<br>
+(0.109)</td>
+<td class="gt_row gt_center">-0.003<br>
 (0.100)</td>
 </tr>
 <tr class="odd">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">X3</th>
-<td class="gt_row gt_center">0.022<br>
-(0.108)</td>
-<td class="gt_row gt_center">-0.041<br>
-(0.117)</td>
-<td class="gt_row gt_center">-0.015<br>
-(0.098)</td>
-<td class="gt_row gt_center">0.042<br>
-(0.088)</td>
-<td class="gt_row gt_center">-0.121<br>
-(0.096)</td>
-<td class="gt_row gt_center">-0.037<br>
+<td class="gt_row gt_center">0.113<br>
+(0.111)</td>
+<td class="gt_row gt_center">0.100<br>
+(0.119)</td>
+<td class="gt_row gt_center">0.012<br>
+(0.082)</td>
+<td class="gt_row gt_center">-0.006<br>
 (0.101)</td>
-<td class="gt_row gt_center">0.008<br>
-(0.090)</td>
-<td class="gt_row gt_center">-0.108<br>
-(0.090)</td>
-<td class="gt_row gt_center">0.039<br>
-(0.096)</td>
-<td class="gt_row gt_center">0.115<br>
-(0.118)</td>
-<td class="gt_row gt_center">-0.064<br>
-(0.109)</td>
-<td class="gt_row gt_center">-0.065<br>
-(0.098)</td>
-<td class="gt_row gt_center">0.053<br>
-(0.100)</td>
-<td class="gt_row gt_center">0.062<br>
-(0.121)</td>
-<td class="gt_row gt_center">-0.099<br>
-(0.107)</td>
-<td class="gt_row gt_center">0.173<br>
-(0.090)</td>
-<td class="gt_row gt_center">-0.036<br>
-(0.095)</td>
-<td class="gt_row gt_center">0.147<br>
-(0.097)</td>
-<td class="gt_row gt_center">-0.039<br>
+<td class="gt_row gt_center">-0.072<br>
+(0.111)</td>
+<td class="gt_row gt_center">-0.127<br>
+(0.112)</td>
+<td class="gt_row gt_center">0.132<br>
 (0.114)</td>
-<td class="gt_row gt_center">-0.027<br>
-(0.093)</td>
+<td class="gt_row gt_center">0.206<br>
+(0.147)</td>
+<td class="gt_row gt_center">-0.019<br>
+(0.101)</td>
+<td class="gt_row gt_center">0.027<br>
+(0.108)</td>
+<td class="gt_row gt_center">-0.067<br>
+(0.085)</td>
+<td class="gt_row gt_center">0.033<br>
+(0.108)</td>
+<td class="gt_row gt_center">0.023<br>
+(0.109)</td>
+<td class="gt_row gt_center">0.021<br>
+(0.100)</td>
+<td class="gt_row gt_center">0.057<br>
+(0.104)</td>
+<td class="gt_row gt_center">-0.011<br>
+(0.134)</td>
+<td class="gt_row gt_center">-0.098<br>
+(0.099)</td>
+<td class="gt_row gt_center">0.079<br>
+(0.099)</td>
+<td class="gt_row gt_center">0.019<br>
+(0.088)</td>
+<td class="gt_row gt_center">-0.097<br>
+(0.091)</td>
 </tr>
 <tr class="even">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">X4</th>
-<td class="gt_row gt_center">-0.109<br>
-(0.099)</td>
-<td class="gt_row gt_center">-0.071<br>
-(0.120)</td>
-<td class="gt_row gt_center">0.026<br>
-(0.093)</td>
-<td class="gt_row gt_center">0.064<br>
+<td class="gt_row gt_center">-0.027<br>
+(0.105)</td>
+<td class="gt_row gt_center">0.043<br>
+(0.084)</td>
+<td class="gt_row gt_center">-0.005<br>
 (0.074)</td>
-<td class="gt_row gt_center">0.062<br>
-(0.127)</td>
-<td class="gt_row gt_center">0.021<br>
-(0.088)</td>
-<td class="gt_row gt_center">-0.035<br>
-(0.104)</td>
-<td class="gt_row gt_center">-0.082<br>
-(0.085)</td>
-<td class="gt_row gt_center">0.059<br>
-(0.093)</td>
-<td class="gt_row gt_center">0.027<br>
-(0.092)</td>
-<td class="gt_row gt_center">0.084<br>
-(0.105)</td>
-<td class="gt_row gt_center">-0.123<br>
+<td class="gt_row gt_center">0.090<br>
 (0.114)</td>
-<td class="gt_row gt_center">-0.142<br>
-(0.107)</td>
-<td class="gt_row gt_center">0.105<br>
-(0.103)</td>
-<td class="gt_row gt_center">0.004<br>
-(0.113)</td>
-<td class="gt_row gt_center">0.002<br>
-(0.097)</td>
-<td class="gt_row gt_center">0.040<br>
-(0.091)</td>
-<td class="gt_row gt_center">-0.063<br>
+<td class="gt_row gt_center">-0.198*<br>
+(0.094)</td>
+<td class="gt_row gt_center">0.097<br>
 (0.099)</td>
-<td class="gt_row gt_center">0.006<br>
-(0.105)</td>
-<td class="gt_row gt_center">-0.010<br>
-(0.092)</td>
+<td class="gt_row gt_center">-0.102<br>
+(0.100)</td>
+<td class="gt_row gt_center">-0.031<br>
+(0.110)</td>
+<td class="gt_row gt_center">-0.024<br>
+(0.103)</td>
+<td class="gt_row gt_center">0.094<br>
+(0.111)</td>
+<td class="gt_row gt_center">0.220*<br>
+(0.093)</td>
+<td class="gt_row gt_center">0.164<br>
+(0.117)</td>
+<td class="gt_row gt_center">-0.201<br>
+(0.122)</td>
+<td class="gt_row gt_center">-0.025<br>
+(0.120)</td>
+<td class="gt_row gt_center">-0.069<br>
+(0.095)</td>
+<td class="gt_row gt_center">-0.146<br>
+(0.100)</td>
+<td class="gt_row gt_center">-0.037<br>
+(0.096)</td>
+<td class="gt_row gt_center">-0.030<br>
+(0.109)</td>
+<td class="gt_row gt_center">0.076<br>
+(0.108)</td>
+<td class="gt_row gt_center">0.001<br>
+(0.090)</td>
 </tr>
 <tr class="odd">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">Intercept</th>
-<td class="gt_row gt_center">0.169<br>
+<td class="gt_row gt_center">-0.136<br>
 (0.105)</td>
-<td class="gt_row gt_center">0.094<br>
-(0.117)</td>
-<td class="gt_row gt_center">-0.021<br>
-(0.097)</td>
-<td class="gt_row gt_center">0.188*<br>
+<td class="gt_row gt_center">-0.091<br>
 (0.090)</td>
-<td class="gt_row gt_center">-0.034<br>
-(0.112)</td>
-<td class="gt_row gt_center">-0.047<br>
-(0.101)</td>
-<td class="gt_row gt_center">0.048<br>
-(0.098)</td>
-<td class="gt_row gt_center">-0.161<br>
-(0.092)</td>
-<td class="gt_row gt_center">-0.109<br>
-(0.101)</td>
-<td class="gt_row gt_center">-0.047<br>
-(0.113)</td>
-<td class="gt_row gt_center">-0.227*<br>
-(0.095)</td>
-<td class="gt_row gt_center">0.006<br>
-(0.101)</td>
-<td class="gt_row gt_center">0.136<br>
-(0.102)</td>
-<td class="gt_row gt_center">0.212*<br>
-(0.097)</td>
-<td class="gt_row gt_center">-0.042<br>
-(0.103)</td>
-<td class="gt_row gt_center">0.128<br>
-(0.104)</td>
-<td class="gt_row gt_center">0.029<br>
-(0.103)</td>
-<td class="gt_row gt_center">-0.139<br>
-(0.110)</td>
-<td class="gt_row gt_center">-0.052<br>
+<td class="gt_row gt_center">0.041<br>
+(0.086)</td>
+<td class="gt_row gt_center">-0.246*<br>
 (0.106)</td>
-<td class="gt_row gt_center">0.049<br>
+<td class="gt_row gt_center">0.064<br>
+(0.106)</td>
+<td class="gt_row gt_center">0.174<br>
+(0.112)</td>
+<td class="gt_row gt_center">-0.053<br>
+(0.101)</td>
+<td class="gt_row gt_center">-0.016<br>
+(0.120)</td>
+<td class="gt_row gt_center">0.037<br>
+(0.106)</td>
+<td class="gt_row gt_center">0.100<br>
+(0.096)</td>
+<td class="gt_row gt_center">0.052<br>
+(0.087)</td>
+<td class="gt_row gt_center">-0.095<br>
+(0.099)</td>
+<td class="gt_row gt_center">-0.036<br>
+(0.106)</td>
+<td class="gt_row gt_center">-0.090<br>
+(0.111)</td>
+<td class="gt_row gt_center">-0.076<br>
 (0.097)</td>
+<td class="gt_row gt_center">0.150<br>
+(0.114)</td>
+<td class="gt_row gt_center">0.062<br>
+(0.095)</td>
+<td class="gt_row gt_center">-0.082<br>
+(0.107)</td>
+<td class="gt_row gt_center">-0.139<br>
+(0.102)</td>
+<td class="gt_row gt_center">0.053<br>
+(0.098)</td>
 </tr>
 <tr class="gt_group_heading_row even">
 <th colspan="21" class="gt_group_heading" data-quarto-table-cell-role="th">stats</th>
@@ -1409,7 +1428,7 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 <td class="gt_row gt_center" style="background-color: yellow">1.0</td>
 <td class="gt_row gt_center" style="background-color: yellow">1.0</td>
 <td class="gt_row gt_center" style="background-color: yellow">1.0</td>
-<td class="gt_row gt_center" style="background-color: yellow">1.0</td>
+<td class="gt_row gt_center" style="background-color: yellow">0.4402</td>
 <td class="gt_row gt_center" style="background-color: yellow">1.0</td>
 <td class="gt_row gt_center" style="background-color: yellow">1.0</td>
 <td class="gt_row gt_center" style="background-color: yellow">1.0</td>
@@ -1418,49 +1437,49 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 </tr>
 <tr class="even">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">RW: pval(X1)</th>
+<td class="gt_row gt_center" style="background-color: yellow">0.968</td>
+<td class="gt_row gt_center" style="background-color: yellow">0.9341</td>
+<td class="gt_row gt_center" style="background-color: yellow">0.995</td>
+<td class="gt_row gt_center" style="background-color: yellow">0.995</td>
 <td class="gt_row gt_center" style="background-color: yellow">1.0</td>
 <td class="gt_row gt_center" style="background-color: yellow">1.0</td>
-<td class="gt_row gt_center" style="background-color: yellow">0.7273</td>
 <td class="gt_row gt_center" style="background-color: yellow">1.0</td>
+<td class="gt_row gt_center" style="background-color: yellow">0.995</td>
+<td class="gt_row gt_center" style="background-color: yellow">0.8182</td>
 <td class="gt_row gt_center" style="background-color: yellow">1.0</td>
-<td class="gt_row gt_center" style="background-color: yellow">0.996</td>
+<td class="gt_row gt_center" style="background-color: yellow">0.995</td>
+<td class="gt_row gt_center" style="background-color: yellow">0.9491</td>
+<td class="gt_row gt_center" style="background-color: yellow">0.9491</td>
 <td class="gt_row gt_center" style="background-color: yellow">1.0</td>
-<td class="gt_row gt_center" style="background-color: yellow">0.998</td>
-<td class="gt_row gt_center" style="background-color: yellow">1.0</td>
-<td class="gt_row gt_center" style="background-color: yellow">0.999</td>
-<td class="gt_row gt_center" style="background-color: yellow">1.0</td>
-<td class="gt_row gt_center" style="background-color: yellow">0.8921</td>
-<td class="gt_row gt_center" style="background-color: yellow">0.8521</td>
-<td class="gt_row gt_center" style="background-color: yellow">1.0</td>
-<td class="gt_row gt_center" style="background-color: yellow">1.0</td>
-<td class="gt_row gt_center" style="background-color: yellow">0.8162</td>
-<td class="gt_row gt_center" style="background-color: yellow">1.0</td>
-<td class="gt_row gt_center" style="background-color: yellow">0.956</td>
-<td class="gt_row gt_center" style="background-color: yellow">0.999</td>
-<td class="gt_row gt_center" style="background-color: yellow">0.954</td>
+<td class="gt_row gt_center" style="background-color: yellow">0.4006</td>
+<td class="gt_row gt_center" style="background-color: yellow">0.995</td>
+<td class="gt_row gt_center" style="background-color: yellow">0.995</td>
+<td class="gt_row gt_center" style="background-color: yellow">0.995</td>
+<td class="gt_row gt_center" style="background-color: yellow">0.995</td>
+<td class="gt_row gt_center" style="background-color: yellow">0.995</td>
 </tr>
 <tr class="odd">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">WY: pval(X1)</th>
+<td class="gt_row gt_center" style="background-color: yellow">0.968</td>
+<td class="gt_row gt_center" style="background-color: yellow">0.934</td>
+<td class="gt_row gt_center" style="background-color: yellow">0.995</td>
+<td class="gt_row gt_center" style="background-color: yellow">0.995</td>
 <td class="gt_row gt_center" style="background-color: yellow">1.0</td>
 <td class="gt_row gt_center" style="background-color: yellow">1.0</td>
-<td class="gt_row gt_center" style="background-color: yellow">0.727</td>
 <td class="gt_row gt_center" style="background-color: yellow">1.0</td>
+<td class="gt_row gt_center" style="background-color: yellow">0.995</td>
+<td class="gt_row gt_center" style="background-color: yellow">0.818</td>
 <td class="gt_row gt_center" style="background-color: yellow">1.0</td>
-<td class="gt_row gt_center" style="background-color: yellow">0.996</td>
+<td class="gt_row gt_center" style="background-color: yellow">0.995</td>
+<td class="gt_row gt_center" style="background-color: yellow">0.949</td>
+<td class="gt_row gt_center" style="background-color: yellow">0.949</td>
 <td class="gt_row gt_center" style="background-color: yellow">1.0</td>
-<td class="gt_row gt_center" style="background-color: yellow">0.998</td>
-<td class="gt_row gt_center" style="background-color: yellow">1.0</td>
-<td class="gt_row gt_center" style="background-color: yellow">0.999</td>
-<td class="gt_row gt_center" style="background-color: yellow">1.0</td>
-<td class="gt_row gt_center" style="background-color: yellow">0.892</td>
-<td class="gt_row gt_center" style="background-color: yellow">0.852</td>
-<td class="gt_row gt_center" style="background-color: yellow">1.0</td>
-<td class="gt_row gt_center" style="background-color: yellow">1.0</td>
-<td class="gt_row gt_center" style="background-color: yellow">0.816</td>
-<td class="gt_row gt_center" style="background-color: yellow">1.0</td>
-<td class="gt_row gt_center" style="background-color: yellow">0.956</td>
-<td class="gt_row gt_center" style="background-color: yellow">0.999</td>
-<td class="gt_row gt_center" style="background-color: yellow">0.954</td>
+<td class="gt_row gt_center" style="background-color: yellow">0.4</td>
+<td class="gt_row gt_center" style="background-color: yellow">0.995</td>
+<td class="gt_row gt_center" style="background-color: yellow">0.995</td>
+<td class="gt_row gt_center" style="background-color: yellow">0.995</td>
+<td class="gt_row gt_center" style="background-color: yellow">0.995</td>
+<td class="gt_row gt_center" style="background-color: yellow">0.995</td>
 </tr>
 <tr class="even">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">Observations</th>
@@ -1510,26 +1529,49 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 </tr>
 <tr class="even">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">R<sup>2</sup></th>
-<td class="gt_row gt_center">0.078</td>
-<td class="gt_row gt_center">0.030</td>
-<td class="gt_row gt_center">0.063</td>
-<td class="gt_row gt_center">0.017</td>
-<td class="gt_row gt_center">0.079</td>
-<td class="gt_row gt_center">0.085</td>
-<td class="gt_row gt_center">0.009</td>
-<td class="gt_row gt_center">0.048</td>
 <td class="gt_row gt_center">0.026</td>
-<td class="gt_row gt_center">0.023</td>
-<td class="gt_row gt_center">0.033</td>
-<td class="gt_row gt_center">0.061</td>
-<td class="gt_row gt_center">0.097</td>
-<td class="gt_row gt_center">0.040</td>
-<td class="gt_row gt_center">0.014</td>
-<td class="gt_row gt_center">0.076</td>
-<td class="gt_row gt_center">0.011</td>
+<td class="gt_row gt_center">0.050</td>
+<td class="gt_row gt_center">0.026</td>
+<td class="gt_row gt_center">0.024</td>
+<td class="gt_row gt_center">0.047</td>
 <td class="gt_row gt_center">0.035</td>
 <td class="gt_row gt_center">0.024</td>
-<td class="gt_row gt_center">0.051</td>
+<td class="gt_row gt_center">0.046</td>
+<td class="gt_row gt_center">0.059</td>
+<td class="gt_row gt_center">0.020</td>
+<td class="gt_row gt_center">0.122</td>
+<td class="gt_row gt_center">0.076</td>
+<td class="gt_row gt_center">0.068</td>
+<td class="gt_row gt_center">0.023</td>
+<td class="gt_row gt_center">0.080</td>
+<td class="gt_row gt_center">0.049</td>
+<td class="gt_row gt_center">0.028</td>
+<td class="gt_row gt_center">0.083</td>
+<td class="gt_row gt_center">0.024</td>
+<td class="gt_row gt_center">0.045</td>
+</tr>
+<tr class="odd">
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">Adj. R<sup>2</sup></th>
+<td class="gt_row gt_center">-0.025</td>
+<td class="gt_row gt_center">-0.001</td>
+<td class="gt_row gt_center">-0.025</td>
+<td class="gt_row gt_center">-0.028</td>
+<td class="gt_row gt_center">-0.004</td>
+<td class="gt_row gt_center">-0.016</td>
+<td class="gt_row gt_center">-0.028</td>
+<td class="gt_row gt_center">-0.005</td>
+<td class="gt_row gt_center">0.009</td>
+<td class="gt_row gt_center">-0.032</td>
+<td class="gt_row gt_center">0.075</td>
+<td class="gt_row gt_center">0.027</td>
+<td class="gt_row gt_center">0.018</td>
+<td class="gt_row gt_center">-0.029</td>
+<td class="gt_row gt_center">0.031</td>
+<td class="gt_row gt_center">-0.002</td>
+<td class="gt_row gt_center">-0.024</td>
+<td class="gt_row gt_center">0.035</td>
+<td class="gt_row gt_center">-0.028</td>
+<td class="gt_row gt_center">-0.005</td>
 </tr>
 </tbody><tfoot class="gt_sourcenotes">
 <tr class="odd">
@@ -1548,85 +1590,48 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 <section id="controlling-for-the-familiy-wise-error-rate-fwer" class="level2">
 <h2 class="anchored" data-anchor-id="controlling-for-the-familiy-wise-error-rate-fwer">Controlling for the Familiy-Wise Error Rate (FWER)</h2>
 <p>We now show by means of simulation that the three methods control the family-wise error rate (FWER). To do so, we simulate 1000 data sets imposing true nulls for the effect of X1 on all of 20 created dependent variables. For each simulation, we then count if the methods flag more than one false positive and report our results.</p>
-<div id="cell-22" class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> compute_family_rejection(seed, rho):</span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">"Simulate data, estimate models, and compute family rejection rates."</span></span>
-<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>    data <span class="op">=</span> get_data(N, n_covariates, n_depvars, rho, seed<span class="op">=</span>seed)</span>
-<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>    fit <span class="op">=</span> pf.feols(fml<span class="op">=</span>fml, data<span class="op">=</span>data, vcov<span class="op">=</span><span class="st">"hetero"</span>)</span>
-<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>    df <span class="op">=</span> fit.tidy().reset_index().set_index(<span class="st">"Coefficient"</span>).xs(<span class="st">"X1"</span>)</span>
-<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>    df[<span class="st">"Pr(&gt;|t|) reject"</span>] <span class="op">=</span> df[<span class="st">"Pr(&gt;|t|)"</span>] <span class="op">&lt;</span> <span class="fl">0.05</span></span>
-<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>    df[<span class="st">"Bonferroni reject"</span>] <span class="op">=</span> (</span>
-<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>        pf.bonferroni(fit, param<span class="op">=</span><span class="st">"X1"</span>).xs(<span class="st">"Bonferroni Pr(&gt;|t|)"</span>).values <span class="op">&lt;</span> <span class="fl">0.05</span></span>
-<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>    df[<span class="st">"rwolf reject"</span>] <span class="op">=</span> (</span>
-<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>        pf.rwolf(fit, param<span class="op">=</span><span class="st">"X1"</span>, reps<span class="op">=</span><span class="dv">1000</span>, seed<span class="op">=</span>seed <span class="op">*</span> <span class="dv">11</span>).xs(<span class="st">"RW Pr(&gt;|t|)"</span>).values</span>
-<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>        <span class="op">&lt;</span> <span class="fl">0.05</span></span>
-<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a>    df[<span class="st">"wyoung reject"</span>] <span class="op">=</span> (</span>
-<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a>        pf.wyoung(fit, param<span class="op">=</span><span class="st">"X1"</span>, reps<span class="op">=</span><span class="dv">1000</span>, seed<span class="op">=</span>seed <span class="op">*</span> <span class="dv">11</span>).xs(<span class="st">"WY Pr(&gt;|t|)"</span>).values</span>
-<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a>        <span class="op">&lt;</span> <span class="fl">0.05</span></span>
-<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Compute family rejection means</span></span>
-<span id="cb11-21"><a href="#cb11-21" aria-hidden="true" tabindex="-1"></a>    family_rejection <span class="op">=</span> {</span>
-<span id="cb11-22"><a href="#cb11-22" aria-hidden="true" tabindex="-1"></a>        <span class="st">"Pr(&gt;|t|) reject family"</span>: df[<span class="st">"Pr(&gt;|t|) reject"</span>].<span class="bu">sum</span>() <span class="op">&gt;</span> <span class="dv">0</span>,</span>
-<span id="cb11-23"><a href="#cb11-23" aria-hidden="true" tabindex="-1"></a>        <span class="st">"Bonferroni reject family"</span>: df[<span class="st">"Bonferroni reject"</span>].<span class="bu">sum</span>() <span class="op">&gt;</span> <span class="dv">0</span>,</span>
-<span id="cb11-24"><a href="#cb11-24" aria-hidden="true" tabindex="-1"></a>        <span class="st">"rwolf reject family"</span>: df[<span class="st">"rwolf reject"</span>].<span class="bu">sum</span>() <span class="op">&gt;</span> <span class="dv">0</span>,</span>
-<span id="cb11-25"><a href="#cb11-25" aria-hidden="true" tabindex="-1"></a>        <span class="st">"wyoung reject family"</span>: df[<span class="st">"wyoung reject"</span>].<span class="bu">sum</span>() <span class="op">&gt;</span> <span class="dv">0</span>,</span>
-<span id="cb11-26"><a href="#cb11-26" aria-hidden="true" tabindex="-1"></a>    }</span>
-<span id="cb11-27"><a href="#cb11-27" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-28"><a href="#cb11-28" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> pd.Series(family_rejection)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div id="cell-22" class="cell" data-execution_count="12">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> compute_family_rejection(seed, rho):</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">"Simulate data, estimate models, and compute family rejection rates."</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    data <span class="op">=</span> get_data(N, n_covariates, n_depvars, rho, seed<span class="op">=</span>seed)</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>    fit <span class="op">=</span> pf.feols(fml<span class="op">=</span>fml, data<span class="op">=</span>data, vcov<span class="op">=</span><span class="st">"hetero"</span>)</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>    df <span class="op">=</span> fit.tidy().reset_index().set_index(<span class="st">"Coefficient"</span>).xs(<span class="st">"X1"</span>)</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>    df[<span class="st">"Pr(&gt;|t|) reject"</span>] <span class="op">=</span> df[<span class="st">"Pr(&gt;|t|)"</span>] <span class="op">&lt;</span> <span class="fl">0.05</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>    df[<span class="st">"Bonferroni reject"</span>] <span class="op">=</span> (</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>        pf.bonferroni(fit, param<span class="op">=</span><span class="st">"X1"</span>).xs(<span class="st">"Bonferroni Pr(&gt;|t|)"</span>).values <span class="op">&lt;</span> <span class="fl">0.05</span></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>    df[<span class="st">"rwolf reject"</span>] <span class="op">=</span> (</span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>        pf.rwolf(fit, param<span class="op">=</span><span class="st">"X1"</span>, reps<span class="op">=</span><span class="dv">1000</span>, seed<span class="op">=</span>seed <span class="op">*</span> <span class="dv">11</span>).xs(<span class="st">"RW Pr(&gt;|t|)"</span>).values</span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>        <span class="op">&lt;</span> <span class="fl">0.05</span></span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>    df[<span class="st">"wyoung reject"</span>] <span class="op">=</span> (</span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>        pf.wyoung(fit, param<span class="op">=</span><span class="st">"X1"</span>, reps<span class="op">=</span><span class="dv">1000</span>, seed<span class="op">=</span>seed <span class="op">*</span> <span class="dv">11</span>).xs(<span class="st">"WY Pr(&gt;|t|)"</span>).values</span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a>        <span class="op">&lt;</span> <span class="fl">0.05</span></span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Compute family rejection means</span></span>
+<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a>    family_rejection <span class="op">=</span> {</span>
+<span id="cb10-22"><a href="#cb10-22" aria-hidden="true" tabindex="-1"></a>        <span class="st">"Pr(&gt;|t|) reject family"</span>: df[<span class="st">"Pr(&gt;|t|) reject"</span>].<span class="bu">sum</span>() <span class="op">&gt;</span> <span class="dv">0</span>,</span>
+<span id="cb10-23"><a href="#cb10-23" aria-hidden="true" tabindex="-1"></a>        <span class="st">"Bonferroni reject family"</span>: df[<span class="st">"Bonferroni reject"</span>].<span class="bu">sum</span>() <span class="op">&gt;</span> <span class="dv">0</span>,</span>
+<span id="cb10-24"><a href="#cb10-24" aria-hidden="true" tabindex="-1"></a>        <span class="st">"rwolf reject family"</span>: df[<span class="st">"rwolf reject"</span>].<span class="bu">sum</span>() <span class="op">&gt;</span> <span class="dv">0</span>,</span>
+<span id="cb10-25"><a href="#cb10-25" aria-hidden="true" tabindex="-1"></a>        <span class="st">"wyoung reject family"</span>: df[<span class="st">"wyoung reject"</span>].<span class="bu">sum</span>() <span class="op">&gt;</span> <span class="dv">0</span>,</span>
+<span id="cb10-26"><a href="#cb10-26" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb10-27"><a href="#cb10-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-28"><a href="#cb10-28" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> pd.Series(family_rejection)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<div id="cell-23" class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> run_fwer_simulation(n_iter, rho):</span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">"Run simulation for family-wise error rate."</span></span>
-<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>    results <span class="op">=</span> Parallel(n_jobs<span class="op">=-</span><span class="dv">1</span>)(</span>
-<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>        delayed(compute_family_rejection)(seed, rho<span class="op">=</span>rho) <span class="cf">for</span> seed <span class="kw">in</span> tqdm(<span class="bu">range</span>(n_iter))</span>
-<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> pd.concat(results).reset_index().groupby(<span class="st">"index"</span>).mean()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div id="cell-23" class="cell" data-execution_count="13">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> run_fwer_simulation(n_iter, rho):</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">"Run simulation for family-wise error rate."</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>    results <span class="op">=</span> Parallel(n_jobs<span class="op">=-</span><span class="dv">1</span>)(</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>        delayed(compute_family_rejection)(seed, rho<span class="op">=</span>rho) <span class="cf">for</span> seed <span class="kw">in</span> tqdm(<span class="bu">range</span>(n_iter))</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> pd.concat(results).reset_index().groupby(<span class="st">"index"</span>).mean()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<div id="cell-24" class="cell" data-execution_count="15">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>run_fwer_simulation(n_iter<span class="op">=</span><span class="dv">1000</span>, rho<span class="op">=</span><span class="fl">0.5</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div id="cell-24" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>run_fwer_simulation(n_iter<span class="op">=</span><span class="dv">1000</span>, rho<span class="op">=</span><span class="fl">0.5</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stderr">
-<pre><code>100%|██████████| 1000/1000 [19:03&lt;00:00,  1.14s/it]</code></pre>
-</div>
-<div class="cell-output cell-output-display" data-execution_count="15">
-<div>
-
-
-<table class="dataframe caption-top table table-sm table-striped small" data-border="1">
-<thead>
-<tr class="header">
-<th data-quarto-table-cell-role="th"></th>
-<th data-quarto-table-cell-role="th">0</th>
-</tr>
-<tr class="even">
-<th data-quarto-table-cell-role="th">index</th>
-<th data-quarto-table-cell-role="th"></th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<th data-quarto-table-cell-role="th">Bonferroni reject family</th>
-<td>0.069</td>
-</tr>
-<tr class="even">
-<th data-quarto-table-cell-role="th">Pr(&gt;|t|) reject family</th>
-<td>0.694</td>
-</tr>
-<tr class="odd">
-<th data-quarto-table-cell-role="th">rwolf reject family</th>
-<td>0.043</td>
-</tr>
-<tr class="even">
-<th data-quarto-table-cell-role="th">wyoung reject family</th>
-<td>0.043</td>
-</tr>
-</tbody>
-</table>
-
-</div>
+<pre><code>  8%|▊         | 80/1000 [03:34&lt;38:48,  2.53s/it]  </code></pre>
 </div>
 </div>
 <p>We see that all three correction methods get close to the desired 5% level. In contrast, the uncorrected method produces the expected much higher family-wise error rate.</p>
@@ -1636,34 +1641,34 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 <p>Now that we’ve seen that all three methods effectively handle false positives, let’s see how well they avoid <strong>false negatives</strong>. In other words, we will study how powerful all three methods are in detecting true effects.</p>
 <p>To do so, we slightly have to adjust the data generating process. Instead of simulating the impact of X1 on all dependent variables to be zero (a true null effect), we will now simulate the impact of X1 to be <span class="math inline">\(0.5\)</span> for all dependent variables. Hence we simulate <strong>true positives</strong> and count how often we correctly detect the true effect, or, equivalently stated, how often we correctly reject the null of no treatment effect.</p>
 <div id="cell-27" class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> get_data_true_effect(N, n_covariates, n_depvars, rho<span class="op">=</span><span class="fl">0.5</span>, seed<span class="op">=</span><span class="dv">12345</span>, effect<span class="op">=</span><span class="fl">0.1</span>):</span>
-<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">"Generate data with true positives."</span></span>
-<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>    rng <span class="op">=</span> np.random.default_rng(seed)</span>
-<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>    Omega <span class="op">=</span> np.eye(n_depvars)</span>
-<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>    Omega[Omega <span class="op">!=</span> <span class="dv">1</span>] <span class="op">=</span> rho</span>
-<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>    X <span class="op">=</span> rng.standard_normal((N, n_covariates))</span>
-<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>    u_joint <span class="op">=</span> np.random.multivariate_normal(np.zeros(n_depvars), Omega, N)</span>
-<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>    beta <span class="op">=</span> np.zeros((n_covariates, n_depvars))</span>
-<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>    beta[<span class="dv">1</span>, :] <span class="op">=</span> effect</span>
-<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a>    y <span class="op">=</span> X <span class="op">@</span> beta <span class="op">+</span> u_joint</span>
-<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a>    data <span class="op">=</span> pd.DataFrame(X, columns<span class="op">=</span>[<span class="ss">f"X</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">"</span> <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(n_covariates)])</span>
-<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a>    data <span class="op">=</span> data.assign(<span class="op">**</span>{<span class="ss">f"y</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">"</span>: y[:, i] <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(n_depvars)})</span>
-<span id="cb15-14"><a href="#cb15-14" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-15"><a href="#cb15-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> data</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> get_data_true_effect(N, n_covariates, n_depvars, rho<span class="op">=</span><span class="fl">0.5</span>, seed<span class="op">=</span><span class="dv">12345</span>, effect<span class="op">=</span><span class="fl">0.1</span>):</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">"Generate data with true positives."</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>    rng <span class="op">=</span> np.random.default_rng(seed)</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>    Omega <span class="op">=</span> np.eye(n_depvars)</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>    Omega[Omega <span class="op">!=</span> <span class="dv">1</span>] <span class="op">=</span> rho</span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>    X <span class="op">=</span> rng.standard_normal((N, n_covariates))</span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>    u_joint <span class="op">=</span> np.random.multivariate_normal(np.zeros(n_depvars), Omega, N)</span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>    beta <span class="op">=</span> np.zeros((n_covariates, n_depvars))</span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>    beta[<span class="dv">1</span>, :] <span class="op">=</span> effect</span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>    y <span class="op">=</span> X <span class="op">@</span> beta <span class="op">+</span> u_joint</span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a>    data <span class="op">=</span> pd.DataFrame(X, columns<span class="op">=</span>[<span class="ss">f"X</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">"</span> <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(n_covariates)])</span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a>    data <span class="op">=</span> data.assign(<span class="op">**</span>{<span class="ss">f"y</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">"</span>: y[:, i] <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(n_depvars)})</span>
+<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> data</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<div id="cell-28" class="cell" data-execution_count="37">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>data_true <span class="op">=</span> get_data_true_effect(</span>
-<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>    N<span class="op">=</span>N, n_covariates<span class="op">=</span>n_covariates, n_depvars<span class="op">=</span>n_depvars, rho<span class="op">=</span><span class="fl">0.5</span>, seed<span class="op">=</span><span class="dv">12345</span>, effect<span class="op">=</span><span class="fl">0.5</span></span>
-<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(fml, data<span class="op">=</span>data_true)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div id="cell-28" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>data_true <span class="op">=</span> get_data_true_effect(</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>    N<span class="op">=</span>N, n_covariates<span class="op">=</span>n_covariates, n_depvars<span class="op">=</span>n_depvars, rho<span class="op">=</span><span class="fl">0.5</span>, seed<span class="op">=</span><span class="dv">12345</span>, effect<span class="op">=</span><span class="fl">0.5</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(fml, data<span class="op">=</span>data_true)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<div id="cell-29" class="cell" data-execution_count="38">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>(</span>
-<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>    pf.etable(fit).tab_style(</span>
-<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>        style<span class="op">=</span>style.fill(color<span class="op">=</span><span class="st">"yellow"</span>), locations<span class="op">=</span>loc.body(rows<span class="op">=</span>[<span class="dv">1</span>])</span>
-<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div id="cell-29" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>(</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>    pf.etable(fit).tab_style(</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>        style<span class="op">=</span>style.fill(color<span class="op">=</span><span class="st">"yellow"</span>), locations<span class="op">=</span>loc.body(rows<span class="op">=</span>[<span class="dv">1</span>])</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="38">
 <div id="tnfyjezzch" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
 <style>
@@ -2133,52 +2138,52 @@ P(\text{reject at least one } H_{s} \text{ with } s \in I) = \alpha
 </div>
 <p>We will now study power more systematically via a simulation. More concretely, we will compute how often we detect the <strong>true effect</strong> of <strong>X1 on Y1, Y2, …, etc</strong> given a fixed sample size <span class="math inline">\(N\)</span> using “uncorrected” p-values, the Bonferroni, Romano-Wolf and Westfall-Young methods.</p>
 <div id="cell-31" class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> compute_power(seed, rho, effect):</span>
-<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">"Simulate data, estimate models, and compute power."</span></span>
-<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>    data <span class="op">=</span> get_data_true_effect(</span>
-<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>        N, n_covariates, n_depvars, rho, seed<span class="op">=</span>seed, effect<span class="op">=</span>effect</span>
-<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>    fit <span class="op">=</span> pf.feols(</span>
-<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>        fml<span class="op">=</span>fml, data<span class="op">=</span>data, vcov<span class="op">=</span><span class="st">"hetero"</span></span>
-<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>    )  <span class="co"># model '1' regresses on Y1 - we're only interested in the power of this specific test</span></span>
-<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>    df <span class="op">=</span> fit.tidy().reset_index().set_index(<span class="st">"Coefficient"</span>).xs(<span class="st">"X1"</span>)</span>
-<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>    df[<span class="st">"Pr(&gt;|t|) detect"</span>] <span class="op">=</span> df[<span class="st">"Pr(&gt;|t|)"</span>] <span class="op">&lt;</span> <span class="fl">0.05</span></span>
-<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a>    df[<span class="st">"Bonferroni detect"</span>] <span class="op">=</span> (</span>
-<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a>        pf.bonferroni(fit, param<span class="op">=</span><span class="st">"X1"</span>).xs(<span class="st">"Bonferroni Pr(&gt;|t|)"</span>).values <span class="op">&lt;</span> <span class="fl">0.05</span></span>
-<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a>    df[<span class="st">"rwolf detect"</span>] <span class="op">=</span> (</span>
-<span id="cb18-16"><a href="#cb18-16" aria-hidden="true" tabindex="-1"></a>        pf.rwolf(fit, param<span class="op">=</span><span class="st">"X1"</span>, reps<span class="op">=</span><span class="dv">200</span>, seed<span class="op">=</span>seed <span class="op">*</span> <span class="dv">11</span>).xs(<span class="st">"RW Pr(&gt;|t|)"</span>).values</span>
-<span id="cb18-17"><a href="#cb18-17" aria-hidden="true" tabindex="-1"></a>        <span class="op">&lt;</span> <span class="fl">0.05</span></span>
-<span id="cb18-18"><a href="#cb18-18" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb18-19"><a href="#cb18-19" aria-hidden="true" tabindex="-1"></a>    df[<span class="st">"wyoung detect"</span>] <span class="op">=</span> (</span>
-<span id="cb18-20"><a href="#cb18-20" aria-hidden="true" tabindex="-1"></a>        pf.wyoung(fit, param<span class="op">=</span><span class="st">"X1"</span>, reps<span class="op">=</span><span class="dv">200</span>, seed<span class="op">=</span>seed <span class="op">*</span> <span class="dv">11</span>).xs(<span class="st">"WY Pr(&gt;|t|)"</span>).values</span>
-<span id="cb18-21"><a href="#cb18-21" aria-hidden="true" tabindex="-1"></a>        <span class="op">&lt;</span> <span class="fl">0.05</span></span>
-<span id="cb18-22"><a href="#cb18-22" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb18-23"><a href="#cb18-23" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-24"><a href="#cb18-24" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Compute family rejection means</span></span>
-<span id="cb18-25"><a href="#cb18-25" aria-hidden="true" tabindex="-1"></a>    detect_effect <span class="op">=</span> {</span>
-<span id="cb18-26"><a href="#cb18-26" aria-hidden="true" tabindex="-1"></a>        <span class="st">"Pr(&gt;|t|) detect effect"</span>: df[<span class="st">"Pr(&gt;|t|) detect"</span>].mean(),</span>
-<span id="cb18-27"><a href="#cb18-27" aria-hidden="true" tabindex="-1"></a>        <span class="st">"Bonferroni detect effect"</span>: df[<span class="st">"Bonferroni detect"</span>].mean(),</span>
-<span id="cb18-28"><a href="#cb18-28" aria-hidden="true" tabindex="-1"></a>        <span class="st">"rwolf detect effect"</span>: df[<span class="st">"rwolf detect"</span>].mean(),</span>
-<span id="cb18-29"><a href="#cb18-29" aria-hidden="true" tabindex="-1"></a>        <span class="st">"wyoung detect effect"</span>: df[<span class="st">"wyoung detect"</span>].mean(),</span>
-<span id="cb18-30"><a href="#cb18-30" aria-hidden="true" tabindex="-1"></a>    }</span>
-<span id="cb18-31"><a href="#cb18-31" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-32"><a href="#cb18-32" aria-hidden="true" tabindex="-1"></a>    detect_effect_df <span class="op">=</span> pd.DataFrame(detect_effect, index<span class="op">=</span>[effect])</span>
-<span id="cb18-33"><a href="#cb18-33" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> detect_effect_df</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> compute_power(seed, rho, effect):</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">"Simulate data, estimate models, and compute power."</span></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>    data <span class="op">=</span> get_data_true_effect(</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>        N, n_covariates, n_depvars, rho, seed<span class="op">=</span>seed, effect<span class="op">=</span>effect</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>    fit <span class="op">=</span> pf.feols(</span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>        fml<span class="op">=</span>fml, data<span class="op">=</span>data, vcov<span class="op">=</span><span class="st">"hetero"</span></span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>    )  <span class="co"># model '1' regresses on Y1 - we're only interested in the power of this specific test</span></span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>    df <span class="op">=</span> fit.tidy().reset_index().set_index(<span class="st">"Coefficient"</span>).xs(<span class="st">"X1"</span>)</span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a>    df[<span class="st">"Pr(&gt;|t|) detect"</span>] <span class="op">=</span> df[<span class="st">"Pr(&gt;|t|)"</span>] <span class="op">&lt;</span> <span class="fl">0.05</span></span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a>    df[<span class="st">"Bonferroni detect"</span>] <span class="op">=</span> (</span>
+<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a>        pf.bonferroni(fit, param<span class="op">=</span><span class="st">"X1"</span>).xs(<span class="st">"Bonferroni Pr(&gt;|t|)"</span>).values <span class="op">&lt;</span> <span class="fl">0.05</span></span>
+<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb17-15"><a href="#cb17-15" aria-hidden="true" tabindex="-1"></a>    df[<span class="st">"rwolf detect"</span>] <span class="op">=</span> (</span>
+<span id="cb17-16"><a href="#cb17-16" aria-hidden="true" tabindex="-1"></a>        pf.rwolf(fit, param<span class="op">=</span><span class="st">"X1"</span>, reps<span class="op">=</span><span class="dv">200</span>, seed<span class="op">=</span>seed <span class="op">*</span> <span class="dv">11</span>).xs(<span class="st">"RW Pr(&gt;|t|)"</span>).values</span>
+<span id="cb17-17"><a href="#cb17-17" aria-hidden="true" tabindex="-1"></a>        <span class="op">&lt;</span> <span class="fl">0.05</span></span>
+<span id="cb17-18"><a href="#cb17-18" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb17-19"><a href="#cb17-19" aria-hidden="true" tabindex="-1"></a>    df[<span class="st">"wyoung detect"</span>] <span class="op">=</span> (</span>
+<span id="cb17-20"><a href="#cb17-20" aria-hidden="true" tabindex="-1"></a>        pf.wyoung(fit, param<span class="op">=</span><span class="st">"X1"</span>, reps<span class="op">=</span><span class="dv">200</span>, seed<span class="op">=</span>seed <span class="op">*</span> <span class="dv">11</span>).xs(<span class="st">"WY Pr(&gt;|t|)"</span>).values</span>
+<span id="cb17-21"><a href="#cb17-21" aria-hidden="true" tabindex="-1"></a>        <span class="op">&lt;</span> <span class="fl">0.05</span></span>
+<span id="cb17-22"><a href="#cb17-22" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb17-23"><a href="#cb17-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-24"><a href="#cb17-24" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Compute family rejection means</span></span>
+<span id="cb17-25"><a href="#cb17-25" aria-hidden="true" tabindex="-1"></a>    detect_effect <span class="op">=</span> {</span>
+<span id="cb17-26"><a href="#cb17-26" aria-hidden="true" tabindex="-1"></a>        <span class="st">"Pr(&gt;|t|) detect effect"</span>: df[<span class="st">"Pr(&gt;|t|) detect"</span>].mean(),</span>
+<span id="cb17-27"><a href="#cb17-27" aria-hidden="true" tabindex="-1"></a>        <span class="st">"Bonferroni detect effect"</span>: df[<span class="st">"Bonferroni detect"</span>].mean(),</span>
+<span id="cb17-28"><a href="#cb17-28" aria-hidden="true" tabindex="-1"></a>        <span class="st">"rwolf detect effect"</span>: df[<span class="st">"rwolf detect"</span>].mean(),</span>
+<span id="cb17-29"><a href="#cb17-29" aria-hidden="true" tabindex="-1"></a>        <span class="st">"wyoung detect effect"</span>: df[<span class="st">"wyoung detect"</span>].mean(),</span>
+<span id="cb17-30"><a href="#cb17-30" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb17-31"><a href="#cb17-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-32"><a href="#cb17-32" aria-hidden="true" tabindex="-1"></a>    detect_effect_df <span class="op">=</span> pd.DataFrame(detect_effect, index<span class="op">=</span>[effect])</span>
+<span id="cb17-33"><a href="#cb17-33" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> detect_effect_df</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <div id="cell-32" class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> run_power_simulation(n_iter, rho, effect, nthreads<span class="op">=-</span><span class="dv">1</span>):</span>
-<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">"Run simulation for power."</span></span>
-<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>    seeds <span class="op">=</span> <span class="bu">list</span>(<span class="bu">range</span>(n_iter))</span>
-<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>    results <span class="op">=</span> Parallel(n_jobs<span class="op">=</span>nthreads)(</span>
-<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>        delayed(compute_power)(seed, rho<span class="op">=</span>rho, effect<span class="op">=</span>effect) <span class="cf">for</span> seed <span class="kw">in</span> tqdm(seeds)</span>
-<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> pd.concat(results).mean()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> run_power_simulation(n_iter, rho, effect, nthreads<span class="op">=-</span><span class="dv">1</span>):</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">"Run simulation for power."</span></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>    seeds <span class="op">=</span> <span class="bu">list</span>(<span class="bu">range</span>(n_iter))</span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>    results <span class="op">=</span> Parallel(n_jobs<span class="op">=</span>nthreads)(</span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>        delayed(compute_power)(seed, rho<span class="op">=</span>rho, effect<span class="op">=</span>effect) <span class="cf">for</span> seed <span class="kw">in</span> tqdm(seeds)</span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> pd.concat(results).mean()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<div id="cell-33" class="cell" data-execution_count="41">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>run_power_simulation(n_iter<span class="op">=</span><span class="dv">1000</span>, rho<span class="op">=</span><span class="fl">0.5</span>, effect<span class="op">=</span><span class="fl">0.4</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div id="cell-33" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>run_power_simulation(n_iter<span class="op">=</span><span class="dv">1000</span>, rho<span class="op">=</span><span class="fl">0.5</span>, effect<span class="op">=</span><span class="fl">0.4</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stderr">
 <pre><code>  0%|          | 0/1000 [00:00&lt;?, ?it/s]c:\Users\alexa\Documents\pyfixest\.pixi\envs\dev\Lib\site-packages\joblib\externals\loky\process_executor.py:752: UserWarning: A worker stopped while some jobs were given to the executor. This can be caused by a too short worker timeout or by a memory leak.
   warnings.warn(
@@ -2196,26 +2201,26 @@ dtype: float64</code></pre>
 <p>Additionally, it looks as if the rwolf and wyoung methods detect the true positives at a slightly higher rate than the Bonferroni method.</p>
 <p>Do these findings generalize to other effect sizes? We can check this by simply imposing different effects on the data generating process and repeating the previous exercise multiple times.</p>
 <div id="cell-36" class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> run_power_simulation_vary_effect():</span>
-<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">"Run power simulations with varying effect sizes."</span></span>
-<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>    n_points <span class="op">=</span> <span class="dv">10</span></span>
-<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>    max_val <span class="op">=</span> <span class="fl">0.7</span></span>
-<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>    effects <span class="op">=</span> (</span>
-<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>        np.sign(np.linspace(<span class="op">-</span><span class="dv">1</span>, <span class="dv">1</span>, n_points))</span>
-<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a>        <span class="op">*</span> max_val</span>
-<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a>        <span class="op">*</span> (np.linspace(<span class="op">-</span><span class="dv">1</span>, <span class="dv">1</span>, n_points) <span class="op">**</span> <span class="dv">2</span>)</span>
-<span id="cb23-10"><a href="#cb23-10" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb23-11"><a href="#cb23-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb23-12"><a href="#cb23-12" aria-hidden="true" tabindex="-1"></a>    res_list <span class="op">=</span> []</span>
-<span id="cb23-13"><a href="#cb23-13" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> effect_size <span class="kw">in</span> tqdm(effects):</span>
-<span id="cb23-14"><a href="#cb23-14" aria-hidden="true" tabindex="-1"></a>        res <span class="op">=</span> run_power_simulation(n_iter<span class="op">=</span><span class="dv">1000</span>, rho<span class="op">=</span><span class="fl">0.5</span>, effect<span class="op">=</span>effect_size)</span>
-<span id="cb23-15"><a href="#cb23-15" aria-hidden="true" tabindex="-1"></a>        res[<span class="st">"effect"</span>] <span class="op">=</span> effect_size</span>
-<span id="cb23-16"><a href="#cb23-16" aria-hidden="true" tabindex="-1"></a>        res_list.append(res)</span>
-<span id="cb23-17"><a href="#cb23-17" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> pd.concat(res_list, axis<span class="op">=</span><span class="dv">1</span>).T.set_index(<span class="st">"effect"</span>)</span>
-<span id="cb23-18"><a href="#cb23-18" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb23-19"><a href="#cb23-19" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb23-20"><a href="#cb23-20" aria-hidden="true" tabindex="-1"></a>res <span class="op">=</span> run_power_simulation_vary_effect()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb22"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> run_power_simulation_vary_effect():</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">"Run power simulations with varying effect sizes."</span></span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>    n_points <span class="op">=</span> <span class="dv">10</span></span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>    max_val <span class="op">=</span> <span class="fl">0.7</span></span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>    effects <span class="op">=</span> (</span>
+<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a>        np.sign(np.linspace(<span class="op">-</span><span class="dv">1</span>, <span class="dv">1</span>, n_points))</span>
+<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a>        <span class="op">*</span> max_val</span>
+<span id="cb22-9"><a href="#cb22-9" aria-hidden="true" tabindex="-1"></a>        <span class="op">*</span> (np.linspace(<span class="op">-</span><span class="dv">1</span>, <span class="dv">1</span>, n_points) <span class="op">**</span> <span class="dv">2</span>)</span>
+<span id="cb22-10"><a href="#cb22-10" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb22-11"><a href="#cb22-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-12"><a href="#cb22-12" aria-hidden="true" tabindex="-1"></a>    res_list <span class="op">=</span> []</span>
+<span id="cb22-13"><a href="#cb22-13" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> effect_size <span class="kw">in</span> tqdm(effects):</span>
+<span id="cb22-14"><a href="#cb22-14" aria-hidden="true" tabindex="-1"></a>        res <span class="op">=</span> run_power_simulation(n_iter<span class="op">=</span><span class="dv">1000</span>, rho<span class="op">=</span><span class="fl">0.5</span>, effect<span class="op">=</span>effect_size)</span>
+<span id="cb22-15"><a href="#cb22-15" aria-hidden="true" tabindex="-1"></a>        res[<span class="st">"effect"</span>] <span class="op">=</span> effect_size</span>
+<span id="cb22-16"><a href="#cb22-16" aria-hidden="true" tabindex="-1"></a>        res_list.append(res)</span>
+<span id="cb22-17"><a href="#cb22-17" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> pd.concat(res_list, axis<span class="op">=</span><span class="dv">1</span>).T.set_index(<span class="st">"effect"</span>)</span>
+<span id="cb22-18"><a href="#cb22-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-19"><a href="#cb22-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-20"><a href="#cb22-20" aria-hidden="true" tabindex="-1"></a>res <span class="op">=</span> run_power_simulation_vary_effect()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stderr">
 <pre><code>100%|██████████| 1000/1000 [10:54&lt;00:00,  1.53it/s]
 100%|██████████| 1000/1000 [10:17&lt;00:00,  1.62it/s]
@@ -2230,27 +2235,27 @@ dtype: float64</code></pre>
 100%|██████████| 10/10 [1:53:04&lt;00:00, 678.48s/it]</code></pre>
 </div>
 </div>
-<div id="cell-37" class="cell" data-execution_count="42">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb25"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>column_to_label_dict <span class="op">=</span> {</span>
-<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Pr(&gt;|t|) detect effect"</span>: <span class="st">"Unadjusted"</span>,</span>
-<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Bonferroni detect effect"</span>: <span class="st">"Bonferroni"</span>,</span>
-<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>    <span class="st">"rwolf detect effect"</span>: <span class="st">"RW"</span>,</span>
-<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a>    <span class="st">"wyoung detect effect"</span>: <span class="st">"WY"</span>,</span>
-<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb25-7"><a href="#cb25-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb25-8"><a href="#cb25-8" aria-hidden="true" tabindex="-1"></a>plt.figure(figsize<span class="op">=</span>(<span class="dv">10</span>, <span class="dv">6</span>))</span>
-<span id="cb25-9"><a href="#cb25-9" aria-hidden="true" tabindex="-1"></a>line_styles <span class="op">=</span> [<span class="st">"-"</span>, <span class="st">"--"</span>, <span class="st">"-."</span>, <span class="st">":"</span>]</span>
-<span id="cb25-10"><a href="#cb25-10" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> column, line_style <span class="kw">in</span> <span class="bu">zip</span>(res.columns, line_styles):</span>
-<span id="cb25-11"><a href="#cb25-11" aria-hidden="true" tabindex="-1"></a>    plt.plot(</span>
-<span id="cb25-12"><a href="#cb25-12" aria-hidden="true" tabindex="-1"></a>        res.index, res[column], linestyle<span class="op">=</span>line_style, label<span class="op">=</span>column_to_label_dict[column]</span>
-<span id="cb25-13"><a href="#cb25-13" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb25-14"><a href="#cb25-14" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb25-15"><a href="#cb25-15" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">"Power of Multiple Testing Correction Procedures"</span>)</span>
-<span id="cb25-16"><a href="#cb25-16" aria-hidden="true" tabindex="-1"></a>plt.xlabel(<span class="st">"Effect"</span>)</span>
-<span id="cb25-17"><a href="#cb25-17" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="st">"Proportion of correctly detected effects"</span>)</span>
-<span id="cb25-18"><a href="#cb25-18" aria-hidden="true" tabindex="-1"></a>plt.legend()</span>
-<span id="cb25-19"><a href="#cb25-19" aria-hidden="true" tabindex="-1"></a>plt.grid()</span>
-<span id="cb25-20"><a href="#cb25-20" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div id="cell-37" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb24"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>column_to_label_dict <span class="op">=</span> {</span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Pr(&gt;|t|) detect effect"</span>: <span class="st">"Unadjusted"</span>,</span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Bonferroni detect effect"</span>: <span class="st">"Bonferroni"</span>,</span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>    <span class="st">"rwolf detect effect"</span>: <span class="st">"RW"</span>,</span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>    <span class="st">"wyoung detect effect"</span>: <span class="st">"WY"</span>,</span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a>plt.figure(figsize<span class="op">=</span>(<span class="dv">10</span>, <span class="dv">6</span>))</span>
+<span id="cb24-9"><a href="#cb24-9" aria-hidden="true" tabindex="-1"></a>line_styles <span class="op">=</span> [<span class="st">"-"</span>, <span class="st">"--"</span>, <span class="st">"-."</span>, <span class="st">":"</span>]</span>
+<span id="cb24-10"><a href="#cb24-10" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> column, line_style <span class="kw">in</span> <span class="bu">zip</span>(res.columns, line_styles):</span>
+<span id="cb24-11"><a href="#cb24-11" aria-hidden="true" tabindex="-1"></a>    plt.plot(</span>
+<span id="cb24-12"><a href="#cb24-12" aria-hidden="true" tabindex="-1"></a>        res.index, res[column], linestyle<span class="op">=</span>line_style, label<span class="op">=</span>column_to_label_dict[column]</span>
+<span id="cb24-13"><a href="#cb24-13" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb24-14"><a href="#cb24-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-15"><a href="#cb24-15" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">"Power of Multiple Testing Correction Procedures"</span>)</span>
+<span id="cb24-16"><a href="#cb24-16" aria-hidden="true" tabindex="-1"></a>plt.xlabel(<span class="st">"Effect"</span>)</span>
+<span id="cb24-17"><a href="#cb24-17" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="st">"Proportion of correctly detected effects"</span>)</span>
+<span id="cb24-18"><a href="#cb24-18" aria-hidden="true" tabindex="-1"></a>plt.legend()</span>
+<span id="cb24-19"><a href="#cb24-19" aria-hidden="true" tabindex="-1"></a>plt.grid()</span>
+<span id="cb24-20"><a href="#cb24-20" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
