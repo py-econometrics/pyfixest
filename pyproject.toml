@@ -10,31 +10,28 @@ authors = [
 readme = "README.md"
 license = { text = "MIT" }
 
-dependencies = [
-  "scipy>=1.6,<1.16",
-  "formulaic>=1.1.0",
-  "pandas>=2.0.0",
-  "numba>=0.58.0",
-  "seaborn>=0.13.2",
-  "tabulate>=0.9.0",
-  "tqdm>=4.0.0",
-  "great-tables>=0.10.0",
-  "numpy>=1.25.2,<2.0",
-  "narwhals>=1.13.3",
-  "joblib>=1.4.2,<2",]
+[tool.pixi.dependencies]
+numpy = ">=1.25.2,<3"
+pandas = ">=1.1.0,<3"
+scipy = ">=1.6,<2"
+numba = ">=0.58,<0.62"
+formulaic = ">=1.1.0,<2"
+tqdm = ">=4.0.0,<5"
+seaborn = ">=0.13.2,<1"
+tabulate = ">=0.9.0,<1"
+joblib = ">=1.4.2,<2"
+great_tables = ">=0.15.0,<1"
+narwhals = ">=1.13.3,<2"
 
 [tool.pixi.feature.dev.dependencies]
 rpy2 = ">=3.5.11,<4"
 pixi-pycharm = ">=0.0.8,<0.0.9"
 r = "*"
-r-fixest = ">=0.13.0,<0.14"
+r-fixest = ">=0.12.1,<0.13"
 r-sandwich = ">=3.0_2,<4"
 r-broom = ">=1.0.5,<2"
 r-car = ">=3.1_2,<4"
 r-quantreg = ">=5.0"
-r-jsonlite = "*"
-r-reticulate = "*"
-
 
 [project.optional-dependencies]
 dev = [
@@ -109,10 +106,6 @@ docs = { features = ["docs"], solve-group = "default" }
 jax = { features = ["jax"], solve-group = "default" }
 plots = { features = ["plots"], solve-group = "default" }
 
-[tool.pixi.dependencies]
-r-stringmagic = "*"
-numpy = ">=1.25.2,<2.0"
-
 [tool.pixi.feature.dev.tasks]
 tests = "pytest -rs -n 4 --cov-report=term tests"
 tests-against-r-core = "pytest -rs tests -n 4 -m \"against_r_core\" --cov=pyfixest --cov-report=xml"
@@ -127,8 +120,6 @@ debug = "python pyfixest/debug.py"
 update-test-data = "Rscript tests/r_test_comparisons.R"
 install-r-extended = "Rscript r_test_requirements.R"
 render-notebooks = "python scripts/run_notebooks.py"
-tests-cached = "pytest -rs tests/test_vs_fixest_cached.py -n 4 --cov=pyfixest --cov-report=xml"
-generate-r-results = "Rscript tests/scripts/generate_r_results.R"
 
 [tool.pixi.feature.lint.tasks]
 pre-commit = "pre-commit run --all-files"
@@ -146,8 +137,7 @@ docs-preview = "quarto preview docs"
 [tool.pixi.feature.docs.dependencies]
 rpy2 = ">=3.5.11,<4"
 r = "*"
-r-fixest = ">=0.13,<0.14"
-r-stringmagic = ">=1.2.0"
+r-fixest = ">=0.12.1,<0.13"
 r-broom = ">=1.0.5,<2"
 
 [tool.pytest.ini_options]
