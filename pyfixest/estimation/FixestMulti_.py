@@ -442,6 +442,7 @@ class FixestMulti:
                         FIT.get_inference()
                         if _method == "feols" and not FIT._is_iv:
                             FIT.get_performance()
+                            FIT.wald_test()
                         if isinstance(FIT, Feiv):
                             FIT.first_stage()
                     # delete large attributes
