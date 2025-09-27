@@ -10519,7 +10519,7 @@ packages:
 - pypi: .
   name: pyfixest
   version: 0.30.2
-  sha256: 40f1210135754398d74487f8d1ed71aa1850cc1e06deb38cc9bbc30f456479a7
+  sha256: fe5785a7d55fb05a1480be54a65f901ca488a3321b3ca0eabfa1bdf674a0d8f0
   requires_dist:
   - scipy>=1.6,<1.16
   - formulaic>=1.1.0
