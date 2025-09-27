@@ -529,8 +529,9 @@ class Feglm(Feols, ABC):
         pass
 
 
-def _glm_input_checks(drop_singletons: bool, drop_infinite_coef: bool, tol: float, maxiter: int):
-
+def _glm_input_checks(
+    drop_singletons: bool, drop_infinite_coef: bool, tol: float, maxiter: int
+):
     if not isinstance(drop_singletons, bool):
         raise TypeError("drop_singletons must be logical.")
     if not isinstance(drop_infinite_coef, bool):

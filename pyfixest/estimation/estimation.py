@@ -507,7 +507,7 @@ def fepois(
     data: DataFrameType,  # type: ignore
     vcov: Optional[Union[VcovTypeOptions, dict[str, str]]] = None,
     ssc: Optional[dict[str, Union[str, bool]]] = None,
-fixef_rm: FixedRmOptions = "perfect_fit",
+    fixef_rm: FixedRmOptions = "perfect_fit",
     fixef_tol: float = 1e-08,
     fixef_maxiter: int = 100_000,
     iwls_tol: float = 1e-08,
@@ -1262,7 +1262,9 @@ def _estimation_input_checks(
         raise TypeError("collin_tol must be a float")
 
     if fixef_rm not in ["none", "singleton", "perfect_fit", "infinite_coef"]:
-        raise ValueError("fixef_rm must be either 'none', 'singleton', 'perfect_fit', or 'infinite_coef'")
+        raise ValueError(
+            "fixef_rm must be either 'none', 'singleton', 'perfect_fit', or 'infinite_coef'"
+        )
     if collin_tol <= 0:
         raise ValueError("collin_tol must be greater than zero")
     if collin_tol >= 1:

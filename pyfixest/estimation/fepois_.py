@@ -711,8 +711,9 @@ def _check_for_separation_ir(
     return separation_na
 
 
-def _fepois_input_checks(drop_singletons: bool, drop_infinite_coef: bool, tol: float, maxiter: int):
-
+def _fepois_input_checks(
+    drop_singletons: bool, drop_infinite_coef: bool, tol: float, maxiter: int
+):
     if not isinstance(drop_singletons, bool):
         raise TypeError("drop_singletons must be logical.")
     if not isinstance(drop_infinite_coef, bool):

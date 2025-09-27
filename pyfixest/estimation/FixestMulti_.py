@@ -733,5 +733,4 @@ def _drop_singletons(fixef_rm: str) -> bool:
 
 
 def _drop_infinite_coef(fixef_rm: str) -> bool:
-
     return fixef_rm in ["infinite_coef", "perfect_fit"]

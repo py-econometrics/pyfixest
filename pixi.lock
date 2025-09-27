@@ -12196,21 +12196,11 @@ packages:
 - pypi: .
   name: pyfixest
   version: 0.30.2
-  sha256: b13b375bd54d5d4940b652fc1be178b26d939f9e58396603c4bd395feb249529
+  sha256: 806b39d951a4e70c1cc98126303232b6a43aa30b078f76addee27f3c0159bddb
   requires_dist:
-  - pytest>=7.2.0 ; extra == 'dev'
-  - pytest-cov>=4.1.0 ; extra == 'dev'
-  - pytest-xdist>=3.5.0 ; extra == 'dev'
   - pyhdfe>=0.2.0 ; extra == 'dev'
   - doubleml==0.7.1 ; extra == 'dev'
   - wildboottest>=0.3.2 ; extra == 'dev'
-  - ipykernel>=6.29.5,<7 ; extra == 'dev'
-  - duckdb>=1.1.3 ; extra == 'dev'
-  - polars>=1.0.0 ; extra == 'dev'
-  - pyarrow>=14.0 ; extra == 'dev'
-  - jax>=0.4.15 ; extra == 'dev'
-  - jaxlib>=0.4.15 ; extra == 'dev'
-  - pytest-benchmark>=5.1.0,<6 ; extra == 'dev'
   - pre-commit==3.6.0 ; extra == 'lint'
   - pip ; extra == 'build'
   - maturin>=1.8.0 ; extra == 'build'
@@ -13993,8 +13983,6 @@ packages:
   - r-rcpp >=1.0.5
   - r-sandwich
   - r-stringmagic
-  arch: x86_64
-  platform: linux
   license: GPL-3.0-only
   license_family: GPL3
   purls: []
@@ -14014,8 +14002,6 @@ packages:
   - r-rcpp >=1.0.5
   - r-sandwich
   - r-stringmagic
-  arch: x86_64
-  platform: osx
   license: GPL-3.0-only
   license_family: GPL3
   purls: []
@@ -14035,8 +14021,6 @@ packages:
   - r-rcpp >=1.0.5
   - r-sandwich
   - r-stringmagic
-  arch: arm64
-  platform: osx
   license: GPL-3.0-only
   license_family: GPL3
   purls: []
@@ -14057,8 +14041,6 @@ packages:
   - r-sandwich
   - r-stringmagic
   - ucrt >=10.0.20348.0
-  arch: x86_64
-  platform: win
   license: GPL-3.0-only
   license_family: GPL3
   purls: []
