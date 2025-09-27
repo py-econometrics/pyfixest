@@ -27,7 +27,7 @@ narwhals = ">=1.13.3,<2"
 rpy2 = ">=3.5.11,<4"
 pixi-pycharm = ">=0.0.8,<0.0.9"
 r = "*"
-r-fixest = ">=0.12.1,<0.13"
+r-fixest = ">=0.13.0,<0.14"
 r-sandwich = ">=3.0_2,<4"
 r-broom = ">=1.0.5,<2"
 r-car = ">=3.1_2,<4"
@@ -137,7 +137,7 @@ docs-preview = "quarto preview docs"
 [tool.pixi.feature.docs.dependencies]
 rpy2 = ">=3.5.11,<4"
 r = "*"
-r-fixest = ">=0.12.1,<0.13"
+r-fixest = ">=0.13.0,<0.14"
 r-broom = ">=1.0.5,<2"
 
 [tool.pytest.ini_options]
