@@ -43,7 +43,7 @@ class FixestMulti:
         seed: Optional[int],
         split: Optional[str],
         fsplit: Optional[str],
-        separation_check: Optional[list[str]] = None,
+        infinite_coef_check: Optional[list[str]] = None,
         context: Union[int, Mapping[str, Any]] = 0,
         quantreg_method: QuantregMethodOptions = "fn",
         quantreg_multi_method: QuantregMultiOptions = "cfm1",
@@ -78,7 +78,7 @@ class FixestMulti:
         seed : Optional[int]
             Option to provide a random seed. Default is None.
             Only relevant for wild cluster bootstrap for use_compression=True.
-        separation_check: list[str], optional
+        infinite_coef_check: list[str], optional
             Only used in "fepois". Methods to identify and drop separated observations.
             Either "fe" or "ir". Executes both by default.
         context : int or Mapping[str, Any]
@@ -104,7 +104,7 @@ class FixestMulti:
         self._use_compression = use_compression
         self._reps = reps
         self._seed = seed
-        self._separation_check = separation_check
+        self._infinite_coef_check = infinite_coef_check
         self._context = capture_context(context)
         self._quantreg_method = quantreg_method
         self._quantreg_multi_method = quantreg_multi_method
@@ -208,7 +208,6 @@ class FixestMulti:
         self._fml_dict = None
         self._fml_dict_iv = None
         self._ssc_dict: dict[str, Union[str, bool]] = {}
-        self._drop_singletons = False
         self._is_multiple_estimation = False
         self._drop_intercept = False
         self._weights = weights
@@ -235,6 +234,7 @@ class FixestMulti:
         # self._fml_dict_iv = fxst_fml.condensed_fml_dict_iv
         self._ssc_dict = ssc if ssc is not None else {}
         self._drop_singletons = _drop_singletons(fixef_rm)
+        self._drop_infinite_coef = _drop_infinite_coef(fixef_rm)
 
     def _estimate_all_models(
         self,
@@ -244,7 +244,7 @@ class FixestMulti:
         collin_tol: float = 1e-6,
         iwls_maxiter: int = 25,
         iwls_tol: float = 1e-08,
-        separation_check: Optional[list[str]] = None,
+        infinite_coef_check: Optional[list[str]] = None,
     ) -> None:
         """
         Estimate multiple regression models.
@@ -270,7 +270,7 @@ class FixestMulti:
         iwls_tol : float, optional
             The tolerance level for the IWLS algorithm. Default is 1e-8.
             Only relevant for non-linear estimation strategies.
-        separation_check: list[str], optional
+        infinite_coef_check: list[str], optional
             Only used in "fepois". Methods to identify and drop separated observations.
             Either "fe" or "ir". Executes both by default.
 
@@ -368,7 +368,8 @@ class FixestMulti:
                     }:
                         model_kwargs.update(
                             {
-                                "separation_check": separation_check,
+                                "drop_infinite_coef": _drop_infinite_coef,
+                                "infinite_coef_check": infinite_coef_check,
                                 "tol": iwls_tol,
                                 "maxiter": iwls_maxiter,
                             }
@@ -715,8 +716,8 @@ def _drop_singletons(fixef_rm: str) -> bool:
     """
     Drop singleton fixed effects.
 
-    Checks if the fixef_rm argument is set to "singleton". If so, returns True,
-    else False.
+    Checks if the fixef_rm argument is set to "singleton" or "perfect_fit".
+    If so, returns True,else False.
 
     Parameters
     ----------
@@ -728,4 +729,9 @@ def _drop_singletons(fixef_rm: str) -> bool:
     bool
         drop_singletons (bool) : Whether to drop singletons.
     """
-    return fixef_rm == "singleton"
+    return fixef_rm in ["singleton", "perfect_fit"]
+
+
+def _drop_infinite_coef(fixef_rm: str) -> bool:
+
+    return fixef_rm in ["infinite_coef", "perfect_fit"]

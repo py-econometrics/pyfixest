@@ -26,7 +26,7 @@ def feols(
     vcov: Optional[Union[VcovTypeOptions, dict[str, str]]] = None,
     weights: Union[None, str] = None,
     ssc: Optional[dict[str, Union[str, bool]]] = None,
-    fixef_rm: FixedRmOptions = "none",
+    fixef_rm: FixedRmOptions = "perfect_fit",
     fixef_tol=1e-08,
     fixef_maxiter: int = 100_000,
     collin_tol: float = 1e-09,
@@ -73,7 +73,16 @@ def feols(
 
     fixef_rm : FixedRmOptions
         Specifies whether to drop singleton fixed effects.
-        Options: "none" (default), "singleton".
+        Can be equal to "perfect_fit" (default), "singletons", "infinite_coef",
+        or "none".
+        "perfect_fit" is the default and equal to "singletongs" and "infinite_coef"
+        combined.
+        "singletons" will drop singleton fixed effects. This will not impact point
+        estimates but it will impact standard errors.
+        "infinite_coef" is only relevant for GLM models and will drop "perfectly
+        separated" observations that would produce "infinite" coefficients. Multiple
+        options are supported and can be set via the `separation` argument for GLMs.
+        "none" will do nothing.
 
     collin_tol : float, optional
         Tolerance for collinearity check, by default 1e-10.
@@ -498,13 +507,13 @@ def fepois(
     data: DataFrameType,  # type: ignore
     vcov: Optional[Union[VcovTypeOptions, dict[str, str]]] = None,
     ssc: Optional[dict[str, Union[str, bool]]] = None,
-    fixef_rm: FixedRmOptions = "none",
+fixef_rm: FixedRmOptions = "perfect_fit",
     fixef_tol: float = 1e-08,
     fixef_maxiter: int = 100_000,
     iwls_tol: float = 1e-08,
     iwls_maxiter: int = 25,
     collin_tol: float = 1e-09,
-    separation_check: Optional[list[str]] = None,
+    infinite_coef_check: Optional[list[str]] = None,
     solver: SolverOptions = "scipy.linalg.solve",
     demeaner_backend: DemeanerBackendOptions = "numba",
     drop_intercept: bool = False,
@@ -544,7 +553,16 @@ def fepois(
 
     fixef_rm : FixedRmOptions
         Specifies whether to drop singleton fixed effects.
-        Options: "none" (default), "singleton".
+        Can be equal to "perfect_fit" (default), "singletons", "infinite_coef",
+        or "none".
+        "perfect_fit" is the default and equal to "singletongs" and "infinite_coef"
+        combined.
+        "singletons" will drop singleton fixed effects. This will not impact point
+        estimates but it will impact standard errors.
+        "infinite_coef" is only relevant for GLM models and will drop "perfectly
+        separated" observations that would produce "infinite" coefficients. Multiple
+        options are supported and can be set via the `infinite_coef_check` argument for GLMs.
+        "none" will do nothing.
 
     fixef_tol: float, optional
         Tolerance for the fixed effects demeaning algorithm. Defaults to 1e-08.
@@ -561,7 +579,7 @@ def fepois(
     collin_tol : float, optional
         Tolerance for collinearity check, by default 1e-10.
 
-    separation_check: list[str], optional
+    infinite_coef_check: list[str], optional
         Methods to identify and drop separated observations.
         Either "fe" or "ir". Executes "fe" by default (when None).
 
@@ -638,8 +656,8 @@ def fepois(
 
     For more examples on the use of other function arguments, please take a look at the documentation of the [feols()](https://py-econometrics.github.io/pyfixest/reference/estimation.estimation.feols.html#pyfixest.estimation.estimation.feols) function.
     """
-    if separation_check is None:
-        separation_check = ["fe"]
+    if infinite_coef_check is None:
+        infinite_coef_check = ["fe"]
     if ssc is None:
         ssc = ssc_func()
     context = {} if context is None else capture_context(context)
@@ -667,7 +685,7 @@ def fepois(
         seed=None,
         split=split,
         fsplit=fsplit,
-        separation_check=separation_check,
+        infinite_coef_check=infinite_coef_check,
     )
 
     fixest = FixestMulti(
@@ -699,7 +717,7 @@ def fepois(
         iwls_tol=iwls_tol,
         iwls_maxiter=iwls_maxiter,
         collin_tol=collin_tol,
-        separation_check=separation_check,
+        infinite_coef_check=infinite_coef_check,
         solver=solver,
         demeaner_backend=demeaner_backend,
     )
@@ -716,13 +734,13 @@ def feglm(
     family: str,
     vcov: Optional[Union[VcovTypeOptions, dict[str, str]]] = None,
     ssc: Optional[dict[str, Union[str, bool]]] = None,
-    fixef_rm: FixedRmOptions = "none",
+    fixef_rm: FixedRmOptions = "perfect_fit",
     fixef_tol: float = 1e-08,
     fixef_maxiter: int = 100_000,
     iwls_tol: float = 1e-08,
     iwls_maxiter: int = 25,
     collin_tol: float = 1e-09,
-    separation_check: Optional[list[str]] = None,
+    infinite_coef_check: Optional[list[str]] = None,
     solver: SolverOptions = "scipy.linalg.solve",
     drop_intercept: bool = False,
     copy_data: bool = True,
@@ -765,7 +783,16 @@ def feglm(
 
     fixef_rm : FixedRmOptions
         Specifies whether to drop singleton fixed effects.
-        Options: "none" (default), "singleton".
+        Can be equal to "perfect_fit" (default), "singletons", "infinite_coef",
+        or "none".
+        "perfect_fit" is the default and equal to "singletongs" and "infinite_coef"
+        combined.
+        "singletons" will drop singleton fixed effects. This will not impact point
+        estimates but it will impact standard errors.
+        "infinite_coef" is only relevant for GLM models and will drop "perfectly
+        separated" observations that would produce "infinite" coefficients. Multiple
+        options are supported and can be set via the `infinite_coef_check` argument for GLMs.
+        "none" will do nothing.
 
     fixef_tol: float, optional
         Tolerance for the fixed effects demeaning algorithm. Defaults to 1e-08.
@@ -784,7 +811,7 @@ def feglm(
     collin_tol : float, optional
         Tolerance for collinearity check, by default 1e-10.
 
-    separation_check: list[str], optional
+    infinite_coef_check: list[str], optional
         Methods to identify and drop separated observations.
         Either "fe" or "ir". Executes "fe" by default (when None).
 
@@ -889,8 +916,8 @@ def feglm(
             f"Only families 'gaussian', 'logit' and 'probit'are supported but you asked for {family}."
         )
 
-    if separation_check is None:
-        separation_check = ["fe"]
+    if infinite_coef_check is None:
+        infinite_coef_check = ["fe"]
     if ssc is None:
         ssc = ssc_func()
     # WLS currently not supported for GLM regression
@@ -918,7 +945,7 @@ def feglm(
         seed=None,
         split=split,
         fsplit=fsplit,
-        separation_check=separation_check,
+        infinite_coef_check=infinite_coef_check,
     )
 
     fixest = FixestMulti(
@@ -951,7 +978,7 @@ def feglm(
         iwls_tol=iwls_tol,
         iwls_maxiter=iwls_maxiter,
         collin_tol=collin_tol,
-        separation_check=separation_check,
+        infinite_coef_check=infinite_coef_check,
         solver=solver,
     )
 
@@ -972,7 +999,7 @@ def quantreg(
     maxiter: Optional[int] = None,
     ssc: Optional[dict[str, Union[str, bool]]] = None,
     collin_tol: float = 1e-09,
-    separation_check: Optional[list[str]] = None,
+    infinite_coef_check: Optional[list[str]] = None,
     drop_intercept: bool = False,
     copy_data: bool = True,
     store_data: bool = True,
@@ -1042,7 +1069,7 @@ def quantreg(
     collin_tol : float, optional
         Tolerance for collinearity check, by default 1e-10.
 
-    separation_check : list[str], optional
+    infinite_coef_check : list[str], optional
         Methods to identify and drop separated observations. Not used in quantile regression.
 
     drop_intercept : bool, optional
@@ -1148,7 +1175,7 @@ def quantreg(
         seed=None,
         split=split,
         fsplit=fsplit,
-        separation_check=separation_check,
+        infinite_coef_check=infinite_coef_check,
     )
 
     fixest = FixestMulti(
@@ -1192,7 +1219,7 @@ def quantreg(
         iwls_tol=iwls_tol,
         iwls_maxiter=iwls_maxiter,
         collin_tol=collin_tol,
-        separation_check=separation_check,
+        infinite_coef_check=infinite_coef_check,
         solver=solver,
     )
 
@@ -1221,7 +1248,7 @@ def _estimation_input_checks(
     seed: Optional[int],
     split: Optional[str],
     fsplit: Optional[str],
-    separation_check: Optional[list[str]] = None,
+    infinite_coef_check: Optional[list[str]] = None,
 ):
     if not isinstance(fml, str):
         raise TypeError("fml must be a string")
@@ -1234,8 +1261,8 @@ def _estimation_input_checks(
     if not isinstance(collin_tol, float):
         raise TypeError("collin_tol must be a float")
 
-    if fixef_rm not in ["none", "singleton"]:
-        raise ValueError("fixef_rm must be either 'none' or 'singleton'")
+    if fixef_rm not in ["none", "singleton", "perfect_fit", "infinite_coef"]:
+        raise ValueError("fixef_rm must be either 'none', 'singleton', 'perfect_fit', or 'infinite_coef'")
     if collin_tol <= 0:
         raise ValueError("collin_tol must be greater than zero")
     if collin_tol >= 1:
@@ -1334,15 +1361,15 @@ def _estimation_input_checks(
     if isinstance(fsplit, str) and fsplit not in data.columns:
         raise KeyError(f"Column '{fsplit}' not found in data.")
 
-    if separation_check is not None:
-        if not isinstance(separation_check, list):
+    if infinite_coef_check is not None:
+        if not isinstance(infinite_coef_check, list):
             raise TypeError(
-                "The function argument `separation_check` must be of type list."
+                "The function argument `infinite_coef_check` must be of type list."
             )
 
-        if not all(x in ["fe", "ir"] for x in separation_check):
+        if not all(x in ["fe", "ir"] for x in infinite_coef_check):
             raise ValueError(
-                "The function argument `separation_check` must be a list of strings containing 'fe' and/or 'ir'."
+                "The function argument `infinite_coef_check` must be a list of strings containing 'fe' and/or 'ir'."
             )
 
 

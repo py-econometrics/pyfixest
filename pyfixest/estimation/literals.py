@@ -3,7 +3,7 @@ from typing import Any, Literal, get_args
 PredictionType = Literal["response", "link"]
 VcovTypeOptions = Literal["iid", "hetero", "HC1", "HC2", "HC3", "nid"]
 WeightsTypeOptions = Literal["aweights", "fweights"]
-FixedRmOptions = Literal["singleton", "none"]
+FixedRmOptions = Literal["perfect_fit", "infinite_coef", "singleton", "none"]
 SolverOptions = Literal[
     "np.linalg.lstsq",
     "np.linalg.solve",

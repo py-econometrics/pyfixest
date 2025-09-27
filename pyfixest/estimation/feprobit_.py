@@ -19,6 +19,7 @@ class Feprobit(Feglm):
         data: pd.DataFrame,
         ssc_dict: dict[str, Union[str, bool]],
         drop_singletons: bool,
+        drop_infinite_coef: bool,
         drop_intercept: bool,
         weights: Optional[str],
         weights_type: Optional[str],
@@ -40,7 +41,7 @@ class Feprobit(Feglm):
         lean: bool = False,
         sample_split_var: Optional[str] = None,
         sample_split_value: Optional[Union[str, int]] = None,
-        separation_check: Optional[list[str]] = None,
+        infinite_coef_check: Optional[list[str]] = None,
         context: Union[int, Mapping[str, Any]] = 0,
     ):
         super().__init__(
@@ -48,6 +49,7 @@ class Feprobit(Feglm):
             data=data,
             ssc_dict=ssc_dict,
             drop_singletons=drop_singletons,
+            drop_infinite_coef=drop_infinite_coef,
             drop_intercept=drop_intercept,
             weights=weights,
             weights_type=weights_type,
@@ -63,7 +65,7 @@ class Feprobit(Feglm):
             lean=lean,
             sample_split_var=sample_split_var,
             sample_split_value=sample_split_value,
-            separation_check=separation_check,
+            infinite_coef_check=infinite_coef_check,
             context=context,
         )
 
