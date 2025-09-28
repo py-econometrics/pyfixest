@@ -10,10 +10,10 @@ from pathlib import Path
 from typing import Dict, Any
 
 # Add tests directory to path for imports
-tests_dir = Path(__file__).parent.parent
+tests_dir = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(tests_dir))
 
-from config.feols_tests import TestSingleFitFeols
+from refactor.config.feols_tests import TestSingleFitFeols
 
 
 class FeolsRTestRunner:
@@ -22,9 +22,9 @@ class FeolsRTestRunner:
     def __init__(self, cache_dir: str = "data/cached_results"):
         self.cache_dir = Path(cache_dir)
         if not self.cache_dir.is_absolute():
-            # Make relative to tests directory
-            tests_dir = Path(__file__).parent.parent
-            self.cache_dir = tests_dir / cache_dir
+            # Make relative to refactor directory (parent of r_cache)
+            refactor_dir = Path(__file__).parent.parent
+            self.cache_dir = refactor_dir / cache_dir
         self.cache_dir.mkdir(parents=True, exist_ok=True)
 
         # Path to R script

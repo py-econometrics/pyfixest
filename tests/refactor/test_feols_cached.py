@@ -13,21 +13,21 @@ import pyfixest as pf
 from pyfixest.utils.utils import ssc
 
 # Add tests directory to path for imports
-tests_dir = Path(__file__).parent
+tests_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(tests_dir))
 
-from config.feols_test_generator import generate_feols_test_cases
-from config.feols_tests import TestSingleFitFeols
-from r_cache.r_test_runner import FeolsRTestRunner
+from refactor.config.feols_test_generator import generate_feols_test_cases
+from refactor.config.feols_tests import TestSingleFitFeols
+from refactor.r_cache.r_test_runner import FeolsRTestRunner
 
 
 class CachedRResults:
     """Manages cached R results for comparison."""
 
     def __init__(self, cache_dir: str = "data/cached_results"):
-        # Make cache_dir relative to the tests directory
-        tests_dir = Path(__file__).parent
-        self.cache_dir = tests_dir / cache_dir
+        # Make cache_dir relative to the refactor directory (where this file is)
+        refactor_dir = Path(__file__).parent
+        self.cache_dir = refactor_dir / cache_dir
         self.runner = FeolsRTestRunner(str(self.cache_dir))
 
     def get_cached_result(self, test_case: TestSingleFitFeols):
@@ -51,7 +51,7 @@ def check_absolute_diff(x1, x2, tol, msg=None):
         x1 = np.array([x1])
     elif isinstance(x1, list):
         x1 = np.array(x1)
-    
+
     if isinstance(x2, (int, float)):
         x2 = np.array([x2])
     elif isinstance(x2, list):

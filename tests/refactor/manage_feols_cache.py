@@ -7,12 +7,12 @@ import json
 from datetime import datetime
 import sys
 
-# Add current directory to path for imports
-current_dir = Path(__file__).parent
-sys.path.insert(0, str(current_dir))
+# Add tests directory to path for imports
+tests_dir = Path(__file__).parent.parent
+sys.path.insert(0, str(tests_dir))
 
-from config.feols_test_generator import generate_feols_test_cases
-from r_cache.r_test_runner import FeolsRTestRunner
+from refactor.config.feols_test_generator import generate_feols_test_cases
+from refactor.r_cache.r_test_runner import FeolsRTestRunner
 
 
 def generate_cache(force_refresh: bool = False):
