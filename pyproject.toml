@@ -121,6 +121,14 @@ update-test-data = "Rscript tests/r_test_comparisons.R"
 install-r-extended = "Rscript r_test_requirements.R"
 render-notebooks = "python scripts/run_notebooks.py"
 
+# New cached test framework tasks
+test-generate-params = "cd tests && python -c \"from refactor.config.feols_test_generator import generate_feols_test_cases; cases = generate_feols_test_cases(); print(f'Generated {len(cases)} test cases')\""
+test-cache-r-results = "cd tests && python refactor/manage_feols_cache.py generate"
+test-run-cached = "pytest -rs tests/refactor/test_feols_cached.py -n 4 --cov=pyfixest --cov-report=xml"
+test-cache-summary = "cd tests && python refactor/manage_feols_cache.py summary"
+test-cache-clear = "cd tests && python refactor/manage_feols_cache.py clear"
+test-cached-workflow = { depends-on = ["test-generate-params", "test-cache-r-results", "test-run-cached"] }
+
 [tool.pixi.feature.lint.tasks]
 pre-commit = "pre-commit run --all-files"
 

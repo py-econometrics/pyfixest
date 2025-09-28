@@ -24,7 +24,8 @@ def generate_cache(force_refresh: bool = False):
     results = runner.run_all_tests(test_cases, force_refresh)
 
     # Save summary
-    summary_path = Path("data/cached_results/feols_cache_summary.json")
+    script_dir = Path(__file__).parent
+    summary_path = script_dir / "data/cached_results/feols_cache_summary.json"
     summary = {
         'total_tests': len(results),
         'successful_tests': len([r for r in results.values() if 'error' not in r]),
@@ -51,7 +52,9 @@ def generate_cache(force_refresh: bool = False):
 
 def clear_cache():
     """Clear FEOLS cached results."""
-    cache_dir = Path("data/cached_results")
+    # Use the same path resolution as FeolsRTestRunner
+    script_dir = Path(__file__).parent
+    cache_dir = script_dir / "data/cached_results"
 
     # Clear FEOLS cache files
     cleared = 0
@@ -70,7 +73,9 @@ def clear_cache():
 
 def show_summary():
     """Show cache summary."""
-    summary_path = Path("data/cached_results/feols_cache_summary.json")
+    # Use the same path resolution as FeolsRTestRunner
+    script_dir = Path(__file__).parent
+    summary_path = script_dir / "data/cached_results/feols_cache_summary.json"
 
     if not summary_path.exists():
         print("No cache summary found. Run 'generate' first.")
@@ -86,7 +91,8 @@ def show_summary():
     print(f"  Last updated: {summary.get('last_updated', 'unknown')}")
 
     # Show cache directory size
-    cache_dir = Path("data/cached_results")
+    script_dir = Path(__file__).parent
+    cache_dir = script_dir / "data/cached_results"
     cache_files = list(cache_dir.glob("feols_*.json"))
     print(f"  Cache files: {len(cache_files)}")
 
