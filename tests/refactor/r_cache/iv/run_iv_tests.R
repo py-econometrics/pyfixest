@@ -44,7 +44,7 @@ get_r_inference <- function(inference) {
   }
 }
 
-run_single_fepois_test <- function(test_params) {
+run_single_iv_test <- function(test_params) {
   tryCatch({
     # Extract parameters
     test_id <- test_params$test_id
@@ -52,7 +52,7 @@ run_single_fepois_test <- function(test_params) {
     data_params <- test_params$data_params
     estimation_params <- test_params$estimation_params
 
-    cat("Running FEPOIS test:", test_id, "\n")
+    cat("Running IV test:", test_id, "\n")
     cat("Formula:", formula, "\n")
 
     # Generate data using pyfixest
@@ -66,7 +66,7 @@ run_single_fepois_test <- function(test_params) {
     cat("Generating data with params:", toString(data_params), "\n")
     data <- do.call(pyfixest$get_data, data_params)
 
-    # Apply dropna if needed (should always be FALSE for FEPOIS)
+    # Apply dropna if needed (should always be FALSE for IV)
     if (estimation_params$dropna) {
       data <- data[complete.cases(data), ]
     }
@@ -91,25 +91,29 @@ run_single_fepois_test <- function(test_params) {
     adj <- ssc_params$adj
     cluster_adj <- ssc_params$cluster_adj
 
-    # Extract FEPOIS-specific parameters
-    glm_tol <- estimation_params$iwls_tol  # R uses glm_tol, Python uses iwls_tol
-    glm_maxiter <- estimation_params$iwls_maxiter  # R uses glm_maxiter, Python uses iwls_maxiter
+    cat("Running R IV estimation...\n")
 
-    cat("Running R FEPOIS estimation...\n")
-
-    # Run R estimation (FEPOIS uses fepois instead of feols)
-    r_fit <- fepois(
-      as.formula(r_formula),
-      vcov = r_inference,
-      data = data_r,
-      ssc = ssc(adj, "nested", cluster_adj, "min", "min", FALSE),
-      glm_tol = glm_tol,
-      glm_maxiter = glm_maxiter
-    )
+    # Run R estimation (IV uses feols, not a separate IV function)
+    if (!is.null(estimation_params$weights)) {
+      r_fit <- feols(
+        as.formula(r_formula),
+        vcov = r_inference,
+        data = data_r,
+        ssc = ssc(adj, "nested", cluster_adj, "min", "min", FALSE),
+        weights = as.formula(paste("~", estimation_params$weights))
+      )
+    } else {
+      r_fit <- feols(
+        as.formula(r_formula),
+        vcov = r_inference,
+        data = data_r,
+        ssc = ssc(adj, "nested", cluster_adj, "min", "min", FALSE)
+      )
+    }
 
     cat("Extracting results...\n")
 
-    # Extract results using the same structure as FEOLS
+    # Extract results using the same structure as FEOLS/FEPOIS
     coef_table <- coeftable(r_fit)
     confint_table <- confint(r_fit)
     coef_table_x1 <- coef_table[rownames(coef_table) == "X1", ]
@@ -117,8 +121,8 @@ run_single_fepois_test <- function(test_params) {
 
     # Use direct functions for full precision
     r_coef <- as.numeric(coef(r_fit)["X1"])
-    r_se <- as.numeric(se(r_fit)["X1"])  # Use se() function for full precision
-    r_tstat <- tstat(r_fit)["X1"]  # Calculate t-stat directly for consistency
+    r_se <- as.numeric(se(r_fit)["X1"])
+    r_tstat <- tstat(r_fit)["X1"]
     r_pval <- pvalue(r_fit)["X1"]
     r_confint_low <- as.numeric(confint_table_x1["2.5 %"])
     r_confint_high <- as.numeric(confint_table_x1["97.5 %"])
@@ -133,25 +137,13 @@ run_single_fepois_test <- function(test_params) {
     r_dof_k <- attr(r_fit$cov.scaled, "dof.K")
     r_df_t <- attr(r_fit$cov.scaled, "df.t")
 
-    # FEPOIS-specific statistics
-    r_deviance <- as.numeric(r_fit$deviance)
-    r_irls_weights <- as.numeric(r_fit$irls_weights)
-
     # Get residuals and predictions for iid case (matching FEOLS structure)
-    # Skip predictions if formula has fixed effects (not supported in Python FEPOIS)
+    # Skip predictions for IV models (not supported in Python pyfixest)
     r_resid <- NULL
-    r_predict_response <- NULL
-    r_predict_link <- NULL
-    has_fixed_effects <- grepl("\\|", formula)
-
+    r_predict <- NULL  # IV predictions not supported in pyfixest
     if (estimation_params$vcov == "iid" && adj && cluster_adj) {
       r_resid <- as.numeric(residuals(r_fit))[1:5]  # First 5 for comparison
-
-      # Only get predictions if no fixed effects
-      if (!has_fixed_effects) {
-        r_predict_response <- as.numeric(predict(r_fit, type = "response"))[1:5]  # First 5 for comparison
-        r_predict_link <- as.numeric(predict(r_fit, type = "link"))[1:5]  # First 5 for comparison
-      }
+      # r_predict <- as.numeric(predict(r_fit))[1:5]  # Skip predictions for IV
     }
 
     cat("Preparing results...\n")
@@ -171,27 +163,22 @@ run_single_fepois_test <- function(test_params) {
       # Model statistics
       nobs = r_nobs,
       vcov = r_vcov,
-      deviance = r_deviance,
       dof_k = r_dof_k,
       df_t = r_df_t,
       n_coefs = r_n_coefs,
 
-      # FEPOIS-specific results
-      irls_weights = r_irls_weights,
-
       # Residuals and predictions
       resid = r_resid,
-      predict_response = r_predict_response,
-      predict_link = r_predict_link,
+      predict = r_predict,
 
       success = TRUE
     )
 
-    cat("FEPOIS test completed successfully for", test_id, "\n")
+    cat("IV test completed successfully for", test_id, "\n")
     return(results)
 
   }, error = function(e) {
-    cat("Error in FEPOIS test", test_id, ":", as.character(e), "\n")
+    cat("Error in IV test", test_id, ":", as.character(e), "\n")
     return(list(
       test_id = test_id,
       error = as.character(e),
@@ -209,14 +196,14 @@ if (length(commandArgs(trailingOnly = TRUE)) >= 2) {
   cat("Reading test parameters from:", input_file, "\n")
   test_params <- fromJSON(input_file)
 
-  cat("Running FEPOIS test...\n")
-  results <- run_single_fepois_test(test_params)
+  cat("Running IV test...\n")
+  results <- run_single_iv_test(test_params)
 
   cat("Writing results to:", output_file, "\n")
   write_json(results, output_file, pretty = TRUE, auto_unbox = TRUE)
 
-  cat("FEPOIS test script completed.\n")
+  cat("IV test script completed.\n")
 } else {
-  cat("Usage: Rscript run_fepois_tests.R <input_file> <output_file>\n")
+  cat("Usage: Rscript run_iv_tests.R <input_file> <output_file>\n")
   quit(status = 1)
 }

@@ -133,10 +133,10 @@ run_single_feols_test <- function(test_params) {
     coef_table_x1 <- coef_table[rownames(coef_table) == "X1", ]
     confint_table_x1 <- confint_table[rownames(confint_table) == "X1", ]
 
-    r_coef <- as.numeric(coef_table_x1["Estimate"])
-    r_se <- as.numeric(coef_table_x1["Std. Error"])
-    r_tstat <- as.numeric(coef_table_x1["t value"])
-    r_pval <- as.numeric(coef_table_x1["Pr(>|t|)"])
+    r_coef <- as.numeric(coef(r_fit)["X1"])
+    r_se <- as.numeric(se(r_fit)["X1"])  # Use se() function for full precision
+    r_tstat <- tstat(r_fit)["X1"]  # Calculate t-stat directly for consistency
+    r_pval <- pvalue(r_fit)["X1"]
     r_confint_low <- as.numeric(confint_table_x1["2.5 %"])
     r_confint_high <- as.numeric(confint_table_x1["97.5 %"])
 

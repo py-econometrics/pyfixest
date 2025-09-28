@@ -4,20 +4,17 @@ Unified cache manager for all test methods.
 This module provides a single interface for managing cached R test results
 across all test methods (FEOLS, FEPOIS, IV, etc.).
 """
+
 import argparse
 import json
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any, List, Optional, Type
-from abc import ABC, abstractmethod
+from typing import Any, Dict, List, Optional
 
 # Add tests directory to path for imports
 tests_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(tests_dir))
-
-from refactor.config.base.test_cases import BaseTestCase
-from refactor.r_cache.base.r_test_runner import BaseRTestRunner
 
 
 class TestMethodRegistry:
@@ -39,7 +36,7 @@ class TestMethodRegistry:
                 "runner_class": FeolsRTestRunner,
                 "description": "FEOLS (Fixed Effects OLS) tests",
                 "original_function": "test_single_fit_feols",
-                "status": "implemented"
+                "status": "implemented",
             }
         except ImportError:
             pass
@@ -54,7 +51,7 @@ class TestMethodRegistry:
                 "runner_class": FepoisRTestRunner,
                 "description": "FEPOIS (Fixed Effects Poisson) tests",
                 "original_function": "test_single_fit_fepois",
-                "status": "implemented"
+                "status": "implemented",
             }
         except ImportError:
             self._methods["fepois"] = {
@@ -62,17 +59,29 @@ class TestMethodRegistry:
                 "runner_class": None,
                 "description": "FEPOIS (Fixed Effects Poisson) tests",
                 "original_function": "test_single_fit_fepois",
-                "status": "planned"
+                "status": "planned",
             }
 
-        # Register IV (planned)
-        self._methods["iv"] = {
-            "generator": None,
-            "runner_class": None,
-            "description": "IV (Instrumental Variables) tests",
-            "original_function": "test_single_fit_iv",
-            "status": "planned"
-        }
+        # Register IV (implemented)
+        try:
+            from refactor.config.iv.test_generator import generate_iv_test_cases
+            from refactor.r_cache.iv.r_test_runner import IvRTestRunner
+
+            self._methods["iv"] = {
+                "generator": generate_iv_test_cases,
+                "runner_class": IvRTestRunner,
+                "description": "IV (Instrumental Variables) tests",
+                "original_function": "test_single_fit_iv",
+                "status": "implemented",
+            }
+        except ImportError:
+            self._methods["iv"] = {
+                "generator": None,
+                "runner_class": None,
+                "description": "IV (Instrumental Variables) tests",
+                "original_function": "test_single_fit_iv",
+                "status": "planned",
+            }
 
     def get_available_methods(self) -> List[str]:
         """Get list of all available test methods."""
@@ -80,8 +89,11 @@ class TestMethodRegistry:
 
     def get_implemented_methods(self) -> List[str]:
         """Get list of implemented test methods."""
-        return [method for method, info in self._methods.items()
-                if info["status"] == "implemented"]
+        return [
+            method
+            for method, info in self._methods.items()
+            if info["status"] == "implemented"
+        ]
 
     def get_method_info(self, method: str) -> Optional[Dict[str, Any]]:
         """Get information about a specific test method."""
@@ -105,8 +117,8 @@ class UnifiedCacheManager:
         """
         Initialize the unified cache manager.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         cache_base_dir : str
             Base directory for caching results, relative to refactor directory
         """
@@ -119,13 +131,17 @@ class UnifiedCacheManager:
 
         self.registry = TestMethodRegistry()
 
-    def generate_cache(self, methods: Optional[List[str]] = None,
-                      force_refresh: bool = False, n_jobs: int = -1) -> Dict[str, Dict[str, Any]]:
+    def generate_cache(
+        self,
+        methods: Optional[List[str]] = None,
+        force_refresh: bool = False,
+        n_jobs: int = -1,
+    ) -> Dict[str, Dict[str, Any]]:
         """
         Generate cached results for specified test methods.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         methods : Optional[List[str]]
             List of test methods to generate cache for. If None, generates for all implemented methods.
         force_refresh : bool
@@ -133,8 +149,8 @@ class UnifiedCacheManager:
         n_jobs : int
             Number of parallel jobs. -1 means use all available cores, 1 means sequential
 
-        Returns:
-        --------
+        Returns
+        -------
         Dict[str, Dict[str, Any]]
             Results summary for each method
         """
@@ -164,16 +180,28 @@ class UnifiedCacheManager:
             results = runner.run_all_tests(test_cases, force_refresh, n_jobs=n_jobs)
 
             # Create summary
-            successful = len([r for r in results.values() if r.get('success', True) and 'error' not in r])
-            failed = len([r for r in results.values() if 'error' in r or not r.get('success', True)])
+            successful = len(
+                [
+                    r
+                    for r in results.values()
+                    if r.get("success", True) and "error" not in r
+                ]
+            )
+            failed = len(
+                [
+                    r
+                    for r in results.values()
+                    if "error" in r or not r.get("success", True)
+                ]
+            )
 
             summary = {
-                'total_tests': len(results),
-                'successful_tests': successful,
-                'failed_tests': failed,
-                'test_method': method,
-                'last_updated': datetime.now().isoformat(),
-                'status': 'completed'
+                "total_tests": len(results),
+                "successful_tests": successful,
+                "failed_tests": failed,
+                "test_method": method,
+                "last_updated": datetime.now().isoformat(),
+                "status": "completed",
             }
 
             # Save method-specific summary
@@ -181,7 +209,7 @@ class UnifiedCacheManager:
             method_cache_dir.mkdir(exist_ok=True)
             summary_path = method_cache_dir / f"{method}_cache_summary.json"
 
-            with open(summary_path, 'w') as f:
+            with open(summary_path, "w") as f:
                 json.dump(summary, f, indent=2)
 
             results_summary[method] = summary
@@ -196,13 +224,13 @@ class UnifiedCacheManager:
         """
         Clear cached results for specified test methods.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         methods : Optional[List[str]]
             List of test methods to clear cache for. If None, clears all methods.
 
-        Returns:
-        --------
+        Returns
+        -------
         Dict[str, int]
             Number of files cleared for each method
         """
@@ -232,17 +260,19 @@ class UnifiedCacheManager:
 
         return cleared_summary
 
-    def show_summary(self, methods: Optional[List[str]] = None) -> Dict[str, Dict[str, Any]]:
+    def show_summary(
+        self, methods: Optional[List[str]] = None
+    ) -> Dict[str, Dict[str, Any]]:
         """
         Show cache summary for specified test methods.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         methods : Optional[List[str]]
             List of test methods to show summary for. If None, shows all methods.
 
-        Returns:
-        --------
+        Returns
+        -------
         Dict[str, Dict[str, Any]]
             Summary information for each method
         """
@@ -260,15 +290,15 @@ class UnifiedCacheManager:
 
             if not summary_path.exists():
                 print(f"\n{method.upper()}:")
-                print(f"  Status: No cache found")
+                print("  Status: No cache found")
                 if self.registry.is_implemented(method):
                     print(f"  Action: Run 'generate {method}' to create cache")
                 else:
-                    print(f"  Action: Method not implemented yet")
+                    print("  Action: Method not implemented yet")
                 summaries[method] = {"status": "no_cache"}
                 continue
 
-            with open(summary_path, 'r') as f:
+            with open(summary_path) as f:
                 summary = json.load(f)
 
             print(f"\n{method.upper()}:")
@@ -280,12 +310,14 @@ class UnifiedCacheManager:
             # Show cache directory info
             if method_cache_dir.exists():
                 cache_files = list(method_cache_dir.glob(f"{method}_*.json"))
-                cache_files = [f for f in cache_files if not f.name.endswith('_summary.json')]
+                cache_files = [
+                    f for f in cache_files if not f.name.endswith("_summary.json")
+                ]
                 print(f"  Cache files: {len(cache_files)}")
 
                 if cache_files:
                     total_size = sum(f.stat().st_size for f in cache_files)
-                    print(f"  Total size: {total_size / (1024*1024):.1f} MB")
+                    print(f"  Total size: {total_size / (1024 * 1024):.1f} MB")
 
             summaries[method] = summary
 
@@ -320,18 +352,28 @@ Examples:
   %(prog)s clear feols                 # Clear cache for FEOLS only
   %(prog)s summary                     # Show summary for all methods
   %(prog)s list                        # List all available methods
-        """
+        """,
     )
 
-    parser.add_argument("command",
-                       choices=["generate", "clear", "summary", "list"],
-                       help="Command to run")
-    parser.add_argument("methods", nargs="*",
-                       help="Test methods to operate on (e.g., feols, fepois, iv). If not specified, operates on all available methods.")
-    parser.add_argument("--force", action="store_true",
-                       help="Force refresh of existing cache")
-    parser.add_argument("--n-jobs", type=int, default=-1,
-                       help="Number of parallel jobs for R test execution. -1 uses all cores, 1 is sequential (default: -1)")
+    parser.add_argument(
+        "command",
+        choices=["generate", "clear", "summary", "list"],
+        help="Command to run",
+    )
+    parser.add_argument(
+        "methods",
+        nargs="*",
+        help="Test methods to operate on (e.g., feols, fepois, iv). If not specified, operates on all available methods.",
+    )
+    parser.add_argument(
+        "--force", action="store_true", help="Force refresh of existing cache"
+    )
+    parser.add_argument(
+        "--n-jobs",
+        type=int,
+        default=-1,
+        help="Number of parallel jobs for R test execution. -1 uses all cores, 1 is sequential (default: -1)",
+    )
 
     args = parser.parse_args()
 

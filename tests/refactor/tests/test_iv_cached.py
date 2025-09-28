@@ -1,6 +1,6 @@
 """
-New FEPOIS tests using cached R results.
-This replaces test_single_fit_fepois with a cached approach.
+New IV tests using cached R results.
+This replaces test_single_fit_iv with a cached approach.
 """
 
 import json
@@ -18,9 +18,9 @@ from pyfixest.utils.utils import ssc
 tests_dir = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(tests_dir))
 
-from refactor.config.fepois.test_cases import TestSingleFitFepois
-from refactor.config.fepois.test_generator import generate_fepois_test_cases
-from refactor.r_cache.fepois.r_test_runner import FepoisRTestRunner
+from refactor.config.iv.test_cases import TestSingleFitIv
+from refactor.config.iv.test_generator import generate_iv_test_cases
+from refactor.r_cache.iv.r_test_runner import IvRTestRunner
 
 
 class CachedRResults:
@@ -30,9 +30,9 @@ class CachedRResults:
         # Make cache_dir relative to the refactor directory (parent of tests directory)
         refactor_dir = Path(__file__).parent.parent
         self.cache_dir = refactor_dir / cache_dir
-        self.runner = FepoisRTestRunner(str(self.cache_dir))
+        self.runner = IvRTestRunner(str(self.cache_dir))
 
-    def get_cached_result(self, test_case: TestSingleFitFepois):
+    def get_cached_result(self, test_case: TestSingleFitIv):
         """Get cached R result for a test case."""
         cache_path = self.runner._get_cache_path(test_case)
         if not cache_path.exists():
@@ -74,11 +74,6 @@ def check_absolute_diff(x1, x2, tol, msg=None):
     assert np.all(np.abs(x1[valid_mask] - x2[valid_mask]) < tol), msg
 
 
-def _has_fixed_effects(formula: str) -> bool:
-    """Check if formula contains fixed effects (indicated by | symbol)."""
-    return "|" in formula
-
-
 def _convert_f3(data, f3_type):
     """Convert f3 column to specified type (matching FEOLS implementation)."""
     if f3_type == "str":
@@ -94,15 +89,15 @@ def _convert_f3(data, f3_type):
     return data
 
 
-def prepare_python_data(test_case: TestSingleFitFepois) -> pd.DataFrame:
-    """Prepare data for Python FEPOIS test, matching R preparation."""
+def prepare_python_data(test_case: TestSingleFitIv) -> pd.DataFrame:
+    """Prepare data for Python IV test, matching R preparation."""
     data_params = test_case.get_data_params()
     f3_type = data_params.pop("f3_type", "str")
 
     # Generate base data
     data = pf.get_data(**data_params)
 
-    # Apply dropna if needed (should always be False for FEPOIS)
+    # Apply dropna if needed (should always be False for IV)
     if test_case.dropna:
         data = data.dropna()
 
@@ -115,9 +110,9 @@ def prepare_python_data(test_case: TestSingleFitFepois) -> pd.DataFrame:
     return data
 
 
-@pytest.mark.parametrize("test_case", generate_fepois_test_cases())
-def test_fepois_vs_cached_r(test_case: TestSingleFitFepois):
-    """Test FEPOIS Python implementation against cached R results."""
+@pytest.mark.parametrize("test_case", generate_iv_test_cases())
+def test_iv_vs_cached_r(test_case: TestSingleFitIv):
+    """Test IV Python implementation against cached R results."""
     # Get cached R results
     try:
         r_results = CACHED_R_RESULTS.get_cached_result(test_case)
@@ -138,14 +133,13 @@ def test_fepois_vs_cached_r(test_case: TestSingleFitFepois):
     ssc_params = estimation_params["ssc"]
     ssc_ = ssc(adj=ssc_params["adj"], cluster_adj=ssc_params["cluster_adj"])
 
-    # Run Python FEPOIS estimation
-    py_mod = pf.fepois(
+    # Run Python IV estimation (IV uses feols, not a separate IV function)
+    py_mod = pf.feols(
         fml=test_case.formula,
         data=data,
         vcov=test_case.inference,
         ssc=ssc_,
-        iwls_tol=test_case.iwls_tol,
-        iwls_maxiter=test_case.iwls_maxiter,
+        weights=test_case.weights,
     )
 
     # Extract Python results
@@ -156,19 +150,13 @@ def test_fepois_vs_cached_r(test_case: TestSingleFitFepois):
     py_confint = py_mod.confint().xs("X1").values
     py_nobs = py_mod._N
     py_vcov = py_mod._vcov[0, 0]
-    py_deviance = py_mod.deviance
-    py_resid = py_mod.resid()
-    py_irls_weights = py_mod._irls_weights.flatten()
     py_dof_k = int(py_mod._dof_k)
     py_df_t = int(py_mod._df_t)
     py_n_coefs = py_mod.coef().values.size
 
-    # Get predictions (skip if formula has fixed effects - not supported for FEPOIS)
-    py_predict_response = None
-    py_predict_link = None
-    if not _has_fixed_effects(test_case.formula):
-        py_predict_response = py_mod.predict(type="response")
-        py_predict_link = py_mod.predict(type="link")
+    # Get residuals (predictions not supported for IV models in pyfixest)
+    py_predict = None  # IV predictions not supported in pyfixest
+    py_resid = py_mod.resid()
 
     # Extract R results
     r_coef = r_results["coef"]
@@ -178,64 +166,47 @@ def test_fepois_vs_cached_r(test_case: TestSingleFitFepois):
     r_confint = r_results["confint"]
     r_nobs = r_results["nobs"]
     r_vcov = r_results["vcov"]
-    r_deviance = r_results["deviance"]
-    r_resid = r_results["resid"]
-    r_irls_weights = r_results["irls_weights"]
     r_dof_k = r_results["dof_k"]
     r_df_t = r_results["df_t"]
     r_n_coefs = r_results["n_coefs"]
-    r_predict_response = r_results["predict_response"]
-    r_predict_link = r_results["predict_link"]
+    r_predict = r_results["predict"]
+    r_resid = r_results["resid"]
 
     # Perform comparisons (based on original test conditions)
     # Only test when inference is "iid" and both adj and cluster_adj are True
     if test_case.inference == "iid" and test_case.ssc_adj and test_case.ssc_cluster_adj:
         check_absolute_diff(py_nobs, r_nobs, 1e-08, "py_nobs != r_nobs")
         check_absolute_diff(py_coef, r_coef, 1e-08, "py_coef != r_coef")
-        check_absolute_diff(py_resid[0:5], r_resid[0:5], 1e-07, "py_resid != r_resid")
-
-        # FEPOIS-specific comparisons (with relaxed tolerance as in original test)
-        check_absolute_diff(
-            py_irls_weights[10:12],
-            r_irls_weights[10:12],
-            1e-06,  # Relaxed tolerance for IRLS weights
-            "py_irls_weights != r_irls_weights",
-        )
-
         check_absolute_diff(py_se, r_se, 1e-08, "py_se != r_se")
         check_absolute_diff(py_tstat, r_tstat, 1e-08, "py_tstat != r_tstat")
         check_absolute_diff(py_pval, r_pval, 1e-08, "py_pval != r_pval")
         check_absolute_diff(py_confint, r_confint, 1e-08, "py_confint != r_confint")
         check_absolute_diff(py_vcov, r_vcov, 1e-08, "py_vcov != r_vcov")
-        check_absolute_diff(py_deviance, r_deviance, 1e-08, "py_deviance != r_deviance")
         check_absolute_diff(py_dof_k, r_dof_k, 1e-08, "py_dof_k != r_dof_k")
         check_absolute_diff(py_df_t, r_df_t, 1e-08, "py_df_t != r_df_t")
         check_absolute_diff(py_n_coefs, r_n_coefs, 1e-08, "py_n_coefs != r_n_coefs")
 
-        # Prediction comparisons (only if predictions are available)
-        if py_predict_response is not None and r_predict_response is not None:
+        # Residuals and predictions comparisons (only if available)
+        if r_resid is not None:
             check_absolute_diff(
-                py_predict_response[0:5],
-                r_predict_response[0:5],
-                1e-07,
-                "py_predict_response != r_predict_response",
+                py_resid[0:5], r_resid[0:5], 1e-07, "py_resid != r_resid"
             )
-        if py_predict_link is not None and r_predict_link is not None:
-            check_absolute_diff(
-                py_predict_link[0:5],
-                r_predict_link[0:5],
-                1e-07,
-                "py_predict_link != r_predict_link",
-            )
+
+        # Skip prediction comparisons for IV (not supported in pyfixest)
+        # if py_predict is not None and r_predict is not None:
+        #     check_absolute_diff(
+        #         py_predict[0:5], r_predict[0:5], 1e-07, "py_predict != r_predict"
+        #     )
 
 
 if __name__ == "__main__":
     # Allow running this file directly for debugging
-    test_cases = generate_fepois_test_cases()
-    print(f"Generated {len(test_cases)} FEPOIS test cases")
+    test_cases = generate_iv_test_cases()
+    print(f"Generated {len(test_cases)} IV test cases")
 
     # Run first test case as example
     if test_cases:
         print(f"Example test case: {test_cases[0].test_id}")
         print(f"Formula: {test_cases[0].formula}")
         print(f"Inference: {test_cases[0].inference}")
+        print(f"Weights: {test_cases[0].weights}")
