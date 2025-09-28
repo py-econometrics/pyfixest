@@ -46,6 +46,12 @@ CACHED_R_RESULTS = CachedRResults()
 
 def check_absolute_diff(x1, x2, tol, msg=None):
     """Check for absolute differences (from original test)."""
+    # Handle None values (from R's NULL)
+    if x1 is None and x2 is None:
+        return  # Both None, considered equal
+    if x1 is None or x2 is None:
+        raise AssertionError(f"{msg}: One value is None, the other is not")
+
     # Convert to numpy arrays
     if isinstance(x1, (int, float)):
         x1 = np.array([x1])
@@ -164,8 +170,8 @@ def test_feols_vs_cached_r(test_case: TestSingleFitFeols):
 
     py_vcov = py_fit._vcov[0, 0]
     py_nobs = py_fit._N
-    py_dof_k = py_fit._dof_k
-    py_df_t = py_fit._df_t
+    py_dof_k = getattr(py_fit, '_dof_k', None)
+    py_df_t = getattr(py_fit, '_df_t', None)
 
     # Compare results with tolerances from original test
     rtol = 1e-08

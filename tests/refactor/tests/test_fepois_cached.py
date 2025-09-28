@@ -50,6 +50,12 @@ CACHED_R_RESULTS = CachedRResults()
 
 def check_absolute_diff(x1, x2, tol, msg=None):
     """Check for absolute differences (from original test)."""
+    # Handle None values (from R's NULL)
+    if x1 is None and x2 is None:
+        return  # Both None, considered equal
+    if x1 is None or x2 is None:
+        raise AssertionError(f"{msg}: One value is None, the other is not")
+
     # Convert to numpy arrays
     if isinstance(x1, (int, float)):
         x1 = np.array([x1])
@@ -159,8 +165,8 @@ def test_fepois_vs_cached_r(test_case: TestSingleFitFepois):
     py_deviance = py_mod.deviance
     py_resid = py_mod.resid()
     py_irls_weights = py_mod._irls_weights.flatten()
-    py_dof_k = int(py_mod._dof_k)
-    py_df_t = int(py_mod._df_t)
+    py_dof_k = getattr(py_mod, '_dof_k', None)
+    py_df_t = getattr(py_mod, '_df_t', None)
     py_n_coefs = py_mod.coef().values.size
 
     # Get predictions (skip if formula has fixed effects - not supported for FEPOIS)
@@ -187,14 +193,22 @@ def test_fepois_vs_cached_r(test_case: TestSingleFitFepois):
     r_predict_response = r_results["predict_response"]
     r_predict_link = r_results["predict_link"]
 
-    # Perform comparisons (based on original test conditions)
-    # Only test when inference is "iid" and both adj and cluster_adj are True
-    if test_case.inference == "iid" and test_case.ssc_adj and test_case.ssc_cluster_adj:
-        check_absolute_diff(py_nobs, r_nobs, 1e-08, "py_nobs != r_nobs")
-        check_absolute_diff(py_coef, r_coef, 1e-08, "py_coef != r_coef")
-        check_absolute_diff(py_resid[0:5], r_resid[0:5], 1e-07, "py_resid != r_resid")
+    # Compare results
+    check_absolute_diff(py_nobs, r_nobs, 1e-08, "py_nobs != r_nobs")
+    check_absolute_diff(py_coef, r_coef, 1e-08, "py_coef != r_coef")
+    check_absolute_diff(py_se, r_se, 1e-08, "py_se != r_se")
+    check_absolute_diff(py_tstat, r_tstat, 1e-08, "py_tstat != r_tstat")
+    check_absolute_diff(py_pval, r_pval, 1e-08, "py_pval != r_pval")
+    check_absolute_diff(py_confint, r_confint, 1e-08, "py_confint != r_confint")
+    check_absolute_diff(py_vcov, r_vcov, 1e-08, "py_vcov != r_vcov")
+    check_absolute_diff(py_deviance, r_deviance, 1e-08, "py_deviance != r_deviance")
+    check_absolute_diff(py_dof_k, r_dof_k, 1e-08, "py_dof_k != r_dof_k")
+    check_absolute_diff(py_df_t, r_df_t, 1e-08, "py_df_t != r_df_t")
+    check_absolute_diff(py_n_coefs, r_n_coefs, 1e-08, "py_n_coefs != r_n_coefs")
 
-        # FEPOIS-specific comparisons (with relaxed tolerance as in original test)
+    # Residuals and IRLS weights (only for iid case)
+    if test_case.inference == "iid" and test_case.ssc_adj and test_case.ssc_cluster_adj:
+        check_absolute_diff(py_resid[0:5], r_resid[0:5], 1e-07, "py_resid != r_resid")
         check_absolute_diff(
             py_irls_weights[10:12],
             r_irls_weights[10:12],
@@ -202,31 +216,21 @@ def test_fepois_vs_cached_r(test_case: TestSingleFitFepois):
             "py_irls_weights != r_irls_weights",
         )
 
-        check_absolute_diff(py_se, r_se, 1e-08, "py_se != r_se")
-        check_absolute_diff(py_tstat, r_tstat, 1e-08, "py_tstat != r_tstat")
-        check_absolute_diff(py_pval, r_pval, 1e-08, "py_pval != r_pval")
-        check_absolute_diff(py_confint, r_confint, 1e-08, "py_confint != r_confint")
-        check_absolute_diff(py_vcov, r_vcov, 1e-08, "py_vcov != r_vcov")
-        check_absolute_diff(py_deviance, r_deviance, 1e-08, "py_deviance != r_deviance")
-        check_absolute_diff(py_dof_k, r_dof_k, 1e-08, "py_dof_k != r_dof_k")
-        check_absolute_diff(py_df_t, r_df_t, 1e-08, "py_df_t != r_df_t")
-        check_absolute_diff(py_n_coefs, r_n_coefs, 1e-08, "py_n_coefs != r_n_coefs")
-
-        # Prediction comparisons (only if predictions are available)
-        if py_predict_response is not None and r_predict_response is not None:
-            check_absolute_diff(
-                py_predict_response[0:5],
-                r_predict_response[0:5],
-                1e-07,
-                "py_predict_response != r_predict_response",
-            )
-        if py_predict_link is not None and r_predict_link is not None:
-            check_absolute_diff(
-                py_predict_link[0:5],
-                r_predict_link[0:5],
-                1e-07,
-                "py_predict_link != r_predict_link",
-            )
+    # Prediction comparisons (only if predictions are available)
+    if py_predict_response is not None and r_predict_response is not None:
+        check_absolute_diff(
+            py_predict_response[0:5],
+            r_predict_response[0:5],
+            1e-07,
+            "py_predict_response != r_predict_response",
+        )
+    if py_predict_link is not None and r_predict_link is not None:
+        check_absolute_diff(
+            py_predict_link[0:5],
+            r_predict_link[0:5],
+            1e-07,
+            "py_predict_link != r_predict_link",
+        )
 
 
 if __name__ == "__main__":

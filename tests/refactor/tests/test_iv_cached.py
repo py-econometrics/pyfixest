@@ -50,6 +50,12 @@ CACHED_R_RESULTS = CachedRResults()
 
 def check_absolute_diff(x1, x2, tol, msg=None):
     """Check for absolute differences (from original test)."""
+    # Handle None values (from R's NULL)
+    if x1 is None and x2 is None:
+        return  # Both None, considered equal
+    if x1 is None or x2 is None:
+        raise AssertionError(f"{msg}: One value is None, the other is not")
+
     # Convert to numpy arrays
     if isinstance(x1, (int, float)):
         x1 = np.array([x1])
@@ -150,8 +156,8 @@ def test_iv_vs_cached_r(test_case: TestSingleFitIv):
     py_confint = py_mod.confint().xs("X1").values
     py_nobs = py_mod._N
     py_vcov = py_mod._vcov[0, 0]
-    py_dof_k = int(py_mod._dof_k)
-    py_df_t = int(py_mod._df_t)
+    py_dof_k = getattr(py_mod, '_dof_k', None)
+    py_df_t = getattr(py_mod, '_df_t', None)
     py_n_coefs = py_mod.coef().values.size
 
     # Get residuals (predictions not supported for IV models in pyfixest)

@@ -145,9 +145,13 @@ run_single_feols_test <- function(test_params) {
     r_nobs <- as.numeric(nobs(r_fit))
     r_n_coefs <- length(coef(r_fit))
 
-    # Get degrees of freedom
+    # Get degrees of freedom (handle NULL values)
     r_dof_k <- attr(r_fit$cov.scaled, "dof.K")
     r_df_t <- attr(r_fit$cov.scaled, "df.t")
+
+    # Convert NULL to NA for JSON serialization
+    if (is.null(r_dof_k)) r_dof_k <- NA
+    if (is.null(r_df_t)) r_df_t <- NA
 
     # Get residuals and predictions for iid case
     r_resid <- NULL

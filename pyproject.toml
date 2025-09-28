@@ -126,7 +126,7 @@ test-cache-all-methods = "cd tests && python refactor/cache_manager.py list"
 test-cache-all-results = "cd tests && python refactor/cache_manager.py generate --n-jobs -1"
 test-cache-all-summary = "cd tests && python refactor/cache_manager.py summary"
 test-cache-all-clear = "cd tests && python refactor/cache_manager.py clear"
-test-run-all-cached = "pytest -rs tests/refactor/tests/ -n 4 --cov=pyfixest --cov-report=xml"
+test-run-all-cached = "pytest -rs tests/refactor/tests/ -n 6 --cov=pyfixest --cov-report=xml"
 test-cached-workflow-all = { depends-on = ["test-cache-all-results", "test-run-all-cached"] }
 
 # FEOLS-specific tasks (legacy, use unified tasks above)

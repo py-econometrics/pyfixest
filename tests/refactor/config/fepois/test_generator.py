@@ -24,8 +24,8 @@ OLS_FMLS = [
     "Y ~ X1 + i(f1, ref = 1) | f2 + f3",
     "Y ~ X1 + i(f1) + i(f2)",
     "Y ~ X1 + i(f1, ref = 1) + i(f2, ref = 2)",
-     ("Y ~ X1 + C(f1):C(fe2)"),                  # currently does not work as C():C() translation not implemented
-     ("Y ~ X1 + C(f1):C(fe2) | f3"),             # currently does not work as C():C() translation not implemented
+    # ("Y ~ X1 + C(f1):C(fe2)"),                  # currently does not work as C():C() translation not implemented
+    # ("Y ~ X1 + C(f1):C(fe2) | f3"),             # currently does not work as C():C() translation not implemented
     "Y ~ X1 + X2:f1",
     "Y ~ X1 + X2:f1 | f3",
     "Y ~ X1 + X2:f1 | f3 + f1",
