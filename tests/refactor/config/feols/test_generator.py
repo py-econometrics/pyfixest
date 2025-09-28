@@ -82,15 +82,15 @@ OLS_BUT_NOT_POISSON_FML = [
 # Parameter combinations from original test
 ALL_F3 = [
     "str",
-#    "object",
-#    "int",
-#    "categorical",
-#    "float"
+    #"object",
+    #"int",
+    #"categorical",
+    #"float"
 ]
 
 BACKEND_F3 = [
     *[("numba", t) for t in ALL_F3],
-#    *[(b, "str") for b in ("jax", "rust")],  # JAX and Rust only support str f3_type
+    #*[(b, "str") for b in ("jax", "rust")],  # JAX and Rust only support str f3_type
 ]
 
 

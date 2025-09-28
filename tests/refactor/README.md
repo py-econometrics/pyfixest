@@ -17,7 +17,7 @@ This directory contains the refactored test framework for comparing pyfixest aga
 ## Migration Status
 
 - ✅ `test_single_fit_feols` - Completed
-- ⏳ `test_single_fit_fepois` - Planned
+- ✅ `test_single_fit_fepois` - Completed
 - ⏳ `test_single_fit_iv` - Planned
 
 ## Usage

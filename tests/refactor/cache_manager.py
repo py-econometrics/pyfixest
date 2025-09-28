@@ -44,14 +44,26 @@ class TestMethodRegistry:
         except ImportError:
             pass
 
-        # Register FEPOIS (planned)
-        self._methods["fepois"] = {
-            "generator": None,
-            "runner_class": None,
-            "description": "FEPOIS (Fixed Effects Poisson) tests",
-            "original_function": "test_single_fit_fepois",
-            "status": "planned"
-        }
+        # Register FEPOIS (implemented)
+        try:
+            from refactor.config.fepois.test_generator import generate_fepois_test_cases
+            from refactor.r_cache.fepois.r_test_runner import FepoisRTestRunner
+
+            self._methods["fepois"] = {
+                "generator": generate_fepois_test_cases,
+                "runner_class": FepoisRTestRunner,
+                "description": "FEPOIS (Fixed Effects Poisson) tests",
+                "original_function": "test_single_fit_fepois",
+                "status": "implemented"
+            }
+        except ImportError:
+            self._methods["fepois"] = {
+                "generator": None,
+                "runner_class": None,
+                "description": "FEPOIS (Fixed Effects Poisson) tests",
+                "original_function": "test_single_fit_fepois",
+                "status": "planned"
+            }
 
         # Register IV (planned)
         self._methods["iv"] = {
