@@ -2,7 +2,7 @@
 Generator for FEOLS test cases based on original test_single_fit_feols parameters.
 """
 from typing import List
-from .feols_tests import TestSingleFitFeols
+from .test_cases import TestSingleFitFeols
 
 
 # Original formulas from test_vs_fixest.py
