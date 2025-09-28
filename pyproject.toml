@@ -121,14 +121,21 @@ update-test-data = "Rscript tests/r_test_comparisons.R"
 install-r-extended = "Rscript r_test_requirements.R"
 render-notebooks = "python scripts/run_notebooks.py"
 
-# New cached test framework tasks
-test-generate-params = "cd tests && python -c \"from refactor.config.feols_test_generator import generate_feols_test_cases; cases = generate_feols_test_cases(); print(f'Generated {len(cases)} test cases')\""
-test-cache-r-results = "cd tests && python refactor/manage_feols_cache.py generate --n-jobs -1"
-test-run-cached = "pytest -rs tests/refactor/test_feols_cached.py -n 4 --cov=pyfixest --cov-report=xml"
-test-cache-summary = "cd tests && python refactor/manage_feols_cache.py summary"
-test-cache-clear = "cd tests && python refactor/manage_feols_cache.py clear"
+# Unified cached test framework tasks (recommended)
+test-cache-all-methods = "cd tests && python refactor/cache_manager.py list"
+test-cache-all-results = "cd tests && python refactor/cache_manager.py generate --n-jobs -1"
+test-cache-all-summary = "cd tests && python refactor/cache_manager.py summary"
+test-cache-all-clear = "cd tests && python refactor/cache_manager.py clear"
+test-run-all-cached = "pytest -rs tests/refactor/tests/ -n 4 --cov=pyfixest --cov-report=xml"
+test-cached-workflow-all = { depends-on = ["test-cache-all-results", "test-run-all-cached"] }
+
+# FEOLS-specific tasks (legacy, use unified tasks above)
+test-generate-params = "cd tests && python -c \"from refactor.config.feols.test_generator import generate_feols_test_cases; cases = generate_feols_test_cases(); print(f'Generated {len(cases)} test cases')\""
+test-cache-r-results = "cd tests && python refactor/manage_cache.py generate --n-jobs -1"
+test-run-cached = "pytest -rs tests/refactor/tests/test_feols_cached.py -n 4 --cov=pyfixest --cov-report=xml"
+test-cache-summary = "cd tests && python refactor/manage_cache.py summary"
+test-cache-clear = "cd tests && python refactor/manage_cache.py clear"
 test-cached-workflow = { depends-on = ["test-generate-params", "test-cache-r-results", "test-run-cached"] }
-test-cached-workflow-parallel = { depends-on = ["test-generate-params", "test-cache-r-results-parallel", "test-run-cached"] }
 
 [tool.pixi.feature.lint.tasks]
 pre-commit = "pre-commit run --all-files"
