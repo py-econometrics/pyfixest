@@ -9,7 +9,7 @@ from .test_cases import BaseTestCase
 @dataclass
 class TestSingleFitFeols(BaseTestCase):
     """Test case for test_single_fit_feols function migration."""
-    
+
     # Tell pytest this is not a test class
     __test__ = False
 

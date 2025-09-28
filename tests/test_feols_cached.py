@@ -46,10 +46,16 @@ CACHED_R_RESULTS = CachedRResults()
 
 def check_absolute_diff(x1, x2, tol, msg=None):
     """Check for absolute differences (from original test)."""
+    # Convert to numpy arrays
     if isinstance(x1, (int, float)):
         x1 = np.array([x1])
+    elif isinstance(x1, list):
+        x1 = np.array(x1)
+    
     if isinstance(x2, (int, float)):
         x2 = np.array([x2])
+    elif isinstance(x2, list):
+        x2 = np.array(x2)
 
     msg = "" if msg is None else msg
 
