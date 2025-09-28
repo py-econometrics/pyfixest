@@ -11964,7 +11964,7 @@ packages:
 - pypi: .
   name: pyfixest
   version: 0.30.2
-  sha256: d167e763a31414cef5b403b91550d0edbd2363ef8bc545161146664695a89cb6
+  sha256: 81d131608bed7d344f7f6f280855bf9ce66225ea350ac7280dacca4b6b1f2833
   requires_dist:
   - pytest>=7.2.0 ; extra == 'dev'
   - pytest-cov>=4.1.0 ; extra == 'dev'

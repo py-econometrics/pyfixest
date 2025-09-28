@@ -8,12 +8,33 @@ import tempfile
 import sys
 from pathlib import Path
 from typing import Dict, Any
+from joblib import Parallel, delayed
 
 # Add tests directory to path for imports
 tests_dir = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(tests_dir))
 
 from refactor.config.feols_tests import TestSingleFitFeols
+
+
+def run_single_test_worker(test_case: TestSingleFitFeols, cache_dir: str, force_refresh: bool = False) -> Dict[str, Any]:
+    """
+    Worker function to run a single R test.
+    This function is designed to be used with joblib.delayed for parallel execution.
+    """
+    from pathlib import Path
+    import json
+
+    # Create a temporary runner instance for this worker
+    runner = FeolsRTestRunner(cache_dir)
+
+    try:
+        result = runner.run_and_cache_test(test_case, force_refresh)
+        print(f"✓ Completed {test_case.test_id}")
+        return result
+    except Exception as e:
+        print(f"✗ Failed {test_case.test_id}: {e}")
+        return {'test_id': test_case.test_id, 'error': str(e), 'hash': test_case.get_hash(), 'success': False}
 
 
 class FeolsRTestRunner:
@@ -128,16 +149,65 @@ class FeolsRTestRunner:
 
         return results
 
-    def run_all_tests(self, test_cases: list, force_refresh: bool = False) -> Dict[str, Dict[str, Any]]:
-        """Run all FEOLS tests and cache results."""
-        results = {}
+    def run_all_tests(self, test_cases: list, force_refresh: bool = False, n_jobs: int = -1) -> Dict[str, Dict[str, Any]]:
+        """
+        Run all FEOLS tests and cache results.
 
+        Parameters:
+        -----------
+        test_cases : list
+            List of TestSingleFitFeols instances to run
+        force_refresh : bool
+            Whether to force refresh of existing cache
+        n_jobs : int
+            Number of parallel jobs. -1 means use all available cores, 1 means sequential
+        """
+        if n_jobs == 1:
+            # Sequential execution
+            return self._run_all_tests_sequential(test_cases, force_refresh)
+        else:
+            # Parallel execution with joblib
+            return self._run_all_tests_parallel(test_cases, force_refresh, n_jobs)
+
+    def _run_all_tests_sequential(self, test_cases: list, force_refresh: bool = False) -> Dict[str, Dict[str, Any]]:
+        """Run all tests sequentially (original implementation)."""
+        results = {}
+        total = len(test_cases)
+
+        print(f"Running {total} R tests sequentially...")
         for i, test_case in enumerate(test_cases):
-            print(f"Progress: {i+1}/{len(test_cases)} - {test_case.test_id}")
+            print(f"Progress: {i+1}/{total} - {test_case.test_id}")
             try:
                 results[test_case.test_id] = self.run_and_cache_test(test_case, force_refresh)
             except Exception as e:
                 print(f"Error running {test_case.test_id}: {e}")
                 results[test_case.test_id] = {'error': str(e)}
+
+        return results
+
+    def _run_all_tests_parallel(self, test_cases: list, force_refresh: bool = False, n_jobs: int = -1) -> Dict[str, Dict[str, Any]]:
+        """Run all tests in parallel using joblib."""
+        total = len(test_cases)
+
+        # Determine actual number of jobs
+        if n_jobs == -1:
+            import multiprocessing
+            actual_jobs = multiprocessing.cpu_count()
+        else:
+            actual_jobs = min(n_jobs, total)
+
+        print(f"Running {total} R tests in parallel with {actual_jobs} workers using joblib...")
+
+        # Use joblib to run tests in parallel
+        results_list = Parallel(n_jobs=n_jobs, verbose=1)(
+            delayed(run_single_test_worker)(test_case, str(self.cache_dir), force_refresh)
+            for test_case in test_cases
+        )
+
+        # Convert list of results to dictionary
+        results = {}
+        for result in results_list:
+            test_id = result.get('test_id', 'unknown')
+            results[test_id] = result
 
         return results

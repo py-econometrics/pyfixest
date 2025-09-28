@@ -1,5 +1,10 @@
 """
 Script to manage FEOLS R test cache.
+
+Parallelization:
+- By default, R test generation uses all available CPU cores for maximum speed
+- Use --n-jobs 1 for sequential execution (useful for debugging)
+- Use --n-jobs N to specify a custom number of parallel workers
 """
 import argparse
 from pathlib import Path
@@ -15,13 +20,13 @@ from refactor.config.feols_test_generator import generate_feols_test_cases
 from refactor.r_cache.r_test_runner import FeolsRTestRunner
 
 
-def generate_cache(force_refresh: bool = False):
+def generate_cache(force_refresh: bool = False, n_jobs: int = -1):
     """Generate all R results and cache them."""
     runner = FeolsRTestRunner()
     test_cases = generate_feols_test_cases()
 
     print(f"Generating R cache for {len(test_cases)} FEOLS test cases...")
-    results = runner.run_all_tests(test_cases, force_refresh)
+    results = runner.run_all_tests(test_cases, force_refresh, n_jobs=n_jobs)
 
     # Save summary
     script_dir = Path(__file__).parent
@@ -108,11 +113,13 @@ def main():
                        help="Command to run")
     parser.add_argument("--force", action="store_true",
                        help="Force refresh of existing cache")
+    parser.add_argument("--n-jobs", type=int, default=-1,
+                       help="Number of parallel jobs for R test execution. -1 uses all cores, 1 is sequential (default: -1)")
 
     args = parser.parse_args()
 
     if args.command == "generate":
-        generate_cache(args.force)
+        generate_cache(args.force, n_jobs=args.n_jobs)
     elif args.command == "clear":
         clear_cache()
     elif args.command == "summary":
