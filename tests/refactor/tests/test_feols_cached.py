@@ -45,35 +45,23 @@ CACHED_R_RESULTS = CachedRResults()
 
 
 def check_absolute_diff(x1, x2, tol, msg=None):
-    """Check for absolute differences (from original test)."""
-    # Handle None values (from R's NULL)
-    if x1 is None and x2 is None:
-        return  # Both None, considered equal
-    if x1 is None or x2 is None:
-        raise AssertionError(f"{msg}: One value is None, the other is not")
-
-    # Convert to numpy arrays
+    "Check for absolute differences."
     if isinstance(x1, (int, float)):
         x1 = np.array([x1])
-    elif isinstance(x1, list):
-        x1 = np.array(x1)
-
     if isinstance(x2, (int, float)):
         x2 = np.array([x2])
-    elif isinstance(x2, list):
-        x2 = np.array(x2)
+        msg = "" if msg is None else msg
 
-    msg = "" if msg is None else msg
-
-    # Handle nan values
+    # handle nan values
     nan_mask_x1 = np.isnan(x1)
     nan_mask_x2 = np.isnan(x2)
 
     if not np.array_equal(nan_mask_x1, nan_mask_x2):
         raise AssertionError(f"{msg}: NaN positions do not match")
 
-    valid_mask = ~nan_mask_x1
+    valid_mask = ~nan_mask_x1  # Mask for non-NaN elements (same for x1 and x2)
     assert np.all(np.abs(x1[valid_mask] - x2[valid_mask]) < tol), msg
+
 
 
 def _convert_f3(data: pd.DataFrame, f3_type: str) -> pd.DataFrame:
@@ -184,7 +172,9 @@ def test_feols_vs_cached_r(test_case: TestSingleFitFeols):
     check_absolute_diff(py_se, r_results['r_se'], atol, f"py_se != r_se for {test_case.test_id}")
     check_absolute_diff(py_pval, r_results['r_pval'], atol, f"py_pval != r_pval for {test_case.test_id}")
     check_absolute_diff(py_tstat, r_results['r_tstat'], atol, f"py_tstat != r_tstat for {test_case.test_id}")
-    check_absolute_diff(py_confint, r_results['r_confint'], atol, f"py_confint != r_confint for {test_case.test_id}")
+    check_absolute_diff(py_confint[0], r_results['r_confint'][0], atol, f"py_confint != r_confint for {test_case.test_id}")
+    check_absolute_diff(py_confint[1], r_results['r_confint'][1], atol, f"py_confint != r_confint for {test_case.test_id}")
+
     check_absolute_diff(py_vcov, r_results['r_vcov'], atol, f"py_vcov != r_vcov for {test_case.test_id}")
     check_absolute_diff(py_dof_k, r_results['r_dof_k'], atol, f"py_dof_k != r_dof_k for {test_case.test_id}")
     check_absolute_diff(py_df_t, r_results['r_df_t'], atol, f"py_df_t != r_df_t for {test_case.test_id}")
@@ -198,13 +188,13 @@ def test_feols_vs_cached_r(test_case: TestSingleFitFeols):
 
         check_absolute_diff(
             py_predict[0:5],
-            r_results['r_predict'],
+            np.array(r_results['r_predict']),
             1e-07,
             f"py_predict != r_predict for {test_case.test_id}"
         )
         check_absolute_diff(
             py_resid[0:5],
-            r_results['r_resid'],
+            np.array(r_results['r_resid']),
             1e-07,
             f"py_resid != r_resid for {test_case.test_id}"
         )

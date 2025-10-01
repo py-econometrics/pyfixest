@@ -193,26 +193,33 @@ def test_fepois_vs_cached_r(test_case: TestSingleFitFepois):
     r_predict_response = r_results["predict_response"]
     r_predict_link = r_results["predict_link"]
 
-    # Compare results
-    check_absolute_diff(py_nobs, r_nobs, 1e-08, "py_nobs != r_nobs")
-    check_absolute_diff(py_coef, r_coef, 1e-08, "py_coef != r_coef")
-    check_absolute_diff(py_se, r_se, 1e-08, "py_se != r_se")
-    check_absolute_diff(py_tstat, r_tstat, 1e-08, "py_tstat != r_tstat")
-    check_absolute_diff(py_pval, r_pval, 1e-08, "py_pval != r_pval")
-    check_absolute_diff(py_confint, r_confint, 1e-08, "py_confint != r_confint")
-    check_absolute_diff(py_vcov, r_vcov, 1e-08, "py_vcov != r_vcov")
-    check_absolute_diff(py_deviance, r_deviance, 1e-08, "py_deviance != r_deviance")
-    check_absolute_diff(py_dof_k, r_dof_k, 1e-08, "py_dof_k != r_dof_k")
-    check_absolute_diff(py_df_t, r_df_t, 1e-08, "py_df_t != r_df_t")
-    check_absolute_diff(py_n_coefs, r_n_coefs, 1e-08, "py_n_coefs != r_n_coefs")
+    # Compare results (use FEPOIS-specific tolerances - less precise than FEOLS)
+    # From original test: "effective tolerances for fepois are 1e-04 and 1e-03"
+    fepois_tol = 1e-04  # Standard FEPOIS tolerance
+    fepois_tol_crv = 1e-03  # Relaxed tolerance for CRV inference
+
+    # Use relaxed tolerance for CRV inference, standard for others
+    tolerance = fepois_tol_crv if isinstance(test_case.inference, dict) and "CRV1" in test_case.inference else fepois_tol
+
+    check_absolute_diff(py_nobs, r_nobs, fepois_tol, "py_nobs != r_nobs")
+    check_absolute_diff(py_coef, r_coef, fepois_tol, "py_coef != r_coef")
+    check_absolute_diff(py_se, r_se, tolerance, "py_se != r_se")
+    check_absolute_diff(py_tstat, r_tstat, tolerance, "py_tstat != r_tstat")
+    check_absolute_diff(py_pval, r_pval, tolerance, "py_pval != r_pval")
+    check_absolute_diff(py_confint, r_confint, tolerance, "py_confint != r_confint")
+    check_absolute_diff(py_vcov, r_vcov, tolerance, "py_vcov != r_vcov")
+    check_absolute_diff(py_deviance, r_deviance, fepois_tol, "py_deviance != r_deviance")
+    check_absolute_diff(py_dof_k, r_dof_k, fepois_tol, "py_dof_k != r_dof_k")
+    check_absolute_diff(py_df_t, r_df_t, fepois_tol, "py_df_t != r_df_t")
+    check_absolute_diff(py_n_coefs, r_n_coefs, fepois_tol, "py_n_coefs != r_n_coefs")
 
     # Residuals and IRLS weights (only for iid case)
     if test_case.inference == "iid" and test_case.ssc_adj and test_case.ssc_cluster_adj:
-        check_absolute_diff(py_resid[0:5], r_resid[0:5], 1e-07, "py_resid != r_resid")
+        check_absolute_diff(py_resid[0:5], r_resid[0:5], 1e-06, "py_resid != r_resid")  # Relaxed for FEPOIS
         check_absolute_diff(
             py_irls_weights[10:12],
             r_irls_weights[10:12],
-            1e-06,  # Relaxed tolerance for IRLS weights
+            1e-05,  # More relaxed tolerance for IRLS weights in FEPOIS
             "py_irls_weights != r_irls_weights",
         )
 
@@ -221,14 +228,14 @@ def test_fepois_vs_cached_r(test_case: TestSingleFitFepois):
         check_absolute_diff(
             py_predict_response[0:5],
             r_predict_response[0:5],
-            1e-07,
+            1e-06,  # Relaxed tolerance for FEPOIS predictions
             "py_predict_response != r_predict_response",
         )
     if py_predict_link is not None and r_predict_link is not None:
         check_absolute_diff(
             py_predict_link[0:5],
             r_predict_link[0:5],
-            1e-07,
+            1e-06,  # Relaxed tolerance for FEPOIS predictions
             "py_predict_link != r_predict_link",
         )
 

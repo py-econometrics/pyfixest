@@ -217,7 +217,7 @@ if (length(commandArgs(trailingOnly = TRUE)) >= 2) {
   results <- run_single_fepois_test(test_params)
 
   cat("Writing results to:", output_file, "\n")
-  write_json(results, output_file, pretty = TRUE, auto_unbox = TRUE)
+  write_json(results, output_file, pretty = TRUE, auto_unbox = TRUE, digits = 10)
 
   cat("FEPOIS test script completed.\n")
 } else {
