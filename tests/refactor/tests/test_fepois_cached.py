@@ -12,10 +12,10 @@ import pandas as pd
 import pytest
 
 import pyfixest as pf
-from pyfixest.utils.utils import ssc
 
 # Pre-import commonly used functions to avoid repeated lookups
 from pyfixest import fepois
+from pyfixest.utils.utils import ssc
 
 # Add tests directory to path for imports
 tests_dir = Path(__file__).parent.parent.parent
@@ -184,7 +184,7 @@ def run_all_comparisons_vectorized(py_results, r_results, test_case, fepois_tol=
     }
 
     # Run all comparisons
-    for key in r_arrays.keys():
+    for key in r_arrays:
         py_val = py_arrays[key]
         r_val = r_arrays[key]
         tol = tolerances[key]
