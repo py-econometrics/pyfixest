@@ -156,8 +156,8 @@ def test_iv_vs_cached_r(test_case: TestSingleFitIv):
     py_confint = py_mod.confint().xs("X1").values
     py_nobs = py_mod._N
     py_vcov = py_mod._vcov[0, 0]
-    py_dof_k = getattr(py_mod, '_dof_k', None)
-    py_df_t = getattr(py_mod, '_df_t', None)
+    py_dof_k = getattr(py_mod, "_dof_k", None)
+    py_df_t = getattr(py_mod, "_df_t", None)
     py_n_coefs = py_mod.coef().values.size
 
     # Get residuals (predictions not supported for IV models in pyfixest)
@@ -188,9 +188,11 @@ def test_iv_vs_cached_r(test_case: TestSingleFitIv):
         check_absolute_diff(py_pval, r_pval, 1e-08, "py_pval != r_pval")
         check_absolute_diff(py_confint, r_confint, 1e-08, "py_confint != r_confint")
         check_absolute_diff(py_vcov, r_vcov, 1e-08, "py_vcov != r_vcov")
-        check_absolute_diff(py_dof_k, r_dof_k, 1e-08, "py_dof_k != r_dof_k")
-        check_absolute_diff(py_df_t, r_df_t, 1e-08, "py_df_t != r_df_t")
-        check_absolute_diff(py_n_coefs, r_n_coefs, 1e-08, "py_n_coefs != r_n_coefs")
+        check_absolute_diff(int(py_dof_k), int(r_dof_k), 1e-08, "py_dof_k != r_dof_k")
+        check_absolute_diff(int(py_df_t), int(r_df_t), 1e-08, "py_df_t != r_df_t")
+        check_absolute_diff(
+            int(py_n_coefs), int(r_n_coefs), 1e-08, "py_n_coefs != r_n_coefs"
+        )
 
         # Residuals and predictions comparisons (only if available)
         if r_resid is not None:

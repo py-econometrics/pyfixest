@@ -162,16 +162,11 @@ def generate_feols_test_cases() -> List[TestSingleFitFeols]:
 def setup_feols_test_registry():
     """Setup the test registry with all FEOLS test cases."""
     test_cases = generate_feols_test_cases()
-
-    for test_case in test_cases:
-        TEST_REGISTRY.add_test_case(test_case)
-
     print(f"Generated {len(test_cases)} FEOLS test cases")
     return test_cases
 
 
 if __name__ == "__main__":
     # Generate and display summary
-    test_cases = setup_feols_test_registry()
+    test_cases = generate_feols_test_cases()
     print(f"Total test cases: {len(test_cases)}")
-    print(f"Registry summary: {TEST_REGISTRY.get_summary()}")
