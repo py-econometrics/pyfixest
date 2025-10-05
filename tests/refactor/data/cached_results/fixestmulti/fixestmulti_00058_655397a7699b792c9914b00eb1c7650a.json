@@ -1,0 +1,36 @@
+{
+  "test_id": "fixestmulti_00058",
+  "formula": "Y + Y2 ~ X1 | csw0(f1,f2)",
+  "test_group": "fixestmulti",
+  "hash": "655397a7699b792c9914b00eb1c7650a",
+  "is_multi": true,
+  "n_models": 3,
+  "all_coefs": [
+    [
+      -2.1876448873,
+      11.0078490518
+    ],
+    -1.9682688796,
+    -2.165270549
+  ],
+  "all_ses": [
+    [
+      0.92122916928,
+      1.1682723893
+    ],
+    0.37782135107,
+    0.49070373673
+  ],
+  "all_n_coefs": [
+    2,
+    1,
+    1
+  ],
+  "all_nobs": [
+    97,
+    97,
+    97
+  ],
+  "dropna": true,
+  "success": true
+}

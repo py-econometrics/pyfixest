@@ -1,0 +1,39 @@
+{
+  "test_id": "feols_01394",
+  "formula": "Y ~ X1 + X2:f1",
+  "test_group": "feols",
+  "hash": "fde904116c671926c8061c6fcfb2738e",
+  "r_coef": 1.2491161231,
+  "r_n_coefs": 3,
+  "r_se": 0.43057055509,
+  "r_pval": 0.0038008781468,
+  "r_tstat": 2.9010718646,
+  "r_confint": [
+    0.40418451547,
+    2.0940477307
+  ],
+  "r_vcov": 0.29827243566,
+  "r_nobs": 997,
+  "r_dof_k": 3,
+  "r_df_t": 994,
+  "r_resid": [
+    15.9564732875,
+    2.6992648468,
+    -4.1507836123,
+    11.9424328177,
+    13.3249658954
+  ],
+  "r_predict": [
+    10.1449478238,
+    5.8996891156,
+    13.2999263171,
+    1.8341777257,
+    -1.0824710864
+  ],
+  "inference": "iid",
+  "weights": "weights",
+  "dropna": false,
+  "f3_type": "float",
+  "demeaner_backend": "numba",
+  "success": true
+}

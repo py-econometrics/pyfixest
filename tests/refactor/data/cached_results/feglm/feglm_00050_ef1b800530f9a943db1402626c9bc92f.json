@@ -1,0 +1,28 @@
+{
+  "test_id": "feglm_00050",
+  "formula": "Y ~ X1*X2",
+  "test_group": "feglm",
+  "hash": "ef1b800530f9a943db1402626c9bc92f",
+  "r_coefs": [
+    0.11961452331,
+    -0.35804636033,
+    -0.47794323179,
+    0.14631053527
+  ],
+  "r_n_coefs": 4,
+  "r_nobs": 97,
+  "r_predict_link": {},
+  "r_predict_response": {},
+  "r_predict_new_link": {},
+  "r_predict_new_response": {},
+  "r_irls_weights": {},
+  "r_resid_working": {},
+  "r_resid_deviance": {},
+  "r_resid_response": {},
+  "r_deviance": {},
+  "inference": "hetero",
+  "weights": {},
+  "dropna": true,
+  "family": "logit",
+  "success": true
+}

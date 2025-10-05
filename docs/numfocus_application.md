@@ -2,9 +2,9 @@
 
 1. Does your project have a contributor Code of Conduct?This question is required.*
 
-Yes.
+Yes, we have a code of conduct.
 
-2. What is the name of your project?This question is required.*
+2. What is the name of your project? This question is required.*
 
 PyFixest.
 
@@ -18,7 +18,7 @@ https://py-econometrics.github.io/pyfixest/pyfixest.html
 
 5. Please provide a summary description of your project in a few sentences:This question is required.*
 
-PyFixest is a Python package for fast high-dimensional fixed effects regression.
+PyFixest is a Python package for fast, high-dimensional fixed-effects regression. It mirrors the syntax and functionality of the popular R package fixest, while integrating tightly with the scientific Python stack (NumPy, SciPy, Narwhals, Formulaic, Great-Tables). PyFixest supports OLS, IV, Poisson, GLMs, quantile regression, cluster-robust variance estimation, wild-cluster bootstrap, difference-in-differences estimators, and more.
 
 6. Does your project have a logo? This question is required.*
 
@@ -50,6 +50,8 @@ PyFixest advances the NumFOCUS mission by providing a free, high-performance alt
 
 The econometric methods implemented in PyFixest are widely used not only in academic research but also across industry and tech companies, where the package has already seen promising adoption. In addition, we actively engage students and new contributors through mentorship, pair-programming sessions, and well-curated starter issues (we have been supporting around 10 new contributors in the past 18 months) and building a diverse and sustainable open-source community.
 
+We are currently branching out PyFixest regression table functionality into a standalone package to allow it to support creating tables from other scientific Python package, as eg. statsmodels, linearmodels, lifelines, and others. 
+
 13. Please list your project's maintainers (i.e., anyone with write access to the repository). This question is required.*
 
 Alexander Fischer (@s3alfisc), Trivago, August 2025
@@ -63,11 +65,11 @@ Alexander Fischer (@s3alfisc), Trivago, August 2025
 
 15. What is your project doing to attract and/or mentor new contributors and maintainers?This question is required.*
 
-We regularly talk about PyFixest at Python conferences (PyData Berlin 2024, Euroscipy 2024, PyData DE 2025) and openly invite new contributions! We actively maintain a "how to get started" guide and regularly organize pair-programming sessions in which we introduced interested new contributors to the code base (around 10). On top, we add good first issues on an ongoing basis and have set up a community-discord, in which we talk about PyFixest development.
+We regularly talk about PyFixest at Python conferences (PyData Berlin 2024, Euroscipy 2024, PyData DE 2025) and openly invite new contributions. We actively maintain a "how to get started" guide and regularly organize pair-programming sessions in which we introduced interested new contributors to the code base (around 10). On top, we label good first issues on an ongoing basis and have set up a community-discord, in which we talk about PyFixest development.
 
 16. Where do you host conversations about project development and governance (e.g. mailing lists, forums, etc.), and how many participants do you have?
 
-We communicate in a discord channel that is open to everyone and linked on top of the github repository.
+Development discussion happens primarily via our open Discord server (linked from the GitHub repo). Contributors, maintainers, and interested community members regularly participate.
 
 17. What license(s) does your project currently use?This question is required.*
 
@@ -79,7 +81,7 @@ We follow the code of conduct applied by the NumFocus affiliated project optimag
 
 19. Please provide a link to your Code of Conduct:
 
-You can find it here: https://github.com/py-econometrics/pyfixest?tab=coc-ov-file#readme
+You can find it here: https://github.com/py-econometrics/pyfixest?tab=coc-ov-file#code-of-conduct
 
 20. Your Name (First & Last):This question is required.*
 

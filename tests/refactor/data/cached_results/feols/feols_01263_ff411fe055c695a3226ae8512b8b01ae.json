@@ -1,0 +1,27 @@
+{
+  "test_id": "feols_01263",
+  "formula": "Y ~ X1 + i(f1, ref = 1) + i(f2, ref = 2)",
+  "test_group": "feols",
+  "hash": "ff411fe055c695a3226ae8512b8b01ae",
+  "r_coef": 1.9606435191,
+  "r_n_coefs": 32,
+  "r_se": 0.4808849055,
+  "r_pval": 4.9344341441e-05,
+  "r_tstat": 4.0771575417,
+  "r_confint": [
+    1.0169427995,
+    2.9043442387
+  ],
+  "r_vcov": 5.4934407163,
+  "r_nobs": 997,
+  "r_dof_k": 32,
+  "r_df_t": 965,
+  "r_resid": {},
+  "r_predict": {},
+  "inference": "hetero",
+  "weights": {},
+  "dropna": false,
+  "f3_type": "str",
+  "demeaner_backend": "numba",
+  "success": true
+}

@@ -1,0 +1,39 @@
+{
+  "test_id": "feols_02870",
+  "formula": "Y ~ X1 + poly(X2, 2) | f1",
+  "test_group": "feols",
+  "hash": "51725da437328ffcf3ef369e9e30060e",
+  "r_coef": 0.91065649827,
+  "r_n_coefs": 3,
+  "r_se": 0.3238698674,
+  "r_pval": 0.0050248586172,
+  "r_tstat": 2.8117975456,
+  "r_confint": [
+    0.27509828288,
+    1.5462147137
+  ],
+  "r_vcov": 0.10489169101,
+  "r_nobs": 997,
+  "r_dof_k": 17,
+  "r_df_t": 980,
+  "r_resid": [
+    4.6670430116,
+    3.7183667158,
+    -9.6389443998,
+    -1.8636089752,
+    -4.1813753056
+  ],
+  "r_predict": [
+    21.4343780997,
+    4.8805872466,
+    18.7880871046,
+    15.6402195186,
+    16.4238701146
+  ],
+  "inference": "iid",
+  "weights": "weights",
+  "dropna": false,
+  "f3_type": "object",
+  "demeaner_backend": "numba",
+  "success": true
+}

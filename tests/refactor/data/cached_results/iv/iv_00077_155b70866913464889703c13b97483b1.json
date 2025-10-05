@@ -1,0 +1,21 @@
+{
+  "test_id": "iv_00077",
+  "formula": "Y ~ X2 + C(f3) | X1 ~ Z1 + Z2",
+  "hash": "155b70866913464889703c13b97483b1",
+  "coef": "NA",
+  "se": "NA",
+  "tstat": "NA",
+  "pval": "NA",
+  "confint": [
+    "NA",
+    "NA"
+  ],
+  "nobs": 998,
+  "vcov": 0.40801098252,
+  "dof_k": 4,
+  "df_t": 11,
+  "n_coefs": 4,
+  "resid": {},
+  "predict": {},
+  "success": true
+}

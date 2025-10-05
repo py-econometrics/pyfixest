@@ -1,0 +1,29 @@
+{
+  "test_id": "feols_05382",
+  "formula": "log(Y) ~ X1*X2",
+  "test_group": "feols",
+  "hash": "b2ac5aa9dcd0ed0e666ae9080644e9e9",
+  "r_coef": 0.016074271519,
+  "r_n_coefs": 4,
+  "r_se": 0.1292903829,
+  "r_pval": 0.90329929973,
+  "r_tstat": 0.12432689237,
+  "r_confint": [
+    -0.26849194259,
+    0.30064048563
+  ],
+  "r_vcov": 0.033275895776,
+  "r_nobs": 433,
+  "r_dof_k": 4,
+  "r_df_t": 11,
+  "r_resid": {},
+  "r_predict": {},
+  "inference": {
+    "CRV1": "group_id"
+  },
+  "weights": "weights",
+  "dropna": false,
+  "f3_type": "str",
+  "demeaner_backend": "numba",
+  "success": true
+}

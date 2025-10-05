@@ -1,0 +1,26 @@
+{
+  "test_id": "fixestmulti_00033",
+  "formula": "Y + log(Y2) ~X1+X2",
+  "test_group": "fixestmulti",
+  "hash": "fd0fbeb749cb51c75866baf8da3e8e76",
+  "is_multi": false,
+  "n_models": 1,
+  "all_coefs": [
+    [
+      -0.077997001345,
+      1.0034641393,
+      5.9828906306
+    ]
+  ],
+  "all_ses": [
+    [
+      0.075623910061,
+      0.27500571728,
+      0.33371511344
+    ]
+  ],
+  "all_n_coefs": 3,
+  "all_nobs": 82,
+  "dropna": false,
+  "success": true
+}

@@ -1,0 +1,12 @@
+{
+  "test_id": "wald_00001",
+  "formula": "dep_var ~ treat | unit",
+  "test_group": "wald",
+  "hash": "39d2b36df3e459f836eddf5039d5128d",
+  "wald_stat": 15353.728472457,
+  "wald_pval": 0,
+  "r_coefs": 2.0562430369,
+  "r_n_coefs": 1,
+  "r_nobs": 46500,
+  "success": true
+}

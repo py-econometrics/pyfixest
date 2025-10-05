@@ -1,0 +1,39 @@
+{
+  "test_id": "feols_05209",
+  "formula": "log(Y) ~ X1 + I(X2 ** 2)",
+  "test_group": "feols",
+  "hash": "e3dc54c46a5ef543acdb6cb5c1c85b1d",
+  "r_coef": -0.043657393435,
+  "r_n_coefs": 3,
+  "r_se": 0.057803943494,
+  "r_pval": 0.45050246222,
+  "r_tstat": -0.75526669628,
+  "r_confint": [
+    -0.15727082423,
+    0.06995603736
+  ],
+  "r_vcov": 0.0069138844445,
+  "r_nobs": 433,
+  "r_dof_k": 3,
+  "r_df_t": 430,
+  "r_resid": [
+    0.86667175351,
+    0.1487535895,
+    0.26861106336,
+    0.15463481019,
+    0.80438334285
+  ],
+  "r_predict": [
+    1.9815117975,
+    3.1132361721,
+    1.8830295002,
+    2.0590253712,
+    1.8185889232
+  ],
+  "inference": "iid",
+  "weights": {},
+  "dropna": false,
+  "f3_type": "str",
+  "demeaner_backend": "numba",
+  "success": true
+}

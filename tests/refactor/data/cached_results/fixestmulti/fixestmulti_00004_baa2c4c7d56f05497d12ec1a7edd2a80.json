@@ -1,0 +1,26 @@
+{
+  "test_id": "fixestmulti_00004",
+  "formula": "Y~ sw(X1, X2) |f1 ",
+  "test_group": "fixestmulti",
+  "hash": "baa2c4c7d56f05497d12ec1a7edd2a80",
+  "is_multi": true,
+  "n_models": 2,
+  "all_coefs": [
+    -0.52416477053,
+    1.0071937849
+  ],
+  "all_ses": [
+    0.34267778745,
+    0.066034842774
+  ],
+  "all_n_coefs": [
+    1,
+    1
+  ],
+  "all_nobs": [
+    97,
+    97
+  ],
+  "dropna": true,
+  "success": true
+}

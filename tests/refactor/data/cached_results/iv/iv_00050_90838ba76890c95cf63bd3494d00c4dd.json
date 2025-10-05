@@ -1,0 +1,27 @@
+{
+  "test_id": "iv_00050",
+  "formula": "Y ~ 1 | f1^f2 | X1 ~ Z1",
+  "hash": "90838ba76890c95cf63bd3494d00c4dd",
+  "coef": "NA",
+  "se": "NA",
+  "tstat": "NA",
+  "pval": "NA",
+  "confint": [
+    "NA",
+    "NA"
+  ],
+  "nobs": 997,
+  "vcov": 0.70003029677,
+  "dof_k": 248,
+  "df_t": 749,
+  "n_coefs": 1,
+  "resid": [
+    16.2179904222,
+    8.3361959047,
+    7.1289144973,
+    -1.7186557567,
+    7.3054763918
+  ],
+  "predict": {},
+  "success": true
+}

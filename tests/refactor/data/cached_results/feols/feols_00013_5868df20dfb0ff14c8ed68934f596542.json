@@ -1,0 +1,6 @@
+{
+  "test_id": "feols_00013",
+  "error": "Error in feols(as.formula(r_formula), vcov = r_inference, data = data_r, : Error in ssc(K.adj = adj, K.fixef = \"nested\", G.adj = cluster_adj, G.df = \"min\",  : \n  unused arguments (K.adj = adj, K.fixef = \"nested\", G.adj = cluster_adj, G.df = \"min\")\nThis error was unforeseen by the author of the function feols. If you think your call to the function is legitimate, could you report?\n",
+  "hash": "5868df20dfb0ff14c8ed68934f596542",
+  "success": false
+}

@@ -1,0 +1,18 @@
+{
+  "test_id": "fixestmulti_00039",
+  "formula": "Y + Y2 ~X2|f2+f3",
+  "test_group": "fixestmulti",
+  "hash": "ee67bfceb0aa347b3fdd8bc93302df6e",
+  "is_multi": false,
+  "n_models": 1,
+  "all_coefs": [
+    1.6808747355
+  ],
+  "all_ses": [
+    0.087910914025
+  ],
+  "all_n_coefs": 1,
+  "all_nobs": 99,
+  "dropna": false,
+  "success": true
+}

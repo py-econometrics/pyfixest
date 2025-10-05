@@ -1,0 +1,6 @@
+{
+  "test_id": "ssc_00736",
+  "error": "R script failed: Error in sys.frame(1) : not that many frames on the stack\nCalls: dirname -> sys.frame\nExecution halted\n",
+  "hash": "91434044a473de322cdfc729d9800843",
+  "success": false
+}

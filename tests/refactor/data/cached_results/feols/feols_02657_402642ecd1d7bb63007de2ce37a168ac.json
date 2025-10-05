@@ -1,0 +1,29 @@
+{
+  "test_id": "feols_02657",
+  "formula": "Y ~ X1 + I(X1 ** 2) + I(X2**4)",
+  "test_group": "feols",
+  "hash": "402642ecd1d7bb63007de2ce37a168ac",
+  "r_coef": -3.6610841609,
+  "r_n_coefs": 4,
+  "r_se": 1.8920651857,
+  "r_pval": 0.079115755572,
+  "r_tstat": -1.9349672456,
+  "r_confint": [
+    -7.8254915565,
+    0.50332323484
+  ],
+  "r_vcov": 0.7968058003,
+  "r_nobs": 998,
+  "r_dof_k": 4,
+  "r_df_t": 11,
+  "r_resid": {},
+  "r_predict": {},
+  "inference": {
+    "CRV1": "group_id"
+  },
+  "weights": {},
+  "dropna": false,
+  "f3_type": "float",
+  "demeaner_backend": "numba",
+  "success": true
+}
