@@ -169,25 +169,25 @@ def get_ssc(
     k_fe_adj = k_fe - (n_fe - 1) if n_fe > 1 else k_fe
 
     if fixef_k == "none":
-        dof_k = k
+        df_k = k
     elif fixef_k == "nested":
         if n_fe == 0:
-            dof_k = k
+            df_k = k
         elif k_fe_nested == 0:
             # no nested fe, so just add all fixed effects
-            dof_k = k + k_fe_adj
+            df_k = k + k_fe_adj
         else:
             # subtract nested fixed effects and add one for each fully nested
             # subtracted fixed effect back
-            dof_k = k + k_fe_adj - k_fe_nested + n_fe_fully_nested
+            df_k = k + k_fe_adj - k_fe_nested + n_fe_fully_nested
     elif fixef_k == "full":
         # add all fixed effects
-        dof_k = k + k_fe_adj if n_fe > 0 else k
+        df_k = k + k_fe_adj if n_fe > 0 else k
     else:
         raise ValueError("fixef_k is neither none, nested, nor full.")
 
     if adj:
-        adj_value = (N - 1) / (N - dof_k)
+        adj_value = (N - 1) / (N - df_k)
 
     # cluster_adj applied with G = N for hetero but not for iid
     if vcov_type in ["hetero", "CRV"] and cluster_adj:
@@ -199,9 +199,9 @@ def get_ssc(
         else:
             raise ValueError("cluster_df is neither conventional nor min.")
 
-    df_t = N - dof_k if vcov_type in ["iid", "hetero"] else G - 1
+    df_t = N - df_k if vcov_type in ["iid", "hetero"] else G - 1
 
-    return np.array([adj_value * cluster_adj_value * vcov_sign]), dof_k, df_t
+    return np.array([adj_value * cluster_adj_value * vcov_sign]), df_k, df_t
 
 
 def get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Feols"):

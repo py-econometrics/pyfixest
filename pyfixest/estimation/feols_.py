@@ -648,7 +648,7 @@ class Feols:
             }
 
             all_kwargs = {**ssc_kwargs, **ssc_kwargs_iid}
-            self._ssc, self._dof_k, self._df_t = get_ssc(**all_kwargs)
+            self._ssc, self._df_k, self._df_t = get_ssc(**all_kwargs)
 
             self._vcov = self._ssc * self._vcov_iid()
 
@@ -665,7 +665,7 @@ class Feols:
             }
 
             all_kwargs = {**ssc_kwargs, **ssc_kwargs_hetero}
-            self._ssc, self._dof_k, self._df_t = get_ssc(**all_kwargs)
+            self._ssc, self._df_k, self._df_t = get_ssc(**all_kwargs)
             self._vcov = self._ssc * self._vcov_hetero()
 
         elif self._vcov_type == "nid":
@@ -678,7 +678,7 @@ class Feols:
             }
 
             all_kwargs = {**ssc_kwargs, **ssc_kwargs_hetero}
-            self._ssc, self._dof_k, self._df_t = get_ssc(**all_kwargs)
+            self._ssc, self._df_k, self._df_t = get_ssc(**all_kwargs)
             self._vcov = self._ssc * self._vcov_nid()
 
         elif self._vcov_type == "CRV":
@@ -749,10 +749,10 @@ class Feols:
                 }
 
                 all_kwargs = {**ssc_kwargs, **ssc_kwargs_crv}
-                ssc, dof_k, df_t = get_ssc(**all_kwargs)
+                ssc, df_k, df_t = get_ssc(**all_kwargs)
 
                 self._ssc = np.array([ssc]) if x == 0 else np.append(self._ssc, ssc)
-                self._dof_k = dof_k  # the same across all vcov's
+                self._df_k = df_k  # the same across all vcov's
 
                 # update. take min(df_t) ad the end of loop
                 df_t_full[x] = df_t

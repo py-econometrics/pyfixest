@@ -15,7 +15,7 @@ In both `fixest` and `pyfixest`, small sample corrections are controlled by the 
 Based on these inputs, the adjusted variance-covariance matrix is computed as:
 
 ```
-vcov_adj = adj_val(N, dof_k) if adj else 1
+vcov_adj = adj_val(N, df_k) if adj else 1
           * cluster_adj_val(G, cluster_df) if cluster_adj else 1
           * vcov
 ```
@@ -25,14 +25,14 @@ Where:
 - **`adj`**: Enables or disables the first scalar adjustment.
 - **`cluster_adj`**: Enables or disables the second scalar adjustment.
 - **`vcov`**: The unadjusted variance-covariance matrix.
-- **`dof_k`**: The number of estimated parameters considered in the first adjustment. Impacts `adj_val`.
-- **`fixef_k`**: Determines how `dof_k` is computed (how fixed effects are counted).
+- **`df_k`**: The number of estimated parameters considered in the first adjustment. Impacts `adj_val`.
+- **`fixef_k`**: Determines how `df_k` is computed (how fixed effects are counted).
 - **`cluster_df`**: Determines how `cluster_adj_val` is computed (only relevant for multi-way clustering).
 - **`G`**: The number of unique clusters (`G = N` for heteroskedastic errors).
 
 Outside of this formula, we have **`df_t`**, which is the degrees of freedom used for p-values and confidence intervals:
 
-- `df_t = N - dof_k` for IID or heteroskedastic errors.
+- `df_t = N - df_k` for IID or heteroskedastic errors.
 - `df_t = G - 1` for clustered errors.
 
 ---
@@ -43,7 +43,7 @@ Outside of this formula, we have **`df_t`**, which is the degrees of freedom use
 
 If `adj = True`, the adjustment factor is:
 
-`adj_val = (N - 1) / (N - dof_k)`
+`adj_val = (N - 1) / (N - df_k)`
 
 If `adj = False`, no adjustment is applied.
 
@@ -51,11 +51,11 @@ If `adj = False`, no adjustment is applied.
 
 ## `fixef_k`
 
-The `fixef_k` argument controls how fixed effects contribute to `dof_k`, and thus to `adj_val`. It supports three options:
+The `fixef_k` argument controls how fixed effects contribute to `df_k`, and thus to `adj_val`. It supports three options:
 
 - **`"none"`**
 - **`"full"`**
-- **`"nested"`**
+- **`"nonnested"`**
 
 ### `fixef_k = "none"`
 
@@ -67,7 +67,7 @@ Fixed effects are ignored when counting parameters:
 
 ### `fixef_k = "full"`
 
-Fixed effects are fully counted. For `n_fe` total fixed effects and each fixed effect `f_i`, we set `dof_k = k + k_fe`,
+Fixed effects are fully counted. For `n_fe` total fixed effects and each fixed effect `f_i`, we set `df_k = k + k_fe`,
 
 
 - If there is **more than one** fixed effect, we drop one level from each fixed effects except the first (to avoid multicollinearity)
@@ -76,7 +76,7 @@ Fixed effects are fully counted. For `n_fe` total fixed effects and each fixed e
 - If there is **only one** fixed effect:
   `k_fe = sum_{i=1}^{n_fe} levels(f_i) = levels(f_1)`
 
-### `fixef_k = "nested"`
+### `fixef_k = "nonnested"`
 
 Fixed effects may be **nested** within cluster variables (e.g., district FEs nested in state clusters). If `fixef_k = "nested"`, nested fixed effects do not count toward `k_fe`:
 
@@ -120,7 +120,7 @@ where `A` and `B` are clustering dimensions, with `G_AB > G_A > G_B`.
 
 For computing critical values:
 
-- **OLS and IV**: use t-statistics with `df_t = N - dof_k` (non-clustered) or `df_t = G - 1` (clustered).
+- **OLS and IV**: use t-statistics with `df_t = N - df_k` (non-clustered) or `df_t = G - 1` (clustered).
 - **GLMs**: use z-statistics (normal approximation).
 
 For multi-way clustering:
