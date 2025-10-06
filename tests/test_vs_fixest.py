@@ -1084,7 +1084,7 @@ def test_twoway_clustering():
                 ro.Formula("Y ~ X1 + X2"),
                 data=data,
                 cluster=ro.Formula("~f1+f2"),
-                ssc=fixest.ssc(True, "nonnested", cluster_adj, cluster_df, "min", False),
+                ssc=fixest.ssc(True, "nonnested", False, cluster_adj, cluster_df, "min"),
             )
 
             # test vcov's
@@ -1147,7 +1147,7 @@ def test_wls_na():
         ro.Formula("Y ~ X1"),
         data=data,
         weights=ro.Formula("~ weights"),
-        ssc=fixest.ssc(True, "nonnested", True, False, "min", "min"),
+        ssc=fixest.ssc(True, "nonnested", False, True, "min", "min"),
     )
     np.testing.assert_allclose(
         fit_py.coef(),
@@ -1350,7 +1350,7 @@ def test_ssc(fml, dropna, weights, vcov, adj, cluster_adj, fixef_k, model):
         "fml": ro.Formula(fml),
         "vcov": vcov if vcov in ["iid", "hetero"] else ro.Formula(f"~{vcov}"),
         "data": df,
-        "ssc": fixest.ssc(adj, fixef_k, cluster_adj, "min", "min", False),
+        "ssc": fixest.ssc(adj, fixef_k, False, cluster_adj, "min", "min"),
     }
 
     py_kwargs = {

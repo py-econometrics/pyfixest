@@ -11,6 +11,7 @@ version = "0.30.2"
 
 [tasks]
 
+
 [dependencies]
 scipy=">=1.6,<1.16"
 formulaic=">=1.1.0"
@@ -26,6 +27,10 @@ joblib=">=1.4.2,<2"
 
 [feature.dev]
 platforms = ["linux-64", "osx-arm64", "osx-64"]
+
+[feature.docs]
+platforms = ["linux-64", "osx-arm64", "osx-64"]
+
 
 [feature.dev.dependencies]
 pytest = ">=7.2.0"
@@ -52,6 +57,78 @@ doubleml = ">=0.10.1,<0.11"
 [feature.dev.pypi-dependencies]
 wildboottest = ">=0.3.2, <0.4"
 
+[feature.dev.tasks]
+"tests" = "pytest -rs -n 4 --cov-report=term tests"
+"tests-against-r-core" = 'pytest -rs tests -n 4 -m "against_r_core" --cov=pyfixest --cov-report=xml'
+"tests-against-r-extended"  = 'pytest -rs tests -n 4 -m "against_r_extended" --cov=pyfixest --cov-report=xml'
+"tests-regular" = 'pytest tests -n 4 -m "not (extended or against_r_core or against_r_extended or plots)" --cov=pyfixest --cov-report=xml'
+"tests-extended" = 'pytest tests -n 4 -m "extended" --cov=pyfixest --cov-report=xml'
+"tests-fixest" = "pytest -rs tests/test_vs_fixest.py -n 4 --cov=pyfixest --cov-report=xml" 
+"debug" = "python pyfixest/debug.py" 
+"update-test-data" = "Rscript tests/r_test_comparisons.R" 
+"install-r-extended" = "Rscript r_test_requirements.R" 
+"render-notebooks" = "python scripts/run_notebooks.py"
+
+[feature.docs.dependencies]
+jupyterlab = ">=4.0.12"
+jupytext = "==1.16.1"
+watermark = "==2.4.3"
+pylatex = ">=1.4.2,<2"
+pyarrow = ">=14.0"
+jax = ">=0.4.15"
+jaxlib =">=0.4.15"
+quartodoc =">=0.9.1,<0.10"
+rpy2 = "==3.5.11"
+r-base = "*"
+r-fixest = ">=0.13.2,<0.14"
+r-broom = ">=1.0.5,<2"
+quarto = ">=1.8.25,<2"
+
+[feature.docs.pypi-dependencies]
+wildboottest = ">=0.3.2"
+causaldata = ">=0.1.4,<0.2"
+marginaleffects= ">=0.0.10"
+lets-plot =">=4.0.0"
+
+[feature.docs.tasks]
+docs-build = "quartodoc build --verbose --config docs/_quarto.yml"
+docs-render = "quarto render docs"
+docs-preview = "quarto preview docs"
+
+[feature.jax.dependencies]
+jax = ">=0.4.15"
+jaxlib = ">=0.4.15"
+
+[feature.plots.pypi-dependencies]
+lets-plot = ">=4.0.0"
+
+[feature.lint.dependencies]
+pre-commit = "==3.6.0"
+
+[feature.build.dependencies]
+pip = "*"
+maturin = ">=1.8.0"
+
+[tool.pixi.feature.lint.tasks]
+pre-commit = "pre-commit run --all-files"
+
+[tool.pixi.feature.build.tasks]
+build-pip = 'python -m build .'
+maturin-develop = "maturin develop --release --strip"
 
 [environments]
 dev = ["dev"]
+docs = ["docs"]
+lint = ["lint"]
+plots = ["plots"]
+jax = ["jax"]
+build = ["build"]
+
+[tool.pixi.environments]
+default = { solve-group = "default" }
+dev = { features = ["dev"], solve-group = "default" }
+build = { features = ["build"], solve-group = "default" }
+lint = { features = ["lint"], solve-group = "default" }
+docs = { features = ["docs"], solve-group = "default" }
+jax = { features = ["jax"], solve-group = "default" }
+plots = { features = ["plots"], solve-group = "default" }
