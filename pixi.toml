@@ -54,6 +54,8 @@ doubleml = ">=0.10.1,<0.11"
 
 [feature.dev.pypi-dependencies]
 wildboottest = ">=0.3.2, <0.4"
+jax = ">=0.4.38, <0.8"
+jaxlib = ">=0.4.38, <0.8"
 
 [feature.dev.tasks]
 "tests" = "pytest -rs -n 9 --cov-report=term tests"
