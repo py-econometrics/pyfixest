@@ -94,14 +94,12 @@ def test_vs_fixest(data, fml):
     r_fixest_ols = fixest.feols(
         ro.Formula(fml),
         data=data,
-        ssc=fixest.ssc(True, "none", True, "min", "min", False),
         se="hetero",
     )
 
     r_fixest_pois = fixest.fepois(
         ro.Formula(fml),
         data=data,
-        ssc=fixest.ssc(True, "none", True, "min", "min", False),
         se="hetero",
     )
 
@@ -230,7 +228,6 @@ def test_new_fixef_level(data, fml):
     r_fixest_ols = fixest.feols(
         ro.Formula(fml),
         data=data,
-        ssc=fixest.ssc(True, "none", True, "min", "min", False),
         se="hetero",
     )
 

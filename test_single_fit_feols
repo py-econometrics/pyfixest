@@ -1,0 +1,8 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.12.11, pytest-8.4.2, pluggy-1.6.0
+benchmark: 5.1.0 (defaults: timer=time.perf_counter disable_gc=False min_rounds=5 min_time=0.000005 max_time=1.0 calibration_precision=10 warmup=False warmup_iterations=100000)
+rootdir: /Users/afischer/Documents/pyfixest
+plugins: xdist-3.8.0, sugar-1.1.1, benchmark-5.1.0, cov-7.0.0
+collected 0 items
+
+============================ no tests ran in 0.01s =============================

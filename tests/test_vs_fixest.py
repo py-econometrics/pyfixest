@@ -1485,7 +1485,7 @@ def test_inf_dropping(fml, weights):
         UserWarning,
         match=f"{n_zeros} rows with infinite values detected. These rows are dropped from the model.",
     ):
-        fit_py = feols(fml=fml, data=data, weights=weights)
+        fit_py = feols(fml=fml, data=data, weights=weights, fixef_rm = "none")
 
     assert int(data.shape[0] - n_zeros) == fit_py._N
     assert np.all(fit_py._na_index == np.where(data.Y == 0)[0].tolist())
