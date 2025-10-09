@@ -1388,7 +1388,7 @@ class Feols:
             boot.get_scores(
                 bootstrap_type=bootstrap_type,
                 impose_null=impose_null,
-                k_adj=k_adj,
+                adj=k_adj,
                 G=G_adj,
             )
             _, _, full_enumeration_warn = boot.get_weights(weights_type=weights_type)
