@@ -18,7 +18,7 @@ def test_HC1_vs_CRV1(N, seed, beta_type, error_type, weights):
         fml="Y~X1",
         data=data,
         vcov="HC1",
-        ssc=ssc(adj=False, cluster_adj=False),
+        ssc=ssc(adj=False, G_adj=False),
         weights=weights,
     )
     res_hc1 = fit1.tidy()
@@ -27,7 +27,7 @@ def test_HC1_vs_CRV1(N, seed, beta_type, error_type, weights):
         fml="Y~X1",
         data=data,
         vcov={"CRV1": "id"},
-        ssc=ssc(adj=False, cluster_adj=False),
+        ssc=ssc(adj=False, G_adj=False),
         weights=weights,
     )
     res_crv1 = fit2.tidy()
@@ -36,18 +36,18 @@ def test_HC1_vs_CRV1(N, seed, beta_type, error_type, weights):
     _k = fit1._k
 
     adj = False
-    cluster_adj = False
+    G_adj = False
 
     adj1 = _N / (_N - 1)
     adj2 = (_N - 1) / (_N - _k)
     adj3 = _N / (_N - _k)
-    if adj and cluster_adj:
+    if adj and G_adj:
         adj_factor = adj3
-    elif adj and not cluster_adj:
+    elif adj and not G_adj:
         adj_factor = adj2
-    elif not adj and cluster_adj:
+    elif not adj and G_adj:
         adj_factor = adj1
-    elif not adj and not cluster_adj:
+    elif not adj and not G_adj:
         adj_factor = 1
 
     if not np.allclose(res_hc1["t value"] * np.sqrt(adj_factor), res_crv1["t value"]):
@@ -70,7 +70,7 @@ def test_HC3_vs_CRV3(N, seed, beta_type, error_type, weights):
         fml="Y~X1",
         data=data,
         vcov="HC3",
-        ssc=ssc(adj=False, cluster_adj=False),
+        ssc=ssc(adj=False, G_adj=False),
         weights=weights,
     )
     res_hc3 = fit1.tidy()
@@ -79,7 +79,7 @@ def test_HC3_vs_CRV3(N, seed, beta_type, error_type, weights):
         fml="Y~X1",
         data=data,
         vcov={"CRV3": "id"},
-        ssc=ssc(adj=False, cluster_adj=False),
+        ssc=ssc(adj=False, G_adj=False),
         weights=weights,
     )
 
@@ -89,18 +89,18 @@ def test_HC3_vs_CRV3(N, seed, beta_type, error_type, weights):
     _k = fit1._k
 
     adj = False
-    cluster_adj = False
+    G_adj = False
 
     adj1 = _N / (_N - 1)
     adj2 = (_N - 1) / (_N - _k)
     adj3 = _N / (_N - _k)
-    if adj and cluster_adj:
+    if adj and G_adj:
         adj_factor = adj3
-    elif adj and not cluster_adj:
+    elif adj and not G_adj:
         adj_factor = adj2
-    elif not adj and cluster_adj:
+    elif not adj and G_adj:
         adj_factor = adj1
-    elif not adj and not cluster_adj:
+    elif not adj and not G_adj:
         adj_factor = 1
 
     if not np.allclose(res_hc3["t value"] * np.sqrt(adj_factor), res_crv3["t value"]):
@@ -122,7 +122,7 @@ def test_CRV3_fixef(N, seed, beta_type, error_type):
         fml="Y~X1 + C(f2)",
         data=data,
         vcov={"CRV3": "f1"},
-        ssc=ssc(adj=False, cluster_adj=False),
+        ssc=ssc(adj=False, G_adj=False),
     )
     res_crv3a = fit1.tidy().reset_index().set_index("Coefficient").xs("X1")
 
@@ -130,7 +130,7 @@ def test_CRV3_fixef(N, seed, beta_type, error_type):
         fml="Y~X1 | f2",
         data=data,
         vcov={"CRV3": "f1"},
-        ssc=ssc(adj=False, cluster_adj=False),
+        ssc=ssc(adj=False, G_adj=False),
     )
     res_crv3b = fit2.tidy()
 
@@ -144,7 +144,7 @@ def test_CRV3_fixef(N, seed, beta_type, error_type):
         fml="Y~X1 + C(f2)",
         data=data,
         vcov={"CRV3": "f1"},
-        ssc=ssc(adj=False, cluster_adj=False),
+        ssc=ssc(adj=False, G_adj=False),
         weights="weights",
         weights_type="aweights",
     )
@@ -153,7 +153,7 @@ def test_CRV3_fixef(N, seed, beta_type, error_type):
         fml="Y~X1 |f2",
         data=data,
         vcov={"CRV3": "f1"},
-        ssc=ssc(adj=False, cluster_adj=False),
+        ssc=ssc(adj=False, G_adj=False),
         weights="weights",
         weights_type="aweights",
     )
@@ -180,7 +180,7 @@ def test_CRV3_fixef(N, seed, beta_type, error_type):
         fml="Y~X1 + C(f1)",
         data=data2_w,
         vcov={"CRV3": "f1"},
-        ssc=ssc(adj=False, cluster_adj=False),
+        ssc=ssc(adj=False, G_adj=False),
         weights="count",
         weights_type="fweights",
     )
@@ -188,7 +188,7 @@ def test_CRV3_fixef(N, seed, beta_type, error_type):
         fml="Y~X1 |f1",
         data=data2_w,
         vcov={"CRV3": "f1"},
-        ssc=ssc(adj=False, cluster_adj=False),
+        ssc=ssc(adj=False, G_adj=False),
         weights="count",
         weights_type="fweights",
     )
@@ -209,12 +209,12 @@ def run_crv3_poisson():
         fml="Y~X1 + C(f2)",
         data=data,
         vcov={"CRV3": "f1"},
-        ssc=ssc(adj=False, cluster_adj=False),
+        ssc=ssc(adj=False, G_adj=False),
     )
 
     fit = fepois(  # noqa: F841
         fml="Y~X1 |f1 + f2",
         data=data,
         vcov={"CRV3": "f1"},
-        ssc=ssc(adj=False, cluster_adj=False),
+        ssc=ssc(adj=False, G_adj=False),
     )

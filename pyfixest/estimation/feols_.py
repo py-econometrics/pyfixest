@@ -718,7 +718,7 @@ class Feols:
 
             k_fe_nested = 0
             n_fe_fully_nested = 0
-            if self._has_fixef and self._ssc_dict["k_adj"] == "nonnested":
+            if self._has_fixef and self._ssc_dict["k_fixef"] == "nonnested":
                 k_fe_nested_flag, n_fe_fully_nested = self._cound_nested_fixef_func(
                     all_fixef_array=np.array(
                         self._fixef.replace("^", "_").split("+"), dtype=str
@@ -1207,7 +1207,7 @@ class Feols:
         bootstrap_type: Optional[str] = "11",
         seed: Optional[int] = None,
         adj: Optional[bool] = True,
-        cluster_adj: Optional[bool] = True,
+        G_adj: Optional[bool] = True,
         parallel: Optional[bool] = False,
         return_bootstrapped_t_stats=False,
     ):
@@ -1240,7 +1240,7 @@ class Feols:
         adj : bool, optional
             Indicates whether to apply a small sample adjustment for the number
             of observations and covariates. Defaults to True.
-        cluster_adj : bool, optional
+        G_adj : bool, optional
             Indicates whether to apply a small sample adjustment for the number
             of clusters. Defaults to True.
         parallel : bool, optional
@@ -1389,7 +1389,7 @@ class Feols:
                 bootstrap_type=bootstrap_type,
                 impose_null=impose_null,
                 adj=adj,
-                cluster_adj=cluster_adj,
+                G_adj=G_adj,
             )
             _, _, full_enumeration_warn = boot.get_weights(weights_type=weights_type)
             boot.get_numer()

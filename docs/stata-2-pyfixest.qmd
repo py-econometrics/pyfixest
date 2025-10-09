@@ -281,7 +281,7 @@ fit8 = pf.feols(
   "Y ~ X1 + X2",
   df.dropna(subset=['f1', 'f2']),
   vcov={"CRV1": "f1 + f2"},
-  ssc=pf.ssc(cluster_df="conventional")
+  ssc=pf.ssc(G_df="conventional")
 )
 fit8.summary()
 ```

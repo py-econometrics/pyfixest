@@ -185,7 +185,7 @@ test_counter_feiv = 0
 # - dropna: False, True
 # - f3_type: "str", "object", "int", "categorical", "float"
 # - adj: True
-# - cluster_adj: True
+# - G_adj: True
 
 
 ALL_F3 = ["str", "object", "int", "categorical", "float"]
@@ -203,7 +203,7 @@ BACKEND_F3 = [
 @pytest.mark.parametrize("weights", [None, "weights"])
 @pytest.mark.parametrize("fml", ols_fmls + ols_but_not_poisson_fml)
 @pytest.mark.parametrize("adj", [True])
-@pytest.mark.parametrize("cluster_adj", [True])
+@pytest.mark.parametrize("G_adj", [True])
 def test_single_fit_feols(
     data_feols,
     dropna,
@@ -212,7 +212,7 @@ def test_single_fit_feols(
     f3_type,
     fml,
     adj,
-    cluster_adj,
+    G_adj,
     demeaner_backend,
 ):
     global test_counter_feols
@@ -221,7 +221,7 @@ def test_single_fit_feols(
     _skip_f3_checks(fml, f3_type)
     _skip_dropna(test_counter_feols, dropna)
 
-    ssc_ = ssc(adj=adj, cluster_adj=cluster_adj)
+    ssc_ = ssc(adj=adj, G_adj=G_adj)
 
     data = data_feols.copy()
 
@@ -254,7 +254,7 @@ def test_single_fit_feols(
             ro.Formula(r_fml),
             vcov=r_inference,
             data=data_r,
-            ssc=fixest.ssc(adj, "nonnested", False, cluster_adj, "min", "min"),
+            ssc=fixest.ssc(adj, "nonnested", False, G_adj, "min", "min"),
             weights=ro.Formula("~" + weights),
         )
     else:
@@ -262,7 +262,7 @@ def test_single_fit_feols(
             ro.Formula(r_fml),
             vcov=r_inference,
             data=data_r,
-            ssc=fixest.ssc(adj, "nonnested", False, cluster_adj, "min", "min"),
+            ssc=fixest.ssc(adj, "nonnested", False, G_adj, "min", "min"),
         )
 
     # r_fixest to global r env, needed for
@@ -295,7 +295,7 @@ def test_single_fit_feols(
     r_df_k = int(ro.r('attr(r_fixest$cov.scaled, "df.K")')[0])
     r_df_t = int(ro.r('attr(r_fixest$cov.scaled, "df.t")')[0])
 
-    if inference == "iid" and adj and cluster_adj:
+    if inference == "iid" and adj and G_adj:
         py_resid = mod.resid()
         r_resid = stats.residuals(r_fixest)
 
@@ -496,9 +496,9 @@ def test_single_fit_feols_empty(
 @pytest.mark.parametrize("f3_type", ["str"])
 @pytest.mark.parametrize("fml", ols_fmls)
 @pytest.mark.parametrize("adj", [True])
-@pytest.mark.parametrize("cluster_adj", [True])
+@pytest.mark.parametrize("G_adj", [True])
 def test_single_fit_fepois(
-    data_fepois, dropna, inference, f3_type, fml, adj, cluster_adj
+    data_fepois, dropna, inference, f3_type, fml, adj, G_adj
 ):
     global test_counter_fepois
     test_counter_fepois += 1
@@ -506,7 +506,7 @@ def test_single_fit_fepois(
     _skip_f3_checks(fml, f3_type)
     _skip_dropna(test_counter_fepois, dropna)
 
-    ssc_ = ssc(adj=adj, cluster_adj=cluster_adj)
+    ssc_ = ssc(adj=adj, G_adj=G_adj)
 
     data = data_fepois
 
@@ -532,7 +532,7 @@ def test_single_fit_fepois(
         ro.Formula(r_fml),
         vcov=r_inference,
         data=data_r,
-        ssc=fixest.ssc(adj, "nonnested", False, cluster_adj, "min", "min"),
+        ssc=fixest.ssc(adj, "nonnested", False, G_adj, "min", "min"),
         glm_tol=1e-10,
         glm_maxiter=100,
     )
@@ -568,7 +568,7 @@ def test_single_fit_fepois(
     r_df_t = int(ro.r('attr(r_fixest$cov.scaled, "df.t")')[0])
     r_n_coefs = int(df_X1["n_coef"])
 
-    if inference == "iid" and adj and cluster_adj:
+    if inference == "iid" and adj and G_adj:
         check_absolute_diff(py_nobs, r_nobs, 1e-08, "py_nobs != r_nobs")
         check_absolute_diff(py_coef, r_coef, 1e-08, "py_coef != r_coef")
         check_absolute_diff((py_resid)[0:5], (r_resid)[0:5], 1e-07, "py_coef != r_coef")
@@ -622,7 +622,7 @@ def test_single_fit_fepois(
 @pytest.mark.parametrize("f3_type", ["str"])
 @pytest.mark.parametrize("fml", iv_fmls)
 @pytest.mark.parametrize("adj", [True])
-@pytest.mark.parametrize("cluster_adj", [True])
+@pytest.mark.parametrize("G_adj", [True])
 def test_single_fit_iv(
     data_feols,
     dropna,
@@ -631,7 +631,7 @@ def test_single_fit_iv(
     f3_type,
     fml,
     adj,
-    cluster_adj,
+    G_adj,
 ):
     global test_counter_feiv
     test_counter_feiv += 1
@@ -639,7 +639,7 @@ def test_single_fit_iv(
     _skip_f3_checks(fml, f3_type)
     _skip_dropna(test_counter_feiv, dropna)
 
-    ssc_ = ssc(adj=adj, cluster_adj=cluster_adj)
+    ssc_ = ssc(adj=adj, G_adj=G_adj)
 
     data = data_feols
 
@@ -666,7 +666,7 @@ def test_single_fit_iv(
             ro.Formula(r_fml),
             vcov=r_inference,
             data=data_r,
-            ssc=fixest.ssc(adj, "nonnested", False, cluster_adj, "min", "min"),
+            ssc=fixest.ssc(adj, "nonnested", False, G_adj, "min", "min"),
             weights=ro.Formula("~" + weights),
         )
     else:
@@ -674,7 +674,7 @@ def test_single_fit_iv(
             ro.Formula(r_fml),
             vcov=r_inference,
             data=data_r,
-            ssc=fixest.ssc(adj, "nonnested", False, cluster_adj, "min", "min"),
+            ssc=fixest.ssc(adj, "nonnested", False, G_adj, "min", "min"),
         )
 
     py_coef = mod.coef().xs("X1")
@@ -699,7 +699,7 @@ def test_single_fit_iv(
     r_nobs = int(stats.nobs(r_fixest)[0])
     r_resid = stats.resid(r_fixest)
 
-    # if inference == "iid" and adj and cluster_adj:
+    # if inference == "iid" and adj and G_adj:
     check_absolute_diff(py_nobs, r_nobs, 1e-08, "py_nobs != r_nobs")
     check_absolute_diff(py_coef, r_coef, 1e-08, "py_coef != r_coef")
     check_absolute_diff((py_resid)[0:5], (r_resid)[0:5], 1e-07, "py_resid != r_resid")
@@ -1062,29 +1062,29 @@ def test_split_fit(N, seed, beta_type, error_type, dropna, fml_multi, split, fsp
 def test_twoway_clustering():
     data = get_data(N=500, seed=17021, beta_type="1", error_type="1").dropna()
 
-    cluster_adj_options = [True]
-    cluster_df_options = ["min", "conventional"]
+    G_adj_options = [True]
+    G_df_options = ["min", "conventional"]
 
-    for cluster_adj in cluster_adj_options:
-        for cluster_df in cluster_df_options:
+    for G_adj in G_adj_options:
+        for G_df in G_df_options:
             fit1 = feols(
                 "Y ~ X1 + X2 ",
                 data=data,
                 vcov={"CRV1": "f1 +f2"},
-                ssc=ssc(cluster_adj=cluster_adj, cluster_df=cluster_df),
+                ssc=ssc(G_adj=G_adj, G_df=G_df),
             )
             fit2 = feols(  # noqa: F841
                 "Y ~ X1 + X2 ",
                 data=data,
                 vcov={"CRV3": " f1+f2"},
-                ssc=ssc(cluster_adj=cluster_adj, cluster_df=cluster_df),
+                ssc=ssc(G_adj=G_adj, G_df=G_df),
             )
 
             feols_fit1 = fixest.feols(
                 ro.Formula("Y ~ X1 + X2"),
                 data=data,
                 cluster=ro.Formula("~f1+f2"),
-                ssc=fixest.ssc(True, "nonnested", False, cluster_adj, cluster_df, "min"),
+                ssc=fixest.ssc(True, "nonnested", False, G_adj, G_df, "min"),
             )
 
             # test vcov's
@@ -1093,7 +1093,7 @@ def test_twoway_clustering():
                 stats.vcov(feols_fit1),
                 rtol=1e-04,
                 atol=1e-04,
-                err_msg=f"CRV1-vcov: cluster_adj = {cluster_adj}, cluster_df = {cluster_df}",
+                err_msg=f"CRV1-vcov: G_adj = {G_adj}, G_df = {G_df}",
             )
 
             # now test se's
@@ -1102,7 +1102,7 @@ def test_twoway_clustering():
                 fixest.se(feols_fit1),
                 rtol=1e-04,
                 atol=1e-04,
-                err_msg=f"CRV1-se: cluster_adj = {cluster_adj}, cluster_df = {cluster_df}",
+                err_msg=f"CRV1-se: G_adj = {G_adj}, G_df = {G_df}",
             )
 
             # now test pvalues
@@ -1111,7 +1111,7 @@ def test_twoway_clustering():
                 fixest.pvalue(feols_fit1),
                 rtol=1e-04,
                 atol=1e-04,
-                err_msg=f"CRV1-pvalue: cluster_adj = {cluster_adj}, cluster_df = {cluster_df}",
+                err_msg=f"CRV1-pvalue: G_adj = {G_adj}, G_df = {G_df}",
             )
 
 
@@ -1330,10 +1330,10 @@ ssc_fmls = [
 @pytest.mark.parametrize("weights", [None, "weights"])
 @pytest.mark.parametrize("vcov", ["iid", "hetero", "f1", "f2", "f1+f2"])
 @pytest.mark.parametrize("adj", [True, False])
-@pytest.mark.parametrize("cluster_adj", [True, False])
-@pytest.mark.parametrize("k_adj", ["full", "none", "nonnested"])
+@pytest.mark.parametrize("G_adj", [True, False])
+@pytest.mark.parametrize("k_fixef", ["full", "none", "nonnested"])
 @pytest.mark.parametrize("model", ["feols","fepois"])
-def test_ssc(fml, dropna, weights, vcov, adj, cluster_adj, k_adj, model):
+def test_ssc(fml, dropna, weights, vcov, adj, G_adj, k_fixef, model):
     df = (
         pf.get_data(model="Feols")
         if model == "feols"
@@ -1350,13 +1350,13 @@ def test_ssc(fml, dropna, weights, vcov, adj, cluster_adj, k_adj, model):
         "fml": ro.Formula(fml),
         "vcov": vcov if vcov in ["iid", "hetero"] else ro.Formula(f"~{vcov}"),
         "data": df,
-        "ssc": fixest.ssc(adj, k_adj, False, cluster_adj, "min", "min"),
+        "ssc": fixest.ssc(adj, k_fixef, False, G_adj, "min", "min"),
     }
 
     py_kwargs = {
         "fml": fml,
         "data": df,
-        "ssc": pf.ssc(adj, k_adj=k_adj, cluster_adj=cluster_adj, cluster_df="min"),
+        "ssc": pf.ssc(adj, k_fixef=k_fixef, G_adj=G_adj, G_df="min"),
         "vcov": vcov if vcov in ["iid", "hetero"] else {"CRV1": vcov},
     }
 
@@ -1394,34 +1394,34 @@ def test_ssc(fml, dropna, weights, vcov, adj, cluster_adj, k_adj, model):
         ro.r("r_fit$coeftable[,1]"),
         rtol=1e-08,
         atol=1e-08,
-        err_msg=f"coefficients do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, cluster_adj = {cluster_adj}, k_adj = {k_adj}",
+        err_msg=f"coefficients do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, G_adj = {G_adj}, k_fixef = {k_fixef}",
     )
 
     np.testing.assert_allclose(
         py_nobs,
         r_nobs,
-        err_msg=f"nobs do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, cluster_adj = {cluster_adj}, k_adj = {k_adj}",
+        err_msg=f"nobs do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, G_adj = {G_adj}, k_fixef = {k_fixef}",
     )
 
     # df_t identical:
     np.testing.assert_allclose(
         py_df_t,
         r_df_t,
-        err_msg=f"df_t do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, cluster_adj = {cluster_adj}, k_adj = {k_adj}",
+        err_msg=f"df_t do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, G_adj = {G_adj}, k_fixef = {k_fixef}",
     )
 
     # df.K identical:
     np.testing.assert_allclose(
         r_df_k,
         py_df_k,
-        err_msg=f"df.K do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, cluster_adj = {cluster_adj}, k_adj = {k_adj}",
+        err_msg=f"df.K do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, G_adj = {G_adj}, k_fixef = {k_fixef}",
     )
 
     # df.t identical:
     np.testing.assert_allclose(
         py_df_t,
         r_df_t,
-        err_msg=f"df.t do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, cluster_adj = {cluster_adj}, k_adj = {k_adj}",
+        err_msg=f"df.t do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, G_adj = {G_adj}, k_fixef = {k_fixef}",
     )
 
     if False: 
@@ -1431,7 +1431,7 @@ def test_ssc(fml, dropna, weights, vcov, adj, cluster_adj, k_adj, model):
             ro.r("r_fit$coeftable[,2]"),
             rtol=1e-07 if model == "feols" else 1e-06,
             atol=1e-07 if model == "feols" else 1e-06,
-            err_msg=f"SEs do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, cluster_adj = {cluster_adj}, k_adj = {k_adj}",
+            err_msg=f"SEs do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, G_adj = {G_adj}, k_fixef = {k_fixef}",
         )
         # p-values identical:
         np.testing.assert_allclose(
@@ -1439,7 +1439,7 @@ def test_ssc(fml, dropna, weights, vcov, adj, cluster_adj, k_adj, model):
             ro.r("r_fit$coeftable[,4]"),
             rtol=1e-07 if model == "feols" else 1e-06,
             atol=1e-07 if model == "feols" else 1e-06,
-            err_msg=f"p-values do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, cluster_adj = {cluster_adj}, k_adj = {k_adj}",
+            err_msg=f"p-values do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, G_adj = {G_adj}, k_fixef = {k_fixef}",
         )
         # t-stats identical:
         np.testing.assert_allclose(
@@ -1447,7 +1447,7 @@ def test_ssc(fml, dropna, weights, vcov, adj, cluster_adj, k_adj, model):
             ro.r("r_fit$coeftable[,3]"),
             rtol=1e-07 if model == "feols" else 1e-06,
             atol=1e-07 if model == "feols" else 1e-06,
-            err_msg=f"t-stats do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, cluster_adj = {cluster_adj}, k_adj = {k_adj}",
+            err_msg=f"t-stats do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, G_adj = {G_adj}, k_fixef = {k_fixef}",
         )
 
         # confint identical:
@@ -1456,7 +1456,7 @@ def test_ssc(fml, dropna, weights, vcov, adj, cluster_adj, k_adj, model):
             pd.DataFrame(stats.confint(r_fit)).T.values,
             rtol=1e-07 if model == "feols" else 1e-06,
             atol=1e-07 if model == "feols" else 1e-06,
-            err_msg=f"confint do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, cluster_adj = {cluster_adj}, k_adj = {k_adj}",
+            err_msg=f"confint do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, G_adj = {G_adj}, k_fixef = {k_fixef}",
         )
         ## vcov identical:
         np.testing.assert_allclose(
@@ -1464,7 +1464,7 @@ def test_ssc(fml, dropna, weights, vcov, adj, cluster_adj, k_adj, model):
             stats.vcov(r_fit),
             rtol=1e-07 if model == "feols" else 1e-06,
             atol=1e-07 if model == "feols" else 1e-06,
-            err_msg=f"vcov do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, cluster_adj = {cluster_adj}, k_adj = {k_adj}",
+            err_msg=f"vcov do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, G_adj = {G_adj}, k_fixef = {k_fixef}",
         )
 
 

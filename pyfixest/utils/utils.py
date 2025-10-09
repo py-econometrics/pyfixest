@@ -11,9 +11,9 @@ from pyfixest.utils.dev_utils import _create_rng
 
 def ssc(
     adj: bool = True,
-    k_adj: str = "nonnested",
-    cluster_adj: bool = True,
-    cluster_df: str = "min",
+    k_fixef: str = "nonnested",
+    G_adj: bool = True,
+    G_df: str = "min",
 ) -> dict[str, Union[str, bool]]:
     """
     Set the small sample correction factor applied in `get_ssc()`.
@@ -25,14 +25,14 @@ def ssc(
             is the number of observations and k is the number of estimated
             coefficients excluding any fixed effects projected out by either
             `feols()` or `fepois()`.
-        k_adj : str, default "none"
+        k_fixef : str, default "none"
             Equal to 'none': the fixed effects parameters are discarded when
             calculating k in (N-1) / (N-k).
-        cluster_adj : bool, default True
+        G_adj : bool, default True
             If True, a cluster correction G/(G-1) is performed, with G the number
             of clusters.
-        cluster_df : str, default "conventional"
-            Controls how "G" is computed for multiway clustering if cluster_adj = True.
+        G_df : str, default "conventional"
+            Controls how "G" is computed for multiway clustering if G_adj = True.
             Note that the covariance matrix in the multiway clustering case is of
             the form V = V_1 + V_2 - V_12. If "conventional", then each summand G_i
             is multiplied with a small sample adjustment G_i / (G_i - 1). If "min",
@@ -47,7 +47,7 @@ def ssc(
     small sample correction factor of (N-1) / (N-k), where N is the number of
     observations and k is the number of estimated coefficients.
 
-    If k_adj = "none", the fixed effects parameters are discarded when
+    If k_fixef = "none", the fixed effects parameters are discarded when
     calculating k. This is the default behavior and currently the only
     option. Note that it is not r-fixest's default behavior.
 
@@ -57,27 +57,27 @@ def ssc(
     If adj = False, no small sample correction is applied of the type
     above is applied.
 
-    If cluster_adj = True, a cluster correction of G/(G-1) is performed,
+    If G_adj = True, a cluster correction of G/(G-1) is performed,
     with G the number of clusters.
 
-    If adj = True and cluster_adj = True, V = V x (N - 1) / N - k) x G/(G-1)
+    If adj = True and G_adj = True, V = V x (N - 1) / N - k) x G/(G-1)
     for cluster robust errors where G is the number of clusters.
 
-    If adj = False and cluster_adj = True, V = V x G/(G-1) for cluster robust
-    errors, i.e. we drop the (N-1) / (N-k) factor. And if cluster_adj = False,
+    If adj = False and G_adj = True, V = V x G/(G-1) for cluster robust
+    errors, i.e. we drop the (N-1) / (N-k) factor. And if G_adj = False,
     no cluster correction is applied.
 
     Things are slightly more complicated for multiway clustering. In this
     case, we compute the variance covariance matrix as V = V1 + V2 - V_12.
 
-    If cluster_adj = True and cluster_df = "conventional", then
+    If G_adj = True and G_df = "conventional", then
     V += [V x G_i / (G_i - 1) for i in [1, 2, 12]], i.e. each separate
     covariance matrix G_i is multiplied with a small sample adjustment
     G_i / (G_i - 1) corresponding to the number of clusters in the
     respective covariance matrix. This is the default behavior
     for clustered errors.
 
-    If cluster_df = "min", then
+    If G_df = "min", then
     V += [V x min(G) / (min(G) - 1) for i in [1, 2, 12]].
 
     Returns
@@ -87,20 +87,20 @@ def ssc(
     """
     if adj not in [True, False]:
         raise ValueError("adj must be True or False.")
-    if k_adj not in ["none", "full", "nonnested"]:
+    if k_fixef not in ["none", "full", "nonnested"]:
         raise ValueError(
-            f"k_adj must be 'none', 'full', or 'nonnested' but it is {k_adj}."
+            f"k_fixef must be 'none', 'full', or 'nonnested' but it is {k_fixef}."
         )
-    if cluster_adj not in [True, False]:
-        raise ValueError("cluster_adj must be True or False.")
-    if cluster_df not in ["conventional", "min"]:
-        raise ValueError("cluster_df must be 'conventional' or 'min'.")
+    if G_adj not in [True, False]:
+        raise ValueError("G_adj must be True or False.")
+    if G_df not in ["conventional", "min"]:
+        raise ValueError("G_df must be 'conventional' or 'min'.")
 
     return {
         "adj": adj,
-        "k_adj": k_adj,
-        "cluster_adj": cluster_adj,
-        "cluster_df": cluster_df,
+        "k_fixef": k_fixef,
+        "G_adj": G_adj,
+        "G_df": G_df,
     }
 
 
@@ -151,15 +151,15 @@ def get_ssc(
     Raises
     ------
     ValueError
-        If vcov_type is not "iid", "hetero", or "CRV", or if cluster_df is neither
+        If vcov_type is not "iid", "hetero", or "CRV", or if G_df is neither
         "conventional" nor "min".
     """
     adj = ssc_dict["adj"]
-    k_adj = ssc_dict["k_adj"]
-    cluster_adj = ssc_dict["cluster_adj"]
-    cluster_df = ssc_dict["cluster_df"]
+    k_fixef = ssc_dict["k_fixef"]
+    G_adj = ssc_dict["G_adj"]
+    G_df = ssc_dict["G_df"]
 
-    cluster_adj_value = 1.0
+    G_adj_value = 1.0
     adj_value = 1.0
 
     # see here for why:
@@ -168,9 +168,9 @@ def get_ssc(
     # subtract one for each fixed effect, except for the first
     k_fe_adj = k_fe - (n_fe - 1) if n_fe > 1 else k_fe
 
-    if k_adj == "none":
+    if k_fixef == "none":
         df_k = k
-    elif k_adj == "nonnested":
+    elif k_fixef == "nonnested":
         if n_fe == 0:
             df_k = k
         elif k_fe_nested == 0:
@@ -180,28 +180,28 @@ def get_ssc(
             # subtract nested fixed effects and add one for each fully nested
             # subtracted fixed effect back
             df_k = k + k_fe_adj - k_fe_nested + n_fe_fully_nested
-    elif k_adj == "full":
+    elif k_fixef == "full":
         # add all fixed effects
         df_k = k + k_fe_adj if n_fe > 0 else k
     else:
-        raise ValueError("k_adj is neither none, nonnested, nor full.")
+        raise ValueError("k_fixef is neither none, nonnested, nor full.")
 
     if adj:
         adj_value = (N - 1) / (N - df_k)
 
-    # cluster_adj applied with G = N for hetero but not for iid
-    if vcov_type in ["hetero", "CRV"] and cluster_adj:
-        if cluster_df == "conventional":
-            cluster_adj_value = G / (G - 1)
-        elif cluster_df == "min":
+    # G_adj applied with G = N for hetero but not for iid
+    if vcov_type in ["hetero", "CRV"] and G_adj:
+        if G_df == "conventional":
+            G_adj_value = G / (G - 1)
+        elif G_df == "min":
             G = np.min(G)
-            cluster_adj_value = G / (G - 1)
+            G_adj_value = G / (G - 1)
         else:
-            raise ValueError("cluster_df is neither conventional nor min.")
+            raise ValueError("G_df is neither conventional nor min.")
 
     df_t = N - df_k if vcov_type in ["iid", "hetero"] else G - 1
 
-    return np.array([adj_value * cluster_adj_value * vcov_sign]), df_k, df_t
+    return np.array([adj_value * G_adj_value * vcov_sign]), df_k, df_t
 
 
 def get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Feols"):

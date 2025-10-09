@@ -608,7 +608,7 @@ class FixestMulti:
         bootstrap_type: str = "11",
         seed: Optional[int] = None,
         adj: bool = True,
-        cluster_adj: bool = True,
+        G_adj: bool = True,
     ) -> pd.DataFrame:
         """
         Run a wild cluster bootstrap for all regressions in the Fixest object.
@@ -639,7 +639,7 @@ class FixestMulti:
         adj:bool, optional
             Whether to adjust the original coefficients with the bootstrap distribution.
             Default is True.
-        cluster_adj : bool, optional
+        G_adj : bool, optional
             Whether to adjust standard errors for clustering in the bootstrap.
             Default is True.
 
@@ -662,7 +662,7 @@ class FixestMulti:
                 bootstrap_type,
                 seed,
                 adj,
-                cluster_adj,
+                G_adj,
             )
 
             pvalue = boot_res["Pr(>|t|)"]

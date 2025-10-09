@@ -24,13 +24,13 @@ def test_fweights_ols():
         .rename(columns={0: "count"})
     )
 
-    fit1 = pf.feols("Y ~ X1", data=data, ssc=pf.ssc(adj=False, cluster_adj=False))
+    fit1 = pf.feols("Y ~ X1", data=data, ssc=pf.ssc(adj=False, G_adj=False))
     fit2 = pf.feols(
         "Y ~ X1",
         data=data2_w,
         weights="count",
         weights_type="fweights",
-        ssc=pf.ssc(adj=False, cluster_adj=False),
+        ssc=pf.ssc(adj=False, G_adj=False),
     )
 
     assert fit1._N == fit2._N, "Number of observations is not the same."
