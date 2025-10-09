@@ -607,7 +607,7 @@ class FixestMulti:
         impose_null: bool = True,
         bootstrap_type: str = "11",
         seed: Optional[int] = None,
-        adj: bool = True,
+        k_adj: bool = True,
         G_adj: bool = True,
     ) -> pd.DataFrame:
         """
@@ -636,7 +636,7 @@ class FixestMulti:
             Either '11', '31', '13', or '33'. Default is '11'.
         seed : Union[str, None], optional
             Option to provide a random seed. Default is None.
-        adj:bool, optional
+        k_adj:bool, optional
             Whether to adjust the original coefficients with the bootstrap distribution.
             Default is True.
         G_adj : bool, optional
@@ -661,7 +661,7 @@ class FixestMulti:
                 impose_null,
                 bootstrap_type,
                 seed,
-                adj,
+                k_adj,
                 G_adj,
             )
 

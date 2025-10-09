@@ -193,7 +193,7 @@ robust standard errors, while Stata only uses one of them. You can turn off the
 correction that Stata doesn't use with the `ssc` argument.
 
 ```{python}
-fit5 = pf.feols("Y ~ X1 + X2", data=df, vcov="HC3", ssc=pf.ssc(adj = False))
+fit5 = pf.feols("Y ~ X1 + X2", data=df, vcov="HC3", ssc=pf.ssc(k_adj = False))
 fit5.summary()
 ```
 

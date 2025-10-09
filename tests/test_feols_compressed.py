@@ -43,7 +43,7 @@ fmls = [
 @pytest.mark.parametrize("fml", fmls)
 @pytest.mark.parametrize("vcov", ["iid", "hetero"])
 @pytest.mark.parametrize(
-    "ssc", [pf.ssc(adj=True, G_adj=True), pf.ssc(adj=False, G_adj=False)]
+    "ssc", [pf.ssc(k_adj=True, G_adj=True), pf.ssc(k_adj=False, G_adj=False)]
 )
 @pytest.mark.parametrize("dropna", [False])
 def test_feols_compressed(data, fml, vcov, ssc, dropna):

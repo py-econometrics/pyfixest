@@ -1114,7 +1114,7 @@ class Feols:
         import pyfixest as pf
 
         data = pf.get_data()
-        fit = pf.feols("Y ~ X1 + X2| f1", data, vcov={"CRV1": "f1"}, ssc=pf.ssc(adj=False))
+        fit = pf.feols("Y ~ X1 + X2| f1", data, vcov={"CRV1": "f1"}, ssc=pf.ssc(k_adj=False))
 
         R = np.array([[1,-1]] )
         q = np.array([0.0])
@@ -1206,7 +1206,7 @@ class Feols:
         impose_null: Optional[bool] = True,
         bootstrap_type: Optional[str] = "11",
         seed: Optional[int] = None,
-        adj: Optional[bool] = True,
+        k_adj: Optional[bool] = True,
         G_adj: Optional[bool] = True,
         parallel: Optional[bool] = False,
         return_bootstrapped_t_stats=False,
@@ -1237,7 +1237,7 @@ class Feols:
             Options are '11', '31', '13', or '33'. Defaults to '11'.
         seed : Union[int, None], optional
             An option to provide a random seed. Defaults to None.
-        adj : bool, optional
+        k_adj : bool, optional
             Indicates whether to apply a small sample adjustment for the number
             of observations and covariates. Defaults to True.
         G_adj : bool, optional
@@ -1388,8 +1388,8 @@ class Feols:
             boot.get_scores(
                 bootstrap_type=bootstrap_type,
                 impose_null=impose_null,
-                adj=adj,
-                G_adj=G_adj,
+                k_adj=k_adj,
+                G=G_adj,
             )
             _, _, full_enumeration_warn = boot.get_weights(weights_type=weights_type)
             boot.get_numer()

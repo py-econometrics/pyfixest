@@ -1037,7 +1037,7 @@ def quantreg(
     ssc : dict[str, Union[str, bool]], optional
         A dictionary specifying the small sample correction for inference.
         If None, uses default settings from `ssc_func()`. Note that by default, R's quantreg and Stata's qreg2 do not use
-        small sample corrections. To match their behavior, set `ssc = pf.ssc(adj = False, G_adj = False)`.
+        small sample corrections. To match their behavior, set `ssc = pf.ssc(k_adj = False, G_adj = False)`.
 
     collin_tol : float, optional
         Tolerance for collinearity check, by default 1e-10.

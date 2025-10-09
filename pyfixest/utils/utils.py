@@ -10,7 +10,7 @@ from pyfixest.utils.dev_utils import _create_rng
 
 
 def ssc(
-    adj: bool = True,
+    k_adj: bool = True,
     k_fixef: str = "nonnested",
     G_adj: bool = True,
     G_df: str = "min",
@@ -20,7 +20,7 @@ def ssc(
 
     Parameters
     ----------
-        adj : bool, default True
+        k_adj : bool, default True
             If True, applies a small sample correction of (N-1) / (N-k) where N
             is the number of observations and k is the number of estimated
             coefficients excluding any fixed effects projected out by either
@@ -43,7 +43,7 @@ def ssc(
     The small sample correction choices mimic fixest's behavior. For details, see
     https://cran.r-project.org/web/packages/fixest/vignettes/standard_errors.html.
 
-    In general, if adj = True, we multiply the variance covariance matrix V with a
+    In general, if k_adj = True, we multiply the variance covariance matrix V with a
     small sample correction factor of (N-1) / (N-k), where N is the number of
     observations and k is the number of estimated coefficients.
 
@@ -51,19 +51,19 @@ def ssc(
     calculating k. This is the default behavior and currently the only
     option. Note that it is not r-fixest's default behavior.
 
-    Hence if adj = True, the covariance matrix is computed as
+    Hence if k_adj = True, the covariance matrix is computed as
     V = V x (N-1) / (N-k) for iid and heteroskedastic errors.
 
-    If adj = False, no small sample correction is applied of the type
+    If k_adj = False, no small sample correction is applied of the type
     above is applied.
 
     If G_adj = True, a cluster correction of G/(G-1) is performed,
     with G the number of clusters.
 
-    If adj = True and G_adj = True, V = V x (N - 1) / N - k) x G/(G-1)
+    If k_adj = True and G_adj = True, V = V x (N - 1) / N - k) x G/(G-1)
     for cluster robust errors where G is the number of clusters.
 
-    If adj = False and G_adj = True, V = V x G/(G-1) for cluster robust
+    If k_adj = False and G_adj = True, V = V x G/(G-1) for cluster robust
     errors, i.e. we drop the (N-1) / (N-k) factor. And if G_adj = False,
     no cluster correction is applied.
 
@@ -85,8 +85,8 @@ def ssc(
     dict
         A dictionary with encoded info on how to form small sample corrections
     """
-    if adj not in [True, False]:
-        raise ValueError("adj must be True or False.")
+    if k_adj not in [True, False]:
+        raise ValueError("k_adj must be True or False.")
     if k_fixef not in ["none", "full", "nonnested"]:
         raise ValueError(
             f"k_fixef must be 'none', 'full', or 'nonnested' but it is {k_fixef}."
@@ -97,7 +97,7 @@ def ssc(
         raise ValueError("G_df must be 'conventional' or 'min'.")
 
     return {
-        "adj": adj,
+        "k_adj": k_adj,
         "k_fixef": k_fixef,
         "G_adj": G_adj,
         "G_df": G_df,
@@ -154,7 +154,7 @@ def get_ssc(
         If vcov_type is not "iid", "hetero", or "CRV", or if G_df is neither
         "conventional" nor "min".
     """
-    adj = ssc_dict["adj"]
+    k_adj = ssc_dict["k_adj"]
     k_fixef = ssc_dict["k_fixef"]
     G_adj = ssc_dict["G_adj"]
     G_df = ssc_dict["G_df"]
@@ -186,7 +186,7 @@ def get_ssc(
     else:
         raise ValueError("k_fixef is neither none, nonnested, nor full.")
 
-    if adj:
+    if k_adj:
         adj_value = (N - 1) / (N - df_k)
 
     # G_adj applied with G = N for hetero but not for iid
