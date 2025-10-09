@@ -10,7 +10,7 @@ toc-location: left
 
 The `fixest` R package provides various options for small sample corrections. While it has an excellent [vignette](https://cran.r-project.org/web/packages/fixest/vignettes/standard_errors.html) on the topic, reproducing its behavior in `pyfixest` took more time than expected. So that future developers (and my future self) can stay sane, I’ve compiled all of my hard-earned understanding of how small sample adjustments work in `fixest` and how they are implemented in `pyfixest` in this document.
 
-In both `fixest` and `pyfixest`, small sample corrections are controlled by the `ssc` function. In `pyfixest`, `ssc` accepts four arguments: `adj`, `cluster_adj`, `fixef_k` and `cluster_df`.
+In both `fixest` and `pyfixest`, small sample corrections are controlled by the `ssc` function. In `pyfixest`, `ssc` accepts four arguments: `adj`, `cluster_adj`, `k_adj` and `cluster_df`.
 
 Based on these inputs, the adjusted variance-covariance matrix is computed as:
 
@@ -26,7 +26,7 @@ Where:
 - **`cluster_adj`**: Enables or disables the second scalar adjustment.
 - **`vcov`**: The unadjusted variance-covariance matrix.
 - **`df_k`**: The number of estimated parameters considered in the first adjustment. Impacts `adj_val`.
-- **`fixef_k`**: Determines how `df_k` is computed (how fixed effects are counted).
+- **`k_adj`**: Determines how `df_k` is computed (how fixed effects are counted).
 - **`cluster_df`**: Determines how `cluster_adj_val` is computed (only relevant for multi-way clustering).
 - **`G`**: The number of unique clusters (`G = N` for heteroskedastic errors).
 
@@ -49,15 +49,15 @@ If `adj = False`, no adjustment is applied.
 
 ---
 
-## `fixef_k`
+## `k_adj`
 
-The `fixef_k` argument controls how fixed effects contribute to `df_k`, and thus to `adj_val`. It supports three options:
+The `k_adj` argument controls how fixed effects contribute to `df_k`, and thus to `adj_val`. It supports three options:
 
 - **`"none"`**
 - **`"full"`**
 - **`"nonnested"`**
 
-### `fixef_k = "none"`
+### `k_adj = "none"`
 
 Fixed effects are ignored when counting parameters:
 
@@ -65,7 +65,7 @@ Fixed effects are ignored when counting parameters:
   - `Y ~ X1 | f1` → `k = 1`
   - `Y ~ X1 + X2 | f1` → `k = 2`
 
-### `fixef_k = "full"`
+### `k_adj = "full"`
 
 Fixed effects are fully counted. For `n_fe` total fixed effects and each fixed effect `f_i`, we set `df_k = k + k_fe`,
 
@@ -76,9 +76,9 @@ Fixed effects are fully counted. For `n_fe` total fixed effects and each fixed e
 - If there is **only one** fixed effect:
   `k_fe = sum_{i=1}^{n_fe} levels(f_i) = levels(f_1)`
 
-### `fixef_k = "nonnested"`
+### `k_adj = "nonnested"`
 
-Fixed effects may be **nested** within cluster variables (e.g., district FEs nested in state clusters). If `fixef_k = "nested"`, nested fixed effects do not count toward `k_fe`:
+Fixed effects may be **nested** within cluster variables (e.g., district FEs nested in state clusters). If `k_adj = "nonnested"`, nested fixed effects do not count toward `k_fe`:
 
 `k_fe = sum_{i=1}^{n_fe} levels(f_i) - k_fe_nested - (n_fe - 1)`
 

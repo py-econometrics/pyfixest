@@ -8,7 +8,7 @@ from pyfixest.estimation.fepois_ import Fepois
 from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.literals import (
     DemeanerBackendOptions,
-    FixedRmOptions,
+    FixefRmOptions,
     QuantregMethodOptions,
     QuantregMultiOptions,
     SolverOptions,
@@ -26,7 +26,7 @@ def feols(
     vcov: Optional[Union[VcovTypeOptions, dict[str, str]]] = None,
     weights: Union[None, str] = None,
     ssc: Optional[dict[str, Union[str, bool]]] = None,
-    fixef_rm: FixedRmOptions = "none",
+    fixef_rm: FixefRmOptions = "singleton",
     fixef_tol=1e-08,
     fixef_maxiter: int = 100_000,
     collin_tol: float = 1e-09,
@@ -71,7 +71,7 @@ def feols(
     ssc : str
         A ssc object specifying the small sample correction for inference.
 
-    fixef_rm : FixedRmOptions
+    fixef_rm : FixefRmOptions
         Specifies whether to drop singleton fixed effects.
         Options: "none" (default), "singleton".
 
@@ -232,7 +232,7 @@ def feols(
 
     The `ssc` argument specifies the small sample correction for inference. In
     general, `feols()` uses all of `fixest::feols()` defaults, but sets the
-    `fixef.K` argument to `"none"` whereas the `fixest::feols()` default is `"nested"`.
+    `fixef.K` argument to `"none"` whereas the `fixest::feols()` default is `"nonnested"`.
     See here for more details: [link to github](https://github.com/py-econometrics/pyfixest/issues/260).
 
     `feols()` supports a range of multiple estimation syntax, i.e. you can estimate
@@ -498,7 +498,7 @@ def fepois(
     data: DataFrameType,  # type: ignore
     vcov: Optional[Union[VcovTypeOptions, dict[str, str]]] = None,
     ssc: Optional[dict[str, Union[str, bool]]] = None,
-    fixef_rm: FixedRmOptions = "none",
+    fixef_rm: FixefRmOptions = "singleton",
     fixef_tol: float = 1e-08,
     fixef_maxiter: int = 100_000,
     iwls_tol: float = 1e-08,
@@ -542,7 +542,7 @@ def fepois(
     ssc : str
         A ssc object specifying the small sample correction for inference.
 
-    fixef_rm : FixedRmOptions
+    fixef_rm : FixefRmOptions
         Specifies whether to drop singleton fixed effects.
         Options: "none" (default), "singleton".
 
@@ -716,7 +716,7 @@ def feglm(
     family: str,
     vcov: Optional[Union[VcovTypeOptions, dict[str, str]]] = None,
     ssc: Optional[dict[str, Union[str, bool]]] = None,
-    fixef_rm: FixedRmOptions = "none",
+    fixef_rm: FixefRmOptions = "singleton",
     fixef_tol: float = 1e-08,
     fixef_maxiter: int = 100_000,
     iwls_tol: float = 1e-08,
@@ -763,7 +763,7 @@ def feglm(
     ssc : str
         A ssc object specifying the small sample correction for inference.
 
-    fixef_rm : FixedRmOptions
+    fixef_rm : FixefRmOptions
         Specifies whether to drop singleton fixed effects.
         Options: "none" (default), "singleton".
 

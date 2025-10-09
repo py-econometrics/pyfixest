@@ -51,6 +51,7 @@ r-broom = ">=1.0.5,<2"
 r-car = ">=3.1_2,<4"
 r-quantreg = ">=5.0"
 doubleml = ">=0.10.1,<0.11"
+pytest-sugar = ">=1.1.1,<2"
 
 [feature.dev.pypi-dependencies]
 wildboottest = ">=0.3.2, <0.4"

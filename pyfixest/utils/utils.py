@@ -11,7 +11,7 @@ from pyfixest.utils.dev_utils import _create_rng
 
 def ssc(
     adj: bool = True,
-    fixef_k: str = "nested",
+    k_adj: str = "nonnested",
     cluster_adj: bool = True,
     cluster_df: str = "min",
 ) -> dict[str, Union[str, bool]]:
@@ -25,7 +25,7 @@ def ssc(
             is the number of observations and k is the number of estimated
             coefficients excluding any fixed effects projected out by either
             `feols()` or `fepois()`.
-        fixef_k : str, default "none"
+        k_adj : str, default "none"
             Equal to 'none': the fixed effects parameters are discarded when
             calculating k in (N-1) / (N-k).
         cluster_adj : bool, default True
@@ -47,7 +47,7 @@ def ssc(
     small sample correction factor of (N-1) / (N-k), where N is the number of
     observations and k is the number of estimated coefficients.
 
-    If fixef_k = "none", the fixed effects parameters are discarded when
+    If k_adj = "none", the fixed effects parameters are discarded when
     calculating k. This is the default behavior and currently the only
     option. Note that it is not r-fixest's default behavior.
 
@@ -87,9 +87,9 @@ def ssc(
     """
     if adj not in [True, False]:
         raise ValueError("adj must be True or False.")
-    if fixef_k not in ["none", "full", "nested"]:
+    if k_adj not in ["none", "full", "nonnested"]:
         raise ValueError(
-            f"fixef_k must be 'none', 'full', or 'nested' but it is {fixef_k}."
+            f"k_adj must be 'none', 'full', or 'nonnested' but it is {k_adj}."
         )
     if cluster_adj not in [True, False]:
         raise ValueError("cluster_adj must be True or False.")
@@ -98,7 +98,7 @@ def ssc(
 
     return {
         "adj": adj,
-        "fixef_k": fixef_k,
+        "k_adj": k_adj,
         "cluster_adj": cluster_adj,
         "cluster_df": cluster_df,
     }
@@ -155,7 +155,7 @@ def get_ssc(
         "conventional" nor "min".
     """
     adj = ssc_dict["adj"]
-    fixef_k = ssc_dict["fixef_k"]
+    k_adj = ssc_dict["k_adj"]
     cluster_adj = ssc_dict["cluster_adj"]
     cluster_df = ssc_dict["cluster_df"]
 
@@ -168,9 +168,9 @@ def get_ssc(
     # subtract one for each fixed effect, except for the first
     k_fe_adj = k_fe - (n_fe - 1) if n_fe > 1 else k_fe
 
-    if fixef_k == "none":
+    if k_adj == "none":
         df_k = k
-    elif fixef_k == "nested":
+    elif k_adj == "nonnested":
         if n_fe == 0:
             df_k = k
         elif k_fe_nested == 0:
@@ -180,11 +180,11 @@ def get_ssc(
             # subtract nested fixed effects and add one for each fully nested
             # subtracted fixed effect back
             df_k = k + k_fe_adj - k_fe_nested + n_fe_fully_nested
-    elif fixef_k == "full":
+    elif k_adj == "full":
         # add all fixed effects
         df_k = k + k_fe_adj if n_fe > 0 else k
     else:
-        raise ValueError("fixef_k is neither none, nested, nor full.")
+        raise ValueError("k_adj is neither none, nonnested, nor full.")
 
     if adj:
         adj_value = (N - 1) / (N - df_k)

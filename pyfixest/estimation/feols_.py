@@ -322,7 +322,7 @@ class Feols:
         self._demean_func = impl["demean"]
         self._find_collinear_variables_func = impl["collinear"]
         self._crv1_meat_func = impl["crv1_meat"]
-        self._cound_nested_fixef_func = impl["nested"]
+        self._cound_nested_fixef_func = impl["nonnested"]
 
         # set in get_fit()
         self._tZX = np.array([])
@@ -718,7 +718,7 @@ class Feols:
 
             k_fe_nested = 0
             n_fe_fully_nested = 0
-            if self._has_fixef and self._ssc_dict["fixef_k"] == "nested":
+            if self._has_fixef and self._ssc_dict["k_adj"] == "nonnested":
                 k_fe_nested_flag, n_fe_fully_nested = self._cound_nested_fixef_func(
                     all_fixef_array=np.array(
                         self._fixef.replace("^", "_").split("+"), dtype=str
