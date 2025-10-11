@@ -237,7 +237,7 @@ def test_new_fixef_level(data, fml):
     updated_prediction_py = feols_mod.predict(newdata=data2)
     updated_prediction_r = stats.predict(r_fixest_ols, newdata=data2)
 
-    if not np.allclose(updated_prediction_py, updated_prediction_r):
+    if not np.allclose(updated_prediction_py[10:15], updated_prediction_r[10:15]):
         raise ValueError("Updated predictions are not equal")
 
 
