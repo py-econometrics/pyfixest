@@ -23,7 +23,11 @@ def test_event_study_twfe(data):
         estimator="twfe",
     )
 
-    twfe_feols = pf.feols("dep_var ~ treat | state + year", data=data)
+    twfe_feols = pf.feols(
+        fml = "dep_var ~ treat | state + year", 
+        data=data, 
+        vcov = {"CRV1": "state"}
+    )
 
     assert np.allclose(twfe.coef().values, twfe_feols.coef().values), (
         "TWFE coefficients are not the same."
