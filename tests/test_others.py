@@ -12,7 +12,12 @@ from pyfixest.utils.utils import capture_context, get_data, ssc
 
 def test_multicol_overdetermined_iv():
     data = get_data()
-    fit = feols("Y ~ X2 +  f1| f1 | X1 ~ Z1 + Z2", data=data, ssc=ssc(k_adj=False))
+    fit = feols(
+        fml = "Y ~ X2 +  f1| f1 | X1 ~ Z1 + Z2",
+        data=data, 
+        ssc=ssc(k_adj=False),
+        vcov = {"CRV1": "f1"}
+    )
 
     assert fit._collin_vars == ["f1"]
     assert fit._collin_vars_z == ["f1"]
