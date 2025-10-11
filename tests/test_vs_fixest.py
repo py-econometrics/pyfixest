@@ -323,19 +323,10 @@ def test_single_fit_feols(
             colnames = ["fit", "se_fit", "ci_low", "ci_high"]
             r_predict_all.columns = colnames
 
-            # needed at the moment because r-fixest returns
-            # prediction intervals not on estimation sample,
-            # see https://github.com/lrberge/fixest/issues/549
-            # as a result, py_predict_all and r_predict_all
-
-            mask_r = np.zeros(r_predict_all.shape[0], dtype=bool)
-            mask_r[0 : r_predict_all.shape[0]] = True
-            mask_r[mod._na_index] = False
-
             for col in colnames:
                 check_absolute_diff(
                     py_predict_all[col].values[-4:],
-                    r_predict_all[col].iloc[mask_r].values[-4:],
+                    r_predict_all[col].values[-4:],
                     1e-07,
                     f"py_predict_all != r_predict_all for {col}",
                 )
