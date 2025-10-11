@@ -249,7 +249,7 @@ def test_rwolf_error():
 
     data = get_data()
     data["f1"] = rng.choice(range(5), len(data), True)
-    fit = feols("Y + Y2 ~ X1 | f1", data=data)
+    fit = feols("Y + Y2 ~ X1 | f1", data=data, vcov = {"CRV1": "f1"})
 
     # test for full enumeration warning
     with pytest.warns(UserWarning):
