@@ -21,9 +21,10 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   in the presence of fixed effect. 
 - The arguments of the `pf.ssc()` functions have been renamed: `adj` becomes `k_adj`, `fixef_k` becomes `k_fixef`, `cluster_df` becomes `G_df`, and `cluster_adj` becomes `G_adj`. 
   Backwards compatibility is ensured. 
+- The `k_fixef` option `"nested"` has been renamed to `"nonnested"`.
 - The `fixef_rm` argument is changed from default `"none"` to `"singleton"` for all estimation functions. This has no impact on point estimates, but might change inference due to a smaller number of 
   observations in the degree of freedom correction. 
-- The multicollinearity default tolerance has been reduced from 1e-08 to 1e-07. 
+- The multicollinearity default tolerance has been reduced from 1e-10 to 1e-09.
 
 ### Moved to `pixi.toml` and install from conda-forge
 
