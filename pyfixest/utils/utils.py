@@ -14,6 +14,8 @@ def ssc(
     k_fixef: str = "nonnested",
     G_adj: bool = True,
     G_df: str = "min",
+    *args: Any,
+    **kwargs: Any,
 ) -> dict[str, Union[str, bool]]:
     """
     Set the small sample correction factor applied in `get_ssc()`.
@@ -85,6 +87,27 @@ def ssc(
     dict
         A dictionary with encoded info on how to form small sample corrections
     """
+    import warnings
+
+    # Check for old argument names for backward compatibility
+    if "adj" in kwargs:
+        warnings.warn("The 'adj' argument is deprecated. Use 'k_adj' instead.", DeprecationWarning)
+        if "k_adj" not in kwargs:
+            k_adj = kwargs["adj"]
+    if "fixef_k" in kwargs:
+        warnings.warn("The 'fixef_k' argument is deprecated. Use 'k_fixef' instead.", DeprecationWarning)
+        if "k_fixef" not in kwargs:
+            k_fixef = kwargs["fixef_k"]
+    if "cluster_df" in kwargs:
+        warnings.warn("The 'cluster_df' argument is deprecated. Use 'G_df' instead.", DeprecationWarning)
+        if "G_df" not in kwargs:
+            G_df = kwargs["cluster_df"]
+    if "cluster_adj" in kwargs:
+        warnings.warn("The 'cluster_adj' argument is deprecated. Use 'G_adj' instead.", DeprecationWarning)
+        if "G_adj" not in kwargs:
+            G_adj = kwargs["cluster_adj"]
+
+    # Type checking for new arguments
     if k_adj not in [True, False]:
         raise ValueError("k_adj must be True or False.")
     if k_fixef not in ["none", "full", "nonnested"]:
