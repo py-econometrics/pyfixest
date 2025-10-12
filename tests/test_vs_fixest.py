@@ -706,7 +706,10 @@ def test_single_fit_iv(
 @pytest.mark.parametrize("N", [100])
 @pytest.mark.parametrize("seed", [172])
 @pytest.mark.parametrize("dropna", [True, False])
-@pytest.mark.parametrize("fml", glm_fmls)
+@pytest.mark.parametrize(
+    "fml",
+    glm_fmls,
+)
 @pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
 @pytest.mark.parametrize("family", ["probit", "logit", "gaussian"])
 def test_glm_vs_fixest(N, seed, dropna, fml, inference, family):
@@ -1050,60 +1053,66 @@ def test_split_fit(N, seed, beta_type, error_type, dropna, fml_multi, split, fsp
 
 
 @pytest.mark.against_r_core
-def test_twoway_clustering():
-    data = get_data(N=500, seed=17021, beta_type="1", error_type="1").dropna()
+@pytest.mark.parametrize("data", [get_data(N=500, seed=9289, beta_type="1", error_type="1")])
+@pytest.mark.parametrize("k_adj", [True, False])
+@pytest.mark.parametrize("k_fixef", ["none", "full", "nonnested"])
+@pytest.mark.parametrize("G_adj", [True, False])
+@pytest.mark.parametrize("G_df", ["min", "conventional"])
+def test_twoway_clustering(data, k_adj, k_fixef, G_adj, G_df):
+    data = data.dropna()
 
-    G_adj_options = [True]
-    G_df_options = ["min", "conventional"]
+    fit1 = feols(
+        "Y ~ X1 + X2 ",
+        data=data,
+        vcov={"CRV1": "f1 +f2"},
+        ssc=ssc(k_adj=k_adj, k_fixef=k_fixef, G_adj=G_adj, G_df=G_df),
+    )
 
-    for G_adj in G_adj_options:
-        for G_df in G_df_options:
-            fit1 = feols(
-                "Y ~ X1 + X2 ",
-                data=data,
-                vcov={"CRV1": "f1 +f2"},
-                ssc=ssc(G_adj=G_adj, G_df=G_df),
-            )
-            fit2 = feols(  # noqa: F841
-                "Y ~ X1 + X2 ",
-                data=data,
-                vcov={"CRV3": " f1+f2"},
-                ssc=ssc(G_adj=G_adj, G_df=G_df),
-            )
+    feols_fit1 = fixest.feols(
+        ro.Formula("Y ~ X1 + X2"),
+        data=data,
+        cluster=ro.Formula("~f1+f2"),
+        ssc=fixest.ssc(k_adj, k_fixef, False, G_adj, G_df, "min"),
+    )
 
-            feols_fit1 = fixest.feols(
-                ro.Formula("Y ~ X1 + X2"),
-                data=data,
-                cluster=ro.Formula("~f1+f2"),
-                ssc=fixest.ssc(True, "nonnested", False, G_adj, G_df, "min"),
-            )
+    # check that coefs match
+    np.testing.assert_allclose(
+        fit1.coef(),
+        stats.coef(feols_fit1),
+        rtol=1e-08,
+        atol=1e-08,
+        err_msg=f"CRV1-coef: G_adj = {G_adj}, G_df = {G_df}, k_adj = {k_adj}, k_fixef = {k_fixef}",
+    )
 
-            # test vcov's
-            np.testing.assert_allclose(
-                fit1._vcov,
-                stats.vcov(feols_fit1),
-                rtol=1e-04,
-                atol=1e-04,
-                err_msg=f"CRV1-vcov: G_adj = {G_adj}, G_df = {G_df}",
-            )
+    if True:
+        # test vcov's
+        np.testing.assert_allclose(
+            fit1._vcov,
+            stats.vcov(feols_fit1),
+            rtol=1e-04,
+            atol=1e-04,
+            err_msg=f"CRV1-vcov: G_adj = {G_adj}, G_df = {G_df}, k_adj = {k_adj}, k_fixef = {k_fixef}",
+        )
 
-            # now test se's
-            np.testing.assert_allclose(
-                fit1.se(),
-                fixest.se(feols_fit1),
-                rtol=1e-04,
-                atol=1e-04,
-                err_msg=f"CRV1-se: G_adj = {G_adj}, G_df = {G_df}",
-            )
+    if True:
+        # now test se's
+        np.testing.assert_allclose(
+            fit1.se(),
+            fixest.se(feols_fit1),
+            rtol=1e-04,
+            atol=1e-04,
+            err_msg=f"CRV1-se: G_adj = {G_adj}, G_df = {G_df}, k_adj = {k_adj}, k_fixef = {k_fixef}",
+        )
 
-            # now test pvalues
-            np.testing.assert_allclose(
-                fit1.pvalue(),
-                fixest.pvalue(feols_fit1),
-                rtol=1e-04,
-                atol=1e-04,
-                err_msg=f"CRV1-pvalue: G_adj = {G_adj}, G_df = {G_df}",
-            )
+    if True:
+        # now test pvalues
+        np.testing.assert_allclose(
+            fit1.pvalue(),
+            fixest.pvalue(feols_fit1),
+            rtol=1e-04,
+            atol=1e-04,
+            err_msg=f"CRV1-pvalue: G_adj = {G_adj}, G_df = {G_df}, k_adj = {k_adj}, k_fixef = {k_fixef}",
+        )
 
 
 @pytest.mark.against_r_core
