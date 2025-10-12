@@ -25,6 +25,10 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 - The `fixef_rm` argument is changed from default `"none"` to `"singleton"` for all estimation functions. This has no impact on point estimates, but might change inference due to a smaller number of 
   observations in the degree of freedom correction. 
 - The multicollinearity default tolerance has been reduced from 1e-10 to 1e-09.
+- The attribute `_dof_k` has been renamed to `_df_k`.
+
+Other related changes: 
+- The arguments to adjust the small samples for the `wildboottest` methods have been renamed to `k_adj` and `G_adj`. 
 
 ### Moved to `pixi.toml` and install from conda-forge
 
