@@ -42,6 +42,7 @@ def _demean_jax_impl(
         result, _ = jax.lax.scan(_apply_factor, x_curr, jnp.arange(n_factors))
         return result
 
+
     @jax.jit
     def _body_fun(state):
         """Body function for while_loop."""

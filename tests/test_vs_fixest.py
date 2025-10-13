@@ -488,9 +488,7 @@ def test_single_fit_feols_empty(
 @pytest.mark.parametrize("fml", ols_fmls)
 @pytest.mark.parametrize("k_adj", [True])
 @pytest.mark.parametrize("G_adj", [True])
-def test_single_fit_fepois(
-    data_fepois, dropna, inference, f3_type, fml, k_adj, G_adj
-):
+def test_single_fit_fepois(data_fepois, dropna, inference, f3_type, fml, k_adj, G_adj):
     global test_counter_fepois
     test_counter_fepois += 1
 
@@ -1053,7 +1051,9 @@ def test_split_fit(N, seed, beta_type, error_type, dropna, fml_multi, split, fsp
 
 
 @pytest.mark.against_r_core
-@pytest.mark.parametrize("data", [get_data(N=500, seed=9289, beta_type="1", error_type="1")])
+@pytest.mark.parametrize(
+    "data", [get_data(N=500, seed=9289, beta_type="1", error_type="1")]
+)
 @pytest.mark.parametrize("k_adj", [True, False])
 @pytest.mark.parametrize("k_fixef", ["none", "full", "nonnested"])
 @pytest.mark.parametrize("G_adj", [True, False])
@@ -1332,7 +1332,7 @@ ssc_fmls = [
 @pytest.mark.parametrize("k_adj", [True, False])
 @pytest.mark.parametrize("G_adj", [True, False])
 @pytest.mark.parametrize("k_fixef", ["full", "none", "nonnested"])
-@pytest.mark.parametrize("model", ["feols","fepois"])
+@pytest.mark.parametrize("model", ["feols", "fepois"])
 def test_ssc(fml, dropna, weights, vcov, k_adj, G_adj, k_fixef, model):
     df = (
         pf.get_data(model="Feols")
@@ -1424,7 +1424,7 @@ def test_ssc(fml, dropna, weights, vcov, k_adj, G_adj, k_fixef, model):
         err_msg=f"df.t do not match for fml = {fml}, vcov = {vcov}, k_adj = {k_adj}, G_adj = {G_adj}, k_fixef = {k_fixef}",
     )
 
-    if False: 
+    if False:
         # SEs identical:
         np.testing.assert_allclose(
             py_fit.se(),
@@ -1485,7 +1485,7 @@ def test_inf_dropping(fml, weights):
         UserWarning,
         match=f"{n_zeros} rows with infinite values detected. These rows are dropped from the model.",
     ):
-        fit_py = feols(fml=fml, data=data, weights=weights, fixef_rm = "none")
+        fit_py = feols(fml=fml, data=data, weights=weights, fixef_rm="none")
 
     assert int(data.shape[0] - n_zeros) == fit_py._N
     assert np.all(fit_py._na_index == np.where(data.Y == 0)[0].tolist())
