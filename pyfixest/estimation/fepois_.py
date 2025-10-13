@@ -49,8 +49,6 @@ class Fepois(Feols):
         Names of the coefficients in the design matrix X.
     drop_singletons : bool
         Whether to drop singleton fixed effects.
-    drop_infinite_coef : bool
-        Whether to drop infinite coefficient observations.
     collin_tol : float
         Tolerance level for the detection of collinearity.
     maxiter : Optional[int], default=25
@@ -85,7 +83,6 @@ class Fepois(Feols):
         data: pd.DataFrame,
         ssc_dict: dict[str, Union[str, bool]],
         drop_singletons: bool,
-        drop_infinite_coef: bool,
         drop_intercept: bool,
         weights: Optional[str],
         weights_type: Optional[str],
@@ -110,7 +107,6 @@ class Fepois(Feols):
             data=data,
             ssc_dict=ssc_dict,
             drop_singletons=drop_singletons,
-            drop_infinite_coef=drop_infinite_coef,
             drop_intercept=drop_intercept,
             weights=weights,
             weights_type=weights_type,
@@ -131,7 +127,6 @@ class Fepois(Feols):
         # input checks
         _fepois_input_checks(
             drop_singletons=drop_singletons,
-            drop_infinite_coef=drop_infinite_coef,
             tol=tol,
             maxiter=maxiter,
         )
@@ -140,7 +135,6 @@ class Fepois(Feols):
         self.tol = tol
         self._method = "fepois"
         self.convergence = False
-        self.drop_infinite_coef = drop_infinite_coef
         self.infinite_coef_check = infinite_coef_check
 
         self._support_crv3_inference = True
@@ -167,7 +161,6 @@ class Fepois(Feols):
         na_separation: list[int] = []
         if (
             self._fe is not None
-            and self.drop_infinite_coef
             and self.infinite_coef_check is not None
             and self.infinite_coef_check  # not an empty list
         ):
@@ -711,13 +704,9 @@ def _check_for_separation_ir(
     return separation_na
 
 
-def _fepois_input_checks(
-    drop_singletons: bool, drop_infinite_coef: bool, tol: float, maxiter: int
-):
+def _fepois_input_checks(drop_singletons: bool, tol: float, maxiter: int):
     if not isinstance(drop_singletons, bool):
         raise TypeError("drop_singletons must be logical.")
-    if not isinstance(drop_infinite_coef, bool):
-        raise TypeError("drop_infinite_coef must be logical.")
     if not isinstance(tol, (int, float)):
         raise TypeError("tol must be numeric.")
     if tol <= 0 or tol >= 1:

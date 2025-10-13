@@ -234,7 +234,6 @@ class FixestMulti:
         # self._fml_dict_iv = fxst_fml.condensed_fml_dict_iv
         self._ssc_dict = ssc if ssc is not None else {}
         self._drop_singletons = _drop_singletons(fixef_rm)
-        self._drop_infinite_coef = _drop_infinite_coef(fixef_rm)
 
     def _estimate_all_models(
         self,
@@ -368,7 +367,6 @@ class FixestMulti:
                     }:
                         model_kwargs.update(
                             {
-                                "drop_infinite_coef": _drop_infinite_coef,
                                 "infinite_coef_check": infinite_coef_check,
                                 "tol": iwls_tol,
                                 "maxiter": iwls_maxiter,
@@ -730,7 +728,3 @@ def _drop_singletons(fixef_rm: str) -> bool:
         drop_singletons (bool) : Whether to drop singletons.
     """
     return fixef_rm in ["singleton", "perfect_fit"]
-
-
-def _drop_infinite_coef(fixef_rm: str) -> bool:
-    return fixef_rm in ["infinite_coef", "perfect_fit"]

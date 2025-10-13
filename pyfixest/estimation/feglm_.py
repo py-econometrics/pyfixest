@@ -24,7 +24,6 @@ class Feglm(Feols, ABC):
         data: pd.DataFrame,
         ssc_dict: dict[str, Union[str, bool]],
         drop_singletons: bool,
-        drop_infinite_coef: bool,
         drop_intercept: bool,
         weights: Optional[str],
         weights_type: Optional[str],
@@ -54,7 +53,6 @@ class Feglm(Feols, ABC):
             data=data,
             ssc_dict=ssc_dict,
             drop_singletons=drop_singletons,
-            drop_infinite_coef=drop_infinite_coef,
             drop_intercept=drop_intercept,
             weights=weights,
             weights_type=weights_type,
@@ -73,7 +71,6 @@ class Feglm(Feols, ABC):
 
         _glm_input_checks(
             drop_singletons=drop_singletons,
-            drop_infinite_coef=drop_infinite_coef,
             tol=tol,
             maxiter=maxiter,
         )
@@ -81,7 +78,6 @@ class Feglm(Feols, ABC):
         self.maxiter = maxiter
         self.tol = tol
         self.convergence = False
-        self.drop_infinite_coef = drop_infinite_coef
         self.infinite_coef_check = infinite_coef_check
 
         self._support_crv3_inference = True
@@ -106,7 +102,6 @@ class Feglm(Feols, ABC):
         na_separation: list[int] = []
         if (
             self._fe is not None
-            and self.drop_infinite_coef
             and self.infinite_coef_check is not None
             and self.infinite_coef_check  # not an empty list
         ):
@@ -529,13 +524,9 @@ class Feglm(Feols, ABC):
         pass
 
 
-def _glm_input_checks(
-    drop_singletons: bool, drop_infinite_coef: bool, tol: float, maxiter: int
-):
+def _glm_input_checks(drop_singletons: bool, tol: float, maxiter: int):
     if not isinstance(drop_singletons, bool):
         raise TypeError("drop_singletons must be logical.")
-    if not isinstance(drop_infinite_coef, bool):
-        raise TypeError("drop_infinite_coef must be logical.")
     if not isinstance(tol, (int, float)):
         raise TypeError("tol must be numeric.")
     if tol <= 0 or tol >= 1:
