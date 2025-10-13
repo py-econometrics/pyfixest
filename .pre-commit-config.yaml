@@ -37,6 +37,6 @@ repos:
     rev: v1.18.2
     hooks:
       - id: mypy
-        args: [--ignore-missing-imports]
+        args: [--ignore-missing-imports, --config-file=pixi.toml]
         files: ^pyfixest/
         additional_dependencies: [numpy>=1.20, pandas-stubs]
