@@ -43,7 +43,7 @@ class FixestMulti:
         seed: Optional[int],
         split: Optional[str],
         fsplit: Optional[str],
-        infinite_coef_check: Optional[list[str]] = None,
+        separation_check: Optional[list[str]] = None,
         context: Union[int, Mapping[str, Any]] = 0,
         quantreg_method: QuantregMethodOptions = "fn",
         quantreg_multi_method: QuantregMultiOptions = "cfm1",
@@ -78,7 +78,7 @@ class FixestMulti:
         seed : Optional[int]
             Option to provide a random seed. Default is None.
             Only relevant for wild cluster bootstrap for use_compression=True.
-        infinite_coef_check: list[str], optional
+        separation_check: list[str], optional
             Only used in "fepois". Methods to identify and drop separated observations.
             Either "fe" or "ir". Executes both by default.
         context : int or Mapping[str, Any]
@@ -104,7 +104,7 @@ class FixestMulti:
         self._use_compression = use_compression
         self._reps = reps
         self._seed = seed
-        self._infinite_coef_check = infinite_coef_check
+        self._separation_check = separation_check
         self._context = capture_context(context)
         self._quantreg_method = quantreg_method
         self._quantreg_multi_method = quantreg_multi_method
