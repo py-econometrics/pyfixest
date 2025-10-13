@@ -26,7 +26,7 @@ def feols(
     vcov: Optional[Union[VcovTypeOptions, dict[str, str]]] = None,
     weights: Union[None, str] = None,
     ssc: Optional[dict[str, Union[str, bool]]] = None,
-    fixef_rm: FixedRmOptions = "perfect_fit",
+    fixef_rm: FixedRmOptions = "singleton",
     fixef_tol=1e-08,
     fixef_maxiter: int = 100_000,
     collin_tol: float = 1e-09,
@@ -73,16 +73,10 @@ def feols(
 
     fixef_rm : FixedRmOptions
         Specifies whether to drop singleton fixed effects.
-        Can be equal to "perfect_fit" (default), "singletons", "infinite_coef",
+        Can be equal to "singleton" (default),
         or "none".
-        "perfect_fit" is the default and equal to "singletongs" and "infinite_coef"
-        combined.
         "singletons" will drop singleton fixed effects. This will not impact point
         estimates but it will impact standard errors.
-        "infinite_coef" is only relevant for GLM models and will drop "perfectly
-        separated" observations that would produce "infinite" coefficients. Multiple
-        options are supported and can be set via the `separation` argument for GLMs.
-        "none" will do nothing.
 
     collin_tol : float, optional
         Tolerance for collinearity check, by default 1e-10.
