@@ -40,7 +40,7 @@ class Feprobit(Feglm):
         lean: bool = False,
         sample_split_var: Optional[str] = None,
         sample_split_value: Optional[Union[str, int]] = None,
-        infinite_coef_check: Optional[list[str]] = None,
+        separation_check: Optional[list[str]] = None,
         context: Union[int, Mapping[str, Any]] = 0,
     ):
         super().__init__(
@@ -63,7 +63,7 @@ class Feprobit(Feglm):
             lean=lean,
             sample_split_var=sample_split_var,
             sample_split_value=sample_split_value,
-            infinite_coef_check=infinite_coef_check,
+            separation_check=separation_check,
             context=context,
         )
 
