@@ -269,7 +269,7 @@ class FixestMulti:
         iwls_tol : float, optional
             The tolerance level for the IWLS algorithm. Default is 1e-8.
             Only relevant for non-linear estimation strategies.
-        infinite_coef_check: list[str], optional
+        separation_check: list[str], optional
             Only used in "fepois". Methods to identify and drop separated observations.
             Either "fe" or "ir". Executes both by default.
 
