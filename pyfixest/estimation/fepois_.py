@@ -100,7 +100,7 @@ class Fepois(Feols):
         lean: bool = False,
         sample_split_var: Optional[str] = None,
         sample_split_value: Optional[Union[str, int]] = None,
-        infinite_coef_check: Optional[list[str]] = None,
+        separation_check: Optional[list[str]] = None,
     ):
         super().__init__(
             FixestFormula=FixestFormula,
@@ -135,7 +135,7 @@ class Fepois(Feols):
         self.tol = tol
         self._method = "fepois"
         self.convergence = False
-        self.infinite_coef_check = infinite_coef_check
+        self.separation_check = separation_check
 
         self._support_crv3_inference = True
         self._support_iid_inference = True
@@ -161,8 +161,8 @@ class Fepois(Feols):
         na_separation: list[int] = []
         if (
             self._fe is not None
-            and self.infinite_coef_check is not None
-            and self.infinite_coef_check  # not an empty list
+            and self.separation_check is not None
+            and self.separation_check  # not an empty list
         ):
             na_separation = _check_for_separation(
                 Y=self._Y,
@@ -170,7 +170,7 @@ class Fepois(Feols):
                 fe=self._fe,
                 fml=self._fml,
                 data=self._data,
-                methods=self.infinite_coef_check,
+                methods=self.separation_check,
             )
 
         if na_separation:
