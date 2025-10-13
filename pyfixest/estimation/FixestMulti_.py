@@ -243,7 +243,7 @@ class FixestMulti:
         collin_tol: float = 1e-6,
         iwls_maxiter: int = 25,
         iwls_tol: float = 1e-08,
-        infinite_coef_check: Optional[list[str]] = None,
+        separation_check: Optional[list[str]] = None,
     ) -> None:
         """
         Estimate multiple regression models.
@@ -367,7 +367,7 @@ class FixestMulti:
                     }:
                         model_kwargs.update(
                             {
-                                "infinite_coef_check": infinite_coef_check,
+                                "separation_check": separation_check,
                                 "tol": iwls_tol,
                                 "maxiter": iwls_maxiter,
                             }
