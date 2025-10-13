@@ -714,7 +714,7 @@ def _drop_singletons(fixef_rm: str) -> bool:
     """
     Drop singleton fixed effects.
 
-    Checks if the fixef_rm argument is set to "singleton" or "perfect_fit".
+    Checks if the fixef_rm argument is set to "singleton".
     If so, returns True,else False.
 
     Parameters
@@ -727,4 +727,4 @@ def _drop_singletons(fixef_rm: str) -> bool:
     bool
         drop_singletons (bool) : Whether to drop singletons.
     """
-    return fixef_rm in ["singleton", "perfect_fit"]
+    return fixef_rm in ["singleton"]
