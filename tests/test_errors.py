@@ -249,7 +249,7 @@ def test_rwolf_error():
 
     data = get_data()
     data["f1"] = rng.choice(range(5), len(data), True)
-    fit = feols("Y + Y2 ~ X1 | f1", data=data)
+    fit = feols("Y + Y2 ~ X1 | f1", data=data, vcov={"CRV1": "f1"})
 
     # test for full enumeration warning
     with pytest.warns(UserWarning):
@@ -465,7 +465,7 @@ def test_wald_test_invalid_distribution():
     data = data.iloc[1:3000]
 
     fml = "dep_var ~ treat"
-    fit = feols(fml, data, vcov={"CRV1": "year"}, ssc=ssc(adj=False))
+    fit = feols(fml, data, vcov={"CRV1": "year"}, ssc=ssc(k_adj=False))
 
     with pytest.raises(ValueError):
         fit.wald_test(R=np.array([[1, -1]]), distribution="abc")
@@ -475,7 +475,7 @@ def test_wald_test_R_q_column_consistency():
     data = pd.read_csv("pyfixest/did/data/df_het.csv")
     data = data.iloc[1:3000]
     fml = "dep_var ~ treat"
-    fit = feols(fml, data, vcov={"CRV1": "year"}, ssc=ssc(adj=False))
+    fit = feols(fml, data, vcov={"CRV1": "year"}, ssc=ssc(k_adj=False))
 
     # Test with R.size[1] == number of coeffcients
     with pytest.raises(ValueError):

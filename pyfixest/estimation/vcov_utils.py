@@ -55,7 +55,7 @@ def _count_G_for_ssc_correction(
     for col in cluster_df.columns:
         G.append(cluster_df[col].nunique())
 
-    if ssc_dict["cluster_df"] == "min":
+    if ssc_dict["G_df"] == "min":
         G = [min(G)] * 3
 
     return G

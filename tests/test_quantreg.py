@@ -89,7 +89,7 @@ def test_quantreg_vs_r(data, fml, vcov, quantile, method):
         quantile=quantile,
         method=method,
         tol=tol,
-        ssc=pf.ssc(adj=False, cluster_adj=False),
+        ssc=pf.ssc(k_adj=False, G_adj=False),
         seed=83838,
     )
 
@@ -156,7 +156,7 @@ def test_quantreg_crv(data, fml, quantile, stata_results_crv):
         data=data,
         vcov={"CRV1": "f1"},
         quantile=quantile,
-        ssc=pf.ssc(adj=False, cluster_adj=False),
+        ssc=pf.ssc(k_adj=False, G_adj=False),
         seed=9389323,
     )
 
@@ -290,7 +290,7 @@ def test_quantreg_vs_statsmodels(data, fml, vcov, quantile, method):
         vcov=vcov,
         quantile=quantile,
         method=method,
-        ssc=pf.ssc(adj=False, cluster_adj=False),
+        ssc=pf.ssc(k_adj=False, G_adj=False),
         seed=383838,
     )
 

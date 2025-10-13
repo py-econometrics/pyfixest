@@ -11,7 +11,31 @@ fit2 = pf.feols("Y ~ X1 + X2", data = df)
 fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 ```
 
-## PyFixest 0.31.0 (In Dev, Install from Github)
+## PyFixest 0.40.0 (In Dev, Install from Github)
+
+### Breaking Changes for compatibility with `fixest` 0.13
+
+`fixest` 0.13 has recently been released to CRAN, with a range of breaking changes. We are following these in pyfixet 0.40.0. 
+
+- The default inference method is now always "iid". Before, both `fixest` and `pyfixest` would default to cluster by the first fixest effect 
+  in the presence of fixed effect. 
+- The arguments of the `pf.ssc()` functions have been renamed: `adj` becomes `k_adj`, `fixef_k` becomes `k_fixef`, `cluster_df` becomes `G_df`, and `cluster_adj` becomes `G_adj`. 
+  Backwards compatibility is ensured. 
+- The `k_fixef` option `"nested"` has been renamed to `"nonnested"`.
+- The `fixef_rm` argument is changed from default `"none"` to `"singleton"` for all estimation functions. This has no impact on point estimates, but might change inference due to a smaller number of 
+  observations in the degree of freedom correction. 
+- The multicollinearity default tolerance has been reduced from 1e-10 to 1e-09.
+- The attribute `_dof_k` has been renamed to `_df_k`.
+
+Other related changes: 
+- The arguments to adjust the small samples for the `wildboottest` methods have been renamed to `k_adj` and `G_adj`. 
+
+### Moved to `pixi.toml` and install from conda-forge
+
+We have been using pixi as our package manager for a while and are moving from a `pyproject.toml` to using a `pixi.toml` for specifying dependencies. 
+We also install all package by default from the free and open source conda-forge. Because of some environment resolution challenges around an old version of 
+`rpy2`that we need for testing `pyfixest` against `fixest`, we temporarily have dropped support for the dev and docs environments for windows. A fix is 
+work in progress.
 
 ### `cat_template` argument for plotting functions
 
@@ -189,7 +213,7 @@ pf.qplot(fit_qr, figsize = [7,3])
 
 ## PyFixest 0.29.0
 
-- We add options `fixef_k = "nested"` and `fixef_k = "full"` for computing small sample corrections via `pf.ssc()`. We set the defaults for `pf.feols()` and other estimation functions to `fixef_k = "nested"` to 100% mimic the defaults of `r-fixest`. This is a "breaking change" in the sense that it might (slightly) impact the standard errors of your estimations.
+- We add options `fixef_k = "nonnested"` and `fixef_k = "full"` for computing small sample corrections via `pf.ssc()`. We set the defaults for `pf.feols()` and other estimation functions to `fixef_k = "nonnested"` to 100% mimic the defaults of `r-fixest`. This is a "breaking change" in the sense that it might (slightly) impact the standard errors of your estimations.
 - We add support for fully saturated event study estimation via the `SaturatedEventStudy` class, which can be called via `pf.event_study()`.
 - We add support for difference-in-differences specification tests following Lal (2025).
 - We add R2-within values to the default `etable()` output.
