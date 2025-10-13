@@ -501,7 +501,7 @@ def fepois(
     data: DataFrameType,  # type: ignore
     vcov: Optional[Union[VcovTypeOptions, dict[str, str]]] = None,
     ssc: Optional[dict[str, Union[str, bool]]] = None,
-    fixef_rm: FixedRmOptions = "perfect_fit",
+    fixef_rm: FixedRmOptions = "singleton",
     fixef_tol: float = 1e-08,
     fixef_maxiter: int = 100_000,
     iwls_tol: float = 1e-08,
@@ -547,16 +547,9 @@ def fepois(
 
     fixef_rm : FixedRmOptions
         Specifies whether to drop singleton fixed effects.
-        Can be equal to "perfect_fit" (default), "singletons", "infinite_coef",
-        or "none".
-        "perfect_fit" is the default and equal to "singletongs" and "infinite_coef"
-        combined.
+        Can be equal to "singletons" (default) or "none".
         "singletons" will drop singleton fixed effects. This will not impact point
         estimates but it will impact standard errors.
-        "infinite_coef" is only relevant for GLM models and will drop "perfectly
-        separated" observations that would produce "infinite" coefficients. Multiple
-        options are supported and can be set via the `infinite_coef_check` argument for GLMs.
-        "none" will do nothing.
 
     fixef_tol: float, optional
         Tolerance for the fixed effects demeaning algorithm. Defaults to 1e-08.
@@ -728,7 +721,7 @@ def feglm(
     family: str,
     vcov: Optional[Union[VcovTypeOptions, dict[str, str]]] = None,
     ssc: Optional[dict[str, Union[str, bool]]] = None,
-    fixef_rm: FixedRmOptions = "perfect_fit",
+    fixef_rm: FixedRmOptions = "singleton",
     fixef_tol: float = 1e-08,
     fixef_maxiter: int = 100_000,
     iwls_tol: float = 1e-08,
@@ -777,16 +770,10 @@ def feglm(
 
     fixef_rm : FixedRmOptions
         Specifies whether to drop singleton fixed effects.
-        Can be equal to "perfect_fit" (default), "singletons", "infinite_coef",
+        Can be equal to "singleton" (default),
         or "none".
-        "perfect_fit" is the default and equal to "singletongs" and "infinite_coef"
-        combined.
         "singletons" will drop singleton fixed effects. This will not impact point
         estimates but it will impact standard errors.
-        "infinite_coef" is only relevant for GLM models and will drop "perfectly
-        separated" observations that would produce "infinite" coefficients. Multiple
-        options are supported and can be set via the `infinite_coef_check` argument for GLMs.
-        "none" will do nothing.
 
     fixef_tol: float, optional
         Tolerance for the fixed effects demeaning algorithm. Defaults to 1e-08.
@@ -1255,9 +1242,9 @@ def _estimation_input_checks(
     if not isinstance(collin_tol, float):
         raise TypeError("collin_tol must be a float")
 
-    if fixef_rm not in ["none", "singleton", "perfect_fit", "infinite_coef"]:
+    if fixef_rm not in ["none", "singleton"]:
         raise ValueError(
-            "fixef_rm must be either 'none', 'singleton', 'perfect_fit', or 'infinite_coef'"
+            "fixef_rm must be either 'none' or 'singleton'."
         )
     if collin_tol <= 0:
         raise ValueError("collin_tol must be greater than zero")
