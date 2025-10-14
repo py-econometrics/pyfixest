@@ -208,6 +208,7 @@ class FixestMulti:
         self._fml_dict = None
         self._fml_dict_iv = None
         self._ssc_dict: dict[str, Union[str, bool]] = {}
+        self._drop_singletons = False
         self._is_multiple_estimation = False
         self._drop_intercept = False
         self._weights = weights
