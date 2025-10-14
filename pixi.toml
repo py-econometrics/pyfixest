@@ -1,14 +1,3 @@
-[workspace]
-authors = [
-    "Alexander Fischer <alexander-fischer1801@t-online.de>",
-    "Styfen Schär"
-    ]
-description = "Fast high dimensional fixed effect estimation following syntax of the fixest R package."
-channels = ["conda-forge"]
-name = "pyfixest"
-platforms = ["linux-64", "win-64", "osx-arm64", "osx-64"]
-version = "0.30.2"
-
 [tasks]
 
 
@@ -109,6 +98,7 @@ pre-commit = "==3.6.0"
 [feature.build.dependencies]
 pip = "*"
 maturin = ">=1.8.0"
+rust = "*"
 
 [tool.pixi.feature.lint.tasks]
 pre-commit = "pre-commit run --all-files"
@@ -133,85 +123,3 @@ lint = { features = ["lint"], solve-group = "default" }
 docs = { features = ["docs"], solve-group = "default" }
 jax = { features = ["jax"], solve-group = "default" }
 plots = { features = ["plots"], solve-group = "default" }
-
-[tool.ruff]
-line-length = 88
-fix = true
-
-# Assume Python 3.9
-target-version = "py39"
-
-[tool.ruff.lint]
-# docs: https://docs.astral.sh/ruff/rules/
-select = [
-  "B",   # bugbear
-  "F",   # Pyflakes
-  "E",   # pycodestyle errors
-  "W",   # pycodestyle warnings
-  "I",   # isort
-  "D",   # flake8-docstrings
-  "UP",  # pyupgrade
-  "SIM", # flake8-simplify
-  "RUF", # ruff,
-  "TRY", # tryceratops
-]
-
-ignore = [
-  # do not enable if formatting
-  # docs: https://docs.astral.sh/ruff/formatter/#conflicting-lint-rules
-  "B028",   # No explicit `stacklevel` keyword argument found
-  "B904",   # Better exception handling
-  "W191",   # tab indentation
-  "E111",   # indentation
-  "E114",   # indentation
-  "E117",   # over indented
-  "D206",   # indent with spaces
-  "D300",   # triple single quotes
-  "E501",   # line length regulated by formatter
-  "D105",   # missing docstring in magic method
-  "D100",   # missing docstring in public module
-  "D104",   # missing docstring in public package
-  "SIM110", # Use all instead of `for` loop
-  "TRY003", # Avoid specifying long messages outside the exception class
-  "D205",   # 1 blank line required between summary line and description
-  "W505",   # Doc line too long
-]
-
-[tool.ruff.lint.per-file-ignores]
-"tests/**/*.py" = ["D100", "D103"]
-"pyfixest/multcomp.py" = ["D103"]
-"pyfixest/summarize.py" = ["D103"]
-"pyfixest/visualize.py" = ["D103"]
-"scripts/*.py" = ["D103"]
-
-[tool.ruff.lint.pycodestyle]
-max-doc-length = 88
-
-[tool.ruff.lint.pydocstyle]
-convention = "numpy"
-
-[tool.ruff.format]
-docstring-code-format = true
-docstring-code-line-length = 88
-
-[tool.mypy]
-
-[[tool.mypy.overrides]]
-module = [
-  "pandas.*",
-  "numpy.*",
-  "scipy.*",
-  "numba.*",
-  "lets_plot.*",
-  "formulaic.*",
-  "wildboottest.*",
-  "tabulate.*",
-  "joblib.*",
-  "narwhals.*",
-  "tqdm.*",
-]
-ignore_missing_imports = true
-
-[tool.maturin]
-module-name = "pyfixest.core._core_impl"
-features = ["pyo3/extension-module"]
