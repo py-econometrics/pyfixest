@@ -636,7 +636,7 @@ class FixestMulti:
             Either '11', '31', '13', or '33'. Default is '11'.
         seed : Union[str, None], optional
             Option to provide a random seed. Default is None.
-        k_adj:bool, optional
+        k_adj: bool, optional
             Whether to adjust the original coefficients with the bootstrap distribution.
             Default is True.
         G_adj : bool, optional

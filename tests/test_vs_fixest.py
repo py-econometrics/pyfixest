@@ -1424,7 +1424,7 @@ def test_ssc(fml, dropna, weights, vcov, k_adj, G_adj, k_fixef, model):
         err_msg=f"df.t do not match for fml = {fml}, vcov = {vcov}, k_adj = {k_adj}, G_adj = {G_adj}, k_fixef = {k_fixef}",
     )
 
-    if False:
+    if True:
         # SEs identical:
         np.testing.assert_allclose(
             py_fit.se(),

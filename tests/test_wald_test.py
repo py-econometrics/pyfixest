@@ -91,7 +91,10 @@ def test_F_test_single_equation(R):
 
     # Compare with R
     r_fit = fixest.feols(
-        ro.Formula(fml), data=data, vcov=ro.Formula("~year"), ssc=fixest.ssc(False)
+        ro.Formula(fml),
+        data=data,
+        vcov=ro.Formula("~year"),
+        ssc=fixest.ssc(k_adj=False),
     )
 
     r_wald = car.linearHypothesis(r_fit, base.matrix(R, 1, 2), test="F")
@@ -141,7 +144,10 @@ def test_F_test_multiple_equation(seedn):
     p_value = fit._p_value
 
     r_fit = fixest.feols(
-        ro.Formula(fml), data=data, vcov=ro.Formula("~year"), ssc=fixest.ssc(False)
+        ro.Formula(fml),
+        data=data,
+        vcov=ro.Formula("~year"),
+        ssc=fixest.ssc(k_adj=False),
     )
 
     r_wald = car.linearHypothesis(r_fit, base.matrix(R, 3, 3), test="F")
@@ -203,7 +209,10 @@ def test_F_test_multiple_equations_pvalue(R, fml):
     f_stat = fit._f_statistic
 
     r_fit = fixest.feols(
-        ro.Formula(fml), data=data, vcov=ro.Formula("~year"), ssc=fixest.ssc(False)
+        ro.Formula(fml),
+        data=data,
+        vcov=ro.Formula("~year"),
+        ssc=fixest.ssc(k_adj=False),
     )
 
     r_wald = car.linearHypothesis(r_fit, base.matrix(R, Rsize1, Rsize2), test="F")
