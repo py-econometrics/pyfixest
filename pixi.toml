@@ -80,6 +80,7 @@ quartodoc =">=0.9.1,<0.10"
 rpy2 = "==3.5.11"
 r-base = "*"
 r-fixest = ">=0.13.2,<0.14"
+r-stringmagic=">=1.2.0"
 r-broom = ">=1.0.5,<2"
 quarto = ">=1.8.25,<2"
 
