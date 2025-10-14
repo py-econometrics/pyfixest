@@ -660,7 +660,7 @@ def test_split_fsplit_errors(data, split, fsplit, expected_exception, error_mess
         pf.feols("Y~X1", data=data, split=split, fsplit=fsplit)
 
 
-def test_infinite_coef_check_validations():
+def test_separation_check_validations():
     data = pd.DataFrame(
         {
             "Y": [1, 2, 3],
@@ -670,21 +670,21 @@ def test_infinite_coef_check_validations():
 
     with pytest.raises(
         ValueError,
-        match=r"The function argument `infinite_coef_check` must be a list of strings containing 'fe' and/or 'ir'\.",
+        match=r"The function argument `separation_check` must be a list of strings containing 'fe' and/or 'ir'\.",
     ):
-        pf.fepois("Y ~ X1", data=data, infinite_coef_check=["a"])
+        pf.fepois("Y ~ X1", data=data, separation_check=["a"])
 
     with pytest.raises(
         TypeError,
-        match=r"The function argument `infinite_coef_check` must be of type list\.",
+        match=r"The function argument `separation_check` must be of type list\.",
     ):
-        pf.fepois("Y ~ X1", data=data, infinite_coef_check="fe")
+        pf.fepois("Y ~ X1", data=data, separation_check="fe")
 
     with pytest.raises(
         ValueError,
-        match=r"The function argument `infinite_coef_check` must be a list of strings containing 'fe' and/or 'ir'\.",
+        match=r"The function argument `separation_check` must be a list of strings containing 'fe' and/or 'ir'\.",
     ):
-        pf.fepois("Y ~ X1", data=data, infinite_coef_check=["fe", "invalid"])
+        pf.fepois("Y ~ X1", data=data, separation_check=["fe", "invalid"])
 
 
 def test_gelbach_errors():
