@@ -1,3 +1,14 @@
+[workspace]
+authors = [
+    "Alexander Fischer <alexander-fischer1801@t-online.de>",
+    "Styfen Schär"
+    ]
+description = "Fast high dimensional fixed effect estimation following syntax of the fixest R package."
+channels = ["conda-forge"]
+name = "pyfixest"
+platforms = ["linux-64", "win-64", "osx-arm64", "osx-64"]
+version = "0.30.2"
+
 [tasks]
 
 
