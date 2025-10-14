@@ -86,7 +86,21 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["D100", "D103"]
- @@ -224,21 +72,5 @@ docstring-code-line-length = 88
+"pyfixest/multcomp.py" = ["D103"]
+"pyfixest/summarize.py" = ["D103"]
+"pyfixest/visualize.py" = ["D103"]
+"scripts/*.py" = ["D103"]
+
+[tool.ruff.lint.pycodestyle]
+max-doc-length = 88
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.ruff.format]
+docstring-code-format = true
+docstring-code-line-length = 88
+
 [tool.mypy]
 
 [[tool.mypy.overrides]]
@@ -103,5 +117,4 @@ module = [
   "narwhals.*",
   "tqdm.*",
 ]
-
 ignore_missing_imports = true
