@@ -213,7 +213,7 @@ pf.qplot(fit_qr, figsize = [7,3])
 
 ## PyFixest 0.29.0
 
-- We add options `fixef_k = "nonnested"` and `fixef_k = "full"` for computing small sample corrections via `pf.ssc()`. We set the defaults for `pf.feols()` and other estimation functions to `fixef_k = "nonnested"` to 100% mimic the defaults of `r-fixest`. This is a "breaking change" in the sense that it might (slightly) impact the standard errors of your estimations.
+- We add options `fixef_k = "nested"` and `fixef_k = "full"` for computing small sample corrections via `pf.ssc()`. We set the defaults for `pf.feols()` and other estimation functions to `fixef_k = "nested"` to 100% mimic the defaults of `r-fixest`. This is a "breaking change" in the sense that it might (slightly) impact the standard errors of your estimations.
 - We add support for fully saturated event study estimation via the `SaturatedEventStudy` class, which can be called via `pf.event_study()`.
 - We add support for difference-in-differences specification tests following Lal (2025).
 - We add R2-within values to the default `etable()` output.
