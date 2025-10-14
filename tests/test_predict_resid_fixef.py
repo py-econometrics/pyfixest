@@ -86,7 +86,7 @@ def test_vs_fixest(data, fml):
 
     data2 = data.copy()[1:500]
 
-    feols_mod.fixef(atol = 1e-12, btol = 1e-12)
+    feols_mod.fixef(atol=1e-12, btol=1e-12)
 
     # fepois_mod.fixef()
 
@@ -107,8 +107,8 @@ def test_vs_fixest(data, fml):
     if not np.allclose(feols_mod.coef().values, r_fixest_ols.rx2("coefficients")):
         raise ValueError("Coefficients are not equal")
 
-    if not (feols_mod._N == stats.nobs(r_fixest_ols)[0]): 
-        raise ValueError(f"The Number of Observations does not match.")
+    if not (stats.nobs(r_fixest_ols)[0] == feols_mod._N):
+        raise ValueError("The Number of Observations does not match.")
 
     # test Poisson fit
     if not np.allclose(fepois_mod.coef(), r_fixest_pois.rx2("coefficients")):
@@ -126,8 +126,10 @@ def test_vs_fixest(data, fml):
     #    raise ValueError("sumFE for Poisson are not equal")
 
     # test predict for OLS
-    if not np.allclose(feols_mod.predict()[0:5], r_fixest_ols.rx2("fitted.values")[0:5]):
-       raise ValueError("Predictions for OLS are not equal")
+    if not np.allclose(
+        feols_mod.predict()[0:5], r_fixest_ols.rx2("fitted.values")[0:5]
+    ):
+        raise ValueError("Predictions for OLS are not equal")
 
     if not np.allclose(len(feols_mod.predict()), len(stats.predict(r_fixest_ols))):
         raise ValueError("Predictions for OLS are not the same length")

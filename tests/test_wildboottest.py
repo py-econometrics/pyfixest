@@ -31,8 +31,8 @@ def test_crv1_equivalence(data, fml):
         fml, data=data, vcov={"CRV1": "group_id"}, ssc=ssc(k_adj=False, G_adj=False)
     )
     tstat = fixest.tstat().xs("X1")
-    boot_tstat = fixest.wildboottest(
-        param="X1", reps=999, k_adj=False, G_adj=False
-    )["t value"]
+    boot_tstat = fixest.wildboottest(param="X1", reps=999, k_adj=False, G_adj=False)[
+        "t value"
+    ]
 
     np.testing.assert_allclose(tstat, boot_tstat)

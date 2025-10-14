@@ -88,7 +88,6 @@ def ssc(
     dict
         A dictionary with encoded info on how to form small sample corrections
     """
-
     deprecated_mapping = {
         "adj": "k_adj",
         "fixef_k": "k_fixef",
@@ -114,15 +113,15 @@ def ssc(
                 G_adj = kwargs[old_name]
 
     if not isinstance(k_adj, bool):
-        raise ValueError("k_adj must be True or False.")
+        raise TypeError("k_adj must be True or False.")
     if k_fixef not in ["none", "full", "nonnested"]:
-        raise ValueError(
+        raise TypeError(
             f"k_fixef must be 'none', 'full', or 'nonnested' but it is {k_fixef}."
         )
     if not isinstance(G_adj, bool):
-        raise ValueError("G_adj must be True or False.")
+        raise TypeError("G_adj must be True or False.")
     if G_df not in ["conventional", "min"]:
-        raise ValueError("G_df must be 'conventional' or 'min'.")
+        raise TypeError("G_df must be 'conventional' or 'min'.")
 
     return {
         "k_adj": k_adj,

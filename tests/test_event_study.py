@@ -24,9 +24,7 @@ def test_event_study_twfe(data):
     )
 
     twfe_feols = pf.feols(
-        fml = "dep_var ~ treat | state + year", 
-        data=data, 
-        vcov = {"CRV1": "state"}
+        fml="dep_var ~ treat | state + year", data=data, vcov={"CRV1": "state"}
     )
 
     assert np.allclose(twfe.coef().values, twfe_feols.coef().values), (

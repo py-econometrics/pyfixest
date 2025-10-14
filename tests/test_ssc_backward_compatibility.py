@@ -1,9 +1,9 @@
 import numpy as np
 import pandas as pd
 import pytest
-import warnings
 
 import pyfixest as pf
+
 
 @pytest.fixture(scope="module")
 def data():
@@ -40,10 +40,18 @@ def test_ssc_backward_compatibility_feols(data, k_adj, k_fixef, G_adj, G_df):
     fit_new = pf.feols("Y ~ X1", data=data, vcov={"CRV1": "f1"}, ssc=ssc_new)
     fit_old = pf.feols("Y ~ X1", data=data, vcov={"CRV1": "f1"}, ssc=ssc_old)
 
-    np.testing.assert_allclose(fit_new.coef(), fit_old.coef(), rtol=0, atol=0, err_msg="coef differ")
-    np.testing.assert_allclose(fit_new.se(), fit_old.se(), rtol=0, atol=0, err_msg="se differ")
-    np.testing.assert_allclose(fit_new.pvalue(), fit_old.pvalue(), rtol=0, atol=0, err_msg="pvalues differ")
-    np.testing.assert_allclose(fit_new.tstat(), fit_old.tstat(), rtol=0, atol=0, err_msg="tstats differ")
+    np.testing.assert_allclose(
+        fit_new.coef(), fit_old.coef(), rtol=0, atol=0, err_msg="coef differ"
+    )
+    np.testing.assert_allclose(
+        fit_new.se(), fit_old.se(), rtol=0, atol=0, err_msg="se differ"
+    )
+    np.testing.assert_allclose(
+        fit_new.pvalue(), fit_old.pvalue(), rtol=0, atol=0, err_msg="pvalues differ"
+    )
+    np.testing.assert_allclose(
+        fit_new.tstat(), fit_old.tstat(), rtol=0, atol=0, err_msg="tstats differ"
+    )
 
     ci_new = fit_new.confint().values
     ci_old = fit_old.confint().values
@@ -51,6 +59,8 @@ def test_ssc_backward_compatibility_feols(data, k_adj, k_fixef, G_adj, G_df):
 
     assert fit_new._df_t == fit_old._df_t
     assert fit_new._df_k == fit_old._df_k
-    np.testing.assert_allclose(fit_new._vcov, fit_old._vcov, rtol=0, atol=0, err_msg="vcov differ")
+    np.testing.assert_allclose(
+        fit_new._vcov, fit_old._vcov, rtol=0, atol=0, err_msg="vcov differ"
+    )
 
     assert fit_new._ssc == fit_old._ssc
