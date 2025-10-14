@@ -111,10 +111,10 @@ pip = "*"
 maturin = ">=1.8.0"
 rust = "*"
 
-[tool.pixi.feature.lint.tasks]
+[feature.lint.tasks]
 pre-commit = "pre-commit run --all-files"
 
-[tool.pixi.feature.build.tasks]
+[feature.build.tasks]
 build-pip = 'python -m build .'
 maturin-develop = "maturin develop --release --strip"
 
@@ -125,12 +125,3 @@ lint = ["lint"]
 plots = ["plots"]
 jax = ["jax"]
 build = ["build"]
-
-[tool.pixi.environments]
-default = { solve-group = "default" }
-dev = { features = ["dev"], solve-group = "default" }
-build = { features = ["build"], solve-group = "default" }
-lint = { features = ["lint"], solve-group = "default" }
-docs = { features = ["docs"], solve-group = "default" }
-jax = { features = ["jax"], solve-group = "default" }
-plots = { features = ["plots"], solve-group = "default" }
