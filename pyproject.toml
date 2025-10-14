@@ -49,28 +49,59 @@ fix = true
 target-version = "py39"
 
 [tool.ruff.lint]
-select = ["B", "F", "E", "W", "I", "D", "UP", "SIM", "RUF", "TRY"]
-ignore = ["B028", "B904", "W191", "E111", "E114", "E117", "D206", "D300", "E501", "D105", "D100", "D104", "SIM110", "TRY003", "D205", "W505"]
+# docs: https://docs.astral.sh/ruff/rules/
+select = [
+  "B",   # bugbear
+  "F",   # Pyflakes
+  "E",   # pycodestyle errors
+  "W",   # pycodestyle warnings
+  "I",   # isort
+  "D",   # flake8-docstrings
+  "UP",  # pyupgrade
+  "SIM", # flake8-simplify
+  "RUF", # ruff,
+  "TRY", # tryceratops
+]
+
+ignore = [
+  # do not enable if formatting
+  # docs: https://docs.astral.sh/ruff/formatter/#conflicting-lint-rules
+  "B028",   # No explicit `stacklevel` keyword argument found
+  "B904",   # Better exception handling
+  "W191",   # tab indentation
+  "E111",   # indentation
+  "E114",   # indentation
+  "E117",   # over indented
+  "D206",   # indent with spaces
+  "D300",   # triple single quotes
+  "E501",   # line length regulated by formatter
+  "D105",   # missing docstring in magic method
+  "D100",   # missing docstring in public module
+  "D104",   # missing docstring in public package
+  "SIM110", # Use all instead of `for` loop
+  "TRY003", # Avoid specifying long messages outside the exception class
+  "D205",   # 1 blank line required between summary line and description
+  "W505",   # Doc line too long
+]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["D100", "D103"]
-"pyfixest/multcomp.py" = ["D103"]
-"pyfixest/summarize.py" = ["D103"]
-"pyfixest/visualize.py" = ["D103"]
-"scripts/*.py" = ["D103"]
-
-[tool.ruff.lint.pycodestyle]
-max-doc-length = 88
-
-[tool.ruff.lint.pydocstyle]
-convention = "numpy"
-
-[tool.ruff.format]
-docstring-code-format = true
-docstring-code-line-length = 88
-
+ @@ -224,21 +72,5 @@ docstring-code-line-length = 88
 [tool.mypy]
 
 [[tool.mypy.overrides]]
-module = ["pandas.*", "numpy.*", "scipy.*", "numba.*", "lets_plot.*", "formulaic.*", "wildboottest.*", "tabulate.*", "joblib.*", "narwhals.*", "tqdm.*"]
+module = [
+  "pandas.*",
+  "numpy.*",
+  "scipy.*",
+  "numba.*",
+  "lets_plot.*",
+  "formulaic.*",
+  "wildboottest.*",
+  "tabulate.*",
+  "joblib.*",
+  "narwhals.*",
+  "tqdm.*",
+]
+
 ignore_missing_imports = true
