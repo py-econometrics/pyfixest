@@ -2201,7 +2201,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/pyzmq-27.1.0-py312hfb55c3c_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/qhull-2020.2-h434a139_5.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/quarto-1.8.25-hbf95b10_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/quartodoc-0.9.1-pyhd8ed1ab_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/quartodoc-0.11.1-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/r-backports-1.5.0-r43hb1dbf0f_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/r-base-4.3.3-h65010dc_18.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/r-broom-1.0.8-r43hc72bb7e_0.conda
@@ -2605,7 +2605,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-64/pyzmq-27.1.0-py312hb7d603e_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/qhull-2020.2-h3c5361c_5.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/quarto-1.8.25-h046caca_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/quartodoc-0.9.1-pyhd8ed1ab_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/quartodoc-0.11.1-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/r-backports-1.5.0-r43h6b9d099_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/r-base-4.3.3-h9afdce2_18.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/r-broom-1.0.8-r43hc72bb7e_0.conda
@@ -3002,7 +3002,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/pyzmq-27.1.0-py312hd65ceae_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/qhull-2020.2-h420ef59_5.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/quarto-1.8.25-hb67532b_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/quartodoc-0.9.1-pyhd8ed1ab_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/quartodoc-0.11.1-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/r-backports-1.5.0-r43h07cda29_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/r-base-4.3.3-h07f0ef5_18.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/r-broom-1.0.8-r43hc72bb7e_0.conda
@@ -15839,9 +15839,9 @@ packages:
   purls: []
   size: 22985309
   timestamp: 1759247420455
-- conda: https://conda.anaconda.org/conda-forge/noarch/quartodoc-0.9.1-pyhd8ed1ab_1.conda
-  sha256: e37e3c0703141421377235871c8ea67c5af273d44c8994840f7b2376f0ba571b
-  md5: 4fd91f55e6fa12e6cd1c99557cf7a918
+- conda: https://conda.anaconda.org/conda-forge/noarch/quartodoc-0.11.1-pyhd8ed1ab_0.conda
+  sha256: 351371773b1ee713d1987bf105f567016273c6e9d368b3bebe74f7dc00c6df6c
+  md5: 08026bd0a9b1686920c91fb47368feb8
   depends:
   - black
   - click
@@ -15862,8 +15862,8 @@ packages:
   license_family: MIT
   purls:
   - pkg:pypi/quartodoc?source=hash-mapping
-  size: 69610
-  timestamp: 1736998689153
+  size: 72577
+  timestamp: 1749664077086
 - conda: https://conda.anaconda.org/conda-forge/noarch/r-abind-1.4_5-r43hc72bb7e_1006.conda
   sha256: c70b75fbc7f7b30937b6f3f2faeb036a9105b39a0bca025ca5bef915eb17ac29
   md5: 75d26096ffa98e1cde7b27b9530899a1
