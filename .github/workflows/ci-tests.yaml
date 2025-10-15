@@ -48,7 +48,7 @@ jobs:
 
       - name: Compile Rust extension (no wheel)
         run: |
-          pixi r maturin-develop
+          pixi r -e dev maturin-develop
 
       - name: Run 'regular' tests
         run: |
@@ -101,7 +101,7 @@ jobs:
 
       - name: Compile Rust extension (no wheel)
         run: |
-          pixi r maturin-develop
+          pixi r -e dev maturin-develop
 
       - name: Run tests against r
         run: |
@@ -152,6 +152,11 @@ jobs:
       - name: install tinytex
         run: |
           quarto install tinytex
+
+      - name: Compile Rust extension (no wheel)
+        run: |
+          pixi run -e docs maturin-develop
+
 
       - name: Compile docstrings with quartodoc
         run: |
