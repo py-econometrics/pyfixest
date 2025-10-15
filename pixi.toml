@@ -121,8 +121,8 @@ build-pip = 'python -m build .'
 maturin-develop = "maturin develop --release --strip"
 
 [environments]
-dev = ["dev", "build"]  
-docs = ["docs", "build"]  
+dev = ["dev", "build"]
+docs = ["docs", "build"]
 lint = ["lint"]
 plots = ["plots"]
 jax = ["jax"]
