@@ -33,13 +33,14 @@ def ssc(
             calculating k in (N-1) / (N-k).
         G_adj : bool, default True
             If True, a cluster correction G/(G-1) is performed, with G the number
-            of clusters.
+            of clusters. This argument is only relevant for clustered errors.
         G_df : str, default "conventional"
             Controls how "G" is computed for multiway clustering if G_adj = True.
             Note that the covariance matrix in the multiway clustering case is of
             the form V = V_1 + V_2 - V_12. If "conventional", then each summand G_i
             is multiplied with a small sample adjustment G_i / (G_i - 1). If "min",
-            all summands are multiplied with the same value, min(G) / (min(G) - 1)
+            all summands are multiplied with the same value, min(G) / (min(G) - 1). 
+            This argument is only relevant for clustered errors.
 
     Details
     -------
@@ -214,10 +215,10 @@ def get_ssc(
         raise ValueError("k_fixef is neither none, nonnested, nor full.")
 
     if k_adj:
-        adj_value = (N - 1) / (N - df_k)
+        adj_value = (N - 1) / (N - df_k) if vcov_type != "hetero" else N / (N - k)
 
     # G_adj applied with G = N for hetero but not for iid
-    if vcov_type in ["hetero", "CRV"] and G_adj:
+    if vcov_type in ["CRV"] and G_adj:
         if G_df == "conventional":
             G_adj_value = G / (G - 1)
         elif G_df == "min":

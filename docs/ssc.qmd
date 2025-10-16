@@ -23,7 +23,7 @@ vcov_k_adj = adj_val(N, df_k) if k_adj else 1
 Where:
 
 - **`k_adj`**: Enables or disables the first scalar adjustment.
-- **`G_adj`**: Enables or disables the second scalar adjustment.
+- **`G_adj`**: Enables or disables the second scalar adjustment. This argument is only relevant / applied to clustered errors.
 - **`vcov`**: The unadjusted variance-covariance matrix.
 - **`df_k`**: The number of estimated parameters considered in the first adjustment. Impacts `adj_val`.
 - **`k_fixef`**: Determines how `df_k` is computed (how fixed effects are counted).
@@ -46,6 +46,8 @@ If `k_adj = True`, the adjustment factor is:
 `adj_val = (N - 1) / (N - df_k)`
 
 If `k_adj = False`, no adjustment is applied.
+
+Note that for `k_adj = True` and heteroskedastic errors, the applied correction is `N / (N-k)`.
 
 ---
 
@@ -89,6 +91,8 @@ where `k_fe_nested` is the count of nested fixed effects. For cluster fixed effe
 ---
 
 ## `G_adj`
+
+This argument is only relevant for clustered errors.
 
 If `G_adj = True`, we apply a second correction:
 

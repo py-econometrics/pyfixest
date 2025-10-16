@@ -1337,7 +1337,7 @@ def test_ssc(fml, dropna, weights, vcov, k_adj, G_adj, k_fixef, model):
     df = (
         pf.get_data(model="Feols")
         if model == "feols"
-        else pf.get_data(model="Fepois", N=1000)
+        else pf.get_data(model="Fepois")
     )
     df = df.dropna() if dropna else df
 
