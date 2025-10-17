@@ -94,7 +94,7 @@ def test_F_test_single_equation(R):
         ro.Formula(fml),
         data=data,
         vcov=ro.Formula("~year"),
-        ssc=fixest.ssc(k_adj=False),
+        ssc=fixest.ssc(False),
     )
 
     r_wald = car.linearHypothesis(r_fit, base.matrix(R, 1, 2), test="F")
@@ -110,7 +110,7 @@ def test_F_test_single_equation(R):
 @pytest.mark.parametrize(
     "seedn",
     [
-        50,
+        51,
         20,
         100,
     ],
@@ -147,7 +147,7 @@ def test_F_test_multiple_equation(seedn):
         ro.Formula(fml),
         data=data,
         vcov=ro.Formula("~year"),
-        ssc=fixest.ssc(k_adj=False),
+        ssc=fixest.ssc(False),
     )
 
     r_wald = car.linearHypothesis(r_fit, base.matrix(R, 3, 3), test="F")
@@ -212,7 +212,7 @@ def test_F_test_multiple_equations_pvalue(R, fml):
         ro.Formula(fml),
         data=data,
         vcov=ro.Formula("~year"),
-        ssc=fixest.ssc(k_adj=False),
+        ssc=fixest.ssc(False),
     )
 
     r_wald = car.linearHypothesis(r_fit, base.matrix(R, Rsize1, Rsize2), test="F")

@@ -215,7 +215,7 @@ def get_ssc(
         raise ValueError("k_fixef is neither none, nonnested, nor full.")
 
     if k_adj:
-        adj_value = (N - 1) / (N - df_k) if vcov_type != "hetero" else N / (N - k)
+        adj_value = (N - 1) / (N - df_k) if vcov_type != "hetero" else N / (N - df_k)
 
     # G_adj applied with G = N for hetero but not for iid
     if vcov_type in ["CRV"] and G_adj:
