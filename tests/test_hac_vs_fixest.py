@@ -162,9 +162,9 @@ def test_single_fit_feols_hac_panel(
     fml,
     balanced,
 ):
-    adj = False
-    cluster_adj = False
-    ssc_ = ssc(adj=adj, cluster_adj=cluster_adj)
+    k_adj = False
+    G_adj = False
+    ssc_ = ssc(k_adj=k_adj, G_adj=G_adj)
 
     lag = vcov_kwargs.get("lag", None)
     time_id = vcov_kwargs.get("time_id", None)
@@ -217,10 +217,9 @@ def test_single_fit_feols_hac_panel(
         ro.Formula(fml),
         vcov= fixest.vcov_NW(**r_panel_kwars) if inference == "NW" else fixest.vcov_DK(**r_panel_kwars),
         data=data,
-        ssc=fixest.ssc(adj, "nested", cluster_adj, "min", "min", False),
-        **({"weights": ro.Formula(f"~{weights}")} if weights is not None else {}),
-        # use once fixest 0.13 is released and we can support non-consecutive time
-        # **({"panel_time_step": panel_time_step} if panel_time_step is not None else {})
+        ssc=fixest.ssc(k_adj, "nested", False, G_adj, "min" , "min"),
+        **({"weights": ro.Formula(f"~{weights}")} if weights is not None else {})
+
     )
 
     mod = pf.feols(
