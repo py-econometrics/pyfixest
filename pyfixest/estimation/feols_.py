@@ -322,7 +322,7 @@ class Feols:
         self._demean_func = impl["demean"]
         self._find_collinear_variables_func = impl["collinear"]
         self._crv1_meat_func = impl["crv1_meat"]
-        self._cound_nested_fixef_func = impl["nested"]
+        self._cound_nested_fixef_func = impl["nonnested"]
 
         # set in get_fit()
         self._tZX = np.array([])
@@ -648,7 +648,7 @@ class Feols:
             }
 
             all_kwargs = {**ssc_kwargs, **ssc_kwargs_iid}
-            self._ssc, self._dof_k, self._df_t = get_ssc(**all_kwargs)
+            self._ssc, self._df_k, self._df_t = get_ssc(**all_kwargs)
 
             self._vcov = self._ssc * self._vcov_iid()
 
@@ -665,7 +665,7 @@ class Feols:
             }
 
             all_kwargs = {**ssc_kwargs, **ssc_kwargs_hetero}
-            self._ssc, self._dof_k, self._df_t = get_ssc(**all_kwargs)
+            self._ssc, self._df_k, self._df_t = get_ssc(**all_kwargs)
             self._vcov = self._ssc * self._vcov_hetero()
 
         elif self._vcov_type == "nid":
@@ -678,7 +678,7 @@ class Feols:
             }
 
             all_kwargs = {**ssc_kwargs, **ssc_kwargs_hetero}
-            self._ssc, self._dof_k, self._df_t = get_ssc(**all_kwargs)
+            self._ssc, self._df_k, self._df_t = get_ssc(**all_kwargs)
             self._vcov = self._ssc * self._vcov_nid()
 
         elif self._vcov_type == "CRV":
@@ -718,7 +718,7 @@ class Feols:
 
             k_fe_nested = 0
             n_fe_fully_nested = 0
-            if self._has_fixef and self._ssc_dict["fixef_k"] == "nested":
+            if self._has_fixef and self._ssc_dict["k_fixef"] == "nonnested":
                 k_fe_nested_flag, n_fe_fully_nested = self._cound_nested_fixef_func(
                     all_fixef_array=np.array(
                         self._fixef.replace("^", "_").split("+"), dtype=str
@@ -749,10 +749,10 @@ class Feols:
                 }
 
                 all_kwargs = {**ssc_kwargs, **ssc_kwargs_crv}
-                ssc, dof_k, df_t = get_ssc(**all_kwargs)
+                ssc, df_k, df_t = get_ssc(**all_kwargs)
 
                 self._ssc = np.array([ssc]) if x == 0 else np.append(self._ssc, ssc)
-                self._dof_k = dof_k  # the same across all vcov's
+                self._df_k = df_k  # the same across all vcov's
 
                 # update. take min(df_t) ad the end of loop
                 df_t_full[x] = df_t
@@ -1114,7 +1114,7 @@ class Feols:
         import pyfixest as pf
 
         data = pf.get_data()
-        fit = pf.feols("Y ~ X1 + X2| f1", data, vcov={"CRV1": "f1"}, ssc=pf.ssc(adj=False))
+        fit = pf.feols("Y ~ X1 + X2| f1", data, vcov={"CRV1": "f1"}, ssc=pf.ssc(k_adj=False))
 
         R = np.array([[1,-1]] )
         q = np.array([0.0])
@@ -1206,8 +1206,8 @@ class Feols:
         impose_null: Optional[bool] = True,
         bootstrap_type: Optional[str] = "11",
         seed: Optional[int] = None,
-        adj: Optional[bool] = True,
-        cluster_adj: Optional[bool] = True,
+        k_adj: Optional[bool] = True,
+        G_adj: Optional[bool] = True,
         parallel: Optional[bool] = False,
         return_bootstrapped_t_stats=False,
     ):
@@ -1237,10 +1237,10 @@ class Feols:
             Options are '11', '31', '13', or '33'. Defaults to '11'.
         seed : Union[int, None], optional
             An option to provide a random seed. Defaults to None.
-        adj : bool, optional
+        k_adj : bool, optional
             Indicates whether to apply a small sample adjustment for the number
             of observations and covariates. Defaults to True.
-        cluster_adj : bool, optional
+        G_adj : bool, optional
             Indicates whether to apply a small sample adjustment for the number
             of clusters. Defaults to True.
         parallel : bool, optional
@@ -1388,8 +1388,8 @@ class Feols:
             boot.get_scores(
                 bootstrap_type=bootstrap_type,
                 impose_null=impose_null,
-                adj=adj,
-                cluster_adj=cluster_adj,
+                adj=k_adj,
+                cluster_adj=G_adj,
             )
             _, _, full_enumeration_warn = boot.get_weights(weights_type=weights_type)
             boot.get_numer()
@@ -2668,41 +2668,6 @@ def _feols_input_checks(Y: np.ndarray, X: np.ndarray, weights: np.ndarray):
         raise ValueError("X must be a 2D array")
     if weights.ndim != 2:
         raise ValueError("weights must be a 2D array")
-
-
-def _get_vcov_type(vcov: str, fval: str):
-    """
-    Get variance-covariance matrix type.
-
-    Passes the specified vcov type and sets the default vcov type based on the
-    inclusion of fixed effects in the model.
-
-    Parameters
-    ----------
-    vcov : str
-        The specified vcov type.
-    fval : str
-        The specified fixed effects, formatted as a string (e.g., "X1+X2").
-
-    Returns
-    -------
-    vcov_type : str
-        The specified or default vcov type. Defaults to 'iid' if no fixed effect
-        is included in the model, and 'CRV1' clustered by the first fixed effect
-        if a fixed effect is included.
-    """
-    if vcov is None:
-        # iid if no fixed effects
-        if fval == "0":
-            vcov_type = "iid"
-        else:
-            # CRV1 inference, clustered by first fixed effect
-            first_fe = fval.split("+")[0]
-            vcov_type = {"CRV1": first_fe}
-    else:
-        vcov_type = vcov
-
-    return vcov_type
 
 
 def _drop_multicollinear_variables(

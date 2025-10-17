@@ -39,3 +39,6 @@ target
 .idea/
 coverage.xml
 .DS_Store
+# pixi environments
+.pixi/*
+!.pixi/config.toml

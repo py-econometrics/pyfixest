@@ -30,18 +30,18 @@ BACKENDS = {
         "demean": demean_nb,
         "collinear": find_collinear_variables_nb,
         "crv1_meat": crv1_meat_loop_nb,
-        "nested": count_fixef_fully_nested_all_nb,
+        "nonnested": count_fixef_fully_nested_all_nb,
     },
     "rust": {
         "demean": demean,
         "collinear": find_collinear_variables,
         "crv1_meat": crv1_meat_loop,
-        "nested": count_fixef_fully_nested_all,
+        "nonnested": count_fixef_fully_nested_all,
     },
     "jax": {
         "demean": demean_jax_fn,
         "collinear": find_collinear_variables_jax,
         "crv1_meat": crv1_meat_loop_jax,
-        "nested": count_fixef_fully_nested_all_jax,
+        "nonnested": count_fixef_fully_nested_all_jax,
     },
 }
