@@ -621,8 +621,8 @@ class FixestMulti:
         impose_null: bool = True,
         bootstrap_type: str = "11",
         seed: Optional[int] = None,
-        adj: bool = True,
-        cluster_adj: bool = True,
+        k_adj: bool = True,
+        G_adj: bool = True,
     ) -> pd.DataFrame:
         """
         Run a wild cluster bootstrap for all regressions in the Fixest object.
@@ -650,10 +650,10 @@ class FixestMulti:
             Either '11', '31', '13', or '33'. Default is '11'.
         seed : Union[str, None], optional
             Option to provide a random seed. Default is None.
-        adj:bool, optional
+        k_adj: bool, optional
             Whether to adjust the original coefficients with the bootstrap distribution.
             Default is True.
-        cluster_adj : bool, optional
+        G_adj : bool, optional
             Whether to adjust standard errors for clustering in the bootstrap.
             Default is True.
 
@@ -675,8 +675,8 @@ class FixestMulti:
                 impose_null,
                 bootstrap_type,
                 seed,
-                adj,
-                cluster_adj,
+                k_adj,
+                G_adj,
             )
 
             pvalue = boot_res["Pr(>|t|)"]
@@ -729,8 +729,8 @@ def _drop_singletons(fixef_rm: str) -> bool:
     """
     Drop singleton fixed effects.
 
-    Checks if the fixef_rm argument is set to "singleton". If so, returns True,
-    else False.
+    Checks if the fixef_rm argument is set to "singleton".
+    If so, returns True,else False.
 
     Parameters
     ----------
@@ -742,4 +742,4 @@ def _drop_singletons(fixef_rm: str) -> bool:
     bool
         drop_singletons (bool) : Whether to drop singletons.
     """
-    return fixef_rm == "singleton"
+    return fixef_rm in ["singleton"]

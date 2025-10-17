@@ -11,7 +11,47 @@ fit2 = pf.feols("Y ~ X1 + X2", data = df)
 fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 ```
 
-## PyFixest 0.31.0 (In Dev, Install from Github)
+## PyFixest 0.40.0 (In Dev, Install from Github)
+
+### Breaking Changes for compatibility with `fixest` 0.13
+
+`fixest` 0.13 has recently been released to CRAN, with a range of breaking changes. We are following these in pyfixet 0.40.0.
+
+- The default inference method is now always "iid". Before, both `fixest` and `pyfixest` would default to cluster by the first fixest effect
+  in the presence of fixed effect.
+- The arguments of the `pf.ssc()` functions have been renamed: `adj` becomes `k_adj`, `fixef_k` becomes `k_fixef`, `cluster_df` becomes `G_df`, and `cluster_adj` becomes `G_adj`.
+  Backwards compatibility is ensured.
+- `fixest` no longer applies the `G/(G-1)` small sample correction for heteroskedastic errors. The argument is now only relevant for cluster robust errors.
+- If the `k_adj` arg is set to `True` with heteroskedastic errors, the applied small sample correction now is `N / (N-k)` and no longer `(N-1) / (N-df_k)`, 
+  as was previously the case and is still the case for iid and cluster robust errors.
+- The `k_fixef` option `"nested"` has been renamed to `"nonnested"`.
+- The `fixef_rm` argument is changed from default `"none"` to `"singleton"` for all estimation functions. This has no impact on point estimates, but might change inference due to a smaller number of
+  observations in the degree of freedom correction.
+- The multicollinearity default tolerance has been reduced from 1e-10 to 1e-09.
+- The attribute `_dof_k` has been renamed to `_df_k`.
+
+Other related changes:
+- The arguments to adjust the small samples for the `wildboottest` methods have been renamed to `k_adj` and `G_adj`.
+
+### Moved to `pixi.toml` and install from conda-forge
+
+We have been using pixi as our package manager for a while and are moving from a `pyproject.toml` to using a `pixi.toml` for specifying dependencies.
+We also install all package by default from the free and open source conda-forge. Because of some environment resolution challenges around an old version of
+`rpy2`that we need for testing `pyfixest` against `fixest`, we temporarily have dropped support for the dev and docs environments for windows. A fix is
+work in progress.
+
+### `cat_template` argument for plotting functions
+
+For easier encoding of categorical variables in relation to the `iplot()` and `coefplot()` functions, we add a new function argument, cat_template:
+
+```{python}
+fit_c = pf.feols(fml = "Y ~ i(X1, f1)", data = df)
+fit_c.iplot(cat_template = "{variable}::{value}")
+```
+
+This is particularly useful for Difference-in-Differences and event studies. You can find an example use case in the DiD [vignette](https://py-econometrics.github.io/pyfixest/difference-in-differences.html#one-shot-adoption-static-and-dynamic-specifications).
+
+Going forward, we will deprecate the `rename_event_study_coefs` function, which is no longer needed (and did not work anyways).
 
 ### Updates to Gelbach Decomposition
 
@@ -50,6 +90,8 @@ gb.etable(
 ```
 
 As can be seen, we by default now return normalized (and not just absolute) effects.
+
+We are now also supporting frequency weights for the decomposition (currently without inference).
 
 Additionally, some house keeping and interal refactoring of the `GelbachDecomposition` class.
 

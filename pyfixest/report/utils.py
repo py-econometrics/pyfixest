@@ -1,5 +1,12 @@
 import re
+import warnings
 from typing import Optional
+
+
+def _check_label_keys_in_covars(label_keys: list[str], covariate_names: list[str]):
+    for label_key in label_keys:
+        if label_key not in covariate_names:
+            warnings.warn(f"The label key '{label_key}' is not in the covariate names.")
 
 
 def _relabel_expvar(
@@ -28,20 +35,12 @@ def _relabel_expvar(
     str
         The relabeled variable
     """
-    # First split the variable name by the interaction symbol
-    # Note: will just be equal to varname when no interaction term
-    vars = varname.split(":")
-    # Loop over the variables and relabel them
-    for i in range(len(vars)):
-        # Check whether template for categorical variables is provided &
-        # whether the variable is a categorical variable
-        v = vars[i]
-        if cat_template != "" and ("C(" in v or "[" in v):
-            vars[i] = _rename_categorical(v, template=cat_template, labels=labels)
-        else:
-            vars[i] = labels.get(v, v)
-    # Finally join the variables using the interaction symbol
-    return interaction_symbol.join(vars)
+    if not labels and cat_template != "" and ("C(" in varname or "[" in varname):
+        v = _rename_categorical(varname, template=cat_template, labels=labels)
+    else:
+        v = labels.get(varname, varname)
+
+    return v.replace(interaction_symbol, ":")
 
 
 def _rename_categorical(

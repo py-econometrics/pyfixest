@@ -82,44 +82,54 @@ To help with development, we've included several handy pixi tasks.
 
 For example, we use `ruff` and `pre-commit` to ensure code consistency across the project.
 
-To install the required hooks, simply run
+To run (and install) all pre-commit hooks, you can run
 
 ```{.bash .code-copy}
-pixi run lint
-```
-
-and you're ready to go! After installation, the task will run all linting rules via `ruff`.
-
-To run type checks via `mypy`, you can run
-
-```{.bash .code-copy}
-pixi run mypy
+pixi run -e lint pre-commit 
 ```
 
 We’ve included other tasks to help with testing. Almost all the necessary dependencies to run tests are included in the dev environment,
 except for R packages unavailable through conda-forge.
+
+In a first step, we need to compile the provided Rust code, which we can do by running 
+
+```{.bash .code-copy}
+pixi run -e dev maturin-develop
+```
+
+Note that you do not require a global Rust installation - we install Rust via conda!
+
+We can then run all dev tasks: 
+
 ```{.bash .code-copy}
 # attempt to install non-conda R dependencies
 pixi run install-r-extended
 # run all tests via pytest
-pixi run tests
+pixi run -e dev tests
 # run all tests excluding very computationally demanding tests or R-based tests
-pixi run tests-regular
-# run all tests that depend on the extra R dependencies
-pixi run tests-against-r-extended
+pixi run -e dev tests-regular
+# run all -e dev tests that depend on the extra R dependencies
 # rerun failed tests
-pixi run tests-rerun
+pixi run -e dev tests-against-r-extended
+pixi run -e dev tests-rerun
 ```
 
-Building the documentation is also straightforward. We’ve got tasks to build, render, and preview the docs:
+Building the documentation is also straightforward. We’ve got tasks to build, render, and preview the docs. As before, 
+we first need to compile the Rust extensions, this time in the docs env, by running 
+
+```{.bash .code-copy}
+pixi run -e docs maturin-develop
+```
+
+Then we can build the documentation with quartodoc. 
 
 ```{.bash .code-copy}
 # Build documentation and website
-pixi run docs-build
+pixi run -e docs docs-build
 # render the docs
-pixi run docs-render
+pixi run -e docs docs-render
 # preview the docs
-pixi run docs-preview
+pixi run -e docs docs-preview
 ```
 
 Keep in mind that you’ll need quarto installed to build the documentation locally.

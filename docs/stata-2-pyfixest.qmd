@@ -193,7 +193,7 @@ robust standard errors, while Stata only uses one of them. You can turn off the
 correction that Stata doesn't use with the `ssc` argument.
 
 ```{python}
-fit5 = pf.feols("Y ~ X1 + X2", data=df, vcov="HC3", ssc=pf.ssc(adj = False))
+fit5 = pf.feols("Y ~ X1 + X2", data=df, vcov="HC3", ssc=pf.ssc(k_adj = False))
 fit5.summary()
 ```
 
@@ -281,7 +281,7 @@ fit8 = pf.feols(
   "Y ~ X1 + X2",
   df.dropna(subset=['f1', 'f2']),
   vcov={"CRV1": "f1 + f2"},
-  ssc=pf.ssc(cluster_df="conventional")
+  ssc=pf.ssc(G_df="conventional")
 )
 fit8.summary()
 ```
@@ -358,15 +358,19 @@ reghdfe Y X1 X2, absorb(f1)
 * -----------------------------------------------------+
 ```
 
-Note: You need to specify `vcov="iid`.  This is because the default for `fixest` is to
-cluster standard errors based on the first fixed effect.  So
+To use cluster robust standard errors, specify the `vcov` argument:
 
 ```{python}
+# Standard iid inference
 fit10 = pf.feols("Y ~ X1 + X2 | f1", data=df)
 fit10.summary()
+
+# Cluster robust standard errors
+fit10_clustered = pf.feols("Y ~ X1 + X2 | f1", data=df, vcov={"CRV1": "f1"})
+fit10_clustered.summary()
 ```
 
-is equivalent to
+The clustered version `fit10_clustered` is equivalent to
 
 ```stata
 xtset f1
@@ -470,6 +474,5 @@ reghdfe Y X1 X2, absorb(f1 f2) cluster(f1)
 * * = FE nested within cluster; treated as redundant for DoF computation
 ```
 
-Note: By default `pyfixest` will still cluster standard errors just by the first group
-specified.  You can change this using the `vcov` argument.  See the `fit8` example above
-for how to specify two way clustering.
+Note: To cluster standard errors by a specific group, use the `vcov` argument.
+See the `fit8` example above for how to specify two way clustering.

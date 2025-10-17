@@ -27,10 +27,10 @@ def feols(
     vcov_kwargs: Optional[dict[str, Union[str, int]]] = None,
     weights: Union[None, str] = None,
     ssc: Optional[dict[str, Union[str, bool]]] = None,
-    fixef_rm: FixedRmOptions = "none",
+    fixef_rm: FixedRmOptions = "singleton",
     fixef_tol=1e-08,
     fixef_maxiter: int = 100_000,
-    collin_tol: float = 1e-10,
+    collin_tol: float = 1e-09,
     drop_intercept: bool = False,
     copy_data: bool = True,
     store_data: bool = True,
@@ -84,7 +84,10 @@ def feols(
 
     fixef_rm : FixedRmOptions
         Specifies whether to drop singleton fixed effects.
-        Options: "none" (default), "singleton".
+        Can be equal to "singleton" (default),
+        or "none".
+        "singletons" will drop singleton fixed effects. This will not impact point
+        estimates but it will impact standard errors.
 
     collin_tol : float, optional
         Tolerance for collinearity check, by default 1e-10.
@@ -212,10 +215,10 @@ def feols(
     `fit.tstat()` for the t-statistics, and `fit.pval()` for the p-values, and
     `fit.confint()` for the confidence intervals.
 
-    The employed type of inference can be specified via the `vcov` argument. If
-    vcov is not provided, `PyFixest` employs the `fixest` default of iid inference,
-    unless there are fixed effects in the model, in which case `feols()` clusters
-    the standard error by the first fixed effect (CRV1 inference).
+    The employed type of inference can be specified via the `vcov` argument. For compatibility
+    with `fixest`, if vcov is not provided, `PyFixest` always employs "iid" inference by default
+    starting with pyfixest 0.31.0. Prior to pyfixest 0.31.0, if vcov was not provided, `PyFixest`
+    would cluster by the first fixed effect if no vcov was provided.
 
     ```{python}
     fit1 = pf.feols("Y ~ X1 + X2 | f1 + f2", data, vcov="iid")
@@ -519,12 +522,12 @@ def fepois(
     vcov: Optional[Union[VcovTypeOptions, dict[str, str]]] = None,
     vcov_kwargs: Optional[dict[str, Union[str, int]]] = None,
     ssc: Optional[dict[str, Union[str, bool]]] = None,
-    fixef_rm: FixedRmOptions = "none",
+    fixef_rm: FixedRmOptions = "singleton",
     fixef_tol: float = 1e-08,
     fixef_maxiter: int = 100_000,
     iwls_tol: float = 1e-08,
     iwls_maxiter: int = 25,
-    collin_tol: float = 1e-10,
+    collin_tol: float = 1e-09,
     separation_check: Optional[list[str]] = None,
     solver: SolverOptions = "scipy.linalg.solve",
     demeaner_backend: DemeanerBackendOptions = "numba",
@@ -575,7 +578,9 @@ def fepois(
 
     fixef_rm : FixedRmOptions
         Specifies whether to drop singleton fixed effects.
-        Options: "none" (default), "singleton".
+        Can be equal to "singletons" (default) or "none".
+        "singletons" will drop singleton fixed effects. This will not impact point
+        estimates but it will impact standard errors.
 
     fixef_tol: float, optional
         Tolerance for the fixed effects demeaning algorithm. Defaults to 1e-08.
@@ -757,12 +762,12 @@ def feglm(
     vcov: Optional[Union[VcovTypeOptions, dict[str, str]]] = None,
     vcov_kwargs: Optional[dict[str, Union[str, int]]] = None,
     ssc: Optional[dict[str, Union[str, bool]]] = None,
-    fixef_rm: FixedRmOptions = "none",
+    fixef_rm: FixedRmOptions = "singleton",
     fixef_tol: float = 1e-08,
     fixef_maxiter: int = 100_000,
     iwls_tol: float = 1e-08,
     iwls_maxiter: int = 25,
-    collin_tol: float = 1e-10,
+    collin_tol: float = 1e-09,
     separation_check: Optional[list[str]] = None,
     solver: SolverOptions = "scipy.linalg.solve",
     drop_intercept: bool = False,
@@ -816,7 +821,10 @@ def feglm(
 
     fixef_rm : FixedRmOptions
         Specifies whether to drop singleton fixed effects.
-        Options: "none" (default), "singleton".
+        Can be equal to "singleton" (default),
+        or "none".
+        "singletons" will drop singleton fixed effects. This will not impact point
+        estimates but it will impact standard errors.
 
     fixef_tol: float, optional
         Tolerance for the fixed effects demeaning algorithm. Defaults to 1e-08.
@@ -1031,7 +1039,7 @@ def quantreg(
     tol: float = 1e-06,
     maxiter: Optional[int] = None,
     ssc: Optional[dict[str, Union[str, bool]]] = None,
-    collin_tol: float = 1e-10,
+    collin_tol: float = 1e-09,
     separation_check: Optional[list[str]] = None,
     drop_intercept: bool = False,
     copy_data: bool = True,
@@ -1299,7 +1307,7 @@ def _estimation_input_checks(
         raise TypeError("collin_tol must be a float")
 
     if fixef_rm not in ["none", "singleton"]:
-        raise ValueError("fixef_rm must be either 'none' or 'singleton'")
+        raise ValueError("fixef_rm must be either 'none' or 'singleton'.")
     if collin_tol <= 0:
         raise ValueError("collin_tol must be greater than zero")
     if collin_tol >= 1:
