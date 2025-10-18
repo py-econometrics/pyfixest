@@ -883,6 +883,8 @@ def test_errors_quantreg(data):
 def test_errors_vcov_kwargs():
     """Test all error conditions for vcov_kwargs in _estimation_input_checks."""
     data = pf.get_data()
+    data["time_id"] = data["X2"]
+    data["panel_id"] = data["f1"]
 
     # Error 1: Invalid keys in vcov_kwargs
     with pytest.raises(
