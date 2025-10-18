@@ -889,7 +889,7 @@ def test_errors_vcov_kwargs():
     # Error 1: Invalid keys in vcov_kwargs
     with pytest.raises(
         ValueError,
-        match="must be a dictionary with keys 'lag', 'time_id', or 'panel_id'",
+        match=r"must be a dictionary with keys 'lag', 'time_id', or 'panel_id'",
     ):
         pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs={"invalid_key": 5})
 
@@ -903,7 +903,7 @@ def test_errors_vcov_kwargs():
     # Error 3: Mix of valid and invalid keys
     with pytest.raises(
         ValueError,
-        match="must be a dictionary with keys 'lag', 'time_id', or 'panel_id'",
+        match=r"must be a dictionary with keys 'lag', 'time_id', or 'panel_id'",
     ):
         pf.feols(
             "Y ~ X1",
@@ -944,7 +944,7 @@ def test_errors_vcov_kwargs():
 
     # Error 9: time_id column does not exist in data
     with pytest.raises(
-        ValueError, match="The variable 'nonexistent_column' is not in the data."
+        ValueError, match=r"The variable 'nonexistent_column' is not in the data\."
     ):
         pf.feols(
             "Y ~ X1",
@@ -961,7 +961,7 @@ def test_errors_vcov_kwargs():
 
     # Error 11: panel_id value is not a string (list)
     with pytest.raises(
-        ValueError, match="must be a dictionary with string values for 'panel_id'"
+        ValueError, match=r'must be a dictionary with string values for "panel_id".'
     ):
         pf.feols(
             "Y ~ X1", data=data, vcov="NW", vcov_kwargs={"panel_id": ["col1", "col2"]}
@@ -969,7 +969,7 @@ def test_errors_vcov_kwargs():
 
     # Error 12: panel_id column does not exist in data
     with pytest.raises(
-        ValueError, match="The variable 'missing_panel_column' is not in the data."
+        ValueError, match=r"The variable 'missing_panel_column' is not in the data\."
     ):
         pf.feols(
             "Y ~ X1",
@@ -995,7 +995,9 @@ def test_errors_hac():
     )
 
     # Error 3: time_id is not provided if vcov is NW or DK
-    with pytest.raises(ValueError, match="Missing required 'time_id' for NW/DK vcov"):
+    with pytest.raises(
+        ValueError, match=r"Missing required 'time_id' for NW/DK vcov\."
+    ):
         pf.feols(
             "Y ~ X1",
             data=data,
@@ -1006,7 +1008,7 @@ def test_errors_hac():
     # Error 4: lag is not provided if vcov is NW or DK
     with pytest.raises(
         ValueError,
-        match="We have not yet implemented the default Newey-West HAC lag. Please provide a lag value via the `vcov_kwargs`.",
+        match=r"We have not yet implemented the default Newey-West HAC lag. Please provide a lag value via the `vcov_kwargs`\.",
     ):
         pf.feols(
             "Y ~ X1",
@@ -1017,7 +1019,7 @@ def test_errors_hac():
 
     # Error 5: time_id column does not exist in data
     with pytest.raises(
-        ValueError, match="The variable 'nonexistent_column' is not in the data."
+        ValueError, match=r"The variable 'nonexistent_column' is not in the data\."
     ):
         pf.feols(
             "Y ~ X1",
@@ -1032,7 +1034,7 @@ def test_errors_hac():
 
     # Error 6: panel_id column does not exist in data
     with pytest.raises(
-        ValueError, match="The variable 'nonexistent_column' is not in the data."
+        ValueError, match=r"The variable 'nonexistent_column' is not in the data\."
     ):
         pf.feols(
             "Y ~ X1",
@@ -1046,7 +1048,7 @@ def test_errors_hac():
     data["time2"][0] = data["time2"][1]
     with pytest.raises(
         ValueError,
-        match="There are duplicate time periods in the data. This is not supported for HAC SEs.",
+        match=r"There are duplicate time periods in the data. This is not supported for HAC SEs\.",
     ):
         pf.feols(
             "Y ~ X1",
@@ -1061,7 +1063,7 @@ def test_errors_hac():
     for vcov in ["NW", "DK"]:
         with pytest.raises(
             ValueError,
-            match="There are duplicate time periods for the same panel id. This is not supported for HAC SEs.",
+            match=r"There are duplicate time periods for the same panel id. This is not supported for HAC SEs\.",
         ):
             pf.feols(
                 "Y ~ X1",
@@ -1070,9 +1072,12 @@ def test_errors_hac():
                 vcov_kwargs={"time_id": "time3", "panel_id": "panel", "lag": 5},
             )
 
-def test_errors_hac_inference():
 
+def test_errors_hac_inference():
     data = pf.get_data()
     data["Y"] = np.where(data["Y"] > 0, 1, 0)
-    with pytest.raises(NotImplementedError, match="HAC inference is not supported for this model type."):
+    with pytest.raises(
+        NotImplementedError,
+        match=r"HAC inference is not supported for this model type\.",
+    ):
         pf.quantreg("Y ~ X1", data=data, vcov="NW")
