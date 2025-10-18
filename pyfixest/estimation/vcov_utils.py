@@ -118,8 +118,8 @@ def _hac_meat_loop(
         gamma_buffer.fill(0.0)
         weight = weights[lag_value]
 
-        scores_current = scores[lag_value:time_periods] 
-        scores_lagged = scores[:time_periods-lag_value]  
+        scores_current = scores[lag_value:time_periods]
+        scores_lagged = scores[: time_periods - lag_value]
 
         gamma_buffer[:, :] = scores_current.T @ scores_lagged
         meat += weight * (gamma_buffer + gamma_buffer.T)
@@ -191,7 +191,6 @@ def _get_panel_idx(
     return order, units, starts, counts, panel_arr_sorted, time_arr_sorted
 
 
-
 @nb.njit(parallel=False)
 def _nw_meat_panel(
     scores: np.ndarray,
@@ -241,7 +240,7 @@ def _nw_meat_panel(
         gamma0 = np.zeros((k, k))
         for t in range(start, end):
             score_t = scores[t, :]
-            gamma0 += np.outer(score_t, score_t) 
+            gamma0 += np.outer(score_t, score_t)
 
         gamma_l_sum.fill(0.0)
         Lmax = min(lag, count - 1)

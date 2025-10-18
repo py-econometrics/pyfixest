@@ -85,13 +85,13 @@ For example, we use `ruff` and `pre-commit` to ensure code consistency across th
 To run (and install) all pre-commit hooks, you can run
 
 ```{.bash .code-copy}
-pixi run -e lint pre-commit 
+pixi run -e lint pre-commit
 ```
 
 We’ve included other tasks to help with testing. Almost all the necessary dependencies to run tests are included in the dev environment,
 except for R packages unavailable through conda-forge.
 
-In a first step, we need to compile the provided Rust code, which we can do by running 
+In a first step, we need to compile the provided Rust code, which we can do by running
 
 ```{.bash .code-copy}
 pixi run -e dev maturin-develop
@@ -99,7 +99,7 @@ pixi run -e dev maturin-develop
 
 Note that you do not require a global Rust installation - we install Rust via conda!
 
-We can then run all dev tasks: 
+We can then run all dev tasks:
 
 ```{.bash .code-copy}
 # attempt to install non-conda R dependencies
@@ -114,14 +114,14 @@ pixi run -e dev tests-against-r-extended
 pixi run -e dev tests-rerun
 ```
 
-Building the documentation is also straightforward. We’ve got tasks to build, render, and preview the docs. As before, 
-we first need to compile the Rust extensions, this time in the docs env, by running 
+Building the documentation is also straightforward. We’ve got tasks to build, render, and preview the docs. As before,
+we first need to compile the Rust extensions, this time in the docs env, by running
 
 ```{.bash .code-copy}
 pixi run -e docs maturin-develop
 ```
 
-Then we can build the documentation with quartodoc. 
+Then we can build the documentation with quartodoc.
 
 ```{.bash .code-copy}
 # Build documentation and website

@@ -39,7 +39,7 @@ def ssc(
             Note that the covariance matrix in the multiway clustering case is of
             the form V = V_1 + V_2 - V_12. If "conventional", then each summand G_i
             is multiplied with a small sample adjustment G_i / (G_i - 1). If "min",
-            all summands are multiplied with the same value, min(G) / (min(G) - 1). 
+            all summands are multiplied with the same value, min(G) / (min(G) - 1).
             This argument is only relevant for clustered errors.
 
     Details
@@ -422,6 +422,7 @@ def capture_context(context: Union[int, Mapping[str, Any]]) -> Mapping[str, Any]
     """
     return _capture_context(context + 2) if isinstance(context, int) else context
 
+
 def _check_balanced(panel_arr: np.ndarray, time_arr: np.ndarray) -> bool:
     """
     Check if the panel data is balanced.
@@ -448,5 +449,5 @@ def _check_balanced(panel_arr: np.ndarray, time_arr: np.ndarray) -> bool:
 
         if len(panel_times) != expected_time_count:
             return False
-    
+
     return True
