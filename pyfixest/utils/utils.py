@@ -39,7 +39,7 @@ def ssc(
             Note that the covariance matrix in the multiway clustering case is of
             the form V = V_1 + V_2 - V_12. If "conventional", then each summand G_i
             is multiplied with a small sample adjustment G_i / (G_i - 1). If "min",
-            all summands are multiplied with the same value, min(G) / (min(G) - 1). 
+            all summands are multiplied with the same value, min(G) / (min(G) - 1).
             This argument is only relevant for clustered errors.
 
     Details
@@ -169,7 +169,7 @@ def get_ssc(
     vcov_sign : array-like
         A vector that helps create the covariance matrix.
     vcov_type : str
-        The type of covariance matrix. Must be one of "iid", "hetero", or "CRV".
+        The type of covariance matrix. Must be one of "iid", "hetero", "HAC", or "CRV".
 
     Returns
     -------
@@ -421,3 +421,33 @@ def capture_context(context: Union[int, Mapping[str, Any]]) -> Mapping[str, Any]
         procedure like: `.get_model_matrix(..., context=<this object>)`.
     """
     return _capture_context(context + 2) if isinstance(context, int) else context
+
+
+def _check_balanced(panel_arr: np.ndarray, time_arr: np.ndarray) -> bool:
+    """
+    Check if the panel data is balanced.
+
+    Parameters
+    ----------
+    panel_arr: np.ndarray
+        The panel variable for clustering.
+    time_arr: np.ndarray
+        The time variable for clustering.
+
+    Returns
+    -------
+    bool
+        True if the panel data is balanced, False otherwise.
+    """
+    unique_panels = np.unique(panel_arr)
+    unique_times = np.unique(time_arr)
+    expected_time_count = len(unique_times)
+
+    for panel_id in unique_panels:
+        mask = panel_arr == panel_id
+        panel_times = np.unique(time_arr[mask])
+
+        if len(panel_times) != expected_time_count:
+            return False
+
+    return True

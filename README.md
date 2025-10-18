@@ -45,7 +45,7 @@ You can also leave a message through the donation form - your support and encour
 -   Probit, Logit and Gaussian Family **GLMs** (currently without fixed effects demeaning, this is WIP)
 -   **Quantile Regression** using an Interior Point Solver
 -   Multiple Estimation Syntax
--   Several **Robust** and **Cluster Robust Variance-Covariance** Estimators
+-   Several **Robust**, **Cluster Robust** and **HAC Variance-Covariance** Estimators
 -   **Wild Cluster Bootstrap** Inference (via
     [wildboottest](https://github.com/py-econometrics/wildboottest))
 -   **Difference-in-Differences** Estimators:

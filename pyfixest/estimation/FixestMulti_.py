@@ -152,6 +152,7 @@ class FixestMulti:
         estimation: str,
         fml: str,
         vcov: Union[None, str, dict[str, str]] = None,
+        vcov_kwargs: Optional[dict[str, Any]] = None,
         weights: Union[None, str] = None,
         ssc: Optional[dict[str, Union[str, bool]]] = None,
         fixef_rm: str = "none",
@@ -177,6 +178,9 @@ class FixestMulti:
             A string or dictionary specifying the type of variance-covariance
             matrix to use for inference.
             See `feols()` or `fepois()`.
+        vcov_kwargs : dict[str, Any], optional
+            Additional keyword arguments for the variance-covariance matrix.
+             See `feols()` or `fepois()`.
         weights : Union[None, np.ndarray], optional
             An array of weights.
             Either None or a 1D array of length N. Default is None.
@@ -240,6 +244,7 @@ class FixestMulti:
         self,
         vcov: Union[str, dict[str, str], None],
         solver: SolverOptions,
+        vcov_kwargs: Optional[dict[str, Any]] = None,
         demeaner_backend: DemeanerBackendOptions = "numba",
         collin_tol: float = 1e-6,
         iwls_maxiter: int = 25,
@@ -254,9 +259,11 @@ class FixestMulti:
         vcov : Union[str, dict[str, str]]
             A string or dictionary specifying the type of variance-covariance
             matrix to use for inference.
-            - If a string, can be one of "iid", "hetero", "HC1", "HC2", "HC3".
+            - If a string, can be one of "iid", "hetero", "HC1", "HC2", "HC3", "NW", "DK".
             - If a dictionary, it should have the format {"CRV1": "clustervar"}
             for CRV1 inference or {"CRV3": "clustervar"} for CRV3 inference.
+         vcov_kwargs : Optional[dict[str, Any]], optional
+             Additional keyword arguments for the variance-covariance matrix. Defaults to None.
         solver: SolverOptions
             Solver to use for the estimation.
         demeaner_backend: DemeanerBackendOptions, optional
@@ -434,6 +441,7 @@ class FixestMulti:
                         vcov_type = _get_vcov_type(vcov, fval)
                         FIT.vcov(
                             vcov=vcov_type,
+                            vcov_kwargs=vcov_kwargs,
                             data=FIT._data
                             if not isinstance(FIT, QuantregMulti)
                             else FIT.all_quantregs[FIT.quantiles[0]]._data,
@@ -467,7 +475,11 @@ class FixestMulti:
         """
         return list(self.all_fitted_models.values())
 
-    def vcov(self, vcov: Union[str, dict[str, str]]):
+    def vcov(
+        self,
+        vcov: Union[str, dict[str, str]],
+        vcov_kwargs: Optional[dict[str, Union[str, int]]] = None,
+    ):
         """
         Update regression inference "on the fly".
 
@@ -483,6 +495,8 @@ class FixestMulti:
             - If a string, can be one of "iid", "hetero", "HC1", "HC2", "HC3".
             - If a dictionary, it should have the format {"CRV1": "clustervar"}
             for CRV1 inference or {"CRV3": "clustervar"} for CRV3 inference.
+        vcov_kwargs : Optional[dict[str, any]]
+             Additional keyword arguments for the variance-covariance matrix.
 
         Returns
         -------
@@ -492,7 +506,7 @@ class FixestMulti:
             fxst = self.all_fitted_models[model]
             _data = fxst._data
 
-            _check_vcov_input(vcov, _data)
+            _check_vcov_input(vcov=vcov, vcov_kwargs=vcov_kwargs, data=_data)
             (
                 fxst._vcov_type,
                 fxst._vcov_type_detail,
@@ -500,7 +514,7 @@ class FixestMulti:
                 _,
             ) = _deparse_vcov_input(vcov, False, False)
 
-            fxst.vcov(vcov=vcov)
+            fxst.vcov(vcov=vcov, vcov_kwargs=vcov_kwargs)
             fxst.get_inference()
 
         return self

@@ -85,6 +85,7 @@ class Quantreg(Feols):
         self._supports_wildboottest = False
         self._support_crv3_inference = False
         self._supports_cluster_causal_variance = False
+        self._support_hac_inference = False
 
         self._quantile = quantile
         self._method = f"quantreg_{method}"

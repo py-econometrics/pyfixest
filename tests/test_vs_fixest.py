@@ -1334,11 +1334,7 @@ ssc_fmls = [
 @pytest.mark.parametrize("k_fixef", ["full", "none", "nonnested"])
 @pytest.mark.parametrize("model", ["feols", "fepois"])
 def test_ssc(fml, dropna, weights, vcov, k_adj, G_adj, k_fixef, model):
-    df = (
-        pf.get_data(model="Feols")
-        if model == "feols"
-        else pf.get_data(model="Fepois")
-    )
+    df = pf.get_data(model="Feols") if model == "feols" else pf.get_data(model="Fepois")
     df = df.dropna() if dropna else df
 
     if not dropna and vcov in ["f1", "f2", "f1+f2"] and vcov not in fml:
