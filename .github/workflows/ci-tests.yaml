@@ -16,7 +16,7 @@ jobs:
       fail-fast: false
       matrix:
         os: ["ubuntu-latest"]
-        python-version: ["3.9", "3.12"]
+        python-version: ["3.9", "3.14"]
         pytest_opts: ["--workers 4 --tests-per-worker 1"]
     steps:
       - name: Checkout source
@@ -69,7 +69,7 @@ jobs:
       fail-fast: false
       matrix:
         os: ["ubuntu-latest"]
-        python-version: ["3.9", "3.12"]
+        python-version: ["3.9", "3.14"]
         pytest_opts: ["--workers 4 --tests-per-worker 1"]
     steps:
       - name: Checkout source
