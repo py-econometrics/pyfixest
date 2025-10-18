@@ -218,7 +218,7 @@ def get_ssc(
         adj_value = (N - 1) / (N - df_k) if vcov_type != "hetero" else N / (N - df_k)
 
     # G_adj applied with G = N for hetero but not for iid
-    if vcov_type in ["CRV"] and G_adj:
+    if vcov_type in ["CRV", "HAC-TS", "HAC-P"] and G_adj:
         if G_df == "conventional":
             G_adj_value = G / (G - 1)
         elif G_df == "min":
@@ -227,8 +227,7 @@ def get_ssc(
         else:
             raise ValueError("G_df is neither conventional nor min.")
 
-    df_t = N - df_k if vcov_type in ["iid", "hetero"] else G - 1
-
+    df_t = N - df_k if vcov_type in ["iid", "hetero", "HAC-TS"] else G - 1
     return np.array([adj_value * G_adj_value * vcov_sign]), df_k, df_t
 
 

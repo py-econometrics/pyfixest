@@ -327,7 +327,7 @@ class Feols:
         self._demean_func = impl["demean"]
         self._find_collinear_variables_func = impl["collinear"]
         self._crv1_meat_func = impl["crv1_meat"]
-        self._cound_nested_fixef_func = impl["nonnested"]
+        self._count_nested_fixef_func = impl["nonnested"]
 
         # set in get_fit()
         self._tZX = np.array([])
@@ -690,16 +690,45 @@ class Feols:
             self._vcov = self._ssc * self._vcov_hetero()
 
         elif self._vcov_type == "HAC":
+
+            k_fe_nested = 0
+            n_fe_fully_nested = 0
+            vcov_type_for_ssc = "HAC-TS"
+            G_for_ssc = self._N
+
+            if self._panel_id is not None:
+
+                vcov_type_for_ssc = "HAC-P"
+                G_for_ssc = np.unique(self._data[self._time_id]).shape[0]
+                k_fe_nested = 0
+                n_fe_fully_nested = 0
+                if self._has_fixef and self._ssc_dict["k_fixef"] == "nonnested":
+                    k_fe_nested_flag, n_fe_fully_nested = self._count_nested_fixef_func(
+                        all_fixef_array=np.array(
+                            self._fixef.replace("^", "_").split("+"), dtype=str
+                        ),
+                        cluster_colnames=np.array(self._time_id, dtype=str),
+                        cluster_data=self._data[self._time_id].to_numpy().astype(np.uintp),
+                        fe_data=self._fe.to_numpy().astype(np.uintp)
+                        if isinstance(self._fe, pd.DataFrame)
+                        else self._fe.astype(np.uintp),
+                    )
+
+                    k_fe_nested = (
+                        np.sum(self._k_fe[k_fe_nested_flag]) if n_fe_fully_nested > 0 else 0
+                    )
+            
+
             ssc_kwargs_hac = {
-                "k_fe_nested": 0,
-                "n_fe_fully_nested": 0,
+                "k_fe_nested": k_fe_nested,
+                "n_fe_fully_nested": n_fe_fully_nested,
                 "vcov_sign": 1,
-                "vcov_type": "HAC",
-                "G": self._N,
+                "vcov_type": vcov_type_for_ssc,
+                "G": G_for_ssc ,
             }
 
             all_kwargs = {**ssc_kwargs, **ssc_kwargs_hac}
-            self._ssc, self._dof_k, self._df_t = get_ssc(**all_kwargs)
+            self._ssc, self._df_k, self._df_t = get_ssc(**all_kwargs)
 
             self._vcov = self._ssc * self._vcov_hac()
 
@@ -754,7 +783,7 @@ class Feols:
             k_fe_nested = 0
             n_fe_fully_nested = 0
             if self._has_fixef and self._ssc_dict["k_fixef"] == "nonnested":
-                k_fe_nested_flag, n_fe_fully_nested = self._cound_nested_fixef_func(
+                k_fe_nested_flag, n_fe_fully_nested = self._count_nested_fixef_func(
                     all_fixef_array=np.array(
                         self._fixef.replace("^", "_").split("+"), dtype=str
                     ),

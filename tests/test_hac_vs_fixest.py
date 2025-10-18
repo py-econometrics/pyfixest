@@ -261,7 +261,19 @@ BACKEND_F3 = [
     ],
 )
 @pytest.mark.parametrize("fml", ols_fmls)
-
+@pytest.mark.parametrize("k_adj", [
+    True, 
+    False
+])
+@pytest.mark.parametrize("G_adj", [
+   True, 
+   False
+])
+@pytest.mark.parametrize("k_fixef", [
+    "none", 
+    "nonnested", 
+    "full"
+])
 def test_single_fit_feols_hac_panel(
     data_panel,
     data_time,
@@ -270,10 +282,10 @@ def test_single_fit_feols_hac_panel(
     weights,
     fml,
     balanced,
+    k_adj, 
+    G_adj,
+    k_fixef,
 ):
-    k_adj = False
-    G_adj = False
-    ssc_ = ssc(k_adj=k_adj, G_adj=G_adj)
 
     lag = vcov_kwargs.get("lag", None)
     time_id = vcov_kwargs.get("time_id", None)
@@ -297,9 +309,9 @@ def test_single_fit_feols_hac_panel(
         ro.Formula(fml),
         vcov= fixest.vcov_NW(**r_panel_kwars) if inference == "NW" else fixest.vcov_DK(**r_panel_kwars),
         data=data,
-        ssc=fixest.ssc(k_adj, "nested", False, G_adj, "min" , "min"),
         **({"weights": ro.Formula(f"~{weights}")} if weights is not None else {}), 
-        panel_time_step = 1
+        panel_time_step = 1, 
+        ssc = fixest.ssc(k_adj, k_fixef, False, G_adj, "min" , "min"),
 
     )
 
@@ -309,7 +321,7 @@ def test_single_fit_feols_hac_panel(
         vcov=inference,
         vcov_kwargs=vcov_kwargs,
         weights=weights,
-        ssc=ssc_,
+        ssc=pf.ssc(k_adj =k_adj, k_fixef=k_fixef, G_adj=G_adj),
     )
 
     # r_fixest to global r env, needed for
@@ -318,6 +330,12 @@ def test_single_fit_feols_hac_panel(
 
     py_vcov = mod._vcov[0, 0]
     r_vcov = stats.vcov(r_fixest)[0, 0]
+
+    if np.abs(py_vcov - r_vcov) > 1e-05:
+        print("G adj time:", 1 / (len(np.unique(mod._data[mod._time_id])) / (len(np.unique(mod._data[mod._time_id])) - 1)))
+        print("G adj panel:", 1 / (len(np.unique(mod._data[mod._panel_id])) / (len(np.unique(mod._data[mod._panel_id])) - 1)))
+
+        print("vcov_ratio:", py_vcov / r_vcov)
 
     check_absolute_diff(py_vcov, r_vcov, 1e-05, "py_vcov != r_vcov")
 
@@ -346,7 +364,7 @@ def test_single_fit_feols_hac_panel(
         "balanced-consecutive",
         #"balanced-non-consecutive",
         #"non-balanced-consecutive",
-       # "non-balanced-non-consecutive",
+        #"non-balanced-non-consecutive",
     ],
 )
 @pytest.mark.parametrize("fml", poisson_fmls)
