@@ -22,7 +22,7 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 - The arguments of the `pf.ssc()` functions have been renamed: `adj` becomes `k_adj`, `fixef_k` becomes `k_fixef`, `cluster_df` becomes `G_df`, and `cluster_adj` becomes `G_adj`.
   Backwards compatibility is ensured.
 - `fixest` no longer applies the `G/(G-1)` small sample correction for heteroskedastic errors. The argument is now only relevant for cluster robust errors.
-- If the `k_adj` arg is set to `True` with heteroskedastic errors, the applied small sample correction now is `N / (N-k)` and no longer `(N-1) / (N-df_k)`, 
+- If the `k_adj` arg is set to `True` with heteroskedastic errors, the applied small sample correction now is `N / (N-k)` and no longer `(N-1) / (N-df_k)`,
   as was previously the case and is still the case for iid and cluster robust errors.
 - The `k_fixef` option `"nested"` has been renamed to `"nonnested"`.
 - The `fixef_rm` argument is changed from default `"none"` to `"singleton"` for all estimation functions. This has no impact on point estimates, but might change inference due to a smaller number of
@@ -40,18 +40,18 @@ We also install all package by default from the free and open source conda-forge
 `rpy2`that we need for testing `pyfixest` against `fixest`, we temporarily have dropped support for the dev and docs environments for windows. A fix is
 work in progress.
 
-## New Features 
+## New Features
 
-### HAC Standard Errors 
+### HAC Standard Errors
 
 We now support HAC standard errors! Thanks for Daman (https://github.com/damandhaliwal) for all his work (and coping with me with the PR, which took forever to get through).
 We now support:
 
 - time series HAC
 - panel HAC
-- panel DK  
+- panel DK
 
-variance-covariance matrices. 
+variance-covariance matrices.
 
 For now, we assume that the time series column is consecutive and each entry has "time delta 1". Relaxation of this requirement are work in progress.
 

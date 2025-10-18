@@ -690,14 +690,12 @@ class Feols:
             self._vcov = self._ssc * self._vcov_hetero()
 
         elif self._vcov_type == "HAC":
-
             k_fe_nested = 0
             n_fe_fully_nested = 0
             vcov_type_for_ssc = "HAC-TS"
             G_for_ssc = self._N
 
             if self._panel_id is not None:
-
                 vcov_type_for_ssc = "HAC-P"
                 G_for_ssc = np.unique(self._data[self._time_id]).shape[0]
                 k_fe_nested = 0
@@ -708,23 +706,26 @@ class Feols:
                             self._fixef.replace("^", "_").split("+"), dtype=str
                         ),
                         cluster_colnames=np.array(self._time_id, dtype=str),
-                        cluster_data=self._data[self._time_id].to_numpy().astype(np.uintp),
+                        cluster_data=self._data[self._time_id]
+                        .to_numpy()
+                        .astype(np.uintp),
                         fe_data=self._fe.to_numpy().astype(np.uintp)
                         if isinstance(self._fe, pd.DataFrame)
                         else self._fe.astype(np.uintp),
                     )
 
                     k_fe_nested = (
-                        np.sum(self._k_fe[k_fe_nested_flag]) if n_fe_fully_nested > 0 else 0
+                        np.sum(self._k_fe[k_fe_nested_flag])
+                        if n_fe_fully_nested > 0
+                        else 0
                     )
-            
 
             ssc_kwargs_hac = {
                 "k_fe_nested": k_fe_nested,
                 "n_fe_fully_nested": n_fe_fully_nested,
                 "vcov_sign": 1,
                 "vcov_type": vcov_type_for_ssc,
-                "G": G_for_ssc ,
+                "G": G_for_ssc,
             }
 
             all_kwargs = {**ssc_kwargs, **ssc_kwargs_hac}
@@ -911,15 +912,15 @@ class Feols:
 
         # some data checks on input pandas df
         # time needs to be numeric or date else we cannot sort by time
-        if not np.issubdtype(_data[_time_id], np.number) and not np.issubdtype(_data[_time_id], np.datetime64):
+        if not np.issubdtype(_data[_time_id], np.number) and not np.issubdtype(
+            _data[_time_id], np.datetime64
+        ):
             raise ValueError(
                 "The time variable must be numeric or date, else we cannot sort by time."
             )
-    
+
         _time_arr = _data[_time_id].to_numpy()
         _panel_arr = _data[_panel_id].to_numpy() if _panel_id is not None else None
-
- 
 
         if _vcov_type_detail == "NW":
             # Newey-West

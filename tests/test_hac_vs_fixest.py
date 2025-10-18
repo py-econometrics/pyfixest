@@ -40,6 +40,7 @@ glm_fmls = [
     ("Y_binary~treat + unit"),
 ]
 
+
 @pytest.fixture(scope="module")
 def data_panel(N=1000, T=30, seed=421):
     rng = np.random.default_rng(seed)
@@ -52,7 +53,7 @@ def data_panel(N=1000, T=30, seed=421):
     ever_treated = np.isin(units, treated_units).astype(int)
     alpha = rng.normal(0, 1, N)
     gamma = np.random.normal(0, 0.5, T)
-    
+
     # Generate AR(1) errors within each unit (rho=0.8 for strong autocorrelation)
     epsilon = np.empty(N * T)
     rho = 0.5
@@ -68,12 +69,18 @@ def data_panel(N=1000, T=30, seed=421):
         for t in range(1, T):
             errors[t] = rho * errors[t - 1] + innovations[t]
         epsilon[start_idx:end_idx] = errors
-    
+
     Y = alpha[units] + gamma[time] + treat + epsilon
-    
+
     # Add count variable for Poisson models
     # Ensure it's positive by exponentiating a scaled version
-    Y_count = np.exp(0.5 + 0.1 * alpha[units] + 0.05 * gamma[time] + 0.1 * treat + rng.normal(0, 0.3, N * T))
+    Y_count = np.exp(
+        0.5
+        + 0.1 * alpha[units]
+        + 0.05 * gamma[time]
+        + 0.1 * treat
+        + rng.normal(0, 0.3, N * T)
+    )
     Y_count = np.maximum(Y_count, 0.1).astype(int)  # Ensure positive integers
     Y_binary = (Y_count > 0).astype(int)
     weights = rng.uniform(0, 1, N * T)
@@ -103,7 +110,7 @@ def data_time():
             "weights": rng.uniform(0, 1, N),
         }
     )
-    
+
     # Generate AR(1) errors with rho=0.8 for strong autocorrelation
     rho = 0.8
     innovations = rng.normal(0, 1, N)
@@ -111,12 +118,22 @@ def data_time():
     epsilon[0] = innovations[0]
     for t in range(1, N):
         epsilon[t] = rho * epsilon[t - 1] + innovations[t]
-    
+
     data["Y"] = data["unit"] - data["year"] + 0.5 * data["treat"] + epsilon
     # Add count variable for Poisson models
-    data["Y_count"] = np.maximum(np.exp(0.5 + 0.05 * data["unit"] - 0.01 * data["year"] + 0.1 * data["treat"] + rng.normal(0, 0.3, N)), 0.1).astype(int)
+    data["Y_count"] = np.maximum(
+        np.exp(
+            0.5
+            + 0.05 * data["unit"]
+            - 0.01 * data["year"]
+            + 0.1 * data["treat"]
+            + rng.normal(0, 0.3, N)
+        ),
+        0.1,
+    ).astype(int)
     data["Y_binary"] = (data["Y_count"] > 0).astype(int)
     return data
+
 
 def check_absolute_diff(x1, x2, tol, msg=None):
     "Check for absolute differences."
@@ -149,7 +166,7 @@ def check_relative_diff(x1, x2, tol, msg=None):
 
 def _prepare_balanced_data(data, panel_id, balanced):
     """Prepare data by applying balancing/non-balancing modifications.
-    
+
     Parameters
     ----------
     data : pd.DataFrame
@@ -159,7 +176,7 @@ def _prepare_balanced_data(data, panel_id, balanced):
     balanced : str
         Type of balancing: "balanced-consecutive", "balanced-non-consecutive",
         "non-balanced-consecutive", or "non-balanced-non-consecutive".
-    
+
     Returns
     -------
     pd.DataFrame
@@ -167,10 +184,10 @@ def _prepare_balanced_data(data, panel_id, balanced):
     """
     if panel_id is None:
         return data
-    
+
     first_25 = np.unique(data["unit"])[:25]
     cc = data.groupby("unit").cumcount()
-    
+
     if balanced == "balanced-non-consecutive":
         # drop an interior row (e.g., the 2nd observation, cc==1) for EVERY unit
         # => all units lose exactly one row (balanced), and there is a gap (non-consecutive)
@@ -185,13 +202,13 @@ def _prepare_balanced_data(data, panel_id, balanced):
         # => those units have a gap (non-consecutive) and fewer rows (non-balanced)
         mask = ~(data["unit"].isin(first_25) & (cc == 2))
         data = data[mask].reset_index(drop=True)
-    
+
     return data
 
 
 def _get_r_panel_kwargs(time_id, panel_id, lag, inference):
     """Construct R panel kwargs for vcov_NW or vcov_DK.
-    
+
     Parameters
     ----------
     time_id : str or None
@@ -202,7 +219,7 @@ def _get_r_panel_kwargs(time_id, panel_id, lag, inference):
         The lag value for HAC.
     inference : str
         Type of inference: "NW" or "DK".
-    
+
     Returns
     -------
     dict
@@ -227,11 +244,7 @@ BACKEND_F3 = [
 
 
 @pytest.mark.against_r_core
-@pytest.mark.parametrize(
-    "inference", [
-    "NW",
-    "DK"
-])
+@pytest.mark.parametrize("inference", ["NW", "DK"])
 @pytest.mark.parametrize(
     "vcov_kwargs",
     [
@@ -255,25 +268,12 @@ BACKEND_F3 = [
 )
 @pytest.mark.parametrize(
     "weights",
-    [
-        None,
-        "weights"
-    ],
+    [None, "weights"],
 )
 @pytest.mark.parametrize("fml", ols_fmls)
-@pytest.mark.parametrize("k_adj", [
-    True, 
-    False
-])
-@pytest.mark.parametrize("G_adj", [
-   True, 
-   False
-])
-@pytest.mark.parametrize("k_fixef", [
-    "none", 
-    "nonnested", 
-    "full"
-])
+@pytest.mark.parametrize("k_adj", [True, False])
+@pytest.mark.parametrize("G_adj", [True, False])
+@pytest.mark.parametrize("k_fixef", ["none", "nonnested", "full"])
 def test_single_fit_feols_hac_panel(
     data_panel,
     data_time,
@@ -282,21 +282,22 @@ def test_single_fit_feols_hac_panel(
     weights,
     fml,
     balanced,
-    k_adj, 
+    k_adj,
     G_adj,
     k_fixef,
 ):
-
     lag = vcov_kwargs.get("lag", None)
     time_id = vcov_kwargs.get("time_id", None)
     panel_id = vcov_kwargs.get("panel_id", None)
     data = data_panel if panel_id is not None else data_time
-    
+
     if panel_id is None and balanced != "balanced-consecutive":
         pytest.skip("Don't test for non-balancedness when no panel data.")
 
     if panel_id is None and inference == "DK":
-        pytest.skip("Don't test for DK when no panel data, as ill-defined / collapes back to TS HAC.")
+        pytest.skip(
+            "Don't test for DK when no panel data, as ill-defined / collapes back to TS HAC."
+        )
 
     data = _prepare_balanced_data(data, panel_id, balanced)
 
@@ -307,12 +308,13 @@ def test_single_fit_feols_hac_panel(
 
     r_fixest = fixest.feols(
         ro.Formula(fml),
-        vcov= fixest.vcov_NW(**r_panel_kwars) if inference == "NW" else fixest.vcov_DK(**r_panel_kwars),
+        vcov=fixest.vcov_NW(**r_panel_kwars)
+        if inference == "NW"
+        else fixest.vcov_DK(**r_panel_kwars),
         data=data,
-        **({"weights": ro.Formula(f"~{weights}")} if weights is not None else {}), 
-        panel_time_step = 1, 
-        ssc = fixest.ssc(k_adj, k_fixef, False, G_adj, "min" , "min"),
-
+        **({"weights": ro.Formula(f"~{weights}")} if weights is not None else {}),
+        panel_time_step=1,
+        ssc=fixest.ssc(k_adj, k_fixef, False, G_adj, "min", "min"),
     )
 
     mod = pf.feols(
@@ -321,7 +323,7 @@ def test_single_fit_feols_hac_panel(
         vcov=inference,
         vcov_kwargs=vcov_kwargs,
         weights=weights,
-        ssc=pf.ssc(k_adj =k_adj, k_fixef=k_fixef, G_adj=G_adj),
+        ssc=pf.ssc(k_adj=k_adj, k_fixef=k_fixef, G_adj=G_adj),
     )
 
     # r_fixest to global r env, needed for
@@ -332,8 +334,22 @@ def test_single_fit_feols_hac_panel(
     r_vcov = stats.vcov(r_fixest)[0, 0]
 
     if np.abs(py_vcov - r_vcov) > 1e-05:
-        print("G adj time:", 1 / (len(np.unique(mod._data[mod._time_id])) / (len(np.unique(mod._data[mod._time_id])) - 1)))
-        print("G adj panel:", 1 / (len(np.unique(mod._data[mod._panel_id])) / (len(np.unique(mod._data[mod._panel_id])) - 1)))
+        print(
+            "G adj time:",
+            1
+            / (
+                len(np.unique(mod._data[mod._time_id]))
+                / (len(np.unique(mod._data[mod._time_id])) - 1)
+            ),
+        )
+        print(
+            "G adj panel:",
+            1
+            / (
+                len(np.unique(mod._data[mod._panel_id]))
+                / (len(np.unique(mod._data[mod._panel_id])) - 1)
+            ),
+        )
 
         print("vcov_ratio:", py_vcov / r_vcov)
 
@@ -341,11 +357,7 @@ def test_single_fit_feols_hac_panel(
 
 
 @pytest.mark.against_r_core
-@pytest.mark.parametrize(
-    "inference", [
-    "NW",
-    "DK"
-])
+@pytest.mark.parametrize("inference", ["NW", "DK"])
 @pytest.mark.parametrize(
     "vcov_kwargs",
     [
@@ -362,13 +374,15 @@ def test_single_fit_feols_hac_panel(
     "balanced",
     [
         "balanced-consecutive",
-        #"balanced-non-consecutive",
-        #"non-balanced-consecutive",
-        #"non-balanced-non-consecutive",
+        # "balanced-non-consecutive",
+        # "non-balanced-consecutive",
+        # "non-balanced-non-consecutive",
     ],
 )
 @pytest.mark.parametrize("fml", poisson_fmls)
-def test_single_fit_fepois_hac_panel(data_panel, data_time, inference, vcov_kwargs, fml, balanced):
+def test_single_fit_fepois_hac_panel(
+    data_panel, data_time, inference, vcov_kwargs, fml, balanced
+):
     k_adj = False
     G_adj = False
     ssc_ = ssc(k_adj=k_adj, G_adj=G_adj)
@@ -382,7 +396,9 @@ def test_single_fit_fepois_hac_panel(data_panel, data_time, inference, vcov_kwar
         pytest.skip("Don't test for non-balancedness when no panel data.")
 
     if panel_id is None and inference == "DK":
-        pytest.skip("Don't test for DK when no panel data, as ill-defined / collapes back to TS HAC.")
+        pytest.skip(
+            "Don't test for DK when no panel data, as ill-defined / collapes back to TS HAC."
+        )
 
     data = _prepare_balanced_data(data, panel_id, balanced)
 
@@ -393,10 +409,12 @@ def test_single_fit_fepois_hac_panel(data_panel, data_time, inference, vcov_kwar
 
     r_fixest = fixest.fepois(
         ro.Formula(fml),
-        vcov= fixest.vcov_NW(**r_panel_kwars) if inference == "NW" else fixest.vcov_DK(**r_panel_kwars),
+        vcov=fixest.vcov_NW(**r_panel_kwars)
+        if inference == "NW"
+        else fixest.vcov_DK(**r_panel_kwars),
         data=data,
-        ssc=fixest.ssc(k_adj, "nested", False, G_adj, "min" , "min"),
-        panel_time_step = 1
+        ssc=fixest.ssc(k_adj, "nested", False, G_adj, "min", "min"),
+        panel_time_step=1,
     )
 
     mod = pf.fepois(
@@ -418,11 +436,7 @@ def test_single_fit_fepois_hac_panel(data_panel, data_time, inference, vcov_kwar
 
 
 @pytest.mark.against_r_core
-@pytest.mark.parametrize(
-    "inference", [
-    "NW",
-    "DK"
-])
+@pytest.mark.parametrize("inference", ["NW", "DK"])
 @pytest.mark.parametrize(
     "vcov_kwargs",
     [
@@ -439,15 +453,15 @@ def test_single_fit_fepois_hac_panel(data_panel, data_time, inference, vcov_kwar
     "balanced",
     [
         "balanced-consecutive",
-        #"balanced-non-consecutive",
-        #"non-balanced-consecutive",
-       # "non-balanced-non-consecutive",
+        # "balanced-non-consecutive",
+        # "non-balanced-consecutive",
+        # "non-balanced-non-consecutive",
     ],
 )
-
 @pytest.mark.parametrize("fml", glm_fmls)
-def test_single_fit_feglm_hac_panel(data_panel, data_time, inference, vcov_kwargs, fml, balanced):
-
+def test_single_fit_feglm_hac_panel(
+    data_panel, data_time, inference, vcov_kwargs, fml, balanced
+):
     k_adj = False
     G_adj = False
     ssc_ = ssc(k_adj=k_adj, G_adj=G_adj)
@@ -462,7 +476,9 @@ def test_single_fit_feglm_hac_panel(data_panel, data_time, inference, vcov_kwarg
         pytest.skip("Don't test for non-balancedness when no panel data.")
 
     if panel_id is None and inference == "DK":
-        pytest.skip("Don't test for DK when no panel data, as ill-defined / collapes back to TS HAC.")
+        pytest.skip(
+            "Don't test for DK when no panel data, as ill-defined / collapes back to TS HAC."
+        )
 
     if panel_id is not None:
         # pick the subset of units to alter for the non-balanced cases
@@ -491,21 +507,22 @@ def test_single_fit_feglm_hac_panel(data_panel, data_time, inference, vcov_kwarg
     if "|" in fml and panel_id is None:
         pytest.skip("Don't run fixed effect test when data is not a panel.")
 
-    r_panel_kwars = (
-        ({"time": time_id} if time_id is not None else {})
-        | ({"lag": lag} if lag is not None else {})
+    r_panel_kwars = ({"time": time_id} if time_id is not None else {}) | (
+        {"lag": lag} if lag is not None else {}
     )
 
     if inference == "NW":
-        r_panel_kwars |= ({"unit": panel_id} if panel_id is not None else {})
+        r_panel_kwars |= {"unit": panel_id} if panel_id is not None else {}
 
     r_fixest = fixest.feglm(
         ro.Formula(fml),
-        vcov= fixest.vcov_NW(**r_panel_kwars) if inference == "NW" else fixest.vcov_DK(**r_panel_kwars),
+        vcov=fixest.vcov_NW(**r_panel_kwars)
+        if inference == "NW"
+        else fixest.vcov_DK(**r_panel_kwars),
         data=data,
-        ssc=fixest.ssc(k_adj, "nested", False, G_adj, "min" , "min"),
-        family=stats.binomial(link = "logit"),
-        panel_time_step = 1
+        ssc=fixest.ssc(k_adj, "nested", False, G_adj, "min", "min"),
+        family=stats.binomial(link="logit"),
+        panel_time_step=1,
     )
 
     mod = pf.feglm(
@@ -514,7 +531,7 @@ def test_single_fit_feglm_hac_panel(data_panel, data_time, inference, vcov_kwarg
         vcov=inference,
         vcov_kwargs=vcov_kwargs,
         ssc=ssc_,
-        family="logit"
+        family="logit",
     )
     # r_fixest to global r env, needed for
     # operations as in dof.K
@@ -540,7 +557,9 @@ def test_vcov_updating(data_panel):
         vcov_kwargs={"time_id": "year", "panel_id": "unit", "lag": 7},
     )
 
-    fit_hetero.vcov(vcov="NW", vcov_kwargs={"lag": 7, "time_id": "year", "panel_id": "unit"})
+    fit_hetero.vcov(
+        vcov="NW", vcov_kwargs={"lag": 7, "time_id": "year", "panel_id": "unit"}
+    )
 
     assert fit_hetero._vcov_type == "HAC"
     assert fit_hetero._vcov_type_detail == "NW"
