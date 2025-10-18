@@ -944,7 +944,7 @@ def test_errors_vcov_kwargs():
 
     # Error 9: time_id column does not exist in data
     with pytest.raises(
-        ValueError, match="must be a dictionary with string values for 'time_id'"
+        ValueError, match="The variable 'nonexistent_column' is not in the data."
     ):
         pf.feols(
             "Y ~ X1",
@@ -969,7 +969,7 @@ def test_errors_vcov_kwargs():
 
     # Error 12: panel_id column does not exist in data
     with pytest.raises(
-        ValueError, match="must be a dictionary with string values for 'panel_id'"
+        ValueError, match="The variable 'missing_panel_column' is not in the data."
     ):
         pf.feols(
             "Y ~ X1",
