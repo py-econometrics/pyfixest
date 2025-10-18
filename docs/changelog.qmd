@@ -40,6 +40,21 @@ We also install all package by default from the free and open source conda-forge
 `rpy2`that we need for testing `pyfixest` against `fixest`, we temporarily have dropped support for the dev and docs environments for windows. A fix is
 work in progress.
 
+## New Features 
+
+### HAC Standard Errors 
+
+We now support HAC standard errors! Thanks for Daman (https://github.com/damandhaliwal) for all his work (and coping with me with the PR, which took forever to get through).
+We now support:
+
+- time series HAC
+- panel HAC
+- panel DK  
+
+variance-covariance matrices. 
+
+For now, we assume that the time series column is consecutive and each entry has "time delta 1". Relaxation of this requirement are work in progress.
+
 ### `cat_template` argument for plotting functions
 
 For easier encoding of categorical variables in relation to the `iplot()` and `coefplot()` functions, we add a new function argument, cat_template:

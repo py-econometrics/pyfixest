@@ -72,7 +72,8 @@ def feols(
          Additional keyword arguments to pass to the vcov function. These keywoards include
         "lag" for the number of lag to use in the Newey-West (NW) and Driscoll-Kraay (DK) HAC standard errors.
         "time_id" for the time ID used for NW and DK standard errors, and "panel_id" for the panel
-         identifier used for NW and DK standard errors.
+         identifier used for NW and DK standard errors. Currently, the the time difference between consecutive time
+         periods is always treated as 1. More flexible time-step selection is work in progress.
 
     weights : Union[None, str], optional.
         Default is None. Weights for WLS estimation. If None, all observations
@@ -571,7 +572,8 @@ def fepois(
          Additional keyword arguments to pass to the vcov function. These keywoards include
         "lag" for the number of lag to use in the Newey-West (NW) and Driscoll-Kraay (DK) HAC standard errors.
         "time_id" for the time ID used for NW and DK standard errors, and "panel_id" for the panel
-         identifier used for NW and DK standard errors.
+         identifier used for NW and DK standard errors. Currently, the the time difference between consecutive time
+         periods is always treated as 1. More flexible time-step selection is work in progress.
 
     ssc : str
         A ssc object specifying the small sample correction for inference.
@@ -814,7 +816,8 @@ def feglm(
          Additional keyword arguments to pass to the vcov function. These keywoards include
         "lag" for the number of lag to use in the Newey-West (NW) and Driscoll-Kraay (DK) HAC standard errors.
         "time_id" for the time ID used for NW and DK standard errors, and "panel_id" for the panel
-         identifier used for NW and DK standard errors.
+         identifier used for NW and DK standard errors. Currently, the the time difference between consecutive time
+         periods is always treated as 1. More flexible time-step selection is work in progress.
 
     ssc : str
         A ssc object specifying the small sample correction for inference.

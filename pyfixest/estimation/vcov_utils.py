@@ -111,25 +111,18 @@ def _hac_meat_loop(
         The HAC meat matrix.
     """
     meat = np.zeros((k, k))
-    gamma_lag = np.zeros((k, k))
+    gamma_buffer = np.zeros((k, k))
 
-    # note: just the same as for time series HAC
-    # only difference is computation on time scores
+    # Vectorized computation for all lag values
     for lag_value in range(lag + 1):
+        gamma_buffer.fill(0.0)
         weight = weights[lag_value]
-        gamma_lag.fill(0.0)
-        for t in range(lag_value, time_periods):
-            scores_t = scores[t, :]
-            scores_t_lag = scores[t - lag_value, :]
 
-            for i in range(k):
-                scores_t_i = scores_t[i]
-                for j in range(k):
-                    gamma_lag[i, j] += scores_t_i * scores_t_lag[j]
+        scores_current = scores[lag_value:time_periods] 
+        scores_lagged = scores[:time_periods-lag_value]  
 
-        for i in range(k):
-            for j in range(k):
-                meat[i, j] += weight * (gamma_lag[i, j] + gamma_lag[j, i])
+        gamma_buffer[:, :] = scores_current.T @ scores_lagged
+        meat += weight * (gamma_buffer + gamma_buffer.T)
 
     return meat
 
@@ -163,7 +156,7 @@ def _nw_meat_time(scores: np.ndarray, time_arr: np.ndarray, lag: int):
 
 
 def _get_panel_idx(
-    panel_arr: np.ndarray, time_arr: np.ndarray, duplicate_method: str = "none"
+    panel_arr: np.ndarray, time_arr: np.ndarray
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
     Get indices for each unit. I.e. the first value ("starts") and how many
@@ -175,10 +168,6 @@ def _get_panel_idx(
         Panel ID variable.
     time_arr : ndarray, shape (N*T,)
         Time ID variable.
-    duplicate_method : str, optional
-        How to handle duplicate (panel, time) pairs.
-        - "none": raise error if duplicates exist (default)
-        - "first": keep only the first occurrence of each (panel, time) pair
 
     Returns
     -------
@@ -189,43 +178,18 @@ def _get_panel_idx(
       panel_arr_sorted : panel variable in sorted order
       time_arr_sorted : time variable in sorted order
     """
-    if duplicate_method not in ("none", "first"):
-        raise ValueError(
-            f"duplicate_method must be 'none' or 'first', got '{duplicate_method}'"
-        )
-
     order = np.lexsort((time_arr, panel_arr))  # sort by panel, then time
     p_sorted = panel_arr[order]
-    t_sorted = time_arr[order]
-    
-    # Check for duplicates
-    duplicate_mask = (np.diff(p_sorted) == 0) & (np.diff(t_sorted) == 0)
-    
-    if np.any(duplicate_mask):
-        if duplicate_method == "none":
-            raise ValueError(
-                "There are duplicate time periods for the same panel id. This is not supported for HAC SEs. "
-                "You can use duplicate_method='first' in vcov_kwargs to keep only the first occurrence."
-            )
-        elif duplicate_method == "first":
-            # Keep only first occurrence of each (panel, time) pair
-            # duplicate_mask is True where positions i and i+1 are duplicates
-            # Mark all positions that are duplicates (position i+1 in duplicate pairs) for removal
-            keep_mask = np.ones(len(order), dtype=bool)
-            dup_indices = np.where(duplicate_mask)[0]
-            # For each duplicate pair, mark the second occurrence (dup_indices[j] + 1) for removal
-            keep_mask[dup_indices + 1] = False
-            
-            # Filter to keep only first occurrences
-            order = order[keep_mask]
-            p_sorted = p_sorted[keep_mask]
-            t_sorted = t_sorted[keep_mask]
-    
     units, starts, counts = np.unique(p_sorted, return_index=True, return_counts=True)
     panel_arr_sorted = panel_arr[order]
     time_arr_sorted = time_arr[order]
-    
+    duplicate_mask = (np.diff(panel_arr_sorted) == 0) & (np.diff(time_arr_sorted) == 0)
+    if np.any(duplicate_mask):
+        raise ValueError(
+            "There are duplicate time periods for the same panel id. This is not supported for HAC SEs."
+        )
     return order, units, starts, counts, panel_arr_sorted, time_arr_sorted
+
 
 
 @nb.njit(parallel=False)

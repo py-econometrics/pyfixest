@@ -302,6 +302,7 @@ class Feols:
         self._context = capture_context(context)
 
         self._support_crv3_inference = True
+        self._support_hac_inference = True
         if self._weights_name is not None:
             self._supports_wildboottest = False
         self._supports_wildboottest = True
@@ -873,6 +874,11 @@ class Feols:
         _panel_id = self._panel_id
         _lag = self._lag
         _data = self._data
+
+        if not self._support_hac_inference:
+            raise NotImplementedError(
+                "HAC inference is not supported for this model type."
+            )
 
         _time_arr = _data[_time_id].to_numpy()
         _panel_arr = _data[_panel_id].to_numpy() if _panel_id is not None else None
