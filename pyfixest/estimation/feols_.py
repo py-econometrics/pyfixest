@@ -880,8 +880,17 @@ class Feols:
                 "HAC inference is not supported for this model type."
             )
 
+        # some data checks on input pandas df
+        # time needs to be numeric or date else we cannot sort by time
+        if not np.issubdtype(_data[_time_id], np.number) and not np.issubdtype(_data[_time_id], np.datetime64):
+            raise ValueError(
+                "The time variable must be numeric or date, else we cannot sort by time."
+            )
+    
         _time_arr = _data[_time_id].to_numpy()
         _panel_arr = _data[_panel_id].to_numpy() if _panel_id is not None else None
+
+ 
 
         if _vcov_type_detail == "NW":
             # Newey-West
