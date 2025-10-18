@@ -690,6 +690,22 @@ class Feols:
             self._vcov = self._ssc * self._vcov_hetero()
 
         elif self._vcov_type == "HAC":
+            if self._ssc_dict["k_adj"]:
+                self._ssc_dict["k_adj"] = False
+                warnings.warn(
+                    "k_adj was set to False for HAC inference because that's currently the only supported option."
+                )
+            if self._ssc_dict["G_adj"]:
+                self._ssc_dict["G_adj"] = False
+                warnings.warn(
+                    "G_adj was set to False for HAC inference because that's currently the only supported option."
+                )
+            if self._ssc_dict["k_fixef"] == "nonnested":
+                self._ssc_dict["k_fixef"] = "none"
+                warnings.warn(
+                    "k_fixef was set to none for HAC inference because nonnested is currently not supported."
+                )
+
             ssc_kwargs_hac = {
                 "k_fe_nested": 0,
                 "n_fe_fully_nested": 0,
