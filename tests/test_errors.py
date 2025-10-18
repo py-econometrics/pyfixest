@@ -961,7 +961,7 @@ def test_errors_vcov_kwargs():
 
     # Error 11: panel_id value is not a string (list)
     with pytest.raises(
-        ValueError, match=r'The function argument `vcov_kwargs` must be a.'
+        ValueError, match=r"The function argument `vcov_kwargs` must be a."
     ):
         pf.feols(
             "Y ~ X1", data=data, vcov="NW", vcov_kwargs={"panel_id": ["col1", "col2"]}
@@ -995,9 +995,7 @@ def test_errors_hac():
     )
 
     # Error 3: time_id is not provided if vcov is NW or DK
-    with pytest.raises(
-        ValueError, match=r"Missing required 'time_id' for NW/DK vcov"
-    ):
+    with pytest.raises(ValueError, match=r"Missing required 'time_id' for NW/DK vcov"):
         pf.feols(
             "Y ~ X1",
             data=data,
