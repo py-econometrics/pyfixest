@@ -135,6 +135,7 @@ class FeolsCompressed(Feols):
         self._support_iid_inference = True
         self._supports_cluster_causal_variance = False
         self._support_decomposition = False
+        self._support_hac_inference = False
 
         if weights is not None:
             raise ValueError(

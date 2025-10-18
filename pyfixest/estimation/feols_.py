@@ -902,8 +902,7 @@ class Feols:
                 )
 
                 hac_meat = _nw_meat_panel(
-                    X=self._X[order],
-                    u_hat=self._u_hat[order],
+                    scores=_scores[order],
                     time_arr=time_arr_sorted,
                     panel_arr=panel_arr_sorted,
                     starts=starts,

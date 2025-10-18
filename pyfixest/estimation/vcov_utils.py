@@ -194,8 +194,7 @@ def _get_panel_idx(
 
 @nb.njit(parallel=False)
 def _nw_meat_panel(
-    X: np.ndarray,
-    u_hat: np.ndarray,
+    scores: np.ndarray,
     time_arr: np.ndarray,
     panel_arr: np.ndarray,
     starts: np.ndarray,
@@ -207,10 +206,8 @@ def _nw_meat_panel(
 
     Parameters
     ----------
-    X : ndarray, shape (N*T, k)
-        Stacked regressor matrix, where each block of T rows corresponds to one panel unit.
-    u_hat : ndarray, shape (N*T,)
-        Residuals from the panel regression.
+    scores: np.ndarray
+        The scores matrix.
     time_arr : ndarray, shape (N*T,)
         The time variable for clustering.
     panel_arr : ndarray, shape (N*T,)
@@ -233,7 +230,7 @@ def _nw_meat_panel(
 
     weights = _get_bartlett_weights(lag=lag)
 
-    k = X.shape[1]
+    k = scores.shape[1]
 
     meat_nw_panel = np.zeros((k, k))
     gamma_l = np.zeros((k, k))
@@ -243,8 +240,8 @@ def _nw_meat_panel(
         end = start + count
         gamma0 = np.zeros((k, k))
         for t in range(start, end):
-            xi = X[t, :]
-            gamma0 += np.outer(xi, xi) * u_hat[t] ** 2
+            score_t = scores[t, :]
+            gamma0 += np.outer(score_t, score_t) 
 
         gamma_l_sum.fill(0.0)
         Lmax = min(lag, count - 1)
@@ -253,9 +250,9 @@ def _nw_meat_panel(
             for t in range(lag_value, count):
                 curr_t = start + t
                 prev_t = start + t - lag_value
-                xi1 = X[curr_t, :] * u_hat[curr_t]
-                xi2 = X[prev_t, :] * u_hat[prev_t]
-                gamma_l += np.outer(xi1, xi2)
+                score_curr = scores[curr_t, :]
+                score_prev = scores[prev_t, :]
+                gamma_l += np.outer(score_curr, score_prev)
             gamma_l_sum += weights[lag_value] * (gamma_l + gamma_l.T)
 
         meat_nw_panel += gamma0 + gamma_l_sum
