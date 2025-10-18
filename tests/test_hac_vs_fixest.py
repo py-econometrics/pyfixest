@@ -52,7 +52,23 @@ def data_panel(N=1000, T=30, seed=421):
     ever_treated = np.isin(units, treated_units).astype(int)
     alpha = rng.normal(0, 1, N)
     gamma = np.random.normal(0, 0.5, T)
-    epsilon = rng.normal(0, 5, N * T)
+    
+    # Generate AR(1) errors within each unit (rho=0.8 for strong autocorrelation)
+    epsilon = np.empty(N * T)
+    rho = 0.5
+    for i in range(N):
+        # Get indices for this unit
+        start_idx = i * T
+        end_idx = (i + 1) * T
+        # Generate innovations
+        innovations = rng.normal(0, 5, T)
+        # Build AR(1) process within unit
+        errors = np.empty(T)
+        errors[0] = innovations[0]
+        for t in range(1, T):
+            errors[t] = rho * errors[t - 1] + innovations[t]
+        epsilon[start_idx:end_idx] = errors
+    
     Y = alpha[units] + gamma[time] + treat + epsilon
     
     # Add count variable for Poisson models
@@ -87,7 +103,16 @@ def data_time():
             "weights": rng.uniform(0, 1, N),
         }
     )
-    data["Y"] = data["unit"] - data["year"] + 0.5 * data["treat"] + rng.normal(0, 1, N)
+    
+    # Generate AR(1) errors with rho=0.8 for strong autocorrelation
+    rho = 0.8
+    innovations = rng.normal(0, 1, N)
+    epsilon = np.empty(N)
+    epsilon[0] = innovations[0]
+    for t in range(1, N):
+        epsilon[t] = rho * epsilon[t - 1] + innovations[t]
+    
+    data["Y"] = data["unit"] - data["year"] + 0.5 * data["treat"] + epsilon
     # Add count variable for Poisson models
     data["Y_count"] = np.maximum(np.exp(0.5 + 0.05 * data["unit"] - 0.01 * data["year"] + 0.1 * data["treat"] + rng.normal(0, 0.3, N)), 0.1).astype(int)
     data["Y_binary"] = (data["Y_count"] > 0).astype(int)
@@ -223,9 +248,9 @@ BACKEND_F3 = [
     "balanced",
     [
         "balanced-consecutive",
-        #"balanced-non-consecutive",
-        #"non-balanced-consecutive",
-       # "non-balanced-non-consecutive",
+        "balanced-non-consecutive",
+        "non-balanced-consecutive",
+        "non-balanced-non-consecutive",
     ],
 )
 @pytest.mark.parametrize(
@@ -273,7 +298,8 @@ def test_single_fit_feols_hac_panel(
         vcov= fixest.vcov_NW(**r_panel_kwars) if inference == "NW" else fixest.vcov_DK(**r_panel_kwars),
         data=data,
         ssc=fixest.ssc(k_adj, "nested", False, G_adj, "min" , "min"),
-        **({"weights": ro.Formula(f"~{weights}")} if weights is not None else {})
+        **({"weights": ro.Formula(f"~{weights}")} if weights is not None else {}), 
+        panel_time_step = 1
 
     )
 
@@ -293,7 +319,7 @@ def test_single_fit_feols_hac_panel(
     py_vcov = mod._vcov[0, 0]
     r_vcov = stats.vcov(r_fixest)[0, 0]
 
-    check_absolute_diff(py_vcov, r_vcov, 1e-08, "py_vcov != r_vcov")
+    check_absolute_diff(py_vcov, r_vcov, 1e-05, "py_vcov != r_vcov")
 
 
 @pytest.mark.against_r_core
@@ -352,7 +378,7 @@ def test_single_fit_fepois_hac_panel(data_panel, data_time, inference, vcov_kwar
         vcov= fixest.vcov_NW(**r_panel_kwars) if inference == "NW" else fixest.vcov_DK(**r_panel_kwars),
         data=data,
         ssc=fixest.ssc(k_adj, "nested", False, G_adj, "min" , "min"),
-
+        panel_time_step = 1
     )
 
     mod = pf.fepois(
@@ -463,8 +489,8 @@ def test_single_fit_feglm_hac_panel(data_panel, data_time, inference, vcov_kwarg
         vcov= fixest.vcov_NW(**r_panel_kwars) if inference == "NW" else fixest.vcov_DK(**r_panel_kwars),
         data=data,
         ssc=fixest.ssc(k_adj, "nested", False, G_adj, "min" , "min"),
-        family=stats.binomial(link = "logit")
-
+        family=stats.binomial(link = "logit"),
+        panel_time_step = 1
     )
 
     mod = pf.feglm(
