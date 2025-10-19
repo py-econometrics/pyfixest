@@ -333,26 +333,6 @@ def test_single_fit_feols_hac_panel(
     py_vcov = mod._vcov[0, 0]
     r_vcov = stats.vcov(r_fixest)[0, 0]
 
-    if np.abs(py_vcov - r_vcov) > 1e-05:
-        print(
-            "G adj time:",
-            1
-            / (
-                len(np.unique(mod._data[mod._time_id]))
-                / (len(np.unique(mod._data[mod._time_id])) - 1)
-            ),
-        )
-        print(
-            "G adj panel:",
-            1
-            / (
-                len(np.unique(mod._data[mod._panel_id]))
-                / (len(np.unique(mod._data[mod._panel_id])) - 1)
-            ),
-        )
-
-        print("vcov_ratio:", py_vcov / r_vcov)
-
     check_absolute_diff(py_vcov, r_vcov, 1e-05, "py_vcov != r_vcov")
 
 
