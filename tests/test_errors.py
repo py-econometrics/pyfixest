@@ -1069,13 +1069,3 @@ def test_errors_hac():
                 vcov=vcov,
                 vcov_kwargs={"time_id": "time3", "panel_id": "panel", "lag": 5},
             )
-
-
-def test_errors_hac_inference():
-    data = pf.get_data()
-    data["Y"] = np.where(data["Y"] > 0, 1, 0)
-    with pytest.raises(
-        NotImplementedError,
-        match=r"HAC inference is not supported for this model type\.",
-    ):
-        pf.quantreg("Y ~ X1", data=data, vcov="NW")

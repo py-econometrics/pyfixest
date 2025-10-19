@@ -271,6 +271,9 @@ BACKEND_F3 = [
     [None, "weights"],
 )
 @pytest.mark.parametrize("fml", ols_fmls)
+@pytest.mark.parametrize("k_adj", [True, False])
+@pytest.mark.parametrize("G_adj", [True, False])
+@pytest.mark.parametrize("k_fixef", ["none", "nonnested", "full"])
 def test_single_fit_feols_hac_panel(
     data_panel,
     data_time,
@@ -279,11 +282,10 @@ def test_single_fit_feols_hac_panel(
     weights,
     fml,
     balanced,
+    k_adj,
+    G_adj,
+    k_fixef,
 ):
-    k_adj = False
-    G_adj = False
-    ssc_ = ssc(k_adj=k_adj, G_adj=G_adj)
-
     lag = vcov_kwargs.get("lag", None)
     time_id = vcov_kwargs.get("time_id", None)
     panel_id = vcov_kwargs.get("panel_id", None)
@@ -310,9 +312,9 @@ def test_single_fit_feols_hac_panel(
         if inference == "NW"
         else fixest.vcov_DK(**r_panel_kwars),
         data=data,
-        ssc=fixest.ssc(k_adj, "nested", False, G_adj, "min", "min"),
         **({"weights": ro.Formula(f"~{weights}")} if weights is not None else {}),
         panel_time_step=1,
+        ssc=fixest.ssc(k_adj, k_fixef, False, G_adj, "min", "min"),
     )
 
     mod = pf.feols(
@@ -321,7 +323,7 @@ def test_single_fit_feols_hac_panel(
         vcov=inference,
         vcov_kwargs=vcov_kwargs,
         weights=weights,
-        ssc=ssc_,
+        ssc=pf.ssc(k_adj=k_adj, k_fixef=k_fixef, G_adj=G_adj),
     )
 
     # r_fixest to global r env, needed for
