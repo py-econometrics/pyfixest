@@ -690,13 +690,14 @@ class Feols:
             self._vcov = self._ssc * self._vcov_hetero()
 
         elif self._vcov_type == "HAC":
-
             ssc_kwargs_hac = {
-                "k_fe_nested": 0, # nesting ignored / irrelevant for HAC SEs
-                "n_fe_fully_nested": 0, # nesting ignored / irrelevant for HAC SEs
+                "k_fe_nested": 0,  # nesting ignored / irrelevant for HAC SEs
+                "n_fe_fully_nested": 0,  # nesting ignored / irrelevant for HAC SEs
                 "vcov_sign": 1,
                 "vcov_type": "HAC",
-                "G": np.unique(self._data[self._time_id]).shape[0], # number of unique time periods T used
+                "G": np.unique(self._data[self._time_id]).shape[
+                    0
+                ],  # number of unique time periods T used
             }
 
             all_kwargs = {**ssc_kwargs, **ssc_kwargs_hac}
