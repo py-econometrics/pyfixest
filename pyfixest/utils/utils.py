@@ -218,7 +218,7 @@ def get_ssc(
         adj_value = (N - 1) / (N - df_k) if vcov_type != "hetero" else N / (N - df_k)
 
     # G_adj applied with G = N for hetero but not for iid
-    if vcov_type in ["CRV", "HAC-TS", "HAC-P"] and G_adj:
+    if vcov_type in ["CRV", "HAC"] and G_adj:
         if G_df == "conventional":
             G_adj_value = G / (G - 1)
         elif G_df == "min":
