@@ -48,7 +48,7 @@ website:
         - file: quantile-regression.qmd
           text: "Quantile Regression"
         - text: "Compare fixest & PyFixest"
-          file: compare-fixest-pyfixest.qmd
+          file: compare-fixest-pyfixest.ipynb
         - text: "Compare Stata & PyFixest"
           file: stata-2-pyfixest.qmd
         - text: "PyFixest on the GPU"
