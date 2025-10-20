@@ -1,0 +1,328 @@
+---
+title: Does `PyFixest` match `fixest`?
+toc: true
+toc-title: "On this page"
+toc-location: left
+jupyter: python3
+---
+
+This vignette compares estimation results from `fixest` with `pyfixest` by running them side-by-side.
+
+## Setup
+
+First, we generate and save the data using `pyfixest`:
+
+```{python}
+import pandas as pd
+import numpy as np
+import pyfixest as pf
+import os
+
+# Use a fixed path in the docs directory for data sharing
+data_dir = "docs/_data_temp"
+os.makedirs(data_dir, exist_ok=True)
+
+data_path_feols = os.path.join(data_dir, "data_feols.csv")
+data_path_fepois = os.path.join(data_dir, "data_fepois.csv")
+
+# Get data using pyfixest and save to CSV
+data_feols = pf.get_data(model="Feols", N=10_000, seed=99292)
+data_feols.to_csv(data_path_feols, index=False)
+
+data_fepois = pf.get_data(model="Fepois", N=10_000, seed=99292)
+data_fepois.to_csv(data_path_fepois, index=False)
+
+print(f"Data saved to: {data_dir}")
+print(f"FEOLS data shape: {data_feols.shape}")
+print(f"FEPOIS data shape: {data_fepois.shape}")
+```
+
+Now load the data in R:
+
+```{r}
+library(fixest)
+library(broom)
+
+# Read the data from the CSV files (using fixed path)
+data_feols <- read.csv("docs/_data_temp/data_feols.csv")
+data_fepois <- read.csv("docs/_data_temp/data_fepois.csv")
+
+cat("Data loaded in R\n")
+cat("FEOLS data dimensions:", dim(data_feols), "\n")
+cat("FEPOIS data dimensions:", dim(data_fepois), "\n")
+```
+
+## Ordinary Least Squares (OLS)
+
+### IID Inference
+
+First, we estimate a model via `pyfixest` and R's `fixest`. We compute "iid" standard errors.
+
+```{python}
+# PyFixest estimation
+fit = pf.feols(fml="Y ~ X1 + X2 | f1 + f2", data=data_feols, vcov="iid")
+fit_weights = pf.feols(
+    fml="Y ~ X1 + X2 | f1 + f2", data=data_feols, weights="weights", vcov="iid"
+)
+
+print("PyFixest results (unweighted):")
+print(fit.tidy())
+print("\nPyFixest results (weighted):")
+print(fit_weights.tidy())
+```
+
+```{r}
+# R fixest estimation
+r_fit <- feols(
+    Y ~ X1 + X2 | f1 + f2,
+    data = data_feols,
+    vcov = "iid"
+)
+
+r_fit_weights <- feols(
+    Y ~ X1 + X2 | f1 + f2,
+    data = data_feols,
+    weights = ~weights,
+    vcov = "iid"
+)
+
+cat("R fixest results (unweighted):\n")
+print(tidy(r_fit))
+
+cat("\nR fixest results (weighted):\n")
+print(tidy(r_fit_weights))
+
+cat("\nCoefficients (unweighted):\n")
+print(coef(r_fit))
+
+cat("\nVariance-covariance matrix (unweighted):\n")
+print(vcov(r_fit))
+
+cat("\nCoefficients (weighted):\n")
+print(coef(r_fit_weights))
+
+cat("\nVariance-covariance matrix (weighted):\n")
+print(vcov(r_fit_weights))
+```
+
+Compare the results:
+
+```{python}
+# Store Python results for comparison
+py_coef = fit.coef().values
+py_vcov = fit._vcov
+py_coef_weights = fit_weights.coef().values
+py_vcov_weights = fit_weights._vcov
+
+print("Python coefficients (unweighted):", py_coef)
+print("Python vcov (unweighted):\n", py_vcov)
+print("\nPython coefficients (weighted):", py_coef_weights)
+print("Python vcov (weighted):\n", py_vcov_weights)
+```
+
+### Heteroskedastic Errors
+
+We repeat the same exercise with heteroskedastic (HC1) errors:
+
+```{python}
+fit = pf.feols(fml="Y ~ X1 + X2 | f1 + f2", data=data_feols, vcov="hetero")
+fit_weights = pf.feols(
+    fml="Y ~ X1 + X2 | f1 + f2", data=data_feols, vcov="hetero", weights="weights"
+)
+
+print("PyFixest results (unweighted, hetero):")
+print(fit.tidy())
+print("\nPyFixest results (weighted, hetero):")
+print(fit_weights.tidy())
+```
+
+```{r}
+r_fit <- feols(
+    Y ~ X1 + X2 | f1 + f2,
+    data = data_feols,
+    vcov = "hetero"
+)
+
+r_fit_weights <- feols(
+    Y ~ X1 + X2 | f1 + f2,
+    data = data_feols,
+    weights = ~weights,
+    vcov = "hetero"
+)
+
+cat("R fixest results (unweighted, hetero):\n")
+print(tidy(r_fit))
+
+cat("\nR fixest results (weighted, hetero):\n")
+print(tidy(r_fit_weights))
+
+cat("\nCoefficients (unweighted):\n")
+print(coef(r_fit))
+
+cat("\nVariance-covariance matrix (unweighted):\n")
+print(vcov(r_fit))
+
+cat("\nCoefficients (weighted):\n")
+print(coef(r_fit_weights))
+
+cat("\nVariance-covariance matrix (weighted):\n")
+print(vcov(r_fit_weights))
+```
+
+```{python}
+py_coef = fit.coef().values
+py_vcov = fit._vcov
+py_coef_weights = fit_weights.coef().values
+py_vcov_weights = fit_weights._vcov
+
+print("Python coefficients (unweighted):", py_coef)
+print("Python vcov (unweighted):\n", py_vcov)
+print("\nPython coefficients (weighted):", py_coef_weights)
+print("Python vcov (weighted):\n", py_vcov_weights)
+```
+
+
+### Cluster-Robust Errors
+
+We conclude with cluster robust errors.
+
+```{python}
+fit = pf.feols(fml="Y ~ X1 + X2 | f1 + f2", data=data_feols, vcov={"CRV1": "f1"})
+fit_weights = pf.feols(
+    fml="Y ~ X1 + X2 | f1 + f2", data=data_feols, vcov={"CRV1": "f1"}, weights="weights"
+)
+
+print("PyFixest results (unweighted, CRV):")
+print(fit.tidy())
+print("\nPyFixest results (weighted, CRV):")
+print(fit_weights.tidy())
+```
+
+```{r}
+r_fit <- feols(
+    Y ~ X1 + X2 | f1 + f2,
+    data = data_feols,
+    vcov = ~f1
+)
+
+r_fit_weights <- feols(
+    Y ~ X1 + X2 | f1 + f2,
+    data = data_feols,
+    weights = ~weights,
+    vcov = ~f1
+)
+
+cat("R fixest results (unweighted, CRV):\n")
+print(tidy(r_fit))
+
+cat("\nR fixest results (weighted, CRV):\n")
+print(tidy(r_fit_weights))
+
+cat("\nCoefficients (unweighted):\n")
+print(coef(r_fit))
+
+cat("\nVariance-covariance matrix (unweighted):\n")
+print(vcov(r_fit))
+
+cat("\nCoefficients (weighted):\n")
+print(coef(r_fit_weights))
+
+cat("\nVariance-covariance matrix (weighted):\n")
+print(vcov(r_fit_weights))
+```
+
+```{python}
+py_coef = fit.coef().values
+py_vcov = fit._vcov
+py_coef_weights = fit_weights.coef().values
+py_vcov_weights = fit_weights._vcov
+
+print("Python coefficients (unweighted):", py_coef)
+print("Python vcov (unweighted):\n", py_vcov)
+print("\nPython coefficients (weighted):", py_coef_weights)
+print("Python vcov (weighted):\n", py_vcov_weights)
+```
+
+## Poisson Regression
+
+```{python}
+fit_iid = pf.fepois(fml="Y ~ X1 + X2 | f1 + f2", data=data_fepois, vcov="iid", iwls_tol=1e-10)
+fit_hetero = pf.fepois(
+    fml="Y ~ X1 + X2 | f1 + f2", data=data_fepois, vcov="hetero", iwls_tol=1e-10
+)
+fit_crv = pf.fepois(
+    fml="Y ~ X1 + X2 | f1 + f2", data=data_fepois, vcov={"CRV1": "f1"}, iwls_tol=1e-10
+)
+
+print("PyFixest results (IID):")
+print(fit_iid.tidy())
+print("\nPyFixest results (Hetero):")
+print(fit_hetero.tidy())
+print("\nPyFixest results (CRV):")
+print(fit_crv.tidy())
+```
+
+```{r}
+fit_r_iid <- fepois(
+    Y ~ X1 + X2 | f1 + f2,
+    data = data_fepois,
+    vcov = "iid"
+)
+
+fit_r_hetero <- fepois(
+    Y ~ X1 + X2 | f1 + f2,
+    data = data_fepois,
+    vcov = "hetero"
+)
+
+fit_r_crv <- fepois(
+    Y ~ X1 + X2 | f1 + f2,
+    data = data_fepois,
+    vcov = ~f1
+)
+
+cat("R fixest results (IID):\n")
+print(tidy(fit_r_iid))
+cat("\nCoefficients (IID):\n")
+print(coef(fit_r_iid))
+cat("\nVariance-covariance matrix (IID):\n")
+print(vcov(fit_r_iid))
+
+cat("\nR fixest results (Hetero):\n")
+print(tidy(fit_r_hetero))
+cat("\nCoefficients (Hetero):\n")
+print(coef(fit_r_hetero))
+cat("\nVariance-covariance matrix (Hetero):\n")
+print(vcov(fit_r_hetero))
+
+cat("\nR fixest results (CRV):\n")
+print(tidy(fit_r_crv))
+cat("\nCoefficients (CRV):\n")
+print(coef(fit_r_crv))
+cat("\nVariance-covariance matrix (CRV):\n")
+print(vcov(fit_r_crv))
+```
+
+```{python}
+py_coef_iid = fit_iid.coef().values
+py_vcov_iid = fit_iid._vcov
+py_coef_hetero = fit_hetero.coef().values
+py_vcov_hetero = fit_hetero._vcov
+py_coef_crv = fit_crv.coef().values
+py_vcov_crv = fit_crv._vcov
+
+print("Python coefficients (IID):", py_coef_iid)
+print("Python vcov (IID):\n", py_vcov_iid)
+print("\nPython coefficients (Hetero):", py_coef_hetero)
+print("Python vcov (Hetero):\n", py_vcov_hetero)
+print("\nPython coefficients (CRV):", py_coef_crv)
+print("Python vcov (CRV):\n", py_vcov_crv)
+```
+
+## Cleanup
+
+```{python}
+import shutil
+shutil.rmtree(data_dir)
+print(f"Cleaned up temporary directory: {data_dir}")
+```

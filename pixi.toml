@@ -78,7 +78,6 @@ watermark = "==2.4.3"
 pylatex = ">=1.4.2,<2"
 pyarrow = ">=14.0"
 quartodoc =">=0.11.0,<0.12"
-rpy2 = "==3.5.11"
 r-base = "*"
 r-fixest = ">=0.13.2,<0.14"
 r-stringmagic=">=1.2.0"
@@ -95,6 +94,7 @@ lets-plot =">=4.0.0"
 docs-build = "quartodoc build --verbose --config docs/_quarto.yml"
 docs-render = "quarto render docs"
 docs-preview = "quarto preview docs"
+docs-tinytext = "quarto install tinytex"
 
 [feature.jax.dependencies]
 

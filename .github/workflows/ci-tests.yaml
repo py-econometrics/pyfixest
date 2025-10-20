@@ -150,6 +150,10 @@ jobs:
         run: |
           pixi run -e docs maturin-develop
 
+      - name: Install tinytex
+        run: |
+          pixi run -e docs docs-tinytex
+
       - name: Compile docstrings with quartodoc
         run: |
           pixi run docs-build

@@ -121,6 +121,12 @@ we first need to compile the Rust extensions, this time in the docs env, by runn
 pixi run -e docs maturin-develop
 ```
 
+We also have to install a small latex distribution into our dev environment: 
+
+```{.bash .code-copy}
+pixi run -e docs docs-tinytex
+```
+
 Then we can build the documentation with quartodoc.
 
 ```{.bash .code-copy}
@@ -132,8 +138,7 @@ pixi run -e docs docs-render
 pixi run -e docs docs-preview
 ```
 
-Keep in mind that you’ll need quarto installed to build the documentation locally.
-
+Note: quarto is automatically installed in your local dev env.
 ## Installing Python, R and Quarto
 
 #### Installing Python
