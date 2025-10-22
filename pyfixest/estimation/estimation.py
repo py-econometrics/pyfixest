@@ -24,12 +24,13 @@ def feols(
     fml: str,
     data: DataFrameType,  # type: ignore
     vcov: Optional[Union[VcovTypeOptions, dict[str, str]]] = None,
+    vcov_kwargs: Optional[dict[str, Union[str, int]]] = None,
     weights: Union[None, str] = None,
     ssc: Optional[dict[str, Union[str, bool]]] = None,
-    fixef_rm: FixedRmOptions = "none",
+    fixef_rm: FixedRmOptions = "singleton",
     fixef_tol=1e-08,
     fixef_maxiter: int = 100_000,
-    collin_tol: float = 1e-10,
+    collin_tol: float = 1e-09,
     drop_intercept: bool = False,
     copy_data: bool = True,
     store_data: bool = True,
@@ -61,7 +62,18 @@ def feols(
 
     vcov : Union[VcovTypeOptions, dict[str, str]]
         Type of variance-covariance matrix for inference. Options include "iid",
-        "hetero", "HC1", "HC2", "HC3", or a dictionary for CRV1/CRV3 inference.
+          "hetero", "HC1", "HC2", "HC3", "NW" for Newey-West HAC standard errors,
+        "DK" for Driscoll-Kraay HAC standard errors, or a dictionary for CRV1/CRV3 inference.
+        Note that NW and DK require to pass additional keyword arguments via the `vcov_kwargs` argument.
+        For time-series HAC, you need to pass the 'time_id' column. For panel-HAC, you need to add
+        pass both 'time_id' and 'panel_id'. See `vcov_kwargs` for details.
+
+    vcov_kwargs : Optional[dict[str, any]]
+         Additional keyword arguments to pass to the vcov function. These keywoards include
+        "lag" for the number of lag to use in the Newey-West (NW) and Driscoll-Kraay (DK) HAC standard errors.
+        "time_id" for the time ID used for NW and DK standard errors, and "panel_id" for the panel
+         identifier used for NW and DK standard errors. Currently, the the time difference between consecutive time
+         periods is always treated as 1. More flexible time-step selection is work in progress.
 
     weights : Union[None, str], optional.
         Default is None. Weights for WLS estimation. If None, all observations
@@ -73,7 +85,10 @@ def feols(
 
     fixef_rm : FixedRmOptions
         Specifies whether to drop singleton fixed effects.
-        Options: "none" (default), "singleton".
+        Can be equal to "singleton" (default),
+        or "none".
+        "singletons" will drop singleton fixed effects. This will not impact point
+        estimates but it will impact standard errors.
 
     collin_tol : float, optional
         Tolerance for collinearity check, by default 1e-10.
@@ -201,10 +216,10 @@ def feols(
     `fit.tstat()` for the t-statistics, and `fit.pval()` for the p-values, and
     `fit.confint()` for the confidence intervals.
 
-    The employed type of inference can be specified via the `vcov` argument. If
-    vcov is not provided, `PyFixest` employs the `fixest` default of iid inference,
-    unless there are fixed effects in the model, in which case `feols()` clusters
-    the standard error by the first fixed effect (CRV1 inference).
+    The employed type of inference can be specified via the `vcov` argument. For compatibility
+    with `fixest`, if vcov is not provided, `PyFixest` always employs "iid" inference by default
+    starting with pyfixest 0.31.0. Prior to pyfixest 0.31.0, if vcov was not provided, `PyFixest`
+    would cluster by the first fixed effect if no vcov was provided.
 
     ```{python}
     fit1 = pf.feols("Y ~ X1 + X2 | f1 + f2", data, vcov="iid")
@@ -440,6 +455,7 @@ def feols(
         fml=fml,
         data=data,
         vcov=vcov,
+        vcov_kwargs=vcov_kwargs,
         weights=weights,
         ssc=ssc,
         fixef_rm=fixef_rm,
@@ -476,14 +492,22 @@ def feols(
     estimation = "feols" if not use_compression else "compression"
 
     fixest._prepare_estimation(
-        estimation, fml, vcov, weights, ssc, fixef_rm, drop_intercept
+        estimation=estimation,
+        fml=fml,
+        vcov=vcov,
+        vcov_kwargs=vcov_kwargs,
+        weights=weights,
+        ssc=ssc,
+        fixef_rm=fixef_rm,
+        drop_intercept=drop_intercept,
     )
 
     # demean all models: based on fixed effects x split x missing value combinations
     fixest._estimate_all_models(
-        vcov,
-        collin_tol=collin_tol,
+        vcov=vcov,
         solver=solver,
+        vcov_kwargs=vcov_kwargs,
+        collin_tol=collin_tol,
         demeaner_backend=demeaner_backend,
     )
 
@@ -497,13 +521,14 @@ def fepois(
     fml: str,
     data: DataFrameType,  # type: ignore
     vcov: Optional[Union[VcovTypeOptions, dict[str, str]]] = None,
+    vcov_kwargs: Optional[dict[str, Union[str, int]]] = None,
     ssc: Optional[dict[str, Union[str, bool]]] = None,
-    fixef_rm: FixedRmOptions = "none",
+    fixef_rm: FixedRmOptions = "singleton",
     fixef_tol: float = 1e-08,
     fixef_maxiter: int = 100_000,
     iwls_tol: float = 1e-08,
     iwls_maxiter: int = 25,
-    collin_tol: float = 1e-10,
+    collin_tol: float = 1e-09,
     separation_check: Optional[list[str]] = None,
     solver: SolverOptions = "scipy.linalg.solve",
     demeaner_backend: DemeanerBackendOptions = "numba",
@@ -537,14 +562,27 @@ def fepois(
 
     vcov : Union[VcovTypeOptions, dict[str, str]]
         Type of variance-covariance matrix for inference. Options include "iid",
-        "hetero", "HC1", "HC2", "HC3", or a dictionary for CRV1/CRV3 inference.
+          "hetero", "HC1", "HC2", "HC3", "NW" for Newey-West HAC standard errors,
+        "DK" for Driscoll-Kraay HAC standard errors, or a dictionary for CRV1/CRV3 inference.
+        Note that NW and DK require to pass additional keyword arguments via the `vcov_kwargs` argument.
+        For time-series HAC, you need to pass the 'time_id' column. For panel-HAC, you need to add
+        pass both 'time_id' and 'panel_id'. See `vcov_kwargs` for details.
+
+    vcov_kwargs : Optional[dict[str, any]]
+         Additional keyword arguments to pass to the vcov function. These keywoards include
+        "lag" for the number of lag to use in the Newey-West (NW) and Driscoll-Kraay (DK) HAC standard errors.
+        "time_id" for the time ID used for NW and DK standard errors, and "panel_id" for the panel
+         identifier used for NW and DK standard errors. Currently, the the time difference between consecutive time
+         periods is always treated as 1. More flexible time-step selection is work in progress.
 
     ssc : str
         A ssc object specifying the small sample correction for inference.
 
     fixef_rm : FixedRmOptions
         Specifies whether to drop singleton fixed effects.
-        Options: "none" (default), "singleton".
+        Can be equal to "singletons" (default) or "none".
+        "singletons" will drop singleton fixed effects. This will not impact point
+        estimates but it will impact standard errors.
 
     fixef_tol: float, optional
         Tolerance for the fixed effects demeaning algorithm. Defaults to 1e-08.
@@ -652,6 +690,7 @@ def fepois(
         fml=fml,
         data=data,
         vcov=vcov,
+        vcov_kwargs=vcov_kwargs,
         weights=weights,
         ssc=ssc,
         fixef_rm=fixef_rm,
@@ -687,7 +726,14 @@ def fepois(
     )
 
     fixest._prepare_estimation(
-        "fepois", fml, vcov, weights, ssc, fixef_rm, drop_intercept
+        estimation="fepois",
+        fml=fml,
+        vcov=vcov,
+        vcov_kwargs=vcov_kwargs,
+        weights=weights,
+        ssc=ssc,
+        fixef_rm=fixef_rm,
+        drop_intercept=drop_intercept,
     )
     if fixest._is_iv:
         raise NotImplementedError(
@@ -696,11 +742,12 @@ def fepois(
 
     fixest._estimate_all_models(
         vcov=vcov,
+        solver=solver,
+        vcov_kwargs=vcov_kwargs,
         iwls_tol=iwls_tol,
         iwls_maxiter=iwls_maxiter,
         collin_tol=collin_tol,
         separation_check=separation_check,
-        solver=solver,
         demeaner_backend=demeaner_backend,
     )
 
@@ -715,13 +762,14 @@ def feglm(
     data: DataFrameType,  # type: ignore
     family: str,
     vcov: Optional[Union[VcovTypeOptions, dict[str, str]]] = None,
+    vcov_kwargs: Optional[dict[str, Union[str, int]]] = None,
     ssc: Optional[dict[str, Union[str, bool]]] = None,
-    fixef_rm: FixedRmOptions = "none",
+    fixef_rm: FixedRmOptions = "singleton",
     fixef_tol: float = 1e-08,
     fixef_maxiter: int = 100_000,
     iwls_tol: float = 1e-08,
     iwls_maxiter: int = 25,
-    collin_tol: float = 1e-10,
+    collin_tol: float = 1e-09,
     separation_check: Optional[list[str]] = None,
     solver: SolverOptions = "scipy.linalg.solve",
     drop_intercept: bool = False,
@@ -758,14 +806,28 @@ def feglm(
 
     vcov : Union[VcovTypeOptions, dict[str, str]]
         Type of variance-covariance matrix for inference. Options include "iid",
-        "hetero", "HC1", "HC2", "HC3", or a dictionary for CRV1/CRV3 inference.
+          "hetero", "HC1", "HC2", "HC3", "NW" for Newey-West HAC standard errors,
+        "DK" for Driscoll-Kraay HAC standard errors, or a dictionary for CRV1/CRV3 inference.
+        Note that NW and DK require to pass additional keyword arguments via the `vcov_kwargs` argument.
+        For time-series HAC, you need to pass the 'time_id' column. For panel-HAC, you need to add
+        pass both 'time_id' and 'panel_id'. See `vcov_kwargs` for details.
+
+    vcov_kwargs : Optional[dict[str, any]]
+         Additional keyword arguments to pass to the vcov function. These keywoards include
+        "lag" for the number of lag to use in the Newey-West (NW) and Driscoll-Kraay (DK) HAC standard errors.
+        "time_id" for the time ID used for NW and DK standard errors, and "panel_id" for the panel
+         identifier used for NW and DK standard errors. Currently, the the time difference between consecutive time
+         periods is always treated as 1. More flexible time-step selection is work in progress.
 
     ssc : str
         A ssc object specifying the small sample correction for inference.
 
     fixef_rm : FixedRmOptions
         Specifies whether to drop singleton fixed effects.
-        Options: "none" (default), "singleton".
+        Can be equal to "singleton" (default),
+        or "none".
+        "singletons" will drop singleton fixed effects. This will not impact point
+        estimates but it will impact standard errors.
 
     fixef_tol: float, optional
         Tolerance for the fixed effects demeaning algorithm. Defaults to 1e-08.
@@ -903,6 +965,7 @@ def feglm(
         fml=fml,
         data=data,
         vcov=vcov,
+        vcov_kwargs=vcov_kwargs,
         weights=weights,
         ssc=ssc,
         fixef_rm=fixef_rm,
@@ -939,7 +1002,14 @@ def feglm(
 
     # same checks as for Poisson regression
     fixest._prepare_estimation(
-        f"feglm-{family}", fml, vcov, weights, ssc, fixef_rm, drop_intercept
+        estimation=f"feglm-{family}",
+        fml=fml,
+        vcov=vcov,
+        vcov_kwargs=vcov_kwargs,
+        weights=weights,
+        ssc=ssc,
+        fixef_rm=fixef_rm,
+        drop_intercept=drop_intercept,
     )
     if fixest._is_iv:
         raise NotImplementedError(
@@ -948,11 +1018,12 @@ def feglm(
 
     fixest._estimate_all_models(
         vcov=vcov,
+        solver=solver,
+        vcov_kwargs=vcov_kwargs,
         iwls_tol=iwls_tol,
         iwls_maxiter=iwls_maxiter,
         collin_tol=collin_tol,
         separation_check=separation_check,
-        solver=solver,
     )
 
     if fixest._is_multiple_estimation:
@@ -971,7 +1042,7 @@ def quantreg(
     tol: float = 1e-06,
     maxiter: Optional[int] = None,
     ssc: Optional[dict[str, Union[str, bool]]] = None,
-    collin_tol: float = 1e-10,
+    collin_tol: float = 1e-09,
     separation_check: Optional[list[str]] = None,
     drop_intercept: bool = False,
     copy_data: bool = True,
@@ -1133,6 +1204,7 @@ def quantreg(
         fml=fml,
         data=data,
         vcov=vcov,
+        vcov_kwargs=None,
         weights=weights,
         ssc=ssc,
         fixef_rm=fixef_rm,
@@ -1174,6 +1246,7 @@ def quantreg(
         estimation="quantreg" if not isinstance(quantile, list) else "quantreg_multi",
         fml=fml,
         vcov=vcov,
+        vcov_kwargs=None,
         weights=weights,
         ssc=ssc,
         fixef_rm=fixef_rm,
@@ -1189,11 +1262,12 @@ def quantreg(
 
     fixest._estimate_all_models(
         vcov=vcov,
+        solver=solver,
+        vcov_kwargs=None,
         iwls_tol=iwls_tol,
         iwls_maxiter=iwls_maxiter,
         collin_tol=collin_tol,
         separation_check=separation_check,
-        solver=solver,
     )
 
     if fixest._is_multiple_estimation:
@@ -1206,6 +1280,7 @@ def _estimation_input_checks(
     fml: str,
     data: DataFrameType,
     vcov: Optional[Union[str, dict[str, str]]],
+    vcov_kwargs: Optional[dict[str, Union[str, int]]],
     weights: Union[None, str],
     ssc: dict[str, Union[str, bool]],
     fixef_rm: str,
@@ -1235,7 +1310,7 @@ def _estimation_input_checks(
         raise TypeError("collin_tol must be a float")
 
     if fixef_rm not in ["none", "singleton"]:
-        raise ValueError("fixef_rm must be either 'none' or 'singleton'")
+        raise ValueError("fixef_rm must be either 'none' or 'singleton'.")
     if collin_tol <= 0:
         raise ValueError("collin_tol must be greater than zero")
     if collin_tol >= 1:
@@ -1344,6 +1419,39 @@ def _estimation_input_checks(
             raise ValueError(
                 "The function argument `separation_check` must be a list of strings containing 'fe' and/or 'ir'."
             )
+
+    if vcov_kwargs is not None:
+        # check that dict keys are either "lag", "time_id", or "panel_id"
+        if not all(key in ["lag", "time_id", "panel_id"] for key in vcov_kwargs):
+            raise ValueError(
+                "The function argument `vcov_kwargs` must be a dictionary with keys 'lag', 'time_id', or 'panel_id'."
+            )
+
+        # if lag provided, check that it is an int
+        if "lag" in vcov_kwargs and not isinstance(vcov_kwargs["lag"], int):
+            raise ValueError(
+                "The function argument `vcov_kwargs` must be a dictionary with integer values for 'lag' if explicitly provided."
+            )
+
+        if "time_id" in vcov_kwargs:
+            if not isinstance(vcov_kwargs["time_id"], str):
+                raise ValueError(
+                    "The function argument `vcov_kwargs` must be a dictionary with string values for 'time_id' if explicitly provided."
+                )
+            if vcov_kwargs["time_id"] not in data.columns:
+                raise ValueError(
+                    f"The variable '{vcov_kwargs['time_id']}' is not in the data."
+                )
+
+        if "panel_id" in vcov_kwargs:
+            if not isinstance(vcov_kwargs["panel_id"], str):
+                raise ValueError(
+                    "The function argument `vcov_kwargs` must be a dictionary with string values for 'panel_id' if explicitly provided."
+                )
+            if vcov_kwargs["panel_id"] not in data.columns:
+                raise ValueError(
+                    f"The variable '{vcov_kwargs['panel_id']}' is not in the data."
+                )
 
 
 def _quantreg_input_checks(quantile: float, tol: float, maxiter: Optional[int]):

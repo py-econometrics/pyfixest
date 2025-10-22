@@ -153,7 +153,7 @@ def test_panelview():
     plt.close()
 
     # Test with provided axes
-    fig, ax = plt.subplots()
+    _, ax = plt.subplots()
     result_ax = panelview(
         data=df_het,
         unit="unit",

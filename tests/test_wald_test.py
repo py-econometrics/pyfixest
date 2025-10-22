@@ -47,7 +47,7 @@ def test_F_test_single_equation_no_clustering(R):
     )
 
     fml = "dep_var ~ treat + X1"
-    fit = feols(fml, data, vcov=None, ssc=ssc(adj=False))
+    fit = feols(fml, data, vcov=None, ssc=ssc(k_adj=False))
 
     # Wald test
     fit.wald_test(R=R, distribution="F")
@@ -82,7 +82,7 @@ def test_F_test_single_equation(R):
     data = pd.read_csv("pyfixest/did/data/df_het.csv")
     data = data.iloc[1:3000]
     fml = "dep_var ~ treat"
-    fit = feols(fml, data, vcov={"CRV1": "year"}, ssc=ssc(adj=False))
+    fit = feols(fml, data, vcov={"CRV1": "year"}, ssc=ssc(k_adj=False))
 
     # Wald test
     fit.wald_test(R=R)
@@ -91,7 +91,10 @@ def test_F_test_single_equation(R):
 
     # Compare with R
     r_fit = fixest.feols(
-        ro.Formula(fml), data=data, vcov=ro.Formula("~year"), ssc=fixest.ssc(adj=False)
+        ro.Formula(fml),
+        data=data,
+        vcov=ro.Formula("~year"),
+        ssc=fixest.ssc(False),
     )
 
     r_wald = car.linearHypothesis(r_fit, base.matrix(R, 1, 2), test="F")
@@ -107,7 +110,7 @@ def test_F_test_single_equation(R):
 @pytest.mark.parametrize(
     "seedn",
     [
-        50,
+        51,
         20,
         100,
     ],
@@ -133,7 +136,7 @@ def test_F_test_multiple_equation(seedn):
     )
 
     fml = "dep_var ~ treat + X1"
-    fit = feols(fml, data, vcov={"CRV1": "year"}, ssc=ssc(adj=False))
+    fit = feols(fml, data, vcov={"CRV1": "year"}, ssc=ssc(k_adj=False))
 
     # Wald test
     fit.wald_test(R=R)
@@ -141,7 +144,10 @@ def test_F_test_multiple_equation(seedn):
     p_value = fit._p_value
 
     r_fit = fixest.feols(
-        ro.Formula(fml), data=data, vcov=ro.Formula("~year"), ssc=fixest.ssc(adj=False)
+        ro.Formula(fml),
+        data=data,
+        vcov=ro.Formula("~year"),
+        ssc=fixest.ssc(False),
     )
 
     r_wald = car.linearHypothesis(r_fit, base.matrix(R, 3, 3), test="F")
@@ -196,14 +202,17 @@ def test_F_test_multiple_equations_pvalue(R, fml):
             }
         )
 
-    fit = feols(fml, data, vcov={"CRV1": "year"}, ssc=ssc(adj=False))
+    fit = feols(fml, data, vcov={"CRV1": "year"}, ssc=ssc(k_adj=False))
 
     # Wald test
     fit.wald_test(R=R)
     f_stat = fit._f_statistic
 
     r_fit = fixest.feols(
-        ro.Formula(fml), data=data, vcov=ro.Formula("~year"), ssc=fixest.ssc(adj=False)
+        ro.Formula(fml),
+        data=data,
+        vcov=ro.Formula("~year"),
+        ssc=fixest.ssc(False),
     )
 
     r_wald = car.linearHypothesis(r_fit, base.matrix(R, Rsize1, Rsize2), test="F")

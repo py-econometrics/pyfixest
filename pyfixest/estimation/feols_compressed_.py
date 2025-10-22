@@ -135,6 +135,7 @@ class FeolsCompressed(Feols):
         self._support_iid_inference = True
         self._supports_cluster_causal_variance = False
         self._support_decomposition = False
+        self._support_hac_inference = False
 
         if weights is not None:
             raise ValueError(
@@ -235,7 +236,10 @@ class FeolsCompressed(Feols):
         self._data = compressed_dict.df_compressed.to_pandas()
 
     def vcov(
-        self, vcov: Union[str, dict[str, str]], data: Optional[DataFrameType] = None
+        self,
+        vcov: Union[str, dict[str, str]],
+        vcov_kwargs: Optional[dict[str, Any]] = None,
+        data: Optional[DataFrameType] = None,
     ):
         "Compute the variance-covariance matrix for the compressed regression."
         if self._use_mundlak and vcov in ["iid", "hetero", "HC1", "HC2", "HC3"]:
@@ -255,7 +259,7 @@ class FeolsCompressed(Feols):
                     f"The only supported clustered vcov type for compressed regression is CRV1, but {vcov} was specified."
                 )
 
-        super().vcov(vcov, data)
+        super().vcov(vcov=vcov, vcov_kwargs=vcov_kwargs, data=data)
 
     def _vcov_iid(self):
         _N = self._N

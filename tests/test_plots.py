@@ -78,7 +78,7 @@ def test_set_figsize_not_none_bad_backend():
 @pytest.mark.extended
 def test_set_figsize_none_bad_backend():
     with pytest.raises(
-        ValueError, match="plot_backend must be either 'lets_plot' or 'matplotlib'."
+        ValueError, match=r"plot_backend must be either 'lets_plot' or 'matplotlib'\."
     ):
         set_figsize(None, "bad_backend")
 

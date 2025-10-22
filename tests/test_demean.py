@@ -29,16 +29,14 @@ def test_demean(benchmark, demean_func):
     weights = np.ones(N)
     algorithm = pyhdfe.create(flist)
     res_pyhdfe = algorithm.residualize(x)
-    res_pyfixest, success = demean_func(x, flist, weights, tol=1e-10)
+    res_pyfixest, _ = demean_func(x, flist, weights, tol=1e-10)
     assert np.allclose(res_pyhdfe, res_pyfixest)
 
     # with weights
     weights = rng.uniform(0, 1, N).reshape((N, 1))
     algorithm = pyhdfe.create(flist)
     res_pyhdfe = algorithm.residualize(x, weights)
-    res_pyfixest, success = benchmark(
-        demean_func, x, flist, weights.flatten(), tol=1e-10
-    )
+    res_pyfixest, _ = benchmark(demean_func, x, flist, weights.flatten(), tol=1e-10)
     assert np.allclose(res_pyhdfe, res_pyfixest)
 
 
@@ -239,7 +237,7 @@ def test_demean_model_caching(benchmark, demean_func):
     X_new = X.copy()
     X_new["x3"] = rng.normal(0, 1, N)
 
-    Yd3, Xd3 = demean_model(
+    _, Xd3 = demean_model(
         Y=Y,
         X=X_new,
         fe=fe,
@@ -338,11 +336,11 @@ def test_demean_maxiter_parameter():
     weights = np.ones(N)
 
     # Test with very small maxiter
-    result, success = demean(x, flist, weights, tol=1e-10, maxiter=1)
+    _, success = demean(x, flist, weights, tol=1e-10, maxiter=1)
     assert not success  # Should fail to converge
 
     # Test with large maxiter
-    result, success = demean(x, flist, weights, tol=1e-10, maxiter=100_000)
+    _, success = demean(x, flist, weights, tol=1e-10, maxiter=100_000)
     # May or may not converge, but shouldn't crash
 
 

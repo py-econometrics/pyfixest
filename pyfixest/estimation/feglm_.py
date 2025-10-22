@@ -69,7 +69,11 @@ class Feglm(Feols, ABC):
             context=context,
         )
 
-        _glm_input_checks(drop_singletons=drop_singletons, tol=tol, maxiter=maxiter)
+        _glm_input_checks(
+            drop_singletons=drop_singletons,
+            tol=tol,
+            maxiter=maxiter,
+        )
 
         self.maxiter = maxiter
         self.tol = tol
@@ -78,6 +82,7 @@ class Feglm(Feols, ABC):
 
         self._support_crv3_inference = True
         self._support_iid_inference = True
+        self._support_hac_inference = True
         self._supports_cluster_causal_variance = False
         self._support_decomposition = False
 
@@ -521,31 +526,12 @@ class Feglm(Feols, ABC):
 
 
 def _glm_input_checks(drop_singletons: bool, tol: float, maxiter: int):
-    """
-    Perform input checks for Fepois constructor arguments.
-
-    Parameters
-    ----------
-    drop_singletons : bool
-        Whether to drop singleton fixed effects.
-    tol : float
-        Tolerance level for convergence check.
-    maxiter : int
-        Maximum number of iterations.
-
-    Returns
-    -------
-    None
-    """
-    # drop singletons must be logical
     if not isinstance(drop_singletons, bool):
         raise TypeError("drop_singletons must be logical.")
-    # tol must be numeric and between 0 and 1
     if not isinstance(tol, (int, float)):
         raise TypeError("tol must be numeric.")
     if tol <= 0 or tol >= 1:
         raise AssertionError("tol must be between 0 and 1.")
-    # maxiter must be integer and greater than 0
     if not isinstance(maxiter, int):
         raise TypeError("maxiter must be integer.")
     if maxiter <= 0:
