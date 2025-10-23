@@ -10,6 +10,11 @@ readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
 
+[project.optional-dependencies]
+gpu = [
+  "cupy-cuda12x>=13.0.0",  # For CUDA 12.x; use cupy-cuda11x for CUDA 11.x
+]
+
 [build-system]
 requires = ["maturin>=1.8,<2.0"]
 build-backend = "maturin"
@@ -116,5 +121,7 @@ module = [
   "joblib.*",
   "narwhals.*",
   "tqdm.*",
+  "cupy.*",
+  "cupyx.*",
 ]
 ignore_missing_imports = true

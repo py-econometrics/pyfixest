@@ -326,12 +326,12 @@ def _set_demeaner_backend(
 ) -> Callable:
     """Set the demeaning backend.
 
-    Currently, we allow for a numba backend, rust backend and a jax backend.
-    The latter is expected to be faster on GPU.
+    Currently, we allow for a numba backend, rust backend, jax backend, and cupy backend.
+    JAX and CuPy are expected to be faster on GPU.
 
     Parameters
     ----------
-    demeaner_backend : Literal["numba", "jax", "rust"]
+    demeaner_backend : Literal["numba", "jax", "rust", "cupy"]
         The demeaning backend to use.
 
     Returns
@@ -354,5 +354,9 @@ def _set_demeaner_backend(
         from pyfixest.estimation.jax.demean_jax_ import demean_jax
 
         return demean_jax
+    elif demeaner_backend == "cupy":
+        from pyfixest.estimation.cupy.demean_cupy_ import demean_cupy
+
+        return demean_cupy
     else:
         raise ValueError(f"Invalid demeaner backend: {demeaner_backend}")

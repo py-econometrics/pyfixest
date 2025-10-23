@@ -7,12 +7,13 @@ from pyfixest.core import demean as demean_rs
 from pyfixest.core.demean_accelerated import demean_accelerated
 from pyfixest.estimation.demean_ import _set_demeaner_backend, demean, demean_model
 from pyfixest.estimation.jax.demean_jax_ import demean_jax
+from pyfixest.estimation.cupy.demean_cupy_ import demean_cupy
 
 
 @pytest.mark.parametrize(
     argnames="demean_func",
-    argvalues=[demean, demean_jax, demean_rs, demean_accelerated],
-    ids=["demean_numba", "demean_jax", "demean_rs", "demean_accelerated"],
+    argvalues=[demean, demean_jax, demean_rs, demean_accelerated, demean_cupy],
+    ids=["demean_numba", "demean_jax", "demean_rs", "demean_accelerated", "demean_cupy"],
 )
 def test_demean(benchmark, demean_func):
     rng = np.random.default_rng(929291)
@@ -38,6 +39,27 @@ def test_demean(benchmark, demean_func):
     res_pyhdfe = algorithm.residualize(x, weights)
     res_pyfixest, _ = benchmark(demean_func, x, flist, weights.flatten(), tol=1e-10)
     assert np.allclose(res_pyhdfe, res_pyfixest)
+
+    # Additional test for cupy with formulaic encoding
+    if demean_func == demean_cupy:
+        try:
+            import formulaic  # noqa: F401
+
+            # Test with fe DataFrame using formulaic
+            fe = pd.DataFrame({f"fe{i}": flist[:, i] for i in range(flist.shape[1])})
+            res_formulaic, success_fe = demean_cupy(x, fe=fe, weights=weights.flatten())
+            assert success_fe, "CuPy with fe DataFrame should succeed"
+
+            # Compare with pyhdfe reference
+            assert np.allclose(res_pyhdfe, res_formulaic), \
+                "CuPy formulaic should match pyhdfe"
+
+            # Compare formulaic vs flist approach
+            max_diff = np.abs(res_formulaic - res_pyfixest).max()
+            print(f"\n  CuPy formulaic vs flist: max diff = {max_diff:.2e}")
+
+        except ImportError:
+            pass  # Skip if formulaic not available
 
 
 def test_set_demeaner_backend():
@@ -371,17 +393,49 @@ def test_feols_integration_maxiter():
 
 @pytest.mark.parametrize(
     argnames="demean_func",
-    argvalues=[demean_rs, demean_accelerated],
-    ids=["demean_rs", "demean_accelerated"],
+    argvalues=[demean_rs, demean_accelerated, demean_cupy],
+    ids=["demean_rs", "demean_accelerated", "demean_cupy"],
 )
 def test_demean_complex_fixed_effects(benchmark, demean_func):
     """Benchmark demean functions with complex multi-level fixed effects."""
     X, flist, weights = generate_complex_fixed_effects_data()
 
-    X_demeaned, success = benchmark(demean_func, X, flist, weights, tol=1e-10)
+    # For CuPy, use formulaic encoding for better accuracy
+    if demean_func == demean_cupy:
+        try:
+            import formulaic  # noqa: F401
 
-    assert success, "Benchmarked demeaning should succeed"
-    assert X_demeaned.shape == X.shape
+            # Create fe DataFrame for formulaic encoding
+            fe = pd.DataFrame({f"fe{i}": flist[:, i] for i in range(flist.shape[1])})
+
+            # Benchmark formulaic approach - benchmark the actual call
+            def cupy_with_formulaic():
+                return demean_cupy(X, fe=fe, weights=weights)
+
+            X_demeaned, success = benchmark(cupy_with_formulaic)
+
+            assert success, "CuPy with formulaic should succeed"
+            assert X_demeaned.shape == X.shape
+
+            # Also test flist approach for comparison (not benchmarked)
+            X_demeaned_flist, success_flist = demean_cupy(X, flist=flist, weights=weights)
+            assert success_flist, "CuPy with flist should succeed"
+
+            # Compare formulaic vs flist
+            max_diff = np.abs(X_demeaned - X_demeaned_flist).max()
+            rel_err = max_diff / (np.abs(X_demeaned_flist).max() + 1e-10)
+            print(f"\n  CuPy: formulaic vs flist (max diff: {max_diff:.2e}, rel err: {rel_err:.2e})")
+
+        except ImportError:
+            # Fall back to flist if formulaic not available
+            X_demeaned, success = benchmark(demean_func, X, flist, weights, tol=1e-10)
+            assert success, "Benchmarked demeaning should succeed"
+            assert X_demeaned.shape == X.shape
+    else:
+        # For other backends, use standard flist approach
+        X_demeaned, success = benchmark(demean_func, X, flist, weights, tol=1e-10)
+        assert success, "Benchmarked demeaning should succeed"
+        assert X_demeaned.shape == X.shape
 
 
 def generate_complex_fixed_effects_data():
@@ -391,7 +445,7 @@ def generate_complex_fixed_effects_data():
 
     """
     rng = np.random.default_rng(42)
-    n = 10**5  # Large dataset for benchmarking
+    n = 20**5  # Large dataset for benchmarking
     nb_indiv = n // 20
     nb_firm = max(1, round(n / 160))
     nb_year = max(1, round(n**0.3))
