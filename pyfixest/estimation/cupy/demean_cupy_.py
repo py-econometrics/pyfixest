@@ -38,7 +38,6 @@ class CupyFWLDemeaner:
         solver_atol: float = 1e-8,
         solver_btol: float = 1e-8,
         solver_maxiter: Optional[int] = None,
-        cache_operators: bool = True,
         warn_on_cpu_fallback: bool = True,
     ):
         """
@@ -112,11 +111,14 @@ class CupyFWLDemeaner:
         x_unweighted: "np.ndarray | cp.ndarray",
     ) -> Tuple["np.ndarray | cp.ndarray", bool]:
         "Solve OLS Equations via LSMR solver."
- 
+
+        X_k = x_unweighted.shape[1]
+        D_k = D_weighted.shape[1]
         x_demeaned = self.xp.zeros_like(x_unweighted)
+        theta = self.xp.zeros((D_k,X_k))
         success = True
 
-        for k in range(x_weighted.shape[1]):
+        for k in range(X_k):
             result = self.lsmr(
                 D_weighted,
                 x_weighted[:, k],
@@ -125,10 +127,11 @@ class CupyFWLDemeaner:
                 btol=self.solver_btol,
                 maxiter=self.solver_maxiter,
             )
-            theta = result[0]
+            theta[:, k] = result[0]
             istop = result[1]
-            x_demeaned[:, k] = x_unweighted[:, k].flatten() - (D_unweighted @ theta)
             success = success and (istop in [1, 2, 3])
+
+        x_demeaned = x_unweighted - (D_unweighted @ theta)
 
         return x_demeaned, success
 
