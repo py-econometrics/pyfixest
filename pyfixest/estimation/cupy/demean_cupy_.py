@@ -97,12 +97,6 @@ class CupyFWLDemeaner:
         except Exception:
             return False
 
-    def _scipy_to_cupy_sparse(
-        self, scipy_matrix: sp_sparse.csr_matrix
-    ) -> "cp_sparse.csr_matrix":
-        "Convert scipy.sparse.csr_matrix to cupyx.scipy.sparse.csr_matrix."
-        return cp_sparse.csr_matrix(scipy_matrix)
-
     def _solve_lsmr_loop(
         self,
         D_weighted: "sp_sparse.csr_matrix | cp_sparse.csr_matrix",
@@ -115,7 +109,7 @@ class CupyFWLDemeaner:
         X_k = x_unweighted.shape[1]
         D_k = D_weighted.shape[1]
         x_demeaned = self.xp.zeros_like(x_unweighted)
-        theta = self.xp.zeros((D_k,X_k))
+        theta = self.xp.zeros((D_k, X_k), dtype=x_unweighted.dtype)
         success = True
 
         for k in range(X_k):
@@ -182,9 +176,11 @@ class CupyFWLDemeaner:
         if self.use_gpu:
             x_device = cp.asarray(x)
             weights_device = cp.asarray(weights)
+            D_device = cp_sparse.csr_matrix(D)
         else:
             x_device = x
             weights_device = weights
+            D_device = D
 
         if weights is not None:
             sqrt_w = self.xp.sqrt(weights_device)
@@ -192,13 +188,13 @@ class CupyFWLDemeaner:
                 x_weighted = x_device * sqrt_w[:, None]
             else:
                 x_weighted = x_device * sqrt_w
-            D_weighted = D.multiply(sqrt_w[:, None])
+            D_weighted = D_device.multiply(sqrt_w[:, None])
         else:
             x_weighted = x_device
-            D_weighted = D
+            D_weighted = D_device
 
         x_demeaned, success = self._solve_lsmr_loop(
-            D_weighted, x_weighted, D, x_device
+            D_weighted, x_weighted, D_device, x_device
         )
 
         if self.use_gpu:
