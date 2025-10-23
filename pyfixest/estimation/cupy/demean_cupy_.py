@@ -4,7 +4,7 @@ import warnings
 import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
-from formulaic import model_matrix
+from formulaic import Formula
 
 try:
     import cupy as cp
@@ -205,17 +205,14 @@ class CupyFWLDemeaner:
 
 
 def create_fe_sparse_matrix(
-    fe: pd.DataFrame, drop_reference: bool = True
+    fe: pd.DataFrame
 ) -> sp_sparse.csr_matrix:
     "Create sparse fixed effects matrix using formulaic."
 
     fe_fml = " + ".join([f"C({col})" for col in fe.columns])
-    _, D = model_matrix(fml = fe_fml, data = fe, output = "sparse")
-    return D.sparse.to_csr()
-
-
-# Module-level singleton for functional interface
-_default_demeaner = None
+    FML = Formula(fe_fml)
+    D = FML.get_model_matrix(data = fe, output = "sparse")
+    return D.tocsr()
 
 
 def demean_cupy(
@@ -224,22 +221,15 @@ def demean_cupy(
     weights: Optional[NDArray[np.float64]] = None,
     tol: float = 1e-8,
     maxiter: int = 100_000,
-    fe_df: Optional[pd.DataFrame] = None,
 ) -> Tuple[NDArray[np.float64], bool]:
     "Function Interface for CuPy demeaner."
 
     if weights is None:
         weights = np.ones(x.shape[0] if x.ndim > 1 else len(x))
 
-    fe_sparse_matrix = None
-    if fe_df is not None:
-        fe_sparse_matrix = create_fe_sparse_matrix(fe_df)
-    elif flist is None:
-        raise ValueError("Either `fe` or `flist` must be provided")
-
-    # required for common API
-    if flist is None:
-        flist = np.zeros((x.shape[0], 1), dtype=np.uint64)
+    n_fe = flist.shape[1] if flist.ndim > 1 else 1
+    fe_df = pd.DataFrame(flist, columns=[f"f{i+1}" for i in range(n_fe)])
+    fe_sparse_matrix = create_fe_sparse_matrix(fe_df)
 
     return CupyFWLDemeaner().demean(
         x, flist, weights, tol, maxiter, fe_sparse_matrix=fe_sparse_matrix
