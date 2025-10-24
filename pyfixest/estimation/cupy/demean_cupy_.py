@@ -3,7 +3,6 @@ import warnings
 
 import numpy as np
 import pandas as pd
-from numpy.typing import np.ndarray
 from formulaic import Formula
 
 try:
@@ -178,10 +177,23 @@ class CupyFWLDemeaner:
 
         D = fe_sparse_matrix
         if self.use_gpu:
-            x_device = cp.asarray(x, dtype=self.dtype)
-            weights_device = cp.asarray(weights, dtype=self.dtype)
-            D_device = cp_sparse.csr_matrix(D)
-            D_device = D_device.astype(self.dtype)
+            if x.dtype != self.dtype:
+                x_converted = x.astype(self.dtype, copy=False)
+                x_device = cp.asarray(x_converted)
+            else:
+                x_device = cp.asarray(x)
+
+            if weights.dtype != self.dtype:
+                weights_converted = weights.astype(self.dtype, copy=False)
+                weights_device = cp.asarray(weights_converted)
+            else:
+                weights_device = cp.asarray(weights)
+
+            if D.dtype != self.dtype:
+                D_converted = D.astype(self.dtype)
+                D_device = cp_sparse.csr_matrix(D_converted)
+            else:
+                D_device = cp_sparse.csr_matrix(D)
         else:
             x_device = x
             weights_device = weights
@@ -203,8 +215,15 @@ class CupyFWLDemeaner:
         )
 
         if self.use_gpu:
-            # Convert back to CPU and ensure float64 for downstream precision
-            x_demeaned = cp.asnumpy(x_demeaned).astype(np.float64)
+            # Optimize GPU→CPU transfer: convert dtype on GPU before transfer
+            # GPU is faster at dtype conversion than CPU
+            if self.dtype == np.float64:
+                # Already float64, direct transfer
+                x_demeaned = cp.asnumpy(x_demeaned)
+            else:
+                # Convert to float64 on GPU first, then transfer
+                x_demeaned_f64 = x_demeaned.astype(np.float64)
+                x_demeaned = cp.asnumpy(x_demeaned_f64)
 
         return x_demeaned, success
 
