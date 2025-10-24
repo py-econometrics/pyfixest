@@ -3,7 +3,7 @@ import warnings
 
 import numpy as np
 import pandas as pd
-from numpy.typing import NDArray
+from numpy.typing import np.ndarray
 from formulaic import Formula
 
 try:
@@ -104,7 +104,7 @@ class CupyFWLDemeaner:
     def _solve_lsmr_loop(
         self,
         D_weighted: "sp_sparse.csr_matrix | cp_sparse.csr_matrix",
-        x_weighted: "np.ndarray | cp.ndarray",
+        x_weighted: "np.np.ndarray | cp.np.ndarray",
         D_unweighted: "sp_sparse.csr_matrix | cp_sparse.csr_matrix",
         x_unweighted: "np.ndarray | cp.ndarray",
     ) -> Tuple["np.ndarray | cp.ndarray", bool]:
@@ -240,7 +240,7 @@ def demean_cupy(
         weights = np.ones(x.shape[0] if x.ndim > 1 else len(x))
 
     n_fe = flist.shape[1] if flist.ndim > 1 else 1
-    fe_df = pd.DataFrame(flist, columns=[f"f{i+1}" for i in range(n_fe)])
+    fe_df = pd.DataFrame(flist, columns=[f"f{i+1}" for i in range(n_fe)], copy=False)
     fe_sparse_matrix = create_fe_sparse_matrix(fe_df)
 
     return CupyFWLDemeaner(dtype=dtype).demean(
@@ -254,7 +254,7 @@ def demean_cupy32(
     weights: Optional[NDArray[np.float64]] = None,
     tol: float = 1e-8,
     maxiter: int = 100_000,
-) -> Tuple[NDArray[np.float64], bool]:
+) -> Tuple[np.ndarray[np.float64], bool]:
     """
     CuPy demeaner using float32 precision (faster on GPU, ~2x speedup).
 
@@ -265,12 +265,12 @@ def demean_cupy32(
 
 
 def demean_cupy64(
-    x: NDArray[np.float64],
-    flist: Optional[NDArray[np.uint64]] = None,
-    weights: Optional[NDArray[np.float64]] = None,
+    x: np.ndarray[np.float64],
+    flist: Optional[np.ndarray[np.uint64]] = None,
+    weights: Optional[np.ndarray[np.float64]] = None,
     tol: float = 1e-8,
     maxiter: int = 100_000,
-) -> Tuple[NDArray[np.float64], bool]:
+) -> Tuple[np.ndarray[np.float64], bool]:
     """
     CuPy demeaner using float64 precision (more accurate, safer default).
 
