@@ -25,6 +25,24 @@ find_collinear_variables_jax = find_collinear_variables_nb
 crv1_meat_loop_jax = crv1_meat_loop_nb
 count_fixef_fully_nested_all_jax = count_fixef_fully_nested_all_nb
 
+# Try to import CuPy functions, fall back to numba if not available
+try:
+    from pyfixest.estimation.cupy.demean_cupy_ import (
+        demean_cupy32,
+        demean_cupy64,
+    )
+
+    CUPY_AVAILABLE = True
+except ImportError:
+    # Fall back to numba implementation if CuPy is not available
+    demean_cupy32 = demean_nb
+    demean_cupy64 = demean_nb
+    CUPY_AVAILABLE = False
+
+find_collinear_variables_cupy = find_collinear_variables_nb
+crv1_meat_loop_cupy = crv1_meat_loop_nb
+count_fixef_fully_nested_all_cupy = count_fixef_fully_nested_all_nb
+
 BACKENDS = {
     "numba": {
         "demean": demean_nb,
@@ -43,5 +61,23 @@ BACKENDS = {
         "collinear": find_collinear_variables_jax,
         "crv1_meat": crv1_meat_loop_jax,
         "nonnested": count_fixef_fully_nested_all_jax,
+    },
+    "cupy": {
+        "demean": demean_cupy64,
+        "collinear": find_collinear_variables_cupy,
+        "crv1_meat": crv1_meat_loop_cupy,
+        "nonnested": count_fixef_fully_nested_all_cupy,
+    },
+    "cupy32": {
+        "demean": demean_cupy32,
+        "collinear": find_collinear_variables_cupy,
+        "crv1_meat": crv1_meat_loop_cupy,
+        "nonnested": count_fixef_fully_nested_all_cupy,
+    },
+    "cupy64": {
+        "demean": demean_cupy64,
+        "collinear": find_collinear_variables_cupy,
+        "crv1_meat": crv1_meat_loop_cupy,
+        "nonnested": count_fixef_fully_nested_all_cupy,
     },
 }
