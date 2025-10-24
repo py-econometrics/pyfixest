@@ -331,8 +331,11 @@ def _set_demeaner_backend(
 
     Parameters
     ----------
-    demeaner_backend : Literal["numba", "jax", "rust", "cupy"]
+    demeaner_backend : Literal["numba", "jax", "rust", "cupy", "cupy32", "cupy64"]
         The demeaning backend to use.
+        - "cupy": CuPy backend with float64
+        - "cupy32": CuPy backend with float32
+        - "cupy64": CuPy backend with float64
 
     Returns
     -------
@@ -354,9 +357,13 @@ def _set_demeaner_backend(
         from pyfixest.estimation.jax.demean_jax_ import demean_jax
 
         return demean_jax
-    elif demeaner_backend == "cupy":
-        from pyfixest.estimation.cupy.demean_cupy_ import demean_cupy
+    elif demeaner_backend in ["cupy", "cupy64"]:
+        from pyfixest.estimation.cupy.demean_cupy_ import demean_cupy64
 
-        return demean_cupy
+        return demean_cupy64
+    elif demeaner_backend == "cupy32":
+        from pyfixest.estimation.cupy.demean_cupy_ import demean_cupy32
+
+        return demean_cupy32
     else:
         raise ValueError(f"Invalid demeaner backend: {demeaner_backend}")

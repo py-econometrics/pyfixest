@@ -39,6 +39,7 @@ class CupyFWLDemeaner:
         solver_btol: float = 1e-8,
         solver_maxiter: Optional[int] = None,
         warn_on_cpu_fallback: bool = True,
+        dtype: type = np.float64,
     ):
         """
         Initialize CuPy FWL demeaner.
@@ -56,6 +57,8 @@ class CupyFWLDemeaner:
             Maximum LSMR iterations. If None, uses LSMR's default.
         warn_on_cpu_fallback : bool, default=True
             Warn when falling back to CPU despite use_gpu=True.
+        dtype : type, default=np.float64
+            Data type for GPU computations (np.float32 or np.float64).
         """
         if use_gpu is None:
             self.use_gpu = CUPY_AVAILABLE and self._gpu_available()
@@ -74,6 +77,7 @@ class CupyFWLDemeaner:
         self.solver_btol = solver_btol
         self.solver_maxiter = solver_maxiter
         self.warn_on_cpu_fallback = warn_on_cpu_fallback
+        self.dtype = dtype
 
         if self.use_gpu:
             self.xp = cp
@@ -174,9 +178,10 @@ class CupyFWLDemeaner:
 
         D = fe_sparse_matrix
         if self.use_gpu:
-            x_device = cp.asarray(x)
-            weights_device = cp.asarray(weights)
+            x_device = cp.asarray(x, dtype=self.dtype)
+            weights_device = cp.asarray(weights, dtype=self.dtype)
             D_device = cp_sparse.csr_matrix(D)
+            D_device = D_device.astype(self.dtype)
         else:
             x_device = x
             weights_device = weights
@@ -198,7 +203,8 @@ class CupyFWLDemeaner:
         )
 
         if self.use_gpu:
-            x_demeaned = cp.asnumpy(x_demeaned)
+            # Convert back to CPU and ensure float64 for downstream precision
+            x_demeaned = cp.asnumpy(x_demeaned).astype(np.float64)
 
         return x_demeaned, success
 
@@ -220,9 +226,16 @@ def demean_cupy(
     weights: Optional[NDArray[np.float64]] = None,
     tol: float = 1e-8,
     maxiter: int = 100_000,
+    dtype: type = np.float64,
 ) -> Tuple[NDArray[np.float64], bool]:
-    "Function Interface for CuPy demeaner."
+    """
+    Function interface for CuPy demeaner.
 
+    Parameters
+    ----------
+    dtype : type, default=np.float64
+        Data type for GPU computations (np.float32 or np.float64).
+    """
     if weights is None:
         weights = np.ones(x.shape[0] if x.ndim > 1 else len(x))
 
@@ -230,6 +243,37 @@ def demean_cupy(
     fe_df = pd.DataFrame(flist, columns=[f"f{i+1}" for i in range(n_fe)])
     fe_sparse_matrix = create_fe_sparse_matrix(fe_df)
 
-    return CupyFWLDemeaner().demean(
+    return CupyFWLDemeaner(dtype=dtype).demean(
         x, flist, weights, tol, maxiter, fe_sparse_matrix=fe_sparse_matrix
     )
+
+
+def demean_cupy32(
+    x: NDArray[np.float64],
+    flist: Optional[NDArray[np.uint64]] = None,
+    weights: Optional[NDArray[np.float64]] = None,
+    tol: float = 1e-8,
+    maxiter: int = 100_000,
+) -> Tuple[NDArray[np.float64], bool]:
+    """
+    CuPy demeaner using float32 precision (faster on GPU, ~2x speedup).
+
+    May have numerical stability issues for ill-conditioned problems.
+    Results are converted back to float64 for downstream precision.
+    """
+    return demean_cupy(x, flist, weights, tol, maxiter, dtype=np.float32)
+
+
+def demean_cupy64(
+    x: NDArray[np.float64],
+    flist: Optional[NDArray[np.uint64]] = None,
+    weights: Optional[NDArray[np.float64]] = None,
+    tol: float = 1e-8,
+    maxiter: int = 100_000,
+) -> Tuple[NDArray[np.float64], bool]:
+    """
+    CuPy demeaner using float64 precision (more accurate, safer default).
+
+    Slower than float32 but provides better numerical stability.
+    """
+    return demean_cupy(x, flist, weights, tol, maxiter, dtype=np.float64)
