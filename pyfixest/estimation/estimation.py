@@ -142,7 +142,7 @@ def feols(
         - "jax": GPU-accelerated using JAX (requires jax/jaxlib)
         - "rust": Rust-based implementation
         - "cupy" or "cupy64": GPU-accelerated using CuPy with float64 precision (requires cupy & GPU, defaults to scipy/CPU if no GPU available)
-        - "cupy32": GPU-accelerated using CuPy with float32 precision (requires cupy & GPU, defaults to scipy/CPU if no GPU available)
+        - "cupy32": GPU-accelerated using CuPy with float32 precision (requires cupy & GPU, defaults to scipy/CPU and float64 if no GPU available)
         Defaults to "numba".
 
     use_compression: bool
@@ -619,7 +619,13 @@ def fepois(
         - "jax": GPU-accelerated using JAX (requires jax/jaxlib)
         - "rust": Rust-based implementation
         - "cupy" or "cupy64": GPU-accelerated using CuPy with float64 precision (requires cupy & GPU, defaults to scipy/CPU if no GPU available)
-        - "cupy32": GPU-accelerated using CuPy with float32 precision (requires cupy & GPU, defaults to scipy/CPU if no GPU available)
+    demeaner_backend: DemeanerBackendOptions, optional
+        The backend to use for demeaning. Options include:
+        - "numba" (default): Fast CPU-based demeaning using Numba JIT
+        - "jax": GPU-accelerated using JAX (requires jax/jaxlib)
+        - "rust": Rust-based implementation
+        - "cupy" or "cupy64": GPU-accelerated using CuPy with float64 precision (requires cupy & GPU, defaults to scipy/CPU if no GPU available)
+        - "cupy32": GPU-accelerated using CuPy with float32 precision (requires cupy & GPU, defaults to scipy/CPU and float64 if no GPU available)
         Defaults to "numba".
 
     drop_intercept : bool, optional
