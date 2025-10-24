@@ -27,8 +27,6 @@ class CupyFWLDemeaner:
     Frisch-Waugh-Lovell theorem demeaner using sparse solvers.
 
     Solves via the LSMR solver. 
-
-    Strategy selection is automatic based on problem size and sparsity.
     """
 
     def __init__(
@@ -47,7 +45,8 @@ class CupyFWLDemeaner:
         ----------
         use_gpu : bool, optional
             Force GPU usage (True), CPU usage (False), or auto-detect (None).
-            Auto-detect checks if CuPy is available and GPU is accessible.
+            Auto-detect checks if CuPy is available and GPU is accessible. If 
+            both are True, runs on the GPU via CuPy.
         solver_atol : float, default=1e-8
             Absolute tolerance for LSMR stopping criterion.
         solver_btol : float, default=1e-8
@@ -151,7 +150,7 @@ class CupyFWLDemeaner:
         flist : np.ndarray, shape (n_obs, n_factors) or (n_obs,)
             Integer-encoded fixed effects. Ignored if fe_sparse_matrix provided.
         weights : np.ndarray, shape (n_obs,)
-            Observation weights (1.0 for equal weighting).
+            Weights (1.0 for equal weighting).
         tol : float, default=1e-8
             Convergence tolerance (unused for normal eq; used for LSMR fallback).
         maxiter : int, default=100_000
@@ -215,13 +214,9 @@ class CupyFWLDemeaner:
         )
 
         if self.use_gpu:
-            # Optimize GPU→CPU transfer: convert dtype on GPU before transfer
-            # GPU is faster at dtype conversion than CPU
             if self.dtype == np.float64:
-                # Already float64, direct transfer
                 x_demeaned = cp.asnumpy(x_demeaned)
             else:
-                # Convert to float64 on GPU first, then transfer
                 x_demeaned_f64 = x_demeaned.astype(np.float64)
                 x_demeaned = cp.asnumpy(x_demeaned_f64)
 
