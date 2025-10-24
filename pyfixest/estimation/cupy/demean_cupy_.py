@@ -135,13 +135,13 @@ class CupyFWLDemeaner:
 
     def demean(
         self,
-        x: NDArray[np.float64],
-        flist: NDArray[np.uint64],
-        weights: NDArray[np.float64],
+        x: np.ndarray[np.float64],
+        flist: np.ndarray[np.uint64],
+        weights: np.ndarray[np.float64],
         tol: float = 1e-8,
         maxiter: int = 100_000,
         fe_sparse_matrix: Optional["sp_sparse.csr_matrix"] = None,
-    ) -> Tuple[NDArray[np.float64], bool]:
+    ) -> Tuple[np.ndarray[np.float64], bool]:
         """
         Demean variable x by projecting out fixed effects using FWL theorem.
 
@@ -221,13 +221,13 @@ def create_fe_sparse_matrix(
 
 
 def demean_cupy(
-    x: NDArray[np.float64],
-    flist: Optional[NDArray[np.uint64]] = None,
-    weights: Optional[NDArray[np.float64]] = None,
+    x: np.ndarray[np.float64],
+    flist: Optional[np.ndarray[np.uint64]] = None,
+    weights: Optional[np.ndarray[np.float64]] = None,
     tol: float = 1e-8,
     maxiter: int = 100_000,
     dtype: type = np.float64,
-) -> Tuple[NDArray[np.float64], bool]:
+) -> Tuple[np.ndarray[np.float64], bool]:
     """
     Function interface for CuPy demeaner.
 
@@ -249,9 +249,9 @@ def demean_cupy(
 
 
 def demean_cupy32(
-    x: NDArray[np.float64],
-    flist: Optional[NDArray[np.uint64]] = None,
-    weights: Optional[NDArray[np.float64]] = None,
+    x: np.ndarray[np.float64],
+    flist: Optional[np.ndarray[np.uint64]] = None,
+    weights: Optional[np.ndarray[np.float64]] = None,
     tol: float = 1e-8,
     maxiter: int = 100_000,
 ) -> Tuple[np.ndarray[np.float64], bool]:
