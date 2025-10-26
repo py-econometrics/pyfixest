@@ -384,7 +384,14 @@ def test_demean_complex_fixed_effects(benchmark, demean_func):
     """Benchmark demean functions with complex multi-level fixed effects."""
     X, flist, weights = generate_complex_fixed_effects_data()
 
-    X_demeaned, success = benchmark(demean_func, X, flist, weights, tol=1e-10)
+    X_demeaned, success = benchmark.pedantic(
+        demean_func,
+        args=(X, flist, weights),
+        kwargs={"tol": 1e-10},
+        iterations=1,
+        rounds=1,
+        warmup_rounds=0,
+    )
 
     assert success, "Benchmarked demeaning should succeed"
     assert X_demeaned.shape == X.shape
