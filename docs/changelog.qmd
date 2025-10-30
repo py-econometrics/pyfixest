@@ -83,7 +83,7 @@ import pyfixest as pf
 data = gelbach_data(nobs=500)
 data["w"] = np.random.rand(500)
 fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
-gb = fit.decompose(decomp_var = "x1", x1_vars = ["x21"],reps = 10, nthreads = 1)
+gb = fit.decompose(decomp_var = "x1", x1_vars = ["x21"],reps = 10, nthreads = 1, only_coef = True)
 print(type(gb))
 ```
 
@@ -172,7 +172,7 @@ pf.etable([fit_nb, fit_rust], digits = 8)
 learn more about all features and take a look at more systematic benchmarks in the [quantreg vignette](https://py-econometrics.github.io/pyfixest/quantile-regression.html).
 
 ```{python}
-N_qr = 10_000
+N_qr = 1000
 rng = np.random.default_rng(929)
 
 df_qr = pd.DataFrame({
@@ -314,6 +314,8 @@ See the github changelog for details: [link](https://github.com/py-econometrics/
 
 ```{python}
 #| eval: False
+
+#| eval: False
 import pyfixest as pf
 data = pf.get_data()
 
@@ -392,6 +394,8 @@ if run:
 - Adds three new function arguments to `feols()` and `fepois()`: `copy_data`, `store_data`, and `fixef_tol`.
 - Adds support for frequency weights with the `weights_type` function argument.
 ```{python}
+#| eval: False
+
 import pyfixest as pf
 
 data = pf.get_data(N = 10000, model = "Fepois")

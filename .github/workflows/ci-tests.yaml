@@ -146,17 +146,13 @@ jobs:
           pixi-version: v0.41.4
           cache: true
 
-      - name: Set up Quarto
-        uses: quarto-dev/quarto-actions/setup@v2
-
-      - name: install tinytex
-        run: |
-          quarto install tinytex
-
       - name: Compile Rust extension (no wheel)
         run: |
           pixi run -e docs maturin-develop
 
+      - name: Install tinytex
+        run: |
+          pixi run -e docs docs-tinytex
 
       - name: Compile docstrings with quartodoc
         run: |
