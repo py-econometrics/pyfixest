@@ -121,7 +121,7 @@ pf.etable(
 )
 ```
 
-To obtain latex output use `format = "tex"`. If you want to save the table as a tex file, you can use the `file_name=` argument to specify the respective path where it should be saved. Etable will use latex packages `booktabs`, `threeparttable` and `makecell` for the table layout, so don't forget to include these packages in your latex document.
+To obtain latex output use `type = "tex"`. If you want to save the table as a tex file, you can use the `file_name=` argument to specify the respective path where it should be saved. Etable will use latex packages `booktabs`, `threeparttable` and `makecell` for the table layout, so don't forget to include these packages in your latex document.
 
 ```{python}
 # LaTex output (include latex packages booktabs, threeparttable, and makecell in your document):
