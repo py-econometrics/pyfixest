@@ -291,3 +291,55 @@ def demean_cupy64(
     Slower than float32 but provides better numerical stability.
     """
     return demean_cupy(x, flist, weights, tol, maxiter, dtype=np.float64)
+
+
+def demean_scipy(
+    x: np.ndarray[np.float64],
+    flist: Optional[np.ndarray[np.uint64]] = None,
+    weights: Optional[np.ndarray[np.float64]] = None,
+    tol: float = 1e-8,
+    maxiter: int = 100_000,
+) -> Tuple[np.ndarray[np.float64], bool]:
+    """
+    Scipy demeaner using float64 precision (CPU-only, no GPU).
+
+    Forces CPU execution using scipy sparse solvers even if CuPy is available.
+    Uses the same FWL (Frisch-Waugh-Lovell) algorithm as the cupy backend
+    but runs on CPU via scipy.sparse.linalg.lsmr.
+
+    Useful for:
+    - Systems without GPU
+    - Debugging/comparison with GPU results
+    - Ensuring consistent CPU-only execution
+
+    Parameters
+    ----------
+    x : np.ndarray
+        Variable(s) to demean.
+    flist : np.ndarray, optional
+        Integer-encoded fixed effects.
+    weights : np.ndarray, optional
+        Observation weights.
+    tol : float, default=1e-8
+        Convergence tolerance for LSMR solver.
+    maxiter : int, default=100_000
+        Maximum iterations for LSMR solver.
+
+    Returns
+    -------
+    x_demeaned : np.ndarray
+        Demeaned variable (residuals after projecting out FEs).
+    success : bool
+        True if solver converged/succeeded.
+    """
+    if weights is None:
+        weights = np.ones(x.shape[0] if x.ndim > 1 else len(x))
+
+    n_fe = flist.shape[1] if flist.ndim > 1 else 1
+    fe_df = pd.DataFrame(flist, columns=[f"f{i+1}" for i in range(n_fe)], copy=False)
+    fe_sparse_matrix = create_fe_sparse_matrix(fe_df)
+
+    # Force CPU usage (use_gpu=False) and disable warnings
+    return CupyFWLDemeaner(
+        use_gpu=False, warn_on_cpu_fallback=False, dtype=np.float64
+    ).demean(x, flist, weights, tol, maxiter, fe_sparse_matrix=fe_sparse_matrix)

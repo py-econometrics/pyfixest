@@ -194,8 +194,9 @@ BACKEND_F3 = [
     *[("numba", t) for t in ALL_F3],
     *[(b, SINGLE_F3) for b in (
         "jax", 
-         "rust", 
-        "cupy"
+        "rust", 
+        "cupy", 
+        "scipy"
     )],
 ]
 
@@ -299,10 +300,10 @@ def test_single_fit_feols(
     r_df_k = int(ro.r('attr(r_fixest$cov.scaled, "df.K")')[0])
     r_df_t = int(ro.r('attr(r_fixest$cov.scaled, "df.t")')[0])
 
-    if demeaner_backend == "cupy":
+    if demeaner_backend in ("cupy", "scipy"):
         coef_tol = 1e-08  
         predict_tol = 2e-06  
-        resid_tol = 2e-06  
+        resid_tol = 2e-06 
         inference_tol = 5e-07  
         tstat_tol = 1e-06
         if "^" in fml and weights is not None:
