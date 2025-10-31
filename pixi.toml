@@ -120,6 +120,27 @@ pre-commit = "pre-commit run --all-files"
 build-pip = 'python -m build .'
 maturin-develop = "maturin develop --release --strip"
 
+[feature.bench]
+platforms = ["linux-64"]
+
+[feature.bench.dependencies]
+python = "3.12.*"
+ipykernel = ">=6.29,<7"
+
+[feature.bench.pypi-dependencies]
+jax = { version = ">=0.4.38,<0.8", extras = ["cuda12"] }
+cupy-cuda12x = ">=13.0.0"
+
+nvidia-cublas-cu12 = "*"
+nvidia-cusparse-cu12 = "*"
+nvidia-cusolver-cu12 = "*"
+nvidia-cufft-cu12 = "*"
+nvidia-curand-cu12 = "*"
+nvidia-cuda-runtime-cu12 = "*"
+nvidia-cuda-cupti-cu12 = "*"
+nvidia-cudnn-cu12 = "*"
+
+
 [environments]
 dev = ["dev", "build"]
 docs = ["docs", "build"]
@@ -127,3 +148,4 @@ lint = ["lint"]
 plots = ["plots"]
 jax = ["jax"]
 build = ["build"]
+bench = ["bench", "build"] 
