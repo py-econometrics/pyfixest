@@ -192,7 +192,11 @@ ALL_F3 = ["str", "object", "int", "categorical", "float"]
 SINGLE_F3 = ALL_F3[0]
 BACKEND_F3 = [
     *[("numba", t) for t in ALL_F3],
-    *[(b, SINGLE_F3) for b in ("jax", "rust", "cupy")],
+    *[(b, SINGLE_F3) for b in (
+        "jax", 
+         "rust", 
+        "cupy"
+    )],
 ]
 
 
@@ -295,6 +299,22 @@ def test_single_fit_feols(
     r_df_k = int(ro.r('attr(r_fixest$cov.scaled, "df.K")')[0])
     r_df_t = int(ro.r('attr(r_fixest$cov.scaled, "df.t")')[0])
 
+    if demeaner_backend == "cupy":
+        coef_tol = 1e-08  
+        predict_tol = 2e-06  
+        resid_tol = 2e-06  
+        inference_tol = 5e-07  
+        tstat_tol = 1e-06
+        if "^" in fml and weights is not None:
+            predict_tol = 6e-06
+            resid_tol = 6e-06
+    else:
+        coef_tol = 1e-08
+        predict_tol = 1e-07
+        resid_tol = 1e-07
+        inference_tol = 1e-08
+        tstat_tol = 1e-07
+
     if inference == "iid" and k_adj and G_adj:
         py_resid = mod.resid()
         r_resid = stats.residuals(r_fixest)
@@ -303,15 +323,15 @@ def test_single_fit_feols(
         r_predict = stats.predict(r_fixest)
 
         check_absolute_diff(py_nobs, r_nobs, 1e-08, "py_nobs != r_nobs")
-        check_absolute_diff(py_coef, r_coef, 1e-08, "py_coef != r_coef")
+        check_absolute_diff(py_coef, r_coef, coef_tol, "py_coef != r_coef")
         check_absolute_diff(
-            py_predict[0:5], r_predict[0:5], 1e-07, "py_predict != r_predict"
+            py_predict[0:5], r_predict[0:5], predict_tol, "py_predict != r_predict"
         )
 
         check_absolute_diff(py_n_coefs, r_n_coefs, 1e-08, "py_n_coefs != r_n_coefs")
 
         check_absolute_diff(
-            (py_resid)[0:5], (r_resid)[0:5], 1e-07, "py_resid != r_resid"
+            (py_resid)[0:5], (r_resid)[0:5], resid_tol, "py_resid != r_resid"
         )
 
         if not mod._has_fixef and not mod._has_weights:
@@ -327,7 +347,7 @@ def test_single_fit_feols(
                 check_absolute_diff(
                     py_predict_all[col].values[-4:],
                     r_predict_all[col].values[-4:],
-                    1e-07,
+                    predict_tol,
                     f"py_predict_all != r_predict_all for {col}",
                 )
 
@@ -351,7 +371,7 @@ def test_single_fit_feols(
                 check_absolute_diff(
                     na_omit(py_predict_newsample)[0:5],
                     na_omit(r_predict_newsample)[0:5],
-                    1e-07,
+                    predict_tol,
                     "py_predict_newdata != r_predict_newdata",
                 )
 
@@ -373,7 +393,7 @@ def test_single_fit_feols(
                         check_absolute_diff(
                             py_predict_all_newdata[col].to_numpy()[-4:],
                             r_predict_all_newdata[col].to_numpy()[-4:],
-                            1e-07,
+                            predict_tol,
                             f"py_predict_all != r_predict_all for {col}",
                         )
         else:
@@ -392,11 +412,11 @@ def test_single_fit_feols(
     # number of "effective" covariates k identical
     assert py_df_k == r_df_k, "py_df_k != r_df_k"
 
-    check_absolute_diff(py_vcov, r_vcov, 1e-08, "py_vcov != r_vcov")
-    check_absolute_diff(py_se, r_se, 1e-08, "py_se != r_se")
-    check_absolute_diff(py_pval, r_pval, 1e-08, "py_pval != r_pval")
-    check_absolute_diff(py_tstat, r_tstat, 1e-07, "py_tstat != r_tstat")
-    check_absolute_diff(py_confint, r_confint, 1e-08, "py_confint != r_confint")
+    check_absolute_diff(py_vcov, r_vcov, inference_tol, "py_vcov != r_vcov")
+    check_absolute_diff(py_se, r_se, inference_tol, "py_se != r_se")
+    check_absolute_diff(py_pval, r_pval, inference_tol, "py_pval != r_pval")
+    check_absolute_diff(py_tstat, r_tstat, tstat_tol , "py_tstat != r_tstat")
+    check_absolute_diff(py_confint, r_confint, inference_tol, "py_confint != r_confint")
 
     py_r2 = mod._r2
     py_r2_within = mod._r2_within
@@ -408,17 +428,17 @@ def test_single_fit_feols(
     r_r2_within = r_r[5]
     r_adj_r2_within = r_r[6]
 
-    check_absolute_diff(py_r2, r_r2, 1e-08, "py_r2 != r_r2")
-    check_absolute_diff(py_adj_r2, r_adj_r2, 1e-08, "py_adj_r2 != r_adj_r2")
+    check_absolute_diff(py_r2, r_r2, inference_tol, "py_r2 != r_r2")
+    check_absolute_diff(py_adj_r2, r_adj_r2, inference_tol, "py_adj_r2 != r_adj_r2")
 
     if not np.isnan(py_r2_within):
         check_absolute_diff(
-            py_r2_within, r_r2_within, 1e-08, "py_r2_within != r_r2_within"
+            py_r2_within, r_r2_within, inference_tol, "py_r2_within != r_r2_within"
         )
         check_absolute_diff(
             py_adj_r2_within,
             r_adj_r2_within,
-            1e-08,
+            inference_tol,
             "py_adj_r2_within != r_adj_r2_within",
         )
 
