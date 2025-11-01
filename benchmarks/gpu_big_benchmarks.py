@@ -1,6 +1,4 @@
 import pyfixest as pf
-
-import pyfixest as pf
 import time
 from itertools import product
 
@@ -13,6 +11,98 @@ np.random.seed(42)
 
 import cupy as cp
 print(cp.ones(10).device)
+
+# ============================================================================
+# VISUALIZATION
+# ============================================================================
+import matplotlib.pyplot as plt
+import seaborn as sns
+import os
+
+print("\n" + "="*80)
+print("CREATING VISUALIZATIONS")
+print("="*80 + "\n")
+
+
+def create_benchmark_plot(df, title_suffix, filename, facet_by_fixef=True):
+    """Create a benchmark plot for either standard or complex data."""
+    df = df.copy()
+    df["G"] = df["G"].map({1: "n_fixef = 1", 2: "n_fixef = 2", 3: "n_fixef = 3"})
+    df["n_obs"] = df["n_obs"].astype(str)
+
+    # Dynamically determine unique values for order and hue_order
+    n_obs_order = sorted(df["n_obs"].unique(), key=lambda x: int(x))
+    demeaner_backend_order = df["demeaner_backend"].unique()
+
+    custom_palette = sns.color_palette("coolwarm", n_colors=len(demeaner_backend_order))
+
+    if facet_by_fixef:
+        # Create the FacetGrid with reordered columns and rows
+        g = sns.FacetGrid(
+            df,
+            col="G",  # G (n_fixef) increases left to right
+            margin_titles=True,
+            height=4,
+            aspect=1.2,
+            col_order=["n_fixef = 1", "n_fixef = 2", "n_fixef = 3"],
+            sharey=False,
+        )
+
+        # Plot the bar chart for each facet with the custom palette
+        g.map(
+            sns.barplot,
+            "n_obs",
+            "full_feols_timing",
+            "demeaner_backend",
+            order=n_obs_order,
+            hue_order=demeaner_backend_order,
+            errorbar=None,
+            palette=custom_palette,
+        )
+
+        # Add legend and adjust layout
+        g.add_legend(title="Demeaner Backend")
+        g.set_axis_labels("Number of Observations", "Runtime (seconds)")
+        g.set_titles(col_template="{col_name}")
+        plt.subplots_adjust(top=0.9)
+        g.fig.suptitle(f"Runtime vs Number of Observations by n_fixef ({title_suffix})")
+    else:
+        # Create a single plot without faceting
+        fig, ax = plt.subplots(figsize=(10, 6))
+
+        sns.barplot(
+            data=df,
+            x="n_obs",
+            y="full_feols_timing",
+            hue="demeaner_backend",
+            order=n_obs_order,
+            hue_order=demeaner_backend_order,
+            errorbar=None,
+            palette=custom_palette,
+            ax=ax
+        )
+
+        ax.set_xlabel("Number of Observations", fontsize=12)
+        ax.set_ylabel("Runtime (seconds)", fontsize=12)
+        ax.set_title(f"Runtime vs Number of Observations ({title_suffix})", fontsize=14, pad=20)
+        ax.legend(title="Demeaner Backend", bbox_to_anchor=(1.05, 1), loc='upper left')
+
+        plt.tight_layout()
+
+        # Create a mock FacetGrid-like object to maintain compatibility
+        class SimplePlot:
+            def __init__(self, fig):
+                self.fig = fig
+            def savefig(self, *args, **kwargs):
+                self.fig.savefig(*args, **kwargs)
+
+        g = SimplePlot(fig)
+
+    # Save figure
+    g.savefig(filename, dpi=300, bbox_inches="tight")
+    print(f"Saved {title_suffix} plot to: {os.path.abspath(filename)}")
+
+    return g
 
 
 def generate_test_data(size: int, k: int = 2):
@@ -78,22 +168,23 @@ def generate_test_data(size: int, k: int = 2):
     return base, y, X_full, dum_all, weights
 
 
-def generate_complex_fixed_effects_data(size: int = 1, k: int = 2):
+def generate_complex_fixed_effects_data(n: int = 10**5):
     """
     Complex fixed effects example ported from fixest R-implementation:
     https://github.com/lrberge/fixest/blob/ac1be27fda5fc381c0128b861eaf5bda88af846c/_BENCHMARK/Data%20generation.R#L125 .
 
+    Always generates:
+    - 3 fixed effects: id_indiv, id_firm, id_year
+    - 2 covariates: X1, X2
+    - Variable n observations
+
     Args:
-        size (int): Size parameter (1-5) where 1=10^5, 2=10^6, etc.
-        k (int): The number of covariates in the data frame.
+        n (int): Number of observations. Default is 10^5.
 
     Returns
     -------
         tuple: (pd.DataFrame, y, X_full, flist, weights)
     """
-    all_n = [10**5, 10**6, 10**7, 10**8, 10**9]
-    n = all_n[size - 1] if size <= len(all_n) else 10**5
-
     rng = np.random.default_rng(42)
     nb_indiv = n // 20
     nb_firm = max(1, round(n / 160))
@@ -122,7 +213,7 @@ def generate_complex_fixed_effects_data(size: int = 1, k: int = 2):
         + rng.normal(0, 1, n)
     )
 
-    # Build dataframe
+    # Build dataframe with exactly 2 covariates and 3 fixed effects
     base = pd.DataFrame({
         "y": y,
         "X1": x1,
@@ -132,22 +223,17 @@ def generate_complex_fixed_effects_data(size: int = 1, k: int = 2):
         "id_year": id_year,
     })
 
-    # Add additional covariates if k > 2
-    X_full = np.column_stack([x1, x2])
-    if k > 2:
-        X_extra = rng.normal(size=(n, k - 2))
-        X_df = pd.DataFrame(X_extra, columns=[f"X{i}" for i in range(3, k + 1)])
-        base = pd.concat([base, X_df], axis=1)
-        X_full = np.column_stack((X_full, X_extra))
-
+    X_full = np.column_stack([x1, x2, y])
     flist = np.column_stack([id_indiv, id_firm, id_year]).astype(np.uint64)
     weights = rng.uniform(0.5, 2.0, n)
 
     return base, y, X_full, flist, weights
 
+
 df, Y, X, f, weights = generate_test_data(1)
 m0 = pf.feols("ln_y ~ X1 | dum_1", df, demeaner_backend="rust")
 m1 = pf.feols("ln_y ~ X1 | dum_1", df, demeaner_backend="cupy")
+
 
 def run_standard_benchmark(
     fixed_effect,
@@ -189,6 +275,8 @@ def run_standard_benchmark(
         store_data=False,
         copy_data=False,
         solver=solver,
+        fixef_tol=1e-06,
+        fixef_maxiter=500_000
     )
 
     if k > 1:
@@ -208,6 +296,8 @@ def run_standard_benchmark(
             store_data=False,
             copy_data=False,
             solver=solver,
+            fixef_tol=1e-06,
+            fixef_maxiter=500_000
         )
         tic2 = time.time()
 
@@ -244,46 +334,35 @@ def run_standard_benchmark(
 
 
 def run_complex_benchmark(
-    fixed_effect,
     demeaner_backend,
-    size=1,
-    k=2,
+    n=10**5,
     solver="np.linalg.solve",
-    skip_demean_benchmark=True,
     nrep=3,
 ):
     """
     Run benchmarks on complex fixed effect models using the R fixest benchmark data structure.
 
+    This benchmark always uses:
+    - 3 fixed effects: id_indiv + id_firm + id_year
+    - 2 covariates: X1 + X2
+
     Args:
-        fixed_effect (str): The fixed effect to use. Must be "id_indiv", "id_indiv+id_firm", or "id_indiv+id_firm+id_year".
         demeaner_backend (str): The backend to use for demeaning.
-        size (int): The size of the data to generate (1-5).
-        k (int): The number of covariates to generate.
+        n (int): The number of observations to generate.
         solver (str): The solver to use for the estimation.
-        skip_demean_benchmark (bool): Whether to skip the "pure" demean benchmark.
         nrep (int): Number of repetitions.
 
     Returns
     -------
         pd.DataFrame: Benchmark results.
     """
-    assert fixed_effect in ["id_indiv", "id_indiv+id_firm", "id_indiv+id_firm+id_year"]
-
     res = []
 
-    # Build formula - X1 and X2 are always present, then X3, X4, ... for k > 2
-    if k == 1:
-        fml = f"y ~ X1 | {fixed_effect}"
-    elif k == 2:
-        fml = f"y ~ X1 + X2 | {fixed_effect}"
-    else:
-        # For k > 2, add X3, X4, ..., Xk
-        xfml = "+".join([f"X{i}" for i in range(1, k + 1)])
-        fml = f"y ~ {xfml} | {fixed_effect}"
+    # Fixed formula: always 2 covariates and 3 fixed effects
+    fml = "y ~ X1 + X2 | id_indiv + id_firm + id_year"
 
     # warmup
-    df_warmup, _, _, _, _ = generate_complex_fixed_effects_data(1, k=k)
+    df_warmup, _, _, _, _ = generate_complex_fixed_effects_data(n=10**4)
     pf.feols(
         fml,
         data=df_warmup,
@@ -291,10 +370,12 @@ def run_complex_benchmark(
         store_data=False,
         copy_data=False,
         solver=solver,
+        fixef_tol=1e-06,
+        fixef_maxiter=500_000
     )
 
     for rep in range(nrep):
-        df, Y, X, f, weights = generate_complex_fixed_effects_data(size=size, k=k)
+        df, Y, X, f, weights = generate_complex_fixed_effects_data(n=n)
 
         tic1 = time.time()
         pf.feols(
@@ -304,6 +385,8 @@ def run_complex_benchmark(
             store_data=False,
             copy_data=False,
             solver=solver,
+            fixef_tol=1e-06,
+            fixef_maxiter=500_000
         )
         tic2 = time.time()
 
@@ -316,8 +399,8 @@ def run_complex_benchmark(
                     "solver": solver,
                     "demeaner_backend": demeaner_backend,
                     "n_obs": df.shape[0],
-                    "k": k,
-                    "G": len(fixed_effect.split("+")),
+                    "k": 2,  # Always 2 covariates
+                    "G": 3,  # Always 3 fixed effects
                     "rep": rep + 1,
                     "full_feols_timing": full_feols_timing,
                     "demean_timing": np.nan,
@@ -327,10 +410,12 @@ def run_complex_benchmark(
 
     return pd.concat(res, axis=1).T
 
+
 a_rust = run_standard_benchmark(fixed_effect="dum_1", demeaner_backend="rust", size=1, k=1)
 a_cupy = run_standard_benchmark(fixed_effect="dum_1", demeaner_backend="cupy", size=1, k=1)
 print(a_rust)
 print(a_cupy)
+
 
 def run_all_benchmarks(size_list, k_list, nrep):
     """
@@ -367,7 +452,7 @@ def run_all_benchmarks(size_list, k_list, nrep):
                         demeaner_backend=demeaner_backend,
                         size=size,
                         k=k,
-                        nrep = nrep
+                        nrep=nrep
                     ),
                 ],
                 axis=0,
@@ -377,13 +462,16 @@ def run_all_benchmarks(size_list, k_list, nrep):
     return res
 
 
-def run_all_complex_benchmarks(size_list, k_list, nrep):
+def run_all_complex_benchmarks(n_list, nrep):
     """
     Run all the complex benchmarks.
 
+    Complex benchmarks always use:
+    - 3 fixed effects: id_indiv + id_firm + id_year
+    - 2 covariates: X1 + X2
+
     Args:
-        size_list (list): The list of sizes to run the benchmarks on. 1-> 10^5, 2-> 10^6, etc.
-        k_list (list): The list of k values to run the benchmarks on.
+        n_list (list): The list of n (observation counts) to run the benchmarks on.
         nrep (int): Number of repetitions for each benchmark.
     """
     res = pd.DataFrame()
@@ -395,24 +483,20 @@ def run_all_complex_benchmarks(size_list, k_list, nrep):
                 "cupy64", "cupy32",
                 "scipy"
             ],  # demeaner_backend
-            ["id_indiv", "id_indiv+id_firm", "id_indiv+id_firm+id_year"],  # fixef
-            size_list,  # size
-            k_list,  # k
+            n_list,  # n
             ["np.linalg.solve"],  # solver
         )
     )
 
     with tqdm(total=len(all_combinations), desc="Running Complex Benchmarks") as pbar:
-        for demeaner_backend, fixef, size, k, solver in all_combinations:
+        for demeaner_backend, n, solver in all_combinations:
             res = pd.concat(
                 [
                     res,
                     run_complex_benchmark(
                         solver=solver,
-                        fixed_effect=fixef,
                         demeaner_backend=demeaner_backend,
-                        size=size,
-                        k=k,
+                        n=n,
                         nrep=nrep
                     ),
                 ],
@@ -422,6 +506,7 @@ def run_all_complex_benchmarks(size_list, k_list, nrep):
 
     return res
 
+
 # ============================================================================
 # STANDARD BENCHMARKS
 # ============================================================================
@@ -430,8 +515,8 @@ print("RUNNING STANDARD BENCHMARKS")
 print("="*80 + "\n")
 
 res_all_standard = run_all_benchmarks(
-    size_list=[1, 2, 3, 4],  # for N = 1000, 10_000, 100_000, 1_000_000, 10_000_000
-    k_list=[1, 10],  # for k = 1, 10
+    size_list=[1, 2, 3, 4, 5],  # for N = 1000, 10_000, 100_000, 1_000_000, 10_000_000
+    k_list=[1, 10, 25],  # for k = 1, 10, 25
     nrep=3
 )
 
@@ -448,6 +533,13 @@ print(df_standard)
 df_standard.to_csv("gpu_runtime_res_standard.csv", index=False)
 print("\nSaved standard results to: gpu_runtime_res_standard.csv")
 
+# Create standard benchmark plot
+g_standard = create_benchmark_plot(
+    df_standard,
+    "Standard Data",
+    "gpu_runtime_comparison_standard.png"
+)
+
 # ============================================================================
 # COMPLEX BENCHMARKS
 # ============================================================================
@@ -456,8 +548,7 @@ print("RUNNING COMPLEX BENCHMARKS")
 print("="*80 + "\n")
 
 res_all_complex = run_all_complex_benchmarks(
-    size_list=[1, 2],  # for N = 10^5, 10^6, 10^7, 10^8, 10^9
-    k_list=[2, 10],  # for k = 2, 10
+    n_list=[10**5, 10**6, 5*10**6, 10**7],  # Various observation counts
     nrep=3
 )
 
@@ -474,80 +565,12 @@ print(df_complex)
 df_complex.to_csv("gpu_runtime_res_complex.csv", index=False)
 print("\nSaved complex results to: gpu_runtime_res_complex.csv")
 
-# ============================================================================
-# VISUALIZATION
-# ============================================================================
-import matplotlib.pyplot as plt
-import seaborn as sns
-import os
-
-print("\n" + "="*80)
-print("CREATING VISUALIZATIONS")
-print("="*80 + "\n")
-
-
-def create_benchmark_plot(df, title_suffix, filename):
-    """Create a benchmark plot for either standard or complex data."""
-    df = df.copy()
-    df["G"] = df["G"].map({1: "n_fixef = 1", 2: "n_fixef = 2", 3: "n_fixef = 3"})
-    df["n_obs"] = df["n_obs"].astype(str)
-
-    # Dynamically determine unique values for order and hue_order
-    n_obs_order = sorted(df["n_obs"].unique(), key=lambda x: int(x))
-    demeaner_backend_order = df["demeaner_backend"].unique()
-
-    custom_palette = sns.color_palette("coolwarm", n_colors=len(demeaner_backend_order))
-
-    # Create the FacetGrid with reordered columns and rows
-    g = sns.FacetGrid(
-        df,
-        col="G",  # G (n_fixef) increases left to right
-        row="k",  # k increases top to bottom
-        margin_titles=True,
-        height=4,
-        aspect=1.2,
-        col_order=["n_fixef = 1", "n_fixef = 2", "n_fixef = 3"],
-        sharey=False,
-    )
-
-    # Plot the bar chart for each facet with the custom palette
-    g.map(
-        sns.barplot,
-        "n_obs",
-        "full_feols_timing",
-        "demeaner_backend",
-        order=n_obs_order,
-        hue_order=demeaner_backend_order,
-        errorbar=None,
-        palette=custom_palette,
-    )
-
-    # Add legend and adjust layout
-    g.add_legend(title="Demeaner Backend")
-    g.set_axis_labels("Number of Observations", "Runtime (seconds)")
-    g.set_titles(row_template="k = {row_name}", col_template="{col_name}")
-    plt.subplots_adjust(top=0.9)
-    g.fig.suptitle(f"Runtime vs Number of Observations by n_fixef and k ({title_suffix})")
-
-    # Save figure
-    g.savefig(filename, dpi=300, bbox_inches="tight")
-    print(f"Saved {title_suffix} plot to: {os.path.abspath(filename)}")
-
-    return g
-
-
-# Create standard benchmark plot
-g_standard = create_benchmark_plot(
-    df_standard,
-    "Standard Data",
-    "gpu_runtime_comparison_standard.png"
-)
-
-# Create complex benchmark plot
+# Create complex benchmark plot (single plot, no faceting)
 g_complex = create_benchmark_plot(
     df_complex,
     "Complex Data",
-    "gpu_runtime_comparison_complex.png"
+    "gpu_runtime_comparison_complex.png",
+    facet_by_fixef=False
 )
 
 # Show plots
