@@ -300,38 +300,7 @@ def demean_scipy(
     tol: float = 1e-8,
     maxiter: int = 100_000,
 ) -> Tuple[np.ndarray[np.float64], bool]:
-    """
-    Scipy demeaner using float64 precision (CPU-only, no GPU).
-
-    Forces CPU execution using scipy sparse solvers even if CuPy is available.
-    Uses the same FWL (Frisch-Waugh-Lovell) algorithm as the cupy backend
-    but runs on CPU via scipy.sparse.linalg.lsmr.
-
-    Useful for:
-    - Systems without GPU
-    - Debugging/comparison with GPU results
-    - Ensuring consistent CPU-only execution
-
-    Parameters
-    ----------
-    x : np.ndarray
-        Variable(s) to demean.
-    flist : np.ndarray, optional
-        Integer-encoded fixed effects.
-    weights : np.ndarray, optional
-        Observation weights.
-    tol : float, default=1e-8
-        Convergence tolerance for LSMR solver.
-    maxiter : int, default=100_000
-        Maximum iterations for LSMR solver.
-
-    Returns
-    -------
-    x_demeaned : np.ndarray
-        Demeaned variable (residuals after projecting out FEs).
-    success : bool
-        True if solver converged/succeeded.
-    """
+    "Scipy demeaner using float64 precision (CPU-only, no GPU)."
     if weights is None:
         weights = np.ones(x.shape[0] if x.ndim > 1 else len(x))
 
