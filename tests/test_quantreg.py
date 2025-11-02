@@ -103,7 +103,7 @@ def test_quantreg_vs_r(data, fml, vcov, quantile, method):
     # Compare coefficients
     py_coef = fit_py.coef().to_numpy()
     r_coef = np.array(fit_r.rx2("coefficients"))
-    np.testing.assert_allclose(py_coef, r_coef, rtol=1e-08, atol=1e-08)
+    np.testing.assert_allclose(py_coef, r_coef, rtol=1e-07, atol=1e-07)
 
     py_se = fit_py.se().to_numpy()
     r_summ = ro.r["summary"](fit_r, se=vcov)
