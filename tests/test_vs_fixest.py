@@ -192,12 +192,7 @@ ALL_F3 = ["str", "object", "int", "categorical", "float"]
 SINGLE_F3 = ALL_F3[0]
 BACKEND_F3 = [
     *[("numba", t) for t in ALL_F3],
-    *[(b, SINGLE_F3) for b in (
-        "jax", 
-        "rust", 
-        "cupy", 
-        "scipy"
-    )],
+    *[(b, SINGLE_F3) for b in ("jax", "rust", "cupy", "scipy")],
 ]
 
 
@@ -301,10 +296,10 @@ def test_single_fit_feols(
     r_df_t = int(ro.r('attr(r_fixest$cov.scaled, "df.t")')[0])
 
     if demeaner_backend in ("cupy", "scipy"):
-        coef_tol = 1e-08  
-        predict_tol = 2e-06  
-        resid_tol = 2e-06 
-        inference_tol = 5e-07  
+        coef_tol = 1e-08
+        predict_tol = 2e-06
+        resid_tol = 2e-06
+        inference_tol = 5e-07
         tstat_tol = 1e-06
         if "^" in fml and weights is not None:
             predict_tol = 6e-06
@@ -416,7 +411,7 @@ def test_single_fit_feols(
     check_absolute_diff(py_vcov, r_vcov, inference_tol, "py_vcov != r_vcov")
     check_absolute_diff(py_se, r_se, inference_tol, "py_se != r_se")
     check_absolute_diff(py_pval, r_pval, inference_tol, "py_pval != r_pval")
-    check_absolute_diff(py_tstat, r_tstat, tstat_tol , "py_tstat != r_tstat")
+    check_absolute_diff(py_tstat, r_tstat, tstat_tol, "py_tstat != r_tstat")
     check_absolute_diff(py_confint, r_confint, inference_tol, "py_confint != r_confint")
 
     py_r2 = mod._r2
