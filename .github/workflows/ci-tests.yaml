@@ -13,7 +13,7 @@ jobs:
     name: "Tests Core"
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         os: ["ubuntu-latest"]
         python-version: ["3.9", "3.14"]
@@ -35,16 +35,6 @@ jobs:
 
       - name: set numba parallel flags
         run: echo "NUMBA_NUM_THREADS=1" >> $GITHUB_ENV
-
-      - name: Setup r2u
-        uses: eddelbuettel/github-actions/r2u-setup@master
-
-      - name: Install R packages
-        run: |
-          R_LIB_PATH="${{ github.workspace }}/.pixi/envs/dev/lib/R/library"
-          mkdir -p $R_LIB_PATH
-          Rscript -e ".libPaths('$R_LIB_PATH'); install.packages(c('did2s', 'wildrwolf', 'ivDiag'),  lib='/home/runner/work/pyfixest/pyfixest/.pixi/envs/dev/lib/R/library', repos = c('https://cran.rstudio.com', 'https://s3alfisc.r-universe.dev'))"
-          Rscript -e ".libPaths('$R_LIB_PATH'); install.packages('ritest', lib='/home/runner/work/pyfixest/pyfixest/.pixi/envs/dev/lib/R/library', repos = c('https://grantmcdermott.r-universe.dev'))"
 
       - name: Compile Rust extension (no wheel)
         run: |
@@ -66,7 +56,7 @@ jobs:
     name: "Tests vs fixest"
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         os: ["ubuntu-latest"]
         python-version: ["3.9", "3.14"]
@@ -88,16 +78,6 @@ jobs:
 
       - name: set numba parallel flags
         run: echo "NUMBA_NUM_THREADS=1" >> $GITHUB_ENV
-
-      - name: Setup r2u
-        uses: eddelbuettel/github-actions/r2u-setup@master
-
-      - name: Install R packages
-        run: |
-          R_LIB_PATH="${{ github.workspace }}/.pixi/envs/dev/lib/R/library"
-          mkdir -p $R_LIB_PATH
-          Rscript -e ".libPaths('$R_LIB_PATH'); install.packages(c('did2s', 'wildrwolf', 'ivDiag'),  lib='/home/runner/work/pyfixest/pyfixest/.pixi/envs/dev/lib/R/library', repos = c('https://cran.rstudio.com', 'https://s3alfisc.r-universe.dev'))"
-          Rscript -e ".libPaths('$R_LIB_PATH'); install.packages('ritest', lib='/home/runner/work/pyfixest/pyfixest/.pixi/envs/dev/lib/R/library', repos = c('https://grantmcdermott.r-universe.dev'))"
 
       - name: Compile Rust extension (no wheel)
         run: |
