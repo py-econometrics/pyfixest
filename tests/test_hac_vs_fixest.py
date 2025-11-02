@@ -243,7 +243,7 @@ BACKEND_F3 = [
 ]
 
 
-@pytest.mark.against_r_core
+#@pytest.mark.against_r_core
 @pytest.mark.parametrize("inference", ["NW", "DK"])
 @pytest.mark.parametrize(
     "vcov_kwargs",
@@ -336,7 +336,7 @@ def test_single_fit_feols_hac_panel(
     check_absolute_diff(py_vcov, r_vcov, 1e-05, "py_vcov != r_vcov")
 
 
-@pytest.mark.against_r_core
+#@pytest.mark.against_r_core
 @pytest.mark.parametrize("inference", ["NW", "DK"])
 @pytest.mark.parametrize(
     "vcov_kwargs",
@@ -415,7 +415,7 @@ def test_single_fit_fepois_hac_panel(
     check_absolute_diff(py_vcov, r_vcov, 1e-04, "py_vcov != r_vcov")
 
 
-@pytest.mark.against_r_core
+#@pytest.mark.against_r_core
 @pytest.mark.parametrize("inference", ["NW", "DK"])
 @pytest.mark.parametrize(
     "vcov_kwargs",
@@ -527,7 +527,7 @@ def test_single_fit_feglm_hac_panel(
     check_absolute_diff(py_vcov, r_vcov, 1e-04, "py_vcov != r_vcov")
 
 
-@pytest.mark.against_r_core
+#@pytest.mark.against_r_core
 def test_vcov_updating(data_panel):
     fit_hetero = pf.feols("Y ~ treat", data=data_panel, vcov="hetero")
     fit_nw = pf.feols(
