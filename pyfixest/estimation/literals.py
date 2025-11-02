@@ -11,7 +11,9 @@ SolverOptions = Literal[
     "scipy.sparse.linalg.lsqr",
     "jax",
 ]
-DemeanerBackendOptions = Literal["numba", "jax", "rust", "cupy", "cupy32", "cupy64", "scipy"]
+DemeanerBackendOptions = Literal[
+    "numba", "jax", "rust", "cupy", "cupy32", "cupy64", "scipy"
+]
 PredictionErrorOptions = Literal["prediction"]
 QuantregMethodOptions = Literal["fn", "pfn"]
 QuantregMultiOptions = Literal["cfm1", "cfm2"]

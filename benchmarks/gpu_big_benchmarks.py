@@ -1,4 +1,3 @@
-import pyfixest as pf
 import time
 from itertools import product
 
@@ -7,21 +6,25 @@ import pandas as pd
 from scipy.stats import nbinom
 from tqdm import tqdm
 
+import pyfixest as pf
+
 np.random.seed(42)
 
 import cupy as cp
+
 print(cp.ones(10).device)
 
 # ============================================================================
 # VISUALIZATION
 # ============================================================================
-import matplotlib.pyplot as plt
-import seaborn as sns
 import os
 
-print("\n" + "="*80)
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+print("\n" + "=" * 80)
 print("CREATING VISUALIZATIONS")
-print("="*80 + "\n")
+print("=" * 80 + "\n")
 
 
 def create_benchmark_plot(df, title_suffix, filename, facet_by_fixef=True):
@@ -79,13 +82,15 @@ def create_benchmark_plot(df, title_suffix, filename, facet_by_fixef=True):
             hue_order=demeaner_backend_order,
             errorbar=None,
             palette=custom_palette,
-            ax=ax
+            ax=ax,
         )
 
         ax.set_xlabel("Number of Observations", fontsize=12)
         ax.set_ylabel("Runtime (seconds)", fontsize=12)
-        ax.set_title(f"Runtime vs Number of Observations ({title_suffix})", fontsize=14, pad=20)
-        ax.legend(title="Demeaner Backend", bbox_to_anchor=(1.05, 1), loc='upper left')
+        ax.set_title(
+            f"Runtime vs Number of Observations ({title_suffix})", fontsize=14, pad=20
+        )
+        ax.legend(title="Demeaner Backend", bbox_to_anchor=(1.05, 1), loc="upper left")
 
         plt.tight_layout()
 
@@ -93,6 +98,7 @@ def create_benchmark_plot(df, title_suffix, filename, facet_by_fixef=True):
         class SimplePlot:
             def __init__(self, fig):
                 self.fig = fig
+
             def savefig(self, *args, **kwargs):
                 self.fig.savefig(*args, **kwargs)
 
@@ -214,14 +220,16 @@ def generate_complex_fixed_effects_data(n: int = 10**5):
     )
 
     # Build dataframe with exactly 2 covariates and 3 fixed effects
-    base = pd.DataFrame({
-        "y": y,
-        "X1": x1,
-        "X2": x2,
-        "id_indiv": id_indiv,
-        "id_firm": id_firm,
-        "id_year": id_year,
-    })
+    base = pd.DataFrame(
+        {
+            "y": y,
+            "X1": x1,
+            "X2": x2,
+            "id_indiv": id_indiv,
+            "id_firm": id_firm,
+            "id_year": id_year,
+        }
+    )
 
     X_full = np.column_stack([x1, x2, y])
     flist = np.column_stack([id_indiv, id_firm, id_year]).astype(np.uint64)
@@ -276,7 +284,7 @@ def run_standard_benchmark(
         copy_data=False,
         solver=solver,
         fixef_tol=1e-06,
-        fixef_maxiter=500_000
+        fixef_maxiter=500_000,
     )
 
     if k > 1:
@@ -297,7 +305,7 @@ def run_standard_benchmark(
             copy_data=False,
             solver=solver,
             fixef_tol=1e-06,
-            fixef_maxiter=500_000
+            fixef_maxiter=500_000,
         )
         tic2 = time.time()
 
@@ -371,7 +379,7 @@ def run_complex_benchmark(
         copy_data=False,
         solver=solver,
         fixef_tol=1e-06,
-        fixef_maxiter=500_000
+        fixef_maxiter=500_000,
     )
 
     for rep in range(nrep):
@@ -386,7 +394,7 @@ def run_complex_benchmark(
             copy_data=False,
             solver=solver,
             fixef_tol=1e-06,
-            fixef_maxiter=500_000
+            fixef_maxiter=500_000,
         )
         tic2 = time.time()
 
@@ -411,8 +419,12 @@ def run_complex_benchmark(
     return pd.concat(res, axis=1).T
 
 
-a_rust = run_standard_benchmark(fixed_effect="dum_1", demeaner_backend="rust", size=1, k=1)
-a_cupy = run_standard_benchmark(fixed_effect="dum_1", demeaner_backend="cupy", size=1, k=1)
+a_rust = run_standard_benchmark(
+    fixed_effect="dum_1", demeaner_backend="rust", size=1, k=1
+)
+a_cupy = run_standard_benchmark(
+    fixed_effect="dum_1", demeaner_backend="cupy", size=1, k=1
+)
 print(a_rust)
 print(a_cupy)
 
@@ -430,9 +442,11 @@ def run_all_benchmarks(size_list, k_list, nrep):
     all_combinations = list(
         product(
             [
-                "numba", "rust",
-                "cupy64", "cupy32",
-            #    "scipy"
+                "numba",
+                "rust",
+                "cupy64",
+                "cupy32",
+                #    "scipy"
             ],  # demeaner_backend
             ["dum_1", "dum_1+dum_2", "dum_1+dum_2+dum_3"],  # fixef
             size_list,  # size
@@ -452,7 +466,7 @@ def run_all_benchmarks(size_list, k_list, nrep):
                         demeaner_backend=demeaner_backend,
                         size=size,
                         k=k,
-                        nrep=nrep
+                        nrep=nrep,
                     ),
                 ],
                 axis=0,
@@ -478,11 +492,7 @@ def run_all_complex_benchmarks(n_list, nrep):
 
     all_combinations = list(
         product(
-            [
-                "numba", "rust",
-                "cupy64", "cupy32",
-                "scipy"
-            ],  # demeaner_backend
+            ["numba", "rust", "cupy64", "cupy32", "scipy"],  # demeaner_backend
             n_list,  # n
             ["np.linalg.solve"],  # solver
         )
@@ -494,10 +504,7 @@ def run_all_complex_benchmarks(n_list, nrep):
                 [
                     res,
                     run_complex_benchmark(
-                        solver=solver,
-                        demeaner_backend=demeaner_backend,
-                        n=n,
-                        nrep=nrep
+                        solver=solver, demeaner_backend=demeaner_backend, n=n, nrep=nrep
                     ),
                 ],
                 axis=0,
@@ -510,14 +517,14 @@ def run_all_complex_benchmarks(n_list, nrep):
 # ============================================================================
 # STANDARD BENCHMARKS
 # ============================================================================
-print("\n" + "="*80)
+print("\n" + "=" * 80)
 print("RUNNING STANDARD BENCHMARKS")
-print("="*80 + "\n")
+print("=" * 80 + "\n")
 
 res_all_standard = run_all_benchmarks(
     size_list=[1, 2, 3, 4, 5],  # for N = 1000, 10_000, 100_000, 1_000_000, 10_000_000
     k_list=[1, 10, 25],  # for k = 1, 10, 25
-    nrep=3
+    nrep=3,
 )
 
 df_standard = (
@@ -535,21 +542,19 @@ print("\nSaved standard results to: gpu_runtime_res_standard.csv")
 
 # Create standard benchmark plot
 g_standard = create_benchmark_plot(
-    df_standard,
-    "Standard Data",
-    "gpu_runtime_comparison_standard.png"
+    df_standard, "Standard Data", "gpu_runtime_comparison_standard.png"
 )
 
 # ============================================================================
 # COMPLEX BENCHMARKS
 # ============================================================================
-print("\n" + "="*80)
+print("\n" + "=" * 80)
 print("RUNNING COMPLEX BENCHMARKS")
-print("="*80 + "\n")
+print("=" * 80 + "\n")
 
 res_all_complex = run_all_complex_benchmarks(
-    n_list=[10**5, 10**6, 5*10**6, 10**7],  # Various observation counts
-    nrep=3
+    n_list=[10**5, 10**6, 5 * 10**6, 10**7],  # Various observation counts
+    nrep=3,
 )
 
 df_complex = (
@@ -570,12 +575,12 @@ g_complex = create_benchmark_plot(
     df_complex,
     "Complex Data",
     "gpu_runtime_comparison_complex.png",
-    facet_by_fixef=False
+    facet_by_fixef=False,
 )
 
 # Show plots
 plt.show()
 
-print("\n" + "="*80)
+print("\n" + "=" * 80)
 print("BENCHMARK COMPLETE")
-print("="*80)
+print("=" * 80)

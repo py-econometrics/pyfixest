@@ -1,5 +1,5 @@
-from typing import Optional, Tuple, Union
 import warnings
+from typing import Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -18,15 +18,15 @@ except ImportError:
     cp_lsmr = None
 
 import scipy.sparse as sp_sparse
-from scipy.sparse.linalg import lsmr as sp_lsmr, spsolve as sp_spsolve
-
+from scipy.sparse.linalg import lsmr as sp_lsmr
+from scipy.sparse.linalg import spsolve as sp_spsolve
 
 
 class CupyFWLDemeaner:
     """
     Frisch-Waugh-Lovell theorem demeaner using sparse solvers.
 
-    Solves via the LSMR solver. 
+    Solves via the LSMR solver.
     """
 
     def __init__(
@@ -45,7 +45,7 @@ class CupyFWLDemeaner:
         ----------
         use_gpu : bool, optional
             Force GPU usage (True), CPU usage (False), or auto-detect (None).
-            Auto-detect checks if CuPy is available and GPU is accessible. If 
+            Auto-detect checks if CuPy is available and GPU is accessible. If
             both are True, runs on the GPU via CuPy.
         solver_atol : float, default=1e-8
             Absolute tolerance for LSMR stopping criterion.
@@ -107,7 +107,6 @@ class CupyFWLDemeaner:
         x_unweighted: "np.ndarray | cp.ndarray",
     ) -> Tuple["np.ndarray | cp.ndarray", bool]:
         "Solve OLS Equations via LSMR solver."
-
         X_k = x_unweighted.shape[1]
         D_k = D_weighted.shape[1]
         x_demeaned = self.xp.zeros_like(x_unweighted)
@@ -223,14 +222,11 @@ class CupyFWLDemeaner:
         return x_demeaned, success
 
 
-def create_fe_sparse_matrix(
-    fe: pd.DataFrame
-) -> sp_sparse.csr_matrix:
+def create_fe_sparse_matrix(fe: pd.DataFrame) -> sp_sparse.csr_matrix:
     "Create sparse fixed effects matrix using formulaic."
-
     fe_fml = " + ".join([f"C({col})" for col in fe.columns])
     FML = Formula(fe_fml)
-    D = FML.get_model_matrix(data = fe, output = "sparse")
+    D = FML.get_model_matrix(data=fe, output="sparse")
     return D.tocsr()
 
 
@@ -254,7 +250,7 @@ def demean_cupy(
         weights = np.ones(x.shape[0] if x.ndim > 1 else len(x))
 
     n_fe = flist.shape[1] if flist.ndim > 1 else 1
-    fe_df = pd.DataFrame(flist, columns=[f"f{i+1}" for i in range(n_fe)], copy=False)
+    fe_df = pd.DataFrame(flist, columns=[f"f{i + 1}" for i in range(n_fe)], copy=False)
     fe_sparse_matrix = create_fe_sparse_matrix(fe_df)
 
     return CupyFWLDemeaner(dtype=dtype).demean(
@@ -305,7 +301,7 @@ def demean_scipy(
         weights = np.ones(x.shape[0] if x.ndim > 1 else len(x))
 
     n_fe = flist.shape[1] if flist.ndim > 1 else 1
-    fe_df = pd.DataFrame(flist, columns=[f"f{i+1}" for i in range(n_fe)], copy=False)
+    fe_df = pd.DataFrame(flist, columns=[f"f{i + 1}" for i in range(n_fe)], copy=False)
     fe_sparse_matrix = create_fe_sparse_matrix(fe_df)
 
     # Force CPU usage (use_gpu=False) and disable warnings

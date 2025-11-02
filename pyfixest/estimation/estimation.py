@@ -143,7 +143,7 @@ def feols(
         - "rust": Rust-based implementation
         - "cupy" or "cupy64": GPU-accelerated using CuPy with float64 precision (requires cupy & GPU, defaults to scipy/CPU if no GPU available)
         - "cupy32": GPU-accelerated using CuPy with float32 precision (requires cupy & GPU, defaults to scipy/CPU and float64 if no GPU available)
-        - "scipy": Forces to use a scipy-sparse backend even when cupy is installed and GPU is available. 
+        - "scipy": Forces to use a scipy-sparse backend even when cupy is installed and GPU is available.
         Defaults to "numba".
 
     use_compression: bool
@@ -621,7 +621,7 @@ def fepois(
         - "rust": Rust-based implementation
         - "cupy" or "cupy64": GPU-accelerated using CuPy with float64 precision (requires cupy & GPU, defaults to scipy/CPU if no GPU available)
         - "cupy32": GPU-accelerated using CuPy with float32 precision (requires cupy & GPU, defaults to scipy/CPU and float64 if no GPU available)
-        - "scipy": Forces to use a scipy-sparse backend even when cupy is installed and GPU is available. 
+        - "scipy": Forces to use a scipy-sparse backend even when cupy is installed and GPU is available.
         Defaults to "numba".
 
     drop_intercept : bool, optional
