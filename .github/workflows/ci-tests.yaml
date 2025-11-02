@@ -13,7 +13,7 @@ jobs:
     name: "Tests Core"
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         os: ["ubuntu-latest"]
         python-version: ["3.9", "3.14"]
@@ -66,7 +66,7 @@ jobs:
     name: "Tests vs fixest"
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         os: ["ubuntu-latest"]
         python-version: ["3.9", "3.14"]
