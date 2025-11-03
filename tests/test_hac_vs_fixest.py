@@ -52,7 +52,7 @@ def data_panel(N=1000, T=30, seed=421):
     treat[(np.isin(units, treated_units)) & (time >= midpoint)] = 1
     ever_treated = np.isin(units, treated_units).astype(int)
     alpha = rng.normal(0, 1, N)
-    gamma = np.random.normal(0, 0.5, T)
+    gamma = rng.normal(0, 0.5, T)
 
     # Generate AR(1) errors within each unit (rho=0.8 for strong autocorrelation)
     epsilon = np.empty(N * T)
