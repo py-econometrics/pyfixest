@@ -327,16 +327,13 @@ def _set_demeaner_backend(
     """Set the demeaning backend.
 
     Currently, we allow for a numba backend, rust backend, jax backend, and cupy backend.
-    JAX and CuPy are expected to be faster on GPU.
+    JAX and CuPy are expected to be faster on GPU for larger problems, but not necessarily 
+    faster than the numba and rust algos.
 
     Parameters
     ----------
     demeaner_backend : Literal["numba", "jax", "rust", "cupy", "cupy32", "cupy64"]
         The demeaning backend to use.
-        - "cupy": CuPy backend with float64
-        - "cupy32": CuPy backend with float32
-        - "cupy64": CuPy backend with float64
-
     Returns
     -------
     Callable
