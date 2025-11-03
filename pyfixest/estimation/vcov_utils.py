@@ -191,7 +191,7 @@ def _get_panel_idx(
     return order, units, starts, counts, panel_arr_sorted, time_arr_sorted
 
 
-@nb.njit(parallel=False)
+#@nb.njit(parallel=False)
 def _nw_meat_panel(
     scores: np.ndarray,
     time_arr: np.ndarray,
@@ -224,6 +224,7 @@ def _nw_meat_panel(
     vcov_nw : ndarray, shape (k, k)
         HAC Newey-West covariance matrix.
     """
+
     if lag is None:
         lag = int(np.floor(len(np.unique(time_arr)) ** 0.25))
 
@@ -235,23 +236,20 @@ def _nw_meat_panel(
     gamma_l = np.zeros((k, k))
     gamma_l_sum = np.zeros((k, k))
 
+    # start: first entry per panel i = 1, ..., N
+    # counts: number of counts for panel i
     for start, count in zip(starts, counts):
         end = start + count
-        gamma0 = np.zeros((k, k))
-        for t in range(start, end):
-            score_t = scores[t, :]
-            gamma0 += np.outer(score_t, score_t)
+
+        score_i = scores[start:end, :]
+        gamma0 = score_i.T @ score_i 
 
         gamma_l_sum.fill(0.0)
         Lmax = min(lag, count - 1)
         for lag_value in range(1, Lmax + 1):
-            gamma_l.fill(0.0)
-            for t in range(lag_value, count):
-                curr_t = start + t
-                prev_t = start + t - lag_value
-                score_curr = scores[curr_t, :]
-                score_prev = scores[prev_t, :]
-                gamma_l += np.outer(score_curr, score_prev)
+            score_curr = scores[start + lag_value:end, :]      
+            score_prev = scores[start:end - lag_value, :]      
+            gamma_l = score_curr.T @ score_prev                
             gamma_l_sum += weights[lag_value] * (gamma_l + gamma_l.T)
 
         meat_nw_panel += gamma0 + gamma_l_sum
