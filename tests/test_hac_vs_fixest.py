@@ -203,7 +203,8 @@ def _prepare_balanced_data(data, panel_id, balanced):
         mask = ~(data["unit"].isin(first_25) & (cc == 2))
         data = data[mask].reset_index(drop=True)
 
-    return data
+    return data.sort_values(['unit', 'year']).reset_index(drop=True)
+
 
 
 def _get_r_panel_kwargs(time_id, panel_id, lag, inference):
@@ -249,10 +250,10 @@ BACKEND_F3 = [
     "vcov_kwargs",
     [
         {"lag": 2, "time_id": "year"},
-        {"lag": 4, "time_id": "year"},
+        {"lag": 8, "time_id": "year"},
         # now add panel id
         {"lag": 2, "time_id": "year", "panel_id": "unit"},
-        {"lag": 4, "time_id": "year", "panel_id": "unit"},
+        {"lag": 8, "time_id": "year", "panel_id": "unit"},
         # lag not required when panel_id is provided
         {"time_id": "year", "panel_id": "unit"},
     ],
