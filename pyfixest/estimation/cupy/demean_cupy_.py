@@ -144,20 +144,19 @@ class CupyFWLDemeaner:
 
         Parameters
         ----------
-        x : np.ndarray, shape (n_obs,) or (n_obs, n_vars)
+        x : np.ndarray. 
             Variable(s) to demean.
-        flist : np.ndarray, shape (n_obs, n_factors) or (n_obs,)
+        flist : np.ndarray. 
             Integer-encoded fixed effects. Ignored if fe_sparse_matrix provided.
+            Usually not used within pyfixest internals. 
         weights : np.ndarray, shape (n_obs,)
             Weights (1.0 for equal weighting).
         tol : float, default=1e-8
-            Convergence tolerance (unused for normal eq; used for LSMR fallback).
+            Convergence tolerance. Used for both atol and btol of lsmr algo. 
         maxiter : int, default=100_000
-            Maximum iterations (used for LSMR fallback).
+            Maximum iterations for lsmr iterations.
         fe_sparse_matrix : scipy.sparse.csr_matrix, optional
-            Pre-computed sparse FE dummy matrix (from formulaic).
-            If provided, uses this directly (faster and more accurate).
-            Should have reference levels dropped for full-rank system.
+            Pre-computed sparse FE dummy matrix. 
 
         Returns
         -------
