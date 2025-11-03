@@ -191,7 +191,7 @@ def _get_panel_idx(
     return order, units, starts, counts, panel_arr_sorted, time_arr_sorted
 
 
-# @nb.njit(parallel=False)
+@nb.njit(parallel=False)
 def _nw_meat_panel(
     scores: np.ndarray,
     time_arr: np.ndarray,
