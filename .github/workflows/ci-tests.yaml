@@ -43,6 +43,7 @@ jobs:
       - name: Run 'regular' tests
         run: |
           pixi run tests-regular
+          pixi run tests-hac
 
       - name: Upload coverage to Codecov (partial)
         uses: codecov/codecov-action@v4

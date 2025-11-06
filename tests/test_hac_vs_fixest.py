@@ -1,3 +1,13 @@
+"""
+Tests for HAC (Heteroskedasticity and Autocorrelation Consistent) standard errors.
+
+IMPORTANT: These tests require single-threaded BLAS for deterministic results.
+Multi-threaded BLAS libraries can produce slightly different numerical results
+(~1-4% variance in vcov elements) due to different parallel reduction orders,
+even though both implementations are mathematically correct. The conftest.py
+fixture `single_thread_blas` handles this automatically.
+"""
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -355,9 +365,9 @@ def test_single_fit_feols_hac_panel(
     "balanced",
     [
         "balanced-consecutive",
-        # "balanced-non-consecutive",
-        # "non-balanced-consecutive",
-        # "non-balanced-non-consecutive",
+        "balanced-non-consecutive",
+        "non-balanced-consecutive",
+        "non-balanced-non-consecutive",
     ],
 )
 @pytest.mark.parametrize("fml", poisson_fmls)

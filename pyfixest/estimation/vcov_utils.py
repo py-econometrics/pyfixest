@@ -118,8 +118,8 @@ def _hac_meat_loop(
         gamma_buffer.fill(0.0)
         weight = weights[lag_value]
 
-        scores_current = scores[lag_value:time_periods]
-        scores_lagged = scores[: time_periods - lag_value]
+        scores_current = np.ascontiguousarray(scores[lag_value:time_periods, :])
+        scores_lagged = np.ascontiguousarray(scores[: time_periods - lag_value, :])
 
         gamma_buffer[:, :] = scores_current.T @ scores_lagged
         meat += weight * (gamma_buffer + gamma_buffer.T)
@@ -142,10 +142,10 @@ def _get_bartlett_weights(lag: int):
 @nb.njit(parallel=False)
 def _nw_meat_time(scores: np.ndarray, time_arr: np.ndarray, lag: int):
     if time_arr is None:
-        ordered_scores = scores
+        ordered_scores = np.ascontiguousarray(scores)
     else:
         order = np.argsort(time_arr)
-        ordered_scores = scores[order]
+        ordered_scores = np.ascontiguousarray(scores[order])
 
     time_periods, k = ordered_scores.shape
     weights = _get_bartlett_weights(lag=lag)
@@ -229,6 +229,7 @@ def _nw_meat_panel(
 
     weights = _get_bartlett_weights(lag=lag)
 
+    scores = np.ascontiguousarray(scores)
     k = scores.shape[1]
 
     meat_nw_panel = np.zeros((k, k))
@@ -240,14 +241,14 @@ def _nw_meat_panel(
     for start, count in zip(starts, counts):
         end = start + count
 
-        score_i = scores[start:end, :]
+        score_i = np.ascontiguousarray(scores[start:end, :])
         gamma0 = score_i.T @ score_i
 
         gamma_l_sum.fill(0.0)
         Lmax = min(lag, count - 1)
         for lag_value in range(1, Lmax + 1):
-            score_curr = scores[start + lag_value : end, :]
-            score_prev = scores[start : end - lag_value, :]
+            score_curr = np.ascontiguousarray(scores[start + lag_value : end, :])
+            score_prev = np.ascontiguousarray(scores[start : end - lag_value, :])
             gamma_l = score_curr.T @ score_prev
             gamma_l_sum += weights[lag_value] * (gamma_l + gamma_l.T)
 
@@ -289,6 +290,7 @@ def _dk_meat_panel(
     time_periods, k = scores_time.shape
 
     weights = _get_bartlett_weights(lag=lag)
+    scores_time = np.ascontiguousarray(scores_time)
 
     return _hac_meat_loop(
         scores=scores_time, weights=weights, time_periods=time_periods, k=k, lag=lag
