@@ -137,7 +137,16 @@ def feols(
         Defaults to "scipy.linalg.solve".
 
     demeaner_backend: DemeanerBackendOptions, optional
-        The backend to use for demeaning. Can be either "numba", "jax", or "rust".
+        The backend to use for demeaning. Options include:
+        - "numba" (default): CPU-based demeaning using Numba JIT via the Alternating Projections Algorithm.
+        - "rust": CPU-based demeaning implemented in Rust via the Alternating Projections Algorithm.
+        - "jax": CPU or GPU-accelerated using JAX (requires jax/jaxlib) via the Alternating Projections Algorithm.
+        - "cupy" or "cupy64": GPU-accelerated using CuPy with float64 precision via direct application of the Frisch-Waugh-Lovell Theorem on sparse
+          matrices (requires cupy & GPU, defaults to scipy/CPU if no GPU available)
+        - "cupy32": GPU-accelerated using CuPy with float32 precision via direct application of the Frisch-Waugh-Lovell Theorem on sparse
+          matrices (requires cupy & GPU, defaults to scipy/CPU and float64 if no GPU available)
+        - "scipy": Direct application of the Frisch-Waugh-Lovell Theorem on sparse matrice.
+          Forces to use a scipy-sparse backend even when cupy is installed and GPU is available.
         Defaults to "numba".
 
     use_compression: bool
@@ -609,7 +618,16 @@ def fepois(
         Defaults to "scipy.linalg.solve".
 
     demeaner_backend: DemeanerBackendOptions, optional
-        The backend to use for demeaning. Can be either "numba", "jax", or "rust".
+        The backend to use for demeaning. Options include:
+        - "numba" (default): CPU-based demeaning using Numba JIT via the Alternating Projections Algorithm.
+        - "rust": CPU-based demeaning implemented in Rust via the Alternating Projections Algorithm.
+        - "jax": CPU or GPU-accelerated using JAX (requires jax/jaxlib) via the Alternating Projections Algorithm.
+        - "cupy" or "cupy64": GPU-accelerated using CuPy with float64 precision via direct application of the Frisch-Waugh-Lovell Theorem on sparse
+          matrices (requires cupy & GPU, defaults to scipy/CPU if no GPU available)
+        - "cupy32": GPU-accelerated using CuPy with float32 precision via direct application of the Frisch-Waugh-Lovell Theorem on sparse
+          matrices (requires cupy & GPU, defaults to scipy/CPU and float64 if no GPU available)
+        - "scipy": Direct application of the Frisch-Waugh-Lovell Theorem on sparse matrice.
+          Forces to use a scipy-sparse backend even when cupy is installed and GPU is available.
         Defaults to "numba".
 
     drop_intercept : bool, optional

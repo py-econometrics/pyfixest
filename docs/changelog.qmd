@@ -42,6 +42,13 @@ work in progress.
 
 ## New Features
 
+### CuPy and SciPy Backends via LSMR
+
+We add CuPy and SciPy Backend to run the demeaning algorithm on the GPU via the sparse LSMR solver. For problems
+where the standard demeaner struggles to converge, this strategy can lead to significant speedups if paired with a GPU.
+
+![Complex Fixed Effects Benchmark](../benchmarks/complex_benchmarks.png)
+
 ### HAC Standard Errors
 
 We now support HAC standard errors! Thanks for Daman (https://github.com/damandhaliwal) for all his work (and coping with me with the PR, which took forever to get through).

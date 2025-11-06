@@ -34,6 +34,7 @@ markers = [
   "against_r_extended: mark test to be part of the test suite that depends on other R modules",
   "extended: mark test to be part of the extended test suite",
   "plots: marks all tests for plotting functionality, tests only triggered when using tag in github issue",
+  "hac: marks all tests for HAC SEs"
 ]
 
 filterwarnings = [
@@ -90,6 +91,7 @@ ignore = [
 "pyfixest/summarize.py" = ["D103"]
 "pyfixest/visualize.py" = ["D103"]
 "scripts/*.py" = ["D103"]
+"benchmarks/gpu_big_benchmarks.py" = ["E402", "F821", "RUF059", "B018", "TRY300"]
 
 [tool.ruff.lint.pycodestyle]
 max-doc-length = 88
