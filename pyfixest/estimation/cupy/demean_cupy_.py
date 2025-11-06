@@ -1,9 +1,10 @@
 import warnings
-from typing import Optional, Tuple
+from typing import Any, Optional
 
 import numpy as np
 import pandas as pd
 from formulaic import Formula
+from numpy.typing import NDArray
 
 try:
     import cupy as cp
@@ -94,18 +95,19 @@ class CupyFWLDemeaner:
         if not CUPY_AVAILABLE:
             return False
         try:
-            cp.cuda.Device(0).compute_capability
-            return True
+            _ = cp.cuda.Device(0).compute_capability
         except Exception:
             return False
+        else:
+            return True
 
     def _solve_lsmr_loop(
         self,
         D_weighted: "sp_sparse.csr_matrix | cp_sparse.csr_matrix",
-        x_weighted: "np.np.ndarray | cp.np.ndarray",
+        x_weighted: "NDArray[Any] | Any",
         D_unweighted: "sp_sparse.csr_matrix | cp_sparse.csr_matrix",
-        x_unweighted: "np.ndarray | cp.ndarray",
-    ) -> Tuple["np.ndarray | cp.ndarray", bool]:
+        x_unweighted: "NDArray[Any] | Any",
+    ) -> tuple["NDArray[Any] | Any", bool]:
         "Solve OLS Equations via LSMR solver."
         X_k = x_unweighted.shape[1]
         D_k = D_weighted.shape[1]
@@ -132,31 +134,31 @@ class CupyFWLDemeaner:
 
     def demean(
         self,
-        x: np.ndarray[np.float64],
-        flist: np.ndarray[np.uint64],
-        weights: np.ndarray[np.float64],
+        x: NDArray[Any],
+        flist: NDArray[Any],
+        weights: NDArray[Any],
         tol: float = 1e-8,
         maxiter: int = 100_000,
         fe_sparse_matrix: Optional["sp_sparse.csr_matrix"] = None,
-    ) -> Tuple[np.ndarray[np.float64], bool]:
+    ) -> tuple[NDArray[Any], bool]:
         """
         Demean variable x by projecting out fixed effects using FWL theorem.
 
         Parameters
         ----------
-        x : np.ndarray. 
+        x : np.ndarray.
             Variable(s) to demean.
-        flist : np.ndarray. 
+        flist : np.ndarray.
             Integer-encoded fixed effects. Ignored if fe_sparse_matrix provided.
-            Usually not used within pyfixest internals. 
+            Usually not used within pyfixest internals.
         weights : np.ndarray, shape (n_obs,)
             Weights (1.0 for equal weighting).
         tol : float, default=1e-8
-            Convergence tolerance. Used for both atol and btol of lsmr algo. 
+            Convergence tolerance. Used for both atol and btol of lsmr algo.
         maxiter : int, default=100_000
             Maximum iterations for lsmr iterations.
         fe_sparse_matrix : scipy.sparse.csr_matrix, optional
-            Pre-computed sparse FE dummy matrix. 
+            Pre-computed sparse FE dummy matrix.
 
         Returns
         -------
@@ -167,30 +169,29 @@ class CupyFWLDemeaner:
         """
         # Override maxiter if not set in __init__
         if self.solver_maxiter is None:
-            original_maxiter = self.solver_maxiter
             self.solver_maxiter = maxiter
-        else:
-            original_maxiter = None
 
         D = fe_sparse_matrix
         if self.use_gpu:
             if x.dtype != self.dtype:
-                x_converted = x.astype(self.dtype, copy=False)
+                x_converted: NDArray[Any] = x.astype(self.dtype, copy=False)
                 x_device = cp.asarray(x_converted)
             else:
                 x_device = cp.asarray(x)
 
             if weights.dtype != self.dtype:
-                weights_converted = weights.astype(self.dtype, copy=False)
+                weights_converted: NDArray[Any] = weights.astype(self.dtype, copy=False)
                 weights_device = cp.asarray(weights_converted)
             else:
                 weights_device = cp.asarray(weights)
 
-            if D.dtype != self.dtype:
+            if D is not None and D.dtype != self.dtype:
                 D_converted = D.astype(self.dtype)
                 D_device = cp_sparse.csr_matrix(D_converted)
-            else:
+            elif D is not None:
                 D_device = cp_sparse.csr_matrix(D)
+            else:
+                raise ValueError("fe_sparse_matrix cannot be None")
         else:
             x_device = x
             weights_device = weights
@@ -230,15 +231,15 @@ def create_fe_sparse_matrix(fe: pd.DataFrame) -> sp_sparse.csr_matrix:
 
 
 def demean_cupy(
-    x: np.ndarray[np.float64],
-    flist: Optional[np.ndarray[np.uint64]] = None,
-    weights: Optional[np.ndarray[np.float64]] = None,
+    x: NDArray[np.float64],
+    flist: Optional[NDArray[np.uint64]] = None,
+    weights: Optional[NDArray[np.float64]] = None,
     tol: float = 1e-8,
     maxiter: int = 100_000,
     dtype: type = np.float64,
-) -> Tuple[np.ndarray[np.float64], bool]:
+) -> tuple[NDArray[np.float64], bool]:
     """
-    Function interface for CuPy demeaner.
+    Functional interface for CuPy demeaner.
 
     Parameters
     ----------
@@ -247,6 +248,9 @@ def demean_cupy(
     """
     if weights is None:
         weights = np.ones(x.shape[0] if x.ndim > 1 else len(x))
+
+    if flist is None:
+        raise ValueError("flist cannot be None")
 
     n_fe = flist.shape[1] if flist.ndim > 1 else 1
     fe_df = pd.DataFrame(flist, columns=[f"f{i + 1}" for i in range(n_fe)], copy=False)
@@ -258,12 +262,12 @@ def demean_cupy(
 
 
 def demean_cupy32(
-    x: np.ndarray[np.float64],
-    flist: Optional[np.ndarray[np.uint64]] = None,
-    weights: Optional[np.ndarray[np.float64]] = None,
+    x: NDArray[np.float64],
+    flist: Optional[NDArray[np.uint64]] = None,
+    weights: Optional[NDArray[np.float64]] = None,
     tol: float = 1e-8,
     maxiter: int = 100_000,
-) -> Tuple[np.ndarray[np.float64], bool]:
+) -> tuple[NDArray[np.float64], bool]:
     """
     CuPy demeaner using float32 precision (faster on GPU, ~2x speedup).
 
@@ -274,12 +278,12 @@ def demean_cupy32(
 
 
 def demean_cupy64(
-    x: np.ndarray[np.float64],
-    flist: Optional[np.ndarray[np.uint64]] = None,
-    weights: Optional[np.ndarray[np.float64]] = None,
+    x: NDArray[np.float64],
+    flist: Optional[NDArray[np.uint64]] = None,
+    weights: Optional[NDArray[np.float64]] = None,
     tol: float = 1e-8,
     maxiter: int = 100_000,
-) -> Tuple[np.ndarray[np.float64], bool]:
+) -> tuple[NDArray[np.float64], bool]:
     """
     CuPy demeaner using float64 precision (more accurate, safer default).
 
@@ -289,15 +293,18 @@ def demean_cupy64(
 
 
 def demean_scipy(
-    x: np.ndarray[np.float64],
-    flist: Optional[np.ndarray[np.uint64]] = None,
-    weights: Optional[np.ndarray[np.float64]] = None,
+    x: NDArray[np.float64],
+    flist: Optional[NDArray[np.uint64]] = None,
+    weights: Optional[NDArray[np.float64]] = None,
     tol: float = 1e-8,
     maxiter: int = 100_000,
-) -> Tuple[np.ndarray[np.float64], bool]:
+) -> tuple[NDArray[np.float64], bool]:
     "Scipy demeaner using float64 precision (CPU-only, no GPU)."
     if weights is None:
         weights = np.ones(x.shape[0] if x.ndim > 1 else len(x))
+
+    if flist is None:
+        raise ValueError("flist cannot be None")
 
     n_fe = flist.shape[1] if flist.ndim > 1 else 1
     fe_df = pd.DataFrame(flist, columns=[f"f{i + 1}" for i in range(n_fe)], copy=False)

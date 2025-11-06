@@ -383,7 +383,7 @@ def run_complex_benchmark(
     )
 
     for rep in range(nrep):
-        df, Y, X, f, weights = generate_complex_fixed_effects_data(n=n)
+        df, Y, X, f, _ = generate_complex_fixed_effects_data(n=n)
 
         tic1 = time.time()
         pf.feols(
