@@ -213,8 +213,8 @@ def _prepare_balanced_data(data, panel_id, balanced):
         mask = ~(data["unit"].isin(first_25) & (cc == 2))
         data = data[mask].reset_index(drop=True)
 
-    return data.sort_values(['unit', 'year']).reset_index(drop=True)
-
+    return data
+x
 
 
 def _get_r_panel_kwargs(time_id, panel_id, lag, inference):
