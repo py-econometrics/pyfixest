@@ -142,7 +142,7 @@ def _get_bartlett_weights(lag: int):
 @nb.njit(parallel=False)
 def _nw_meat_time(scores: np.ndarray, time_arr: np.ndarray, lag: int):
     if time_arr is None:
-        ordered_scores =  np.ascontiguousarray(scores)
+        ordered_scores = np.ascontiguousarray(scores)
     else:
         order = np.argsort(time_arr)
         ordered_scores = np.ascontiguousarray(scores[order])

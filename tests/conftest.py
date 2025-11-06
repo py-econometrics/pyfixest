@@ -1,6 +1,4 @@
-"""
-Pytest configuration for pyfixest tests.
-"""
+"Pytest configuration for pyfixest tests."
 
 import os
 
@@ -12,7 +10,7 @@ def single_thread_blas():
     """
     Force single-threaded BLAS for deterministic HAC standard errors.
 
-    What Claude says: 
+    What Claude says:
 
     Multi-threaded BLAS libraries (OpenBLAS, MKL, Accelerate) can produce
     slightly different numerical results due to different parallel reduction
