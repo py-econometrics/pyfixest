@@ -66,6 +66,7 @@ jaxlib = ">=0.4.38, <0.8"
 "tests-regular" = 'pytest tests -n 9 -m "not (extended or against_r_core or against_r_extended or plots)" --cov=pyfixest --cov-report=xml'
 "tests-extended" = 'pytest tests -n 9 -m "extended" --cov=pyfixest --cov-report=xml'
 "tests-fixest" = "pytest -rs tests/test_vs_fixest.py -n 9 --cov=pyfixest --cov-report=xml"
+"tests-hac" = { cmd = "pytest tests/test_hac_vs_fixest.py -v -n 9", env = { OMP_NUM_THREADS = "1", OPENBLAS_NUM_THREADS = "1", MKL_NUM_THREADS = "1", VECLIB_MAXIMUM_THREADS = "1", NUMEXPR_NUM_THREADS = "1" } }
 "debug" = "python pyfixest/debug.py"
 "update-test-data" = "Rscript tests/r_test_comparisons.R"
 "install-r-extended" = "Rscript r_test_requirements.R"
