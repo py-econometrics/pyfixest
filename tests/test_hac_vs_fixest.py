@@ -252,6 +252,7 @@ BACKEND_F3 = [
     # *[(b, SINGLE_F3) for b in ("jax", "rust")],
 ]
 
+
 @pytest.mark.hac
 @pytest.mark.parametrize("inference", ["NW", "DK"])
 @pytest.mark.parametrize(
