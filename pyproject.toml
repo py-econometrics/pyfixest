@@ -34,6 +34,7 @@ markers = [
   "against_r_extended: mark test to be part of the test suite that depends on other R modules",
   "extended: mark test to be part of the extended test suite",
   "plots: marks all tests for plotting functionality, tests only triggered when using tag in github issue",
+  "hac": marks all tests for HAC SEs
 ]
 
 filterwarnings = [
