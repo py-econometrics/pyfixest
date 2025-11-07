@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.8.24">
+<meta name="generator" content="quarto-1.8.25">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -72,10 +72,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="site_libs/quarto-html/anchor.min.js"></script>
 <link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="site_libs/quarto-html/quarto-syntax-highlighting-dc55a5b9e770e841cd82e46aadbfb9b0.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-7b89279ff1a6dce999919e0e67d4d9ec.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="site_libs/bootstrap/bootstrap-19c6f25d9c793ca7e0d0ad6a6391bd12.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-b9c55ee423fe9b09b80369c068559168.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -177,16 +177,16 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
  <span class="dropdown-text">Quantile Regression</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="./compare-fixest-pyfixest.html">
- <span class="dropdown-text">Compare fixest &amp; PyFixest</span></a>
-  </li>  
-        <li>
     <a class="dropdown-item" href="./stata-2-pyfixest.html">
  <span class="dropdown-text">Compare Stata &amp; PyFixest</span></a>
   </li>  
         <li>
+    <a class="dropdown-item" href="./pyfixest-gpu-cupy.html">
+ <span class="dropdown-text">PyFixest on the GPU via CuPy</span></a>
+  </li>  
+        <li>
     <a class="dropdown-item" href="./pyfixest_gpu.html">
- <span class="dropdown-text">PyFixest on the GPU</span></a>
+ <span class="dropdown-text">PyFixest on the GPU via JAX</span></a>
   </li>  
         <li>
     <a class="dropdown-item" href="./resources.html">
@@ -246,24 +246,24 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="features" class="level2">
 <h2 class="anchored" data-anchor-id="features">Features</h2>
 <ul>
-<li><p><strong>OLS</strong>, <strong>WLS</strong> and <strong>IV</strong> Regression with Fixed-Effects Demeaning via <a href="https://bookdown.org/ts_robinson1994/10EconometricTheorems/frisch.html">Frisch-Waugh-Lovell</a></p></li>
-<li><p><strong>Poisson Regression</strong> following the <a href="https://journals.sagepub.com/doi/full/10.1177/1536867X20909691">pplmhdfe algorithm</a></p></li>
-<li><p>Probit, Logit and Gaussian Family <strong>GLMs</strong> (currently without fixed effects demeaning, this is WIP)</p></li>
-<li><p><strong>Quantile Regression</strong> using an Interior Point Solver</p></li>
-<li><p>Multiple Estimation Syntax</p></li>
-<li><p>Several <strong>Robust</strong> and <strong>Cluster Robust Variance-Covariance</strong> Estimators</p></li>
-<li><p><strong>Wild Cluster Bootstrap</strong> Inference (via <a href="https://github.com/py-econometrics/wildboottest">wildboottest</a>)</p></li>
-<li><p><strong>Difference-in-Differences</strong> Estimators:</p>
+<li><strong>OLS</strong>, <strong>WLS</strong> and <strong>IV</strong> Regression with Fixed-Effects Demeaning via <a href="https://bookdown.org/ts_robinson1994/10EconometricTheorems/frisch.html">Frisch-Waugh-Lovell</a></li>
+<li><strong>Poisson Regression</strong> following the <a href="https://journals.sagepub.com/doi/full/10.1177/1536867X20909691">pplmhdfe algorithm</a></li>
+<li>Probit, Logit and Gaussian Family <strong>GLMs</strong> (currently without fixed effects demeaning, this is WIP)</li>
+<li><strong>Quantile Regression</strong> using an Interior Point Solver</li>
+<li>Multiple Estimation Syntax</li>
+<li>Several <strong>Robust</strong>, <strong>Cluster Robust</strong> and <strong>HAC Variance-Covariance</strong> Estimators</li>
+<li><strong>Wild Cluster Bootstrap</strong> Inference (via <a href="https://github.com/py-econometrics/wildboottest">wildboottest</a>)</li>
+<li><strong>Difference-in-Differences</strong> Estimators:
 <ul>
 <li>The canonical Two-Way Fixed Effects Estimator</li>
 <li><a href="https://jrgcmu.github.io/2sdd_current.pdf">Gardner’s two-stage (“<code>Did2s</code>”)</a> estimator</li>
 <li>Basic Versions of the Local Projections estimator following <a href="https://www.nber.org/papers/w31184">Dube et al (2023)</a></li>
 <li>The fully saturated Event-Study estimator following <a href="https://www.sciencedirect.com/science/article/abs/pii/S030440762030378X">Sun &amp; Abraham (2021)</a></li>
 </ul></li>
-<li><p><strong>Multiple Hypothesis Corrections</strong> following the Procedure by <a href="https://journals.sagepub.com/doi/pdf/10.1177/1536867X20976314">Romano and Wolf</a> and <strong>Simultaneous Confidence Intervals</strong> using a <strong>Multiplier Bootstrap</strong></p></li>
-<li><p>The <strong>Causal Cluster Variance Estimator (CCV)</strong> following <a href="https://economics.mit.edu/sites/default/files/2022-09/When%20Should%20You%20Adjust%20Standard%20Errors%20for%20Clustering.pdf">Abadie et al.</a></p></li>
-<li><p>Regression <strong>Decomposition</strong> following <a href="https://papers.ssrn.com/sol3/papers.cfm?abstract_id=1425737">Gelbach (2016)</a></p></li>
-<li><p><strong>Publication-ready tables</strong> with <a href="https://posit-dev.github.io/great-tables/articles/intro.html">Great Tables</a> or LaTex booktabs</p></li>
+<li><strong>Multiple Hypothesis Corrections</strong> following the Procedure by <a href="https://journals.sagepub.com/doi/pdf/10.1177/1536867X20976314">Romano and Wolf</a> and <strong>Simultaneous Confidence Intervals</strong> using a <strong>Multiplier Bootstrap</strong></li>
+<li>The <strong>Causal Cluster Variance Estimator (CCV)</strong> following <a href="https://economics.mit.edu/sites/default/files/2022-09/When%20Should%20You%20Adjust%20Standard%20Errors%20for%20Clustering.pdf">Abadie et al.</a></li>
+<li>Regression <strong>Decomposition</strong> following <a href="https://papers.ssrn.com/sol3/papers.cfm?abstract_id=1425737">Gelbach (2016)</a></li>
+<li><strong>Publication-ready tables</strong> with <a href="https://posit-dev.github.io/great-tables/articles/intro.html">Great Tables</a> or LaTex booktabs</li>
 </ul>
 </section>
 <section id="installation" class="level2">
@@ -272,6 +272,18 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode py code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pip install <span class="op">-</span>U pyfixest</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>or the development version from github by running</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode py code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>pip install git<span class="op">+</span>https:<span class="op">//</span>github.com<span class="op">/</span>py<span class="op">-</span>econometrics<span class="op">/</span>pyfixest.git</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<section id="gpu-acceleration-optional" class="level3">
+<h3 class="anchored" data-anchor-id="gpu-acceleration-optional">GPU Acceleration (Optional)</h3>
+<p>PyFixest supports GPU-accelerated fixed effects demeaning via CuPy. To enable GPU acceleration, install CuPy matching your CUDA version:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># For CUDA 11.x, 12.x, 13.x</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="ex">pip</span> install cupy-cuda11x</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="ex">pip</span> install cupy-cuda12x</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="ex">pip</span> install cupy-cuda13x</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Once installed, you can use GPU-accelerated demeaning by setting the <code>demean_backend</code> parameter:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Use GPU with float32 and float64 precision</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>pf.feols(<span class="st">"Y ~ X1 | f1 + f2"</span>, data<span class="op">=</span>data, demean_backend<span class="op">=</span><span class="st">"cupy32"</span>)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>pf.feols(<span class="st">"Y ~ X1 | f1 + f2"</span>, data<span class="op">=</span>data, demean_backend<span class="op">=</span><span class="st">"cupy64"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
 </section>
 <section id="benchmarks" class="level2">
 <h2 class="anchored" data-anchor-id="benchmarks">Benchmarks</h2>
@@ -280,10 +292,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="quickstart" class="level2">
 <h2 class="anchored" data-anchor-id="quickstart">Quickstart</h2>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> pf.get_data()</span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>pf.feols(<span class="st">"Y ~ X1 | f1 + f2"</span>, data<span class="op">=</span>data).summary()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> pf.get_data()</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>pf.feols(<span class="st">"Y ~ X1 | f1 + f2"</span>, data<span class="op">=</span>data).summary()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <pre><code>###
 
 Estimation:  OLS
@@ -299,10 +311,10 @@ RMSE: 1.441   R2: 0.609   R2 Within: 0.2</code></pre>
 <section id="multiple-estimation" class="level3">
 <h3 class="anchored" data-anchor-id="multiple-estimation">Multiple Estimation</h3>
 <p>You can estimate multiple models at once by using <a href="https://aeturrell.github.io/coding-for-economists/econmt-regression.html#multiple-regression-models">multiple estimation syntax</a>:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># OLS Estimation: estimate multiple models at once</span></span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(<span class="st">"Y + Y2 ~X1 | csw0(f1, f2)"</span>, data <span class="op">=</span> data, vcov <span class="op">=</span> {<span class="st">'CRV1'</span>:<span class="st">'group_id'</span>})</span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Print the results</span></span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>fit.etable()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># OLS Estimation: estimate multiple models at once</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(<span class="st">"Y + Y2 ~X1 | csw0(f1, f2)"</span>, data <span class="op">=</span> data, vcov <span class="op">=</span> {<span class="st">'CRV1'</span>:<span class="st">'group_id'</span>})</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Print the results</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>fit.etable()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <pre><code>                           est1               est2               est3               est4               est5               est6
 ------------  -----------------  -----------------  -----------------  -----------------  -----------------  -----------------
 depvar                        Y                 Y2                  Y                 Y2                  Y                 Y2
@@ -324,8 +336,8 @@ Coefficient (Std. Error)</code></pre>
 <section id="adjust-standard-errors-on-the-fly" class="level3">
 <h3 class="anchored" data-anchor-id="adjust-standard-errors-on-the-fly">Adjust Standard Errors “on-the-fly”</h3>
 <p>Standard Errors can be adjusted after estimation, “on-the-fly”:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>fit1 <span class="op">=</span> fit.fetch_model(<span class="dv">0</span>)</span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>fit1.vcov(<span class="st">"hetero"</span>).summary()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>fit1 <span class="op">=</span> fit.fetch_model(<span class="dv">0</span>)</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>fit1.vcov(<span class="st">"hetero"</span>).summary()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <pre><code>Model:  Y~X1
 ###
 
@@ -344,8 +356,8 @@ RMSE: 2.158   R2: 0.123</code></pre>
 <section id="poisson-regression-via-fepois" class="level3">
 <h3 class="anchored" data-anchor-id="poisson-regression-via-fepois">Poisson Regression via <code>fepois()</code></h3>
 <p>You can estimate Poisson Regressions via the <code>fepois()</code> function:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>poisson_data <span class="op">=</span> pf.get_data(model <span class="op">=</span> <span class="st">"Fepois"</span>)</span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>pf.fepois(<span class="st">"Y ~ X1 + X2 | f1 + f2"</span>, data <span class="op">=</span> poisson_data).summary()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>poisson_data <span class="op">=</span> pf.get_data(model <span class="op">=</span> <span class="st">"Fepois"</span>)</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>pf.fepois(<span class="st">"Y ~ X1 + X2 | f1 + f2"</span>, data <span class="op">=</span> poisson_data).summary()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <pre><code>###
 
 Estimation:  Poisson
@@ -363,8 +375,8 @@ Deviance: 1068.169</code></pre>
 <section id="iv-estimation-via-three-part-formulas" class="level3">
 <h3 class="anchored" data-anchor-id="iv-estimation-via-three-part-formulas">IV Estimation via three-part formulas</h3>
 <p>Last, <code>PyFixest</code> also supports IV estimation via three part formula syntax:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>fit_iv <span class="op">=</span> pf.feols(<span class="st">"Y ~ 1 | f1 | X1 ~ Z1"</span>, data <span class="op">=</span> data)</span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>fit_iv.summary()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>fit_iv <span class="op">=</span> pf.feols(<span class="st">"Y ~ 1 | f1 | X1 ~ Z1"</span>, data <span class="op">=</span> data)</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>fit_iv.summary()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <pre><code>###
 
 Estimation:  IV
@@ -380,7 +392,7 @@ Observations:  997
 </section>
 <section id="quantile-regression-via-pf.quantreg" class="level2">
 <h2 class="anchored" data-anchor-id="quantile-regression-via-pf.quantreg">Quantile Regression via <code>pf.quantreg</code></h2>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>fit_qr <span class="op">=</span> pf.quantreg(<span class="st">"Y ~ X1 + X2"</span>, data <span class="op">=</span> data, quantile <span class="op">=</span> <span class="fl">0.5</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>fit_qr <span class="op">=</span> pf.quantreg(<span class="st">"Y ~ X1 + X2"</span>, data <span class="op">=</span> data, quantile <span class="op">=</span> <span class="fl">0.5</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
 <section id="call-for-contributions" class="level2">
 <h2 class="anchored" data-anchor-id="call-for-contributions">Call for Contributions</h2>
@@ -433,12 +445,12 @@ Observations:  997
 <section id="how-to-cite" class="level2">
 <h2 class="anchored" data-anchor-id="how-to-cite">How to Cite</h2>
 <p>If you want to cite PyFixest, you can use the following BibTeX entry:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb14"><pre class="sourceCode bibtex code-with-copy"><code class="sourceCode bibtex"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co">@software{pyfixest,</span></span>
-<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="co">  author  = {{The PyFixest Authors}},</span></span>
-<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a><span class="co">  title   = {{pyfixest: Fast high-dimensional fixed effect estimation in Python}},</span></span>
-<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a><span class="co">  year    = {2025},</span></span>
-<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a><span class="co">  url     = {https://github.com/py-econometrics/pyfixest}</span></span>
-<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a><span class="co">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb16"><pre class="sourceCode bibtex code-with-copy"><code class="sourceCode bibtex"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co">@software{pyfixest,</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="co">  author  = {{The PyFixest Authors}},</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a><span class="co">  title   = {{pyfixest: Fast high-dimensional fixed effect estimation in Python}},</span></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a><span class="co">  year    = {2025},</span></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a><span class="co">  url     = {https://github.com/py-econometrics/pyfixest}</span></span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a><span class="co">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 
 
 </section>

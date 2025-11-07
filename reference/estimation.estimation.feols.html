@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.8.24">
+<meta name="generator" content="quarto-1.8.25">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -72,10 +72,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="../site_libs/quarto-html/anchor.min.js"></script>
 <link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-dc55a5b9e770e841cd82e46aadbfb9b0.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-7b89279ff1a6dce999919e0e67d4d9ec.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-19c6f25d9c793ca7e0d0ad6a6391bd12.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-b9c55ee423fe9b09b80369c068559168.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -180,16 +180,16 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
  <span class="dropdown-text">Quantile Regression</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="../compare-fixest-pyfixest.html">
- <span class="dropdown-text">Compare fixest &amp; PyFixest</span></a>
-  </li>  
-        <li>
     <a class="dropdown-item" href="../stata-2-pyfixest.html">
  <span class="dropdown-text">Compare Stata &amp; PyFixest</span></a>
   </li>  
         <li>
+    <a class="dropdown-item" href="../pyfixest-gpu-cupy.html">
+ <span class="dropdown-text">PyFixest on the GPU via CuPy</span></a>
+  </li>  
+        <li>
     <a class="dropdown-item" href="../pyfixest_gpu.html">
- <span class="dropdown-text">PyFixest on the GPU</span></a>
+ <span class="dropdown-text">PyFixest on the GPU via JAX</span></a>
   </li>  
         <li>
     <a class="dropdown-item" href="../resources.html">
@@ -487,26 +487,27 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    fml,</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    data,</span>
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    weights<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    ssc<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    fixef_rm<span class="op">=</span><span class="st">'none'</span>,</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    fixef_tol<span class="op">=</span><span class="fl">1e-08</span>,</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    fixef_maxiter<span class="op">=</span><span class="dv">100000</span>,</span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    collin_tol<span class="op">=</span><span class="fl">1e-10</span>,</span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    drop_intercept<span class="op">=</span><span class="va">False</span>,</span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    copy_data<span class="op">=</span><span class="va">True</span>,</span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    store_data<span class="op">=</span><span class="va">True</span>,</span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    lean<span class="op">=</span><span class="va">False</span>,</span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    weights_type<span class="op">=</span><span class="st">'aweights'</span>,</span>
-<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    solver<span class="op">=</span><span class="st">'scipy.linalg.solve'</span>,</span>
-<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    demeaner_backend<span class="op">=</span><span class="st">'numba'</span>,</span>
-<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    use_compression<span class="op">=</span><span class="va">False</span>,</span>
-<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    reps<span class="op">=</span><span class="dv">100</span>,</span>
-<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    context<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>    seed<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>    split<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>    fsplit<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    vcov_kwargs<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    weights<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    ssc<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    fixef_rm<span class="op">=</span><span class="st">'singleton'</span>,</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    fixef_tol<span class="op">=</span><span class="fl">1e-08</span>,</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    fixef_maxiter<span class="op">=</span><span class="dv">100000</span>,</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    collin_tol<span class="op">=</span><span class="fl">1e-09</span>,</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    drop_intercept<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    copy_data<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    store_data<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    lean<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    weights_type<span class="op">=</span><span class="st">'aweights'</span>,</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    solver<span class="op">=</span><span class="st">'scipy.linalg.solve'</span>,</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    demeaner_backend<span class="op">=</span><span class="st">'numba'</span>,</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    use_compression<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    reps<span class="op">=</span><span class="dv">100</span>,</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>    context<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>    seed<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>    split<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>    fsplit<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Estimate a linear regression models with fixed effects using fixest formula syntax.</p>
 <section id="parameters" class="level2 doc-section doc-section-parameters">
 <h2 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters">Parameters</h2>
@@ -541,118 +542,124 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tr class="odd">
 <td>vcov</td>
 <td>Union[VcovTypeOptions, dict[str, str]]</td>
-<td>Type of variance-covariance matrix for inference. Options include “iid”, “hetero”, “HC1”, “HC2”, “HC3”, or a dictionary for CRV1/CRV3 inference.</td>
+<td>Type of variance-covariance matrix for inference. Options include “iid”, “hetero”, “HC1”, “HC2”, “HC3”, “NW” for Newey-West HAC standard errors, “DK” for Driscoll-Kraay HAC standard errors, or a dictionary for CRV1/CRV3 inference. Note that NW and DK require to pass additional keyword arguments via the <code>vcov_kwargs</code> argument. For time-series HAC, you need to pass the ‘time_id’ column. For panel-HAC, you need to add pass both ‘time_id’ and ‘panel_id’. See <code>vcov_kwargs</code> for details.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="even">
+<td>vcov_kwargs</td>
+<td>Optional[dict[str, any]]</td>
+<td>Additional keyword arguments to pass to the vcov function. These keywoards include “lag” for the number of lag to use in the Newey-West (NW) and Driscoll-Kraay (DK) HAC standard errors. “time_id” for the time ID used for NW and DK standard errors, and “panel_id” for the panel identifier used for NW and DK standard errors. Currently, the the time difference between consecutive time periods is always treated as 1. More flexible time-step selection is work in progress.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="odd">
 <td>weights</td>
 <td>Union[None, str], optional.</td>
 <td>Default is None. Weights for WLS estimation. If None, all observations are weighted equally. If a string, the name of the column in <code>data</code> that contains the weights.</td>
 <td><code>None</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>ssc</td>
 <td>str</td>
 <td>A ssc object specifying the small sample correction for inference.</td>
 <td><code>None</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>fixef_rm</td>
 <td>FixedRmOptions</td>
-<td>Specifies whether to drop singleton fixed effects. Options: “none” (default), “singleton”.</td>
-<td><code>'none'</code></td>
+<td>Specifies whether to drop singleton fixed effects. Can be equal to “singleton” (default), or “none”. “singletons” will drop singleton fixed effects. This will not impact point estimates but it will impact standard errors.</td>
+<td><code>'singleton'</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>collin_tol</td>
 <td>float</td>
 <td>Tolerance for collinearity check, by default 1e-10.</td>
-<td><code>1e-10</code></td>
+<td><code>1e-09</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>fixef_tol</td>
 <td></td>
 <td>Tolerance for the fixed effects demeaning algorithm. Defaults to 1e-08.</td>
 <td><code>1e-08</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>fixef_maxiter</td>
 <td>int</td>
 <td>Maximum number of iterations for the demeaning algorithm. Defaults to 100,000.</td>
 <td><code>100000</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>drop_intercept</td>
 <td>bool</td>
 <td>Whether to drop the intercept from the model, by default False.</td>
 <td><code>False</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>copy_data</td>
 <td>bool</td>
 <td>Whether to copy the data before estimation, by default True. If set to False, the data is not copied, which can save memory but may lead to unintended changes in the input data outside of <code>fepois</code>. For example, the input data set is re-index within the function. As far as I know, the only other relevant case is when using interacted fixed effects, in which case you’ll find a column with interacted fixed effects in the data set.</td>
 <td><code>True</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>store_data</td>
 <td>bool</td>
 <td>Whether to store the data in the model object, by default True. If set to False, the data is not stored in the model object, which can improve performance and save memory. However, it will no longer be possible to access the data via the <code>data</code> attribute of the model object. This has impact on post-estimation capabilities that rely on the data, e.g.&nbsp;<code>predict()</code> or <code>vcov()</code>.</td>
 <td><code>True</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>lean</td>
 <td>bool</td>
 <td>False by default. If True, then all large objects are removed from the returned result: this will save memory but will block the possibility to use many methods. It is recommended to use the argument vcov to obtain the appropriate standard-errors at estimation time, since obtaining different SEs won’t be possible afterwards.</td>
 <td><code>False</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>weights_type</td>
 <td>WeightsTypeOptions</td>
 <td>Options include <code>aweights</code> or <code>fweights</code>. <code>aweights</code> implement analytic or precision weights, while <code>fweights</code> implement frequency weights. For details see this blog post: https://notstatschat.rbind.io/2020/08/04/weights-in-statistics/.</td>
 <td><code>'aweights'</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>solver</td>
 <td>SolverOptions, optional.</td>
 <td>The solver to use for the regression. Can be “np.linalg.lstsq”, “np.linalg.solve”, “scipy.linalg.solve”, “scipy.sparse.linalg.lsqr” and “jax”. Defaults to “scipy.linalg.solve”.</td>
 <td><code>'scipy.linalg.solve'</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>demeaner_backend</td>
 <td>DemeanerBackendOptions</td>
-<td>The backend to use for demeaning. Can be either “numba”, “jax”, or “rust”. Defaults to “numba”.</td>
+<td>The backend to use for demeaning. Options include: - “numba” (default): CPU-based demeaning using Numba JIT via the Alternating Projections Algorithm. - “rust”: CPU-based demeaning implemented in Rust via the Alternating Projections Algorithm. - “jax”: CPU or GPU-accelerated using JAX (requires jax/jaxlib) via the Alternating Projections Algorithm. - “cupy” or “cupy64”: GPU-accelerated using CuPy with float64 precision via direct application of the Frisch-Waugh-Lovell Theorem on sparse matrices (requires cupy &amp; GPU, defaults to scipy/CPU if no GPU available) - “cupy32”: GPU-accelerated using CuPy with float32 precision via direct application of the Frisch-Waugh-Lovell Theorem on sparse matrices (requires cupy &amp; GPU, defaults to scipy/CPU and float64 if no GPU available) - “scipy”: Direct application of the Frisch-Waugh-Lovell Theorem on sparse matrice. Forces to use a scipy-sparse backend even when cupy is installed and GPU is available. Defaults to “numba”.</td>
 <td><code>'numba'</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>use_compression</td>
 <td>bool</td>
 <td>Whether to use sufficient statistics to losslessly fit the regression model on compressed data. False by default. If True, the model is estimated on compressed data, which can lead to a significant speed-up for large data sets. See the paper by Wong et al (2021) for more details https://arxiv.org/abs/2102.11297. Note that if <code>use_compression = True</code>, inference is lossless. If standard errors are clustered, a wild cluster bootstrap is employed. Parameters for the wild bootstrap can be specified via the <code>reps</code> and <code>seed</code> arguments. Additionally, note that for one-way fixed effects, the estimation method uses a Mundlak transform to “control” for the fixed effects. For two-way fixed effects, a two-way Mundlak transform is employed. For two-way fixed effects, the Mundlak transform is only identical to a two-way fixed effects model if the data set is a panel. We do not provide any checks for the panel status of the data set.</td>
 <td><code>False</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>reps</td>
 <td>int</td>
 <td>Number of bootstrap repetitions. Only relevant for boostrap inference applied to compute cluster robust errors when <code>use_compression = True</code>.</td>
 <td><code>100</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>context</td>
 <td>int or Mapping[str, Any]</td>
 <td>A dictionary containing additional context variables to be used by formulaic during the creation of the model matrix. This can include custom factorization functions, transformations, or any other variables that need to be available in the formula environment.</td>
 <td><code>None</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>seed</td>
 <td>Optional[int]</td>
 <td>Seed for the random number generator. Only relevant for boostrap inference applied to compute cluster robust errors when <code>use_compression = True</code>.</td>
 <td><code>None</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>split</td>
 <td>Optional[str]</td>
 <td>A character string, i.e.&nbsp;‘split = var’. If provided, the sample is split according to the variable and one estimation is performed for each value of that variable. If you also want to include the estimation for the full sample, use the argument fsplit instead.</td>
 <td><code>None</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>fsplit</td>
 <td>Optional[str]</td>
 <td>This argument is the same as split but also includes the full sample as the first estimation.</td>
@@ -688,7 +695,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="examples" class="level2 doc-section doc-section-examples">
 <h2 class="doc-section doc-section-examples anchored" data-anchor-id="examples">Examples</h2>
 <p>As in <code>fixest</code>, the [Feols(/reference/Feols.qmd) function can be used to estimate a simple linear regression model with fixed effects. The following example regresses <code>Y</code> on <code>X1</code> and <code>X2</code> with fixed effects for <code>f1</code> and <code>f2</code>: fixed effects are specified after the <code>|</code> symbol.</p>
-<div id="4718ab0e" class="cell" data-execution_count="1">
+<div id="84718a68" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
@@ -699,7 +706,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>fit.summary()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 
-            <div id="Lysybd"></div>
+            <div id="0aZS1W"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -710,7 +717,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                 (function() {
                     var script = document.createElement("script");
                     script.type = "text/javascript";
-                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.6.2/js-package/distr/lets-plot.min.js";
+                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.7.3/js-package/distr/lets-plot.min.js";
                     script.onload = function() {
                         window.letsPlotCall = function(f) {f();};
                         window.letsPlotCallQueue.forEach(function(f) {f();});
@@ -723,9 +730,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("Lysybd").appendChild(div);
+                        document.getElementById("0aZS1W").appendChild(div);
                     };
-                    var e = document.getElementById("Lysybd");
+                    var e = document.getElementById("0aZS1W");
                     e.appendChild(script);
                 })()
             </script>
@@ -733,7 +740,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <div class="cell-output cell-output-display">
 
-            <div id="1nOKZA"></div>
+            <div id="WHTsT1"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -744,7 +751,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                 (function() {
                     var script = document.createElement("script");
                     script.type = "text/javascript";
-                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.6.2/js-package/distr/lets-plot.min.js";
+                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.7.3/js-package/distr/lets-plot.min.js";
                     script.onload = function() {
                         window.letsPlotCall = function(f) {f();};
                         window.letsPlotCallQueue.forEach(function(f) {f();});
@@ -757,9 +764,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("1nOKZA").appendChild(div);
+                        document.getElementById("WHTsT1").appendChild(div);
                     };
-                    var e = document.getElementById("1nOKZA");
+                    var e = document.getElementById("WHTsT1");
                     e.appendChild(script);
                 })()
             </script>
@@ -770,20 +777,20 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 Estimation:  OLS
 Dep. var.: Y, Fixed effects: f1+f2
-Inference:  CRV1
+Inference:  iid
 Observations:  997
 
 | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5% |   97.5% |
 |:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
-| X1            |     -0.924 |        0.062 |   -14.934 |      0.000 | -1.051 |  -0.797 |
-| X2            |     -0.174 |        0.015 |   -11.737 |      0.000 | -0.204 |  -0.144 |
+| X1            |     -0.924 |        0.056 |   -16.483 |      0.000 | -1.034 |  -0.814 |
+| X2            |     -0.174 |        0.015 |   -11.717 |      0.000 | -0.203 |  -0.145 |
 ---
 RMSE: 1.346 R2: 0.659 R2 Within: 0.303 </code></pre>
 </div>
 </div>
 <p>Calling <code>feols()</code> returns an instance of the [Feols(/reference/Feols.qmd) class. The <code>summary()</code> method can be used to print the results.</p>
 <p>An alternative way to retrieve model results is via the <code>tidy()</code> method, which returns a pandas dataframe with the estimated coefficients, standard errors, t-statistics, and p-values.</p>
-<div id="57a1d56c" class="cell" data-execution_count="2">
+<div id="8fbe49fb" class="cell" data-execution_count="2">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>fit.tidy()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="2">
 <div>
@@ -814,20 +821,20 @@ RMSE: 1.346 R2: 0.659 R2 Within: 0.303 </code></pre>
 <tr class="odd">
 <th data-quarto-table-cell-role="th">X1</th>
 <td>-0.924046</td>
-<td>0.061874</td>
-<td>-14.934259</td>
-<td>3.774758e-15</td>
-<td>-1.050593</td>
-<td>-0.797499</td>
+<td>0.056060</td>
+<td>-16.483063</td>
+<td>0.0</td>
+<td>-1.034065</td>
+<td>-0.814028</td>
 </tr>
 <tr class="even">
 <th data-quarto-table-cell-role="th">X2</th>
 <td>-0.174107</td>
-<td>0.014834</td>
-<td>-11.737229</td>
-<td>1.548539e-12</td>
-<td>-0.204446</td>
-<td>-0.143769</td>
+<td>0.014859</td>
+<td>-11.717062</td>
+<td>0.0</td>
+<td>-0.203269</td>
+<td>-0.144946</td>
 </tr>
 </tbody>
 </table>
@@ -836,18 +843,18 @@ RMSE: 1.346 R2: 0.659 R2 Within: 0.303 </code></pre>
 </div>
 </div>
 <p>You can also access all elements in the tidy data frame by dedicated methods, e.g.&nbsp;<code>fit.coef()</code> for the coefficients, <code>fit.se()</code> for the standard errors, <code>fit.tstat()</code> for the t-statistics, and <code>fit.pval()</code> for the p-values, and <code>fit.confint()</code> for the confidence intervals.</p>
-<p>The employed type of inference can be specified via the <code>vcov</code> argument. If vcov is not provided, <code>PyFixest</code> employs the <code>fixest</code> default of iid inference, unless there are fixed effects in the model, in which case <code>feols()</code> clusters the standard error by the first fixed effect (CRV1 inference).</p>
-<div id="237a3b6e" class="cell" data-execution_count="3">
+<p>The employed type of inference can be specified via the <code>vcov</code> argument. For compatibility with <code>fixest</code>, if vcov is not provided, <code>PyFixest</code> always employs “iid” inference by default starting with pyfixest 0.31.0. Prior to pyfixest 0.31.0, if vcov was not provided, <code>PyFixest</code> would cluster by the first fixed effect if no vcov was provided.</p>
+<div id="04b6bbb5" class="cell" data-execution_count="3">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>fit1 <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 + X2 | f1 + f2"</span>, data, vcov<span class="op">=</span><span class="st">"iid"</span>)</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>fit2 <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 + X2 | f1 + f2"</span>, data, vcov<span class="op">=</span><span class="st">"hetero"</span>)</span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>fit3 <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 + X2 | f1 + f2"</span>, data, vcov<span class="op">=</span>{<span class="st">"CRV1"</span>: <span class="st">"f1"</span>})</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>Supported inference types are “iid”, “hetero”, “HC1”, “HC2”, “HC3”, and “CRV1”/“CRV3”. Clustered standard errors are specified via a dictionary, e.g.&nbsp;<code>{"CRV1": "f1"}</code> for CRV1 inference with clustering by <code>f1</code> or <code>{"CRV3": "f1"}</code> for CRV3 inference with clustering by <code>f1</code>. For two-way clustering, you can provide a formula string, e.g.&nbsp;<code>{"CRV1": "f1 + f2"}</code> for CRV1 inference with clustering by <code>f1</code>.</p>
-<div id="bdb64585" class="cell" data-execution_count="4">
+<div id="2b6fef51" class="cell" data-execution_count="4">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>fit4 <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 + X2 | f1 + f2"</span>, data, vcov<span class="op">=</span>{<span class="st">"CRV1"</span>: <span class="st">"f1 + f2"</span>})</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>Inference can be adjusted post estimation via the <code>vcov</code> method:</p>
-<div id="273ab395" class="cell" data-execution_count="5">
+<div id="d3f4ab35" class="cell" data-execution_count="5">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>fit.summary()</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>fit.vcov(<span class="st">"iid"</span>).summary()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
@@ -855,13 +862,13 @@ RMSE: 1.346 R2: 0.659 R2 Within: 0.303 </code></pre>
 
 Estimation:  OLS
 Dep. var.: Y, Fixed effects: f1+f2
-Inference:  CRV1
+Inference:  iid
 Observations:  997
 
 | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5% |   97.5% |
 |:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
-| X1            |     -0.924 |        0.062 |   -14.934 |      0.000 | -1.051 |  -0.797 |
-| X2            |     -0.174 |        0.015 |   -11.737 |      0.000 | -0.204 |  -0.144 |
+| X1            |     -0.924 |        0.056 |   -16.483 |      0.000 | -1.034 |  -0.814 |
+| X2            |     -0.174 |        0.015 |   -11.717 |      0.000 | -0.203 |  -0.145 |
 ---
 RMSE: 1.346 R2: 0.659 R2 Within: 0.303 
 ###
@@ -881,7 +888,7 @@ RMSE: 1.346 R2: 0.659 R2 Within: 0.303 </code></pre>
 </div>
 <p>The <code>ssc</code> argument specifies the small sample correction for inference. In general, <code>feols()</code> uses all of <code>fixest::feols()</code> defaults, but sets the <code>fixef.K</code> argument to <code>"none"</code> whereas the <code>fixest::feols()</code> default is <code>"nested"</code>. See here for more details: <a href="https://github.com/py-econometrics/pyfixest/issues/260">link to github</a>.</p>
 <p><code>feols()</code> supports a range of multiple estimation syntax, i.e.&nbsp;you can estimate multiple models in one call. The following example estimates two models, one with fixed effects for <code>f1</code> and one with fixed effects for <code>f2</code> using the <code>sw()</code> syntax.</p>
-<div id="c91301bf" class="cell" data-execution_count="6">
+<div id="7a62bdf6" class="cell" data-execution_count="6">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 + X2 | sw(f1, f2)"</span>, data)</span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="bu">type</span>(fit)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="6">
@@ -889,55 +896,58 @@ RMSE: 1.346 R2: 0.659 R2 Within: 0.303 </code></pre>
 </div>
 </div>
 <p>The returned object is an instance of the <code>FixestMulti</code> class. You can access the results of the first model via <code>fit.fetch_model(0)</code> and the results of the second model via <code>fit.fetch_model(1)</code>. You can compare the model results via the <code>etable()</code> function:</p>
-<div id="e98d9a67" class="cell" data-execution_count="7">
+<div id="a333a27f" class="cell" data-execution_count="7">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>pf.etable(fit)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="7">
-<div id="koqtjtdvhv" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<div id="nvbsetglfy" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
 <style>
-#koqtjtdvhv table {
+#nvbsetglfy table {
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
           -webkit-font-smoothing: antialiased;
           -moz-osx-font-smoothing: grayscale;
         }
 
-#koqtjtdvhv thead, tbody, tfoot, tr, td, th { border-style: none; }
+#nvbsetglfy thead, tbody, tfoot, tr, td, th { border-style: none; }
  tr { background-color: transparent; }
-#koqtjtdvhv p { margin: 0; padding: 0; }
- #koqtjtdvhv .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: solid; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
- #koqtjtdvhv .gt_caption { padding-top: 4px; padding-bottom: 4px; }
- #koqtjtdvhv .gt_title { color: #333333; font-size: 125%; font-weight: initial; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
- #koqtjtdvhv .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 3px; padding-bottom: 5px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
- #koqtjtdvhv .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
- #koqtjtdvhv .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
- #koqtjtdvhv .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
- #koqtjtdvhv .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 4px; padding-bottom: 5px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
- #koqtjtdvhv .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
- #koqtjtdvhv .gt_column_spanner_outer:first-child { padding-left: 0; }
- #koqtjtdvhv .gt_column_spanner_outer:last-child { padding-right: 0; }
- #koqtjtdvhv .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; vertical-align: bottom; padding-top: 4px; padding-bottom: 4px; overflow-x: hidden; display: inline-block; width: 100%; }
- #koqtjtdvhv .gt_spanner_row { border-bottom-style: hidden; }
- #koqtjtdvhv .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
- #koqtjtdvhv .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; vertical-align: middle; }
- #koqtjtdvhv .gt_from_md> :first-child { margin-top: 0; }
- #koqtjtdvhv .gt_from_md> :last-child { margin-bottom: 0; }
- #koqtjtdvhv .gt_row { padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
- #koqtjtdvhv .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
- #koqtjtdvhv .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
- #koqtjtdvhv .gt_row_group_first td { border-top-width: 0.5px; }
- #koqtjtdvhv .gt_row_group_first th { border-top-width: 0.5px; }
- #koqtjtdvhv .gt_striped { background-color: rgba(128,128,128,0.05); }
- #koqtjtdvhv .gt_table_body { border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
- #koqtjtdvhv .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
- #koqtjtdvhv .gt_sourcenote { font-size: 90%; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
- #koqtjtdvhv .gt_left { text-align: left; }
- #koqtjtdvhv .gt_center { text-align: center; }
- #koqtjtdvhv .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
- #koqtjtdvhv .gt_font_normal { font-weight: normal; }
- #koqtjtdvhv .gt_font_bold { font-weight: bold; }
- #koqtjtdvhv .gt_font_italic { font-style: italic; }
- #koqtjtdvhv .gt_super { font-size: 65%; }
- #koqtjtdvhv .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
- #koqtjtdvhv .gt_asterisk { font-size: 100%; vertical-align: 0; }
+#nvbsetglfy p { margin: 0; padding: 0; }
+ #nvbsetglfy .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: solid; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
+ #nvbsetglfy .gt_caption { padding-top: 4px; padding-bottom: 4px; }
+ #nvbsetglfy .gt_title { color: #333333; font-size: 125%; font-weight: initial; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
+ #nvbsetglfy .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 3px; padding-bottom: 5px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
+ #nvbsetglfy .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #nvbsetglfy .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
+ #nvbsetglfy .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #nvbsetglfy .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 4px; padding-bottom: 5px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
+ #nvbsetglfy .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
+ #nvbsetglfy .gt_column_spanner_outer:first-child { padding-left: 0; }
+ #nvbsetglfy .gt_column_spanner_outer:last-child { padding-right: 0; }
+ #nvbsetglfy .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; vertical-align: bottom; padding-top: 4px; padding-bottom: 4px; overflow-x: hidden; display: inline-block; width: 100%; }
+ #nvbsetglfy .gt_spanner_row { border-bottom-style: hidden; }
+ #nvbsetglfy .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
+ #nvbsetglfy .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; vertical-align: middle; }
+ #nvbsetglfy .gt_from_md> :first-child { margin-top: 0; }
+ #nvbsetglfy .gt_from_md> :last-child { margin-bottom: 0; }
+ #nvbsetglfy .gt_row { padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
+ #nvbsetglfy .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
+ #nvbsetglfy .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
+ #nvbsetglfy .gt_row_group_first td { border-top-width: 0.5px; }
+ #nvbsetglfy .gt_row_group_first th { border-top-width: 0.5px; }
+ #nvbsetglfy .gt_striped { color: #333333; background-color: #F4F4F4; }
+ #nvbsetglfy .gt_table_body { border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
+ #nvbsetglfy .gt_grand_summary_row { color: #333333; background-color: #FFFFFF; text-transform: inherit; padding-top: 8px; padding-bottom: 8px; padding-left: 5px; padding-right: 5px; }
+ #nvbsetglfy .gt_first_grand_summary_row_bottom { border-top-style: double; border-top-width: 6px; border-top-color: #D3D3D3; }
+ #nvbsetglfy .gt_last_grand_summary_row_top { border-bottom-style: double; border-bottom-width: 6px; border-bottom-color: #D3D3D3; }
+ #nvbsetglfy .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
+ #nvbsetglfy .gt_sourcenote { font-size: 90%; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
+ #nvbsetglfy .gt_left { text-align: left; }
+ #nvbsetglfy .gt_center { text-align: center; }
+ #nvbsetglfy .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
+ #nvbsetglfy .gt_font_normal { font-weight: normal; }
+ #nvbsetglfy .gt_font_bold { font-weight: bold; }
+ #nvbsetglfy .gt_font_italic { font-style: italic; }
+ #nvbsetglfy .gt_super { font-size: 65%; }
+ #nvbsetglfy .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
+ #nvbsetglfy .gt_asterisk { font-size: 100%; vertical-align: 0; }
  
 </style>
 
@@ -964,29 +974,29 @@ RMSE: 1.346 R2: 0.659 R2 Within: 0.303 </code></pre>
 <tr class="even">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">X1</th>
 <td class="gt_row gt_center">-0.950***<br>
-(0.067)</td>
+(0.066)</td>
 <td class="gt_row gt_center">-0.979***<br>
-(0.077)</td>
+(0.075)</td>
 </tr>
 <tr class="odd">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">X2</th>
 <td class="gt_row gt_center">-0.174***<br>
 (0.018)</td>
 <td class="gt_row gt_center">-0.175***<br>
-(0.022)</td>
+(0.020)</td>
 </tr>
 <tr class="gt_group_heading_row even">
 <th colspan="3" class="gt_group_heading" data-quarto-table-cell-role="th">fe</th>
 </tr>
 <tr class="odd">
-<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">f1</th>
-<td class="gt_row gt_center">x</td>
-<td class="gt_row gt_center">-</td>
-</tr>
-<tr class="even">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">f2</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">x</td>
+</tr>
+<tr class="even">
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">f1</th>
+<td class="gt_row gt_center">x</td>
+<td class="gt_row gt_center">-</td>
 </tr>
 <tr class="gt_group_heading_row odd">
 <th colspan="3" class="gt_group_heading" data-quarto-table-cell-role="th">stats</th>
@@ -998,8 +1008,8 @@ RMSE: 1.346 R2: 0.659 R2 Within: 0.303 </code></pre>
 </tr>
 <tr class="odd">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">S.E. type</th>
-<td class="gt_row gt_center">by: f1</td>
-<td class="gt_row gt_center">by: f2</td>
+<td class="gt_row gt_center">iid</td>
+<td class="gt_row gt_center">iid</td>
 </tr>
 <tr class="even">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">R<sup>2</sup></th>
@@ -1024,56 +1034,59 @@ RMSE: 1.346 R2: 0.659 R2 Within: 0.303 </code></pre>
 </div>
 </div>
 <p>Other supported multiple estimation syntax include <code>sw0()</code>, <code>csw()</code> and <code>csw0()</code>. While <code>sw()</code> adds variables in a “stepwise” fashion, <code>csw()</code> does so cumulatively.</p>
-<div id="de4dc08e" class="cell" data-execution_count="8">
+<div id="6eccbffe" class="cell" data-execution_count="8">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 + X2 | csw(f1, f2)"</span>, data)</span>
 <span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>pf.etable(fit)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="8">
-<div id="dgmydjhtxu" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<div id="ymfzcivbky" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
 <style>
-#dgmydjhtxu table {
+#ymfzcivbky table {
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
           -webkit-font-smoothing: antialiased;
           -moz-osx-font-smoothing: grayscale;
         }
 
-#dgmydjhtxu thead, tbody, tfoot, tr, td, th { border-style: none; }
+#ymfzcivbky thead, tbody, tfoot, tr, td, th { border-style: none; }
  tr { background-color: transparent; }
-#dgmydjhtxu p { margin: 0; padding: 0; }
- #dgmydjhtxu .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: solid; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
- #dgmydjhtxu .gt_caption { padding-top: 4px; padding-bottom: 4px; }
- #dgmydjhtxu .gt_title { color: #333333; font-size: 125%; font-weight: initial; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
- #dgmydjhtxu .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 3px; padding-bottom: 5px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
- #dgmydjhtxu .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
- #dgmydjhtxu .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
- #dgmydjhtxu .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
- #dgmydjhtxu .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 4px; padding-bottom: 5px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
- #dgmydjhtxu .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
- #dgmydjhtxu .gt_column_spanner_outer:first-child { padding-left: 0; }
- #dgmydjhtxu .gt_column_spanner_outer:last-child { padding-right: 0; }
- #dgmydjhtxu .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; vertical-align: bottom; padding-top: 4px; padding-bottom: 4px; overflow-x: hidden; display: inline-block; width: 100%; }
- #dgmydjhtxu .gt_spanner_row { border-bottom-style: hidden; }
- #dgmydjhtxu .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
- #dgmydjhtxu .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; vertical-align: middle; }
- #dgmydjhtxu .gt_from_md> :first-child { margin-top: 0; }
- #dgmydjhtxu .gt_from_md> :last-child { margin-bottom: 0; }
- #dgmydjhtxu .gt_row { padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
- #dgmydjhtxu .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
- #dgmydjhtxu .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
- #dgmydjhtxu .gt_row_group_first td { border-top-width: 0.5px; }
- #dgmydjhtxu .gt_row_group_first th { border-top-width: 0.5px; }
- #dgmydjhtxu .gt_striped { background-color: rgba(128,128,128,0.05); }
- #dgmydjhtxu .gt_table_body { border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
- #dgmydjhtxu .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
- #dgmydjhtxu .gt_sourcenote { font-size: 90%; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
- #dgmydjhtxu .gt_left { text-align: left; }
- #dgmydjhtxu .gt_center { text-align: center; }
- #dgmydjhtxu .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
- #dgmydjhtxu .gt_font_normal { font-weight: normal; }
- #dgmydjhtxu .gt_font_bold { font-weight: bold; }
- #dgmydjhtxu .gt_font_italic { font-style: italic; }
- #dgmydjhtxu .gt_super { font-size: 65%; }
- #dgmydjhtxu .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
- #dgmydjhtxu .gt_asterisk { font-size: 100%; vertical-align: 0; }
+#ymfzcivbky p { margin: 0; padding: 0; }
+ #ymfzcivbky .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: solid; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
+ #ymfzcivbky .gt_caption { padding-top: 4px; padding-bottom: 4px; }
+ #ymfzcivbky .gt_title { color: #333333; font-size: 125%; font-weight: initial; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
+ #ymfzcivbky .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 3px; padding-bottom: 5px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
+ #ymfzcivbky .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #ymfzcivbky .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
+ #ymfzcivbky .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #ymfzcivbky .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 4px; padding-bottom: 5px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
+ #ymfzcivbky .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
+ #ymfzcivbky .gt_column_spanner_outer:first-child { padding-left: 0; }
+ #ymfzcivbky .gt_column_spanner_outer:last-child { padding-right: 0; }
+ #ymfzcivbky .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; vertical-align: bottom; padding-top: 4px; padding-bottom: 4px; overflow-x: hidden; display: inline-block; width: 100%; }
+ #ymfzcivbky .gt_spanner_row { border-bottom-style: hidden; }
+ #ymfzcivbky .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
+ #ymfzcivbky .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; vertical-align: middle; }
+ #ymfzcivbky .gt_from_md> :first-child { margin-top: 0; }
+ #ymfzcivbky .gt_from_md> :last-child { margin-bottom: 0; }
+ #ymfzcivbky .gt_row { padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
+ #ymfzcivbky .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
+ #ymfzcivbky .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
+ #ymfzcivbky .gt_row_group_first td { border-top-width: 0.5px; }
+ #ymfzcivbky .gt_row_group_first th { border-top-width: 0.5px; }
+ #ymfzcivbky .gt_striped { color: #333333; background-color: #F4F4F4; }
+ #ymfzcivbky .gt_table_body { border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
+ #ymfzcivbky .gt_grand_summary_row { color: #333333; background-color: #FFFFFF; text-transform: inherit; padding-top: 8px; padding-bottom: 8px; padding-left: 5px; padding-right: 5px; }
+ #ymfzcivbky .gt_first_grand_summary_row_bottom { border-top-style: double; border-top-width: 6px; border-top-color: #D3D3D3; }
+ #ymfzcivbky .gt_last_grand_summary_row_top { border-bottom-style: double; border-bottom-width: 6px; border-bottom-color: #D3D3D3; }
+ #ymfzcivbky .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
+ #ymfzcivbky .gt_sourcenote { font-size: 90%; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
+ #ymfzcivbky .gt_left { text-align: left; }
+ #ymfzcivbky .gt_center { text-align: center; }
+ #ymfzcivbky .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
+ #ymfzcivbky .gt_font_normal { font-weight: normal; }
+ #ymfzcivbky .gt_font_bold { font-weight: bold; }
+ #ymfzcivbky .gt_font_italic { font-style: italic; }
+ #ymfzcivbky .gt_super { font-size: 65%; }
+ #ymfzcivbky .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
+ #ymfzcivbky .gt_asterisk { font-size: 100%; vertical-align: 0; }
  
 </style>
 
@@ -1100,9 +1113,9 @@ RMSE: 1.346 R2: 0.659 R2 Within: 0.303 </code></pre>
 <tr class="even">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">X1</th>
 <td class="gt_row gt_center">-0.950***<br>
-(0.067)</td>
+(0.066)</td>
 <td class="gt_row gt_center">-0.924***<br>
-(0.062)</td>
+(0.056)</td>
 </tr>
 <tr class="odd">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">X2</th>
@@ -1115,13 +1128,13 @@ RMSE: 1.346 R2: 0.659 R2 Within: 0.303 </code></pre>
 <th colspan="3" class="gt_group_heading" data-quarto-table-cell-role="th">fe</th>
 </tr>
 <tr class="odd">
-<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">f1</th>
-<td class="gt_row gt_center">x</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">f2</th>
+<td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">x</td>
 </tr>
 <tr class="even">
-<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">f2</th>
-<td class="gt_row gt_center">-</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">f1</th>
+<td class="gt_row gt_center">x</td>
 <td class="gt_row gt_center">x</td>
 </tr>
 <tr class="gt_group_heading_row odd">
@@ -1134,8 +1147,8 @@ RMSE: 1.346 R2: 0.659 R2 Within: 0.303 </code></pre>
 </tr>
 <tr class="odd">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">S.E. type</th>
-<td class="gt_row gt_center">by: f1</td>
-<td class="gt_row gt_center">by: f1</td>
+<td class="gt_row gt_center">iid</td>
+<td class="gt_row gt_center">iid</td>
 </tr>
 <tr class="even">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">R<sup>2</sup></th>
@@ -1160,56 +1173,59 @@ RMSE: 1.346 R2: 0.659 R2 Within: 0.303 </code></pre>
 </div>
 </div>
 <p>The <code>sw0()</code> and <code>csw0()</code> syntax are similar to <code>sw()</code> and <code>csw()</code>, but start with a model that excludes the variables specified in <code>sw()</code> and <code>csw()</code>:</p>
-<div id="8bd79ae9" class="cell" data-execution_count="9">
+<div id="c1164fde" class="cell" data-execution_count="9">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 + X2 | sw0(f1, f2)"</span>, data)</span>
 <span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>pf.etable(fit)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="9">
-<div id="wzbyjalutc" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<div id="ziamxjanzh" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
 <style>
-#wzbyjalutc table {
+#ziamxjanzh table {
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
           -webkit-font-smoothing: antialiased;
           -moz-osx-font-smoothing: grayscale;
         }
 
-#wzbyjalutc thead, tbody, tfoot, tr, td, th { border-style: none; }
+#ziamxjanzh thead, tbody, tfoot, tr, td, th { border-style: none; }
  tr { background-color: transparent; }
-#wzbyjalutc p { margin: 0; padding: 0; }
- #wzbyjalutc .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: solid; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
- #wzbyjalutc .gt_caption { padding-top: 4px; padding-bottom: 4px; }
- #wzbyjalutc .gt_title { color: #333333; font-size: 125%; font-weight: initial; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
- #wzbyjalutc .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 3px; padding-bottom: 5px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
- #wzbyjalutc .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
- #wzbyjalutc .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
- #wzbyjalutc .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
- #wzbyjalutc .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 4px; padding-bottom: 5px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
- #wzbyjalutc .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
- #wzbyjalutc .gt_column_spanner_outer:first-child { padding-left: 0; }
- #wzbyjalutc .gt_column_spanner_outer:last-child { padding-right: 0; }
- #wzbyjalutc .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; vertical-align: bottom; padding-top: 4px; padding-bottom: 4px; overflow-x: hidden; display: inline-block; width: 100%; }
- #wzbyjalutc .gt_spanner_row { border-bottom-style: hidden; }
- #wzbyjalutc .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
- #wzbyjalutc .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; vertical-align: middle; }
- #wzbyjalutc .gt_from_md> :first-child { margin-top: 0; }
- #wzbyjalutc .gt_from_md> :last-child { margin-bottom: 0; }
- #wzbyjalutc .gt_row { padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
- #wzbyjalutc .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
- #wzbyjalutc .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
- #wzbyjalutc .gt_row_group_first td { border-top-width: 0.5px; }
- #wzbyjalutc .gt_row_group_first th { border-top-width: 0.5px; }
- #wzbyjalutc .gt_striped { background-color: rgba(128,128,128,0.05); }
- #wzbyjalutc .gt_table_body { border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
- #wzbyjalutc .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
- #wzbyjalutc .gt_sourcenote { font-size: 90%; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
- #wzbyjalutc .gt_left { text-align: left; }
- #wzbyjalutc .gt_center { text-align: center; }
- #wzbyjalutc .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
- #wzbyjalutc .gt_font_normal { font-weight: normal; }
- #wzbyjalutc .gt_font_bold { font-weight: bold; }
- #wzbyjalutc .gt_font_italic { font-style: italic; }
- #wzbyjalutc .gt_super { font-size: 65%; }
- #wzbyjalutc .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
- #wzbyjalutc .gt_asterisk { font-size: 100%; vertical-align: 0; }
+#ziamxjanzh p { margin: 0; padding: 0; }
+ #ziamxjanzh .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: solid; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
+ #ziamxjanzh .gt_caption { padding-top: 4px; padding-bottom: 4px; }
+ #ziamxjanzh .gt_title { color: #333333; font-size: 125%; font-weight: initial; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
+ #ziamxjanzh .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 3px; padding-bottom: 5px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
+ #ziamxjanzh .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #ziamxjanzh .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
+ #ziamxjanzh .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #ziamxjanzh .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 4px; padding-bottom: 5px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
+ #ziamxjanzh .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
+ #ziamxjanzh .gt_column_spanner_outer:first-child { padding-left: 0; }
+ #ziamxjanzh .gt_column_spanner_outer:last-child { padding-right: 0; }
+ #ziamxjanzh .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; vertical-align: bottom; padding-top: 4px; padding-bottom: 4px; overflow-x: hidden; display: inline-block; width: 100%; }
+ #ziamxjanzh .gt_spanner_row { border-bottom-style: hidden; }
+ #ziamxjanzh .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
+ #ziamxjanzh .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; vertical-align: middle; }
+ #ziamxjanzh .gt_from_md> :first-child { margin-top: 0; }
+ #ziamxjanzh .gt_from_md> :last-child { margin-bottom: 0; }
+ #ziamxjanzh .gt_row { padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
+ #ziamxjanzh .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
+ #ziamxjanzh .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
+ #ziamxjanzh .gt_row_group_first td { border-top-width: 0.5px; }
+ #ziamxjanzh .gt_row_group_first th { border-top-width: 0.5px; }
+ #ziamxjanzh .gt_striped { color: #333333; background-color: #F4F4F4; }
+ #ziamxjanzh .gt_table_body { border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
+ #ziamxjanzh .gt_grand_summary_row { color: #333333; background-color: #FFFFFF; text-transform: inherit; padding-top: 8px; padding-bottom: 8px; padding-left: 5px; padding-right: 5px; }
+ #ziamxjanzh .gt_first_grand_summary_row_bottom { border-top-style: double; border-top-width: 6px; border-top-color: #D3D3D3; }
+ #ziamxjanzh .gt_last_grand_summary_row_top { border-bottom-style: double; border-bottom-width: 6px; border-bottom-color: #D3D3D3; }
+ #ziamxjanzh .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
+ #ziamxjanzh .gt_sourcenote { font-size: 90%; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
+ #ziamxjanzh .gt_left { text-align: left; }
+ #ziamxjanzh .gt_center { text-align: center; }
+ #ziamxjanzh .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
+ #ziamxjanzh .gt_font_normal { font-weight: normal; }
+ #ziamxjanzh .gt_font_bold { font-weight: bold; }
+ #ziamxjanzh .gt_font_italic { font-style: italic; }
+ #ziamxjanzh .gt_super { font-size: 65%; }
+ #ziamxjanzh .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
+ #ziamxjanzh .gt_asterisk { font-size: 100%; vertical-align: 0; }
  
 </style>
 
@@ -1240,9 +1256,9 @@ RMSE: 1.346 R2: 0.659 R2 Within: 0.303 </code></pre>
 <td class="gt_row gt_center">-0.993***<br>
 (0.082)</td>
 <td class="gt_row gt_center">-0.950***<br>
-(0.067)</td>
+(0.066)</td>
 <td class="gt_row gt_center">-0.979***<br>
-(0.077)</td>
+(0.075)</td>
 </tr>
 <tr class="odd">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">X2</th>
@@ -1251,7 +1267,7 @@ RMSE: 1.346 R2: 0.659 R2 Within: 0.303 </code></pre>
 <td class="gt_row gt_center">-0.174***<br>
 (0.018)</td>
 <td class="gt_row gt_center">-0.175***<br>
-(0.022)</td>
+(0.020)</td>
 </tr>
 <tr class="even">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">Intercept</th>
@@ -1264,16 +1280,16 @@ RMSE: 1.346 R2: 0.659 R2 Within: 0.303 </code></pre>
 <th colspan="4" class="gt_group_heading" data-quarto-table-cell-role="th">fe</th>
 </tr>
 <tr class="even">
-<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">f1</th>
-<td class="gt_row gt_center">-</td>
-<td class="gt_row gt_center">x</td>
-<td class="gt_row gt_center">-</td>
-</tr>
-<tr class="odd">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">f2</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">x</td>
+</tr>
+<tr class="odd">
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">f1</th>
+<td class="gt_row gt_center">-</td>
+<td class="gt_row gt_center">x</td>
+<td class="gt_row gt_center">-</td>
 </tr>
 <tr class="gt_group_heading_row even">
 <th colspan="4" class="gt_group_heading" data-quarto-table-cell-role="th">stats</th>
@@ -1287,8 +1303,8 @@ RMSE: 1.346 R2: 0.659 R2 Within: 0.303 </code></pre>
 <tr class="even">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">S.E. type</th>
 <td class="gt_row gt_center">iid</td>
-<td class="gt_row gt_center">by: f1</td>
-<td class="gt_row gt_center">by: f2</td>
+<td class="gt_row gt_center">iid</td>
+<td class="gt_row gt_center">iid</td>
 </tr>
 <tr class="odd">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">R<sup>2</sup></th>
@@ -1315,56 +1331,59 @@ RMSE: 1.346 R2: 0.659 R2 Within: 0.303 </code></pre>
 </div>
 </div>
 <p>The <code>feols()</code> function also supports multiple dependent variables. The following example estimates two models, one with <code>Y1</code> as the dependent variable and one with <code>Y2</code> as the dependent variable.</p>
-<div id="bb4e2fad" class="cell" data-execution_count="10">
+<div id="a1badc2d" class="cell" data-execution_count="10">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(<span class="st">"Y + Y2 ~ X1 | f1 + f2"</span>, data)</span>
 <span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>pf.etable(fit)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="10">
-<div id="jdfgdzqdwe" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<div id="ptcstsvgbg" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
 <style>
-#jdfgdzqdwe table {
+#ptcstsvgbg table {
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
           -webkit-font-smoothing: antialiased;
           -moz-osx-font-smoothing: grayscale;
         }
 
-#jdfgdzqdwe thead, tbody, tfoot, tr, td, th { border-style: none; }
+#ptcstsvgbg thead, tbody, tfoot, tr, td, th { border-style: none; }
  tr { background-color: transparent; }
-#jdfgdzqdwe p { margin: 0; padding: 0; }
- #jdfgdzqdwe .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: solid; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
- #jdfgdzqdwe .gt_caption { padding-top: 4px; padding-bottom: 4px; }
- #jdfgdzqdwe .gt_title { color: #333333; font-size: 125%; font-weight: initial; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
- #jdfgdzqdwe .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 3px; padding-bottom: 5px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
- #jdfgdzqdwe .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
- #jdfgdzqdwe .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
- #jdfgdzqdwe .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
- #jdfgdzqdwe .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 4px; padding-bottom: 5px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
- #jdfgdzqdwe .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
- #jdfgdzqdwe .gt_column_spanner_outer:first-child { padding-left: 0; }
- #jdfgdzqdwe .gt_column_spanner_outer:last-child { padding-right: 0; }
- #jdfgdzqdwe .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; vertical-align: bottom; padding-top: 4px; padding-bottom: 4px; overflow-x: hidden; display: inline-block; width: 100%; }
- #jdfgdzqdwe .gt_spanner_row { border-bottom-style: hidden; }
- #jdfgdzqdwe .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
- #jdfgdzqdwe .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; vertical-align: middle; }
- #jdfgdzqdwe .gt_from_md> :first-child { margin-top: 0; }
- #jdfgdzqdwe .gt_from_md> :last-child { margin-bottom: 0; }
- #jdfgdzqdwe .gt_row { padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
- #jdfgdzqdwe .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
- #jdfgdzqdwe .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
- #jdfgdzqdwe .gt_row_group_first td { border-top-width: 0.5px; }
- #jdfgdzqdwe .gt_row_group_first th { border-top-width: 0.5px; }
- #jdfgdzqdwe .gt_striped { background-color: rgba(128,128,128,0.05); }
- #jdfgdzqdwe .gt_table_body { border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
- #jdfgdzqdwe .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
- #jdfgdzqdwe .gt_sourcenote { font-size: 90%; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
- #jdfgdzqdwe .gt_left { text-align: left; }
- #jdfgdzqdwe .gt_center { text-align: center; }
- #jdfgdzqdwe .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
- #jdfgdzqdwe .gt_font_normal { font-weight: normal; }
- #jdfgdzqdwe .gt_font_bold { font-weight: bold; }
- #jdfgdzqdwe .gt_font_italic { font-style: italic; }
- #jdfgdzqdwe .gt_super { font-size: 65%; }
- #jdfgdzqdwe .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
- #jdfgdzqdwe .gt_asterisk { font-size: 100%; vertical-align: 0; }
+#ptcstsvgbg p { margin: 0; padding: 0; }
+ #ptcstsvgbg .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: solid; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
+ #ptcstsvgbg .gt_caption { padding-top: 4px; padding-bottom: 4px; }
+ #ptcstsvgbg .gt_title { color: #333333; font-size: 125%; font-weight: initial; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
+ #ptcstsvgbg .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 3px; padding-bottom: 5px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
+ #ptcstsvgbg .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #ptcstsvgbg .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
+ #ptcstsvgbg .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #ptcstsvgbg .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 4px; padding-bottom: 5px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
+ #ptcstsvgbg .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
+ #ptcstsvgbg .gt_column_spanner_outer:first-child { padding-left: 0; }
+ #ptcstsvgbg .gt_column_spanner_outer:last-child { padding-right: 0; }
+ #ptcstsvgbg .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; vertical-align: bottom; padding-top: 4px; padding-bottom: 4px; overflow-x: hidden; display: inline-block; width: 100%; }
+ #ptcstsvgbg .gt_spanner_row { border-bottom-style: hidden; }
+ #ptcstsvgbg .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
+ #ptcstsvgbg .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; vertical-align: middle; }
+ #ptcstsvgbg .gt_from_md> :first-child { margin-top: 0; }
+ #ptcstsvgbg .gt_from_md> :last-child { margin-bottom: 0; }
+ #ptcstsvgbg .gt_row { padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
+ #ptcstsvgbg .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
+ #ptcstsvgbg .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
+ #ptcstsvgbg .gt_row_group_first td { border-top-width: 0.5px; }
+ #ptcstsvgbg .gt_row_group_first th { border-top-width: 0.5px; }
+ #ptcstsvgbg .gt_striped { color: #333333; background-color: #F4F4F4; }
+ #ptcstsvgbg .gt_table_body { border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
+ #ptcstsvgbg .gt_grand_summary_row { color: #333333; background-color: #FFFFFF; text-transform: inherit; padding-top: 8px; padding-bottom: 8px; padding-left: 5px; padding-right: 5px; }
+ #ptcstsvgbg .gt_first_grand_summary_row_bottom { border-top-style: double; border-top-width: 6px; border-top-color: #D3D3D3; }
+ #ptcstsvgbg .gt_last_grand_summary_row_top { border-bottom-style: double; border-bottom-width: 6px; border-bottom-color: #D3D3D3; }
+ #ptcstsvgbg .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
+ #ptcstsvgbg .gt_sourcenote { font-size: 90%; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
+ #ptcstsvgbg .gt_left { text-align: left; }
+ #ptcstsvgbg .gt_center { text-align: center; }
+ #ptcstsvgbg .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
+ #ptcstsvgbg .gt_font_normal { font-weight: normal; }
+ #ptcstsvgbg .gt_font_bold { font-weight: bold; }
+ #ptcstsvgbg .gt_font_italic { font-style: italic; }
+ #ptcstsvgbg .gt_super { font-size: 65%; }
+ #ptcstsvgbg .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
+ #ptcstsvgbg .gt_asterisk { font-size: 100%; vertical-align: 0; }
  
 </style>
 
@@ -1392,20 +1411,20 @@ RMSE: 1.346 R2: 0.659 R2 Within: 0.303 </code></pre>
 <tr class="even">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">X1</th>
 <td class="gt_row gt_center">-0.919***<br>
-(0.066)</td>
+(0.060)</td>
 <td class="gt_row gt_center">-1.228***<br>
-(0.198)</td>
+(0.212)</td>
 </tr>
 <tr class="gt_group_heading_row odd">
 <th colspan="3" class="gt_group_heading" data-quarto-table-cell-role="th">fe</th>
 </tr>
 <tr class="even">
-<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">f1</th>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">f2</th>
 <td class="gt_row gt_center">x</td>
 <td class="gt_row gt_center">x</td>
 </tr>
 <tr class="odd">
-<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">f2</th>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">f1</th>
 <td class="gt_row gt_center">x</td>
 <td class="gt_row gt_center">x</td>
 </tr>
@@ -1419,8 +1438,8 @@ RMSE: 1.346 R2: 0.659 R2 Within: 0.303 </code></pre>
 </tr>
 <tr class="even">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">S.E. type</th>
-<td class="gt_row gt_center">by: f1</td>
-<td class="gt_row gt_center">by: f1</td>
+<td class="gt_row gt_center">iid</td>
+<td class="gt_row gt_center">iid</td>
 </tr>
 <tr class="odd">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">R<sup>2</sup></th>
@@ -1445,56 +1464,59 @@ RMSE: 1.346 R2: 0.659 R2 Within: 0.303 </code></pre>
 </div>
 </div>
 <p>It is possible to combine different multiple estimation operators:</p>
-<div id="70f613fa" class="cell" data-execution_count="11">
+<div id="6afbe5ca" class="cell" data-execution_count="11">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(<span class="st">"Y + Y2 ~ X1 | sw(f1, f2)"</span>, data)</span>
 <span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>pf.etable(fit)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="11">
-<div id="pkirmtujhq" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<div id="oyqvwlqkpw" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
 <style>
-#pkirmtujhq table {
+#oyqvwlqkpw table {
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
           -webkit-font-smoothing: antialiased;
           -moz-osx-font-smoothing: grayscale;
         }
 
-#pkirmtujhq thead, tbody, tfoot, tr, td, th { border-style: none; }
+#oyqvwlqkpw thead, tbody, tfoot, tr, td, th { border-style: none; }
  tr { background-color: transparent; }
-#pkirmtujhq p { margin: 0; padding: 0; }
- #pkirmtujhq .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: solid; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
- #pkirmtujhq .gt_caption { padding-top: 4px; padding-bottom: 4px; }
- #pkirmtujhq .gt_title { color: #333333; font-size: 125%; font-weight: initial; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
- #pkirmtujhq .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 3px; padding-bottom: 5px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
- #pkirmtujhq .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
- #pkirmtujhq .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
- #pkirmtujhq .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
- #pkirmtujhq .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 4px; padding-bottom: 5px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
- #pkirmtujhq .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
- #pkirmtujhq .gt_column_spanner_outer:first-child { padding-left: 0; }
- #pkirmtujhq .gt_column_spanner_outer:last-child { padding-right: 0; }
- #pkirmtujhq .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; vertical-align: bottom; padding-top: 4px; padding-bottom: 4px; overflow-x: hidden; display: inline-block; width: 100%; }
- #pkirmtujhq .gt_spanner_row { border-bottom-style: hidden; }
- #pkirmtujhq .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
- #pkirmtujhq .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; vertical-align: middle; }
- #pkirmtujhq .gt_from_md> :first-child { margin-top: 0; }
- #pkirmtujhq .gt_from_md> :last-child { margin-bottom: 0; }
- #pkirmtujhq .gt_row { padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
- #pkirmtujhq .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
- #pkirmtujhq .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
- #pkirmtujhq .gt_row_group_first td { border-top-width: 0.5px; }
- #pkirmtujhq .gt_row_group_first th { border-top-width: 0.5px; }
- #pkirmtujhq .gt_striped { background-color: rgba(128,128,128,0.05); }
- #pkirmtujhq .gt_table_body { border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
- #pkirmtujhq .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
- #pkirmtujhq .gt_sourcenote { font-size: 90%; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
- #pkirmtujhq .gt_left { text-align: left; }
- #pkirmtujhq .gt_center { text-align: center; }
- #pkirmtujhq .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
- #pkirmtujhq .gt_font_normal { font-weight: normal; }
- #pkirmtujhq .gt_font_bold { font-weight: bold; }
- #pkirmtujhq .gt_font_italic { font-style: italic; }
- #pkirmtujhq .gt_super { font-size: 65%; }
- #pkirmtujhq .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
- #pkirmtujhq .gt_asterisk { font-size: 100%; vertical-align: 0; }
+#oyqvwlqkpw p { margin: 0; padding: 0; }
+ #oyqvwlqkpw .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: solid; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
+ #oyqvwlqkpw .gt_caption { padding-top: 4px; padding-bottom: 4px; }
+ #oyqvwlqkpw .gt_title { color: #333333; font-size: 125%; font-weight: initial; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
+ #oyqvwlqkpw .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 3px; padding-bottom: 5px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
+ #oyqvwlqkpw .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #oyqvwlqkpw .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
+ #oyqvwlqkpw .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #oyqvwlqkpw .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 4px; padding-bottom: 5px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
+ #oyqvwlqkpw .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
+ #oyqvwlqkpw .gt_column_spanner_outer:first-child { padding-left: 0; }
+ #oyqvwlqkpw .gt_column_spanner_outer:last-child { padding-right: 0; }
+ #oyqvwlqkpw .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; vertical-align: bottom; padding-top: 4px; padding-bottom: 4px; overflow-x: hidden; display: inline-block; width: 100%; }
+ #oyqvwlqkpw .gt_spanner_row { border-bottom-style: hidden; }
+ #oyqvwlqkpw .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
+ #oyqvwlqkpw .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; vertical-align: middle; }
+ #oyqvwlqkpw .gt_from_md> :first-child { margin-top: 0; }
+ #oyqvwlqkpw .gt_from_md> :last-child { margin-bottom: 0; }
+ #oyqvwlqkpw .gt_row { padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
+ #oyqvwlqkpw .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
+ #oyqvwlqkpw .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
+ #oyqvwlqkpw .gt_row_group_first td { border-top-width: 0.5px; }
+ #oyqvwlqkpw .gt_row_group_first th { border-top-width: 0.5px; }
+ #oyqvwlqkpw .gt_striped { color: #333333; background-color: #F4F4F4; }
+ #oyqvwlqkpw .gt_table_body { border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
+ #oyqvwlqkpw .gt_grand_summary_row { color: #333333; background-color: #FFFFFF; text-transform: inherit; padding-top: 8px; padding-bottom: 8px; padding-left: 5px; padding-right: 5px; }
+ #oyqvwlqkpw .gt_first_grand_summary_row_bottom { border-top-style: double; border-top-width: 6px; border-top-color: #D3D3D3; }
+ #oyqvwlqkpw .gt_last_grand_summary_row_top { border-bottom-style: double; border-bottom-width: 6px; border-bottom-color: #D3D3D3; }
+ #oyqvwlqkpw .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
+ #oyqvwlqkpw .gt_sourcenote { font-size: 90%; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
+ #oyqvwlqkpw .gt_left { text-align: left; }
+ #oyqvwlqkpw .gt_center { text-align: center; }
+ #oyqvwlqkpw .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
+ #oyqvwlqkpw .gt_font_normal { font-weight: normal; }
+ #oyqvwlqkpw .gt_font_bold { font-weight: bold; }
+ #oyqvwlqkpw .gt_font_italic { font-style: italic; }
+ #oyqvwlqkpw .gt_super { font-size: 65%; }
+ #oyqvwlqkpw .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
+ #oyqvwlqkpw .gt_asterisk { font-size: 100%; vertical-align: 0; }
  
 </style>
 
@@ -1528,30 +1550,30 @@ RMSE: 1.346 R2: 0.659 R2 Within: 0.303 </code></pre>
 <tr class="even">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">X1</th>
 <td class="gt_row gt_center">-0.949***<br>
-(0.069)</td>
+(0.070)</td>
 <td class="gt_row gt_center">-1.266***<br>
-(0.176)</td>
+(0.211)</td>
 <td class="gt_row gt_center">-0.982***<br>
-(0.081)</td>
+(0.078)</td>
 <td class="gt_row gt_center">-1.301***<br>
-(0.205)</td>
+(0.216)</td>
 </tr>
 <tr class="gt_group_heading_row odd">
 <th colspan="5" class="gt_group_heading" data-quarto-table-cell-role="th">fe</th>
 </tr>
 <tr class="even">
-<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">f1</th>
-<td class="gt_row gt_center">x</td>
-<td class="gt_row gt_center">x</td>
-<td class="gt_row gt_center">-</td>
-<td class="gt_row gt_center">-</td>
-</tr>
-<tr class="odd">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">f2</th>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">x</td>
 <td class="gt_row gt_center">x</td>
+</tr>
+<tr class="odd">
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">f1</th>
+<td class="gt_row gt_center">x</td>
+<td class="gt_row gt_center">x</td>
+<td class="gt_row gt_center">-</td>
+<td class="gt_row gt_center">-</td>
 </tr>
 <tr class="gt_group_heading_row even">
 <th colspan="5" class="gt_group_heading" data-quarto-table-cell-role="th">stats</th>
@@ -1565,10 +1587,10 @@ RMSE: 1.346 R2: 0.659 R2 Within: 0.303 </code></pre>
 </tr>
 <tr class="even">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">S.E. type</th>
-<td class="gt_row gt_center">by: f1</td>
-<td class="gt_row gt_center">by: f1</td>
-<td class="gt_row gt_center">by: f2</td>
-<td class="gt_row gt_center">by: f2</td>
+<td class="gt_row gt_center">iid</td>
+<td class="gt_row gt_center">iid</td>
+<td class="gt_row gt_center">iid</td>
+<td class="gt_row gt_center">iid</td>
 </tr>
 <tr class="odd">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">R<sup>2</sup></th>
@@ -1598,118 +1620,121 @@ RMSE: 1.346 R2: 0.659 R2 Within: 0.303 </code></pre>
 </div>
 <p>In general, using muliple estimation syntax can improve the estimation time as covariates that are demeaned in one model and are used in another model do not need to be demeaned again: <code>feols()</code> implements a caching mechanism that stores the demeaned covariates.</p>
 <p>Additionally, you can fit models on different samples via the split and fsplit arguments. The split argument splits the sample according to the variable specified in the argument, while the fsplit argument also includes the full sample in the estimation.</p>
-<div id="7a444a58" class="cell" data-execution_count="12">
+<div id="4bad76e5" class="cell" data-execution_count="12">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 + X2 | f1 + f2"</span>, data, split <span class="op">=</span> <span class="st">"f1"</span>)</span>
 <span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>pf.etable(fit)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stderr">
-<pre><code>/home/runner/work/pyfixest/pyfixest/pyfixest/utils/utils.py:198: RuntimeWarning: divide by zero encountered in scalar divide
-  cluster_adj_value = G / (G - 1)
-/home/runner/work/pyfixest/pyfixest/pyfixest/utils/utils.py:198: RuntimeWarning: divide by zero encountered in scalar divide
-  cluster_adj_value = G / (G - 1)
-/home/runner/work/pyfixest/pyfixest/pyfixest/utils/utils.py:198: RuntimeWarning: divide by zero encountered in scalar divide
-  cluster_adj_value = G / (G - 1)
-/home/runner/work/pyfixest/pyfixest/pyfixest/utils/utils.py:198: RuntimeWarning: divide by zero encountered in scalar divide
-  cluster_adj_value = G / (G - 1)
-/home/runner/work/pyfixest/pyfixest/pyfixest/utils/utils.py:198: RuntimeWarning: divide by zero encountered in scalar divide
-  cluster_adj_value = G / (G - 1)
-/home/runner/work/pyfixest/pyfixest/pyfixest/utils/utils.py:198: RuntimeWarning: divide by zero encountered in scalar divide
-  cluster_adj_value = G / (G - 1)
-/home/runner/work/pyfixest/pyfixest/pyfixest/utils/utils.py:198: RuntimeWarning: divide by zero encountered in scalar divide
-  cluster_adj_value = G / (G - 1)
-/home/runner/work/pyfixest/pyfixest/pyfixest/utils/utils.py:198: RuntimeWarning: divide by zero encountered in scalar divide
-  cluster_adj_value = G / (G - 1)
-/home/runner/work/pyfixest/pyfixest/pyfixest/utils/utils.py:198: RuntimeWarning: divide by zero encountered in scalar divide
-  cluster_adj_value = G / (G - 1)
-/home/runner/work/pyfixest/pyfixest/pyfixest/utils/utils.py:198: RuntimeWarning: divide by zero encountered in scalar divide
-  cluster_adj_value = G / (G - 1)
-/home/runner/work/pyfixest/pyfixest/pyfixest/utils/utils.py:198: RuntimeWarning: divide by zero encountered in scalar divide
-  cluster_adj_value = G / (G - 1)
-/home/runner/work/pyfixest/pyfixest/pyfixest/utils/utils.py:198: RuntimeWarning: divide by zero encountered in scalar divide
-  cluster_adj_value = G / (G - 1)
-/home/runner/work/pyfixest/pyfixest/pyfixest/utils/utils.py:198: RuntimeWarning: divide by zero encountered in scalar divide
-  cluster_adj_value = G / (G - 1)
-/home/runner/work/pyfixest/pyfixest/pyfixest/utils/utils.py:198: RuntimeWarning: divide by zero encountered in scalar divide
-  cluster_adj_value = G / (G - 1)
-/home/runner/work/pyfixest/pyfixest/pyfixest/utils/utils.py:198: RuntimeWarning: divide by zero encountered in scalar divide
-  cluster_adj_value = G / (G - 1)
-/home/runner/work/pyfixest/pyfixest/pyfixest/utils/utils.py:198: RuntimeWarning: divide by zero encountered in scalar divide
-  cluster_adj_value = G / (G - 1)
-/home/runner/work/pyfixest/pyfixest/pyfixest/utils/utils.py:198: RuntimeWarning: divide by zero encountered in scalar divide
-  cluster_adj_value = G / (G - 1)
-/home/runner/work/pyfixest/pyfixest/pyfixest/utils/utils.py:198: RuntimeWarning: divide by zero encountered in scalar divide
-  cluster_adj_value = G / (G - 1)
-/home/runner/work/pyfixest/pyfixest/pyfixest/utils/utils.py:198: RuntimeWarning: divide by zero encountered in scalar divide
-  cluster_adj_value = G / (G - 1)
-/home/runner/work/pyfixest/pyfixest/pyfixest/utils/utils.py:198: RuntimeWarning: divide by zero encountered in scalar divide
-  cluster_adj_value = G / (G - 1)
-/home/runner/work/pyfixest/pyfixest/pyfixest/utils/utils.py:198: RuntimeWarning: divide by zero encountered in scalar divide
-  cluster_adj_value = G / (G - 1)
-/home/runner/work/pyfixest/pyfixest/pyfixest/utils/utils.py:198: RuntimeWarning: divide by zero encountered in scalar divide
-  cluster_adj_value = G / (G - 1)
-/home/runner/work/pyfixest/pyfixest/pyfixest/utils/utils.py:198: RuntimeWarning: divide by zero encountered in scalar divide
-  cluster_adj_value = G / (G - 1)
-/home/runner/work/pyfixest/pyfixest/pyfixest/utils/utils.py:198: RuntimeWarning: divide by zero encountered in scalar divide
-  cluster_adj_value = G / (G - 1)
-/home/runner/work/pyfixest/pyfixest/pyfixest/utils/utils.py:198: RuntimeWarning: divide by zero encountered in scalar divide
-  cluster_adj_value = G / (G - 1)
-/home/runner/work/pyfixest/pyfixest/pyfixest/utils/utils.py:198: RuntimeWarning: divide by zero encountered in scalar divide
-  cluster_adj_value = G / (G - 1)
-/home/runner/work/pyfixest/pyfixest/pyfixest/utils/utils.py:198: RuntimeWarning: divide by zero encountered in scalar divide
-  cluster_adj_value = G / (G - 1)
-/home/runner/work/pyfixest/pyfixest/pyfixest/utils/utils.py:198: RuntimeWarning: divide by zero encountered in scalar divide
-  cluster_adj_value = G / (G - 1)
-/home/runner/work/pyfixest/pyfixest/pyfixest/utils/utils.py:198: RuntimeWarning: divide by zero encountered in scalar divide
-  cluster_adj_value = G / (G - 1)
-/home/runner/work/pyfixest/pyfixest/pyfixest/utils/utils.py:198: RuntimeWarning: divide by zero encountered in scalar divide
-  cluster_adj_value = G / (G - 1)</code></pre>
+<pre><code>/home/runner/work/pyfixest/pyfixest/pyfixest/estimation/model_matrix_fixest_.py:215: UserWarning: 8 singleton fixed effect(s) detected. These observations are dropped from the model.
+  warnings.warn(
+/home/runner/work/pyfixest/pyfixest/pyfixest/estimation/model_matrix_fixest_.py:215: UserWarning: 12 singleton fixed effect(s) detected. These observations are dropped from the model.
+  warnings.warn(
+/home/runner/work/pyfixest/pyfixest/pyfixest/estimation/model_matrix_fixest_.py:215: UserWarning: 5 singleton fixed effect(s) detected. These observations are dropped from the model.
+  warnings.warn(
+/home/runner/work/pyfixest/pyfixest/pyfixest/estimation/model_matrix_fixest_.py:215: UserWarning: 12 singleton fixed effect(s) detected. These observations are dropped from the model.
+  warnings.warn(
+/home/runner/work/pyfixest/pyfixest/pyfixest/estimation/model_matrix_fixest_.py:215: UserWarning: 14 singleton fixed effect(s) detected. These observations are dropped from the model.
+  warnings.warn(
+/home/runner/work/pyfixest/pyfixest/pyfixest/estimation/model_matrix_fixest_.py:215: UserWarning: 9 singleton fixed effect(s) detected. These observations are dropped from the model.
+  warnings.warn(
+/home/runner/work/pyfixest/pyfixest/pyfixest/estimation/model_matrix_fixest_.py:215: UserWarning: 13 singleton fixed effect(s) detected. These observations are dropped from the model.
+  warnings.warn(
+/home/runner/work/pyfixest/pyfixest/pyfixest/estimation/model_matrix_fixest_.py:215: UserWarning: 6 singleton fixed effect(s) detected. These observations are dropped from the model.
+  warnings.warn(
+/home/runner/work/pyfixest/pyfixest/pyfixest/estimation/model_matrix_fixest_.py:215: UserWarning: 10 singleton fixed effect(s) detected. These observations are dropped from the model.
+  warnings.warn(
+/home/runner/work/pyfixest/pyfixest/pyfixest/estimation/model_matrix_fixest_.py:215: UserWarning: 6 singleton fixed effect(s) detected. These observations are dropped from the model.
+  warnings.warn(
+/home/runner/work/pyfixest/pyfixest/pyfixest/estimation/model_matrix_fixest_.py:215: UserWarning: 11 singleton fixed effect(s) detected. These observations are dropped from the model.
+  warnings.warn(
+/home/runner/work/pyfixest/pyfixest/pyfixest/estimation/model_matrix_fixest_.py:215: UserWarning: 9 singleton fixed effect(s) detected. These observations are dropped from the model.
+  warnings.warn(
+/home/runner/work/pyfixest/pyfixest/pyfixest/estimation/model_matrix_fixest_.py:215: UserWarning: 10 singleton fixed effect(s) detected. These observations are dropped from the model.
+  warnings.warn(
+/home/runner/work/pyfixest/pyfixest/pyfixest/estimation/model_matrix_fixest_.py:215: UserWarning: 14 singleton fixed effect(s) detected. These observations are dropped from the model.
+  warnings.warn(
+/home/runner/work/pyfixest/pyfixest/pyfixest/estimation/model_matrix_fixest_.py:215: UserWarning: 15 singleton fixed effect(s) detected. These observations are dropped from the model.
+  warnings.warn(
+/home/runner/work/pyfixest/pyfixest/pyfixest/estimation/model_matrix_fixest_.py:215: UserWarning: 8 singleton fixed effect(s) detected. These observations are dropped from the model.
+  warnings.warn(
+/home/runner/work/pyfixest/pyfixest/pyfixest/estimation/model_matrix_fixest_.py:215: UserWarning: 6 singleton fixed effect(s) detected. These observations are dropped from the model.
+  warnings.warn(
+/home/runner/work/pyfixest/pyfixest/pyfixest/estimation/model_matrix_fixest_.py:215: UserWarning: 8 singleton fixed effect(s) detected. These observations are dropped from the model.
+  warnings.warn(
+/home/runner/work/pyfixest/pyfixest/pyfixest/estimation/model_matrix_fixest_.py:215: UserWarning: 12 singleton fixed effect(s) detected. These observations are dropped from the model.
+  warnings.warn(
+/home/runner/work/pyfixest/pyfixest/pyfixest/estimation/model_matrix_fixest_.py:215: UserWarning: 9 singleton fixed effect(s) detected. These observations are dropped from the model.
+  warnings.warn(
+/home/runner/work/pyfixest/pyfixest/pyfixest/estimation/model_matrix_fixest_.py:215: UserWarning: 10 singleton fixed effect(s) detected. These observations are dropped from the model.
+  warnings.warn(
+/home/runner/work/pyfixest/pyfixest/pyfixest/estimation/model_matrix_fixest_.py:215: UserWarning: 14 singleton fixed effect(s) detected. These observations are dropped from the model.
+  warnings.warn(
+/home/runner/work/pyfixest/pyfixest/pyfixest/estimation/model_matrix_fixest_.py:215: UserWarning: 10 singleton fixed effect(s) detected. These observations are dropped from the model.
+  warnings.warn(
+/home/runner/work/pyfixest/pyfixest/pyfixest/estimation/model_matrix_fixest_.py:215: UserWarning: 8 singleton fixed effect(s) detected. These observations are dropped from the model.
+  warnings.warn(
+/home/runner/work/pyfixest/pyfixest/pyfixest/estimation/model_matrix_fixest_.py:215: UserWarning: 8 singleton fixed effect(s) detected. These observations are dropped from the model.
+  warnings.warn(
+/home/runner/work/pyfixest/pyfixest/pyfixest/estimation/model_matrix_fixest_.py:215: UserWarning: 5 singleton fixed effect(s) detected. These observations are dropped from the model.
+  warnings.warn(
+/home/runner/work/pyfixest/pyfixest/pyfixest/estimation/model_matrix_fixest_.py:215: UserWarning: 11 singleton fixed effect(s) detected. These observations are dropped from the model.
+  warnings.warn(
+/home/runner/work/pyfixest/pyfixest/pyfixest/estimation/model_matrix_fixest_.py:215: UserWarning: 10 singleton fixed effect(s) detected. These observations are dropped from the model.
+  warnings.warn(
+/home/runner/work/pyfixest/pyfixest/pyfixest/estimation/model_matrix_fixest_.py:215: UserWarning: 6 singleton fixed effect(s) detected. These observations are dropped from the model.
+  warnings.warn(
+/home/runner/work/pyfixest/pyfixest/pyfixest/estimation/model_matrix_fixest_.py:215: UserWarning: 10 singleton fixed effect(s) detected. These observations are dropped from the model.
+  warnings.warn(</code></pre>
 </div>
 <div class="cell-output cell-output-display" data-execution_count="12">
-<div id="ucdegvoohg" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<div id="rivhhhfgdl" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
 <style>
-#ucdegvoohg table {
+#rivhhhfgdl table {
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
           -webkit-font-smoothing: antialiased;
           -moz-osx-font-smoothing: grayscale;
         }
 
-#ucdegvoohg thead, tbody, tfoot, tr, td, th { border-style: none; }
+#rivhhhfgdl thead, tbody, tfoot, tr, td, th { border-style: none; }
  tr { background-color: transparent; }
-#ucdegvoohg p { margin: 0; padding: 0; }
- #ucdegvoohg .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: solid; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
- #ucdegvoohg .gt_caption { padding-top: 4px; padding-bottom: 4px; }
- #ucdegvoohg .gt_title { color: #333333; font-size: 125%; font-weight: initial; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
- #ucdegvoohg .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 3px; padding-bottom: 5px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
- #ucdegvoohg .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
- #ucdegvoohg .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
- #ucdegvoohg .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
- #ucdegvoohg .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 4px; padding-bottom: 5px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
- #ucdegvoohg .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
- #ucdegvoohg .gt_column_spanner_outer:first-child { padding-left: 0; }
- #ucdegvoohg .gt_column_spanner_outer:last-child { padding-right: 0; }
- #ucdegvoohg .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; vertical-align: bottom; padding-top: 4px; padding-bottom: 4px; overflow-x: hidden; display: inline-block; width: 100%; }
- #ucdegvoohg .gt_spanner_row { border-bottom-style: hidden; }
- #ucdegvoohg .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
- #ucdegvoohg .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; vertical-align: middle; }
- #ucdegvoohg .gt_from_md> :first-child { margin-top: 0; }
- #ucdegvoohg .gt_from_md> :last-child { margin-bottom: 0; }
- #ucdegvoohg .gt_row { padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
- #ucdegvoohg .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
- #ucdegvoohg .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
- #ucdegvoohg .gt_row_group_first td { border-top-width: 0.5px; }
- #ucdegvoohg .gt_row_group_first th { border-top-width: 0.5px; }
- #ucdegvoohg .gt_striped { background-color: rgba(128,128,128,0.05); }
- #ucdegvoohg .gt_table_body { border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
- #ucdegvoohg .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
- #ucdegvoohg .gt_sourcenote { font-size: 90%; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
- #ucdegvoohg .gt_left { text-align: left; }
- #ucdegvoohg .gt_center { text-align: center; }
- #ucdegvoohg .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
- #ucdegvoohg .gt_font_normal { font-weight: normal; }
- #ucdegvoohg .gt_font_bold { font-weight: bold; }
- #ucdegvoohg .gt_font_italic { font-style: italic; }
- #ucdegvoohg .gt_super { font-size: 65%; }
- #ucdegvoohg .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
- #ucdegvoohg .gt_asterisk { font-size: 100%; vertical-align: 0; }
+#rivhhhfgdl p { margin: 0; padding: 0; }
+ #rivhhhfgdl .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: solid; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
+ #rivhhhfgdl .gt_caption { padding-top: 4px; padding-bottom: 4px; }
+ #rivhhhfgdl .gt_title { color: #333333; font-size: 125%; font-weight: initial; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
+ #rivhhhfgdl .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 3px; padding-bottom: 5px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
+ #rivhhhfgdl .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #rivhhhfgdl .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
+ #rivhhhfgdl .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #rivhhhfgdl .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 4px; padding-bottom: 5px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
+ #rivhhhfgdl .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
+ #rivhhhfgdl .gt_column_spanner_outer:first-child { padding-left: 0; }
+ #rivhhhfgdl .gt_column_spanner_outer:last-child { padding-right: 0; }
+ #rivhhhfgdl .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; vertical-align: bottom; padding-top: 4px; padding-bottom: 4px; overflow-x: hidden; display: inline-block; width: 100%; }
+ #rivhhhfgdl .gt_spanner_row { border-bottom-style: hidden; }
+ #rivhhhfgdl .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
+ #rivhhhfgdl .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; vertical-align: middle; }
+ #rivhhhfgdl .gt_from_md> :first-child { margin-top: 0; }
+ #rivhhhfgdl .gt_from_md> :last-child { margin-bottom: 0; }
+ #rivhhhfgdl .gt_row { padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
+ #rivhhhfgdl .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
+ #rivhhhfgdl .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
+ #rivhhhfgdl .gt_row_group_first td { border-top-width: 0.5px; }
+ #rivhhhfgdl .gt_row_group_first th { border-top-width: 0.5px; }
+ #rivhhhfgdl .gt_striped { color: #333333; background-color: #F4F4F4; }
+ #rivhhhfgdl .gt_table_body { border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
+ #rivhhhfgdl .gt_grand_summary_row { color: #333333; background-color: #FFFFFF; text-transform: inherit; padding-top: 8px; padding-bottom: 8px; padding-left: 5px; padding-right: 5px; }
+ #rivhhhfgdl .gt_first_grand_summary_row_bottom { border-top-style: double; border-top-width: 6px; border-top-color: #D3D3D3; }
+ #rivhhhfgdl .gt_last_grand_summary_row_top { border-bottom-style: double; border-bottom-width: 6px; border-bottom-color: #D3D3D3; }
+ #rivhhhfgdl .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
+ #rivhhhfgdl .gt_sourcenote { font-size: 90%; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
+ #rivhhhfgdl .gt_left { text-align: left; }
+ #rivhhhfgdl .gt_center { text-align: center; }
+ #rivhhhfgdl .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
+ #rivhhhfgdl .gt_font_normal { font-weight: normal; }
+ #rivhhhfgdl .gt_font_bold { font-weight: bold; }
+ #rivhhhfgdl .gt_font_italic { font-style: italic; }
+ #rivhhhfgdl .gt_super { font-size: 65%; }
+ #rivhhhfgdl .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
+ #rivhhhfgdl .gt_asterisk { font-size: 100%; vertical-align: 0; }
  
 </style>
 
@@ -1791,135 +1816,135 @@ RMSE: 1.346 R2: 0.659 R2 Within: 0.303 </code></pre>
 </tr>
 <tr class="even">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">X1</th>
-<td class="gt_row gt_center">-1.357<br>
-(INF)</td>
+<td class="gt_row gt_center">-1.357*<br>
+(0.460)</td>
 <td class="gt_row gt_center">-1.137<br>
-(INF)</td>
+(0.748)</td>
 <td class="gt_row gt_center">-0.455<br>
-(INF)</td>
-<td class="gt_row gt_center">-1.138<br>
-(INF)</td>
+(0.359)</td>
+<td class="gt_row gt_center">-1.138*<br>
+(0.499)</td>
 <td class="gt_row gt_center">0.201<br>
-(INF)</td>
+(0.349)</td>
 <td class="gt_row gt_center">-0.306<br>
-(INF)</td>
+(0.395)</td>
 <td class="gt_row gt_center">-0.597<br>
-(INF)</td>
+(0.403)</td>
 <td class="gt_row gt_center">-0.824<br>
-(INF)</td>
-<td class="gt_row gt_center">-1.482<br>
-(INF)</td>
-<td class="gt_row gt_center">-1.117<br>
-(INF)</td>
+(0.420)</td>
+<td class="gt_row gt_center">-1.482**<br>
+(0.388)</td>
+<td class="gt_row gt_center">-1.117*<br>
+(0.418)</td>
 <td class="gt_row gt_center">-1.142<br>
-(INF)</td>
+(0.558)</td>
 <td class="gt_row gt_center">-1.334<br>
-(INF)</td>
-<td class="gt_row gt_center">-3.531<br>
-(INF)</td>
+(0.607)</td>
+<td class="gt_row gt_center">-3.531**<br>
+(0.839)</td>
 <td class="gt_row gt_center">-1.102<br>
-(INF)</td>
+(0.783)</td>
 <td class="gt_row gt_center">-0.826<br>
-(INF)</td>
+(1.099)</td>
 <td class="gt_row gt_center">-0.773<br>
-(INF)</td>
-<td class="gt_row gt_center">-1.501<br>
-(INF)</td>
-<td class="gt_row gt_center">-1.226<br>
-(INF)</td>
+(0.479)</td>
+<td class="gt_row gt_center">-1.501***<br>
+(0.404)</td>
+<td class="gt_row gt_center">-1.226*<br>
+(0.478)</td>
 <td class="gt_row gt_center">-0.641<br>
-(INF)</td>
+(0.682)</td>
 <td class="gt_row gt_center">-0.378<br>
-(INF)</td>
+(0.451)</td>
 <td class="gt_row gt_center">-0.652<br>
-(INF)</td>
-<td class="gt_row gt_center">-1.508<br>
-(INF)</td>
+(0.365)</td>
+<td class="gt_row gt_center">-1.508**<br>
+(0.374)</td>
 <td class="gt_row gt_center">-0.941<br>
-(INF)</td>
+(0.775)</td>
 <td class="gt_row gt_center">-0.206<br>
-(INF)</td>
+(0.377)</td>
 <td class="gt_row gt_center">-0.195<br>
-(INF)</td>
+(0.301)</td>
 <td class="gt_row gt_center">-0.702<br>
-(INF)</td>
-<td class="gt_row gt_center">-1.141<br>
-(INF)</td>
-<td class="gt_row gt_center">-1.349<br>
-(INF)</td>
+(0.580)</td>
+<td class="gt_row gt_center">-1.141***<br>
+(0.285)</td>
+<td class="gt_row gt_center">-1.349*<br>
+(0.545)</td>
 <td class="gt_row gt_center">-0.537<br>
-(INF)</td>
+(0.780)</td>
 <td class="gt_row gt_center">-1.141<br>
-(INF)</td>
+(0.632)</td>
 </tr>
 <tr class="odd">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">X2</th>
 <td class="gt_row gt_center">-0.250<br>
-(INF)</td>
+(0.129)</td>
 <td class="gt_row gt_center">0.198<br>
-(INF)</td>
+(0.352)</td>
 <td class="gt_row gt_center">-0.145<br>
-(INF)</td>
+(0.087)</td>
 <td class="gt_row gt_center">-0.330<br>
-(INF)</td>
+(0.148)</td>
 <td class="gt_row gt_center">-0.177<br>
-(INF)</td>
-<td class="gt_row gt_center">-0.187<br>
-(INF)</td>
+(0.103)</td>
+<td class="gt_row gt_center">-0.187*<br>
+(0.082)</td>
 <td class="gt_row gt_center">-0.118<br>
-(INF)</td>
+(0.098)</td>
 <td class="gt_row gt_center">-0.292<br>
-(INF)</td>
+(0.169)</td>
 <td class="gt_row gt_center">-0.029<br>
-(INF)</td>
-<td class="gt_row gt_center">-0.264<br>
-(INF)</td>
+(0.124)</td>
+<td class="gt_row gt_center">-0.264**<br>
+(0.070)</td>
 <td class="gt_row gt_center">-0.148<br>
-(INF)</td>
+(0.105)</td>
 <td class="gt_row gt_center">-0.313<br>
-(INF)</td>
+(0.154)</td>
 <td class="gt_row gt_center">-0.152<br>
-(INF)</td>
+(0.188)</td>
 <td class="gt_row gt_center">-0.296<br>
-(INF)</td>
+(0.248)</td>
 <td class="gt_row gt_center">0.130<br>
-(INF)</td>
+(0.187)</td>
 <td class="gt_row gt_center">-0.059<br>
-(INF)</td>
-<td class="gt_row gt_center">-0.223<br>
-(INF)</td>
+(0.130)</td>
+<td class="gt_row gt_center">-0.223*<br>
+(0.104)</td>
 <td class="gt_row gt_center">-0.113<br>
-(INF)</td>
+(0.082)</td>
 <td class="gt_row gt_center">-0.261<br>
-(INF)</td>
+(0.173)</td>
 <td class="gt_row gt_center">0.089<br>
-(INF)</td>
+(0.132)</td>
 <td class="gt_row gt_center">-0.148<br>
-(INF)</td>
+(0.174)</td>
 <td class="gt_row gt_center">-0.267<br>
-(INF)</td>
+(0.126)</td>
 <td class="gt_row gt_center">-0.125<br>
-(INF)</td>
-<td class="gt_row gt_center">-0.282<br>
-(INF)</td>
+(0.168)</td>
+<td class="gt_row gt_center">-0.282*<br>
+(0.099)</td>
 <td class="gt_row gt_center">-0.153<br>
-(INF)</td>
+(0.086)</td>
 <td class="gt_row gt_center">0.004<br>
-(INF)</td>
+(0.196)</td>
 <td class="gt_row gt_center">0.083<br>
-(INF)</td>
+(0.128)</td>
 <td class="gt_row gt_center">-0.226<br>
-(INF)</td>
+(0.116)</td>
 <td class="gt_row gt_center">-0.158<br>
-(INF)</td>
+(0.153)</td>
 <td class="gt_row gt_center">-0.160<br>
-(INF)</td>
+(0.145)</td>
 </tr>
 <tr class="gt_group_heading_row even">
 <th colspan="31" class="gt_group_heading" data-quarto-table-cell-role="th">fe</th>
 </tr>
 <tr class="odd">
-<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">f1</th>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">f2</th>
 <td class="gt_row gt_center">x</td>
 <td class="gt_row gt_center">x</td>
 <td class="gt_row gt_center">x</td>
@@ -1952,7 +1977,7 @@ RMSE: 1.346 R2: 0.659 R2 Within: 0.303 </code></pre>
 <td class="gt_row gt_center">x</td>
 </tr>
 <tr class="even">
-<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">f2</th>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">f1</th>
 <td class="gt_row gt_center">x</td>
 <td class="gt_row gt_center">x</td>
 <td class="gt_row gt_center">x</td>
@@ -1989,102 +2014,102 @@ RMSE: 1.346 R2: 0.659 R2 Within: 0.303 </code></pre>
 </tr>
 <tr class="even">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">Observations</th>
-<td class="gt_row gt_center">30</td>
-<td class="gt_row gt_center">29</td>
-<td class="gt_row gt_center">44</td>
-<td class="gt_row gt_center">30</td>
-<td class="gt_row gt_center">31</td>
-<td class="gt_row gt_center">36</td>
-<td class="gt_row gt_center">36</td>
-<td class="gt_row gt_center">30</td>
-<td class="gt_row gt_center">36</td>
-<td class="gt_row gt_center">35</td>
-<td class="gt_row gt_center">32</td>
-<td class="gt_row gt_center">30</td>
+<td class="gt_row gt_center">22</td>
+<td class="gt_row gt_center">17</td>
+<td class="gt_row gt_center">39</td>
+<td class="gt_row gt_center">18</td>
+<td class="gt_row gt_center">17</td>
+<td class="gt_row gt_center">27</td>
 <td class="gt_row gt_center">23</td>
-<td class="gt_row gt_center">28</td>
-<td class="gt_row gt_center">34</td>
-<td class="gt_row gt_center">34</td>
-<td class="gt_row gt_center">48</td>
-<td class="gt_row gt_center">40</td>
-<td class="gt_row gt_center">36</td>
-<td class="gt_row gt_center">34</td>
-<td class="gt_row gt_center">35</td>
-<td class="gt_row gt_center">37</td>
-<td class="gt_row gt_center">27</td>
-<td class="gt_row gt_center">35</td>
-<td class="gt_row gt_center">29</td>
-<td class="gt_row gt_center">27</td>
-<td class="gt_row gt_center">43</td>
-<td class="gt_row gt_center">36</td>
 <td class="gt_row gt_center">24</td>
-<td class="gt_row gt_center">28</td>
+<td class="gt_row gt_center">26</td>
+<td class="gt_row gt_center">29</td>
+<td class="gt_row gt_center">21</td>
+<td class="gt_row gt_center">21</td>
+<td class="gt_row gt_center">13</td>
+<td class="gt_row gt_center">14</td>
+<td class="gt_row gt_center">19</td>
+<td class="gt_row gt_center">26</td>
+<td class="gt_row gt_center">42</td>
+<td class="gt_row gt_center">32</td>
+<td class="gt_row gt_center">24</td>
+<td class="gt_row gt_center">25</td>
+<td class="gt_row gt_center">25</td>
+<td class="gt_row gt_center">23</td>
+<td class="gt_row gt_center">17</td>
+<td class="gt_row gt_center">27</td>
+<td class="gt_row gt_center">21</td>
+<td class="gt_row gt_center">22</td>
+<td class="gt_row gt_center">32</td>
+<td class="gt_row gt_center">26</td>
+<td class="gt_row gt_center">18</td>
+<td class="gt_row gt_center">18</td>
 </tr>
 <tr class="odd">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">S.E. type</th>
-<td class="gt_row gt_center">by: f1</td>
-<td class="gt_row gt_center">by: f1</td>
-<td class="gt_row gt_center">by: f1</td>
-<td class="gt_row gt_center">by: f1</td>
-<td class="gt_row gt_center">by: f1</td>
-<td class="gt_row gt_center">by: f1</td>
-<td class="gt_row gt_center">by: f1</td>
-<td class="gt_row gt_center">by: f1</td>
-<td class="gt_row gt_center">by: f1</td>
-<td class="gt_row gt_center">by: f1</td>
-<td class="gt_row gt_center">by: f1</td>
-<td class="gt_row gt_center">by: f1</td>
-<td class="gt_row gt_center">by: f1</td>
-<td class="gt_row gt_center">by: f1</td>
-<td class="gt_row gt_center">by: f1</td>
-<td class="gt_row gt_center">by: f1</td>
-<td class="gt_row gt_center">by: f1</td>
-<td class="gt_row gt_center">by: f1</td>
-<td class="gt_row gt_center">by: f1</td>
-<td class="gt_row gt_center">by: f1</td>
-<td class="gt_row gt_center">by: f1</td>
-<td class="gt_row gt_center">by: f1</td>
-<td class="gt_row gt_center">by: f1</td>
-<td class="gt_row gt_center">by: f1</td>
-<td class="gt_row gt_center">by: f1</td>
-<td class="gt_row gt_center">by: f1</td>
-<td class="gt_row gt_center">by: f1</td>
-<td class="gt_row gt_center">by: f1</td>
-<td class="gt_row gt_center">by: f1</td>
-<td class="gt_row gt_center">by: f1</td>
+<td class="gt_row gt_center">iid</td>
+<td class="gt_row gt_center">iid</td>
+<td class="gt_row gt_center">iid</td>
+<td class="gt_row gt_center">iid</td>
+<td class="gt_row gt_center">iid</td>
+<td class="gt_row gt_center">iid</td>
+<td class="gt_row gt_center">iid</td>
+<td class="gt_row gt_center">iid</td>
+<td class="gt_row gt_center">iid</td>
+<td class="gt_row gt_center">iid</td>
+<td class="gt_row gt_center">iid</td>
+<td class="gt_row gt_center">iid</td>
+<td class="gt_row gt_center">iid</td>
+<td class="gt_row gt_center">iid</td>
+<td class="gt_row gt_center">iid</td>
+<td class="gt_row gt_center">iid</td>
+<td class="gt_row gt_center">iid</td>
+<td class="gt_row gt_center">iid</td>
+<td class="gt_row gt_center">iid</td>
+<td class="gt_row gt_center">iid</td>
+<td class="gt_row gt_center">iid</td>
+<td class="gt_row gt_center">iid</td>
+<td class="gt_row gt_center">iid</td>
+<td class="gt_row gt_center">iid</td>
+<td class="gt_row gt_center">iid</td>
+<td class="gt_row gt_center">iid</td>
+<td class="gt_row gt_center">iid</td>
+<td class="gt_row gt_center">iid</td>
+<td class="gt_row gt_center">iid</td>
+<td class="gt_row gt_center">iid</td>
 </tr>
 <tr class="even">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">R<sup>2</sup></th>
-<td class="gt_row gt_center">0.850</td>
-<td class="gt_row gt_center">0.691</td>
-<td class="gt_row gt_center">0.578</td>
-<td class="gt_row gt_center">0.745</td>
-<td class="gt_row gt_center">0.939</td>
-<td class="gt_row gt_center">0.644</td>
-<td class="gt_row gt_center">0.792</td>
-<td class="gt_row gt_center">0.776</td>
-<td class="gt_row gt_center">0.919</td>
-<td class="gt_row gt_center">0.797</td>
-<td class="gt_row gt_center">0.727</td>
-<td class="gt_row gt_center">0.822</td>
-<td class="gt_row gt_center">0.924</td>
-<td class="gt_row gt_center">0.865</td>
-<td class="gt_row gt_center">0.711</td>
-<td class="gt_row gt_center">0.808</td>
-<td class="gt_row gt_center">0.651</td>
-<td class="gt_row gt_center">0.819</td>
-<td class="gt_row gt_center">0.746</td>
-<td class="gt_row gt_center">0.731</td>
-<td class="gt_row gt_center">0.880</td>
-<td class="gt_row gt_center">0.868</td>
-<td class="gt_row gt_center">0.796</td>
-<td class="gt_row gt_center">0.648</td>
-<td class="gt_row gt_center">0.915</td>
-<td class="gt_row gt_center">0.820</td>
-<td class="gt_row gt_center">0.837</td>
-<td class="gt_row gt_center">0.789</td>
-<td class="gt_row gt_center">0.688</td>
-<td class="gt_row gt_center">0.883</td>
+<td class="gt_row gt_center">0.747</td>
+<td class="gt_row gt_center">0.545</td>
+<td class="gt_row gt_center">0.509</td>
+<td class="gt_row gt_center">0.637</td>
+<td class="gt_row gt_center">0.875</td>
+<td class="gt_row gt_center">0.591</td>
+<td class="gt_row gt_center">0.649</td>
+<td class="gt_row gt_center">0.756</td>
+<td class="gt_row gt_center">0.900</td>
+<td class="gt_row gt_center">0.724</td>
+<td class="gt_row gt_center">0.684</td>
+<td class="gt_row gt_center">0.770</td>
+<td class="gt_row gt_center">0.873</td>
+<td class="gt_row gt_center">0.619</td>
+<td class="gt_row gt_center">0.485</td>
+<td class="gt_row gt_center">0.755</td>
+<td class="gt_row gt_center">0.642</td>
+<td class="gt_row gt_center">0.732</td>
+<td class="gt_row gt_center">0.676</td>
+<td class="gt_row gt_center">0.606</td>
+<td class="gt_row gt_center">0.802</td>
+<td class="gt_row gt_center">0.778</td>
+<td class="gt_row gt_center">0.594</td>
+<td class="gt_row gt_center">0.466</td>
+<td class="gt_row gt_center">0.849</td>
+<td class="gt_row gt_center">0.790</td>
+<td class="gt_row gt_center">0.769</td>
+<td class="gt_row gt_center">0.735</td>
+<td class="gt_row gt_center">0.601</td>
+<td class="gt_row gt_center">0.774</td>
 </tr>
 <tr class="odd">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">R<sup>2</sup> Within</th>
@@ -2132,7 +2157,7 @@ RMSE: 1.346 R2: 0.659 R2 Within: 0.303 </code></pre>
 </div>
 </div>
 <p>Besides OLS, <code>feols()</code> also supports IV estimation via three part formulas:</p>
-<div id="cc1ec52b" class="cell" data-execution_count="13">
+<div id="5eb59346" class="cell" data-execution_count="13">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(<span class="st">"Y ~  X2 | f1 + f2 | X1 ~ Z1"</span>, data)</span>
 <span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>fit.tidy()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="13">
@@ -2164,20 +2189,20 @@ RMSE: 1.346 R2: 0.659 R2 Within: 0.303 </code></pre>
 <tr class="odd">
 <th data-quarto-table-cell-role="th">X1</th>
 <td>-1.050097</td>
-<td>0.086811</td>
-<td>-12.096326</td>
-<td>7.460699e-13</td>
-<td>-1.227646</td>
-<td>-0.872548</td>
+<td>0.089046</td>
+<td>-11.792698</td>
+<td>0.0</td>
+<td>-1.224851</td>
+<td>-0.875344</td>
 </tr>
 <tr class="even">
 <th data-quarto-table-cell-role="th">X2</th>
 <td>-0.174351</td>
-<td>0.015007</td>
-<td>-11.617833</td>
-<td>1.980638e-12</td>
-<td>-0.205044</td>
-<td>-0.143658</td>
+<td>0.014900</td>
+<td>-11.701432</td>
+<td>0.0</td>
+<td>-0.203592</td>
+<td>-0.145110</td>
 </tr>
 </tbody>
 </table>
@@ -2186,7 +2211,7 @@ RMSE: 1.346 R2: 0.659 R2 Within: 0.303 </code></pre>
 </div>
 </div>
 <p>Here, <code>X1</code> is the endogenous variable and <code>Z1</code> is the instrument. <code>f1</code> and <code>f2</code> are the fixed effects, as before. To estimate IV models without fixed effects, simply omit the fixed effects part of the formula:</p>
-<div id="98f0d65e" class="cell" data-execution_count="14">
+<div id="7bfece86" class="cell" data-execution_count="14">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(<span class="st">"Y ~  X2 | X1 ~ Z1"</span>, data)</span>
 <span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>fit.tidy()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="14">
@@ -2250,7 +2275,7 @@ RMSE: 1.346 R2: 0.659 R2 Within: 0.303 </code></pre>
 </div>
 <p>Last, <code>feols()</code> supports interaction of variables via the <code>i()</code> syntax. Documentation on this is tba.</p>
 <p>You can pass custom transforms via the <code>context</code> argument. If you set <code>context = 0</code>, all functions from the level of the call to <code>feols()</code> will be available:</p>
-<div id="34480033" class="cell" data-execution_count="15">
+<div id="cb3f9fed" class="cell" data-execution_count="15">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> _lspline(series: pd.Series, knots: <span class="bu">list</span>[<span class="bu">float</span>]) <span class="op">-&gt;</span> np.array:</span>
 <span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">'Generate a linear spline design matrix for the input series based on knots.'</span></span>
 <span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>    vector <span class="op">=</span> series.values</span>
@@ -2280,52 +2305,55 @@ RMSE: 1.346 R2: 0.659 R2 Within: 0.303 </code></pre>
 <span id="cb20-27"><a href="#cb20-27" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb20-28"><a href="#cb20-28" aria-hidden="true" tabindex="-1"></a>pf.etable([explicit_fit, context_captured_fit, context_captured_fit_map])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="15">
-<div id="srqiwcexxq" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<div id="echqovpcnc" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
 <style>
-#srqiwcexxq table {
+#echqovpcnc table {
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
           -webkit-font-smoothing: antialiased;
           -moz-osx-font-smoothing: grayscale;
         }
 
-#srqiwcexxq thead, tbody, tfoot, tr, td, th { border-style: none; }
+#echqovpcnc thead, tbody, tfoot, tr, td, th { border-style: none; }
  tr { background-color: transparent; }
-#srqiwcexxq p { margin: 0; padding: 0; }
- #srqiwcexxq .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: solid; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
- #srqiwcexxq .gt_caption { padding-top: 4px; padding-bottom: 4px; }
- #srqiwcexxq .gt_title { color: #333333; font-size: 125%; font-weight: initial; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
- #srqiwcexxq .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 3px; padding-bottom: 5px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
- #srqiwcexxq .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
- #srqiwcexxq .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
- #srqiwcexxq .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
- #srqiwcexxq .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 4px; padding-bottom: 5px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
- #srqiwcexxq .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
- #srqiwcexxq .gt_column_spanner_outer:first-child { padding-left: 0; }
- #srqiwcexxq .gt_column_spanner_outer:last-child { padding-right: 0; }
- #srqiwcexxq .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; vertical-align: bottom; padding-top: 4px; padding-bottom: 4px; overflow-x: hidden; display: inline-block; width: 100%; }
- #srqiwcexxq .gt_spanner_row { border-bottom-style: hidden; }
- #srqiwcexxq .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
- #srqiwcexxq .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; vertical-align: middle; }
- #srqiwcexxq .gt_from_md> :first-child { margin-top: 0; }
- #srqiwcexxq .gt_from_md> :last-child { margin-bottom: 0; }
- #srqiwcexxq .gt_row { padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
- #srqiwcexxq .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
- #srqiwcexxq .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
- #srqiwcexxq .gt_row_group_first td { border-top-width: 0.5px; }
- #srqiwcexxq .gt_row_group_first th { border-top-width: 0.5px; }
- #srqiwcexxq .gt_striped { background-color: rgba(128,128,128,0.05); }
- #srqiwcexxq .gt_table_body { border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
- #srqiwcexxq .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
- #srqiwcexxq .gt_sourcenote { font-size: 90%; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
- #srqiwcexxq .gt_left { text-align: left; }
- #srqiwcexxq .gt_center { text-align: center; }
- #srqiwcexxq .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
- #srqiwcexxq .gt_font_normal { font-weight: normal; }
- #srqiwcexxq .gt_font_bold { font-weight: bold; }
- #srqiwcexxq .gt_font_italic { font-style: italic; }
- #srqiwcexxq .gt_super { font-size: 65%; }
- #srqiwcexxq .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
- #srqiwcexxq .gt_asterisk { font-size: 100%; vertical-align: 0; }
+#echqovpcnc p { margin: 0; padding: 0; }
+ #echqovpcnc .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: solid; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
+ #echqovpcnc .gt_caption { padding-top: 4px; padding-bottom: 4px; }
+ #echqovpcnc .gt_title { color: #333333; font-size: 125%; font-weight: initial; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
+ #echqovpcnc .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 3px; padding-bottom: 5px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
+ #echqovpcnc .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #echqovpcnc .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
+ #echqovpcnc .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #echqovpcnc .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 4px; padding-bottom: 5px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
+ #echqovpcnc .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
+ #echqovpcnc .gt_column_spanner_outer:first-child { padding-left: 0; }
+ #echqovpcnc .gt_column_spanner_outer:last-child { padding-right: 0; }
+ #echqovpcnc .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; vertical-align: bottom; padding-top: 4px; padding-bottom: 4px; overflow-x: hidden; display: inline-block; width: 100%; }
+ #echqovpcnc .gt_spanner_row { border-bottom-style: hidden; }
+ #echqovpcnc .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
+ #echqovpcnc .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; vertical-align: middle; }
+ #echqovpcnc .gt_from_md> :first-child { margin-top: 0; }
+ #echqovpcnc .gt_from_md> :last-child { margin-bottom: 0; }
+ #echqovpcnc .gt_row { padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
+ #echqovpcnc .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
+ #echqovpcnc .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
+ #echqovpcnc .gt_row_group_first td { border-top-width: 0.5px; }
+ #echqovpcnc .gt_row_group_first th { border-top-width: 0.5px; }
+ #echqovpcnc .gt_striped { color: #333333; background-color: #F4F4F4; }
+ #echqovpcnc .gt_table_body { border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
+ #echqovpcnc .gt_grand_summary_row { color: #333333; background-color: #FFFFFF; text-transform: inherit; padding-top: 8px; padding-bottom: 8px; padding-left: 5px; padding-right: 5px; }
+ #echqovpcnc .gt_first_grand_summary_row_bottom { border-top-style: double; border-top-width: 6px; border-top-color: #D3D3D3; }
+ #echqovpcnc .gt_last_grand_summary_row_top { border-bottom-style: double; border-bottom-width: 6px; border-bottom-color: #D3D3D3; }
+ #echqovpcnc .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
+ #echqovpcnc .gt_sourcenote { font-size: 90%; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
+ #echqovpcnc .gt_left { text-align: left; }
+ #echqovpcnc .gt_center { text-align: center; }
+ #echqovpcnc .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
+ #echqovpcnc .gt_font_normal { font-weight: normal; }
+ #echqovpcnc .gt_font_bold { font-weight: bold; }
+ #echqovpcnc .gt_font_italic { font-style: italic; }
+ #echqovpcnc .gt_super { font-size: 65%; }
+ #echqovpcnc .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
+ #echqovpcnc .gt_asterisk { font-size: 100%; vertical-align: 0; }
  
 </style>
 
@@ -2354,21 +2382,21 @@ RMSE: 1.346 R2: 0.659 R2 Within: 0.303 </code></pre>
 <tr class="even">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">X2_0</th>
 <td class="gt_row gt_center">-0.177***<br>
-(0.040)</td>
+(0.037)</td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 </tr>
 <tr class="odd">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">0_X2_1</th>
 <td class="gt_row gt_center">-0.240<br>
-(0.138)</td>
+(0.171)</td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 </tr>
 <tr class="even">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">1_X2</th>
 <td class="gt_row gt_center">-0.140**<br>
-(0.049)</td>
+(0.050)</td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 </tr>
@@ -2376,37 +2404,37 @@ RMSE: 1.346 R2: 0.659 R2 Within: 0.303 </code></pre>
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">_lspline(X2, [0, 1])[0]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center">-0.177***<br>
-(0.040)</td>
+(0.037)</td>
 <td class="gt_row gt_center">-0.177***<br>
-(0.040)</td>
+(0.037)</td>
 </tr>
 <tr class="even">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">_lspline(X2, [0, 1])[1]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center">-0.240<br>
-(0.138)</td>
+(0.171)</td>
 <td class="gt_row gt_center">-0.240<br>
-(0.138)</td>
+(0.171)</td>
 </tr>
 <tr class="odd">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">_lspline(X2, [0, 1])[2]</th>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center">-0.140**<br>
-(0.049)</td>
+(0.050)</td>
 <td class="gt_row gt_center">-0.140**<br>
-(0.049)</td>
+(0.050)</td>
 </tr>
 <tr class="gt_group_heading_row even">
 <th colspan="4" class="gt_group_heading" data-quarto-table-cell-role="th">fe</th>
 </tr>
 <tr class="odd">
-<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">f1</th>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">f2</th>
 <td class="gt_row gt_center">x</td>
 <td class="gt_row gt_center">x</td>
 <td class="gt_row gt_center">x</td>
 </tr>
 <tr class="even">
-<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">f2</th>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">f1</th>
 <td class="gt_row gt_center">x</td>
 <td class="gt_row gt_center">x</td>
 <td class="gt_row gt_center">x</td>
@@ -2422,9 +2450,9 @@ RMSE: 1.346 R2: 0.659 R2 Within: 0.303 </code></pre>
 </tr>
 <tr class="odd">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">S.E. type</th>
-<td class="gt_row gt_center">by: f1</td>
-<td class="gt_row gt_center">by: f1</td>
-<td class="gt_row gt_center">by: f1</td>
+<td class="gt_row gt_center">iid</td>
+<td class="gt_row gt_center">iid</td>
+<td class="gt_row gt_center">iid</td>
 </tr>
 <tr class="even">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">R<sup>2</sup></th>
@@ -2451,7 +2479,7 @@ RMSE: 1.346 R2: 0.659 R2 Within: 0.303 </code></pre>
 </div>
 </div>
 <p>After fitting a model via <code>feols()</code>, you can use the <code>predict()</code> method to get the predicted values:</p>
-<div id="8fd82d2c" class="cell" data-execution_count="16">
+<div id="f4399e08" class="cell" data-execution_count="16">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 + X2 | f1 + f2"</span>, data)</span>
 <span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>fit.predict()[<span class="dv">0</span>:<span class="dv">5</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="16">
@@ -2459,7 +2487,7 @@ RMSE: 1.346 R2: 0.659 R2 Within: 0.303 </code></pre>
 </div>
 </div>
 <p>The <code>predict()</code> method also supports a <code>newdata</code> argument to predict on new data, which returns a numpy array of the predicted values:</p>
-<div id="e333dbd1" class="cell" data-execution_count="17">
+<div id="35057f7a" class="cell" data-execution_count="17">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 + X2 | f1 + f2"</span>, data)</span>
 <span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>fit.predict(newdata<span class="op">=</span>data)[<span class="dv">0</span>:<span class="dv">5</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="17">
@@ -2467,11 +2495,11 @@ RMSE: 1.346 R2: 0.659 R2 Within: 0.303 </code></pre>
 </div>
 </div>
 <p>Last, you can plot the results of a model via the <code>coefplot()</code> method:</p>
-<div id="29eca127" class="cell" data-execution_count="18">
+<div id="48ef8e9c" class="cell" data-execution_count="18">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb25"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 + X2 | f1 + f2"</span>, data)</span>
 <span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>fit.coefplot()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="18">
-   <div id="VhtVkx"></div>
+   <div id="wLHNTX"></div>
    <script type="text/javascript" data-lets-plot-script="plot">
    
    (function() {
@@ -2496,7 +2524,7 @@ RMSE: 1.346 R2: 0.659 R2 Within: 0.303 </code></pre>
        };
    }
    
-   const containerDiv = document.getElementById("VhtVkx");
+   const containerDiv = document.getElementById("wLHNTX");
    let fig = null;
    
    function renderPlot() {
@@ -2505,8 +2533,8 @@ RMSE: 1.346 R2: 0.659 R2 Within: 0.303 </code></pre>
 "data":{
 "Coefficient":["X1","X2"],
 "Estimate":[-0.924046150776497,-0.1741073078540985],
-"2.5%":[-1.050593208178223,-0.2044457651418957],
-"97.5%":[-0.797499093374771,-0.14376885056630131],
+"2.5%":[-1.0340646669866114,-0.20326870487246906],
+"97.5%":[-0.8140276345663826,-0.14494591083572794],
 "Model":["Y~X1+X2|f1+f2","Y~X1+X2|f1+f2"]
 },
 "mapping":{
@@ -2654,7 +2682,7 @@ RMSE: 1.346 R2: 0.659 R2 Within: 0.303 </code></pre>
 </div>
 </div>
 <p>We can conduct a regression decomposition via the <code>decompose()</code> method, which implements a regression decomposition following the method developed in Gelbach (2016):</p>
-<div id="3c278ef2" class="cell" data-execution_count="19">
+<div id="c09f192f" class="cell" data-execution_count="19">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb26"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> re</span>
 <span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
 <span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.utils.dgps <span class="im">import</span> gelbach_data</span>
@@ -2673,19 +2701,19 @@ RMSE: 1.346 R2: 0.659 R2 Within: 0.303 </code></pre>
 <span id="cb26-16"><a href="#cb26-16" aria-hidden="true" tabindex="-1"></a><span class="co"># group covariates via regex</span></span>
 <span id="cb26-17"><a href="#cb26-17" aria-hidden="true" tabindex="-1"></a>res <span class="op">=</span> fit.decompose(param<span class="op">=</span><span class="st">"x1"</span>, combine_covariates<span class="op">=</span>{<span class="st">"g1"</span>: re.<span class="bu">compile</span>(<span class="st">"x2[1-2]"</span>), <span class="st">"g2"</span>: re.<span class="bu">compile</span>(<span class="st">"x23"</span>)})</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stderr">
-<pre><code>/home/runner/work/pyfixest/pyfixest/pyfixest/estimation/feols_.py:1771: UserWarning: The 'param' argument is deprecated. Please use 'decomp_var' instead.
+<pre><code>/home/runner/work/pyfixest/pyfixest/pyfixest/estimation/feols_.py:1888: UserWarning: The 'param' argument is deprecated. Please use 'decomp_var' instead.
   warnings.warn(
-  0%|          | 0/1000 [00:00&lt;?, ?it/s]  1%|          | 8/1000 [00:03&lt;06:25,  2.58it/s]  1%|          | 12/1000 [00:03&lt;03:57,  4.16it/s] 11%|█         | 112/1000 [00:03&lt;00:14, 61.51it/s] 27%|██▋       | 272/1000 [00:03&lt;00:04, 169.72it/s] 53%|█████▎    | 528/1000 [00:03&lt;00:01, 345.62it/s] 66%|██████▌   | 656/1000 [00:03&lt;00:00, 415.11it/s] 78%|███████▊  | 784/1000 [00:04&lt;00:00, 480.48it/s] 91%|█████████ | 912/1000 [00:04&lt;00:00, 542.81it/s]100%|██████████| 1000/1000 [00:04&lt;00:00, 233.75it/s]
-/home/runner/work/pyfixest/pyfixest/pyfixest/estimation/feols_.py:1771: UserWarning: The 'param' argument is deprecated. Please use 'decomp_var' instead.
+  0%|          | 0/1000 [00:00&lt;?, ?it/s]  1%|          | 8/1000 [00:02&lt;05:27,  3.03it/s]  1%|          | 12/1000 [00:02&lt;03:21,  4.90it/s]  4%|▍         | 44/1000 [00:02&lt;00:36, 26.17it/s] 20%|██        | 204/1000 [00:03&lt;00:05, 158.99it/s] 40%|███▉      | 396/1000 [00:03&lt;00:01, 323.89it/s] 52%|█████▏    | 524/1000 [00:03&lt;00:01, 410.24it/s] 65%|██████▌   | 652/1000 [00:03&lt;00:00, 488.65it/s] 78%|███████▊  | 780/1000 [00:03&lt;00:00, 552.85it/s] 91%|█████████ | 908/1000 [00:03&lt;00:00, 605.75it/s]100%|██████████| 1000/1000 [00:03&lt;00:00, 260.28it/s]
+/home/runner/work/pyfixest/pyfixest/pyfixest/estimation/feols_.py:1888: UserWarning: The 'param' argument is deprecated. Please use 'decomp_var' instead.
   warnings.warn(
-  0%|          | 0/1000 [00:00&lt;?, ?it/s] 12%|█▏        | 120/1000 [00:00&lt;00:00, 1109.13it/s] 25%|██▍       | 248/1000 [00:00&lt;00:00, 1163.29it/s] 50%|█████     | 504/1000 [00:00&lt;00:00, 1201.13it/s] 63%|██████▎   | 632/1000 [00:00&lt;00:00, 1087.84it/s] 76%|███████▌  | 760/1000 [00:00&lt;00:00, 1020.27it/s] 89%|████████▉ | 888/1000 [00:00&lt;00:00, 983.21it/s] 100%|██████████| 1000/1000 [00:00&lt;00:00, 1171.77it/s]
-/home/runner/work/pyfixest/pyfixest/pyfixest/estimation/feols_.py:1771: UserWarning: The 'param' argument is deprecated. Please use 'decomp_var' instead.
+  0%|          | 0/1000 [00:00&lt;?, ?it/s] 12%|█▏        | 120/1000 [00:00&lt;00:00, 1079.74it/s] 25%|██▍       | 248/1000 [00:00&lt;00:00, 1154.88it/s] 50%|█████     | 504/1000 [00:00&lt;00:00, 1174.89it/s] 63%|██████▎   | 632/1000 [00:00&lt;00:00, 1067.91it/s] 76%|███████▌  | 760/1000 [00:00&lt;00:00, 1011.39it/s] 89%|████████▉ | 888/1000 [00:00&lt;00:00, 979.40it/s] 100%|██████████| 1000/1000 [00:00&lt;00:00, 1161.64it/s]
+/home/runner/work/pyfixest/pyfixest/pyfixest/estimation/feols_.py:1888: UserWarning: The 'param' argument is deprecated. Please use 'decomp_var' instead.
   warnings.warn(
-  0%|          | 0/1000 [00:00&lt;?, ?it/s] 12%|█▏        | 120/1000 [00:00&lt;00:00, 1098.73it/s] 25%|██▍       | 248/1000 [00:00&lt;00:00, 1134.07it/s] 50%|█████     | 504/1000 [00:00&lt;00:00, 1174.57it/s] 63%|██████▎   | 632/1000 [00:00&lt;00:00, 1073.48it/s] 76%|███████▌  | 760/1000 [00:00&lt;00:00, 1007.72it/s] 89%|████████▉ | 888/1000 [00:00&lt;00:00, 980.46it/s] 100%|██████████| 1000/1000 [00:00&lt;00:00, 1162.24it/s]</code></pre>
+  0%|          | 0/1000 [00:00&lt;?, ?it/s] 12%|█▏        | 120/1000 [00:00&lt;00:00, 1090.67it/s] 25%|██▍       | 248/1000 [00:00&lt;00:00, 1157.02it/s] 50%|█████     | 504/1000 [00:00&lt;00:00, 1187.64it/s] 63%|██████▎   | 632/1000 [00:00&lt;00:00, 1098.27it/s] 76%|███████▌  | 760/1000 [00:00&lt;00:00, 1038.64it/s] 89%|████████▉ | 888/1000 [00:00&lt;00:00, 1000.80it/s]100%|██████████| 1000/1000 [00:00&lt;00:00, 1185.05it/s]</code></pre>
 </div>
 </div>
 <p>Objects of type <code>Feols</code> support a range of other methods to conduct inference. For example, you can run a wild (cluster) bootstrap via the <code>wildboottest()</code> method:</p>
-<div id="aef303be" class="cell" data-execution_count="20">
+<div id="94987062" class="cell" data-execution_count="20">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb28"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 + X2"</span>, data)</span>
 <span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>fit.wildboottest(param <span class="op">=</span> <span class="st">"X1"</span>, reps<span class="op">=</span><span class="dv">1000</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="20">
@@ -2701,7 +2729,7 @@ dtype: object</code></pre>
 </div>
 <p>would run a wild bootstrap test for the coefficient of <code>X1</code> with 1000 bootstrap repetitions.</p>
 <p>For a wild cluster bootstrap, you can specify the cluster variable via the <code>cluster</code> argument:</p>
-<div id="c0d942af" class="cell" data-execution_count="21">
+<div id="849f88f1" class="cell" data-execution_count="21">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb30"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>fit.wildboottest(param <span class="op">=</span> <span class="st">"X1"</span>, reps<span class="op">=</span><span class="dv">1000</span>, cluster<span class="op">=</span><span class="st">"group_id"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="21">
 <pre><code>param                             X1
@@ -2715,7 +2743,7 @@ dtype: object</code></pre>
 </div>
 </div>
 <p>The <code>ritest()</code> method can be used to conduct randomization inference:</p>
-<div id="df5da527" class="cell" data-execution_count="22">
+<div id="0b74b5c3" class="cell" data-execution_count="22">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb32"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>fit.ritest(resampvar <span class="op">=</span> <span class="st">"X1"</span>, reps<span class="op">=</span><span class="dv">1000</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="22">
 <pre><code>H0                                      X1=0
@@ -2729,14 +2757,14 @@ dtype: object</code></pre>
 </div>
 </div>
 <p>Last, you can compute the cluster causal variance estimator by Athey et al by using the <code>ccv()</code> method:</p>
-<div id="02cc1b8b" class="cell" data-execution_count="23">
+<div id="24453243" class="cell" data-execution_count="23">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb34"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>rng <span class="op">=</span> np.random.default_rng(<span class="dv">1234</span>)</span>
 <span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a>data[<span class="st">"D"</span>] <span class="op">=</span> rng.choice([<span class="dv">0</span>, <span class="dv">1</span>], size <span class="op">=</span> data.shape[<span class="dv">0</span>])</span>
 <span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a>fit_D <span class="op">=</span> pf.feols(<span class="st">"Y ~ D"</span>, data <span class="op">=</span> data)</span>
 <span id="cb34-5"><a href="#cb34-5" aria-hidden="true" tabindex="-1"></a>fit_D.ccv(treatment <span class="op">=</span> <span class="st">"D"</span>, cluster <span class="op">=</span> <span class="st">"group_id"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stderr">
-<pre><code>/home/runner/work/pyfixest/pyfixest/pyfixest/estimation/feols_.py:1518: UserWarning: The initial model was not clustered. CRV1 inference is computed and stored in the model object.
+<pre><code>/home/runner/work/pyfixest/pyfixest/pyfixest/estimation/feols_.py:1635: UserWarning: The initial model was not clustered. CRV1 inference is computed and stored in the model object.
   warnings.warn(</code></pre>
 </div>
 <div class="cell-output cell-output-display" data-execution_count="23">
@@ -2759,11 +2787,11 @@ dtype: object</code></pre>
 <tr class="odd">
 <th data-quarto-table-cell-role="th">CCV</th>
 <td>0.016087657906364183</td>
-<td>0.275127</td>
-<td>0.058474</td>
-<td>0.954016</td>
-<td>-0.561932</td>
-<td>0.594107</td>
+<td>0.266528</td>
+<td>0.06036</td>
+<td>0.952534</td>
+<td>-0.543867</td>
+<td>0.576043</td>
 </tr>
 <tr class="even">
 <th data-quarto-table-cell-role="th">CRV1</th>

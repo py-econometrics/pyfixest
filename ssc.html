@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.8.24">
+<meta name="generator" content="quarto-1.8.25">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -37,10 +37,10 @@ ul.task-list li input[type="checkbox"] {
 <script src="site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="site_libs/quarto-html/anchor.min.js"></script>
 <link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="site_libs/quarto-html/quarto-syntax-highlighting-dc55a5b9e770e841cd82e46aadbfb9b0.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-7b89279ff1a6dce999919e0e67d4d9ec.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="site_libs/bootstrap/bootstrap-19c6f25d9c793ca7e0d0ad6a6391bd12.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-b9c55ee423fe9b09b80369c068559168.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -171,16 +171,16 @@ window.Quarto = {
  <span class="dropdown-text">Quantile Regression</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="./compare-fixest-pyfixest.html">
- <span class="dropdown-text">Compare fixest &amp; PyFixest</span></a>
-  </li>  
-        <li>
     <a class="dropdown-item" href="./stata-2-pyfixest.html">
  <span class="dropdown-text">Compare Stata &amp; PyFixest</span></a>
   </li>  
         <li>
+    <a class="dropdown-item" href="./pyfixest-gpu-cupy.html">
+ <span class="dropdown-text">PyFixest on the GPU via CuPy</span></a>
+  </li>  
+        <li>
     <a class="dropdown-item" href="./pyfixest_gpu.html">
- <span class="dropdown-text">PyFixest on the GPU</span></a>
+ <span class="dropdown-text">PyFixest on the GPU via JAX</span></a>
   </li>  
         <li>
     <a class="dropdown-item" href="./resources.html">
@@ -224,15 +224,15 @@ window.Quarto = {
   <ul>
   <li><a href="#small-sample-adjustments" id="toc-small-sample-adjustments" class="nav-link active" data-scroll-target="#small-sample-adjustments">Small Sample Adjustments</a>
   <ul class="collapse">
-  <li><a href="#adj-true" id="toc-adj-true" class="nav-link" data-scroll-target="#adj-true"><code>adj = True</code></a></li>
-  <li><a href="#fixef_k" id="toc-fixef_k" class="nav-link" data-scroll-target="#fixef_k"><code>fixef_k</code></a>
+  <li><a href="#k_adj-true" id="toc-k_adj-true" class="nav-link" data-scroll-target="#k_adj-true"><code>k_adj = True</code></a></li>
+  <li><a href="#k_fixef" id="toc-k_fixef" class="nav-link" data-scroll-target="#k_fixef"><code>k_fixef</code></a>
   <ul class="collapse">
-  <li><a href="#fixef_k-none" id="toc-fixef_k-none" class="nav-link" data-scroll-target="#fixef_k-none"><code>fixef_k = "none"</code></a></li>
-  <li><a href="#fixef_k-full" id="toc-fixef_k-full" class="nav-link" data-scroll-target="#fixef_k-full"><code>fixef_k = "full"</code></a></li>
-  <li><a href="#fixef_k-nested" id="toc-fixef_k-nested" class="nav-link" data-scroll-target="#fixef_k-nested"><code>fixef_k = "nested"</code></a></li>
+  <li><a href="#k_fixef-none" id="toc-k_fixef-none" class="nav-link" data-scroll-target="#k_fixef-none"><code>k_fixef = "none"</code></a></li>
+  <li><a href="#k_fixef-full" id="toc-k_fixef-full" class="nav-link" data-scroll-target="#k_fixef-full"><code>k_fixef = "full"</code></a></li>
+  <li><a href="#k_fixef-nonnested" id="toc-k_fixef-nonnested" class="nav-link" data-scroll-target="#k_fixef-nonnested"><code>k_fixef = "nonnested"</code></a></li>
   </ul></li>
-  <li><a href="#cluster_adj" id="toc-cluster_adj" class="nav-link" data-scroll-target="#cluster_adj"><code>cluster_adj</code></a></li>
-  <li><a href="#cluster_df" id="toc-cluster_df" class="nav-link" data-scroll-target="#cluster_df"><code>cluster_df</code></a></li>
+  <li><a href="#g_adj" id="toc-g_adj" class="nav-link" data-scroll-target="#g_adj"><code>G_adj</code></a></li>
+  <li><a href="#g_df" id="toc-g_df" class="nav-link" data-scroll-target="#g_df"><code>G_df</code></a></li>
   </ul></li>
   <li><a href="#more-on-inference" id="toc-more-on-inference" class="nav-link" data-scroll-target="#more-on-inference">More on Inference</a></li>
   <li><a href="#in-code" id="toc-in-code" class="nav-link" data-scroll-target="#in-code">In Code</a></li>
@@ -266,46 +266,47 @@ window.Quarto = {
 
 
 <p>The <code>fixest</code> R package provides various options for small sample corrections. While it has an excellent <a href="https://cran.r-project.org/web/packages/fixest/vignettes/standard_errors.html">vignette</a> on the topic, reproducing its behavior in <code>pyfixest</code> took more time than expected. So that future developers (and my future self) can stay sane, I’ve compiled all of my hard-earned understanding of how small sample adjustments work in <code>fixest</code> and how they are implemented in <code>pyfixest</code> in this document.</p>
-<p>In both <code>fixest</code> and <code>pyfixest</code>, small sample corrections are controlled by the <code>ssc</code> function. In <code>pyfixest</code>, <code>ssc</code> accepts four arguments: <code>adj</code>, <code>cluster_adj</code>, <code>fixef_k</code> and <code>cluster_df</code>.</p>
+<p>In both <code>fixest</code> and <code>pyfixest</code>, small sample corrections are controlled by the <code>ssc</code> function. In <code>pyfixest</code>, <code>ssc</code> accepts four arguments: <code>k_adj</code>, <code>G_adj</code>, <code>k_fixef</code> and <code>G_df</code>.</p>
 <p>Based on these inputs, the adjusted variance-covariance matrix is computed as:</p>
-<pre><code>vcov_adj = adj_val(N, dof_k) if adj else 1
-          * cluster_adj_val(G, cluster_df) if cluster_adj else 1
+<pre><code>vcov_k_adj = adj_val(N, df_k) if k_adj else 1
+          * G_adj_val(G, G_df) if G_adj else 1
           * vcov</code></pre>
 <p>Where:</p>
 <ul>
-<li><strong><code>adj</code></strong>: Enables or disables the first scalar adjustment.</li>
-<li><strong><code>cluster_adj</code></strong>: Enables or disables the second scalar adjustment.</li>
+<li><strong><code>k_adj</code></strong>: Enables or disables the first scalar adjustment.</li>
+<li><strong><code>G_adj</code></strong>: Enables or disables the second scalar adjustment. This argument is only relevant / applied to clustered errors.</li>
 <li><strong><code>vcov</code></strong>: The unadjusted variance-covariance matrix.</li>
-<li><strong><code>dof_k</code></strong>: The number of estimated parameters considered in the first adjustment. Impacts <code>adj_val</code>.</li>
-<li><strong><code>fixef_k</code></strong>: Determines how <code>dof_k</code> is computed (how fixed effects are counted).</li>
-<li><strong><code>cluster_df</code></strong>: Determines how <code>cluster_adj_val</code> is computed (only relevant for multi-way clustering).</li>
+<li><strong><code>df_k</code></strong>: The number of estimated parameters considered in the first adjustment. Impacts <code>adj_val</code>.</li>
+<li><strong><code>k_fixef</code></strong>: Determines how <code>df_k</code> is computed (how fixed effects are counted).</li>
+<li><strong><code>G_df</code></strong>: Determines how <code>G_adj_val</code> is computed (only relevant for multi-way clustering).</li>
 <li><strong><code>G</code></strong>: The number of unique clusters (<code>G = N</code> for heteroskedastic errors).</li>
 </ul>
 <p>Outside of this formula, we have <strong><code>df_t</code></strong>, which is the degrees of freedom used for p-values and confidence intervals:</p>
 <ul>
-<li><code>df_t = N - dof_k</code> for IID or heteroskedastic errors.</li>
+<li><code>df_t = N - df_k</code> for IID or heteroskedastic errors.</li>
 <li><code>df_t = G - 1</code> for clustered errors.</li>
 </ul>
 <hr>
 <section id="small-sample-adjustments" class="level1">
 <h1>Small Sample Adjustments</h1>
-<section id="adj-true" class="level2">
-<h2 class="anchored" data-anchor-id="adj-true"><code>adj = True</code></h2>
-<p>If <code>adj = True</code>, the adjustment factor is:</p>
-<p><code>adj_val = (N - 1) / (N - dof_k)</code></p>
-<p>If <code>adj = False</code>, no adjustment is applied.</p>
+<section id="k_adj-true" class="level2">
+<h2 class="anchored" data-anchor-id="k_adj-true"><code>k_adj = True</code></h2>
+<p>If <code>k_adj = True</code>, the adjustment factor is:</p>
+<p><code>adj_val = (N - 1) / (N - df_k)</code></p>
+<p>If <code>k_adj = False</code>, no adjustment is applied.</p>
+<p>Note that for <code>k_adj = True</code> and heteroskedastic errors, the applied correction is <code>N / (N-k)</code>.</p>
 <hr>
 </section>
-<section id="fixef_k" class="level2">
-<h2 class="anchored" data-anchor-id="fixef_k"><code>fixef_k</code></h2>
-<p>The <code>fixef_k</code> argument controls how fixed effects contribute to <code>dof_k</code>, and thus to <code>adj_val</code>. It supports three options:</p>
+<section id="k_fixef" class="level2">
+<h2 class="anchored" data-anchor-id="k_fixef"><code>k_fixef</code></h2>
+<p>The <code>k_fixef</code> argument controls how fixed effects contribute to <code>df_k</code>, and thus to <code>adj_val</code>. It supports three options:</p>
 <ul>
 <li><strong><code>"none"</code></strong></li>
 <li><strong><code>"full"</code></strong></li>
-<li><strong><code>"nested"</code></strong></li>
+<li><strong><code>"nonnested"</code></strong></li>
 </ul>
-<section id="fixef_k-none" class="level3">
-<h3 class="anchored" data-anchor-id="fixef_k-none"><code>fixef_k = "none"</code></h3>
+<section id="k_fixef-none" class="level3">
+<h3 class="anchored" data-anchor-id="k_fixef-none"><code>k_fixef = "none"</code></h3>
 <p>Fixed effects are ignored when counting parameters:</p>
 <ul>
 <li><strong>Example</strong>:
@@ -315,17 +316,17 @@ window.Quarto = {
 </ul></li>
 </ul>
 </section>
-<section id="fixef_k-full" class="level3">
-<h3 class="anchored" data-anchor-id="fixef_k-full"><code>fixef_k = "full"</code></h3>
-<p>Fixed effects are fully counted. For <code>n_fe</code> total fixed effects and each fixed effect <code>f_i</code>, we set <code>dof_k = k + k_fe</code>,</p>
+<section id="k_fixef-full" class="level3">
+<h3 class="anchored" data-anchor-id="k_fixef-full"><code>k_fixef = "full"</code></h3>
+<p>Fixed effects are fully counted. For <code>n_fe</code> total fixed effects and each fixed effect <code>f_i</code>, we set <code>df_k = k + k_fe</code>,</p>
 <ul>
 <li><p>If there is <strong>more than one</strong> fixed effect, we drop one level from each fixed effects except the first (to avoid multicollinearity) <code>k_fe = sum_{i=1}^{n_fe} levels(f_i) - (n_fe - 1)</code></p></li>
 <li><p>If there is <strong>only one</strong> fixed effect: <code>k_fe = sum_{i=1}^{n_fe} levels(f_i) = levels(f_1)</code></p></li>
 </ul>
 </section>
-<section id="fixef_k-nested" class="level3">
-<h3 class="anchored" data-anchor-id="fixef_k-nested"><code>fixef_k = "nested"</code></h3>
-<p>Fixed effects may be <strong>nested</strong> within cluster variables (e.g., district FEs nested in state clusters). If <code>fixef_k = "nested"</code>, nested fixed effects do not count toward <code>k_fe</code>:</p>
+<section id="k_fixef-nonnested" class="level3">
+<h3 class="anchored" data-anchor-id="k_fixef-nonnested"><code>k_fixef = "nonnested"</code></h3>
+<p>Fixed effects may be <strong>nested</strong> within cluster variables (e.g., district FEs nested in state clusters). If <code>k_fixef = "nonnested"</code>, nested fixed effects do not count toward <code>k_fe</code>:</p>
 <p><code>k_fe = sum_{i=1}^{n_fe} levels(f_i) - k_fe_nested - (n_fe - 1)</code></p>
 <p>where <code>k_fe_nested</code> is the count of nested fixed effects. For cluster fixed effects, <code>k_fe_nested = G</code>, the number of clusters.</p>
 <blockquote class="blockquote">
@@ -334,28 +335,29 @@ window.Quarto = {
 <hr>
 </section>
 </section>
-<section id="cluster_adj" class="level2">
-<h2 class="anchored" data-anchor-id="cluster_adj"><code>cluster_adj</code></h2>
-<p>If <code>cluster_adj = True</code>, we apply a second correction:</p>
-<p><code>cluster_df_val = G / (G - 1)</code></p>
+<section id="g_adj" class="level2">
+<h2 class="anchored" data-anchor-id="g_adj"><code>G_adj</code></h2>
+<p>This argument is only relevant for clustered errors.</p>
+<p>If <code>G_adj = True</code>, we apply a second correction:</p>
+<p><code>G_df_val = G / (G - 1)</code></p>
 <p>Where:</p>
 <ul>
 <li><code>G</code> is the number of clusters for clustered errors, or <code>N</code> for heteroskedastic errors.</li>
 <li>This follows the approach in R’s <code>sandwich</code> package, interpreting heteroskedastic errors as “singleton clusters.”</li>
 </ul>
 <blockquote class="blockquote">
-<p><em>Tip:</em> If <code>cluster_adj = True</code> for IID errors, <code>cluster_df_val</code> defaults to <code>1</code>. For <em>heteroskedastic erros</em>, despite its name, <code>cluster_adj=True</code> will apply an adjustment of (N-1) / N, as there are <span class="math inline">\(G = N\)</span> singleton clusters.</p>
+<p><em>Tip:</em> If <code>G_adj = True</code> for IID errors, <code>G_df_val</code> defaults to <code>1</code>. For <em>heteroskedastic erros</em>, despite its name, <code>G_adj=True</code> will apply an adjustment of (N-1) / N, as there are <span class="math inline">\(G = N\)</span> singleton clusters.</p>
 </blockquote>
 <hr>
 </section>
-<section id="cluster_df" class="level2">
-<h2 class="anchored" data-anchor-id="cluster_df"><code>cluster_df</code></h2>
+<section id="g_df" class="level2">
+<h2 class="anchored" data-anchor-id="g_df"><code>G_df</code></h2>
 <p>Relevant only for <strong>multi-way clustering</strong>. Two-way clustering, for example, can be written as:</p>
 <p><code>vcov = ssc_A * vcov_A + ssc_B * vcov_B - ssc_AB * vcov_AB</code></p>
 <p>where <code>A</code> and <code>B</code> are clustering dimensions, with <code>G_AB &gt; G_A &gt; G_B</code>.</p>
 <ul>
-<li>If <code>cluster_df = "min"</code>, then G is set to the minimum value of <code>G_A</code>, <code>G_B</code>, and <code>G_AB</code>.</li>
-<li>If <code>cluster_df = "conventional"</code>, each clustering dimension uses its own cluster count (<code>G_A</code>, <code>G_B</code>, etc.) for its respective adjustment.</li>
+<li>If <code>G_df = "min"</code>, then G is set to the minimum value of <code>G_A</code>, <code>G_B</code>, and <code>G_AB</code>.</li>
+<li>If <code>G_df = "conventional"</code>, each clustering dimension uses its own cluster count (<code>G_A</code>, <code>G_B</code>, etc.) for its respective adjustment.</li>
 </ul>
 <hr>
 </section>
@@ -364,7 +366,7 @@ window.Quarto = {
 <h1>More on Inference</h1>
 <p>For computing critical values:</p>
 <ul>
-<li><strong>OLS and IV</strong>: use t-statistics with <code>df_t = N - dof_k</code> (non-clustered) or <code>df_t = G - 1</code> (clustered).</li>
+<li><strong>OLS and IV</strong>: use t-statistics with <code>df_t = N - df_k</code> (non-clustered) or <code>df_t = G - 1</code> (clustered).</li>
 <li><strong>GLMs</strong>: use z-statistics (normal approximation).</li>
 </ul>
 <p>For multi-way clustering:</p>

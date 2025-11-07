@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>PyFixest on professional-tier GPUs</title>
+<title>PyFixest on the GPU via CuPy</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -19,6 +19,41 @@ ul.task-list li input[type="checkbox"] {
   width: 0.8em;
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
 }
 </style>
 
@@ -195,7 +230,7 @@ ul.task-list li input[type="checkbox"] {
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title"><code>PyFixest</code> on professional-tier GPUs</h1>
+<h1 class="title">PyFixest on the GPU via CuPy</h1>
 </div>
 
 
@@ -212,13 +247,32 @@ ul.task-list li input[type="checkbox"] {
 </header>
 
 
-<p><code>PyFixest</code> allows to run the fixed effects demeaning on the GPU via the <code>demeaner_backend</code> argument. To do so, you will have to install <code>jax</code> and <code>jaxblib</code>, for example by typing <code>pip install pyfixest[jax]</code>.</p>
-<p>We test two back-ends for the iterative alternating-projections component of the fixed-effects regression on an Nvidia A100 GPU with 40 GB VRAM (a GPU that one typically wouldn’t have installed to play graphics-intensive videogames on consumer hardware). <code>numba</code> benchmarks are run on a 12-core xeon CPU.</p>
-<p>The JAX backend exhibits major performance improvements <strong>on the GPU</strong> over numba in large problems.</p>
-<p><img src="figures/gpu_benchmarks.png" class="img-fluid"></p>
-<p>On the <strong>CPU</strong> instead, we find that <code>numba</code> outperforms the JAX backend. You can find details in the <a href="https://github.com/py-econometrics/pyfixest/tree/master/benchmarks">benchmark section</a> of the github repo.</p>
+<p>Besides JAX, it is possible to run PyFixest on the GPU via CuPy (linux and windows). Instead of applying the alternating projections algorithm to demean fixed effects, CuPy works with sparse matrices and the sparse LSMR solver (as is e.g.&nbsp;<a href="https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.lsmr.html">available in scipy</a>).</p>
+<p>This strategy is amenable for GPU acceleration, and for problems where the standard demeaner struggles to converge, this strategy can lead to significant speedups if paired with a GPU.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="../benchmarks/complex_benchmarks.png" class="img-fluid figure-img"></p>
+<figcaption>Complex Fixed Effects Structure: Benchmark</figcaption>
+</figure>
+</div>
+<p>Note that for smaller and more well-behaved problems, running the alternating projections algorithm on the CPU via <code>numba</code> or <code>rust</code> usually seems to work better:</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="../benchmarks/simple_benchmarks_cupy.png" class="img-fluid figure-img"></p>
+<figcaption>Simply Fixed Effects Structure: Benchmark</figcaption>
+</figure>
+</div>
+<p><strong>Benchmark Hardware Specifications:</strong> - <strong>CPU</strong>: x86_64, 8 physical cores @ 3.2 GHz, 44 GB RAM - <strong>GPU</strong>: NVIDIA RTX A6000, 48 GB memory, Compute Capability 8.6</p>
+<section id="installation" class="level2">
+<h2 class="anchored" data-anchor-id="installation">Installation</h2>
+<p>To run pyfixest via cup on the GPU, you need to install the required dependency:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># For CUDA 11.x, 12.x, 13.x</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ex">pip</span> install cupy-cuda11x</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="ex">pip</span> install cupy-cuda12x</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="ex">pip</span> install cupy-cuda13x</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 
 
+</section>
 
 </main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
