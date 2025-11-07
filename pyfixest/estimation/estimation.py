@@ -869,7 +869,8 @@ def feglm(
     # we load polars as marginaleffects outputs pl.DataFrame's
     import polars as pl
     from marginaleffects import avg_slopes
-    pl.concat([avg_slopes(model, variables  = "X1") for model in [fit_probit, fit_logit, fit_gaussian]])
+    results = [avg_slopes(model, variables  = "X1") for model in [fit_probit, fit_logit, fit_gaussian]]
+    pl.concat([r.to_polars() for r in results])
     ```
 
     We can also compute marginal effects by group (group average marginal effects):

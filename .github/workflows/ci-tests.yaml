@@ -130,7 +130,6 @@ jobs:
   build-docs:
     name: "Build Docs"
     runs-on: ubuntu-latest
-    needs: ["test"]
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
