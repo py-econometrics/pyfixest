@@ -11,7 +11,7 @@ fit2 = pf.feols("Y ~ X1 + X2", data = df)
 fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 ```
 
-## PyFixest 0.40.0 (In Dev, Install from Github)
+## PyFixest 0.40.0
 
 ### Breaking Changes for compatibility with `fixest` 0.13
 
