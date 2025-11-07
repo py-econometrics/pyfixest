@@ -67,10 +67,10 @@ def test_feols_feglm_internally(fml, family):
     fml1, fml2 = fml
 
     fit1 = pf.feglm(
-        fml=fml1, data=data, family=family, ssc=pf.ssc(adj=False, cluster_adj=False)
+        fml=fml1, data=data, family=family, ssc=pf.ssc(k_adj=False, G_adj=False)
     )
     fit2 = pf.feglm(
-        fml=fml2, data=data, family=family, ssc=pf.ssc(adj=False, cluster_adj=False)
+        fml=fml2, data=data, family=family, ssc=pf.ssc(k_adj=False, G_adj=False)
     )
 
     assert fit1.coef().xs("X1") == fit2.coef().xs("X1"), (

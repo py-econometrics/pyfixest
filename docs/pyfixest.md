@@ -44,8 +44,7 @@ You can also leave a message through the donation form - your support and encour
 -   Probit, Logit and Gaussian Family **GLMs** (currently without fixed effects demeaning, this is WIP)
 -   **Quantile Regression** using an Interior Point Solver
 -   Multiple Estimation Syntax
--   Several **Robust** and **Cluster Robust Variance-Covariance** Estimators
-
+-   Several **Robust**, **Cluster Robust** and **HAC Variance-Covariance** Estimators
 -   **Wild Cluster Bootstrap** Inference (via
     [wildboottest](https://github.com/py-econometrics/wildboottest))
 -   **Difference-in-Differences** Estimators:
@@ -73,6 +72,26 @@ or the development version from github by running
 
 ``` py
 pip install git+https://github.com/py-econometrics/pyfixest.git
+```
+
+
+### GPU Acceleration (Optional)
+
+PyFixest supports GPU-accelerated fixed effects demeaning via CuPy. To enable GPU acceleration, install CuPy matching your CUDA version:
+
+```bash
+# For CUDA 11.x, 12.x, 13.x
+pip install cupy-cuda11x
+pip install cupy-cuda12x
+pip install cupy-cuda13x
+```
+
+Once installed, you can use GPU-accelerated demeaning by setting the `demean_backend` parameter:
+
+```python
+# Use GPU with float32 and float64 precision
+pf.feols("Y ~ X1 | f1 + f2", data=data, demean_backend="cupy32")
+pf.feols("Y ~ X1 | f1 + f2", data=data, demean_backend="cupy64")
 ```
 
 ## Benchmarks

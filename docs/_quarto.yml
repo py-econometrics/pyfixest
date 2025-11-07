@@ -47,11 +47,13 @@ website:
           text: "On Small Sample Corrections"
         - file: quantile-regression.qmd
           text: "Quantile Regression"
-        - text: "Compare fixest & PyFixest"
-          file: compare-fixest-pyfixest.qmd
+        #- text: "Compare fixest & PyFixest"
+        #  file: compare-fixest-pyfixest.qmd
         - text: "Compare Stata & PyFixest"
           file: stata-2-pyfixest.qmd
-        - text: "PyFixest on the GPU"
+        - text: "PyFixest on the GPU via CuPy"
+          file: pyfixest-gpu-cupy.ipynb
+        - text: "PyFixest on the GPU via JAX"
           file: pyfixest_gpu.ipynb
         - text: "Other Resources around PyFixest"
           file: resources.qmd

@@ -16,14 +16,14 @@
 [![Donate | GiveDirectly](https://img.shields.io/static/v1?label=GiveDirectly&message=Donate&color=blue&style=flat-square)](https://github.com/py-econometrics/pyfixest?tab=readme-ov-file#support-pyfixest)
 [![PyPI](https://img.shields.io/pypi/v/pyfixest)](https://pypi.org/project/pyfixest)
 [![Citation](https://img.shields.io/badge/Cite%20as-PyFixest-blue)](https://github.com/py-econometrics/pyfixest?tab=readme-ov-file#how-to-cite)
-[![Documentation](https://img.shields.io/badge/Open-Documentation-orange)](https://py-econometrics.github.io/pyfixest/pyfixest.html)
-[![Function Reference](https://img.shields.io/badge/Open-Function%20Reference-yellow)](https://py-econometrics.github.io/pyfixest/reference/)
 
 [pixi-badge]:https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/prefix-dev/pixi/main/assets/badge/v0.json&style=flat-square
 [pixi-url]: https://pixi.sh
 
 [chat-badge]: https://img.shields.io/discord/1259933360726216754.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2&style=flat-square
 [chat-url]: https://discord.gg/gBAydeDMVK
+
+[Docs](https://py-econometrics.github.io/pyfixest/pyfixest.html) · [Function & API Reference](https://py-econometrics.github.io/pyfixest/reference/) · [Report Bugs & Request Features](https://github.com/py-econometrics/pyfixest/issues) · [Changelog](https://py-econometrics.github.io/pyfixest/changelog.html)
 
 `PyFixest` is a Python package for fast high-dimensional fixed effects regression.
 
@@ -45,7 +45,7 @@ You can also leave a message through the donation form - your support and encour
 -   Probit, Logit and Gaussian Family **GLMs** (currently without fixed effects demeaning, this is WIP)
 -   **Quantile Regression** using an Interior Point Solver
 -   Multiple Estimation Syntax
--   Several **Robust** and **Cluster Robust Variance-Covariance** Estimators
+-   Several **Robust**, **Cluster Robust** and **HAC Variance-Covariance** Estimators
 -   **Wild Cluster Bootstrap** Inference (via
     [wildboottest](https://github.com/py-econometrics/wildboottest))
 -   **Difference-in-Differences** Estimators:
@@ -85,6 +85,25 @@ python -m pip install pyfixest[plots]
 ```
 
 Note that matplotlib is included by default, so you can always use the matplotlib backend for plotting even without installing the optional lets-plot dependency.
+
+### GPU Acceleration (Optional)
+
+PyFixest supports GPU-accelerated fixed effects demeaning via CuPy. To enable GPU acceleration, install CuPy matching your CUDA version:
+
+```bash
+# For CUDA 11.x, 12.x, 13.x
+pip install cupy-cuda11x
+pip install cupy-cuda12x
+pip install cupy-cuda13x
+```
+
+Once installed, you can use GPU-accelerated demeaning by setting the `demean_backend` parameter:
+
+```python
+# Use GPU with float32 and float64 precision
+pf.feols("Y ~ X1 | f1 + f2", data=data, demean_backend="cupy32")
+pf.feols("Y ~ X1 | f1 + f2", data=data, demean_backend="cupy64")
+```
 
 ## Benchmarks
 

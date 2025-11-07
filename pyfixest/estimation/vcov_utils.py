@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Optional, Union
 
 import numba as nb
 import numpy as np
@@ -55,7 +55,7 @@ def _count_G_for_ssc_correction(
     for col in cluster_df.columns:
         G.append(cluster_df[col].nunique())
 
-    if ssc_dict["cluster_df"] == "min":
+    if ssc_dict["G_df"] == "min":
         G = [min(G)] * 3
 
     return G
@@ -67,9 +67,8 @@ def _get_vcov_type(
     """
     Pass the specified vcov type.
 
-    Passes the specified vcov type. If no vcov type specified, sets the default
-    vcov type as iid if no fixed effect is included in the model, and CRV1
-    clustered by the first fixed effect if a fixed effect is included in the model.
+    Passes the specified vcov type. If no vcov type specified, always defaults
+    to "iid" inference, regardless of whether fixed effects are included in the model.
 
     Parameters
     ----------
@@ -81,20 +80,221 @@ def _get_vcov_type(
     Returns
     -------
     str
-        vcov_type (str) : The specified vcov type.
+        vcov_type (str) : The specified vcov type, or "iid" by default.
     """
-    if vcov is None:
-        # iid if no fixed effects
-        if fval == "0":
-            vcov_type = "iid"  # type: ignore
-        else:
-            # CRV1 inference, clustered by first fixed effect
-            first_fe = fval.split("+")[0]
-            vcov_type = {"CRV1": first_fe}  # type: ignore
-    else:
-        vcov_type = vcov  # type: ignore
+    return vcov if vcov is not None else "iid"
 
-    return vcov_type  # type: ignore
+
+@nb.njit(parallel=False)
+def _hac_meat_loop(
+    scores: np.ndarray, weights: np.ndarray, time_periods: int, k: int, lag: int
+):
+    """
+    Compute the HAC meat matrix. Used for both time series and DK HAC.
+
+    Parameters
+    ----------
+    scores: np.ndarray
+        The scores matrix.
+    weights: np.ndarray
+        The weights matrix.
+    time_periods: int
+        The number of time periods.
+    k: int
+        The number of regressors.
+    lag: int
+        The number of lag for the HAC estimator.
+
+    Returns
+    -------
+    meat: np.ndarray
+        The HAC meat matrix.
+    """
+    meat = np.zeros((k, k))
+    gamma_buffer = np.zeros((k, k))
+
+    # Vectorized computation for all lag values
+    for lag_value in range(lag + 1):
+        gamma_buffer.fill(0.0)
+        weight = weights[lag_value]
+
+        scores_current = np.ascontiguousarray(scores[lag_value:time_periods, :])
+        scores_lagged = np.ascontiguousarray(scores[: time_periods - lag_value, :])
+
+        gamma_buffer[:, :] = scores_current.T @ scores_lagged
+        meat += weight * (gamma_buffer + gamma_buffer.T)
+
+    return meat
+
+
+@nb.njit(parallel=False)
+def _get_bartlett_weights(lag: int):
+    # Pre-compute bartlett kernel weights more efficiently
+    weights = np.empty(lag + 1)
+    lag_plus_one = lag + 1
+    for j in range(lag + 1):
+        weights[j] = 1.0 - j / lag_plus_one
+    weights[0] = 0.5  # Halve first weight
+
+    return weights
+
+
+@nb.njit(parallel=False)
+def _nw_meat_time(scores: np.ndarray, time_arr: np.ndarray, lag: int):
+    if time_arr is None:
+        ordered_scores = np.ascontiguousarray(scores)
+    else:
+        order = np.argsort(time_arr)
+        ordered_scores = np.ascontiguousarray(scores[order])
+
+    time_periods, k = ordered_scores.shape
+    weights = _get_bartlett_weights(lag=lag)
+
+    return _hac_meat_loop(
+        scores=ordered_scores, weights=weights, time_periods=time_periods, k=k, lag=lag
+    )
+
+
+def _get_panel_idx(
+    panel_arr: np.ndarray, time_arr: np.ndarray
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Get indices for each unit. I.e. the first value ("starts") and how many
+    observations ("counts") each unit has.
+
+    Parameters
+    ----------
+    panel_arr : ndarray, shape (N*T,)
+        Panel ID variable.
+    time_arr : ndarray, shape (N*T,)
+        Time ID variable.
+
+    Returns
+    -------
+      order  : indices that sort by (panel, time)
+      units  : unique panel ids in sorted order
+      starts : start index of each unit slice in the sorted arrays
+      counts : length of each unit slice
+      panel_arr_sorted : panel variable in sorted order
+      time_arr_sorted : time variable in sorted order
+    """
+    order = np.lexsort((time_arr, panel_arr))  # sort by panel, then time
+    p_sorted = panel_arr[order]
+    units, starts, counts = np.unique(p_sorted, return_index=True, return_counts=True)
+    panel_arr_sorted = panel_arr[order]
+    time_arr_sorted = time_arr[order]
+    duplicate_mask = (np.diff(panel_arr_sorted) == 0) & (np.diff(time_arr_sorted) == 0)
+    if np.any(duplicate_mask):
+        raise ValueError(
+            "There are duplicate time periods for the same panel id. This is not supported for HAC SEs."
+        )
+    return order, units, starts, counts, panel_arr_sorted, time_arr_sorted
+
+
+@nb.njit(parallel=False)
+def _nw_meat_panel(
+    scores: np.ndarray,
+    time_arr: np.ndarray,
+    panel_arr: np.ndarray,
+    starts: np.ndarray,
+    counts: np.ndarray,
+    lag: Optional[int] = None,
+):
+    """
+    Compute the panel Newey-West (HAC) covariance estimator.
+
+    Parameters
+    ----------
+    scores: np.ndarray
+        The scores matrix.
+    time_arr : ndarray, shape (N*T,)
+        The time variable for clustering.
+    panel_arr : ndarray, shape (N*T,)
+        The panel variable for clustering.
+    starts : np.ndarray
+        The start index of each unit slice in the sorted arrays.
+    counts : np.ndarray
+        The length of each unit slice.
+    lag : int
+        Maximum lag for autocovariance. If not provided, defaults to floor(N**0.25), where
+        N is the number of time periods.
+
+    Returns
+    -------
+    vcov_nw : ndarray, shape (k, k)
+        HAC Newey-West covariance matrix.
+    """
+    if lag is None:
+        lag = int(np.floor(len(np.unique(time_arr)) ** 0.25))
+
+    weights = _get_bartlett_weights(lag=lag)
+
+    scores = np.ascontiguousarray(scores)
+    k = scores.shape[1]
+
+    meat_nw_panel = np.zeros((k, k))
+    gamma_l = np.zeros((k, k))
+    gamma_l_sum = np.zeros((k, k))
+
+    # start: first entry per panel i = 1, ..., N
+    # counts: number of counts for panel i
+    for start, count in zip(starts, counts):
+        end = start + count
+
+        score_i = np.ascontiguousarray(scores[start:end, :])
+        gamma0 = score_i.T @ score_i
+
+        gamma_l_sum.fill(0.0)
+        Lmax = min(lag, count - 1)
+        for lag_value in range(1, Lmax + 1):
+            score_curr = np.ascontiguousarray(scores[start + lag_value : end, :])
+            score_prev = np.ascontiguousarray(scores[start : end - lag_value, :])
+            gamma_l = score_curr.T @ score_prev
+            gamma_l_sum += weights[lag_value] * (gamma_l + gamma_l.T)
+
+        meat_nw_panel += gamma0 + gamma_l_sum
+
+    return meat_nw_panel
+
+
+@nb.njit(parallel=False)
+def _dk_meat_panel(
+    scores: np.ndarray,
+    time_arr: np.ndarray,
+    idx: np.ndarray,
+    lag: Optional[int] = None,
+):
+    """Compute Driscoll-Kraay HAC meat matrix.
+
+    Parameters
+    ----------
+    scores: np.ndarray
+        The time-aggregated scores. Is assumed to be sorted by time.
+    time_arr: np.ndarray, optional
+        The time variable for clustering. Assume that there are no duplicate time periods.
+        Is assumed to be sorted by time.
+    idx: np.ndarray, optional
+        The indices of the unique time periods.
+    lag: int, optional
+        The number of lag for the HAC estimator. Defaults to floor (# of time periods)^(1/4).
+    """
+    # Set lag if not provided
+    if lag is None:
+        lag = int(np.floor(np.unique(time_arr).shape[0] ** 0.25))
+
+    scores_time = np.zeros((len(idx), scores.shape[1]))
+    for t in range(len(idx) - 1):
+        scores_time[t, :] = scores[idx[t] : idx[t + 1], :].sum(axis=0)
+    scores_time[-1, :] = scores[idx[-1] :, :].sum(axis=0)
+
+    time_periods, k = scores_time.shape
+
+    weights = _get_bartlett_weights(lag=lag)
+    scores_time = np.ascontiguousarray(scores_time)
+
+    return _hac_meat_loop(
+        scores=scores_time, weights=weights, time_periods=time_periods, k=k, lag=lag
+    )
 
 
 def _prepare_twoway_clustering(clustervar: list, cluster_df: pd.DataFrame):

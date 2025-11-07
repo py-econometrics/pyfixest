@@ -249,7 +249,7 @@ def test_rwolf_error():
 
     data = get_data()
     data["f1"] = rng.choice(range(5), len(data), True)
-    fit = feols("Y + Y2 ~ X1 | f1", data=data)
+    fit = feols("Y + Y2 ~ X1 | f1", data=data, vcov={"CRV1": "f1"})
 
     # test for full enumeration warning
     with pytest.warns(UserWarning):
@@ -465,7 +465,7 @@ def test_wald_test_invalid_distribution():
     data = data.iloc[1:3000]
 
     fml = "dep_var ~ treat"
-    fit = feols(fml, data, vcov={"CRV1": "year"}, ssc=ssc(adj=False))
+    fit = feols(fml, data, vcov={"CRV1": "year"}, ssc=ssc(k_adj=False))
 
     with pytest.raises(ValueError):
         fit.wald_test(R=np.array([[1, -1]]), distribution="abc")
@@ -475,7 +475,7 @@ def test_wald_test_R_q_column_consistency():
     data = pd.read_csv("pyfixest/did/data/df_het.csv")
     data = data.iloc[1:3000]
     fml = "dep_var ~ treat"
-    fit = feols(fml, data, vcov={"CRV1": "year"}, ssc=ssc(adj=False))
+    fit = feols(fml, data, vcov={"CRV1": "year"}, ssc=ssc(k_adj=False))
 
     # Test with R.size[1] == number of coeffcients
     with pytest.raises(ValueError):
@@ -878,3 +878,194 @@ def test_errors_quantreg(data):
     def test_invalid_tolerance(tol):
         with pytest.raises(ValueError, match=r"tol must be in \(0, 1\)"):
             pf.quantreg("Y ~ X1", data=data, tol=tol)
+
+
+def test_errors_vcov_kwargs():
+    """Test all error conditions for vcov_kwargs in _estimation_input_checks."""
+    data = pf.get_data()
+    data["time_id"] = data["X2"]
+    data["panel_id"] = data["f1"]
+
+    # Error 1: Invalid keys in vcov_kwargs
+    with pytest.raises(
+        ValueError,
+        match=r"must be a dictionary with keys 'lag', 'time_id', or 'panel_id'",
+    ):
+        pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs={"invalid_key": 5})
+
+    # Error 2: Multiple invalid keys
+    with pytest.raises(
+        ValueError,
+        match="must be a dictionary with keys 'lag', 'time_id', or 'panel_id'",
+    ):
+        pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs={"wrong1": 1, "wrong2": 2})
+
+    # Error 3: Mix of valid and invalid keys
+    with pytest.raises(
+        ValueError,
+        match=r"must be a dictionary with keys 'lag', 'time_id', or 'panel_id'",
+    ):
+        pf.feols(
+            "Y ~ X1",
+            data=data,
+            vcov="NW",
+            vcov_kwargs={"lag": 5, "invalid_key": "test"},
+        )
+
+    # Error 4: lag value is not an integer (string)
+    with pytest.raises(
+        ValueError, match="must be a dictionary with integer values for 'lag'"
+    ):
+        pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs={"lag": "5"})
+
+    # Error 5: lag value is not an integer (float)
+    with pytest.raises(
+        ValueError, match="must be a dictionary with integer values for 'lag'"
+    ):
+        pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs={"lag": 5.5})
+
+    # Error 6: lag value is not an integer (None)
+    with pytest.raises(
+        ValueError, match="must be a dictionary with integer values for 'lag'"
+    ):
+        pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs={"lag": None})
+
+    # Error 7: time_id value is not a string (integer)
+    with pytest.raises(
+        ValueError, match="must be a dictionary with string values for 'time_id'"
+    ):
+        pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs={"time_id": 123})
+
+    # Error 8: time_id value is not a string (None)
+    with pytest.raises(
+        ValueError, match="must be a dictionary with string values for 'time_id'"
+    ):
+        pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs={"time_id": None})
+
+    # Error 9: time_id column does not exist in data
+    with pytest.raises(
+        ValueError, match=r"The variable 'nonexistent_column' is not in the data\."
+    ):
+        pf.feols(
+            "Y ~ X1",
+            data=data,
+            vcov="NW",
+            vcov_kwargs={"time_id": "nonexistent_column"},
+        )
+
+    # Error 10: panel_id value is not a string (integer)
+    with pytest.raises(
+        ValueError, match="must be a dictionary with string values for 'panel_id'"
+    ):
+        pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs={"panel_id": 456})
+
+    # Error 11: panel_id value is not a string (list)
+    with pytest.raises(
+        ValueError, match=r"The function argument `vcov_kwargs` must be a."
+    ):
+        pf.feols(
+            "Y ~ X1", data=data, vcov="NW", vcov_kwargs={"panel_id": ["col1", "col2"]}
+        )
+
+    # Error 12: panel_id column does not exist in data
+    with pytest.raises(
+        ValueError, match=r"The variable 'missing_panel_column' is not in the data\."
+    ):
+        pf.feols(
+            "Y ~ X1",
+            data=data,
+            vcov="NW",
+            vcov_kwargs={"panel_id": "missing_panel_column"},
+        )
+
+
+def test_errors_hac():
+    """Test all error conditions for HAC (Heteroskedasticity and Autocorrelation Consistent) standard errors."""
+    rng = np.random.default_rng(123)
+    N = 100
+    T = 10
+    n_panels = N // T
+    data = pd.DataFrame(
+        {
+            "time": np.tile(np.arange(T), n_panels),
+            "panel": np.repeat(np.arange(n_panels), T),
+            "Y": rng.normal(0, 1, N),
+            "X1": rng.normal(0, 1, N),
+        }
+    )
+
+    # Error 3: time_id is not provided if vcov is NW or DK
+    with pytest.raises(ValueError, match=r"Missing required 'time_id' for NW/DK vcov"):
+        pf.feols(
+            "Y ~ X1",
+            data=data,
+            vcov="NW",
+            vcov_kwargs={"lag": 3},
+        )
+
+    # Error 4: lag is not provided if vcov is NW or DK
+    with pytest.raises(
+        ValueError,
+        match=r"We have not yet implemented the default Newey-West HAC lag. Please provide a lag value via the `vcov_kwargs`\.",
+    ):
+        pf.feols(
+            "Y ~ X1",
+            data=data[data.panel == 0],
+            vcov="NW",
+            vcov_kwargs={"time_id": "time"},
+        )
+
+    # Error 5: time_id column does not exist in data
+    with pytest.raises(
+        ValueError, match=r"The variable 'nonexistent_column' is not in the data\."
+    ):
+        pf.feols(
+            "Y ~ X1",
+            data=data,
+            vcov="NW",
+            vcov_kwargs={
+                "time_id": "nonexistent_column",
+                "panel_id": "panel",
+                "lag": 5,
+            },
+        )
+
+    # Error 6: panel_id column does not exist in data
+    with pytest.raises(
+        ValueError, match=r"The variable 'nonexistent_column' is not in the data\."
+    ):
+        pf.feols(
+            "Y ~ X1",
+            data=data,
+            vcov="NW",
+            vcov_kwargs={"panel_id": "nonexistent_column", "time_id": "time", "lag": 5},
+        )
+
+    # Error 7: duplicate time periods in data
+    data["time2"] = data["time"]
+    data["time2"][0] = data["time2"][1]
+    with pytest.raises(
+        ValueError,
+        match=r"There are duplicate time periods in the data. This is not supported for HAC SEs\.",
+    ):
+        pf.feols(
+            "Y ~ X1",
+            data=data,
+            vcov="NW",
+            vcov_kwargs={"time_id": "time2", "lag": 5},
+        )
+
+    # Error 8: duplicate time periods for the same panel id
+    data["time3"] = data["time"]
+    data["time3"][0] = data["time3"][1]
+    for vcov in ["NW", "DK"]:
+        with pytest.raises(
+            ValueError,
+            match=r"There are duplicate time periods for the same panel id. This is not supported for HAC SEs\.",
+        ):
+            pf.feols(
+                "Y ~ X1",
+                data=data,
+                vcov=vcov,
+                vcov_kwargs={"time_id": "time3", "panel_id": "panel", "lag": 5},
+            )

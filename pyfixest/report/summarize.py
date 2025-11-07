@@ -6,7 +6,7 @@ from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
-from tabulate import tabulate
+from tabulate import tabulate  # type: ignore[import-untyped]
 
 from pyfixest.estimation.feiv_ import Feiv
 from pyfixest.estimation.feols_ import Feols
