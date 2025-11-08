@@ -31,13 +31,6 @@ jax = [
 plots = [
     "lets-plot>=4.0.0",
 ]
-dev = [
-    "pytest>=7.2.0",
-    "pytest-cov>=4.1.0",
-    "pytest-xdist>=3.5.0",
-    "pytest-benchmark>=5.1.0,<6",
-    "wildboottest>=0.3.2,<0.4",
-]
 
 [build-system]
 requires = ["maturin>=1.8,<2.0"]
