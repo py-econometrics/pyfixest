@@ -622,7 +622,9 @@ class Feols:
             self._clustervar,
         ) = _deparse_vcov_input(vcov, self._has_fixef, self._is_iv)
 
-        self._bread = _compute_bread(self._is_iv, self._tXZ, self._tZZinv, self._tZX, self._hessian)
+        self._bread = _compute_bread(
+            self._is_iv, self._tXZ, self._tZZinv, self._tZX, self._hessian
+        )
 
         # HAC attributes
         self._lag = vcov_kwargs.get("lag", None) if vcov_kwargs is not None else None
@@ -830,7 +832,11 @@ class Feols:
 
         Omega = transformed_scores.T @ transformed_scores
 
-        meat = self._tXZ @ self._tZZinv @ Omega @ self._tZZinv @ self._tZX if self._is_iv else Omega
+        meat = (
+            self._tXZ @ self._tZZinv @ Omega @ self._tZZinv @ self._tZX
+            if self._is_iv
+            else Omega
+        )
         vcov = self._bread @ meat @ self._bread
 
         return vcov
@@ -930,7 +936,11 @@ class Feols:
             cluster_col=cluster_col.astype(np.uintp),
         )
 
-        meat = self._tXZ @ self._tZZinv @ meat @ self._tZZinv @ self._tZX if self._is_iv else meat
+        meat = (
+            self._tXZ @ self._tZZinv @ meat @ self._tZZinv @ self._tZX
+            if self._is_iv
+            else meat
+        )
         vcov = self._bread @ meat @ self._bread
 
         return vcov
@@ -2474,7 +2484,9 @@ class Feols:
         if cluster is not None and cluster not in self._data:
             raise ValueError(f"The variable {cluster} is not found in the data.")
 
-        clustervar_arr = self._data[cluster].to_numpy().reshape(-1, 1) if cluster else None
+        clustervar_arr = (
+            self._data[cluster].to_numpy().reshape(-1, 1) if cluster else None
+        )
 
         if clustervar_arr is not None and np.any(np.isnan(clustervar_arr)):
             raise ValueError(
@@ -2520,7 +2532,8 @@ class Feols:
                 # "iid" for models without controls, else HC1
                 vcov_input = (
                     "hetero"
-                    if (self._has_fixef and len(self._coefnames) > 1) or len(self._coefnames) > 2
+                    if (self._has_fixef and len(self._coefnames) > 1)
+                    or len(self._coefnames) > 2
                     else "iid"
                 )
 
