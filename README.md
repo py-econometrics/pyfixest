@@ -327,6 +327,7 @@ Thanks goes to these wonderful people:
       <td align="center" valign="top" width="12.5%"><a href="http://bobbyho.me"><img src="https://avatars.githubusercontent.com/u/10739091?v=4?s=80" width="80px;" alt="Bobby Ho"/><br /><sub><b>Bobby Ho</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=bobby1030" title="Documentation">📖</a></td>
       <td align="center" valign="top" width="12.5%"><a href="https://github.com/Erica-Ryan"><img src="https://avatars.githubusercontent.com/u/27149581?v=4?s=80" width="80px;" alt="Erica Ryan"/><br /><sub><b>Erica Ryan</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=Erica-Ryan" title="Code">💻</a></td>
       <td align="center" valign="top" width="12.5%"><a href="https://github.com/souhil25"><img src="https://avatars.githubusercontent.com/u/185626340?v=4?s=80" width="80px;" alt="Souhil Abdelmalek Louddad"/><br /><sub><b>Souhil Abdelmalek Louddad</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=souhil25" title="Documentation">📖</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="http://dpananos.github.io"><img src="https://avatars.githubusercontent.com/u/20362941?v=4?s=80" width="80px;" alt="Demetri Pananos"/><br /><sub><b>Demetri Pananos</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=Dpananos" title="Code">💻</a></td>
     </tr>
   </tbody>
 </table>
