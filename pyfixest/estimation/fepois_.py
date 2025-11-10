@@ -199,6 +199,23 @@ class Fepois(Feols):
             if self._fe.ndim == 1:
                 self._fe = self._fe.reshape((self._N, 1))
 
+    def _compute_deviance(self, Y: np.ndarray, mu: np.ndarray):
+        """
+        Deviance is defined as twice the difference in log likelihood between the
+        saturated model and the model being fit.
+
+        deviance = 2 * (log_likelihood_saturated - log_likelihood_fitted)
+
+        See [1] chapter 5.6 for more details.
+        [1] Dobson, Annette J., and Adrian G. Barnett. An introduction to generalized linear models. Chapman and Hall/CRC, 2018.
+        """
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            deviance = np.float64(
+                2 * np.sum(np.where(Y == 0, 0, Y * np.log(Y / mu)) - (Y - mu))
+            )
+        return deviance
+
     def get_fit(self) -> None:
         """
         Fit a Poisson Regression Model via Iterated Weighted Least Squares (IWLS).
@@ -227,15 +244,6 @@ class Fepois(Feols):
             Demeaned dependent variable (from the last iteration of the IRLS
             algorithm).
         """
-
-        def compute_deviance(Y: np.ndarray, mu: np.ndarray):
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-                deviance = (
-                    2 * np.sum(np.where(Y == 0, 0, Y * np.log(Y / mu)) - (Y - mu))
-                ).flatten()
-            return deviance
-
         stop_iterating = False
         crit = 1
 
@@ -257,7 +265,7 @@ class Fepois(Feols):
                 eta = np.log(mu)
                 Z = eta + self._Y / mu - 1
                 reg_Z = Z.copy()
-                last = compute_deviance(self._Y, mu)
+                last = self._compute_deviance(self._Y, mu)
 
             else:
                 # update w and Z
@@ -307,9 +315,9 @@ class Fepois(Feols):
 
             # same criterion as fixest
             # https://github.com/lrberge/fixest/blob/6b852fa277b947cea0bad8630986225ddb2d6f1b/R/ESTIMATION_FUNS.R#L2746
-            deviance = compute_deviance(self._Y, mu)
+            deviance = self._compute_deviance(self._Y, mu)
             crit = np.abs(deviance - last) / (0.1 + np.abs(last))
-            last = deviance.copy()
+            last = deviance
 
             stop_iterating = crit < self.tol
 
