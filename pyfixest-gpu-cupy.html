@@ -247,22 +247,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
-<p>Besides JAX, it is possible to run PyFixest on the GPU via CuPy (linux and windows). Instead of applying the alternating projections algorithm to demean fixed effects, CuPy works with sparse matrices and the sparse LSMR solver (as is e.g.&nbsp;<a href="https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.lsmr.html">available in scipy</a>).</p>
-<p>This strategy is amenable for GPU acceleration, and for problems where the standard demeaner struggles to converge, this strategy can lead to significant speedups if paired with a GPU.</p>
-<div class="quarto-figure quarto-figure-center">
-<figure class="figure">
-<p><img src="../benchmarks/complex_benchmarks.png" class="img-fluid figure-img"></p>
-<figcaption>Complex Fixed Effects Structure: Benchmark</figcaption>
-</figure>
-</div>
-<p>Note that for smaller and more well-behaved problems, running the alternating projections algorithm on the CPU via <code>numba</code> or <code>rust</code> usually seems to work better:</p>
-<div class="quarto-figure quarto-figure-center">
-<figure class="figure">
-<p><img src="../benchmarks/simple_benchmarks_cupy.png" class="img-fluid figure-img"></p>
-<figcaption>Simply Fixed Effects Structure: Benchmark</figcaption>
-</figure>
-</div>
-<p><strong>Benchmark Hardware Specifications:</strong> - <strong>CPU</strong>: x86_64, 8 physical cores @ 3.2 GHz, 44 GB RAM - <strong>GPU</strong>: NVIDIA RTX A6000, 48 GB memory, Compute Capability 8.6</p>
+<p>Besides JAX, it is possible to run PyFixest on the GPU via CuPy (linux and windows). Instead of applying the alternating projections algorithm to demean fixed effects, CuPy works with sparse matrices and the sparse LSMR solver (as is e.g.&nbsp;<a href="https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.lsmr.html">available in scipy</a>).This strategy is amenable for GPU acceleration, and for problems where the standard demeaner struggles to converge, this strategy can lead to significant speedups if paired with a GPU.<img src="https://raw.githubusercontent.com/py-econometrics/pyfixest/master/benchmarks/complex_benchmarks.png" class="img-fluid" alt="Complex Fixed Effects Structure: Benchmark">Note that for smaller and more well-behaved problems, running the alternating projections algorithm on the CPU via <code>numba</code> or <code>rust</code> usually seems to work better: <img src="https://raw.githubusercontent.com/py-econometrics/pyfixest/master/benchmarks/simple_benchmarks_cupy.png" class="img-fluid" alt="Simply Fixed Effects Structure: Benchmark"><strong>Benchmark Hardware Specifications:</strong>- <strong>CPU</strong>: x86_64, 8 physical cores @ 3.2 GHz, 44 GB RAM- <strong>GPU</strong>: NVIDIA RTX A6000, 48 GB memory, Compute Capability 8.6</p>
 <section id="installation" class="level2">
 <h2 class="anchored" data-anchor-id="installation">Installation</h2>
 <p>To run pyfixest via cup on the GPU, you need to install the required dependency:</p>
