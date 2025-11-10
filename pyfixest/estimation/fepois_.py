@@ -227,6 +227,7 @@ class Fepois(Feols):
             Demeaned dependent variable (from the last iteration of the IRLS
             algorithm).
         """
+
         def compute_deviance(Y: np.ndarray, mu: np.ndarray):
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
