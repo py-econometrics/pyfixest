@@ -23,8 +23,7 @@ import sys
 
 # Check if HAC tests are being run
 _run_hac_tests = any(
-    arg in sys.argv
-    for arg in ["test_hac_vs_fixest.py", "-m hac", "--markers=hac"]
+    arg in sys.argv for arg in ["test_hac_vs_fixest.py", "-m hac", "--markers=hac"]
 ) or any("test_hac_vs_fixest" in arg for arg in sys.argv)
 
 if _run_hac_tests:
