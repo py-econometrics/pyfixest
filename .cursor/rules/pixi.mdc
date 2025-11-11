@@ -1,0 +1,11 @@
+---
+description: Running unit tests
+alwaysApply: false
+---
+When running unit tests, always:
+
+* use pixi to run the test.  We have a dev environement called "dev" that should house all dependencies.
+
+When running unit tests, never:
+
+* Alter the tolerance to get the test to pass.  Use a default tolerance of 1e-06 when comparing two floats.
