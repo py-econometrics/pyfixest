@@ -262,53 +262,41 @@ class FeolsCompressed(Feols):
         super().vcov(vcov=vcov, vcov_kwargs=vcov_kwargs, data=data)
 
     def _vcov_iid(self):
-        _N = self._N
-        _bread = self._bread
-
         weights = self._compression_count.to_numpy()
-        Yprime = self._Yprime.to_numpy()
-        Yprimeprime = self._Yprimeprime.to_numpy()
+        yprime = self._Yprime.to_numpy()
+        yprimeprime = self._Yprimeprime.to_numpy()
         X = self._X / np.sqrt(weights)
-        beta_hat = self._beta_hat
-        yhat = (X @ beta_hat).reshape(-1, 1)
-        rss_g = (yhat**2) * weights - 2 * yhat * Yprime + Yprimeprime
-        sigma2 = np.sum(rss_g) / (_N - 1)
+        yhat = (X @ self._beta_hat).reshape(-1, 1)
+        rss_g = (yhat**2) * weights - 2 * yhat * yprime + yprimeprime
+        sigma2 = np.sum(rss_g) / (self._N - 1)
 
-        _vcov = _bread * sigma2
-
-        return _vcov
+        return self._bread * sigma2
 
     def _vcov_hetero(self):
-        _vcov_type_detail = self._vcov_type_detail
-        _bread = self._bread
-
-        if _vcov_type_detail in ["HC2", "HC3"]:
+        if self._vcov_type_detail in ["HC2", "HC3"]:
             raise NotImplementedError(
-                f"Only HC1 robust inference is supported, but {_vcov_type_detail} was specified."
+                f"Only HC1 robust inference is supported, but {self._vcov_type_detail} was specified."
             )
 
         yprime = self._Yprime.to_numpy()
         yprimeprime = self._Yprimeprime.to_numpy()
         weights = self._compression_count.to_numpy()
         X = self._X / np.sqrt(weights)
-        beta_hat = self._beta_hat
-        yhat = (X @ beta_hat).reshape(-1, 1)
+        yhat = (X @ self._beta_hat).reshape(-1, 1)
         rss_g = (yhat**2) * weights - 2 * yhat * yprime + yprimeprime
 
         _meat = (X * rss_g).T @ X
 
-        return _bread @ _meat @ _bread
+        return self._bread @ _meat @ self._bread
 
     def _vcov_crv1(self, clustid: np.ndarray, cluster_col: np.ndarray):
-        _data_long_nw = self._data_long
-
-        X_long = _data_long_nw.select(self._coefnames).to_numpy()
-        Y_long = _data_long_nw.select(self._depvar).to_numpy()
+        X_long = self._data_long.select(self._coefnames).to_numpy()
+        Y_long = self._data_long.select(self._depvar).to_numpy()
 
         yhat = X_long @ self._beta_hat
         uhat = Y_long.flatten() - yhat
 
-        _data_long_nw = _data_long_nw.with_columns(
+        data_long = self._data_long.with_columns(
             [
                 nw.lit(yhat.tolist()).alias("yhat"),
                 nw.lit(uhat.tolist()).alias("uhat"),
@@ -317,27 +305,25 @@ class FeolsCompressed(Feols):
             ]
         )
 
-        boot_iter = self._reps
         rng = np.random.default_rng(self._seed)
 
-        assert boot_iter is not None, "boot_iter must not be None"
+        assert self._reps is not None, "boot_iter must not be None"
         assert self._k is not None, "self._k must not be None"
-        beta_boot = np.zeros((boot_iter, self._k))
+        beta_boot = np.zeros((self._reps, self._k))
 
-        clustervar = self._clustervar
-        cluster = _data_long_nw[clustervar]
+        cluster = data_long[self._clustervar]
         cluster_ids = np.sort(np.unique(cluster).astype(np.int32))
-        _data_long_nw = _data_long_nw.with_columns(nw.col(clustervar[0]).cast(nw.Int32))
+        data_long = data_long.with_columns(nw.col(self._clustervar[0]).cast(nw.Int32))
 
-        for b in tqdm(range(boot_iter)):
+        for b in tqdm(range(self._reps)):
             boot_df = nw.from_native(
                 {
                     "coin_flip": rng.integers(0, 2, size=len(cluster_ids)),
-                    f"{clustervar[0]}": cluster_ids,
+                    f"{self._clustervar[0]}": cluster_ids,
                 }
             )
 
-            df_boot = _data_long_nw.join(boot_df, on=f"{clustervar[0]}", how="left")
+            df_boot = data_long.join(boot_df, on=f"{self._clustervar[0]}", how="left")
             df_boot = df_boot.with_columns(
                 [
                     nw.when(nw.col("coin_flip") == 1)
