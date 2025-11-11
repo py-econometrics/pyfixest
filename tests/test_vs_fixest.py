@@ -125,6 +125,12 @@ glm_fmls = [
     "Y ~ X1 + f1:X2",
 ]
 
+glm_fmls_with_fe = [
+    "Y ~ X1 | f1",
+    "Y ~ X1 | f1 + f2",
+    "Y ~ X1 + X2 | f2",
+]
+
 
 @pytest.fixture(scope="module")
 def data_feols(N=1000, seed=76540251, beta_type="2", error_type="2"):
@@ -880,6 +886,71 @@ def test_glm_vs_fixest(N, seed, dropna, fml, inference, family):
         r_vcov,
         1e-04,
         f"py_{family}_vcov != r_{family}_vcov for inference {inference}",
+    )
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize("N", [100])
+@pytest.mark.parametrize("seed", [172])
+@pytest.mark.parametrize("dropna", [True, False])
+@pytest.mark.parametrize(
+    "fml",
+    glm_fmls_with_fe,
+)
+@pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
+def test_glm_with_fe_vs_fixest(N, seed, dropna, fml, inference):
+    """Test Gaussian GLM with fixed effects against R's fixest."""
+    data = pf.get_data(N=N, seed=seed)
+    if dropna:
+        data = data.dropna()
+
+    r_inference = _get_r_inference(inference)
+
+    # Fit models for Gaussian family
+    fit_py = pf.feglm(fml=fml, data=data, family="gaussian", vcov=inference)
+    r_fml = _py_fml_to_r_fml(fml)
+    data_r = get_data_r(fml, data)
+
+    fit_r = fixest.feglm(
+        ro.Formula(r_fml), data=data_r, family=stats.gaussian(), vcov=r_inference
+    )
+
+    # Compare coefficients
+    py_coefs = fit_py.coef()
+    r_coefs = stats.coef(fit_r)
+
+    check_absolute_diff(
+        py_coefs, r_coefs, 1e-05, "py_gaussian_coefs != r_gaussian_coefs"
+    )
+
+    # Compare standard errors
+    py_se = fit_py.se().xs("X1")
+    r_se = _get_r_df(fit_r)["std.error"]
+    check_absolute_diff(
+        py_se,
+        r_se,
+        1e-04,
+        f"py_gaussian_se != r_gaussian_se for inference {inference}",
+    )
+
+    # Compare variance-covariance matrices
+    py_vcov = fit_py._vcov[0, 0]
+    r_vcov = stats.vcov(fit_r)[0, 0]
+    check_absolute_diff(
+        py_vcov,
+        r_vcov,
+        1e-04,
+        f"py_gaussian_vcov != r_gaussian_vcov for inference {inference}",
+    )
+
+    # Compare residuals - response
+    py_resid_response = fit_py._u_hat_response
+    r_resid_response = stats.resid(fit_r, type="response")
+    check_absolute_diff(
+        py_resid_response[0:5],
+        r_resid_response[0:5],
+        1e-04,
+        f"py_gaussian_resid_response != r_gaussian_resid_response for inference {inference}",
     )
 
 

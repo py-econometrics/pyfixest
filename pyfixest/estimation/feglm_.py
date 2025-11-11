@@ -8,10 +8,10 @@ import pandas as pd
 from pyfixest.errors import (
     NonConvergenceError,
 )
-from pyfixest.estimation.demean_ import demean
 from pyfixest.estimation.feols_ import Feols, PredictionErrorOptions, PredictionType
 from pyfixest.estimation.fepois_ import _check_for_separation
 from pyfixest.estimation.FormulaParser import FixestFormula
+from pyfixest.estimation.literals import DemeanerBackendOptions
 from pyfixest.utils.dev_utils import DataFrameType
 
 
@@ -40,6 +40,7 @@ class Feglm(Feols, ABC):
             "scipy.sparse.linalg.lsqr",
             "jax",
         ],
+        demeaner_backend: DemeanerBackendOptions = "numba",
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
@@ -61,6 +62,7 @@ class Feglm(Feols, ABC):
             fixef_maxiter=fixef_maxiter,
             lookup_demeaned_data=lookup_demeaned_data,
             solver=solver,
+            demeaner_backend=demeaner_backend,
             store_data=store_data,
             copy_data=copy_data,
             lean=lean,
@@ -96,7 +98,8 @@ class Feglm(Feols, ABC):
         "Prepare model inputs for estimation."
         super().prepare_model_matrix()
 
-        if self._fe is not None:
+        # Fixed effects are only supported for Gaussian family
+        if self._fe is not None and self._method != "feglm-gaussian":
             raise NotImplementedError("Fixed effects are not yet supported for GLMs.")
 
         # check for separation
@@ -314,7 +317,7 @@ class Feglm(Feols, ABC):
         if flist is None:
             return v, X
         else:
-            vX_resid, success = demean(
+            vX_resid, success = self._demean_func(
                 x=np.c_[v, X], flist=flist, weights=weights, tol=tol, maxiter=maxiter
             )
             if success is False:
