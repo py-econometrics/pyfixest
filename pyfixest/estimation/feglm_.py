@@ -227,17 +227,40 @@ class Feglm(Feols, ABC):
         if self._weights.ndim == 1:
             self._weights = self._weights.reshape((self._N, 1))
 
-        self._u_hat_response = (self._Y.flatten() - self._get_mu(theta=eta)).flatten()
-        self._u_hat_working = (
-            self._u_hat_response
-            if self._method == "feglm-gaussian"
-            else (v_dotdot / W_tilde).flatten()
-        )
+        if self._method == "feglm-gaussian" and self._fe is not None:
+            # For Gaussian with identity link and fixed effects,
+            # residuals must be computed in the demeaned space to match feols.
+            # Demean Y and compute residuals as Y_demeaned - X_demeaned @ beta
+            y_demeaned, _ = self.residualize(
+                v=self._Y,
+                X=np.zeros((self._N, 0)),  # Just demean Y, no X needed
+                flist=self._fe,
+                weights=W_tilde.flatten(),
+                tol=self._fixef_tol,
+                maxiter=self._fixef_maxiter,
+            )
+            # Residuals in demeaned space
+            self._u_hat_response = (y_demeaned.flatten() - X_dotdot @ beta).flatten()
+            self._u_hat_working = self._u_hat_response
 
-        self._scores_response = self._u_hat_response[:, None] * self._X
-        self._scores_working = self._u_hat_working[:, None] * self._X
-
-        self._scores = self._get_score(y=self._Y.flatten(), X=self._X, mu=mu, eta=eta)
+            # For sandwich variance, scores must also use demeaned X
+            self._scores_response = self._u_hat_response[:, None] * X_dotdot
+            self._scores_working = self._u_hat_working[:, None] * X_dotdot
+            self._scores = self._scores_response  # Use response scores for Gaussian
+        elif self._method == "feglm-gaussian":
+            # Gaussian without fixed effects
+            self._u_hat_response = (self._Y.flatten() - self._get_mu(theta=eta)).flatten()
+            self._u_hat_working = self._u_hat_response
+            self._scores_response = self._u_hat_response[:, None] * self._X
+            self._scores_working = self._u_hat_working[:, None] * self._X
+            self._scores = self._get_score(y=self._Y.flatten(), X=self._X, mu=mu, eta=eta)
+        else:
+            # For other GLM families
+            self._u_hat_response = (self._Y.flatten() - self._get_mu(theta=eta)).flatten()
+            self._u_hat_working = (v_dotdot / W_tilde).flatten()
+            self._scores_response = self._u_hat_response[:, None] * self._X
+            self._scores_working = self._u_hat_working[:, None] * self._X
+            self._scores = self._get_score(y=self._Y.flatten(), X=self._X, mu=mu, eta=eta)
 
         self._u_hat = self._u_hat_working
         self._tZX = np.transpose(self._Z) @ self._X

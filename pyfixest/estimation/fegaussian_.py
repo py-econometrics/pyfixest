@@ -97,6 +97,18 @@ class Fegaussian(Feglm):
     def _get_V(self, mu: np.ndarray) -> np.ndarray:
         return np.ones_like(mu)
 
+<<<<<<< HEAD
+=======
+    def _vcov_iid(self):
+        _u_hat = self._u_hat
+        _bread = self._bread
+        # Use df_t (degrees of freedom) for denominator, matching feols behavior
+        sigma2 = np.sum(_u_hat.flatten() ** 2) / self._df_t
+        _vcov = _bread * sigma2
+
+        return _vcov
+
+>>>>>>> 85e4d800 (test passing via clauide)
     def _get_score(
         self, y: np.ndarray, X: np.ndarray, mu: np.ndarray, eta: np.ndarray
     ) -> np.ndarray:
