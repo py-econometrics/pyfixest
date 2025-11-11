@@ -288,10 +288,11 @@ class FixestMulti:
         FixestFormulaDict = self.FixestFormulaDict
         _fixef_keys = list(FixestFormulaDict.keys())
 
-        split_values: list[Union[str, int]] = []
-        if self._run_split and self._splitvar is not None:
-            split_values = self._data[self._splitvar].dropna().unique().tolist()
-        all_splits = (["all"] if self._run_full else []) + split_values
+        all_splits = (["all"] if self._run_full else []) + (
+            self._data[self._splitvar].dropna().unique().tolist()
+            if self._run_split
+            else []
+        )
 
         for sample_split_value in all_splits:
             for _, fval in enumerate(_fixef_keys):
