@@ -71,11 +71,25 @@ We can also easily **drop** variables via the `drop` argument:
 pf.etable([fit1, fit2, fit3, fit4, fit5, fit6], drop=["X1"])
 ```
 
-## Hide fixed effects or SE-type rows
-We can hide the rows showing the relevant fixed effects and those showing the S.E. type by setting `show_fe=False` and `show_se_type=False` (for instance when the set of fixed effects or the estimation method for the std. errors is the same for all models and you want to describe this in the text or table notes rather than displaying it in the table).
+## Specify displayed model statistics
+The user can specify the model statistics to be displayed and their order by passing a list of strings to `model_stats`. Names of the statistics must match the model's respective attribute names such as "r2", "adj_r2", "N", "r2_within" (see the respective function reference for attributes and omit the leading "_"). The type of standard error estimated can be shown by adding "se_type" to the list. When passing an empty list no model statistics are displayed.
 
 ```{python}
-pf.etable([fit1, fit2, fit3, fit4, fit5, fit6], show_fe=False, show_se_type=False)
+pf.etable([fit1, fit2, fit3, fit4, fit5, fit6], model_stats=['N','r2','se_type'])
+```
+
+Model statistics can also be relabeled by passing a dictionary `model_stats_labels`.
+
+```{python}
+pf.etable([fit1, fit2, fit3, fit4, fit5, fit6], model_stats=['N','r2'], model_stats_labels={"N": "Number of firms", "r2": "R squared"})
+```
+
+
+## Hide fixed effects
+We can hide the rows showing the relevant fixed effects by setting `show_fe=False` (for instance when the set of fixed effects is the same for all models and you want to describe this in the text or table notes rather than displaying it in the table).
+
+```{python}
+pf.etable([fit1, fit2, fit3, fit4, fit5, fit6], model_stats=['r2','N'], show_fe=False)
 ```
 
 
