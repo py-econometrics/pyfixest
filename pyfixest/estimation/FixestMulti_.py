@@ -285,35 +285,13 @@ class FixestMulti:
         -------
             None
         """
-        _is_iv = self._is_iv
-        _data = self._data
-        _method = self._method
-        _drop_singletons = self._drop_singletons
-        _ssc_dict = self._ssc_dict
-        _drop_intercept = self._drop_intercept
-        _weights = self._weights
-        _fixef_tol = self._fixef_tol
-        _fixef_maxiter = self._fixef_maxiter
-        _weights_type = self._weights_type
-        _lean = self._lean
-        _store_data = self._store_data
-        _copy_data = self._copy_data
-        _run_split = self._run_split
-        _run_full = self._run_full
-        _splitvar = self._splitvar
-        _context = self._context
-        _quantreg_method = self._quantreg_method
-        _quantreg_multi_method = self._quantreg_multi_method
-        _quantile = self._quantile
-        _quantile_tol = self._quantile_tol
-        _quantile_maxiter = self._quantile_maxiter
-
         FixestFormulaDict = self.FixestFormulaDict
         _fixef_keys = list(FixestFormulaDict.keys())
 
-        all_splits = (["all"] if _run_full else []) + (
-            _data[_splitvar].dropna().unique().tolist() if _run_split else []
-        )
+        split_values: list[Union[str, int]] = []
+        if self._run_split and self._splitvar is not None:
+            split_values = self._data[self._splitvar].dropna().unique().tolist()
+        all_splits = (["all"] if self._run_full else []) + split_values
 
         for sample_split_value in all_splits:
             for _, fval in enumerate(_fixef_keys):
@@ -341,33 +319,33 @@ class FixestMulti:
 
                     model_kwargs = {
                         "FixestFormula": FixestFormula,
-                        "data": _data,
-                        "ssc_dict": _ssc_dict,
-                        "drop_singletons": _drop_singletons,
-                        "drop_intercept": _drop_intercept,
-                        "weights": _weights,
-                        "weights_type": _weights_type,
+                        "data": self._data,
+                        "ssc_dict": self._ssc_dict,
+                        "drop_singletons": self._drop_singletons,
+                        "drop_intercept": self._drop_intercept,
+                        "weights": self._weights,
+                        "weights_type": self._weights_type,
                         "solver": solver,
                         "collin_tol": collin_tol,
-                        "fixef_tol": _fixef_tol,
-                        "fixef_maxiter": _fixef_maxiter,
-                        "store_data": _store_data,
-                        "copy_data": _copy_data,
-                        "lean": _lean,
-                        "context": _context,
+                        "fixef_tol": self._fixef_tol,
+                        "fixef_maxiter": self._fixef_maxiter,
+                        "store_data": self._store_data,
+                        "copy_data": self._copy_data,
+                        "lean": self._lean,
+                        "context": self._context,
                         "sample_split_value": sample_split_value,
-                        "sample_split_var": _splitvar,
+                        "sample_split_var": self._splitvar,
                         "lookup_demeaned_data": lookup_demeaned_data,
                     }
 
-                    if _method in {"feols", "fepois"}:
+                    if self._method in {"feols", "fepois"}:
                         model_kwargs.update(
                             {
                                 "demeaner_backend": demeaner_backend,
                             }
                         )
 
-                    if _method in {
+                    if self._method in {
                         "fepois",
                         "feglm-logit",
                         "feglm-probit",
@@ -381,20 +359,20 @@ class FixestMulti:
                             }
                         )
 
-                    if _method in ["quantreg", "quantreg_multi"]:
+                    if self._method in ["quantreg", "quantreg_multi"]:
                         model_kwargs.update(
                             {
-                                "quantile": _quantile,
-                                "method": _quantreg_method,
-                                "quantile_tol": _quantile_tol,
-                                "quantile_maxiter": _quantile_maxiter,
+                                "quantile": self._quantile,
+                                "method": self._quantreg_method,
+                                "quantile_tol": self._quantile_tol,
+                                "quantile_maxiter": self._quantile_maxiter,
                                 "seed": self._seed,
                             }
                         )
-                    if _method == "quantreg_multi":
+                    if self._method == "quantreg_multi":
                         model_kwargs.update(
                             {
-                                "multi_method": _quantreg_multi_method,
+                                "multi_method": self._quantreg_multi_method,
                             }
                         )
 
@@ -410,7 +388,7 @@ class FixestMulti:
                         ("quantreg_multi", None): QuantregMulti,
                     }
 
-                    if _method == "compression":
+                    if self._method == "compression":
                         model_kwargs.update(
                             {
                                 "reps": self._reps,
@@ -419,7 +397,9 @@ class FixestMulti:
                         )
 
                     model_key = (
-                        (_method, _is_iv) if _method == "feols" else (_method, None)
+                        (self._method, self._is_iv)
+                        if self._method == "feols"
+                        else (self._method, None)
                     )
                     ModelClass = model_map[model_key]  # type: ignore
                     FIT = ModelClass(**model_kwargs)
@@ -448,7 +428,7 @@ class FixestMulti:
                         )  #  a little hacky, but works
 
                         FIT.get_inference()
-                        if _method == "feols" and not FIT._is_iv:
+                        if self._method == "feols" and not FIT._is_iv:
                             FIT.get_performance()
                         if isinstance(FIT, Feiv):
                             FIT.first_stage()
