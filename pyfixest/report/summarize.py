@@ -605,7 +605,8 @@ def summary(models: ModelInputType, digits: int = 3) -> None:
         if not np.isnan(fxst._r2_within):
             to_print += f"R2 Within: {np.round(fxst._r2_within, digits)} "
         if fxst.deviance is not None:
-            to_print += f"Deviance: {np.round(fxst.deviance[0], digits)} "
+            deviance_value = np.asarray(fxst.deviance).squeeze()
+            to_print += f"Deviance: {np.round(deviance_value, digits)} "
 
         print(to_print)
 

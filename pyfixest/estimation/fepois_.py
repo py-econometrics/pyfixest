@@ -199,6 +199,23 @@ class Fepois(Feols):
             if self._fe.ndim == 1:
                 self._fe = self._fe.reshape((self._N, 1))
 
+    def _compute_deviance(self, Y: np.ndarray, mu: np.ndarray):
+        """
+        Deviance is defined as twice the difference in log likelihood between the
+        saturated model and the model being fit.
+
+        deviance = 2 * (log_likelihood_saturated - log_likelihood_fitted)
+
+        See [1] chapter 5.6 for more details.
+        [1] Dobson, Annette J., and Adrian G. Barnett. An introduction to generalized linear models. Chapman and Hall/CRC, 2018.
+        """
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            deviance = np.float64(
+                2 * np.sum(np.where(Y == 0, 0, Y * np.log(Y / mu)) - (Y - mu))
+            )
+        return deviance
+
     def get_fit(self) -> None:
         """
         Fit a Poisson Regression Model via Iterated Weighted Least Squares (IWLS).
@@ -227,51 +244,32 @@ class Fepois(Feols):
             Demeaned dependent variable (from the last iteration of the IRLS
             algorithm).
         """
-        _Y = self._Y
-        _X = self._X
-        _fe = self._fe
-        _N = self._N
-        _convergence = self.convergence  # False
-        _maxiter = self.maxiter
-        _tol = self.tol
-        _fixef_tol = self._fixef_tol
-        _fixef_maxiter = self._fixef_maxiter
-        _solver = self._solver
-
-        def compute_deviance(_Y: np.ndarray, mu: np.ndarray):
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-                deviance = (
-                    2 * np.sum(np.where(_Y == 0, 0, _Y * np.log(_Y / mu)) - (_Y - mu))
-                ).flatten()
-            return deviance
-
         stop_iterating = False
         crit = 1
 
-        for i in range(_maxiter):
+        for i in range(self.maxiter):
             if stop_iterating:
-                _convergence = True
+                self.convergence = True
                 break
-            if i == _maxiter:
+            if i == self.maxiter:
                 raise NonConvergenceError(
                     f"""
-                    The IRLS algorithm did not converge with {_maxiter}
+                    The IRLS algorithm did not converge with {self.maxiter}
                     iterations. Try to increase the maximum number of iterations.
                     """
                 )
 
             if i == 0:
-                _mean = np.mean(_Y)
-                mu = (_Y + _mean) / 2
+                _mean = np.mean(self._Y)
+                mu = (self._Y + _mean) / 2
                 eta = np.log(mu)
-                Z = eta + _Y / mu - 1
+                Z = eta + self._Y / mu - 1
                 reg_Z = Z.copy()
-                last = compute_deviance(_Y, mu)
+                last = self._compute_deviance(self._Y, mu)
 
             else:
                 # update w and Z
-                Z = eta + _Y / mu - 1  # eq (8)
+                Z = eta + self._Y / mu - 1  # eq (8)
                 reg_Z = Z.copy()  # eq (9)
 
             # tighten HDFE tolerance - currently not possible with PyHDFE
@@ -279,23 +277,23 @@ class Fepois(Feols):
             #    inner_tol = inner_tol / 10
 
             # Step 1: weighted demeaning
-            ZX = np.concatenate([reg_Z, _X], axis=1)
+            ZX = np.concatenate([reg_Z, self._X], axis=1)
 
-            if _fe is not None:
+            if self._fe is not None:
                 # ZX_resid = algorithm.residualize(ZX, mu)
                 ZX_resid, success = demean(
                     x=ZX,
-                    flist=_fe.astype(np.uintp),
+                    flist=self._fe.astype(np.uintp),
                     weights=mu.flatten(),
-                    tol=_fixef_tol,
-                    maxiter=_fixef_maxiter,
+                    tol=self._fixef_tol,
+                    maxiter=self._fixef_maxiter,
                 )
                 if success is False:
                     raise ValueError("Demeaning failed after 100_000 iterations.")
             else:
                 ZX_resid = ZX
 
-            Z_resid = ZX_resid[:, 0].reshape((_N, 1))  # z_resid
+            Z_resid = ZX_resid[:, 0].reshape((self._N, 1))  # z_resid
             X_resid = ZX_resid[:, 1:]  # x_resid
 
             # Step 2: estimate WLS
@@ -305,7 +303,7 @@ class Fepois(Feols):
             XWX = WX.transpose() @ WX
             XWZ = WX.transpose() @ WZ
 
-            delta_new = solve_ols(XWX, XWZ, _solver).reshape(
+            delta_new = solve_ols(XWX, XWZ, self._solver).reshape(
                 (-1, 1)
             )  # eq (10), delta_new -> reg_z
             resid = Z_resid - X_resid @ delta_new
@@ -317,11 +315,11 @@ class Fepois(Feols):
 
             # same criterion as fixest
             # https://github.com/lrberge/fixest/blob/6b852fa277b947cea0bad8630986225ddb2d6f1b/R/ESTIMATION_FUNS.R#L2746
-            deviance = compute_deviance(_Y, mu)
+            deviance = self._compute_deviance(self._Y, mu)
             crit = np.abs(deviance - last) / (0.1 + np.abs(last))
-            last = deviance.copy()
+            last = deviance
 
-            stop_iterating = crit < _tol
+            stop_iterating = crit < self.tol
 
         self._beta_hat = delta_new.flatten()
         self._Y_hat_response = mu.flatten()
@@ -352,7 +350,7 @@ class Fepois(Feols):
         self._scores = self._u_hat[:, None] * self._X
         self._hessian = XWX
 
-        if _convergence:
+        if self.convergence:
             self._convergence = True
 
     def resid(self, type: str = "response") -> np.ndarray:

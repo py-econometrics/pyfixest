@@ -145,34 +145,23 @@ class Feglm(Feols, ABC):
         Estimation of Generalized Linear Models with High-Dimensional
         k-way fixed effects': https://arxiv.org/pdf/1707.01815
         """
-        _Y = self._Y
-        _X = self._X
-        _fe = self._fe
-        _N = self._N
-        _convergence = self.convergence  # False
-        _maxiter = self.maxiter
-        _tol = self.tol
-        _fixef_tol = self._fixef_tol
-        _fixef_maxiter = self._fixef_maxiter
-        _solver = self._solver
-
         # initialize
 
-        beta = np.zeros(_X.shape[1])
-        eta = np.zeros(_N)
+        beta = np.zeros(self._X.shape[1])
+        eta = np.zeros(self._N)
         mu = self._get_mu(theta=eta)
-        deviance = self._get_deviance(_Y.flatten(), mu)
+        deviance = self._get_deviance(self._Y.flatten(), mu)
         deviance_old = deviance.copy() + 1
 
-        for r in range(_maxiter):
+        for r in range(self.maxiter):
             if r == 0:
                 pass
             else:
                 converged = self._check_convergence(
                     crit=self._get_diff(deviance=deviance, last=deviance_old),
-                    tol=_tol,
+                    tol=self.tol,
                     r=r,
-                    maxiter=_maxiter,
+                    maxiter=self.maxiter,
                     model=self._method,
                 )
                 if converged:
@@ -184,19 +173,19 @@ class Feglm(Feols, ABC):
 
             # Step 2: _get v_tilde(r-1) and X_tilde(r-1) (eq. 3.2)
             W_tilde = self._update_W_tilde(W=W)
-            X_tilde = self._update_X_tilde(W_tilde=W_tilde, X=_X)
+            X_tilde = self._update_X_tilde(W_tilde=W_tilde, X=self._X)
             v_tilde = self._update_v_tilde(
-                y=_Y.flatten(), mu=mu, W_tilde=W_tilde.flatten(), detadmu=detadmu
+                y=self._Y.flatten(), mu=mu, W_tilde=W_tilde.flatten(), detadmu=detadmu
             )
 
             # Step 3 compute v_dotdot(r-1) and X_dotdot(r-1) - demeaning
             v_dotdot, X_dotdot = self.residualize(
                 v=v_tilde,
                 X=X_tilde,
-                flist=_fe,
+                flist=self._fe,
                 weights=W_tilde.flatten(),
-                tol=_fixef_tol,
-                maxiter=_fixef_maxiter,
+                tol=self._fixef_tol,
+                maxiter=self._fixef_maxiter,
             )
 
             # Step 4: compute (beta(r) - beta(r-1)) and check for convergence, _update beta(r-1) s(eq. 3.5)
@@ -209,7 +198,7 @@ class Feglm(Feols, ABC):
             deviance_old = deviance.copy()
 
             beta, eta, mu, deviance = self._update_eta_step_halfing(
-                Y=_Y,
+                Y=self._Y,
                 beta=beta,
                 eta=eta,
                 mu=mu,
@@ -245,7 +234,7 @@ class Feglm(Feols, ABC):
         self._scores_response = self._u_hat_response[:, None] * self._X
         self._scores_working = self._u_hat_working[:, None] * self._X
 
-        self._scores = self._get_score(y=_Y.flatten(), X=_X, mu=mu, eta=eta)
+        self._scores = self._get_score(y=self._Y.flatten(), X=self._X, mu=mu, eta=eta)
 
         self._u_hat = self._u_hat_working
         self._tZX = np.transpose(self._Z) @ self._X
@@ -255,7 +244,7 @@ class Feglm(Feols, ABC):
         self._hessian = X_dotdot.T @ X_dotdot
         self.deviance = deviance
 
-        if _convergence:
+        if self.convergence:
             self._convergence = True
 
     def _vcov_iid(self):
