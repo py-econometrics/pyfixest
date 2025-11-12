@@ -49,12 +49,15 @@ def test_ols_vs_gaussian_glm(fml, inference, dropna):
     check_absolute_diff(fit_ols._u_hat[0:5], fit_gaussian._u_hat[0:5], tol=1e-10)
     check_absolute_diff(fit_ols._scores[0, :], fit_gaussian._scores[0, :], tol=1e-10)
 
-    if inference != "iid":
+    if inference == "iid":
         # iid inference different: follows iid-glm; just the bread and not bread x sigma2
+        scaling_factor = fit_ols._vcov[0, 0] / fit_gaussian._vcov[0, 0]
+        # Check that all elements follow the same scaling
         check_absolute_diff(
-            fit_ols.se().xs("X1"), fit_gaussian.se().xs("X1"), tol=1e-10
+            fit_ols._vcov, scaling_factor * fit_gaussian._vcov, tol=1e-10
         )
-        check_absolute_diff(fit_ols._vcov[0, 0], fit_gaussian._vcov[0, 0], tol=1e-10)
+    else:
+        check_absolute_diff(fit_ols._vcov, fit_gaussian._vcov, tol=1e-10)
 
 
 @pytest.mark.skip("Fixed effects are not yet supported.")
