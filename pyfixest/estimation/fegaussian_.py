@@ -101,3 +101,12 @@ class Fegaussian(Feglm):
         self, y: np.ndarray, X: np.ndarray, mu: np.ndarray, eta: np.ndarray
     ) -> np.ndarray:
         return (y - mu)[:, None] * X
+
+    def _vcov_iid(self):
+        _u_hat = self._u_hat
+        _bread = self._bread
+        # Use df_t (degrees of freedom) for denominator, matching feols behavior
+        sigma2 = np.sum(_u_hat.flatten() ** 2) / self._df_t
+        _vcov = _bread * sigma2
+
+        return _vcov
