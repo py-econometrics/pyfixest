@@ -1,95 +1,141 @@
-<!-- a86255fd-e559-425e-82e2-e2ad35c50047 f5adc961-97fa-4a2f-b1f7-c67734af5cd0 -->
-# Add Fixed Effects Support to feglm (Gaussian Family)
+<!-- a86255fd-e559-425e-82e2-e2ad35c50047 460c8778-a2e6-429c-924f-1f88709080a0 -->
+# Extend Fixed Effects Support to feglm (Logit/Binomial Family)
 
-## Current State
+## Current State - Gaussian Implementation Complete
 
-The `Feglm` class currently raises `NotImplementedError` at line 99-100 when fixed effects are present. Additionally, `Feglm` hardcodes the numba demeaning backend instead of using the configurable backend system that `feols` uses.
+Fixed effects support for Gaussian GLMs is **fully working**:
 
-**Key differences from feols:**
+- ✅ Backend infrastructure in place (`demeaner_backend` parameter)
+- ✅ Proper variance calculation using `self._df_t`
+- ✅ All tests passing (30/30): internal, R comparison, and error handling
+- ✅ Results match R's `fixest::feglm(family=gaussian())` exactly
 
-- `Feglm` imports `demean` directly from `demean_.py` (line 11) - this is the numba backend
-- `Feglm` calls this hardcoded `demean` function in `residualize()` (line 317)
-- `Feols` uses a `demeaner_backend` parameter and selects the demean function from the `BACKENDS` dictionary
-- `Fepois` tries to pass `demeaner_backend` to `Feglm.__init__`, but `Feglm` doesn't accept it
+**Restriction in place** (line 102-103 in `feglm_.py`):
+
+```python
+if self._fe is not None and self._method != "feglm-gaussian":
+    raise NotImplementedError("Fixed effects are not yet supported for GLMs.")
+```
+
+## Logit Family Structure
+
+The `Felogit` class exists in `felogit_.py` and:
+
+- Inherits from `Feglm` (like `Fegaussian`)
+- Implements binomial family with logit link
+- Has `_method = "feglm-logit"`
+- Uses `_vcov_iid()` from `Feglm` (returns `self._bread`, no dispersion multiplier needed)
+- **Missing**: `demeaner_backend` parameter (not passed to parent)
+
+**Key difference from Gaussian**: Logit uses dispersion φ = 1.0, so no sigma² multiplier in variance calculation (already correct in base `Feglm._vcov_iid()`).
 
 ## Implementation Steps
 
-### 1. Update Feglm to Use Backend Infrastructure
+### 1. Update Felogit to Accept demeaner_backend Parameter
 
-Modify `pyfixest/estimation/feglm_.py`:
+Modify `pyfixest/estimation/felogit_.py`:
 
-**a) Update imports** (line 11):
+**a) Add import** (after line 8):
 
-- Remove: `from pyfixest.estimation.demean_ import demean`
-- Add: `from pyfixest.estimation.backends import BACKENDS`
-- Add: `from pyfixest.estimation.literals import DemeanerBackendOptions`
+```python
+from pyfixest.estimation.literals import DemeanerBackendOptions
+```
 
-**b) Add `demeaner_backend` parameter to `__init__`** (line 21):
+**b) Add parameter to `__init__`** (after line 35):
 
-- Add `demeaner_backend: DemeanerBackendOptions = "numba"` parameter
-- Store as `self._demeaner_backend = demeaner_backend`
-- Set `self._demean_func = BACKENDS[demeaner_backend]["demean"]` (similar to how `Feols` does it at line 323-327 of `feols_.py`)
+```python
+demeaner_backend: DemeanerBackendOptions = "numba",
+```
 
-**c) Update `residualize()` method** (line 317):
+**c) Pass to parent `super().__init__`** (after line 57):
 
-- Replace `demean(...)` with `self._demean_func(...)`
+```python
+demeaner_backend=demeaner_backend,
+```
 
-### 2. Remove Fixed Effects Restriction
+### 2. Update Fixed Effects Restriction in feglm_.py
 
-In `pyfixest/estimation/feglm_.py`:
+Modify line 102 in `pyfixest/estimation/feglm_.py`:
 
-- Delete lines 99-100 that raise `NotImplementedError` for fixed effects
+**Change from:**
 
-### 3. Update Fegaussian Constructor
+```python
+if self._fe is not None and self._method != "feglm-gaussian":
+```
 
-Modify `pyfixest/estimation/fegaussian_.py`:
+**To:**
 
-- Add `demeaner_backend: DemeanerBackendOptions = "numba"` parameter to `__init__` (around line 29)
-- Pass it to the parent `Feglm.__init__` call
+```python
+if self._fe is not None and self._method not in ["feglm-gaussian", "feglm-logit"]:
+```
 
-### 4. Test the Implementation
+This allows both Gaussian and Logit, while still blocking Probit.
 
-**a) Enable skipped test in `test_feols_feglm_internally.py`:**
+### 3. Add Tests for Logit with Fixed Effects
 
-- Remove the `@pytest.mark.skip` decorator on line 60
+**a) Update test formulas in `test_vs_fixest.py`:**
 
-**b) Add R comparison tests in `test_vs_fixest.py`:**
+Currently `glm_fmls_with_fe` is only used for Gaussian. Update the test to include logit:
 
-- Test formulas: `"Y ~ X1 | f1"`, `"Y ~ X1 | f1 + f2"`, `"Y ~ X1 + X2 | f2"`
-- Compare: coefficients, standard errors, residuals against R's `fixest::feglm(family="gaussian")`
+**Modify `test_glm_with_fe_vs_fixest`** (around line 901):
 
-### 5. Validation
+- Add `@pytest.mark.parametrize("family", ["gaussian", "logit"])`
+- Update R model creation to handle both families:
+  ```python
+  if family == "gaussian":
+      fit_r = fixest.feglm(ro.Formula(r_fml), data=data_r, family=stats.gaussian(), vcov=r_inference)
+  elif family == "logit":
+      fit_r = fixest.feglm(ro.Formula(r_fml), data=data_r, family=stats.binomial(link="logit"), vcov=r_inference)
+  ```
 
-Ensure the implementation correctly handles:
 
-- Backend selection (numba, rust, jax) works correctly
-- Single and multiple fixed effects
-- Proper weight handling in demeaning at each IRLS iteration
-- Convergence (should still converge in 1 iteration for Gaussian)
+**b) Update `test_errors.py`:**
+
+Modify `test_glm_errors` (around line 820):
+
+- Update to test that logit now allows fixed effects
+- Keep probit blocked
+
+### 4. Validation
+
+Run tests to ensure:
+
+- Logit with single FE: `Y ~ X1 | f1` ✓
+- Logit with multiple FE: `Y ~ X1 | f1 + f2` ✓
+- Logit with multiple covariates: `Y ~ X1 + X2 | f2` ✓
+- All inference types: `iid`, `hetero`, `CRV1` ✓
+- Results match R's `fixest::feglm(family=binomial(link="logit"))` ✓
+- IRLS converges properly with fixed effects
 
 ## Key Files to Modify
 
-- `pyfixest/estimation/feglm_.py` (add backend infrastructure, remove restriction)
-- `pyfixest/estimation/fegaussian_.py` (pass demeaner_backend parameter)
-- `tests/test_feols_feglm_internally.py` (enable skipped test)
-- `tests/test_vs_fixest.py` (add R comparison tests)
+- `pyfixest/estimation/felogit_.py` (add demeaner_backend parameter)
+- `pyfixest/estimation/feglm_.py` (update restriction to include logit)
+- `tests/test_vs_fixest.py` (extend tests to logit family)
+- `tests/test_errors.py` (update error test for logit)
 
 ## Expected Behavior
 
 After implementation:
 
-1. Users can specify `demeaner_backend` for `feglm`, just like with `feols`
-2. `pf.feglm(fml="Y ~ X1 | f1", family="gaussian", demeaner_backend="rust")` works with any backend
-3. Results match R's `fixest::feglm()` with Gaussian family
-4. For Gaussian family, effectively matches `feols()` results (with appropriate inference adjustments)
+1. `pf.feglm(fml="Y ~ X1 | f1", family="logit", demeaner_backend="rust")` works
+2. Results match R's `fixest::feglm(family=binomial(link="logit"))`
+3. IRLS with fixed effects converges properly
+4. Variance calculation uses `self._bread` (no dispersion multiplier, φ=1)
+5. Probit remains blocked (for now)
+
+## Notes
+
+- Logit doesn't need a custom `_vcov_iid()` method (unlike Gaussian) because dispersion φ = 1.0
+- The IRLS algorithm in `Feglm.get_fit()` already handles demeaning at each iteration via `residualize()`
+- Main differences from Gaussian: link function, variance function, and convergence behavior
+- Separation checks are already in place and conditional on fixed effects
 
 ### To-dos
 
-- [ ] Update imports in feglm_.py to use BACKENDS and DemeanerBackendOptions
-- [ ] Add demeaner_backend parameter to Feglm.__init__ and set self._demean_func
-- [ ] Update residualize() method to use self._demean_func instead of hardcoded demean
-- [ ] Remove NotImplementedError for fixed effects in feglm_.py
-- [ ] Add demeaner_backend parameter to Fegaussian.__init__ and pass to parent
-- [ ] Remove @pytest.mark.skip decorator from test in test_feols_feglm_internally.py
-- [ ] Add R comparison tests to test_vs_fixest.py
-- [ ] Run tests and validate against R fixest results
+- [ ] Add DemeanerBackendOptions import to felogit_.py
+- [ ] Add demeaner_backend parameter to Felogit.__init__ and pass to parent
+- [ ] Update feglm_.py restriction to allow both gaussian and logit families
+- [ ] Extend test_glm_with_fe_vs_fixest to test both gaussian and logit families
+- [ ] Update test_glm_errors to allow logit with fixed effects
+- [ ] Run tests and validate logit with FE matches R fixest results

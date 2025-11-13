@@ -9,3 +9,4 @@ When running unit tests, always:
 When running unit tests, never:
 
 * Alter the tolerance to get the test to pass.  Use a default tolerance of 1e-06 when comparing two floats.
+* Alter the test to make them easier to pass, unless explicitly told so.
