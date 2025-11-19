@@ -61,7 +61,7 @@ class Fepois(Feols):
         Defaults to "scipy.linalg.solve".
     demeaner_backend: DemeanerBackendOptions.
         The backend used for demeaning.
-    fixef_tol: float, default = 1e-08.
+    fixef_tol: float, default = 1e-06.
         Tolerance level for the convergence of the demeaning algorithm.
     context : int or Mapping[str, Any]
         A dictionary containing additional context variables to be used by

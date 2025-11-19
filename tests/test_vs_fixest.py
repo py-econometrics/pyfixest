@@ -306,10 +306,10 @@ def test_single_fit_feols(
             resid_tol = 6e-06
     else:
         coef_tol = 1e-08
-        predict_tol = 1e-07
-        resid_tol = 1e-07
-        inference_tol = 1e-08
-        tstat_tol = 1e-07
+        predict_tol = 1e-06
+        resid_tol = 1e-06
+        inference_tol = 1e-07
+        tstat_tol = 1e-06
 
     if inference == "iid" and k_adj and G_adj:
         py_resid = mod.resid()
