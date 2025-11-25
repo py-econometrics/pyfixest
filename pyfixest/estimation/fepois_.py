@@ -339,13 +339,19 @@ class Fepois(Feols):
         self._u_hat_working = resid
         self._u_hat_response = self._Y - np.exp(eta)
 
-        y = self._Y.flatten()      
+        y = self._Y.flatten()
         self._y_hat_null = np.full_like(y, np.mean(y), dtype=float)
-        
-        self._loglik = np.sum(y * np.log(self._Y_hat_response) - self._Y_hat_response - gammaln(y + 1))
-        self._loglik_null = np.sum(y * np.log(self._y_hat_null) - self._y_hat_null - gammaln(y + 1))
+
+        self._loglik = np.sum(
+            y * np.log(self._Y_hat_response) - self._Y_hat_response - gammaln(y + 1)
+        )
+        self._loglik_null = np.sum(
+            y * np.log(self._y_hat_null) - self._y_hat_null - gammaln(y + 1)
+        )
         self._pseudo_r2 = 1 - (self._loglik / self._loglik_null)
-        self._pearson_chi2 = np.sum((y - self._Y_hat_response) ** 2 / self._Y_hat_response)
+        self._pearson_chi2 = np.sum(
+            (y - self._Y_hat_response) ** 2 / self._Y_hat_response
+        )
 
         self._Y = WZ
         self._X = WX
