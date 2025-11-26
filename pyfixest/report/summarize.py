@@ -1,3 +1,4 @@
+import math
 import re
 import warnings
 from collections import Counter
@@ -26,6 +27,8 @@ def etable(
     type: str = "gt",
     signif_code: Optional[list] = None,
     coef_fmt: str = "b \n (se)",
+    model_stats: Optional[list[str]] = None,
+    model_stats_labels: Optional[dict[str, str]] = None,
     custom_stats: Optional[dict] = None,
     custom_model_stats: Optional[dict] = None,
     keep: Optional[Union[list, str]] = None,
@@ -34,7 +37,7 @@ def etable(
     labels: Optional[dict] = None,
     cat_template: Optional[str] = None,
     show_fe: Optional[bool] = True,
-    show_se_type: Optional[bool] = True,
+    show_se_type: Optional[bool] = True,  # legacy (ignored when model_stats provided)
     felabels: Optional[dict] = None,
     notes: str = "",
     model_heads: Optional[list] = None,
@@ -61,6 +64,10 @@ def etable(
         The format of the coefficient (b), standard error (se), t-stats (t), and
         p-value (p). Default is `"b \n (se)"`.
         Spaces ` `, parentheses `()`, brackets `[]`, newlines `\n` are supported.
+    model_stats: Optional[list[str]] = None,
+        A list of model statistics to include in the table which will be displayed in the determined order. Names must match the model's respective attribute names (without leading "_") such as "r2", "adj_r2", "N", ...
+    model_stats_labels: Optional[dict[str, str]] = None,
+        A dictionary mapping model statistic names to display labels. If None, the default names are used.
     custom_stats: dict, optional
         A dictionary of custom statistics that can be used in the coef_fmt string to be displayed
         in the coefficuent cells analogously to "b", "se" etc. The keys are the names of the custom
@@ -225,116 +232,138 @@ def etable(
                 "lists in custom_model_stats values must have the same length as models"
             )
 
-    dep_var_list = []
-    nobs_list = []
+    # Collect info needed for coefficients & fixed effects
+    dep_var_list: list[str] = []
     fixef_list: list[str] = []
-    n_coefs = []
-    se_type_list = []
-    r2_list = []
-    adj_r2_list = []
-    r2_within_list = []
 
-    # Define code for R2, interaction & line break depending on output type
+    # Output-type dependent symbols
     if type in ["gt", "html"]:
         interactionSymbol = " &#215; "
-        R2code = "R<sup>2</sup>"
-        adj_R2_code = "Adj. R<sup>2</sup>"
-        R2_within_code = "R<sup>2</sup> Within"
         lbcode = "<br>"
     elif type == "tex":
         interactionSymbol = " $\\times$ "
-        R2code = "$R^2$"
-        adj_R2_code = "Adj. $R^2$"
-        R2_within_code = "$R^2$ Within"
         lbcode = r"\\"
     else:
         interactionSymbol = " x "
-        R2code = "R2"
-        adj_R2_code = "Adj. R2"
-        R2_within_code = "R2 Within"
         lbcode = "\n"
 
+    # Pre-scan models (only once)
     for model in models:
         dep_var_list.append(model._depvar)
-        n_coefs.append(len(model._coefnames))
-
-        _nobs_kwargs = kwargs.copy()
-        _nobs_kwargs["integer"] = True
-        _nobs_kwargs["scientific_notation"] = False
-        nobs_list.append(_number_formatter(model._N, **_nobs_kwargs))
-
-        if not np.isnan(model._r2):
-            r2_list.append(_number_formatter(model._r2, **kwargs))
-        else:
-            r2_list.append("-")
-
-        if not np.isnan(model._adj_r2):
-            adj_r2_list.append(_number_formatter(model._adj_r2, **kwargs))
-        else:
-            adj_r2_list.append("-")
-
-        if not np.isnan(model._r2_within):
-            r2_within_list.append(_number_formatter(model._r2_within, **kwargs))
-        else:
-            r2_within_list.append("-")
-
-        if model._vcov_type == "CRV":
-            se_type_list.append("by: " + "+".join(model._clustervar))
-        else:
-            se_type_list.append(model._vcov_type)
-
         if model._fixef is not None and model._fixef != "0":
             fixef_list += model._fixef.split("+")
 
-    # find all fixef variables when the user does not want to hide the FE rows
+    # Fixed effects set
     if show_fe:
-        # drop "" from fixef_list
         fixef_list = [x for x in fixef_list if x]
-        # keep only unique values
         fixef_list = list(set(fixef_list))
         n_fixef = len(fixef_list)
     else:
         fixef_list = []
         n_fixef = 0
 
-    # First create a dataframe for the model stats such as R2, nobs, etc.
-    model_stats_df = pd.DataFrame()
-    if custom_model_stats is not None:
-        for stat, values in custom_model_stats.items():
-            model_stats_df[stat] = values
-    model_stats_df["Observations"] = nobs_list
-    if show_se_type:
-        model_stats_df["S.E. type"] = se_type_list
-    model_stats_df[R2code] = r2_list
-    n_model_stats = model_stats_df.shape[1]
-    if any(x != "-" for x in r2_within_list):
-        model_stats_df[R2_within_code] = r2_within_list
-    else:
-        model_stats_df[adj_R2_code] = adj_r2_list
-    # Transpose
-    model_stats_df = model_stats_df.T
+    # Determine default model stats (legacy emulation) if user did not provide any
+    if model_stats is None:
+        any_within = any(
+            hasattr(m, "_r2_within")
+            and not math.isnan(getattr(m, "_r2_within", float("nan")))
+            for m in models
+        )
+        # Legacy order
+        model_stats = ["N"]
+        if show_se_type:
+            model_stats.append("se_type")
+        model_stats += ["r2", "r2_within" if any_within else "adj_r2"]
 
-    # Create a dataframe for the Fixed Effects markers
-    fe_df = pd.DataFrame()
-    # when at least one model has a fixed effect & the user wants to show them
-    if fixef_list:
-        for fixef in fixef_list:
-            # check if not empty string
-            if fixef:
-                for i, model in enumerate(models):
-                    if (
-                        model._fixef is not None
-                        and fixef in model._fixef.split("+")
-                        and not model._use_mundlak
-                    ):
-                        fe_df.loc[i, fixef] = "x"
-                    else:
-                        fe_df.loc[i, fixef] = "-"
-        # Sort by model
-        fe_df.sort_index(inplace=True)
-        # Transpose
-        fe_df = fe_df.T
+    assert isinstance(model_stats, (list, tuple)), "model_stats must be list-like"
+    model_stats = list(model_stats)
+    assert all(isinstance(s, str) for s in model_stats), (
+        "model_stats entries must be strings"
+    )
+    # Assert that there are no duplicates in model_stats
+    assert len(model_stats) == len(set(model_stats)), (
+        "model_stats contains duplicate entries"
+    )
+
+    # Default labels by output type
+    def _default_label(stat: str) -> str:
+        if type in ("gt", "html"):
+            mapping = {
+                "N": "Observations",
+                "se_type": "S.E. type",
+                "r2": "R<sup>2</sup>",
+                "adj_r2": "Adj. R<sup>2</sup>",
+                "r2_within": "R<sup>2</sup> Within",
+            }
+        elif type == "tex":
+            mapping = {
+                "N": "Observations",
+                "se_type": "S.E. type",
+                "r2": "$R^2$",
+                "adj_r2": "Adj. $R^2$",
+                "r2_within": "$R^2$ Within",
+            }
+        else:
+            mapping = {
+                "N": "Observations",
+                "se_type": "S.E. type",
+                "r2": "R2",
+                "adj_r2": "Adj. R2",
+                "r2_within": "R2 Within",
+            }
+        return mapping.get(stat, stat)
+
+    model_stats_rows: dict[str, list[str]] = {}
+    for stat in model_stats:
+        values = [_extract(m, stat) for m in models]
+        label = _default_label(stat)
+        if model_stats_labels and stat in model_stats_labels:
+            label = model_stats_labels[stat]
+        model_stats_rows[label] = values
+
+    # Build custom model stats first (if any)
+    if custom_model_stats is not None and len(custom_model_stats) > 0:
+        # Values already validated for correct length earlier
+        custom_df = pd.DataFrame.from_dict(custom_model_stats, orient="index")
     else:
+        custom_df = pd.DataFrame()
+
+    # Builtin / attribute stats
+    if model_stats_rows:
+        builtin_df = pd.DataFrame.from_dict(model_stats_rows, orient="index")
+    else:
+        builtin_df = pd.DataFrame()
+
+    # Combine (custom first)
+    if not custom_df.empty and not builtin_df.empty:
+        model_stats_df = pd.concat([custom_df, builtin_df], axis=0)
+    elif not custom_df.empty:
+        model_stats_df = custom_df
+    else:
+        model_stats_df = builtin_df
+
+    # Ensure index name consistency
+    if model_stats_df.index.name is None:
+        model_stats_df.index.name = None
+
+    n_model_stats = model_stats_df.shape[0]
+
+    # Create a dataframe for the Fixed Effects markers (fixed implementation)
+    if show_fe and fixef_list:
+        fe_rows = {}
+        for fixef in fixef_list:
+            row = []
+            for model in models:
+                has = (
+                    model._fixef is not None
+                    and fixef in model._fixef.split("+")
+                    and not model._use_mundlak
+                )
+                row.append("x" if has else "-")
+            fe_rows[fixef] = row
+        fe_df = pd.DataFrame.from_dict(fe_rows, orient="index")
+    else:
+        fe_df = pd.DataFrame()
         show_fe = False
 
     # Finally, collect & format estimated coefficients and standard errors etc.
@@ -446,15 +475,22 @@ def etable(
             felabels = dict()
         if labels is None:
             labels = dict()
-        # When the user provides a dictionary for fixed effects, then use it
-        # When a corresponsing variable is not in the felabel dictionary, then use the labels dictionary
-        # When in neither then just use the original variable name
         fe_index = fe_df.index.to_series()
         fe_index = fe_index.apply(lambda x: felabels.get(x, labels.get(x, x)))
         fe_df.set_index(fe_index, inplace=True)
 
-    model_stats_df.columns = res.columns
-    if show_fe:
+    # Ensure model_stats_df columns align after coefficient construction:
+    # Allow user to pass model_stats = [] (no model stats displayed).
+    # In that case model_stats_df is (0, 0) and assigning columns would raise a length mismatch.
+    if model_stats_df.shape[1] == 0:
+        # Create an empty frame with the correct columns so later concatenation works.
+        model_stats_df = pd.DataFrame(
+            index=pd.Index([], name=res.index.name), columns=res.columns
+        )
+    else:
+        model_stats_df.columns = res.columns
+    # Also align fixed effects dataframe columns
+    if show_fe and not fe_df.empty:
         fe_df.columns = res.columns
 
     depvars = pd.DataFrame({"depvar": dep_var_list}).T
@@ -837,6 +873,41 @@ def _number_formatter(x: float, **kwargs) -> str:
     _int, _float = str(x_str).split(".")
     _float = _float.ljust(digits, "0")
     return _int if digits == 0 else f"{_int}.{_float}"
+
+
+def _extract(model, key: str, **kwargs):
+    """
+    Extract the value of a model statistics from a model.
+
+    Parameters
+    ----------
+    model: Any
+        The model from which to extract the value.
+    key: str
+        The name of the statistic to extract. The method adds _ to the key and calls getattr on the model.
+
+    Returns
+    -------
+    value: Any
+        The extracted and formatted value.
+    """
+    if key == "se_type":
+        if getattr(model, "_vcov_type", "") == "CRV":
+            return "by: " + "+".join(getattr(model, "_clustervar", []))
+        return getattr(model, "_vcov_type", None)
+    attr_name = f"_{key}"
+    val = getattr(model, attr_name, None)
+    if val is None:
+        return "-"
+    if isinstance(val, (int, np.integer)):
+        return _number_formatter(float(val), integer=True, **kwargs)
+    if isinstance(val, (float, np.floating)):
+        if math.isnan(val):
+            return "-"
+        return _number_formatter(float(val), **kwargs)
+    if isinstance(val, bool):
+        return str(val)
+    return str(val)
 
 
 def _relabel_index(index, labels=None, stats_labels=None):
