@@ -87,7 +87,7 @@ def test_demean_model_no_fixed_effects(benchmark, demean_func):
         lookup_demeaned_data=lookup_dict,
         na_index_str="test",
         fixef_tol=1e-6,
-        fixef_maxiter=100_000,
+        fixef_maxiter=10_000,
         demean_func=demean_func,
     )
 
@@ -125,7 +125,7 @@ def test_demean_model_with_fixed_effects(benchmark, demean_func):
         lookup_demeaned_data=lookup_dict,
         na_index_str="test",
         fixef_tol=1e-6,
-        fixef_maxiter=100_000,
+        fixef_maxiter=10_000,
         demean_func=demean_func,
     )
 
@@ -170,7 +170,7 @@ def test_demean_model_with_weights(benchmark, demean_func):
         lookup_demeaned_data=lookup_dict,
         na_index_str="test",
         fixef_tol=1e-6,
-        fixef_maxiter=100_000,
+        fixef_maxiter=10_000,
         demean_func=demean_func,
     )
 
@@ -183,7 +183,7 @@ def test_demean_model_with_weights(benchmark, demean_func):
         lookup_demeaned_data={},
         na_index_str="test2",
         fixef_tol=1e-6,
-        fixef_maxiter=100_000,
+        fixef_maxiter=10_000,
         demean_func=demean_func,
     )
 
@@ -217,7 +217,7 @@ def test_demean_model_caching(benchmark, demean_func):
         lookup_demeaned_data=lookup_dict,
         na_index_str="test",
         fixef_tol=1e-6,
-        fixef_maxiter=100_000,
+        fixef_maxiter=10_000,
         demean_func=demean_func,
     )
 
@@ -231,7 +231,7 @@ def test_demean_model_caching(benchmark, demean_func):
         lookup_demeaned_data=lookup_dict,
         na_index_str="test",
         fixef_tol=1e-6,
-        fixef_maxiter=100_000,
+        fixef_maxiter=10_000,
         demean_func=demean_func,
     )
 
@@ -251,7 +251,7 @@ def test_demean_model_caching(benchmark, demean_func):
         lookup_demeaned_data=lookup_dict,
         na_index_str="test",
         fixef_tol=1e-6,
-        fixef_maxiter=100_000,
+        fixef_maxiter=10_000,
         demean_func=demean_func,
     )
 
