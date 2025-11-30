@@ -300,14 +300,14 @@ window.Quarto = {
 
 
 <p>PyFixest now experimentally supports quantile regression!</p>
-<div id="4cbd9dcf" class="cell" data-execution_count="1">
+<div id="e67830a1" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>load_ext autoreload</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> pf.get_data()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 
-            <div id="OQB25c"></div>
+            <div id="C33yOc"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -331,9 +331,9 @@ window.Quarto = {
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("OQB25c").appendChild(div);
+                        document.getElementById("C33yOc").appendChild(div);
                     };
-                    var e = document.getElementById("OQB25c");
+                    var e = document.getElementById("C33yOc");
                     e.appendChild(script);
                 })()
             </script>
@@ -341,7 +341,7 @@ window.Quarto = {
 </div>
 <div class="cell-output cell-output-display">
 
-            <div id="ycsrFA"></div>
+            <div id="lcjPMW"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -365,9 +365,9 @@ window.Quarto = {
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("ycsrFA").appendChild(div);
+                        document.getElementById("lcjPMW").appendChild(div);
                     };
-                    var e = document.getElementById("ycsrFA");
+                    var e = document.getElementById("lcjPMW");
                     e.appendChild(script);
                 })()
             </script>
@@ -378,7 +378,7 @@ window.Quarto = {
 <h2 class="anchored" data-anchor-id="basic-example">Basic Example</h2>
 <p>Just as in <code>statsmodels</code>, the function that runs a quantile regression is <code>quantreg()</code>.</p>
 <p>Below, we loop over 10 different quantiles.</p>
-<div id="7e0fbed3" class="cell" data-execution_count="2">
+<div id="adb64dd5" class="cell" data-execution_count="2">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="op">%%</span>capture</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>fits <span class="op">=</span> pf.quantreg(</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  fml <span class="op">=</span> <span class="st">"Y~X1 + X2"</span>,</span>
@@ -387,7 +387,7 @@ window.Quarto = {
 <span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>We can inspect the quantile regression results using the dedicated <code>qplot()</code> function.</p>
-<div id="7af9d134" class="cell" data-execution_count="3">
+<div id="9bac659e" class="cell" data-execution_count="3">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>pf.qplot(fits, nrow <span class="op">=</span> <span class="dv">2</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="3">
 <pre><code>(&lt;Figure size 960x576 with 4 Axes&gt;,
@@ -411,7 +411,7 @@ window.Quarto = {
 <p>By default, <code>pf.quantreg</code> uses an interior-point solver as in <a href="http://www.econ.uiuc.edu/~roger/research/sparse/fn3.pdf">Koenker and Ng (2004)</a> (<code>methd = "fn"</code>). This is different to e.g.&nbsp;<code>statsmodels</code>, which implements an iterated weighted least squares solver.</p>
 <p>For big data sets with many observations, it is often sensible to use an interior-point solver with pre-processing (as in <a href="https://experts.illinois.edu/en/publications/the-gaussian-hare-and-the-laplacian-tortoise-computability-of-squ">Portnoy and Koenker (1997)</a>, see <a href="https://arxiv.org/abs/1909.05782">Chernozhukov et al (2019)</a> for details), which can speed up the estimation time significantly. Because the pre-processing step requires taking a random sample, the method assumes that observations are independent. Additionally, for the purpose of reproducibility, it is advisable to set a seed.</p>
 <p>You can access the “preprocessing frisch-newton” algorithm by setting the <code>method</code> argument to <code>"pfn"</code>:</p>
-<div id="36650c4c" class="cell" data-execution_count="4">
+<div id="c4ab1129" class="cell" data-execution_count="4">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="op">%%</span>capture</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>fit_fn <span class="op">=</span> pf.quantreg(</span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  fml <span class="op">=</span> <span class="st">"Y ~ X1"</span>,</span>
@@ -431,7 +431,7 @@ window.Quarto = {
 <section id="quantile-regression-process" class="level2">
 <h2 class="anchored" data-anchor-id="quantile-regression-process">Quantile Regression Process</h2>
 <p>Instead of running multiple independent quantile regression via a for-loop, the literature on quantile regression has developed multiple algorithms to speed up the “quantile regression process”. Two such algorithms are described in detail in Chernozhukov, Fernandez-Val and Melly (2019) and are implemented in PyFixest. They can be accessed via the <code>multi_method</code> argument, and both can significantly speed up estimation time of the full quantile regression process.</p>
-<div id="87d15919" class="cell" data-execution_count="5">
+<div id="145837ed" class="cell" data-execution_count="5">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>fml <span class="op">=</span> <span class="st">"Y~X1"</span></span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>method <span class="op">=</span> <span class="st">"pfn"</span></span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>seed <span class="op">=</span> <span class="dv">929</span></span>
@@ -469,55 +469,55 @@ window.Quarto = {
   warnings.warn(</code></pre>
 </div>
 <div class="cell-output cell-output-display" data-execution_count="5">
-<div id="egfponqlrx" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<div id="deaeeyujgo" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
 <style>
-#egfponqlrx table {
+#deaeeyujgo table {
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
           -webkit-font-smoothing: antialiased;
           -moz-osx-font-smoothing: grayscale;
         }
 
-#egfponqlrx thead, tbody, tfoot, tr, td, th { border-style: none; }
+#deaeeyujgo thead, tbody, tfoot, tr, td, th { border-style: none; }
  tr { background-color: transparent; }
-#egfponqlrx p { margin: 0; padding: 0; }
- #egfponqlrx .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: solid; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
- #egfponqlrx .gt_caption { padding-top: 4px; padding-bottom: 4px; }
- #egfponqlrx .gt_title { color: #333333; font-size: 125%; font-weight: initial; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
- #egfponqlrx .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 3px; padding-bottom: 5px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
- #egfponqlrx .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
- #egfponqlrx .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
- #egfponqlrx .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
- #egfponqlrx .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 4px; padding-bottom: 5px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
- #egfponqlrx .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
- #egfponqlrx .gt_column_spanner_outer:first-child { padding-left: 0; }
- #egfponqlrx .gt_column_spanner_outer:last-child { padding-right: 0; }
- #egfponqlrx .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; vertical-align: bottom; padding-top: 4px; padding-bottom: 4px; overflow-x: hidden; display: inline-block; width: 100%; }
- #egfponqlrx .gt_spanner_row { border-bottom-style: hidden; }
- #egfponqlrx .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
- #egfponqlrx .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; vertical-align: middle; }
- #egfponqlrx .gt_from_md> :first-child { margin-top: 0; }
- #egfponqlrx .gt_from_md> :last-child { margin-bottom: 0; }
- #egfponqlrx .gt_row { padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
- #egfponqlrx .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
- #egfponqlrx .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
- #egfponqlrx .gt_row_group_first td { border-top-width: 0.5px; }
- #egfponqlrx .gt_row_group_first th { border-top-width: 0.5px; }
- #egfponqlrx .gt_striped { color: #333333; background-color: #F4F4F4; }
- #egfponqlrx .gt_table_body { border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
- #egfponqlrx .gt_grand_summary_row { color: #333333; background-color: #FFFFFF; text-transform: inherit; padding-top: 8px; padding-bottom: 8px; padding-left: 5px; padding-right: 5px; }
- #egfponqlrx .gt_first_grand_summary_row_bottom { border-top-style: double; border-top-width: 6px; border-top-color: #D3D3D3; }
- #egfponqlrx .gt_last_grand_summary_row_top { border-bottom-style: double; border-bottom-width: 6px; border-bottom-color: #D3D3D3; }
- #egfponqlrx .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
- #egfponqlrx .gt_sourcenote { font-size: 90%; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
- #egfponqlrx .gt_left { text-align: left; }
- #egfponqlrx .gt_center { text-align: center; }
- #egfponqlrx .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
- #egfponqlrx .gt_font_normal { font-weight: normal; }
- #egfponqlrx .gt_font_bold { font-weight: bold; }
- #egfponqlrx .gt_font_italic { font-style: italic; }
- #egfponqlrx .gt_super { font-size: 65%; }
- #egfponqlrx .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
- #egfponqlrx .gt_asterisk { font-size: 100%; vertical-align: 0; }
+#deaeeyujgo p { margin: 0; padding: 0; }
+ #deaeeyujgo .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: solid; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
+ #deaeeyujgo .gt_caption { padding-top: 4px; padding-bottom: 4px; }
+ #deaeeyujgo .gt_title { color: #333333; font-size: 125%; font-weight: initial; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
+ #deaeeyujgo .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 3px; padding-bottom: 5px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
+ #deaeeyujgo .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #deaeeyujgo .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
+ #deaeeyujgo .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #deaeeyujgo .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 4px; padding-bottom: 5px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
+ #deaeeyujgo .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
+ #deaeeyujgo .gt_column_spanner_outer:first-child { padding-left: 0; }
+ #deaeeyujgo .gt_column_spanner_outer:last-child { padding-right: 0; }
+ #deaeeyujgo .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; vertical-align: bottom; padding-top: 4px; padding-bottom: 4px; overflow-x: hidden; display: inline-block; width: 100%; }
+ #deaeeyujgo .gt_spanner_row { border-bottom-style: hidden; }
+ #deaeeyujgo .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
+ #deaeeyujgo .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; vertical-align: middle; }
+ #deaeeyujgo .gt_from_md> :first-child { margin-top: 0; }
+ #deaeeyujgo .gt_from_md> :last-child { margin-bottom: 0; }
+ #deaeeyujgo .gt_row { padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
+ #deaeeyujgo .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
+ #deaeeyujgo .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
+ #deaeeyujgo .gt_row_group_first td { border-top-width: 0.5px; }
+ #deaeeyujgo .gt_row_group_first th { border-top-width: 0.5px; }
+ #deaeeyujgo .gt_striped { color: #333333; background-color: #F4F4F4; }
+ #deaeeyujgo .gt_table_body { border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
+ #deaeeyujgo .gt_grand_summary_row { color: #333333; background-color: #FFFFFF; text-transform: inherit; padding-top: 8px; padding-bottom: 8px; padding-left: 5px; padding-right: 5px; }
+ #deaeeyujgo .gt_first_grand_summary_row_bottom { border-top-style: double; border-top-width: 6px; border-top-color: #D3D3D3; }
+ #deaeeyujgo .gt_last_grand_summary_row_top { border-bottom-style: double; border-bottom-width: 6px; border-bottom-color: #D3D3D3; }
+ #deaeeyujgo .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
+ #deaeeyujgo .gt_sourcenote { font-size: 90%; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
+ #deaeeyujgo .gt_left { text-align: left; }
+ #deaeeyujgo .gt_center { text-align: center; }
+ #deaeeyujgo .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
+ #deaeeyujgo .gt_font_normal { font-weight: normal; }
+ #deaeeyujgo .gt_font_bold { font-weight: bold; }
+ #deaeeyujgo .gt_font_italic { font-style: italic; }
+ #deaeeyujgo .gt_super { font-size: 65%; }
+ #deaeeyujgo .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
+ #deaeeyujgo .gt_asterisk { font-size: 100%; vertical-align: 0; }
  
 </style>
 <table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
@@ -618,7 +618,7 @@ Coefficient
 </div>
 <p>Note that the first method <code>cfm1</code> is exactly identical to running separate regressions per quantile, while the second method <code>cfm2</code> is only <strong>asymptotically</strong> identical.</p>
 <p>You can combine different estimation <code>method</code>’s with different <code>multi_methods</code>:</p>
-<div id="e789916d" class="cell" data-execution_count="6">
+<div id="20cd2148" class="cell" data-execution_count="6">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>fit_multi2a <span class="op">=</span> pf.quantreg(</span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  fml <span class="op">=</span> <span class="st">"Y~X1"</span>,</span>
 <span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  data <span class="op">=</span> data,</span>
@@ -651,55 +651,55 @@ Coefficient
   warnings.warn(</code></pre>
 </div>
 <div class="cell-output cell-output-display" data-execution_count="6">
-<div id="jtkvursati" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<div id="pftgsydwwm" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
 <style>
-#jtkvursati table {
+#pftgsydwwm table {
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
           -webkit-font-smoothing: antialiased;
           -moz-osx-font-smoothing: grayscale;
         }
 
-#jtkvursati thead, tbody, tfoot, tr, td, th { border-style: none; }
+#pftgsydwwm thead, tbody, tfoot, tr, td, th { border-style: none; }
  tr { background-color: transparent; }
-#jtkvursati p { margin: 0; padding: 0; }
- #jtkvursati .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: solid; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
- #jtkvursati .gt_caption { padding-top: 4px; padding-bottom: 4px; }
- #jtkvursati .gt_title { color: #333333; font-size: 125%; font-weight: initial; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
- #jtkvursati .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 3px; padding-bottom: 5px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
- #jtkvursati .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
- #jtkvursati .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
- #jtkvursati .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
- #jtkvursati .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 4px; padding-bottom: 5px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
- #jtkvursati .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
- #jtkvursati .gt_column_spanner_outer:first-child { padding-left: 0; }
- #jtkvursati .gt_column_spanner_outer:last-child { padding-right: 0; }
- #jtkvursati .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; vertical-align: bottom; padding-top: 4px; padding-bottom: 4px; overflow-x: hidden; display: inline-block; width: 100%; }
- #jtkvursati .gt_spanner_row { border-bottom-style: hidden; }
- #jtkvursati .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
- #jtkvursati .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; vertical-align: middle; }
- #jtkvursati .gt_from_md> :first-child { margin-top: 0; }
- #jtkvursati .gt_from_md> :last-child { margin-bottom: 0; }
- #jtkvursati .gt_row { padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
- #jtkvursati .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
- #jtkvursati .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
- #jtkvursati .gt_row_group_first td { border-top-width: 0.5px; }
- #jtkvursati .gt_row_group_first th { border-top-width: 0.5px; }
- #jtkvursati .gt_striped { color: #333333; background-color: #F4F4F4; }
- #jtkvursati .gt_table_body { border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
- #jtkvursati .gt_grand_summary_row { color: #333333; background-color: #FFFFFF; text-transform: inherit; padding-top: 8px; padding-bottom: 8px; padding-left: 5px; padding-right: 5px; }
- #jtkvursati .gt_first_grand_summary_row_bottom { border-top-style: double; border-top-width: 6px; border-top-color: #D3D3D3; }
- #jtkvursati .gt_last_grand_summary_row_top { border-bottom-style: double; border-bottom-width: 6px; border-bottom-color: #D3D3D3; }
- #jtkvursati .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
- #jtkvursati .gt_sourcenote { font-size: 90%; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
- #jtkvursati .gt_left { text-align: left; }
- #jtkvursati .gt_center { text-align: center; }
- #jtkvursati .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
- #jtkvursati .gt_font_normal { font-weight: normal; }
- #jtkvursati .gt_font_bold { font-weight: bold; }
- #jtkvursati .gt_font_italic { font-style: italic; }
- #jtkvursati .gt_super { font-size: 65%; }
- #jtkvursati .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
- #jtkvursati .gt_asterisk { font-size: 100%; vertical-align: 0; }
+#pftgsydwwm p { margin: 0; padding: 0; }
+ #pftgsydwwm .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: solid; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
+ #pftgsydwwm .gt_caption { padding-top: 4px; padding-bottom: 4px; }
+ #pftgsydwwm .gt_title { color: #333333; font-size: 125%; font-weight: initial; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
+ #pftgsydwwm .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 3px; padding-bottom: 5px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
+ #pftgsydwwm .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #pftgsydwwm .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
+ #pftgsydwwm .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #pftgsydwwm .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 4px; padding-bottom: 5px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
+ #pftgsydwwm .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
+ #pftgsydwwm .gt_column_spanner_outer:first-child { padding-left: 0; }
+ #pftgsydwwm .gt_column_spanner_outer:last-child { padding-right: 0; }
+ #pftgsydwwm .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; vertical-align: bottom; padding-top: 4px; padding-bottom: 4px; overflow-x: hidden; display: inline-block; width: 100%; }
+ #pftgsydwwm .gt_spanner_row { border-bottom-style: hidden; }
+ #pftgsydwwm .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
+ #pftgsydwwm .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; vertical-align: middle; }
+ #pftgsydwwm .gt_from_md> :first-child { margin-top: 0; }
+ #pftgsydwwm .gt_from_md> :last-child { margin-bottom: 0; }
+ #pftgsydwwm .gt_row { padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
+ #pftgsydwwm .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
+ #pftgsydwwm .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
+ #pftgsydwwm .gt_row_group_first td { border-top-width: 0.5px; }
+ #pftgsydwwm .gt_row_group_first th { border-top-width: 0.5px; }
+ #pftgsydwwm .gt_striped { color: #333333; background-color: #F4F4F4; }
+ #pftgsydwwm .gt_table_body { border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
+ #pftgsydwwm .gt_grand_summary_row { color: #333333; background-color: #FFFFFF; text-transform: inherit; padding-top: 8px; padding-bottom: 8px; padding-left: 5px; padding-right: 5px; }
+ #pftgsydwwm .gt_first_grand_summary_row_bottom { border-top-style: double; border-top-width: 6px; border-top-color: #D3D3D3; }
+ #pftgsydwwm .gt_last_grand_summary_row_top { border-bottom-style: double; border-bottom-width: 6px; border-bottom-color: #D3D3D3; }
+ #pftgsydwwm .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
+ #pftgsydwwm .gt_sourcenote { font-size: 90%; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
+ #pftgsydwwm .gt_left { text-align: left; }
+ #pftgsydwwm .gt_center { text-align: center; }
+ #pftgsydwwm .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
+ #pftgsydwwm .gt_font_normal { font-weight: normal; }
+ #pftgsydwwm .gt_font_bold { font-weight: bold; }
+ #pftgsydwwm .gt_font_italic { font-style: italic; }
+ #pftgsydwwm .gt_super { font-size: 65%; }
+ #pftgsydwwm .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
+ #pftgsydwwm .gt_asterisk { font-size: 100%; vertical-align: 0; }
  
 </style>
 <table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
@@ -790,7 +790,7 @@ Coefficient
 <p>By default, the <code>"iid", "hetero"</code> and cluster robust variance estimators implement (sandwich) estimators as in <a href="https://econpapers.repec.org/paper/attwimass/8818.htm">Powell (1991)</a>, using a uniform kernel to estimate the “sparsity”.</p>
 <p>The cluster robust estimator follows Parente &amp; Santos Silva. See this <a href="https://www.stata.com/meeting/uk15/abstracts/materials/uk15_santossilva.pdf">slide set</a> or the <a href="https://repository.essex.ac.uk/8976/1/dp728.pdf">Journal of Econometrics paper</a> for details.</p>
 <p>Additionally, <code>pf.quantreg</code> supports the <code>"nid"</code> (“non-iid”) estimator from <a href="https://www.tandfonline.com/doi/abs/10.1080/01621459.1992.10475175">Hendricks and Koenker (1991)</a>, which uses a linear approximation of the conditional quantile function.</p>
-<div id="5e1dda4d" class="cell" data-execution_count="7">
+<div id="7519a0f6" class="cell" data-execution_count="7">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>fit_nid <span class="op">=</span> pf.quantreg(<span class="st">"Y ~ X1 + X2 + f1"</span>, data <span class="op">=</span> data, quantile <span class="op">=</span> <span class="fl">0.5</span>, vcov <span class="op">=</span> <span class="st">"nid"</span>)</span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>fit_crv <span class="op">=</span> pf.quantreg(<span class="st">"Y ~ X1 + X2 + f1"</span>, data <span class="op">=</span> data, quantile <span class="op">=</span> <span class="fl">0.5</span>, vcov <span class="op">=</span> {<span class="st">"CRV1"</span>: <span class="st">"f1"</span>})</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stderr">
