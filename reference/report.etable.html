@@ -498,12 +498,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    show_fe<span class="op">=</span><span class="va">True</span>,</span>
 <span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    show_se_type<span class="op">=</span><span class="va">True</span>,</span>
 <span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    felabels<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    notes<span class="op">=</span><span class="st">''</span>,</span>
-<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    model_heads<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    head_order<span class="op">=</span><span class="st">'dh'</span>,</span>
-<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    file_name<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    <span class="op">**</span>kwargs,</span>
-<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    fe_present<span class="op">=</span><span class="st">'x'</span>,</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    fe_absent<span class="op">=</span><span class="st">'-'</span>,</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    notes<span class="op">=</span><span class="st">''</span>,</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    model_heads<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    head_order<span class="op">=</span><span class="st">'dh'</span>,</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>    file_name<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>    <span class="op">**</span>kwargs,</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Generate a table summarizing the results of multiple regression models. It supports various output formats including html (via great tables), markdown, and LaTeX.</p>
 <section id="parameters" class="level2 doc-section doc-section-parameters">
 <h2 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters">Parameters</h2>
@@ -608,6 +610,18 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td><code>None</code></td>
 </tr>
 <tr class="odd">
+<td>fe_present</td>
+<td>str</td>
+<td>Symbol to use when a fixed effect is present in a model. Default is “x”. Common alternatives include “Y”, “YES”, “✓”, “✅”, or any custom string.</td>
+<td><code>'x'</code></td>
+</tr>
+<tr class="even">
+<td>fe_absent</td>
+<td>str</td>
+<td>Symbol to use when a fixed effect is absent from a model. Default is “-”. Common alternatives include “N”, “NO”, “✗”, ““, or any custom string.</td>
+<td><code>'-'</code></td>
+</tr>
+<tr class="odd">
 <td>digits</td>
 <td></td>
 <td>The number of digits to round to.</td>
@@ -685,7 +699,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="examples" class="level2 doc-section doc-section-examples">
 <h2 class="doc-section doc-section-examples anchored" data-anchor-id="examples">Examples</h2>
 <p>For more examples, take a look at the <a href="https://py-econometrics.github.io/pyfixest/table-layout.html">regression tables and summary statistics vignette</a>.</p>
-<div id="a54f9479" class="cell" data-execution_count="1">
+<div id="a6741ce5" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co"># load data</span></span>
@@ -696,7 +710,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>pf.etable([fit1, fit2])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 
-            <div id="RoqKog"></div>
+            <div id="tzLxfC"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -720,9 +734,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("RoqKog").appendChild(div);
+                        document.getElementById("tzLxfC").appendChild(div);
                     };
-                    var e = document.getElementById("RoqKog");
+                    var e = document.getElementById("tzLxfC");
                     e.appendChild(script);
                 })()
             </script>
@@ -730,7 +744,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <div class="cell-output cell-output-display">
 
-            <div id="A6xKp1"></div>
+            <div id="ganqtX"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -754,64 +768,64 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("A6xKp1").appendChild(div);
+                        document.getElementById("ganqtX").appendChild(div);
                     };
-                    var e = document.getElementById("A6xKp1");
+                    var e = document.getElementById("ganqtX");
                     e.appendChild(script);
                 })()
             </script>
             
 </div>
 <div class="cell-output cell-output-display" data-execution_count="1">
-<div id="alajclzqky" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<div id="gefewqwdhq" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
 <style>
-#alajclzqky table {
+#gefewqwdhq table {
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
           -webkit-font-smoothing: antialiased;
           -moz-osx-font-smoothing: grayscale;
         }
 
-#alajclzqky thead, tbody, tfoot, tr, td, th { border-style: none; }
+#gefewqwdhq thead, tbody, tfoot, tr, td, th { border-style: none; }
  tr { background-color: transparent; }
-#alajclzqky p { margin: 0; padding: 0; }
- #alajclzqky .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: solid; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
- #alajclzqky .gt_caption { padding-top: 4px; padding-bottom: 4px; }
- #alajclzqky .gt_title { color: #333333; font-size: 125%; font-weight: initial; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
- #alajclzqky .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 3px; padding-bottom: 5px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
- #alajclzqky .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
- #alajclzqky .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
- #alajclzqky .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
- #alajclzqky .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 4px; padding-bottom: 5px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
- #alajclzqky .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
- #alajclzqky .gt_column_spanner_outer:first-child { padding-left: 0; }
- #alajclzqky .gt_column_spanner_outer:last-child { padding-right: 0; }
- #alajclzqky .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; vertical-align: bottom; padding-top: 4px; padding-bottom: 4px; overflow-x: hidden; display: inline-block; width: 100%; }
- #alajclzqky .gt_spanner_row { border-bottom-style: hidden; }
- #alajclzqky .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
- #alajclzqky .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; vertical-align: middle; }
- #alajclzqky .gt_from_md> :first-child { margin-top: 0; }
- #alajclzqky .gt_from_md> :last-child { margin-bottom: 0; }
- #alajclzqky .gt_row { padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
- #alajclzqky .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
- #alajclzqky .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
- #alajclzqky .gt_row_group_first td { border-top-width: 0.5px; }
- #alajclzqky .gt_row_group_first th { border-top-width: 0.5px; }
- #alajclzqky .gt_striped { color: #333333; background-color: #F4F4F4; }
- #alajclzqky .gt_table_body { border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
- #alajclzqky .gt_grand_summary_row { color: #333333; background-color: #FFFFFF; text-transform: inherit; padding-top: 8px; padding-bottom: 8px; padding-left: 5px; padding-right: 5px; }
- #alajclzqky .gt_first_grand_summary_row_bottom { border-top-style: double; border-top-width: 6px; border-top-color: #D3D3D3; }
- #alajclzqky .gt_last_grand_summary_row_top { border-bottom-style: double; border-bottom-width: 6px; border-bottom-color: #D3D3D3; }
- #alajclzqky .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
- #alajclzqky .gt_sourcenote { font-size: 90%; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
- #alajclzqky .gt_left { text-align: left; }
- #alajclzqky .gt_center { text-align: center; }
- #alajclzqky .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
- #alajclzqky .gt_font_normal { font-weight: normal; }
- #alajclzqky .gt_font_bold { font-weight: bold; }
- #alajclzqky .gt_font_italic { font-style: italic; }
- #alajclzqky .gt_super { font-size: 65%; }
- #alajclzqky .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
- #alajclzqky .gt_asterisk { font-size: 100%; vertical-align: 0; }
+#gefewqwdhq p { margin: 0; padding: 0; }
+ #gefewqwdhq .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: solid; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
+ #gefewqwdhq .gt_caption { padding-top: 4px; padding-bottom: 4px; }
+ #gefewqwdhq .gt_title { color: #333333; font-size: 125%; font-weight: initial; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
+ #gefewqwdhq .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 3px; padding-bottom: 5px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
+ #gefewqwdhq .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #gefewqwdhq .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
+ #gefewqwdhq .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #gefewqwdhq .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 4px; padding-bottom: 5px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
+ #gefewqwdhq .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
+ #gefewqwdhq .gt_column_spanner_outer:first-child { padding-left: 0; }
+ #gefewqwdhq .gt_column_spanner_outer:last-child { padding-right: 0; }
+ #gefewqwdhq .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; vertical-align: bottom; padding-top: 4px; padding-bottom: 4px; overflow-x: hidden; display: inline-block; width: 100%; }
+ #gefewqwdhq .gt_spanner_row { border-bottom-style: hidden; }
+ #gefewqwdhq .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
+ #gefewqwdhq .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; vertical-align: middle; }
+ #gefewqwdhq .gt_from_md> :first-child { margin-top: 0; }
+ #gefewqwdhq .gt_from_md> :last-child { margin-bottom: 0; }
+ #gefewqwdhq .gt_row { padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
+ #gefewqwdhq .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
+ #gefewqwdhq .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
+ #gefewqwdhq .gt_row_group_first td { border-top-width: 0.5px; }
+ #gefewqwdhq .gt_row_group_first th { border-top-width: 0.5px; }
+ #gefewqwdhq .gt_striped { color: #333333; background-color: #F4F4F4; }
+ #gefewqwdhq .gt_table_body { border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
+ #gefewqwdhq .gt_grand_summary_row { color: #333333; background-color: #FFFFFF; text-transform: inherit; padding-top: 8px; padding-bottom: 8px; padding-left: 5px; padding-right: 5px; }
+ #gefewqwdhq .gt_first_grand_summary_row_bottom { border-top-style: double; border-top-width: 6px; border-top-color: #D3D3D3; }
+ #gefewqwdhq .gt_last_grand_summary_row_top { border-bottom-style: double; border-bottom-width: 6px; border-bottom-color: #D3D3D3; }
+ #gefewqwdhq .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
+ #gefewqwdhq .gt_sourcenote { font-size: 90%; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
+ #gefewqwdhq .gt_left { text-align: left; }
+ #gefewqwdhq .gt_center { text-align: center; }
+ #gefewqwdhq .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
+ #gefewqwdhq .gt_font_normal { font-weight: normal; }
+ #gefewqwdhq .gt_font_bold { font-weight: bold; }
+ #gefewqwdhq .gt_font_italic { font-style: italic; }
+ #gefewqwdhq .gt_super { font-size: 65%; }
+ #gefewqwdhq .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
+ #gefewqwdhq .gt_asterisk { font-size: 100%; vertical-align: 0; }
  
 </style>
 
@@ -853,13 +867,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <th colspan="3" class="gt_group_heading" data-quarto-table-cell-role="th">fe</th>
 </tr>
 <tr class="odd">
-<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">f1</th>
-<td class="gt_row gt_center">x</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">f2</th>
+<td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">x</td>
 </tr>
 <tr class="even">
-<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">f2</th>
-<td class="gt_row gt_center">-</td>
+<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">f1</th>
+<td class="gt_row gt_center">x</td>
 <td class="gt_row gt_center">x</td>
 </tr>
 <tr class="gt_group_heading_row odd">
