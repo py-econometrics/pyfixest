@@ -28,8 +28,8 @@ def feols(
     weights: Union[None, str] = None,
     ssc: Optional[dict[str, Union[str, bool]]] = None,
     fixef_rm: FixedRmOptions = "singleton",
-    fixef_tol=1e-08,
-    fixef_maxiter: int = 100_000,
+    fixef_tol=1e-06,
+    fixef_maxiter: int = 10_000,
     collin_tol: float = 1e-09,
     drop_intercept: bool = False,
     copy_data: bool = True,
@@ -94,7 +94,7 @@ def feols(
         Tolerance for collinearity check, by default 1e-10.
 
     fixef_tol: float, optional
-        Tolerance for the fixed effects demeaning algorithm. Defaults to 1e-08.
+        Tolerance for the fixed effects demeaning algorithm. Defaults to 1e-06.
 
     fixef_maxiter: int, optional
          Maximum number of iterations for the demeaning algorithm. Defaults to 100,000.
@@ -533,8 +533,8 @@ def fepois(
     vcov_kwargs: Optional[dict[str, Union[str, int]]] = None,
     ssc: Optional[dict[str, Union[str, bool]]] = None,
     fixef_rm: FixedRmOptions = "singleton",
-    fixef_tol: float = 1e-08,
-    fixef_maxiter: int = 100_000,
+    fixef_tol: float = 1e-06,
+    fixef_maxiter: int = 10_000,
     iwls_tol: float = 1e-08,
     iwls_maxiter: int = 25,
     collin_tol: float = 1e-09,
@@ -594,7 +594,7 @@ def fepois(
         estimates but it will impact standard errors.
 
     fixef_tol: float, optional
-        Tolerance for the fixed effects demeaning algorithm. Defaults to 1e-08.
+        Tolerance for the fixed effects demeaning algorithm. Defaults to 1e-06.
 
     fixef_maxiter: int, optional
          Maximum number of iterations for the demeaning algorithm. Defaults to 100,000.
@@ -783,7 +783,7 @@ def feglm(
     vcov_kwargs: Optional[dict[str, Union[str, int]]] = None,
     ssc: Optional[dict[str, Union[str, bool]]] = None,
     fixef_rm: FixedRmOptions = "singleton",
-    fixef_tol: float = 1e-08,
+    fixef_tol: float = 1e-06,
     fixef_maxiter: int = 100_000,
     iwls_tol: float = 1e-08,
     iwls_maxiter: int = 25,
@@ -848,7 +848,7 @@ def feglm(
         estimates but it will impact standard errors.
 
     fixef_tol: float, optional
-        Tolerance for the fixed effects demeaning algorithm. Defaults to 1e-08.
+        Tolerance for the fixed effects demeaning algorithm. Defaults to 1e-06.
         Currently does not do anything, as fixed effects are not supported for GLMs.
 
     fixef_maxiter: int, optional
@@ -1209,7 +1209,7 @@ def quantreg(
     context = {} if context is None else capture_context(context)
 
     fixef_rm = "none"
-    fixef_tol = 1e-08
+    fixef_tol = 1e-06
     fixef_maxiter = 100_000
     iwls_tol = 1e-08
     iwls_maxiter = 25

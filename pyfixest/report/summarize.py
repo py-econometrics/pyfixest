@@ -36,6 +36,8 @@ def etable(
     show_fe: Optional[bool] = True,
     show_se_type: Optional[bool] = True,
     felabels: Optional[dict] = None,
+    fe_present: str = "x",
+    fe_absent: str = "-",
     notes: str = "",
     model_heads: Optional[list] = None,
     head_order: Optional[str] = "dh",
@@ -109,6 +111,12 @@ def etable(
         the FE lines with a different label than the one specied for the respective
         variable in the labels dictionary.
         The command is applied after the `keep` and `drop` commands.
+    fe_present: str, optional
+        Symbol to use when a fixed effect is present in a model. Default is "x".
+        Common alternatives include "Y", "YES", "✓", "✅", or any custom string.
+    fe_absent: str, optional
+        Symbol to use when a fixed effect is absent from a model. Default is "-".
+        Common alternatives include "N", "NO", "✗", "", or any custom string.
     digits: int
         The number of digits to round to.
     thousands_sep: bool, optional
@@ -327,9 +335,9 @@ def etable(
                         and fixef in model._fixef.split("+")
                         and not model._use_mundlak
                     ):
-                        fe_df.loc[i, fixef] = "x"
+                        fe_df.loc[i, fixef] = fe_present
                     else:
-                        fe_df.loc[i, fixef] = "-"
+                        fe_df.loc[i, fixef] = fe_absent
         # Sort by model
         fe_df.sort_index(inplace=True)
         # Transpose
