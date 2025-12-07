@@ -878,7 +878,7 @@ def _get_model_df(
             .merge(df_joint, on="Coefficient", how="left")
         )
 
-        df_joint_full["fml"] += " (joint CIs)"
+        df_joint_full["fml"] += " (joint CIs)"  # type: ignore[operator]
 
         if joint == "both":
             df_model = pd.concat([df_model, df_joint_full], axis=0)
