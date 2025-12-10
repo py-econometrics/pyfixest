@@ -200,7 +200,9 @@ class Fepois(Feols):
             if self._fe.ndim == 1:
                 self._fe = self._fe.reshape((self._N, 1))
 
-    def _compute_deviance(self, Y: np.ndarray, mu: np.ndarray):
+    def _compute_deviance(
+        self, Y: np.ndarray, mu: np.ndarray, weights: Optional[np.ndarray] = None
+    ):
         """
         Deviance is defined as twice the difference in log likelihood between the
         saturated model and the model being fit.
@@ -212,8 +214,20 @@ class Fepois(Feols):
         """
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
+            if weights is None:
+                weights = np.ones_like(Y)
+            weights = weights.flatten()
+            Y_flat = Y.flatten()
+            mu_flat = mu.flatten()
             deviance = np.float64(
-                2 * np.sum(np.where(Y == 0, 0, Y * np.log(Y / mu)) - (Y - mu))
+                2
+                * np.sum(
+                    weights
+                    * (
+                        np.where(Y_flat == 0, 0, Y_flat * np.log(Y_flat / mu_flat))
+                        - (Y_flat - mu_flat)
+                    )
+                )
             )
         return deviance
 
@@ -280,12 +294,13 @@ class Fepois(Feols):
             # Step 1: weighted demeaning
             ZX = np.concatenate([reg_Z, self._X], axis=1)
 
+            combined_weights = self._weights * mu
+
             if self._fe is not None:
-                # ZX_resid = algorithm.residualize(ZX, mu)
                 ZX_resid, success = demean(
                     x=ZX,
                     flist=self._fe.astype(np.uintp),
-                    weights=mu.flatten(),
+                    weights=combined_weights.flatten(),
                     tol=self._fixef_tol,
                     maxiter=self._fixef_maxiter,
                 )
@@ -297,9 +312,8 @@ class Fepois(Feols):
             Z_resid = ZX_resid[:, 0].reshape((self._N, 1))  # z_resid
             X_resid = ZX_resid[:, 1:]  # x_resid
 
-            # Step 2: estimate WLS
-            WX = np.sqrt(mu) * X_resid
-            WZ = np.sqrt(mu) * Z_resid
+            WX = np.sqrt(combined_weights) * X_resid
+            WZ = np.sqrt(combined_weights) * Z_resid
 
             XWX = WX.transpose() @ WX
             XWZ = WX.transpose() @ WZ
@@ -309,7 +323,6 @@ class Fepois(Feols):
             )  # eq (10), delta_new -> reg_z
             resid = Z_resid - X_resid @ delta_new
 
-            mu_old = mu.copy()
             # more updating
             eta = Z - resid
             mu = np.exp(eta)
@@ -329,34 +342,39 @@ class Fepois(Feols):
         # needed for the calculation of the vcov
 
         # update for inference
-        self._weights = mu_old
-        self._irls_weights = mu
-        # if only one dim
-        if self._weights.ndim == 1:
-            self._weights = self._weights.reshape((self._N, 1))
+        user_weights = self._weights.flatten()
+        self._irls_weights =combined_weights.flatten()
 
         self._u_hat = (WZ - WX @ delta_new).flatten()
         self._u_hat_working = resid
         self._u_hat_response = self._Y - np.exp(eta)
 
         y = self._Y.flatten()
-        self._y_hat_null = np.full_like(y, np.mean(y), dtype=float)
+        self._y_hat_null = np.full_like(y, np.average(y, weights=user_weights), dtype=float)
 
         self._loglik = np.sum(
-            y * np.log(self._Y_hat_response) - self._Y_hat_response - gammaln(y + 1)
+            user_weights * (y * np.log(self._Y_hat_response) - self._Y_hat_response - gammaln(y + 1))
         )
-        self._loglik_null = np.sum(
-            y * np.log(self._y_hat_null) - self._y_hat_null - gammaln(y + 1)
-        )
-        self._pseudo_r2 = 1 - (self._loglik / self._loglik_null)
+        
+        # cant replicate fixest atm
+        if self._has_weights:
+            self._loglik_null = None
+            self._pseudo_r2 = None
+        else:
+            self._loglik_null = np.sum(
+                user_weights * (y * np.log(self._y_hat_null) - self._y_hat_null - gammaln(y + 1))
+            )
+            self._pseudo_r2 = 1 - (self._loglik / self._loglik_null)
         self._pearson_chi2 = np.sum(
-            (y - self._Y_hat_response) ** 2 / self._Y_hat_response
+            user_weights * (y - self._Y_hat_response) ** 2 / self._Y_hat_response
         )
+
+        self._weights = combined_weights
+        self.deviance = self._compute_deviance(y, mu, user_weights)
 
         self._Y = WZ
         self._X = WX
         self._Z = self._X
-        self.deviance = deviance
 
         self._tZX = np.transpose(self._Z) @ self._X
         self._tZXinv = np.linalg.inv(self._tZX)

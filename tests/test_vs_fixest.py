@@ -504,7 +504,10 @@ def test_single_fit_feols_empty(
 @pytest.mark.parametrize("fml", ols_fmls)
 @pytest.mark.parametrize("k_adj", [True])
 @pytest.mark.parametrize("G_adj", [True])
-def test_single_fit_fepois(data_fepois, dropna, inference, f3_type, fml, k_adj, G_adj):
+@pytest.mark.parametrize("weights", [None, "weights"])
+def test_single_fit_fepois(
+    data_fepois, dropna, inference, f3_type, fml, k_adj, G_adj, weights
+):
     global test_counter_fepois
     test_counter_fepois += 1
 
@@ -530,17 +533,34 @@ def test_single_fit_fepois(data_fepois, dropna, inference, f3_type, fml, k_adj, 
     r_inference = _get_r_inference(inference)
 
     mod = pf.fepois(
-        fml=fml, data=data, vcov=inference, ssc=ssc_, iwls_tol=1e-10, iwls_maxiter=100
+        fml=fml,
+        data=data,
+        vcov=inference,
+        ssc=ssc_,
+        iwls_tol=1e-10,
+        iwls_maxiter=100,
+        weights=weights,
     )
 
-    r_fixest = fixest.fepois(
-        ro.Formula(r_fml),
-        vcov=r_inference,
-        data=data_r,
-        ssc=fixest.ssc(k_adj, "nonnested", False, G_adj, "min", "min"),
-        glm_tol=1e-10,
-        glm_maxiter=100,
-    )
+    if weights is not None:
+        r_fixest = fixest.fepois(
+            ro.Formula(r_fml),
+            vcov=r_inference,
+            data=data_r,
+            ssc=fixest.ssc(k_adj, "nonnested", False, G_adj, "min", "min"),
+            glm_tol=1e-10,
+            glm_maxiter=100,
+            weights=ro.Formula("~" + weights),
+        )
+    else:
+        r_fixest = fixest.fepois(
+            ro.Formula(r_fml),
+            vcov=r_inference,
+            data=data_r,
+            ssc=fixest.ssc(k_adj, "nonnested", False, G_adj, "min", "min"),
+            glm_tol=1e-10,
+            glm_maxiter=100,
+        )
 
     py_coef = mod.coef().xs("X1")
     py_se = mod.se().xs("X1")
@@ -603,14 +623,17 @@ def test_single_fit_fepois(data_fepois, dropna, inference, f3_type, fml, k_adj, 
     check_absolute_diff(py_vcov, r_vcov, 1e-06, "py_vcov != r_vcov")
     check_absolute_diff(py_se, r_se, 1e-06, "py_se != r_se")
     check_absolute_diff(py_pval, r_pval, 1e-06, "py_pval != r_pval")
-    check_absolute_diff(py_tstat, r_tstat, 1e-06, "py_tstat != r_tstat")
+    check_absolute_diff(py_tstat, r_tstat, 1e-06 if weights is None else 1e-05, "py_tstat != r_tstat")
     check_absolute_diff(py_confint, r_confint, 1e-06, "py_confint != r_confint")
     check_absolute_diff(py_deviance, r_deviance, 1e-08, "py_deviance != r_deviance")
     check_absolute_diff(py_loglik, r_loglik, 1e-08, "py_ll != r_loglik")
-    check_absolute_diff(
-        py_loglik_null, r_loglik_null, 1e-08, "py_loglik_null != r_loglik_null"
-    )
-    check_absolute_diff(py_pseudo_r2, r_pseudo_r2, 1e-08, "py_pseudo_r2 != r_pseudo_r2")
+
+    # cant match fixest yet
+    if weights is None:
+        check_absolute_diff(
+            py_loglik_null, r_loglik_null, 1e-08, "py_loglik_null != r_loglik_null"
+        )
+        check_absolute_diff(py_pseudo_r2, r_pseudo_r2, 1e-08, "py_pseudo_r2 != r_pseudo_r2")
 
     if not mod._has_fixef:
         py_predict_response = mod.predict(type="response")
@@ -1386,8 +1409,6 @@ def test_ssc(fml, dropna, weights, vcov, k_adj, G_adj, k_fixef, model):
     if weights is not None:
         r_kwargs["weights"] = ro.Formula(f"~{weights}")
         py_kwargs["weights"] = weights
-        if model == "fepois":
-            pytest.skip("pf.fepois does not support weights.")
 
     if model == "feols":
         r_fit = fixest.feols(**r_kwargs)

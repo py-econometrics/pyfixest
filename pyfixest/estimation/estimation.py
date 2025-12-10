@@ -531,6 +531,8 @@ def fepois(
     data: DataFrameType,  # type: ignore
     vcov: Optional[Union[VcovTypeOptions, dict[str, str]]] = None,
     vcov_kwargs: Optional[dict[str, Union[str, int]]] = None,
+    weights: Union[None, str] = None,
+    weights_type: WeightsTypeOptions = "aweights",
     ssc: Optional[dict[str, Union[str, bool]]] = None,
     fixef_rm: FixedRmOptions = "singleton",
     fixef_tol: float = 1e-06,
@@ -583,6 +585,17 @@ def fepois(
         "time_id" for the time ID used for NW and DK standard errors, and "panel_id" for the panel
          identifier used for NW and DK standard errors. Currently, the the time difference between consecutive time
          periods is always treated as 1. More flexible time-step selection is work in progress.
+
+    weights : Union[None, str], optional.
+        Default is None. Weights for weighted Poisson regression. If None, all observations
+        are weighted equally. If a string, the name of the column in `data` that
+        contains the weights.
+
+    weights_type: WeightsTypeOptions, optional
+        Options include `aweights` or `fweights`. `aweights` implement analytic or
+        precision weights, while `fweights` implement frequency weights. Frequency weights
+        are useful for compressed count data where identical observations are aggregated.
+        For details see this blog post: https://notstatschat.rbind.io/2020/08/04/weights-in-statistics/.
 
     ssc : str
         A ssc object specifying the small sample correction for inference.
@@ -699,10 +712,6 @@ def fepois(
     if ssc is None:
         ssc = ssc_func()
     context = {} if context is None else capture_context(context)
-
-    # WLS currently not supported for Poisson regression
-    weights = None
-    weights_type = "aweights"
 
     _estimation_input_checks(
         fml=fml,
