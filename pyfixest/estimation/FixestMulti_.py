@@ -412,7 +412,8 @@ class FixestMulti:
                     if isinstance(FIT, (Felogit, Feprobit, Fegaussian)):
                         FIT._check_dependent_variable()
                     FIT.drop_multicol_vars()
-                    if isinstance(FIT, (Feols, Feiv, FeolsCompressed)):
+                    # NOTE: Fepois handles weights internally in its IWLS algorithm
+                    if type(FIT) in [Feols, Feiv, FeolsCompressed]:
                         FIT.wls_transform()
 
                     FIT.get_fit()
