@@ -623,7 +623,9 @@ def test_single_fit_fepois(
     check_absolute_diff(py_vcov, r_vcov, 1e-06, "py_vcov != r_vcov")
     check_absolute_diff(py_se, r_se, 1e-06, "py_se != r_se")
     check_absolute_diff(py_pval, r_pval, 1e-06, "py_pval != r_pval")
-    check_absolute_diff(py_tstat, r_tstat, 1e-06 if weights is None else 1e-05, "py_tstat != r_tstat")
+    check_absolute_diff(
+        py_tstat, r_tstat, 1e-06 if weights is None else 1e-05, "py_tstat != r_tstat"
+    )
     check_absolute_diff(py_confint, r_confint, 1e-06, "py_confint != r_confint")
     check_absolute_diff(py_deviance, r_deviance, 1e-08, "py_deviance != r_deviance")
     check_absolute_diff(py_loglik, r_loglik, 1e-08, "py_ll != r_loglik")
@@ -633,7 +635,9 @@ def test_single_fit_fepois(
         check_absolute_diff(
             py_loglik_null, r_loglik_null, 1e-08, "py_loglik_null != r_loglik_null"
         )
-        check_absolute_diff(py_pseudo_r2, r_pseudo_r2, 1e-08, "py_pseudo_r2 != r_pseudo_r2")
+        check_absolute_diff(
+            py_pseudo_r2, r_pseudo_r2, 1e-08, "py_pseudo_r2 != r_pseudo_r2"
+        )
 
     if not mod._has_fixef:
         py_predict_response = mod.predict(type="response")

@@ -347,26 +347,30 @@ class Fepois(Feols):
 
         # update for inference
         user_weights = self._weights.flatten()
-        self._irls_weights =combined_weights.flatten()
+        self._irls_weights = combined_weights.flatten()
 
         self._u_hat = (WZ - WX @ delta_new).flatten()
         self._u_hat_working = resid
         self._u_hat_response = self._Y - np.exp(eta)
 
         y = self._Y.flatten()
-        self._y_hat_null = np.full_like(y, np.average(y, weights=user_weights), dtype=float)
+        self._y_hat_null = np.full_like(
+            y, np.average(y, weights=user_weights), dtype=float
+        )
 
         self._loglik = np.sum(
-            user_weights * (y * np.log(self._Y_hat_response) - self._Y_hat_response - gammaln(y + 1))
+            user_weights
+            * (y * np.log(self._Y_hat_response) - self._Y_hat_response - gammaln(y + 1))
         )
-        
+
         # cant replicate fixest atm
         if self._has_weights:
             self._loglik_null = None
             self._pseudo_r2 = None
         else:
             self._loglik_null = np.sum(
-                user_weights * (y * np.log(self._y_hat_null) - self._y_hat_null - gammaln(y + 1))
+                user_weights
+                * (y * np.log(self._y_hat_null) - self._y_hat_null - gammaln(y + 1))
             )
             self._pseudo_r2 = 1 - (self._loglik / self._loglik_null)
         self._pearson_chi2 = np.sum(
