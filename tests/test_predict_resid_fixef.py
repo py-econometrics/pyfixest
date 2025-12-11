@@ -62,12 +62,19 @@ def test_ols_prediction_internally(data, fml, weights):
 @pytest.mark.parametrize("fml", ["Y ~ X1", "Y~X1 |f1", "Y ~ X1 | f1 + f2"])
 @pytest.mark.parametrize("weights", ["weights"])
 def test_poisson_prediction_internally(data, weights, fml):
-    with pytest.raises(TypeError):
+    # predict with newdata is not implemented for fepois
+    with pytest.raises(NotImplementedError):
         fit = pf.fepois(fml=fml, data=data, vcov="hetero", weights=weights)
         fit.predict(newdata=fit._data)
-    with pytest.raises(TypeError):
-        fit = pf.fepois(fml=fml, data=data, vcov="hetero", weights=weights)
-        fit.predict()
+    # predict without newdata: raises NotImplementedError only if model has fixed effects
+    fit = pf.fepois(fml=fml, data=data, vcov="hetero", weights=weights)
+    if fit._has_fixef:
+        with pytest.raises(NotImplementedError):
+            fit.predict()
+    else:
+        # Without fixed effects, predict() works for fepois
+        result = fit.predict()
+        assert result is not None
 
 
 @pytest.mark.against_r_core

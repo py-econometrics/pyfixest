@@ -179,8 +179,12 @@ class Fepois(Feols):
             self._X.drop(na_separation, axis=0, inplace=True)
             self._fe.drop(na_separation, axis=0, inplace=True)
             self._data.drop(na_separation, axis=0, inplace=True)
+            if self._weights_df is not None:
+                self._weights_df.drop(na_separation, axis=0, inplace=True)
             self._N = self._Y.shape[0]
-            self._N_rows = self._N  # ok as weights not supported
+            self._N_rows = self._N
+            # Re-set weights after dropping rows (handles both weighted and unweighted)
+            self._weights = self._set_weights()
 
             self.na_index = np.concatenate([self.na_index, np.array(na_separation)])
             self.n_separation_na = len(na_separation)
