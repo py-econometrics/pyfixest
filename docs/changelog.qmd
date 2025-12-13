@@ -13,9 +13,9 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ## PyFixest 0.41.0 (In Development)
 
-- Adds the following statistics to the `Fepois` class: `_loglik`, `_loglik_null`, `_pseudo_r2`.
+- Adds the following statistics to the `Fepois` class: `_loglik`, `_loglik_null`, `_pseudo_r2` for regression without weights.
 - Set the default parameters for the MAP algorithm to a tolerance of `1e-06` and maximum number of iterations of `10_000`.
-
+- Adds support for weights for poisson regression via `feopis()`. 
 
 ## PyFixest 0.40.1
 
