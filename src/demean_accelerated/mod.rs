@@ -1,5 +1,8 @@
-//! Optimized demeaning implementation with Irons-Tuck acceleration.
+//! Accelerated alternating-projections demeaning with Irons-Tuck/Grand speedups.
 //!
+//! This module is a Rust port of fixest's original C++ demeaning implementation
+//! (`https://github.com/lrberge/fixest/blob/master/src/demeaning.cpp`),
+//! keeping the same acceleration cadence and safeguards.
 //! Dispatches based on number of fixed effects:
 //! - 1 FE: O(n) closed-form solution (single pass, no iteration)
 //! - 2 FE: Alternating projections with Irons-Tuck acceleration
@@ -55,7 +58,6 @@ impl AcceleratedConfig {
     }
 }
 
-/// Accelerated alternating-projections demeaning with Irons-Tuck/Grand speedups.
 pub(crate) fn demean_accelerated(
     x: &ArrayView2<f64>,
     flist: &ArrayView2<usize>,
