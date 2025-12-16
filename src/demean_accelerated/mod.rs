@@ -32,6 +32,10 @@ struct AcceleratedConfig {
     accel_interval: usize,
     /// Interval for grand acceleration snapshots (3+ FEs only)
     grand_accel_interval: usize,
+    /// Interval for SSR-based convergence safeguard
+    ssr_check_interval: usize,
+    /// Iteration from which to run a post-acceleration projection (fixest: 3)
+    post_accel_iter: usize,
 }
 
 impl AcceleratedConfig {
@@ -43,6 +47,10 @@ impl AcceleratedConfig {
             warmup_iters: 15,
             accel_interval: 3,
             grand_accel_interval: 15,
+            // fixest uses a coarse SSR check every 40 iterations.
+            ssr_check_interval: 40,
+            // fixest projects once after acceleration starting at iter 3.
+            post_accel_iter: 3,
         }
     }
 }
@@ -259,6 +267,11 @@ fn demean_multi_fe(
                     break;
                 }
 
+                // After acceleration, fixest runs an extra projection (iter_projAfterAcc).
+                if iter >= config.post_accel_iter {
+                    let _ = accel.regular_step();
+                }
+
                 // Grand acceleration: record snapshots and apply when ready
                 if grand_accel.should_record(iter) {
                     grand_accel.record(accel.get_result());
@@ -279,7 +292,7 @@ fn demean_multi_fe(
                 }
 
                 // Coarse SSR check to stop slow tails (matches fixest safeguard).
-                if iter > 0 && iter % (config.grand_accel_interval / 2).max(1) == 0 {
+                if iter > 0 && iter % config.ssr_check_interval == 0 {
                     let current = accel.get_result();
                     let mut ssr = 0.0;
                     for i in 0..n_samples {
