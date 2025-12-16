@@ -24,8 +24,6 @@ pub struct TwoFEDemeaner {
     fe2_group_weight_sums: Vec<f64>,
     /// Working buffer for FE2 weighted sums per group
     fe2_group_weighted_sums: Vec<f64>,
-    /// Number of groups for FE2
-    n_groups_fe2: usize,
     /// Working buffer for intermediate results (n_obs length)
     temp_buffer: Vec<f64>,
 }
@@ -66,7 +64,6 @@ impl TwoFEDemeaner {
             sample_weights: sample_weights.to_vec(),
             fe2_group_weight_sums,
             fe2_group_weighted_sums: vec![0.0; n_groups_fe2],
-            n_groups_fe2,
             temp_buffer: vec![0.0; n_samples],
         }
     }

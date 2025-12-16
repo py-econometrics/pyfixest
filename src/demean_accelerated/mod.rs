@@ -15,7 +15,7 @@ pub mod simd_ops;
 pub mod single_fe;
 pub mod two_fe;
 
-use acceleration::{GrandAcceleration, IronsTuckAcceleration, Projector, StepResult};
+use acceleration::{GrandAcceleration, IronsTuckAcceleration, StepResult};
 use general::MultiFactorProjector;
 use ndarray::{Array2, ArrayView1, ArrayView2, Zip};
 use numpy::{PyArray2, PyReadonlyArray1, PyReadonlyArray2};

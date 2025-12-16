@@ -20,8 +20,6 @@ pub struct SingleFEDemeaner {
     group_weight_sums: Vec<f64>,
     /// Working buffer for weighted sums per group
     group_weighted_sums: Vec<f64>,
-    /// Number of groups
-    n_groups: usize,
 }
 
 impl SingleFEDemeaner {
@@ -51,7 +49,6 @@ impl SingleFEDemeaner {
             group_ids: group_ids.to_vec(),
             group_weight_sums,
             group_weighted_sums: vec![0.0; n_groups],
-            n_groups,
         }
     }
 
@@ -86,40 +83,6 @@ impl SingleFEDemeaner {
         }
     }
 
-    /// Demean in-place, modifying the input buffer.
-    pub fn demean_inplace(&mut self, data: &mut [f64]) {
-        debug_assert_eq!(data.len(), self.sample_weights.len());
-
-        let n_samples = data.len();
-
-        // Reset weighted sums
-        self.group_weighted_sums.fill(0.0);
-
-        // Pass 1: Accumulate weighted sums per group
-        for i in 0..n_samples {
-            let gid = self.group_ids[i];
-            self.group_weighted_sums[gid] += self.sample_weights[i] * data[i];
-        }
-
-        // Pass 2: Subtract group means in-place
-        for i in 0..n_samples {
-            let gid = self.group_ids[i];
-            let group_mean = self.group_weighted_sums[gid] / self.group_weight_sums[gid];
-            data[i] -= group_mean;
-        }
-    }
-
-    /// Get the number of groups.
-    #[inline]
-    pub fn n_groups(&self) -> usize {
-        self.n_groups
-    }
-
-    /// Get the number of samples.
-    #[inline]
-    pub fn n_samples(&self) -> usize {
-        self.sample_weights.len()
-    }
 }
 
 #[cfg(test)]
@@ -173,16 +136,17 @@ mod tests {
     fn test_single_fe_inplace() {
         let weights = vec![1.0, 1.0, 1.0, 1.0];
         let group_ids = vec![0, 0, 1, 1];
-        let mut data = vec![1.0, 3.0, 10.0, 20.0];
+        let data = vec![1.0, 3.0, 10.0, 20.0];
 
         let mut demeaner = SingleFEDemeaner::new(&weights, &group_ids, 2);
-        demeaner.demean_inplace(&mut data);
+        let mut output = vec![0.0; data.len()];
+        demeaner.demean(&data, &mut output);
 
         // Group 0 mean = 2.0, Group 1 mean = 15.0
-        assert!((data[0] - (-1.0)).abs() < 1e-10);
-        assert!((data[1] - 1.0).abs() < 1e-10);
-        assert!((data[2] - (-5.0)).abs() < 1e-10);
-        assert!((data[3] - 5.0).abs() < 1e-10);
+        assert!((output[0] - (-1.0)).abs() < 1e-10);
+        assert!((output[1] - 1.0).abs() < 1e-10);
+        assert!((output[2] - (-5.0)).abs() < 1e-10);
+        assert!((output[3] - 5.0).abs() < 1e-10);
     }
 
     #[test]
