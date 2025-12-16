@@ -516,7 +516,7 @@ def _deparse_fml(
     variable with `w2+w3` as its instruments.
     """
     # Split the formula string into its components
-    fml_split = re.split(r"\s*\|\s*", fml)
+    fml_split = re.split(r"\s*\|\s*", fml.strip())
     depvars, covars = re.split(r"\s*~\s*", fml_split[0])
 
     if len(fml_split) == 1:
