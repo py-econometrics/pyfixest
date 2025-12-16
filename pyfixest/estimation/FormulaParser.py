@@ -485,7 +485,7 @@ def _deparse_fml(
     -------
     tuple
         A tuple containing the decomposed parts of the formula as strings:
-        (depvars, covars, fevars,endogvars, instruments).
+        (depvars, covars, fevars, endogvars, instruments).
         `endogvars` and `instruments` may be `None` if not applicable.
 
     Raises
@@ -496,7 +496,6 @@ def _deparse_fml(
 
     Notes
     -----
-    - The function cleans the formula string of spaces before processing.
     - Fixed effects variables are set to "0" if not explicitly provided in
       the formula.
     - The function automatically adds endogenous variables to the covariates
@@ -516,8 +515,6 @@ def _deparse_fml(
     the fixed effects variables, and `w1` is the endogenous
     variable with `w2+w3` as its instruments.
     """
-    # Clean up the formula string
-    fml = "".join(fml.split())
 
     # Split the formula string into its components
     fml_split = fml.split("|")
