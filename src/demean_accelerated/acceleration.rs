@@ -96,7 +96,7 @@ impl<P: Projector> IronsTuckAcceleration<P> {
     }
 
     /// Regular projection step: X = G(X)
-    fn regular_step(&mut self) -> StepResult {
+    pub fn regular_step(&mut self) -> StepResult {
         // Borrow buffers and projector as separate fields - no copy needed
         let (input, output) = self.buffers.get_read_write(indices::X_CURR, indices::GX_CURR);
         self.projector.project(input, output);
