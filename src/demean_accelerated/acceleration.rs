@@ -382,6 +382,7 @@ impl GrandAcceleration {
     }
 
     /// Reset the acceleration state (e.g., after a restart).
+    #[allow(dead_code)]
     pub fn reset(&mut self) {
         self.counter = 0;
         self.ready_to_apply = false;

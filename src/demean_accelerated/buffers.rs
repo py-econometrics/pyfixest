@@ -39,12 +39,6 @@ impl CoefficientBuffer {
         self.n_samples
     }
 
-    /// Get the number of logical buffers.
-    #[inline]
-    pub fn n_buffers(&self) -> usize {
-        self.n_buffers
-    }
-
     /// Get an immutable slice for buffer at index `idx`.
     ///
     /// # Panics
@@ -114,43 +108,6 @@ impl CoefficientBuffer {
         }
     }
 
-    /// Get three immutable buffers and one mutable buffer simultaneously.
-    ///
-    /// # Panics
-    /// Panics if any indices are out of bounds or if write_idx equals any read index.
-    #[inline]
-    pub fn get_3read_1write(
-        &mut self,
-        r0: usize,
-        r1: usize,
-        r2: usize,
-        w: usize,
-    ) -> (&[f64], &[f64], &[f64], &mut [f64]) {
-        debug_assert!(r0 < self.n_buffers && r1 < self.n_buffers && r2 < self.n_buffers);
-        debug_assert!(w < self.n_buffers);
-        debug_assert!(w != r0 && w != r1 && w != r2, "write index must differ from read indices");
-
-        let n = self.n_samples;
-
-        // Find the split point - we split just before the write buffer
-        let w_start = w * n;
-        let (left, right) = self.data.split_at_mut(w_start);
-        let (write_buf, after_write) = right.split_at_mut(n);
-
-        // Helper to get a read slice given the split
-        let get_read = |idx: usize| -> &[f64] {
-            let start = idx * n;
-            if start < w_start {
-                &left[start..start + n]
-            } else {
-                let offset = start - w_start - n;
-                &after_write[offset..offset + n]
-            }
-        };
-
-        (get_read(r0), get_read(r1), get_read(r2), write_buf)
-    }
-
     /// Get direct mutable access to underlying data for complex operations.
     ///
     /// Returns the data slice and n_samples for manual indexing.
@@ -189,7 +146,6 @@ mod tests {
     fn test_new_buffer() {
         let buf = CoefficientBuffer::new(100, 6);
         assert_eq!(buf.n_samples(), 100);
-        assert_eq!(buf.n_buffers(), 6);
         assert_eq!(buf.data.len(), 600);
     }
 
@@ -216,18 +172,6 @@ mod tests {
         // Verify no overlap
         assert_eq!(buf.buffer(1)[9], 0.0);
         assert_eq!(buf.buffer(2)[0], 0.0);
-    }
-
-    #[test]
-    fn test_clear() {
-        let mut buf = CoefficientBuffer::new(10, 2);
-        buf.buffer_mut(0)[0] = 1.0;
-        buf.buffer_mut(1)[5] = 2.0;
-
-        buf.clear();
-
-        assert_eq!(buf.buffer(0)[0], 0.0);
-        assert_eq!(buf.buffer(1)[5], 0.0);
     }
 
     #[test]
