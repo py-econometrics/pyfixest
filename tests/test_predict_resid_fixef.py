@@ -140,9 +140,11 @@ def test_vs_fixest(data, fml):
 
     if not np.allclose(len(feols_mod.predict()), len(stats.predict(r_fixest_ols))):
         raise ValueError("Predictions for OLS are not the same length")
-    # test predict for Poisson
-    # if not np.allclose(fepois_mod.predict(), r_fixest_pois.rx2("fitted.values")):
-    #    raise ValueError("Predictions for Poisson are not equal")
+
+    if not np.allclose(
+        fepois_mod.predict(type="response"), r_fixest_pois.rx2("fitted.values")
+    ):
+        raise ValueError("Predictions for Poisson are not equal")
 
     # test on new data - OLS.
     if not np.allclose(
@@ -166,13 +168,8 @@ def test_vs_fixest(data, fml):
         raise ValueError("Residuals for OLS are not equal")
 
     # test resid for Poisson
-    # if not np.allclose(
-    #    fepois_mod.resid(),
-    #    r_fixest_pois.rx2("residuals")
-    # ):
-    #    raise ValueError("Residuals for Poisson are not equal")
-
-    # test with missing fixed effects
+    if not np.allclose(fepois_mod.resid(), r_fixest_pois.rx2("residuals")):
+        raise ValueError("Residuals for Poisson are not equal")
 
 
 @pytest.mark.against_r_core

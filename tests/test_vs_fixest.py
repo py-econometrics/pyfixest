@@ -639,23 +639,22 @@ def test_single_fit_fepois(
             py_pseudo_r2, r_pseudo_r2, 1e-08, "py_pseudo_r2 != r_pseudo_r2"
         )
 
-    if not mod._has_fixef:
-        py_predict_response = mod.predict(type="response")
-        py_predict_link = mod.predict(type="link")
-        r_predict_response = stats.predict(r_fixest, type="response")
-        r_predict_link = stats.predict(r_fixest, type="link")
-        check_absolute_diff(
-            py_predict_response[0:5],
-            r_predict_response[0:5],
-            1e-05,
-            "py_predict_response != r_predict_response",
-        )
-        check_absolute_diff(
-            py_predict_link[0:5],
-            r_predict_link[0:5],
-            1e-06,
-            "py_predict_link != r_predict_link",
-        )
+    py_predict_response = mod.predict(type="response")
+    py_predict_link = mod.predict(type="link")
+    r_predict_response = stats.predict(r_fixest, type="response")
+    r_predict_link = stats.predict(r_fixest, type="link")
+    check_absolute_diff(
+        py_predict_response[0:5],
+        r_predict_response[0:5],
+        1e-05,
+        "py_predict_response != r_predict_response",
+    )
+    check_absolute_diff(
+        py_predict_link[0:5],
+        r_predict_link[0:5],
+        1e-06,
+        "py_predict_link != r_predict_link",
+    )
 
 
 @pytest.mark.against_r_core
