@@ -66,15 +66,9 @@ def test_poisson_prediction_internally(data, weights, fml):
     with pytest.raises(NotImplementedError):
         fit = pf.fepois(fml=fml, data=data, vcov="hetero", weights=weights)
         fit.predict(newdata=fit._data)
-    # predict without newdata: raises NotImplementedError only if model has fixed effects
     fit = pf.fepois(fml=fml, data=data, vcov="hetero", weights=weights)
-    if fit._has_fixef:
-        with pytest.raises(NotImplementedError):
-            fit.predict()
-    else:
-        # Without fixed effects, predict() works for fepois
-        result = fit.predict()
-        assert result is not None
+    result = fit.predict()
+    assert result is not None
 
 
 @pytest.mark.against_r_core
