@@ -9,7 +9,7 @@ from joblib import Parallel, delayed
 from numpy.typing import NDArray
 from scipy.sparse import diags, hstack, spmatrix, vstack
 from scipy.sparse.linalg import lsqr
-from scipy.stats import t, ppf
+from scipy.stats import t
 from tqdm import tqdm
 
 @dataclass
@@ -24,11 +24,11 @@ class SensitivityAnalysis:
     To be added.
     """
    # Core Inputs - LIST IN PROGRESS
-    model: Feols
+    model: Any
     X: Optional[str] = None
 
    # let's start with R_2
-   def partial_r2(self, X: Optional[str] = None) -> Union[float, np.ndarray]:
+    def partial_r2(self, X: Optional[str] = None) -> Union[float, np.ndarray]:
        """
        Calculates the partial R2 for a given variable. The partial R2 explains how much of the residual variance of the outcome is explained by the covariate.
        """
@@ -73,18 +73,34 @@ class SensitivityAnalysis:
         f_crit = abs(t.ppf(alpha / 2, df - 1)) / np.sqrt(df - 1)
         fqa = fq - f_crit
 
-        if fqa <= 0:
-            rv = 0
-        else:
-            rv = 0.5 * (np.sqrt(fqa**4 + (4 * fqa**2)) - fqa**2)
-            # check edge case
-            if rv < 1 - (1 / fq**2):
-                rv = (fq**2 - f_crit**2) / (1 + fq**2)
+        rv = np.where(fqa > 0, 0.5 * (np.sqrt(fqa ** 4 + 4 * fqa ** 2) - fqa ** 2), 0.0)
+
+        # check edge cases
+        edge_case = 1 - (1 / fq**2)
+        rv = np.where(rv > edge_case, rv, (fq**2 - f_crit**2) / (1 + fq**2))
 
         return rv
 
     # summary function to report these
-    def sensitivity_stats(self):
+    def sensitivity_stats(self, X: Optional[str] = None, q = 1, alpha = 0.05) -> dict:
         """
         Compute the sensitivity statistics for the model. Returns the RV, partial R2 and partial f2
         """
+        estimate = self.model._beta_hat
+        se = self.model._se
+        df = self.model._df_t
+
+        if X is not None:
+            idx = self.model._coefnames.index(X)
+            estimate = estimate[idx]
+            se = se[idx]
+
+        # compute statistics
+        r2yd_x = self.partial_r2(X = X)
+        f2yd_x = self.partial_f2(X = X)
+        rv_q = self.robustness_value(X = X, q = q, alpha = 1) # alpha = 1 makes f_crit = 0
+        rv_qa = self.robustness_value(X = X, q = q, alpha = alpha)
+
+        sensitivity_stats_df = {'estimate': estimate, 'se': se, 'df': df, 'partial_R2': r2yd_x, 'partial_f2': f2yd_x, 'rv_q': rv_q, 'rv_qa': rv_qa }
+
+        return sensitivity_stats_df

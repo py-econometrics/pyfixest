@@ -38,7 +38,7 @@ from pyfixest.estimation.ritest import (
     _get_ritest_stats_slow,
     _plot_ritest_pvalue,
 )
-from pyfixest.estimation.sensitivity import SensitivityAnalysis, partial_r2
+from pyfixest.estimation.sensitivity import SensitivityAnalysis
 from pyfixest.estimation.solvers import solve_ols
 from pyfixest.estimation.vcov_utils import (
     _check_cluster_df,
@@ -2677,6 +2677,9 @@ class Feols:
 
         return beta_n_plus_1
 
+    def sensitivity_analysis(self) -> SensitivityAnalysis:
+        return SensitivityAnalysis(self)
+
 
 def _feols_input_checks(Y: np.ndarray, X: np.ndarray, weights: np.ndarray):
     """
@@ -2925,6 +2928,3 @@ def _deparse_vcov_input(vcov: Union[str, dict[str, str]], has_fixef: bool, is_iv
         )
 
     return vcov_type, vcov_type_detail, is_clustered, clustervar
-
-    def sensitivity_analysis(self) -> SensitivityAnalysis:
-        return SensitivityAnalysis(self)
