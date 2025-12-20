@@ -1,22 +1,39 @@
 \renewcommand\cellalign{t}
 \begin{threeparttable}
-\begin{tabular}{lcc}
+\begingroup
+\renewcommand\arraystretch{1}
+\setlength{\tabcolsep}{3pt}
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}X>{\centering\arraybackslash}X>{\centering\arraybackslash}X}
 \toprule
  & \multicolumn{2}{c}{Y} \\
 \cmidrule(lr){2-3}
  & (1) & (2) \\
 \midrule
-X1 & \makecell{-0.950*** \\ (0.067)} & \makecell{0.004 \\ (0.033)} \\
-X2 & \makecell{-0.174*** \\ (0.018)} & \makecell{-0.014 \\ (0.011)} \\
+\addlinespace[1ex]
+X1 & \makecell{-0.95*** \\ (0.047)} & \makecell{0.004 \\ (0.033)} \\
+\addlinespace[0.5ex]
+\addlinespace[0.5ex]
+X2 & \makecell{-0.174*** \\ (0.012)} & \makecell{-0.014 \\ (0.011)} \\
+\addlinespace[0.5ex]
+\addlinespace[0.5ex]
 f2 &  & \makecell{0.003 \\ (0.004)} \\
+\addlinespace[0.5ex]
 \midrule
+\addlinespace[1ex]
 f1 & x & x \\
+\addlinespace[0.5ex]
 \midrule
-Observations & 1994 & 997 \\
-S.E. type & by: f1 & by: f1+f2 \\
+\addlinespace[1ex]
+Observations & 1,994 & 996 \\
+\addlinespace[0.5ex]
+\addlinespace[0.5ex]
 $R^2$ & 0.489 & - \\
+\addlinespace[0.5ex]
 \bottomrule
-\end{tabular}
-\footnotesize Significance levels: $*$ p $<$ 0.05, $**$ p $<$ 0.01, $***$ p $<$ 0.001. Format of coefficient cell: Coefficient
- (Std. Error)
+\end{tabularx}
+\endgroup
+\footnotesize 
+\noindent\begin{minipage}{\linewidth}\smallskip\footnotesize
+Significance levels: * p < 0.05, ** p < 0.01, *** p < 0.001. Format of coefficient cell: Coefficient   (Std. Error)\end{minipage}
+
 \end{threeparttable}

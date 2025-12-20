@@ -8,7 +8,13 @@ toc-location: left
 ---
 ## Table Layout with PyFixest
 
-Pyfixest comes with functions to generate publication-ready tables. Regression tables are generated with `pf.etable()`, which can output different formats, for instance using the [Great Tables](https://posit-dev.github.io/great-tables/articles/intro.html) package or generating formatted LaTex Tables using [booktabs](https://ctan.org/pkg/booktabs?lang=en). There are also further functions `pf.dtable()` to display descriptive statistics and `pf.make_table()` generating formatted tables from pandas dataframes in the same layout.
+::: {.callout-note}
+## Migration Notice
+Starting with pyfixest 0.41.0, the table functionality is powered by [maketables](https://py-econometrics.github.io/maketables/).
+The `pf.etable()` API remains unchanged. `pf.dtable()` is deprecated (use `maketables.DTable()` directly) and `pf.make_table()` has been removed (use `maketables.MTable()` directly).
+:::
+
+Pyfixest comes with functions to generate publication-ready tables. Regression tables are generated with `pf.etable()`, which can output different formats, for instance using the [Great Tables](https://posit-dev.github.io/great-tables/articles/intro.html) package or generating formatted LaTex Tables using [booktabs](https://ctan.org/pkg/booktabs?lang=en). Descriptive statistics tables can be created with `maketables.DTable()` and custom tables with `maketables.MTable()`.
 
 To begin, we load some libraries and fit a set of regression models.
 
@@ -16,7 +22,8 @@ To begin, we load some libraries and fit a set of regression models.
 import numpy as np
 import pandas as pd
 import pylatex as pl  # for the latex table; note: not a dependency of pyfixest - needs manual installation
-from great_tables import loc, style
+import maketables
+from great_tables import loc, style  # great_tables is used by maketables internally
 from IPython.display import FileLink, display
 
 import pyfixest as pf
