@@ -72,9 +72,9 @@ class Feols:
     Non user-facing class to estimate a linear regression via OLS.
 
     Users should not directly instantiate this class,
-    but rather use the [feols()](/reference/estimation.feols.qmd) function. Note that
+    but rather use the [feols()](/reference/estimation.estimation.feols.qmd) function. Note that
     no demeaning is performed in this class: demeaning is performed in the
-    [FixestMulti](/reference/estimation.fixest_multi.qmd) class (to allow for caching
+    FixestMulti class (to allow for caching
     of demeaned variables for multiple estimation).
 
     Parameters
@@ -598,7 +598,7 @@ class Feols:
         Returns
         -------
         Feols
-            An instance of class [Feols(/reference/Feols.qmd) with updated inference.
+            An instance of class [Feols](/reference/estimation.feols_.Feols.qmd) with updated inference.
         """
         # Assuming `data` is the DataFrame in question
 
