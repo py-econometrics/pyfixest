@@ -3,10 +3,9 @@ from collections import Counter
 from collections.abc import ValuesView
 from typing import Optional, Union
 
+import maketables
 import numpy as np
 import pandas as pd
-
-import maketables
 
 from pyfixest.estimation.feiv_ import Feiv
 from pyfixest.estimation.feols_ import Feols

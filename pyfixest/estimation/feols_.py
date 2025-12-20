@@ -1653,7 +1653,7 @@ class Feols:
         res_ccv.name = "CCV"
 
         res_crv1 = self.tidy().xs(treatment)
-        res_crv1.name = "CRV1"
+        res_crv1.name = "CRV1"  # type: ignore[union-attr]
 
         return pd.concat([res_ccv, res_crv1], axis=1).T
 
