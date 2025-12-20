@@ -505,7 +505,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    sample_split_value<span class="op">=</span><span class="va">None</span>,</span>
 <span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Non user-facing class to estimate an IV model using a 2SLS estimator.</p>
-<p>Inherits from the Feols class. Users should not directly instantiate this class, but rather use the <a href="../reference/estimation.feols.qmd">feols()</a> function. Note that no demeaning is performed in this class: demeaning is performed in the <a href="../reference/estimation.fixest_multi.qmd">FixestMulti</a> class (to allow for caching of demeaned variables for multiple estimation).</p>
+<p>Inherits from the Feols class. Users should not directly instantiate this class, but rather use the <a href="../reference/estimation.estimation.feols.html">feols()</a> function. Note that no demeaning is performed in this class: demeaning is performed in the FixestMulti class (to allow for caching of demeaned variables for multiple estimation).</p>
 <section id="parameters" class="level2 doc-section doc-section-parameters">
 <h2 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters">Parameters</h2>
 <table class="caption-top table">
@@ -868,7 +868,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="example" class="level4 doc-section doc-section-example">
 <h4 class="doc-section doc-section-example anchored" data-anchor-id="example">Example</h4>
 <p>The following is an example usage of this method:</p>
-<pre><code>::: {#c633155f .cell execution_count=1}
+<pre><code>::: {#b55f2ba8 .cell execution_count=1}
 ``` {.python .cell-code}
 import numpy as np
 import pandas as pd
@@ -932,7 +932,7 @@ print("Effective F stat :", F_stat_eff_pf)
 ::: {.cell-output .cell-output-display}
 ```{=html}
 
-            &lt;div id="0O0yJs"&gt;&lt;/div&gt;
+            &lt;div id="B22d9u"&gt;&lt;/div&gt;
             &lt;script type="text/javascript" data-lets-plot-script="library"&gt;
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -956,9 +956,9 @@ print("Effective F stat :", F_stat_eff_pf)
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("0O0yJs").appendChild(div);
+                        document.getElementById("B22d9u").appendChild(div);
                     };
-                    var e = document.getElementById("0O0yJs");
+                    var e = document.getElementById("B22d9u");
                     e.appendChild(script);
                 })()
             &lt;/script&gt;
@@ -969,7 +969,7 @@ print("Effective F stat :", F_stat_eff_pf)
 ::: {.cell-output .cell-output-display}
 ```{=html}
 
-            &lt;div id="mirApk"&gt;&lt;/div&gt;
+            &lt;div id="pnBnGC"&gt;&lt;/div&gt;
             &lt;script type="text/javascript" data-lets-plot-script="library"&gt;
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -993,9 +993,9 @@ print("Effective F stat :", F_stat_eff_pf)
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("mirApk").appendChild(div);
+                        document.getElementById("pnBnGC").appendChild(div);
                     };
-                    var e = document.getElementById("mirApk");
+                    var e = document.getElementById("pnBnGC");
                     e.appendChild(script);
                 })()
             &lt;/script&gt;
