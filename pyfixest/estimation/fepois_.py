@@ -29,9 +29,9 @@ class Fepois(Feols):
     Weighted Least Squares (IWLS).
 
     Inherits from the Feols class. Users should not directly instantiate this class,
-    but rather use the [fepois()](/reference/estimation.fepois.qmd) function.
+    but rather use the [fepois()](/reference/estimation.estimation.fepois.qmd) function.
     Note that no demeaning is performed in this class: demeaning is performed in the
-    [FixestMulti](/reference/estimation.fixest_multi.qmd) class (to allow for caching
+    FixestMulti class (to allow for caching
     of demeaned variables for multiple estimation).
 
     The method implements the algorithm from Stata's `ppmlhdfe` module.
