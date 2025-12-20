@@ -23,6 +23,8 @@ tqdm=">=4.0.0"
 numpy=">=1.25.2"
 narwhals=">=1.13.3"
 joblib=">=1.4.2,<2"
+
+[pypi-dependencies]
 maketables = ">=0.1.0"
 
 [feature.dev]

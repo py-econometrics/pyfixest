@@ -749,7 +749,7 @@ class GelbachDecomposition:
         add_notes : str, optional
             Additional notes to append to the table, by default None.
         **kwargs : dict, optional
-            Additional arguments passed to make_table function (type, digits, output_type, etc.).
+            Additional arguments passed to maketables.MTable (type, digits, etc.).
 
         Returns
         -------

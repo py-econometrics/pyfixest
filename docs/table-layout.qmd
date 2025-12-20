@@ -128,10 +128,10 @@ pf.etable(
 )
 ```
 
-To obtain latex output use `type = "tex"`. If you want to save the table as a tex file, you can use the `file_name=` argument to specify the respective path where it should be saved. Etable will use latex packages `booktabs`, `threeparttable` and `makecell` for the table layout, so don't forget to include these packages in your latex document.
+To obtain latex output use `type = "tex"`. If you want to save the table as a tex file, you can use the `file_name=` argument to specify the respective path where it should be saved. Etable will use latex packages `booktabs`, `threeparttable`, `makecell`, and `tabularx` for the table layout, so don't forget to include these packages in your latex document.
 
 ```{python}
-# LaTex output (include latex packages booktabs, threeparttable, and makecell in your document):
+# LaTex output (include latex packages booktabs, threeparttable, makecell, and tabularx in your document):
 tab = pf.etable(
     [fit1, fit2, fit3, fit4, fit5, fit6],
     signif_code=[0.01, 0.05, 0.1],
@@ -152,6 +152,7 @@ def make_pdf(tab, file):
     doc.packages.append(pl.Package("booktabs"))
     doc.packages.append(pl.Package("threeparttable"))
     doc.packages.append(pl.Package("makecell"))
+    doc.packages.append(pl.Package("tabularx"))
 
     with (
         doc.create(pl.Section("A PyFixest LateX Table")),
@@ -458,56 +459,6 @@ run = False
 if run:
     make_pdf(dtab, "latexdocs/SampleTableDoc3")
 display(FileLink("latexdocs/SampleTableDoc3.pdf"))
-```
-
-
-
-# Table Layout for DataFrames with `pf.make_table()`
-
-`pf.make_table()` is called by `pf.etable()` and `pf.dtable()` to generate the tables in "gt" and "tex" format. But you can also use it directly to generate tables in the same layout from other pandas dataframes.
-
-## Basic Usage of make_table
-
-
-```{python}
-df = pd.DataFrame(np.random.randn(4, 4).round(2), columns=["A", "B", "C", "D"])
-
-# Make Booktabs style table
-pf.make_table(df=df, caption="This is a caption", notes="These are notes")
-```
-
-
-## Mutiindex DataFrames
-When the respective dataframe has a mutiindex for the columns, columns spanners are generated from the index. The row index can also be a multiindex (of at most two levels). In this case the first index level is used to generate group rows (for instance using the index name as headline and separating the groups by a horizontal line) and the second index level is used to generate the row labels.
-
-
-```{python}
-# Create a multiindex dataframe with random data
-row_index = pd.MultiIndex.from_tuples(
-    [
-        ("Group 1", "Variable 1"),
-        ("Group 1", "Variable 2"),
-        ("Group 1", "Variable 3"),
-        ("Group 2", "Variable 4"),
-        ("Group 2", "Variable 5"),
-        ("Group 3", "Variable 6"),
-    ]
-)
-
-col_index = pd.MultiIndex.from_product([["A", "B"], ["X", "Y"], ["High", "Low"]])
-df = pd.DataFrame(np.random.randn(6, 8).round(3), index=row_index, columns=col_index)
-
-pf.make_table(df=df, caption="This is a caption", notes="These are notes")
-```
-
-
-You can also hide column group names: This just creates a table where variables on the second level of the row index are displayed in groups based on the first level separated by horizontal lines.
-
-
-```{python}
-pf.make_table(
-    df=df, caption="This is a caption", notes="These are notes", rgroup_display=False
-).tab_style(style=style.text(style="italic"), locations=loc.body(rows=[1, 5]))
 ```
 
 
