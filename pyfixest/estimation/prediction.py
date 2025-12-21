@@ -9,12 +9,13 @@ from scipy.stats import t
 
 from pyfixest.utils.dev_utils import (
     _narwhals_to_pandas,
+    DataFrameType,
 )
 
 
 def get_design_matrix_and_yhat(
     model,
-    newdata: Optional[pd.DataFrame] = None,
+    newdata: Optional[DataFrameType] = None,
     context: Optional[Union[int, Mapping[str, Any]]] = None,
 ):
     """
@@ -24,7 +25,7 @@ def get_design_matrix_and_yhat(
     ----------
     model : Feols
         The fitted Feols model (self inside Feols).
-    newdata : Optional DataFrame
+    newdata : DataFrameType, optional
         The new data on which predictions are made, or None for original data.
 
     Returns
@@ -83,7 +84,7 @@ def get_design_matrix_and_yhat(
 
 
 def _get_fixed_effects_prediction_component(
-    model, newdata: pd.DataFrame, atol: float = 1e-6, btol: float = 1e-6
+    model, newdata: DataFrameType, atol: float = 1e-6, btol: float = 1e-6
 ):
     """
     Compute the fixed effect contribution to the prediction.
@@ -92,7 +93,7 @@ def _get_fixed_effects_prediction_component(
     ----------
     model : Feols
         The fitted Feols model.
-    newdata : pd.DataFrame
+    newdata : DataFrameType
         Data for predictions.
     atol : float
     btol : float
@@ -102,6 +103,9 @@ def _get_fixed_effects_prediction_component(
     np.ndarray
         fe_hat: the sum of fixed effects contributions for each observation.
     """
+    # Convert newdata to a Pandas DataFrame if needed
+    newdata = _narwhals_to_pandas(newdata).reset_index(drop=False)
+
     fe_hat = np.zeros(newdata.shape[0])
 
     if model._has_fixef:
