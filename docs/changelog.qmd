@@ -15,7 +15,45 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 - Adds the following statistics to the `Fepois` class: `_loglik`, `_loglik_null`, `_pseudo_r2` for regression without weights.
 - Set the default parameters for the MAP algorithm to a tolerance of `1e-06` and maximum number of iterations of `10_000`.
-- Adds support for weights for poisson regression via `feopis()`.
+- Adds support for weights for Poisson regression via `fepois()`, including frequency weights (`fweights`).
+- Fixes a bug in heteroskedastic-robust standard errors (HC1/HC2/HC3) when using frequency weights with both `feols()` and `fepois()`. Previously, the meat matrix was incorrectly scaled by `w²` instead of `w`. See [issue #367](https://github.com/py-econometrics/pyfixest/issues/367).
+
+### Frequency Weights Example
+
+Frequency weights allow you to work with aggregated data where each row represents multiple identical observations:
+
+```{python}
+import pyfixest as pf
+
+data = pf.get_data(model="Fepois")
+
+# aggregate data by (Y, X1) and count occurrences
+data_agg = (
+    data[["Y", "X1"]]
+    .groupby(["Y", "X1"])
+    .size()
+    .reset_index()
+    .rename(columns={0: "count"})
+)
+
+# fit poisson without on long data
+fit = pf.fepois(
+    "Y ~ X1",
+    data=data,
+    vcov="hetero"
+)
+
+# fit poisson on compressed data
+fit_wls = pf.fepois(
+    "Y ~ X1",
+    data=data_agg,
+    weights="count",
+    weights_type="fweights",
+    vcov="hetero"
+)
+
+pf.etable([fit, fit_wls])
+```
 
 ## PyFixest 0.40.1
 
