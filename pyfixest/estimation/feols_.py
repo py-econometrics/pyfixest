@@ -824,11 +824,21 @@ class Feols:
             transformed_scores = self._scores
         elif self._vcov_type_detail in ["HC2", "HC3"]:
             leverage = np.sum(self._X * (self._X @ np.linalg.inv(self._tZX)), axis=1)
+            if self._weights_type == "fweights":
+                leverage = leverage / self._weights.flatten()
             transformed_scores = (
                 self._scores / np.sqrt(1 - leverage)[:, None]
                 if self._vcov_type_detail == "HC2"
                 else self._scores / (1 - leverage)[:, None]
             )
+
+        # For fweights, the scores are X_w * u_w = (sqrt(w)*x) * (sqrt(w)*u) = w*x*u.
+        # The meat matrix should be sum_i(w_i * u_i^2 * x_i @ x_i'), not
+        # sum_i(w_i^2 * u_i^2 * x_i @ x_i'). We correct by dividing by sqrt(w).
+        # For Poisson, use _user_weights (original weights before IRLS adjustment).
+        if self._weights_type == "fweights":
+            fweights = getattr(self, "_user_weights", self._weights)
+            transformed_scores = transformed_scores / np.sqrt(fweights)
 
         Omega = transformed_scores.T @ transformed_scores
 
