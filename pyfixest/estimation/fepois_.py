@@ -202,7 +202,7 @@ class Fepois(Feols):
         if self._fe is not None:
             self._fe = self._fe.to_numpy()
             if self._fe.ndim == 1:
-                self._fe = self._fe.reshape((self._N, 1))
+                self._fe = self._fe.reshape((-1, 1))
 
     def _compute_deviance(
         self, Y: np.ndarray, mu: np.ndarray, weights: Optional[np.ndarray] = None
@@ -313,7 +313,7 @@ class Fepois(Feols):
             else:
                 ZX_resid = ZX
 
-            Z_resid = ZX_resid[:, 0].reshape((self._N, 1))  # z_resid
+            Z_resid = ZX_resid[:, 0].reshape((-1, 1))  # z_resid
             X_resid = ZX_resid[:, 1:]  # x_resid
 
             WX = np.sqrt(combined_weights) * X_resid
@@ -346,7 +346,9 @@ class Fepois(Feols):
         # needed for the calculation of the vcov
 
         # update for inference
+        # Save original user weights for fweights correction in _vcov_hetero
         user_weights = self._weights.flatten()
+        self._user_weights = self._weights.copy()
         self._irls_weights = combined_weights.flatten()
 
         self._u_hat = (WZ - WX @ delta_new).flatten()

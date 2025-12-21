@@ -832,9 +832,13 @@ class Feols:
                 else self._scores / (1 - leverage)[:, None]
             )
 
-        # for fweights, need to divide by sqrt(weights)
+        # For fweights, the scores are X_w * u_w = (sqrt(w)*x) * (sqrt(w)*u) = w*x*u.
+        # The meat matrix should be sum_i(w_i * u_i^2 * x_i @ x_i'), not
+        # sum_i(w_i^2 * u_i^2 * x_i @ x_i'). We correct by dividing by sqrt(w).
+        # For Poisson, use _user_weights (original weights before IRLS adjustment).
         if self._weights_type == "fweights":
-            transformed_scores = transformed_scores / np.sqrt(self._weights)
+            fweights = getattr(self, "_user_weights", self._weights)
+            transformed_scores = transformed_scores / np.sqrt(fweights)
 
         Omega = transformed_scores.T @ transformed_scores
 
