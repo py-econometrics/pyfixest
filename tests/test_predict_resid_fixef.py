@@ -158,8 +158,6 @@ def test_vs_fixest(data, fml):
     if not np.allclose(
         fepois_mod.predict(newdata=data2, type="link")[11:16],
         stats.predict(r_fixest_pois, newdata=data2, type="link")[11:16],
-        fepois_mod.predict(newdata=data2, type="link"),
-        stats.predict(r_fixest_pois, newdata=data2, type="link"),
         atol=1e-07,
         equal_nan=True,
     ):
