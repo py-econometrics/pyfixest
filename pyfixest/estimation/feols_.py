@@ -824,11 +824,17 @@ class Feols:
             transformed_scores = self._scores
         elif self._vcov_type_detail in ["HC2", "HC3"]:
             leverage = np.sum(self._X * (self._X @ np.linalg.inv(self._tZX)), axis=1)
+            if self._weights_type == "fweights":
+                leverage = leverage / self._weights.flatten()
             transformed_scores = (
                 self._scores / np.sqrt(1 - leverage)[:, None]
                 if self._vcov_type_detail == "HC2"
                 else self._scores / (1 - leverage)[:, None]
             )
+
+        # for fweights, need to divide by sqrt(weights)
+        if self._weights_type == "fweights":
+            transformed_scores = transformed_scores / np.sqrt(self._weights)
 
         Omega = transformed_scores.T @ transformed_scores
 
