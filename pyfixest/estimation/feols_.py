@@ -1953,8 +1953,6 @@ class Feols:
                 "The fixef() method is currently not supported for IV models."
             )
 
-        # fixef_vars = self._fixef.split("+")[0]
-
         depvars, rhs = self._fml.split("~")
         covars, fixef_vars = rhs.split("|")
 
@@ -1962,20 +1960,20 @@ class Feols:
         fixef_vars_C = [f"C({x})" for x in fixef_vars_list]
         fixef_fml = "+".join(fixef_vars_C)
 
-        fml_linear = f"{depvars} ~ {covars}"
-        Y, X = Formula(fml_linear).get_model_matrix(
+        Y, X = Formula(f"{depvars} ~ {covars}").get_model_matrix(
             self._data, output="pandas", context=self._context
         )
+        Y = Y.to_numpy().flatten().astype(np.float64)
         if self._X_is_empty:
-            Y = Y.to_numpy()
             uhat = Y.flatten()
-
         else:
-            X = X[self._coefnames]  # drop intercept, potentially multicollinear vars
-            Y = Y.to_numpy().flatten().astype(np.float64)
-            X = X.to_numpy()
+            # drop intercept, potentially multicollinear vars
+            X = X[self._coefnames].to_numpy()
+            if self._method == "fepois":
+                # determine residuals from estimated linear predictor
+                # equation (5.2) in Stammann (2018) http://arxiv.org/abs/1707.01815
+                Y = self._Y_hat_link
             uhat = (Y - X @ self._beta_hat).flatten()
-
         D2 = Formula("-1+" + fixef_fml).get_model_matrix(self._data, output="sparse")
         cols = D2.model_spec.column_names
 
@@ -2023,7 +2021,7 @@ class Feols:
 
         Parameters
         ----------
-        newdata : Optional[DataFrameType], optional
+        newdata : DataFrameType, optional
             A narwhals compatible DataFrame (polars, pandas, duckdb, etc).
             If None (default), the data used for fitting the model is used.
         type : str, optional
@@ -2082,59 +2080,42 @@ class Feols:
             # note: no need to worry about fixed effects, as not supported with
             # prediction errors; will throw error later;
             # divide by sqrt(weights) as self._X is "weighted"
-
             X = self._X
             X_index = np.arange(self._N)
-
-            yhat = (
+            y_hat = (
                 self._Y_hat_link
                 if type == "link" or self._method == "feols"
                 else self._Y_hat_response
             )
-            if not se_fit and interval != "prediction":
-                return yhat
-            else:
-                prediction_df = _compute_prediction_error(
-                    model=self,
-                    nobs=self._N,
-                    yhat=yhat,
-                    X=X,
-                    X_index=X_index,
-                    alpha=alpha,
-                )
-
-                if interval == "prediction":
-                    return prediction_df
-                else:
-                    return prediction_df["se_fit"].to_numpy()
-
+            n_observations = self._N
         else:
             y_hat, X, X_index = get_design_matrix_and_yhat(
                 model=self,
-                newdata=newdata if newdata is not None else None,
+                newdata=newdata,
                 context=self._context,
             )
-
             y_hat += _get_fixed_effects_prediction_component(
                 model=self, newdata=newdata, atol=atol, btol=btol
             )
+            n_observations = newdata.shape[0]
+            if type == "response" and self._method == "fepois":
+                y_hat = np.exp(y_hat)
 
-            if not se_fit and interval != "prediction":
-                return y_hat
+        if se_fit or interval == "prediction":
+            prediction_df = _compute_prediction_error(
+                model=self,
+                nobs=n_observations,
+                yhat=y_hat,
+                X=X,
+                X_index=X_index,
+                alpha=alpha,
+            )
+            if interval == "prediction":
+                return prediction_df
             else:
-                prediction_df = _compute_prediction_error(
-                    model=self,
-                    nobs=newdata.shape[0],
-                    yhat=y_hat,
-                    X=X,
-                    X_index=X_index,
-                    alpha=alpha,
-                )
-
-                if interval == "prediction":
-                    return prediction_df
-                else:
-                    return prediction_df["se_fit"].to_numpy()
+                return prediction_df["se_fit"].to_numpy()
+        else:
+            return y_hat
 
     def get_performance(self) -> None:
         """

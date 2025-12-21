@@ -479,11 +479,6 @@ class Fepois(Feols):
             Otherwise, returns a np.ndarray with the predicted values of the model or the prediction
             standard errors if argument "se_fit=True".
         """
-        if newdata is not None:
-            raise NotImplementedError(
-                "Prediction with function argument `newdata` is not yet implemented for Poisson regression."
-            )
-
         if se_fit:
             raise NotImplementedError(
                 "Prediction with standard errors is not implemented for Poisson regression."
