@@ -38,7 +38,11 @@ def _assert_fit_equal(fit1, fit2, vcov_types, rtol=1e-5):
         # Without fixed effects - test CRV (need to include cluster var in aggregation)
         ("Y ~ X1", ["Y", "X1", "f1"], [{"CRV1": "f1"}, {"CRV3": "f1"}]),
         # With fixed effects - HC2/HC3 not supported
-        ("Y ~ X1 | f1", ["Y", "X1", "f1"], ["iid", "HC1", {"CRV1": "f1"}, {"CRV3": "f1"}]),
+        (
+            "Y ~ X1 | f1",
+            ["Y", "X1", "f1"],
+            ["iid", "HC1", {"CRV1": "f1"}, {"CRV3": "f1"}],
+        ),
     ],
 )
 def test_fweights_ols(fml, cols, vcov_types):

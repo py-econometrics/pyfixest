@@ -831,7 +831,7 @@ class Feols:
                 if self._vcov_type_detail == "HC2"
                 else self._scores / (1 - leverage)[:, None]
             )
-        
+
         # for fweights, need to divide by sqrt(weights)
         if self._weights_type == "fweights":
             transformed_scores = transformed_scores / np.sqrt(self._weights)
