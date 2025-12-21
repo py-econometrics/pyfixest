@@ -2105,11 +2105,11 @@ class Feols:
                 alpha=alpha,
             )
             if interval == "prediction":
-                y_hat = prediction_df
+                return prediction_df
             else:
-                y_hat = prediction_df["se_fit"].to_numpy()
-
-        return y_hat
+                return prediction_df["se_fit"].to_numpy()
+        else:
+            return y_hat
 
     def get_performance(self) -> None:
         """

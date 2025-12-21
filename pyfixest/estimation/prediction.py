@@ -8,8 +8,8 @@ from formulaic import Formula
 from scipy.stats import t
 
 from pyfixest.utils.dev_utils import (
-    _narwhals_to_pandas,
     DataFrameType,
+    _narwhals_to_pandas,
 )
 
 

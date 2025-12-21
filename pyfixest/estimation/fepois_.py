@@ -5,7 +5,6 @@ from typing import Any, Optional, Protocol, Union
 
 import numpy as np
 import pandas as pd
-from formulaic import Formula
 from scipy.special import gammaln
 
 from pyfixest.errors import (
