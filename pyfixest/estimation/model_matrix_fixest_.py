@@ -354,20 +354,14 @@ def _get_columns_to_drop_and_check_ivars(
                     if ref and "_" in ref:
                         ref = ref.replace("_", "")
 
-                pattern = rf"\[(?:T\.)?{ref}(?:\.0)?\]:{var2}"
+                # reference levels may be quoted (e.g., if they contain spaces)
+                pattern = rf"""\[(?:T\.)?(?:['"])?{ref.strip("'").strip('"')}(?:['"])?(?:\.0)?\]:{var2}"""
                 if ref:
                     for column in X.columns:
                         if var1 in column and re.search(pattern, column):
                             columns_to_drop.append(column)
 
     return columns_to_drop
-
-
-def _check_ivars(_ivars: list[str], data: pd.DataFrame) -> None:
-    if _ivars and len(_ivars) == 2 and not _is_numeric(data[_ivars[1]]):
-        raise ValueError(
-            f"The second variable in the i() syntax must be numeric, but it is of type {data[_ivars[1]].dtype}."
-        )
 
 
 def _transform_i_to_C(match: re.Match) -> str:
