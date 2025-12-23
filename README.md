@@ -13,6 +13,7 @@
 [![Downloads](https://static.pepy.tech/badge/pyfixest/month)](https://pepy.tech/project/pyfixest)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![Pixi Badge][pixi-badge]][pixi-url]
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/py-econometrics/pyfixest)
 [![Donate | GiveDirectly](https://img.shields.io/static/v1?label=GiveDirectly&message=Donate&color=blue&style=flat-square)](https://github.com/py-econometrics/pyfixest?tab=readme-ov-file#support-pyfixest)
 [![PyPI](https://img.shields.io/pypi/v/pyfixest)](https://pypi.org/project/pyfixest)
 [![Citation](https://img.shields.io/badge/Cite%20as-PyFixest-blue)](https://github.com/py-econometrics/pyfixest?tab=readme-ov-file#how-to-cite)
