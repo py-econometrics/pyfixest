@@ -4,7 +4,7 @@ Thanks for taking the time to contribute! We appreciate all contributions, from 
 
 ## Quick Start with GitHub Codespaces
 
-If you are new to open source / Python development, the fastest way to start contributing is with **GitHub Codespaces**.
+If you are new to open source / Python development, the fastest way to start contributing might be with **GitHub Codespaces**.
 You start by forking the repository. You can then launch a codespace by clicking
 
 [![Open in Codespaces](https://img.shields.io/badge/Open%20in-Codespaces-blue?logo=github)](https://github.com/py-econometrics/pyfixest/codespaces)
