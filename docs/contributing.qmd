@@ -18,12 +18,10 @@ For a comprehensive overview of the codebase architecture and internals, check o
 
 ## Quick Start with GitHub Codespaces
 
-If you are new to open source / Python development, the fastest way to start contributing is with **GitHub Codespaces**. 
-You can launch a code space directly from your IDE by: 
+If you are new to open source / Python development, the fastest way to start contributing is with **GitHub Codespaces**.
+You start by forking the repository. You can then launch a codespace by clicking
 
-1. Clicking on the the green **Code** button on the repository
-2. Select the **Codespaces** tab
-3. Click **Create codespace on master**
+[![Open in Codespaces](https://img.shields.io/badge/Open%20in-Codespaces-blue?logo=github)](https://codespaces.new/py-econometrics/pyfixest)
 
 This will launch a github codespace (there is a free tier for 60h a month, thank you github!).
 

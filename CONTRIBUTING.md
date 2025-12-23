@@ -4,13 +4,12 @@ Thanks for taking the time to contribute! We appreciate all contributions, from 
 
 ## Quick Start with GitHub Codespaces
 
-The fastest way to start contributing is with GitHub Codespaces - no local setup required!
+If you are new to open source / Python development, the fastest way to start contributing is with **GitHub Codespaces**.
+You start by forking the repository. You can then launch a codespace by clicking
 
-1. Click the green **Code** button on the repository
-2. Select the **Codespaces** tab
-3. Click **Create codespace on master**
+[![Open in Codespaces](https://img.shields.io/badge/Open%20in-Codespaces-blue?logo=github)](https://codespaces.new/py-econometrics/pyfixest)
 
-The codespace will automatically install all dependencies, compile the Rust extension, and set up pre-commit hooks. Once ready (~7-10 min), you can immediately run tests with `pixi run tests-regular`.
+This will launch a github codespace (there is a free tier for 60h a month, thank you github!).
 
 ## Local Development
 
