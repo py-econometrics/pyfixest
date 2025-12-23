@@ -18,35 +18,46 @@ For a comprehensive overview of the codebase architecture and internals, check o
 
 ## Quick Start with GitHub Codespaces
 
-The fastest way to start contributing is with **GitHub Codespaces** - no local setup required!
+If you are new to open source / Python development, the fastest way to start contributing is with **GitHub Codespaces**. 
+You can launch a code space directly from your IDE by: 
 
-1. Click the green **Code** button on the repository
+1. Clicking on the the green **Code** button on the repository
 2. Select the **Codespaces** tab
 3. Click **Create codespace on master**
 
-The codespace will automatically:
+This will launch a github codespace (there is a free tier for 60h a month, thank you github!).
 
-- Install all Python, Rust, and R dependencies via pixi
-- Compile the Rust extension
-- Set up pre-commit hooks
-
-Once ready (~7-10 minutes), you can immediately start working:
+If you run 
 
 ```{.bash .code-copy}
-# Run the quick test suite
-pixi run tests-regular
+# set up env and install dependencies
+pixi install -e dev
+# compile rust dependencies
+pixi run -e dev maturin-develop
+```
+`pixi` will install the development environment and all dependencies. 
 
-# Run all tests including R comparison tests
-pixi run tests
+Now, create a new Python script `debug.py` at the root of the repository and 
+paste the following: 
 
-# Run linting
-pixi run -e lint pre-commit run --all-files
+```{python}
+import pyfixest as pf 
 
-# Activate the dev environment shell
-pixi shell -e dev
+data = pf.get_data()
+fit = pf.feols("Y ~ X1", data=data)
+````
+
+You can now run the script by typing 
+
+```{.bash .code-copy}
+pixi r -e dev python3 debug.py
 ```
 
-The codespace includes VSCode extensions for Python, Ruff, Rust, and Jupyter pre-configured.
+or run unit tests
+
+```{.bash .code-copy}
+pixi run tests-regular
+```
 
 ## Reporting bugs
 
