@@ -57,6 +57,14 @@ or run unit tests
 pixi run tests-regular
 ```
 
+After changing the docs, you can build them by running 
+
+```{.bash .code-copy}
+docs-build
+docs-preview
+docs-render
+```
+
 ## Reporting bugs
 
 We use [GitHub issues](https://github.com/py-econometrics/pyfixest/issues) to track bugs. You can report a bug by opening a new issue or contribute to an existing issue if
