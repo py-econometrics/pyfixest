@@ -123,6 +123,20 @@ pre-commit = "pre-commit run --all-files"
 build-pip = 'python -m build .'
 maturin-develop = "maturin develop --release --strip"
 
+[feature.snapshot]
+platforms = ["osx-arm64", "osx-64"]
+
+[feature.snapshot.dependencies]
+pytest = ">=7.2.0"
+
+[feature.snapshot.pypi-dependencies]
+maketables = ">=0.1.0"
+syrupy = ">=4.6.0"
+
+[feature.snapshot.tasks]
+snapshot-test = "pytest tests/test_etable_snapshot.py -v"
+snapshot-update = "pytest tests/test_etable_snapshot.py -v --snapshot-update"
+
 [environments]
 dev = ["dev", "build"]
 docs = ["docs", "build"]
@@ -130,3 +144,4 @@ lint = ["lint"]
 plots = ["plots"]
 jax = ["jax"]
 build = ["build"]
+snapshot = ["snapshot", "build"]

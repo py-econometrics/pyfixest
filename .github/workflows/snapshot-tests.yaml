@@ -1,0 +1,65 @@
+name: Snapshot Tests
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'pyfixest/report/**'
+      - 'pyfixest/estimation/decomposition.py'
+      - 'tests/test_etable_snapshot.py'
+      - 'tests/__snapshots__/**'
+  pull_request:
+    branches:
+      - master
+    paths:
+      - 'pyfixest/report/**'
+      - 'pyfixest/estimation/decomposition.py'
+      - 'tests/test_etable_snapshot.py'
+      - 'tests/__snapshots__/**'
+  schedule:
+    # Run weekly on Mondays at 6:00 UTC to catch dependency-induced regressions
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+jobs:
+  snapshot-test:
+    name: "Snapshot Tests"
+    runs-on: macos-14  # ARM-based macOS
+    continue-on-error: true  # Warn only - does not block merge
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Setup pixi
+        uses: prefix-dev/setup-pixi@v0.8.3
+        with:
+          pixi-version: v0.41.4
+          cache: true
+
+      - name: Compile Rust extension
+        run: |
+          pixi run -e snapshot maturin-develop
+
+      - name: Run snapshot tests
+        id: snapshot_tests
+        run: |
+          pixi run -e snapshot snapshot-test
+
+      - name: Report snapshot status
+        if: failure()
+        run: |
+          echo "::warning::Snapshot tests failed. Run 'pixi run -e snapshot snapshot-update' locally to update snapshots if the changes are intentional."
+
+      - name: Upload snapshot artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: snapshot-failures
+          path: tests/__snapshots__/
+          retention-days: 7

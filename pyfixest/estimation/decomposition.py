@@ -908,7 +908,7 @@ class GelbachDecomposition:
         output_type = kwargs.pop("type", "gt")
 
         # Create MTable with the DataFrame
-        table = maketables.MTable(
+        table = MTable(
             res_sub,
             notes=notes,
             caption=caption,
