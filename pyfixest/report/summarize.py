@@ -162,7 +162,6 @@ def etable(
     if signif_code is None:
         signif_code = [0.001, 0.01, 0.05]
 
-    # Validate signif_code
     assert isinstance(signif_code, list) and len(signif_code) == 3, (
         "signif_code must be a list of length 3"
     )
@@ -175,7 +174,6 @@ def etable(
             "signif_code must be in increasing order"
         )
 
-    # Validate type
     assert type in [
         "df",
         "tex",
@@ -184,16 +182,13 @@ def etable(
         "gt",
     ], "type must be either 'df', 'md', 'html', 'gt' or 'tex'"
 
-    # Normalize models to a list
     models_list = _post_processing_input_checks(models)
 
-    # Validate model_heads length
     if model_heads is not None:
         assert len(model_heads) == len(models_list), (
             "model_heads must have the same length as models"
         )
 
-    # Validate head_order
     assert head_order in [
         "dh",
         "hd",
@@ -202,7 +197,6 @@ def etable(
         "",
     ], "head_order must be one of 'd', 'h', 'dh', 'hd', ''"
 
-    # Validate custom_model_stats
     if custom_model_stats is not None:
         assert isinstance(custom_model_stats, dict), "custom_model_stats must be a dict"
         for stat, values in custom_model_stats.items():
@@ -212,7 +206,6 @@ def etable(
                 "lists in custom_model_stats values must have the same length as models"
             )
 
-    # Create maketables.ETable object
     table = maketables.ETable(
         models=models_list,
         signif_code=signif_code,
@@ -234,7 +227,6 @@ def etable(
         **kwargs,
     )
 
-    # Handle output based on type parameter
     if type == "df":
         return table.df
     elif type == "md":

@@ -10,7 +10,7 @@ toc-location: left
 
 ::: {.callout-note}
 ## Migration Notice
-Starting with pyfixest 0.41.0, the table functionality is powered by [maketables](https://py-econometrics.github.io/maketables/).
+Starting with pyfixest 0.41.0 (currently in development), the table functionality is powered by [maketables](https://py-econometrics.github.io/maketables/).
 The `pf.etable()` API remains unchanged. `pf.dtable()` is deprecated (use `DTable()` directly) and `pf.make_table()` has been removed (use `maketables.MTable()` directly).
 :::
 
@@ -350,7 +350,7 @@ format:
 
 ::: {.callout-warning}
 ## Deprecation Notice
-`pf.dtable()` is deprecated as of pyfixest 0.41.0. Please use `DTable()` directly instead.
+`pf.dtable()` will be deprecated in the future. Please use  from the `maketables` package.
 :::
 
 The function `DTable()` allows to display descriptive statistics for a set of variables in the same layout.

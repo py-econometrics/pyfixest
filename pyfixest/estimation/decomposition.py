@@ -771,7 +771,7 @@ class GelbachDecomposition:
         ```{python}
         gb.etable(column_heads = ["Full Difference", "Unexplained Difference", "Explained Difference"])
         """
-        import maketables
+        from maketables import MTable
 
         if column_heads is not None and len(column_heads) != 3:
             raise ValueError("The 'column_heads' parameter must be a list of length 3.")
