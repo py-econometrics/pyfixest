@@ -14,6 +14,8 @@ new features, or suggesting improvements to documentation.
 If you'd like to get involved, but are not yet sure how, please feel free to send us an [email](alexander-fischer1801@t-online.de). Some familiarity with
 either Python or econometrics will help, but you really don't need to be a `numpy` core developer or have published in [Econometrica](https://onlinelibrary.wiley.com/journal/14680262) =) We'd be more than happy to invest time to help you get started!
 
+For a comprehensive overview of the codebase architecture and internals, check out the [DeepWiki](https://deepwiki.com/py-econometrics/pyfixest). While not perfect and correct in all regards, we think it is a pretty good starting point to learn about the codebase!
+
 ## Reporting bugs
 
 We use [GitHub issues](https://github.com/py-econometrics/pyfixest/issues) to track bugs. You can report a bug by opening a new issue or contribute to an existing issue if

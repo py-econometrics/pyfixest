@@ -1,3 +1,7 @@
+---
+freeze: auto
+---
+
 # Changelog
 
 ```{python}
@@ -15,7 +19,7 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 - Adds the following statistics to the `Fepois` class: `_loglik`, `_loglik_null`, `_pseudo_r2` for regression without weights.
 - Set the default parameters for the MAP algorithm to a tolerance of `1e-06` and maximum number of iterations of `10_000`.
-- Adds support for weights for poisson regression via `feopis()`. 
+- Adds support for weights for poisson regression via `feopis()`.
 
 ## PyFixest 0.40.1
 
@@ -185,6 +189,8 @@ pf.etable([fit_nb, fit_rust], digits = 8)
 learn more about all features and take a look at more systematic benchmarks in the [quantreg vignette](https://py-econometrics.github.io/pyfixest/quantile-regression.html).
 
 ```{python}
+#| eval: false
+
 N_qr = 10_000
 rng = np.random.default_rng(929)
 
@@ -772,7 +778,7 @@ Improved Collinearity handling. See [#145](https://github.com/py-econometrics/py
 
 ### Breaking API changes
 
-It is no longer required to initiate an object of type `Fixest` prior to running [Feols(/reference/Feols.qmd) or `fepois`. Instead,
+It is no longer required to initiate an object of type `Fixest` prior to running [Feols](/reference/estimation.feols_.Feols.qmd) or `fepois`. Instead,
 you can now simply use `feols()` and `fepois()` as functions, just as in `fixest`. Both function can be found in an
 `estimation` module and need to obtain a `pd.DataFrame` as a function argument:
 
@@ -784,7 +790,7 @@ data = get_data()
 fit = feols("Y ~ X1 | f1", data = data, vcov = "iid")
 ```
 
-Calling `feols()` will return an instance of class [Feols(/reference/Feols.qmd), while calling `fepois()` will return an instance of class `Fepois`.
+Calling `feols()` will return an instance of class [Feols](/reference/estimation.feols_.Feols.qmd), while calling `fepois()` will return an instance of class `Fepois`.
 Multiple estimation syntax will return an instance of class `FixestMulti`.
 
 Post processing works as before via `.summary()`, `.tidy()` and other methods.
@@ -800,7 +806,7 @@ summary([fit, fit2])
 ```
 
 Visualization is possible via custom methods (`.iplot()` & `.coefplot()`), but a new module allows to visualize
-  a list of [Feols(/reference/Feols.qmd) and/or `Fepois` instances:
+  a list of [Feols](/reference/estimation.feols_.Feols.qmd) and/or `Fepois` instances:
 
 ```py
 from pyfixest.visualize import coefplot, iplot

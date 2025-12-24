@@ -23,7 +23,7 @@
 [chat-badge]: https://img.shields.io/discord/1259933360726216754.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2&style=flat-square
 [chat-url]: https://discord.gg/gBAydeDMVK
 
-[Docs](https://py-econometrics.github.io/pyfixest/pyfixest.html) · [Function & API Reference](https://py-econometrics.github.io/pyfixest/reference/) · [Report Bugs & Request Features](https://github.com/py-econometrics/pyfixest/issues) · [Changelog](https://py-econometrics.github.io/pyfixest/changelog.html)
+[Docs](https://py-econometrics.github.io/pyfixest/pyfixest.html) · [Function & API Reference](https://py-econometrics.github.io/pyfixest/reference/) · [DeepWiki](https://deepwiki.com/py-econometrics/pyfixest) · [Report Bugs & Request Features](https://github.com/py-econometrics/pyfixest/issues) · [Changelog](https://py-econometrics.github.io/pyfixest/changelog.html)
 
 `PyFixest` is a Python package for fast high-dimensional fixed effects regression.
 
