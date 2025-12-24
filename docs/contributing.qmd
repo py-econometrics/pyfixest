@@ -60,9 +60,12 @@ pixi run tests-regular
 After changing the docs, you can build them by running 
 
 ```{.bash .code-copy}
+# compile rust in docs environment
+pixi run -e dev maturin-develop
+# build, render, preview docs
 docs-build
-docs-preview
 docs-render
+docs-preview
 ```
 
 Note that the entire process might take a few minutes. 
