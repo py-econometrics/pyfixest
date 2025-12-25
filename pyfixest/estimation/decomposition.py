@@ -907,8 +907,7 @@ class GelbachDecomposition:
         rgroup_sep_val = "t" if rgroup_sep is None else rgroup_sep
         output_type = kwargs.pop("type", "gt")
 
-        # Create MTable with the DataFrame
-        table = maketables.MTable(
+        table = MTable(
             res_sub,
             notes=notes,
             caption=caption,

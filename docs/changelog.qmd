@@ -26,7 +26,7 @@ connection to `pyfixest`, the API of `pf.etable()` remains unchanged.
 **Changes:**
 
 - `pf.etable()` now uses `maketables.ETable` internally. The API remains unchanged for backward compatibility.
-- Because this function is not at the core of `pyixest` functionality, we will deprecate `pf.dtable()`. 
+- Because the function is not at the core of `pyixest` functionality, we will deprecate `pf.dtable()`. 
   A `FutureWarning` is now emitted. The function has been moved to `maketables` and can be used by calling `maketables.DTable()` directly.
 - The same applies for `pf.make_table()`, which has been an internal utility function to create tables. An equivalent function now lives in 
   `maketables.MTable()`.
@@ -47,7 +47,7 @@ maketables.DTable(df, vars=["Y", "X1"])
 pf.make_table(df, type="gt", caption="My Table")
 # After:
 import maketables
-maketables.MTable(df, caption="My Table").to_gt()
+maketables.MTable(df, caption="My Table").make(type="gt")
 ```
 
 ### Other Changes

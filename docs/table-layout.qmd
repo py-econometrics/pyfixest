@@ -350,7 +350,7 @@ format:
 
 ::: {.callout-warning}
 ## Deprecation Notice
-`pf.dtable()` will be deprecated in the future. Please use  from the `maketables` package.
+`pf.dtable()` will be deprecated in the future. Please use `DTable` from the `maketables` package.
 :::
 
 The function `DTable()` allows to display descriptive statistics for a set of variables in the same layout.

@@ -43,7 +43,7 @@ import pyfixest as pf
 
 data = pf.get_data()
 fit = pf.feols("Y ~ X1", data=data)
-````
+```
 
 You can now run the script by typing 
 
