@@ -439,7 +439,7 @@ def dtable(
     Generate descriptive statistics tables and create a booktab style table in
     the desired format (gt or tex).
 
-    .. deprecated::
+    .. deprecated:: 0.41.0
         This function is deprecated and will be removed in a future version.
         Please use `maketables.DTable()` directly instead.
         See https://py-econometrics.github.io/maketables/ for documentation.
