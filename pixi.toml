@@ -62,7 +62,9 @@ jax = ">=0.4.38, <0.8"
 jaxlib = ">=0.4.38, <0.8"
 
 [feature.dev.tasks]
-"tests" = "pytest -rs -n 9 --cov-report=term tests"
+"tests" = "pytest -rs -n 9 --cov=pyfixest --cov-report=term tests --ignore=tests/test_etable_snapshot.py --ignore=tests/test_plots_snapshot.py"
+"coverage-report" = "coverage report && coverage xml"
+"coverage-clean" = "coverage erase"
 "tests-against-r-core" = 'pytest -rs tests -n 9 -m "against_r_core" --cov=pyfixest --cov-report=xml'
 "tests-against-r-extended"  = 'pytest -rs tests -n 9 -m "against_r_extended" --cov=pyfixest --cov-report=xml'
 "tests-regular" = 'pytest tests -n 9 -m "not (extended or against_r_core or against_r_extended or plots or hac)" --cov=pyfixest --cov-report=xml'
@@ -128,14 +130,17 @@ platforms = ["osx-arm64", "osx-64"]
 
 [feature.snapshot.dependencies]
 pytest = ">=7.2.0"
+pytest-cov = ">=4.1.0"
+matplotlib = ">=3.7.0"
 
 [feature.snapshot.pypi-dependencies]
 maketables = ">=0.1.0"
 syrupy = ">=4.6.0"
+lets-plot = ">=4.0.0"
 
 [feature.snapshot.tasks]
-snapshot-test = "pytest tests/test_etable_snapshot.py -v"
-snapshot-update = "pytest tests/test_etable_snapshot.py -v --snapshot-update"
+snapshot-test = "pytest tests/test_etable_snapshot.py tests/test_plots_snapshot.py -v --cov=pyfixest --cov-append --cov-report=term"
+snapshot-update = "pytest tests/test_etable_snapshot.py tests/test_plots_snapshot.py -v --snapshot-update"
 
 [environments]
 dev = ["dev", "build"]

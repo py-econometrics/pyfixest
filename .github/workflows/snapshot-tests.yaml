@@ -8,6 +8,7 @@ on:
       - 'pyfixest/report/**'
       - 'pyfixest/estimation/decomposition.py'
       - 'tests/test_etable_snapshot.py'
+      - 'tests/test_plots_snapshot.py'
       - 'tests/__snapshots__/**'
   pull_request:
     branches:
@@ -16,6 +17,7 @@ on:
       - 'pyfixest/report/**'
       - 'pyfixest/estimation/decomposition.py'
       - 'tests/test_etable_snapshot.py'
+      - 'tests/test_plots_snapshot.py'
       - 'tests/__snapshots__/**'
   schedule:
     # Run weekly on Mondays at 6:00 UTC to catch dependency-induced regressions
