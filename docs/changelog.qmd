@@ -19,10 +19,9 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ### Migration to maketables
 
-The table functionality in pyfixest now uses the [maketables](https://py-econometrics.github.io/maketables/) package internally. `maketables` is a spin-off of
+The table functionality in pyfixest now uses [maketables](https://py-econometrics.github.io/maketables/). `maketables` is a spin-off of
 pyfixest internal functions, but supports more packages in the Python eco-system (e.g. `statsmodels` and `linearmorels`). Due to it's close
 connection to `pyfixest`, the API of `pf.etable()` remains unchanged.
-
 **Changes:**
 
 - `pf.etable()` now uses `maketables.ETable` internally. The API remains unchanged for backward compatibility.
