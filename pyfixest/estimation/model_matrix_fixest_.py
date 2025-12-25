@@ -100,7 +100,13 @@ def model_matrix_fixest(
     fval = FixestFormula._fval
     _check_weights(weights, data)
 
-    pattern = r"i\((?P<var1>\w+)(?:,(?P<var2>\w+))?(?:,ref=(?P<ref>.*?))?\)"
+    pattern = (
+        r"i\(\s*"
+        r"(?P<var1>[A-Za-z_]\w*)\s*"
+        r"(?:,\s*(?P<var2>[A-Za-z_]\w*)\s*)?"
+        r"(?:,\s*ref\s*=\s*(?P<ref>[^)]*?)\s*)?"
+        r"\)"
+    )
 
     fml_all = (
         fml_second_stage
