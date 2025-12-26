@@ -218,7 +218,7 @@ pub struct FixestConfig {
 impl Default for FixestConfig {
     fn default() -> Self {
         Self {
-            tol: 1e-8,
+            tol: 1e-6, // Match fixest's default
             maxiter: 100_000,
             iter_warmup: 15,
             iter_proj_after_acc: 40,

@@ -1,0 +1,7 @@
+[target.aarch64-apple-darwin]
+rustflags = [
+    "-C", "target-cpu=native",
+    "-C", "target-feature=+neon,+fp-armv8,+aes,+sha2",
+    "-C", "llvm-args=-enable-unsafe-fp-math",
+    "-C", "llvm-args=-fast-isel=false",
+]
