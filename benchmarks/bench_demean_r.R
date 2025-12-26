@@ -46,9 +46,9 @@ df <- data.frame(
 
 # Build formula based on n_fe
 if (n_fe == 2) {
-  fml <- y ~ 1 | indiv_id + year
+  fml <- y ~ x1 | indiv_id + year
 } else {
-  fml <- y ~ 1 | indiv_id + year + firm_id
+  fml <- y ~ x1 | indiv_id + year + firm_id
 }
 
 # Warm up
