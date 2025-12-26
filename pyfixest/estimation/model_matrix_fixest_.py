@@ -1,3 +1,4 @@
+import ast
 import re
 import warnings
 from collections.abc import Mapping
@@ -6,10 +7,10 @@ from typing import Any, Optional, Union
 import numpy as np
 import pandas as pd
 from formulaic import Formula
+from formulaic.errors import FactorEvaluationError
 
 from pyfixest.estimation.detect_singletons_ import detect_singletons
 from pyfixest.estimation.FormulaParser import FixestFormula
-from pyfixest.utils.utils import capture_context
 
 
 def model_matrix_fixest(
@@ -100,43 +101,22 @@ def model_matrix_fixest(
     fval = FixestFormula._fval
     _check_weights(weights, data)
 
-    pattern = (
-        r"i\(\s*"
-        r"(?P<var1>[A-Za-z_]\w*)\s*"
-        r"(?:,\s*(?P<var2>[A-Za-z_]\w*)\s*)?"
-        r"(?:,\s*ref\s*=\s*(?P<ref>[^)]*?)\s*)?"
-        r"\)"
-    )
-
-    fml_all = (
-        fml_second_stage
-        if fml_first_stage is None
-        else f"{fml_second_stage} + {fml_first_stage}"
-    )
-
-    _list_of_ivars_dict = _get_ivars_dict(fml_all, pattern)
-
-    fml_second_stage = re.sub(pattern, _transform_i_to_C, fml_second_stage)
-    fml_first_stage = (
-        re.sub(pattern, _transform_i_to_C, fml_first_stage)
-        if fml_first_stage is not None
-        else fml_first_stage
-    )
+    fml_second_stage = _fixest_to_formulaic(fml_second_stage, data=data)
+    if fml_first_stage is not None:
+        fml_first_stage = _fixest_to_formulaic(fml_first_stage, data=data)
 
     fval, data = _fixef_interactions(fval=fval, data=data)
     _is_iv = fml_first_stage is not None
 
-    fml_kwargs = {
-        "fml_second_stage": fml_second_stage,
-        **({"fml_first_stage": fml_first_stage} if _is_iv else {}),
-        **({"fe": wrap_factorize(fval)} if fval != "0" else {}),
-        **({"weights": weights} if weights is not None else {}),
-    }
-
-    FML = Formula(**fml_kwargs)
-    _context = capture_context(context)
-    mm = FML.get_model_matrix(
-        data, output="pandas", context={"factorize": factorize, **_context}
+    mm = Formula(
+        **{
+            "fml_second_stage": fml_second_stage,
+            **({"fml_first_stage": fml_first_stage} if _is_iv else {}),
+            **({"fe": wrap_factorize(fval)} if fval != "0" else {}),
+            **({"weights": weights} if weights is not None else {}),
+        }
+    ).get_model_matrix(
+        data, ensure_full_rank=False, output="pandas", context={"factorize": factorize}
     )
     endogvar = Z = weights_df = fe = None
 
@@ -194,15 +174,6 @@ def model_matrix_fixest(
     if endogvar is not None and endogvar.shape[1] > 1:
         raise TypeError("The endogenous variable must be numeric.")
 
-    columns_to_drop = _get_columns_to_drop_and_check_ivars(_list_of_ivars_dict, X, data)
-
-    if columns_to_drop and not X_is_empty:
-        X.drop(columns_to_drop, axis=1, inplace=True)
-        if Z is not None:
-            Z.drop(columns_to_drop, axis=1, inplace=True)
-
-    _icovars = _get_icovars(_list_of_ivars_dict, X)
-
     # drop intercept if specified i
     # n feols() call - mostly handy for did2s()
     if drop_intercept or fe is not None:
@@ -252,7 +223,6 @@ def model_matrix_fixest(
         "weights_df": weights_df,
         "na_index": na_index,
         "na_index_str": na_index_str,
-        "icovars": _icovars,
         "X_is_empty": X_is_empty,
         "model_spec": model_spec,
     }
@@ -330,61 +300,51 @@ def _get_na_index(N: int, Y_index: pd.Index) -> np.ndarray:
     return na_index
 
 
-def _get_columns_to_drop_and_check_ivars(
-    _list_of_ivars_dict: Union[list[dict], None], X: pd.DataFrame, data: pd.DataFrame
-) -> list[str]:
-    columns_to_drop = []
-    if _list_of_ivars_dict:
-        for _i_ref in _list_of_ivars_dict:
-            if _i_ref.get("var2"):
-                var1 = _i_ref.get("var1", "")
-                var2 = _i_ref.get("var2", "")
-                ref = _i_ref.get("ref", "")
+def _fixest_to_formulaic(formula_string: str, data: pd.DataFrame) -> str:
+    terms = re.findall(r"(i\(.+?\))", formula_string)
+    if not terms:
+        return formula_string  # fixest:i() syntax not used in formula
 
-                if pd.api.types.is_categorical_dtype(  # type: ignore
-                    data[var2]  # type: ignore
-                ) or pd.api.types.is_object_dtype(data[var2]):  # type: ignore
-                    raise ValueError(
-                        f"""
-                        The second variable in the i() syntax cannot be of type "category" or "object", but
-                        but it is of type {data[var2].dtype}.
-                        """
-                    )
-                else:
-                    if ref and "_" in ref:
-                        ref = ref.replace("_", "")
-
-                pattern = rf"\[(?:T\.)?{ref}(?:\.0)?\]:{var2}"
-                if ref:
-                    for column in X.columns:
-                        if var1 in column and re.search(pattern, column):
-                            columns_to_drop.append(column)
-
-    return columns_to_drop
-
-
-def _check_ivars(_ivars: list[str], data: pd.DataFrame) -> None:
-    if _ivars and len(_ivars) == 2 and not _is_numeric(data[_ivars[1]]):
-        raise ValueError(
-            f"The second variable in the i() syntax must be numeric, but it is of type {data[_ivars[1]].dtype}."
+    def is_categorical(variable: str, data: pd.DataFrame) -> bool:
+        if variable not in data.columns:
+            raise FactorEvaluationError(
+                f"Unable to evaluate factor `{variable}`. [NameError: `{variable}` is not present in the dataset or evaluation context.]"
+            )
+        values = data[variable]
+        # Copy of formulaic.materializers.pandas.PandasMaterializer._is_categorical
+        return values.dtype in ("object", "str") or isinstance(
+            values.dtype, pd.CategoricalDtype
         )
 
+    def build_term(variable: str, reference: str | None, categorical: bool) -> str:
+        if reference is None and not categorical:
+            return variable  # do not encode as categorical
+        if reference is None:
+            contrast = ",contr.treatment(drop=False)"
+        else:
+            contrast = f",contr.treatment(base={reference},drop=True)"
+        return f"C({variable}{contrast})"
 
-def _transform_i_to_C(match: re.Match) -> str:
-    # Extracting the matched groups
-    var1 = match.group("var1")
-    var2 = match.group("var2")
-    ref = match.group("ref")
-
-    # Determine transformation based on captured groups
-    if var2:
-        # Case: i(X1,X2) or i(X1,X2,ref=1)
-        base = f",contr.treatment(base={ref})" if ref else ""
-        return f"C({var1}{base}):{var2}"
-    else:
-        # Case: i(X1) or i(X1,ref=1)
-        base = f",contr.treatment(base={ref})" if ref else ""
-        return f"C({var1}{base})"
+    variable_to_reference: dict[str, str] = {"factor_var": "ref", "var": "ref2"}
+    for term in terms:
+        expression = ast.parse(term, mode="eval")
+        args = [ast.unparse(arg) for arg in expression.body.args]
+        kwargs = {kw.arg: ast.unparse(kw.value) for kw in expression.body.keywords}
+        formulaic_terms: list[str] = []
+        for i, (var, ref) in enumerate(variable_to_reference.items()):
+            if var not in kwargs and i >= len(args):
+                continue
+            variable = kwargs[var] if var in kwargs else args[i]
+            reference = kwargs.get(ref)
+            categorical = (
+                True if var == "factor_var" else is_categorical(variable, data)
+            )
+            formulaic_term = build_term(
+                variable=variable, reference=reference, categorical=categorical
+            )
+            formulaic_terms.append(formulaic_term)
+        formula_string = formula_string.replace(term, ":".join(formulaic_terms))
+    return formula_string
 
 
 def _fixef_interactions(fval: str, data: pd.DataFrame) -> tuple[str, pd.DataFrame]:
@@ -420,81 +380,6 @@ def _fixef_interactions(fval: str, data: pd.DataFrame) -> tuple[str, pd.DataFram
                 )
 
     return fval.replace("^", "_"), data
-
-
-def _get_ivars_dict(fml: str, pattern: str) -> list[dict]:
-    matches = re.finditer(pattern, fml)
-
-    res = []
-    if matches:
-        for match in matches:
-            match_dict = {}
-            if match.group("var1"):
-                match_dict["var1"] = match.group("var1")
-            if match.group("var2"):
-                match_dict["var2"] = match.group("var2")
-            if match.group("ref"):
-                match_dict["ref"] = match.group("ref")
-            res.append(match_dict)
-
-    return res
-
-
-def _get_icovars(
-    _list_of_ivars_dict: Union[None, list], X: pd.DataFrame
-) -> Optional[list[str]]:
-    """
-    Get interacted variables.
-
-    Get all interacted variables via i() syntax. Required for plotting of all
-    interacted variables via iplot().
-
-    Parameters
-    ----------
-    _ivars : list
-        A list of interaction variables.
-    X : pd.DataFrame
-        The DataFrame containing the covariates.
-
-    Returns
-    -------
-    list
-        A list of interacted variables or None.
-    """
-    if _list_of_ivars_dict:
-        _ivars = [
-            (
-                (d.get("var1"),)
-                if d.get("var2") is None
-                else (d.get("var1"), d.get("var2"))
-            )
-            for d in _list_of_ivars_dict
-        ]
-
-        _icovars_set = set()
-
-        for _ivar in _ivars:
-            if len(_ivar) == 1:
-                _icovars_set.update(
-                    [col for col in X.columns if f"C({_ivar[0]}" in col]
-                )
-            else:
-                var1, var2 = _ivar
-                pattern = rf"C\({var1}(,.*)?\)\[.*\]:{var2}"
-                _icovars_set.update(
-                    [
-                        match.group()
-                        for match in (re.search(pattern, x) for x in X.columns)
-                        if match
-                    ]
-                )
-
-        _icovars = list(_icovars_set)
-
-    else:
-        _icovars = None
-
-    return _icovars
 
 
 def _is_numeric(column: pd.Series) -> bool:
