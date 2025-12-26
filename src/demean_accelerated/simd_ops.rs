@@ -1,26 +1,25 @@
-//! SIMD-optimized convergence check for demeaning algorithms.
-//!
-//! Minimal subset used in production; other helpers were removed to avoid unused warnings.
-
-use wide::{f64x4, CmpGe};
+//! Convergence check for demeaning algorithms.
 
 /// Check if maximum absolute difference is below tolerance with early exit.
+///
+/// Uses loop unrolling for better performance. The compiler will auto-vectorize
+/// this on platforms with SIMD support.
 #[inline]
 pub fn is_converged(a: &[f64], b: &[f64], tol: f64) -> bool {
     debug_assert_eq!(a.len(), b.len());
 
     let n = a.len();
     let chunks = n / 4;
-    let tol_vec = f64x4::splat(tol);
 
-    // Process 4 elements at a time with early exit.
+    // Process 4 elements at a time with early exit (unrolled for auto-vectorization).
     for i in 0..chunks {
         let idx = i * 4;
-        let av = f64x4::new([a[idx], a[idx + 1], a[idx + 2], a[idx + 3]]);
-        let bv = f64x4::new([b[idx], b[idx + 1], b[idx + 2], b[idx + 3]]);
-        let diff = (av - bv).abs();
+        let d0 = (a[idx] - b[idx]).abs();
+        let d1 = (a[idx + 1] - b[idx + 1]).abs();
+        let d2 = (a[idx + 2] - b[idx + 2]).abs();
+        let d3 = (a[idx + 3] - b[idx + 3]).abs();
 
-        if diff.cmp_ge(tol_vec).any() {
+        if d0 >= tol || d1 >= tol || d2 >= tol || d3 >= tol {
             return false;
         }
     }
