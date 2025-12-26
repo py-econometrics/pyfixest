@@ -4,19 +4,21 @@
 //! iteration rather than residual-space iteration.
 
 /// Pre-computed FE information for coefficient-space iteration.
+/// Uses flat memory layout for better cache performance.
 pub struct FEInfo {
     pub n_obs: usize,
     pub n_fe: usize,
-    /// Group IDs for each FE: fe_ids[q][i] = group ID for observation i in FE q
-    pub fe_ids: Vec<Vec<usize>>,
+    /// Group IDs flattened: fe_ids[q * n_obs + i] = group ID for observation i in FE q
+    /// This eliminates pointer indirection compared to Vec<Vec<usize>>
+    pub fe_ids: Vec<usize>,
     /// Number of groups per FE
     pub n_groups: Vec<usize>,
-    /// Starting index of each FE's coefficients
+    /// Starting index of each FE's coefficients in coef array
     pub coef_start: Vec<usize>,
     /// Total number of coefficients
     pub n_coef_total: usize,
-    /// Sum of weights per group: sum_weights[q][g]
-    pub sum_weights: Vec<Vec<f64>>,
+    /// Sum of weights per group, flattened: access via coef_start[q] + g
+    pub sum_weights: Vec<f64>,
     /// Sample weights
     pub weights: Vec<f64>,
     /// Whether all weights are 1.0 (optimization)
@@ -34,35 +36,37 @@ impl FEInfo {
         // Check if unweighted
         let is_unweighted = weights.iter().all(|&w| (w - 1.0).abs() < 1e-10);
 
-        // Extract per-FE group IDs
-        let mut fe_ids = vec![vec![0usize; n_obs]; n_fe];
-        for i in 0..n_obs {
-            for q in 0..n_fe {
-                fe_ids[q][i] = group_ids[i * n_fe + q];
-            }
-        }
-
-        // Coefficient starting indices
+        // Coefficient starting indices (computed first, used for sum_weights layout)
         let mut coef_start = vec![0usize; n_fe];
         for q in 1..n_fe {
             coef_start[q] = coef_start[q - 1] + n_groups[q - 1];
         }
         let n_coef_total: usize = n_groups.iter().sum();
 
-        // Sum of weights per group
-        let mut sum_weights = Vec::with_capacity(n_fe);
+        // Flatten fe_ids: fe_ids[q * n_obs + i] = group_ids[i * n_fe + q]
+        // This converts from row-major input to column-major (per-FE) layout
+        let mut fe_ids = vec![0usize; n_fe * n_obs];
+        for i in 0..n_obs {
+            for q in 0..n_fe {
+                fe_ids[q * n_obs + i] = group_ids[i * n_fe + q];
+            }
+        }
+
+        // Sum of weights per group, flattened with same layout as coef
+        let mut sum_weights = vec![0.0; n_coef_total];
         for q in 0..n_fe {
-            let mut sw = vec![0.0; n_groups[q]];
+            let start = coef_start[q];
+            let fe_offset = q * n_obs;
             for i in 0..n_obs {
-                sw[fe_ids[q][i]] += weights[i];
+                let g = fe_ids[fe_offset + i];
+                sum_weights[start + g] += weights[i];
             }
-            // Avoid division by zero
-            for s in &mut sw {
-                if *s == 0.0 {
-                    *s = 1.0;
-                }
+        }
+        // Avoid division by zero
+        for s in &mut sum_weights {
+            if *s == 0.0 {
+                *s = 1.0;
             }
-            sum_weights.push(sw);
         }
 
         Self {
@@ -78,25 +82,47 @@ impl FEInfo {
         }
     }
 
+    /// Get slice of FE group IDs for FE q: &[group_id for obs 0..n_obs]
+    #[inline(always)]
+    pub fn fe_ids_slice(&self, q: usize) -> &[usize] {
+        let start = q * self.n_obs;
+        &self.fe_ids[start..start + self.n_obs]
+    }
+
+    /// Get slice of sum_weights for FE q: &[sum_weight for group 0..n_groups[q]]
+    #[inline(always)]
+    pub fn sum_weights_slice(&self, q: usize) -> &[f64] {
+        let start = self.coef_start[q];
+        let end = if q + 1 < self.n_fe {
+            self.coef_start[q + 1]
+        } else {
+            self.n_coef_total
+        };
+        &self.sum_weights[start..end]
+    }
+
     /// Compute sum of weighted (input - output) for each coefficient.
     /// This is computed ONCE at the start and never changes.
     pub fn compute_in_out(&self, input: &[f64], output: &[f64]) -> Vec<f64> {
         let mut in_out = vec![0.0; self.n_coef_total];
+        let n_obs = self.n_obs;
 
         if self.is_unweighted {
             for q in 0..self.n_fe {
                 let start = self.coef_start[q];
-                let fe_q = &self.fe_ids[q];
-                for i in 0..self.n_obs {
-                    in_out[start + fe_q[i]] += input[i] - output[i];
+                let fe_offset = q * n_obs;
+                for i in 0..n_obs {
+                    let g = self.fe_ids[fe_offset + i];
+                    in_out[start + g] += input[i] - output[i];
                 }
             }
         } else {
             for q in 0..self.n_fe {
                 let start = self.coef_start[q];
-                let fe_q = &self.fe_ids[q];
-                for i in 0..self.n_obs {
-                    in_out[start + fe_q[i]] += (input[i] - output[i]) * self.weights[i];
+                let fe_offset = q * n_obs;
+                for i in 0..n_obs {
+                    let g = self.fe_ids[fe_offset + i];
+                    in_out[start + g] += (input[i] - output[i]) * self.weights[i];
                 }
             }
         }
@@ -107,11 +133,13 @@ impl FEInfo {
     /// Compute output from coefficients: output[i] = input[i] - sum_q(coef[fe_q[i]])
     pub fn compute_output(&self, coef: &[f64], input: &[f64], output: &mut [f64]) {
         output.copy_from_slice(input);
+        let n_obs = self.n_obs;
         for q in 0..self.n_fe {
             let start = self.coef_start[q];
-            let fe_q = &self.fe_ids[q];
-            for i in 0..self.n_obs {
-                output[i] -= coef[start + fe_q[i]];
+            let fe_offset = q * n_obs;
+            for i in 0..n_obs {
+                let g = self.fe_ids[fe_offset + i];
+                output[i] -= coef[start + g];
             }
         }
     }
@@ -216,10 +244,10 @@ fn project_2fe(
     let n0 = fe_info.n_groups[0];
     let n1 = fe_info.n_groups[1];
     let n_obs = fe_info.n_obs;
-    let fe0 = &fe_info.fe_ids[0];
-    let fe1 = &fe_info.fe_ids[1];
-    let sw0 = &fe_info.sum_weights[0];
-    let sw1 = &fe_info.sum_weights[1];
+    let fe0 = fe_info.fe_ids_slice(0);
+    let fe1 = fe_info.fe_ids_slice(1);
+    let sw0 = fe_info.sum_weights_slice(0);
+    let sw1 = fe_info.sum_weights_slice(1);
     let weights = &fe_info.weights;
 
     // Step 1: Compute beta from alpha_in
@@ -377,7 +405,7 @@ fn project_qfe(
         // Add contributions from FEs with h < q (use coef_in)
         for h in 0..q {
             let start_h = fe_info.coef_start[h];
-            let fe_h = &fe_info.fe_ids[h];
+            let fe_h = fe_info.fe_ids_slice(h);
             // SAFETY: fe_h[i] < n_groups[h], start_h + fe_h[i] < coef_in.len()
             for i in 0..n_obs {
                 unsafe {
@@ -390,7 +418,7 @@ fn project_qfe(
         // Add contributions from FEs with h > q (use coef_out, already computed)
         for h in (q + 1)..n_fe {
             let start_h = fe_info.coef_start[h];
-            let fe_h = &fe_info.fe_ids[h];
+            let fe_h = fe_info.fe_ids_slice(h);
             // SAFETY: fe_h[i] < n_groups[h], start_h + fe_h[i] < coef_out.len()
             for i in 0..n_obs {
                 unsafe {
@@ -403,8 +431,8 @@ fn project_qfe(
         // Step 2: Compute new coefficients for FE q
         let start_q = fe_info.coef_start[q];
         let n_groups_q = fe_info.n_groups[q];
-        let fe_q = &fe_info.fe_ids[q];
-        let sw_q = &fe_info.sum_weights[q];
+        let fe_q = fe_info.fe_ids_slice(q);
+        let sw_q = fe_info.sum_weights_slice(q);
 
         // Initialize to in_out (pre-aggregated weighted (input-output))
         coef_out[start_q..start_q + n_groups_q]
@@ -557,8 +585,8 @@ pub fn demean_single(
     if n_fe == 1 {
         // Single FE: closed-form solution
         let mut result = vec![0.0; n_obs];
-        let fe0 = &fe_info.fe_ids[0];
-        let sw0 = &fe_info.sum_weights[0];
+        let fe0 = fe_info.fe_ids_slice(0);
+        let sw0 = fe_info.sum_weights_slice(0);
 
         // coef[g] = in_out[g] / sw[g]
         let coef: Vec<f64> = in_out.iter().zip(sw0.iter()).map(|(&io, &sw)| io / sw).collect();
@@ -590,8 +618,8 @@ pub fn demean_single(
 
         // Compute output
         let mut result = vec![0.0; n_obs];
-        let fe0 = &fe_info.fe_ids[0];
-        let fe1 = &fe_info.fe_ids[1];
+        let fe0 = fe_info.fe_ids_slice(0);
+        let fe1 = fe_info.fe_ids_slice(1);
 
         for i in 0..n_obs {
             result[i] = input[i] - alpha[fe0[i]] - beta[fe1[i]];
@@ -623,14 +651,16 @@ pub fn demean_single(
         let mut in_out = vec![0.0; fe_info.n_coef_total];
         for q in 0..fe_info.n_fe {
             let start = fe_info.coef_start[q];
-            let fe_q = &fe_info.fe_ids[q];
+            let fe_offset = q * n_obs;
             if fe_info.is_unweighted {
                 for i in 0..n_obs {
-                    in_out[start + fe_q[i]] += input[i] - mu[i];
+                    let g = fe_info.fe_ids[fe_offset + i];
+                    in_out[start + g] += input[i] - mu[i];
                 }
             } else {
                 for i in 0..n_obs {
-                    in_out[start + fe_q[i]] += (input[i] - mu[i]) * fe_info.weights[i];
+                    let g = fe_info.fe_ids[fe_offset + i];
+                    in_out[start + g] += (input[i] - mu[i]) * fe_info.weights[i];
                 }
             }
         }
@@ -641,9 +671,10 @@ pub fn demean_single(
     let add_coef_to_mu = |coef: &[f64], mu: &mut [f64]| {
         for q in 0..fe_info.n_fe {
             let start = fe_info.coef_start[q];
-            let fe_q = &fe_info.fe_ids[q];
+            let fe_offset = q * n_obs;
             for i in 0..n_obs {
-                mu[i] += coef[start + fe_q[i]];
+                let g = fe_info.fe_ids[fe_offset + i];
+                mu[i] += coef[start + g];
             }
         }
     };
@@ -688,8 +719,8 @@ pub fn demean_single(
         total_iter += iter2;
 
         // Add Phase 2's alpha/beta to mu (only FE0 and FE1)
-        let fe0 = &fe_info.fe_ids[0];
-        let fe1 = &fe_info.fe_ids[1];
+        let fe0 = fe_info.fe_ids_slice(0);
+        let fe1 = fe_info.fe_ids_slice(1);
         for i in 0..n_obs {
             mu[i] += alpha[fe0[i]] + beta[fe1[i]];
         }
