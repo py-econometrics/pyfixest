@@ -305,6 +305,49 @@ fn project_2fe(
     }
 }
 
+/// Compute beta from alpha (half of project_2fe, for SSR computation).
+/// This matches fixest's compute_fe_coef_2_internal with step_2=false.
+#[inline(always)]
+fn compute_beta_from_alpha(
+    fe_info: &FEInfo,
+    in_out: &[f64],
+    alpha: &[f64],
+    beta: &mut [f64],
+) {
+    let n1 = fe_info.n_groups[1];
+    let n_obs = fe_info.n_obs;
+    let n0 = fe_info.n_groups[0];
+    let fe0 = fe_info.fe_ids_slice(0);
+    let fe1 = fe_info.fe_ids_slice(1);
+    let sw1 = fe_info.sum_weights_slice(1);
+    let weights = &fe_info.weights;
+
+    // beta[g] = (in_out[n0+g] - sum_{i:fe1[i]=g} alpha[fe0[i]] * w[i]) / sw1[g]
+    beta[..n1].copy_from_slice(&in_out[n0..n0 + n1]);
+
+    if fe_info.is_unweighted {
+        for i in 0..n_obs {
+            unsafe {
+                let g1 = *fe1.get_unchecked(i);
+                let g0 = *fe0.get_unchecked(i);
+                *beta.get_unchecked_mut(g1) -= *alpha.get_unchecked(g0);
+            }
+        }
+    } else {
+        for i in 0..n_obs {
+            unsafe {
+                let g1 = *fe1.get_unchecked(i);
+                let g0 = *fe0.get_unchecked(i);
+                *beta.get_unchecked_mut(g1) -= *alpha.get_unchecked(g0) * *weights.get_unchecked(i);
+            }
+        }
+    }
+
+    for g in 0..n1 {
+        unsafe { *beta.get_unchecked_mut(g) /= *sw1.get_unchecked(g) };
+    }
+}
+
 /// Run 2-FE acceleration loop (demean_acc_gnl with two_fe=true).
 fn run_2fe_acceleration(
     fe_info: &FEInfo,
@@ -313,20 +356,28 @@ fn run_2fe_acceleration(
     beta: &mut [f64],       // Temporary buffer
     config: &FixestConfig,
     max_iter: usize,
+    input: &[f64],          // Original input for SSR stopping criterion
 ) -> (usize, bool) {
     let n0 = fe_info.n_groups[0];
+    let n1 = fe_info.n_groups[1];
+    let n_obs = fe_info.n_obs;
 
     // Working buffers
     let mut gx = vec![0.0; n0];
     let mut ggx = vec![0.0; n0];
     let mut temp = vec![0.0; n0];
-    let mut beta_tmp = vec![0.0; fe_info.n_groups[1]];
+    let mut beta_tmp = vec![0.0; n1];
 
     // Grand acceleration buffers
     let mut y = vec![0.0; n0];
     let mut gy = vec![0.0; n0];
     let mut ggy = vec![0.0; n0];
     let mut grand_counter = 0usize;
+
+    // SSR tracking
+    let mut ssr = 0.0;
+    let fe0 = fe_info.fe_ids_slice(0);
+    let fe1 = fe_info.fe_ids_slice(1);
 
     // First iteration: G(alpha)
     project_2fe(fe_info, in_out, alpha, &mut gx, beta);
@@ -371,6 +422,26 @@ fn run_2fe_acceleration(
                     project_2fe(fe_info, in_out, &y, &mut gx, beta);
                     grand_counter = 0;
                 }
+            }
+        }
+
+        // SSR stopping criterion every 40 iterations (matching fixest)
+        if iter % 40 == 0 {
+            let ssr_old = ssr;
+
+            // Compute beta from gx (current alpha) for SSR computation
+            // Only need to compute beta, not full projection (matches fixest)
+            compute_beta_from_alpha(fe_info, in_out, &gx, &mut beta_tmp);
+
+            // Compute SSR = sum((input - alpha[fe0] - beta[fe1])^2)
+            ssr = 0.0;
+            for i in 0..n_obs {
+                let resid = input[i] - gx[fe0[i]] - beta_tmp[fe1[i]];
+                ssr += resid * resid;
+            }
+
+            if iter > 40 && stopping_crit(ssr_old, ssr, config.tol) {
+                break;
             }
         }
     }
@@ -614,6 +685,7 @@ pub fn demean_single(
             &mut beta,
             config,
             config.maxiter,
+            input,
         );
 
         // Compute output
@@ -707,6 +779,9 @@ pub fn demean_single(
         // Extract only the first 2 FE portions of in_out
         let in_out_2fe: Vec<f64> = in_out_phase2[..n0 + n1].to_vec();
 
+        // Compute effective input for SSR: input - mu (accounts for Phase 1)
+        let effective_input: Vec<f64> = (0..n_obs).map(|i| input[i] - mu[i]).collect();
+
         let iter_max_2fe = config.maxiter / 2;
         let (iter2, _) = run_2fe_acceleration(
             fe_info,
@@ -715,6 +790,7 @@ pub fn demean_single(
             &mut beta,
             config,
             iter_max_2fe,
+            &effective_input,
         );
         total_iter += iter2;
 
