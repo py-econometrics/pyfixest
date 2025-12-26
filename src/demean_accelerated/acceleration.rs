@@ -127,10 +127,11 @@ impl<P: Projector> IronsTuckAcceleration<P> {
         self.apply_acceleration(n)
     }
 
-    /// Apply Irons-Tuck acceleration formula with SIMD optimization.
+    /// Apply Irons-Tuck acceleration formula.
+    ///
+    /// Uses loop unrolling for better performance. The compiler will auto-vectorize
+    /// this on platforms with SIMD support.
     fn apply_acceleration(&mut self, n: usize) -> StepResult {
-        use wide::f64x4;
-
         let (data, stride) = self.buffers.raw_data_mut();
 
         let x_off = indices::X_CURR * stride;
@@ -139,57 +140,56 @@ impl<P: Projector> IronsTuckAcceleration<P> {
         let dgx_off = indices::DELTA_GX * stride;
         let d2x_off = indices::DELTA2_X * stride;
 
-        // SIMD-optimized computation of delta_GX, delta2_X, vprod, ssq
+        // Unrolled computation of delta_GX, delta2_X, vprod, ssq
         let chunks = n / 4;
-        let mut vprod_vec = f64x4::ZERO;
-        let mut ssq_vec = f64x4::ZERO;
+        let mut vprod = 0.0;
+        let mut ssq = 0.0;
 
         for i in 0..chunks {
             let idx = i * 4;
 
-            let x_v = f64x4::new([
-                data[x_off + idx],
-                data[x_off + idx + 1],
-                data[x_off + idx + 2],
-                data[x_off + idx + 3],
-            ]);
-            let gx_v = f64x4::new([
-                data[gx_off + idx],
-                data[gx_off + idx + 1],
-                data[gx_off + idx + 2],
-                data[gx_off + idx + 3],
-            ]);
-            let ggx_v = f64x4::new([
-                data[ggx_off + idx],
-                data[ggx_off + idx + 1],
-                data[ggx_off + idx + 2],
-                data[ggx_off + idx + 3],
-            ]);
+            // Load values
+            let x0 = data[x_off + idx];
+            let x1 = data[x_off + idx + 1];
+            let x2 = data[x_off + idx + 2];
+            let x3 = data[x_off + idx + 3];
 
-            let delta_gx_v = ggx_v - gx_v;
-            let delta2_x_v = delta_gx_v - gx_v + x_v;
+            let gx0 = data[gx_off + idx];
+            let gx1 = data[gx_off + idx + 1];
+            let gx2 = data[gx_off + idx + 2];
+            let gx3 = data[gx_off + idx + 3];
+
+            let ggx0 = data[ggx_off + idx];
+            let ggx1 = data[ggx_off + idx + 1];
+            let ggx2 = data[ggx_off + idx + 2];
+            let ggx3 = data[ggx_off + idx + 3];
+
+            // Compute deltas
+            let dgx0 = ggx0 - gx0;
+            let dgx1 = ggx1 - gx1;
+            let dgx2 = ggx2 - gx2;
+            let dgx3 = ggx3 - gx3;
+
+            let d2x0 = dgx0 - gx0 + x0;
+            let d2x1 = dgx1 - gx1 + x1;
+            let d2x2 = dgx2 - gx2 + x2;
+            let d2x3 = dgx3 - gx3 + x3;
 
             // Store delta_gx and delta2_x
-            let dgx_arr = delta_gx_v.to_array();
-            let d2x_arr = delta2_x_v.to_array();
-            data[dgx_off + idx] = dgx_arr[0];
-            data[dgx_off + idx + 1] = dgx_arr[1];
-            data[dgx_off + idx + 2] = dgx_arr[2];
-            data[dgx_off + idx + 3] = dgx_arr[3];
-            data[d2x_off + idx] = d2x_arr[0];
-            data[d2x_off + idx + 1] = d2x_arr[1];
-            data[d2x_off + idx + 2] = d2x_arr[2];
-            data[d2x_off + idx + 3] = d2x_arr[3];
+            data[dgx_off + idx] = dgx0;
+            data[dgx_off + idx + 1] = dgx1;
+            data[dgx_off + idx + 2] = dgx2;
+            data[dgx_off + idx + 3] = dgx3;
 
-            vprod_vec = vprod_vec + delta_gx_v * delta2_x_v;
-            ssq_vec = ssq_vec + delta2_x_v * delta2_x_v;
+            data[d2x_off + idx] = d2x0;
+            data[d2x_off + idx + 1] = d2x1;
+            data[d2x_off + idx + 2] = d2x2;
+            data[d2x_off + idx + 3] = d2x3;
+
+            // Accumulate dot products
+            vprod += dgx0 * d2x0 + dgx1 * d2x1 + dgx2 * d2x2 + dgx3 * d2x3;
+            ssq += d2x0 * d2x0 + d2x1 * d2x1 + d2x2 * d2x2 + d2x3 * d2x3;
         }
-
-        // Reduce SIMD vectors to scalars
-        let vprod_arr = vprod_vec.to_array();
-        let ssq_arr = ssq_vec.to_array();
-        let mut vprod = vprod_arr[0] + vprod_arr[1] + vprod_arr[2] + vprod_arr[3];
-        let mut ssq = ssq_arr[0] + ssq_arr[1] + ssq_arr[2] + ssq_arr[3];
 
         // Handle remainder
         for i in (chunks * 4)..n {
@@ -222,28 +222,13 @@ impl<P: Projector> IronsTuckAcceleration<P> {
             coef = 10.0;
         }
 
-        // SIMD-optimized update: X = GGX - coef * delta_GX
-        let coef_v = f64x4::splat(coef);
+        // Update: X = GGX - coef * delta_GX (unrolled)
         for i in 0..chunks {
             let idx = i * 4;
-            let ggx_v = f64x4::new([
-                data[ggx_off + idx],
-                data[ggx_off + idx + 1],
-                data[ggx_off + idx + 2],
-                data[ggx_off + idx + 3],
-            ]);
-            let dgx_v = f64x4::new([
-                data[dgx_off + idx],
-                data[dgx_off + idx + 1],
-                data[dgx_off + idx + 2],
-                data[dgx_off + idx + 3],
-            ]);
-            let result = ggx_v - coef_v * dgx_v;
-            let arr = result.to_array();
-            data[x_off + idx] = arr[0];
-            data[x_off + idx + 1] = arr[1];
-            data[x_off + idx + 2] = arr[2];
-            data[x_off + idx + 3] = arr[3];
+            data[x_off + idx] = data[ggx_off + idx] - coef * data[dgx_off + idx];
+            data[x_off + idx + 1] = data[ggx_off + idx + 1] - coef * data[dgx_off + idx + 1];
+            data[x_off + idx + 2] = data[ggx_off + idx + 2] - coef * data[dgx_off + idx + 2];
+            data[x_off + idx + 3] = data[ggx_off + idx + 3] - coef * data[dgx_off + idx + 3];
         }
 
         // Handle remainder
