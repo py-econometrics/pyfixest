@@ -385,6 +385,14 @@ fn run_2fe_acceleration(
     let mut keep_going = should_continue(alpha, &gx, config.tol);
     let mut iter = 0;
 
+    if std::env::var("PYFIXEST_DEBUG_ITER").is_ok() {
+        let alpha_norm: f64 = alpha.iter().map(|x| x * x).sum();
+        let gx_norm: f64 = gx.iter().map(|x| x * x).sum();
+        let diff_norm: f64 = alpha.iter().zip(gx.iter()).map(|(a, g)| (a - g).powi(2)).sum();
+        eprintln!("[run_2fe_acc] Initial: alpha_norm={:.6e}, gx_norm={:.6e}, diff_norm={:.6e}, keep_going={}",
+                  alpha_norm, gx_norm, diff_norm, keep_going);
+    }
+
     while keep_going && iter < max_iter {
         iter += 1;
 
@@ -455,6 +463,7 @@ fn run_2fe_acceleration(
 
 /// Q-FE projection: Compute G(coef_in) -> coef_out.
 /// Updates FEs in reverse order (Q-1 down to 0) matching fixest.
+/// Specialized for 3 FEs (most common case) with loop unrolling.
 #[inline(always)]
 fn project_qfe(
     fe_info: &FEInfo,
@@ -465,65 +474,301 @@ fn project_qfe(
 ) {
     let n_fe = fe_info.n_fe;
     let n_obs = fe_info.n_obs;
-    let weights = &fe_info.weights;
 
-    // Process in reverse order
+    // Pre-compute raw pointers for hot loops
+    let fe_ids_ptr = fe_info.fe_ids.as_ptr();
+    let coef_start = &fe_info.coef_start;
+    let sum_other_ptr = sum_other_means.as_mut_ptr();
+    let coef_in_ptr = coef_in.as_ptr();
+    let coef_out_ptr = coef_out.as_mut_ptr();
+    let weights_ptr = fe_info.weights.as_ptr();
+
+    // Specialized fast path for 3 FEs (common case)
+    if n_fe == 3 && fe_info.is_unweighted {
+        project_qfe_3fe_unweighted(
+            n_obs,
+            fe_ids_ptr,
+            coef_start,
+            sum_other_ptr,
+            coef_in_ptr,
+            coef_out_ptr,
+            in_out,
+            &fe_info.n_groups,
+            &fe_info.sum_weights,
+        );
+        return;
+    }
+
+    // General case for any number of FEs
+    project_qfe_general(
+        fe_info,
+        in_out,
+        coef_in,
+        coef_out,
+        sum_other_means,
+        n_fe,
+        n_obs,
+        fe_ids_ptr,
+        coef_start,
+        sum_other_ptr,
+        coef_in_ptr,
+        coef_out_ptr,
+        weights_ptr,
+    );
+}
+
+/// Specialized 3-FE projection for unweighted case.
+#[inline(always)]
+fn project_qfe_3fe_unweighted(
+    n_obs: usize,
+    fe_ids_ptr: *const usize,
+    coef_start: &[usize],
+    sum_other_ptr: *mut f64,
+    coef_in_ptr: *const f64,
+    coef_out_ptr: *mut f64,
+    in_out: &[f64],
+    n_groups: &[usize],
+    sum_weights: &[f64],
+) {
+    let (start_0, start_1, start_2) = (coef_start[0], coef_start[1], coef_start[2]);
+    let fe_0_ptr = fe_ids_ptr;
+    let fe_1_ptr = unsafe { fe_ids_ptr.add(n_obs) };
+    let fe_2_ptr = unsafe { fe_ids_ptr.add(2 * n_obs) };
+    let in_out_ptr = in_out.as_ptr();
+
+    // === q=2: Process FE 2 (add from FE 0, 1 using coef_in) ===
+    // No need to fill with zeros - we directly assign the sum of FE 0 and FE 1 contributions
+    // Unrolled loop: process 4 observations at a time
+    let n_chunks = n_obs / 4;
+    let remainder = n_obs % 4;
+
+    unsafe {
+        for chunk in 0..n_chunks {
+            let base = chunk * 4;
+            let g0_0 = *fe_0_ptr.add(base);
+            let g0_1 = *fe_0_ptr.add(base + 1);
+            let g0_2 = *fe_0_ptr.add(base + 2);
+            let g0_3 = *fe_0_ptr.add(base + 3);
+            let g1_0 = *fe_1_ptr.add(base);
+            let g1_1 = *fe_1_ptr.add(base + 1);
+            let g1_2 = *fe_1_ptr.add(base + 2);
+            let g1_3 = *fe_1_ptr.add(base + 3);
+
+            *sum_other_ptr.add(base) =
+                *coef_in_ptr.add(start_0 + g0_0) + *coef_in_ptr.add(start_1 + g1_0);
+            *sum_other_ptr.add(base + 1) =
+                *coef_in_ptr.add(start_0 + g0_1) + *coef_in_ptr.add(start_1 + g1_1);
+            *sum_other_ptr.add(base + 2) =
+                *coef_in_ptr.add(start_0 + g0_2) + *coef_in_ptr.add(start_1 + g1_2);
+            *sum_other_ptr.add(base + 3) =
+                *coef_in_ptr.add(start_0 + g0_3) + *coef_in_ptr.add(start_1 + g1_3);
+        }
+
+        for i in (n_chunks * 4)..(n_chunks * 4 + remainder) {
+            let g0 = *fe_0_ptr.add(i);
+            let g1 = *fe_1_ptr.add(i);
+            *sum_other_ptr.add(i) = *coef_in_ptr.add(start_0 + g0) + *coef_in_ptr.add(start_1 + g1);
+        }
+    }
+
+    // Compute coef_out for FE 2
+    let n_groups_2 = n_groups[2];
+    unsafe {
+        std::ptr::copy_nonoverlapping(
+            in_out_ptr.add(start_2),
+            coef_out_ptr.add(start_2),
+            n_groups_2,
+        );
+    }
+
+    unsafe {
+        for i in 0..n_obs {
+            let g = *fe_2_ptr.add(i);
+            *coef_out_ptr.add(start_2 + g) -= *sum_other_ptr.add(i);
+        }
+        for g in 0..n_groups_2 {
+            *coef_out_ptr.add(start_2 + g) /= *sum_weights.get_unchecked(start_2 + g);
+        }
+    }
+
+    // === q=1: Process FE 1 (add from FE 0 using coef_in, FE 2 using coef_out) ===
+    unsafe {
+        for chunk in 0..n_chunks {
+            let base = chunk * 4;
+            let g0_0 = *fe_0_ptr.add(base);
+            let g0_1 = *fe_0_ptr.add(base + 1);
+            let g0_2 = *fe_0_ptr.add(base + 2);
+            let g0_3 = *fe_0_ptr.add(base + 3);
+            let g2_0 = *fe_2_ptr.add(base);
+            let g2_1 = *fe_2_ptr.add(base + 1);
+            let g2_2 = *fe_2_ptr.add(base + 2);
+            let g2_3 = *fe_2_ptr.add(base + 3);
+
+            *sum_other_ptr.add(base) =
+                *coef_in_ptr.add(start_0 + g0_0) + *coef_out_ptr.add(start_2 + g2_0);
+            *sum_other_ptr.add(base + 1) =
+                *coef_in_ptr.add(start_0 + g0_1) + *coef_out_ptr.add(start_2 + g2_1);
+            *sum_other_ptr.add(base + 2) =
+                *coef_in_ptr.add(start_0 + g0_2) + *coef_out_ptr.add(start_2 + g2_2);
+            *sum_other_ptr.add(base + 3) =
+                *coef_in_ptr.add(start_0 + g0_3) + *coef_out_ptr.add(start_2 + g2_3);
+        }
+
+        for i in (n_chunks * 4)..(n_chunks * 4 + remainder) {
+            let g0 = *fe_0_ptr.add(i);
+            let g2 = *fe_2_ptr.add(i);
+            *sum_other_ptr.add(i) = *coef_in_ptr.add(start_0 + g0) + *coef_out_ptr.add(start_2 + g2);
+        }
+    }
+
+    // Compute coef_out for FE 1
+    let n_groups_1 = n_groups[1];
+    unsafe {
+        std::ptr::copy_nonoverlapping(
+            in_out_ptr.add(start_1),
+            coef_out_ptr.add(start_1),
+            n_groups_1,
+        );
+    }
+
+    unsafe {
+        for i in 0..n_obs {
+            let g = *fe_1_ptr.add(i);
+            *coef_out_ptr.add(start_1 + g) -= *sum_other_ptr.add(i);
+        }
+        for g in 0..n_groups_1 {
+            *coef_out_ptr.add(start_1 + g) /= *sum_weights.get_unchecked(start_1 + g);
+        }
+    }
+
+    // === q=0: Process FE 0 (add from FE 1, 2 using coef_out) ===
+    unsafe {
+        for chunk in 0..n_chunks {
+            let base = chunk * 4;
+            let g1_0 = *fe_1_ptr.add(base);
+            let g1_1 = *fe_1_ptr.add(base + 1);
+            let g1_2 = *fe_1_ptr.add(base + 2);
+            let g1_3 = *fe_1_ptr.add(base + 3);
+            let g2_0 = *fe_2_ptr.add(base);
+            let g2_1 = *fe_2_ptr.add(base + 1);
+            let g2_2 = *fe_2_ptr.add(base + 2);
+            let g2_3 = *fe_2_ptr.add(base + 3);
+
+            *sum_other_ptr.add(base) =
+                *coef_out_ptr.add(start_1 + g1_0) + *coef_out_ptr.add(start_2 + g2_0);
+            *sum_other_ptr.add(base + 1) =
+                *coef_out_ptr.add(start_1 + g1_1) + *coef_out_ptr.add(start_2 + g2_1);
+            *sum_other_ptr.add(base + 2) =
+                *coef_out_ptr.add(start_1 + g1_2) + *coef_out_ptr.add(start_2 + g2_2);
+            *sum_other_ptr.add(base + 3) =
+                *coef_out_ptr.add(start_1 + g1_3) + *coef_out_ptr.add(start_2 + g2_3);
+        }
+
+        for i in (n_chunks * 4)..(n_chunks * 4 + remainder) {
+            let g1 = *fe_1_ptr.add(i);
+            let g2 = *fe_2_ptr.add(i);
+            *sum_other_ptr.add(i) =
+                *coef_out_ptr.add(start_1 + g1) + *coef_out_ptr.add(start_2 + g2);
+        }
+    }
+
+    // Compute coef_out for FE 0
+    let n_groups_0 = n_groups[0];
+    unsafe {
+        std::ptr::copy_nonoverlapping(in_out_ptr.add(start_0), coef_out_ptr.add(start_0), n_groups_0);
+    }
+
+    unsafe {
+        for i in 0..n_obs {
+            let g = *fe_0_ptr.add(i);
+            *coef_out_ptr.add(start_0 + g) -= *sum_other_ptr.add(i);
+        }
+        for g in 0..n_groups_0 {
+            *coef_out_ptr.add(start_0 + g) /= *sum_weights.get_unchecked(start_0 + g);
+        }
+    }
+}
+
+/// General Q-FE projection (any number of FEs, weighted or unweighted).
+#[inline(always)]
+#[allow(clippy::too_many_arguments)]
+fn project_qfe_general(
+    fe_info: &FEInfo,
+    in_out: &[f64],
+    _coef_in: &[f64],  // Used via coef_in_ptr
+    _coef_out: &mut [f64],  // Used via coef_out_ptr
+    _sum_other_means: &mut [f64],  // Used via sum_other_ptr
+    n_fe: usize,
+    n_obs: usize,
+    fe_ids_ptr: *const usize,
+    coef_start: &[usize],
+    sum_other_ptr: *mut f64,
+    coef_in_ptr: *const f64,
+    coef_out_ptr: *mut f64,
+    weights_ptr: *const f64,
+) {
+    let in_out_ptr = in_out.as_ptr();
+
+    // Process in reverse order (Q-1 down to 0, matching fixest)
     for q in (0..n_fe).rev() {
-        // Step 1: Compute sum of other FE contributions (NO weights here - this is just
-        // expanding coefficients to observation space)
-        sum_other_means.fill(0.0);
+        // Step 1: Fill sum_other_means with zeros
+        unsafe {
+            std::ptr::write_bytes(sum_other_ptr, 0, n_obs);
+        }
 
         // Add contributions from FEs with h < q (use coef_in)
         for h in 0..q {
-            let start_h = fe_info.coef_start[h];
-            let fe_h = fe_info.fe_ids_slice(h);
-            // SAFETY: fe_h[i] < n_groups[h], start_h + fe_h[i] < coef_in.len()
+            let start_h = coef_start[h];
+            let fe_h_ptr = unsafe { fe_ids_ptr.add(h * n_obs) };
             for i in 0..n_obs {
                 unsafe {
-                    let g = *fe_h.get_unchecked(i);
-                    *sum_other_means.get_unchecked_mut(i) += *coef_in.get_unchecked(start_h + g);
+                    let g = *fe_h_ptr.add(i);
+                    *sum_other_ptr.add(i) += *coef_in_ptr.add(start_h + g);
                 }
             }
         }
 
-        // Add contributions from FEs with h > q (use coef_out, already computed)
+        // Add contributions from FEs with h > q (use coef_out)
         for h in (q + 1)..n_fe {
-            let start_h = fe_info.coef_start[h];
-            let fe_h = fe_info.fe_ids_slice(h);
-            // SAFETY: fe_h[i] < n_groups[h], start_h + fe_h[i] < coef_out.len()
+            let start_h = coef_start[h];
+            let fe_h_ptr = unsafe { fe_ids_ptr.add(h * n_obs) };
             for i in 0..n_obs {
                 unsafe {
-                    let g = *fe_h.get_unchecked(i);
-                    *sum_other_means.get_unchecked_mut(i) += *coef_out.get_unchecked(start_h + g);
+                    let g = *fe_h_ptr.add(i);
+                    *sum_other_ptr.add(i) += *coef_out_ptr.add(start_h + g);
                 }
             }
         }
 
         // Step 2: Compute new coefficients for FE q
-        let start_q = fe_info.coef_start[q];
+        let start_q = coef_start[q];
         let n_groups_q = fe_info.n_groups[q];
-        let fe_q = fe_info.fe_ids_slice(q);
+        let fe_q_ptr = unsafe { fe_ids_ptr.add(q * n_obs) };
         let sw_q = fe_info.sum_weights_slice(q);
 
-        // Initialize to in_out (pre-aggregated weighted (input-output))
-        coef_out[start_q..start_q + n_groups_q]
-            .copy_from_slice(&in_out[start_q..start_q + n_groups_q]);
+        // Initialize to in_out
+        unsafe {
+            std::ptr::copy_nonoverlapping(
+                in_out_ptr.add(start_q),
+                coef_out_ptr.add(start_q),
+                n_groups_q,
+            );
+        }
 
-        // Subtract weighted other FE contributions (weights applied when aggregating back)
-        // SAFETY: fe_q[i] < n_groups_q, start_q + fe_q[i] < coef_out.len()
+        // Subtract weighted other FE contributions
         if fe_info.is_unweighted {
             for i in 0..n_obs {
                 unsafe {
-                    let g = *fe_q.get_unchecked(i);
-                    *coef_out.get_unchecked_mut(start_q + g) -= *sum_other_means.get_unchecked(i);
+                    let g = *fe_q_ptr.add(i);
+                    *coef_out_ptr.add(start_q + g) -= *sum_other_ptr.add(i);
                 }
             }
         } else {
             for i in 0..n_obs {
                 unsafe {
-                    let g = *fe_q.get_unchecked(i);
-                    *coef_out.get_unchecked_mut(start_q + g) -=
-                        *sum_other_means.get_unchecked(i) * *weights.get_unchecked(i);
+                    let g = *fe_q_ptr.add(i);
+                    *coef_out_ptr.add(start_q + g) -=
+                        *sum_other_ptr.add(i) * *weights_ptr.add(i);
                 }
             }
         }
@@ -531,7 +776,7 @@ fn project_qfe(
         // Divide by sum of weights
         for g in 0..n_groups_q {
             unsafe {
-                *coef_out.get_unchecked_mut(start_q + g) /= *sw_q.get_unchecked(g);
+                *coef_out_ptr.add(start_q + g) /= *sw_q.get_unchecked(g);
             }
         }
     }
@@ -596,7 +841,11 @@ fn run_qfe_acceleration(
         project_qfe(fe_info, in_out, coef, &mut gx, &mut sum_other_means);
 
         // Convergence check on nb_coef_no_q
+        let prev_keep_going = keep_going;
         keep_going = should_continue(&coef[..nb_coef_no_q], &gx[..nb_coef_no_q], config.tol);
+        if std::env::var("PYFIXEST_DEBUG_ITER").is_ok() && prev_keep_going && !keep_going {
+            eprintln!("[run_qfe_acc] Coefficient converged at iter {}", iter);
+        }
 
         // Grand acceleration on nb_coef_no_q
         if iter % config.iter_grand_acc == 0 {
@@ -622,6 +871,11 @@ fn run_qfe_acceleration(
             ssr = output_buf.iter().map(|&r| r * r).sum();
 
             if iter > 40 && stopping_crit(ssr_old, ssr, config.tol) {
+                if std::env::var("PYFIXEST_DEBUG_ITER").is_ok() {
+                    eprintln!("[run_qfe_acc] SSR converged at iter {}: ssr_old={:.6e}, ssr={:.6e}",
+                              iter, ssr_old, ssr);
+                }
+                keep_going = false;  // Mark as converged
                 break;
             }
         }
@@ -755,6 +1009,7 @@ pub fn demean_single(
     let mut coef = vec![0.0; n_coef];
     let in_out_phase1 = compute_in_out_from_mu(&mu);
 
+    let t1 = std::time::Instant::now();
     let (iter1, converged1) = run_qfe_acceleration(
         fe_info,
         &in_out_phase1,
@@ -763,7 +1018,14 @@ pub fn demean_single(
         config.iter_warmup,
         input,
     );
+    let phase1_time = t1.elapsed();
     total_iter += iter1;
+
+    // Debug: print iteration counts for 3+ FE case
+    if std::env::var("PYFIXEST_DEBUG_ITER").is_ok() {
+        eprintln!("[demean_single] Phase 1 (warmup): {} iters, converged={}, time={:.2}ms",
+                  iter1, converged1, phase1_time.as_secs_f64() * 1000.0);
+    }
 
     // Add Phase 1 coefficients to mu
     add_coef_to_mu(&coef, &mut mu);
@@ -779,11 +1041,18 @@ pub fn demean_single(
         // Extract only the first 2 FE portions of in_out
         let in_out_2fe: Vec<f64> = in_out_phase2[..n0 + n1].to_vec();
 
+        if std::env::var("PYFIXEST_DEBUG_ITER").is_ok() {
+            let in_out_norm: f64 = in_out_2fe.iter().map(|x| x * x).sum();
+            eprintln!("[demean_single] Phase 2: in_out_2fe norm^2={:.6e}, n0={}, n1={}",
+                      in_out_norm, n0, n1);
+        }
+
         // Compute effective input for SSR: input - mu (accounts for Phase 1)
         let effective_input: Vec<f64> = (0..n_obs).map(|i| input[i] - mu[i]).collect();
 
         let iter_max_2fe = config.maxiter / 2;
-        let (iter2, _) = run_2fe_acceleration(
+        let t2 = std::time::Instant::now();
+        let (iter2, conv2) = run_2fe_acceleration(
             fe_info,
             &in_out_2fe,
             &mut alpha,
@@ -792,7 +1061,13 @@ pub fn demean_single(
             iter_max_2fe,
             &effective_input,
         );
+        let phase2_time = t2.elapsed();
         total_iter += iter2;
+
+        if std::env::var("PYFIXEST_DEBUG_ITER").is_ok() {
+            eprintln!("[demean_single] Phase 2 (2-FE): {} iters, converged={}, time={:.2}ms",
+                      iter2, conv2, phase2_time.as_secs_f64() * 1000.0);
+        }
 
         // Add Phase 2's alpha/beta to mu (only FE0 and FE1)
         let fe0 = fe_info.fe_ids_slice(0);
@@ -809,7 +1084,8 @@ pub fn demean_single(
             // Start with fresh coefficients
             coef.fill(0.0);
 
-            let (iter3, _) = run_qfe_acceleration(
+            let t3 = std::time::Instant::now();
+            let (iter3, conv3) = run_qfe_acceleration(
                 fe_info,
                 &in_out_phase3,
                 &mut coef,
@@ -817,7 +1093,13 @@ pub fn demean_single(
                 remaining,
                 input,
             );
+            let phase3_time = t3.elapsed();
             total_iter += iter3;
+
+            if std::env::var("PYFIXEST_DEBUG_ITER").is_ok() {
+                eprintln!("[demean_single] Phase 3 (re-acc): {} iters, converged={}, time={:.2}ms",
+                          iter3, conv3, phase3_time.as_secs_f64() * 1000.0);
+            }
 
             // Add Phase 3 coefficients to mu
             add_coef_to_mu(&coef, &mut mu);
