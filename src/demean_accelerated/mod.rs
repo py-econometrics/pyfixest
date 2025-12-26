@@ -9,13 +9,7 @@
 //! - 2 FE: Coefficient-space iteration with Irons-Tuck + Grand acceleration
 //! - 3+ FE: Coefficient-space iteration with Irons-Tuck + Grand acceleration
 
-pub mod acceleration;
-pub mod buffers;
-pub mod coef_space;
-pub mod general;
-pub mod simd_ops;
-pub mod single_fe;
-pub mod two_fe;
+mod coef_space;
 
 use coef_space::{demean_single, FEInfo, FixestConfig};
 use ndarray::{Array2, ArrayView1, ArrayView2, Zip};
