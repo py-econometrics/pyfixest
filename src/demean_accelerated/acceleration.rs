@@ -211,16 +211,7 @@ impl<P: Projector> IronsTuckAcceleration<P> {
             return StepResult::NumericallyConverged;
         }
 
-        let mut coef = vprod / ssq;
-
-        // Guard against runaway coefficients that can stall convergence.
-        if !coef.is_finite() {
-            coef = 0.0;
-        } else if coef < -10.0 {
-            coef = -10.0;
-        } else if coef > 10.0 {
-            coef = 10.0;
-        }
+        let coef = vprod / ssq;
 
         // Update: X = GGX - coef * delta_GX (unrolled)
         for i in 0..chunks {
