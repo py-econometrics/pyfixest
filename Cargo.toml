@@ -21,3 +21,4 @@ lto = "fat"          # Full link-time optimization
 codegen-units = 1    # Whole-program optimization
 panic = "abort"      # Smaller binary, no unwind support
 strip = true         # Remove symbol table
+debug = false        # No debug info in release

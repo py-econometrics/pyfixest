@@ -9,8 +9,8 @@ n_obs <- if (length(args) >= 1) as.integer(args[1]) else 100000L
 dgp_type <- if (length(args) >= 2) args[2] else "difficult"
 n_fe <- if (length(args) >= 3) as.integer(args[3]) else 3L
 
-# Set single thread for fair comparison
-setFixest_nthreads(1)
+# Use all available threads for fair comparison (pyfixest also uses all threads)
+setFixest_nthreads(0)  # 0 = use all available
 
 # Generate data matching Python benchmark DGP
 set.seed(42)
@@ -46,9 +46,9 @@ df <- data.frame(
 
 # Build formula based on n_fe
 if (n_fe == 2) {
-  fml <- y ~ 1 | indiv_id + year
+  fml <- y ~ x1 | indiv_id + year
 } else {
-  fml <- y ~ 1 | indiv_id + year + firm_id
+  fml <- y ~ x1 | indiv_id + year + firm_id
 }
 
 # Warm up

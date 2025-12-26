@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """
-Benchmark comparing pyfixest demean vs native fixest (via R subprocess).
+Benchmark comparing pyfixest feols vs native fixest feols.
 
 Runs fixest directly in R to avoid rpy2 overhead, then compares with pyfixest.
+This is a fair apples-to-apples comparison of full feols() routines.
 """
 
 from __future__ import annotations
@@ -14,6 +15,7 @@ from pathlib import Path
 from statistics import median
 
 import numpy as np
+import pandas as pd
 
 
 def generate_dgp(
@@ -21,7 +23,7 @@ def generate_dgp(
     dgp_type: str = "simple",
     n_years: int = 10,
     n_indiv_per_firm: int = 23,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+) -> pd.DataFrame:
     """Generate test data matching fixest benchmark DGP."""
     np.random.seed(42)
 
@@ -42,10 +44,15 @@ def generate_dgp(
     year_fe = np.random.randn(n_years)[year]
     y = x1 + firm_fe + unit_fe + year_fe + np.random.randn(n)
 
-    x = np.column_stack([y, x1])
-    weights = np.ones(n)
-
-    return x, indiv_id, year, firm_id, weights
+    return pd.DataFrame(
+        {
+            "y": y,
+            "x1": x1,
+            "indiv_id": indiv_id,
+            "year": year,
+            "firm_id": firm_id,
+        }
+    )
 
 
 def run_r_benchmark(n_obs: int, dgp_type: str, n_fe: int, n_runs: int = 5) -> dict:
@@ -80,46 +87,39 @@ def run_r_benchmark(n_obs: int, dgp_type: str, n_fe: int, n_runs: int = 5) -> di
         return {"error": "R not found", "median": float("inf")}
 
 
-def run_rust_benchmark(
-    x: np.ndarray,
-    flist: np.ndarray,
-    weights: np.ndarray,
+def run_pyfixest_benchmark(
+    df: pd.DataFrame,
+    n_fe: int,
     n_runs: int = 5,
-    use_simple: bool = False,
 ) -> dict:
-    """Run pyfixest Rust demean benchmark."""
-    import os
+    """Run pyfixest feols benchmark."""
+    import pyfixest as pf
 
-    if use_simple:
-        os.environ["PYFIXEST_DEMEAN_SIMPLE"] = "1"
-    elif "PYFIXEST_DEMEAN_SIMPLE" in os.environ:
-        del os.environ["PYFIXEST_DEMEAN_SIMPLE"]
+    # Build formula matching R benchmark
+    if n_fe == 2:
+        fml = "y ~ x1 | indiv_id + year"
+    else:
+        fml = "y ~ x1 | indiv_id + year + firm_id"
 
-    try:
-        from pyfixest.core.demean import demean
+    # Warmup - use rust backend for accelerated demeaning
+    pf.feols(fml, data=df, demeaner_backend="rust")
 
-        times = []
-        for _ in range(n_runs):
-            x_copy = x.copy()
-            start = time.perf_counter()
-            _result, converged = demean(x_copy, flist, weights)
-            elapsed = (time.perf_counter() - start) * 1000  # ms
-            times.append(elapsed)
+    times = []
+    for _ in range(n_runs):
+        start = time.perf_counter()
+        fit = pf.feols(fml, data=df, demeaner_backend="rust")
+        elapsed = (time.perf_counter() - start) * 1000  # ms
+        times.append(elapsed)
 
-        return {
-            "median": median(times),
-            "times": times,
-            "converged": converged,
-        }
-    except Exception as e:
-        return {"error": str(e), "median": float("inf")}
-    finally:
-        if "PYFIXEST_DEMEAN_SIMPLE" in os.environ:
-            del os.environ["PYFIXEST_DEMEAN_SIMPLE"]
+    return {
+        "median": median(times),
+        "times": times,
+        "coef": float(fit.coef().iloc[0]),
+    }
 
 
 def main():
-    """Run benchmark comparing pyfixest demean vs native fixest."""
+    """Run benchmark comparing pyfixest feols vs native fixest feols."""
     configs = [
         (10_000, "simple", 2),
         (10_000, "difficult", 2),
@@ -134,7 +134,7 @@ def main():
     results = []
 
     print("=" * 70)
-    print("PyFixest vs Fixest Native Benchmark")
+    print("PyFixest feols() vs Fixest feols() Benchmark")
     print("=" * 70)
 
     for n_obs, dgp_type, n_fe in configs:
@@ -142,37 +142,22 @@ def main():
         print("-" * 50)
 
         # Generate data
-        x, indiv_id, year, firm_id, weights = generate_dgp(n_obs, dgp_type)
+        df = generate_dgp(n_obs, dgp_type)
 
-        if n_fe == 2:
-            flist = np.column_stack([indiv_id, year]).astype(np.uint64)
-        else:
-            flist = np.column_stack([indiv_id, year, firm_id]).astype(np.uint64)
-
-        # Run R benchmark
+        # Run R benchmark (feols)
         r_result = run_r_benchmark(n_obs, dgp_type, n_fe)
         r_time = r_result.get("median", float("inf"))
-        print(f"  fixest (R native):   {r_time:8.2f} ms")
+        print(f"  fixest (R):      {r_time:8.2f} ms")
 
-        # Run Rust accelerated benchmark
-        rust_result = run_rust_benchmark(x, flist, weights)
-        rust_time = rust_result.get("median", float("inf"))
+        # Run pyfixest benchmark (feols)
+        py_result = run_pyfixest_benchmark(df, n_fe)
+        py_time = py_result.get("median", float("inf"))
 
-        if r_time > 0 and rust_time < float("inf"):
-            ratio = rust_time / r_time
-            print(f"  pyfixest (Rust):     {rust_time:8.2f} ms ({ratio:.2f}x)")
+        if r_time > 0 and py_time < float("inf"):
+            ratio = py_time / r_time
+            print(f"  pyfixest:        {py_time:8.2f} ms ({ratio:.2f}x)")
         else:
-            print(f"  pyfixest (Rust):     {rust_time:8.2f} ms")
-
-        # Run Rust simple benchmark
-        rust_simple = run_rust_benchmark(x, flist, weights, use_simple=True)
-        rust_simple_time = rust_simple.get("median", float("inf"))
-
-        if r_time > 0 and rust_simple_time < float("inf"):
-            ratio = rust_simple_time / r_time
-            print(f"  pyfixest (simple):   {rust_simple_time:8.2f} ms ({ratio:.2f}x)")
-        else:
-            print(f"  pyfixest (simple):   {rust_simple_time:8.2f} ms")
+            print(f"  pyfixest:        {py_time:8.2f} ms")
 
         results.append(
             {
@@ -180,14 +165,13 @@ def main():
                 "dgp_type": dgp_type,
                 "n_fe": n_fe,
                 "fixest_r_ms": r_time,
-                "pyfixest_rust_ms": rust_time,
-                "pyfixest_simple_ms": rust_simple_time,
+                "pyfixest_ms": py_time,
             }
         )
 
     # Summary
     print("\n" + "=" * 70)
-    print("SUMMARY (pyfixest accelerated vs fixest)")
+    print("SUMMARY (pyfixest feols vs fixest feols)")
     print("=" * 70)
 
     print(f"{'Config':<35} {'fixest':>10} {'pyfixest':>10} {'ratio':>8}")
@@ -196,7 +180,7 @@ def main():
     for r in results:
         config = f"n={r['n_obs']:,} {r['dgp_type']:9} {r['n_fe']}FE"
         fixest = r["fixest_r_ms"]
-        pyfixest = r["pyfixest_rust_ms"]
+        pyfixest = r["pyfixest_ms"]
 
         if fixest > 0 and fixest < float("inf") and pyfixest < float("inf"):
             ratio = pyfixest / fixest

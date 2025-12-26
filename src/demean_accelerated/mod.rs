@@ -76,19 +76,20 @@ fn demean_coef_space(
     let not_converged = Arc::new(AtomicUsize::new(0));
     let mut res = Array2::<f64>::zeros((n_samples, n_features));
 
+    // Create FEInfo once and share across all columns (it only depends on FE structure)
+    let fe_info = FEInfo::new(
+        n_samples,
+        n_factors,
+        group_ids,
+        n_groups_per_factor,
+        sample_weights,
+    );
+
     res.axis_iter_mut(ndarray::Axis(1))
         .into_par_iter()
         .enumerate()
         .for_each(|(k, mut col)| {
             let xk: Vec<f64> = (0..n_samples).map(|i| x[[i, k]]).collect();
-
-            let fe_info = FEInfo::new(
-                n_samples,
-                n_factors,
-                group_ids,
-                n_groups_per_factor,
-                sample_weights,
-            );
 
             let (result, _iter, converged) = demean_single(&fe_info, &xk, config);
 
