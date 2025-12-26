@@ -601,7 +601,10 @@ pub fn demean_single(
     }
 
     // 3+ FE: Use fixest's multi-phase strategy
-    // Each phase: recompute in_out from updated output, start coef from 0
+    // Key insight: fixest's output stores SUM OF FE COEFFICIENTS, not residual.
+    // in_out = agg(input - output) = agg(input - sum_of_coefs) = agg(residual)
+    // We'll use mu to store sum of FE coefs, then convert to residual at the end.
+    //
     // 1. Warmup iterations on all FEs
     // 2. 2-FE sub-convergence on first 2 FEs
     // 3. Re-acceleration on all FEs
@@ -611,9 +614,43 @@ pub fn demean_single(
     let n1 = fe_info.n_groups[1];
     let mut total_iter = 0usize;
 
+    // mu = sum of FE contributions per observation (fixest's "output")
+    // Starts at 0, accumulates FE coefficients across phases
+    let mut mu = vec![0.0; n_obs];
+
+    // Helper to compute in_out = agg(input - mu) per FE group
+    let compute_in_out_from_mu = |mu: &[f64]| -> Vec<f64> {
+        let mut in_out = vec![0.0; fe_info.n_coef_total];
+        for q in 0..fe_info.n_fe {
+            let start = fe_info.coef_start[q];
+            let fe_q = &fe_info.fe_ids[q];
+            if fe_info.is_unweighted {
+                for i in 0..n_obs {
+                    in_out[start + fe_q[i]] += input[i] - mu[i];
+                }
+            } else {
+                for i in 0..n_obs {
+                    in_out[start + fe_q[i]] += (input[i] - mu[i]) * fe_info.weights[i];
+                }
+            }
+        }
+        in_out
+    };
+
+    // Helper to add coefficients to mu
+    let add_coef_to_mu = |coef: &[f64], mu: &mut [f64]| {
+        for q in 0..fe_info.n_fe {
+            let start = fe_info.coef_start[q];
+            let fe_q = &fe_info.fe_ids[q];
+            for i in 0..n_obs {
+                mu[i] += coef[start + fe_q[i]];
+            }
+        }
+    };
+
     // Phase 1: Warmup with all FEs
     let mut coef = vec![0.0; n_coef];
-    let in_out_phase1 = fe_info.compute_in_out(input, &output);
+    let in_out_phase1 = compute_in_out_from_mu(&mu);
 
     let (iter1, converged1) = run_qfe_acceleration(
         fe_info,
@@ -625,15 +662,14 @@ pub fn demean_single(
     );
     total_iter += iter1;
 
-    // Update output from Phase 1 coefficients
-    fe_info.compute_output(&coef, input, &mut output);
+    // Add Phase 1 coefficients to mu
+    add_coef_to_mu(&coef, &mut mu);
 
     if !converged1 {
         // Phase 2: 2-FE sub-convergence on first 2 FEs
-        // Recompute in_out from updated output
-        let in_out_phase2 = fe_info.compute_in_out(input, &output);
+        let in_out_phase2 = compute_in_out_from_mu(&mu);
 
-        // Start with fresh alpha, beta (coef = 0 for 2-FE iteration)
+        // Start with fresh alpha, beta
         let mut alpha = vec![0.0; n0];
         let mut beta = vec![0.0; n1];
 
@@ -651,18 +687,17 @@ pub fn demean_single(
         );
         total_iter += iter2;
 
-        // Update output from Phase 2 (only first 2 FEs)
+        // Add Phase 2's alpha/beta to mu (only FE0 and FE1)
         let fe0 = &fe_info.fe_ids[0];
         let fe1 = &fe_info.fe_ids[1];
         for i in 0..n_obs {
-            output[i] = input[i] - alpha[fe0[i]] - beta[fe1[i]];
+            mu[i] += alpha[fe0[i]] + beta[fe1[i]];
         }
 
         // Phase 3: Re-acceleration on all FEs
         let remaining = config.maxiter.saturating_sub(total_iter);
         if remaining > 0 {
-            // Recompute in_out from updated output
-            let in_out_phase3 = fe_info.compute_in_out(input, &output);
+            let in_out_phase3 = compute_in_out_from_mu(&mu);
 
             // Start with fresh coefficients
             coef.fill(0.0);
@@ -677,9 +712,14 @@ pub fn demean_single(
             );
             total_iter += iter3;
 
-            // Compute final output from Phase 3 coefficients
-            fe_info.compute_output(&coef, input, &mut output);
+            // Add Phase 3 coefficients to mu
+            add_coef_to_mu(&coef, &mut mu);
         }
+    }
+
+    // Convert mu (sum of FE coefs) to output (residual = input - mu)
+    for i in 0..n_obs {
+        output[i] = input[i] - mu[i];
     }
 
     let converged = total_iter < config.maxiter;
