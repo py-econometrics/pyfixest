@@ -8,7 +8,7 @@ def demean(
     x: NDArray[np.float64],
     flist: NDArray[np.uint64],
     weights: NDArray[np.float64],
-    tol: float = 1e-08,
+    tol: float = 1e-06,
     maxiter: int = 100_000,
 ) -> tuple[NDArray, bool]:
     """
@@ -27,7 +27,7 @@ def demean(
     weights : numpy.ndarray
         Array of shape (n_samples,) specifying the weights.
     tol : float, optional
-        Tolerance criterion for convergence. Defaults to 1e-08.
+        Tolerance criterion for convergence. Defaults to 1e-06 (matching fixest).
     maxiter : int, optional
         Maximum number of iterations. Defaults to 100_000.
 

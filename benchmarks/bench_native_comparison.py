@@ -102,7 +102,8 @@ def run_rust_benchmark(
         for _ in range(n_runs):
             x_copy = x.copy()
             start = time.perf_counter()
-            _result, converged = demean(x_copy, flist, weights)
+            # Use tol=1e-6 to match fixest's default
+            _result, converged = demean(x_copy, flist, weights, tol=1e-6)
             elapsed = (time.perf_counter() - start) * 1000  # ms
             times.append(elapsed)
 
