@@ -22,7 +22,7 @@ repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.14.9
     hooks:
-      - id: ruff
+      - id: ruff-check
         args: ["--fix", "--output-format=full"]
       - id: ruff-format
 
@@ -33,10 +33,11 @@ repos:
         args: ["--fix", "--output-format=full", "--ignore=B018", "--ignore=E402"]
         files: ^docs/.*\.ipynb$
 
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.19.1
+  - repo: local
     hooks:
-      - id: mypy
-        args: [--ignore-missing-imports, --config-file=pixi.toml]
-        files: ^pyfixest/
-        additional_dependencies: [numpy>=1.20, pandas-stubs]
+      - id: ty
+        name: ty
+        entry: pixi run -e lint ty check pyfixest
+        language: system
+        types: [python]
+        pass_filenames: false

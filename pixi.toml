@@ -109,6 +109,9 @@ lets-plot = ">=4.0.0"
 [feature.lint.dependencies]
 pre-commit = "==3.6.0"
 
+[feature.lint.pypi-dependencies]
+ty = "*"
+
 [feature.build.dependencies]
 pip = "*"
 maturin = ">=1.8.0"
