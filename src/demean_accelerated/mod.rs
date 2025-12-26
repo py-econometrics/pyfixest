@@ -15,8 +15,7 @@ pub mod simd_ops;
 pub mod single_fe;
 pub mod two_fe;
 
-use acceleration::{GrandAcceleration, IronsTuckAcceleration, StepResult};
-use general::MultiFactorProjector;
+use acceleration::{IronsTuckAcceleration, StepResult};
 use ndarray::{Array2, ArrayView1, ArrayView2, Zip};
 use numpy::{PyArray2, PyReadonlyArray1, PyReadonlyArray2};
 use pyo3::prelude::*;
@@ -33,12 +32,6 @@ struct AcceleratedConfig {
     warmup_iters: usize,
     /// Interval between Irons-Tuck acceleration steps
     accel_interval: usize,
-    /// Interval for grand acceleration snapshots (3+ FEs only)
-    grand_accel_interval: usize,
-    /// Interval for SSR-based convergence safeguard
-    ssr_check_interval: usize,
-    /// Iteration from which to run a post-acceleration projection (fixest: 3)
-    post_accel_iter: usize,
 }
 
 impl AcceleratedConfig {
@@ -46,14 +39,8 @@ impl AcceleratedConfig {
         Self {
             tol,
             maxiter,
-            // Match fixest defaults: warmup 15, accel every 3, grand every 15.
             warmup_iters: 15,
             accel_interval: 3,
-            grand_accel_interval: 15,
-            // fixest uses a coarse SSR check every 40 iterations.
-            ssr_check_interval: 40,
-            // fixest projects once after acceleration starting at iter 3.
-            post_accel_iter: 3,
         }
     }
 }
@@ -221,7 +208,10 @@ fn demean_two_fe(
     (res, success)
 }
 
-/// Demean with 3+ fixed effects using Irons-Tuck + Grand acceleration.
+/// Demean with 3+ fixed effects using N-length residual iteration.
+///
+/// Uses the same IronsTuckAcceleration approach as 2-FE case but with
+/// MultiFactorProjector that applies each FE in sequence.
 fn demean_multi_fe(
     x: &ArrayView2<f64>,
     sample_weights: &[f64],
@@ -232,16 +222,17 @@ fn demean_multi_fe(
     n_groups_per_factor: &[usize],
     config: &AcceleratedConfig,
 ) -> (Array2<f64>, bool) {
+    use general::MultiFactorProjector;
+
     let not_converged = Arc::new(AtomicUsize::new(0));
+    let max_iters = Arc::new(AtomicUsize::new(0));
     let mut res = Array2::<f64>::zeros((n_samples, n_features));
 
     res.axis_iter_mut(ndarray::Axis(1))
         .into_par_iter()
         .enumerate()
         .for_each(|(k, mut col)| {
-            let xk = x.column(k).to_vec();
-            let original = xk.clone();
-            let mut prev_ssr = f64::MAX;
+            let xk: Vec<f64> = (0..n_samples).map(|i| x[[i, k]]).collect();
 
             let projector = MultiFactorProjector::new(
                 sample_weights,
@@ -252,13 +243,12 @@ fn demean_multi_fe(
             );
 
             let mut accel = IronsTuckAcceleration::new(projector, n_samples);
-            let mut grand_accel = GrandAcceleration::new(n_samples, config.grand_accel_interval);
-
             accel.set_initial(&xk);
 
             let mut converged = false;
+            let mut final_iter = config.maxiter;
             for iter in 0..config.maxiter {
-                // Apply Irons-Tuck acceleration every accel_interval iterations after warmup
+                // Apply acceleration every accel_interval iterations after warmup
                 let should_accelerate =
                     iter >= config.warmup_iters && iter % config.accel_interval == 0;
 
@@ -266,53 +256,22 @@ fn demean_multi_fe(
 
                 if step_result == StepResult::NumericallyConverged {
                     converged = true;
+                    final_iter = iter + 1;
                     break;
-                }
-
-                // After acceleration, fixest runs an extra projection (iter_projAfterAcc).
-                if iter >= config.post_accel_iter {
-                    let _ = accel.regular_step();
-                }
-
-                // Grand acceleration: record snapshots and apply when ready
-                if grand_accel.should_record(iter) {
-                    grand_accel.record(accel.get_result());
-
-                    if grand_accel.can_apply() {
-                        // Apply grand acceleration
-                        let current = accel.get_result().to_vec();
-                        let mut accelerated = current;
-                        grand_accel.apply(&mut accelerated);
-                        accel.set_initial(&accelerated);
-                    }
                 }
 
                 // Check convergence after warmup
                 if iter >= config.warmup_iters && accel.is_converged(config.tol) {
                     converged = true;
+                    final_iter = iter + 1;
                     break;
-                }
-
-                // Coarse SSR check to stop slow tails (matches fixest safeguard).
-                if iter > 0 && iter % config.ssr_check_interval == 0 {
-                    let current = accel.get_result();
-                    let mut ssr = 0.0;
-                    for i in 0..n_samples {
-                        let r = original[i] - current[i];
-                        ssr += r * r;
-                    }
-                    let rel_change = (prev_ssr - ssr).abs() / (prev_ssr.abs() + 1e-12);
-                    if rel_change < config.tol {
-                        converged = true;
-                        break;
-                    }
-                    prev_ssr = ssr;
                 }
             }
 
             if !converged {
                 not_converged.fetch_add(1, Ordering::SeqCst);
             }
+            max_iters.fetch_max(final_iter, Ordering::SeqCst);
 
             let result = accel.get_result();
             Zip::from(&mut col).and(result).for_each(|col_elm, &val| {
@@ -321,6 +280,11 @@ fn demean_multi_fe(
         });
 
     let success = not_converged.load(Ordering::SeqCst) == 0;
+    let final_max_iters = max_iters.load(Ordering::SeqCst);
+    if final_max_iters > 100 {
+        eprintln!("[demean_multi_fe] max_iters={}, n_samples={}, n_factors={}",
+            final_max_iters, n_samples, n_factors);
+    }
     (res, success)
 }
 
