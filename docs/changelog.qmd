@@ -17,6 +17,40 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ## PyFixest 0.41.0 (In Development)
 
+### Migration to maketables
+
+The table functionality in pyfixest now uses [maketables](https://py-econometrics.github.io/maketables/). `maketables` is a spin-off of
+pyfixest internal functions, but supports more packages in the Python eco-system (e.g. `statsmodels` and `linearmorels`). Due to it's close
+connection to `pyfixest`, the API of `pf.etable()` remains unchanged.
+**Changes:**
+
+- `pf.etable()` now uses `maketables.ETable` internally. The API remains unchanged for backward compatibility.
+- Because the function is not at the core of `pyixest` functionality, we will deprecate `pf.dtable()`.
+  A `FutureWarning` is now emitted. The function has been moved to `maketables` and can be used by calling `maketables.DTable()` directly.
+- The same applies for `pf.make_table()`, which has been an internal utility function to create tables. An equivalent function now lives in
+  `maketables.MTable()`.
+- The `great_tables` dependency has been replaced with `maketables`.
+
+**Migration guide:**
+
+```python
+# dtable migration
+# Before:
+pf.dtable(df, vars=["Y", "X1"])
+# After:
+import maketables
+maketables.DTable(df, vars=["Y", "X1"])
+
+# make_table migration
+# Before:
+pf.make_table(df, type="gt", caption="My Table")
+# After:
+import maketables
+maketables.MTable(df, caption="My Table").make(type="gt")
+```
+
+### Other Changes
+
 - Adds the following statistics to the `Fepois` class: `_loglik`, `_loglik_null`, `_pseudo_r2` for regression without weights.
 - Set the default parameters for the MAP algorithm to a tolerance of `1e-06` and maximum number of iterations of `10_000`.
 - Adds support for weights for poisson regression via `feopis()`.

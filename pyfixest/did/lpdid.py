@@ -286,7 +286,7 @@ def _lpdid_estimate(
 
             fit_tidy = fit.tidy().xs("treat_diff")
             fit_tidy["N"] = int(fit._N)
-            fit_tidy.name = h
+            fit_tidy.name = h  # type: ignore[union-attr]
             fit_all.append(fit_tidy)
 
         for h in range(pre_window + 1):
@@ -301,7 +301,7 @@ def _lpdid_estimate(
 
             fit_tidy = fit.tidy().xs("treat_diff")
             fit_tidy["N"] = int(fit._N)
-            fit_tidy.name = -h
+            fit_tidy.name = -h  # type: ignore[union-attr]
             fit_all.append(fit_tidy)
 
         res = pd.DataFrame(fit_all).sort_index()
