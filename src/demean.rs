@@ -2,6 +2,7 @@ use ndarray::{Array2, ArrayView1, ArrayView2, Zip};
 use numpy::{PyArray2, PyReadonlyArray1, PyReadonlyArray2};
 use pyo3::prelude::*;
 use rayon::prelude::*;
+use std::env;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
@@ -60,6 +61,29 @@ mod internal {
 }
 
 fn demean_impl(
+    x: &ArrayView2<f64>,
+    flist: &ArrayView2<usize>,
+    weights: &ArrayView1<f64>,
+    tol: f64,
+    maxiter: usize,
+) -> (Array2<f64>, bool) {
+    // Allow benchmarks to force the simple implementation for apples-to-apples comparisons.
+    if env::var("PYFIXEST_DEMEAN_SIMPLE").is_ok() {
+        return demean_simple_impl(x, flist, weights, tol, maxiter);
+    }
+
+    // Use the accelerated Rust implementation by default. If it fails to converge,
+    // fall back to the reference implementation to guarantee correctness.
+    let (accel, success) =
+        crate::demean_accelerated::demean_accelerated(x, flist, weights, tol, maxiter);
+    if success {
+        return (accel, true);
+    }
+
+    demean_simple_impl(x, flist, weights, tol, maxiter)
+}
+
+fn demean_simple_impl(
     x: &ArrayView2<f64>,
     flist: &ArrayView2<usize>,
     weights: &ArrayView1<f64>,
@@ -211,8 +235,7 @@ pub fn _demean_rs(
     let flist_arr = flist.as_array();
     let weights_arr = weights.as_array();
 
-    let (out, success) =
-        py.allow_threads(|| demean_impl(&x_arr, &flist_arr, &weights_arr, tol, maxiter));
+    let (out, success) = py.detach(|| demean_impl(&x_arr, &flist_arr, &weights_arr, tol, maxiter));
 
     let pyarray = PyArray2::from_owned_array(py, out);
     Ok((pyarray.into(), success))

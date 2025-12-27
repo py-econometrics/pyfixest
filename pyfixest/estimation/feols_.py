@@ -1,5 +1,4 @@
 import functools
-import gc
 import re
 import warnings
 from collections.abc import Mapping
@@ -1140,7 +1139,8 @@ class Feols:
         for attr in attributes:
             if hasattr(self, attr):
                 delattr(self, attr)
-        gc.collect()
+        # Note: gc.collect() was removed here as it added ~50ms overhead per call
+        # and Python's automatic GC is sufficient for most use cases
 
     def wald_test(self, R=None, q=None, distribution="F"):
         """
