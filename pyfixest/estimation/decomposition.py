@@ -750,6 +750,7 @@ class GelbachDecomposition:
             Additional notes to append to the table, by default None.
         **kwargs : dict, optional
             Additional arguments passed to maketables.MTable (type, digits, etc.).
+            Additional arguments passed to maketables.MTable (type, digits, etc.).
 
         Returns
         -------
@@ -907,6 +908,7 @@ class GelbachDecomposition:
         rgroup_sep_val = "t" if rgroup_sep is None else rgroup_sep
         output_type = kwargs.pop("type", "gt")
 
+        # Create MTable with the DataFrame
         table = MTable(
             res_sub,
             notes=notes,
