@@ -4,7 +4,6 @@ from collections.abc import ValuesView
 from typing import Optional, Union
 
 import maketables
-import maketables
 import numpy as np
 import pandas as pd
 
@@ -42,10 +41,6 @@ def etable(
 ) -> Union[pd.DataFrame, str, None]:
     r"""
     Generate a table summarizing the results of multiple regression models.
-
-    This function uses the maketables package internally to create publication-ready
-    regression tables. It supports various output formats including HTML (via Great Tables),
-    markdown, and LaTeX.
 
     This function uses the maketables package internally to create publication-ready
     regression tables. It supports various output formats including HTML (via Great Tables),
@@ -164,10 +159,8 @@ def etable(
     ```
     """
     # Apply pyfixest default for signif_code (different from maketables default)
-    # Apply pyfixest default for signif_code (different from maketables default)
     if signif_code is None:
         signif_code = [0.001, 0.01, 0.05]
-
 
     assert isinstance(signif_code, list) and len(signif_code) == 3, (
         "signif_code must be a list of length 3"
@@ -180,7 +173,6 @@ def etable(
         assert signif_code[0] < signif_code[1] < signif_code[2], (
             "signif_code must be in increasing order"
         )
-        )
 
     assert type in [
         "df",
@@ -192,10 +184,7 @@ def etable(
 
     models_list = _post_processing_input_checks(models)
 
-    models_list = _post_processing_input_checks(models)
-
     if model_heads is not None:
-        assert len(model_heads) == len(models_list), (
         assert len(model_heads) == len(models_list), (
             "model_heads must have the same length as models"
         )
@@ -213,7 +202,6 @@ def etable(
         for stat, values in custom_model_stats.items():
             assert isinstance(stat, str), "custom_model_stats keys must be strings"
             assert isinstance(values, list), "custom_model_stats values must lists"
-            assert len(values) == len(models_list), (
             assert len(values) == len(models_list), (
                 "lists in custom_model_stats values must have the same length as models"
             )
@@ -238,50 +226,13 @@ def etable(
         head_order=head_order,
         **kwargs,
     )
-    table = maketables.ETable(
-        models=models_list,
-        signif_code=signif_code,
-        coef_fmt=coef_fmt,
-        custom_stats=custom_stats,
-        custom_model_stats=custom_model_stats,
-        keep=keep if keep else [],
-        drop=drop if drop else [],
-        exact_match=exact_match,
-        labels=labels,
-        cat_template=cat_template,
-        show_fe=show_fe,
-        felabels=felabels,
-        fe_present=fe_present,
-        fe_absent=fe_absent,
-        notes=notes,
-        model_heads=model_heads,
-        head_order=head_order,
-        **kwargs,
-    )
 
     if type == "df":
-        return table.df
         return table.df
     elif type == "md":
         result = table.df.to_markdown()
         print(result)
-        result = table.df.to_markdown()
-        print(result)
         return None
-    elif type == "tex":
-        result = table.make(type="tex")
-        if file_name is not None:
-            with open(file_name, "w") as f:
-                f.write(result)
-        return result
-    elif type == "html":
-        return table.make(type="html")
-    elif type == "gt":
-        result = table.make(type="gt")
-        if file_name is not None:
-            with open(file_name, "w") as f:
-                f.write(result.as_raw_html())
-        return result
     elif type == "tex":
         result = table.make(type="tex")
         if file_name is not None:
@@ -529,7 +480,6 @@ def dtable(
         listed in the table notes. The default is False.
     kwargs : dict
         Additional arguments to be passed to maketables.DTable.
-        Additional arguments to be passed to maketables.DTable.
 
     Returns
     -------
@@ -547,40 +497,6 @@ def dtable(
     pf.dtable(df, vars = ["Y", "X1", "X2", "f1"])
     ```
     """
-    warnings.warn(
-        "pf.dtable() is deprecated and will be removed in a future version. "
-        "Please use maketables.DTable() directly. "
-        "See https://py-econometrics.github.io/maketables/ for documentation.",
-        FutureWarning,
-        stacklevel=2,
-    )
-
-    table = maketables.DTable(
-        df=df,
-        vars=vars,
-        stats=stats,
-        bycol=bycol,
-        byrow=byrow,
-        labels=labels,
-        stats_labels=stats_labels,
-        digits=digits,
-        notes=notes,
-        counts_row_below=counts_row_below,
-        hide_stats=hide_stats,
-        **kwargs,
-    )
-
-    # Handle output based on type parameter
-    if type == "df":
-        return table.df
-    elif type == "gt":
-        return table.make(type="gt")
-    elif type == "tex":
-        return table.make(type="tex")
-    elif type == "html":
-        return table.make(type="html")
-
-    return table.make(type="gt")
     warnings.warn(
         "pf.dtable() is deprecated and will be removed in a future version. "
         "Please use maketables.DTable() directly. "

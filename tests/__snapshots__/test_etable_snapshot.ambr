@@ -8,7 +8,7 @@
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
           }
-  
+
   #gt_table thead, tbody, tfoot, tr, td, th { border-style: none; }
    tr { background-color: transparent; }
   #gt_table p { margin: 0; padding: 0; }
@@ -50,11 +50,11 @@
    #gt_table .gt_super { font-size: 65%; }
    #gt_table .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
    #gt_table .gt_asterisk { font-size: 100%; vertical-align: 0; }
-   
+
   </style>
   <table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
   <thead>
-  
+
   <tr class="gt_col_headings gt_spanner_row">
     <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="2" colspan="1" scope="col" id=""></th>
     <th class="gt_center gt_columns_top_border gt_column_spanner_outer" rowspan="1" colspan="1" scope="col" id="Y">
@@ -322,17 +322,17 @@
     </tr>
   </tbody>
     <tfoot class="gt_sourcenotes">
-    
+
     <tr>
       <td class="gt_sourcenote" colspan="2">Format of coefficient cell: Coefficient   (Std. Error)</td>
     </tr>
-  
+
   </tfoot>
-  
+
   </table>
-  
+
   </div>
-          
+
   '''
 # ---
 # name: TestEtableAdvancedParams.test_custom_fe_symbols
@@ -344,7 +344,7 @@
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
           }
-  
+
   #gt_table thead, tbody, tfoot, tr, td, th { border-style: none; }
    tr { background-color: transparent; }
   #gt_table p { margin: 0; padding: 0; }
@@ -386,11 +386,11 @@
    #gt_table .gt_super { font-size: 65%; }
    #gt_table .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
    #gt_table .gt_asterisk { font-size: 100%; vertical-align: 0; }
-   
+
   </style>
   <table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
   <thead>
-  
+
   <tr class="gt_col_headings gt_spanner_row">
     <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="2" colspan="1" scope="col" id=""></th>
     <th class="gt_center gt_columns_top_border gt_column_spanner_outer" rowspan="1" colspan="2" scope="colgroup" id="Y">
@@ -444,17 +444,17 @@
     </tr>
   </tbody>
     <tfoot class="gt_sourcenotes">
-    
+
     <tr>
       <td class="gt_sourcenote" colspan="3">Format of coefficient cell: Coefficient   (Std. Error)</td>
     </tr>
-  
+
   </tfoot>
-  
+
   </table>
-  
+
   </div>
-          
+
   '''
 # ---
 # name: TestEtableAdvancedParams.test_custom_model_stats
@@ -466,7 +466,7 @@
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
           }
-  
+
   #gt_table thead, tbody, tfoot, tr, td, th { border-style: none; }
    tr { background-color: transparent; }
   #gt_table p { margin: 0; padding: 0; }
@@ -508,11 +508,11 @@
    #gt_table .gt_super { font-size: 65%; }
    #gt_table .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
    #gt_table .gt_asterisk { font-size: 100%; vertical-align: 0; }
-   
+
   </style>
   <table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
   <thead>
-  
+
   <tr class="gt_col_headings gt_spanner_row">
     <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="2" colspan="1" scope="col" id=""></th>
     <th class="gt_center gt_columns_top_border gt_column_spanner_outer" rowspan="1" colspan="2" scope="colgroup" id="Y">
@@ -571,17 +571,17 @@
     </tr>
   </tbody>
     <tfoot class="gt_sourcenotes">
-    
+
     <tr>
       <td class="gt_sourcenote" colspan="3">Format of coefficient cell: Coefficient   (Std. Error)</td>
     </tr>
-  
+
   </tfoot>
-  
+
   </table>
-  
+
   </div>
-          
+
   '''
 # ---
 # name: TestEtableAdvancedParams.test_digits
@@ -593,7 +593,7 @@
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
           }
-  
+
   #gt_table thead, tbody, tfoot, tr, td, th { border-style: none; }
    tr { background-color: transparent; }
   #gt_table p { margin: 0; padding: 0; }
@@ -635,11 +635,11 @@
    #gt_table .gt_super { font-size: 65%; }
    #gt_table .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
    #gt_table .gt_asterisk { font-size: 100%; vertical-align: 0; }
-   
+
   </style>
   <table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
   <thead>
-  
+
   <tr class="gt_col_headings gt_spanner_row">
     <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="2" colspan="1" scope="col" id=""></th>
     <th class="gt_center gt_columns_top_border gt_column_spanner_outer" rowspan="1" colspan="2" scope="colgroup" id="Y">
@@ -693,17 +693,17 @@
     </tr>
   </tbody>
     <tfoot class="gt_sourcenotes">
-    
+
     <tr>
       <td class="gt_sourcenote" colspan="3">Format of coefficient cell: Coefficient   (Std. Error)</td>
     </tr>
-  
+
   </tfoot>
-  
+
   </table>
-  
+
   </div>
-          
+
   '''
 # ---
 # name: TestEtableAdvancedParams.test_exact_match
@@ -715,7 +715,7 @@
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
           }
-  
+
   #gt_table thead, tbody, tfoot, tr, td, th { border-style: none; }
    tr { background-color: transparent; }
   #gt_table p { margin: 0; padding: 0; }
@@ -757,11 +757,11 @@
    #gt_table .gt_super { font-size: 65%; }
    #gt_table .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
    #gt_table .gt_asterisk { font-size: 100%; vertical-align: 0; }
-   
+
   </style>
   <table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
   <thead>
-  
+
   <tr class="gt_col_headings gt_spanner_row">
     <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="2" colspan="1" scope="col" id=""></th>
     <th class="gt_center gt_columns_top_border gt_column_spanner_outer" rowspan="1" colspan="2" scope="colgroup" id="Y">
@@ -810,17 +810,17 @@
     </tr>
   </tbody>
     <tfoot class="gt_sourcenotes">
-    
+
     <tr>
       <td class="gt_sourcenote" colspan="3">Format of coefficient cell: Coefficient   (Std. Error)</td>
     </tr>
-  
+
   </tfoot>
-  
+
   </table>
-  
+
   </div>
-          
+
   '''
 # ---
 # name: TestEtableAdvancedParams.test_scientific_notation
@@ -832,7 +832,7 @@
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
           }
-  
+
   #gt_table thead, tbody, tfoot, tr, td, th { border-style: none; }
    tr { background-color: transparent; }
   #gt_table p { margin: 0; padding: 0; }
@@ -874,11 +874,11 @@
    #gt_table .gt_super { font-size: 65%; }
    #gt_table .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
    #gt_table .gt_asterisk { font-size: 100%; vertical-align: 0; }
-   
+
   </style>
   <table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
   <thead>
-  
+
   <tr class="gt_col_headings gt_spanner_row">
     <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="2" colspan="1" scope="col" id=""></th>
     <th class="gt_center gt_columns_top_border gt_column_spanner_outer" rowspan="1" colspan="2" scope="colgroup" id="Y">
@@ -932,17 +932,17 @@
     </tr>
   </tbody>
     <tfoot class="gt_sourcenotes">
-    
+
     <tr>
       <td class="gt_sourcenote" colspan="3">Format of coefficient cell: Coefficient   (Std. Error)</td>
     </tr>
-  
+
   </tfoot>
-  
+
   </table>
-  
+
   </div>
-          
+
   '''
 # ---
 # name: TestEtableAdvancedParams.test_show_fe_false
@@ -954,7 +954,7 @@
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
           }
-  
+
   #gt_table thead, tbody, tfoot, tr, td, th { border-style: none; }
    tr { background-color: transparent; }
   #gt_table p { margin: 0; padding: 0; }
@@ -996,11 +996,11 @@
    #gt_table .gt_super { font-size: 65%; }
    #gt_table .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
    #gt_table .gt_asterisk { font-size: 100%; vertical-align: 0; }
-   
+
   </style>
   <table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
   <thead>
-  
+
   <tr class="gt_col_headings gt_spanner_row">
     <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="2" colspan="1" scope="col" id=""></th>
     <th class="gt_center gt_columns_top_border gt_column_spanner_outer" rowspan="1" colspan="2" scope="colgroup" id="Y">
@@ -1041,17 +1041,17 @@
     </tr>
   </tbody>
     <tfoot class="gt_sourcenotes">
-    
+
     <tr>
       <td class="gt_sourcenote" colspan="3">Format of coefficient cell: Coefficient   (Std. Error)</td>
     </tr>
-  
+
   </tfoot>
-  
+
   </table>
-  
+
   </div>
-          
+
   '''
 # ---
 # name: TestEtableAdvancedParams.test_thousands_sep
@@ -1063,7 +1063,7 @@
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
           }
-  
+
   #gt_table thead, tbody, tfoot, tr, td, th { border-style: none; }
    tr { background-color: transparent; }
   #gt_table p { margin: 0; padding: 0; }
@@ -1105,11 +1105,11 @@
    #gt_table .gt_super { font-size: 65%; }
    #gt_table .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
    #gt_table .gt_asterisk { font-size: 100%; vertical-align: 0; }
-   
+
   </style>
   <table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
   <thead>
-  
+
   <tr class="gt_col_headings gt_spanner_row">
     <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="2" colspan="1" scope="col" id=""></th>
     <th class="gt_center gt_columns_top_border gt_column_spanner_outer" rowspan="1" colspan="2" scope="colgroup" id="Y">
@@ -1163,22 +1163,22 @@
     </tr>
   </tbody>
     <tfoot class="gt_sourcenotes">
-    
+
     <tr>
       <td class="gt_sourcenote" colspan="3">Format of coefficient cell: Coefficient   (Std. Error)</td>
     </tr>
-  
+
   </tfoot>
-  
+
   </table>
-  
+
   </div>
-          
+
   '''
 # ---
 # name: TestEtableDf.test_basic_df
   '''
-                                      Y                   
+                                      Y
                                     (1)                (2)
   coef  X1             -0.95 \n (0.066)  -0.924 \n (0.056)
         X2            -0.174 \n (0.018)  -0.174 \n (0.015)
@@ -1190,7 +1190,7 @@
 # ---
 # name: TestEtableDf.test_df_with_custom_stats
   '''
-                                           Y                         
+                                           Y
                                          (1)                      (2)
   coef  X1            -0.95 [-1.080, -0.819]  -0.924 [-1.034, -0.814]
         X2            -0.174 [-0.209, -0.14]  -0.174 [-0.203, -0.145]
@@ -1209,7 +1209,7 @@
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
           }
-  
+
   #gt_table thead, tbody, tfoot, tr, td, th { border-style: none; }
    tr { background-color: transparent; }
   #gt_table p { margin: 0; padding: 0; }
@@ -1251,11 +1251,11 @@
    #gt_table .gt_super { font-size: 65%; }
    #gt_table .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
    #gt_table .gt_asterisk { font-size: 100%; vertical-align: 0; }
-   
+
   </style>
   <table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
   <thead>
-  
+
   <tr class="gt_col_headings gt_spanner_row">
     <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="2" colspan="1" scope="col" id=""></th>
     <th class="gt_center gt_columns_top_border gt_column_spanner_outer" rowspan="1" colspan="2" scope="colgroup" id="Y">
@@ -1309,17 +1309,17 @@
     </tr>
   </tbody>
     <tfoot class="gt_sourcenotes">
-    
+
     <tr>
       <td class="gt_sourcenote" colspan="3">Format of coefficient cell: Coefficient   (Std. Error)</td>
     </tr>
-  
+
   </tfoot>
-  
+
   </table>
-  
+
   </div>
-          
+
   '''
 # ---
 # name: TestEtableGt.test_gt_with_coef_fmt
@@ -1331,7 +1331,7 @@
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
           }
-  
+
   #gt_table thead, tbody, tfoot, tr, td, th { border-style: none; }
    tr { background-color: transparent; }
   #gt_table p { margin: 0; padding: 0; }
@@ -1373,11 +1373,11 @@
    #gt_table .gt_super { font-size: 65%; }
    #gt_table .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
    #gt_table .gt_asterisk { font-size: 100%; vertical-align: 0; }
-   
+
   </style>
   <table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
   <thead>
-  
+
   <tr class="gt_col_headings gt_spanner_row">
     <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="2" colspan="1" scope="col" id=""></th>
     <th class="gt_center gt_columns_top_border gt_column_spanner_outer" rowspan="1" colspan="2" scope="colgroup" id="Y">
@@ -1431,17 +1431,17 @@
     </tr>
   </tbody>
     <tfoot class="gt_sourcenotes">
-    
+
     <tr>
       <td class="gt_sourcenote" colspan="3">Format of coefficient cell: Coefficient (Std. Error) t-stats [p-value]</td>
     </tr>
-  
+
   </tfoot>
-  
+
   </table>
-  
+
   </div>
-          
+
   '''
 # ---
 # name: TestEtableGt.test_gt_with_drop
@@ -1453,7 +1453,7 @@
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
           }
-  
+
   #gt_table thead, tbody, tfoot, tr, td, th { border-style: none; }
    tr { background-color: transparent; }
   #gt_table p { margin: 0; padding: 0; }
@@ -1495,11 +1495,11 @@
    #gt_table .gt_super { font-size: 65%; }
    #gt_table .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
    #gt_table .gt_asterisk { font-size: 100%; vertical-align: 0; }
-   
+
   </style>
   <table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
   <thead>
-  
+
   <tr class="gt_col_headings gt_spanner_row">
     <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="2" colspan="1" scope="col" id=""></th>
     <th class="gt_center gt_columns_top_border gt_column_spanner_outer" rowspan="1" colspan="2" scope="colgroup" id="Y">
@@ -1548,17 +1548,17 @@
     </tr>
   </tbody>
     <tfoot class="gt_sourcenotes">
-    
+
     <tr>
       <td class="gt_sourcenote" colspan="3">Format of coefficient cell: Coefficient   (Std. Error)</td>
     </tr>
-  
+
   </tfoot>
-  
+
   </table>
-  
+
   </div>
-          
+
   '''
 # ---
 # name: TestEtableGt.test_gt_with_keep
@@ -1570,7 +1570,7 @@
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
           }
-  
+
   #gt_table thead, tbody, tfoot, tr, td, th { border-style: none; }
    tr { background-color: transparent; }
   #gt_table p { margin: 0; padding: 0; }
@@ -1612,11 +1612,11 @@
    #gt_table .gt_super { font-size: 65%; }
    #gt_table .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
    #gt_table .gt_asterisk { font-size: 100%; vertical-align: 0; }
-   
+
   </style>
   <table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
   <thead>
-  
+
   <tr class="gt_col_headings gt_spanner_row">
     <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="2" colspan="1" scope="col" id=""></th>
     <th class="gt_center gt_columns_top_border gt_column_spanner_outer" rowspan="1" colspan="2" scope="colgroup" id="Y">
@@ -1665,17 +1665,17 @@
     </tr>
   </tbody>
     <tfoot class="gt_sourcenotes">
-    
+
     <tr>
       <td class="gt_sourcenote" colspan="3">Format of coefficient cell: Coefficient   (Std. Error)</td>
     </tr>
-  
+
   </tfoot>
-  
+
   </table>
-  
+
   </div>
-          
+
   '''
 # ---
 # name: TestEtableGt.test_gt_with_labels
@@ -1687,7 +1687,7 @@
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
           }
-  
+
   #gt_table thead, tbody, tfoot, tr, td, th { border-style: none; }
    tr { background-color: transparent; }
   #gt_table p { margin: 0; padding: 0; }
@@ -1729,11 +1729,11 @@
    #gt_table .gt_super { font-size: 65%; }
    #gt_table .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
    #gt_table .gt_asterisk { font-size: 100%; vertical-align: 0; }
-   
+
   </style>
   <table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
   <thead>
-  
+
   <tr class="gt_col_headings gt_spanner_row">
     <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="2" colspan="1" scope="col" id=""></th>
     <th class="gt_center gt_columns_top_border gt_column_spanner_outer" rowspan="1" colspan="2" scope="colgroup" id="Y">
@@ -1787,17 +1787,17 @@
     </tr>
   </tbody>
     <tfoot class="gt_sourcenotes">
-    
+
     <tr>
       <td class="gt_sourcenote" colspan="3">Format of coefficient cell: Coefficient   (Std. Error)</td>
     </tr>
-  
+
   </tfoot>
-  
+
   </table>
-  
+
   </div>
-          
+
   '''
 # ---
 # name: TestEtableGt.test_gt_with_model_heads
@@ -1809,7 +1809,7 @@
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
           }
-  
+
   #gt_table thead, tbody, tfoot, tr, td, th { border-style: none; }
    tr { background-color: transparent; }
   #gt_table p { margin: 0; padding: 0; }
@@ -1851,11 +1851,11 @@
    #gt_table .gt_super { font-size: 65%; }
    #gt_table .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
    #gt_table .gt_asterisk { font-size: 100%; vertical-align: 0; }
-   
+
   </style>
   <table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
   <thead>
-  
+
   <tr class="gt_col_headings gt_spanner_row">
     <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1" scope="col">
       <span>&nbsp</span>
@@ -1920,17 +1920,17 @@
     </tr>
   </tbody>
     <tfoot class="gt_sourcenotes">
-    
+
     <tr>
       <td class="gt_sourcenote" colspan="3">Format of coefficient cell: Coefficient   (Std. Error)</td>
     </tr>
-  
+
   </tfoot>
-  
+
   </table>
-  
+
   </div>
-          
+
   '''
 # ---
 # name: TestEtableGt.test_gt_with_notes
@@ -1942,7 +1942,7 @@
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
           }
-  
+
   #gt_table thead, tbody, tfoot, tr, td, th { border-style: none; }
    tr { background-color: transparent; }
   #gt_table p { margin: 0; padding: 0; }
@@ -1984,11 +1984,11 @@
    #gt_table .gt_super { font-size: 65%; }
    #gt_table .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
    #gt_table .gt_asterisk { font-size: 100%; vertical-align: 0; }
-   
+
   </style>
   <table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
   <thead>
-  
+
   <tr class="gt_col_headings gt_spanner_row">
     <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="2" colspan="1" scope="col" id=""></th>
     <th class="gt_center gt_columns_top_border gt_column_spanner_outer" rowspan="1" colspan="2" scope="colgroup" id="Y">
@@ -2042,17 +2042,17 @@
     </tr>
   </tbody>
     <tfoot class="gt_sourcenotes">
-    
+
     <tr>
       <td class="gt_sourcenote" colspan="3">Custom notes for this table.</td>
     </tr>
-  
+
   </tfoot>
-  
+
   </table>
-  
+
   </div>
-          
+
   '''
 # ---
 # name: TestEtableGt.test_gt_with_significance_codes
@@ -2064,7 +2064,7 @@
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
           }
-  
+
   #gt_table thead, tbody, tfoot, tr, td, th { border-style: none; }
    tr { background-color: transparent; }
   #gt_table p { margin: 0; padding: 0; }
@@ -2106,11 +2106,11 @@
    #gt_table .gt_super { font-size: 65%; }
    #gt_table .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
    #gt_table .gt_asterisk { font-size: 100%; vertical-align: 0; }
-   
+
   </style>
   <table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
   <thead>
-  
+
   <tr class="gt_col_headings gt_spanner_row">
     <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="2" colspan="1" scope="col" id=""></th>
     <th class="gt_center gt_columns_top_border gt_column_spanner_outer" rowspan="1" colspan="2" scope="colgroup" id="Y">
@@ -2164,17 +2164,17 @@
     </tr>
   </tbody>
     <tfoot class="gt_sourcenotes">
-    
+
     <tr>
       <td class="gt_sourcenote" colspan="3">Format of coefficient cell: Coefficient   (Std. Error)</td>
     </tr>
-  
+
   </tfoot>
-  
+
   </table>
-  
+
   </div>
-          
+
   '''
 # ---
 # name: TestEtableGt.test_single_model_gt
@@ -2186,7 +2186,7 @@
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
           }
-  
+
   #gt_table thead, tbody, tfoot, tr, td, th { border-style: none; }
    tr { background-color: transparent; }
   #gt_table p { margin: 0; padding: 0; }
@@ -2228,11 +2228,11 @@
    #gt_table .gt_super { font-size: 65%; }
    #gt_table .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
    #gt_table .gt_asterisk { font-size: 100%; vertical-align: 0; }
-   
+
   </style>
   <table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
   <thead>
-  
+
   <tr class="gt_col_headings gt_spanner_row">
     <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="2" colspan="1" scope="col" id=""></th>
     <th class="gt_center gt_columns_top_border gt_column_spanner_outer" rowspan="1" colspan="1" scope="col" id="Y">
@@ -2275,17 +2275,17 @@
     </tr>
   </tbody>
     <tfoot class="gt_sourcenotes">
-    
+
     <tr>
       <td class="gt_sourcenote" colspan="2">Format of coefficient cell: Coefficient   (Std. Error)</td>
     </tr>
-  
+
   </tfoot>
-  
+
   </table>
-  
+
   </div>
-          
+
   '''
 # ---
 # name: TestEtableHtml.test_basic_html
@@ -2297,7 +2297,7 @@
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
           }
-  
+
   #gt_table thead, tbody, tfoot, tr, td, th { border-style: none; }
    tr { background-color: transparent; }
   #gt_table p { margin: 0; padding: 0; }
@@ -2339,11 +2339,11 @@
    #gt_table .gt_super { font-size: 65%; }
    #gt_table .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
    #gt_table .gt_asterisk { font-size: 100%; vertical-align: 0; }
-   
+
   </style>
   <table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
   <thead>
-  
+
   <tr class="gt_col_headings gt_spanner_row">
     <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="2" colspan="1" scope="col" id=""></th>
     <th class="gt_center gt_columns_top_border gt_column_spanner_outer" rowspan="1" colspan="2" scope="colgroup" id="Y">
@@ -2397,17 +2397,17 @@
     </tr>
   </tbody>
     <tfoot class="gt_sourcenotes">
-    
+
     <tr>
       <td class="gt_sourcenote" colspan="3">Format of coefficient cell: Coefficient   (Std. Error)</td>
     </tr>
-  
+
   </tfoot>
-  
+
   </table>
-  
+
   </div>
-          
+
   '''
 # ---
 # name: TestEtableMd.test_basic_md
@@ -2422,7 +2422,7 @@
   | ('fe', 'f2')              | -              | x              |
   | ('stats', 'Observations') | 997            | 997            |
   | ('stats', 'R²')           | 0.489          | 0.659          |
-  
+
   '''
 # ---
 # name: TestEtableMd.test_md_with_notes
@@ -2437,7 +2437,7 @@
   | ('fe', 'f2')              | -              | x              |
   | ('stats', 'Observations') | 997            | 997            |
   | ('stats', 'R²')           | 0.489          | 0.659          |
-  
+
   '''
 # ---
 # name: TestEtableModelInputs.test_explicit_model_list
@@ -2449,7 +2449,7 @@
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
           }
-  
+
   #gt_table thead, tbody, tfoot, tr, td, th { border-style: none; }
    tr { background-color: transparent; }
   #gt_table p { margin: 0; padding: 0; }
@@ -2491,11 +2491,11 @@
    #gt_table .gt_super { font-size: 65%; }
    #gt_table .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
    #gt_table .gt_asterisk { font-size: 100%; vertical-align: 0; }
-   
+
   </style>
   <table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
   <thead>
-  
+
   <tr class="gt_col_headings gt_spanner_row">
     <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="2" colspan="1" scope="col" id=""></th>
     <th class="gt_center gt_columns_top_border gt_column_spanner_outer" rowspan="1" colspan="3" scope="colgroup" id="Y">
@@ -2556,17 +2556,17 @@
     </tr>
   </tbody>
     <tfoot class="gt_sourcenotes">
-    
+
     <tr>
       <td class="gt_sourcenote" colspan="4">Format of coefficient cell: Coefficient   (Std. Error)</td>
     </tr>
-  
+
   </tfoot>
-  
+
   </table>
-  
+
   </div>
-          
+
   '''
 # ---
 # name: TestEtableModelInputs.test_fixest_multi_direct
@@ -2578,7 +2578,7 @@
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
           }
-  
+
   #gt_table thead, tbody, tfoot, tr, td, th { border-style: none; }
    tr { background-color: transparent; }
   #gt_table p { margin: 0; padding: 0; }
@@ -2620,11 +2620,11 @@
    #gt_table .gt_super { font-size: 65%; }
    #gt_table .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
    #gt_table .gt_asterisk { font-size: 100%; vertical-align: 0; }
-   
+
   </style>
   <table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
   <thead>
-  
+
   <tr class="gt_col_headings gt_spanner_row">
     <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="2" colspan="1" scope="col" id=""></th>
     <th class="gt_center gt_columns_top_border gt_column_spanner_outer" rowspan="1" colspan="1" scope="col" id="Y">
@@ -2676,17 +2676,17 @@
     </tr>
   </tbody>
     <tfoot class="gt_sourcenotes">
-    
+
     <tr>
       <td class="gt_sourcenote" colspan="3">Format of coefficient cell: Coefficient   (Std. Error)</td>
     </tr>
-  
+
   </tfoot>
-  
+
   </table>
-  
+
   </div>
-          
+
   '''
 # ---
 # name: TestEtableModelInputs.test_fixest_multi_method
@@ -2698,7 +2698,7 @@
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
           }
-  
+
   #gt_table thead, tbody, tfoot, tr, td, th { border-style: none; }
    tr { background-color: transparent; }
   #gt_table p { margin: 0; padding: 0; }
@@ -2740,11 +2740,11 @@
    #gt_table .gt_super { font-size: 65%; }
    #gt_table .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
    #gt_table .gt_asterisk { font-size: 100%; vertical-align: 0; }
-   
+
   </style>
   <table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
   <thead>
-  
+
   <tr class="gt_col_headings gt_spanner_row">
     <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="2" colspan="1" scope="col" id=""></th>
     <th class="gt_center gt_columns_top_border gt_column_spanner_outer" rowspan="1" colspan="1" scope="col" id="Y">
@@ -2796,17 +2796,17 @@
     </tr>
   </tbody>
     <tfoot class="gt_sourcenotes">
-    
+
     <tr>
       <td class="gt_sourcenote" colspan="3">Format of coefficient cell: Coefficient   (Std. Error)</td>
     </tr>
-  
+
   </tfoot>
-  
+
   </table>
-  
+
   </div>
-          
+
   '''
 # ---
 # name: TestEtableModelInputs.test_fixest_multi_to_list
@@ -2818,7 +2818,7 @@
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
           }
-  
+
   #gt_table thead, tbody, tfoot, tr, td, th { border-style: none; }
    tr { background-color: transparent; }
   #gt_table p { margin: 0; padding: 0; }
@@ -2860,11 +2860,11 @@
    #gt_table .gt_super { font-size: 65%; }
    #gt_table .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
    #gt_table .gt_asterisk { font-size: 100%; vertical-align: 0; }
-   
+
   </style>
   <table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
   <thead>
-  
+
   <tr class="gt_col_headings gt_spanner_row">
     <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="2" colspan="1" scope="col" id=""></th>
     <th class="gt_center gt_columns_top_border gt_column_spanner_outer" rowspan="1" colspan="1" scope="col" id="Y">
@@ -2916,17 +2916,17 @@
     </tr>
   </tbody>
     <tfoot class="gt_sourcenotes">
-    
+
     <tr>
       <td class="gt_sourcenote" colspan="3">Format of coefficient cell: Coefficient   (Std. Error)</td>
     </tr>
-  
+
   </tfoot>
-  
+
   </table>
-  
+
   </div>
-          
+
   '''
 # ---
 # name: TestEtableSpecialModels.test_iv_model
@@ -2938,7 +2938,7 @@
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
           }
-  
+
   #gt_table thead, tbody, tfoot, tr, td, th { border-style: none; }
    tr { background-color: transparent; }
   #gt_table p { margin: 0; padding: 0; }
@@ -2980,11 +2980,11 @@
    #gt_table .gt_super { font-size: 65%; }
    #gt_table .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
    #gt_table .gt_asterisk { font-size: 100%; vertical-align: 0; }
-   
+
   </style>
   <table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
   <thead>
-  
+
   <tr class="gt_col_headings gt_spanner_row">
     <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="2" colspan="1" scope="col" id=""></th>
     <th class="gt_center gt_columns_top_border gt_column_spanner_outer" rowspan="1" colspan="2" scope="colgroup" id="Y">
@@ -3033,17 +3033,17 @@
     </tr>
   </tbody>
     <tfoot class="gt_sourcenotes">
-    
+
     <tr>
       <td class="gt_sourcenote" colspan="3">Format of coefficient cell: Coefficient   (Std. Error)</td>
     </tr>
-  
+
   </tfoot>
-  
+
   </table>
-  
+
   </div>
-          
+
   '''
 # ---
 # name: TestEtableSpecialModels.test_mixed_models
@@ -3055,7 +3055,7 @@
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
           }
-  
+
   #gt_table thead, tbody, tfoot, tr, td, th { border-style: none; }
    tr { background-color: transparent; }
   #gt_table p { margin: 0; padding: 0; }
@@ -3097,11 +3097,11 @@
    #gt_table .gt_super { font-size: 65%; }
    #gt_table .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
    #gt_table .gt_asterisk { font-size: 100%; vertical-align: 0; }
-   
+
   </style>
   <table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
   <thead>
-  
+
   <tr class="gt_col_headings gt_spanner_row">
     <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="2" colspan="1" scope="col" id=""></th>
     <th class="gt_center gt_columns_top_border gt_column_spanner_outer" rowspan="1" colspan="3" scope="colgroup" id="Y">
@@ -3168,17 +3168,17 @@
     </tr>
   </tbody>
     <tfoot class="gt_sourcenotes">
-    
+
     <tr>
       <td class="gt_sourcenote" colspan="4">Format of coefficient cell: Coefficient   (Std. Error)</td>
     </tr>
-  
+
   </tfoot>
-  
+
   </table>
-  
+
   </div>
-          
+
   '''
 # ---
 # name: TestEtableSpecialModels.test_poisson_model
@@ -3190,7 +3190,7 @@
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
           }
-  
+
   #gt_table thead, tbody, tfoot, tr, td, th { border-style: none; }
    tr { background-color: transparent; }
   #gt_table p { margin: 0; padding: 0; }
@@ -3232,11 +3232,11 @@
    #gt_table .gt_super { font-size: 65%; }
    #gt_table .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
    #gt_table .gt_asterisk { font-size: 100%; vertical-align: 0; }
-   
+
   </style>
   <table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
   <thead>
-  
+
   <tr class="gt_col_headings gt_spanner_row">
     <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="2" colspan="1" scope="col" id=""></th>
     <th class="gt_center gt_columns_top_border gt_column_spanner_outer" rowspan="1" colspan="1" scope="col" id="Y">
@@ -3283,17 +3283,17 @@
     </tr>
   </tbody>
     <tfoot class="gt_sourcenotes">
-    
+
     <tr>
       <td class="gt_sourcenote" colspan="2">Format of coefficient cell: Coefficient   (Std. Error)</td>
     </tr>
-  
+
   </tfoot>
-  
+
   </table>
-  
+
   </div>
-          
+
   '''
 # ---
 # name: TestEtableTex.test_basic_tex
@@ -3334,7 +3334,7 @@
   \endgroup
   \noindent\begin{minipage}{\linewidth}\smallskip\footnotesize
   Format of coefficient cell: Coefficient   (Std. Error)\end{minipage}
-  
+
   \end{threeparttable}
   '''
 # ---
@@ -3376,7 +3376,7 @@
   \endgroup
   \noindent\begin{minipage}{\linewidth}\smallskip\footnotesize
   Format of coefficient cell: Coefficient   (Std. Error)\end{minipage}
-  
+
   \end{threeparttable}
   '''
 # ---
@@ -3420,7 +3420,7 @@
   \endgroup
   \noindent\begin{minipage}{\linewidth}\smallskip\footnotesize
   Format of coefficient cell: Coefficient   (Std. Error)\end{minipage}
-  
+
   \end{threeparttable}
   '''
 # ---
@@ -3462,7 +3462,7 @@
   \endgroup
   \noindent\begin{minipage}{\linewidth}\smallskip\footnotesize
   Format of coefficient cell: Coefficient   (Std. Error)\end{minipage}
-  
+
   \end{threeparttable}
   '''
 # ---
@@ -3506,7 +3506,7 @@
   \endgroup
   \noindent\begin{minipage}{\linewidth}\smallskip\footnotesize
   Format of coefficient cell: Coefficient   (Std. Error)\end{minipage}
-  
+
   \end{threeparttable}
   '''
 # ---
@@ -3548,7 +3548,7 @@
   \endgroup
   \noindent\begin{minipage}{\linewidth}\smallskip\footnotesize
   Custom notes here.\end{minipage}
-  
+
   \end{threeparttable}
   '''
 # ---
@@ -3561,7 +3561,7 @@
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
           }
-  
+
   #gt_table thead, tbody, tfoot, tr, td, th { border-style: none; }
    tr { background-color: transparent; }
   #gt_table p { margin: 0; padding: 0; }
@@ -3603,11 +3603,11 @@
    #gt_table .gt_super { font-size: 65%; }
    #gt_table .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
    #gt_table .gt_asterisk { font-size: 100%; vertical-align: 0; }
-   
+
   </style>
   <table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
   <thead>
-  
+
   <tr class="gt_col_headings">
     <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1" scope="col" id=""></th>
     <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1" scope="col" id="Initial-Difference">Initial Difference</th>
@@ -3699,7 +3699,7 @@
     </tr>
   </tbody>
     <tfoot class="gt_sourcenotes">
-    
+
     <tr>
       <td class="gt_sourcenote" colspan="4">
               Decomposition variable: x1.
@@ -3712,13 +3712,13 @@
               Additional custom note for the table.
               </td>
     </tr>
-  
+
   </tfoot>
-  
+
   </table>
-  
+
   </div>
-          
+
   '''
 # ---
 # name: TestGelbachAdvancedParams.test_rgroup_sep_b
@@ -3730,7 +3730,7 @@
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
           }
-  
+
   #gt_table thead, tbody, tfoot, tr, td, th { border-style: none; }
    tr { background-color: transparent; }
   #gt_table p { margin: 0; padding: 0; }
@@ -3772,11 +3772,11 @@
    #gt_table .gt_super { font-size: 65%; }
    #gt_table .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
    #gt_table .gt_asterisk { font-size: 100%; vertical-align: 0; }
-   
+
   </style>
   <table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
   <thead>
-  
+
   <tr class="gt_col_headings">
     <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1" scope="col" id=""></th>
     <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1" scope="col" id="Initial-Difference">Initial Difference</th>
@@ -3868,7 +3868,7 @@
     </tr>
   </tbody>
     <tfoot class="gt_sourcenotes">
-    
+
     <tr>
       <td class="gt_sourcenote" colspan="4">
               Decomposition variable: x1.
@@ -3879,13 +3879,13 @@
   Panel 2: Share of Full Effect: Levels normalized by coefficient of the short regression.
   Panel 3: Share of Explained Effect: Levels normalized by coefficient of the long regression.</td>
     </tr>
-  
+
   </tfoot>
-  
+
   </table>
-  
+
   </div>
-          
+
   '''
 # ---
 # name: TestGelbachAdvancedParams.test_rgroup_sep_none
@@ -3897,7 +3897,7 @@
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
           }
-  
+
   #gt_table thead, tbody, tfoot, tr, td, th { border-style: none; }
    tr { background-color: transparent; }
   #gt_table p { margin: 0; padding: 0; }
@@ -3939,11 +3939,11 @@
    #gt_table .gt_super { font-size: 65%; }
    #gt_table .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
    #gt_table .gt_asterisk { font-size: 100%; vertical-align: 0; }
-   
+
   </style>
   <table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
   <thead>
-  
+
   <tr class="gt_col_headings">
     <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1" scope="col" id=""></th>
     <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1" scope="col" id="Initial-Difference">Initial Difference</th>
@@ -4035,7 +4035,7 @@
     </tr>
   </tbody>
     <tfoot class="gt_sourcenotes">
-    
+
     <tr>
       <td class="gt_sourcenote" colspan="4">
               Decomposition variable: x1.
@@ -4046,13 +4046,13 @@
   Panel 2: Share of Full Effect: Levels normalized by coefficient of the short regression.
   Panel 3: Share of Explained Effect: Levels normalized by coefficient of the long regression.</td>
     </tr>
-  
+
   </tfoot>
-  
+
   </table>
-  
+
   </div>
-          
+
   '''
 # ---
 # name: TestGelbachAdvancedParams.test_rgroup_sep_t
@@ -4064,7 +4064,7 @@
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
           }
-  
+
   #gt_table thead, tbody, tfoot, tr, td, th { border-style: none; }
    tr { background-color: transparent; }
   #gt_table p { margin: 0; padding: 0; }
@@ -4106,11 +4106,11 @@
    #gt_table .gt_super { font-size: 65%; }
    #gt_table .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
    #gt_table .gt_asterisk { font-size: 100%; vertical-align: 0; }
-   
+
   </style>
   <table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
   <thead>
-  
+
   <tr class="gt_col_headings">
     <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1" scope="col" id=""></th>
     <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1" scope="col" id="Initial-Difference">Initial Difference</th>
@@ -4202,7 +4202,7 @@
     </tr>
   </tbody>
     <tfoot class="gt_sourcenotes">
-    
+
     <tr>
       <td class="gt_sourcenote" colspan="4">
               Decomposition variable: x1.
@@ -4213,13 +4213,13 @@
   Panel 2: Share of Full Effect: Levels normalized by coefficient of the short regression.
   Panel 3: Share of Explained Effect: Levels normalized by coefficient of the long regression.</td>
     </tr>
-  
+
   </tfoot>
-  
+
   </table>
-  
+
   </div>
-          
+
   '''
 # ---
 # name: TestGelbachAdvancedParams.test_rgroup_sep_tb
@@ -4231,7 +4231,7 @@
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
           }
-  
+
   #gt_table thead, tbody, tfoot, tr, td, th { border-style: none; }
    tr { background-color: transparent; }
   #gt_table p { margin: 0; padding: 0; }
@@ -4273,11 +4273,11 @@
    #gt_table .gt_super { font-size: 65%; }
    #gt_table .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
    #gt_table .gt_asterisk { font-size: 100%; vertical-align: 0; }
-   
+
   </style>
   <table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
   <thead>
-  
+
   <tr class="gt_col_headings">
     <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1" scope="col" id=""></th>
     <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1" scope="col" id="Initial-Difference">Initial Difference</th>
@@ -4369,7 +4369,7 @@
     </tr>
   </tbody>
     <tfoot class="gt_sourcenotes">
-    
+
     <tr>
       <td class="gt_sourcenote" colspan="4">
               Decomposition variable: x1.
@@ -4380,13 +4380,13 @@
   Panel 2: Share of Full Effect: Levels normalized by coefficient of the short regression.
   Panel 3: Share of Explained Effect: Levels normalized by coefficient of the long regression.</td>
     </tr>
-  
+
   </tfoot>
-  
+
   </table>
-  
+
   </div>
-          
+
   '''
 # ---
 # name: TestGelbachEtable.test_gelbach_basic_gt
@@ -4398,7 +4398,7 @@
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
           }
-  
+
   #gt_table thead, tbody, tfoot, tr, td, th { border-style: none; }
    tr { background-color: transparent; }
   #gt_table p { margin: 0; padding: 0; }
@@ -4440,11 +4440,11 @@
    #gt_table .gt_super { font-size: 65%; }
    #gt_table .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
    #gt_table .gt_asterisk { font-size: 100%; vertical-align: 0; }
-   
+
   </style>
   <table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
   <thead>
-  
+
   <tr class="gt_col_headings">
     <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1" scope="col" id=""></th>
     <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1" scope="col" id="Initial-Difference">Initial Difference</th>
@@ -4536,7 +4536,7 @@
     </tr>
   </tbody>
     <tfoot class="gt_sourcenotes">
-    
+
     <tr>
       <td class="gt_sourcenote" colspan="4">
               Decomposition variable: x1.
@@ -4547,13 +4547,13 @@
   Panel 2: Share of Full Effect: Levels normalized by coefficient of the short regression.
   Panel 3: Share of Explained Effect: Levels normalized by coefficient of the long regression.</td>
     </tr>
-  
+
   </tfoot>
-  
+
   </table>
-  
+
   </div>
-          
+
   '''
 # ---
 # name: TestGelbachEtable.test_gelbach_df
@@ -4582,7 +4582,7 @@
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
           }
-  
+
   #gt_table thead, tbody, tfoot, tr, td, th { border-style: none; }
    tr { background-color: transparent; }
   #gt_table p { margin: 0; padding: 0; }
@@ -4624,11 +4624,11 @@
    #gt_table .gt_super { font-size: 65%; }
    #gt_table .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
    #gt_table .gt_asterisk { font-size: 100%; vertical-align: 0; }
-   
+
   </style>
   <table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
   <thead>
-  
+
   <tr class="gt_col_headings">
     <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1" scope="col" id=""></th>
     <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1" scope="col" id="Initial-Difference">Initial Difference</th>
@@ -4666,7 +4666,7 @@
     </tr>
   </tbody>
     <tfoot class="gt_sourcenotes">
-    
+
     <tr>
       <td class="gt_sourcenote" colspan="4">
               Decomposition variable: x1.
@@ -4675,13 +4675,13 @@
   Col 3: Explained Difference - Difference in coefficients of x1 in short and long regression.
   Panel 1: Levels (units).</td>
     </tr>
-  
+
   </tfoot>
-  
+
   </table>
-  
+
   </div>
-          
+
   '''
 # ---
 # name: TestGelbachEtable.test_gelbach_share_explained_panel
@@ -4693,7 +4693,7 @@
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
           }
-  
+
   #gt_table thead, tbody, tfoot, tr, td, th { border-style: none; }
    tr { background-color: transparent; }
   #gt_table p { margin: 0; padding: 0; }
@@ -4735,11 +4735,11 @@
    #gt_table .gt_super { font-size: 65%; }
    #gt_table .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
    #gt_table .gt_asterisk { font-size: 100%; vertical-align: 0; }
-   
+
   </style>
   <table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
   <thead>
-  
+
   <tr class="gt_col_headings">
     <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1" scope="col" id=""></th>
     <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1" scope="col" id="Initial-Difference">Initial Difference</th>
@@ -4777,7 +4777,7 @@
     </tr>
   </tbody>
     <tfoot class="gt_sourcenotes">
-    
+
     <tr>
       <td class="gt_sourcenote" colspan="4">
               Decomposition variable: x1.
@@ -4786,13 +4786,13 @@
   Col 3: Explained Difference - Difference in coefficients of x1 in short and long regression.
   Panel 1: Share of Explained Effect: Levels normalized by coefficient of the long regression.</td>
     </tr>
-  
+
   </tfoot>
-  
+
   </table>
-  
+
   </div>
-          
+
   '''
 # ---
 # name: TestGelbachEtable.test_gelbach_share_full_panel
@@ -4804,7 +4804,7 @@
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
           }
-  
+
   #gt_table thead, tbody, tfoot, tr, td, th { border-style: none; }
    tr { background-color: transparent; }
   #gt_table p { margin: 0; padding: 0; }
@@ -4846,11 +4846,11 @@
    #gt_table .gt_super { font-size: 65%; }
    #gt_table .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
    #gt_table .gt_asterisk { font-size: 100%; vertical-align: 0; }
-   
+
   </style>
   <table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
   <thead>
-  
+
   <tr class="gt_col_headings">
     <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1" scope="col" id=""></th>
     <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1" scope="col" id="Initial-Difference">Initial Difference</th>
@@ -4888,7 +4888,7 @@
     </tr>
   </tbody>
     <tfoot class="gt_sourcenotes">
-    
+
     <tr>
       <td class="gt_sourcenote" colspan="4">
               Decomposition variable: x1.
@@ -4897,13 +4897,13 @@
   Col 3: Explained Difference - Difference in coefficients of x1 in short and long regression.
   Panel 1: Share of Full Effect: Levels normalized by coefficient of the short regression.</td>
     </tr>
-  
+
   </tfoot>
-  
+
   </table>
-  
+
   </div>
-          
+
   '''
 # ---
 # name: TestGelbachEtable.test_gelbach_tex
@@ -4965,7 +4965,7 @@
   \end{tabularx}
   \endgroup
   \noindent\begin{minipage}{\linewidth}\smallskip\footnotesize
-  
+
               Decomposition variable: x1.
           Col 1: Raw Difference - Coefficient on x1 in short regression .
   Col 2: Adjusted Difference - Coefficient on x1 in long regression.
@@ -4973,7 +4973,7 @@
   Panel 1: Levels (units).
   Panel 2: Share of Full Effect: Levels normalized by coefficient of the short regression.
   Panel 3: Share of Explained Effect: Levels normalized by coefficient of the long regression.\end{minipage}
-  
+
   \end{threeparttable}
   '''
 # ---
@@ -4986,7 +4986,7 @@
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
           }
-  
+
   #gt_table thead, tbody, tfoot, tr, td, th { border-style: none; }
    tr { background-color: transparent; }
   #gt_table p { margin: 0; padding: 0; }
@@ -5028,11 +5028,11 @@
    #gt_table .gt_super { font-size: 65%; }
    #gt_table .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
    #gt_table .gt_asterisk { font-size: 100%; vertical-align: 0; }
-   
+
   </style>
   <table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
   <thead>
-  
+
     <tr class="gt_heading">
       <td colspan="4" class="gt_heading gt_title gt_font_normal">Gelbach Decomposition Results</td>
     </tr>
@@ -5127,7 +5127,7 @@
     </tr>
   </tbody>
     <tfoot class="gt_sourcenotes">
-    
+
     <tr>
       <td class="gt_sourcenote" colspan="4">
               Decomposition variable: x1.
@@ -5138,13 +5138,13 @@
   Panel 2: Share of Full Effect: Levels normalized by coefficient of the short regression.
   Panel 3: Share of Explained Effect: Levels normalized by coefficient of the long regression.</td>
     </tr>
-  
+
   </tfoot>
-  
+
   </table>
-  
+
   </div>
-          
+
   '''
 # ---
 # name: TestGelbachEtable.test_gelbach_with_column_heads
@@ -5156,7 +5156,7 @@
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
           }
-  
+
   #gt_table thead, tbody, tfoot, tr, td, th { border-style: none; }
    tr { background-color: transparent; }
   #gt_table p { margin: 0; padding: 0; }
@@ -5198,11 +5198,11 @@
    #gt_table .gt_super { font-size: 65%; }
    #gt_table .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
    #gt_table .gt_asterisk { font-size: 100%; vertical-align: 0; }
-   
+
   </style>
   <table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
   <thead>
-  
+
   <tr class="gt_col_headings">
     <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1" scope="col" id=""></th>
     <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1" scope="col" id="Total">Total</th>
@@ -5294,7 +5294,7 @@
     </tr>
   </tbody>
     <tfoot class="gt_sourcenotes">
-    
+
     <tr>
       <td class="gt_sourcenote" colspan="4">
               Decomposition variable: x1.
@@ -5305,13 +5305,13 @@
   Panel 2: Share of Full Effect: Levels normalized by coefficient of the short regression.
   Panel 3: Share of Explained Effect: Levels normalized by coefficient of the long regression.</td>
     </tr>
-  
+
   </tfoot>
-  
+
   </table>
-  
+
   </div>
-          
+
   '''
 # ---
 # name: TestGelbachEtable.test_gelbach_with_panel_heads
@@ -5323,7 +5323,7 @@
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
           }
-  
+
   #gt_table thead, tbody, tfoot, tr, td, th { border-style: none; }
    tr { background-color: transparent; }
   #gt_table p { margin: 0; padding: 0; }
@@ -5365,11 +5365,11 @@
    #gt_table .gt_super { font-size: 65%; }
    #gt_table .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
    #gt_table .gt_asterisk { font-size: 100%; vertical-align: 0; }
-   
+
   </style>
   <table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
   <thead>
-  
+
   <tr class="gt_col_headings">
     <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1" scope="col" id=""></th>
     <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1" scope="col" id="Initial-Difference">Initial Difference</th>
@@ -5461,7 +5461,7 @@
     </tr>
   </tbody>
     <tfoot class="gt_sourcenotes">
-    
+
     <tr>
       <td class="gt_sourcenote" colspan="4">
               Decomposition variable: x1.
@@ -5472,12 +5472,12 @@
   Panel 2: Share of Full Effect: Levels normalized by coefficient of the short regression.
   Panel 3: Share of Explained Effect: Levels normalized by coefficient of the long regression.</td>
     </tr>
-  
+
   </tfoot>
-  
+
   </table>
-  
+
   </div>
-          
+
   '''
 # ---

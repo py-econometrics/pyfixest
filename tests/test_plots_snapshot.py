@@ -16,7 +16,6 @@ import pandas as pd
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-import pyfixest as pf
 from pyfixest.estimation.estimation import feols
 from pyfixest.report.visualize import _HAS_LETS_PLOT, coefplot, iplot
 from pyfixest.utils.utils import get_data
@@ -142,9 +141,7 @@ def normalize_letsplot_html(html: str) -> str:
     )
 
     # Normalize data attributes with random values
-    html = re.sub(
-        r'data-lets-plot-id="[^"]*"', 'data-lets-plot-id="normalized"', html
-    )
+    html = re.sub(r'data-lets-plot-id="[^"]*"', 'data-lets-plot-id="normalized"', html)
 
     # Remove version-specific references
     html = re.sub(r"lets-plot-[0-9.]+", "lets-plot-VERSION", html)
@@ -180,7 +177,7 @@ def iplot_model(plot_data):
 
 @pytest.fixture(scope="module")
 def coefplot_model(plot_data):
-    """Simple model for coefplot."""
+    """Create simple model for coefplot."""
     return feols(fml="Y ~ X1 + X2 | f1", data=plot_data, vcov="iid")
 
 
@@ -375,9 +372,7 @@ class TestIplotLetsPlot:
 
     def test_labels(self, iplot_model, snapshot: SnapshotAssertion):
         """Iplot with custom labels using lets_plot."""
-        plot = iplot(
-            iplot_model, plot_backend="lets_plot", labels={"f2": "Factor 2"}
-        )
+        plot = iplot(iplot_model, plot_backend="lets_plot", labels={"f2": "Factor 2"})
         assert letsplot_to_html(plot) == snapshot
 
     def test_joint(self, iplot_model, snapshot: SnapshotAssertion):

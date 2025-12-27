@@ -19,16 +19,16 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ### Migration to maketables
 
-The table functionality in pyfixest now uses the [maketables](https://py-econometrics.github.io/maketables/) package internally. `maketables` is a spin-off of 
-pyfixest internal functions, but supports more packages in the Python eco-system (e.g. `statsmodels` and `linearmorels`). Due to it's close 
-connection to `pyfixest`, the API of `pf.etable()` remains unchanged. 
+The table functionality in pyfixest now uses the [maketables](https://py-econometrics.github.io/maketables/) package internally. `maketables` is a spin-off of
+pyfixest internal functions, but supports more packages in the Python eco-system (e.g. `statsmodels` and `linearmorels`). Due to it's close
+connection to `pyfixest`, the API of `pf.etable()` remains unchanged.
 
 **Changes:**
 
 - `pf.etable()` now uses `maketables.ETable` internally. The API remains unchanged for backward compatibility.
-- Because this function is not at the core of `pyixest` functionality, we will deprecate `pf.dtable()`. 
+- Because this function is not at the core of `pyixest` functionality, we will deprecate `pf.dtable()`.
   A `FutureWarning` is now emitted. The function has been moved to `maketables` and can be used by calling `maketables.DTable()` directly.
-- The same applies for `pf.make_table()`, which has been an internal utility function to create tables. An equivalent function now lives in 
+- The same applies for `pf.make_table()`, which has been an internal utility function to create tables. An equivalent function now lives in
   `maketables.MTable()`.
 - The `great_tables` dependency has been replaced with `maketables`.
 

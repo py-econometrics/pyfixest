@@ -11,7 +11,6 @@ import io
 import re
 import sys
 
-import pandas as pd
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
@@ -328,6 +327,7 @@ class TestEtableSpecialModels:
         result = etable([*basic_models, poisson_model], type="gt")
         assert normalize_gt_html(result.as_raw_html()) == snapshot
 
+
 # ============================================================================
 # Snapshot Tests: Advanced etable() Parameters
 # ============================================================================
@@ -370,9 +370,7 @@ class TestEtableAdvancedParams:
 
     def test_custom_fe_symbols(self, basic_models, snapshot: SnapshotAssertion):
         """Test etable with custom fixed effects symbols."""
-        result = etable(
-            basic_models, type="gt", fe_present="Yes", fe_absent="No"
-        )
+        result = etable(basic_models, type="gt", fe_present="Yes", fe_absent="No")
         assert normalize_gt_html(result.as_raw_html()) == snapshot
 
     def test_thousands_sep(self, basic_models, snapshot: SnapshotAssertion):
@@ -434,9 +432,7 @@ class TestEtableModelInputs:
 class TestGelbachEtable:
     """Snapshot tests for GelbachDecomposition.etable()."""
 
-    def test_gelbach_basic_gt(
-        self, gelbach_decomposition, snapshot: SnapshotAssertion
-    ):
+    def test_gelbach_basic_gt(self, gelbach_decomposition, snapshot: SnapshotAssertion):
         """Test basic Gelbach decomposition table."""
         result = gelbach_decomposition.etable(type="gt", digits=3)
         assert normalize_gt_html(result.as_raw_html()) == snapshot
@@ -504,7 +500,7 @@ class TestGelbachEtable:
         result = gelbach_decomposition.etable(type="df", digits=3)
         assert result.to_string() == snapshot
 
-        
+
 # ============================================================================
 # Snapshot Tests: GelbachDecomposition Advanced Parameters
 # ============================================================================
