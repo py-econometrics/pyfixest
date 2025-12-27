@@ -13,6 +13,7 @@
 [![Downloads](https://static.pepy.tech/badge/pyfixest/month)](https://pepy.tech/project/pyfixest)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![Pixi Badge][pixi-badge]][pixi-url]
+[![Open in Codespaces](https://img.shields.io/badge/Open%20in-Codespaces-blue?logo=github)](https://github.com/py-econometrics/pyfixest/codespaces)
 [![Donate | GiveDirectly](https://img.shields.io/static/v1?label=GiveDirectly&message=Donate&color=blue&style=flat-square)](https://github.com/py-econometrics/pyfixest?tab=readme-ov-file#support-pyfixest)
 [![PyPI](https://img.shields.io/pypi/v/pyfixest)](https://pypi.org/project/pyfixest)
 [![Citation](https://img.shields.io/badge/Cite%20as-PyFixest-blue)](https://github.com/py-econometrics/pyfixest?tab=readme-ov-file#how-to-cite)
@@ -23,7 +24,7 @@
 [chat-badge]: https://img.shields.io/discord/1259933360726216754.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2&style=flat-square
 [chat-url]: https://discord.gg/gBAydeDMVK
 
-[Docs](https://py-econometrics.github.io/pyfixest/pyfixest.html) · [Function & API Reference](https://py-econometrics.github.io/pyfixest/reference/) · [Report Bugs & Request Features](https://github.com/py-econometrics/pyfixest/issues) · [Changelog](https://py-econometrics.github.io/pyfixest/changelog.html)
+[Docs](https://py-econometrics.github.io/pyfixest/pyfixest.html) · [Function & API Reference](https://py-econometrics.github.io/pyfixest/reference/) · [DeepWiki](https://deepwiki.com/py-econometrics/pyfixest) · [Report Bugs & Request Features](https://github.com/py-econometrics/pyfixest/issues) · [Changelog](https://py-econometrics.github.io/pyfixest/changelog.html)
 
 `PyFixest` is a Python package for fast high-dimensional fixed effects regression.
 

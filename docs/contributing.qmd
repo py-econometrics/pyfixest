@@ -14,6 +14,62 @@ new features, or suggesting improvements to documentation.
 If you'd like to get involved, but are not yet sure how, please feel free to send us an [email](alexander-fischer1801@t-online.de). Some familiarity with
 either Python or econometrics will help, but you really don't need to be a `numpy` core developer or have published in [Econometrica](https://onlinelibrary.wiley.com/journal/14680262) =) We'd be more than happy to invest time to help you get started!
 
+For a comprehensive overview of the codebase architecture and internals, check out the [DeepWiki](https://deepwiki.com/py-econometrics/pyfixest). While not perfect and correct in all regards, we think it is a pretty good starting point to learn about the codebase!
+
+## Quick Start with GitHub Codespaces
+
+If you are new to open source / Python development, the fastest way to start contributing might be with **GitHub Codespaces**.
+You start by forking the repository. You can then launch a codespace by clicking
+
+[![Open in Codespaces](https://img.shields.io/badge/Open%20in-Codespaces-blue?logo=github)](https://github.com/py-econometrics/pyfixest/codespaces)
+
+This will launch a github codespace (there is a free tier for 60h a month, thank you github!).
+
+If you run
+
+```{.bash .code-copy}
+# set up env and install dependencies
+pixi install -e dev
+# compile rust dependencies
+pixi run -e dev maturin-develop
+```
+`pixi` will install the development environment and all dependencies.
+
+Now, create a new Python script `debug.py` at the root of the repository and
+paste the following:
+
+```{python}
+import pyfixest as pf
+
+data = pf.get_data()
+fit = pf.feols("Y ~ X1", data=data)
+```
+
+You can now run the script by typing
+
+```{.bash .code-copy}
+pixi r -e dev python3 debug.py
+```
+
+or run unit tests
+
+```{.bash .code-copy}
+pixi run tests-regular
+```
+
+After changing the docs, you can build them by running
+
+```{.bash .code-copy}
+# compile rust in docs environment
+pixi run -e dev maturin-develop
+# build, render, preview docs
+docs-build
+docs-render
+docs-preview
+```
+
+Note that the entire process might take a few minutes.
+
 ## Reporting bugs
 
 We use [GitHub issues](https://github.com/py-econometrics/pyfixest/issues) to track bugs. You can report a bug by opening a new issue or contribute to an existing issue if

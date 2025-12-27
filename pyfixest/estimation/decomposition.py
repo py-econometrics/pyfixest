@@ -750,6 +750,7 @@ class GelbachDecomposition:
             Additional notes to append to the table, by default None.
         **kwargs : dict, optional
             Additional arguments passed to maketables.MTable (type, digits, etc.).
+            Additional arguments passed to maketables.MTable (type, digits, etc.).
 
         Returns
         -------
@@ -771,6 +772,7 @@ class GelbachDecomposition:
         ```{python}
         gb.etable(column_heads = ["Full Difference", "Unexplained Difference", "Explained Difference"])
         """
+        from maketables import MTable
         from maketables import MTable
 
         if column_heads is not None and len(column_heads) != 3:

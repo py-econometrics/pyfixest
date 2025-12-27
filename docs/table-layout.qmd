@@ -15,6 +15,13 @@ The `pf.etable()` API remains unchanged. `pf.dtable()` is deprecated (use `DTabl
 :::
 
 Pyfixest comes with functions to generate publication-ready tables. Regression tables are generated with `pf.etable()`, which can output different formats, for instance using the [Great Tables](https://posit-dev.github.io/great-tables/articles/intro.html) package or generating formatted LaTex Tables using [booktabs](https://ctan.org/pkg/booktabs?lang=en). Descriptive statistics tables can be created with `DTable()` and custom tables with `maketables.MTable()`.
+::: {.callout-note}
+## Migration Notice
+Starting with pyfixest 0.41.0 (currently in development), the table functionality is powered by [maketables](https://py-econometrics.github.io/maketables/).
+The `pf.etable()` API remains unchanged. `pf.dtable()` is deprecated (use `DTable()` directly) and `pf.make_table()` has been removed (use `maketables.MTable()` directly).
+:::
+
+Pyfixest comes with functions to generate publication-ready tables. Regression tables are generated with `pf.etable()`, which can output different formats, for instance using the [Great Tables](https://posit-dev.github.io/great-tables/articles/intro.html) package or generating formatted LaTex Tables using [booktabs](https://ctan.org/pkg/booktabs?lang=en). Descriptive statistics tables can be created with `DTable()` and custom tables with `maketables.MTable()`.
 
 To begin, we load some libraries and fit a set of regression models.
 
@@ -22,6 +29,8 @@ To begin, we load some libraries and fit a set of regression models.
 import numpy as np
 import pandas as pd
 import pylatex as pl  # for the latex table; note: not a dependency of pyfixest - needs manual installation
+from maketables import DTable
+from great_tables import loc, style  # great_tables is used by maketables internally
 from maketables import DTable
 from great_tables import loc, style  # great_tables is used by maketables internally
 from IPython.display import FileLink, display
@@ -78,14 +87,6 @@ We can also easily **drop** variables via the `drop` argument:
 pf.etable([fit1, fit2, fit3, fit4, fit5, fit6], drop=["X1"])
 ```
 
-## Hide fixed effects or SE-type rows
-We can hide the rows showing the relevant fixed effects and those showing the S.E. type by setting `show_fe=False` and `show_se_type=False` (for instance when the set of fixed effects or the estimation method for the std. errors is the same for all models and you want to describe this in the text or table notes rather than displaying it in the table).
-
-```{python}
-pf.etable([fit1, fit2, fit3, fit4, fit5, fit6], show_fe=False, show_se_type=False)
-```
-
-
 ## Display p-values or confidence intervals
 By default, `pf.etable()` reports **standard errors**. But we can also ask to output p-values or confidence intervals via the `coef_fmt` function argument.
 
@@ -129,8 +130,10 @@ pf.etable(
 ```
 
 To obtain latex output use `type = "tex"`. If you want to save the table as a tex file, you can use the `file_name=` argument to specify the respective path where it should be saved. Etable will use latex packages `booktabs`, `threeparttable`, `makecell`, and `tabularx` for the table layout, so don't forget to include these packages in your latex document.
+To obtain latex output use `type = "tex"`. If you want to save the table as a tex file, you can use the `file_name=` argument to specify the respective path where it should be saved. Etable will use latex packages `booktabs`, `threeparttable`, `makecell`, and `tabularx` for the table layout, so don't forget to include these packages in your latex document.
 
 ```{python}
+# LaTex output (include latex packages booktabs, threeparttable, makecell, and tabularx in your document):
 # LaTex output (include latex packages booktabs, threeparttable, makecell, and tabularx in your document):
 tab = pf.etable(
     [fit1, fit2, fit3, fit4, fit5, fit6],
@@ -152,6 +155,7 @@ def make_pdf(tab, file):
     doc.packages.append(pl.Package("booktabs"))
     doc.packages.append(pl.Package("threeparttable"))
     doc.packages.append(pl.Package("makecell"))
+    doc.packages.append(pl.Package("tabularx"))
     doc.packages.append(pl.Package("tabularx"))
 
     with (
@@ -354,13 +358,16 @@ format:
 :::
 
 The function `DTable()` allows to display descriptive statistics for a set of variables in the same layout.
+The function `DTable()` allows to display descriptive statistics for a set of variables in the same layout.
 
+## Basic Usage of DTable
 ## Basic Usage of DTable
 Specify the variables you want to display the descriptive statistics for. You can also use a dictionary to rename the variables and add a caption.
 
 
 
 ```{python}
+DTable(
 DTable(
     data,
     vars=["Y", "Y2", "X1", "X2"],
@@ -375,6 +382,7 @@ Choose the set of statistics to be displayed with `stats`. You can use any panda
 
 
 ```{python}
+DTable(
 DTable(
     data,
     vars=["Y", "Y2", "X1", "X2"],
@@ -398,6 +406,7 @@ data["occupation"] = np.random.choice(["Blue collar", "White collar"], data.shap
 data.dropna(inplace=True)
 
 DTable(
+DTable(
     data,
     vars=["Y", "Y2", "X1", "X2"],
     labels=labels,
@@ -417,6 +426,7 @@ You can also hide the display of the statistics labels in the header with `hide_
 
 ```{python}
 DTable(
+DTable(
     data,
     vars=["Y", "Y2", "X1", "X2"],
     labels=labels,
@@ -435,6 +445,7 @@ You can also split by characteristics in both columns and rows. Note that you ca
 
 ```{python}
 DTable(
+DTable(
     data,
     vars=["Y", "Y2", "X1", "X2"],
     labels=labels,
@@ -450,6 +461,7 @@ And you can again export descriptive statistics tables also to LaTex:
 
 
 ```{python}
+dtab = DTable(
 dtab = DTable(
     data,
     vars=["Y", "Y2", "X1", "X2"],
@@ -531,6 +543,7 @@ style_presentation = {
 
 ```{python}
 t1 = DTable(
+t1 = DTable(
     data,
     vars=["Y", "Y2", "X1", "X2"],
     stats=["count", "mean", "std", "min", "max"],
@@ -550,6 +563,7 @@ t2 = pf.etable(
 
 ```{python}
 display(t1.make(type="gt", gt_style=style_print))
+display(t1.make(type="gt", gt_style=style_print))
 display(t2.tab_options(**style_print))
 ```
 
@@ -568,6 +582,7 @@ style_printDouble = {
     "table_body_border_top_style": "None",
     "table_width": "14cm",
 }
+display(t1.make(type="gt", gt_style=style_printDouble))
 display(t1.make(type="gt", gt_style=style_printDouble))
 display(t2.tab_options(**style_printDouble))
 ```
