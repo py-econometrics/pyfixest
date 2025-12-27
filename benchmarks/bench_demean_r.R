@@ -9,8 +9,8 @@ n_obs <- if (length(args) >= 1) as.integer(args[1]) else 100000L
 dgp_type <- if (length(args) >= 2) args[2] else "difficult"
 n_fe <- if (length(args) >= 3) as.integer(args[3]) else 3L
 
-# Use all available threads for fair comparison (pyfixest also uses all threads)
-setFixest_nthreads(0)  # 0 = use all available
+# Use 2 threads to match fixest_benchmarks settings
+setFixest_nthreads(2)
 
 # Generate data matching Python benchmark DGP
 set.seed(42)
@@ -52,7 +52,7 @@ if (n_fe == 2) {
 }
 
 # Warm up
-invisible(feols(fml, data = df))
+invisible(feols(fml, data = df, notes = FALSE, warn = FALSE, nthreads = 2L))
 
 # Benchmark
 n_runs <- 5L
@@ -60,7 +60,7 @@ times <- numeric(n_runs)
 
 for (i in 1:n_runs) {
   start <- Sys.time()
-  fit <- feols(fml, data = df)
+  fit <- feols(fml, data = df, notes = FALSE, warn = FALSE, nthreads = 2L)
   end <- Sys.time()
   times[i] <- as.numeric(end - start, units = "secs") * 1000  # ms
 }

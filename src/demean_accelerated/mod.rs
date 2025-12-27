@@ -4,14 +4,27 @@
 //! (`https://github.com/lrberge/fixest/blob/master/src/demeaning.cpp`),
 //! using coefficient-space iteration for efficiency.
 //!
-//! Dispatches based on number of fixed effects:
+//! # Module Structure
+//!
+//! - [`types`]: Core data types (`FEInfo`, `FixestConfig`)
+//! - [`traits`]: Extensibility traits (`AccelerationStrategy`, `ConvergenceCriterion`, `FEOrdering`)
+//! - [`strategies`]: Default implementations (`IronsTuck`, `FixestConvergence`, `ReverseOrder`)
+//! - [`projection`]: FE projection operations
+//! - [`solver`]: Solver implementations for different FE counts
+//! - [`buffers`]: Working buffer management
+//!
+//! # Dispatching based on number of fixed effects:
 //! - 1 FE: O(n) closed-form solution (single pass, no iteration)
 //! - 2 FE: Coefficient-space iteration with Irons-Tuck + Grand acceleration
-//! - 3+ FE: Coefficient-space iteration with Irons-Tuck + Grand acceleration
+//! - 3+ FE: Multi-phase strategy with 2-FE sub-convergence
 
-mod coef_space;
+pub mod types;
+pub mod solver;
+pub mod buffers;
 
-use coef_space::{demean_single, FEInfo, FixestConfig};
+use types::{FEInfo, FixestConfig};
+use solver::demean_single;
+
 use ndarray::{Array2, ArrayView1, ArrayView2, Zip};
 use numpy::{PyArray2, PyReadonlyArray1, PyReadonlyArray2};
 use pyo3::prelude::*;
@@ -19,6 +32,7 @@ use rayon::prelude::*;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
+/// Demean using accelerated coefficient-space iteration.
 pub(crate) fn demean_accelerated(
     x: &ArrayView2<f64>,
     flist: &ArrayView2<usize>,
@@ -32,7 +46,6 @@ pub(crate) fn demean_accelerated(
     let sample_weights: Vec<f64> = weights.iter().cloned().collect();
     let group_ids: Vec<usize> = flist.iter().cloned().collect();
 
-    // Compute n_groups per factor
     let n_groups_per_factor: Vec<usize> = (0..n_factors)
         .map(|j| {
             (0..n_samples)
@@ -49,40 +62,15 @@ pub(crate) fn demean_accelerated(
         ..FixestConfig::default()
     };
 
-    // Use the unified coefficient-space implementation for all FE counts
-    demean_coef_space(
-        x,
-        &sample_weights,
-        &group_ids,
-        n_samples,
-        n_features,
-        n_factors,
-        &n_groups_per_factor,
-        &config,
-    )
-}
-
-/// Demean using coefficient-space iteration (unified for all FE counts).
-fn demean_coef_space(
-    x: &ArrayView2<f64>,
-    sample_weights: &[f64],
-    group_ids: &[usize],
-    n_samples: usize,
-    n_features: usize,
-    n_factors: usize,
-    n_groups_per_factor: &[usize],
-    config: &FixestConfig,
-) -> (Array2<f64>, bool) {
     let not_converged = Arc::new(AtomicUsize::new(0));
     let mut res = Array2::<f64>::zeros((n_samples, n_features));
 
-    // Create FEInfo once and share across all columns (it only depends on FE structure)
     let fe_info = FEInfo::new(
         n_samples,
         n_factors,
-        group_ids,
-        n_groups_per_factor,
-        sample_weights,
+        &group_ids,
+        &n_groups_per_factor,
+        &sample_weights,
     );
 
     res.axis_iter_mut(ndarray::Axis(1))
@@ -90,8 +78,7 @@ fn demean_coef_space(
         .enumerate()
         .for_each(|(k, mut col)| {
             let xk: Vec<f64> = (0..n_samples).map(|i| x[[i, k]]).collect();
-
-            let (result, _iter, converged) = demean_single(&fe_info, &xk, config);
+            let (result, _iter, converged) = demean_single(&fe_info, &xk, &config);
 
             if !converged {
                 not_converged.fetch_add(1, Ordering::SeqCst);
@@ -106,6 +93,7 @@ fn demean_coef_space(
     (res, success)
 }
 
+/// Python-exposed function for accelerated demeaning.
 #[pyfunction]
 #[pyo3(signature = (x, flist, weights, tol=1e-8, maxiter=100_000))]
 pub fn _demean_accelerated_rs(
@@ -125,4 +113,59 @@ pub fn _demean_accelerated_rs(
 
     let pyarray = PyArray2::from_owned_array(py, out);
     Ok((pyarray.into(), success))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_2fe_convergence() {
+        let n_obs = 100;
+        let n_fe = 2;
+
+        let mut group_ids = Vec::with_capacity(n_obs * n_fe);
+        for i in 0..n_obs {
+            group_ids.push(i % 10);
+            group_ids.push(i % 5);
+        }
+
+        let n_groups = vec![10, 5];
+        let weights = vec![1.0; n_obs];
+
+        let fe_info = FEInfo::new(n_obs, n_fe, &group_ids, &n_groups, &weights);
+        let input: Vec<f64> = (0..n_obs).map(|i| (i as f64) * 0.1).collect();
+
+        let config = FixestConfig::default();
+        let (result, iter, converged) = demean_single(&fe_info, &input, &config);
+
+        assert!(converged, "Should converge");
+        assert!(iter < 100, "Should converge quickly");
+        assert!(result.iter().all(|&v| v.is_finite()));
+    }
+
+    #[test]
+    fn test_3fe_convergence() {
+        let n_obs = 100;
+        let n_fe = 3;
+
+        let mut group_ids = Vec::with_capacity(n_obs * n_fe);
+        for i in 0..n_obs {
+            group_ids.push(i % 10);
+            group_ids.push(i % 5);
+            group_ids.push(i % 3);
+        }
+
+        let n_groups = vec![10, 5, 3];
+        let weights = vec![1.0; n_obs];
+
+        let fe_info = FEInfo::new(n_obs, n_fe, &group_ids, &n_groups, &weights);
+        let input: Vec<f64> = (0..n_obs).map(|i| (i as f64) * 0.1).collect();
+
+        let config = FixestConfig::default();
+        let (result, _iter, converged) = demean_single(&fe_info, &input, &config);
+
+        assert!(converged);
+        assert!(result.iter().all(|&v| v.is_finite()));
+    }
 }

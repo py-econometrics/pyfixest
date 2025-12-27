@@ -8,6 +8,11 @@ This is a fair apples-to-apples comparison of full feols() routines.
 
 from __future__ import annotations
 
+import os
+
+# Set thread count for Rayon (pyfixest) BEFORE importing pyfixest
+os.environ["RAYON_NUM_THREADS"] = "2"
+
 import json
 import subprocess
 import time
@@ -129,6 +134,10 @@ def main():
         (100_000, "difficult", 2),
         (100_000, "simple", 3),
         (100_000, "difficult", 3),
+        (1_000_000, "simple", 2),
+        (1_000_000, "difficult", 2),
+        (1_000_000, "simple", 3),
+        (1_000_000, "difficult", 3),
     ]
 
     results = []
