@@ -11,7 +11,7 @@ from pyfixest.errors import (
 from pyfixest.estimation.demean_ import demean
 from pyfixest.estimation.feols_ import Feols, PredictionErrorOptions, PredictionType
 from pyfixest.estimation.fepois_ import _check_for_separation
-from pyfixest.estimation.FormulaParser import FixestFormula
+from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.utils.dev_utils import DataFrameType
 
 

@@ -26,7 +26,7 @@ class _MultipleEstimationType(StrEnum):
 class _MultipleEstimation:
     constant: list[str]
     variable: list[str]
-    kind: _MultipleEstimationType = None
+    kind: Optional[_MultipleEstimationType] = None
 
     @property
     def is_multiple(self) -> bool:
@@ -34,17 +34,17 @@ class _MultipleEstimation:
 
     @property
     def steps(self) -> list[str]:
-        if not self.is_multiple or self.kind.name.endswith("0"):
+        if self.kind is None or self.kind.name.endswith("0"):
             # Add zero step
             estimation_steps = ["+".join(self.constant) if self.constant else "0"]
         else:
             estimation_steps = []
-        if self.is_multiple and self.kind.name.startswith("sw"):
+        if self.kind is not None and self.kind.name.startswith("sw"):
             # Sequential stepwise estimation
             estimation_steps.extend(
                 ["+".join([*self.constant, v]) for v in self.variable]
             )
-        elif self.is_multiple and self.kind.name.startswith("csw"):
+        elif self.kind is not None and self.kind.name.startswith("csw"):
             # Cumulative stepwise estimation
             cumulative_slice: list[list[str]] = [
                 self.variable[: i + 1] for i, _ in enumerate(self.variable)
@@ -57,14 +57,38 @@ class _MultipleEstimation:
 
 @dataclass(kw_only=False, frozen=True)
 class Formula:
+    """
+    A class representing a fixest model formula.
+
+    Attributes
+    ----------
+    dependent : str
+        The dependent variable in the model.
+    independent : str
+        The independent variables in the model, separated by '+'.
+    fixed_effects : Optional[str]
+        An optional fixed effect variable included in the model.
+        Separated by "+". "0" if no fixed effect in the model.
+    endogenous : Optional[str]
+        Endogenous variables in the model, separated by '+'.
+    instruments : Optional[str]
+        Instrumental variables for the endogenous variables, separated by '+'.
+    """
+
     dependent: str
     independent: str
-    fixed_effects: Optional[str] = None
+    fixed_effects: str = "0"
     endogenous: Optional[str] = None
     instruments: Optional[str] = None
 
     @property
     def fml(self) -> str:
+        """
+
+        Returns
+        -------
+        str
+        """
         formula = f"{self.dependent}~{self.independent}"
         if self.endogenous is not None and self.instruments is not None:
             formula = f"{formula}|{self.endogenous}~{self.instruments}"
@@ -74,11 +98,25 @@ class Formula:
 
     @property
     def fml_first_stage(self) -> str | None:
+        """
+
+        Returns
+        -------
+        str | None
+        """
         if self.endogenous is not None and self.instruments is not None:
             return f"{self.endogenous}~{self.instruments}+{self.independent}-{self.endogenous}+1"
+        else:
+            return None
 
     @property
     def fml_second_stage(self) -> str:
+        """
+
+        Returns
+        -------
+        str
+        """
         return f"{self.dependent}~{self.independent}+1"
 
 
@@ -118,18 +156,20 @@ class _ParsedFormulaContainer:
         kwargs: dict[str, list[str]] = {
             "dependent": self.dependent,
             "independent": self.independent.steps,
-            "fixed_effects": self.fixed_effects.steps if self.is_fixed_effects else "0",
+            "fixed_effects": self.fixed_effects.steps
+            if self.fixed_effects is not None
+            else ["0"],
         }
-        if self.is_iv:
-            kwargs.update(
-                {"endogenous": self.endogenous, "instruments": self.instruments}
-            )
+        if self.endogenous is not None:
+            kwargs.update({"endogenous": self.endogenous})
+        if self.instruments is not None:
+            kwargs.update({"instruments": self.instruments})
         return kwargs
 
     @property
     def FixestFormulaDict(self) -> dict[str, list[Formula]]:
         # Get formulas by group of fixed effects
-        estimations = defaultdict(list[Formula])
+        estimations: defaultdict[str, list[Formula]] = defaultdict(list[Formula])
         dict_of_lists = self._collect_formula_kwargs()
         list_of_kwargs = [
             dict(zip(dict_of_lists.keys(), values))
@@ -137,7 +177,8 @@ class _ParsedFormulaContainer:
         ]
         for kwargs in list_of_kwargs:
             formula = Formula(**kwargs)
-            estimations[formula.fixed_effects].append(formula)
+            if formula.fixed_effects is not None:
+                estimations[formula.fixed_effects].append(formula)
         return estimations
 
 
@@ -244,6 +285,19 @@ def _parse_multiple_estimation(variables: list[str]) -> _MultipleEstimation:
 
 
 def parse(formula: str) -> _ParsedFormulaContainer:
+    """
+    Parse a fixest model formula.
+
+    Parameters
+    ----------
+    formula : str
+        A one to three sided formula string in the form
+        "Y1 + Y2 ~ X1 + X2 | FE1 + FE2 | endogvar ~ exogvar".
+
+    Returns
+    -------
+    _ParsedFormulaContainer
+    """
     # Parse parts of formulas: main part and optional "other" parts (fixed effects and instrumental variables)
     main_part, other_parts = _parse_parts(formula)
     dependent, independent = _parse_dependent_independent(main_part)
@@ -254,15 +308,13 @@ def parse(formula: str) -> _ParsedFormulaContainer:
         # TODO: https://github.com/py-econometrics/pyfixest/issues/1117
         endogenous = endogenous[:1]
         instruments = ["+".join(instruments)]
-    # Parse multiple estimation syntax
-    independent = _parse_multiple_estimation(independent)
-    if fixed_effects is not None:
-        fixed_effects = _parse_multiple_estimation(fixed_effects)
     return _ParsedFormulaContainer(
         formula=formula,
         dependent=dependent,
-        independent=independent,
-        fixed_effects=fixed_effects,
+        independent=_parse_multiple_estimation(independent),
+        fixed_effects=_parse_multiple_estimation(fixed_effects)
+        if fixed_effects is not None
+        else None,
         endogenous=endogenous,
         instruments=instruments,
     )

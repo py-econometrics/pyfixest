@@ -13,7 +13,6 @@ from pyfixest.estimation.feols_compressed_ import FeolsCompressed
 from pyfixest.estimation.fepois_ import Fepois
 from pyfixest.estimation.feprobit_ import Feprobit
 from pyfixest.estimation.formula.parse import parse
-from pyfixest.estimation.FormulaParser import FixestFormulaParser
 from pyfixest.estimation.literals import (
     DemeanerBackendOptions,
     QuantregMethodOptions,
