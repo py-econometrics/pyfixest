@@ -284,7 +284,7 @@ def _parse_multiple_estimation(variables: list[str]) -> _MultipleEstimation:
     return _MultipleEstimation(constant=single, variable=multiple, kind=kind)
 
 
-def parse(formula: str) -> _ParsedFormulaContainer:
+def parse(formula: str, sort: bool = True) -> _ParsedFormulaContainer:
     """
     Parse a fixest model formula.
 
@@ -293,6 +293,9 @@ def parse(formula: str) -> _ParsedFormulaContainer:
     formula : str
         A one to three sided formula string in the form
         "Y1 + Y2 ~ X1 + X2 | FE1 + FE2 | endogvar ~ exogvar".
+
+    sort: Optional[bool]
+        Sort variables lexicographically within formula parts. Defaults to True.
 
     Returns
     -------
@@ -308,6 +311,8 @@ def parse(formula: str) -> _ParsedFormulaContainer:
         # TODO: https://github.com/py-econometrics/pyfixest/issues/1117
         endogenous = endogenous[:1]
         instruments = ["+".join(instruments)]
+    if sort:
+        list.sort(independent)
     return _ParsedFormulaContainer(
         formula=formula,
         dependent=dependent,
