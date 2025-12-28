@@ -121,13 +121,14 @@ def model_matrix_fixest(
         else fml_first_stage
     )
 
-    fval, data = _fixef_interactions(fval=fval, data=data)
+    if fval is not None:
+        fval, data = _fixef_interactions(fval=fval, data=data)
     _is_iv = fml_first_stage is not None
 
     fml_kwargs = {
         "fml_second_stage": fml_second_stage,
         **({"fml_first_stage": fml_first_stage} if _is_iv else {}),
-        **({"fe": wrap_factorize(fval)} if fval != "0" else {}),
+        **({"fe": wrap_factorize(fval)} if fval is not None else {}),
         **({"weights": weights} if weights is not None else {}),
     }
 

@@ -62,22 +62,21 @@ class Formula:
 
     Attributes
     ----------
-    dependent : str
-        The dependent variable in the model.
-    independent : str
-        The independent variables in the model, separated by '+'.
-    fixed_effects : Optional[str]
-        An optional fixed effect variable included in the model.
-        Separated by "+". "0" if no fixed effect in the model.
-    endogenous : Optional[str]
-        Endogenous variables in the model, separated by '+'.
-    instruments : Optional[str]
+    dependent: str
+        The dependent variable.
+    independent: str
+        The independent variables, separated by '+'.
+    fixed_effects: Optional[str]
+        An optional fixed effect variable included, separated by "+".
+    endogenous: Optional[str]
+        Endogenous variables, separated by '+'.
+    instruments: Optional[str]
         Instrumental variables for the endogenous variables, separated by '+'.
     """
 
     dependent: str
     independent: str
-    fixed_effects: str = "0"
+    fixed_effects: Optional[str] = None
     endogenous: Optional[str] = None
     instruments: Optional[str] = None
 
@@ -121,7 +120,26 @@ class Formula:
 
 
 @dataclass(kw_only=True, frozen=True)
-class _ParsedFormulaContainer:
+class ParsedFormula:
+    """
+    A class representing a parsed formula string.
+
+    Attributes
+    ----------
+    formula: str
+        The raw formula string.
+    dependent: list[str]
+        The dependent variables.
+    independent: _MultipleEstimation
+        The independent variables.
+    fixed_effects: Optional[_MultipleEstimation]
+        The fixed effect variables included.
+    endogenous: Optional[list[str]]
+        The endogenous variables.
+    instruments: Optional[list[str]]
+        The instrumental variables for the endogenous variables.
+    """
+
     formula: str
     dependent: list[str]
     independent: _MultipleEstimation
@@ -138,6 +156,12 @@ class _ParsedFormulaContainer:
 
     @property
     def is_multiple(self) -> bool:
+        """
+
+        Returns
+        -------
+        bool
+        """
         return (
             (len(self.dependent) > 1)
             or self.independent.is_multiple
@@ -146,20 +170,31 @@ class _ParsedFormulaContainer:
 
     @property
     def is_fixed_effects(self) -> bool:
+        """
+
+        Returns
+        -------
+        bool
+        """
         return self.fixed_effects is not None
 
     @property
     def is_iv(self) -> bool:
+        """
+
+        Returns
+        -------
+        bool
+        """
         return self.endogenous is not None
 
     def _collect_formula_kwargs(self) -> dict[str, list[str]]:
         kwargs: dict[str, list[str]] = {
             "dependent": self.dependent,
             "independent": self.independent.steps,
-            "fixed_effects": self.fixed_effects.steps
-            if self.fixed_effects is not None
-            else ["0"],
         }
+        if self.fixed_effects is not None:
+            kwargs.update({"fixed_effects": self.fixed_effects.steps})
         if self.endogenous is not None:
             kwargs.update({"endogenous": self.endogenous})
         if self.instruments is not None:
@@ -167,9 +202,15 @@ class _ParsedFormulaContainer:
         return kwargs
 
     @property
-    def FixestFormulaDict(self) -> dict[str, list[Formula]]:
+    def FixestFormulaDict(self) -> dict[str | None, list[Formula]]:
+        """
+
+        Returns
+        -------
+        dict[str, list[Formula]]
+        """
         # Get formulas by group of fixed effects
-        estimations: defaultdict[str, list[Formula]] = defaultdict(list[Formula])
+        estimations: defaultdict[str | None, list[Formula]] = defaultdict(list[Formula])
         dict_of_lists = self._collect_formula_kwargs()
         list_of_kwargs = [
             dict(zip(dict_of_lists.keys(), values))
@@ -177,8 +218,7 @@ class _ParsedFormulaContainer:
         ]
         for kwargs in list_of_kwargs:
             formula = Formula(**kwargs)
-            if formula.fixed_effects is not None:
-                estimations[formula.fixed_effects].append(formula)
+            estimations[formula.fixed_effects].append(formula)
         return estimations
 
 
@@ -284,7 +324,7 @@ def _parse_multiple_estimation(variables: list[str]) -> _MultipleEstimation:
     return _MultipleEstimation(constant=single, variable=multiple, kind=kind)
 
 
-def parse(formula: str, sort: bool = True) -> _ParsedFormulaContainer:
+def parse(formula: str, sort: bool = True) -> ParsedFormula:
     """
     Parse a fixest model formula.
 
@@ -299,7 +339,7 @@ def parse(formula: str, sort: bool = True) -> _ParsedFormulaContainer:
 
     Returns
     -------
-    _ParsedFormulaContainer
+    ParsedFormula
     """
     # Parse parts of formulas: main part and optional "other" parts (fixed effects and instrumental variables)
     main_part, other_parts = _parse_parts(formula)
@@ -313,7 +353,7 @@ def parse(formula: str, sort: bool = True) -> _ParsedFormulaContainer:
         instruments = ["+".join(instruments)]
     if sort:
         list.sort(independent)
-    return _ParsedFormulaContainer(
+    return ParsedFormula(
         formula=formula,
         dependent=dependent,
         independent=_parse_multiple_estimation(independent),

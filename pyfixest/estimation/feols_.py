@@ -742,7 +742,7 @@ class Feols:
 
             k_fe_nested = 0
             n_fe_fully_nested = 0
-            if self._has_fixef and self._ssc_dict["k_fixef"] == "nonnested":
+            if self._fixef is not None and self._ssc_dict["k_fixef"] == "nonnested":
                 k_fe_nested_flag, n_fe_fully_nested = self._count_nested_fixef_func(
                     all_fixef_array=np.array(
                         self._fixef.replace("^", "_").split("+"), dtype=str
@@ -2542,7 +2542,9 @@ class Feols:
 
         else:
             weights = self._weights.flatten()
-            fval_df = self._data[self._fixef.split("+")] if self._has_fixef else None
+            fval_df = (
+                self._data[self._fixef.split("+")] if self._fixef is not None else None
+            )
             D = self._data[resampvar_].to_numpy()
 
             ri_stats = _get_ritest_stats_fast(

@@ -419,7 +419,7 @@ class FixestMulti:
                     # if X is empty: no inference (empty X only as shorthand for demeaning)
                     if not FIT._X_is_empty:
                         # inference
-                        vcov_type = _get_vcov_type(vcov, fval)
+                        vcov_type = _get_vcov_type(vcov)
                         FIT.vcov(
                             vcov=vcov_type,
                             vcov_kwargs=vcov_kwargs,
