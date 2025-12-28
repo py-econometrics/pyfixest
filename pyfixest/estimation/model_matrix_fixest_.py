@@ -8,7 +8,7 @@ import pandas as pd
 from formulaic import Formula
 
 from pyfixest.estimation.detect_singletons_ import detect_singletons
-from pyfixest.estimation.FormulaParser import FixestFormula
+from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.utils.utils import capture_context
 
 
@@ -93,11 +93,9 @@ def model_matrix_fixest(
     mm
     ```
     """
-    FixestFormula.check_syntax()
-
     fml_second_stage = FixestFormula.fml_second_stage
     fml_first_stage = FixestFormula.fml_first_stage
-    fval = FixestFormula._fval
+    fval = FixestFormula.fixed_effects
     _check_weights(weights, data)
 
     pattern = (

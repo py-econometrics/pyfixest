@@ -17,7 +17,7 @@ from pyfixest.errors import EmptyVcovError, VcovTypeNotSupportedError
 from pyfixest.estimation.backends import BACKENDS
 from pyfixest.estimation.decomposition import GelbachDecomposition, _decompose_arg_check
 from pyfixest.estimation.demean_ import demean_model
-from pyfixest.estimation.FormulaParser import FixestFormula
+from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.literals import (
     DemeanerBackendOptions,
     PredictionErrorOptions,
@@ -315,7 +315,7 @@ class Feols:
         # not really optimal code change later
         self._fml = FixestFormula.fml
         self._has_fixef = False
-        self._fixef = FixestFormula._fval
+        self._fixef = FixestFormula.fixed_effects
         # self._coefnames = None
         self._icovars = None
 
@@ -437,7 +437,7 @@ class Feols:
         self._depvar = self._Y.columns[0]
 
         self._has_fixef = self._fe is not None
-        self._fixef = self.FixestFormula._fval
+        self._fixef = self.FixestFormula.fixed_effects
 
         self._k_fe = self._fe.nunique(axis=0) if self._has_fixef else None
         self._n_fe = len(self._k_fe) if self._has_fixef else 0
