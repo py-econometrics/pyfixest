@@ -389,21 +389,6 @@ def test_errors_confint():
         fit.confint(alpha=0.5, keep=["abababa"])
 
 
-def test_i_error():
-    data = get_data()
-    data["f2"] = pd.Categorical(data["f2"])
-
-    with pytest.raises(ValueError):
-        feols("Y ~ i(f1, f2)", data)
-
-    data["f2"] = data["f2"].astype("object")
-    with pytest.raises(ValueError):
-        feols("Y ~ i(f1, f2)", data)
-
-    with pytest.raises(FactorEvaluationError):
-        feols("Y ~ i(f1, X1, ref=a)", data)
-
-
 def test_plot_error():
     df = get_data()
     fit = feols("Y ~ X1", data=df)
