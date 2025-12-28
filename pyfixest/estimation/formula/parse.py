@@ -217,6 +217,9 @@ class ParsedFormula:
             for values in itertools.product(*dict_of_lists.values())
         ]
         for kwargs in list_of_kwargs:
+            if kwargs.get("fixed_effects") == "0":
+                # Encode no fixed effects by `None`
+                kwargs.pop("fixed_effects")
             formula = Formula(**kwargs)
             estimations[formula.fixed_effects].append(formula)
         return estimations
