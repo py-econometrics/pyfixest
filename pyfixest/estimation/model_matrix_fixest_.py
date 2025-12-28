@@ -147,7 +147,7 @@ def model_matrix_fixest(
     if _is_iv:
         endogvar = mm["fml_first_stage"]["lhs"]
         Z = mm["fml_first_stage"]["rhs"]
-    if fval != "0":
+    if fval is not None:
         fe = mm["fe"]
     if weights is not None:
         weights_df = mm["weights"]
