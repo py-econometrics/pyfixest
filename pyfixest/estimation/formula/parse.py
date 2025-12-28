@@ -22,7 +22,7 @@ class _MultipleEstimationType(StrEnum):
     csw0 = "cumulative stepwise with zero step"
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, frozen=True)
 class _MultipleEstimation:
     constant: list[str]
     variable: list[str]
@@ -318,9 +318,3 @@ def parse(formula: str) -> _ParsedFormulaContainer:
         endogenous=endogenous,
         instruments=instruments,
     )
-
-
-if __name__ == "__main__":
-    formula: str = "Y + Y2 ~ 1 | Z1 ~ X1"
-    new = parse(formula=formula)
-    new_lst = new.FixestFormulaDict
