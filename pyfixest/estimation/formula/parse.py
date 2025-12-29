@@ -3,6 +3,7 @@ import re
 from collections import defaultdict
 from dataclasses import dataclass
 from enum import StrEnum
+from typing import Final
 
 from pyfixest.errors import (
     DuplicateKeyError,
@@ -236,11 +237,35 @@ class _Pattern:
 
 
 def _parse_parts(formula: str) -> tuple[str, list[str]]:
+    """
+    Parse parts of a one- to three-sided formula string of the form "`dependent ~ independent | fixed effects | endogenous ~ instruments`".
+
+    Parameters
+    ----------
+    formula: str
+        The three sided formula string.
+
+    Returns
+    -------
+        main_part: str
+        other_parts: list[str]
+    """
+    max_parts: Final[int] = 3
+    min_tildes: Final[int] = 1
+    max_tildes: Final[int] = 2
+
     parts = re.split(_Pattern.parts, formula.strip())
-    if len(parts) > 3:
+    if len(parts) > max_parts:
         raise FormulaSyntaxError(
             f"Formula can have at most 3 parts `dependent ~ independent | fixed effects | endogenous ~ instruments`, "
             f"received {len(parts)}: {formula}"
+        )
+    number_tildes: int = sum("~" in part for part in parts)
+    if number_tildes < min_tildes:
+        raise FormulaSyntaxError("Formula string must have at least one `~`.")
+    elif number_tildes > max_tildes:
+        raise FormulaSyntaxError(
+            "Formula string can have at most two `~`: in the main part and optionally in an instrumental variable part."
         )
     main_part = parts.pop(0)
     return main_part, parts
@@ -269,12 +294,32 @@ def _parse_fixed_effects(parts: list[str]) -> list[str] | None:
 def _parse_instrumental_variable(
     parts: list[str],
     independent: list[str],
-) -> tuple[list[str] | None, list[str] | None]:
+) -> tuple[list[str], list[str]] | tuple[None, None]:
+    """
+    Parse non-main parts of formula for presence of instrumental variable (IV) regressions.
+    IV regressions are identified as the non-main formula part containing a `~`.
+
+    Parameters
+    ----------
+    parts: list[str]
+        Non-main parts of formula string.
+    independent: list[str]
+        Independent variables of main part of formula string.
+
+    Returns
+    -------
+    endogenous, instruments: tuple[list[str], list[str]] | None
+
+    """
     part_iv: str | None = next((part for part in parts if "~" in part), None)
     if part_iv is None:
         return None, None
     else:
         endogenous, instruments = _parse_dependent_independent(part_iv)
+        if len(endogenous) > 1:
+            raise FormulaSyntaxError(
+                "Multiple endogenous variables are currently not supported."
+            )
         endogenous_are_covariates = [
             variable for variable in endogenous if variable in independent
         ]
@@ -291,7 +336,8 @@ def _parse_instrumental_variable(
             )
         if len(endogenous) > len(instruments):
             raise UnderDeterminedIVError(
-                "The IV system is underdetermined. Please provide as many or more instruments as endogenous variables."
+                "The IV system is underdetermined. "
+                "Please provide as many or more instruments as endogenous variables."
             )
         endogenous_have_multiple_estimation = [
             variable
@@ -350,8 +396,6 @@ def parse(formula: str, sort: bool = False) -> ParsedFormula:
     endogenous, instruments = _parse_instrumental_variable(other_parts, independent)
     if endogenous is not None and instruments is not None:
         independent = [*endogenous, *independent]
-        # TODO: https://github.com/py-econometrics/pyfixest/issues/1117
-        endogenous = endogenous[:1]
         instruments = ["+".join(instruments)]
     if sort:
         list.sort(independent)
