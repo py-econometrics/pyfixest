@@ -316,10 +316,6 @@ def _parse_instrumental_variable(
         return None, None
     else:
         endogenous, instruments = _parse_dependent_independent(part_iv)
-        if len(endogenous) > 1:
-            raise FormulaSyntaxError(
-                "Multiple endogenous variables are currently not supported."
-            )
         endogenous_are_covariates = [
             variable for variable in endogenous if variable in independent
         ]
@@ -347,6 +343,10 @@ def _parse_instrumental_variable(
         if endogenous_have_multiple_estimation:
             raise FormulaSyntaxError(
                 "Endogenous variables cannot have multiple estimations."
+            )
+        if len(endogenous) > 1:
+            raise FormulaSyntaxError(
+                "Multiple endogenous variables are currently not supported."
             )
         return endogenous, instruments
 
