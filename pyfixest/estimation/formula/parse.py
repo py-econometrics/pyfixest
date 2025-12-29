@@ -3,7 +3,6 @@ import re
 from collections import defaultdict
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Optional
 
 from pyfixest.errors import (
     DuplicateKeyError,
@@ -26,7 +25,7 @@ class _MultipleEstimationType(StrEnum):
 class _MultipleEstimation:
     constant: list[str]
     variable: list[str]
-    kind: Optional[_MultipleEstimationType] = None
+    kind: _MultipleEstimationType | None = None
 
     @property
     def is_multiple(self) -> bool:
@@ -76,9 +75,9 @@ class Formula:
 
     dependent: str
     independent: str
-    fixed_effects: Optional[str] = None
-    endogenous: Optional[str] = None
-    instruments: Optional[str] = None
+    fixed_effects: str | None = None
+    endogenous: str | None = None
+    instruments: str | None = None
 
     @property
     def fml(self) -> str:
@@ -143,9 +142,9 @@ class ParsedFormula:
     formula: str
     dependent: list[str]
     independent: _MultipleEstimation
-    fixed_effects: Optional[_MultipleEstimation] = None
-    endogenous: Optional[list[str]] = None
-    instruments: Optional[list[str]] = None
+    fixed_effects: _MultipleEstimation | None = None
+    endogenous: list[str] | None = None
+    instruments: list[str] | None = None
 
     def __post_init__(self):
         if self.is_multiple and self.is_iv:
@@ -260,7 +259,7 @@ def _parse_dependent_independent(part: str) -> tuple[list[str], list[str]]:
 
 
 def _parse_fixed_effects(parts: list[str]) -> list[str] | None:
-    part_fe: Optional[str] = next((part for part in parts if "~" not in part), None)
+    part_fe: str | None = next((part for part in parts if "~" not in part), None)
     if part_fe is None:
         return None
     else:
@@ -271,7 +270,7 @@ def _parse_instrumental_variable(
     parts: list[str],
     independent: list[str],
 ) -> tuple[list[str] | None, list[str] | None]:
-    part_iv: Optional[str] = next((part for part in parts if "~" in part), None)
+    part_iv: str | None = next((part for part in parts if "~" in part), None)
     if part_iv is None:
         return None, None
     else:
