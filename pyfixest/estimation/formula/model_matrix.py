@@ -1,4 +1,5 @@
 import re
+import warnings
 from dataclasses import dataclass
 from typing import Any, Mapping, Union
 
@@ -148,12 +149,16 @@ def get(
     )
     if drop_singletons and fixed_effects is not None:
         is_singleton = detect_singletons(fixed_effects.values)
-        for model in model_matrix:
-            if isinstance(model, formulaic.ModelMatrices):
-                for m in model:
-                    m.drop(m.index[is_singleton], inplace=True)
-            else:
-                model.drop(model.index[is_singleton], inplace=True)
+        if is_singleton.any():
+            warnings.warn(
+                f"{is_singleton.sum()} singleton fixed effect(s) detected. These observations are dropped from the model."
+            )
+            for model in model_matrix:
+                if isinstance(model, formulaic.ModelMatrices):
+                    for m in model:
+                        m.drop(m.index[is_singleton], inplace=True)
+                else:
+                    model.drop(model.index[is_singleton], inplace=True)
     return ModelMatrix(
         dependent=model_matrix[_ModelMatrixKey.main]["lhs"],
         independent=model_matrix[_ModelMatrixKey.main]["rhs"],
