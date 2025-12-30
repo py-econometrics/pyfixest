@@ -943,10 +943,9 @@ def feglm(
 
     Examples
     --------
-    The `fepois()` function can be used to estimate a simple Poisson regression
-    model with fixed effects.
-    The following example regresses `Y` on `X1` and `X2` with fixed effects for
-    `f1` and `f2`: fixed effects are specified after the `|` symbol.
+    The `feglm()` function can be used to estimate generalized linear models
+    (logit, probit, gaussian) with high-dimensional fixed effects.
+    Fixed effects are specified after the `|` symbol, just like in `feols()`.
 
     ```{python}
     import pyfixest as pf
@@ -954,36 +953,50 @@ def feglm(
 
     data = pf.get_data()
     data["Y"] = np.where(data["Y"] > 0, 1, 0)
+
+    # Logit with fixed effects
+    fit_fe = pf.feglm("Y ~ X1 + X2 | f1", data, family="logit")
+    fit_fe.summary()
+    ```
+
+    Fixed effects estimation via demeaning produces identical point estimates
+    as one-hot encoding the fixed effects via `C()`:
+
+    ```{python}
+    # Compare FE demeaning vs one-hot encoding
+    fit_onehot = pf.feglm("Y ~ X1 + X2 + C(f1)", data, family="logit")
+
+    pf.etable([fit_fe, fit_onehot])
+    ```
+
+    Note that standard errors differ between the two approaches due to different
+    degrees of freedom adjustments. The one-hot approach counts fixed effect
+    dummies as estimated parameters, while the FE approach does not by default. This behavior
+    can be adjusted via the `ssc` argument.
+
+    We support three different models of the GLM family: logit, probit, gaussian, which
+    you can select via the `family` argument.
+
+    ```{python}
     data["f1"] = np.where(data["f1"] > data["f1"].median(), "group1", "group2")
 
-    fit_probit = pf.feglm("Y ~ X1*f1", data, family = "probit")
-    fit_logit = pf.feglm("Y ~ X1*f1", data, family = "logit")
-    fit_gaussian = pf.feglm("Y ~ X1*f1", data, family = "gaussian")
+    fit_probit = pf.feglm("Y ~ X1*f1", data, family="probit")
+    fit_logit = pf.feglm("Y ~ X1*f1", data, family="logit")
+    fit_gaussian = pf.feglm("Y ~ X1*f1", data, family="gaussian")
 
     pf.etable([fit_probit, fit_logit, fit_gaussian])
     ```
 
-    `PyFixest` integrates with the [marginaleffects](https://marginaleffects.com/bonus/python.html) package. For example, to compute average marginal effects
-    for the probit model above, you can use the following code:
+    To provide more interpretable effects, `PyFixest` integrates with the [marginaleffects](https://marginaleffects.com/bonus/python.html) package. For example, to compute average marginal effects:
 
     ```{python}
-    # we load polars as marginaleffects outputs pl.DataFrame's
     import polars as pl
     from marginaleffects import avg_slopes
-    results = [avg_slopes(model, variables  = "X1") for model in [fit_probit, fit_logit, fit_gaussian]]
+    results = [avg_slopes(model, variables="X1") for model in [fit_probit, fit_logit, fit_gaussian]]
     pl.concat([r.to_polars() for r in results])
     ```
 
-    We can also compute marginal effects by group (group average marginal effects):
-
-    ```{python}
-    avg_slopes(fit_probit, variables  = "X1", by = "f1")
-    ```
-
-    We find homogeneous effects by "f1" in the probit model.
-
-    For more examples of other function arguments, please take a look at the documentation of the [feols()](https://py-econometrics.github.io/pyfixest/reference/estimation.estimation.feols.html#pyfixest.estimation.estimation.feols)
-    function.
+    For more examples of other function arguments, please take a look at the documentation of the [feols()](https://py-econometrics.github.io/pyfixest/reference/estimation.estimation.feols.html#pyfixest.estimation.estimation.feols) function.
 
     """
     if family not in ["logit", "probit", "gaussian"]:
