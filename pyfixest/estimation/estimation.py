@@ -799,6 +799,7 @@ def feglm(
     collin_tol: float = 1e-09,
     separation_check: Optional[list[str]] = None,
     solver: SolverOptions = "scipy.linalg.solve",
+    demeaner_backend: DemeanerBackendOptions = "numba",
     drop_intercept: bool = False,
     copy_data: bool = True,
     store_data: bool = True,
@@ -808,7 +809,7 @@ def feglm(
     fsplit: Optional[str] = None,
 ) -> Union[Feols, Fepois, FixestMulti]:
     """
-    Estimate GLM regression models (currently without fixed effects, this is work in progress).
+    Estimate GLM regression models with optional fixed effects.
     This feature is currently experimental, full support will be released with pyfixest 0.29.
 
     Parameters
@@ -858,11 +859,9 @@ def feglm(
 
     fixef_tol: float, optional
         Tolerance for the fixed effects demeaning algorithm. Defaults to 1e-06.
-        Currently does not do anything, as fixed effects are not supported for GLMs.
 
     fixef_maxiter: int, optional
-         Maximum iterations for the demeaning algorithm.
-        Currently does not do anything, as fixed effects are not supported for GLMs.
+         Maximum iterations for the demeaning algorithm. Defaults to 100,000.
 
     iwls_tol : Optional[float], optional
         Tolerance for IWLS convergence, by default 1e-08.
@@ -881,6 +880,19 @@ def feglm(
         The solver to use for the regression. Can be "np.linalg.lstsq",
         "np.linalg.solve", "scipy.linalg.solve", "scipy.sparse.linalg.lsqr" and "jax".
         Defaults to "scipy.linalg.solve".
+
+    demeaner_backend: DemeanerBackendOptions, optional
+        The backend to use for demeaning. Options include:
+        - "numba" (default): CPU-based demeaning using Numba JIT via the Alternating Projections Algorithm.
+        - "rust": CPU-based demeaning implemented in Rust via the Alternating Projections Algorithm.
+        - "jax": CPU or GPU-accelerated using JAX (requires jax/jaxlib) via the Alternating Projections Algorithm.
+        - "cupy" or "cupy64": GPU-accelerated using CuPy with float64 precision via direct application of the Frisch-Waugh-Lovell Theorem on sparse
+          matrices (requires cupy & GPU, defaults to scipy/CPU if no GPU available)
+        - "cupy32": GPU-accelerated using CuPy with float32 precision via direct application of the Frisch-Waugh-Lovell Theorem on sparse
+          matrices (requires cupy & GPU, defaults to scipy/CPU and float64 if no GPU available)
+        - "scipy": Direct application of the Frisch-Waugh-Lovell Theorem on sparse matrice.
+          Forces to use a scipy-sparse backend even when cupy is installed and GPU is available.
+        Defaults to "numba".
 
     drop_intercept : bool, optional
         Whether to drop the intercept from the model, by default False.
@@ -1052,6 +1064,7 @@ def feglm(
         iwls_maxiter=iwls_maxiter,
         collin_tol=collin_tol,
         separation_check=separation_check,
+        demeaner_backend=demeaner_backend,
     )
 
     if fixest._is_multiple_estimation:

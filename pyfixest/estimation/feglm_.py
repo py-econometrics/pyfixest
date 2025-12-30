@@ -8,10 +8,11 @@ import pandas as pd
 from pyfixest.errors import (
     NonConvergenceError,
 )
-from pyfixest.estimation.demean_ import demean
+from pyfixest.estimation.backends import BACKENDS
 from pyfixest.estimation.feols_ import Feols, PredictionErrorOptions, PredictionType
 from pyfixest.estimation.fepois_ import _check_for_separation
 from pyfixest.estimation.FormulaParser import FixestFormula
+from pyfixest.estimation.literals import DemeanerBackendOptions
 from pyfixest.utils.dev_utils import DataFrameType
 
 
@@ -40,6 +41,7 @@ class Feglm(Feols, ABC):
             "scipy.sparse.linalg.lsqr",
             "jax",
         ],
+        demeaner_backend: DemeanerBackendOptions = "numba",
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
@@ -80,6 +82,14 @@ class Feglm(Feols, ABC):
         self.convergence = False
         self.separation_check = separation_check
 
+        # Initialize demeaner backend
+        self._demeaner_backend = demeaner_backend
+        try:
+            impl = BACKENDS[demeaner_backend]
+        except KeyError:
+            raise ValueError(f"Unknown demeaner backend {demeaner_backend!r}")
+        self._demean_func = impl["demean"]
+
         self._support_crv3_inference = True
         self._support_iid_inference = True
         self._support_hac_inference = True
@@ -95,9 +105,6 @@ class Feglm(Feols, ABC):
     def prepare_model_matrix(self):
         "Prepare model inputs for estimation."
         super().prepare_model_matrix()
-
-        if self._fe is not None:
-            raise NotImplementedError("Fixed effects are not yet supported for GLMs.")
 
         # check for separation
         na_separation: list[int] = []
@@ -141,22 +148,30 @@ class Feglm(Feols, ABC):
         """
         Fit the GLM model via iterated weighted least squares.
 
-        All equations in the code refer to Stammann 'Fast and Feasible
-        Estimation of Generalized Linear Models with High-Dimensional
-        k-way fixed effects': https://arxiv.org/pdf/1707.01815
-        """
-        # initialize
+        Following Stammann (2018) and Correia, Guimarães & Zylkin (2019).
 
-        beta = np.zeros(self._X.shape[1])
-        eta = np.zeros(self._N)
-        mu = self._get_mu(theta=eta)
+        Key insight from claude.md Section 3.5:
+        "The residuals from the within-transformed regression equal the
+        residuals from the full model (FWL property), so:
+            η^(r) = z^(r-1) - e^(r)
+        where e^(r) are residuals from the weighted regression on demeaned data."
+
+        This means: η_new = z (unweighted) - e (residual from demeaned WLS)
+        """
+        _mean = np.mean(self._Y)
+        if self._method in ("feglm-logit", "feglm-probit"):
+            mu = np.full_like(self._Y.flatten(), 0.5, dtype=float)
+        else:
+            mu = np.full_like(self._Y.flatten(), _mean, dtype=float)
+
+        eta = self._get_link(mu)
         deviance = self._get_deviance(self._Y.flatten(), mu)
-        deviance_old = deviance.copy() + 1
+        deviance_old = deviance + 1.0
+
+        W_tilde_final = None
 
         for r in range(self.maxiter):
-            if r == 0:
-                pass
-            else:
+            if r > 0:
                 converged = self._check_convergence(
                     crit=self._get_diff(deviance=deviance, last=deviance_old),
                     tol=self.tol,
@@ -165,70 +180,106 @@ class Feglm(Feols, ABC):
                     model=self._method,
                 )
                 if converged:
+                    self.convergence = True
                     break
 
-            # Step 1: _get weights w_tilde(r-1) and v(r-1) (eq. 2.5)
+            # Step 1: Compute IRLS weights (Section 2.2)
+            # w_i = 1 / [V(mu_i) * g'(mu_i)^2]
             detadmu = self._update_detadmu(mu=mu)
             W = self._update_W(mu=mu)
+            W_tilde = self._update_W_tilde(W=W)  # sqrt(W)
 
-            # Step 2: _get v_tilde(r-1) and X_tilde(r-1) (eq. 3.2)
-            W_tilde = self._update_W_tilde(W=W)
-            X_tilde = self._update_X_tilde(W_tilde=W_tilde, X=self._X)
-            v_tilde = self._update_v_tilde(
-                y=self._Y.flatten(), mu=mu, W_tilde=W_tilde.flatten(), detadmu=detadmu
-            )
+            # Step 2: Compute working response (Section 2.2)
+            # z = eta + (y - mu) * g'(mu)   [unweighted]
+            z = eta + (self._Y.flatten() - mu) * detadmu
 
-            # Step 3 compute v_dotdot(r-1) and X_dotdot(r-1) - demeaning
-            v_dotdot, X_dotdot = self.residualize(
-                v=v_tilde,
-                X=X_tilde,
+            # Step 3: Within-transform using weighted alternating projections
+            # Following Fepois pattern: demean FIRST using weights, THEN multiply by sqrt(W)
+            z_resid, X_resid = self.residualize(
+                v=z,
+                X=self._X,
                 flist=self._fe,
-                weights=W_tilde.flatten(),
+                weights=W.flatten(),
                 tol=self._fixef_tol,
                 maxiter=self._fixef_maxiter,
             )
 
-            # Step 4: compute (beta(r) - beta(r-1)) and check for convergence, _update beta(r-1) s(eq. 3.5)
-            beta_update_diff = self._update_beta_diff(
-                X_dotdot=X_dotdot, v_dotdot=v_dotdot
-            )
+            # Step 4: Weighted least squares on demeaned data
+            # Multiply demeaned quantities by sqrt(W) to convert WLS to OLS
+            # β = (X̃'W X̃)^{-1} X̃'W z̃
+            WX = W_tilde.flatten()[:, None] * X_resid
+            WZ = W_tilde.flatten() * z_resid
 
-            # Step 5: _update using step halfing (if required)
+            beta_new = np.linalg.lstsq(WX, WZ, rcond=None)[0].flatten()
 
-            deviance_old = deviance.copy()
+            # Step 5: Compute residuals and update linear predictor
+            # Residual from DEMEANED (not weighted) quantities
+            resid = z_resid - X_resid @ beta_new
 
-            beta, eta, mu, deviance = self._update_eta_step_halfing(
-                Y=self._Y,
-                beta=beta,
-                eta=eta,
-                mu=mu,
-                deviance=deviance_old,
-                beta_update_diff=beta_update_diff,
-                W_tilde=W_tilde.flatten(),
-                v_tilde=v_tilde,
-                v_dotdot=v_dotdot,
-                X_dotdot=X_dotdot,
-                deviance_old=deviance_old,
-                step_halfing_tolerance=1e-12,
-            )
+            # Key formula from Section 3.5:
+            # η_new = z - e where both z and e are unweighted
+            eta_new = z - resid
 
-        self._beta_hat = beta.flatten()
+            # Step 6: Update conditional mean
+            mu_new = self._get_mu(theta=eta_new)
+            deviance_new = self._get_deviance(self._Y.flatten(), mu_new)
+
+            # Step-halving if deviance did not decrease
+            alpha = 1.0
+            step_halfing_tolerance = 1e-12
+            while deviance_new >= deviance and alpha > step_halfing_tolerance:
+                alpha /= 2.0
+                eta_try = eta + alpha * (eta_new - eta)
+                mu_try = self._get_mu(theta=eta_try)
+                deviance_try = self._get_deviance(self._Y.flatten(), mu_try)
+                if deviance_try < deviance:
+                    eta_new = eta_try
+                    mu_new = mu_try
+                    deviance_new = deviance_try
+                    break
+
+            if deviance_new >= deviance and alpha <= step_halfing_tolerance:
+                # Accept if close to convergence
+                if self._get_diff(deviance=deviance_new, last=deviance) < self.tol:
+                    pass
+                else:
+                    raise RuntimeError(
+                        f"Step-halving failed. Deviance: {deviance_new:.6f} vs {deviance:.6f}"
+                    )
+
+            # Update for next iteration
+            deviance_old = deviance
+            eta = eta_new
+            mu = mu_new
+            deviance = deviance_new
+
+            z_resid_final = z_resid
+            X_resid_final = X_resid
+            W_tilde_final = W_tilde
+
+        # Final beta from last iteration
+        WX_final = W_tilde_final.flatten()[:, None] * X_resid_final
+        WZ_final = W_tilde_final.flatten() * z_resid_final
+        self._beta_hat = np.linalg.lstsq(WX_final, WZ_final, rcond=None)[0].flatten()
+
         self._Y_hat_response = mu.flatten()
         self._Y_hat_link = eta.flatten()
 
-        # _update for inference
+        # Update for inference
         self._weights = W
         self._irls_weights = W
 
-        # if only one dim
         if self._weights.ndim == 1:
             self._weights = self._weights.reshape((self._N, 1))
 
-        self._u_hat_response = (self._Y.flatten() - self._get_mu(theta=eta)).flatten()
+        self._u_hat_response = (self._Y.flatten() - mu).flatten()
+
+        # Compute working residual from DEMEANED quantities
+        resid_final = z_resid_final - X_resid_final @ self._beta_hat
         self._u_hat_working = (
             self._u_hat_response
             if self._method == "feglm-gaussian"
-            else (v_dotdot / W_tilde).flatten()
+            else resid_final.flatten()
         )
 
         self._scores_response = self._u_hat_response[:, None] * self._X
@@ -241,7 +292,7 @@ class Feglm(Feols, ABC):
         self._tZXinv = np.linalg.inv(self._tZX)
         self._Xbeta = eta
 
-        self._hessian = X_dotdot.T @ X_dotdot
+        self._hessian = WX_final.T @ WX_final
         self.deviance = deviance
 
         if self.convergence:
@@ -286,14 +337,30 @@ class Feglm(Feols, ABC):
     def _update_eta(
         self,
         W_tilde: np.ndarray,
-        v_tilde: np.ndarray,
-        v_dotdot: np.ndarray,
+        Z: np.ndarray,
+        Z_dotdot: np.ndarray,
         X_dotdot: np.ndarray,
         beta_diff: np.ndarray,
         eta: np.ndarray,
     ) -> np.ndarray:
-        "Get the eta _update (formula 4.5)."
-        return eta + X_dotdot @ beta_diff / W_tilde
+        """
+        Get the eta update following the Fepois pattern.
+
+        The approach is:
+        1. Compute weighted residual: resid = Z_dotdot - X_dotdot @ beta_diff
+        2. Unweight: resid_unweighted = resid / W_tilde
+        3. New eta = Z - resid_unweighted
+
+        This recovers the fixed effects contribution since Z contains
+        the full working response and the residual is computed from
+        demeaned quantities.
+        """
+        # Compute residual from demeaned regression
+        resid = Z_dotdot - X_dotdot @ beta_diff
+        # Unweight the residual
+        resid_unweighted = resid / W_tilde
+        # New eta = Z - residual (this recovers FE)
+        return Z - resid_unweighted
 
     def _get_gradient(self, Z: np.ndarray, W: np.ndarray, v: np.ndarray) -> np.ndarray:
         return Z.T @ W @ v
@@ -314,8 +381,12 @@ class Feglm(Feols, ABC):
         if flist is None:
             return v, X
         else:
-            vX_resid, success = demean(
-                x=np.c_[v, X], flist=flist, weights=weights, tol=tol, maxiter=maxiter
+            vX_resid, success = self._demean_func(
+                x=np.c_[v, X],
+                flist=flist.astype(np.uintp),
+                weights=weights,
+                tol=tol,
+                maxiter=maxiter,
             )
             if success is False:
                 raise ValueError(f"Demeaning failed after {maxiter} iterations.")
@@ -353,8 +424,8 @@ class Feglm(Feols, ABC):
         deviance: np.ndarray,
         beta_update_diff: np.ndarray,
         W_tilde: np.ndarray,
-        v_tilde: np.ndarray,
-        v_dotdot: np.ndarray,
+        Z: np.ndarray,
+        Z_dotdot: np.ndarray,
         X_dotdot: np.ndarray,
         deviance_old: np.ndarray,
         step_halfing_tolerance: float,
@@ -367,8 +438,8 @@ class Feglm(Feols, ABC):
             beta_try = beta + alpha * beta_update_diff
             eta_try = self._update_eta(
                 W_tilde=W_tilde.flatten(),
-                v_tilde=v_tilde,
-                v_dotdot=v_dotdot,
+                Z=Z,
+                Z_dotdot=Z_dotdot,
                 X_dotdot=X_dotdot,
                 beta_diff=alpha * beta_update_diff,
                 eta=eta,

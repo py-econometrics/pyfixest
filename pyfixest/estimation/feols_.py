@@ -1658,7 +1658,7 @@ class Feols:
 
         res_ccv.name = "CCV"
 
-        res_crv1 = self.tidy().xs(treatment)
+        res_crv1 = cast(pd.Series, self.tidy().xs(treatment))
         res_crv1.name = "CRV1"
 
         return pd.concat([res_ccv, res_crv1], axis=1).T

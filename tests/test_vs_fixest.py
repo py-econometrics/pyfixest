@@ -117,12 +117,19 @@ iv_fmls = [
 ]
 
 glm_fmls = [
+    # No fixed effects
     "Y ~ X1",
     "Y ~ X1 + X2",
     "Y ~ X1*X2",
     # "Y ~ X1 + C(f2)",
     # "Y ~ X1 + i(f1, ref = 1)",
     "Y ~ X1 + f1:X2",
+    # With fixed effects
+    "Y ~ X1 | f1",
+    "Y ~ X1 + X2 | f1",
+    "Y ~ X1 | f1 + f2",
+    "Y ~ X1 + X2 | f1 + f2",
+    "Y ~ X1*X2 | f1",
 ]
 
 

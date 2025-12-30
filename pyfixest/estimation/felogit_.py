@@ -6,6 +6,7 @@ import pandas as pd
 
 from pyfixest.estimation.feglm_ import Feglm
 from pyfixest.estimation.FormulaParser import FixestFormula
+from pyfixest.estimation.literals import DemeanerBackendOptions
 
 
 class Felogit(Feglm):
@@ -33,6 +34,7 @@ class Felogit(Feglm):
             "scipy.sparse.linalg.lsqr",
             "jax",
         ],
+        demeaner_backend: DemeanerBackendOptions = "numba",
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
@@ -56,6 +58,7 @@ class Felogit(Feglm):
             tol=tol,
             maxiter=maxiter,
             solver=solver,
+            demeaner_backend=demeaner_backend,
             store_data=store_data,
             copy_data=copy_data,
             lean=lean,
