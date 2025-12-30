@@ -5,6 +5,8 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Final
 
+from formulaic.parser import DefaultFormulaParser
+
 from pyfixest.errors import (
     DuplicateKeyError,
     EndogVarsAsCovarsError,
@@ -12,6 +14,7 @@ from pyfixest.errors import (
     InstrumentsAsCovarsError,
     UnderDeterminedIVError,
 )
+from pyfixest.estimation.formula import FORMULAIC_FEATURE_FLAG
 
 
 class _MultipleEstimationType(StrEnum):
@@ -72,6 +75,7 @@ class Formula:
         Endogenous variables, separated by '+'.
     instruments: Optional[str]
         Instrumental variables for the endogenous variables, separated by '+'.
+    intercept: Optional[bool]
     """
 
     dependent: str
@@ -79,6 +83,7 @@ class Formula:
     fixed_effects: str | None = None
     endogenous: str | None = None
     instruments: str | None = None
+    intercept: bool = True
 
     @property
     def fml(self) -> str:
@@ -88,7 +93,10 @@ class Formula:
         -------
         str
         """
-        formula = f"{self.dependent}~{self.independent}"
+        independent = self.independent
+        if not self.intercept:
+            independent = f"{independent}-1"
+        formula = f"{self.dependent}~{independent}"
         if self.endogenous is not None and self.instruments is not None:
             formula = f"{formula}|{self.endogenous}~{self.instruments}"
         if self.fixed_effects is not None:
@@ -116,7 +124,16 @@ class Formula:
         -------
         str
         """
-        return f"{self.dependent}~{self.independent}+1"
+        independent = f"{self.independent}"
+        if not self.intercept:
+            independent = f"{independent}-1"
+        if (
+            FORMULAIC_FEATURE_FLAG is DefaultFormulaParser.FeatureFlags.ALL
+            and self.endogenous is not None
+            and self.instruments is not None
+        ):
+            independent = f"{independent}+[{self.endogenous}~{self.instruments}]"
+        return f"{self.dependent}~{independent}"
 
 
 @dataclass(kw_only=True, frozen=True)
@@ -146,6 +163,7 @@ class ParsedFormula:
     fixed_effects: _MultipleEstimation | None = None
     endogenous: list[str] | None = None
     instruments: list[str] | None = None
+    intercept: bool = True
 
     def __post_init__(self):
         if self.is_multiple and self.is_iv:
@@ -220,7 +238,7 @@ class ParsedFormula:
             if kwargs.get("fixed_effects") == "0":
                 # Encode no fixed effects by `None`
                 kwargs.pop("fixed_effects")
-            formula = Formula(**kwargs)
+            formula = Formula(intercept=self.intercept, **kwargs)
             estimations[formula.fixed_effects].append(formula)
         return estimations
 
@@ -372,7 +390,7 @@ def _parse_multiple_estimation(variables: list[str]) -> _MultipleEstimation:
     return _MultipleEstimation(constant=single, variable=multiple, kind=kind)
 
 
-def parse(formula: str, sort: bool = False) -> ParsedFormula:
+def parse(formula: str, intercept: bool = True, sort: bool = False) -> ParsedFormula:
     """
     Parse a fixest model formula.
 
@@ -381,6 +399,8 @@ def parse(formula: str, sort: bool = False) -> ParsedFormula:
     formula : str
         A one to three sided formula string in the form
         "Y1 + Y2 ~ X1 + X2 | FE1 + FE2 | endogvar ~ exogvar".
+    intercept: bool
+    sort: bool
 
     sort: Optional[bool]
         Sort variables lexicographically within formula parts. Defaults to False.
@@ -395,7 +415,8 @@ def parse(formula: str, sort: bool = False) -> ParsedFormula:
     fixed_effects = _parse_fixed_effects(other_parts)
     endogenous, instruments = _parse_instrumental_variable(other_parts, independent)
     if endogenous is not None and instruments is not None:
-        independent = [*endogenous, *independent]
+        if FORMULAIC_FEATURE_FLAG is not DefaultFormulaParser.FeatureFlags.ALL:
+            independent = [*endogenous, *independent]
         instruments = ["+".join(instruments)]
     if sort:
         list.sort(independent)
@@ -408,4 +429,6 @@ def parse(formula: str, sort: bool = False) -> ParsedFormula:
         else None,
         endogenous=endogenous,
         instruments=instruments,
+        # Intercept is not meaningful in the presence of fixed effects
+        intercept=intercept and fixed_effects is None,
     )

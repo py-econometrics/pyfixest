@@ -17,6 +17,7 @@ from pyfixest.errors import EmptyVcovError, VcovTypeNotSupportedError
 from pyfixest.estimation.backends import BACKENDS
 from pyfixest.estimation.decomposition import GelbachDecomposition, _decompose_arg_check
 from pyfixest.estimation.demean_ import demean_model
+from pyfixest.estimation.formula import model_matrix as model_matrix_fixest
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.literals import (
     DemeanerBackendOptions,
@@ -25,7 +26,6 @@ from pyfixest.estimation.literals import (
     SolverOptions,
     _validate_literal_argument,
 )
-from pyfixest.estimation.model_matrix_fixest_ import model_matrix_fixest
 from pyfixest.estimation.prediction import (
     _compute_prediction_error,
     _get_fixed_effects_prediction_component,
@@ -410,27 +410,26 @@ class Feols:
 
     def prepare_model_matrix(self):
         "Prepare model matrices for estimation."
-        mm_dict = model_matrix_fixest(
-            FixestFormula=self.FixestFormula,
+        model_matrix = model_matrix_fixest.get(
+            formula=self.FixestFormula,
             data=self._data,
             drop_singletons=self._drop_singletons,
-            drop_intercept=self._drop_intercept,
             weights=self._weights_name,
             context=self._context,
         )
 
-        self._Y = mm_dict.get("Y")
-        self._Y_untransformed = mm_dict.get("Y").copy()
-        self._X = mm_dict.get("X")
-        self._fe = mm_dict.get("fe")
-        self._endogvar = mm_dict.get("endogvar")
-        self._Z = mm_dict.get("Z")
-        self._weights_df = mm_dict.get("weights_df")
-        self._na_index = mm_dict.get("na_index")
-        self._na_index_str = mm_dict.get("na_index_str")
-        self._icovars = mm_dict.get("icovars")
-        self._X_is_empty = mm_dict.get("X_is_empty")
-        self._model_spec = mm_dict.get("model_spec")
+        self._Y = model_matrix.dependent
+        self._Y_untransformed = model_matrix.dependent.copy()
+        self._X = model_matrix.independent
+        self._fe = model_matrix.fixed_effects
+        self._endogvar = model_matrix.endogenous
+        self._Z = model_matrix.instruments
+        self._weights_df = model_matrix.weights
+        # self._na_index = model_matrix.get("na_index")
+        self._na_index_str = ""
+        # self._icovars = model_matrix.get("icovars")
+        self._X_is_empty = not model_matrix.independent.shape[0] > 0
+        self._model_spec = model_matrix.model_spec
 
         self._coefnames = self._X.columns.tolist()
         self._coefnames_z = self._Z.columns.tolist() if self._Z is not None else None
@@ -442,8 +441,11 @@ class Feols:
         self._k_fe = self._fe.nunique(axis=0) if self._has_fixef else None
         self._n_fe = len(self._k_fe) if self._has_fixef else 0
 
-        # update data:
-        self._data = _drop_cols(self._data, self._na_index)
+        # update data
+        self._data.drop(
+            self._data.index[~self._data.index.isin(model_matrix.dependent.index)],
+            inplace=True,
+        )
 
         self._weights = self._set_weights()
         self._N, self._N_rows = self._set_nobs()

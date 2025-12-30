@@ -214,7 +214,6 @@ class FixestMulti:
         self._ssc_dict: dict[str, Union[str, bool]] = {}
         self._drop_singletons = False
         self._is_multiple_estimation = False
-        self._drop_intercept = False
         self._weights = weights
         self._has_weights = False
         if weights is not None:
@@ -225,7 +224,7 @@ class FixestMulti:
         self._quantile_tol = quantile_tol
         self._quantile_maxiter = quantile_maxiter
 
-        formulas = parse(fml)
+        formulas = parse(fml, intercept=not drop_intercept)
         self._is_multiple_estimation = (
             formulas.is_multiple
             or self._run_split
