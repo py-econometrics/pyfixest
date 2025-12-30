@@ -1969,7 +1969,7 @@ class Feols:
         else:
             # drop intercept, potentially multicollinear vars
             X = X[self._coefnames].to_numpy()
-            if self._method == "fepois":
+            if self._method == "fepois" or self._method.startswith("feglm"):
                 # determine residuals from estimated linear predictor
                 # equation (5.2) in Stammann (2018) http://arxiv.org/abs/1707.01815
                 Y = self._Y_hat_link

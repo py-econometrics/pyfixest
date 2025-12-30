@@ -42,7 +42,7 @@ You can also leave a message through the donation form - your support and encour
 
 -   **OLS**, **WLS** and **IV** Regression with Fixed-Effects Demeaning via [Frisch-Waugh-Lovell](https://bookdown.org/ts_robinson1994/10EconometricTheorems/frisch.html)
 -   **Poisson Regression** following the [pplmhdfe algorithm](https://journals.sagepub.com/doi/full/10.1177/1536867X20909691)
--   Probit, Logit and Gaussian Family **GLMs** (currently without fixed effects demeaning, this is WIP)
+-   Probit, Logit and Gaussian Family **GLMs** with High-Dimensional Fixed Effects
 -   **Quantile Regression** using an Interior Point Solver
 -   Multiple Estimation Syntax
 -   Several **Robust**, **Cluster Robust** and **HAC Variance-Covariance** Estimators
