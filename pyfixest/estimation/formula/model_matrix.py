@@ -1,7 +1,8 @@
 import re
 import warnings
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Final, Mapping, Union
+from typing import Any, Final, Optional, Union
 
 import formulaic
 import numpy as np
@@ -77,10 +78,10 @@ class ModelMatrix:
     independent: pd.DataFrame
     model_spec: formulaic.ModelSpec
     na_index_str: str
-    fixed_effects: pd.DataFrame = None
-    endogenous: pd.DataFrame = None
-    instruments: pd.DataFrame = None
-    weights: pd.DataFrame = None
+    fixed_effects: Optional[pd.DataFrame] = None
+    endogenous: Optional[pd.DataFrame] = None
+    instruments: Optional[pd.DataFrame] = None
+    weights: Optional[pd.DataFrame] = None
 
     def __post_init__(self) -> None:
         n_observations: dict[str, int] = {}
@@ -140,8 +141,8 @@ def get(
     # Set infinite to null
     numeric_columns = data.select_dtypes(include="number").columns
     data[numeric_columns] = data[numeric_columns].where(
-        np.isfinite(data[numeric_columns]),
-        pd.NA,
+        np.isfinite(data[numeric_columns]),  # type: ignore[call-overload]
+        pd.NA,  # type: ignore[call-overload]
     )
     # Collate kwargs to be passed to formulaic.Formula
     formula_kwargs: dict[str, str] = {

@@ -52,7 +52,6 @@ from pyfixest.estimation.vcov_utils import (
 )
 from pyfixest.utils.dev_utils import (
     DataFrameType,
-    _drop_cols,
     _extract_variable_level,
     _narwhals_to_pandas,
     _select_order_coefs,
