@@ -1,7 +1,7 @@
 import re
 import warnings
 from dataclasses import dataclass
-from typing import Any, Mapping, Union
+from typing import Any, Final, Mapping, Union
 
 import formulaic
 import numpy as np
@@ -76,10 +76,34 @@ class ModelMatrix:
     dependent: pd.DataFrame
     independent: pd.DataFrame
     model_spec: formulaic.ModelSpec
+    na_index_str: str
     fixed_effects: pd.DataFrame = None
     endogenous: pd.DataFrame = None
     instruments: pd.DataFrame = None
     weights: pd.DataFrame = None
+
+    def __post_init__(self) -> None:
+        n_observations: dict[str, int] = {}
+        for attribute, type_hint in self.__annotations__.items():
+            if type_hint is not pd.DataFrame:
+                continue
+            attr = getattr(self, attribute)
+            if attr is None:
+                continue
+            elif not isinstance(attr, type_hint):
+                raise TypeError(f"{attribute} must be a DataFrame.")
+            else:
+                n_observations[attribute] = attr.shape[0]
+        if not n_observations:
+            raise ValueError("Must provide data.")
+        elif len(set(n_observations.values())) != 1:
+            raise ValueError(
+                f"All data provided must have the same number of observations. Received: {n_observations}"
+            )
+        if self.dependent.shape[1] != 1:
+            raise TypeError("The dependent variable must be numeric.")
+        if self.endogenous is not None and self.endogenous.shape[1] != 1:
+            raise TypeError("The endogenous variable must be numeric.")
 
 
 def get(
@@ -87,6 +111,7 @@ def get(
     data: pd.DataFrame,
     weights: str | None = None,
     drop_singletons: bool = False,
+    ensure_full_rank: bool = True,
     context: Union[int, Mapping[str, Any]] = 0,
 ) -> ModelMatrix:
     """
@@ -97,6 +122,7 @@ def get(
     data: pd.DataFrame
     weights: str or None
     drop_singletons: bool
+    ensure_full_rank: bool
     context : int or Mapping[str, Any]
         A dictionary containing additional context variables to be used by
         formulaic during the creation of the model matrix. This can include
@@ -108,13 +134,19 @@ def get(
     ModelMatrix
 
     """
+    # Process input data
+    data.reset_index(drop=True, inplace=True)  # Sanitise index
+    n_observations: Final[int] = data.shape[0]
     # Set infinite to null
     numeric_columns = data.select_dtypes(include="number").columns
     data[numeric_columns] = data[numeric_columns].where(
         np.isfinite(data[numeric_columns]),
         pd.NA,
     )
-    formula_kwargs: dict[str, str] = {_ModelMatrixKey.main: formula.fml_second_stage}
+    # Collate kwargs to be passed to formulaic.Formula
+    formula_kwargs: dict[str, str] = {
+        _ModelMatrixKey.main: formula.fml_second_stage
+    }  # Main formula
     if formula.fixed_effects is not None:
         # Encode fixed effects as integers to prevent categorical encoding
         # This is because fixed effects are partialled out in the demeaning step and not directly estimated
@@ -126,6 +158,7 @@ def get(
             }
         )
     if formula.fml_first_stage is not None:
+        # Instrumental variable
         formula_kwargs.update(
             {_ModelMatrixKey.instrumental_variable: formula.fml_first_stage}
         )
@@ -138,7 +171,7 @@ def get(
     ).get_model_matrix(
         data=data,
         na_action="drop",
-        ensure_full_rank=False,
+        ensure_full_rank=ensure_full_rank,
         output="pandas",
         context={**capture_context(context)},
     )
@@ -153,12 +186,17 @@ def get(
             warnings.warn(
                 f"{is_singleton.sum()} singleton fixed effect(s) detected. These observations are dropped from the model."
             )
+            fixed_effects.drop(fixed_effects.index[is_singleton], inplace=True)
             for model in model_matrix:
                 if isinstance(model, formulaic.ModelMatrices):
                     for m in model:
                         m.drop(m.index[is_singleton], inplace=True)
                 else:
                     model.drop(model.index[is_singleton], inplace=True)
+
+    na_index: set[int] = set(range(n_observations)).difference(
+        model_matrix[_ModelMatrixKey.main]["lhs"].index
+    )
     return ModelMatrix(
         dependent=model_matrix[_ModelMatrixKey.main]["lhs"],
         independent=model_matrix[_ModelMatrixKey.main]["rhs"],
@@ -171,4 +209,5 @@ def get(
         if formula.fml_first_stage is not None
         else None,
         weights=model_matrix[_ModelMatrixKey.weights] if weights is not None else None,
+        na_index_str=",".join(str(i) for i in na_index),
     )

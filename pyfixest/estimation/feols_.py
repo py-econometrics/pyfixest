@@ -426,7 +426,7 @@ class Feols:
         self._Z = model_matrix.instruments
         self._weights_df = model_matrix.weights
         # self._na_index = model_matrix.get("na_index")
-        self._na_index_str = ""
+        self._na_index_str = model_matrix.na_index_str
         # self._icovars = model_matrix.get("icovars")
         self._X_is_empty = not model_matrix.independent.shape[0] > 0
         self._model_spec = model_matrix.model_spec

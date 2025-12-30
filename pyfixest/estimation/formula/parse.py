@@ -111,10 +111,12 @@ class Formula:
         -------
         str | None
         """
-        if self.endogenous is not None and self.instruments is not None:
-            return f"{self.endogenous}~{self.instruments}+{self.independent}-{self.endogenous}+1"
-        else:
+        if self.endogenous is None or self.instruments is None:
             return None
+        independent = f"{self.instruments}+{self.independent}-{self.endogenous}"
+        if not self.intercept:
+            independent = f"{independent}-1"
+        return f"{self.endogenous}~{independent}"
 
     @property
     def fml_second_stage(self) -> str:
