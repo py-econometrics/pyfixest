@@ -426,7 +426,15 @@ class Feols:
         self._weights_df = model_matrix.weights
         # self._na_index = model_matrix.get("na_index")
         self._na_index_str = model_matrix.na_index_str
-        # self._icovars = model_matrix.get("icovars")
+        # TODO: set dynamically based on naming set in pyfixest.estimation.formula.factor_interaction._encode_i
+        is_icovar = (
+            self._X.columns.str.contains(r"^.+::.+$") if not self._X.empty else None
+        )
+        self._icovars = (
+            self._X.columns[is_icovar].tolist()
+            if is_icovar is not None and is_icovar.any()
+            else None
+        )
         self._X_is_empty = not model_matrix.independent.shape[0] > 0
         self._model_spec = model_matrix.model_spec
 

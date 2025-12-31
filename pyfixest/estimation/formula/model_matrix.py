@@ -11,6 +11,7 @@ from formulaic.parser import DefaultFormulaParser
 
 from pyfixest.estimation import detect_singletons
 from pyfixest.estimation.formula import FORMULAIC_FEATURE_FLAG
+from pyfixest.estimation.formula.factor_interaction import factor_interaction
 from pyfixest.estimation.formula.parse import Formula, _Pattern
 from pyfixest.utils.utils import capture_context
 
@@ -171,10 +172,10 @@ def get(
         _parser=DefaultFormulaParser(feature_flags=FORMULAIC_FEATURE_FLAG),
     ).get_model_matrix(
         data=data,
-        na_action="drop",
         ensure_full_rank=ensure_full_rank,
+        na_action="drop",
         output="pandas",
-        context={**capture_context(context)},
+        context={"i": factor_interaction} | {**capture_context(context)},
     )
     fixed_effects = (
         model_matrix[_ModelMatrixKey.fixed_effects].astype("int32")
