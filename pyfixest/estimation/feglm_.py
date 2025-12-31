@@ -82,7 +82,6 @@ class Feglm(Feols, ABC):
         self.convergence = False
         self.separation_check = separation_check
 
-        # Initialize demeaner backend
         self._demeaner_backend = demeaner_backend
         try:
             impl = BACKENDS[demeaner_backend]
@@ -149,14 +148,6 @@ class Feglm(Feols, ABC):
         Fit the GLM model via iterated weighted least squares.
 
         Following Stammann (2018) and Correia, Guimarães & Zylkin (2019).
-
-        Key insight from claude.md Section 3.5:
-        "The residuals from the within-transformed regression equal the
-        residuals from the full model (FWL property), so:
-            η^(r) = z^(r-1) - e^(r)
-        where e^(r) are residuals from the weighted regression on demeaned data."
-
-        This means: η_new = z (unweighted) - e (residual from demeaned WLS)
         """
         _mean = np.mean(self._Y)
         if self._method in ("feglm-logit", "feglm-probit"):
@@ -194,7 +185,6 @@ class Feglm(Feols, ABC):
             z = eta + (self._Y.flatten() - mu) * detadmu
 
             # Step 3: Within-transform using weighted alternating projections
-            # Following Fepois pattern: demean FIRST using weights, THEN multiply by sqrt(W)
             z_resid, X_resid = self.residualize(
                 v=z,
                 X=self._X,
@@ -205,15 +195,13 @@ class Feglm(Feols, ABC):
             )
 
             # Step 4: Weighted least squares on demeaned data
-            # Multiply demeaned quantities by sqrt(W) to convert WLS to OLS
-            # β = (X̃'W X̃)^{-1} X̃'W z̃
             WX = W_tilde.flatten()[:, None] * X_resid
             WZ = W_tilde.flatten() * z_resid
 
             beta_new = np.linalg.lstsq(WX, WZ, rcond=None)[0].flatten()
 
             # Step 5: Compute residuals and update linear predictor
-            # Residual from DEMEANED (not weighted) quantities
+            # Residual demeaned, not weighted
             resid = z_resid - X_resid @ beta_new
 
             # Key formula from Section 3.5:
