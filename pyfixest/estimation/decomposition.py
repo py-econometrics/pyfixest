@@ -749,7 +749,7 @@ class GelbachDecomposition:
         add_notes : str, optional
             Additional notes to append to the table, by default None.
         **kwargs : dict, optional
-            Additional arguments passed to make_table function (type, digits, etc.).
+            Additional arguments passed to maketables.MTable (type, digits, etc.).
 
         Returns
         -------
@@ -771,7 +771,7 @@ class GelbachDecomposition:
         ```{python}
         gb.etable(column_heads = ["Full Difference", "Unexplained Difference", "Explained Difference"])
         """
-        from pyfixest.report.make_table import make_table
+        from maketables import MTable
 
         if column_heads is not None and len(column_heads) != 3:
             raise ValueError("The 'column_heads' parameter must be a list of length 3.")
@@ -904,11 +904,32 @@ class GelbachDecomposition:
             {add_notes}
             """
 
-        kwargs["rgroup_sep"] = "t" if rgroup_sep is None else rgroup_sep
-        kwargs["caption"] = caption
-        kwargs["notes"] = notes
+        rgroup_sep_val = "t" if rgroup_sep is None else rgroup_sep
+        output_type = kwargs.pop("type", "gt")
 
-        return make_table(res_sub, **kwargs)
+        table = MTable(
+            res_sub,
+            notes=notes,
+            caption=caption,
+            rgroup_sep=rgroup_sep_val,
+            **kwargs,
+        )
+
+        # Return based on type parameter
+        if output_type == "gt":
+            return table.make(type="gt")
+        elif output_type == "tex":
+            return table.make(type="tex")
+        elif output_type == "df":
+            return table.df
+        elif output_type == "md":
+            result = table.df.to_markdown()
+            print(result)
+            return None
+        elif output_type == "html":
+            return table.make(type="html")
+        else:
+            return table.make(type="gt")
 
     def coefplot(
         self,
