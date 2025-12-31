@@ -1,5 +1,5 @@
-import re
-from typing import TYPE_CHECKING, Any, Hashable, Optional
+from collections.abc import Hashable
+from typing import TYPE_CHECKING, Any, Optional
 
 import pandas as pd
 from formulaic.materializers.types import FactorValues
@@ -46,7 +46,7 @@ def factor_interaction(
         encoder_state: dict[str, Any],
         model_spec: "ModelSpec",
     ) -> FactorValues:
-        """Encoder callback that runs during materialization."""
+        """Run encoder callback during materialization."""
         return _encode_i(
             values=values,
             factor_name=factor_name,
@@ -153,7 +153,7 @@ def _encode_i(
         encoder_state["levels"] = contrasts_state.get("categories", levels_encoded)
 
     # --- No interaction: apply fixest naming and return ---
-    if var2 is None:
+    if var2 is None or var2_name is None:
         col_names = [f"{factor_name}::{level}" for level in levels_encoded]
         dummies.columns = col_names
         return FactorValues(
@@ -214,7 +214,7 @@ def _is_numeric(series: pd.Series) -> bool:
 
 
 def _apply_binning(series: pd.Series, bin: dict, state: dict) -> pd.Series:
-    """Apply binning: bin={'low': ['a','b'], 'high': ['c','d']}"""
+    """Apply binning: bin={'low': ['a','b'], 'high': ['c','d']}."""
     if "bin_mapping" not in state:
         mapping = {}
         for new_level, old_levels in bin.items():
