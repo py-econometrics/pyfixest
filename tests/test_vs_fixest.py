@@ -117,12 +117,19 @@ iv_fmls = [
 ]
 
 glm_fmls = [
+    # No fixed effects
     "Y ~ X1",
     "Y ~ X1 + X2",
     "Y ~ X1*X2",
     # "Y ~ X1 + C(f2)",
     # "Y ~ X1 + i(f1, ref = 1)",
     "Y ~ X1 + f1:X2",
+    # With fixed effects
+    "Y ~ X1 | f1",
+    "Y ~ X1 + X2 | f1",
+    "Y ~ X1 | f1 + f2",
+    "Y ~ X1 + X2 | f1 + f2",
+    "Y ~ X1*X2 | f1",
 ]
 
 
@@ -860,8 +867,8 @@ def test_glm_vs_fixest(N, seed, dropna, fml, inference, family):
         py_resid_working = fit_py._u_hat_working
         r_resid_working = stats.resid(fit_r, type="working")
         check_absolute_diff(
-            py_resid_working[0:5],
-            r_resid_working[0:5],
+            py_resid_working[10:15],
+            r_resid_working[10:15],
             1e-03,
             f"py_{family}_resid_working != r_{family}_resid_working for inference {inference}",
         )
@@ -870,8 +877,8 @@ def test_glm_vs_fixest(N, seed, dropna, fml, inference, family):
         py_resid_response = fit_py._u_hat_response
         r_resid_response = stats.resid(fit_r, type="response")
         check_absolute_diff(
-            py_resid_response[0:5],
-            r_resid_response[0:5],
+            py_resid_response[10:15],
+            r_resid_response[10:15],
             1e-04,
             f"py_{family}_resid_response != r_{family}_resid_response for inference {inference}",
         )

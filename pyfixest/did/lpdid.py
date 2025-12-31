@@ -284,7 +284,7 @@ def _lpdid_estimate(
 
             fit = cast(Feols, feols(fml=fml, data=data[sample_idx], vcov=vcov))
 
-            fit_tidy = fit.tidy().xs("treat_diff")
+            fit_tidy = cast(pd.Series, fit.tidy().xs("treat_diff"))
             fit_tidy["N"] = int(fit._N)
             fit_tidy.name = h  # type: ignore[union-attr]
             fit_all.append(fit_tidy)
@@ -299,7 +299,7 @@ def _lpdid_estimate(
 
             fit = cast(Feols, feols(fml=fml, data=data[sample_idx], vcov=vcov))
 
-            fit_tidy = fit.tidy().xs("treat_diff")
+            fit_tidy = cast(pd.Series, fit.tidy().xs("treat_diff"))
             fit_tidy["N"] = int(fit._N)
             fit_tidy.name = -h  # type: ignore[union-attr]
             fit_all.append(fit_tidy)
