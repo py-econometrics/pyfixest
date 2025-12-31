@@ -15,8 +15,12 @@ from pyfixest.estimation.formula.parse import Formula, _Pattern
 from pyfixest.utils.utils import capture_context
 
 
-def _factorize(series: pd.Series) -> np.ndarray:
-    return pd.factorize(series, use_na_sentinel=True)[0].astype("int32")
+def _factorize(series: pd.Series, encode_null: bool = False) -> np.ndarray:
+    factorized, _ = pd.factorize(series, use_na_sentinel=True)
+    if not encode_null:
+        # Keep nulls (otherwise they are encoded as -1 when use_na_sentinel=True)
+        factorized = np.where(factorized == -1, np.nan, factorized)
+    return factorized
 
 
 def _interact_fixed_effects(fixed_effects: str, data: pd.DataFrame) -> pd.DataFrame:
@@ -38,12 +42,8 @@ def _interact_fixed_effects(fixed_effects: str, data: pd.DataFrame) -> pd.DataFr
     return data.loc[:, [fe.replace("^", "_") for fe in fes]]
 
 
-def _encode_fixed_effects(
-    fixed_effects: str, data: pd.DataFrame, dropna: bool = True
-) -> pd.DataFrame:
+def _encode_fixed_effects(fixed_effects: str, data: pd.DataFrame) -> pd.DataFrame:
     data = _interact_fixed_effects(fixed_effects, data)
-    if dropna:
-        data.dropna(how="any", axis=0, inplace=True)
     return data.apply(_factorize, axis=0)
 
 
