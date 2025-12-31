@@ -285,9 +285,13 @@ class Feglm(Feols, ABC):
         self._scores_response = self._u_hat_response[:, None] * self._X
         self._scores_working = self._u_hat_working[:, None] * self._X
 
-        self._scores = self._get_score(y=self._Y.flatten(), X=self._X, mu=mu, eta=eta)
+        self._u_hat = (WZ_final - WX_final @ self._beta_hat).flatten()
+        self._Y = WZ_final
+        self._X = WX_final
+        self._Z = self._X
 
-        self._u_hat = self._u_hat_working
+        self._scores = self._u_hat[:, None] * self._X
+
         self._tZX = np.transpose(self._Z) @ self._X
         self._tZXinv = np.linalg.inv(self._tZX)
         self._Xbeta = eta
