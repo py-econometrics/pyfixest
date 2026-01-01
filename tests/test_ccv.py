@@ -2,8 +2,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from pyfixest.estimation.ccv import _compute_CCV
 from pyfixest.estimation import feols
+from pyfixest.estimation.ccv import _compute_CCV
 
 
 @pytest.fixture

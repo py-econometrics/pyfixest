@@ -1,15 +1,15 @@
 from pyfixest.estimation import literals
-from pyfixest.estimation.demean_ import (
-    demean,
-)
-from pyfixest.estimation.detect_singletons_ import (
-    detect_singletons,
-)
 from pyfixest.estimation.api import (
     feglm,
     feols,
     fepois,
     quantreg,
+)
+from pyfixest.estimation.demean_ import (
+    demean,
+)
+from pyfixest.estimation.detect_singletons_ import (
+    detect_singletons,
 )
 from pyfixest.estimation.fegaussian_ import Fegaussian
 from pyfixest.estimation.feiv_ import (
