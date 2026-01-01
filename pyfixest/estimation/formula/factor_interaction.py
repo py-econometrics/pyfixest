@@ -68,7 +68,7 @@ def factor_interaction(
     return FactorValues(
         wrapped_data,
         kind="categorical",
-        spans_intercept=True,  # Will be reduced during encoding
+        spans_intercept=var2 is None,
         encoder=encoder,
     )
 
@@ -131,14 +131,14 @@ def _encode_i(
 
     # Build contrasts: TreatmentContrasts with base (ref or UNSET) and drop
     contrasts = TreatmentContrasts(
-        base=ref if ref is not None else UNSET, drop=ref is not None
+        base=ref if ref is not None else UNSET, drop=reduced_rank or ref is not None
     )
 
     encoded = encode_contrasts(
         factor_series,
         contrasts=contrasts,
         levels=levels,
-        reduced_rank=False,  # We handle rank reduction via drop parameter
+        reduced_rank=ref is not None,
         output="pandas",
         _state=contrasts_state,
         _spec=model_spec,
@@ -242,7 +242,9 @@ def _factor_factor_interaction(
     levels2 = state.get("levels2")
 
     # Use encode_contrasts for var2
-    contrasts2 = TreatmentContrasts(base=ref2 if ref2 is not None else UNSET)
+    contrasts2 = TreatmentContrasts(
+        base=ref2 if ref2 is not None else UNSET, drop=ref2 is not None
+    )
 
     encoded2 = encode_contrasts(
         var2,
@@ -255,8 +257,6 @@ def _factor_factor_interaction(
     )
 
     dummies2 = encoded2.__wrapped__
-    if ref2 is not None:
-        dummies2.drop(ref2, axis=1, inplace=True)
     levels2_encoded = list(dummies2.columns)
 
     # Store levels2 in state for consistency
