@@ -214,14 +214,19 @@ def _is_numeric(series: pd.Series) -> bool:
 
 
 def _apply_binning(series: pd.Series, bin: dict, state: dict) -> pd.Series:
-    """Apply binning: bin={'low': ['a','b'], 'high': ['c','d']}."""
+    """
+    Apply binning: bin={'low': ['a','b'], 'high': ['c','d']}.
+
+    Values not in the mapping are kept unchanged (matches R fixest behavior).
+    """
     if "bin_mapping" not in state:
         mapping = {}
         for new_level, old_levels in bin.items():
             for old in old_levels:
                 mapping[old] = new_level
         state["bin_mapping"] = mapping
-    return series.map(state["bin_mapping"])
+    # Use replace() instead of map() to keep unmapped values unchanged
+    return series.replace(state["bin_mapping"])
 
 
 def _factor_factor_interaction(
