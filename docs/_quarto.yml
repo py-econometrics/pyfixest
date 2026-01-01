@@ -76,10 +76,10 @@ quartodoc:
       desc: |
         User facing estimation functions
       contents:
-        - estimation.estimation.feols
-        - estimation.estimation.fepois
-        - estimation.estimation.feglm
-        - estimation.estimation.quantreg
+        - estimation.api.feols
+        - estimation.api.fepois
+        - estimation.api.feglm
+        - estimation.api.quantreg
         - did.estimation.did2s
         - did.estimation.lpdid
         - did.estimation.event_study
