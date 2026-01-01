@@ -130,7 +130,9 @@ def _encode_i(
     contrasts_state = encoder_state.setdefault("_contrasts_state", {})
 
     # Build contrasts: TreatmentContrasts with base (ref or UNSET) and drop
-    contrasts = TreatmentContrasts(base=ref if ref is not None else UNSET)
+    contrasts = TreatmentContrasts(
+        base=ref if ref is not None else UNSET, drop=ref is not None
+    )
 
     encoded = encode_contrasts(
         factor_series,
@@ -144,8 +146,6 @@ def _encode_i(
 
     # Extract the underlying DataFrame and levels from state
     dummies = encoded.__wrapped__
-    if ref is not None:
-        dummies.drop(ref, axis=1, inplace=True)
     levels_encoded = list(dummies.columns)  # These are the levels that were kept
 
     # Store levels in our state for consistency across train/predict
