@@ -106,10 +106,21 @@ class Formula:
     @property
     def fml_first_stage(self) -> str | None:
         """
+        Return the first stage formula for IV regression.
+
+        Note: Fixed effects are NOT included in this formula. This is intentional
+        because this property is used by `model_matrix.py` to build model matrices
+        via formulaic, where fixed effects are handled separately (encoded as
+        integers and passed via a separate 'fe' key). The pyfixest `|` syntax for
+        fixed effects is not compatible with formulaic's formula parsing.
+
+        For contexts requiring the full formula with fixed effects (e.g., when
+        passing to `feols()`), fixed effects must be appended manually.
 
         Returns
         -------
         str | None
+            The first stage formula, or None if not an IV regression.
         """
         if self.endogenous is None or self.instruments is None:
             return None
@@ -121,10 +132,19 @@ class Formula:
     @property
     def fml_second_stage(self) -> str:
         """
+        Return the second stage formula for model matrix creation.
+
+        Note: Fixed effects are NOT included in this formula. This is intentional
+        because this property is used by `model_matrix.py` to build model matrices
+        via formulaic, where fixed effects are handled separately (encoded as
+        integers and passed via a separate 'fe' key, then absorbed via demeaning).
+        The pyfixest `|` syntax for fixed effects is not compatible with formulaic's
+        formula parsing.
 
         Returns
         -------
         str
+            The second stage formula.
         """
         independent = f"{self.independent}"
         if not self.intercept:
