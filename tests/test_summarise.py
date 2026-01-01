@@ -4,7 +4,8 @@ import statsmodels.formula.api as smf
 
 import pyfixest as pf
 from pyfixest.estimation import feols, fepois
-from pyfixest.report.summarize import _select_order_coefs, etable, summary
+from pyfixest.report.summarize import etable, summary
+from pyfixest.utils.dev_utils import _select_order_coefs
 from pyfixest.utils.utils import get_data
 
 
@@ -114,7 +115,6 @@ def test_summary():
     # API tests for new tex args
 
     etable([fit1, fit2], type="tex")
-    etable([fit1, fit2], type="tex", print_tex=True)
 
     etable([fit1, fit2], type="tex", notes="You can add notes here.")
     etable([fit1, fit2], type="md", notes="You can add notes here.")
@@ -129,7 +129,7 @@ def test_summary():
     etable([fit1, fit2], type="tex", model_heads=["Model 1", "Model 2"], head_order="d")
     etable([fit1, fit2], type="tex", model_heads=["Model 1", "Model 2"], head_order="h")
     etable([fit1, fit2], type="tex", model_heads=["Model 1", "Model 2"], head_order="")
-    etable([fit1, fit2], type="tex", filename="tests/texfiles/test.tex")
+    etable([fit1, fit2], type="tex", file_name="tests/texfiles/test.tex")
 
     summary(fit_qreg)
     etable(fit_qreg)

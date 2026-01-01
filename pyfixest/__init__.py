@@ -25,7 +25,6 @@ __all__ = [
     "get_ssc",
     "iplot",
     "lpdid",
-    "make_table",
     "panelview",
     "qplot",
     "quantreg",

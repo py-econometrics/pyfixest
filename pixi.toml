@@ -20,10 +20,12 @@ numba=">=0.58.0"
 seaborn=">=0.13.2"
 tabulate=">=0.9.0"
 tqdm=">=4.0.0"
-great_tables=">=0.10.0"
 numpy=">=1.25.2"
 narwhals=">=1.13.3"
 joblib=">=1.4.2,<2"
+
+[pypi-dependencies]
+maketables = ">=0.1.0"
 
 [feature.dev]
 platforms = ["linux-64", "osx-arm64", "osx-64"]

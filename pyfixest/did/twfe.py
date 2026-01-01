@@ -83,7 +83,7 @@ class TWFE(DID):
         """
         Variance-covariance matrix.
 
-        The vcov matrix is calculated via the [Feols(/reference/Feols.qmd) object.
+        The vcov matrix is calculated via the [Feols](/reference/estimation.feols_.Feols.qmd) object.
 
         Notes
         -----

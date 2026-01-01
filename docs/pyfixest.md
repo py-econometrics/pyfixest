@@ -16,6 +16,7 @@
 [![Citation](https://img.shields.io/badge/Cite%20as-PyFixest-blue)](https://github.com/py-econometrics/pyfixest?tab=readme-ov-file#how-to-cite)
 [![Documentation](https://img.shields.io/badge/Cite%20as-PyFixest-green)](https://py-econometrics.github.io/pyfixest/pyfixest.html)
 [![Function Reference](https://img.shields.io/badge/Cite%20as-PyFixest-yellow)](https://py-econometrics.github.io/pyfixest/reference/)
+[![DeepWiki](https://img.shields.io/badge/DeepWiki-pyfixest-blue)](https://deepwiki.com/py-econometrics/pyfixest)
 
 
 [pixi-badge]:https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/prefix-dev/pixi/main/assets/badge/v0.json&style=flat-square
