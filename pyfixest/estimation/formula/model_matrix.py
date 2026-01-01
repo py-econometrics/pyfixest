@@ -13,6 +13,7 @@ from pyfixest.estimation import detect_singletons
 from pyfixest.estimation.formula import FORMULAIC_FEATURE_FLAG
 from pyfixest.estimation.formula.factor_interaction import factor_interaction
 from pyfixest.estimation.formula.parse import Formula, _Pattern
+from pyfixest.estimation.formula.utils import log
 from pyfixest.utils.utils import capture_context
 
 
@@ -175,7 +176,11 @@ def get(
         ensure_full_rank=ensure_full_rank,
         na_action="drop",
         output="pandas",
-        context={"i": factor_interaction} | {**capture_context(context)},
+        context={
+            "log": log,  # custom log settings infinite to nan
+            "i": factor_interaction,  # fixest::i()-style syntax
+        }
+        | {**capture_context(context)},
     )
     fixed_effects = (
         model_matrix[_ModelMatrixKey.fixed_effects].astype("int32")
