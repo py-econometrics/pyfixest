@@ -1,3 +1,4 @@
+import re
 from collections.abc import Hashable
 from typing import TYPE_CHECKING, Any, Optional
 
@@ -198,9 +199,11 @@ def _encode_i(
             dummies,
             levels_encoded,
             var2_series,
+            ref,
             ref2,
             factor_name,
             var2_name,
+            reduced_rank,
             encoder_state,
             model_spec,
         )
@@ -233,9 +236,11 @@ def _factor_factor_interaction(
     dummies1: pd.DataFrame,
     levels1: list,
     var2: pd.Series,
+    ref: Optional[Hashable],
     ref2: Optional[Hashable],
     factor_name: str,
     var2_name: str,
+    reduced_rank: bool,
     state: dict,
     model_spec: "ModelSpec",
 ) -> FactorValues:
@@ -248,7 +253,7 @@ def _factor_factor_interaction(
 
     # Use encode_contrasts for var2
     contrasts2 = TreatmentContrasts(
-        base=ref2 if ref2 is not None else UNSET, drop=ref2 is not None
+        base=ref2 if ref2 is not None else UNSET, drop=reduced_rank or ref2 is not None
     )
 
     encoded2 = encode_contrasts(
@@ -278,7 +283,19 @@ def _factor_factor_interaction(
             result_cols[col_name] = dummies1[l1] * dummies2[l2]
             col_names.append(col_name)
 
+    # To match R's fixest behavior: when no explicit references are provided,
+    # drop the first combination (reference levels of both factors).
+    # This handles collinearity with the intercept in typical models.
+    # Note: reduced_rank is always False for factor-factor interactions,
+    # so we use ref/ref2 to determine when to drop.
+    if ref is None and ref2 is None and len(col_names) > 0:
+        # Remove first combination from result
+        first_col = col_names[0]
+        del result_cols[first_col]
+        col_names = col_names[1:]
+
     result = pd.DataFrame(result_cols, index=dummies1.index)
+
     return FactorValues(
         result,
         kind="categorical",
