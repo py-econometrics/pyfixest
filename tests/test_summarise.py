@@ -3,7 +3,7 @@ import pytest
 import statsmodels.formula.api as smf
 
 import pyfixest as pf
-from pyfixest.estimation.estimation import feols, fepois
+from pyfixest.estimation import feols, fepois
 from pyfixest.report.summarize import etable, summary
 from pyfixest.utils.dev_utils import _select_order_coefs
 from pyfixest.utils.utils import get_data

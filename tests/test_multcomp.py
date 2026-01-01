@@ -6,7 +6,7 @@ from rpy2.robjects import pandas2ri
 from rpy2.robjects.packages import importr
 
 import pyfixest as pf
-from pyfixest.estimation.estimation import feols
+from pyfixest.estimation import feols
 from pyfixest.estimation.multcomp import _get_rwolf_pval, bonferroni, rwolf
 from pyfixest.utils.check_r_install import check_r_install
 from pyfixest.utils.utils import get_data
