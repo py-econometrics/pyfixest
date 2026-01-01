@@ -22,7 +22,7 @@ def _factorize(series: pd.Series, encode_null: bool = False) -> np.ndarray:
     if factorize:
         factorized, _ = pd.factorize(series, use_na_sentinel=True)
     else:
-        factorized = series.values
+        factorized = series.to_numpy()
     if not encode_null and factorize:
         # Keep nulls (otherwise they are encoded as -1 when use_na_sentinel=True)
         factorized = np.where(factorized == -1, np.nan, factorized)
