@@ -8,7 +8,6 @@ from pyfixest.estimation.feiv_ import Feiv
 from pyfixest.estimation.feols_ import Feols
 from pyfixest.estimation.fepois_ import Fepois
 from pyfixest.estimation.FixestMulti_ import FixestMulti
-from warnings import warn
 
 ModelInputType = Union[
     FixestMulti, Feols, Fepois, Feiv, list[Union[Feols, Fepois, Feiv]]
@@ -47,11 +46,10 @@ def _relabel_expvar(
     str
         The relabeled variable
     """
-
     warnings.warn(
         "The function `_relabel_expvar` is deprecated, please rely on the `labels` and `cat_template` arguments of `pf.etable()` instead. ",
         DeprecationWarning,
-        stacklevel=2
+        stacklevel=2,
     )
 
     if not labels and cat_template != "" and ("C(" in varname or "[" in varname):
@@ -83,11 +81,10 @@ def _rename_categorical(
     str
         The renamed categorical variable.
     """
-
     warnings.warn(
         "The function `_relabel_expvar` is deprecated, please rely on the `labels` and `cat_template` arguments of `pf.etable()` instead. ",
         DeprecationWarning,
-        stacklevel=2
+        stacklevel=2,
     )
 
     # Here two patterns are used to extract the variable and level
@@ -149,12 +146,11 @@ def rename_categoricals(
     rename_categorical(["C(var)[T.1]", "C(var)[T.2]", "C(var2)[T.1]", "C(var2)[T.2]"])
     {'C(var)[T.1]': 'var::1', 'C(var)[T.2]': 'var::2', 'C(var2)[T.1]': 'var2::1', 'C(var2)[T.2]': 'var2::2'}
     """
-
     warnings.warn(
-        "The function `_relabel_expvar` is deprecated as we have adjusted the naming of variables interacted via the i() operator with pyfixest 0.50. " \
+        "The function `_relabel_expvar` is deprecated as we have adjusted the naming of variables interacted via the i() operator with pyfixest 0.50. "
         "For regression tables, please rely on the `labels` and `cat_template` arguments of `pf.etable()` instead. ",
         DeprecationWarning,
-        stacklevel=2
+        stacklevel=2,
     )
 
     return {
@@ -164,12 +160,11 @@ def rename_categoricals(
 
 
 def _rename_event_study_coefs(col_name: str):
-
     warnings.warn(
-        "The function `_relabel_expvar` is deprecated as we have adjusted the naming of variables interacted via the i() operator with pyfixest 0.50. " \
+        "The function `_relabel_expvar` is deprecated as we have adjusted the naming of variables interacted via the i() operator with pyfixest 0.50. "
         "For regression tables, please rely on the `labels` and `cat_template` arguments of `pf.etable()` instead. ",
         DeprecationWarning,
-        stacklevel=2
+        stacklevel=2,
     )
 
     pattern = r"C\(([^,]+)(?:,[^]]+)?\)\[T\.(-?\d+(?:\.\d+)?)\]"
@@ -209,10 +204,10 @@ def rename_event_study_coefs(coef_names_list: list):
         }
     """
     warnings.warn(
-        "The function `_relabel_expvar` is deprecated as we have adjusted the naming of variables interacted via the i() operator with pyfixest 0.50. " \
+        "The function `_relabel_expvar` is deprecated as we have adjusted the naming of variables interacted via the i() operator with pyfixest 0.50. "
         "For regression tables, please rely on the `labels` and `cat_template` arguments of `pf.etable()` instead. ",
         DeprecationWarning,
-        stacklevel=2
+        stacklevel=2,
     )
 
     return {col: _rename_event_study_coefs(col) for col in coef_names_list}
