@@ -18,8 +18,12 @@ from pyfixest.utils.utils import capture_context
 
 
 def _factorize(series: pd.Series, encode_null: bool = False) -> np.ndarray:
-    factorized, _ = pd.factorize(series, use_na_sentinel=True)
-    if not encode_null:
+    factorize: bool = not pd.api.types.is_numeric_dtype(series)
+    if factorize:
+        factorized, _ = pd.factorize(series, use_na_sentinel=True)
+    else:
+        factorized = series.values
+    if not encode_null and factorize:
         # Keep nulls (otherwise they are encoded as -1 when use_na_sentinel=True)
         factorized = np.where(factorized == -1, np.nan, factorized)
     return factorized
