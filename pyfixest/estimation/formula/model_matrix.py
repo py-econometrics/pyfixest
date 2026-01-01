@@ -187,6 +187,15 @@ def get(
         if formula.fixed_effects is not None
         else None
     )
+    if fixed_effects is not None:
+        # Intercept not meaningful in the presence of fixed effects
+        model_matrix[_ModelMatrixKey.main]["rhs"].drop(
+            "Intercept", axis=1, inplace=True, errors="ignore"
+        )
+        if formula.fml_first_stage is not None:
+            model_matrix[_ModelMatrixKey.instrumental_variable]["rhs"].drop(
+                "Intercept", axis=1, inplace=True, errors="ignore"
+            )
     if drop_singletons and fixed_effects is not None:
         is_singleton = detect_singletons(fixed_effects.values)
         if is_singleton.any():

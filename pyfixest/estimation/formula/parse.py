@@ -431,6 +431,5 @@ def parse(formula: str, intercept: bool = True, sort: bool = False) -> ParsedFor
         else None,
         endogenous=endogenous,
         instruments=instruments,
-        # Intercept is not meaningful in the presence of fixed effects
-        intercept=intercept and fixed_effects is None,
+        intercept=intercept,
     )
