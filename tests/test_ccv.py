@@ -3,7 +3,7 @@ import pandas as pd
 import pytest
 
 from pyfixest.estimation.ccv import _compute_CCV
-from pyfixest.estimation.estimation import feols
+from pyfixest.estimation import feols
 
 
 @pytest.fixture

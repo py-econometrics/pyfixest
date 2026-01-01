@@ -8,7 +8,7 @@ from rpy2.robjects import pandas2ri
 from rpy2.robjects.packages import importr
 
 import pyfixest as pf
-from pyfixest.estimation.estimation import feols
+from pyfixest.estimation import feols
 from pyfixest.utils.utils import ssc
 
 pandas2ri.activate()

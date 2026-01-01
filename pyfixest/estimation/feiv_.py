@@ -337,7 +337,7 @@ class Feiv(Feols):
 
             import numpy as np
             import pandas as pd
-            from pyfixest.estimation.estimation import feols
+            from pyfixest.estimation import feols
 
             # Set random seed for reproducibility
             np.random.seed(1)

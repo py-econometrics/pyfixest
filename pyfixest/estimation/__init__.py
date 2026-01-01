@@ -5,7 +5,7 @@ from pyfixest.estimation.demean_ import (
 from pyfixest.estimation.detect_singletons_ import (
     detect_singletons,
 )
-from pyfixest.estimation.estimation import (
+from pyfixest.estimation.api import (
     feglm,
     feols,
     fepois,
