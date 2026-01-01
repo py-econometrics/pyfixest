@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>estimation.estimation.feglm</title>
+<title>estimation.api.quantreg</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -227,7 +227,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/estimation.estimation.feols.html">Estimation Functions</a></li><li class="breadcrumb-item"><a href="../reference/estimation.estimation.feglm.html">estimation.estimation.feglm</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/estimation.api.feols.html">Estimation Functions</a></li><li class="breadcrumb-item"><a href="../reference/estimation.api.quantreg.html">estimation.api.quantreg</a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
     </div>
@@ -260,26 +260,26 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.estimation.feols.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.estimation.feols</span></a>
+  <a href="../reference/estimation.api.feols.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.api.feols</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.estimation.fepois.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.estimation.fepois</span></a>
+  <a href="../reference/estimation.api.fepois.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.api.fepois</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.estimation.feglm.html" class="sidebar-item-text sidebar-link active">
- <span class="menu-text">estimation.estimation.feglm</span></a>
+  <a href="../reference/estimation.api.feglm.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.api.feglm</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.estimation.quantreg.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.estimation.quantreg</span></a>
+  <a href="../reference/estimation.api.quantreg.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text">estimation.api.quantreg</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -464,9 +464,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <!-- main -->
 <main class="content" id="quarto-document-content">
 
-<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/estimation.estimation.feols.html">Estimation Functions</a></li><li class="breadcrumb-item"><a href="../reference/estimation.estimation.feglm.html">estimation.estimation.feglm</a></li></ol></nav>
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/estimation.api.feols.html">Estimation Functions</a></li><li class="breadcrumb-item"><a href="../reference/estimation.api.quantreg.html">estimation.api.quantreg</a></li></ol></nav>
 <div class="quarto-title">
-<h1 class="title">estimation.estimation.feglm</h1>
+<h1 class="title">estimation.api.quantreg</h1>
 </div>
 
 
@@ -483,38 +483,55 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>estimation.estimation.feglm(</span>
+<p><code>estimation.api.quantreg</code></p>
+<section id="functions" class="level2">
+<h2 class="anchored" data-anchor-id="functions">Functions</h2>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><a href="#pyfixest.estimation.api.quantreg.quantreg">quantreg</a></td>
+<td>Fit a quantile regression model using the interior point algorithm from Portnoy and Koenker (1997).</td>
+</tr>
+</tbody>
+</table>
+<section id="pyfixest.estimation.api.quantreg.quantreg" class="level3">
+<h3 class="anchored" data-anchor-id="pyfixest.estimation.api.quantreg.quantreg">quantreg</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>estimation.api.quantreg.quantreg(</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    fml,</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    data,</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    family,</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    vcov_kwargs<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    ssc<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    fixef_rm<span class="op">=</span><span class="st">'singleton'</span>,</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    fixef_tol<span class="op">=</span><span class="fl">1e-06</span>,</span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    fixef_maxiter<span class="op">=</span><span class="dv">100000</span>,</span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    iwls_tol<span class="op">=</span><span class="fl">1e-08</span>,</span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    iwls_maxiter<span class="op">=</span><span class="dv">25</span>,</span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    collin_tol<span class="op">=</span><span class="fl">1e-09</span>,</span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    separation_check<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    solver<span class="op">=</span><span class="st">'scipy.linalg.solve'</span>,</span>
-<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    drop_intercept<span class="op">=</span><span class="va">False</span>,</span>
-<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    copy_data<span class="op">=</span><span class="va">True</span>,</span>
-<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    store_data<span class="op">=</span><span class="va">True</span>,</span>
-<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    lean<span class="op">=</span><span class="va">False</span>,</span>
-<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    context<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>    split<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>    fsplit<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>Estimate GLM regression models (currently without fixed effects, this is work in progress). This feature is currently experimental, full support will be released with pyfixest 0.29.</p>
-<section id="parameters" class="level2 doc-section doc-section-parameters">
-<h2 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters">Parameters</h2>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span><span class="st">'nid'</span>,</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    quantile<span class="op">=</span><span class="fl">0.5</span>,</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    method<span class="op">=</span><span class="st">'fn'</span>,</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    multi_method<span class="op">=</span><span class="st">'cfm1'</span>,</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    tol<span class="op">=</span><span class="fl">1e-06</span>,</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    maxiter<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    ssc<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    collin_tol<span class="op">=</span><span class="fl">1e-09</span>,</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    separation_check<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    drop_intercept<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    copy_data<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    store_data<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    lean<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    context<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    split<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    fsplit<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    seed<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Fit a quantile regression model using the interior point algorithm from Portnoy and Koenker (1997). Note that the interior point algorithm assumes independent observations.</p>
+<section id="parameters" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters">Parameters</h4>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 3%">
-<col style="width: 7%">
-<col style="width: 85%">
-<col style="width: 4%">
+<col style="width: 2%">
+<col style="width: 6%">
+<col style="width: 89%">
+<col style="width: 1%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -528,7 +545,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tr class="odd">
 <td>fml</td>
 <td>str</td>
-<td>A two-sided formula string using fixest formula syntax. Syntax: “Y ~ X1 + X2 | FE1 + FE2”. “|” separates left-hand side and fixed effects. Special syntax includes: - Stepwise regressions (sw, sw0) - Cumulative stepwise regression (csw, csw0) - Multiple dependent variables (Y1 + Y2 ~ X) - Interaction of variables (i(X1,X2)) - Interacted fixed effects (fe1^fe2) Compatible with formula parsing via the formulaic module.</td>
+<td>A two-sided formula string using fixest formula syntax. In contrast to <code>feols()</code> and <code>feglm()</code>, no fixed effects formula syntax is supported.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
@@ -538,58 +555,46 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td><em>required</em></td>
 </tr>
 <tr class="odd">
-<td>family</td>
-<td>str</td>
-<td>The family of the GLM model. Options include “gaussian”, “logit” and “probit”.</td>
-<td><em>required</em></td>
+<td>quantile</td>
+<td>float</td>
+<td>The quantile to estimate. Must be between 0 and 1.</td>
+<td><code>0.5</code></td>
+</tr>
+<tr class="even">
+<td>method</td>
+<td>QuantregMethodOptions</td>
+<td>The method to use for the quantile regression. Currently, only “fn” is supported. In the future, will be either “fn” or “pfn”. “fn” implements the Frisch-Newton interior point algorithm described in Portnoy and Koenker (1997). The “pfn” method implements a variant of the algorithm proposed by Portnoy and Koenker (1997) including preprocessing steps, which a) can speed up the algorithm if N is very large but b) assumes independent observations. For details, you can either take a look at the Portnoy and Koenker paper, or “Fast Algorithms for the Quantile Regression Process” by Chernozhukov, Fernández-Val, and Melly (2019).</td>
+<td><code>'fn'</code></td>
+</tr>
+<tr class="odd">
+<td>multi_method</td>
+<td>QuantregMultiOptions</td>
+<td>Controls the algorithm for running the quantile regression process. Only relevant if more than one quantile regression is fit in one <code>quantreg</code> call. Options are ‘cmf1’, which is the default and implements algorithm 2 from Chernozhukov et al, ‘cmf2’, which implements their algorithm 3, and ‘none’, which just loops over separate model calls.</td>
+<td><code>'cfm1'</code></td>
+</tr>
+<tr class="even">
+<td>tol</td>
+<td>float</td>
+<td>The tolerance for the algorithm. Defaults to 1e-06. As in R’s quantreg package, the algorithm stops when the relative change in the duality gap is less than tol.</td>
+<td><code>1e-06</code></td>
+</tr>
+<tr class="odd">
+<td>maxiter</td>
+<td>int</td>
+<td>The maximum number of iterations. If None, maxiter = the number of observations in the model (as in R’s quantreg package via nit(3) = n).</td>
+<td><code>None</code></td>
 </tr>
 <tr class="even">
 <td>vcov</td>
 <td>Union[VcovTypeOptions, dict[str, str]]</td>
-<td>Type of variance-covariance matrix for inference. Options include “iid”, “hetero”, “HC1”, “HC2”, “HC3”, “NW” for Newey-West HAC standard errors, “DK” for Driscoll-Kraay HAC standard errors, or a dictionary for CRV1/CRV3 inference. Note that NW and DK require to pass additional keyword arguments via the <code>vcov_kwargs</code> argument. For time-series HAC, you need to pass the ‘time_id’ column. For panel-HAC, you need to add pass both ‘time_id’ and ‘panel_id’. See <code>vcov_kwargs</code> for details.</td>
-<td><code>None</code></td>
+<td>Type of variance-covariance matrix for inference. Currently supported are “iid”, “nid”, and cluster robust errors, “iid” by default. All of “iid”, “hetero”and “cluster” robust error are based on a kernel-based estimator as in Powell (1991). The “nid” method implements the robust sandwich estimator proposed in Hendricks and Koenker (1993). Any of “HC1 / HC2 / HC3 also works and is equivalent to”hetero”. Cluster robust inference following Parente and Santos Silva (2016) can be specified via a dictionary with the keys “type” and “cluster”. Only one-way clustering is supported.</td>
+<td><code>'nid'</code></td>
 </tr>
 <tr class="odd">
-<td>vcov_kwargs</td>
-<td>Optional[dict[str, any]]</td>
-<td>Additional keyword arguments to pass to the vcov function. These keywoards include “lag” for the number of lag to use in the Newey-West (NW) and Driscoll-Kraay (DK) HAC standard errors. “time_id” for the time ID used for NW and DK standard errors, and “panel_id” for the panel identifier used for NW and DK standard errors. Currently, the the time difference between consecutive time periods is always treated as 1. More flexible time-step selection is work in progress.</td>
-<td><code>None</code></td>
-</tr>
-<tr class="even">
 <td>ssc</td>
-<td>str</td>
-<td>A ssc object specifying the small sample correction for inference.</td>
+<td>dict[str, Union[str, bool]]</td>
+<td>A dictionary specifying the small sample correction for inference. If None, uses default settings from <code>ssc_func()</code>. Note that by default, R’s quantreg and Stata’s qreg2 do not use small sample corrections. To match their behavior, set <code>ssc = pf.ssc(adj = False, cluster_adj = False)</code>.</td>
 <td><code>None</code></td>
-</tr>
-<tr class="odd">
-<td>fixef_rm</td>
-<td>FixedRmOptions</td>
-<td>Specifies whether to drop singleton fixed effects. Can be equal to “singleton” (default), or “none”. “singletons” will drop singleton fixed effects. This will not impact point estimates but it will impact standard errors.</td>
-<td><code>'singleton'</code></td>
-</tr>
-<tr class="even">
-<td>fixef_tol</td>
-<td>float</td>
-<td>Tolerance for the fixed effects demeaning algorithm. Defaults to 1e-06. Currently does not do anything, as fixed effects are not supported for GLMs.</td>
-<td><code>1e-06</code></td>
-</tr>
-<tr class="odd">
-<td>fixef_maxiter</td>
-<td>int</td>
-<td>Maximum iterations for the demeaning algorithm. Currently does not do anything, as fixed effects are not supported for GLMs.</td>
-<td><code>100000</code></td>
-</tr>
-<tr class="even">
-<td>iwls_tol</td>
-<td>Optional[float]</td>
-<td>Tolerance for IWLS convergence, by default 1e-08.</td>
-<td><code>1e-08</code></td>
-</tr>
-<tr class="odd">
-<td>iwls_maxiter</td>
-<td>Optional[float]</td>
-<td>Maximum number of iterations for IWLS convergence, by default 25.</td>
-<td><code>25</code></td>
 </tr>
 <tr class="even">
 <td>collin_tol</td>
@@ -599,68 +604,68 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tr>
 <tr class="odd">
 <td>separation_check</td>
-<td>Optional[list[str]]</td>
-<td>Methods to identify and drop separated observations. Either “fe” or “ir”. Executes “fe” by default (when None).</td>
+<td>list[str]</td>
+<td>Methods to identify and drop separated observations. Not used in quantile regression.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="even">
-<td>solver</td>
-<td>SolverOptions, optional.</td>
-<td>The solver to use for the regression. Can be “np.linalg.lstsq”, “np.linalg.solve”, “scipy.linalg.solve”, “scipy.sparse.linalg.lsqr” and “jax”. Defaults to “scipy.linalg.solve”.</td>
-<td><code>'scipy.linalg.solve'</code></td>
-</tr>
-<tr class="odd">
 <td>drop_intercept</td>
 <td>bool</td>
 <td>Whether to drop the intercept from the model, by default False.</td>
 <td><code>False</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>copy_data</td>
 <td>bool</td>
-<td>Whether to copy the data before estimation, by default True. If set to False, the data is not copied, which can save memory but may lead to unintended changes in the input data outside of <code>fepois</code>. For example, the input data set is re-index within the function. As far as I know, the only other relevant case is when using interacted fixed effects, in which case you’ll find a column with interacted fixed effects in the data set.</td>
+<td>Whether to copy the data before estimation, by default True. If set to False, the data is not copied, which can save memory but may lead to unintended changes in the input data outside of <code>quantreg</code>.</td>
+<td><code>True</code></td>
+</tr>
+<tr class="even">
+<td>store_data</td>
+<td>bool</td>
+<td>Whether to store the data in the model object, by default True. If set to False, the data is not stored in the model object, which can improve performance and save memory. However, it will no longer be possible to access the data via the <code>data</code> attribute of the model object.</td>
 <td><code>True</code></td>
 </tr>
 <tr class="odd">
-<td>store_data</td>
-<td>bool</td>
-<td>Whether to store the data in the model object, by default True. If set to False, the data is not stored in the model object, which can improve performance and save memory. However, it will no longer be possible to access the data via the <code>data</code> attribute of the model object. This has impact on post-estimation capabilities that rely on the data, e.g.&nbsp;<code>predict()</code> or <code>vcov()</code>.</td>
-<td><code>True</code></td>
-</tr>
-<tr class="even">
 <td>lean</td>
 <td>bool</td>
 <td>False by default. If True, then all large objects are removed from the returned result: this will save memory but will block the possibility to use many methods. It is recommended to use the argument vcov to obtain the appropriate standard-errors at estimation time, since obtaining different SEs won’t be possible afterwards.</td>
 <td><code>False</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>context</td>
 <td>int or Mapping[str, Any]</td>
 <td>A dictionary containing additional context variables to be used by formulaic during the creation of the model matrix. This can include custom factorization functions, transformations, or any other variables that need to be available in the formula environment.</td>
 <td><code>None</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>split</td>
-<td>Optional[str]</td>
+<td>str</td>
 <td>A character string, i.e.&nbsp;‘split = var’. If provided, the sample is split according to the variable and one estimation is performed for each value of that variable. If you also want to include the estimation for the full sample, use the argument fsplit instead.</td>
 <td><code>None</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>fsplit</td>
-<td>Optional[str]</td>
+<td>str</td>
 <td>This argument is the same as split but also includes the full sample as the first estimation.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="odd">
+<td>seed</td>
+<td>Optional[int]</td>
+<td>A random seed for reproducibility. If None, no seed is set. Only relevant for the “pfn” method. The “fn” method is deterministic and does not require a seed.</td>
 <td><code>None</code></td>
 </tr>
 </tbody>
 </table>
 </section>
-<section id="returns" class="level2 doc-section doc-section-returns">
-<h2 class="doc-section doc-section-returns anchored" data-anchor-id="returns">Returns</h2>
+<section id="returns" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns">Returns</h4>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 6%">
-<col style="width: 6%">
-<col style="width: 87%">
+<col style="width: 7%">
+<col style="width: 7%">
+<col style="width: 85%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -673,30 +678,26 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tr class="odd">
 <td></td>
 <td>object</td>
-<td>An instance of the <code>Fepois</code> class or an instance of class <code>FixestMulti</code> for multiple models specified via <code>fml</code>.</td>
+<td>An instance of the Quantreg class or FixestMulti class for multiple models specified via <code>fml</code>.</td>
 </tr>
 </tbody>
 </table>
 </section>
-<section id="examples" class="level2 doc-section doc-section-examples">
-<h2 class="doc-section doc-section-examples anchored" data-anchor-id="examples">Examples</h2>
-<p>The <code>fepois()</code> function can be used to estimate a simple Poisson regression model with fixed effects. The following example regresses <code>Y</code> on <code>X1</code> and <code>X2</code> with fixed effects for <code>f1</code> and <code>f2</code>: fixed effects are specified after the <code>|</code> symbol.</p>
-<div id="92d30458" class="cell" data-execution_count="1">
+<section id="examples" class="level4 doc-section doc-section-examples">
+<h4 class="doc-section doc-section-examples anchored" data-anchor-id="examples">Examples</h4>
+<p>The following example regresses <code>Y</code> on <code>X1</code> and <code>X2</code> at the median (0.5 quantile):</p>
+<div id="88db58f6" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> pf.get_data()</span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>data[<span class="st">"Y"</span>] <span class="op">=</span> np.where(data[<span class="st">"Y"</span>] <span class="op">&gt;</span> <span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">0</span>)</span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>data[<span class="st">"f1"</span>] <span class="op">=</span> np.where(data[<span class="st">"f1"</span>] <span class="op">&gt;</span> data[<span class="st">"f1"</span>].median(), <span class="st">"group1"</span>, <span class="st">"group2"</span>)</span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>fit_probit <span class="op">=</span> pf.feglm(<span class="st">"Y ~ X1*f1"</span>, data, family <span class="op">=</span> <span class="st">"probit"</span>)</span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>fit_logit <span class="op">=</span> pf.feglm(<span class="st">"Y ~ X1*f1"</span>, data, family <span class="op">=</span> <span class="st">"logit"</span>)</span>
-<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>fit_gaussian <span class="op">=</span> pf.feglm(<span class="st">"Y ~ X1*f1"</span>, data, family <span class="op">=</span> <span class="st">"gaussian"</span>)</span>
-<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>pf.etable([fit_probit, fit_logit, fit_gaussian])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> pf.get_data()</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.quantreg(<span class="st">"Y ~ X1 + X2"</span>, data, quantile<span class="op">=</span><span class="fl">0.5</span>)</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>fit.summary()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 
-            <div id="Y7E4tx"></div>
+            <div id="NILIoC"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -720,9 +721,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("Y7E4tx").appendChild(div);
+                        document.getElementById("NILIoC").appendChild(div);
                     };
-                    var e = document.getElementById("Y7E4tx");
+                    var e = document.getElementById("NILIoC");
                     e.appendChild(script);
                 })()
             </script>
@@ -730,7 +731,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <div class="cell-output cell-output-display">
 
-            <div id="yGaDrd"></div>
+            <div id="bFe9es"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -754,305 +755,43 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("yGaDrd").appendChild(div);
+                        document.getElementById("bFe9es").appendChild(div);
                     };
-                    var e = document.getElementById("yGaDrd");
+                    var e = document.getElementById("bFe9es");
                     e.appendChild(script);
                 })()
             </script>
             
 </div>
-<div class="cell-output cell-output-display" data-execution_count="1">
-<div id="bhlumfpfzw" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
-<style>
-#bhlumfpfzw table {
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
-          -webkit-font-smoothing: antialiased;
-          -moz-osx-font-smoothing: grayscale;
-        }
+<div class="cell-output cell-output-stderr">
+<pre><code>/home/runner/work/pyfixest/pyfixest/pyfixest/estimation/quantreg/quantreg_.py:77: FutureWarning: 
+           The Quantile Regression implementation is experimental and may change in future releases.
+           But mostly, we expect the API to remain unchanged.
+           
+  warnings.warn(</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>###
 
-#bhlumfpfzw thead, tbody, tfoot, tr, td, th { border-style: none; }
- tr { background-color: transparent; }
-#bhlumfpfzw p { margin: 0; padding: 0; }
- #bhlumfpfzw .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: solid; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
- #bhlumfpfzw .gt_caption { padding-top: 4px; padding-bottom: 4px; }
- #bhlumfpfzw .gt_title { color: #333333; font-size: 16px; font-weight: initial; padding-top: 6px; padding-bottom: 6px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
- #bhlumfpfzw .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 5px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
- #bhlumfpfzw .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
- #bhlumfpfzw .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
- #bhlumfpfzw .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
- #bhlumfpfzw .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 2px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
- #bhlumfpfzw .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
- #bhlumfpfzw .gt_column_spanner_outer:first-child { padding-left: 0; }
- #bhlumfpfzw .gt_column_spanner_outer:last-child { padding-right: 0; }
- #bhlumfpfzw .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: bottom; padding-top: 2px; padding-bottom: 2px; overflow-x: hidden; display: inline-block; width: 100%; }
- #bhlumfpfzw .gt_spanner_row { border-bottom-style: hidden; }
- #bhlumfpfzw .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
- #bhlumfpfzw .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: middle; }
- #bhlumfpfzw .gt_from_md> :first-child { margin-top: 0; }
- #bhlumfpfzw .gt_from_md> :last-child { margin-bottom: 0; }
- #bhlumfpfzw .gt_row { padding-top: 2px; padding-bottom: 2px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
- #bhlumfpfzw .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
- #bhlumfpfzw .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
- #bhlumfpfzw .gt_row_group_first td { border-top-width: 0.25px; }
- #bhlumfpfzw .gt_row_group_first th { border-top-width: 0.25px; }
- #bhlumfpfzw .gt_striped { color: #333333; background-color: #F4F4F4; }
- #bhlumfpfzw .gt_table_body { border-top-style: solid; border-top-width: 0px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
- #bhlumfpfzw .gt_grand_summary_row { color: #333333; background-color: #FFFFFF; text-transform: inherit; padding-top: 8px; padding-bottom: 8px; padding-left: 5px; padding-right: 5px; }
- #bhlumfpfzw .gt_first_grand_summary_row_bottom { border-top-style: double; border-top-width: 6px; border-top-color: #D3D3D3; }
- #bhlumfpfzw .gt_last_grand_summary_row_top { border-bottom-style: double; border-bottom-width: 6px; border-bottom-color: #D3D3D3; }
- #bhlumfpfzw .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
- #bhlumfpfzw .gt_sourcenote { font-size: 10px; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
- #bhlumfpfzw .gt_left { text-align: left; }
- #bhlumfpfzw .gt_center { text-align: center; }
- #bhlumfpfzw .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
- #bhlumfpfzw .gt_font_normal { font-weight: normal; }
- #bhlumfpfzw .gt_font_bold { font-weight: bold; }
- #bhlumfpfzw .gt_font_italic { font-style: italic; }
- #bhlumfpfzw .gt_super { font-size: 65%; }
- #bhlumfpfzw .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
- #bhlumfpfzw .gt_asterisk { font-size: 100%; vertical-align: 0; }
- 
-</style>
+Estimation:  quantreg: q = 0.5
+Dep. var.: Y, Fixed effects: 0
+Inference:  nid
+Observations:  998
 
-<table class="gt_table caption-top table table-sm table-striped small" data-quarto-bootstrap="false">
-<colgroup>
-<col style="width: 25%">
-<col style="width: 25%">
-<col style="width: 25%">
-<col style="width: 25%">
-</colgroup>
-<thead>
-<tr class="gt_col_headings gt_spanner_row header">
-<th rowspan="2" class="gt_col_heading gt_columns_bottom_border gt_left" data-quarto-table-cell-role="th" scope="col"></th>
-<th colspan="3" id="Y" class="gt_center gt_columns_top_border gt_column_spanner_outer" data-quarto-table-cell-role="th" scope="colgroup"><span class="gt_column_spanner">Y</span></th>
-</tr>
-<tr class="gt_col_headings even">
-<th id="0" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(1)</th>
-<th id="1" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(2)</th>
-<th id="2" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(3)</th>
-</tr>
-</thead>
-<tbody class="gt_table_body">
-<tr class="gt_group_heading_row odd">
-<th colspan="4" class="gt_group_heading" data-quarto-table-cell-role="th">coef</th>
-</tr>
-<tr class="even">
-<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">X1</th>
-<td class="gt_row gt_center">-0.466***<br>
-(0.073)</td>
-<td class="gt_row gt_center">-0.752***<br>
-(0.119)</td>
-<td class="gt_row gt_center">-0.179**<br>
-(0.056)</td>
-</tr>
-<tr class="odd">
-<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">f1=group2</th>
-<td class="gt_row gt_center">-0.118<br>
-(0.133)</td>
-<td class="gt_row gt_center">-0.19<br>
-(0.216)</td>
-<td class="gt_row gt_center">-0.044<br>
-(0.104)</td>
-</tr>
-<tr class="even">
-<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">X1 × f1=group2</th>
-<td class="gt_row gt_center">0.035<br>
-(0.102)</td>
-<td class="gt_row gt_center">0.057<br>
-(0.168)</td>
-<td class="gt_row gt_center">0.014<br>
-(0.079)</td>
-</tr>
-<tr class="odd">
-<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">Intercept</th>
-<td class="gt_row gt_center">0.449***<br>
-(0.096)</td>
-<td class="gt_row gt_center">0.724***<br>
-(0.156)</td>
-<td class="gt_row gt_center">0.673***<br>
-(0.074)</td>
-</tr>
-<tr class="gt_group_heading_row even">
-<th colspan="4" class="gt_group_heading" data-quarto-table-cell-role="th">stats</th>
-</tr>
-<tr class="odd">
-<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">Observations</th>
-<td class="gt_row gt_center">999</td>
-<td class="gt_row gt_center">999</td>
-<td class="gt_row gt_center">999</td>
-</tr>
-<tr class="even">
-<th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">R<sup>2</sup></th>
-<td class="gt_row gt_center">-</td>
-<td class="gt_row gt_center">-</td>
-<td class="gt_row gt_center">-</td>
-</tr>
-</tbody><tfoot class="gt_sourcenotes">
-<tr class="odd">
-<td colspan="4" class="gt_sourcenote">Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001. Format of coefficient cell: Coefficient (Std. Error)</td>
-</tr>
-</tfoot>
-
-</table>
+| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5% |   97.5% |
+|:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
+| Intercept     |      0.998 |        0.172 |     5.800 |      0.000 |  0.660 |   1.335 |
+| X1            |     -1.071 |        0.122 |    -8.776 |      0.000 | -1.310 |  -0.831 |
+| X2            |     -0.182 |        0.032 |    -5.713 |      0.000 | -0.245 |  -0.120 |
+---
+</code></pre>
+</div>
+</div>
+<p>For details around inference, estimation techniques, (fast) fitting and visualizing the full quantile regression process, please take a look at the dedicated <a href="https://py-econometrics.github.io/pyfixest/quantile-regression.html">vignette</a>.</p>
 
 
-</div>
-</div>
-</div>
-<p><code>PyFixest</code> integrates with the <a href="https://marginaleffects.com/bonus/python.html">marginaleffects</a> package. For example, to compute average marginal effects for the probit model above, you can use the following code:</p>
-<div id="2cdcf97a" class="cell" data-execution_count="2">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># we load polars as marginaleffects outputs pl.DataFrame's</span></span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> polars <span class="im">as</span> pl</span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> marginaleffects <span class="im">import</span> avg_slopes</span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>results <span class="op">=</span> [avg_slopes(model, variables  <span class="op">=</span> <span class="st">"X1"</span>) <span class="cf">for</span> model <span class="kw">in</span> [fit_probit, fit_logit, fit_gaussian]]</span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>pl.concat([r.to_polars() <span class="cf">for</span> r <span class="kw">in</span> results])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display" data-execution_count="2">
-<div><style>
-.dataframe > thead > tr,
-.dataframe > tbody > tr {
-  text-align: right;
-  white-space: pre-wrap;
-}
-</style>
-<small>shape: (3, 9)</small>
-<table class="dataframe caption-top table table-sm table-striped small" data-border="1">
-<thead>
-<tr class="header">
-<th data-quarto-table-cell-role="th">term</th>
-<th data-quarto-table-cell-role="th">contrast</th>
-<th data-quarto-table-cell-role="th">estimate</th>
-<th data-quarto-table-cell-role="th">std_error</th>
-<th data-quarto-table-cell-role="th">statistic</th>
-<th data-quarto-table-cell-role="th">p_value</th>
-<th data-quarto-table-cell-role="th">s_value</th>
-<th data-quarto-table-cell-role="th">conf_low</th>
-<th data-quarto-table-cell-role="th">conf_high</th>
-</tr>
-<tr class="even">
-<td>str</td>
-<td>str</td>
-<td>f64</td>
-<td>f64</td>
-<td>f64</td>
-<td>f64</td>
-<td>f64</td>
-<td>f64</td>
-<td>f64</td>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>"X1"</td>
-<td>"dY/dX"</td>
-<td>-0.448614</td>
-<td>0.051086</td>
-<td>-8.781558</td>
-<td>0.0</td>
-<td>inf</td>
-<td>-0.54874</td>
-<td>-0.348487</td>
-</tr>
-<tr class="even">
-<td>"X1"</td>
-<td>"dY/dX"</td>
-<td>-0.722455</td>
-<td>0.083797</td>
-<td>-8.621437</td>
-<td>0.0</td>
-<td>inf</td>
-<td>-0.886695</td>
-<td>-0.558215</td>
-</tr>
-<tr class="odd">
-<td>"X1"</td>
-<td>"dY/dX"</td>
-<td>-0.172566</td>
-<td>0.039246</td>
-<td>-4.397038</td>
-<td>0.000011</td>
-<td>16.475574</td>
-<td>-0.249487</td>
-<td>-0.095646</td>
-</tr>
-</tbody>
-</table>
-</div>
-</div>
-</div>
-<p>We can also compute marginal effects by group (group average marginal effects):</p>
-<div id="8ac2b98f" class="cell" data-execution_count="3">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>avg_slopes(fit_probit, variables  <span class="op">=</span> <span class="st">"X1"</span>, by <span class="op">=</span> <span class="st">"f1"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display" data-execution_count="3">
-<div><style>
-.dataframe > thead > tr,
-.dataframe > tbody > tr {
-  text-align: right;
-  white-space: pre-wrap;
-}
-</style>
-<small>shape: (2, 10)</small>
-<table class="dataframe caption-top table table-sm table-striped small" data-border="1">
-<thead>
-<tr class="header">
-<th data-quarto-table-cell-role="th">f1</th>
-<th data-quarto-table-cell-role="th">term</th>
-<th data-quarto-table-cell-role="th">contrast</th>
-<th data-quarto-table-cell-role="th">estimate</th>
-<th data-quarto-table-cell-role="th">std_error</th>
-<th data-quarto-table-cell-role="th">statistic</th>
-<th data-quarto-table-cell-role="th">p_value</th>
-<th data-quarto-table-cell-role="th">s_value</th>
-<th data-quarto-table-cell-role="th">conf_low</th>
-<th data-quarto-table-cell-role="th">conf_high</th>
-</tr>
-<tr class="even">
-<td>enum</td>
-<td>str</td>
-<td>str</td>
-<td>f64</td>
-<td>f64</td>
-<td>f64</td>
-<td>f64</td>
-<td>f64</td>
-<td>f64</td>
-<td>f64</td>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>"group1"</td>
-<td>"X1"</td>
-<td>"dY/dX"</td>
-<td>-0.466327</td>
-<td>0.072613</td>
-<td>-6.422116</td>
-<td>1.3439e-10</td>
-<td>32.792824</td>
-<td>-0.608646</td>
-<td>-0.324009</td>
-</tr>
-<tr class="even">
-<td>"group2"</td>
-<td>"X1"</td>
-<td>"dY/dX"</td>
-<td>-0.431424</td>
-<td>0.071948</td>
-<td>-5.996355</td>
-<td>2.0180e-9</td>
-<td>28.884457</td>
-<td>-0.572439</td>
-<td>-0.290409</td>
-</tr>
-</tbody>
-</table>
-</div>
-</div>
-</div>
-<p>We find homogeneous effects by “f1” in the probit model.</p>
-<p>For more examples of other function arguments, please take a look at the documentation of the <a href="https://py-econometrics.github.io/pyfixest/reference/estimation.estimation.feols.html#pyfixest.estimation.estimation.feols">feols()</a> function.</p>
-
-
+</section>
+</section>
 </section>
 
 </main> <!-- /main -->
