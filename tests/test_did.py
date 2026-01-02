@@ -38,7 +38,7 @@ def data():
     return df_het
 
 
-@pytest.mark.against_r_extended
+@pytest.mark.against_r_core
 def test_event_study(data):
     """Test the event_study() function."""
     fit_did2s = event_study(
@@ -79,7 +79,7 @@ def test_event_study(data):
     np.testing.assert_allclose(fit_did2s.se(), float(r_df[2]), atol=1e-05, rtol=1e-05)
 
 
-@pytest.mark.against_r_extended
+@pytest.mark.against_r_core
 @pytest.mark.parametrize("weights", [None, "weights"])
 def test_did2s(data, weights):
     """Test the did2s() function."""
