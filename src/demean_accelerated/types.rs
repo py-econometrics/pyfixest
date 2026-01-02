@@ -343,9 +343,6 @@ impl ObservationWeights {
 ///
 /// // Compute group means: coef[g] = coef_sums[g] / group_weight[g]
 /// // ... (done in solver)
-///
-/// // Gather coefficients back and subtract from input
-/// ctx.gather_and_subtract(&coef, &input, &mut output);
 /// ```
 pub struct DemeanContext {
     /// Fixed effects index (observation → group mapping).
@@ -470,37 +467,6 @@ impl DemeanContext {
     // -------------------------------------------------------------------------
     // Gather operations (coefficient space → observation space)
     // -------------------------------------------------------------------------
-
-    /// Gather coefficients to observation space and subtract from input.
-    ///
-    /// For each observation, looks up its coefficient for each FE and subtracts:
-    ///
-    /// ```text
-    /// output[i] = input[i] - Σ coef[coef_start[fe] + group_id[fe, i]]
-    ///                        for all fe
-    /// ```
-    ///
-    /// # Arguments
-    ///
-    /// * `coef` - Coefficients in coefficient space (length: `n_coef`)
-    /// * `input` - Input values (length: `n_obs`)
-    /// * `output` - Output buffer to write results (length: `n_obs`)
-    ///
-    /// # Use Case
-    ///
-    /// Compute demeaned values by subtracting all FE contributions.
-    pub fn gather_and_subtract(&self, coef: &[f64], input: &[f64], output: &mut [f64]) {
-        output.copy_from_slice(input);
-        let n_obs = self.index.n_obs;
-        for q in 0..self.index.n_fe {
-            let offset = self.index.coef_start[q];
-            let fe_offset = q * n_obs;
-            for i in 0..n_obs {
-                let g = self.index.group_ids[fe_offset + i];
-                output[i] -= coef[offset + g];
-            }
-        }
-    }
 
     /// Gather coefficients to observation space and add to output.
     ///
