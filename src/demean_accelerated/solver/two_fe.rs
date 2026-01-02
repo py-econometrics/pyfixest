@@ -23,17 +23,15 @@ pub fn solve_two_fe(
 
     // Create buffers and projector
     let mut buffers = DemeanBuffers::new(n_coef);
-    let mut projector = TwoFEProjector::new(ctx);
+    let mut projector = TwoFEProjector::new(ctx, &in_out, input);
 
     // Run acceleration loop
     let (iter, converged) = run_acceleration(
         &mut projector,
-        &in_out,
         &mut coef,
         &mut buffers,
         config,
         config.maxiter,
-        input,
     );
 
     // Reconstruct output: input - alpha - beta
@@ -49,7 +47,6 @@ pub fn solve_two_fe(
 }
 
 /// Run 2-FE acceleration loop (public for use by multi_fe solver).
-#[allow(clippy::too_many_arguments)]
 pub fn run_2fe_acceleration(
     ctx: &DemeanContext,
     in_out: &[f64],
@@ -59,6 +56,6 @@ pub fn run_2fe_acceleration(
     max_iter: usize,
     input: &[f64],
 ) -> (usize, bool) {
-    let mut projector = TwoFEProjector::new(ctx);
-    run_acceleration(&mut projector, in_out, coef, buffers, config, max_iter, input)
+    let mut projector = TwoFEProjector::new(ctx, in_out, input);
+    run_acceleration(&mut projector, coef, buffers, config, max_iter)
 }

@@ -61,26 +61,20 @@ impl DemeanBuffers {
 /// `config.iter_grand_acc` iterations, and SSR convergence checking every
 /// 40 iterations.
 ///
-/// # Type Parameters
-///
-/// * `P` - The projector type (e.g., `TwoFEProjector` or `MultiFEProjector`)
-///
 /// # Returns
 ///
 /// Tuple of (iterations_used, converged_flag)
 pub fn run_acceleration<P: Projector>(
     projector: &mut P,
-    in_out: &[f64],
     coef: &mut [f64],
     buffers: &mut DemeanBuffers,
     config: &FixestConfig,
     max_iter: usize,
-    input: &[f64],
 ) -> (usize, bool) {
     let conv_len = projector.convergence_len();
 
     // Initial projection
-    projector.project(in_out, coef, &mut buffers.gx);
+    projector.project(coef, &mut buffers.gx);
 
     let mut keep_going = should_continue(&coef[..conv_len], &buffers.gx[..conv_len], config.tol);
     let mut iter = 0;
@@ -91,7 +85,7 @@ pub fn run_acceleration<P: Projector>(
         iter += 1;
 
         // Double projection for Irons-Tuck: G(G(x))
-        projector.project(in_out, &buffers.gx, &mut buffers.ggx);
+        projector.project(&buffers.gx, &mut buffers.ggx);
 
         // Irons-Tuck acceleration
         if irons_tuck_accelerate(
@@ -105,11 +99,11 @@ pub fn run_acceleration<P: Projector>(
         // Post-acceleration projection (after warmup)
         if iter >= config.iter_proj_after_acc {
             buffers.temp[..conv_len].copy_from_slice(&coef[..conv_len]);
-            projector.project(in_out, &buffers.temp, coef);
+            projector.project(&buffers.temp, coef);
         }
 
         // Update gx for convergence check
-        projector.project(in_out, coef, &mut buffers.gx);
+        projector.project(coef, &mut buffers.gx);
         keep_going = should_continue(&coef[..conv_len], &buffers.gx[..conv_len], config.tol);
 
         // Grand acceleration (every iter_grand_acc iterations)
@@ -131,7 +125,7 @@ pub fn run_acceleration<P: Projector>(
                     ) {
                         break;
                     }
-                    projector.project(in_out, &buffers.y, &mut buffers.gx);
+                    projector.project(&buffers.y, &mut buffers.gx);
                     grand_counter = 0;
                 }
             }
@@ -140,7 +134,7 @@ pub fn run_acceleration<P: Projector>(
         // SSR convergence check (every 40 iterations)
         if iter % 40 == 0 {
             let ssr_old = ssr;
-            ssr = projector.compute_ssr(in_out, &buffers.gx, input);
+            ssr = projector.compute_ssr(&buffers.gx);
 
             if iter > 40 && converged(ssr_old, ssr, config.tol) {
                 keep_going = false;

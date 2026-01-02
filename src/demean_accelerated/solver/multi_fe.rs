@@ -32,19 +32,15 @@ pub fn solve_multi_fe(
     let mut multi_buffers = DemeanBuffers::new(n_coef);
     let mut two_buffers = DemeanBuffers::new(n_coef_2fe);
 
-    // Create projector for multi-FE phases
-    let mut multi_projector = MultiFEProjector::new(ctx);
-
     // Phase 1: Warmup with all FEs (mu is zeros initially)
     let in_out_phase1 = ctx.scatter_to_coefficients(input);
+    let mut projector1 = MultiFEProjector::new(ctx, &in_out_phase1, input);
     let (iter1, converged1) = run_acceleration(
-        &mut multi_projector,
-        &in_out_phase1,
+        &mut projector1,
         &mut coef,
         &mut multi_buffers,
         config,
         config.iter_warmup,
-        input,
     );
     total_iter += iter1;
     ctx.gather_and_add(&coef, &mut mu);
@@ -79,14 +75,13 @@ pub fn solve_multi_fe(
         if remaining > 0 {
             let in_out_phase3 = ctx.scatter_residuals_to_coefficients(input, &mu);
             coef.fill(0.0);
+            let mut projector3 = MultiFEProjector::new(ctx, &in_out_phase3, input);
             let (iter3, _) = run_acceleration(
-                &mut multi_projector,
-                &in_out_phase3,
+                &mut projector3,
                 &mut coef,
                 &mut multi_buffers,
                 config,
                 remaining,
-                input,
             );
             total_iter += iter3;
             ctx.gather_and_add(&coef, &mut mu);
