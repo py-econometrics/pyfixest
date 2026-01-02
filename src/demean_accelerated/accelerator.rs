@@ -1,10 +1,7 @@
 //! Acceleration strategies for fixed effects demeaning.
 //!
 //! This module provides the [`Accelerator`] trait for iteration acceleration,
-//! with implementations for different strategies:
-//!
-//! - [`IronsTuckGrand`]: Irons-Tuck acceleration with Grand acceleration (default, matches fixest)
-//! - [`SimpleIteration`]: Basic repeated projection for testing/debugging
+//! with the default implementation [`IronsTuckGrand`] matching fixest's algorithm.
 
 use crate::demean_accelerated::projection::Projector;
 use crate::demean_accelerated::types::{converged, irons_tuck_accelerate, should_continue, FixestConfig};
@@ -188,65 +185,45 @@ impl Accelerator for IronsTuckGrand {
     }
 }
 
-// =============================================================================
-// SimpleIteration Accelerator
-// =============================================================================
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::demean_accelerated::projection::TwoFEProjector;
+    use crate::demean_accelerated::types::DemeanContext;
+    use ndarray::{Array1, Array2};
 
-/// Simple repeated projection without acceleration.
-///
-/// This is a basic strategy that just applies G repeatedly until convergence:
-/// `x_{n+1} = G(x_n)`. Useful for testing and debugging to verify that
-/// projectors are correct, or as a baseline for comparing acceleration speedup.
-///
-/// **Note**: This converges much slower than [`IronsTuckGrand`] and is not
-/// recommended for production use.
-pub struct SimpleIteration;
-
-/// Buffers for simple iteration (minimal).
-pub struct SimpleIterationBuffers {
-    /// G(x): Result of projection step.
-    pub gx: Vec<f64>,
-}
-
-impl Accelerator for SimpleIteration {
-    type Buffers = SimpleIterationBuffers;
-
-    #[inline]
-    fn create_buffers(n_coef: usize) -> Self::Buffers {
-        SimpleIterationBuffers {
-            gx: vec![0.0; n_coef],
+    /// Create a test problem with 2 fixed effects
+    fn create_test_problem(n_obs: usize) -> (DemeanContext, Vec<f64>) {
+        let n_fe = 2;
+        let mut flist = Array2::<usize>::zeros((n_obs, n_fe));
+        for i in 0..n_obs {
+            flist[[i, 0]] = i % 10;
+            flist[[i, 1]] = i % 5;
         }
+        let weights = Array1::<f64>::ones(n_obs);
+        let ctx = DemeanContext::new(&flist.view(), &weights.view());
+        let input: Vec<f64> = (0..n_obs).map(|i| (i as f64) * 0.1).collect();
+        (ctx, input)
     }
 
-    fn run<P: Projector>(
-        projector: &mut P,
-        coef: &mut [f64],
-        buffers: &mut Self::Buffers,
-        config: &FixestConfig,
-        max_iter: usize,
-    ) -> (usize, bool) {
-        let conv_len = projector.convergence_len();
+    #[test]
+    fn test_irons_tuck_grand_convergence() {
+        let (ctx, input) = create_test_problem(100);
+        let config = FixestConfig::default();
 
-        // Initial projection
-        projector.project(coef, &mut buffers.gx);
+        let n0 = ctx.index.n_groups[0];
+        let n1 = ctx.index.n_groups[1];
+        let n_coef = n0 + n1;
 
-        let mut keep_going =
-            should_continue(&coef[..conv_len], &buffers.gx[..conv_len], config.tol);
-        let mut iter = 0;
+        let in_out = ctx.scatter_to_coefficients(&input);
+        let mut coef = vec![0.0; n_coef];
+        let mut buffers = IronsTuckGrand::create_buffers(n_coef);
+        let mut projector = TwoFEProjector::new(&ctx, &in_out, &input);
 
-        while keep_going && iter < max_iter {
-            iter += 1;
+        let (iter, converged) =
+            IronsTuckGrand::run(&mut projector, &mut coef, &mut buffers, &config, config.maxiter);
 
-            // Simple iteration: x = G(x)
-            coef[..conv_len].copy_from_slice(&buffers.gx[..conv_len]);
-            projector.project(coef, &mut buffers.gx);
-
-            keep_going =
-                should_continue(&coef[..conv_len], &buffers.gx[..conv_len], config.tol);
-        }
-
-        // Copy final result
-        coef.copy_from_slice(&buffers.gx);
-        (iter, !keep_going)
+        assert!(converged, "IronsTuckGrand should converge");
+        assert!(iter < 100, "Should converge in less than 100 iterations");
     }
 }
