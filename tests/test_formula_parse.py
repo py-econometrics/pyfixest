@@ -401,10 +401,7 @@ def test_correct_number_of_models(test_data, formula: str, expected_n_models: in
     """Verify the correct number of models are generated from multiple estimation syntax."""
     fit = pf.feols(formula, data=test_data)
 
-    if hasattr(fit, "to_list"):
-        n_models = len(fit.to_list())
-    else:
-        n_models = 1
+    n_models = len(fit.to_list()) if hasattr(fit, "to_list") else 1
 
     assert n_models == expected_n_models, (
         f"Expected {expected_n_models} models for '{formula}', got {n_models}"
@@ -535,8 +532,8 @@ class TestEdgeCases:
         with_intercept = parse("Y ~ X1", intercept=True)
         without_intercept = parse("Y ~ X1", intercept=False)
 
-        formula_with = list(with_intercept.FixestFormulaDict.values())[0][0]
-        formula_without = list(without_intercept.FixestFormulaDict.values())[0][0]
+        formula_with = next(iter(with_intercept.FixestFormulaDict.values()))[0]
+        formula_without = next(iter(without_intercept.FixestFormulaDict.values()))[0]
 
         assert formula_with.intercept is True
         assert formula_without.intercept is False
