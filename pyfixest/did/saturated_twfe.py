@@ -331,7 +331,7 @@ def _saturated_event_study(
     res_cohort_eventtime_dict: dict[str, dict[str, pd.DataFrame | np.ndarray]] = {}
     for cohort, res_cohort in res.groupby("cohort"):
         event_time = res_cohort["time"].to_numpy()
-        res_cohort_eventtime_dict[cohort] = {"est": res_cohort, "time": event_time}
+        res_cohort_eventtime_dict[str(cohort)] = {"est": res_cohort, "time": event_time}
 
     return m, res_cohort_eventtime_dict
 
