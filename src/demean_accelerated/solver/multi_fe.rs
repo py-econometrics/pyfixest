@@ -279,18 +279,18 @@ pub fn solve_multi_fe(
     let mut multi_buffers = MultiFEBuffers::new(n_coef, n_obs);
     let mut two_buffers = TwoFEBuffers::new(n0, n1);
 
-    // Phase 1: Warmup with all FEs
-    let in_out_phase1 = compute_in_out_from_mu(fe_info, input, &mu);
+    // Phase 1: Warmup with all FEs (mu is zeros initially)
+    let in_out_phase1 = fe_info.compute_in_out_from_input(input);
     let (iter1, converged1) = run_qfe_acceleration(
         fe_info, &in_out_phase1, &mut coef, &mut multi_buffers,
         config, config.iter_warmup, input,
     );
     total_iter += iter1;
-    add_coef_to_mu(fe_info, &coef, &mut mu);
+    fe_info.add_coef_to(&coef, &mut mu);
 
     if !converged1 {
         // Phase 2: 2-FE sub-convergence
-        let in_out_phase2 = compute_in_out_from_mu(fe_info, input, &mu);
+        let in_out_phase2 = fe_info.compute_in_out(input, &mu);
         let mut alpha = vec![0.0; n0];
         let mut beta = vec![0.0; n1];
         let in_out_2fe: Vec<f64> = in_out_phase2[..n0 + n1].to_vec();
@@ -311,14 +311,14 @@ pub fn solve_multi_fe(
         // Phase 3: Re-acceleration
         let remaining = config.maxiter.saturating_sub(total_iter);
         if remaining > 0 {
-            let in_out_phase3 = compute_in_out_from_mu(fe_info, input, &mu);
+            let in_out_phase3 = fe_info.compute_in_out(input, &mu);
             coef.fill(0.0);
             let (iter3, _) = run_qfe_acceleration(
                 fe_info, &in_out_phase3, &mut coef, &mut multi_buffers,
                 config, remaining, input,
             );
             total_iter += iter3;
-            add_coef_to_mu(fe_info, &coef, &mut mu);
+            fe_info.add_coef_to(&coef, &mut mu);
         }
     }
 
@@ -398,39 +398,4 @@ fn run_qfe_acceleration(
 
     coef.copy_from_slice(&buffers.gx);
     (iter, !keep_going)
-}
-
-fn compute_in_out_from_mu(fe_info: &FEInfo, input: &[f64], mu: &[f64]) -> Vec<f64> {
-    let n_obs = fe_info.n_obs;
-    let mut in_out = vec![0.0; fe_info.n_coef_total];
-
-    for q in 0..fe_info.n_fe {
-        let start = fe_info.coef_start[q];
-        let fe_offset = q * n_obs;
-
-        if fe_info.is_unweighted {
-            for i in 0..n_obs {
-                let g = fe_info.fe_ids[fe_offset + i];
-                in_out[start + g] += input[i] - mu[i];
-            }
-        } else {
-            for i in 0..n_obs {
-                let g = fe_info.fe_ids[fe_offset + i];
-                in_out[start + g] += (input[i] - mu[i]) * fe_info.weights[i];
-            }
-        }
-    }
-    in_out
-}
-
-fn add_coef_to_mu(fe_info: &FEInfo, coef: &[f64], mu: &mut [f64]) {
-    let n_obs = fe_info.n_obs;
-    for q in 0..fe_info.n_fe {
-        let start = fe_info.coef_start[q];
-        let fe_offset = q * n_obs;
-        for i in 0..n_obs {
-            let g = fe_info.fe_ids[fe_offset + i];
-            mu[i] += coef[start + g];
-        }
-    }
 }

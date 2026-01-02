@@ -102,8 +102,7 @@ pub fn solve_two_fe(
     let n0 = fe_info.n_groups[0];
     let n1 = fe_info.n_groups[1];
 
-    let output = vec![0.0; n_obs];
-    let in_out = fe_info.compute_in_out(input, &output);
+    let in_out = fe_info.compute_in_out_from_input(input);
 
     let mut alpha = vec![0.0; n0];
     let mut beta = vec![0.0; n1];

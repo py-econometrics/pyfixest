@@ -136,7 +136,8 @@ impl FEInfo {
         &self.sum_weights[start..end]
     }
 
-    pub fn compute_in_out(&self, input: &[f64], output: &[f64]) -> Vec<f64> {
+    /// Compute in_out coefficients from input - subtract (subtrahend defaults to 0).
+    pub fn compute_in_out(&self, input: &[f64], subtract: &[f64]) -> Vec<f64> {
         let mut in_out = vec![0.0; self.n_coef_total];
         let n_obs = self.n_obs;
 
@@ -146,7 +147,7 @@ impl FEInfo {
                 let fe_offset = q * n_obs;
                 for i in 0..n_obs {
                     let g = self.fe_ids[fe_offset + i];
-                    in_out[start + g] += input[i] - output[i];
+                    in_out[start + g] += input[i] - subtract[i];
                 }
             }
         } else {
@@ -155,7 +156,35 @@ impl FEInfo {
                 let fe_offset = q * n_obs;
                 for i in 0..n_obs {
                     let g = self.fe_ids[fe_offset + i];
-                    in_out[start + g] += (input[i] - output[i]) * self.weights[i];
+                    in_out[start + g] += (input[i] - subtract[i]) * self.weights[i];
+                }
+            }
+        }
+
+        in_out
+    }
+
+    /// Compute in_out coefficients directly from input (no subtraction).
+    pub fn compute_in_out_from_input(&self, input: &[f64]) -> Vec<f64> {
+        let mut in_out = vec![0.0; self.n_coef_total];
+        let n_obs = self.n_obs;
+
+        if self.is_unweighted {
+            for q in 0..self.n_fe {
+                let start = self.coef_start[q];
+                let fe_offset = q * n_obs;
+                for i in 0..n_obs {
+                    let g = self.fe_ids[fe_offset + i];
+                    in_out[start + g] += input[i];
+                }
+            }
+        } else {
+            for q in 0..self.n_fe {
+                let start = self.coef_start[q];
+                let fe_offset = q * n_obs;
+                for i in 0..n_obs {
+                    let g = self.fe_ids[fe_offset + i];
+                    in_out[start + g] += input[i] * self.weights[i];
                 }
             }
         }
@@ -172,6 +201,19 @@ impl FEInfo {
             for i in 0..n_obs {
                 let g = self.fe_ids[fe_offset + i];
                 output[i] -= coef[start + g];
+            }
+        }
+    }
+
+    /// Add coefficient values to output (expand coefficients to observations).
+    pub fn add_coef_to(&self, coef: &[f64], output: &mut [f64]) {
+        let n_obs = self.n_obs;
+        for q in 0..self.n_fe {
+            let start = self.coef_start[q];
+            let fe_offset = q * n_obs;
+            for i in 0..n_obs {
+                let g = self.fe_ids[fe_offset + i];
+                output[i] += coef[start + g];
             }
         }
     }
