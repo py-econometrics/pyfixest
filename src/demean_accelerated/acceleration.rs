@@ -14,12 +14,11 @@ use crate::demean_accelerated::types::{converged, irons_tuck_accelerate, should_
 // Unified Buffer Struct
 // =============================================================================
 
-/// All working buffers for demeaning acceleration.
+/// Working buffers for the acceleration loop.
 ///
-/// This single struct contains both the acceleration state buffers and
-/// projection scratch space, eliminating the need for separate buffer types.
+/// Contains only the acceleration state vectors. Projection scratch
+/// is owned by individual projectors.
 pub struct DemeanBuffers {
-    // Acceleration state (all sized to n_coef)
     /// G(x): Result of one projection step.
     pub gx: Vec<f64>,
     /// G(G(x)): Result of two projection steps.
@@ -32,10 +31,6 @@ pub struct DemeanBuffers {
     pub gy: Vec<f64>,
     /// Grand acceleration: G(G(y)) snapshot.
     pub ggy: Vec<f64>,
-
-    // Projection scratch (sized to n_obs)
-    /// Scratch space for projectors (beta_tmp for 2-FE, sum_other_means for multi-FE).
-    pub scratch: Vec<f64>,
 }
 
 impl DemeanBuffers {
@@ -43,8 +38,7 @@ impl DemeanBuffers {
     ///
     /// # Arguments
     /// * `n_coef` - Total number of coefficients (sum of groups across all FEs)
-    /// * `n_obs` - Number of observations (for scratch space)
-    pub fn new(n_coef: usize, n_obs: usize) -> Self {
+    pub fn new(n_coef: usize) -> Self {
         Self {
             gx: vec![0.0; n_coef],
             ggx: vec![0.0; n_coef],
@@ -52,7 +46,6 @@ impl DemeanBuffers {
             y: vec![0.0; n_coef],
             gy: vec![0.0; n_coef],
             ggy: vec![0.0; n_coef],
-            scratch: vec![0.0; n_obs],
         }
     }
 }
@@ -75,9 +68,8 @@ impl DemeanBuffers {
 /// # Returns
 ///
 /// Tuple of (iterations_used, converged_flag)
-#[allow(clippy::too_many_arguments)]
 pub fn run_acceleration<P: Projector>(
-    projector: &P,
+    projector: &mut P,
     in_out: &[f64],
     coef: &mut [f64],
     buffers: &mut DemeanBuffers,
@@ -88,12 +80,7 @@ pub fn run_acceleration<P: Projector>(
     let conv_len = projector.convergence_len();
 
     // Initial projection
-    projector.project(
-        in_out,
-        coef,
-        buffers.gx.as_mut_slice(),
-        buffers.scratch.as_mut_slice(),
-    );
+    projector.project(in_out, coef, &mut buffers.gx);
 
     let mut keep_going = should_continue(&coef[..conv_len], &buffers.gx[..conv_len], config.tol);
     let mut iter = 0;
@@ -104,12 +91,7 @@ pub fn run_acceleration<P: Projector>(
         iter += 1;
 
         // Double projection for Irons-Tuck: G(G(x))
-        projector.project(
-            in_out,
-            buffers.gx.as_slice(),
-            buffers.ggx.as_mut_slice(),
-            buffers.scratch.as_mut_slice(),
-        );
+        projector.project(in_out, &buffers.gx, &mut buffers.ggx);
 
         // Irons-Tuck acceleration
         if irons_tuck_accelerate(
@@ -123,21 +105,11 @@ pub fn run_acceleration<P: Projector>(
         // Post-acceleration projection (after warmup)
         if iter >= config.iter_proj_after_acc {
             buffers.temp[..conv_len].copy_from_slice(&coef[..conv_len]);
-            projector.project(
-                in_out,
-                buffers.temp.as_slice(),
-                coef,
-                buffers.scratch.as_mut_slice(),
-            );
+            projector.project(in_out, &buffers.temp, coef);
         }
 
         // Update gx for convergence check
-        projector.project(
-            in_out,
-            coef,
-            buffers.gx.as_mut_slice(),
-            buffers.scratch.as_mut_slice(),
-        );
+        projector.project(in_out, coef, &mut buffers.gx);
         keep_going = should_continue(&coef[..conv_len], &buffers.gx[..conv_len], config.tol);
 
         // Grand acceleration (every iter_grand_acc iterations)
@@ -159,12 +131,7 @@ pub fn run_acceleration<P: Projector>(
                     ) {
                         break;
                     }
-                    projector.project(
-                        in_out,
-                        buffers.y.as_slice(),
-                        buffers.gx.as_mut_slice(),
-                        buffers.scratch.as_mut_slice(),
-                    );
+                    projector.project(in_out, &buffers.y, &mut buffers.gx);
                     grand_counter = 0;
                 }
             }
@@ -173,12 +140,7 @@ pub fn run_acceleration<P: Projector>(
         // SSR convergence check (every 40 iterations)
         if iter % 40 == 0 {
             let ssr_old = ssr;
-            ssr = projector.compute_ssr(
-                in_out,
-                &buffers.gx,
-                input,
-                buffers.scratch.as_mut_slice(),
-            );
+            ssr = projector.compute_ssr(in_out, &buffers.gx, input);
 
             if iter > 40 && converged(ssr_old, ssr, config.tol) {
                 keep_going = false;

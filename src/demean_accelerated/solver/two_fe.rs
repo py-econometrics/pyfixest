@@ -21,13 +21,13 @@ pub fn solve_two_fe(
     // Initialize coefficient array (unified: [alpha | beta])
     let mut coef = vec![0.0; n_coef];
 
-    // Create unified buffers and projector
-    let mut buffers = DemeanBuffers::new(n_coef, n_obs);
-    let projector = TwoFEProjector::new(ctx);
+    // Create buffers and projector
+    let mut buffers = DemeanBuffers::new(n_coef);
+    let mut projector = TwoFEProjector::new(ctx);
 
     // Run acceleration loop
     let (iter, converged) = run_acceleration(
-        &projector,
+        &mut projector,
         &in_out,
         &mut coef,
         &mut buffers,
@@ -59,6 +59,6 @@ pub fn run_2fe_acceleration(
     max_iter: usize,
     input: &[f64],
 ) -> (usize, bool) {
-    let projector = TwoFEProjector::new(ctx);
-    run_acceleration(&projector, in_out, coef, buffers, config, max_iter, input)
+    let mut projector = TwoFEProjector::new(ctx);
+    run_acceleration(&mut projector, in_out, coef, buffers, config, max_iter, input)
 }

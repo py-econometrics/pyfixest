@@ -25,16 +25,9 @@ use crate::demean_accelerated::types::DemeanContext;
 
 /// A projection operation for fixed-effects demeaning.
 ///
-/// Projectors hold a reference to the [`DemeanContext`] and provide methods
-/// for projection and convergence checking. Implementations must be zero-cost
+/// Projectors hold a reference to the [`DemeanContext`] and own their scratch
+/// buffers for intermediate computations. Implementations must be zero-cost
 /// abstractions - all methods should be inlineable and suitable for hot loops.
-///
-/// # Scratch Buffer
-///
-/// The `scratch` parameter is a pre-allocated buffer that projectors can use
-/// for intermediate computations:
-/// - `TwoFEProjector`: Uses `scratch[..n1]` as beta_tmp
-/// - `MultiFEProjector`: Uses `scratch[..n_obs]` as sum_other_means
 ///
 /// # Performance
 ///
@@ -48,14 +41,7 @@ pub trait Projector {
     /// * `in_out` - Scattered input sums in coefficient space
     /// * `coef_in` - Input coefficient estimates
     /// * `coef_out` - Output buffer for updated coefficients
-    /// * `scratch` - Working buffer (sized n_obs)
-    fn project(
-        &self,
-        in_out: &[f64],
-        coef_in: &[f64],
-        coef_out: &mut [f64],
-        scratch: &mut [f64],
-    );
+    fn project(&mut self, in_out: &[f64], coef_in: &[f64], coef_out: &mut [f64]);
 
     /// Compute sum of squared residuals from current coefficients.
     ///
@@ -64,18 +50,11 @@ pub trait Projector {
     /// * `in_out` - Scattered input sums in coefficient space
     /// * `coef` - Current coefficient estimates
     /// * `input` - Original input values in observation space
-    /// * `scratch` - Working buffer (sized n_obs)
     ///
     /// # Returns
     ///
     /// Sum of squared residuals: Σ(input[i] - predicted[i])²
-    fn compute_ssr(
-        &self,
-        in_out: &[f64],
-        coef: &[f64],
-        input: &[f64],
-        scratch: &mut [f64],
-    ) -> f64;
+    fn compute_ssr(&mut self, in_out: &[f64], coef: &[f64], input: &[f64]) -> f64;
 
     /// Length of coefficient slice to use for convergence checking.
     ///
@@ -97,50 +76,38 @@ pub trait Projector {
 ///
 /// Coefficients are stored as `[alpha_0, ..., alpha_{n0-1}, beta_0, ..., beta_{n1-1}]`
 /// where alpha are the coefficients for FE 0 and beta for FE 1.
-///
-/// # Scratch Usage
-///
-/// Uses `scratch[..n1]` as temporary storage for beta during projection.
 pub struct TwoFEProjector<'a> {
     ctx: &'a DemeanContext,
+    /// Scratch buffer for beta coefficients (sized n1).
+    scratch: Vec<f64>,
 }
 
 impl<'a> TwoFEProjector<'a> {
     /// Create a new 2-FE projector with the given context.
     #[inline]
     pub fn new(ctx: &'a DemeanContext) -> Self {
-        Self { ctx }
+        let n1 = ctx.index.n_groups[1];
+        Self {
+            ctx,
+            scratch: vec![0.0; n1],
+        }
     }
 }
 
 impl Projector for TwoFEProjector<'_> {
     #[inline(always)]
-    fn project(
-        &self,
-        in_out: &[f64],
-        coef_in: &[f64],
-        coef_out: &mut [f64],
-        scratch: &mut [f64],
-    ) {
-        project_2fe(self.ctx, in_out, coef_in, coef_out, scratch);
+    fn project(&mut self, in_out: &[f64], coef_in: &[f64], coef_out: &mut [f64]) {
+        project_2fe(self.ctx, in_out, coef_in, coef_out, &mut self.scratch);
     }
 
     #[inline(always)]
-    fn compute_ssr(
-        &self,
-        in_out: &[f64],
-        coef: &[f64],
-        input: &[f64],
-        scratch: &mut [f64],
-    ) -> f64 {
+    fn compute_ssr(&mut self, in_out: &[f64], coef: &[f64], input: &[f64]) -> f64 {
         let ctx = self.ctx;
         let n0 = ctx.index.n_groups[0];
-        let n1 = ctx.index.n_groups[1];
         let n_obs = ctx.index.n_obs;
 
-        // Compute beta from alpha (uses scratch[..n1] as beta_tmp)
-        let beta_tmp = &mut scratch[..n1];
-        compute_beta_from_alpha(ctx, in_out, &coef[..n0], beta_tmp);
+        // Compute beta from alpha
+        compute_beta_from_alpha(ctx, in_out, &coef[..n0], &mut self.scratch);
 
         // Compute SSR
         let fe0 = ctx.index.group_ids_for_fe(0);
@@ -148,7 +115,7 @@ impl Projector for TwoFEProjector<'_> {
 
         let mut ssr = 0.0;
         for i in 0..n_obs {
-            let resid = input[i] - coef[fe0[i]] - beta_tmp[fe1[i]];
+            let resid = input[i] - coef[fe0[i]] - self.scratch[fe1[i]];
             ssr += resid * resid;
         }
         ssr
@@ -257,42 +224,32 @@ fn compute_beta_from_alpha(ctx: &DemeanContext, in_out: &[f64], alpha: &[f64], b
 /// Uses a general Q-FE projection that processes FEs in reverse order,
 /// matching fixest's algorithm. Includes a specialized fast path for
 /// 3-FE unweighted case.
-///
-/// # Scratch Usage
-///
-/// Uses `scratch[..n_obs]` as sum_other_means during projection.
 pub struct MultiFEProjector<'a> {
     ctx: &'a DemeanContext,
+    /// Scratch buffer for sum_other_means (sized n_obs).
+    scratch: Vec<f64>,
 }
 
 impl<'a> MultiFEProjector<'a> {
     /// Create a new multi-FE projector with the given context.
     #[inline]
     pub fn new(ctx: &'a DemeanContext) -> Self {
-        Self { ctx }
+        let n_obs = ctx.index.n_obs;
+        Self {
+            ctx,
+            scratch: vec![0.0; n_obs],
+        }
     }
 }
 
 impl Projector for MultiFEProjector<'_> {
     #[inline(always)]
-    fn project(
-        &self,
-        in_out: &[f64],
-        coef_in: &[f64],
-        coef_out: &mut [f64],
-        scratch: &mut [f64],
-    ) {
-        project_qfe(self.ctx, in_out, coef_in, coef_out, scratch);
+    fn project(&mut self, in_out: &[f64], coef_in: &[f64], coef_out: &mut [f64]) {
+        project_qfe(self.ctx, in_out, coef_in, coef_out, &mut self.scratch);
     }
 
     #[inline(always)]
-    fn compute_ssr(
-        &self,
-        _in_out: &[f64],
-        coef: &[f64],
-        input: &[f64],
-        _scratch: &mut [f64],
-    ) -> f64 {
+    fn compute_ssr(&mut self, _in_out: &[f64], coef: &[f64], input: &[f64]) -> f64 {
         let ctx = self.ctx;
         // Compute SSR directly without intermediate buffer
         let n_obs = ctx.index.n_obs;
