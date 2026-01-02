@@ -1,4 +1,12 @@
-//! Core data types and default implementations for accelerated demeaning.
+//! Core data types for accelerated demeaning.
+//!
+//! The main types are:
+//! - [`FEStructure`]: Fixed effects indexing (which observation belongs to which group)
+//! - [`Weights`]: Observation weights and their group-level aggregations
+//! - [`FEInfo`]: Combines structure + weights for the demeaning algorithm
+//! - [`FixestConfig`]: Algorithm parameters (tolerance, max iterations, etc.)
+
+use ndarray::{ArrayView1, ArrayView2};
 
 // =============================================================================
 // Irons-Tuck Acceleration
@@ -35,7 +43,7 @@ pub fn irons_tuck_accelerate(x: &mut [f64], gx: &[f64], ggx: &[f64]) -> bool {
 }
 
 // =============================================================================
-// Fixest Convergence Criterion
+// Convergence Criteria
 // =============================================================================
 
 /// Returns true if a and b are converged (difference within tolerance).
@@ -52,139 +60,198 @@ pub fn should_continue(coef_old: &[f64], coef_new: &[f64], tol: f64) -> bool {
 }
 
 // =============================================================================
-// FEInfo
+// FEStructure
 // =============================================================================
 
-/// Pre-computed FE information with flat memory layout.
-pub struct FEInfo {
+/// Fixed effects indexing structure.
+///
+/// # Memory Layout
+/// `group_ids` is a flat array where `group_ids[fe * n_obs + obs]` gives
+/// the group ID for observation `obs` in fixed effect `fe`.
+///
+/// # Example
+/// For 100 observations with 2 fixed effects (individual and time):
+/// - `group_ids[0..100]` contains individual IDs for each observation
+/// - `group_ids[100..200]` contains time period IDs for each observation
+pub struct FEStructure {
+    /// Number of observations
     pub n_obs: usize,
+    /// Number of fixed effects
     pub n_fe: usize,
-    pub fe_ids: Vec<usize>,
-    pub n_groups: Vec<usize>,
-    pub coef_start: Vec<usize>,
-    pub n_coef_total: usize,
-    pub sum_weights: Vec<f64>,
-    pub weights: Vec<f64>,
-    pub is_unweighted: bool,
+    /// Flat group IDs: index with `fe * n_obs + obs`
+    pub group_ids: Vec<usize>,
+    /// Number of groups per fixed effect
+    pub groups_per_fe: Vec<usize>,
+    /// Coefficient offset for each FE in the flat coefficient array
+    pub coef_offset: Vec<usize>,
+    /// Total coefficients across all FEs (sum of groups_per_fe)
+    pub n_coef: usize,
 }
 
-impl FEInfo {
-    pub fn new(
-        n_obs: usize,
-        n_fe: usize,
-        group_ids: &[usize],
-        n_groups: &[usize],
-        weights: &[f64],
-    ) -> Self {
-        let is_unweighted = weights.iter().all(|&w| (w - 1.0).abs() < 1e-10);
+impl FEStructure {
+    /// Create FE structure from input array.
+    ///
+    /// # Arguments
+    /// * `flist` - Fixed effect group IDs (shape: n_obs x n_fe)
+    ///
+    /// The number of groups per FE is computed automatically from max(group_id) + 1.
+    pub fn new(flist: &ArrayView2<usize>) -> Self {
+        let (n_obs, n_fe) = flist.dim();
 
-        let mut coef_start = vec![0usize; n_fe];
+        // Compute groups_per_fe: max group_id + 1 for each FE
+        let groups_per_fe: Vec<usize> = (0..n_fe)
+            .map(|j| flist.column(j).iter().max().unwrap_or(&0) + 1)
+            .collect();
+
+        // Compute coefficient offsets (cumulative sum of groups_per_fe)
+        let mut coef_offset = vec![0usize; n_fe];
         for q in 1..n_fe {
-            coef_start[q] = coef_start[q - 1] + n_groups[q - 1];
+            coef_offset[q] = coef_offset[q - 1] + groups_per_fe[q - 1];
         }
-        let n_coef_total: usize = n_groups.iter().sum();
+        let n_coef: usize = groups_per_fe.iter().sum();
 
-        let mut fe_ids = vec![0usize; n_fe * n_obs];
-        for i in 0..n_obs {
-            for q in 0..n_fe {
-                fe_ids[q * n_obs + i] = group_ids[i * n_fe + q];
-            }
-        }
-
-        let mut sum_weights = vec![0.0; n_coef_total];
+        // Transpose group_ids from row-major (obs, fe) to column-major (fe, obs)
+        // This layout is better for the inner loops which iterate over observations
+        let mut group_ids = vec![0usize; n_fe * n_obs];
         for q in 0..n_fe {
-            let start = coef_start[q];
-            let fe_offset = q * n_obs;
-            for i in 0..n_obs {
-                let g = fe_ids[fe_offset + i];
-                sum_weights[start + g] += weights[i];
-            }
-        }
-        for s in &mut sum_weights {
-            if *s == 0.0 {
-                *s = 1.0;
+            for (i, &g) in flist.column(q).iter().enumerate() {
+                group_ids[q * n_obs + i] = g;
             }
         }
 
         Self {
             n_obs,
             n_fe,
-            fe_ids,
-            n_groups: n_groups.to_vec(),
-            coef_start,
-            n_coef_total,
-            sum_weights,
-            weights: weights.to_vec(),
-            is_unweighted,
+            group_ids,
+            groups_per_fe,
+            coef_offset,
+            n_coef,
         }
     }
 
+    /// Slice of group IDs for fixed effect `q`.
     #[inline(always)]
-    pub fn fe_ids_slice(&self, q: usize) -> &[usize] {
+    pub fn group_ids_for_fe(&self, q: usize) -> &[usize] {
         let start = q * self.n_obs;
-        &self.fe_ids[start..start + self.n_obs]
+        &self.group_ids[start..start + self.n_obs]
+    }
+}
+
+// =============================================================================
+// Weights
+// =============================================================================
+
+/// Observation weights and their group-level aggregations.
+///
+/// For weighted least squares, observations have different weights.
+/// `per_group` contains the sum of weights for each group, used for
+/// computing weighted group means.
+pub struct Weights {
+    /// Per-observation weights (length: n_obs)
+    pub per_obs: Vec<f64>,
+    /// Sum of weights per group (length: n_coef)
+    pub per_group: Vec<f64>,
+    /// True if all observation weights are 1.0 (enables fast path)
+    pub is_uniform: bool,
+}
+
+impl Weights {
+    /// Create weights from observation weights and FE structure.
+    pub fn new(weights: &ArrayView1<f64>, structure: &FEStructure) -> Self {
+        let is_uniform = weights.iter().all(|&w| (w - 1.0).abs() < 1e-10);
+
+        // Aggregate observation weights to group level
+        let mut per_group = vec![0.0; structure.n_coef];
+        for q in 0..structure.n_fe {
+            let offset = structure.coef_offset[q];
+            let fe_offset = q * structure.n_obs;
+            for (i, &w) in weights.iter().enumerate() {
+                let g = structure.group_ids[fe_offset + i];
+                per_group[offset + g] += w;
+            }
+        }
+
+        // Avoid division by zero for empty groups
+        for w in &mut per_group {
+            if *w == 0.0 {
+                *w = 1.0;
+            }
+        }
+
+        Self {
+            per_obs: weights.to_vec(),
+            per_group,
+            is_uniform,
+        }
     }
 
+    /// Slice of group weights for fixed effect `q`.
     #[inline(always)]
-    pub fn sum_weights_slice(&self, q: usize) -> &[f64] {
-        let start = self.coef_start[q];
-        let end = if q + 1 < self.n_fe {
-            self.coef_start[q + 1]
+    pub fn group_weights_for_fe(&self, q: usize, structure: &FEStructure) -> &[f64] {
+        let start = structure.coef_offset[q];
+        let end = if q + 1 < structure.n_fe {
+            structure.coef_offset[q + 1]
         } else {
-            self.n_coef_total
+            structure.n_coef
         };
-        &self.sum_weights[start..end]
+        &self.per_group[start..end]
+    }
+}
+
+// =============================================================================
+// FEInfo
+// =============================================================================
+
+/// Complete fixed effects information for demeaning.
+///
+/// Combines [`FEStructure`] (indexing) with [`Weights`] (observation weights).
+pub struct FEInfo {
+    pub structure: FEStructure,
+    pub weights: Weights,
+}
+
+impl FEInfo {
+    /// Create FEInfo from input arrays.
+    ///
+    /// # Arguments
+    /// * `flist` - Fixed effect group IDs (shape: n_obs x n_fe)
+    /// * `weights` - Per-observation weights (length: n_obs)
+    ///
+    /// The number of groups per FE is computed automatically from max(group_id) + 1.
+    pub fn new(flist: &ArrayView2<usize>, weights: &ArrayView1<f64>) -> Self {
+        let structure = FEStructure::new(flist);
+        let weights = Weights::new(weights, &structure);
+        Self { structure, weights }
     }
 
-    /// Compute in_out coefficients from input - subtract (subtrahend defaults to 0).
-    pub fn compute_in_out(&self, input: &[f64], subtract: &[f64]) -> Vec<f64> {
-        let mut in_out = vec![0.0; self.n_coef_total];
-        let n_obs = self.n_obs;
+    // -------------------------------------------------------------------------
+    // Computation methods
+    // -------------------------------------------------------------------------
 
-        if self.is_unweighted {
-            for q in 0..self.n_fe {
-                let start = self.coef_start[q];
-                let fe_offset = q * n_obs;
-                for i in 0..n_obs {
-                    let g = self.fe_ids[fe_offset + i];
-                    in_out[start + g] += input[i] - subtract[i];
-                }
-            }
-        } else {
-            for q in 0..self.n_fe {
-                let start = self.coef_start[q];
-                let fe_offset = q * n_obs;
-                for i in 0..n_obs {
-                    let g = self.fe_ids[fe_offset + i];
-                    in_out[start + g] += (input[i] - subtract[i]) * self.weights[i];
-                }
-            }
-        }
-
-        in_out
-    }
-
-    /// Compute in_out coefficients directly from input (no subtraction).
+    /// Compute weighted sums per group from input values.
+    ///
+    /// For each group g in each FE q:
+    ///   result[coef_offset[q] + g] = sum over obs i in group g of: input[i] * weight[i]
     pub fn compute_in_out_from_input(&self, input: &[f64]) -> Vec<f64> {
-        let mut in_out = vec![0.0; self.n_coef_total];
-        let n_obs = self.n_obs;
+        let mut in_out = vec![0.0; self.structure.n_coef];
+        let n_obs = self.structure.n_obs;
 
-        if self.is_unweighted {
-            for q in 0..self.n_fe {
-                let start = self.coef_start[q];
+        if self.weights.is_uniform {
+            for q in 0..self.structure.n_fe {
+                let offset = self.structure.coef_offset[q];
                 let fe_offset = q * n_obs;
                 for i in 0..n_obs {
-                    let g = self.fe_ids[fe_offset + i];
-                    in_out[start + g] += input[i];
+                    let g = self.structure.group_ids[fe_offset + i];
+                    in_out[offset + g] += input[i];
                 }
             }
         } else {
-            for q in 0..self.n_fe {
-                let start = self.coef_start[q];
+            for q in 0..self.structure.n_fe {
+                let offset = self.structure.coef_offset[q];
                 let fe_offset = q * n_obs;
                 for i in 0..n_obs {
-                    let g = self.fe_ids[fe_offset + i];
-                    in_out[start + g] += input[i] * self.weights[i];
+                    let g = self.structure.group_ids[fe_offset + i];
+                    in_out[offset + g] += input[i] * self.weights.per_obs[i];
                 }
             }
         }
@@ -192,28 +259,57 @@ impl FEInfo {
         in_out
     }
 
+    /// Compute weighted sums per group from (input - subtract).
+    pub fn compute_in_out(&self, input: &[f64], subtract: &[f64]) -> Vec<f64> {
+        let mut in_out = vec![0.0; self.structure.n_coef];
+        let n_obs = self.structure.n_obs;
+
+        if self.weights.is_uniform {
+            for q in 0..self.structure.n_fe {
+                let offset = self.structure.coef_offset[q];
+                let fe_offset = q * n_obs;
+                for i in 0..n_obs {
+                    let g = self.structure.group_ids[fe_offset + i];
+                    in_out[offset + g] += input[i] - subtract[i];
+                }
+            }
+        } else {
+            for q in 0..self.structure.n_fe {
+                let offset = self.structure.coef_offset[q];
+                let fe_offset = q * n_obs;
+                for i in 0..n_obs {
+                    let g = self.structure.group_ids[fe_offset + i];
+                    in_out[offset + g] += (input[i] - subtract[i]) * self.weights.per_obs[i];
+                }
+            }
+        }
+
+        in_out
+    }
+
+    /// Compute output = input - sum of FE coefficients for each observation.
     pub fn compute_output(&self, coef: &[f64], input: &[f64], output: &mut [f64]) {
         output.copy_from_slice(input);
-        let n_obs = self.n_obs;
-        for q in 0..self.n_fe {
-            let start = self.coef_start[q];
+        let n_obs = self.structure.n_obs;
+        for q in 0..self.structure.n_fe {
+            let offset = self.structure.coef_offset[q];
             let fe_offset = q * n_obs;
             for i in 0..n_obs {
-                let g = self.fe_ids[fe_offset + i];
-                output[i] -= coef[start + g];
+                let g = self.structure.group_ids[fe_offset + i];
+                output[i] -= coef[offset + g];
             }
         }
     }
 
-    /// Add coefficient values to output (expand coefficients to observations).
+    /// Add FE coefficients to output for each observation.
     pub fn add_coef_to(&self, coef: &[f64], output: &mut [f64]) {
-        let n_obs = self.n_obs;
-        for q in 0..self.n_fe {
-            let start = self.coef_start[q];
+        let n_obs = self.structure.n_obs;
+        for q in 0..self.structure.n_fe {
+            let offset = self.structure.coef_offset[q];
             let fe_offset = q * n_obs;
             for i in 0..n_obs {
-                let g = self.fe_ids[fe_offset + i];
-                output[i] += coef[start + g];
+                let g = self.structure.group_ids[fe_offset + i];
+                output[i] += coef[offset + g];
             }
         }
     }
@@ -223,14 +319,21 @@ impl FEInfo {
 // FixestConfig
 // =============================================================================
 
+/// Algorithm configuration parameters.
 #[derive(Clone, Copy)]
 pub struct FixestConfig {
+    /// Convergence tolerance
     pub tol: f64,
+    /// Maximum iterations
     pub maxiter: usize,
+    /// Warmup iterations before 2-FE sub-convergence (for 3+ FE)
     pub iter_warmup: usize,
+    /// Iterations before projection after acceleration
     pub iter_proj_after_acc: usize,
+    /// Iterations between grand acceleration steps
     pub iter_grand_acc: usize,
 }
+
 
 impl Default for FixestConfig {
     fn default() -> Self {

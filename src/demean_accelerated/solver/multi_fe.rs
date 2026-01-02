@@ -20,29 +20,29 @@ fn project_qfe(
     coef_out: &mut [f64],
     sum_other_means: &mut [f64],
 ) {
-    let n_fe = fe_info.n_fe;
-    let n_obs = fe_info.n_obs;
+    let n_fe = fe_info.structure.n_fe;
+    let n_obs = fe_info.structure.n_obs;
 
-    let fe_ids_ptr = fe_info.fe_ids.as_ptr();
-    let coef_start = &fe_info.coef_start;
+    let group_ids_ptr = fe_info.structure.group_ids.as_ptr();
+    let coef_offset = &fe_info.structure.coef_offset;
     let sum_other_ptr = sum_other_means.as_mut_ptr();
     let coef_in_ptr = coef_in.as_ptr();
     let coef_out_ptr = coef_out.as_mut_ptr();
-    let weights_ptr = fe_info.weights.as_ptr();
+    let obs_weights_ptr = fe_info.weights.per_obs.as_ptr();
 
     // Specialized fast path for 3 FEs (common case)
-    if n_fe == 3 && fe_info.is_unweighted {
+    if n_fe == 3 && fe_info.weights.is_uniform {
         project_qfe_3fe_unweighted(
-            n_obs, fe_ids_ptr, coef_start, sum_other_ptr, coef_in_ptr, coef_out_ptr,
-            in_out, &fe_info.n_groups, &fe_info.sum_weights,
+            n_obs, group_ids_ptr, coef_offset, sum_other_ptr, coef_in_ptr, coef_out_ptr,
+            in_out, &fe_info.structure.groups_per_fe, &fe_info.weights.per_group,
         );
         return;
     }
 
     // General case
     project_qfe_general(
-        fe_info, in_out, n_fe, n_obs, fe_ids_ptr, coef_start,
-        sum_other_ptr, coef_in_ptr, coef_out_ptr, weights_ptr,
+        fe_info, in_out, n_fe, n_obs, group_ids_ptr, coef_offset,
+        sum_other_ptr, coef_in_ptr, coef_out_ptr, obs_weights_ptr,
     );
 }
 
@@ -53,19 +53,19 @@ fn project_qfe(
 #[inline(always)]
 fn project_qfe_3fe_unweighted(
     n_obs: usize,
-    fe_ids_ptr: *const usize,
-    coef_start: &[usize],
+    group_ids_ptr: *const usize,
+    coef_offset: &[usize],
     sum_other_ptr: *mut f64,
     coef_in_ptr: *const f64,
     coef_out_ptr: *mut f64,
     in_out: &[f64],
-    n_groups: &[usize],
-    sum_weights: &[f64],
+    groups_per_fe: &[usize],
+    group_weights: &[f64],
 ) {
-    let (start_0, start_1, start_2) = (coef_start[0], coef_start[1], coef_start[2]);
-    let fe_0_ptr = fe_ids_ptr;
-    let fe_1_ptr = unsafe { fe_ids_ptr.add(n_obs) };
-    let fe_2_ptr = unsafe { fe_ids_ptr.add(2 * n_obs) };
+    let (start_0, start_1, start_2) = (coef_offset[0], coef_offset[1], coef_offset[2]);
+    let fe_0_ptr = group_ids_ptr;
+    let fe_1_ptr = unsafe { group_ids_ptr.add(n_obs) };
+    let fe_2_ptr = unsafe { group_ids_ptr.add(2 * n_obs) };
     let in_out_ptr = in_out.as_ptr();
 
     let n_chunks = n_obs / 4;
@@ -94,7 +94,7 @@ fn project_qfe_3fe_unweighted(
         }
     }
 
-    let n_groups_2 = n_groups[2];
+    let n_groups_2 = groups_per_fe[2];
     unsafe {
         std::ptr::copy_nonoverlapping(in_out_ptr.add(start_2), coef_out_ptr.add(start_2), n_groups_2);
         for i in 0..n_obs {
@@ -102,7 +102,7 @@ fn project_qfe_3fe_unweighted(
             *coef_out_ptr.add(start_2 + g) -= *sum_other_ptr.add(i);
         }
         for g in 0..n_groups_2 {
-            *coef_out_ptr.add(start_2 + g) /= *sum_weights.get_unchecked(start_2 + g);
+            *coef_out_ptr.add(start_2 + g) /= *group_weights.get_unchecked(start_2 + g);
         }
     }
 
@@ -129,7 +129,7 @@ fn project_qfe_3fe_unweighted(
         }
     }
 
-    let n_groups_1 = n_groups[1];
+    let n_groups_1 = groups_per_fe[1];
     unsafe {
         std::ptr::copy_nonoverlapping(in_out_ptr.add(start_1), coef_out_ptr.add(start_1), n_groups_1);
         for i in 0..n_obs {
@@ -137,7 +137,7 @@ fn project_qfe_3fe_unweighted(
             *coef_out_ptr.add(start_1 + g) -= *sum_other_ptr.add(i);
         }
         for g in 0..n_groups_1 {
-            *coef_out_ptr.add(start_1 + g) /= *sum_weights.get_unchecked(start_1 + g);
+            *coef_out_ptr.add(start_1 + g) /= *group_weights.get_unchecked(start_1 + g);
         }
     }
 
@@ -164,7 +164,7 @@ fn project_qfe_3fe_unweighted(
         }
     }
 
-    let n_groups_0 = n_groups[0];
+    let n_groups_0 = groups_per_fe[0];
     unsafe {
         std::ptr::copy_nonoverlapping(in_out_ptr.add(start_0), coef_out_ptr.add(start_0), n_groups_0);
         for i in 0..n_obs {
@@ -172,7 +172,7 @@ fn project_qfe_3fe_unweighted(
             *coef_out_ptr.add(start_0 + g) -= *sum_other_ptr.add(i);
         }
         for g in 0..n_groups_0 {
-            *coef_out_ptr.add(start_0 + g) /= *sum_weights.get_unchecked(start_0 + g);
+            *coef_out_ptr.add(start_0 + g) /= *group_weights.get_unchecked(start_0 + g);
         }
     }
 }
@@ -187,12 +187,12 @@ fn project_qfe_general(
     in_out: &[f64],
     n_fe: usize,
     n_obs: usize,
-    fe_ids_ptr: *const usize,
-    coef_start: &[usize],
+    group_ids_ptr: *const usize,
+    coef_offset: &[usize],
     sum_other_ptr: *mut f64,
     coef_in_ptr: *const f64,
     coef_out_ptr: *mut f64,
-    weights_ptr: *const f64,
+    obs_weights_ptr: *const f64,
 ) {
     let in_out_ptr = in_out.as_ptr();
 
@@ -200,8 +200,8 @@ fn project_qfe_general(
         unsafe { std::ptr::write_bytes(sum_other_ptr, 0, n_obs); }
 
         for h in 0..q {
-            let start_h = coef_start[h];
-            let fe_h_ptr = unsafe { fe_ids_ptr.add(h * n_obs) };
+            let start_h = coef_offset[h];
+            let fe_h_ptr = unsafe { group_ids_ptr.add(h * n_obs) };
             for i in 0..n_obs {
                 unsafe {
                     let g = *fe_h_ptr.add(i);
@@ -211,8 +211,8 @@ fn project_qfe_general(
         }
 
         for h in (q + 1)..n_fe {
-            let start_h = coef_start[h];
-            let fe_h_ptr = unsafe { fe_ids_ptr.add(h * n_obs) };
+            let start_h = coef_offset[h];
+            let fe_h_ptr = unsafe { group_ids_ptr.add(h * n_obs) };
             for i in 0..n_obs {
                 unsafe {
                     let g = *fe_h_ptr.add(i);
@@ -221,16 +221,16 @@ fn project_qfe_general(
             }
         }
 
-        let start_q = coef_start[q];
-        let n_groups_q = fe_info.n_groups[q];
-        let fe_q_ptr = unsafe { fe_ids_ptr.add(q * n_obs) };
-        let sw_q = fe_info.sum_weights_slice(q);
+        let start_q = coef_offset[q];
+        let n_groups_q = fe_info.structure.groups_per_fe[q];
+        let fe_q_ptr = unsafe { group_ids_ptr.add(q * n_obs) };
+        let group_weights_q = fe_info.weights.group_weights_for_fe(q, &fe_info.structure);
 
         unsafe {
             std::ptr::copy_nonoverlapping(in_out_ptr.add(start_q), coef_out_ptr.add(start_q), n_groups_q);
         }
 
-        if fe_info.is_unweighted {
+        if fe_info.weights.is_uniform {
             for i in 0..n_obs {
                 unsafe {
                     let g = *fe_q_ptr.add(i);
@@ -241,13 +241,13 @@ fn project_qfe_general(
             for i in 0..n_obs {
                 unsafe {
                     let g = *fe_q_ptr.add(i);
-                    *coef_out_ptr.add(start_q + g) -= *sum_other_ptr.add(i) * *weights_ptr.add(i);
+                    *coef_out_ptr.add(start_q + g) -= *sum_other_ptr.add(i) * *obs_weights_ptr.add(i);
                 }
             }
         }
 
         for g in 0..n_groups_q {
-            unsafe { *coef_out_ptr.add(start_q + g) /= *sw_q.get_unchecked(g); }
+            unsafe { *coef_out_ptr.add(start_q + g) /= *group_weights_q.get_unchecked(g); }
         }
     }
 }
@@ -267,10 +267,10 @@ pub fn solve_multi_fe(
     input: &[f64],
     config: &FixestConfig,
 ) -> (Vec<f64>, usize, bool) {
-    let n_obs = fe_info.n_obs;
-    let n_coef = fe_info.n_coef_total;
-    let n0 = fe_info.n_groups[0];
-    let n1 = fe_info.n_groups[1];
+    let n_obs = fe_info.structure.n_obs;
+    let n_coef = fe_info.structure.n_coef;
+    let n0 = fe_info.structure.groups_per_fe[0];
+    let n1 = fe_info.structure.groups_per_fe[1];
     let mut total_iter = 0usize;
 
     let mut mu = vec![0.0; n_obs];
@@ -302,8 +302,8 @@ pub fn solve_multi_fe(
         );
         total_iter += iter2;
 
-        let fe0 = fe_info.fe_ids_slice(0);
-        let fe1 = fe_info.fe_ids_slice(1);
+        let fe0 = fe_info.structure.group_ids_for_fe(0);
+        let fe1 = fe_info.structure.group_ids_for_fe(1);
         for i in 0..n_obs {
             mu[i] += alpha[fe0[i]] + beta[fe1[i]];
         }
@@ -341,8 +341,9 @@ fn run_qfe_acceleration(
     max_iter: usize,
     input: &[f64],
 ) -> (usize, bool) {
-    let n_coef = fe_info.n_coef_total;
-    let nb_coef_no_q = n_coef - fe_info.n_groups[fe_info.n_fe - 1];
+    let n_coef = fe_info.structure.n_coef;
+    let n_fe = fe_info.structure.n_fe;
+    let nb_coef_no_q = n_coef - fe_info.structure.groups_per_fe[n_fe - 1];
 
     project_qfe(fe_info, in_out, coef, &mut buffers.gx, &mut buffers.sum_other_means);
 

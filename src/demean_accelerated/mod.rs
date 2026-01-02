@@ -6,10 +6,11 @@
 //!
 //! # Module Structure
 //!
-//! - [`types`]: Core data types (`FEInfo`, `FixestConfig`)
-//! - [`traits`]: Extensibility traits (`AccelerationStrategy`, `ConvergenceCriterion`, `FEOrdering`)
-//! - [`strategies`]: Default implementations (`IronsTuck`, `FixestConvergence`, `ReverseOrder`)
-//! - [`projection`]: FE projection operations
+//! - [`types`]: Core data types
+//!   - [`FEStructure`](types::FEStructure): Fixed effects indexing (which obs belongs to which group)
+//!   - [`Weights`](types::Weights): Observation weights and group-level aggregations
+//!   - [`FEInfo`](types::FEInfo): Combines structure + weights
+//!   - [`FixestConfig`](types::FixestConfig): Algorithm parameters
 //! - [`solver`]: Solver implementations for different FE counts
 //! - [`buffers`]: Working buffer management
 //!
@@ -41,20 +42,6 @@ pub(crate) fn demean_accelerated(
     maxiter: usize,
 ) -> (Array2<f64>, bool) {
     let (n_samples, n_features) = x.dim();
-    let n_factors = flist.ncols();
-
-    let sample_weights: Vec<f64> = weights.iter().cloned().collect();
-    let group_ids: Vec<usize> = flist.iter().cloned().collect();
-
-    let n_groups_per_factor: Vec<usize> = (0..n_factors)
-        .map(|j| {
-            (0..n_samples)
-                .map(|i| group_ids[i * n_factors + j])
-                .max()
-                .unwrap_or(0)
-                + 1
-        })
-        .collect();
 
     let config = FixestConfig {
         tol,
@@ -65,13 +52,7 @@ pub(crate) fn demean_accelerated(
     let not_converged = Arc::new(AtomicUsize::new(0));
     let mut res = Array2::<f64>::zeros((n_samples, n_features));
 
-    let fe_info = FEInfo::new(
-        n_samples,
-        n_factors,
-        &group_ids,
-        &n_groups_per_factor,
-        &sample_weights,
-    );
+    let fe_info = FEInfo::new(flist, weights);
 
     res.axis_iter_mut(ndarray::Axis(1))
         .into_par_iter()
@@ -118,22 +99,22 @@ pub fn _demean_accelerated_rs(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ndarray::{Array1, Array2};
 
     #[test]
     fn test_2fe_convergence() {
         let n_obs = 100;
         let n_fe = 2;
 
-        let mut group_ids = Vec::with_capacity(n_obs * n_fe);
+        let mut flist = Array2::<usize>::zeros((n_obs, n_fe));
         for i in 0..n_obs {
-            group_ids.push(i % 10);
-            group_ids.push(i % 5);
+            flist[[i, 0]] = i % 10;
+            flist[[i, 1]] = i % 5;
         }
 
-        let n_groups = vec![10, 5];
-        let weights = vec![1.0; n_obs];
+        let weights = Array1::<f64>::ones(n_obs);
 
-        let fe_info = FEInfo::new(n_obs, n_fe, &group_ids, &n_groups, &weights);
+        let fe_info = FEInfo::new(&flist.view(), &weights.view());
         let input: Vec<f64> = (0..n_obs).map(|i| (i as f64) * 0.1).collect();
 
         let config = FixestConfig::default();
@@ -149,17 +130,16 @@ mod tests {
         let n_obs = 100;
         let n_fe = 3;
 
-        let mut group_ids = Vec::with_capacity(n_obs * n_fe);
+        let mut flist = Array2::<usize>::zeros((n_obs, n_fe));
         for i in 0..n_obs {
-            group_ids.push(i % 10);
-            group_ids.push(i % 5);
-            group_ids.push(i % 3);
+            flist[[i, 0]] = i % 10;
+            flist[[i, 1]] = i % 5;
+            flist[[i, 2]] = i % 3;
         }
 
-        let n_groups = vec![10, 5, 3];
-        let weights = vec![1.0; n_obs];
+        let weights = Array1::<f64>::ones(n_obs);
 
-        let fe_info = FEInfo::new(n_obs, n_fe, &group_ids, &n_groups, &weights);
+        let fe_info = FEInfo::new(&flist.view(), &weights.view());
         let input: Vec<f64> = (0..n_obs).map(|i| (i as f64) * 0.1).collect();
 
         let config = FixestConfig::default();

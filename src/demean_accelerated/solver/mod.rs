@@ -21,7 +21,7 @@ pub fn demean_single(
     input: &[f64],
     config: &FixestConfig,
 ) -> (Vec<f64>, usize, bool) {
-    match fe_info.n_fe {
+    match fe_info.structure.n_fe {
         1 => {
             let output = solve_single_fe(fe_info, input);
             (output, 0, true)

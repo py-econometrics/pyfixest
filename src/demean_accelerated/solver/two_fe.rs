@@ -19,23 +19,23 @@ fn project_2fe(
     alpha_out: &mut [f64],
     beta: &mut [f64],
 ) {
-    let n0 = fe_info.n_groups[0];
-    let n1 = fe_info.n_groups[1];
-    let fe0 = fe_info.fe_ids_slice(0);
-    let fe1 = fe_info.fe_ids_slice(1);
-    let sw0 = fe_info.sum_weights_slice(0);
-    let sw1 = fe_info.sum_weights_slice(1);
-    let weights = &fe_info.weights;
+    let n0 = fe_info.structure.groups_per_fe[0];
+    let n1 = fe_info.structure.groups_per_fe[1];
+    let fe0 = fe_info.structure.group_ids_for_fe(0);
+    let fe1 = fe_info.structure.group_ids_for_fe(1);
+    let sw0 = fe_info.weights.group_weights_for_fe(0, &fe_info.structure);
+    let sw1 = fe_info.weights.group_weights_for_fe(1, &fe_info.structure);
 
     // Step 1: Compute beta from alpha_in
     beta[..n1].copy_from_slice(&in_out[n0..n0 + n1]);
 
-    if fe_info.is_unweighted {
+    if fe_info.weights.is_uniform {
         for (&g0, &g1) in fe0.iter().zip(fe1.iter()) {
             beta[g1] -= alpha_in[g0];
         }
     } else {
-        for ((&g0, &g1), &w) in fe0.iter().zip(fe1.iter()).zip(weights.iter()) {
+        let obs_weights = &fe_info.weights.per_obs;
+        for ((&g0, &g1), &w) in fe0.iter().zip(fe1.iter()).zip(obs_weights.iter()) {
             beta[g1] -= alpha_in[g0] * w;
         }
     }
@@ -45,12 +45,13 @@ fn project_2fe(
     // Step 2: Compute alpha_out from beta
     alpha_out[..n0].copy_from_slice(&in_out[..n0]);
 
-    if fe_info.is_unweighted {
+    if fe_info.weights.is_uniform {
         for (&g0, &g1) in fe0.iter().zip(fe1.iter()) {
             alpha_out[g0] -= beta[g1];
         }
     } else {
-        for ((&g0, &g1), &w) in fe0.iter().zip(fe1.iter()).zip(weights.iter()) {
+        let obs_weights = &fe_info.weights.per_obs;
+        for ((&g0, &g1), &w) in fe0.iter().zip(fe1.iter()).zip(obs_weights.iter()) {
             alpha_out[g0] -= beta[g1] * w;
         }
     }
@@ -66,21 +67,21 @@ fn compute_beta_from_alpha(
     alpha: &[f64],
     beta: &mut [f64],
 ) {
-    let n1 = fe_info.n_groups[1];
-    let n0 = fe_info.n_groups[0];
-    let fe0 = fe_info.fe_ids_slice(0);
-    let fe1 = fe_info.fe_ids_slice(1);
-    let sw1 = fe_info.sum_weights_slice(1);
-    let weights = &fe_info.weights;
+    let n0 = fe_info.structure.groups_per_fe[0];
+    let n1 = fe_info.structure.groups_per_fe[1];
+    let fe0 = fe_info.structure.group_ids_for_fe(0);
+    let fe1 = fe_info.structure.group_ids_for_fe(1);
+    let sw1 = fe_info.weights.group_weights_for_fe(1, &fe_info.structure);
 
     beta[..n1].copy_from_slice(&in_out[n0..n0 + n1]);
 
-    if fe_info.is_unweighted {
+    if fe_info.weights.is_uniform {
         for (&g0, &g1) in fe0.iter().zip(fe1.iter()) {
             beta[g1] -= alpha[g0];
         }
     } else {
-        for ((&g0, &g1), &w) in fe0.iter().zip(fe1.iter()).zip(weights.iter()) {
+        let obs_weights = &fe_info.weights.per_obs;
+        for ((&g0, &g1), &w) in fe0.iter().zip(fe1.iter()).zip(obs_weights.iter()) {
             beta[g1] -= alpha[g0] * w;
         }
     }
@@ -98,9 +99,9 @@ pub fn solve_two_fe(
     input: &[f64],
     config: &FixestConfig,
 ) -> (Vec<f64>, usize, bool) {
-    let n_obs = fe_info.n_obs;
-    let n0 = fe_info.n_groups[0];
-    let n1 = fe_info.n_groups[1];
+    let n_obs = fe_info.structure.n_obs;
+    let n0 = fe_info.structure.groups_per_fe[0];
+    let n1 = fe_info.structure.groups_per_fe[1];
 
     let in_out = fe_info.compute_in_out_from_input(input);
 
@@ -120,8 +121,8 @@ pub fn solve_two_fe(
     );
 
     let mut result = vec![0.0; n_obs];
-    let fe0 = fe_info.fe_ids_slice(0);
-    let fe1 = fe_info.fe_ids_slice(1);
+    let fe0 = fe_info.structure.group_ids_for_fe(0);
+    let fe1 = fe_info.structure.group_ids_for_fe(1);
 
     for i in 0..n_obs {
         result[i] = input[i] - alpha[fe0[i]] - beta[fe1[i]];
@@ -142,12 +143,12 @@ pub fn run_2fe_acceleration(
     max_iter: usize,
     input: &[f64],
 ) -> (usize, bool) {
-    let n0 = fe_info.n_groups[0];
-    let n_obs = fe_info.n_obs;
+    let n0 = fe_info.structure.groups_per_fe[0];
+    let n_obs = fe_info.structure.n_obs;
 
     let mut ssr = 0.0;
-    let fe0 = fe_info.fe_ids_slice(0);
-    let fe1 = fe_info.fe_ids_slice(1);
+    let fe0 = fe_info.structure.group_ids_for_fe(0);
+    let fe1 = fe_info.structure.group_ids_for_fe(1);
 
     project_2fe(fe_info, in_out, alpha, &mut buffers.gx, beta);
 

@@ -10,19 +10,19 @@ use crate::demean_accelerated::types::FEInfo;
 ///
 /// No iteration needed - direct O(n) computation.
 pub fn solve_single_fe(fe_info: &FEInfo, input: &[f64]) -> Vec<f64> {
-    let n_obs = fe_info.n_obs;
+    let n_obs = fe_info.structure.n_obs;
     let mut output = vec![0.0; n_obs];
 
     // Compute in_out (sum of input per group)
     let in_out = fe_info.compute_in_out(input, &output);
 
-    let fe0 = fe_info.fe_ids_slice(0);
-    let sw0 = fe_info.sum_weights_slice(0);
+    let fe0 = fe_info.structure.group_ids_for_fe(0);
+    let group_weights = fe_info.weights.group_weights_for_fe(0, &fe_info.structure);
 
-    // coef[g] = in_out[g] / sw[g]
+    // coef[g] = in_out[g] / group_weights[g]
     let coef: Vec<f64> = in_out
         .iter()
-        .zip(sw0.iter())
+        .zip(group_weights.iter())
         .map(|(&io, &sw)| io / sw)
         .collect();
 
