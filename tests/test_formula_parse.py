@@ -19,13 +19,11 @@ from pyfixest.errors import (
 )
 from pyfixest.estimation.formula.parse import (
     Formula,
-    ParsedFormula,
     _MultipleEstimation,
     _MultipleEstimationType,
     _parse_multiple_estimation,
     parse,
 )
-
 
 # =============================================================================
 # Fixtures
@@ -129,7 +127,12 @@ class TestMultipleEstimationSteps:
                 ["x+y+a", "x+y+a+b"],
             ),
             ([], ["a", "b"], _MultipleEstimationType.csw, ["a", "a+b"]),
-            (["x"], ["a", "b", "c"], _MultipleEstimationType.csw, ["x+a", "x+a+b", "x+a+b+c"]),
+            (
+                ["x"],
+                ["a", "b", "c"],
+                _MultipleEstimationType.csw,
+                ["x+a", "x+a+b", "x+a+b+c"],
+            ),
             # No multiple estimation (kind=None)
             (["x", "y"], [], None, ["x+y"]),
             (["x"], [], None, ["x"]),
@@ -175,7 +178,12 @@ class TestParseFunction:
         ],
     )
     def test_parse_basic(
-        self, formula, expected_dependent, expected_independent, expected_fe, expected_is_iv
+        self,
+        formula,
+        expected_dependent,
+        expected_independent,
+        expected_fe,
+        expected_is_iv,
     ):
         """Test basic formula parsing."""
         parsed = parse(formula)
@@ -227,9 +235,7 @@ class TestFormulaDataclass:
 
     def test_fml_with_iv(self):
         """Test formula with instrumental variables."""
-        f = Formula(
-            dependent="Y", independent="X1", endogenous="Z1", instruments="X2"
-        )
+        f = Formula(dependent="Y", independent="X1", endogenous="Z1", instruments="X2")
         assert f.fml == "Y~X1|Z1~X2"
 
     def test_fml_with_iv_and_fe(self):
@@ -400,9 +406,9 @@ def test_correct_number_of_models(test_data, formula: str, expected_n_models: in
     else:
         n_models = 1
 
-    assert (
-        n_models == expected_n_models
-    ), f"Expected {expected_n_models} models for '{formula}', got {n_models}"
+    assert n_models == expected_n_models, (
+        f"Expected {expected_n_models} models for '{formula}', got {n_models}"
+    )
 
 
 # Properties test data
@@ -429,10 +435,12 @@ def test_parsed_formula_properties_parametrized(
     parsed = parse(formula)
 
     assert parsed.is_iv == expected_is_iv, f"is_iv mismatch for {formula}"
-    assert parsed.is_multiple == expected_is_multiple, f"is_multiple mismatch for {formula}"
-    assert (
-        parsed.is_fixed_effects == expected_has_fe
-    ), f"is_fixed_effects mismatch for {formula}"
+    assert parsed.is_multiple == expected_is_multiple, (
+        f"is_multiple mismatch for {formula}"
+    )
+    assert parsed.is_fixed_effects == expected_has_fe, (
+        f"is_fixed_effects mismatch for {formula}"
+    )
 
 
 # Formulas to test FixestFormulaDict structure
