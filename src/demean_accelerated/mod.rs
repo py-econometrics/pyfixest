@@ -11,8 +11,12 @@
 //!   - [`ObservationWeights`](types::ObservationWeights): Observation weights and group-level aggregations
 //!   - [`DemeanContext`](types::DemeanContext): Combines index + weights for demeaning operations
 //!   - [`FixestConfig`](types::FixestConfig): Algorithm parameters
+//! - [`projection`]: Projection operations with [`Projector`](projection::Projector) trait
+//!   - [`TwoFEProjector`](projection::TwoFEProjector): Specialized 2-FE projection
+//!   - [`MultiFEProjector`](projection::MultiFEProjector): General Q-FE projection
+//! - [`acceleration`]: Generic acceleration loop
 //! - [`solver`]: Solver implementations for different FE counts
-//! - [`buffers`]: Working buffer management
+//! - [`buffers`]: Re-exports of buffer types
 //!
 //! # Dispatching based on number of fixed effects:
 //! - 1 FE: O(n) closed-form solution (single pass, no iteration)
@@ -20,6 +24,8 @@
 //! - 3+ FE: Multi-phase strategy with 2-FE sub-convergence
 
 pub mod types;
+pub mod projection;
+pub mod acceleration;
 pub mod solver;
 pub mod buffers;
 
