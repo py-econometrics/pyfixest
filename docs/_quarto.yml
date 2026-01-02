@@ -112,6 +112,14 @@ quartodoc:
         - report.coefplot
         - report.iplot
         - did.visualize.panelview
+    - title: Formula Parsing & Model Matrix
+      desc: |
+        Internal APIs for formula parsing and model matrix construction
+      contents:
+        - estimation.formula.parse.Formula
+        - estimation.formula.parse.parse
+        - estimation.formula.model_matrix.ModelMatrix
+        - estimation.formula.factor_interaction.factor_interaction
     - title: Misc / Utilities
       desc: |
         PyFixest internals and utilities
