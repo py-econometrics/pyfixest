@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 from formulaic import Formula
 
-from pyfixest.estimation.detect_singletons_ import detect_singletons
+from pyfixest.core.detect_singletons import detect_singletons
 from pyfixest.estimation.FormulaParser import FixestFormula
 from pyfixest.utils.utils import capture_context
 
@@ -153,14 +153,16 @@ def model_matrix_fixest(
     if weights is not None:
         weights_df = mm["weights"]
 
-    # drop infinite values
-    inf_idx_list = []
+    # drop infinite values - use numpy for speed (df.isin is very slow)
+    inf_mask = np.zeros(Y.shape[0], dtype=bool)
     for df in [Y, X, Z, endogvar, weights_df]:
         if df is not None:
-            inf_idx = np.where(df.isin([np.inf, -np.inf]).any(axis=1))[0].tolist()
-            inf_idx_list.extend(inf_idx)
+            arr = df.to_numpy()
+            # Check for inf values: ~np.isfinite catches both inf and nan,
+            # but we only want inf, so use explicit check
+            inf_mask |= np.isinf(arr).any(axis=1)
 
-    inf_idx = list(set(inf_idx_list))
+    inf_idx = np.where(inf_mask)[0]
     if len(inf_idx) > 0:
         warnings.warn(
             f"{len(inf_idx)} rows with infinite values detected. These rows are dropped from the model."
@@ -560,24 +562,24 @@ def _is_finite_positive(x: Union[pd.DataFrame, pd.Series, np.ndarray]) -> bool:
     return bool((x[~np.isnan(x)] > 0).all())
 
 
-def factorize(fe: pd.DataFrame) -> pd.DataFrame:
+def factorize(fe: pd.Series) -> pd.Series:
     """
     Factorize / Convert fixed effects into integers.
 
     Parameters
     ----------
-    - fe: A DataFrame of fixed effects.
+    - fe: A Series of fixed effects (single column).
 
     Returns
     -------
-    - A DataFrame of fixed effects where each unique value is replaced by an integer.
+    - A Series of fixed effects where each unique value is replaced by an integer.
       NaNs are not removed but set to -1.
     """
-    if fe.dtype != "category":
-        fe = fe.astype("category")
-    res = fe.cat.codes
-    res[res == -1] = np.nan
-    return res
+    codes, _ = pd.factorize(fe)
+    # pd.factorize returns -1 for NaN, convert to actual NaN
+    result = codes.astype(float)
+    result[codes == -1] = np.nan
+    return pd.Series(result, index=fe.index)
 
 
 def wrap_factorize(pattern: str) -> str:
