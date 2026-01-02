@@ -28,23 +28,18 @@ use crate::demean_accelerated::types::DemeanContext;
 /// Implementations must be zero-cost abstractions - all methods should be
 /// inlineable and suitable for hot loops.
 ///
-/// # Associated Types
+/// # Scratch Buffer
 ///
-/// * `Scratch` - Temporary buffers specific to this projector. These are
-///   separate from the shared acceleration buffers (gx, ggx, etc.) and hold
-///   projector-specific working data.
+/// The `scratch` parameter is a pre-allocated buffer that projectors can use
+/// for intermediate computations:
+/// - `TwoFEProjector`: Uses `scratch[..n1]` as beta_tmp
+/// - `MultiFEProjector`: Uses `scratch[..n_obs]` as sum_other_means
 ///
 /// # Performance
 ///
 /// All methods are called in tight loops and should be marked `#[inline(always)]`.
 /// Using static dispatch (`impl Projector` or generics) ensures zero overhead.
 pub trait Projector {
-    /// Scratch buffers specific to this projector.
-    type Scratch;
-
-    /// Create scratch buffers for this projector.
-    fn new_scratch(ctx: &DemeanContext) -> Self::Scratch;
-
     /// Project coefficients: G(coef_in) -> coef_out.
     ///
     /// # Arguments
@@ -53,18 +48,16 @@ pub trait Projector {
     /// * `in_out` - Scattered input sums in coefficient space
     /// * `coef_in` - Input coefficient estimates
     /// * `coef_out` - Output buffer for updated coefficients
-    /// * `scratch` - Projector-specific scratch buffers
+    /// * `scratch` - Working buffer (sized n_obs)
     fn project(
         ctx: &DemeanContext,
         in_out: &[f64],
         coef_in: &[f64],
         coef_out: &mut [f64],
-        scratch: &mut Self::Scratch,
+        scratch: &mut [f64],
     );
 
     /// Compute sum of squared residuals from current coefficients.
-    ///
-    /// Used for convergence checking every 40 iterations.
     ///
     /// # Arguments
     ///
@@ -72,7 +65,7 @@ pub trait Projector {
     /// * `in_out` - Scattered input sums in coefficient space
     /// * `coef` - Current coefficient estimates
     /// * `input` - Original input values in observation space
-    /// * `scratch` - Projector-specific scratch buffers
+    /// * `scratch` - Working buffer (sized n_obs)
     ///
     /// # Returns
     ///
@@ -82,7 +75,7 @@ pub trait Projector {
         in_out: &[f64],
         coef: &[f64],
         input: &[f64],
-        scratch: &mut Self::Scratch,
+        scratch: &mut [f64],
     ) -> f64;
 
     /// Length of coefficient slice to use for convergence checking.
@@ -105,33 +98,22 @@ pub trait Projector {
 ///
 /// Coefficients are stored as `[alpha_0, ..., alpha_{n0-1}, beta_0, ..., beta_{n1-1}]`
 /// where alpha are the coefficients for FE 0 and beta for FE 1.
+///
+/// # Scratch Usage
+///
+/// Uses `scratch[..n1]` as temporary storage for beta during projection.
 pub struct TwoFEProjector;
 
-/// Scratch buffers for 2-FE projection.
-pub struct TwoFEScratch {
-    /// Temporary buffer for beta during projection (size: n1).
-    pub beta_tmp: Vec<f64>,
-}
-
 impl Projector for TwoFEProjector {
-    type Scratch = TwoFEScratch;
-
-    #[inline(always)]
-    fn new_scratch(ctx: &DemeanContext) -> Self::Scratch {
-        TwoFEScratch {
-            beta_tmp: vec![0.0; ctx.index.n_groups[1]],
-        }
-    }
-
     #[inline(always)]
     fn project(
         ctx: &DemeanContext,
         in_out: &[f64],
         coef_in: &[f64],
         coef_out: &mut [f64],
-        scratch: &mut Self::Scratch,
+        scratch: &mut [f64],
     ) {
-        project_2fe(ctx, in_out, coef_in, coef_out, &mut scratch.beta_tmp);
+        project_2fe(ctx, in_out, coef_in, coef_out, scratch);
     }
 
     #[inline(always)]
@@ -140,13 +122,15 @@ impl Projector for TwoFEProjector {
         in_out: &[f64],
         coef: &[f64],
         input: &[f64],
-        scratch: &mut Self::Scratch,
+        scratch: &mut [f64],
     ) -> f64 {
         let n0 = ctx.index.n_groups[0];
+        let n1 = ctx.index.n_groups[1];
         let n_obs = ctx.index.n_obs;
 
-        // Compute beta from alpha (first half of projection)
-        compute_beta_from_alpha(ctx, in_out, &coef[..n0], &mut scratch.beta_tmp);
+        // Compute beta from alpha (uses scratch[..n1] as beta_tmp)
+        let beta_tmp = &mut scratch[..n1];
+        compute_beta_from_alpha(ctx, in_out, &coef[..n0], beta_tmp);
 
         // Compute SSR
         let fe0 = ctx.index.group_ids_for_fe(0);
@@ -154,7 +138,7 @@ impl Projector for TwoFEProjector {
 
         let mut ssr = 0.0;
         for i in 0..n_obs {
-            let resid = input[i] - coef[fe0[i]] - scratch.beta_tmp[fe1[i]];
+            let resid = input[i] - coef[fe0[i]] - beta_tmp[fe1[i]];
             ssr += resid * resid;
         }
         ssr
@@ -168,16 +152,13 @@ impl Projector for TwoFEProjector {
 }
 
 /// 2-FE projection: Given alpha coefficients, compute new alpha via beta.
-///
-/// This matches fixest's compute_fe_coef_2 which avoids N-length intermediates
-/// by working directly with coefficients.
 #[inline(always)]
 fn project_2fe(
     ctx: &DemeanContext,
     in_out: &[f64],
     coef_in: &[f64],
     coef_out: &mut [f64],
-    beta: &mut [f64],
+    scratch: &mut [f64],
 ) {
     let n0 = ctx.index.n_groups[0];
     let n1 = ctx.index.n_groups[1];
@@ -186,8 +167,11 @@ fn project_2fe(
     let sw0 = ctx.weights.group_weights_for_fe(0, &ctx.index);
     let sw1 = ctx.weights.group_weights_for_fe(1, &ctx.index);
 
+    // Use scratch[..n1] as beta
+    let beta = &mut scratch[..n1];
+
     // Step 1: Compute beta from alpha_in (coef_in[..n0])
-    beta[..n1].copy_from_slice(&in_out[n0..n0 + n1]);
+    beta.copy_from_slice(&in_out[n0..n0 + n1]);
 
     if ctx.weights.is_uniform {
         for (&g0, &g1) in fe0.iter().zip(fe1.iter()) {
@@ -224,7 +208,7 @@ fn project_2fe(
         .for_each(|(a, sw)| *a /= sw);
 
     // Copy beta to output
-    coef_out[n0..n0 + n1].copy_from_slice(&beta[..n1]);
+    coef_out[n0..n0 + n1].copy_from_slice(beta);
 }
 
 /// Compute beta from alpha (half of project_2fe, for SSR computation).
@@ -263,36 +247,22 @@ fn compute_beta_from_alpha(ctx: &DemeanContext, in_out: &[f64], alpha: &[f64], b
 /// Uses a general Q-FE projection that processes FEs in reverse order,
 /// matching fixest's algorithm. Includes a specialized fast path for
 /// 3-FE unweighted case.
+///
+/// # Scratch Usage
+///
+/// Uses `scratch[..n_obs]` as sum_other_means during projection.
 pub struct MultiFEProjector;
 
-/// Scratch buffers for multi-FE projection.
-pub struct MultiFEScratch {
-    /// Sum of other FE means for each observation (size: n_obs).
-    pub sum_other_means: Vec<f64>,
-    /// Output buffer for SSR computation (size: n_obs).
-    pub output_buf: Vec<f64>,
-}
-
 impl Projector for MultiFEProjector {
-    type Scratch = MultiFEScratch;
-
-    #[inline(always)]
-    fn new_scratch(ctx: &DemeanContext) -> Self::Scratch {
-        MultiFEScratch {
-            sum_other_means: vec![0.0; ctx.index.n_obs],
-            output_buf: vec![0.0; ctx.index.n_obs],
-        }
-    }
-
     #[inline(always)]
     fn project(
         ctx: &DemeanContext,
         in_out: &[f64],
         coef_in: &[f64],
         coef_out: &mut [f64],
-        scratch: &mut Self::Scratch,
+        scratch: &mut [f64],
     ) {
-        project_qfe(ctx, in_out, coef_in, coef_out, &mut scratch.sum_other_means);
+        project_qfe(ctx, in_out, coef_in, coef_out, scratch);
     }
 
     #[inline(always)]
@@ -301,10 +271,24 @@ impl Projector for MultiFEProjector {
         _in_out: &[f64],
         coef: &[f64],
         input: &[f64],
-        scratch: &mut Self::Scratch,
+        _scratch: &mut [f64],
     ) -> f64 {
-        ctx.gather_and_subtract(coef, input, &mut scratch.output_buf);
-        scratch.output_buf.iter().map(|&r| r * r).sum()
+        // Compute SSR directly without intermediate buffer
+        let n_obs = ctx.index.n_obs;
+        let n_fe = ctx.index.n_fe;
+        let mut ssr = 0.0;
+
+        for i in 0..n_obs {
+            let mut sum = 0.0;
+            for q in 0..n_fe {
+                let offset = ctx.index.coef_start[q];
+                let g = ctx.index.group_ids[q * n_obs + i];
+                sum += coef[offset + g];
+            }
+            let resid = input[i] - sum;
+            ssr += resid * resid;
+        }
+        ssr
     }
 
     #[inline(always)]

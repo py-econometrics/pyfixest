@@ -1,10 +1,6 @@
 //! Working buffer management for demeaning operations.
 //!
-//! This module re-exports buffer types from their primary locations.
-//! Most code should import directly from [`acceleration`] or [`projection`].
+//! This module re-exports the unified buffer type from [`acceleration`].
 
-// Re-exports for backward compatibility and convenience
 #[allow(unused_imports)]
-pub use crate::demean_accelerated::acceleration::AccelBuffers;
-#[allow(unused_imports)]
-pub use crate::demean_accelerated::projection::{MultiFEScratch, TwoFEScratch};
+pub use crate::demean_accelerated::acceleration::DemeanBuffers;

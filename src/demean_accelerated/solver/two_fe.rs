@@ -1,12 +1,10 @@
 //! 2-FE solver using the generic acceleration loop.
 
-use crate::demean_accelerated::acceleration::{run_acceleration, AccelBuffers};
-use crate::demean_accelerated::projection::{Projector, TwoFEProjector};
+use crate::demean_accelerated::acceleration::{run_acceleration, DemeanBuffers};
+use crate::demean_accelerated::projection::TwoFEProjector;
 use crate::demean_accelerated::types::{DemeanContext, FixestConfig};
 
 /// Solve 2-FE demeaning with acceleration.
-///
-/// Uses the generic [`run_acceleration`] with [`TwoFEProjector`].
 pub fn solve_two_fe(
     ctx: &DemeanContext,
     input: &[f64],
@@ -23,9 +21,8 @@ pub fn solve_two_fe(
     // Initialize coefficient array (unified: [alpha | beta])
     let mut coef = vec![0.0; n_coef];
 
-    // Create buffers
-    let mut buffers = AccelBuffers::new(n_coef);
-    let mut scratch = TwoFEProjector::new_scratch(ctx);
+    // Create unified buffers
+    let mut buffers = DemeanBuffers::new(n_coef, n_obs);
 
     // Run acceleration loop
     let (iter, converged) = run_acceleration::<TwoFEProjector>(
@@ -33,7 +30,6 @@ pub fn solve_two_fe(
         &in_out,
         &mut coef,
         &mut buffers,
-        &mut scratch,
         config,
         config.maxiter,
         input,
@@ -52,19 +48,15 @@ pub fn solve_two_fe(
 }
 
 /// Run 2-FE acceleration loop (public for use by multi_fe solver).
-///
-/// This is a thin wrapper around the generic [`run_acceleration`] for cases
-/// where the multi-FE solver needs to run 2-FE sub-convergence.
 #[allow(clippy::too_many_arguments)]
 pub fn run_2fe_acceleration(
     ctx: &DemeanContext,
     in_out: &[f64],
     coef: &mut [f64],
-    buffers: &mut AccelBuffers,
-    scratch: &mut <TwoFEProjector as Projector>::Scratch,
+    buffers: &mut DemeanBuffers,
     config: &FixestConfig,
     max_iter: usize,
     input: &[f64],
 ) -> (usize, bool) {
-    run_acceleration::<TwoFEProjector>(ctx, in_out, coef, buffers, scratch, config, max_iter, input)
+    run_acceleration::<TwoFEProjector>(ctx, in_out, coef, buffers, config, max_iter, input)
 }

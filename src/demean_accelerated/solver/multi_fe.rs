@@ -1,7 +1,7 @@
 //! Multi-FE (3+) solver using the generic acceleration loop.
 
-use crate::demean_accelerated::acceleration::{run_acceleration, AccelBuffers};
-use crate::demean_accelerated::projection::{MultiFEProjector, Projector, TwoFEProjector};
+use crate::demean_accelerated::acceleration::{run_acceleration, DemeanBuffers};
+use crate::demean_accelerated::projection::MultiFEProjector;
 use crate::demean_accelerated::types::{DemeanContext, FixestConfig};
 
 use super::two_fe::run_2fe_acceleration;
@@ -13,9 +13,6 @@ use super::two_fe::run_2fe_acceleration;
 /// 1. **Warmup**: Run all-FE iterations to get initial estimates
 /// 2. **2-FE sub-convergence**: Converge on first 2 FEs (faster)
 /// 3. **Re-acceleration**: Final all-FE iterations to polish
-///
-/// This matches fixest's approach which exploits the fact that 2-FE
-/// convergence is much faster than Q-FE convergence.
 pub fn solve_multi_fe(
     ctx: &DemeanContext,
     input: &[f64],
@@ -31,11 +28,9 @@ pub fn solve_multi_fe(
     let mut mu = vec![0.0; n_obs];
     let mut coef = vec![0.0; n_coef];
 
-    // Create buffers
-    let mut multi_buffers = AccelBuffers::new(n_coef);
-    let mut multi_scratch = MultiFEProjector::new_scratch(ctx);
-    let mut two_buffers = AccelBuffers::new(n_coef_2fe);
-    let mut two_scratch = TwoFEProjector::new_scratch(ctx);
+    // Create unified buffers (one for multi-FE, one for 2-FE sub-convergence)
+    let mut multi_buffers = DemeanBuffers::new(n_coef, n_obs);
+    let mut two_buffers = DemeanBuffers::new(n_coef_2fe, n_obs);
 
     // Phase 1: Warmup with all FEs (mu is zeros initially)
     let in_out_phase1 = ctx.scatter_to_coefficients(input);
@@ -44,7 +39,6 @@ pub fn solve_multi_fe(
         &in_out_phase1,
         &mut coef,
         &mut multi_buffers,
-        &mut multi_scratch,
         config,
         config.iter_warmup,
         input,
@@ -64,7 +58,6 @@ pub fn solve_multi_fe(
             &in_out_2fe,
             &mut coef_2fe,
             &mut two_buffers,
-            &mut two_scratch,
             config,
             config.maxiter / 2,
             &effective_input,
@@ -88,7 +81,6 @@ pub fn solve_multi_fe(
                 &in_out_phase3,
                 &mut coef,
                 &mut multi_buffers,
-                &mut multi_scratch,
                 config,
                 remaining,
                 input,
