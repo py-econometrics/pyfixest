@@ -3,6 +3,7 @@ use pyo3::prelude::*;
 mod collinear;
 mod crv1;
 mod demean;
+mod detect_singletons;
 mod nested_fixed_effects;
 mod demean_accelerated;
 
@@ -15,5 +16,6 @@ fn _core_impl(m: &Bound<'_, PyModule>) -> PyResult<()> {
         nested_fixed_effects::_count_fixef_fully_nested_all_rs
     ))?;
     m.add_wrapped(wrap_pyfunction!(demean_accelerated::_demean_accelerated_rs))?;
+    m.add_wrapped(wrap_pyfunction!(detect_singletons::_detect_singletons_rs))?;
     Ok(())
 }
