@@ -25,8 +25,9 @@ use crate::demean_accelerated::types::DemeanContext;
 
 /// A projection operation for fixed-effects demeaning.
 ///
-/// Implementations must be zero-cost abstractions - all methods should be
-/// inlineable and suitable for hot loops.
+/// Projectors hold a reference to the [`DemeanContext`] and provide methods
+/// for projection and convergence checking. Implementations must be zero-cost
+/// abstractions - all methods should be inlineable and suitable for hot loops.
 ///
 /// # Scratch Buffer
 ///
@@ -44,13 +45,12 @@ pub trait Projector {
     ///
     /// # Arguments
     ///
-    /// * `ctx` - Demeaning context (index + weights)
     /// * `in_out` - Scattered input sums in coefficient space
     /// * `coef_in` - Input coefficient estimates
     /// * `coef_out` - Output buffer for updated coefficients
     /// * `scratch` - Working buffer (sized n_obs)
     fn project(
-        ctx: &DemeanContext,
+        &self,
         in_out: &[f64],
         coef_in: &[f64],
         coef_out: &mut [f64],
@@ -61,7 +61,6 @@ pub trait Projector {
     ///
     /// # Arguments
     ///
-    /// * `ctx` - Demeaning context
     /// * `in_out` - Scattered input sums in coefficient space
     /// * `coef` - Current coefficient estimates
     /// * `input` - Original input values in observation space
@@ -71,7 +70,7 @@ pub trait Projector {
     ///
     /// Sum of squared residuals: Σ(input[i] - predicted[i])²
     fn compute_ssr(
-        ctx: &DemeanContext,
+        &self,
         in_out: &[f64],
         coef: &[f64],
         input: &[f64],
@@ -80,9 +79,9 @@ pub trait Projector {
 
     /// Length of coefficient slice to use for convergence checking.
     ///
-    /// For 2-FE: full coefficient length (n0 + n1)
+    /// For 2-FE: first FE group count (n0)
     /// For Q-FE: excludes last FE (n_coef - n_groups[Q-1])
-    fn convergence_len(ctx: &DemeanContext) -> usize;
+    fn convergence_len(&self) -> usize;
 }
 
 // =============================================================================
@@ -102,28 +101,39 @@ pub trait Projector {
 /// # Scratch Usage
 ///
 /// Uses `scratch[..n1]` as temporary storage for beta during projection.
-pub struct TwoFEProjector;
+pub struct TwoFEProjector<'a> {
+    ctx: &'a DemeanContext,
+}
 
-impl Projector for TwoFEProjector {
+impl<'a> TwoFEProjector<'a> {
+    /// Create a new 2-FE projector with the given context.
+    #[inline]
+    pub fn new(ctx: &'a DemeanContext) -> Self {
+        Self { ctx }
+    }
+}
+
+impl Projector for TwoFEProjector<'_> {
     #[inline(always)]
     fn project(
-        ctx: &DemeanContext,
+        &self,
         in_out: &[f64],
         coef_in: &[f64],
         coef_out: &mut [f64],
         scratch: &mut [f64],
     ) {
-        project_2fe(ctx, in_out, coef_in, coef_out, scratch);
+        project_2fe(self.ctx, in_out, coef_in, coef_out, scratch);
     }
 
     #[inline(always)]
     fn compute_ssr(
-        ctx: &DemeanContext,
+        &self,
         in_out: &[f64],
         coef: &[f64],
         input: &[f64],
         scratch: &mut [f64],
     ) -> f64 {
+        let ctx = self.ctx;
         let n0 = ctx.index.n_groups[0];
         let n1 = ctx.index.n_groups[1];
         let n_obs = ctx.index.n_obs;
@@ -145,9 +155,9 @@ impl Projector for TwoFEProjector {
     }
 
     #[inline(always)]
-    fn convergence_len(ctx: &DemeanContext) -> usize {
+    fn convergence_len(&self) -> usize {
         // For 2-FE, only check alpha (first FE) for convergence
-        ctx.index.n_groups[0]
+        self.ctx.index.n_groups[0]
     }
 }
 
@@ -251,28 +261,39 @@ fn compute_beta_from_alpha(ctx: &DemeanContext, in_out: &[f64], alpha: &[f64], b
 /// # Scratch Usage
 ///
 /// Uses `scratch[..n_obs]` as sum_other_means during projection.
-pub struct MultiFEProjector;
+pub struct MultiFEProjector<'a> {
+    ctx: &'a DemeanContext,
+}
 
-impl Projector for MultiFEProjector {
+impl<'a> MultiFEProjector<'a> {
+    /// Create a new multi-FE projector with the given context.
+    #[inline]
+    pub fn new(ctx: &'a DemeanContext) -> Self {
+        Self { ctx }
+    }
+}
+
+impl Projector for MultiFEProjector<'_> {
     #[inline(always)]
     fn project(
-        ctx: &DemeanContext,
+        &self,
         in_out: &[f64],
         coef_in: &[f64],
         coef_out: &mut [f64],
         scratch: &mut [f64],
     ) {
-        project_qfe(ctx, in_out, coef_in, coef_out, scratch);
+        project_qfe(self.ctx, in_out, coef_in, coef_out, scratch);
     }
 
     #[inline(always)]
     fn compute_ssr(
-        ctx: &DemeanContext,
+        &self,
         _in_out: &[f64],
         coef: &[f64],
         input: &[f64],
         _scratch: &mut [f64],
     ) -> f64 {
+        let ctx = self.ctx;
         // Compute SSR directly without intermediate buffer
         let n_obs = ctx.index.n_obs;
         let n_fe = ctx.index.n_fe;
@@ -292,7 +313,8 @@ impl Projector for MultiFEProjector {
     }
 
     #[inline(always)]
-    fn convergence_len(ctx: &DemeanContext) -> usize {
+    fn convergence_len(&self) -> usize {
+        let ctx = self.ctx;
         // Exclude last FE from convergence check
         ctx.index.n_coef - ctx.index.n_groups[ctx.index.n_fe - 1]
     }

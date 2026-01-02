@@ -8,9 +8,7 @@
 //! zero-cost abstraction through monomorphization.
 
 use crate::demean_accelerated::projection::Projector;
-use crate::demean_accelerated::types::{
-    converged, irons_tuck_accelerate, should_continue, DemeanContext, FixestConfig,
-};
+use crate::demean_accelerated::types::{converged, irons_tuck_accelerate, should_continue, FixestConfig};
 
 // =============================================================================
 // Unified Buffer Struct
@@ -79,7 +77,7 @@ impl DemeanBuffers {
 /// Tuple of (iterations_used, converged_flag)
 #[allow(clippy::too_many_arguments)]
 pub fn run_acceleration<P: Projector>(
-    ctx: &DemeanContext,
+    projector: &P,
     in_out: &[f64],
     coef: &mut [f64],
     buffers: &mut DemeanBuffers,
@@ -87,11 +85,10 @@ pub fn run_acceleration<P: Projector>(
     max_iter: usize,
     input: &[f64],
 ) -> (usize, bool) {
-    let conv_len = P::convergence_len(ctx);
+    let conv_len = projector.convergence_len();
 
     // Initial projection
-    P::project(
-        ctx,
+    projector.project(
         in_out,
         coef,
         buffers.gx.as_mut_slice(),
@@ -107,8 +104,7 @@ pub fn run_acceleration<P: Projector>(
         iter += 1;
 
         // Double projection for Irons-Tuck: G(G(x))
-        P::project(
-            ctx,
+        projector.project(
             in_out,
             buffers.gx.as_slice(),
             buffers.ggx.as_mut_slice(),
@@ -127,8 +123,7 @@ pub fn run_acceleration<P: Projector>(
         // Post-acceleration projection (after warmup)
         if iter >= config.iter_proj_after_acc {
             buffers.temp[..conv_len].copy_from_slice(&coef[..conv_len]);
-            P::project(
-                ctx,
+            projector.project(
                 in_out,
                 buffers.temp.as_slice(),
                 coef,
@@ -137,8 +132,7 @@ pub fn run_acceleration<P: Projector>(
         }
 
         // Update gx for convergence check
-        P::project(
-            ctx,
+        projector.project(
             in_out,
             coef,
             buffers.gx.as_mut_slice(),
@@ -165,8 +159,7 @@ pub fn run_acceleration<P: Projector>(
                     ) {
                         break;
                     }
-                    P::project(
-                        ctx,
+                    projector.project(
                         in_out,
                         buffers.y.as_slice(),
                         buffers.gx.as_mut_slice(),
@@ -180,8 +173,7 @@ pub fn run_acceleration<P: Projector>(
         // SSR convergence check (every 40 iterations)
         if iter % 40 == 0 {
             let ssr_old = ssr;
-            ssr = P::compute_ssr(
-                ctx,
+            ssr = projector.compute_ssr(
                 in_out,
                 &buffers.gx,
                 input,
