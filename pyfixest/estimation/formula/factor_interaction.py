@@ -1,4 +1,3 @@
-import re
 from collections.abc import Hashable
 from typing import TYPE_CHECKING, Any, Optional
 

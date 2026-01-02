@@ -77,44 +77,139 @@ class _ModelMatrixKey:
 
 
 class ModelMatrix:
+    """
+    A wrapper around formulaic.ModelMatrix for the specification of PyFixest models.
+
+    This class organizes and processes model matrices for econometric estimation,
+    extracting dependent and independent variables, fixed effects, instrumental
+    variables, and weights. It handles missing data, singleton observations,
+    and ensures proper formatting for estimation procedures.
+
+    Attributes
+    ----------
+    dependent : pd.DataFrame
+        The dependent variable(s) (left-hand side of the main equation).
+    independent : pd.DataFrame
+        The independent variable(s) (right-hand side of the main equation).
+    fixed_effects : pd.DataFrame or None
+        Fixed effects variables, encoded as integers.
+    endogenous : pd.DataFrame or None
+        Endogenous variables in instrumental variable specifications.
+    instruments : pd.DataFrame or None
+        Instrumental variables for IV estimation.
+    weights : pd.DataFrame or None
+        Observation weights for weighted estimation.
+    model_spec : formulaic.ModelSpec
+        The underlying formulaic model specification.
+    na_index_str : str
+        Comma-separated string of row indices that were dropped.
+    """
+
     @property
     def dependent(self) -> pd.DataFrame:
-        return self._data[self._dependent]
+        """
+        Get the dependent variable(s) from the model.
+
+        Returns
+        -------
+        pd.DataFrame
+            DataFrame containing the dependent variable(s) (left-hand side
+            of the main equation).
+        """
+        return self._data.loc[:, self._dependent]
 
     @property
     def independent(self) -> pd.DataFrame:
-        return self._data[self._independent]
+        """
+        Get the independent variable(s) from the model.
+
+        Returns
+        -------
+        pd.DataFrame
+            DataFrame containing the independent variable(s) (right-hand side
+            of the main equation). Intercept columns are excluded when fixed
+            effects are present.
+        """
+        return self._data.loc[:, self._independent]
 
     @property
     def fixed_effects(self) -> Optional[pd.DataFrame]:
+        """
+        Get the fixed effects variables from the model.
+
+        Returns
+        -------
+        pd.DataFrame or None
+            DataFrame containing the fixed effects variables encoded as integers,
+            or None if no fixed effects are specified in the model.
+        """
         if self._fixed_effects is None:
             return None
         else:
-            return self._data[self._fixed_effects]
+            return self._data.loc[:, self._fixed_effects]
 
     @property
     def endogenous(self) -> Optional[pd.DataFrame]:
+        """
+        Get the endogenous variable(s) for instrumental variable estimation.
+
+        Returns
+        -------
+        pd.DataFrame or None
+            DataFrame containing the endogenous variable(s) (left-hand side
+            of the first-stage equation in IV estimation), or None if not
+            using instrumental variables.
+        """
         if self._endogenous is None:
             return None
         else:
-            return self._data[self._endogenous]
+            return self._data.loc[:, self._endogenous]
 
     @property
     def instruments(self) -> Optional[pd.DataFrame]:
+        """
+        Get the instrumental variable(s) for IV estimation.
+
+        Returns
+        -------
+        pd.DataFrame or None
+            DataFrame containing the instrumental variable(s) (right-hand side
+            of the first-stage equation in IV estimation), or None if not
+            using instrumental variables. Intercept columns are excluded when
+            fixed effects are present.
+        """
         if self._instruments is None:
             return None
         else:
-            return self._data[self._instruments]
+            return self._data.loc[:, self._instruments]
 
     @property
     def weights(self) -> Optional[pd.DataFrame]:
+        """
+        Get the observation weights for weighted estimation.
+
+        Returns
+        -------
+        pd.DataFrame or None
+            DataFrame containing the observation weights (must be non-negative
+            numeric values), or None if no weights are specified.
+        """
         if self._weights is None:
             return None
         else:
-            return self._data[self._weights]
+            return self._data.loc[:, self._weights]
 
     @property
     def model_spec(self) -> formulaic.ModelSpec:
+        """
+        Get the underlying formulaic model specification.
+
+        Returns
+        -------
+        formulaic.ModelSpec
+            The formulaic ModelSpec object containing metadata about the
+            model structure and transformations.
+        """
         return self._model_spec
 
     def __init__(
@@ -129,47 +224,79 @@ class ModelMatrix:
         self._process(dropped_rows=drop_rows, drop_singletons=drop_singletons)
 
     def _collect_columns(self, model_matrix: formulaic.ModelMatrix) -> None:
-        mapping: dict[str, tuple[str, str | None]] = {
-            "_dependent": (_ModelMatrixKey.main, "lhs"),
-            "_independent": (_ModelMatrixKey.main, "rhs"),
-            "_fixed_effects": (_ModelMatrixKey.fixed_effects, None),
-            "_endogenous": (_ModelMatrixKey.instrumental_variable, "lhs"),
-            "_instruments": (_ModelMatrixKey.instrumental_variable, "rhs"),
-            "_weights": (_ModelMatrixKey.weights, None),
-        }
-        for attribute, (key1, key2) in mapping.items():
-            try:
-                columns = (
-                    model_matrix[key1].columns
-                    if key2 is None
-                    else model_matrix[key1][key2].columns
-                )
-            except KeyError:
-                columns = None
-            setattr(self, attribute, columns)
+        # Extract dependent and independent variables (always present)
+        self._dependent = model_matrix[_ModelMatrixKey.main]["lhs"].columns.tolist()
+        self._independent = model_matrix[_ModelMatrixKey.main]["rhs"].columns.tolist()
+        # Extract fixed effects (optional)
+        try:
+            self._fixed_effects = model_matrix[
+                _ModelMatrixKey.fixed_effects
+            ].columns.tolist()
+        except KeyError:
+            self._fixed_effects = None
+        # Extract endogenous variables
+        try:
+            self._endogenous = model_matrix[_ModelMatrixKey.instrumental_variable][
+                "lhs"
+            ].columns.tolist()
+        except KeyError:
+            self._endogenous = None
+        # Extract instruments
+        try:
+            self._instruments = model_matrix[_ModelMatrixKey.instrumental_variable][
+                "rhs"
+            ].columns.tolist()
+        except KeyError:
+            self._instruments = None
+        # Extract weights (optional)
+        try:
+            self._weights = model_matrix[_ModelMatrixKey.weights].columns.tolist()
+        except KeyError:
+            self._weights = None
 
     def _collect_data(self, model_matrix: formulaic.ModelMatrix) -> None:
-        data: list[pd.DataFrame] = list(model_matrix._flatten())
-        if not all(data[0].index.identical(other.index) for other in data[1:]):
+        datas: list[pd.DataFrame] = list(model_matrix._flatten())
+        if not all(datas[0].index.identical(other.index) for other in datas[1:]):
             raise ValueError("All design matrix data must have the same index.")
-        self._data = pd.concat(data, ignore_index=False, axis=1)
+        data = pd.concat(datas, ignore_index=False, axis=1)
+        self._data = data.loc[:, ~data.columns.duplicated()]
 
     def _process(self, dropped_rows: set[int], drop_singletons: bool = False) -> None:
+        if self.dependent.shape[1] != 1:
+            # If the dependent variable is not numeric, formulaic's contrast encoding kicks in
+            # creating multiple columns for the dependent variable
+            # TODO: Make this check more explicit?
+            raise TypeError("The dependent variable must be numeric.")
+        if self.endogenous is not None and self.endogenous.shape[1] != 1:
+            raise TypeError("The endogenous variable must be numeric.")
         # Drop rows with non-finite values
-        is_infinite = ~np.isfinite(self._data).all(axis=1)
+        is_infinite = pd.Series(
+            ~np.isfinite(self._data).all(axis=1), index=self._data.index
+        )
         if is_infinite.any():
-            dropped_rows |= set(self._data.index[is_infinite])
-            self._data.drop(self._data.index[is_infinite], inplace=True)
+            infinite_indices = is_infinite[is_infinite].index.tolist()
+            dropped_rows |= set(infinite_indices)
+            self._data.drop(infinite_indices, inplace=True)
+            warnings.warn(
+                f"{is_infinite.sum()} rows with infinite values dropped from the model.",
+            )
         if drop_singletons and self.fixed_effects is not None:
             # Drop singletons
             is_singleton = detect_singletons(self.fixed_effects.astype("int32").values)
             if is_singleton.any():
-                dropped_rows |= set(self._data.index[is_singleton])
-                self._data.drop(self._data.index[is_singleton], inplace=True)
+                singleton_indices = self._data[is_singleton].index.tolist()
+                dropped_rows |= set(singleton_indices)
+                self._data.drop(singleton_indices, inplace=True)
+                warnings.warn(
+                    f"{is_singleton.sum()} singleton fixed effect(s) dropped from the model."
+                )
         if self.fixed_effects is not None:
             # Intercept not meaningful in the presence of fixed effects
-            self._independent = self._independent.drop("Intercept", errors="ignore")
-            self._instruments = self._instruments.drop("Intercept", errors="ignore")
+            self._independent = [col for col in self._independent if col != "Intercept"]
+            if self._instruments is not None:
+                self._instruments = [
+                    col for col in self._instruments if col != "Intercept"
+                ]
 
         self.na_index_str = ",".join(str(i) for i in dropped_rows)
 
