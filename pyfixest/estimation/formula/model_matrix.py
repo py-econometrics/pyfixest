@@ -76,41 +76,102 @@ class _ModelMatrixKey:
     weights: str = "weights"
 
 
-@dataclass(kw_only=True, frozen=True)
 class ModelMatrix:
-    """A model matrix."""
+    @property
+    def dependent(self) -> pd.DataFrame:
+        return self._data[self._dependent]
 
-    dependent: pd.DataFrame
-    independent: pd.DataFrame
-    model_spec: formulaic.ModelSpec
-    na_index_str: str
-    fixed_effects: Optional[pd.DataFrame] = None
-    endogenous: Optional[pd.DataFrame] = None
-    instruments: Optional[pd.DataFrame] = None
-    weights: Optional[pd.DataFrame] = None
+    @property
+    def independent(self) -> pd.DataFrame:
+        return self._data[self._independent]
 
-    def __post_init__(self) -> None:
-        n_observations: dict[str, int] = {}
-        for attribute, type_hint in self.__annotations__.items():
-            if type_hint is not pd.DataFrame:
-                continue
-            attr = getattr(self, attribute)
-            if attr is None:
-                continue
-            elif not isinstance(attr, type_hint):
-                raise TypeError(f"{attribute} must be a DataFrame.")
-            else:
-                n_observations[attribute] = attr.shape[0]
-        if not n_observations:
-            raise ValueError("Must provide data.")
-        elif len(set(n_observations.values())) != 1:
-            raise ValueError(
-                f"All data provided must have the same number of observations. Received: {n_observations}"
-            )
-        if self.dependent.shape[1] != 1:
-            raise TypeError("The dependent variable must be numeric.")
-        if self.endogenous is not None and self.endogenous.shape[1] != 1:
-            raise TypeError("The endogenous variable must be numeric.")
+    @property
+    def fixed_effects(self) -> Optional[pd.DataFrame]:
+        if self._fixed_effects is None:
+            return None
+        else:
+            return self._data[self._fixed_effects]
+
+    @property
+    def endogenous(self) -> Optional[pd.DataFrame]:
+        if self._endogenous is None:
+            return None
+        else:
+            return self._data[self._endogenous]
+
+    @property
+    def instruments(self) -> Optional[pd.DataFrame]:
+        if self._instruments is None:
+            return None
+        else:
+            return self._data[self._instruments]
+
+    @property
+    def weights(self) -> Optional[pd.DataFrame]:
+        if self._weights is None:
+            return None
+        else:
+            return self._data[self._weights]
+
+    @property
+    def model_spec(self) -> formulaic.ModelSpec:
+        return self._model_spec
+
+    def __init__(
+        self,
+        model_matrix: formulaic.ModelMatrix,
+        drop_rows: set[int],
+        drop_singletons: bool = True,
+    ) -> None:
+        self._model_spec = model_matrix.model_spec
+        self._collect_columns(model_matrix)
+        self._collect_data(model_matrix)
+        self._process(dropped_rows=drop_rows, drop_singletons=drop_singletons)
+
+    def _collect_columns(self, model_matrix: formulaic.ModelMatrix) -> None:
+        mapping: dict[str, tuple[str, str | None]] = {
+            "_dependent": (_ModelMatrixKey.main, "lhs"),
+            "_independent": (_ModelMatrixKey.main, "rhs"),
+            "_fixed_effects": (_ModelMatrixKey.fixed_effects, None),
+            "_endogenous": (_ModelMatrixKey.instrumental_variable, "lhs"),
+            "_instruments": (_ModelMatrixKey.instrumental_variable, "rhs"),
+            "_weights": (_ModelMatrixKey.weights, None),
+        }
+        for attribute, (key1, key2) in mapping.items():
+            try:
+                columns = (
+                    model_matrix[key1].columns
+                    if key2 is None
+                    else model_matrix[key1][key2].columns
+                )
+            except KeyError:
+                columns = None
+            setattr(self, attribute, columns)
+
+    def _collect_data(self, model_matrix: formulaic.ModelMatrix) -> None:
+        data: list[pd.DataFrame] = list(model_matrix._flatten())
+        if not all(data[0].index.identical(other.index) for other in data[1:]):
+            raise ValueError("All design matrix data must have the same index.")
+        self._data = pd.concat(data, ignore_index=False, axis=1)
+
+    def _process(self, dropped_rows: set[int], drop_singletons: bool = False) -> None:
+        # Drop rows with non-finite values
+        is_infinite = ~np.isfinite(self._data).all(axis=1)
+        if is_infinite.any():
+            dropped_rows |= set(self._data.index[is_infinite])
+            self._data.drop(self._data.index[is_infinite], inplace=True)
+        if drop_singletons and self.fixed_effects is not None:
+            # Drop singletons
+            is_singleton = detect_singletons(self.fixed_effects.astype("int32").values)
+            if is_singleton.any():
+                dropped_rows |= set(self._data.index[is_singleton])
+                self._data.drop(self._data.index[is_singleton], inplace=True)
+        if self.fixed_effects is not None:
+            # Intercept not meaningful in the presence of fixed effects
+            self._independent = self._independent.drop("Intercept", errors="ignore")
+            self._instruments = self._instruments.drop("Intercept", errors="ignore")
+
+        self.na_index_str = ",".join(str(i) for i in dropped_rows)
 
 
 def get(
@@ -144,12 +205,6 @@ def get(
     # Process input data
     data.reset_index(drop=True, inplace=True)  # Sanitise index
     n_observations: Final[int] = data.shape[0]
-    # Set infinite to null
-    numeric_columns = data.select_dtypes(include="number").columns
-    data[numeric_columns] = data[numeric_columns].where(
-        np.isfinite(data[numeric_columns]),  # type: ignore[call-overload]
-        pd.NA,  # type: ignore[call-overload]
-    )
     # Collate kwargs to be passed to formulaic.Formula
     formula_kwargs: dict[str, str] = {
         _ModelMatrixKey.main: formula.fml_second_stage
@@ -186,48 +241,9 @@ def get(
         }
         | {**capture_context(context)},
     )
-    fixed_effects = (
-        model_matrix[_ModelMatrixKey.fixed_effects].astype("int32")
-        if formula.fixed_effects is not None
-        else None
-    )
-    if fixed_effects is not None:
-        # Intercept not meaningful in the presence of fixed effects
-        model_matrix[_ModelMatrixKey.main]["rhs"].drop(
-            "Intercept", axis=1, inplace=True, errors="ignore"
-        )
-        if formula.fml_first_stage is not None:
-            model_matrix[_ModelMatrixKey.instrumental_variable]["rhs"].drop(
-                "Intercept", axis=1, inplace=True, errors="ignore"
-            )
-    if drop_singletons and fixed_effects is not None:
-        is_singleton = detect_singletons(fixed_effects.values)
-        if is_singleton.any():
-            warnings.warn(
-                f"{is_singleton.sum()} singleton fixed effect(s) detected. These observations are dropped from the model."
-            )
-            fixed_effects.drop(fixed_effects.index[is_singleton], inplace=True)
-            for model in model_matrix:
-                if isinstance(model, formulaic.ModelMatrices):
-                    for m in model:
-                        m.drop(m.index[is_singleton], inplace=True)
-                else:
-                    model.drop(model.index[is_singleton], inplace=True)
-
-    na_index: set[int] = set(range(n_observations)).difference(
+    drop_rows: set[int] = set(range(n_observations)).difference(
         model_matrix[_ModelMatrixKey.main]["lhs"].index
     )
     return ModelMatrix(
-        dependent=model_matrix[_ModelMatrixKey.main]["lhs"],
-        independent=model_matrix[_ModelMatrixKey.main]["rhs"],
-        model_spec=model_matrix.model_spec,
-        fixed_effects=fixed_effects,
-        endogenous=model_matrix[_ModelMatrixKey.instrumental_variable]["lhs"]
-        if formula.fml_first_stage is not None
-        else None,
-        instruments=model_matrix[_ModelMatrixKey.instrumental_variable]["rhs"]
-        if formula.fml_first_stage is not None
-        else None,
-        weights=model_matrix[_ModelMatrixKey.weights] if weights is not None else None,
-        na_index_str=",".join(str(i) for i in na_index),
+        model_matrix, drop_rows=drop_rows, drop_singletons=drop_singletons
     )
