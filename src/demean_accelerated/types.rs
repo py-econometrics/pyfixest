@@ -34,34 +34,28 @@ pub struct IronsTuck;
 impl AccelerationStrategy for IronsTuck {
     #[inline(always)]
     fn accelerate(&self, x: &mut [f64], gx: &[f64], ggx: &[f64]) -> bool {
-        let n = x.len();
-        let mut vprod = 0.0;
-        let mut ssq = 0.0;
-
-        for i in 0..n {
-            unsafe {
-                let gx_i = *gx.get_unchecked(i);
-                let ggx_i = *ggx.get_unchecked(i);
-                let x_i = *x.get_unchecked(i);
+        let (vprod, ssq) = x
+            .iter()
+            .zip(gx.iter())
+            .zip(ggx.iter())
+            .map(|((&x_i, &gx_i), &ggx_i)| {
                 let delta_gx = ggx_i - gx_i;
                 let delta2_x = delta_gx - gx_i + x_i;
-                vprod += delta_gx * delta2_x;
-                ssq += delta2_x * delta2_x;
-            }
-        }
+                (delta_gx * delta2_x, delta2_x * delta2_x)
+            })
+            .fold((0.0, 0.0), |(vp, sq), (dvp, dsq)| (vp + dvp, sq + dsq));
 
         if ssq == 0.0 {
             return true;
         }
 
         let coef = vprod / ssq;
-        for i in 0..n {
-            unsafe {
-                let gx_i = *gx.get_unchecked(i);
-                let ggx_i = *ggx.get_unchecked(i);
-                *x.get_unchecked_mut(i) = ggx_i - coef * (ggx_i - gx_i);
-            }
-        }
+        x.iter_mut()
+            .zip(gx.iter())
+            .zip(ggx.iter())
+            .for_each(|((x_i, &gx_i), &ggx_i)| {
+                *x_i = ggx_i - coef * (ggx_i - gx_i);
+            });
 
         false
     }

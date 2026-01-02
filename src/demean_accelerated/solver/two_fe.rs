@@ -21,7 +21,6 @@ fn project_2fe(
 ) {
     let n0 = fe_info.n_groups[0];
     let n1 = fe_info.n_groups[1];
-    let n_obs = fe_info.n_obs;
     let fe0 = fe_info.fe_ids_slice(0);
     let fe1 = fe_info.fe_ids_slice(1);
     let sw0 = fe_info.sum_weights_slice(0);
@@ -32,51 +31,31 @@ fn project_2fe(
     beta[..n1].copy_from_slice(&in_out[n0..n0 + n1]);
 
     if fe_info.is_unweighted {
-        for i in 0..n_obs {
-            unsafe {
-                let g1 = *fe1.get_unchecked(i);
-                let g0 = *fe0.get_unchecked(i);
-                *beta.get_unchecked_mut(g1) -= *alpha_in.get_unchecked(g0);
-            }
+        for (&g0, &g1) in fe0.iter().zip(fe1.iter()) {
+            beta[g1] -= alpha_in[g0];
         }
     } else {
-        for i in 0..n_obs {
-            unsafe {
-                let g1 = *fe1.get_unchecked(i);
-                let g0 = *fe0.get_unchecked(i);
-                *beta.get_unchecked_mut(g1) -= *alpha_in.get_unchecked(g0) * *weights.get_unchecked(i);
-            }
+        for ((&g0, &g1), &w) in fe0.iter().zip(fe1.iter()).zip(weights.iter()) {
+            beta[g1] -= alpha_in[g0] * w;
         }
     }
 
-    for g in 0..n1 {
-        unsafe { *beta.get_unchecked_mut(g) /= *sw1.get_unchecked(g) };
-    }
+    beta.iter_mut().zip(sw1.iter()).for_each(|(b, sw)| *b /= sw);
 
     // Step 2: Compute alpha_out from beta
     alpha_out[..n0].copy_from_slice(&in_out[..n0]);
 
     if fe_info.is_unweighted {
-        for i in 0..n_obs {
-            unsafe {
-                let g0 = *fe0.get_unchecked(i);
-                let g1 = *fe1.get_unchecked(i);
-                *alpha_out.get_unchecked_mut(g0) -= *beta.get_unchecked(g1);
-            }
+        for (&g0, &g1) in fe0.iter().zip(fe1.iter()) {
+            alpha_out[g0] -= beta[g1];
         }
     } else {
-        for i in 0..n_obs {
-            unsafe {
-                let g0 = *fe0.get_unchecked(i);
-                let g1 = *fe1.get_unchecked(i);
-                *alpha_out.get_unchecked_mut(g0) -= *beta.get_unchecked(g1) * *weights.get_unchecked(i);
-            }
+        for ((&g0, &g1), &w) in fe0.iter().zip(fe1.iter()).zip(weights.iter()) {
+            alpha_out[g0] -= beta[g1] * w;
         }
     }
 
-    for g in 0..n0 {
-        unsafe { *alpha_out.get_unchecked_mut(g) /= *sw0.get_unchecked(g) };
-    }
+    alpha_out.iter_mut().zip(sw0.iter()).for_each(|(a, sw)| *a /= sw);
 }
 
 /// Compute beta from alpha (half of project_2fe, for SSR computation).
@@ -88,7 +67,6 @@ fn compute_beta_from_alpha(
     beta: &mut [f64],
 ) {
     let n1 = fe_info.n_groups[1];
-    let n_obs = fe_info.n_obs;
     let n0 = fe_info.n_groups[0];
     let fe0 = fe_info.fe_ids_slice(0);
     let fe1 = fe_info.fe_ids_slice(1);
@@ -98,26 +76,16 @@ fn compute_beta_from_alpha(
     beta[..n1].copy_from_slice(&in_out[n0..n0 + n1]);
 
     if fe_info.is_unweighted {
-        for i in 0..n_obs {
-            unsafe {
-                let g1 = *fe1.get_unchecked(i);
-                let g0 = *fe0.get_unchecked(i);
-                *beta.get_unchecked_mut(g1) -= *alpha.get_unchecked(g0);
-            }
+        for (&g0, &g1) in fe0.iter().zip(fe1.iter()) {
+            beta[g1] -= alpha[g0];
         }
     } else {
-        for i in 0..n_obs {
-            unsafe {
-                let g1 = *fe1.get_unchecked(i);
-                let g0 = *fe0.get_unchecked(i);
-                *beta.get_unchecked_mut(g1) -= *alpha.get_unchecked(g0) * *weights.get_unchecked(i);
-            }
+        for ((&g0, &g1), &w) in fe0.iter().zip(fe1.iter()).zip(weights.iter()) {
+            beta[g1] -= alpha[g0] * w;
         }
     }
 
-    for g in 0..n1 {
-        unsafe { *beta.get_unchecked_mut(g) /= *sw1.get_unchecked(g) };
-    }
+    beta.iter_mut().zip(sw1.iter()).for_each(|(b, sw)| *b /= sw);
 }
 
 // =============================================================================

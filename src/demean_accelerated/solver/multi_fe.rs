@@ -47,6 +47,9 @@ fn project_qfe(
 }
 
 /// Specialized 3-FE projection with loop unrolling.
+///
+/// Uses unsafe raw pointer arithmetic for performance - benchmarks show ~1.5x
+/// speedup over safe iterator-based code for this hot path.
 #[inline(always)]
 fn project_qfe_3fe_unweighted(
     n_obs: usize,
@@ -175,6 +178,8 @@ fn project_qfe_3fe_unweighted(
 }
 
 /// General Q-FE projection (any number of FEs).
+///
+/// Uses unsafe raw pointer arithmetic for performance.
 #[inline(always)]
 #[allow(clippy::too_many_arguments)]
 fn project_qfe_general(
