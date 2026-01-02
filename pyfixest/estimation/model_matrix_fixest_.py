@@ -10,7 +10,7 @@ from formulaic import Formula
 from pyfixest.estimation.detect_singletons_ import detect_singletons
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.utils.utils import capture_context
-
+from warnings import warn
 
 def model_matrix_fixest(
     FixestFormula: FixestFormula,
@@ -92,7 +92,20 @@ def model_matrix_fixest(
     mm = model_matrix_fixest(FixestFormula, data)
     mm
     ```
+
+    .. deprecated::
+        This function will be deprecated in a future version.
+        Use `pyfixest.estimation.formula.model_matrix.get()` with a `Formula` object instead.
+        See https://py-econometrics.github.io/pyfixest/reference/estimation.formula.model_matrix.ModelMatrix.html
     """
+    warnings.warn(
+        "model_matrix_fixest is deprecated and will be removed in a future version. "
+        "Use `pyfixest.estimation.formula.model_matrix.get()` with a `Formula` object instead. "
+        "See https://py-econometrics.github.io/pyfixest/reference/estimation.formula.model_matrix.ModelMatrix.html",
+        FutureWarning,
+        stacklevel=2,
+    )
+
     fml_second_stage = FixestFormula.fml_second_stage
     fml_first_stage = FixestFormula.fml_first_stage
     fval = FixestFormula.fixed_effects
