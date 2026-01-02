@@ -1,7 +1,9 @@
 //! 2-FE accelerated solver with specialized projection operations.
 
-use crate::demean_accelerated::types::{FEInfo, FixestConfig, irons_tuck_accelerate, should_continue, converged};
 use crate::demean_accelerated::buffers::TwoFEBuffers;
+use crate::demean_accelerated::types::{
+    converged, irons_tuck_accelerate, should_continue, DemeanContext, FixestConfig,
+};
 
 // =============================================================================
 // Projection Operations
@@ -13,28 +15,28 @@ use crate::demean_accelerated::buffers::TwoFEBuffers;
 /// by working directly with coefficients.
 #[inline(always)]
 fn project_2fe(
-    fe_info: &FEInfo,
+    ctx: &DemeanContext,
     in_out: &[f64],
     alpha_in: &[f64],
     alpha_out: &mut [f64],
     beta: &mut [f64],
 ) {
-    let n0 = fe_info.structure.groups_per_fe[0];
-    let n1 = fe_info.structure.groups_per_fe[1];
-    let fe0 = fe_info.structure.group_ids_for_fe(0);
-    let fe1 = fe_info.structure.group_ids_for_fe(1);
-    let sw0 = fe_info.weights.group_weights_for_fe(0, &fe_info.structure);
-    let sw1 = fe_info.weights.group_weights_for_fe(1, &fe_info.structure);
+    let n0 = ctx.index.n_groups[0];
+    let n1 = ctx.index.n_groups[1];
+    let fe0 = ctx.index.group_ids_for_fe(0);
+    let fe1 = ctx.index.group_ids_for_fe(1);
+    let sw0 = ctx.weights.group_weights_for_fe(0, &ctx.index);
+    let sw1 = ctx.weights.group_weights_for_fe(1, &ctx.index);
 
     // Step 1: Compute beta from alpha_in
     beta[..n1].copy_from_slice(&in_out[n0..n0 + n1]);
 
-    if fe_info.weights.is_uniform {
+    if ctx.weights.is_uniform {
         for (&g0, &g1) in fe0.iter().zip(fe1.iter()) {
             beta[g1] -= alpha_in[g0];
         }
     } else {
-        let obs_weights = &fe_info.weights.per_obs;
+        let obs_weights = &ctx.weights.per_obs;
         for ((&g0, &g1), &w) in fe0.iter().zip(fe1.iter()).zip(obs_weights.iter()) {
             beta[g1] -= alpha_in[g0] * w;
         }
@@ -45,12 +47,12 @@ fn project_2fe(
     // Step 2: Compute alpha_out from beta
     alpha_out[..n0].copy_from_slice(&in_out[..n0]);
 
-    if fe_info.weights.is_uniform {
+    if ctx.weights.is_uniform {
         for (&g0, &g1) in fe0.iter().zip(fe1.iter()) {
             alpha_out[g0] -= beta[g1];
         }
     } else {
-        let obs_weights = &fe_info.weights.per_obs;
+        let obs_weights = &ctx.weights.per_obs;
         for ((&g0, &g1), &w) in fe0.iter().zip(fe1.iter()).zip(obs_weights.iter()) {
             alpha_out[g0] -= beta[g1] * w;
         }
@@ -62,25 +64,25 @@ fn project_2fe(
 /// Compute beta from alpha (half of project_2fe, for SSR computation).
 #[inline(always)]
 fn compute_beta_from_alpha(
-    fe_info: &FEInfo,
+    ctx: &DemeanContext,
     in_out: &[f64],
     alpha: &[f64],
     beta: &mut [f64],
 ) {
-    let n0 = fe_info.structure.groups_per_fe[0];
-    let n1 = fe_info.structure.groups_per_fe[1];
-    let fe0 = fe_info.structure.group_ids_for_fe(0);
-    let fe1 = fe_info.structure.group_ids_for_fe(1);
-    let sw1 = fe_info.weights.group_weights_for_fe(1, &fe_info.structure);
+    let n0 = ctx.index.n_groups[0];
+    let n1 = ctx.index.n_groups[1];
+    let fe0 = ctx.index.group_ids_for_fe(0);
+    let fe1 = ctx.index.group_ids_for_fe(1);
+    let sw1 = ctx.weights.group_weights_for_fe(1, &ctx.index);
 
     beta[..n1].copy_from_slice(&in_out[n0..n0 + n1]);
 
-    if fe_info.weights.is_uniform {
+    if ctx.weights.is_uniform {
         for (&g0, &g1) in fe0.iter().zip(fe1.iter()) {
             beta[g1] -= alpha[g0];
         }
     } else {
-        let obs_weights = &fe_info.weights.per_obs;
+        let obs_weights = &ctx.weights.per_obs;
         for ((&g0, &g1), &w) in fe0.iter().zip(fe1.iter()).zip(obs_weights.iter()) {
             beta[g1] -= alpha[g0] * w;
         }
@@ -95,22 +97,22 @@ fn compute_beta_from_alpha(
 
 /// Solve 2-FE demeaning with acceleration.
 pub fn solve_two_fe(
-    fe_info: &FEInfo,
+    ctx: &DemeanContext,
     input: &[f64],
     config: &FixestConfig,
 ) -> (Vec<f64>, usize, bool) {
-    let n_obs = fe_info.structure.n_obs;
-    let n0 = fe_info.structure.groups_per_fe[0];
-    let n1 = fe_info.structure.groups_per_fe[1];
+    let n_obs = ctx.index.n_obs;
+    let n0 = ctx.index.n_groups[0];
+    let n1 = ctx.index.n_groups[1];
 
-    let in_out = fe_info.compute_in_out_from_input(input);
+    let in_out = ctx.scatter_to_coefficients(input);
 
     let mut alpha = vec![0.0; n0];
     let mut beta = vec![0.0; n1];
     let mut buffers = TwoFEBuffers::new(n0, n1);
 
     let (iter, converged) = run_2fe_acceleration(
-        fe_info,
+        ctx,
         &in_out,
         &mut alpha,
         &mut beta,
@@ -121,8 +123,8 @@ pub fn solve_two_fe(
     );
 
     let mut result = vec![0.0; n_obs];
-    let fe0 = fe_info.structure.group_ids_for_fe(0);
-    let fe1 = fe_info.structure.group_ids_for_fe(1);
+    let fe0 = ctx.index.group_ids_for_fe(0);
+    let fe1 = ctx.index.group_ids_for_fe(1);
 
     for i in 0..n_obs {
         result[i] = input[i] - alpha[fe0[i]] - beta[fe1[i]];
@@ -134,7 +136,7 @@ pub fn solve_two_fe(
 /// Run 2-FE acceleration loop with Irons-Tuck + Grand acceleration.
 #[allow(clippy::too_many_arguments)]
 pub fn run_2fe_acceleration(
-    fe_info: &FEInfo,
+    ctx: &DemeanContext,
     in_out: &[f64],
     alpha: &mut [f64],
     beta: &mut [f64],
@@ -143,14 +145,14 @@ pub fn run_2fe_acceleration(
     max_iter: usize,
     input: &[f64],
 ) -> (usize, bool) {
-    let n0 = fe_info.structure.groups_per_fe[0];
-    let n_obs = fe_info.structure.n_obs;
+    let n0 = ctx.index.n_groups[0];
+    let n_obs = ctx.index.n_obs;
 
     let mut ssr = 0.0;
-    let fe0 = fe_info.structure.group_ids_for_fe(0);
-    let fe1 = fe_info.structure.group_ids_for_fe(1);
+    let fe0 = ctx.index.group_ids_for_fe(0);
+    let fe1 = ctx.index.group_ids_for_fe(1);
 
-    project_2fe(fe_info, in_out, alpha, &mut buffers.gx, beta);
+    project_2fe(ctx, in_out, alpha, &mut buffers.gx, beta);
 
     let mut keep_going = should_continue(alpha, &buffers.gx, config.tol);
     let mut iter = 0;
@@ -159,7 +161,7 @@ pub fn run_2fe_acceleration(
     while keep_going && iter < max_iter {
         iter += 1;
 
-        project_2fe(fe_info, in_out, &buffers.gx, &mut buffers.ggx, &mut buffers.beta_tmp);
+        project_2fe(ctx, in_out, &buffers.gx, &mut buffers.ggx, &mut buffers.beta_tmp);
 
         if irons_tuck_accelerate(alpha, &buffers.gx, &buffers.ggx) {
             break;
@@ -167,10 +169,10 @@ pub fn run_2fe_acceleration(
 
         if iter >= config.iter_proj_after_acc {
             buffers.temp.copy_from_slice(alpha);
-            project_2fe(fe_info, in_out, &buffers.temp, alpha, &mut buffers.beta_tmp);
+            project_2fe(ctx, in_out, &buffers.temp, alpha, &mut buffers.beta_tmp);
         }
 
-        project_2fe(fe_info, in_out, alpha, &mut buffers.gx, beta);
+        project_2fe(ctx, in_out, alpha, &mut buffers.gx, beta);
 
         keep_going = should_continue(alpha, &buffers.gx, config.tol);
 
@@ -184,7 +186,7 @@ pub fn run_2fe_acceleration(
                     if irons_tuck_accelerate(&mut buffers.y, &buffers.gy, &buffers.ggy) {
                         break;
                     }
-                    project_2fe(fe_info, in_out, &buffers.y, &mut buffers.gx, beta);
+                    project_2fe(ctx, in_out, &buffers.y, &mut buffers.gx, beta);
                     grand_counter = 0;
                 }
             }
@@ -192,7 +194,7 @@ pub fn run_2fe_acceleration(
 
         if iter % 40 == 0 {
             let ssr_old = ssr;
-            compute_beta_from_alpha(fe_info, in_out, &buffers.gx, &mut buffers.beta_tmp);
+            compute_beta_from_alpha(ctx, in_out, &buffers.gx, &mut buffers.beta_tmp);
 
             ssr = 0.0;
             for i in 0..n_obs {

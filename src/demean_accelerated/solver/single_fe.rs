@@ -1,6 +1,6 @@
 //! Single FE solver: O(n) closed-form solution.
 
-use crate::demean_accelerated::types::FEInfo;
+use crate::demean_accelerated::types::DemeanContext;
 
 /// Solve single-FE demeaning in closed form.
 ///
@@ -9,15 +9,15 @@ use crate::demean_accelerated::types::FEInfo;
 /// Output: output[i] = input[i] - coef[fe[i]]
 ///
 /// No iteration needed - direct O(n) computation.
-pub fn solve_single_fe(fe_info: &FEInfo, input: &[f64]) -> Vec<f64> {
-    let n_obs = fe_info.structure.n_obs;
+pub fn solve_single_fe(ctx: &DemeanContext, input: &[f64]) -> Vec<f64> {
+    let n_obs = ctx.index.n_obs;
     let mut output = vec![0.0; n_obs];
 
-    // Compute in_out (sum of input per group)
-    let in_out = fe_info.compute_in_out(input, &output);
+    // Scatter input to coefficient space (sum of input per group)
+    let in_out = ctx.scatter_residuals_to_coefficients(input, &output);
 
-    let fe0 = fe_info.structure.group_ids_for_fe(0);
-    let group_weights = fe_info.weights.group_weights_for_fe(0, &fe_info.structure);
+    let fe0 = ctx.index.group_ids_for_fe(0);
+    let group_weights = ctx.weights.group_weights_for_fe(0, &ctx.index);
 
     // coef[g] = in_out[g] / group_weights[g]
     let coef: Vec<f64> = in_out

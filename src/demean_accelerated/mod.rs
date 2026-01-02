@@ -7,9 +7,9 @@
 //! # Module Structure
 //!
 //! - [`types`]: Core data types
-//!   - [`FEStructure`](types::FEStructure): Fixed effects indexing (which obs belongs to which group)
-//!   - [`Weights`](types::Weights): Observation weights and group-level aggregations
-//!   - [`FEInfo`](types::FEInfo): Combines structure + weights
+//!   - [`FixedEffectsIndex`](types::FixedEffectsIndex): Fixed effects indexing (which obs belongs to which group)
+//!   - [`ObservationWeights`](types::ObservationWeights): Observation weights and group-level aggregations
+//!   - [`DemeanContext`](types::DemeanContext): Combines index + weights for demeaning operations
 //!   - [`FixestConfig`](types::FixestConfig): Algorithm parameters
 //! - [`solver`]: Solver implementations for different FE counts
 //! - [`buffers`]: Working buffer management
@@ -23,7 +23,7 @@ pub mod types;
 pub mod solver;
 pub mod buffers;
 
-use types::{FEInfo, FixestConfig};
+use types::{DemeanContext, FixestConfig};
 use solver::demean_single;
 
 use ndarray::{Array2, ArrayView1, ArrayView2, Zip};
@@ -52,14 +52,14 @@ pub(crate) fn demean_accelerated(
     let not_converged = Arc::new(AtomicUsize::new(0));
     let mut res = Array2::<f64>::zeros((n_samples, n_features));
 
-    let fe_info = FEInfo::new(flist, weights);
+    let ctx = DemeanContext::new(flist, weights);
 
     res.axis_iter_mut(ndarray::Axis(1))
         .into_par_iter()
         .enumerate()
         .for_each(|(k, mut col)| {
             let xk: Vec<f64> = (0..n_samples).map(|i| x[[i, k]]).collect();
-            let (result, _iter, converged) = demean_single(&fe_info, &xk, &config);
+            let (result, _iter, converged) = demean_single(&ctx, &xk, &config);
 
             if !converged {
                 not_converged.fetch_add(1, Ordering::SeqCst);
@@ -114,11 +114,11 @@ mod tests {
 
         let weights = Array1::<f64>::ones(n_obs);
 
-        let fe_info = FEInfo::new(&flist.view(), &weights.view());
+        let ctx = DemeanContext::new(&flist.view(), &weights.view());
         let input: Vec<f64> = (0..n_obs).map(|i| (i as f64) * 0.1).collect();
 
         let config = FixestConfig::default();
-        let (result, iter, converged) = demean_single(&fe_info, &input, &config);
+        let (result, iter, converged) = demean_single(&ctx, &input, &config);
 
         assert!(converged, "Should converge");
         assert!(iter < 100, "Should converge quickly");
@@ -139,11 +139,11 @@ mod tests {
 
         let weights = Array1::<f64>::ones(n_obs);
 
-        let fe_info = FEInfo::new(&flist.view(), &weights.view());
+        let ctx = DemeanContext::new(&flist.view(), &weights.view());
         let input: Vec<f64> = (0..n_obs).map(|i| (i as f64) * 0.1).collect();
 
         let config = FixestConfig::default();
-        let (result, _iter, converged) = demean_single(&fe_info, &input, &config);
+        let (result, _iter, converged) = demean_single(&ctx, &input, &config);
 
         assert!(converged);
         assert!(result.iter().all(|&v| v.is_finite()));
