@@ -17,7 +17,10 @@
 //! The projection is defined such that repeated application converges to the
 //! fixed effects solution: `G(G(G(...))) -> optimal coefficients`.
 
-use crate::demean_accelerated::types::DemeanContext;
+use crate::demean_accelerated::buffers::DemeanBuffers;
+use crate::demean_accelerated::types::{
+    converged, irons_tuck_accelerate, should_continue, DemeanContext, FixestConfig,
+};
 
 // =============================================================================
 // Projector Trait
@@ -28,6 +31,9 @@ use crate::demean_accelerated::types::DemeanContext;
 /// Projectors hold all context needed for projection: the [`DemeanContext`],
 /// scattered input sums, original input values, and scratch buffers.
 /// This makes the projection interface simple and clear.
+///
+/// The trait includes a default implementation of the Irons-Tuck + Grand
+/// acceleration loop via [`Projector::run_acceleration`].
 ///
 /// # Performance
 ///
@@ -42,6 +48,102 @@ pub trait Projector {
 
     /// Length of coefficient slice to use for convergence checking.
     fn convergence_len(&self) -> usize;
+
+    /// Run the Irons-Tuck + Grand acceleration loop.
+    ///
+    /// This is the core iteration loop used by both 2-FE and multi-FE solvers.
+    /// It implements Irons-Tuck acceleration with Grand acceleration every
+    /// `config.iter_grand_acc` iterations, and SSR convergence checking every
+    /// 40 iterations.
+    ///
+    /// # Returns
+    ///
+    /// Tuple of (iterations_used, converged_flag)
+    fn run_acceleration(
+        &mut self,
+        coef: &mut [f64],
+        buffers: &mut DemeanBuffers,
+        config: &FixestConfig,
+        max_iter: usize,
+    ) -> (usize, bool) {
+        let conv_len = self.convergence_len();
+
+        // Initial projection
+        self.project(coef, &mut buffers.gx);
+
+        let mut keep_going =
+            should_continue(&coef[..conv_len], &buffers.gx[..conv_len], config.tol);
+        let mut iter = 0;
+        let mut grand_counter = 0usize;
+        let mut ssr = 0.0;
+
+        while keep_going && iter < max_iter {
+            iter += 1;
+
+            // Double projection for Irons-Tuck: G(G(x))
+            self.project(&buffers.gx, &mut buffers.ggx);
+
+            // Irons-Tuck acceleration
+            if irons_tuck_accelerate(
+                &mut coef[..conv_len],
+                &buffers.gx[..conv_len],
+                &buffers.ggx[..conv_len],
+            ) {
+                break;
+            }
+
+            // Post-acceleration projection (after warmup)
+            if iter >= config.iter_proj_after_acc {
+                buffers.temp[..conv_len].copy_from_slice(&coef[..conv_len]);
+                self.project(&buffers.temp, coef);
+            }
+
+            // Update gx for convergence check
+            self.project(coef, &mut buffers.gx);
+            keep_going =
+                should_continue(&coef[..conv_len], &buffers.gx[..conv_len], config.tol);
+
+            // Grand acceleration (every iter_grand_acc iterations)
+            if iter % config.iter_grand_acc == 0 {
+                grand_counter += 1;
+                match grand_counter {
+                    1 => {
+                        buffers.y[..conv_len].copy_from_slice(&buffers.gx[..conv_len]);
+                    }
+                    2 => {
+                        buffers.gy[..conv_len].copy_from_slice(&buffers.gx[..conv_len]);
+                    }
+                    _ => {
+                        buffers.ggy[..conv_len].copy_from_slice(&buffers.gx[..conv_len]);
+                        if irons_tuck_accelerate(
+                            &mut buffers.y[..conv_len],
+                            &buffers.gy[..conv_len],
+                            &buffers.ggy[..conv_len],
+                        ) {
+                            break;
+                        }
+                        self.project(&buffers.y, &mut buffers.gx);
+                        grand_counter = 0;
+                    }
+                }
+            }
+
+            // SSR convergence check (every 40 iterations)
+            if iter % 40 == 0 {
+                let ssr_old = ssr;
+                ssr = self.compute_ssr(&buffers.gx);
+
+                if iter > 40 && converged(ssr_old, ssr, config.tol) {
+                    keep_going = false;
+                    break;
+                }
+            }
+        }
+
+        // Copy final result
+        coef.copy_from_slice(&buffers.gx);
+        (iter, !keep_going)
+    }
 }
 
 // =============================================================================

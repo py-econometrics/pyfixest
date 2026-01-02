@@ -11,26 +11,28 @@
 //!   - [`ObservationWeights`](types::ObservationWeights): Observation weights and group-level aggregations
 //!   - [`DemeanContext`](types::DemeanContext): Combines index + weights for demeaning operations
 //!   - [`FixestConfig`](types::FixestConfig): Algorithm parameters
+//! - [`buffers`]: Working buffers for the acceleration loop
 //! - [`projection`]: Projection operations with [`Projector`](projection::Projector) trait
 //!   - [`TwoFEProjector`](projection::TwoFEProjector): Specialized 2-FE projection
 //!   - [`MultiFEProjector`](projection::MultiFEProjector): General Q-FE projection
-//! - [`acceleration`]: Generic acceleration loop
-//! - [`solver`]: Solver implementations for different FE counts
-//! - [`buffers`]: Re-exports of buffer types
+//!   - `run_acceleration`: Default method on `Projector` for the acceleration loop
+//! - [`demeaner`]: High-level solver strategies with [`Demeaner`](demeaner::Demeaner) trait
+//!   - [`SingleFEDemeaner`](demeaner::SingleFEDemeaner): O(n) closed-form (1 FE)
+//!   - [`TwoFEDemeaner`](demeaner::TwoFEDemeaner): Accelerated iteration (2 FEs)
+//!   - [`MultiFEDemeaner`](demeaner::MultiFEDemeaner): Multi-phase strategy (3+ FEs)
 //!
 //! # Dispatching based on number of fixed effects:
 //! - 1 FE: O(n) closed-form solution (single pass, no iteration)
 //! - 2 FE: Coefficient-space iteration with Irons-Tuck + Grand acceleration
 //! - 3+ FE: Multi-phase strategy with 2-FE sub-convergence
 
-pub mod types;
-pub mod projection;
-pub mod acceleration;
-pub mod solver;
 pub mod buffers;
+pub mod demeaner;
+pub mod projection;
+pub mod types;
 
+use demeaner::demean_single;
 use types::{DemeanContext, FixestConfig};
-use solver::demean_single;
 
 use ndarray::{Array2, ArrayView1, ArrayView2, Zip};
 use numpy::{PyArray2, PyReadonlyArray1, PyReadonlyArray2};
