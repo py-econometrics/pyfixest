@@ -562,24 +562,24 @@ def _is_finite_positive(x: Union[pd.DataFrame, pd.Series, np.ndarray]) -> bool:
     return bool((x[~np.isnan(x)] > 0).all())
 
 
-def factorize(fe: pd.DataFrame) -> pd.DataFrame:
+def factorize(fe: pd.Series) -> pd.Series:
     """
     Factorize / Convert fixed effects into integers.
 
     Parameters
     ----------
-    - fe: A DataFrame of fixed effects.
+    - fe: A Series of fixed effects (single column).
 
     Returns
     -------
-    - A DataFrame of fixed effects where each unique value is replaced by an integer.
+    - A Series of fixed effects where each unique value is replaced by an integer.
       NaNs are not removed but set to -1.
     """
-    if fe.dtype != "category":
-        fe = fe.astype("category")
-    res = fe.cat.codes
-    res[res == -1] = np.nan
-    return res
+    codes, _ = pd.factorize(fe)
+    # pd.factorize returns -1 for NaN, convert to actual NaN
+    result = codes.astype(float)
+    result[codes == -1] = np.nan
+    return pd.Series(result, index=fe.index)
 
 
 def wrap_factorize(pattern: str) -> str:
