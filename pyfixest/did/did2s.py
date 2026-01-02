@@ -8,8 +8,8 @@ from scipy.sparse.linalg import spsolve
 from pyfixest.did.did import DID
 from pyfixest.estimation.estimation import feols
 from pyfixest.estimation.feols_ import Feols
-from pyfixest.estimation.formula.parse import parse
-from pyfixest.estimation.model_matrix_fixest_ import model_matrix_fixest
+from pyfixest.estimation.formula import model_matrix
+from pyfixest.estimation.formula.parse import Formula
 
 
 class DID2S(DID):
@@ -304,37 +304,45 @@ def _did2s_vcov(
 
     # some formula parsing to get the correct formula for the first and second stage model matrix
     first_stage_x, first_stage_fe = first_stage.split("|")
-    first_stage_fe_list = [f"C({i})" for i in first_stage_fe.split("+")]
+    first_stage_fe_list = [f"C({i.strip()})" for i in first_stage_fe.split("+")]
     first_stage_fe_fml = "+".join(first_stage_fe_list)
-    first_stage = f"{first_stage_x}+{first_stage_fe_fml}"
-
-    second_stage = f"{second_stage}"
+    first_stage_fml = f"{first_stage_x}+{first_stage_fe_fml}"
 
     # note for future Alex: intercept needs to be dropped! it is not as fixed
     # effects are converted to dummies, hence has_fixed checks are False
 
-    FML1 = parse(f"{yname} {first_stage}")
-    FML2 = parse(f"{yname} {second_stage}")
-    FixestFormulaDict1 = FML1.FixestFormulaDict
-    FixestFormulaDict2 = FML2.FixestFormulaDict
-
-    mm_dict_first_stage = model_matrix_fixest(
-        FixestFormula=next(iter(FixestFormulaDict1.values()))[0],
-        data=data,
-        weights=None,
-        drop_singletons=False,
-        drop_intercept=False,
+    # Create Formula objects for the new model_matrix system
+    # First stage: convert fixed effects to dummy variables (C() syntax)
+    FML1 = Formula(
+        dependent=yname,
+        independent=first_stage_fml.replace("~", "").strip(),
+        intercept=False,  # first_stage typically has ~0
     )
-    X1 = cast(pd.DataFrame, mm_dict_first_stage.get("X"))
 
-    mm_second_stage = model_matrix_fixest(
-        FixestFormula=next(iter(FixestFormulaDict2.values()))[0],
+    # Second stage: use the formula as-is (new system handles i() syntax natively)
+    FML2 = Formula(
+        dependent=yname,
+        independent=second_stage.replace("~", "").strip(),
+        intercept=False,  # intercept dropped due to fixed effects in first stage
+    )
+
+    mm_first_stage = model_matrix.get(
+        formula=FML1,
         data=data,
         weights=None,
         drop_singletons=False,
-        drop_intercept=True,
-    )  # reference values not dropped, multicollinearity error
-    X2 = cast(pd.DataFrame, mm_second_stage.get("X"))
+        ensure_full_rank=True,
+    )
+    X1 = mm_first_stage.independent
+
+    mm_second_stage = model_matrix.get(
+        formula=FML2,
+        data=data,
+        weights=None,
+        drop_singletons=False,
+        ensure_full_rank=True,
+    )
+    X2 = mm_second_stage.independent
 
     X1 = csr_matrix(X1.to_numpy() * weights_array[:, None])
     X2 = csr_matrix(X2.to_numpy() * weights_array[:, None])

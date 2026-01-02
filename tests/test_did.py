@@ -38,7 +38,6 @@ def data():
     return df_het
 
 
-@pytest.mark.skipif(import_check is False, reason="R package did2s not installed.")
 @pytest.mark.against_r_extended
 def test_event_study(data):
     """Test the event_study() function."""
@@ -80,7 +79,6 @@ def test_event_study(data):
     np.testing.assert_allclose(fit_did2s.se(), float(r_df[2]), atol=1e-05, rtol=1e-05)
 
 
-@pytest.mark.skipif(import_check is False, reason="R package did2s not installed.")
 @pytest.mark.against_r_extended
 @pytest.mark.parametrize("weights", [None, "weights"])
 def test_did2s(data, weights):
