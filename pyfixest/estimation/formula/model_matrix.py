@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 from formulaic.parser import DefaultFormulaParser
 
-from pyfixest.estimation import detect_singletons
+from pyfixest.estimation.detect_singletons_ import detect_singletons
 from pyfixest.estimation.formula import FORMULAIC_FEATURE_FLAG
 from pyfixest.estimation.formula.factor_interaction import factor_interaction
 from pyfixest.estimation.formula.parse import Formula, _Pattern
