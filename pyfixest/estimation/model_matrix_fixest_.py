@@ -10,7 +10,7 @@ from formulaic import Formula
 from pyfixest.estimation.detect_singletons_ import detect_singletons
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.utils.utils import capture_context
-from warnings import warn
+
 
 def model_matrix_fixest(
     FixestFormula: FixestFormula,

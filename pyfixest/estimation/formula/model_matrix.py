@@ -44,8 +44,6 @@ def _interact_fixed_effects(fixed_effects: str, data: pd.DataFrame) -> pd.DataFr
 
 
 def _get_weights(data: pd.DataFrame, weights: str) -> pd.Series:
-    if weights not in data.columns:
-        raise ValueError(f"The weights column '{weights}' is not a column in the data.")
     w = data[weights]
     try:
         w = pd.to_numeric(w, errors="raise")
@@ -270,10 +268,19 @@ class ModelMatrix:
             warnings.warn(
                 f"{is_infinite.sum()} rows with infinite values dropped from the model.",
             )
+        if self.fixed_effects is not None:
+            # Ensure fixed effects are `int32`
+            self._data[self._fixed_effects] = self.fixed_effects.astype("int32")
+            # Intercept not meaningful in the presence of fixed effects
+            self._independent = [col for col in self._independent if col != "Intercept"]
+            if self._instruments is not None:
+                self._instruments = [
+                    col for col in self._instruments if col != "Intercept"
+                ]
+        # Drop singletons if specified
         if drop_singletons and self.fixed_effects is not None:
-            # Drop singletons
             is_singleton = pd.Series(
-                detect_singletons(self.fixed_effects.astype("int32").to_numpy()),
+                detect_singletons(self.fixed_effects.to_numpy()),
                 index=self._data.index,
             )
             if is_singleton.any():
@@ -283,14 +290,6 @@ class ModelMatrix:
                 warnings.warn(
                     f"{is_singleton.sum()} singleton fixed effect(s) dropped from the model."
                 )
-        if self.fixed_effects is not None:
-            # Intercept not meaningful in the presence of fixed effects
-            self._independent = [col for col in self._independent if col != "Intercept"]
-            if self._instruments is not None:
-                self._instruments = [
-                    col for col in self._instruments if col != "Intercept"
-                ]
-
         self.na_index_str = ",".join(str(i) for i in dropped_rows)
 
 
