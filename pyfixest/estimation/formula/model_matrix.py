@@ -17,15 +17,10 @@ from pyfixest.estimation.formula.utils import log
 from pyfixest.utils.utils import capture_context
 
 
-def _factorize(series: pd.Series, encode_null: bool = False) -> np.ndarray:
-    factorize: bool = not pd.api.types.is_numeric_dtype(series)
-    if factorize:
-        factorized, _ = pd.factorize(series, use_na_sentinel=True)
-    else:
-        factorized = series.to_numpy()
-    if not encode_null and factorize:
-        # Keep nulls (otherwise they are encoded as -1 when use_na_sentinel=True)
-        factorized = np.where(factorized == -1, np.nan, factorized)
+def _factorize(series: pd.Series) -> np.ndarray:
+    factorized, _ = pd.factorize(series, use_na_sentinel=True)
+    # use_sentinel=True replaces np.nan with -1, so we revert to np.nan
+    factorized = np.where(factorized == -1, np.nan, factorized)
     return factorized
 
 
@@ -46,11 +41,6 @@ def _interact_fixed_effects(fixed_effects: str, data: pd.DataFrame) -> pd.DataFr
             )
         )
     return data.loc[:, [fe.replace("^", "_") for fe in fes]]
-
-
-def _encode_fixed_effects(fixed_effects: str, data: pd.DataFrame) -> pd.DataFrame:
-    data = _interact_fixed_effects(fixed_effects, data)
-    return data.apply(_factorize, axis=0)
 
 
 def _get_weights(data: pd.DataFrame, weights: str) -> pd.Series:
@@ -282,7 +272,10 @@ class ModelMatrix:
             )
         if drop_singletons and self.fixed_effects is not None:
             # Drop singletons
-            is_singleton = detect_singletons(self.fixed_effects.astype("int32").values)
+            is_singleton = pd.Series(
+                detect_singletons(self.fixed_effects.astype("int32").to_numpy()),
+                index=self._data.index,
+            )
             if is_singleton.any():
                 singleton_indices = self._data[is_singleton].index.tolist()
                 dropped_rows |= set(singleton_indices)
@@ -337,13 +330,13 @@ def get(
         _ModelMatrixKey.main: formula.fml_second_stage
     }  # Main formula
     if formula.fixed_effects is not None:
-        # Encode fixed effects as integers to prevent categorical encoding
-        # This is because fixed effects are partialled out in the demeaning step and not directly estimated
-        encoded_fixed_effects = _encode_fixed_effects(formula.fixed_effects, data)
-        data[encoded_fixed_effects.columns] = encoded_fixed_effects
+        fixed_effects = _interact_fixed_effects(
+            fixed_effects=formula.fixed_effects, data=data
+        )
+        data[fixed_effects.columns] = fixed_effects
         formula_kwargs.update(
             {
-                _ModelMatrixKey.fixed_effects: f"{'+'.join(encoded_fixed_effects.columns)}-1"
+                _ModelMatrixKey.fixed_effects: f"{'+'.join(f'__fixed_effect__({fe})' for fe in fixed_effects.columns)}-1"
             }
         )
     if formula.fml_first_stage is not None:
@@ -365,6 +358,7 @@ def get(
         context={
             "log": log,  # custom log settings infinite to nan
             "i": factor_interaction,  # fixest::i()-style syntax
+            "__fixed_effect__": _factorize,
         }
         | {**capture_context(context)},
     )
