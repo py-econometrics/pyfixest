@@ -11,11 +11,12 @@
 //!   - [`ObservationWeights`](types::ObservationWeights): Observation weights and group-level aggregations
 //!   - [`DemeanContext`](types::DemeanContext): Combines index + weights for demeaning operations
 //!   - [`FixestConfig`](types::FixestConfig): Algorithm parameters
-//! - [`buffers`]: Working buffers for the acceleration loop
 //! - [`projection`]: Projection operations with [`Projector`](projection::Projector) trait
 //!   - [`TwoFEProjector`](projection::TwoFEProjector): Specialized 2-FE projection
 //!   - [`MultiFEProjector`](projection::MultiFEProjector): General Q-FE projection
-//!   - `run_acceleration`: Default method on `Projector` for the acceleration loop
+//! - [`accelerator`]: Acceleration strategies with [`Accelerator`](accelerator::Accelerator) trait
+//!   - [`IronsTuckGrand`](accelerator::IronsTuckGrand): Default acceleration (matches fixest)
+//!   - [`SimpleIteration`](accelerator::SimpleIteration): Basic iteration for testing
 //! - [`demeaner`]: High-level solver strategies with [`Demeaner`](demeaner::Demeaner) trait
 //!   - [`SingleFEDemeaner`](demeaner::SingleFEDemeaner): O(n) closed-form (1 FE)
 //!   - [`TwoFEDemeaner`](demeaner::TwoFEDemeaner): Accelerated iteration (2 FEs)
@@ -26,7 +27,7 @@
 //! - 2 FE: Coefficient-space iteration with Irons-Tuck + Grand acceleration
 //! - 3+ FE: Multi-phase strategy with 2-FE sub-convergence
 
-pub mod buffers;
+pub mod accelerator;
 pub mod demeaner;
 pub mod projection;
 pub mod types;

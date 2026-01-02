@@ -7,8 +7,8 @@
 //! - [`TwoFEDemeaner`]: Accelerated iteration (2 FEs)
 //! - [`MultiFEDemeaner`]: Multi-phase strategy (3+ FEs)
 
-use crate::demean_accelerated::buffers::DemeanBuffers;
-use crate::demean_accelerated::projection::{MultiFEProjector, Projector, TwoFEProjector};
+use crate::demean_accelerated::accelerator::{Accelerator, IronsTuckGrand};
+use crate::demean_accelerated::projection::{MultiFEProjector, TwoFEProjector};
 use crate::demean_accelerated::types::{DemeanContext, FixestConfig};
 
 // =============================================================================
@@ -98,12 +98,12 @@ impl Demeaner for TwoFEDemeaner {
         let mut coef = vec![0.0; n_coef];
 
         // Create buffers and projector
-        let mut buffers = DemeanBuffers::new(n_coef);
+        let mut buffers = IronsTuckGrand::create_buffers(n_coef);
         let mut projector = TwoFEProjector::new(ctx, &in_out, input);
 
         // Run acceleration loop
         let (iter, converged) =
-            projector.run_acceleration(&mut coef, &mut buffers, config, config.maxiter);
+            IronsTuckGrand::run(&mut projector, &mut coef, &mut buffers, config, config.maxiter);
 
         // Reconstruct output: input - alpha - beta
         let mut result = vec![0.0; n_obs];
@@ -148,14 +148,19 @@ impl Demeaner for MultiFEDemeaner {
         let mut coef = vec![0.0; n_coef];
 
         // Create buffers (one for multi-FE, one for 2-FE sub-convergence)
-        let mut multi_buffers = DemeanBuffers::new(n_coef);
-        let mut two_buffers = DemeanBuffers::new(n_coef_2fe);
+        let mut multi_buffers = IronsTuckGrand::create_buffers(n_coef);
+        let mut two_buffers = IronsTuckGrand::create_buffers(n_coef_2fe);
 
         // Phase 1: Warmup with all FEs (mu is zeros initially)
         let in_out_phase1 = ctx.scatter_to_coefficients(input);
         let mut projector1 = MultiFEProjector::new(ctx, &in_out_phase1, input);
-        let (iter1, converged1) =
-            projector1.run_acceleration(&mut coef, &mut multi_buffers, config, config.iter_warmup);
+        let (iter1, converged1) = IronsTuckGrand::run(
+            &mut projector1,
+            &mut coef,
+            &mut multi_buffers,
+            config,
+            config.iter_warmup,
+        );
         total_iter += iter1;
         ctx.gather_and_add(&coef, &mut mu);
 
@@ -167,7 +172,8 @@ impl Demeaner for MultiFEDemeaner {
             let effective_input: Vec<f64> = (0..n_obs).map(|i| input[i] - mu[i]).collect();
 
             let mut projector2 = TwoFEProjector::new(ctx, &in_out_2fe, &effective_input);
-            let (iter2, _) = projector2.run_acceleration(
+            let (iter2, _) = IronsTuckGrand::run(
+                &mut projector2,
                 &mut coef_2fe,
                 &mut two_buffers,
                 config,
@@ -188,8 +194,13 @@ impl Demeaner for MultiFEDemeaner {
                 let in_out_phase3 = ctx.scatter_residuals_to_coefficients(input, &mu);
                 coef.fill(0.0);
                 let mut projector3 = MultiFEProjector::new(ctx, &in_out_phase3, input);
-                let (iter3, _) =
-                    projector3.run_acceleration(&mut coef, &mut multi_buffers, config, remaining);
+                let (iter3, _) = IronsTuckGrand::run(
+                    &mut projector3,
+                    &mut coef,
+                    &mut multi_buffers,
+                    config,
+                    remaining,
+                );
                 total_iter += iter3;
                 ctx.gather_and_add(&coef, &mut mu);
             }
