@@ -1,6 +1,6 @@
 //! 2-FE accelerated solver with specialized projection operations.
 
-use crate::demean_accelerated::types::{FEInfo, FixestConfig, AccelerationStrategy, ConvergenceCriterion};
+use crate::demean_accelerated::types::{FEInfo, FixestConfig, irons_tuck_accelerate, should_continue, converged};
 use crate::demean_accelerated::buffers::TwoFEBuffers;
 
 // =============================================================================
@@ -93,17 +93,11 @@ fn compute_beta_from_alpha(
 // =============================================================================
 
 /// Solve 2-FE demeaning with acceleration.
-pub fn solve_two_fe<A, C>(
+pub fn solve_two_fe(
     fe_info: &FEInfo,
     input: &[f64],
     config: &FixestConfig,
-    acceleration: &A,
-    convergence: &C,
-) -> (Vec<f64>, usize, bool)
-where
-    A: AccelerationStrategy,
-    C: ConvergenceCriterion,
-{
+) -> (Vec<f64>, usize, bool) {
     let n_obs = fe_info.n_obs;
     let n0 = fe_info.n_groups[0];
     let n1 = fe_info.n_groups[1];
@@ -124,8 +118,6 @@ where
         config,
         config.maxiter,
         input,
-        acceleration,
-        convergence,
     );
 
     let mut result = vec![0.0; n_obs];
@@ -141,7 +133,7 @@ where
 
 /// Run 2-FE acceleration loop with Irons-Tuck + Grand acceleration.
 #[allow(clippy::too_many_arguments)]
-pub fn run_2fe_acceleration<A, C>(
+pub fn run_2fe_acceleration(
     fe_info: &FEInfo,
     in_out: &[f64],
     alpha: &mut [f64],
@@ -150,13 +142,7 @@ pub fn run_2fe_acceleration<A, C>(
     config: &FixestConfig,
     max_iter: usize,
     input: &[f64],
-    acceleration: &A,
-    convergence: &C,
-) -> (usize, bool)
-where
-    A: AccelerationStrategy,
-    C: ConvergenceCriterion,
-{
+) -> (usize, bool) {
     let n0 = fe_info.n_groups[0];
     let n_obs = fe_info.n_obs;
 
@@ -166,7 +152,7 @@ where
 
     project_2fe(fe_info, in_out, alpha, &mut buffers.gx, beta);
 
-    let mut keep_going = convergence.should_continue(alpha, &buffers.gx, config.tol);
+    let mut keep_going = should_continue(alpha, &buffers.gx, config.tol);
     let mut iter = 0;
     let mut grand_counter = 0usize;
 
@@ -175,7 +161,7 @@ where
 
         project_2fe(fe_info, in_out, &buffers.gx, &mut buffers.ggx, &mut buffers.beta_tmp);
 
-        if acceleration.accelerate(alpha, &buffers.gx, &buffers.ggx) {
+        if irons_tuck_accelerate(alpha, &buffers.gx, &buffers.ggx) {
             break;
         }
 
@@ -186,7 +172,7 @@ where
 
         project_2fe(fe_info, in_out, alpha, &mut buffers.gx, beta);
 
-        keep_going = convergence.should_continue(alpha, &buffers.gx, config.tol);
+        keep_going = should_continue(alpha, &buffers.gx, config.tol);
 
         if iter % config.iter_grand_acc == 0 {
             grand_counter += 1;
@@ -195,7 +181,7 @@ where
                 2 => buffers.gy.copy_from_slice(&buffers.gx),
                 _ => {
                     buffers.ggy.copy_from_slice(&buffers.gx);
-                    if acceleration.accelerate(&mut buffers.y, &buffers.gy, &buffers.ggy) {
+                    if irons_tuck_accelerate(&mut buffers.y, &buffers.gy, &buffers.ggy) {
                         break;
                     }
                     project_2fe(fe_info, in_out, &buffers.y, &mut buffers.gx, beta);
@@ -214,7 +200,7 @@ where
                 ssr += resid * resid;
             }
 
-            if iter > 40 && convergence.ssr_converged(ssr_old, ssr, config.tol) {
+            if iter > 40 && converged(ssr_old, ssr, config.tol) {
                 break;
             }
         }

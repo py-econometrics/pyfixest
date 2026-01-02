@@ -1,6 +1,6 @@
 //! Multi-FE (3+) solver with multi-phase strategy and projection operations.
 
-use crate::demean_accelerated::types::{FEInfo, FixestConfig, AccelerationStrategy, ConvergenceCriterion};
+use crate::demean_accelerated::types::{FEInfo, FixestConfig, irons_tuck_accelerate, should_continue, converged};
 use crate::demean_accelerated::buffers::{TwoFEBuffers, MultiFEBuffers};
 
 use super::two_fe::run_2fe_acceleration;
@@ -262,17 +262,11 @@ fn project_qfe_general(
 /// 1. Warmup iterations on all FEs
 /// 2. 2-FE sub-convergence on first 2 FEs
 /// 3. Re-acceleration on all FEs
-pub fn solve_multi_fe<A, C>(
+pub fn solve_multi_fe(
     fe_info: &FEInfo,
     input: &[f64],
     config: &FixestConfig,
-    acceleration: &A,
-    convergence: &C,
-) -> (Vec<f64>, usize, bool)
-where
-    A: AccelerationStrategy,
-    C: ConvergenceCriterion,
-{
+) -> (Vec<f64>, usize, bool) {
     let n_obs = fe_info.n_obs;
     let n_coef = fe_info.n_coef_total;
     let n0 = fe_info.n_groups[0];
@@ -289,7 +283,7 @@ where
     let in_out_phase1 = compute_in_out_from_mu(fe_info, input, &mu);
     let (iter1, converged1) = run_qfe_acceleration(
         fe_info, &in_out_phase1, &mut coef, &mut multi_buffers,
-        config, config.iter_warmup, input, acceleration, convergence,
+        config, config.iter_warmup, input,
     );
     total_iter += iter1;
     add_coef_to_mu(fe_info, &coef, &mut mu);
@@ -304,7 +298,7 @@ where
 
         let (iter2, _) = run_2fe_acceleration(
             fe_info, &in_out_2fe, &mut alpha, &mut beta, &mut two_buffers,
-            config, config.maxiter / 2, &effective_input, acceleration, convergence,
+            config, config.maxiter / 2, &effective_input,
         );
         total_iter += iter2;
 
@@ -321,7 +315,7 @@ where
             coef.fill(0.0);
             let (iter3, _) = run_qfe_acceleration(
                 fe_info, &in_out_phase3, &mut coef, &mut multi_buffers,
-                config, remaining, input, acceleration, convergence,
+                config, remaining, input,
             );
             total_iter += iter3;
             add_coef_to_mu(fe_info, &coef, &mut mu);
@@ -338,7 +332,7 @@ where
 
 /// Run Q-FE acceleration loop.
 #[allow(clippy::too_many_arguments)]
-fn run_qfe_acceleration<A, C>(
+fn run_qfe_acceleration(
     fe_info: &FEInfo,
     in_out: &[f64],
     coef: &mut [f64],
@@ -346,19 +340,13 @@ fn run_qfe_acceleration<A, C>(
     config: &FixestConfig,
     max_iter: usize,
     input: &[f64],
-    acceleration: &A,
-    convergence: &C,
-) -> (usize, bool)
-where
-    A: AccelerationStrategy,
-    C: ConvergenceCriterion,
-{
+) -> (usize, bool) {
     let n_coef = fe_info.n_coef_total;
     let nb_coef_no_q = n_coef - fe_info.n_groups[fe_info.n_fe - 1];
 
     project_qfe(fe_info, in_out, coef, &mut buffers.gx, &mut buffers.sum_other_means);
 
-    let mut keep_going = convergence.should_continue(&coef[..nb_coef_no_q], &buffers.gx[..nb_coef_no_q], config.tol);
+    let mut keep_going = should_continue(&coef[..nb_coef_no_q], &buffers.gx[..nb_coef_no_q], config.tol);
     let mut iter = 0;
     let mut grand_counter = 0usize;
     let mut ssr = 0.0;
@@ -368,7 +356,7 @@ where
 
         project_qfe(fe_info, in_out, &buffers.gx, &mut buffers.ggx, &mut buffers.sum_other_means);
 
-        if acceleration.accelerate(&mut coef[..nb_coef_no_q], &buffers.gx[..nb_coef_no_q], &buffers.ggx[..nb_coef_no_q]) {
+        if irons_tuck_accelerate(&mut coef[..nb_coef_no_q], &buffers.gx[..nb_coef_no_q], &buffers.ggx[..nb_coef_no_q]) {
             break;
         }
 
@@ -378,7 +366,7 @@ where
         }
 
         project_qfe(fe_info, in_out, coef, &mut buffers.gx, &mut buffers.sum_other_means);
-        keep_going = convergence.should_continue(&coef[..nb_coef_no_q], &buffers.gx[..nb_coef_no_q], config.tol);
+        keep_going = should_continue(&coef[..nb_coef_no_q], &buffers.gx[..nb_coef_no_q], config.tol);
 
         if iter % config.iter_grand_acc == 0 {
             grand_counter += 1;
@@ -387,7 +375,7 @@ where
                 2 => buffers.gy[..nb_coef_no_q].copy_from_slice(&buffers.gx[..nb_coef_no_q]),
                 _ => {
                     buffers.ggy[..nb_coef_no_q].copy_from_slice(&buffers.gx[..nb_coef_no_q]);
-                    if acceleration.accelerate(&mut buffers.y[..nb_coef_no_q], &buffers.gy[..nb_coef_no_q], &buffers.ggy[..nb_coef_no_q]) {
+                    if irons_tuck_accelerate(&mut buffers.y[..nb_coef_no_q], &buffers.gy[..nb_coef_no_q], &buffers.ggy[..nb_coef_no_q]) {
                         break;
                     }
                     project_qfe(fe_info, in_out, &buffers.y, &mut buffers.gx, &mut buffers.sum_other_means);
@@ -401,7 +389,7 @@ where
             fe_info.compute_output(&buffers.gx, input, &mut buffers.output_buf);
             ssr = buffers.output_buf.iter().map(|&r| r * r).sum();
 
-            if iter > 40 && convergence.ssr_converged(ssr_old, ssr, config.tol) {
+            if iter > 40 && converged(ssr_old, ssr, config.tol) {
                 keep_going = false;
                 break;
             }

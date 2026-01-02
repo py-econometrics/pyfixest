@@ -1,97 +1,54 @@
-//! Core data types, traits, and default implementations for accelerated demeaning.
+//! Core data types and default implementations for accelerated demeaning.
 
 // =============================================================================
-// Traits
+// Irons-Tuck Acceleration
 // =============================================================================
 
-/// Strategy for accelerating fixed-point iteration.
-pub trait AccelerationStrategy: Send + Sync {
-    /// Apply acceleration: given x, G(x), G(G(x)), compute accelerated update.
-    /// Returns `true` if converged.
-    fn accelerate(&self, x: &mut [f64], gx: &[f64], ggx: &[f64]) -> bool;
-}
+/// Apply Irons-Tuck acceleration: given x, G(x), G(G(x)), compute accelerated update.
+/// Returns `true` if converged (ssq == 0).
+#[inline(always)]
+pub fn irons_tuck_accelerate(x: &mut [f64], gx: &[f64], ggx: &[f64]) -> bool {
+    let (vprod, ssq) = x
+        .iter()
+        .zip(gx.iter())
+        .zip(ggx.iter())
+        .map(|((&x_i, &gx_i), &ggx_i)| {
+            let delta_gx = ggx_i - gx_i;
+            let delta2_x = delta_gx - gx_i + x_i;
+            (delta_gx * delta2_x, delta2_x * delta2_x)
+        })
+        .fold((0.0, 0.0), |(vp, sq), (dvp, dsq)| (vp + dvp, sq + dsq));
 
-/// Criterion for checking convergence.
-pub trait ConvergenceCriterion: Send + Sync {
-    /// Returns `true` if NOT converged (should keep iterating).
-    fn should_continue(&self, coef_old: &[f64], coef_new: &[f64], tol: f64) -> bool;
-
-    /// Returns `true` if converged based on SSR change.
-    fn ssr_converged(&self, ssr_old: f64, ssr_new: f64, tol: f64) -> bool {
-        let _ = (ssr_old, ssr_new, tol);
-        false
+    if ssq == 0.0 {
+        return true;
     }
+
+    let coef = vprod / ssq;
+    x.iter_mut()
+        .zip(gx.iter())
+        .zip(ggx.iter())
+        .for_each(|((x_i, &gx_i), &ggx_i)| {
+            *x_i = ggx_i - coef * (ggx_i - gx_i);
+        });
+
+    false
 }
 
 // =============================================================================
-// Default Implementations
+// Fixest Convergence Criterion
 // =============================================================================
 
-/// Irons-Tuck acceleration (fixest default).
-#[derive(Debug, Clone, Copy, Default)]
-pub struct IronsTuck;
-
-impl AccelerationStrategy for IronsTuck {
-    #[inline(always)]
-    fn accelerate(&self, x: &mut [f64], gx: &[f64], ggx: &[f64]) -> bool {
-        let (vprod, ssq) = x
-            .iter()
-            .zip(gx.iter())
-            .zip(ggx.iter())
-            .map(|((&x_i, &gx_i), &ggx_i)| {
-                let delta_gx = ggx_i - gx_i;
-                let delta2_x = delta_gx - gx_i + x_i;
-                (delta_gx * delta2_x, delta2_x * delta2_x)
-            })
-            .fold((0.0, 0.0), |(vp, sq), (dvp, dsq)| (vp + dvp, sq + dsq));
-
-        if ssq == 0.0 {
-            return true;
-        }
-
-        let coef = vprod / ssq;
-        x.iter_mut()
-            .zip(gx.iter())
-            .zip(ggx.iter())
-            .for_each(|((x_i, &gx_i), &ggx_i)| {
-                *x_i = ggx_i - coef * (ggx_i - gx_i);
-            });
-
-        false
-    }
+/// Returns true if a and b are converged (difference within tolerance).
+#[inline]
+pub fn converged(a: f64, b: f64, tol: f64) -> bool {
+    let diff = (a - b).abs();
+    (diff <= tol) || (diff / (0.1 + a.abs()) <= tol)
 }
 
-/// Fixest's convergence criterion (abs AND relative check).
-#[derive(Debug, Clone, Copy, Default)]
-pub struct FixestConvergence;
-
-impl FixestConvergence {
-    #[inline]
-    fn continue_crit(a: f64, b: f64, diff_max: f64) -> bool {
-        let diff = (a - b).abs();
-        (diff > diff_max) && (diff / (0.1 + a.abs()) > diff_max)
-    }
-
-    #[inline]
-    fn stopping_crit(a: f64, b: f64, diff_max: f64) -> bool {
-        let diff = (a - b).abs();
-        (diff < diff_max) || (diff / (0.1 + a.abs()) < diff_max)
-    }
-}
-
-impl ConvergenceCriterion for FixestConvergence {
-    fn should_continue(&self, coef_old: &[f64], coef_new: &[f64], tol: f64) -> bool {
-        for i in 0..coef_old.len() {
-            if Self::continue_crit(coef_old[i], coef_new[i], tol) {
-                return true;
-            }
-        }
-        false
-    }
-
-    fn ssr_converged(&self, ssr_old: f64, ssr_new: f64, tol: f64) -> bool {
-        Self::stopping_crit(ssr_old, ssr_new, tol)
-    }
+/// Returns `true` if NOT converged (should keep iterating).
+#[inline]
+pub fn should_continue(coef_old: &[f64], coef_new: &[f64], tol: f64) -> bool {
+    coef_old.iter().zip(coef_new.iter()).any(|(&a, &b)| !converged(a, b, tol))
 }
 
 // =============================================================================
