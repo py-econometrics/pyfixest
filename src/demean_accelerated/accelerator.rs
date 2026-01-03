@@ -7,30 +7,8 @@ use crate::demean_accelerated::projection::Projector;
 use crate::demean_accelerated::types::{ConvergenceState, FixestConfig};
 
 // =============================================================================
-// IronsTuckGrand Accelerator
+// Internal Types
 // =============================================================================
-
-/// Irons-Tuck acceleration with Grand acceleration.
-///
-/// This is the default acceleration strategy, matching fixest's implementation.
-/// It combines two techniques:
-///
-/// 1. **Irons-Tuck**: After computing G(x) and G(G(x)), extrapolates to estimate
-///    the fixed point directly using the formula from Irons & Tuck (1969).
-///
-/// 2. **Grand acceleration**: Every `iter_grand_acc` iterations, applies Irons-Tuck
-///    at a coarser level to accelerate long-range convergence.
-///
-/// Additionally, SSR (sum of squared residuals) is checked every 40 iterations
-/// as a secondary convergence criterion. The interval of 40 balances overhead
-/// (SSR computation is O(n)) against catching convergence that coefficient
-/// checks might miss.
-pub struct IronsTuckGrand {
-    /// Algorithm configuration (tolerance, iteration parameters).
-    config: FixestConfig,
-    /// Working buffers for the acceleration algorithm.
-    buffers: IronsTuckGrandBuffers,
-}
 
 /// Phase of grand acceleration state machine.
 ///
@@ -117,119 +95,31 @@ impl IronsTuckGrandBuffers {
     }
 }
 
+// =============================================================================
+// IronsTuckGrand Accelerator
+// =============================================================================
+
+/// Irons-Tuck acceleration with Grand acceleration.
+///
+/// This is the default acceleration strategy, matching fixest's implementation.
+/// It combines two techniques:
+///
+/// 1. **Irons-Tuck**: After computing G(x) and G(G(x)), extrapolates to estimate
+///    the fixed point directly using the formula from Irons & Tuck (1969).
+///
+/// 2. **Grand acceleration**: Every `iter_grand_acc` iterations, applies Irons-Tuck
+///    at a coarser level to accelerate long-range convergence.
+///
+/// Additionally, SSR (sum of squared residuals) is checked every `ssr_check_interval`
+/// iterations as a secondary convergence criterion.
+pub struct IronsTuckGrand {
+    /// Algorithm configuration (tolerance, iteration parameters).
+    config: FixestConfig,
+    /// Working buffers for the acceleration algorithm.
+    buffers: IronsTuckGrandBuffers,
+}
+
 impl IronsTuckGrand {
-    /// Apply Irons-Tuck acceleration to speed up convergence.
-    ///
-    /// Given three successive iterates x, G(x), G(G(x)), extrapolates toward
-    /// the fixed point using the formula from Irons & Tuck (1969).
-    ///
-    /// The method computes second differences `δ²x = G(G(x)) - 2G(x) + x` and uses
-    /// them to estimate how far we are from the fixed point. If second differences
-    /// are zero, we've already converged.
-    #[inline(always)]
-    fn accelerate(x: &mut [f64], gx: &[f64], ggx: &[f64]) -> ConvergenceState {
-        let (vprod, ssq) = x
-            .iter()
-            .zip(gx.iter())
-            .zip(ggx.iter())
-            .map(|((&x_i, &gx_i), &ggx_i)| {
-                let delta_gx = ggx_i - gx_i;
-                let delta2_x = delta_gx - gx_i + x_i;
-                (delta_gx * delta2_x, delta2_x * delta2_x)
-            })
-            .fold((0.0, 0.0), |(vp, sq), (dvp, dsq)| (vp + dvp, sq + dsq));
-
-        if ssq == 0.0 {
-            return ConvergenceState::Converged;
-        }
-
-        let coef = vprod / ssq;
-        x.iter_mut()
-            .zip(gx.iter())
-            .zip(ggx.iter())
-            .for_each(|((x_i, &gx_i), &ggx_i)| {
-                *x_i = ggx_i - coef * (ggx_i - gx_i);
-            });
-
-        ConvergenceState::NotConverged
-    }
-
-    /// Perform one step of grand acceleration.
-    ///
-    /// Grand acceleration applies Irons-Tuck at a coarser timescale to capture
-    /// long-range convergence patterns that fine-grained iteration might miss.
-    ///
-    /// # How it works
-    ///
-    /// Every `iter_grand_acc` iterations, this function is called to advance a
-    /// 3-phase state machine:
-    ///
-    /// 1. **Collect1st**: Store current `gx` as the first snapshot (`y`)
-    /// 2. **Collect2nd**: Store current `gx` as the second snapshot (`gy`)
-    /// 3. **Collect3rdAndAccelerate**: Store current `gx` as third snapshot (`ggy`),
-    ///    then apply Irons-Tuck to (y, gy, ggy) to extrapolate toward the fixed point
-    ///
-    /// After phase 3, the cycle repeats. This means actual acceleration happens
-    /// every `3 × iter_grand_acc` iterations.
-    #[inline]
-    fn grand_acceleration_step<P: Projector>(
-        &mut self,
-        phase: GrandPhase,
-        projector: &mut P,
-        conv_len: usize,
-    ) -> GrandStepResult {
-        match phase {
-            GrandPhase::Collect1st => {
-                self.buffers.y[..conv_len].copy_from_slice(&self.buffers.gx[..conv_len]);
-                GrandStepResult::Continue(GrandPhase::Collect2nd)
-            }
-            GrandPhase::Collect2nd => {
-                self.buffers.gy[..conv_len].copy_from_slice(&self.buffers.gx[..conv_len]);
-                GrandStepResult::Continue(GrandPhase::Collect3rdAndAccelerate)
-            }
-            GrandPhase::Collect3rdAndAccelerate => {
-                self.buffers.ggy[..conv_len].copy_from_slice(&self.buffers.gx[..conv_len]);
-                let convergence = Self::accelerate(
-                    &mut self.buffers.y[..conv_len],
-                    &self.buffers.gy[..conv_len],
-                    &self.buffers.ggy[..conv_len],
-                );
-                if convergence == ConvergenceState::Converged {
-                    return GrandStepResult::Done(ConvergenceState::Converged);
-                }
-                projector.project(&self.buffers.y, &mut self.buffers.gx);
-                GrandStepResult::Continue(GrandPhase::Collect1st)
-            }
-        }
-    }
-
-    /// Check if two scalar values have converged within tolerance.
-    ///
-    /// Uses both absolute and relative tolerance: converged if
-    /// `|a - b| <= tol` OR `|a - b| <= tol * (0.1 + |a|)`.
-    ///
-    /// The `0.1` denominator offset prevents division by zero and provides
-    /// a smooth transition between absolute tolerance (when |a| << 0.1) and
-    /// relative tolerance (when |a| >> 0.1). This matches fixest's convergence check.
-    #[inline]
-    fn converged(a: f64, b: f64, tol: f64) -> bool {
-        const RELATIVE_TOL_OFFSET: f64 = 0.1;
-        let diff = (a - b).abs();
-        (diff <= tol) || (diff <= tol * (RELATIVE_TOL_OFFSET + a.abs()))
-    }
-
-    /// Check if coefficient arrays have NOT converged (should keep iterating).
-    ///
-    /// Returns `true` if ANY pair of coefficients differs by more than tolerance.
-    /// Uses early-exit: returns as soon as any non-converged pair is found.
-    #[inline]
-    fn should_continue(coef_old: &[f64], coef_new: &[f64], tol: f64) -> bool {
-        coef_old
-            .iter()
-            .zip(coef_new.iter())
-            .any(|(&a, &b)| !Self::converged(a, b, tol))
-    }
-
     /// Create a new accelerator with the given configuration and buffer size.
     #[inline]
     pub fn new(config: FixestConfig, n_coef: usize) -> Self {
@@ -346,6 +236,118 @@ impl IronsTuckGrand {
         // Copy final result
         coef.copy_from_slice(&self.buffers.gx);
         (iter, convergence)
+    }
+
+    /// Apply Irons-Tuck acceleration to speed up convergence.
+    ///
+    /// Given three successive iterates x, G(x), G(G(x)), extrapolates toward
+    /// the fixed point using the formula from Irons & Tuck (1969).
+    ///
+    /// The method computes second differences `δ²x = G(G(x)) - 2G(x) + x` and uses
+    /// them to estimate how far we are from the fixed point. If second differences
+    /// are zero, we've already converged.
+    #[inline(always)]
+    fn accelerate(x: &mut [f64], gx: &[f64], ggx: &[f64]) -> ConvergenceState {
+        let (vprod, ssq) = x
+            .iter()
+            .zip(gx.iter())
+            .zip(ggx.iter())
+            .map(|((&x_i, &gx_i), &ggx_i)| {
+                let delta_gx = ggx_i - gx_i;
+                let delta2_x = delta_gx - gx_i + x_i;
+                (delta_gx * delta2_x, delta2_x * delta2_x)
+            })
+            .fold((0.0, 0.0), |(vp, sq), (dvp, dsq)| (vp + dvp, sq + dsq));
+
+        if ssq == 0.0 {
+            return ConvergenceState::Converged;
+        }
+
+        let coef = vprod / ssq;
+        x.iter_mut()
+            .zip(gx.iter())
+            .zip(ggx.iter())
+            .for_each(|((x_i, &gx_i), &ggx_i)| {
+                *x_i = ggx_i - coef * (ggx_i - gx_i);
+            });
+
+        ConvergenceState::NotConverged
+    }
+
+    /// Perform one step of grand acceleration.
+    ///
+    /// Grand acceleration applies Irons-Tuck at a coarser timescale to capture
+    /// long-range convergence patterns that fine-grained iteration might miss.
+    ///
+    /// # How it works
+    ///
+    /// Every `iter_grand_acc` iterations, this function is called to advance a
+    /// 3-phase state machine:
+    ///
+    /// 1. **Collect1st**: Store current `gx` as the first snapshot (`y`)
+    /// 2. **Collect2nd**: Store current `gx` as the second snapshot (`gy`)
+    /// 3. **Collect3rdAndAccelerate**: Store current `gx` as third snapshot (`ggy`),
+    ///    then apply Irons-Tuck to (y, gy, ggy) to extrapolate toward the fixed point
+    ///
+    /// After phase 3, the cycle repeats. This means actual acceleration happens
+    /// every `3 × iter_grand_acc` iterations.
+    #[inline]
+    fn grand_acceleration_step<P: Projector>(
+        &mut self,
+        phase: GrandPhase,
+        projector: &mut P,
+        conv_len: usize,
+    ) -> GrandStepResult {
+        match phase {
+            GrandPhase::Collect1st => {
+                self.buffers.y[..conv_len].copy_from_slice(&self.buffers.gx[..conv_len]);
+                GrandStepResult::Continue(GrandPhase::Collect2nd)
+            }
+            GrandPhase::Collect2nd => {
+                self.buffers.gy[..conv_len].copy_from_slice(&self.buffers.gx[..conv_len]);
+                GrandStepResult::Continue(GrandPhase::Collect3rdAndAccelerate)
+            }
+            GrandPhase::Collect3rdAndAccelerate => {
+                self.buffers.ggy[..conv_len].copy_from_slice(&self.buffers.gx[..conv_len]);
+                let convergence = Self::accelerate(
+                    &mut self.buffers.y[..conv_len],
+                    &self.buffers.gy[..conv_len],
+                    &self.buffers.ggy[..conv_len],
+                );
+                if convergence == ConvergenceState::Converged {
+                    return GrandStepResult::Done(ConvergenceState::Converged);
+                }
+                projector.project(&self.buffers.y, &mut self.buffers.gx);
+                GrandStepResult::Continue(GrandPhase::Collect1st)
+            }
+        }
+    }
+
+    /// Check if two scalar values have converged within tolerance.
+    ///
+    /// Uses both absolute and relative tolerance: converged if
+    /// `|a - b| <= tol` OR `|a - b| <= tol * (0.1 + |a|)`.
+    ///
+    /// The `0.1` denominator offset prevents division by zero and provides
+    /// a smooth transition between absolute tolerance (when |a| << 0.1) and
+    /// relative tolerance (when |a| >> 0.1). This matches fixest's convergence check.
+    #[inline]
+    fn converged(a: f64, b: f64, tol: f64) -> bool {
+        const RELATIVE_TOL_OFFSET: f64 = 0.1;
+        let diff = (a - b).abs();
+        (diff <= tol) || (diff <= tol * (RELATIVE_TOL_OFFSET + a.abs()))
+    }
+
+    /// Check if coefficient arrays have NOT converged (should keep iterating).
+    ///
+    /// Returns `true` if ANY pair of coefficients differs by more than tolerance.
+    /// Uses early-exit: returns as soon as any non-converged pair is found.
+    #[inline]
+    fn should_continue(coef_old: &[f64], coef_new: &[f64], tol: f64) -> bool {
+        coef_old
+            .iter()
+            .zip(coef_new.iter())
+            .any(|(&a, &b)| !Self::converged(a, b, tol))
     }
 }
 
