@@ -324,6 +324,81 @@ impl DemeanContext {
     pub fn group_weights_for_fe(&self, fe: usize) -> &[f64] {
         &self.weights.per_group[self.index.coef_range_for_fe(fe)]
     }
+
+    // =========================================================================
+    // Scatter/Gather Operations
+    // =========================================================================
+
+    /// Scatter values from observation space to coefficient space.
+    ///
+    /// Computes weighted sums of `values` for each group in each FE.
+    /// Returns a vector of length `n_coef` with the aggregated sums.
+    #[inline]
+    pub fn scatter_to_coefficients(&self, values: &[f64]) -> Vec<f64> {
+        let mut result = vec![0.0; self.index.n_coef];
+        self.scatter_inner(values, None, &mut result);
+        result
+    }
+
+    /// Scatter residuals from observation space to coefficient space.
+    ///
+    /// Like [`scatter_to_coefficients`], but first subtracts `baseline` from `values`.
+    /// Computes: `Σ (values[i] - baseline[i]) * weight[i]` for each group.
+    #[inline]
+    pub fn scatter_residuals(&self, values: &[f64], baseline: &[f64]) -> Vec<f64> {
+        let mut result = vec![0.0; self.index.n_coef];
+        self.scatter_inner(values, Some(baseline), &mut result);
+        result
+    }
+
+    /// Gather coefficients to observation space and add to output.
+    ///
+    /// For each observation, looks up its coefficient for each FE and adds to output.
+    /// Computes: `output[i] += Σ_q coef[offset_q + fe_q[i]]`
+    #[inline]
+    pub fn gather_and_add(&self, coef: &[f64], output: &mut [f64]) {
+        for q in 0..self.index.n_fe {
+            let offset = self.index.coef_start[q];
+            let fe_ids = self.index.group_ids_for_fe(q);
+            for (i, &g) in fe_ids.iter().enumerate() {
+                output[i] += coef[offset + g];
+            }
+        }
+    }
+
+    /// Inner scatter implementation with optional baseline subtraction.
+    ///
+    /// Handles both uniform and non-uniform weights with optimized code paths.
+    #[inline(always)]
+    fn scatter_inner(&self, values: &[f64], baseline: Option<&[f64]>, result: &mut [f64]) {
+        for q in 0..self.index.n_fe {
+            let offset = self.index.coef_start[q];
+            let fe_ids = self.index.group_ids_for_fe(q);
+
+            match (self.weights.is_uniform, baseline) {
+                (true, None) => {
+                    for (i, &g) in fe_ids.iter().enumerate() {
+                        result[offset + g] += values[i];
+                    }
+                }
+                (true, Some(base)) => {
+                    for (i, &g) in fe_ids.iter().enumerate() {
+                        result[offset + g] += values[i] - base[i];
+                    }
+                }
+                (false, None) => {
+                    for (i, &g) in fe_ids.iter().enumerate() {
+                        result[offset + g] += values[i] * self.weights.per_obs[i];
+                    }
+                }
+                (false, Some(base)) => {
+                    for (i, &g) in fe_ids.iter().enumerate() {
+                        result[offset + g] += (values[i] - base[i]) * self.weights.per_obs[i];
+                    }
+                }
+            }
+        }
+    }
 }
 
 // =============================================================================

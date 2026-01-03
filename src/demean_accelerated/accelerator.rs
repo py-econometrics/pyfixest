@@ -29,22 +29,31 @@ pub trait Accelerator {
     /// Check if two scalar values have converged within tolerance.
     ///
     /// Uses both absolute and relative tolerance: converged if
-    /// `|a - b| <= tol` OR `|a - b| / (0.1 + |a|) <= tol`.
+    /// `|a - b| <= tol` OR `|a - b| <= tol * (0.1 + |a|)`.
     ///
     /// The `0.1` denominator offset prevents division by zero and provides
     /// a smooth transition between absolute tolerance (when |a| << 0.1) and
     /// relative tolerance (when |a| >> 0.1). This matches fixest's convergence check.
+    ///
+    /// # Implementation Note
+    ///
+    /// The relative tolerance check `|a - b| / (0.1 + |a|) <= tol` is rewritten
+    /// as `|a - b| <= tol * (0.1 + |a|)` to avoid division, improving performance
+    /// and SIMD-friendliness.
     #[inline]
     fn converged(a: f64, b: f64, tol: f64) -> bool {
         // 0.1 offset: ensures numerical stability and smooth absolute/relative transition
         const RELATIVE_TOL_OFFSET: f64 = 0.1;
         let diff = (a - b).abs();
-        (diff <= tol) || (diff / (RELATIVE_TOL_OFFSET + a.abs()) <= tol)
+        // Absolute tolerance check (faster, handles small values)
+        // OR relative tolerance check (multiplication form, avoids division)
+        (diff <= tol) || (diff <= tol * (RELATIVE_TOL_OFFSET + a.abs()))
     }
 
     /// Check if coefficient arrays have NOT converged (should keep iterating).
     ///
     /// Returns `true` if ANY pair of coefficients differs by more than tolerance.
+    /// Uses early-exit: returns as soon as any non-converged pair is found.
     #[inline]
     fn should_continue(coef_old: &[f64], coef_new: &[f64], tol: f64) -> bool {
         coef_old
@@ -257,7 +266,6 @@ impl Accelerator for IronsTuckGrand {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::demean_accelerated::demeaner::{Demeaner, TwoFEDemeaner};
     use crate::demean_accelerated::projection::TwoFEProjector;
     use crate::demean_accelerated::types::DemeanContext;
     use ndarray::{Array1, Array2};
@@ -285,7 +293,7 @@ mod tests {
         let n1 = ctx.index.n_groups[1];
         let n_coef = n0 + n1;
 
-        let in_out = TwoFEDemeaner::scatter_to_coefficients(&ctx, &input);
+        let in_out = ctx.scatter_to_coefficients(&input);
         let mut coef = vec![0.0; n_coef];
         let mut buffers = IronsTuckGrand::create_buffers(n_coef);
         let mut projector = TwoFEProjector::new(&ctx, &in_out, &input);
