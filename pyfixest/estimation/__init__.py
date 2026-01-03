@@ -11,7 +11,6 @@ from pyfixest.estimation.api import (
 from pyfixest.estimation.demean_ import (
     demean,
 )
-
 from pyfixest.estimation.fegaussian_ import Fegaussian
 from pyfixest.estimation.feiv_ import (
     Feiv,
