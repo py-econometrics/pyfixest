@@ -158,4 +158,155 @@ mod tests {
         assert!(converged);
         assert!(result.iter().all(|&v| v.is_finite()));
     }
+
+    #[test]
+    fn test_single_fe() {
+        let n_obs = 100;
+        let n_groups = 10;
+
+        // Single fixed effect
+        let mut flist = Array2::<usize>::zeros((n_obs, 1));
+        for i in 0..n_obs {
+            flist[[i, 0]] = i % n_groups;
+        }
+
+        let weights = Array1::<f64>::ones(n_obs);
+        let ctx = DemeanContext::new(&flist.view(), &weights.view());
+        let input: Vec<f64> = (0..n_obs).map(|i| (i as f64) * 0.1).collect();
+
+        let config = FixestConfig::default();
+        let (result, iter, converged) = demean_single(&ctx, &input, &config);
+
+        assert!(converged, "Single FE should always converge");
+        assert_eq!(iter, 0, "Single FE should be closed-form (0 iterations)");
+
+        // Verify demeaning: each group's sum should be approximately 0
+        for g in 0..n_groups {
+            let group_sum: f64 = result
+                .iter()
+                .enumerate()
+                .filter(|(i, _)| i % n_groups == g)
+                .map(|(_, &v)| v)
+                .sum();
+            assert!(
+                group_sum.abs() < 1e-10,
+                "Group {} sum should be ~0, got {}",
+                g,
+                group_sum
+            );
+        }
+    }
+
+    #[test]
+    fn test_weighted_regression() {
+        let n_obs = 100;
+        let n_fe = 2;
+
+        let mut flist = Array2::<usize>::zeros((n_obs, n_fe));
+        for i in 0..n_obs {
+            flist[[i, 0]] = i % 10;
+            flist[[i, 1]] = i % 5;
+        }
+
+        // Non-uniform weights: 1.0, 2.0, 3.0, 1.0, 2.0, 3.0, ...
+        let weights: Array1<f64> = (0..n_obs).map(|i| 1.0 + (i % 3) as f64).collect();
+        let ctx = DemeanContext::new(&flist.view(), &weights.view());
+
+        assert!(
+            !ctx.weights.is_uniform,
+            "Weights should be detected as non-uniform"
+        );
+
+        let input: Vec<f64> = (0..n_obs).map(|i| (i as f64) * 0.1).collect();
+        let config = FixestConfig::default();
+        let (result, _iter, converged) = demean_single(&ctx, &input, &config);
+
+        assert!(converged, "Weighted regression should converge");
+        assert!(
+            result.iter().all(|&v| v.is_finite()),
+            "All results should be finite"
+        );
+    }
+
+    #[test]
+    fn test_singleton_groups() {
+        // Each observation in its own group for FE 0 (singleton groups)
+        let n_obs = 20;
+
+        let mut flist = Array2::<usize>::zeros((n_obs, 2));
+        for i in 0..n_obs {
+            flist[[i, 0]] = i; // Singleton groups (each obs is its own group)
+            flist[[i, 1]] = i % 4; // 4 groups in FE 1
+        }
+
+        let weights = Array1::<f64>::ones(n_obs);
+        let ctx = DemeanContext::new(&flist.view(), &weights.view());
+        let input: Vec<f64> = (0..n_obs).map(|i| (i as f64) * 0.1).collect();
+
+        let config = FixestConfig::default();
+        let (result, _iter, converged) = demean_single(&ctx, &input, &config);
+
+        assert!(converged, "Singleton groups should converge");
+
+        // With singleton groups in FE 0, each observation's own mean is subtracted,
+        // then adjusted for FE 1. The result should be all zeros since each
+        // observation perfectly absorbs its own value in FE 0.
+        assert!(
+            result.iter().all(|&v| v.abs() < 1e-10),
+            "Singleton groups should yield near-zero residuals"
+        );
+    }
+
+    #[test]
+    fn test_small_groups() {
+        // Test with very few observations per group
+        let n_obs = 30;
+
+        let mut flist = Array2::<usize>::zeros((n_obs, 2));
+        for i in 0..n_obs {
+            flist[[i, 0]] = i / 3; // 10 groups, 3 obs each
+            flist[[i, 1]] = i % 2; // 2 groups, 15 obs each
+        }
+
+        let weights = Array1::<f64>::ones(n_obs);
+        let ctx = DemeanContext::new(&flist.view(), &weights.view());
+        let input: Vec<f64> = (0..n_obs).map(|i| (i as f64) * 0.1).collect();
+
+        let config = FixestConfig::default();
+        let (result, _iter, converged) = demean_single(&ctx, &input, &config);
+
+        assert!(converged, "Small groups should converge");
+        assert!(
+            result.iter().all(|&v| v.is_finite()),
+            "All results should be finite"
+        );
+    }
+
+    #[test]
+    fn test_uniform_weights_detection() {
+        let n_obs = 50;
+
+        let mut flist = Array2::<usize>::zeros((n_obs, 2));
+        for i in 0..n_obs {
+            flist[[i, 0]] = i % 5;
+            flist[[i, 1]] = i % 3;
+        }
+
+        // Test uniform weights (all 1.0)
+        let uniform_weights = Array1::<f64>::ones(n_obs);
+        let ctx_uniform = DemeanContext::new(&flist.view(), &uniform_weights.view());
+        assert!(
+            ctx_uniform.weights.is_uniform,
+            "All-ones weights should be detected as uniform"
+        );
+
+        // Test non-uniform weights
+        let mut non_uniform_weights = Array1::<f64>::ones(n_obs);
+        non_uniform_weights[0] = 2.0;
+        let ctx_non_uniform = DemeanContext::new(&flist.view(), &non_uniform_weights.view());
+        assert!(
+            !ctx_non_uniform.weights.is_uniform,
+            "Varying weights should be detected as non-uniform"
+        );
+    }
 }
