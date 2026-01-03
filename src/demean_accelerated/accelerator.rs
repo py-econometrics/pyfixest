@@ -4,7 +4,73 @@
 //! with the default implementation [`IronsTuckGrand`] matching fixest's algorithm.
 
 use crate::demean_accelerated::projection::Projector;
-use crate::demean_accelerated::types::{converged, irons_tuck_accelerate, should_continue, FixestConfig};
+use crate::demean_accelerated::types::FixestConfig;
+
+// =============================================================================
+// Convergence Helpers
+// =============================================================================
+
+/// Check if two scalar values have converged within tolerance.
+///
+/// Uses both absolute and relative tolerance: converged if
+/// `|a - b| <= tol` OR `|a - b| / (0.1 + |a|) <= tol`.
+#[inline]
+fn converged(a: f64, b: f64, tol: f64) -> bool {
+    let diff = (a - b).abs();
+    (diff <= tol) || (diff / (0.1 + a.abs()) <= tol)
+}
+
+/// Check if coefficient arrays have NOT converged (should keep iterating).
+///
+/// Returns `true` if ANY pair of coefficients differs by more than tolerance.
+#[inline]
+fn should_continue(coef_old: &[f64], coef_new: &[f64], tol: f64) -> bool {
+    coef_old
+        .iter()
+        .zip(coef_new.iter())
+        .any(|(&a, &b)| !converged(a, b, tol))
+}
+
+/// Apply Irons-Tuck acceleration to speed up convergence.
+///
+/// Given three successive iterates x, G(x), G(G(x)), computes an accelerated
+/// update that often converges faster than simple iteration.
+///
+/// # Algorithm
+///
+/// Computes the optimal step size that minimizes the residual along
+/// the acceleration direction, then updates x in-place.
+///
+/// # Returns
+///
+/// `true` if already converged (denominator is zero), `false` otherwise.
+#[inline(always)]
+fn irons_tuck_accelerate(x: &mut [f64], gx: &[f64], ggx: &[f64]) -> bool {
+    let (vprod, ssq) = x
+        .iter()
+        .zip(gx.iter())
+        .zip(ggx.iter())
+        .map(|((&x_i, &gx_i), &ggx_i)| {
+            let delta_gx = ggx_i - gx_i;
+            let delta2_x = delta_gx - gx_i + x_i;
+            (delta_gx * delta2_x, delta2_x * delta2_x)
+        })
+        .fold((0.0, 0.0), |(vp, sq), (dvp, dsq)| (vp + dvp, sq + dsq));
+
+    if ssq == 0.0 {
+        return true;
+    }
+
+    let coef = vprod / ssq;
+    x.iter_mut()
+        .zip(gx.iter())
+        .zip(ggx.iter())
+        .for_each(|((x_i, &gx_i), &ggx_i)| {
+            *x_i = ggx_i - coef * (ggx_i - gx_i);
+        });
+
+    false
+}
 
 // =============================================================================
 // Accelerator Trait
