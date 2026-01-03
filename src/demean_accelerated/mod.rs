@@ -41,9 +41,6 @@ use rayon::prelude::*;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
-// Re-export for backwards compatibility and testing
-#[allow(unused_imports)]
-pub use demeaner::demean_single;
 
 /// Thread-local demeaner state that wraps the appropriate demeaner type.
 ///
@@ -152,6 +149,7 @@ pub fn _demean_accelerated_rs(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use demeaner::{MultiFEDemeaner, SingleFEDemeaner};
     use ndarray::{Array1, Array2};
 
     #[test]
@@ -171,7 +169,8 @@ mod tests {
         let input: Vec<f64> = (0..n_obs).map(|i| (i as f64) * 0.1).collect();
 
         let config = FixestConfig::default();
-        let (result, iter, converged) = demean_single(&ctx, &input, &config);
+        let mut demeaner = TwoFEDemeaner::new(&ctx, &config);
+        let (result, iter, converged) = demeaner.solve(&input);
 
         assert!(converged, "Should converge");
         assert!(iter < 100, "Should converge quickly");
@@ -196,7 +195,8 @@ mod tests {
         let input: Vec<f64> = (0..n_obs).map(|i| (i as f64) * 0.1).collect();
 
         let config = FixestConfig::default();
-        let (result, _iter, converged) = demean_single(&ctx, &input, &config);
+        let mut demeaner = MultiFEDemeaner::new(&ctx, &config);
+        let (result, _iter, converged) = demeaner.solve(&input);
 
         assert!(converged);
         assert!(result.iter().all(|&v| v.is_finite()));
@@ -217,8 +217,8 @@ mod tests {
         let ctx = DemeanContext::new(&flist.view(), &weights.view());
         let input: Vec<f64> = (0..n_obs).map(|i| (i as f64) * 0.1).collect();
 
-        let config = FixestConfig::default();
-        let (result, iter, converged) = demean_single(&ctx, &input, &config);
+        let mut demeaner = SingleFEDemeaner::new(&ctx);
+        let (result, iter, converged) = demeaner.solve(&input);
 
         assert!(converged, "Single FE should always converge");
         assert_eq!(iter, 0, "Single FE should be closed-form (0 iterations)");
@@ -262,7 +262,8 @@ mod tests {
 
         let input: Vec<f64> = (0..n_obs).map(|i| (i as f64) * 0.1).collect();
         let config = FixestConfig::default();
-        let (result, _iter, converged) = demean_single(&ctx, &input, &config);
+        let mut demeaner = TwoFEDemeaner::new(&ctx, &config);
+        let (result, _iter, converged) = demeaner.solve(&input);
 
         assert!(converged, "Weighted regression should converge");
         assert!(
@@ -287,7 +288,8 @@ mod tests {
         let input: Vec<f64> = (0..n_obs).map(|i| (i as f64) * 0.1).collect();
 
         let config = FixestConfig::default();
-        let (result, _iter, converged) = demean_single(&ctx, &input, &config);
+        let mut demeaner = TwoFEDemeaner::new(&ctx, &config);
+        let (result, _iter, converged) = demeaner.solve(&input);
 
         assert!(converged, "Singleton groups should converge");
 
@@ -316,7 +318,8 @@ mod tests {
         let input: Vec<f64> = (0..n_obs).map(|i| (i as f64) * 0.1).collect();
 
         let config = FixestConfig::default();
-        let (result, _iter, converged) = demean_single(&ctx, &input, &config);
+        let mut demeaner = TwoFEDemeaner::new(&ctx, &config);
+        let (result, _iter, converged) = demeaner.solve(&input);
 
         assert!(converged, "Small groups should converge");
         assert!(

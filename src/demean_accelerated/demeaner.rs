@@ -310,37 +310,3 @@ impl Demeaner for MultiFEDemeaner<'_> {
         (output, total_iter, converged)
     }
 }
-
-// =============================================================================
-// Entry Point
-// =============================================================================
-
-/// Demean a single variable using the appropriate solver.
-///
-/// Dispatches to the appropriate [`Demeaner`] implementation based on FE count.
-/// This function creates a new demeaner for each call; for buffer reuse in
-/// parallel contexts, create demeaners directly and call `solve()` multiple times.
-///
-/// # Panics
-///
-/// Panics in debug builds if `input.len() != ctx.index.n_obs`.
-#[allow(dead_code)]
-pub fn demean_single(
-    ctx: &DemeanContext,
-    input: &[f64],
-    config: &FixestConfig,
-) -> (Vec<f64>, usize, bool) {
-    debug_assert_eq!(
-        input.len(),
-        ctx.index.n_obs,
-        "input length ({}) must match number of observations ({})",
-        input.len(),
-        ctx.index.n_obs
-    );
-
-    match ctx.index.n_fe {
-        1 => SingleFEDemeaner::new(ctx).solve(input),
-        2 => TwoFEDemeaner::new(ctx, config).solve(input),
-        _ => MultiFEDemeaner::new(ctx, config).solve(input),
-    }
-}
