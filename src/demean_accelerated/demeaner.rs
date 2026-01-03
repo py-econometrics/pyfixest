@@ -6,80 +6,10 @@
 //! - [`SingleFEDemeaner`]: O(n) closed-form solution (1 FE)
 //! - [`TwoFEDemeaner`]: Accelerated iteration (2 FEs)
 //! - [`MultiFEDemeaner`]: Multi-phase strategy (3+ FEs)
-//!
-//! It also provides scatter/gather operations for transforming between
-//! observation space and coefficient space.
 
 use crate::demean_accelerated::accelerator::{Accelerator, IronsTuckGrand};
 use crate::demean_accelerated::projection::{MultiFEProjector, TwoFEProjector};
 use crate::demean_accelerated::types::{DemeanContext, FixestConfig};
-
-// =============================================================================
-// Scatter/Gather Operations
-// =============================================================================
-
-/// Scatter values from observation space to coefficient space.
-///
-/// Computes weighted sums of `values` for each group in each FE.
-pub fn scatter_to_coefficients(ctx: &DemeanContext, values: &[f64]) -> Vec<f64> {
-    let mut result = vec![0.0; ctx.index.n_coef];
-    scatter_inner(ctx, values, None, &mut result);
-    result
-}
-
-/// Scatter residuals from observation space to coefficient space.
-///
-/// Like [`scatter_to_coefficients`], but first subtracts `baseline` from `values`.
-pub fn scatter_residuals(ctx: &DemeanContext, values: &[f64], baseline: &[f64]) -> Vec<f64> {
-    let mut result = vec![0.0; ctx.index.n_coef];
-    scatter_inner(ctx, values, Some(baseline), &mut result);
-    result
-}
-
-/// Gather coefficients to observation space and add to output.
-///
-/// For each observation, looks up its coefficient for each FE and adds to output.
-pub fn gather_and_add(ctx: &DemeanContext, coef: &[f64], output: &mut [f64]) {
-    for q in 0..ctx.index.n_fe {
-        let offset = ctx.index.coef_start[q];
-        let fe_ids = ctx.index.group_ids_for_fe(q);
-        for (i, &g) in fe_ids.iter().enumerate() {
-            output[i] += coef[offset + g];
-        }
-    }
-}
-
-/// Inner scatter implementation.
-#[inline(always)]
-fn scatter_inner(ctx: &DemeanContext, values: &[f64], baseline: Option<&[f64]>, result: &mut [f64]) {
-    for q in 0..ctx.index.n_fe {
-        let offset = ctx.index.coef_start[q];
-        let fe_ids = ctx.index.group_ids_for_fe(q);
-
-        match (ctx.weights.is_uniform, baseline) {
-            (true, None) => {
-                for (i, &g) in fe_ids.iter().enumerate() {
-                    result[offset + g] += values[i];
-                }
-            }
-            (true, Some(base)) => {
-                for (i, &g) in fe_ids.iter().enumerate() {
-                    result[offset + g] += values[i] - base[i];
-                }
-            }
-            (false, None) => {
-                for (i, &g) in fe_ids.iter().enumerate() {
-                    result[offset + g] += values[i] * ctx.weights.per_obs[i];
-                }
-            }
-            (false, Some(base)) => {
-                for (i, &g) in fe_ids.iter().enumerate() {
-                    result[offset + g] += (values[i] - base[i]) * ctx.weights.per_obs[i];
-                }
-            }
-        }
-    }
-}
 
 // =============================================================================
 // Demeaner Trait
@@ -90,6 +20,9 @@ fn scatter_inner(ctx: &DemeanContext, values: &[f64], baseline: Option<&[f64]>, 
 /// This trait represents the complete strategy for solving the demeaning
 /// problem with a specific number of fixed effects. Implementations handle
 /// setup, iteration (if needed), and output reconstruction.
+///
+/// The trait provides default implementations for scatter/gather operations
+/// that transform between observation space and coefficient space.
 pub trait Demeaner {
     /// Solve the demeaning problem.
     ///
@@ -101,6 +34,79 @@ pub trait Demeaner {
         input: &[f64],
         config: &FixestConfig,
     ) -> (Vec<f64>, usize, bool);
+
+    /// Scatter values from observation space to coefficient space.
+    ///
+    /// Computes weighted sums of `values` for each group in each FE.
+    fn scatter_to_coefficients(ctx: &DemeanContext, values: &[f64]) -> Vec<f64> {
+        let mut result = vec![0.0; ctx.index.n_coef];
+        Self::scatter_inner(ctx, values, None, &mut result);
+        result
+    }
+
+    /// Scatter residuals from observation space to coefficient space.
+    ///
+    /// Like [`scatter_to_coefficients`], but first subtracts `baseline` from `values`.
+    fn scatter_residuals(ctx: &DemeanContext, values: &[f64], baseline: &[f64]) -> Vec<f64> {
+        let mut result = vec![0.0; ctx.index.n_coef];
+        Self::scatter_inner(ctx, values, Some(baseline), &mut result);
+        result
+    }
+
+    /// Gather coefficients to observation space and add to output.
+    ///
+    /// For each observation, looks up its coefficient for each FE and adds to output.
+    fn gather_and_add(ctx: &DemeanContext, coef: &[f64], output: &mut [f64]) {
+        for q in 0..ctx.index.n_fe {
+            let offset = ctx.index.coef_start[q];
+            let fe_ids = ctx.index.group_ids_for_fe(q);
+            for (i, &g) in fe_ids.iter().enumerate() {
+                output[i] += coef[offset + g];
+            }
+        }
+    }
+
+    /// Inner scatter implementation.
+    #[inline(always)]
+    fn scatter_inner(
+        ctx: &DemeanContext,
+        values: &[f64],
+        baseline: Option<&[f64]>,
+        result: &mut [f64],
+    ) {
+        for q in 0..ctx.index.n_fe {
+            let offset = ctx.index.coef_start[q];
+            let fe_ids = ctx.index.group_ids_for_fe(q);
+
+            match (ctx.weights.is_uniform, baseline) {
+                (true, None) => {
+                    for (i, &g) in fe_ids.iter().enumerate() {
+                        result[offset + g] += values[i];
+                    }
+                }
+                (true, Some(base)) => {
+                    for (i, &g) in fe_ids.iter().enumerate() {
+                        result[offset + g] += values[i] - base[i];
+                    }
+                }
+                (false, None) => {
+                    for (i, &g) in fe_ids.iter().enumerate() {
+                        result[offset + g] += values[i] * ctx.weights.per_obs[i];
+                    }
+                }
+                (false, Some(base)) => {
+                    for (i, &g) in fe_ids.iter().enumerate() {
+                        result[offset + g] += (values[i] - base[i]) * ctx.weights.per_obs[i];
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Scatter values from observation space to coefficient space (convenience function).
+pub fn scatter_to_coefficients(ctx: &DemeanContext, values: &[f64]) -> Vec<f64> {
+    SingleFEDemeaner::scatter_to_coefficients(ctx, values)
 }
 
 // =============================================================================
@@ -122,7 +128,7 @@ impl Demeaner for SingleFEDemeaner {
         let mut output = vec![0.0; n_obs];
 
         // Scatter input to coefficient space (sum of input per group)
-        let in_out = scatter_residuals(ctx, input, &output);
+        let in_out = Self::scatter_residuals(ctx, input, &output);
 
         let fe0 = ctx.index.group_ids_for_fe(0);
         let group_weights = ctx.group_weights_for_fe(0);
@@ -162,7 +168,7 @@ impl Demeaner for TwoFEDemeaner {
         let n_coef = n0 + n1;
 
         // Scatter input to coefficient space
-        let in_out = scatter_to_coefficients(ctx, input);
+        let in_out = Self::scatter_to_coefficients(ctx, input);
 
         // Initialize coefficient array (unified: [alpha | beta])
         let mut coef = vec![0.0; n_coef];
@@ -222,7 +228,7 @@ impl Demeaner for MultiFEDemeaner {
         let mut two_buffers = IronsTuckGrand::create_buffers(n_coef_2fe);
 
         // Phase 1: Warmup with all FEs (mu is zeros initially)
-        let in_out_phase1 = scatter_to_coefficients(ctx, input);
+        let in_out_phase1 = Self::scatter_to_coefficients(ctx, input);
         let mut projector1 = MultiFEProjector::new(ctx, &in_out_phase1, input);
         let (iter1, converged1) = IronsTuckGrand::run(
             &mut projector1,
@@ -232,11 +238,11 @@ impl Demeaner for MultiFEDemeaner {
             config.iter_warmup,
         );
         total_iter += iter1;
-        gather_and_add(ctx, &coef, &mut mu);
+        Self::gather_and_add(ctx, &coef, &mut mu);
 
         if !converged1 {
             // Phase 2: 2-FE sub-convergence
-            let in_out_phase2 = scatter_residuals(ctx, input, &mu);
+            let in_out_phase2 = Self::scatter_residuals(ctx, input, &mu);
             let mut coef_2fe = vec![0.0; n_coef_2fe];
             let in_out_2fe: Vec<f64> = in_out_phase2[..n_coef_2fe].to_vec();
             let effective_input: Vec<f64> = (0..n_obs).map(|i| input[i] - mu[i]).collect();
@@ -261,7 +267,7 @@ impl Demeaner for MultiFEDemeaner {
             // Phase 3: Re-acceleration with all FEs
             let remaining = config.maxiter.saturating_sub(total_iter);
             if remaining > 0 {
-                let in_out_phase3 = scatter_residuals(ctx, input, &mu);
+                let in_out_phase3 = Self::scatter_residuals(ctx, input, &mu);
                 coef.fill(0.0);
                 let mut projector3 = MultiFEProjector::new(ctx, &in_out_phase3, input);
                 let (iter3, _) = IronsTuckGrand::run(
@@ -272,7 +278,7 @@ impl Demeaner for MultiFEDemeaner {
                     remaining,
                 );
                 total_iter += iter3;
-                gather_and_add(ctx, &coef, &mut mu);
+                Self::gather_and_add(ctx, &coef, &mut mu);
             }
         }
 
