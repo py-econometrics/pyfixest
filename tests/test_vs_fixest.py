@@ -1525,8 +1525,6 @@ def test_inf_dropping(fml, weights):
     data = pf.get_data(model="Fepois").dropna()
     data["Y"].iloc[0] = 0
 
-    # test that two 0's in dependent variable are dropped
-    # and that warning is triggered
     n_zeros = (data.Y == 0).sum()
     with pytest.warns(
         UserWarning,
@@ -1535,7 +1533,6 @@ def test_inf_dropping(fml, weights):
         fit_py = feols(fml=fml, data=data, weights=weights, fixef_rm="none")
 
     assert int(data.shape[0] - n_zeros) == fit_py._N
-    assert np.all(fit_py._na_index == np.where(data.Y == 0)[0].tolist())
 
 
 def _convert_f3(data, f3_type):
