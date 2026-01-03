@@ -7,12 +7,13 @@
 //! - [`TwoFEDemeaner`]: Accelerated iteration (2 FEs)
 //! - [`MultiFEDemeaner`]: Multi-phase strategy (3+ FEs)
 //!
-//! # Scatter/Gather Operations
+//! # Buffer Reuse
 //!
-//! The scatter/gather operations that transform between observation space and
-//! coefficient space are provided by [`DemeanContext`] methods, not by this trait.
+//! Demeaners own their working buffers, allowing reuse across multiple `solve()` calls.
+//! This is important for parallel processing where each thread can have its own
+//! demeaner instance that reuses buffers across columns.
 
-use crate::demean_accelerated::accelerator::{Accelerator, IronsTuckGrand};
+use crate::demean_accelerated::accelerator::{Accelerator, IronsTuckGrand, IronsTuckGrandBuffers};
 use crate::demean_accelerated::projection::{MultiFEProjector, TwoFEProjector};
 use crate::demean_accelerated::types::{DemeanContext, FixestConfig};
 
@@ -22,17 +23,8 @@ use crate::demean_accelerated::types::{DemeanContext, FixestConfig};
 
 /// A demeaning solver for a specific fixed-effects configuration.
 ///
-/// This trait represents the complete strategy for solving the demeaning
-/// problem with a specific number of fixed effects. Implementations handle
-/// setup, iteration (if needed), and output reconstruction.
-///
-/// Demeaners own references to their context and configuration, making the
-/// solve interface simple: just pass the input data.
-///
-/// Scatter/gather operations are available via [`DemeanContext`] methods:
-/// - [`DemeanContext::scatter_to_coefficients`]
-/// - [`DemeanContext::scatter_residuals`]
-/// - [`DemeanContext::gather_and_add`]
+/// Demeaners own references to their context and configuration, as well as
+/// working buffers that are reused across multiple `solve()` calls.
 pub trait Demeaner {
     /// Solve the demeaning problem.
     ///
@@ -48,7 +40,7 @@ pub trait Demeaner {
 
 /// Demeaner for 1 fixed effect: O(n) closed-form solution.
 ///
-/// No iteration needed - direct computation.
+/// No iteration or buffers needed - direct computation.
 pub struct SingleFEDemeaner<'a> {
     ctx: &'a DemeanContext,
 }
@@ -91,16 +83,31 @@ impl Demeaner for SingleFEDemeaner<'_> {
 // =============================================================================
 
 /// Demeaner for 2 fixed effects: accelerated coefficient-space iteration.
+///
+/// Owns working buffers that are reused across multiple `solve()` calls.
 pub struct TwoFEDemeaner<'a> {
     ctx: &'a DemeanContext,
     config: &'a FixestConfig,
+    /// Coefficient array [alpha | beta], reused across solves
+    coef: Vec<f64>,
+    /// Acceleration buffers, reused across solves
+    buffers: IronsTuckGrandBuffers,
 }
 
 impl<'a> TwoFEDemeaner<'a> {
-    /// Create a new two-FE demeaner.
+    /// Create a new two-FE demeaner with pre-allocated buffers.
     #[inline]
     pub fn new(ctx: &'a DemeanContext, config: &'a FixestConfig) -> Self {
-        Self { ctx, config }
+        let n0 = ctx.index.n_groups[0];
+        let n1 = ctx.index.n_groups[1];
+        let n_coef = n0 + n1;
+
+        Self {
+            ctx,
+            config,
+            coef: vec![0.0; n_coef],
+            buffers: IronsTuckGrand::create_buffers(n_coef),
+        }
     }
 }
 
@@ -108,24 +115,21 @@ impl Demeaner for TwoFEDemeaner<'_> {
     fn solve(&mut self, input: &[f64]) -> (Vec<f64>, usize, bool) {
         let n_obs = self.ctx.index.n_obs;
         let n0 = self.ctx.index.n_groups[0];
-        let n1 = self.ctx.index.n_groups[1];
-        let n_coef = n0 + n1;
 
         // Scatter input to coefficient space
         let in_out = self.ctx.scatter_to_coefficients(input);
 
-        // Initialize coefficient array (unified: [alpha | beta])
-        let mut coef = vec![0.0; n_coef];
+        // Reset coefficient array for this solve
+        self.coef.fill(0.0);
 
-        // Create buffers and projector
-        let mut buffers = IronsTuckGrand::create_buffers(n_coef);
+        // Create projector (lightweight, references in_out and input)
         let mut projector = TwoFEProjector::new(self.ctx, &in_out, input);
 
-        // Run acceleration loop
+        // Run acceleration loop with reused buffers
         let (iter, converged) = IronsTuckGrand::run(
             &mut projector,
-            &mut coef,
-            &mut buffers,
+            &mut self.coef,
+            &mut self.buffers,
             self.config,
             self.config.maxiter,
         );
@@ -135,7 +139,7 @@ impl Demeaner for TwoFEDemeaner<'_> {
         let fe1 = self.ctx.index.group_ids_for_fe(1);
 
         let result: Vec<f64> = (0..n_obs)
-            .map(|i| input[i] - coef[fe0[i]] - coef[n0 + fe1[i]])
+            .map(|i| input[i] - self.coef[fe0[i]] - self.coef[n0 + fe1[i]])
             .collect();
 
         (result, iter, converged)
@@ -148,56 +152,77 @@ impl Demeaner for TwoFEDemeaner<'_> {
 
 /// Demeaner for 3+ fixed effects: multi-phase strategy.
 ///
+/// Owns working buffers that are reused across multiple `solve()` calls.
+///
 /// # Strategy
 ///
 /// 1. **Warmup**: Run all-FE iterations to get initial estimates
 /// 2. **2-FE sub-convergence**: Converge on first 2 FEs (faster)
 /// 3. **Re-acceleration**: Final all-FE iterations to polish
-///
-/// # Convergence
-///
-/// Returns `converged=true` if any phase converges early (before max iterations).
 pub struct MultiFEDemeaner<'a> {
     ctx: &'a DemeanContext,
     config: &'a FixestConfig,
+    /// Accumulated fixed effects per observation
+    mu: Vec<f64>,
+    /// Coefficient array for all FEs
+    coef: Vec<f64>,
+    /// Coefficient array for 2-FE sub-convergence
+    coef_2fe: Vec<f64>,
+    /// Effective input after subtracting mu
+    effective_input: Vec<f64>,
+    /// Buffers for multi-FE acceleration
+    multi_buffers: IronsTuckGrandBuffers,
+    /// Buffers for 2-FE sub-convergence
+    two_buffers: IronsTuckGrandBuffers,
 }
 
 impl<'a> MultiFEDemeaner<'a> {
-    /// Create a new multi-FE demeaner.
+    /// Create a new multi-FE demeaner with pre-allocated buffers.
     #[inline]
     pub fn new(ctx: &'a DemeanContext, config: &'a FixestConfig) -> Self {
-        Self { ctx, config }
+        let n_obs = ctx.index.n_obs;
+        let n_coef = ctx.index.n_coef;
+        let n0 = ctx.index.n_groups[0];
+        let n1 = ctx.index.n_groups[1];
+        let n_coef_2fe = n0 + n1;
+
+        Self {
+            ctx,
+            config,
+            mu: vec![0.0; n_obs],
+            coef: vec![0.0; n_coef],
+            coef_2fe: vec![0.0; n_coef_2fe],
+            effective_input: vec![0.0; n_obs],
+            multi_buffers: IronsTuckGrand::create_buffers(n_coef),
+            two_buffers: IronsTuckGrand::create_buffers(n_coef_2fe),
+        }
     }
 }
 
 impl Demeaner for MultiFEDemeaner<'_> {
     fn solve(&mut self, input: &[f64]) -> (Vec<f64>, usize, bool) {
         let n_obs = self.ctx.index.n_obs;
-        let n_coef = self.ctx.index.n_coef;
         let n0 = self.ctx.index.n_groups[0];
         let n1 = self.ctx.index.n_groups[1];
         let n_coef_2fe = n0 + n1;
         let mut total_iter = 0usize;
 
-        let mut mu = vec![0.0; n_obs];
-        let mut coef = vec![0.0; n_coef];
-
-        // Create buffers (one for multi-FE, one for 2-FE sub-convergence)
-        let mut multi_buffers = IronsTuckGrand::create_buffers(n_coef);
-        let mut two_buffers = IronsTuckGrand::create_buffers(n_coef_2fe);
+        // Reset buffers for this solve
+        self.mu.fill(0.0);
+        self.coef.fill(0.0);
 
         // Phase 1: Warmup with all FEs (mu is zeros initially)
         let in_out_phase1 = self.ctx.scatter_to_coefficients(input);
         let mut projector1 = MultiFEProjector::new(self.ctx, &in_out_phase1, input);
         let (iter1, converged1) = IronsTuckGrand::run(
             &mut projector1,
-            &mut coef,
-            &mut multi_buffers,
+            &mut self.coef,
+            &mut self.multi_buffers,
             self.config,
             self.config.iter_warmup,
         );
         total_iter += iter1;
-        self.ctx.gather_and_add(&coef, &mut mu);
+        self.ctx.gather_and_add(&self.coef, &mut self.mu);
 
         // Determine final convergence status based on which phase completes the algorithm
         let converged = if converged1 {
@@ -205,16 +230,20 @@ impl Demeaner for MultiFEDemeaner<'_> {
             true
         } else {
             // Phase 2: 2-FE sub-convergence
-            let in_out_phase2 = self.ctx.scatter_residuals(input, &mu);
-            let mut coef_2fe = vec![0.0; n_coef_2fe];
+            let in_out_phase2 = self.ctx.scatter_residuals(input, &self.mu);
+            self.coef_2fe.fill(0.0);
             let in_out_2fe: Vec<f64> = in_out_phase2[..n_coef_2fe].to_vec();
-            let effective_input: Vec<f64> = (0..n_obs).map(|i| input[i] - mu[i]).collect();
 
-            let mut projector2 = TwoFEProjector::new(self.ctx, &in_out_2fe, &effective_input);
+            // Compute effective input: input - mu
+            for i in 0..n_obs {
+                self.effective_input[i] = input[i] - self.mu[i];
+            }
+
+            let mut projector2 = TwoFEProjector::new(self.ctx, &in_out_2fe, &self.effective_input);
             let (iter2, converged2) = IronsTuckGrand::run(
                 &mut projector2,
-                &mut coef_2fe,
-                &mut two_buffers,
+                &mut self.coef_2fe,
+                &mut self.two_buffers,
                 self.config,
                 self.config.maxiter / 2,
             );
@@ -224,24 +253,24 @@ impl Demeaner for MultiFEDemeaner<'_> {
             let fe0 = self.ctx.index.group_ids_for_fe(0);
             let fe1 = self.ctx.index.group_ids_for_fe(1);
             for i in 0..n_obs {
-                mu[i] += coef_2fe[fe0[i]] + coef_2fe[n0 + fe1[i]];
+                self.mu[i] += self.coef_2fe[fe0[i]] + self.coef_2fe[n0 + fe1[i]];
             }
 
             // Phase 3: Re-acceleration with all FEs (unless 2-FE converged fully)
             let remaining = self.config.maxiter.saturating_sub(total_iter);
             if remaining > 0 {
-                let in_out_phase3 = self.ctx.scatter_residuals(input, &mu);
-                coef.fill(0.0);
+                let in_out_phase3 = self.ctx.scatter_residuals(input, &self.mu);
+                self.coef.fill(0.0);
                 let mut projector3 = MultiFEProjector::new(self.ctx, &in_out_phase3, input);
                 let (iter3, converged3) = IronsTuckGrand::run(
                     &mut projector3,
-                    &mut coef,
-                    &mut multi_buffers,
+                    &mut self.coef,
+                    &mut self.multi_buffers,
                     self.config,
                     remaining,
                 );
                 total_iter += iter3;
-                self.ctx.gather_and_add(&coef, &mut mu);
+                self.ctx.gather_and_add(&self.coef, &mut self.mu);
                 converged3
             } else {
                 // No remaining iterations, use phase 2 convergence status
@@ -250,7 +279,7 @@ impl Demeaner for MultiFEDemeaner<'_> {
         };
 
         // Compute output: input - mu
-        let output: Vec<f64> = (0..n_obs).map(|i| input[i] - mu[i]).collect();
+        let output: Vec<f64> = (0..n_obs).map(|i| input[i] - self.mu[i]).collect();
 
         (output, total_iter, converged)
     }
@@ -263,10 +292,13 @@ impl Demeaner for MultiFEDemeaner<'_> {
 /// Demean a single variable using the appropriate solver.
 ///
 /// Dispatches to the appropriate [`Demeaner`] implementation based on FE count.
+/// This function creates a new demeaner for each call; for buffer reuse in
+/// parallel contexts, create demeaners directly and call `solve()` multiple times.
 ///
 /// # Panics
 ///
 /// Panics in debug builds if `input.len() != ctx.index.n_obs`.
+#[allow(dead_code)]
 pub fn demean_single(
     ctx: &DemeanContext,
     input: &[f64],
