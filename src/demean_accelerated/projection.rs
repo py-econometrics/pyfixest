@@ -161,13 +161,24 @@ impl Projector for TwoFEProjector<'_> {
         coef_out[n0..n0 + n1].copy_from_slice(&self.scratch[..n1]);
     }
 
+    /// Compute sum of squared residuals for the given coefficients.
+    ///
+    /// # Side Effects
+    ///
+    /// This method recomputes beta from alpha and stores it in `self.scratch`.
+    /// After this call, `self.scratch[..n1]` contains the beta coefficients
+    /// derived from `coef[..n0]` (the alpha coefficients).
+    ///
+    /// This is intentional: the SSR computation needs consistent alpha/beta pairs,
+    /// and recomputing beta ensures correctness even if the caller's `coef` array
+    /// has stale beta values.
     #[inline(always)]
     fn compute_ssr(&mut self, coef: &[f64]) -> f64 {
         let n0 = self.ctx.index.n_groups[0];
         let fe0 = self.ctx.index.group_ids_for_fe(0);
         let fe1 = self.ctx.index.group_ids_for_fe(1);
 
-        // Compute beta from alpha
+        // Compute beta from alpha (updates self.scratch)
         self.compute_beta_from_alpha(&coef[..n0]);
 
         // Compute SSR: Σ (input[i] - alpha[fe0[i]] - beta[fe1[i]])²
