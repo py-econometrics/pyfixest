@@ -336,18 +336,19 @@ impl DemeanContext {
     #[inline]
     pub fn apply_design_matrix_t(&self, values: &[f64]) -> Vec<f64> {
         let mut result = vec![0.0; self.index.n_coef];
-        self.scatter_inner(values, None, &mut result);
-        result
-    }
-
-    /// Apply transpose of design matrix to residuals: Dᵀ · (values - baseline).
-    ///
-    /// Like [`apply_design_matrix_t`], but first subtracts `baseline` from `values`.
-    /// Computes: `Σ (values[i] - baseline[i]) * weight[i]` for each group.
-    #[inline]
-    pub fn apply_design_matrix_t_residuals(&self, values: &[f64], baseline: &[f64]) -> Vec<f64> {
-        let mut result = vec![0.0; self.index.n_coef];
-        self.scatter_inner(values, Some(baseline), &mut result);
+        for q in 0..self.index.n_fe {
+            let offset = self.index.coef_start[q];
+            let fe_ids = self.index.group_ids_for_fe(q);
+            if self.weights.is_uniform {
+                for (i, &g) in fe_ids.iter().enumerate() {
+                    result[offset + g] += values[i];
+                }
+            } else {
+                for (i, &g) in fe_ids.iter().enumerate() {
+                    result[offset + g] += values[i] * self.weights.per_obs[i];
+                }
+            }
+        }
         result
     }
 
@@ -362,40 +363,6 @@ impl DemeanContext {
             let fe_ids = self.index.group_ids_for_fe(q);
             for (i, &g) in fe_ids.iter().enumerate() {
                 output[i] += coef[offset + g];
-            }
-        }
-    }
-
-    /// Inner scatter implementation with optional baseline subtraction.
-    ///
-    /// Handles both uniform and non-uniform weights with optimized code paths.
-    #[inline(always)]
-    fn scatter_inner(&self, values: &[f64], baseline: Option<&[f64]>, result: &mut [f64]) {
-        for q in 0..self.index.n_fe {
-            let offset = self.index.coef_start[q];
-            let fe_ids = self.index.group_ids_for_fe(q);
-
-            match (self.weights.is_uniform, baseline) {
-                (true, None) => {
-                    for (i, &g) in fe_ids.iter().enumerate() {
-                        result[offset + g] += values[i];
-                    }
-                }
-                (true, Some(base)) => {
-                    for (i, &g) in fe_ids.iter().enumerate() {
-                        result[offset + g] += values[i] - base[i];
-                    }
-                }
-                (false, None) => {
-                    for (i, &g) in fe_ids.iter().enumerate() {
-                        result[offset + g] += values[i] * self.weights.per_obs[i];
-                    }
-                }
-                (false, Some(base)) => {
-                    for (i, &g) in fe_ids.iter().enumerate() {
-                        result[offset + g] += (values[i] - base[i]) * self.weights.per_obs[i];
-                    }
-                }
             }
         }
     }

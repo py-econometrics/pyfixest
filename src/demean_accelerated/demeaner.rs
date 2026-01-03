@@ -56,10 +56,9 @@ impl<'a> SingleFEDemeaner<'a> {
 impl Demeaner for SingleFEDemeaner<'_> {
     fn solve(&mut self, input: &[f64]) -> (Vec<f64>, usize, ConvergenceState) {
         let n_obs = self.ctx.index.n_obs;
-        let output = vec![0.0; n_obs];
 
         // Apply Dᵀ to get coefficient-space sums
-        let in_out = self.ctx.apply_design_matrix_t_residuals(input, &output);
+        let in_out = self.ctx.apply_design_matrix_t(input);
 
         let fe0 = self.ctx.index.group_ids_for_fe(0);
         let group_weights = self.ctx.group_weights_for_fe(0);
@@ -240,14 +239,14 @@ impl<'a> MultiFEDemeaner<'a> {
         let n1 = self.ctx.index.n_groups[1];
         let n_coef_2fe = n0 + n1;
 
-        // Apply Dᵀ to residuals after warmup
-        let in_out_full = self.ctx.apply_design_matrix_t_residuals(input, &self.buffers.mu);
-        let in_out_2fe: Vec<f64> = in_out_full[..n_coef_2fe].to_vec();
-
-        // Compute effective input: input - mu
+        // Compute residuals: input - mu
         for i in 0..n_obs {
             self.buffers.effective_input[i] = input[i] - self.buffers.mu[i];
         }
+
+        // Apply Dᵀ to residuals (only need first 2 FEs)
+        let in_out_full = self.ctx.apply_design_matrix_t(&self.buffers.effective_input);
+        let in_out_2fe: Vec<f64> = in_out_full[..n_coef_2fe].to_vec();
 
         // Run 2-FE acceleration
         self.buffers.coef_2fe.fill(0.0);
@@ -275,7 +274,12 @@ impl<'a> MultiFEDemeaner<'a> {
             return (0, ConvergenceState::NotConverged);
         }
 
-        let in_out = self.ctx.apply_design_matrix_t_residuals(input, &self.buffers.mu);
+        // Compute residuals: input - mu
+        for i in 0..self.ctx.index.n_obs {
+            self.buffers.effective_input[i] = input[i] - self.buffers.mu[i];
+        }
+
+        let in_out = self.ctx.apply_design_matrix_t(&self.buffers.effective_input);
         self.buffers.coef.fill(0.0);
 
         let mut projector = MultiFEProjector::new(self.ctx, &in_out, input);
