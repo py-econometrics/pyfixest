@@ -303,6 +303,15 @@ impl Accelerator for IronsTuckGrand {
         config: &FixestConfig,
         max_iter: usize,
     ) -> (usize, ConvergenceState) {
+        // Verify buffer size matches projector's coefficient count
+        debug_assert_eq!(
+            self.buffers.gx.len(),
+            projector.coef_len(),
+            "Accelerator buffer size ({}) must match projector coef_len ({})",
+            self.buffers.gx.len(),
+            projector.coef_len()
+        );
+
         let conv_len = projector.convergence_len();
 
         // Initial projection
