@@ -22,7 +22,7 @@ use pyo3::prelude::*;
 /// accounts for the possibility that removing an observation in one column can
 /// lead to the emergence of new singletons in subsequent columns.
 #[pyfunction]
-pub fn _detect_singletons_rs(py: Python<'_>, ids: PyReadonlyArray2<i32>) -> Py<PyArray1<bool>> {
+pub fn _detect_singletons_rs(py: Python<'_>, ids: PyReadonlyArray2<u32>) -> Py<PyArray1<bool>> {
     let ids = ids.as_array();
     let (n_samples, n_features) = ids.dim();
 
@@ -42,6 +42,9 @@ pub fn _detect_singletons_rs(py: Python<'_>, ids: PyReadonlyArray2<i32>) -> Py<P
         let n_non_singletons_curr = n_non_singletons;
 
         for j in 0..n_features {
+            // Extract column once for faster 1D access (like numba does)
+            let col = ids.column(j);
+
             // Reset counts
             counts.iter_mut().for_each(|c| *c = 0);
 
@@ -49,7 +52,7 @@ pub fn _detect_singletons_rs(py: Python<'_>, ids: PyReadonlyArray2<i32>) -> Py<P
             let mut n_singletons: i32 = 0;
             for i in 0..n_non_singletons {
                 let idx = non_singletons[i] as usize;
-                let e = ids[[idx, j]] as usize;
+                let e = col[idx] as usize;
                 let c = counts[e];
                 // Branchless version:
                 // if c == 0: n_singletons += 1
@@ -66,7 +69,7 @@ pub fn _detect_singletons_rs(py: Python<'_>, ids: PyReadonlyArray2<i32>) -> Py<P
             let mut cnt = 0;
             for i in 0..n_non_singletons {
                 let idx = non_singletons[i] as usize;
-                let e = ids[[idx, j]] as usize;
+                let e = col[idx] as usize;
                 if counts[e] != 1 {
                     non_singletons[cnt] = non_singletons[i];
                     cnt += 1;
