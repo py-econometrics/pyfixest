@@ -198,15 +198,14 @@ impl IronsTuckGrand {
 
             // Update gx for convergence check
             projector.project(coef, &mut self.buffers.gx);
-            convergence = if Self::should_continue(
+            if !Self::should_continue(
                 &coef[..conv_len],
                 &self.buffers.gx[..conv_len],
                 self.config.tol,
             ) {
-                ConvergenceState::NotConverged
-            } else {
-                ConvergenceState::Converged
-            };
+                convergence = ConvergenceState::Converged;
+                break;
+            }
 
             // Grand acceleration (every iter_grand_acc iterations)
             if iter % self.config.iter_grand_acc == 0 {
