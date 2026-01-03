@@ -89,7 +89,7 @@ impl<'a> TwoFEProjector<'a> {
     ///
     /// For each group g1 in FE1:
     ///   beta[g1] = (in_out[g1] - Σ alpha[g0] * w) / group_weight[g1]
-    #[inline(always)]
+    #[inline]
     fn compute_beta_from_alpha(&mut self, alpha: &[f64]) {
         let n0 = self.ctx.index.n_groups[0];
         let n1 = self.ctx.index.n_groups[1];
@@ -119,7 +119,7 @@ impl<'a> TwoFEProjector<'a> {
     ///
     /// For each group g0 in FE0:
     ///   alpha[g0] = (in_out[g0] - Σ beta[g1] * w) / group_weight[g0]
-    #[inline(always)]
+    #[inline]
     fn compute_alpha_from_beta(&self, alpha_out: &mut [f64]) {
         let n0 = self.ctx.index.n_groups[0];
         let fe0 = self.ctx.index.group_ids_for_fe(0);
@@ -216,7 +216,7 @@ impl<'a> MultiFEProjector<'a> {
     /// Accumulate coefficient contributions from one FE into the scratch buffer.
     ///
     /// For each observation i: scratch[i] += coef[start + fe[i]]
-    #[inline(always)]
+    #[inline]
     fn accumulate_fe_contributions(&mut self, fe_idx: usize, coef: &[f64]) {
         let start = self.ctx.index.coef_start[fe_idx];
         let fe = self.ctx.index.group_ids_for_fe(fe_idx);
@@ -230,7 +230,7 @@ impl<'a> MultiFEProjector<'a> {
     ///
     /// For each group g in FE q:
     ///   coef_out[g] = (in_out[g] - Σ scratch[i] * w) / group_weight[g]
-    #[inline(always)]
+    #[inline]
     fn update_fe_coefficients(&self, fe_idx: usize, coef_out: &mut [f64]) {
         let start = self.ctx.index.coef_start[fe_idx];
         let n_groups = self.ctx.index.n_groups[fe_idx];
@@ -298,22 +298,35 @@ impl Projector for MultiFEProjector<'_> {
 
     #[inline(always)]
     fn compute_ssr(&mut self, coef: &[f64]) -> f64 {
-        let n_obs = self.ctx.index.n_obs;
         let n_fe = self.ctx.index.n_fe;
 
         // Compute SSR: Σ (input[i] - Σ_q coef[fe_q[i]])²
-        let mut ssr = 0.0;
-        for i in 0..n_obs {
-            let mut sum = 0.0;
-            for q in 0..n_fe {
-                let offset = self.ctx.index.coef_start[q];
-                let g = self.ctx.index.group_ids[q * n_obs + i];
-                sum += coef[offset + g];
+        //
+        // We iterate over FEs in the outer loop and observations in the inner loop.
+        // This improves cache locality because:
+        // 1. group_ids_for_fe(q) returns a contiguous slice for FE q
+        // 2. We access the scratch buffer sequentially
+        // 3. The coefficient array (typically small) stays in cache
+
+        // Accumulate coefficient sums per observation using the scratch buffer
+        self.scratch.fill(0.0);
+        for q in 0..n_fe {
+            let offset = self.ctx.index.coef_start[q];
+            let fe_ids = self.ctx.index.group_ids_for_fe(q);
+            for (sum, &g) in self.scratch.iter_mut().zip(fe_ids.iter()) {
+                *sum += coef[offset + g];
             }
-            let resid = self.input[i] - sum;
-            ssr += resid * resid;
         }
-        ssr
+
+        // Compute SSR from residuals
+        self.input
+            .iter()
+            .zip(self.scratch.iter())
+            .map(|(&x, &sum)| {
+                let resid = x - sum;
+                resid * resid
+            })
+            .sum()
     }
 
     #[inline(always)]

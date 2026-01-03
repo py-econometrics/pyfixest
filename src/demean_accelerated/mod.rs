@@ -16,7 +16,6 @@
 //!   - [`MultiFEProjector`](projection::MultiFEProjector): General Q-FE projection
 //! - [`accelerator`]: Acceleration strategies with [`Accelerator`](accelerator::Accelerator) trait
 //!   - [`IronsTuckGrand`](accelerator::IronsTuckGrand): Default acceleration (matches fixest)
-//!   - [`SimpleIteration`](accelerator::SimpleIteration): Basic iteration for testing
 //! - [`demeaner`]: High-level solver strategies with [`Demeaner`](demeaner::Demeaner) trait
 //!   - [`SingleFEDemeaner`](demeaner::SingleFEDemeaner): O(n) closed-form (1 FE)
 //!   - [`TwoFEDemeaner`](demeaner::TwoFEDemeaner): Accelerated iteration (2 FEs)
@@ -67,7 +66,9 @@ pub(crate) fn demean_accelerated(
         .into_par_iter()
         .enumerate()
         .for_each(|(k, mut col)| {
-            let xk: Vec<f64> = (0..n_samples).map(|i| x[[i, k]]).collect();
+            // Use ndarray's column view and convert to contiguous Vec
+            // (column() returns a non-contiguous view, to_vec() copies to contiguous)
+            let xk: Vec<f64> = x.column(k).to_vec();
             let (result, _iter, converged) = demean_single(&ctx, &xk, &config);
 
             if !converged {

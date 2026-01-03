@@ -102,8 +102,15 @@ impl FixedEffectsIndex {
     /// - `n_groups`: Computed as `max(group_id) + 1` for each FE
     /// - `coef_start`: Cumulative sum of `n_groups`
     /// - `group_ids`: Transposed to column-major order for cache efficiency
+    ///
+    /// # Panics
+    ///
+    /// Panics in debug builds if `n_obs == 0` or `n_fe == 0`.
     pub fn new(flist: &ArrayView2<usize>) -> Self {
         let (n_obs, n_fe) = flist.dim();
+
+        debug_assert!(n_obs > 0, "Cannot create FixedEffectsIndex with 0 observations");
+        debug_assert!(n_fe > 0, "Cannot create FixedEffectsIndex with 0 fixed effects");
 
         // Compute n_groups: max group_id + 1 for each FE
         let n_groups: Vec<usize> = (0..n_fe)
@@ -211,10 +218,14 @@ impl ObservationWeights {
     ///
     /// # Computed Fields
     ///
-    /// - `is_uniform`: True if all weights are 1.0 (within 1e-10)
+    /// - `is_uniform`: True if all weights are 1.0 (within floating-point tolerance)
     /// - `per_group`: Sum of observation weights for each group
     pub fn new(weights: &ArrayView1<f64>, index: &FixedEffectsIndex) -> Self {
-        let is_uniform = weights.iter().all(|&w| (w - 1.0).abs() < 1e-10);
+        // Tolerance for detecting uniform weights (all 1.0).
+        // Using 1e-10 to account for floating-point representation errors
+        // while being strict enough to catch intentionally non-uniform weights.
+        const UNIFORM_WEIGHT_TOL: f64 = 1e-10;
+        let is_uniform = weights.iter().all(|&w| (w - 1.0).abs() < UNIFORM_WEIGHT_TOL);
 
         // Aggregate observation weights to group level
         let mut per_group = vec![0.0; index.n_coef];
@@ -290,7 +301,19 @@ impl DemeanContext {
     ///
     /// * `flist` - Fixed effect group IDs with shape `(n_obs, n_fe)`
     /// * `weights` - Per-observation weights (length: `n_obs`)
+    ///
+    /// # Panics
+    ///
+    /// Panics in debug builds if `weights.len() != flist.nrows()`.
     pub fn new(flist: &ArrayView2<usize>, weights: &ArrayView1<f64>) -> Self {
+        debug_assert_eq!(
+            weights.len(),
+            flist.nrows(),
+            "weights length ({}) must match number of observations ({})",
+            weights.len(),
+            flist.nrows()
+        );
+
         let index = FixedEffectsIndex::new(flist);
         let weights = ObservationWeights::new(weights, &index);
         Self { index, weights }
@@ -331,12 +354,18 @@ pub struct FixestConfig {
 }
 
 impl Default for FixestConfig {
+    /// Default values match R's fixest package for consistency.
     fn default() -> Self {
         Self {
+            // Default tolerance matches fixest's `fixest_options("demean_tol")`
             tol: 1e-6,
+            // Generous iteration limit to handle difficult convergence cases
             maxiter: 100_000,
+            // Warmup iterations before 2-FE sub-convergence (fixest default)
             iter_warmup: 15,
+            // Post-acceleration projection starts after this many iterations
             iter_proj_after_acc: 40,
+            // Grand acceleration frequency (every N iterations)
             iter_grand_acc: 4,
         }
     }

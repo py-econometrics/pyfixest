@@ -30,10 +30,16 @@ pub trait Accelerator {
     ///
     /// Uses both absolute and relative tolerance: converged if
     /// `|a - b| <= tol` OR `|a - b| / (0.1 + |a|) <= tol`.
+    ///
+    /// The `0.1` denominator offset prevents division by zero and provides
+    /// a smooth transition between absolute tolerance (when |a| << 0.1) and
+    /// relative tolerance (when |a| >> 0.1). This matches fixest's convergence check.
     #[inline]
     fn converged(a: f64, b: f64, tol: f64) -> bool {
+        // 0.1 offset: ensures numerical stability and smooth absolute/relative transition
+        const RELATIVE_TOL_OFFSET: f64 = 0.1;
         let diff = (a - b).abs();
-        (diff <= tol) || (diff / (0.1 + a.abs()) <= tol)
+        (diff <= tol) || (diff / (RELATIVE_TOL_OFFSET + a.abs()) <= tol)
     }
 
     /// Check if coefficient arrays have NOT converged (should keep iterating).
@@ -85,8 +91,14 @@ pub trait Accelerator {
 ///    at a coarser level to accelerate long-range convergence.
 ///
 /// Additionally, SSR (sum of squared residuals) is checked every 40 iterations
-/// as a secondary convergence criterion.
+/// as a secondary convergence criterion. The interval of 40 balances overhead
+/// (SSR computation is O(n)) against catching convergence that coefficient
+/// checks might miss.
 pub struct IronsTuckGrand;
+
+/// Interval for SSR-based convergence checks (every N iterations).
+/// Matches fixest's check frequency for secondary convergence criterion.
+const SSR_CHECK_INTERVAL: usize = 40;
 
 /// Buffers for Irons-Tuck + Grand acceleration.
 pub struct IronsTuckGrandBuffers {
@@ -224,12 +236,12 @@ impl Accelerator for IronsTuckGrand {
                 }
             }
 
-            // SSR convergence check (every 40 iterations)
-            if iter % 40 == 0 {
+            // SSR convergence check (every SSR_CHECK_INTERVAL iterations)
+            if iter % SSR_CHECK_INTERVAL == 0 {
                 let ssr_old = ssr;
                 ssr = projector.compute_ssr(&buffers.gx);
 
-                if iter > 40 && Self::converged(ssr_old, ssr, config.tol) {
+                if iter > SSR_CHECK_INTERVAL && Self::converged(ssr_old, ssr, config.tol) {
                     keep_going = false;
                     break;
                 }

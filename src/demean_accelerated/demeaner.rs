@@ -200,6 +200,10 @@ impl Demeaner for TwoFEDemeaner {
 /// 1. **Warmup**: Run all-FE iterations to get initial estimates
 /// 2. **2-FE sub-convergence**: Converge on first 2 FEs (faster)
 /// 3. **Re-acceleration**: Final all-FE iterations to polish
+///
+/// # Convergence
+///
+/// Returns `converged=true` if any phase converges early (before max iterations).
 pub struct MultiFEDemeaner;
 
 impl Demeaner for MultiFEDemeaner {
@@ -235,7 +239,11 @@ impl Demeaner for MultiFEDemeaner {
         total_iter += iter1;
         Self::gather_and_add(ctx, &coef, &mut mu);
 
-        if !converged1 {
+        // Determine final convergence status based on which phase completes the algorithm
+        let converged = if converged1 {
+            // Early convergence in warmup phase
+            true
+        } else {
             // Phase 2: 2-FE sub-convergence
             let in_out_phase2 = Self::scatter_residuals(ctx, input, &mu);
             let mut coef_2fe = vec![0.0; n_coef_2fe];
@@ -243,7 +251,7 @@ impl Demeaner for MultiFEDemeaner {
             let effective_input: Vec<f64> = (0..n_obs).map(|i| input[i] - mu[i]).collect();
 
             let mut projector2 = TwoFEProjector::new(ctx, &in_out_2fe, &effective_input);
-            let (iter2, _) = IronsTuckGrand::run(
+            let (iter2, converged2) = IronsTuckGrand::run(
                 &mut projector2,
                 &mut coef_2fe,
                 &mut two_buffers,
@@ -259,13 +267,13 @@ impl Demeaner for MultiFEDemeaner {
                 mu[i] += coef_2fe[fe0[i]] + coef_2fe[n0 + fe1[i]];
             }
 
-            // Phase 3: Re-acceleration with all FEs
+            // Phase 3: Re-acceleration with all FEs (unless 2-FE converged fully)
             let remaining = config.maxiter.saturating_sub(total_iter);
             if remaining > 0 {
                 let in_out_phase3 = Self::scatter_residuals(ctx, input, &mu);
                 coef.fill(0.0);
                 let mut projector3 = MultiFEProjector::new(ctx, &in_out_phase3, input);
-                let (iter3, _) = IronsTuckGrand::run(
+                let (iter3, converged3) = IronsTuckGrand::run(
                     &mut projector3,
                     &mut coef,
                     &mut multi_buffers,
@@ -274,8 +282,12 @@ impl Demeaner for MultiFEDemeaner {
                 );
                 total_iter += iter3;
                 Self::gather_and_add(ctx, &coef, &mut mu);
+                converged3
+            } else {
+                // No remaining iterations, use phase 2 convergence status
+                converged2
             }
-        }
+        };
 
         // Compute output: input - mu
         let mut output = vec![0.0; n_obs];
@@ -283,7 +295,7 @@ impl Demeaner for MultiFEDemeaner {
             output[i] = input[i] - mu[i];
         }
 
-        (output, total_iter, total_iter < config.maxiter)
+        (output, total_iter, converged)
     }
 }
 
@@ -294,11 +306,23 @@ impl Demeaner for MultiFEDemeaner {
 /// Demean a single variable using the appropriate solver.
 ///
 /// Dispatches to the appropriate [`Demeaner`] implementation based on FE count.
+///
+/// # Panics
+///
+/// Panics in debug builds if `input.len() != ctx.index.n_obs`.
 pub fn demean_single(
     ctx: &DemeanContext,
     input: &[f64],
     config: &FixestConfig,
 ) -> (Vec<f64>, usize, bool) {
+    debug_assert_eq!(
+        input.len(),
+        ctx.index.n_obs,
+        "input length ({}) must match number of observations ({})",
+        input.len(),
+        ctx.index.n_obs
+    );
+
     match ctx.index.n_fe {
         1 => SingleFEDemeaner::solve(ctx, input, config),
         2 => TwoFEDemeaner::solve(ctx, input, config),
