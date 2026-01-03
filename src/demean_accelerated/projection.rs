@@ -19,8 +19,8 @@
 //!
 //! # Usage with Accelerators
 //!
-//! Projectors are used with [`Accelerator`](crate::demean_accelerated::accelerator::Accelerator)
-//! implementations that handle the iteration strategy (e.g., Irons-Tuck acceleration).
+//! Projectors are used with [`IronsTuckGrand`](crate::demean_accelerated::accelerator::IronsTuckGrand)
+//! which handles the iteration strategy.
 
 use crate::demean_accelerated::types::DemeanContext;
 
@@ -34,14 +34,21 @@ use crate::demean_accelerated::types::DemeanContext;
 /// scattered input sums, original input values, and scratch buffers.
 /// This makes the projection interface simple and clear.
 ///
-/// Projectors are used with [`Accelerator`](crate::demean_accelerated::accelerator::Accelerator)
-/// implementations that handle the iteration strategy.
+/// Projectors are used with [`IronsTuckGrand`](crate::demean_accelerated::accelerator::IronsTuckGrand)
+/// which handles the iteration strategy.
 ///
 /// # Performance
 ///
 /// All methods are called in tight loops and should be marked `#[inline(always)]`.
 /// Using static dispatch (`impl Projector` or generics) ensures zero overhead.
 pub trait Projector {
+    /// Total number of coefficients this projector operates on.
+    ///
+    /// This defines the required size of coefficient arrays passed to
+    /// `project()` and `compute_ssr()`. Accelerator buffers must be
+    /// sized to match this value.
+    fn coef_len(&self) -> usize;
+
     /// Project coefficients: coef_in → coef_out.
     fn project(&mut self, coef_in: &[f64], coef_out: &mut [f64]);
 
@@ -49,6 +56,9 @@ pub trait Projector {
     fn compute_ssr(&mut self, coef: &[f64]) -> f64;
 
     /// Length of coefficient slice to use for convergence checking.
+    ///
+    /// This may be smaller than `coef_len()` when not all coefficients
+    /// need to be checked (e.g., for 2-FE only alpha is checked).
     fn convergence_len(&self) -> usize;
 }
 
@@ -146,6 +156,11 @@ impl<'a> TwoFEProjector<'a> {
 }
 
 impl Projector for TwoFEProjector<'_> {
+    #[inline(always)]
+    fn coef_len(&self) -> usize {
+        self.ctx.index.n_groups[0] + self.ctx.index.n_groups[1]
+    }
+
     #[inline(always)]
     fn project(&mut self, coef_in: &[f64], coef_out: &mut [f64]) {
         let n0 = self.ctx.index.n_groups[0];
@@ -278,6 +293,11 @@ impl<'a> MultiFEProjector<'a> {
 }
 
 impl Projector for MultiFEProjector<'_> {
+    #[inline(always)]
+    fn coef_len(&self) -> usize {
+        self.ctx.index.n_coef
+    }
+
     /// Project coefficients using reverse-order FE updates.
     ///
     /// For each FE q from (n_fe-1) down to 0:

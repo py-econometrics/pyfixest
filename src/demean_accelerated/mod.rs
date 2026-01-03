@@ -14,8 +14,8 @@
 //! - [`projection`]: Projection operations with [`Projector`](projection::Projector) trait
 //!   - [`TwoFEProjector`](projection::TwoFEProjector): Specialized 2-FE projection
 //!   - [`MultiFEProjector`](projection::MultiFEProjector): General Q-FE projection
-//! - [`accelerator`]: Acceleration strategies with [`Accelerator`](accelerator::Accelerator) trait
-//!   - [`IronsTuckGrand`](accelerator::IronsTuckGrand): Default acceleration (matches fixest)
+//! - [`accelerator`]: Acceleration strategy
+//!   - [`IronsTuckGrand`](accelerator::IronsTuckGrand): Irons-Tuck + Grand acceleration (matches fixest)
 //! - [`demeaner`]: High-level solver strategies with [`Demeaner`](demeaner::Demeaner) trait
 //!   - [`SingleFEDemeaner`](demeaner::SingleFEDemeaner): O(n) closed-form (1 FE)
 //!   - [`TwoFEDemeaner`](demeaner::TwoFEDemeaner): Accelerated iteration (2 FEs)
@@ -32,7 +32,7 @@ pub mod projection;
 pub mod types;
 
 use demeaner::{Demeaner, MultiFEDemeaner, SingleFEDemeaner, TwoFEDemeaner};
-use types::{DemeanContext, FixestConfig};
+use types::{ConvergenceState, DemeanContext, FixestConfig};
 
 use ndarray::{Array2, ArrayView1, ArrayView2, Zip};
 use numpy::{PyArray2, PyReadonlyArray1, PyReadonlyArray2};
@@ -64,7 +64,7 @@ impl<'a> ThreadLocalDemeaner<'a> {
 
     /// Solve the demeaning problem, reusing internal buffers.
     #[inline]
-    fn solve(&mut self, input: &[f64]) -> (Vec<f64>, usize, bool) {
+    fn solve(&mut self, input: &[f64]) -> (Vec<f64>, usize, ConvergenceState) {
         match self {
             ThreadLocalDemeaner::Single(d) => d.solve(input),
             ThreadLocalDemeaner::Two(d) => d.solve(input),
@@ -108,9 +108,9 @@ pub(crate) fn demean_accelerated(
                 // Use ndarray's column view and convert to contiguous Vec
                 // (column() returns a non-contiguous view, to_vec() copies to contiguous)
                 let xk: Vec<f64> = x.column(k).to_vec();
-                let (result, _iter, converged) = demeaner.solve(&xk);
+                let (result, _iter, convergence) = demeaner.solve(&xk);
 
-                if !converged {
+                if convergence == ConvergenceState::NotConverged {
                     not_converged.fetch_add(1, Ordering::SeqCst);
                 }
 
@@ -170,9 +170,12 @@ mod tests {
 
         let config = FixestConfig::default();
         let mut demeaner = TwoFEDemeaner::new(&ctx, &config);
-        let (result, iter, converged) = demeaner.solve(&input);
+        let (result, iter, convergence) = demeaner.solve(&input);
 
-        assert!(converged, "Should converge");
+        assert!(
+            convergence == ConvergenceState::Converged,
+            "Should converge"
+        );
         assert!(iter < 100, "Should converge quickly");
         assert!(result.iter().all(|&v| v.is_finite()));
     }
@@ -196,9 +199,9 @@ mod tests {
 
         let config = FixestConfig::default();
         let mut demeaner = MultiFEDemeaner::new(&ctx, &config);
-        let (result, _iter, converged) = demeaner.solve(&input);
+        let (result, _iter, convergence) = demeaner.solve(&input);
 
-        assert!(converged);
+        assert!(convergence == ConvergenceState::Converged);
         assert!(result.iter().all(|&v| v.is_finite()));
     }
 
@@ -218,9 +221,12 @@ mod tests {
         let input: Vec<f64> = (0..n_obs).map(|i| (i as f64) * 0.1).collect();
 
         let mut demeaner = SingleFEDemeaner::new(&ctx);
-        let (result, iter, converged) = demeaner.solve(&input);
+        let (result, iter, convergence) = demeaner.solve(&input);
 
-        assert!(converged, "Single FE should always converge");
+        assert!(
+            convergence == ConvergenceState::Converged,
+            "Single FE should always converge"
+        );
         assert_eq!(iter, 0, "Single FE should be closed-form (0 iterations)");
 
         // Verify demeaning: each group's sum should be approximately 0
@@ -263,9 +269,12 @@ mod tests {
         let input: Vec<f64> = (0..n_obs).map(|i| (i as f64) * 0.1).collect();
         let config = FixestConfig::default();
         let mut demeaner = TwoFEDemeaner::new(&ctx, &config);
-        let (result, _iter, converged) = demeaner.solve(&input);
+        let (result, _iter, convergence) = demeaner.solve(&input);
 
-        assert!(converged, "Weighted regression should converge");
+        assert!(
+            convergence == ConvergenceState::Converged,
+            "Weighted regression should converge"
+        );
         assert!(
             result.iter().all(|&v| v.is_finite()),
             "All results should be finite"
@@ -289,9 +298,12 @@ mod tests {
 
         let config = FixestConfig::default();
         let mut demeaner = TwoFEDemeaner::new(&ctx, &config);
-        let (result, _iter, converged) = demeaner.solve(&input);
+        let (result, _iter, convergence) = demeaner.solve(&input);
 
-        assert!(converged, "Singleton groups should converge");
+        assert!(
+            convergence == ConvergenceState::Converged,
+            "Singleton groups should converge"
+        );
 
         // With singleton groups in FE 0, each observation's own mean is subtracted,
         // then adjusted for FE 1. The result should be all zeros since each
@@ -319,9 +331,12 @@ mod tests {
 
         let config = FixestConfig::default();
         let mut demeaner = TwoFEDemeaner::new(&ctx, &config);
-        let (result, _iter, converged) = demeaner.solve(&input);
+        let (result, _iter, convergence) = demeaner.solve(&input);
 
-        assert!(converged, "Small groups should converge");
+        assert!(
+            convergence == ConvergenceState::Converged,
+            "Small groups should converge"
+        );
         assert!(
             result.iter().all(|&v| v.is_finite()),
             "All results should be finite"
