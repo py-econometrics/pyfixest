@@ -58,8 +58,8 @@ impl Demeaner for SingleFEDemeaner<'_> {
         let n_obs = self.ctx.index.n_obs;
         let output = vec![0.0; n_obs];
 
-        // Scatter input to coefficient space (sum of input per group)
-        let in_out = self.ctx.scatter_residuals(input, &output);
+        // Apply Dᵀ to get coefficient-space sums
+        let in_out = self.ctx.apply_design_matrix_t_residuals(input, &output);
 
         let fe0 = self.ctx.index.group_ids_for_fe(0);
         let group_weights = self.ctx.group_weights_for_fe(0);
@@ -117,8 +117,8 @@ impl Demeaner for TwoFEDemeaner<'_> {
         let n_obs = self.ctx.index.n_obs;
         let n0 = self.ctx.index.n_groups[0];
 
-        // Scatter input to coefficient space
-        let in_out = self.ctx.scatter_to_coefficients(input);
+        // Apply Dᵀ to get coefficient-space sums
+        let in_out = self.ctx.apply_design_matrix_t(input);
 
         // Reset coefficient array for this solve
         self.coef.fill(0.0);
@@ -222,14 +222,14 @@ impl<'a> MultiFEDemeaner<'a> {
 
     /// Phase 1: Warmup with all FEs to get initial estimates.
     fn warmup_phase(&mut self, input: &[f64]) -> (usize, ConvergenceState) {
-        let in_out = self.ctx.scatter_to_coefficients(input);
+        let in_out = self.ctx.apply_design_matrix_t(input);
         let mut projector = MultiFEProjector::new(self.ctx, &in_out, input);
 
         let (iter, convergence) = self
             .multi_acc
             .run(&mut projector, &mut self.buffers.coef, self.config.iter_warmup);
 
-        self.ctx.gather_and_add(&self.buffers.coef, &mut self.buffers.mu);
+        self.ctx.apply_design_matrix(&self.buffers.coef, &mut self.buffers.mu);
         (iter, convergence)
     }
 
@@ -240,8 +240,8 @@ impl<'a> MultiFEDemeaner<'a> {
         let n1 = self.ctx.index.n_groups[1];
         let n_coef_2fe = n0 + n1;
 
-        // Scatter residuals after warmup
-        let in_out_full = self.ctx.scatter_residuals(input, &self.buffers.mu);
+        // Apply Dᵀ to residuals after warmup
+        let in_out_full = self.ctx.apply_design_matrix_t_residuals(input, &self.buffers.mu);
         let in_out_2fe: Vec<f64> = in_out_full[..n_coef_2fe].to_vec();
 
         // Compute effective input: input - mu
@@ -275,7 +275,7 @@ impl<'a> MultiFEDemeaner<'a> {
             return (0, ConvergenceState::NotConverged);
         }
 
-        let in_out = self.ctx.scatter_residuals(input, &self.buffers.mu);
+        let in_out = self.ctx.apply_design_matrix_t_residuals(input, &self.buffers.mu);
         self.buffers.coef.fill(0.0);
 
         let mut projector = MultiFEProjector::new(self.ctx, &in_out, input);
@@ -283,7 +283,7 @@ impl<'a> MultiFEDemeaner<'a> {
             self.multi_acc
                 .run(&mut projector, &mut self.buffers.coef, remaining);
 
-        self.ctx.gather_and_add(&self.buffers.coef, &mut self.buffers.mu);
+        self.ctx.apply_design_matrix(&self.buffers.coef, &mut self.buffers.mu);
         (iter, convergence)
     }
 

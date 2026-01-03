@@ -428,7 +428,7 @@ mod tests {
         let n1 = ctx.index.n_groups[1];
         let n_coef = n0 + n1;
 
-        let in_out = ctx.scatter_to_coefficients(&input);
+        let in_out = ctx.apply_design_matrix_t(&input);
         let mut coef = vec![0.0; n_coef];
         let mut accelerator = IronsTuckGrand::new(config, n_coef);
         let mut projector = TwoFEProjector::new(&ctx, &in_out, &input);

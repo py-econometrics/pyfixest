@@ -280,8 +280,8 @@ impl ObservationWeights {
 /// ```ignore
 /// let ctx = DemeanContext::new(&flist, &weights);
 ///
-/// // Scatter input to coefficient space
-/// let coef_sums = ctx.scatter_to_coefficients(&input);
+/// // Apply Dᵀ to get coefficient-space sums
+/// let coef_sums = ctx.apply_design_matrix_t(&input);
 ///
 /// // Compute group means: coef[g] = coef_sums[g] / group_weight[g]
 /// // ... (done in solver)
@@ -326,37 +326,37 @@ impl DemeanContext {
     }
 
     // =========================================================================
-    // Scatter/Gather Operations
+    // Design Matrix Operations (D and Dᵀ)
     // =========================================================================
 
-    /// Scatter values from observation space to coefficient space.
+    /// Apply transpose of design matrix: Dᵀ · values.
     ///
     /// Computes weighted sums of `values` for each group in each FE.
     /// Returns a vector of length `n_coef` with the aggregated sums.
     #[inline]
-    pub fn scatter_to_coefficients(&self, values: &[f64]) -> Vec<f64> {
+    pub fn apply_design_matrix_t(&self, values: &[f64]) -> Vec<f64> {
         let mut result = vec![0.0; self.index.n_coef];
         self.scatter_inner(values, None, &mut result);
         result
     }
 
-    /// Scatter residuals from observation space to coefficient space.
+    /// Apply transpose of design matrix to residuals: Dᵀ · (values - baseline).
     ///
-    /// Like [`scatter_to_coefficients`], but first subtracts `baseline` from `values`.
+    /// Like [`apply_design_matrix_t`], but first subtracts `baseline` from `values`.
     /// Computes: `Σ (values[i] - baseline[i]) * weight[i]` for each group.
     #[inline]
-    pub fn scatter_residuals(&self, values: &[f64], baseline: &[f64]) -> Vec<f64> {
+    pub fn apply_design_matrix_t_residuals(&self, values: &[f64], baseline: &[f64]) -> Vec<f64> {
         let mut result = vec![0.0; self.index.n_coef];
         self.scatter_inner(values, Some(baseline), &mut result);
         result
     }
 
-    /// Gather coefficients to observation space and add to output.
+    /// Apply design matrix and add to output: output += D · coef.
     ///
     /// For each observation, looks up its coefficient for each FE and adds to output.
     /// Computes: `output[i] += Σ_q coef[offset_q + fe_q[i]]`
     #[inline]
-    pub fn gather_and_add(&self, coef: &[f64], output: &mut [f64]) {
+    pub fn apply_design_matrix(&self, coef: &[f64], output: &mut [f64]) {
         for q in 0..self.index.n_fe {
             let offset = self.index.coef_start[q];
             let fe_ids = self.index.group_ids_for_fe(q);
