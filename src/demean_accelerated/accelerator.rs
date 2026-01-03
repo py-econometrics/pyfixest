@@ -245,7 +245,7 @@ impl Accelerator for IronsTuckGrand {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::demean_accelerated::demeaner::scatter_to_coefficients;
+    use crate::demean_accelerated::demeaner::{Demeaner, TwoFEDemeaner};
     use crate::demean_accelerated::projection::TwoFEProjector;
     use crate::demean_accelerated::types::DemeanContext;
     use ndarray::{Array1, Array2};
@@ -273,7 +273,7 @@ mod tests {
         let n1 = ctx.index.n_groups[1];
         let n_coef = n0 + n1;
 
-        let in_out = scatter_to_coefficients(&ctx, &input);
+        let in_out = TwoFEDemeaner::scatter_to_coefficients(&ctx, &input);
         let mut coef = vec![0.0; n_coef];
         let mut buffers = IronsTuckGrand::create_buffers(n_coef);
         let mut projector = TwoFEProjector::new(&ctx, &in_out, &input);

@@ -104,11 +104,6 @@ pub trait Demeaner {
     }
 }
 
-/// Scatter values from observation space to coefficient space (convenience function).
-pub fn scatter_to_coefficients(ctx: &DemeanContext, values: &[f64]) -> Vec<f64> {
-    SingleFEDemeaner::scatter_to_coefficients(ctx, values)
-}
-
 // =============================================================================
 // SingleFEDemeaner
 // =============================================================================
