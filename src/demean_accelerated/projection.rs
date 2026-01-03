@@ -19,8 +19,8 @@
 //!
 //! # Usage with Accelerators
 //!
-//! Projectors are used with [`Accelerator`](crate::demean_accelerated::accelerator::Accelerator)
-//! implementations that handle the iteration strategy (e.g., Irons-Tuck acceleration).
+//! Projectors are used with [`IronsTuckGrand`](crate::demean_accelerated::accelerator::IronsTuckGrand)
+//! which handles the iteration strategy.
 
 use crate::demean_accelerated::types::DemeanContext;
 
@@ -34,8 +34,8 @@ use crate::demean_accelerated::types::DemeanContext;
 /// scattered input sums, original input values, and scratch buffers.
 /// This makes the projection interface simple and clear.
 ///
-/// Projectors are used with [`Accelerator`](crate::demean_accelerated::accelerator::Accelerator)
-/// implementations that handle the iteration strategy.
+/// Projectors are used with [`IronsTuckGrand`](crate::demean_accelerated::accelerator::IronsTuckGrand)
+/// which handles the iteration strategy.
 ///
 /// # Performance
 ///

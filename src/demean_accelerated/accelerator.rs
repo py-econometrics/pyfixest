@@ -1,80 +1,10 @@
 //! Acceleration strategies for fixed effects demeaning.
 //!
-//! This module provides the [`Accelerator`] trait for iteration acceleration,
-//! with the default implementation [`IronsTuckGrand`] matching fixest's algorithm.
+//! This module provides [`IronsTuckGrand`], the acceleration strategy matching
+//! fixest's implementation.
 
 use crate::demean_accelerated::projection::Projector;
 use crate::demean_accelerated::types::FixestConfig;
-
-// =============================================================================
-// Accelerator Trait
-// =============================================================================
-
-/// An acceleration strategy for iterative demeaning.
-///
-/// Accelerators take a [`Projector`] and repeatedly apply it until convergence,
-/// using various techniques to speed up convergence. Each accelerator owns its
-/// working buffers internally.
-pub trait Accelerator {
-    /// Create a new accelerator with buffers sized for the given coefficient count.
-    fn new(n_coef: usize) -> Self;
-
-    /// Check if two scalar values have converged within tolerance.
-    ///
-    /// Uses both absolute and relative tolerance: converged if
-    /// `|a - b| <= tol` OR `|a - b| <= tol * (0.1 + |a|)`.
-    ///
-    /// The `0.1` denominator offset prevents division by zero and provides
-    /// a smooth transition between absolute tolerance (when |a| << 0.1) and
-    /// relative tolerance (when |a| >> 0.1). This matches fixest's convergence check.
-    ///
-    /// # Implementation Note
-    ///
-    /// The relative tolerance check `|a - b| / (0.1 + |a|) <= tol` is rewritten
-    /// as `|a - b| <= tol * (0.1 + |a|)` to avoid division, improving performance
-    /// and SIMD-friendliness.
-    #[inline]
-    fn converged(a: f64, b: f64, tol: f64) -> bool {
-        // 0.1 offset: ensures numerical stability and smooth absolute/relative transition
-        const RELATIVE_TOL_OFFSET: f64 = 0.1;
-        let diff = (a - b).abs();
-        // Absolute tolerance check (faster, handles small values)
-        // OR relative tolerance check (multiplication form, avoids division)
-        (diff <= tol) || (diff <= tol * (RELATIVE_TOL_OFFSET + a.abs()))
-    }
-
-    /// Check if coefficient arrays have NOT converged (should keep iterating).
-    ///
-    /// Returns `true` if ANY pair of coefficients differs by more than tolerance.
-    /// Uses early-exit: returns as soon as any non-converged pair is found.
-    #[inline]
-    fn should_continue(coef_old: &[f64], coef_new: &[f64], tol: f64) -> bool {
-        coef_old
-            .iter()
-            .zip(coef_new.iter())
-            .any(|(&a, &b)| !Self::converged(a, b, tol))
-    }
-
-    /// Run the acceleration loop to convergence.
-    ///
-    /// # Arguments
-    ///
-    /// * `projector` - The projection operation to accelerate
-    /// * `coef` - Initial coefficients (modified in place with final result)
-    /// * `config` - Algorithm configuration (tolerance, etc.)
-    /// * `max_iter` - Maximum iterations before giving up
-    ///
-    /// # Returns
-    ///
-    /// Tuple of (iterations_used, convergence_state)
-    fn run<P: Projector>(
-        &mut self,
-        projector: &mut P,
-        coef: &mut [f64],
-        config: &FixestConfig,
-        max_iter: usize,
-    ) -> (usize, ConvergenceState);
-}
 
 // =============================================================================
 // IronsTuckGrand Accelerator
@@ -286,17 +216,55 @@ impl IronsTuckGrand {
             }
         }
     }
-}
 
-impl Accelerator for IronsTuckGrand {
+    /// Check if two scalar values have converged within tolerance.
+    ///
+    /// Uses both absolute and relative tolerance: converged if
+    /// `|a - b| <= tol` OR `|a - b| <= tol * (0.1 + |a|)`.
+    ///
+    /// The `0.1` denominator offset prevents division by zero and provides
+    /// a smooth transition between absolute tolerance (when |a| << 0.1) and
+    /// relative tolerance (when |a| >> 0.1). This matches fixest's convergence check.
     #[inline]
-    fn new(n_coef: usize) -> Self {
+    fn converged(a: f64, b: f64, tol: f64) -> bool {
+        const RELATIVE_TOL_OFFSET: f64 = 0.1;
+        let diff = (a - b).abs();
+        (diff <= tol) || (diff <= tol * (RELATIVE_TOL_OFFSET + a.abs()))
+    }
+
+    /// Check if coefficient arrays have NOT converged (should keep iterating).
+    ///
+    /// Returns `true` if ANY pair of coefficients differs by more than tolerance.
+    /// Uses early-exit: returns as soon as any non-converged pair is found.
+    #[inline]
+    fn should_continue(coef_old: &[f64], coef_new: &[f64], tol: f64) -> bool {
+        coef_old
+            .iter()
+            .zip(coef_new.iter())
+            .any(|(&a, &b)| !Self::converged(a, b, tol))
+    }
+
+    /// Create a new accelerator with buffers sized for the given coefficient count.
+    #[inline]
+    pub fn new(n_coef: usize) -> Self {
         Self {
             buffers: IronsTuckGrandBuffers::new(n_coef),
         }
     }
 
-    fn run<P: Projector>(
+    /// Run the acceleration loop to convergence.
+    ///
+    /// # Arguments
+    ///
+    /// * `projector` - The projection operation to accelerate
+    /// * `coef` - Initial coefficients (modified in place with final result)
+    /// * `config` - Algorithm configuration (tolerance, etc.)
+    /// * `max_iter` - Maximum iterations before giving up
+    ///
+    /// # Returns
+    ///
+    /// Tuple of (iterations_used, convergence_state)
+    pub fn run<P: Projector>(
         &mut self,
         projector: &mut P,
         coef: &mut [f64],

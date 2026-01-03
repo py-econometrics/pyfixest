@@ -13,7 +13,7 @@
 //! This is important for parallel processing where each thread can have its own
 //! demeaner instance that reuses buffers across columns.
 
-use crate::demean_accelerated::accelerator::{Accelerator, ConvergenceState, IronsTuckGrand};
+use crate::demean_accelerated::accelerator::{ConvergenceState, IronsTuckGrand};
 use crate::demean_accelerated::projection::{MultiFEProjector, TwoFEProjector};
 use crate::demean_accelerated::types::{DemeanContext, FixestConfig};
 
