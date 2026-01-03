@@ -146,7 +146,6 @@ impl IronsTuckGrand {
         coef: &mut [f64],
         max_iter: usize,
     ) -> (usize, ConvergenceState) {
-        // Verify buffer size matches projector's coefficient count
         debug_assert_eq!(
             self.buffers.gx.len(),
             projector.coef_len(),
@@ -157,10 +156,124 @@ impl IronsTuckGrand {
 
         let conv_len = projector.convergence_len();
 
-        // Initial projection
+        // Initial projection and convergence check
         projector.project(coef, &mut self.buffers.gx);
+        if self.check_coef_convergence(coef, conv_len) == ConvergenceState::Converged {
+            coef.copy_from_slice(&self.buffers.gx);
+            return (0, ConvergenceState::Converged);
+        }
 
-        let mut convergence = if Self::should_continue(
+        let mut grand_phase = GrandPhase::default();
+        let mut ssr = 0.0;
+
+        for iter in 1..=max_iter {
+            // Core acceleration step
+            if self.acceleration_step(projector, coef, conv_len, iter) == ConvergenceState::Converged
+            {
+                coef.copy_from_slice(&self.buffers.gx);
+                return (iter, ConvergenceState::Converged);
+            }
+
+            // Grand acceleration (every iter_grand_acc iterations)
+            if iter % self.config.iter_grand_acc == 0 {
+                if self.grand_acceleration_check(&mut grand_phase, projector, conv_len)
+                    == ConvergenceState::Converged
+                {
+                    coef.copy_from_slice(&self.buffers.gx);
+                    return (iter, ConvergenceState::Converged);
+                }
+            }
+
+            // SSR convergence check (every ssr_check_interval iterations)
+            if iter % self.config.ssr_check_interval == 0 {
+                if self.ssr_convergence_check(projector, iter, &mut ssr)
+                    == ConvergenceState::Converged
+                {
+                    coef.copy_from_slice(&self.buffers.gx);
+                    return (iter, ConvergenceState::Converged);
+                }
+            }
+        }
+
+        coef.copy_from_slice(&self.buffers.gx);
+        (max_iter, ConvergenceState::NotConverged)
+    }
+
+    /// Perform the core Irons-Tuck acceleration step.
+    ///
+    /// Returns `Converged` if convergence detected, `NotConverged` to continue.
+    #[inline]
+    fn acceleration_step<P: Projector>(
+        &mut self,
+        projector: &mut P,
+        coef: &mut [f64],
+        conv_len: usize,
+        iter: usize,
+    ) -> ConvergenceState {
+        // Double projection for Irons-Tuck: G(G(x))
+        projector.project(&self.buffers.gx, &mut self.buffers.ggx);
+
+        // Irons-Tuck acceleration
+        if Self::accelerate(
+            &mut coef[..conv_len],
+            &self.buffers.gx[..conv_len],
+            &self.buffers.ggx[..conv_len],
+        ) == ConvergenceState::Converged
+        {
+            return ConvergenceState::Converged;
+        }
+
+        // Post-acceleration projection (after warmup)
+        if iter >= self.config.iter_proj_after_acc {
+            self.buffers.temp[..conv_len].copy_from_slice(&coef[..conv_len]);
+            projector.project(&self.buffers.temp, coef);
+        }
+
+        // Update gx and check coefficient convergence
+        projector.project(coef, &mut self.buffers.gx);
+        self.check_coef_convergence(coef, conv_len)
+    }
+
+    /// Perform grand acceleration and check for convergence.
+    #[inline]
+    fn grand_acceleration_check<P: Projector>(
+        &mut self,
+        grand_phase: &mut GrandPhase,
+        projector: &mut P,
+        conv_len: usize,
+    ) -> ConvergenceState {
+        match self.grand_acceleration_step(*grand_phase, projector, conv_len) {
+            GrandStepResult::Continue(next) => {
+                *grand_phase = next;
+                ConvergenceState::NotConverged
+            }
+            GrandStepResult::Done(state) => state,
+        }
+    }
+
+    /// Check SSR-based convergence.
+    #[inline]
+    fn ssr_convergence_check<P: Projector>(
+        &self,
+        projector: &mut P,
+        iter: usize,
+        ssr: &mut f64,
+    ) -> ConvergenceState {
+        let ssr_old = *ssr;
+        *ssr = projector.compute_ssr(&self.buffers.gx);
+
+        if iter > self.config.ssr_check_interval && Self::converged(ssr_old, *ssr, self.config.tol)
+        {
+            ConvergenceState::Converged
+        } else {
+            ConvergenceState::NotConverged
+        }
+    }
+
+    /// Check if coefficients have converged.
+    #[inline]
+    fn check_coef_convergence(&self, coef: &[f64], conv_len: usize) -> ConvergenceState {
+        if Self::should_continue(
             &coef[..conv_len],
             &self.buffers.gx[..conv_len],
             self.config.tol,
@@ -168,73 +281,7 @@ impl IronsTuckGrand {
             ConvergenceState::NotConverged
         } else {
             ConvergenceState::Converged
-        };
-        let mut iter = 0;
-        let mut grand_phase = GrandPhase::default();
-        let mut ssr = 0.0;
-
-        while convergence == ConvergenceState::NotConverged && iter < max_iter {
-            iter += 1;
-
-            // Double projection for Irons-Tuck: G(G(x))
-            projector.project(&self.buffers.gx, &mut self.buffers.ggx);
-
-            // Irons-Tuck acceleration
-            let accel_convergence = Self::accelerate(
-                &mut coef[..conv_len],
-                &self.buffers.gx[..conv_len],
-                &self.buffers.ggx[..conv_len],
-            );
-            if accel_convergence == ConvergenceState::Converged {
-                convergence = ConvergenceState::Converged;
-                break;
-            }
-
-            // Post-acceleration projection (after warmup)
-            if iter >= self.config.iter_proj_after_acc {
-                self.buffers.temp[..conv_len].copy_from_slice(&coef[..conv_len]);
-                projector.project(&self.buffers.temp, coef);
-            }
-
-            // Update gx for convergence check
-            projector.project(coef, &mut self.buffers.gx);
-            if !Self::should_continue(
-                &coef[..conv_len],
-                &self.buffers.gx[..conv_len],
-                self.config.tol,
-            ) {
-                convergence = ConvergenceState::Converged;
-                break;
-            }
-
-            // Grand acceleration (every iter_grand_acc iterations)
-            if iter % self.config.iter_grand_acc == 0 {
-                match self.grand_acceleration_step(grand_phase, projector, conv_len) {
-                    GrandStepResult::Continue(next) => grand_phase = next,
-                    GrandStepResult::Done(state) => {
-                        convergence = state;
-                        break;
-                    }
-                }
-            }
-
-            // SSR convergence check (every ssr_check_interval iterations)
-            if iter % self.config.ssr_check_interval == 0 {
-                let ssr_old = ssr;
-                ssr = projector.compute_ssr(&self.buffers.gx);
-
-                if iter > self.config.ssr_check_interval
-                    && Self::converged(ssr_old, ssr, self.config.tol)
-                {
-                    convergence = ConvergenceState::Converged;
-                    break;
-                }
-            }
         }
-
-        // Copy final result
-        coef.copy_from_slice(&self.buffers.gx);
-        (iter, convergence)
     }
 
     /// Apply Irons-Tuck acceleration to speed up convergence.
