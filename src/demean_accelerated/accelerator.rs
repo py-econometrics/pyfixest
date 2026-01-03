@@ -26,6 +26,27 @@ pub trait Accelerator {
     /// Create buffers for the given coefficient count.
     fn create_buffers(n_coef: usize) -> Self::Buffers;
 
+    /// Check if two scalar values have converged within tolerance.
+    ///
+    /// Uses both absolute and relative tolerance: converged if
+    /// `|a - b| <= tol` OR `|a - b| / (0.1 + |a|) <= tol`.
+    #[inline]
+    fn converged(a: f64, b: f64, tol: f64) -> bool {
+        let diff = (a - b).abs();
+        (diff <= tol) || (diff / (0.1 + a.abs()) <= tol)
+    }
+
+    /// Check if coefficient arrays have NOT converged (should keep iterating).
+    ///
+    /// Returns `true` if ANY pair of coefficients differs by more than tolerance.
+    #[inline]
+    fn should_continue(coef_old: &[f64], coef_new: &[f64], tol: f64) -> bool {
+        coef_old
+            .iter()
+            .zip(coef_new.iter())
+            .any(|(&a, &b)| !Self::converged(a, b, tol))
+    }
+
     /// Run the acceleration loop to convergence.
     ///
     /// # Arguments
@@ -84,27 +105,6 @@ pub struct IronsTuckGrandBuffers {
 }
 
 impl IronsTuckGrand {
-    /// Check if two scalar values have converged within tolerance.
-    ///
-    /// Uses both absolute and relative tolerance: converged if
-    /// `|a - b| <= tol` OR `|a - b| / (0.1 + |a|) <= tol`.
-    #[inline]
-    fn converged(a: f64, b: f64, tol: f64) -> bool {
-        let diff = (a - b).abs();
-        (diff <= tol) || (diff / (0.1 + a.abs()) <= tol)
-    }
-
-    /// Check if coefficient arrays have NOT converged (should keep iterating).
-    ///
-    /// Returns `true` if ANY pair of coefficients differs by more than tolerance.
-    #[inline]
-    fn should_continue(coef_old: &[f64], coef_new: &[f64], tol: f64) -> bool {
-        coef_old
-            .iter()
-            .zip(coef_new.iter())
-            .any(|(&a, &b)| !Self::converged(a, b, tol))
-    }
-
     /// Apply Irons-Tuck acceleration to speed up convergence.
     ///
     /// Given three successive iterates x, G(x), G(G(x)), computes an accelerated
