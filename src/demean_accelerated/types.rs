@@ -426,6 +426,9 @@ pub struct FixestConfig {
 
     /// Iterations between grand acceleration steps.
     pub iter_grand_acc: usize,
+
+    /// Iterations between SSR-based convergence checks.
+    pub ssr_check_interval: usize,
 }
 
 impl Default for FixestConfig {
@@ -442,6 +445,8 @@ impl Default for FixestConfig {
             iter_proj_after_acc: 40,
             // Grand acceleration frequency (every N iterations)
             iter_grand_acc: 4,
+            // SSR convergence check frequency
+            ssr_check_interval: 40,
         }
     }
 }

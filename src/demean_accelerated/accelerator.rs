@@ -32,10 +32,6 @@ pub struct IronsTuckGrand {
     buffers: IronsTuckGrandBuffers,
 }
 
-/// Interval for SSR-based convergence checks (every N iterations).
-/// Matches fixest's check frequency for secondary convergence criterion.
-const SSR_CHECK_INTERVAL: usize = 40;
-
 /// Phase of grand acceleration state machine.
 ///
 /// Grand acceleration applies Irons-Tuck at a coarser timescale to capture
@@ -345,12 +341,14 @@ impl IronsTuckGrand {
                 }
             }
 
-            // SSR convergence check (every SSR_CHECK_INTERVAL iterations)
-            if iter % SSR_CHECK_INTERVAL == 0 {
+            // SSR convergence check (every ssr_check_interval iterations)
+            if iter % self.config.ssr_check_interval == 0 {
                 let ssr_old = ssr;
                 ssr = projector.compute_ssr(&self.buffers.gx);
 
-                if iter > SSR_CHECK_INTERVAL && Self::converged(ssr_old, ssr, self.config.tol) {
+                if iter > self.config.ssr_check_interval
+                    && Self::converged(ssr_old, ssr, self.config.tol)
+                {
                     convergence = ConvergenceState::Converged;
                     break;
                 }
