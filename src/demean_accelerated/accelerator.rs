@@ -26,6 +26,8 @@ use crate::demean_accelerated::types::FixestConfig;
 /// (SSR computation is O(n)) against catching convergence that coefficient
 /// checks might miss.
 pub struct IronsTuckGrand {
+    /// Algorithm configuration (tolerance, iteration parameters).
+    config: FixestConfig,
     /// Working buffers for the acceleration algorithm.
     buffers: IronsTuckGrandBuffers,
 }
@@ -244,10 +246,11 @@ impl IronsTuckGrand {
             .any(|(&a, &b)| !Self::converged(a, b, tol))
     }
 
-    /// Create a new accelerator with buffers sized for the given coefficient count.
+    /// Create a new accelerator with the given configuration and buffer size.
     #[inline]
-    pub fn new(n_coef: usize) -> Self {
+    pub fn new(config: FixestConfig, n_coef: usize) -> Self {
         Self {
+            config,
             buffers: IronsTuckGrandBuffers::new(n_coef),
         }
     }
@@ -258,7 +261,6 @@ impl IronsTuckGrand {
     ///
     /// * `projector` - The projection operation to accelerate
     /// * `coef` - Initial coefficients (modified in place with final result)
-    /// * `config` - Algorithm configuration (tolerance, etc.)
     /// * `max_iter` - Maximum iterations before giving up
     ///
     /// # Returns
@@ -268,7 +270,6 @@ impl IronsTuckGrand {
         &mut self,
         projector: &mut P,
         coef: &mut [f64],
-        config: &FixestConfig,
         max_iter: usize,
     ) -> (usize, ConvergenceState) {
         // Verify buffer size matches projector's coefficient count
@@ -288,7 +289,7 @@ impl IronsTuckGrand {
         let mut convergence = if Self::should_continue(
             &coef[..conv_len],
             &self.buffers.gx[..conv_len],
-            config.tol,
+            self.config.tol,
         ) {
             ConvergenceState::NotConverged
         } else {
@@ -316,7 +317,7 @@ impl IronsTuckGrand {
             }
 
             // Post-acceleration projection (after warmup)
-            if iter >= config.iter_proj_after_acc {
+            if iter >= self.config.iter_proj_after_acc {
                 self.buffers.temp[..conv_len].copy_from_slice(&coef[..conv_len]);
                 projector.project(&self.buffers.temp, coef);
             }
@@ -326,7 +327,7 @@ impl IronsTuckGrand {
             convergence = if Self::should_continue(
                 &coef[..conv_len],
                 &self.buffers.gx[..conv_len],
-                config.tol,
+                self.config.tol,
             ) {
                 ConvergenceState::NotConverged
             } else {
@@ -334,7 +335,7 @@ impl IronsTuckGrand {
             };
 
             // Grand acceleration (every iter_grand_acc iterations)
-            if iter % config.iter_grand_acc == 0 {
+            if iter % self.config.iter_grand_acc == 0 {
                 match self.grand_acceleration_step(grand_phase, projector, conv_len) {
                     GrandStepResult::Continue(next) => grand_phase = next,
                     GrandStepResult::Done(state) => {
@@ -349,7 +350,7 @@ impl IronsTuckGrand {
                 let ssr_old = ssr;
                 ssr = projector.compute_ssr(&self.buffers.gx);
 
-                if iter > SSR_CHECK_INTERVAL && Self::converged(ssr_old, ssr, config.tol) {
+                if iter > SSR_CHECK_INTERVAL && Self::converged(ssr_old, ssr, self.config.tol) {
                     convergence = ConvergenceState::Converged;
                     break;
                 }
@@ -387,6 +388,7 @@ mod tests {
     fn test_irons_tuck_grand_convergence() {
         let (ctx, input) = create_test_problem(100);
         let config = FixestConfig::default();
+        let maxiter = config.maxiter;
 
         let n0 = ctx.index.n_groups[0];
         let n1 = ctx.index.n_groups[1];
@@ -394,11 +396,10 @@ mod tests {
 
         let in_out = ctx.scatter_to_coefficients(&input);
         let mut coef = vec![0.0; n_coef];
-        let mut accelerator = IronsTuckGrand::new(n_coef);
+        let mut accelerator = IronsTuckGrand::new(config, n_coef);
         let mut projector = TwoFEProjector::new(&ctx, &in_out, &input);
 
-        let (iter, convergence) =
-            accelerator.run(&mut projector, &mut coef, &config, config.maxiter);
+        let (iter, convergence) = accelerator.run(&mut projector, &mut coef, maxiter);
 
         assert!(
             convergence == ConvergenceState::Converged,

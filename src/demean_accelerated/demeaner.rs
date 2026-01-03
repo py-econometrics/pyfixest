@@ -107,7 +107,7 @@ impl<'a> TwoFEDemeaner<'a> {
             ctx,
             config,
             coef: vec![0.0; n_coef],
-            accelerator: IronsTuckGrand::new(n_coef),
+            accelerator: IronsTuckGrand::new(*config, n_coef),
         }
     }
 }
@@ -129,7 +129,7 @@ impl Demeaner for TwoFEDemeaner<'_> {
         // Run acceleration loop
         let (iter, convergence) = self
             .accelerator
-            .run(&mut projector, &mut self.coef, self.config, self.config.maxiter);
+            .run(&mut projector, &mut self.coef, self.config.maxiter);
 
         // Reconstruct output: input - alpha - beta
         let fe0 = self.ctx.index.group_ids_for_fe(0);
@@ -215,8 +215,8 @@ impl<'a> MultiFEDemeaner<'a> {
             ctx,
             config,
             buffers: MultiFEBuffers::new(n_obs, n_coef, n_coef_2fe),
-            multi_acc: IronsTuckGrand::new(n_coef),
-            two_acc: IronsTuckGrand::new(n_coef_2fe),
+            multi_acc: IronsTuckGrand::new(*config, n_coef),
+            two_acc: IronsTuckGrand::new(*config, n_coef_2fe),
         }
     }
 }
@@ -235,12 +235,9 @@ impl Demeaner for MultiFEDemeaner<'_> {
         // Phase 1: Warmup with all FEs (mu is zeros initially)
         let in_out_phase1 = self.ctx.scatter_to_coefficients(input);
         let mut projector1 = MultiFEProjector::new(self.ctx, &in_out_phase1, input);
-        let (iter1, convergence1) = self.multi_acc.run(
-            &mut projector1,
-            &mut self.buffers.coef,
-            self.config,
-            self.config.iter_warmup,
-        );
+        let (iter1, convergence1) = self
+            .multi_acc
+            .run(&mut projector1, &mut self.buffers.coef, self.config.iter_warmup);
         total_iter += iter1;
         self.ctx.gather_and_add(&self.buffers.coef, &mut self.buffers.mu);
 
@@ -264,7 +261,6 @@ impl Demeaner for MultiFEDemeaner<'_> {
             let (iter2, convergence2) = self.two_acc.run(
                 &mut projector2,
                 &mut self.buffers.coef_2fe,
-                self.config,
                 self.config.maxiter / 2,
             );
             total_iter += iter2;
@@ -283,12 +279,9 @@ impl Demeaner for MultiFEDemeaner<'_> {
                 let in_out_phase3 = self.ctx.scatter_residuals(input, &self.buffers.mu);
                 self.buffers.coef.fill(0.0);
                 let mut projector3 = MultiFEProjector::new(self.ctx, &in_out_phase3, input);
-                let (iter3, convergence3) = self.multi_acc.run(
-                    &mut projector3,
-                    &mut self.buffers.coef,
-                    self.config,
-                    remaining,
-                );
+                let (iter3, convergence3) =
+                    self.multi_acc
+                        .run(&mut projector3, &mut self.buffers.coef, remaining);
                 total_iter += iter3;
                 self.ctx.gather_and_add(&self.buffers.coef, &mut self.buffers.mu);
                 convergence3
