@@ -4,7 +4,7 @@
 //! fixest's implementation.
 
 use crate::demean_accelerated::projection::Projector;
-use crate::demean_accelerated::types::FixestConfig;
+use crate::demean_accelerated::types::{ConvergenceState, FixestConfig};
 
 // =============================================================================
 // IronsTuckGrand Accelerator
@@ -56,18 +56,6 @@ enum GrandPhase {
     Collect2nd,
     /// Store current `gx` as third snapshot (ggy buffer), then accelerate.
     Collect3rdAndAccelerate,
-}
-
-/// Whether the iterative algorithm has converged.
-///
-/// Used throughout the acceleration module to represent convergence state
-/// in a self-documenting way, avoiding ambiguous boolean returns.
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub enum ConvergenceState {
-    /// Algorithm has converged; iteration can stop.
-    Converged,
-    /// Algorithm has not yet converged; continue iterating.
-    NotConverged,
 }
 
 /// Result of a grand acceleration step.

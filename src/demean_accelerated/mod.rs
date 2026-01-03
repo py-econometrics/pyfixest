@@ -14,8 +14,8 @@
 //! - [`projection`]: Projection operations with [`Projector`](projection::Projector) trait
 //!   - [`TwoFEProjector`](projection::TwoFEProjector): Specialized 2-FE projection
 //!   - [`MultiFEProjector`](projection::MultiFEProjector): General Q-FE projection
-//! - [`accelerator`]: Acceleration strategies with [`Accelerator`](accelerator::Accelerator) trait
-//!   - [`IronsTuckGrand`](accelerator::IronsTuckGrand): Default acceleration (matches fixest)
+//! - [`accelerator`]: Acceleration strategy
+//!   - [`IronsTuckGrand`](accelerator::IronsTuckGrand): Irons-Tuck + Grand acceleration (matches fixest)
 //! - [`demeaner`]: High-level solver strategies with [`Demeaner`](demeaner::Demeaner) trait
 //!   - [`SingleFEDemeaner`](demeaner::SingleFEDemeaner): O(n) closed-form (1 FE)
 //!   - [`TwoFEDemeaner`](demeaner::TwoFEDemeaner): Accelerated iteration (2 FEs)
@@ -31,9 +31,8 @@ pub mod demeaner;
 pub mod projection;
 pub mod types;
 
-use accelerator::ConvergenceState;
 use demeaner::{Demeaner, MultiFEDemeaner, SingleFEDemeaner, TwoFEDemeaner};
-use types::{DemeanContext, FixestConfig};
+use types::{ConvergenceState, DemeanContext, FixestConfig};
 
 use ndarray::{Array2, ArrayView1, ArrayView2, Zip};
 use numpy::{PyArray2, PyReadonlyArray1, PyReadonlyArray2};

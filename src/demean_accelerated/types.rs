@@ -450,3 +450,19 @@ impl Default for FixestConfig {
         }
     }
 }
+
+// =============================================================================
+// ConvergenceState
+// =============================================================================
+
+/// Whether the iterative algorithm has converged.
+///
+/// Used throughout the demeaning module to represent convergence state
+/// in a self-documenting way, avoiding ambiguous boolean returns.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum ConvergenceState {
+    /// Algorithm has converged; iteration can stop.
+    Converged,
+    /// Algorithm has not yet converged; continue iterating.
+    NotConverged,
+}
