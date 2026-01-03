@@ -84,30 +84,96 @@ impl<'a> TwoFEProjector<'a> {
             scratch: vec![0.0; n1],
         }
     }
+
+    /// Compute beta coefficients from alpha, storing result in scratch buffer.
+    ///
+    /// For each group g1 in FE1:
+    ///   beta[g1] = (in_out[g1] - Σ alpha[g0] * w) / group_weight[g1]
+    #[inline(always)]
+    fn compute_beta_from_alpha(&mut self, alpha: &[f64]) {
+        let n0 = self.ctx.index.n_groups[0];
+        let n1 = self.ctx.index.n_groups[1];
+        let fe0 = self.ctx.index.group_ids_for_fe(0);
+        let fe1 = self.ctx.index.group_ids_for_fe(1);
+        let sw1 = self.ctx.weights.group_weights_for_fe(1, &self.ctx.index);
+
+        self.scratch[..n1].copy_from_slice(&self.in_out[n0..n0 + n1]);
+
+        if self.ctx.weights.is_uniform {
+            for (&g0, &g1) in fe0.iter().zip(fe1.iter()) {
+                self.scratch[g1] -= alpha[g0];
+            }
+        } else {
+            for ((&g0, &g1), &w) in fe0.iter().zip(fe1.iter()).zip(self.ctx.weights.per_obs.iter())
+            {
+                self.scratch[g1] -= alpha[g0] * w;
+            }
+        }
+
+        for (b, &sw) in self.scratch[..n1].iter_mut().zip(sw1.iter()) {
+            *b /= sw;
+        }
+    }
+
+    /// Compute alpha coefficients from beta (stored in scratch), writing to alpha_out.
+    ///
+    /// For each group g0 in FE0:
+    ///   alpha[g0] = (in_out[g0] - Σ beta[g1] * w) / group_weight[g0]
+    #[inline(always)]
+    fn compute_alpha_from_beta(&self, alpha_out: &mut [f64]) {
+        let n0 = self.ctx.index.n_groups[0];
+        let fe0 = self.ctx.index.group_ids_for_fe(0);
+        let fe1 = self.ctx.index.group_ids_for_fe(1);
+        let sw0 = self.ctx.weights.group_weights_for_fe(0, &self.ctx.index);
+
+        alpha_out[..n0].copy_from_slice(&self.in_out[..n0]);
+
+        if self.ctx.weights.is_uniform {
+            for (&g0, &g1) in fe0.iter().zip(fe1.iter()) {
+                alpha_out[g0] -= self.scratch[g1];
+            }
+        } else {
+            for ((&g0, &g1), &w) in fe0.iter().zip(fe1.iter()).zip(self.ctx.weights.per_obs.iter())
+            {
+                alpha_out[g0] -= self.scratch[g1] * w;
+            }
+        }
+
+        for (a, &sw) in alpha_out[..n0].iter_mut().zip(sw0.iter()) {
+            *a /= sw;
+        }
+    }
 }
 
 impl Projector for TwoFEProjector<'_> {
     #[inline(always)]
     fn project(&mut self, coef_in: &[f64], coef_out: &mut [f64]) {
-        project_2fe(self.ctx, self.in_out, coef_in, coef_out, &mut self.scratch);
+        let n0 = self.ctx.index.n_groups[0];
+        let n1 = self.ctx.index.n_groups[1];
+
+        // Step 1: alpha_in -> beta
+        self.compute_beta_from_alpha(&coef_in[..n0]);
+
+        // Step 2: beta -> alpha_out
+        self.compute_alpha_from_beta(coef_out);
+
+        // Step 3: Copy beta to output
+        coef_out[n0..n0 + n1].copy_from_slice(&self.scratch[..n1]);
     }
 
     #[inline(always)]
     fn compute_ssr(&mut self, coef: &[f64]) -> f64 {
-        let ctx = self.ctx;
-        let n0 = ctx.index.n_groups[0];
-        let n_obs = ctx.index.n_obs;
+        let n0 = self.ctx.index.n_groups[0];
+        let fe0 = self.ctx.index.group_ids_for_fe(0);
+        let fe1 = self.ctx.index.group_ids_for_fe(1);
 
         // Compute beta from alpha
-        compute_beta_from_alpha(ctx, self.in_out, &coef[..n0], &mut self.scratch);
+        self.compute_beta_from_alpha(&coef[..n0]);
 
-        // Compute SSR
-        let fe0 = ctx.index.group_ids_for_fe(0);
-        let fe1 = ctx.index.group_ids_for_fe(1);
-
+        // Compute SSR: Σ (input[i] - alpha[fe0[i]] - beta[fe1[i]])²
         let mut ssr = 0.0;
-        for i in 0..n_obs {
-            let resid = self.input[i] - coef[fe0[i]] - self.scratch[fe1[i]];
+        for ((&g0, &g1), &x) in fe0.iter().zip(fe1.iter()).zip(self.input.iter()) {
+            let resid = x - coef[g0] - self.scratch[g1];
             ssr += resid * resid;
         }
         ssr
@@ -117,75 +183,6 @@ impl Projector for TwoFEProjector<'_> {
     fn convergence_len(&self) -> usize {
         self.ctx.index.n_groups[0]
     }
-}
-
-/// 2-FE projection: Given alpha coefficients, compute new alpha via beta.
-#[inline(always)]
-fn project_2fe(
-    ctx: &DemeanContext,
-    in_out: &[f64],
-    coef_in: &[f64],
-    coef_out: &mut [f64],
-    scratch: &mut [f64],
-) {
-    let n0 = ctx.index.n_groups[0];
-    let n1 = ctx.index.n_groups[1];
-    let fe0 = ctx.index.group_ids_for_fe(0);
-    let fe1 = ctx.index.group_ids_for_fe(1);
-    let sw0 = ctx.weights.group_weights_for_fe(0, &ctx.index);
-
-    // Step 1: Compute beta from alpha_in
-    let beta = &mut scratch[..n1];
-    compute_beta_from_alpha(ctx, in_out, &coef_in[..n0], beta);
-
-    // Step 2: Compute alpha_out from beta
-    coef_out[..n0].copy_from_slice(&in_out[..n0]);
-
-    if ctx.weights.is_uniform {
-        for (&g0, &g1) in fe0.iter().zip(fe1.iter()) {
-            coef_out[g0] -= beta[g1];
-        }
-    } else {
-        let obs_weights = &ctx.weights.per_obs;
-        for ((&g0, &g1), &w) in fe0.iter().zip(fe1.iter()).zip(obs_weights.iter()) {
-            coef_out[g0] -= beta[g1] * w;
-        }
-    }
-
-    coef_out[..n0]
-        .iter_mut()
-        .zip(sw0.iter())
-        .for_each(|(a, sw)| *a /= sw);
-
-    // Copy beta to output
-    coef_out[n0..n0 + n1].copy_from_slice(beta);
-}
-
-/// Compute beta from alpha (half of project_2fe, for SSR computation).
-#[inline(always)]
-fn compute_beta_from_alpha(ctx: &DemeanContext, in_out: &[f64], alpha: &[f64], beta: &mut [f64]) {
-    let n0 = ctx.index.n_groups[0];
-    let n1 = ctx.index.n_groups[1];
-    let fe0 = ctx.index.group_ids_for_fe(0);
-    let fe1 = ctx.index.group_ids_for_fe(1);
-    let sw1 = ctx.weights.group_weights_for_fe(1, &ctx.index);
-
-    beta[..n1].copy_from_slice(&in_out[n0..n0 + n1]);
-
-    if ctx.weights.is_uniform {
-        for (&g0, &g1) in fe0.iter().zip(fe1.iter()) {
-            beta[g1] -= alpha[g0];
-        }
-    } else {
-        let obs_weights = &ctx.weights.per_obs;
-        for ((&g0, &g1), &w) in fe0.iter().zip(fe1.iter()).zip(obs_weights.iter()) {
-            beta[g1] -= alpha[g0] * w;
-        }
-    }
-
-    beta.iter_mut()
-        .zip(sw1.iter())
-        .for_each(|(b, sw)| *b /= sw);
 }
 
 // =============================================================================
@@ -215,26 +212,102 @@ impl<'a> MultiFEProjector<'a> {
             scratch: vec![0.0; n_obs],
         }
     }
+
+    /// Accumulate coefficient contributions from one FE into the scratch buffer.
+    ///
+    /// For each observation i: scratch[i] += coef[start + fe[i]]
+    #[inline(always)]
+    fn accumulate_fe_contributions(&mut self, fe_idx: usize, coef: &[f64]) {
+        let start = self.ctx.index.coef_start[fe_idx];
+        let fe = self.ctx.index.group_ids_for_fe(fe_idx);
+
+        for (sum, &g) in self.scratch.iter_mut().zip(fe.iter()) {
+            *sum += coef[start + g];
+        }
+    }
+
+    /// Update coefficients for a single FE given the accumulated other-FE sums.
+    ///
+    /// For each group g in FE q:
+    ///   coef_out[g] = (in_out[g] - Σ scratch[i] * w) / group_weight[g]
+    #[inline(always)]
+    fn update_fe_coefficients(&self, fe_idx: usize, coef_out: &mut [f64]) {
+        let start = self.ctx.index.coef_start[fe_idx];
+        let n_groups = self.ctx.index.n_groups[fe_idx];
+        let fe = self.ctx.index.group_ids_for_fe(fe_idx);
+        let group_weights = self.ctx.weights.group_weights_for_fe(fe_idx, &self.ctx.index);
+
+        // Initialize from in_out
+        coef_out[start..start + n_groups]
+            .copy_from_slice(&self.in_out[start..start + n_groups]);
+
+        // Subtract accumulated other-FE contributions
+        if self.ctx.weights.is_uniform {
+            for (&g, &sum) in fe.iter().zip(self.scratch.iter()) {
+                coef_out[start + g] -= sum;
+            }
+        } else {
+            for ((&g, &sum), &w) in fe
+                .iter()
+                .zip(self.scratch.iter())
+                .zip(self.ctx.weights.per_obs.iter())
+            {
+                coef_out[start + g] -= sum * w;
+            }
+        }
+
+        // Normalize by group weights
+        for (coef, &sw) in coef_out[start..start + n_groups]
+            .iter_mut()
+            .zip(group_weights.iter())
+        {
+            *coef /= sw;
+        }
+    }
 }
 
 impl Projector for MultiFEProjector<'_> {
+    /// Project coefficients using reverse-order FE updates.
+    ///
+    /// For each FE q from (n_fe-1) down to 0:
+    ///   1. Accumulate contributions from FEs before q (from coef_in)
+    ///   2. Accumulate contributions from FEs after q (from coef_out, already computed)
+    ///   3. Update coef_out for FE q
     #[inline(always)]
     fn project(&mut self, coef_in: &[f64], coef_out: &mut [f64]) {
-        project_qfe(self.ctx, self.in_out, coef_in, coef_out, &mut self.scratch);
+        let n_fe = self.ctx.index.n_fe;
+
+        for q in (0..n_fe).rev() {
+            // Reset scratch buffer
+            self.scratch.fill(0.0);
+
+            // Accumulate from FEs before q (use coef_in)
+            for h in 0..q {
+                self.accumulate_fe_contributions(h, coef_in);
+            }
+
+            // Accumulate from FEs after q (use coef_out, already computed)
+            for h in (q + 1)..n_fe {
+                self.accumulate_fe_contributions(h, coef_out);
+            }
+
+            // Update coefficients for FE q
+            self.update_fe_coefficients(q, coef_out);
+        }
     }
 
     #[inline(always)]
     fn compute_ssr(&mut self, coef: &[f64]) -> f64 {
-        let ctx = self.ctx;
-        let n_obs = ctx.index.n_obs;
-        let n_fe = ctx.index.n_fe;
-        let mut ssr = 0.0;
+        let n_obs = self.ctx.index.n_obs;
+        let n_fe = self.ctx.index.n_fe;
 
+        // Compute SSR: Σ (input[i] - Σ_q coef[fe_q[i]])²
+        let mut ssr = 0.0;
         for i in 0..n_obs {
             let mut sum = 0.0;
             for q in 0..n_fe {
-                let offset = ctx.index.coef_start[q];
-                let g = ctx.index.group_ids[q * n_obs + i];
+                let offset = self.ctx.index.coef_start[q];
+                let g = self.ctx.index.group_ids[q * n_obs + i];
                 sum += coef[offset + g];
             }
             let resid = self.input[i] - sum;
@@ -245,77 +318,6 @@ impl Projector for MultiFEProjector<'_> {
 
     #[inline(always)]
     fn convergence_len(&self) -> usize {
-        let ctx = self.ctx;
-        ctx.index.n_coef - ctx.index.n_groups[ctx.index.n_fe - 1]
-    }
-}
-
-/// Q-FE projection: Compute G(coef_in) -> coef_out.
-///
-/// Updates FEs in reverse order (Q-1 down to 0) matching fixest.
-#[inline(always)]
-fn project_qfe(
-    ctx: &DemeanContext,
-    in_out: &[f64],
-    coef_in: &[f64],
-    coef_out: &mut [f64],
-    sum_other_means: &mut [f64],
-) {
-    let n_fe = ctx.index.n_fe;
-
-    for q in (0..n_fe).rev() {
-        // Zero the sum buffer
-        sum_other_means.fill(0.0);
-
-        // Sum coefficients from FEs before q (use coef_in)
-        for h in 0..q {
-            let start_h = ctx.index.coef_start[h];
-            let fe_h = ctx.index.group_ids_for_fe(h);
-            for (sum, &g) in sum_other_means.iter_mut().zip(fe_h.iter()) {
-                *sum += coef_in[start_h + g];
-            }
-        }
-
-        // Sum coefficients from FEs after q (use coef_out, already computed)
-        for h in (q + 1)..n_fe {
-            let start_h = ctx.index.coef_start[h];
-            let fe_h = ctx.index.group_ids_for_fe(h);
-            for (sum, &g) in sum_other_means.iter_mut().zip(fe_h.iter()) {
-                *sum += coef_out[start_h + g];
-            }
-        }
-
-        // Compute coef_out for FE q
-        let start_q = ctx.index.coef_start[q];
-        let n_groups_q = ctx.index.n_groups[q];
-        let fe_q = ctx.index.group_ids_for_fe(q);
-        let group_weights_q = ctx.weights.group_weights_for_fe(q, &ctx.index);
-
-        // Copy in_out to coef_out for this FE
-        coef_out[start_q..start_q + n_groups_q]
-            .copy_from_slice(&in_out[start_q..start_q + n_groups_q]);
-
-        // Subtract weighted sum_other_means
-        if ctx.weights.is_uniform {
-            for (&g, &sum) in fe_q.iter().zip(sum_other_means.iter()) {
-                coef_out[start_q + g] -= sum;
-            }
-        } else {
-            for ((&g, &sum), &w) in fe_q
-                .iter()
-                .zip(sum_other_means.iter())
-                .zip(ctx.weights.per_obs.iter())
-            {
-                coef_out[start_q + g] -= sum * w;
-            }
-        }
-
-        // Divide by group weights
-        for (coef, &sw) in coef_out[start_q..start_q + n_groups_q]
-            .iter_mut()
-            .zip(group_weights_q.iter())
-        {
-            *coef /= sw;
-        }
+        self.ctx.index.n_coef - self.ctx.index.n_groups[self.ctx.index.n_fe - 1]
     }
 }
