@@ -7,72 +7,6 @@ use crate::demean_accelerated::projection::Projector;
 use crate::demean_accelerated::types::FixestConfig;
 
 // =============================================================================
-// Convergence Helpers
-// =============================================================================
-
-/// Check if two scalar values have converged within tolerance.
-///
-/// Uses both absolute and relative tolerance: converged if
-/// `|a - b| <= tol` OR `|a - b| / (0.1 + |a|) <= tol`.
-#[inline]
-fn converged(a: f64, b: f64, tol: f64) -> bool {
-    let diff = (a - b).abs();
-    (diff <= tol) || (diff / (0.1 + a.abs()) <= tol)
-}
-
-/// Check if coefficient arrays have NOT converged (should keep iterating).
-///
-/// Returns `true` if ANY pair of coefficients differs by more than tolerance.
-#[inline]
-fn should_continue(coef_old: &[f64], coef_new: &[f64], tol: f64) -> bool {
-    coef_old
-        .iter()
-        .zip(coef_new.iter())
-        .any(|(&a, &b)| !converged(a, b, tol))
-}
-
-/// Apply Irons-Tuck acceleration to speed up convergence.
-///
-/// Given three successive iterates x, G(x), G(G(x)), computes an accelerated
-/// update that often converges faster than simple iteration.
-///
-/// # Algorithm
-///
-/// Computes the optimal step size that minimizes the residual along
-/// the acceleration direction, then updates x in-place.
-///
-/// # Returns
-///
-/// `true` if already converged (denominator is zero), `false` otherwise.
-#[inline(always)]
-fn irons_tuck_accelerate(x: &mut [f64], gx: &[f64], ggx: &[f64]) -> bool {
-    let (vprod, ssq) = x
-        .iter()
-        .zip(gx.iter())
-        .zip(ggx.iter())
-        .map(|((&x_i, &gx_i), &ggx_i)| {
-            let delta_gx = ggx_i - gx_i;
-            let delta2_x = delta_gx - gx_i + x_i;
-            (delta_gx * delta2_x, delta2_x * delta2_x)
-        })
-        .fold((0.0, 0.0), |(vp, sq), (dvp, dsq)| (vp + dvp, sq + dsq));
-
-    if ssq == 0.0 {
-        return true;
-    }
-
-    let coef = vprod / ssq;
-    x.iter_mut()
-        .zip(gx.iter())
-        .zip(ggx.iter())
-        .for_each(|((x_i, &gx_i), &ggx_i)| {
-            *x_i = ggx_i - coef * (ggx_i - gx_i);
-        });
-
-    false
-}
-
-// =============================================================================
 // Accelerator Trait
 // =============================================================================
 
@@ -149,6 +83,63 @@ pub struct IronsTuckGrandBuffers {
     pub ggy: Vec<f64>,
 }
 
+impl IronsTuckGrand {
+    /// Check if two scalar values have converged within tolerance.
+    ///
+    /// Uses both absolute and relative tolerance: converged if
+    /// `|a - b| <= tol` OR `|a - b| / (0.1 + |a|) <= tol`.
+    #[inline]
+    fn converged(a: f64, b: f64, tol: f64) -> bool {
+        let diff = (a - b).abs();
+        (diff <= tol) || (diff / (0.1 + a.abs()) <= tol)
+    }
+
+    /// Check if coefficient arrays have NOT converged (should keep iterating).
+    ///
+    /// Returns `true` if ANY pair of coefficients differs by more than tolerance.
+    #[inline]
+    fn should_continue(coef_old: &[f64], coef_new: &[f64], tol: f64) -> bool {
+        coef_old
+            .iter()
+            .zip(coef_new.iter())
+            .any(|(&a, &b)| !Self::converged(a, b, tol))
+    }
+
+    /// Apply Irons-Tuck acceleration to speed up convergence.
+    ///
+    /// Given three successive iterates x, G(x), G(G(x)), computes an accelerated
+    /// update that often converges faster than simple iteration.
+    ///
+    /// Returns `true` if already converged (denominator is zero), `false` otherwise.
+    #[inline(always)]
+    fn accelerate(x: &mut [f64], gx: &[f64], ggx: &[f64]) -> bool {
+        let (vprod, ssq) = x
+            .iter()
+            .zip(gx.iter())
+            .zip(ggx.iter())
+            .map(|((&x_i, &gx_i), &ggx_i)| {
+                let delta_gx = ggx_i - gx_i;
+                let delta2_x = delta_gx - gx_i + x_i;
+                (delta_gx * delta2_x, delta2_x * delta2_x)
+            })
+            .fold((0.0, 0.0), |(vp, sq), (dvp, dsq)| (vp + dvp, sq + dsq));
+
+        if ssq == 0.0 {
+            return true;
+        }
+
+        let coef = vprod / ssq;
+        x.iter_mut()
+            .zip(gx.iter())
+            .zip(ggx.iter())
+            .for_each(|((x_i, &gx_i), &ggx_i)| {
+                *x_i = ggx_i - coef * (ggx_i - gx_i);
+            });
+
+        false
+    }
+}
+
 impl Accelerator for IronsTuckGrand {
     type Buffers = IronsTuckGrandBuffers;
 
@@ -177,7 +168,7 @@ impl Accelerator for IronsTuckGrand {
         projector.project(coef, &mut buffers.gx);
 
         let mut keep_going =
-            should_continue(&coef[..conv_len], &buffers.gx[..conv_len], config.tol);
+            Self::should_continue(&coef[..conv_len], &buffers.gx[..conv_len], config.tol);
         let mut iter = 0;
         let mut grand_counter = 0usize;
         let mut ssr = 0.0;
@@ -189,7 +180,7 @@ impl Accelerator for IronsTuckGrand {
             projector.project(&buffers.gx, &mut buffers.ggx);
 
             // Irons-Tuck acceleration
-            if irons_tuck_accelerate(
+            if Self::accelerate(
                 &mut coef[..conv_len],
                 &buffers.gx[..conv_len],
                 &buffers.ggx[..conv_len],
@@ -206,7 +197,7 @@ impl Accelerator for IronsTuckGrand {
             // Update gx for convergence check
             projector.project(coef, &mut buffers.gx);
             keep_going =
-                should_continue(&coef[..conv_len], &buffers.gx[..conv_len], config.tol);
+                Self::should_continue(&coef[..conv_len], &buffers.gx[..conv_len], config.tol);
 
             // Grand acceleration (every iter_grand_acc iterations)
             if iter % config.iter_grand_acc == 0 {
@@ -220,7 +211,7 @@ impl Accelerator for IronsTuckGrand {
                     }
                     _ => {
                         buffers.ggy[..conv_len].copy_from_slice(&buffers.gx[..conv_len]);
-                        if irons_tuck_accelerate(
+                        if Self::accelerate(
                             &mut buffers.y[..conv_len],
                             &buffers.gy[..conv_len],
                             &buffers.ggy[..conv_len],
@@ -238,7 +229,7 @@ impl Accelerator for IronsTuckGrand {
                 let ssr_old = ssr;
                 ssr = projector.compute_ssr(&buffers.gx);
 
-                if iter > 40 && converged(ssr_old, ssr, config.tol) {
+                if iter > 40 && Self::converged(ssr_old, ssr, config.tol) {
                     keep_going = false;
                     break;
                 }
