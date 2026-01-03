@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>On Small Sample Corrections</title>
+<title>pyfixest-sprint</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -69,39 +69,10 @@ ul.task-list li input[type="checkbox"] {
   }
 }</script>
 
-  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
-
-<script type="text/javascript">
-const typesetMath = (el) => {
-  if (window.MathJax) {
-    // MathJax Typeset
-    window.MathJax.typeset([el]);
-  } else if (window.katex) {
-    // KaTeX Render
-    var mathElements = el.getElementsByClassName("math");
-    var macros = [];
-    for (var i = 0; i < mathElements.length; i++) {
-      var texText = mathElements[i].firstChild;
-      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
-        window.katex.render(texText.data, mathElements[i], {
-          displayMode: mathElements[i].classList.contains('display'),
-          throwOnError: false,
-          macros: macros,
-          fleqn: false
-        });
-      }
-    }
-  }
-}
-window.Quarto = {
-  typesetMath
-};
-</script>
 
 </head>
 
-<body class="floating nav-fixed quarto-light">
+<body class="nav-fixed fullcontent quarto-light">
 
 <div id="quarto-search-results"></div>
   <header id="quarto-header" class="headroom fixed-top">
@@ -138,7 +109,7 @@ window.Quarto = {
 <span class="menu-text">Contributing</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./pyfixest-sprint.html"> 
+    <a class="nav-link active" href="./pyfixest-sprint.html" aria-current="page"> 
 <span class="menu-text">Sprint 2026</span></a>
   </li>  
   <li class="nav-item dropdown ">
@@ -221,170 +192,44 @@ window.Quarto = {
 <!-- content -->
 <div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
 <!-- sidebar -->
-  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
-    <nav id="TOC" role="doc-toc" class="toc-active">
-    <h2 id="toc-title">On this page</h2>
-   
-  <ul>
-  <li><a href="#small-sample-adjustments" id="toc-small-sample-adjustments" class="nav-link active" data-scroll-target="#small-sample-adjustments">Small Sample Adjustments</a>
-  <ul class="collapse">
-  <li><a href="#k_adj-true" id="toc-k_adj-true" class="nav-link" data-scroll-target="#k_adj-true"><code>k_adj = True</code></a></li>
-  <li><a href="#k_fixef" id="toc-k_fixef" class="nav-link" data-scroll-target="#k_fixef"><code>k_fixef</code></a>
-  <ul class="collapse">
-  <li><a href="#k_fixef-none" id="toc-k_fixef-none" class="nav-link" data-scroll-target="#k_fixef-none"><code>k_fixef = "none"</code></a></li>
-  <li><a href="#k_fixef-full" id="toc-k_fixef-full" class="nav-link" data-scroll-target="#k_fixef-full"><code>k_fixef = "full"</code></a></li>
-  <li><a href="#k_fixef-nonnested" id="toc-k_fixef-nonnested" class="nav-link" data-scroll-target="#k_fixef-nonnested"><code>k_fixef = "nonnested"</code></a></li>
-  </ul></li>
-  <li><a href="#g_adj" id="toc-g_adj" class="nav-link" data-scroll-target="#g_adj"><code>G_adj</code></a></li>
-  <li><a href="#g_df" id="toc-g_df" class="nav-link" data-scroll-target="#g_df"><code>G_df</code></a></li>
-  </ul></li>
-  <li><a href="#more-on-inference" id="toc-more-on-inference" class="nav-link" data-scroll-target="#more-on-inference">More on Inference</a></li>
-  <li><a href="#in-code" id="toc-in-code" class="nav-link" data-scroll-target="#in-code">In Code</a></li>
-  </ul>
-</nav>
-</nav>
-<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
 <!-- margin-sidebar -->
-    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
-    </div>
+    
 <!-- main -->
-<main class="content" id="quarto-document-content">
-
-<header id="title-block-header" class="quarto-title-block default">
-<div class="quarto-title">
-<h1 class="title">On Small Sample Corrections</h1>
-</div>
+<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"></header>
 
 
 
-<div class="quarto-title-meta">
 
-    
-  
-    
-  </div>
-  
-
-
-</header>
-
-
-<p>The <code>fixest</code> R package provides various options for small sample corrections. While it has an excellent <a href="https://cran.r-project.org/web/packages/fixest/vignettes/standard_errors.html">vignette</a> on the topic, reproducing its behavior in <code>pyfixest</code> took more time than expected. So that future developers (and my future self) can stay sane, I’ve compiled all of my hard-earned understanding of how small sample adjustments work in <code>fixest</code> and how they are implemented in <code>pyfixest</code> in this document.</p>
-<p>In both <code>fixest</code> and <code>pyfixest</code>, small sample corrections are controlled by the <code>ssc</code> function. In <code>pyfixest</code>, <code>ssc</code> accepts four arguments: <code>k_adj</code>, <code>G_adj</code>, <code>k_fixef</code> and <code>G_df</code>.</p>
-<p>Based on these inputs, the adjusted variance-covariance matrix is computed as:</p>
-<pre><code>vcov_k_adj = adj_val(N, df_k) if k_adj else 1
-          * G_adj_val(G, G_df) if G_adj else 1
-          * vcov</code></pre>
-<p>Where:</p>
+<section id="pyfixest-sprint-in-heilbronn" class="level1">
+<h1>PyFixest Sprint in Heilbronn</h1>
+<p>We’re organizing a PyFixest development sprint in partnership with&nbsp;<a href="https://www.appliedai.de/">AppliedAI</a>&nbsp;at their Heilbronn office. This is a chance to help shape the future of econometrics software in Python, and to work alongside PyFixest’s core development team and AppliedAI’s engineers for a few focused days of coding.</p>
+<p><strong>Dates:</strong>&nbsp;Either February 27th–March 1st, March 2nd–4th, or March 4th–6th (we’ll confirm by January 14th)</p>
+<p><strong>Interested in joining?</strong>&nbsp;Reach out to&nbsp;<a href="mailto:alexander-fischer1801@t-online.de">Alex</a>&nbsp;with a brief note about your background and motivation. We have some funding available to support student participation.</p>
+<section id="what-were-working-on" class="level3">
+<h3 class="anchored" data-anchor-id="what-were-working-on">What we’re working on</h3>
+<p>Our main goals for the sprint:</p>
 <ul>
-<li><strong><code>k_adj</code></strong>: Enables or disables the first scalar adjustment.</li>
-<li><strong><code>G_adj</code></strong>: Enables or disables the second scalar adjustment. This argument is only relevant / applied to clustered errors.</li>
-<li><strong><code>vcov</code></strong>: The unadjusted variance-covariance matrix.</li>
-<li><strong><code>df_k</code></strong>: The number of estimated parameters considered in the first adjustment. Impacts <code>adj_val</code>.</li>
-<li><strong><code>k_fixef</code></strong>: Determines how <code>df_k</code> is computed (how fixed effects are counted).</li>
-<li><strong><code>G_df</code></strong>: Determines how <code>G_adj_val</code> is computed (only relevant for multi-way clustering).</li>
-<li><strong><code>G</code></strong>: The number of unique clusters (<code>G = N</code> for heteroskedastic errors).</li>
+<li><strong>Rust backend:</strong>&nbsp;Finalize the port from Numba to Rust and deprecate the Numba dependency, with continued optimization of our core demeaning algorithm</li>
+<li><strong>GPU acceleration:</strong>&nbsp;Continue building out JAX, CuPy, and potentially PyTorch backends</li>
+<li><strong>Internal refactor:</strong>&nbsp;Introduce a cleaner class hierarchy with a proper base estimation class</li>
+<li><strong>NumPy-style API:</strong>&nbsp;Rewrite estimation classes (Feols, Fepois, etc.) to follow sklearn-style conventions</li>
 </ul>
-<p>Outside of this formula, we have <strong><code>df_t</code></strong>, which is the degrees of freedom used for p-values and confidence intervals:</p>
+<p>We’re also hoping to make progress on:</p>
 <ul>
-<li><code>df_t = N - df_k</code> for IID or heteroskedastic errors.</li>
-<li><code>df_t = G - 1</code> for clustered errors.</li>
-</ul>
-<hr>
-<section id="small-sample-adjustments" class="level1">
-<h1>Small Sample Adjustments</h1>
-<section id="k_adj-true" class="level2">
-<h2 class="anchored" data-anchor-id="k_adj-true"><code>k_adj = True</code></h2>
-<p>If <code>k_adj = True</code>, the adjustment factor is:</p>
-<p><code>adj_val = (N - 1) / (N - df_k)</code></p>
-<p>If <code>k_adj = False</code>, no adjustment is applied.</p>
-<p>Note that for <code>k_adj = True</code> and heteroskedastic errors, the applied correction is <code>N / (N-k)</code>.</p>
-<hr>
-</section>
-<section id="k_fixef" class="level2">
-<h2 class="anchored" data-anchor-id="k_fixef"><code>k_fixef</code></h2>
-<p>The <code>k_fixef</code> argument controls how fixed effects contribute to <code>df_k</code>, and thus to <code>adj_val</code>. It supports three options:</p>
-<ul>
-<li><strong><code>"none"</code></strong></li>
-<li><strong><code>"full"</code></strong></li>
-<li><strong><code>"nonnested"</code></strong></li>
-</ul>
-<section id="k_fixef-none" class="level3">
-<h3 class="anchored" data-anchor-id="k_fixef-none"><code>k_fixef = "none"</code></h3>
-<p>Fixed effects are ignored when counting parameters:</p>
-<ul>
-<li><strong>Example</strong>:
-<ul>
-<li><code>Y ~ X1 | f1</code> → <code>k = 1</code></li>
-<li><code>Y ~ X1 + X2 | f1</code> → <code>k = 2</code></li>
-</ul></li>
+<li><strong>Standalone demeaning package:</strong>&nbsp;Spin out the demeaning algorithms into a lightweight, cross-language package</li>
+<li><strong>Varying slopes support:</strong>&nbsp;Add varying slopes to the demeaning algorithm and extend the formula API</li>
+<li><strong>Narwhals integration:</strong>&nbsp;Better support for running analyses with either pandas or polars</li>
+<li><strong>maketables cleanup:</strong>&nbsp;Refactor the codebase and open PRs to third-party packages (doubleML, CausalPy, econML, etc.)</li>
+<li><strong>moderndid contributions:</strong>&nbsp;Port our DiD estimators (Gardner, local projections, Sun &amp; Abraham) to the moderndid package</li>
+<li><strong>Documentation:</strong>&nbsp;Add practical how-to guides</li>
 </ul>
 </section>
-<section id="k_fixef-full" class="level3">
-<h3 class="anchored" data-anchor-id="k_fixef-full"><code>k_fixef = "full"</code></h3>
-<p>Fixed effects are fully counted. For <code>n_fe</code> total fixed effects and each fixed effect <code>f_i</code>, we set <code>df_k = k + k_fe</code>,</p>
-<ul>
-<li><p>If there is <strong>more than one</strong> fixed effect, we drop one level from each fixed effects except the first (to avoid multicollinearity) <code>k_fe = sum_{i=1}^{n_fe} levels(f_i) - (n_fe - 1)</code></p></li>
-<li><p>If there is <strong>only one</strong> fixed effect: <code>k_fe = sum_{i=1}^{n_fe} levels(f_i) = levels(f_1)</code></p></li>
-</ul>
-</section>
-<section id="k_fixef-nonnested" class="level3">
-<h3 class="anchored" data-anchor-id="k_fixef-nonnested"><code>k_fixef = "nonnested"</code></h3>
-<p>Fixed effects may be <strong>nested</strong> within cluster variables (e.g., district FEs nested in state clusters). If <code>k_fixef = "nonnested"</code>, nested fixed effects do not count toward <code>k_fe</code>:</p>
-<p><code>k_fe = sum_{i=1}^{n_fe} levels(f_i) - k_fe_nested - (n_fe - 1)</code></p>
-<p>where <code>k_fe_nested</code> is the count of nested fixed effects. For cluster fixed effects, <code>k_fe_nested = G</code>, the number of clusters.</p>
-<blockquote class="blockquote">
-<p>⚠️ <em>Note:</em> If you already subtracted a level from a nested FE, you may need to add it back.</p>
-</blockquote>
-<hr>
-</section>
-</section>
-<section id="g_adj" class="level2">
-<h2 class="anchored" data-anchor-id="g_adj"><code>G_adj</code></h2>
-<p>This argument is only relevant for clustered errors.</p>
-<p>If <code>G_adj = True</code>, we apply a second correction:</p>
-<p><code>G_df_val = G / (G - 1)</code></p>
-<p>Where:</p>
-<ul>
-<li><code>G</code> is the number of clusters for clustered errors, or <code>N</code> for heteroskedastic errors.</li>
-<li>This follows the approach in R’s <code>sandwich</code> package, interpreting heteroskedastic errors as “singleton clusters.”</li>
-</ul>
-<blockquote class="blockquote">
-<p><em>Tip:</em> If <code>G_adj = True</code> for IID errors, <code>G_df_val</code> defaults to <code>1</code>. For <em>heteroskedastic erros</em>, despite its name, <code>G_adj=True</code> will apply an adjustment of (N-1) / N, as there are <span class="math inline">\(G = N\)</span> singleton clusters.</p>
-</blockquote>
-<hr>
-</section>
-<section id="g_df" class="level2">
-<h2 class="anchored" data-anchor-id="g_df"><code>G_df</code></h2>
-<p>Relevant only for <strong>multi-way clustering</strong>. Two-way clustering, for example, can be written as:</p>
-<p><code>vcov = ssc_A * vcov_A + ssc_B * vcov_B - ssc_AB * vcov_AB</code></p>
-<p>where <code>A</code> and <code>B</code> are clustering dimensions, with <code>G_AB &gt; G_A &gt; G_B</code>.</p>
-<ul>
-<li>If <code>G_df = "min"</code>, then G is set to the minimum value of <code>G_A</code>, <code>G_B</code>, and <code>G_AB</code>.</li>
-<li>If <code>G_df = "conventional"</code>, each clustering dimension uses its own cluster count (<code>G_A</code>, <code>G_B</code>, etc.) for its respective adjustment.</li>
-</ul>
-<hr>
-</section>
-</section>
-<section id="more-on-inference" class="level1">
-<h1>More on Inference</h1>
-<p>For computing critical values:</p>
-<ul>
-<li><strong>OLS and IV</strong>: use t-statistics with <code>df_t = N - df_k</code> (non-clustered) or <code>df_t = G - 1</code> (clustered).</li>
-<li><strong>GLMs</strong>: use z-statistics (normal approximation).</li>
-</ul>
-<p>For multi-way clustering:</p>
-<ul>
-<li><strong>Two-way</strong>: <code>df_t = min(G_1 - 1, G_2 - 1)</code></li>
-<li><strong>Three-way</strong>: <code>df_t = min(G_1 - 1, G_2 - 1, G_3 - 1)</code> <em>(not currently supported)</em></li>
-</ul>
-<p>See <a href="https://github.com/py-econometrics/pyfixest/blob/864da9c0d1797aff70e3f5b420e4c73f7256642d/pyfixest/estimation/feols_.py#L851">this implementation</a> for details.</p>
-</section>
-<section id="in-code" class="level1">
-<h1>In Code</h1>
-<p>All of the above logic is implemented <a href="https://github.com/py-econometrics/pyfixest/blob/69acf9d22eab4300853d80264ee6d01bc4bdcb35/pyfixest/utils/utils.py#L108">here</a>.</p>
+<section id="what-would-be-helpful" class="level3">
+<h3 class="anchored" data-anchor-id="what-would-be-helpful">What would be helpful</h3>
+<p>If you’re excited about econometrics tooling and want to contribute, we’d love to have you. You don’t need to be an expert in Rust or GPU programming—the AppliedAI team brings deep experience in both, so this is a great opportunity to learn. And if you’ve been looking for a way to get started with open source, we’d be happy to help you make your first contributions.</p>
 
 
+</section>
 </section>
 
 </main> <!-- /main -->
