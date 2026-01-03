@@ -65,7 +65,7 @@ pub fn _detect_singletons_rs(py: Python<'_>, ids: PyReadonlyArray2<u32>) -> Py<P
                 continue;
             }
 
-            // Remove singletons from non_singletons list
+            // Remove singletons from the non_singletons list
             let mut cnt = 0;
             for i in 0..n_non_singletons {
                 let idx = non_singletons[i] as usize;

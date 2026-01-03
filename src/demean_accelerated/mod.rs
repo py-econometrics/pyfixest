@@ -9,21 +9,21 @@
 //! - [`types`]: Core data types
 //!   - [`FixedEffectsIndex`](types::FixedEffectsIndex): Fixed effects indexing (which obs belongs to which group)
 //!   - [`ObservationWeights`](types::ObservationWeights): Observation weights and group-level aggregations
-//!   - [`DemeanContext`](types::DemeanContext): Combines index + weights for demeaning operations
-//!   - [`FixestConfig`](types::FixestConfig): Algorithm parameters
+//!   - [`DemeanContext`](DemeanContext): Combines index and weights for demeaning operations
+//!   - [`FixestConfig`](FixestConfig): Algorithm parameters
 //! - [`projection`]: Projection operations with [`Projector`](projection::Projector) trait
 //!   - [`TwoFEProjector`](projection::TwoFEProjector): Specialized 2-FE projection
 //!   - [`MultiFEProjector`](projection::MultiFEProjector): General Q-FE projection
 //! - [`accelerator`]: Acceleration strategy
 //!   - [`IronsTuckGrand`](accelerator::IronsTuckGrand): Irons-Tuck + Grand acceleration (matches fixest)
-//! - [`demeaner`]: High-level solver strategies with [`Demeaner`](demeaner::Demeaner) trait
-//!   - [`SingleFEDemeaner`](demeaner::SingleFEDemeaner): O(n) closed-form (1 FE)
-//!   - [`TwoFEDemeaner`](demeaner::TwoFEDemeaner): Accelerated iteration (2 FEs)
-//!   - [`MultiFEDemeaner`](demeaner::MultiFEDemeaner): Multi-phase strategy (3+ FEs)
+//! - [`demeaner`]: High-level solver strategies with [`Demeaner`](Demeaner) trait
+//!   - [`SingleFEDemeaner`](SingleFEDemeaner): O(n) closed-form (1 FE)
+//!   - [`TwoFEDemeaner`](TwoFEDemeaner): Accelerated iteration (2 FEs)
+//!   - [`MultiFEDemeaner`](MultiFEDemeaner): Multi-phase strategy (3+ FEs)
 //!
-//! # Dispatching based on number of fixed effects:
+//! # Dispatching based on the number of fixed effects:
 //! - 1 FE: O(n) closed-form solution (single pass, no iteration)
-//! - 2 FE: Coefficient-space iteration with Irons-Tuck + Grand acceleration
+//! - 2 FE: Coefficient-space iteration with Irons-Tuck and Grand acceleration
 //! - 3+ FE: Multi-phase strategy with 2-FE sub-convergence
 
 pub mod accelerator;
@@ -101,14 +101,18 @@ pub(crate) fn demean_accelerated(
         .into_par_iter()
         .enumerate()
         .for_each_init(
-            // Init closure: called once per thread to create thread-local state
+            // Init closure: called once per thread to create the thread-local state
             || ThreadLocalDemeaner::new(&ctx, &config),
             // Body closure: called for each column, reusing thread-local state
             |demeaner, (k, mut col)| {
-                // Use ndarray's column view and convert to contiguous Vec
-                // (column() returns a non-contiguous view, to_vec() copies to contiguous)
-                let xk: Vec<f64> = x.column(k).to_vec();
-                let (result, _iter, convergence) = demeaner.solve(&xk);
+                let col_view = x.column(k);
+                // Zero-copy if column is contiguous (F-order), otherwise copy
+                let (result, _iter, convergence) = if let Some(slice) = col_view.as_slice() {
+                    demeaner.solve(slice)
+                } else {
+                    let xk: Vec<f64> = col_view.to_vec();
+                    demeaner.solve(&xk)
+                };
 
                 if convergence == ConvergenceState::NotConverged {
                     not_converged.fetch_add(1, Ordering::SeqCst);
@@ -172,10 +176,7 @@ mod tests {
         let mut demeaner = TwoFEDemeaner::new(&ctx, &config);
         let (result, iter, convergence) = demeaner.solve(&input);
 
-        assert!(
-            convergence == ConvergenceState::Converged,
-            "Should converge"
-        );
+        assert_eq!(convergence, ConvergenceState::Converged, "Should converge");
         assert!(iter < 100, "Should converge quickly");
         assert!(result.iter().all(|&v| v.is_finite()));
     }
@@ -201,7 +202,7 @@ mod tests {
         let mut demeaner = MultiFEDemeaner::new(&ctx, &config);
         let (result, _iter, convergence) = demeaner.solve(&input);
 
-        assert!(convergence == ConvergenceState::Converged);
+        assert_eq!(convergence, ConvergenceState::Converged);
         assert!(result.iter().all(|&v| v.is_finite()));
     }
 
@@ -223,10 +224,7 @@ mod tests {
         let mut demeaner = SingleFEDemeaner::new(&ctx);
         let (result, iter, convergence) = demeaner.solve(&input);
 
-        assert!(
-            convergence == ConvergenceState::Converged,
-            "Single FE should always converge"
-        );
+        assert_eq!(convergence, ConvergenceState::Converged, "Single FE should always converge");
         assert_eq!(iter, 0, "Single FE should be closed-form (0 iterations)");
 
         // Verify demeaning: each group's sum should be approximately 0
@@ -271,10 +269,7 @@ mod tests {
         let mut demeaner = TwoFEDemeaner::new(&ctx, &config);
         let (result, _iter, convergence) = demeaner.solve(&input);
 
-        assert!(
-            convergence == ConvergenceState::Converged,
-            "Weighted regression should converge"
-        );
+        assert_eq!(convergence, ConvergenceState::Converged, "Weighted regression should converge");
         assert!(
             result.iter().all(|&v| v.is_finite()),
             "All results should be finite"
@@ -300,10 +295,7 @@ mod tests {
         let mut demeaner = TwoFEDemeaner::new(&ctx, &config);
         let (result, _iter, convergence) = demeaner.solve(&input);
 
-        assert!(
-            convergence == ConvergenceState::Converged,
-            "Singleton groups should converge"
-        );
+        assert_eq!(convergence, ConvergenceState::Converged, "Singleton groups should converge");
 
         // With singleton groups in FE 0, each observation's own mean is subtracted,
         // then adjusted for FE 1. The result should be all zeros since each
@@ -333,10 +325,7 @@ mod tests {
         let mut demeaner = TwoFEDemeaner::new(&ctx, &config);
         let (result, _iter, convergence) = demeaner.solve(&input);
 
-        assert!(
-            convergence == ConvergenceState::Converged,
-            "Small groups should converge"
-        );
+        assert_eq!(convergence, ConvergenceState::Converged, "Small groups should converge");
         assert!(
             result.iter().all(|&v| v.is_finite()),
             "All results should be finite"

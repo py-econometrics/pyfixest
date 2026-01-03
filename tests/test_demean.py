@@ -65,7 +65,7 @@ def test_set_demeaner_backend():
     assert demean_func == demean_jax
 
     demean_func = _set_demeaner_backend("rust")
-    assert demean_func == demean_rs
+    assert demean_func == demean_accelerated_rs
 
     demean_func = _set_demeaner_backend("cupy32")
     assert demean_func == demean_cupy32

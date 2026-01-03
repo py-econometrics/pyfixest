@@ -3,7 +3,7 @@
 //! # Overview
 //!
 //! Fixed effects demeaning removes group means from data. For example, with
-//! individual and time fixed effects, we remove both individual-specific and
+//! individual and time-fixed effects, we remove both individual-specific and
 //! time-specific means from each observation.
 //!
 //! # Two Spaces
@@ -29,7 +29,7 @@
 //!
 //! - [`FixedEffectsIndex`]: Maps observations to their group IDs for each FE
 //! - [`ObservationWeights`]: Per-observation and per-group weight sums
-//! - [`DemeanContext`]: Combines index + weights, provides scatter/gather operations
+//! - [`DemeanContext`]: Combines index and weights, provides scatter/gather operations
 //! - [`FixestConfig`]: Algorithm parameters (tolerance, max iterations, etc.)
 
 use ndarray::{ArrayView1, ArrayView2};
@@ -68,7 +68,7 @@ pub struct FixedEffectsIndex {
     /// Number of observations (N).
     pub n_obs: usize,
 
-    /// Number of fixed effects (e.g., 2 for individual + time).
+    /// Number of fixed effects (e.g., 2 for individual and time).
     pub n_fe: usize,
 
     /// Flat group IDs in column-major order.
@@ -204,7 +204,7 @@ pub struct ObservationWeights {
     /// Layout matches coefficient space: `[fe0_group0, ..., fe0_groupK, fe1_group0, ...]`.
     pub per_group: Vec<f64>,
 
-    /// True if all observation weights are 1.0 (enables fast path).
+    /// True if all observation weights are 1.0 (enables the fast path).
     pub is_uniform: bool,
 }
 
@@ -223,7 +223,7 @@ impl ObservationWeights {
     pub fn new(weights: &ArrayView1<f64>, index: &FixedEffectsIndex) -> Self {
         // Tolerance for detecting uniform weights (all 1.0).
         // Using 1e-10 to account for floating-point representation errors
-        // while being strict enough to catch intentionally non-uniform weights.
+        // while being strict enough to intentionally catch non-uniform weights.
         const UNIFORM_WEIGHT_TOL: f64 = 1e-10;
         let is_uniform = weights.iter().all(|&w| (w - 1.0).abs() < UNIFORM_WEIGHT_TOL);
 
@@ -280,8 +280,8 @@ impl ObservationWeights {
 /// ```ignore
 /// let ctx = DemeanContext::new(&flist, &weights);
 ///
-/// // Scatter input to coefficient space
-/// let coef_sums = ctx.scatter_to_coefficients(&input);
+/// // Apply Dᵀ to get coefficient-space sums
+/// let coef_sums = ctx.apply_design_matrix_t(&input);
 ///
 /// // Compute group means: coef[g] = coef_sums[g] / group_weight[g]
 /// // ... (done in solver)
@@ -326,76 +326,43 @@ impl DemeanContext {
     }
 
     // =========================================================================
-    // Scatter/Gather Operations
+    // Design Matrix Operations (D and Dᵀ)
     // =========================================================================
 
-    /// Scatter values from observation space to coefficient space.
+    /// Apply transpose of design matrix: Dᵀ · values.
     ///
     /// Computes weighted sums of `values` for each group in each FE.
     /// Returns a vector of length `n_coef` with the aggregated sums.
     #[inline]
-    pub fn scatter_to_coefficients(&self, values: &[f64]) -> Vec<f64> {
+    pub fn apply_design_matrix_t(&self, values: &[f64]) -> Vec<f64> {
         let mut result = vec![0.0; self.index.n_coef];
-        self.scatter_inner(values, None, &mut result);
+        for q in 0..self.index.n_fe {
+            let offset = self.index.coef_start[q];
+            let fe_ids = self.index.group_ids_for_fe(q);
+            if self.weights.is_uniform {
+                for (i, &g) in fe_ids.iter().enumerate() {
+                    result[offset + g] += values[i];
+                }
+            } else {
+                for (i, &g) in fe_ids.iter().enumerate() {
+                    result[offset + g] += values[i] * self.weights.per_obs[i];
+                }
+            }
+        }
         result
     }
 
-    /// Scatter residuals from observation space to coefficient space.
-    ///
-    /// Like [`scatter_to_coefficients`], but first subtracts `baseline` from `values`.
-    /// Computes: `Σ (values[i] - baseline[i]) * weight[i]` for each group.
-    #[inline]
-    pub fn scatter_residuals(&self, values: &[f64], baseline: &[f64]) -> Vec<f64> {
-        let mut result = vec![0.0; self.index.n_coef];
-        self.scatter_inner(values, Some(baseline), &mut result);
-        result
-    }
-
-    /// Gather coefficients to observation space and add to output.
+    /// Apply design matrix and add to output: output += D · coef.
     ///
     /// For each observation, looks up its coefficient for each FE and adds to output.
     /// Computes: `output[i] += Σ_q coef[offset_q + fe_q[i]]`
     #[inline]
-    pub fn gather_and_add(&self, coef: &[f64], output: &mut [f64]) {
+    pub fn apply_design_matrix(&self, coef: &[f64], output: &mut [f64]) {
         for q in 0..self.index.n_fe {
             let offset = self.index.coef_start[q];
             let fe_ids = self.index.group_ids_for_fe(q);
             for (i, &g) in fe_ids.iter().enumerate() {
                 output[i] += coef[offset + g];
-            }
-        }
-    }
-
-    /// Inner scatter implementation with optional baseline subtraction.
-    ///
-    /// Handles both uniform and non-uniform weights with optimized code paths.
-    #[inline(always)]
-    fn scatter_inner(&self, values: &[f64], baseline: Option<&[f64]>, result: &mut [f64]) {
-        for q in 0..self.index.n_fe {
-            let offset = self.index.coef_start[q];
-            let fe_ids = self.index.group_ids_for_fe(q);
-
-            match (self.weights.is_uniform, baseline) {
-                (true, None) => {
-                    for (i, &g) in fe_ids.iter().enumerate() {
-                        result[offset + g] += values[i];
-                    }
-                }
-                (true, Some(base)) => {
-                    for (i, &g) in fe_ids.iter().enumerate() {
-                        result[offset + g] += values[i] - base[i];
-                    }
-                }
-                (false, None) => {
-                    for (i, &g) in fe_ids.iter().enumerate() {
-                        result[offset + g] += values[i] * self.weights.per_obs[i];
-                    }
-                }
-                (false, Some(base)) => {
-                    for (i, &g) in fe_ids.iter().enumerate() {
-                        result[offset + g] += (values[i] - base[i]) * self.weights.per_obs[i];
-                    }
-                }
             }
         }
     }
@@ -457,9 +424,9 @@ impl Default for FixestConfig {
 
 /// Whether the iterative algorithm has converged.
 ///
-/// Used throughout the demeaning module to represent convergence state
+/// Used throughout the demeaning module to represent the convergence state
 /// in a self-documenting way, avoiding ambiguous boolean returns.
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ConvergenceState {
     /// Algorithm has converged; iteration can stop.
     Converged,

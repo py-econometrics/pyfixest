@@ -56,10 +56,9 @@ impl<'a> SingleFEDemeaner<'a> {
 impl Demeaner for SingleFEDemeaner<'_> {
     fn solve(&mut self, input: &[f64]) -> (Vec<f64>, usize, ConvergenceState) {
         let n_obs = self.ctx.index.n_obs;
-        let output = vec![0.0; n_obs];
 
-        // Scatter input to coefficient space (sum of input per group)
-        let in_out = self.ctx.scatter_residuals(input, &output);
+        // Apply Dᵀ to get coefficient-space sums
+        let in_out = self.ctx.apply_design_matrix_t(input);
 
         let fe0 = self.ctx.index.group_ids_for_fe(0);
         let group_weights = self.ctx.group_weights_for_fe(0);
@@ -89,7 +88,7 @@ impl Demeaner for SingleFEDemeaner<'_> {
 pub struct TwoFEDemeaner<'a> {
     ctx: &'a DemeanContext,
     config: &'a FixestConfig,
-    /// Coefficient array [alpha | beta], reused across solves
+    /// Coefficient array [alpha | beta], reused across calls to solve
     coef: Vec<f64>,
     /// Accelerator with internal buffers, reused across solves
     accelerator: IronsTuckGrand,
@@ -117,13 +116,13 @@ impl Demeaner for TwoFEDemeaner<'_> {
         let n_obs = self.ctx.index.n_obs;
         let n0 = self.ctx.index.n_groups[0];
 
-        // Scatter input to coefficient space
-        let in_out = self.ctx.scatter_to_coefficients(input);
+        // Apply Dᵀ to get coefficient-space sums
+        let in_out = self.ctx.apply_design_matrix_t(input);
 
-        // Reset coefficient array for this solve
+        // Reset coefficient array for this call to solve
         self.coef.fill(0.0);
 
-        // Create projector (lightweight, references in_out and input)
+        // Create the projector (lightweight, references in_out and input)
         let mut projector = TwoFEProjector::new(self.ctx, &in_out, input);
 
         // Run acceleration loop
@@ -219,81 +218,126 @@ impl<'a> MultiFEDemeaner<'a> {
             two_acc: IronsTuckGrand::new(*config, n_coef_2fe),
         }
     }
-}
 
-impl Demeaner for MultiFEDemeaner<'_> {
-    fn solve(&mut self, input: &[f64]) -> (Vec<f64>, usize, ConvergenceState) {
+    /// Phase 1: Warmup with all FEs to get initial estimates.
+    fn warmup_phase(&mut self, input: &[f64]) -> (usize, ConvergenceState) {
+        let in_out = self.ctx.apply_design_matrix_t(input);
+        let mut projector = MultiFEProjector::new(self.ctx, &in_out, input);
+
+        let (iter, convergence) = self
+            .multi_acc
+            .run(&mut projector, &mut self.buffers.coef, self.config.iter_warmup);
+
+        self.ctx.apply_design_matrix(&self.buffers.coef, &mut self.buffers.mu);
+        (iter, convergence)
+    }
+
+    /// Phase 2: Fast 2-FE sub-convergence on the first two fixed effects.
+    fn two_fe_convergence_phase(&mut self, input: &[f64]) -> (usize, ConvergenceState) {
         let n_obs = self.ctx.index.n_obs;
         let n0 = self.ctx.index.n_groups[0];
         let n1 = self.ctx.index.n_groups[1];
         let n_coef_2fe = n0 + n1;
-        let mut total_iter = 0usize;
 
-        // Reset buffers for this solve
+        // Compute residuals: input - mu
+        for i in 0..n_obs {
+            self.buffers.effective_input[i] = input[i] - self.buffers.mu[i];
+        }
+
+        // Apply Dᵀ to residuals (only need first 2 FEs)
+        let in_out_full = self.ctx.apply_design_matrix_t(&self.buffers.effective_input);
+        let in_out_2fe: Vec<f64> = in_out_full[..n_coef_2fe].to_vec();
+
+        // Run 2-FE acceleration
+        self.buffers.coef_2fe.fill(0.0);
+        let mut projector =
+            TwoFEProjector::new(self.ctx, &in_out_2fe, &self.buffers.effective_input);
+        let (iter, convergence) = self.two_acc.run(
+            &mut projector,
+            &mut self.buffers.coef_2fe,
+            self.config.maxiter / 2,
+        );
+
+        // Add 2-FE coefficients to mu
+        self.add_2fe_coefficients_to_mu();
+        (iter, convergence)
+    }
+
+    /// Phase 3: Final re-acceleration with all FEs.
+    fn reacceleration_phase(
+        &mut self,
+        input: &[f64],
+        used_iter: usize,
+    ) -> (usize, ConvergenceState) {
+        let remaining = self.config.maxiter.saturating_sub(used_iter);
+        if remaining == 0 {
+            return (0, ConvergenceState::NotConverged);
+        }
+
+        // Compute residuals: input - mu
+        for i in 0..self.ctx.index.n_obs {
+            self.buffers.effective_input[i] = input[i] - self.buffers.mu[i];
+        }
+
+        let in_out = self.ctx.apply_design_matrix_t(&self.buffers.effective_input);
+        self.buffers.coef.fill(0.0);
+
+        let mut projector = MultiFEProjector::new(self.ctx, &in_out, input);
+        let (iter, convergence) =
+            self.multi_acc
+                .run(&mut projector, &mut self.buffers.coef, remaining);
+
+        self.ctx.apply_design_matrix(&self.buffers.coef, &mut self.buffers.mu);
+        (iter, convergence)
+    }
+
+    /// Add 2-FE coefficients to the accumulated mu buffer.
+    fn add_2fe_coefficients_to_mu(&mut self) {
+        let n0 = self.ctx.index.n_groups[0];
+        let fe0 = self.ctx.index.group_ids_for_fe(0);
+        let fe1 = self.ctx.index.group_ids_for_fe(1);
+
+        for i in 0..self.ctx.index.n_obs {
+            self.buffers.mu[i] +=
+                self.buffers.coef_2fe[fe0[i]] + self.buffers.coef_2fe[n0 + fe1[i]];
+        }
+    }
+
+    /// Compute final output and return result tuple.
+    fn finalize_output(
+        &self,
+        input: &[f64],
+        iter: usize,
+        convergence: ConvergenceState,
+    ) -> (Vec<f64>, usize, ConvergenceState) {
+        let output: Vec<f64> = input
+            .iter()
+            .zip(self.buffers.mu.iter())
+            .map(|(&x, &mu)| x - mu)
+            .collect();
+        (output, iter, convergence)
+    }
+}
+
+impl Demeaner for MultiFEDemeaner<'_> {
+    fn solve(&mut self, input: &[f64]) -> (Vec<f64>, usize, ConvergenceState) {
         self.buffers.reset();
 
-        // Phase 1: Warmup with all FEs (mu is zeros initially)
-        let in_out_phase1 = self.ctx.scatter_to_coefficients(input);
-        let mut projector1 = MultiFEProjector::new(self.ctx, &in_out_phase1, input);
-        let (iter1, convergence1) = self
-            .multi_acc
-            .run(&mut projector1, &mut self.buffers.coef, self.config.iter_warmup);
-        total_iter += iter1;
-        self.ctx.gather_and_add(&self.buffers.coef, &mut self.buffers.mu);
+        // Phase 1: Warmup with all FEs
+        let (iter1, conv1) = self.warmup_phase(input);
+        if conv1 == ConvergenceState::Converged {
+            return self.finalize_output(input, iter1, conv1);
+        }
 
-        // Determine final convergence status based on which phase completes the algorithm
-        let convergence = if convergence1 == ConvergenceState::Converged {
-            // Early convergence in warmup phase
-            ConvergenceState::Converged
-        } else {
-            // Phase 2: 2-FE sub-convergence
-            let in_out_phase2 = self.ctx.scatter_residuals(input, &self.buffers.mu);
-            self.buffers.coef_2fe.fill(0.0);
-            let in_out_2fe: Vec<f64> = in_out_phase2[..n_coef_2fe].to_vec();
+        // Phase 2: 2-FE sub-convergence (refines only first 2 FEs)
+        // Note: Don't return early on Phase 2 convergence!
+        // Phase 2 only refines the first 2 FEs. The 3rd+ FEs still need Phase 3.
+        let (iter2, _conv2) = self.two_fe_convergence_phase(input);
+        let total_iter = iter1 + iter2;
 
-            // Compute effective input: input - mu
-            for i in 0..n_obs {
-                self.buffers.effective_input[i] = input[i] - self.buffers.mu[i];
-            }
+        // Phase 3: Re-acceleration with all FEs
+        let (iter3, conv3) = self.reacceleration_phase(input, total_iter);
 
-            let mut projector2 =
-                TwoFEProjector::new(self.ctx, &in_out_2fe, &self.buffers.effective_input);
-            let (iter2, convergence2) = self.two_acc.run(
-                &mut projector2,
-                &mut self.buffers.coef_2fe,
-                self.config.maxiter / 2,
-            );
-            total_iter += iter2;
-
-            // Add 2-FE coefficients to mu
-            let fe0 = self.ctx.index.group_ids_for_fe(0);
-            let fe1 = self.ctx.index.group_ids_for_fe(1);
-            for i in 0..n_obs {
-                self.buffers.mu[i] +=
-                    self.buffers.coef_2fe[fe0[i]] + self.buffers.coef_2fe[n0 + fe1[i]];
-            }
-
-            // Phase 3: Re-acceleration with all FEs (unless 2-FE converged fully)
-            let remaining = self.config.maxiter.saturating_sub(total_iter);
-            if remaining > 0 {
-                let in_out_phase3 = self.ctx.scatter_residuals(input, &self.buffers.mu);
-                self.buffers.coef.fill(0.0);
-                let mut projector3 = MultiFEProjector::new(self.ctx, &in_out_phase3, input);
-                let (iter3, convergence3) =
-                    self.multi_acc
-                        .run(&mut projector3, &mut self.buffers.coef, remaining);
-                total_iter += iter3;
-                self.ctx.gather_and_add(&self.buffers.coef, &mut self.buffers.mu);
-                convergence3
-            } else {
-                // No remaining iterations, use phase 2 convergence status
-                convergence2
-            }
-        };
-
-        // Compute output: input - mu
-        let output: Vec<f64> = (0..n_obs).map(|i| input[i] - self.buffers.mu[i]).collect();
-
-        (output, total_iter, convergence)
+        self.finalize_output(input, total_iter + iter3, conv3)
     }
 }
