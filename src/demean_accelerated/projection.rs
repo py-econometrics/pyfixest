@@ -95,7 +95,7 @@ impl<'a> TwoFEProjector<'a> {
         let n1 = self.ctx.index.n_groups[1];
         let fe0 = self.ctx.index.group_ids_for_fe(0);
         let fe1 = self.ctx.index.group_ids_for_fe(1);
-        let sw1 = self.ctx.weights.group_weights_for_fe(1, &self.ctx.index);
+        let sw1 = self.ctx.group_weights_for_fe(1);
 
         self.scratch[..n1].copy_from_slice(&self.in_out[n0..n0 + n1]);
 
@@ -124,7 +124,7 @@ impl<'a> TwoFEProjector<'a> {
         let n0 = self.ctx.index.n_groups[0];
         let fe0 = self.ctx.index.group_ids_for_fe(0);
         let fe1 = self.ctx.index.group_ids_for_fe(1);
-        let sw0 = self.ctx.weights.group_weights_for_fe(0, &self.ctx.index);
+        let sw0 = self.ctx.group_weights_for_fe(0);
 
         alpha_out[..n0].copy_from_slice(&self.in_out[..n0]);
 
@@ -235,7 +235,7 @@ impl<'a> MultiFEProjector<'a> {
         let start = self.ctx.index.coef_start[fe_idx];
         let n_groups = self.ctx.index.n_groups[fe_idx];
         let fe = self.ctx.index.group_ids_for_fe(fe_idx);
-        let group_weights = self.ctx.weights.group_weights_for_fe(fe_idx, &self.ctx.index);
+        let group_weights = self.ctx.group_weights_for_fe(fe_idx);
 
         // Initialize from in_out
         coef_out[start..start + n_groups]

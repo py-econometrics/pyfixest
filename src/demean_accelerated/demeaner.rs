@@ -55,7 +55,7 @@ impl Demeaner for SingleFEDemeaner {
         let in_out = ctx.scatter_residuals_to_coefficients(input, &output);
 
         let fe0 = ctx.index.group_ids_for_fe(0);
-        let group_weights = ctx.weights.group_weights_for_fe(0, &ctx.index);
+        let group_weights = ctx.group_weights_for_fe(0);
 
         // coef[g] = in_out[g] / group_weights[g]
         let coef: Vec<f64> = in_out

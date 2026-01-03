@@ -33,6 +33,7 @@
 //! - [`FixestConfig`]: Algorithm parameters (tolerance, max iterations, etc.)
 
 use ndarray::{ArrayView1, ArrayView2};
+use std::ops::Range;
 
 // =============================================================================
 // FixedEffectsIndex
@@ -151,6 +152,21 @@ impl FixedEffectsIndex {
         let start = fe * self.n_obs;
         &self.group_ids[start..start + self.n_obs]
     }
+
+    /// Get the coefficient index range for fixed effect `fe`.
+    ///
+    /// Returns the range of indices in coefficient arrays that correspond
+    /// to this fixed effect's groups.
+    #[inline(always)]
+    pub fn coef_range_for_fe(&self, fe: usize) -> Range<usize> {
+        let start = self.coef_start[fe];
+        let end = if fe + 1 < self.n_fe {
+            self.coef_start[fe + 1]
+        } else {
+            self.n_coef
+        };
+        start..end
+    }
 }
 
 // =============================================================================
@@ -224,21 +240,6 @@ impl ObservationWeights {
             is_uniform,
         }
     }
-
-    /// Get the weight sums for all groups in fixed effect `fe`.
-    ///
-    /// Returns a slice where `result[g]` is the sum of observation weights
-    /// for group `g` in this fixed effect.
-    #[inline(always)]
-    pub fn group_weights_for_fe(&self, fe: usize, index: &FixedEffectsIndex) -> &[f64] {
-        let start = index.coef_start[fe];
-        let end = if fe + 1 < index.n_fe {
-            index.coef_start[fe + 1]
-        } else {
-            index.n_coef
-        };
-        &self.per_group[start..end]
-    }
 }
 
 // =============================================================================
@@ -295,133 +296,78 @@ impl DemeanContext {
         Self { index, weights }
     }
 
+    /// Get the weight sums for all groups in fixed effect `fe`.
+    #[inline(always)]
+    pub fn group_weights_for_fe(&self, fe: usize) -> &[f64] {
+        &self.weights.per_group[self.index.coef_range_for_fe(fe)]
+    }
+
     // -------------------------------------------------------------------------
-    // Scatter operations (observation space → coefficient space)
+    // Scatter operations (observation space -> coefficient space)
     // -------------------------------------------------------------------------
 
     /// Scatter values from observation space to coefficient space.
     ///
-    /// Computes weighted sums of `values` for each group in each FE:
-    ///
-    /// ```text
-    /// result[coef_start[fe] + group] = Σ values[i] * weight[i]
-    ///                                  for all i where group_id[fe, i] == group
-    /// ```
-    ///
-    /// # Arguments
-    ///
-    /// * `values` - Values in observation space (length: `n_obs`)
-    ///
-    /// # Returns
-    ///
-    /// Weighted sums in coefficient space (length: `n_coef`)
-    ///
-    /// # Use Case
-    ///
-    /// Called at the start of iteration to aggregate input values to groups.
+    /// Computes weighted sums of `values` for each group in each FE.
     pub fn scatter_to_coefficients(&self, values: &[f64]) -> Vec<f64> {
         let mut result = vec![0.0; self.index.n_coef];
-        let n_obs = self.index.n_obs;
-
-        if self.weights.is_uniform {
-            for q in 0..self.index.n_fe {
-                let offset = self.index.coef_start[q];
-                let fe_offset = q * n_obs;
-                for i in 0..n_obs {
-                    let g = self.index.group_ids[fe_offset + i];
-                    result[offset + g] += values[i];
-                }
-            }
-        } else {
-            for q in 0..self.index.n_fe {
-                let offset = self.index.coef_start[q];
-                let fe_offset = q * n_obs;
-                for i in 0..n_obs {
-                    let g = self.index.group_ids[fe_offset + i];
-                    result[offset + g] += values[i] * self.weights.per_obs[i];
-                }
-            }
-        }
-
+        self.scatter_inner(values, None, &mut result);
         result
     }
 
     /// Scatter residuals from observation space to coefficient space.
     ///
-    /// Like [`scatter_to_coefficients`], but first subtracts `baseline` from `values`:
-    ///
-    /// ```text
-    /// result[coef_start[fe] + group] = Σ (values[i] - baseline[i]) * weight[i]
-    ///                                  for all i where group_id[fe, i] == group
-    /// ```
-    ///
-    /// # Arguments
-    ///
-    /// * `values` - Values in observation space (length: `n_obs`)
-    /// * `baseline` - Values to subtract before aggregating (length: `n_obs`)
-    ///
-    /// # Returns
-    ///
-    /// Weighted sums of residuals in coefficient space (length: `n_coef`)
-    ///
-    /// # Use Case
-    ///
-    /// Called during iteration to aggregate residuals after partial demeaning.
+    /// Like [`scatter_to_coefficients`], but first subtracts `baseline` from `values`.
     pub fn scatter_residuals_to_coefficients(&self, values: &[f64], baseline: &[f64]) -> Vec<f64> {
         let mut result = vec![0.0; self.index.n_coef];
-        let n_obs = self.index.n_obs;
-
-        if self.weights.is_uniform {
-            for q in 0..self.index.n_fe {
-                let offset = self.index.coef_start[q];
-                let fe_offset = q * n_obs;
-                for i in 0..n_obs {
-                    let g = self.index.group_ids[fe_offset + i];
-                    result[offset + g] += values[i] - baseline[i];
-                }
-            }
-        } else {
-            for q in 0..self.index.n_fe {
-                let offset = self.index.coef_start[q];
-                let fe_offset = q * n_obs;
-                for i in 0..n_obs {
-                    let g = self.index.group_ids[fe_offset + i];
-                    result[offset + g] += (values[i] - baseline[i]) * self.weights.per_obs[i];
-                }
-            }
-        }
-
+        self.scatter_inner(values, Some(baseline), &mut result);
         result
     }
 
+    /// Inner scatter implementation.
+    #[inline(always)]
+    fn scatter_inner(&self, values: &[f64], baseline: Option<&[f64]>, result: &mut [f64]) {
+        for q in 0..self.index.n_fe {
+            let offset = self.index.coef_start[q];
+            let fe_ids = self.index.group_ids_for_fe(q);
+
+            match (self.weights.is_uniform, baseline) {
+                (true, None) => {
+                    for (i, &g) in fe_ids.iter().enumerate() {
+                        result[offset + g] += values[i];
+                    }
+                }
+                (true, Some(base)) => {
+                    for (i, &g) in fe_ids.iter().enumerate() {
+                        result[offset + g] += values[i] - base[i];
+                    }
+                }
+                (false, None) => {
+                    for (i, &g) in fe_ids.iter().enumerate() {
+                        result[offset + g] += values[i] * self.weights.per_obs[i];
+                    }
+                }
+                (false, Some(base)) => {
+                    for (i, &g) in fe_ids.iter().enumerate() {
+                        result[offset + g] += (values[i] - base[i]) * self.weights.per_obs[i];
+                    }
+                }
+            }
+        }
+    }
+
     // -------------------------------------------------------------------------
-    // Gather operations (coefficient space → observation space)
+    // Gather operations (coefficient space -> observation space)
     // -------------------------------------------------------------------------
 
     /// Gather coefficients to observation space and add to output.
     ///
-    /// For each observation, looks up its coefficient for each FE and adds:
-    ///
-    /// ```text
-    /// output[i] += Σ coef[coef_start[fe] + group_id[fe, i]]
-    ///              for all fe
-    /// ```
-    ///
-    /// # Arguments
-    ///
-    /// * `coef` - Coefficients in coefficient space (length: `n_coef`)
-    /// * `output` - Buffer to add coefficients into (length: `n_obs`)
-    ///
-    /// # Use Case
-    ///
-    /// Accumulate FE contributions during multi-phase iteration.
+    /// For each observation, looks up its coefficient for each FE and adds to output.
     pub fn gather_and_add(&self, coef: &[f64], output: &mut [f64]) {
-        let n_obs = self.index.n_obs;
         for q in 0..self.index.n_fe {
             let offset = self.index.coef_start[q];
-            let fe_offset = q * n_obs;
-            for i in 0..n_obs {
-                let g = self.index.group_ids[fe_offset + i];
+            let fe_ids = self.index.group_ids_for_fe(q);
+            for (i, &g) in fe_ids.iter().enumerate() {
                 output[i] += coef[offset + g];
             }
         }
