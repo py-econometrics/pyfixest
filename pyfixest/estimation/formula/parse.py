@@ -169,20 +169,31 @@ class ParsedFormula:
     """
     A class representing a parsed formula string.
 
+    This is the intermediate representation after parsing the raw formula string
+    but before expanding multiple estimation syntax (sw, csw, etc.) into individual
+    `Formula` objects via the `specifications` property.
+
+    In IV regressions, `independent` contains both exogenous covariates AND the
+    endogenous variable (merged during parsing). The `endogenous` field tracks the
+    original endogenous variable separately for first stage construction.
+
     Attributes
     ----------
-    formula: str
-        The raw formula string.
-    dependent: list[str]
-        The dependent variables.
-    independent: _MultipleEstimation
-        The independent variables.
-    fixed_effects: Optional[_MultipleEstimation]
-        The fixed effect variables included.
-    endogenous: Optional[list[str]]
-        The endogenous variables.
-    instruments: Optional[list[str]]
-        The instrumental variables for the endogenous variables.
+    formula : str
+        The raw formula string as provided by the user.
+    dependent : list[str]
+        The dependent variable(s). Multiple values indicate multiple estimation.
+    independent : _MultipleEstimation
+        The independent variables, potentially with stepwise syntax.
+        For IV regressions, includes the endogenous variable.
+    fixed_effects : _MultipleEstimation | None
+        Fixed effect variables, potentially with stepwise syntax. None if no FE.
+    endogenous : list[str] | None
+        The endogenous variable(s) in IV regression. None for OLS.
+    instruments : list[str] | None
+        Instrumental variables for the endogenous variable(s). None for OLS.
+    intercept : bool
+        Whether to include an intercept in the model.
     """
 
     formula: str
@@ -298,7 +309,8 @@ class _Pattern:
 
 def _parse_parts(formula: str) -> tuple[str, list[str]]:
     """
-    Parse parts of a one- to three-sided formula string of the form "`dependent ~ independent | fixed effects | endogenous ~ instruments`".
+    Parse parts of a one- to three-sided formula string of the form 
+    "`dependent ~ independent | fixed effects | endogenous ~ instruments`".
 
     Parameters
     ----------
