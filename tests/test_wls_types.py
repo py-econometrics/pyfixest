@@ -4,55 +4,102 @@ import pytest
 import pyfixest as pf
 
 
-# @pytest.mark.skip(reason="Bug for fweights and heteroskedastic errors.")
-def test_fweights_ols():
-    "Test that the fweights are correctly implemented for OLS models."
-    # Fepois model for discrete Y
-    data = pf.get_data(model="Fepois")
-    data2_w = (
-        data[["Y", "X1"]]
-        .groupby(["Y", "X1"])
-        .size()
-        .reset_index()
-        .rename(columns={0: "count"})
-    )
-    data3_w = (
-        data[["Y", "X1", "f1"]]
-        .groupby(["Y", "X1", "f1"])
-        .size()
-        .reset_index()
-        .rename(columns={0: "count"})
-    )
-
-    fit1 = pf.feols("Y ~ X1", data=data, ssc=pf.ssc(k_adj=False, G_adj=False))
-    fit2 = pf.feols(
-        "Y ~ X1",
-        data=data2_w,
-        weights="count",
-        weights_type="fweights",
-        ssc=pf.ssc(k_adj=False, G_adj=False),
-    )
-
+def _assert_fit_equal(fit1, fit2, vcov_types, rtol=1e-5):
+    "Assert that two regression fits have identical coefficients, vcov, and SEs."
     assert fit1._N == fit2._N, "Number of observations is not the same."
 
-    if False:
-        np.testing.assert_allclose(fit1.tidy().values, fit2.tidy().values)
+    np.testing.assert_allclose(
+        fit1.coef().values, fit2.coef().values, rtol=rtol, err_msg="Coefficients differ"
+    )
 
-        np.testing.assert_allclose(fit1.vcov("HC1")._vcov, fit2.vcov("HC1")._vcov)
-        np.testing.assert_allclose(fit1.vcov("HC2")._vcov, fit2.vcov("HC2")._vcov)
-        np.testing.assert_allclose(fit1.vcov("HC3")._vcov, fit2.vcov("HC3")._vcov)
+    for vcov_type in vcov_types:
+        fit1_vcov = fit1.vcov(vcov_type)
+        fit2_vcov = fit2.vcov(vcov_type)
 
-        fit3 = pf.feols("Y ~ X1 | f1", data=data)
-        fit4 = pf.feols(
-            "Y ~ X1 | f1", data=data3_w, weights="count", weights_type="fweights"
-        )
-        np.testing.assert_allclose(fit3.tidy().values, fit4.tidy().values)
         np.testing.assert_allclose(
-            fit3.vcov({"CRV3": "f1"})._vcov, fit4.vcov({"CRV3": "f1"})._vcov
+            fit1_vcov._vcov,
+            fit2_vcov._vcov,
+            rtol=rtol,
+            err_msg=f"Vcov differs for {vcov_type}",
         )
-        np.testing.assert_allclose(fit1.vcov("HC1")._vcov, fit2.vcov("HC1")._vcov)
-        np.testing.assert_allclose(fit1.vcov("HC2")._vcov, fit2.vcov("HC2")._vcov)
-        np.testing.assert_allclose(fit1.vcov("HC3")._vcov, fit2.vcov("HC3")._vcov)
+        np.testing.assert_allclose(
+            fit1_vcov.se().values,
+            fit2_vcov.se().values,
+            rtol=rtol,
+            err_msg=f"SEs differ for {vcov_type}",
+        )
+
+
+@pytest.mark.parametrize(
+    "fml,cols,vcov_types",
+    [
+        # Without fixed effects - test hetero vcov types
+        ("Y ~ X1", ["Y", "X1"], ["iid", "HC1", "HC2", "HC3"]),
+        # Without fixed effects - test CRV (need to include cluster var in aggregation)
+        ("Y ~ X1", ["Y", "X1", "f1"], [{"CRV1": "f1"}, {"CRV3": "f1"}]),
+        # With fixed effects - HC2/HC3 not supported
+        (
+            "Y ~ X1 | f1",
+            ["Y", "X1", "f1"],
+            ["iid", "HC1", {"CRV1": "f1"}, {"CRV3": "f1"}],
+        ),
+    ],
+)
+def test_fweights_ols(fml, cols, vcov_types):
+    """Test that fweights are correctly implemented for OLS models."""
+    data = pf.get_data(model="Fepois")
+
+    # Drop rows with NaN in columns used for aggregation to ensure same N
+    data = data.dropna(subset=cols)
+
+    data_agg = (
+        data[cols].groupby(cols).size().reset_index().rename(columns={0: "count"})
+    )
+
+    fit_raw = pf.feols(fml, data=data, vcov="iid")
+    fit_agg = pf.feols(
+        fml,
+        data=data_agg,
+        weights="count",
+        weights_type="fweights",
+        vcov="iid",
+    )
+
+    _assert_fit_equal(fit_raw, fit_agg, vcov_types)
+
+
+@pytest.mark.skip(reason="Poisson fweights has a separate bug - see issue #367")
+@pytest.mark.parametrize(
+    "fml,fe_col",
+    [
+        ("Y ~ X1", None),
+        ("Y ~ X1 | f1", "f1"),
+    ],
+)
+def test_fweights_poisson(fml, fe_col):
+    """Test that fweights are correctly implemented for Poisson models."""
+    data = pf.get_data(model="Fepois")
+
+    cols = ["Y", "X1"]
+    if fe_col:
+        cols.append(fe_col)
+
+    data_agg = (
+        data[cols].groupby(cols).size().reset_index().rename(columns={0: "count"})
+    )
+
+    fit_raw = pf.fepois(fml, data=data, vcov="iid")
+    fit_agg = pf.fepois(
+        fml,
+        data=data_agg,
+        weights="count",
+        weights_type="fweights",
+        vcov="iid",
+    )
+
+    # Poisson only supports HC1 for hetero-robust SEs
+    vcov_types = ["iid", "hetero"]
+    _assert_fit_equal(fit_raw, fit_agg, vcov_types)
 
 
 @pytest.mark.skip(reason="Not implemented yet.")
