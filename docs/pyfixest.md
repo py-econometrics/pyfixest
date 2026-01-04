@@ -16,6 +16,7 @@
 [![Citation](https://img.shields.io/badge/Cite%20as-PyFixest-blue)](https://github.com/py-econometrics/pyfixest?tab=readme-ov-file#how-to-cite)
 [![Documentation](https://img.shields.io/badge/Cite%20as-PyFixest-green)](https://py-econometrics.github.io/pyfixest/pyfixest.html)
 [![Function Reference](https://img.shields.io/badge/Cite%20as-PyFixest-yellow)](https://py-econometrics.github.io/pyfixest/reference/)
+[![DeepWiki](https://img.shields.io/badge/DeepWiki-pyfixest-blue)](https://deepwiki.com/py-econometrics/pyfixest)
 
 
 [pixi-badge]:https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/prefix-dev/pixi/main/assets/badge/v0.json&style=flat-square
@@ -249,6 +250,8 @@ fit_qr = pf.quantreg("Y ~ X1 + X2", data = data, quantile = 0.5)
 Thanks for showing interest in contributing to `pyfixest`! We appreciate all
 contributions and constructive feedback, whether that be reporting bugs, requesting
 new features, or suggesting improvements to documentation.
+
+**Upcoming:** We're hosting a [PyFixest Sprint in Heilbronn](pyfixest-sprint.md) with [AppliedAI](https://www.appliedai.de/) in late February/early March 2026. Interested in joining? [Learn more and get in touch](pyfixest-sprint.md).
 
 If you'd like to get involved, but are not yet sure how, please feel free to send us an [email](alexander-fischer1801@t-online.de). Some familiarity with
 either Python or econometrics will help, but you really don't need to be a `numpy` core developer or have published in [Econometrica](https://onlinelibrary.wiley.com/journal/14680262) =) We'd be more than happy to invest time to help you get started!

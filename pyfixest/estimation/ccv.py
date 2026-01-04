@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from numpy.random import Generator
 
-from pyfixest.estimation.estimation import feols
+from pyfixest.estimation import feols
 
 
 def _compute_CCV(

@@ -18,9 +18,9 @@ class Feiv(Feols):
     Non user-facing class to estimate an IV model using a 2SLS estimator.
 
     Inherits from the Feols class. Users should not directly instantiate this class,
-    but rather use the [feols()](/reference/estimation.feols.qmd) function. Note that
+    but rather use the [feols()](/reference/estimation.api.feols.qmd) function. Note that
     no demeaning is performed in this class: demeaning is performed in the
-    [FixestMulti](/reference/estimation.fixest_multi.qmd) class (to allow for caching
+    FixestMulti class (to allow for caching
     of demeaned variables for multiple estimation).
 
     Parameters
@@ -337,7 +337,7 @@ class Feiv(Feols):
 
             import numpy as np
             import pandas as pd
-            from pyfixest.estimation.estimation import feols
+            from pyfixest.estimation import feols
 
             # Set random seed for reproducibility
             np.random.seed(1)

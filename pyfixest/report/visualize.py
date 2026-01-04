@@ -33,8 +33,11 @@ from pyfixest.estimation.feols_ import Feols
 from pyfixest.estimation.fepois_ import Fepois
 from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.quantreg.quantreg_ import Quantreg
-from pyfixest.report.summarize import _post_processing_input_checks
-from pyfixest.report.utils import _check_label_keys_in_covars, _relabel_expvar
+from pyfixest.report.utils import (
+    _check_label_keys_in_covars,
+    _post_processing_input_checks,
+    _relabel_expvar,
+)
 from pyfixest.utils.dev_utils import _select_order_coefs
 
 ModelInputType = Union[

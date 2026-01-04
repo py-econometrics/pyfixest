@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from pyfixest.estimation.estimation import feols, fepois
+from pyfixest.estimation import feols, fepois
 from pyfixest.utils.utils import get_data, ssc
 
 

@@ -11,7 +11,7 @@ from rpy2.robjects import pandas2ri
 from rpy2.robjects.packages import importr
 
 import pyfixest as pf
-from pyfixest.estimation.estimation import fepois
+from pyfixest.estimation import fepois
 
 pandas2ri.activate()
 

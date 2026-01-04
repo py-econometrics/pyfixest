@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import polars as pl
 
-from pyfixest.estimation.estimation import feols, fepois
+from pyfixest.estimation import feols, fepois
 from pyfixest.report.utils import (
     rename_categoricals,
     rename_event_study_coefs,

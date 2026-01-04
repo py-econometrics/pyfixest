@@ -9,7 +9,7 @@ from pyfixest.estimation.feiv_ import Feiv
 from pyfixest.estimation.feols_ import Feols
 from pyfixest.estimation.fepois_ import Fepois
 from pyfixest.estimation.FixestMulti_ import FixestMulti
-from pyfixest.report.summarize import _post_processing_input_checks
+from pyfixest.report.utils import _post_processing_input_checks
 
 ModelInputType = Union[FixestMulti, list[Union[Feols, Fepois, Feiv]]]
 
