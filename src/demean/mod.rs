@@ -77,7 +77,7 @@ impl<'a> ThreadLocalDemeaner<'a> {
 ///
 /// Uses `for_each_init` to create one demeaner per thread, reusing buffers
 /// across all columns processed by that thread.
-pub(crate) fn demean_accelerated(
+pub(crate) fn demean(
     x: &ArrayView2<f64>,
     flist: &ArrayView2<usize>,
     weights: &ArrayView1<f64>,
@@ -131,7 +131,7 @@ pub(crate) fn demean_accelerated(
 /// Python-exposed function for accelerated demeaning.
 #[pyfunction]
 #[pyo3(signature = (x, flist, weights, tol=1e-8, maxiter=100_000))]
-pub fn _demean_accelerated_rs(
+pub fn _demean_rs(
     py: Python<'_>,
     x: PyReadonlyArray2<f64>,
     flist: PyReadonlyArray2<usize>,
@@ -144,7 +144,7 @@ pub fn _demean_accelerated_rs(
     let weights_arr = weights.as_array();
 
     let (out, success) =
-        py.detach(|| demean_accelerated(&x_arr, &flist_arr, &weights_arr, tol, maxiter));
+        py.detach(|| demean(&x_arr, &flist_arr, &weights_arr, tol, maxiter));
 
     let pyarray = PyArray2::from_owned_array(py, out);
     Ok((pyarray.into(), success))

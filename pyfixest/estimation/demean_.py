@@ -346,9 +346,9 @@ def _set_demeaner_backend(
         If the demeaning backend is not supported.
     """
     if demeaner_backend == "rust":
-        from pyfixest.core.demean_accelerated import demean_accelerated
+        from pyfixest.core.demean import demean as demean_rust
 
-        return demean_accelerated
+        return demean_rust
     elif demeaner_backend == "numba":
         return demean
     elif demeaner_backend == "jax":

@@ -19,10 +19,10 @@
 //!
 //! # Usage with Accelerators
 //!
-//! Projectors are used with [`IronsTuckGrand`](crate::demean_accelerated::accelerator::IronsTuckGrand)
+//! Projectors are used with [`IronsTuckGrand`](crate::demean::accelerator::IronsTuckGrand)
 //! which handles the iteration strategy.
 
-use crate::demean_accelerated::types::DemeanContext;
+use crate::demean::types::DemeanContext;
 
 // =============================================================================
 // Projector Trait

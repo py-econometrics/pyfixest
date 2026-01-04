@@ -3,8 +3,7 @@ import pandas as pd
 import pyhdfe
 import pytest
 
-from pyfixest.core import demean as demean_rs
-from pyfixest.core.demean_accelerated import demean_accelerated as demean_accelerated_rs
+from pyfixest.core.demean import demean as demean_rs
 from pyfixest.estimation.cupy.demean_cupy_ import demean_cupy32, demean_cupy64
 from pyfixest.estimation.demean_ import _set_demeaner_backend, demean, demean_model
 from pyfixest.estimation.jax.demean_jax_ import demean_jax
@@ -16,7 +15,6 @@ from pyfixest.estimation.jax.demean_jax_ import demean_jax
         demean,
         demean_jax,
         demean_rs,
-        demean_accelerated_rs,
         demean_cupy32,
         demean_cupy64,
     ],
@@ -24,7 +22,6 @@ from pyfixest.estimation.jax.demean_jax_ import demean_jax
         "demean_numba",
         "demean_jax",
         "demean_rs",
-        "demean_accelerated_rs",
         "demean_cupy32",
         "demean_cupy64",
     ],
@@ -65,7 +62,7 @@ def test_set_demeaner_backend():
     assert demean_func == demean_jax
 
     demean_func = _set_demeaner_backend("rust")
-    assert demean_func == demean_accelerated_rs
+    assert demean_func == demean_rs
 
     demean_func = _set_demeaner_backend("cupy32")
     assert demean_func == demean_cupy32
@@ -84,7 +81,6 @@ def test_set_demeaner_backend():
         demean,
         demean_jax,
         demean_rs,
-        demean_accelerated_rs,
         demean_cupy32,
         demean_cupy64,
     ],
@@ -92,7 +88,6 @@ def test_set_demeaner_backend():
         "demean_numba",
         "demean_jax",
         "demean_rs",
-        "demean_accelerated_rs",
         "demean_cupy32",
         "demean_cupy64",
     ],
@@ -133,7 +128,6 @@ def test_demean_model_no_fixed_effects(benchmark, demean_func):
         demean,
         demean_jax,
         demean_rs,
-        demean_accelerated_rs,
         demean_cupy32,
         demean_cupy64,
     ],
@@ -141,7 +135,6 @@ def test_demean_model_no_fixed_effects(benchmark, demean_func):
         "demean_numba",
         "demean_jax",
         "demean_rs",
-        "demean_accelerated_rs",
         "demean_cupy32",
         "demean_cupy64",
     ],
@@ -193,7 +186,6 @@ def test_demean_model_with_fixed_effects(benchmark, demean_func):
         demean,
         demean_jax,
         demean_rs,
-        demean_accelerated_rs,
         demean_cupy32,
         demean_cupy64,
     ],
@@ -201,7 +193,6 @@ def test_demean_model_with_fixed_effects(benchmark, demean_func):
         "demean_numba",
         "demean_jax",
         "demean_rs",
-        "demean_accelerated_rs",
         "demean_cupy32",
         "demean_cupy64",
     ],
@@ -255,7 +246,6 @@ def test_demean_model_with_weights(benchmark, demean_func):
         demean,
         demean_jax,
         demean_rs,
-        demean_accelerated_rs,
         demean_cupy32,
         demean_cupy64,
     ],
@@ -263,7 +253,6 @@ def test_demean_model_with_weights(benchmark, demean_func):
         "demean_numba",
         "demean_jax",
         "demean_rs",
-        "demean_accelerated_rs",
         "demean_cupy32",
         "demean_cupy64",
     ],
@@ -338,7 +327,6 @@ def test_demean_model_caching(benchmark, demean_func):
         demean,
         demean_jax,
         demean_rs,
-        demean_accelerated_rs,
         demean_cupy32,
         demean_cupy64,
     ],
@@ -346,7 +334,6 @@ def test_demean_model_caching(benchmark, demean_func):
         "demean_numba",
         "demean_jax",
         "demean_rs",
-        "demean_accelerated_rs",
         "demean_cupy32",
         "demean_cupy64",
     ],
@@ -386,7 +373,6 @@ def test_demean_model_maxiter_convergence_failure(demean_func):
         demean,
         demean_jax,
         demean_rs,
-        demean_accelerated_rs,
         demean_cupy32,
         demean_cupy64,
     ],
@@ -394,7 +380,6 @@ def test_demean_model_maxiter_convergence_failure(demean_func):
         "demean_numba",
         "demean_jax",
         "demean_rs",
-        "demean_accelerated_rs",
         "demean_cupy32",
         "demean_cupy64",
     ],
@@ -476,8 +461,8 @@ def test_feols_integration_maxiter():
 
 @pytest.mark.parametrize(
     argnames="demean_func",
-    argvalues=[demean_rs, demean_accelerated_rs, demean_cupy32, demean_cupy64],
-    ids=["demean_rs", "demean_accelerated_rs", "demean_cupy32", "demean_cupy64"],
+    argvalues=[demean_rs, demean_cupy32, demean_cupy64],
+    ids=["demean_rs", "demean_cupy32", "demean_cupy64"],
 )
 def test_demean_complex_fixed_effects(benchmark, demean_func):
     """Benchmark demean functions with complex multi-level fixed effects."""

@@ -3,8 +3,8 @@
 //! This module provides [`IronsTuckGrand`], the acceleration strategy matching
 //! fixest's implementation.
 
-use crate::demean_accelerated::projection::Projector;
-use crate::demean_accelerated::types::{ConvergenceState, FixestConfig};
+use crate::demean::projection::Projector;
+use crate::demean::types::{ConvergenceState, FixestConfig};
 
 // =============================================================================
 // Internal Types
@@ -408,8 +408,8 @@ impl IronsTuckGrand {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::demean_accelerated::projection::TwoFEProjector;
-    use crate::demean_accelerated::types::DemeanContext;
+    use crate::demean::projection::TwoFEProjector;
+    use crate::demean::types::DemeanContext;
     use ndarray::{Array1, Array2};
 
     /// Create a test problem with 2 fixed effects
