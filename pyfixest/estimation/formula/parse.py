@@ -65,17 +65,21 @@ class Formula:
 
     Attributes
     ----------
-    dependent: str
+    dependent : str
         The dependent variable.
-    independent: str
-        The independent variables, separated by '+'.
-    fixed_effects: Optional[str]
-        An optional fixed effect variable included, separated by "+".
-    endogenous: Optional[str]
-        Endogenous variables, separated by '+'.
-    instruments: Optional[str]
-        Instrumental variables for the endogenous variables, separated by '+'.
-    intercept: Optional[bool]
+    independent : str
+        The independent variables for the second stage, separated by '+'.
+        For IV regressions, this includes both exogenous covariates and the
+        endogenous variable.
+    fixed_effects : str | None
+        Fixed effect variables, separated by '+'. None if no fixed effects.
+    endogenous : str | None
+        The endogenous variable in IV regression. None for OLS.
+    instruments : str | None
+        Instrumental variables for the endogenous variable, separated by '+'.
+        None for OLS.
+    intercept : bool
+        Whether to include an intercept in the model.
     """
 
     dependent: str
