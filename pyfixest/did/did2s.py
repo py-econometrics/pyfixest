@@ -326,7 +326,7 @@ def _did2s_vcov(
         intercept=False,  # intercept dropped due to fixed effects in first stage
     )
 
-    mm_first_stage = model_matrix.get(
+    mm_first_stage = model_matrix.create_model_matrix(
         formula=FML1,
         data=data,
         weights=None,
@@ -335,7 +335,7 @@ def _did2s_vcov(
     )
     X1 = mm_first_stage.independent
 
-    mm_second_stage = model_matrix.get(
+    mm_second_stage = model_matrix.create_model_matrix(
         formula=FML2,
         data=data,
         weights=None,

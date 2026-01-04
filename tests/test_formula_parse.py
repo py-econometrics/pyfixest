@@ -257,17 +257,17 @@ class TestFormulaDataclass:
     def test_fml_second_stage_basic(self):
         """Test second stage formula generation."""
         f = Formula(dependent="Y", independent="X1+X2")
-        assert f.fml_second_stage == "Y~X1+X2"
+        assert f.second_stage == "Y~X1+X2"
 
     def test_fml_second_stage_no_intercept(self):
         """Test second stage formula without intercept."""
         f = Formula(dependent="Y", independent="X1+X2", intercept=False)
-        assert f.fml_second_stage == "Y~X1+X2-1"
+        assert f.second_stage == "Y~X1+X2-1"
 
     def test_fml_first_stage_none_for_non_iv(self):
         """Test first stage is None for non-IV."""
         f = Formula(dependent="Y", independent="X1")
-        assert f.fml_first_stage is None
+        assert f.first_stage is None
 
     def test_fml_first_stage_for_iv(self):
         """Test first stage formula for IV."""
@@ -277,7 +277,7 @@ class TestFormulaDataclass:
             endogenous="Z1",
             instruments="X2",
         )
-        assert f.fml_first_stage == "Z1~X2+Z1+X1-Z1"
+        assert f.first_stage == "Z1~X2+Z1+X1-Z1"
 
 
 class TestParsedFormulaProperties:
@@ -455,7 +455,7 @@ STRUCTURE_TEST_FORMULAS = [
 def test_fixest_formula_dict_structure(formula: str):
     """Verify FixestFormulaDict has expected structure."""
     parsed = parse(formula)
-    fml_dict = parsed.FixestFormulaDict
+    fml_dict = parsed.specifications
 
     # Should be a dict
     assert isinstance(fml_dict, dict)
@@ -470,8 +470,8 @@ def test_fixest_formula_dict_structure(formula: str):
             assert hasattr(f, "dependent")
             assert hasattr(f, "independent")
             assert hasattr(f, "fml")
-            assert hasattr(f, "fml_second_stage")
-            assert hasattr(f, "fml_first_stage")
+            assert hasattr(f, "second_stage")
+            assert hasattr(f, "first_stage")
 
             # fml should be a non-empty string
             assert isinstance(f.fml, str)
@@ -510,13 +510,13 @@ class TestEdgeCases:
     def test_fixed_effects_none_in_dict(self):
         """Test that no fixed effects results in None key in FixestFormulaDict."""
         parsed = parse("Y ~ X1")
-        fml_dict = parsed.FixestFormulaDict
+        fml_dict = parsed.specifications
         assert None in fml_dict  # No fixed effects should have None key
 
     def test_fixed_effects_key_in_dict(self):
         """Test that fixed effects are used as keys in FixestFormulaDict."""
         parsed = parse("Y ~ X1 | f1")
-        fml_dict = parsed.FixestFormulaDict
+        fml_dict = parsed.specifications
         assert "f1" in fml_dict
 
     def test_sort_parameter_effect(self):
@@ -532,8 +532,8 @@ class TestEdgeCases:
         with_intercept = parse("Y ~ X1", intercept=True)
         without_intercept = parse("Y ~ X1", intercept=False)
 
-        formula_with = next(iter(with_intercept.FixestFormulaDict.values()))[0]
-        formula_without = next(iter(without_intercept.FixestFormulaDict.values()))[0]
+        formula_with = next(iter(with_intercept.specifications.values()))[0]
+        formula_without = next(iter(without_intercept.specifications.values()))[0]
 
         assert formula_with.intercept is True
         assert formula_without.intercept is False

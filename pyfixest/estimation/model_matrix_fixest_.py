@@ -95,19 +95,19 @@ def model_matrix_fixest(
 
     .. deprecated::
         This function will be deprecated in a future version.
-        Use `pyfixest.estimation.formula.model_matrix.get()` with a `Formula` object instead.
+        Use `pyfixest.estimation.formula.model_matrix.create_model_matrix()` with a `Formula` object instead.
         See https://py-econometrics.github.io/pyfixest/reference/estimation.formula.model_matrix.ModelMatrix.html
     """
     warnings.warn(
         "model_matrix_fixest is deprecated and will be removed in a future version. "
-        "Use `pyfixest.estimation.formula.model_matrix.get()` with a `Formula` object instead. "
+        "Use `pyfixest.estimation.formula.model_matrix.create_model_matrix()` with a `Formula` object instead. "
         "See https://py-econometrics.github.io/pyfixest/reference/estimation.formula.model_matrix.ModelMatrix.html",
         FutureWarning,
         stacklevel=2,
     )
 
-    fml_second_stage = FixestFormula.fml_second_stage
-    fml_first_stage = FixestFormula.fml_first_stage
+    fml_second_stage = FixestFormula.second_stage
+    fml_first_stage = FixestFormula.first_stage
     fval = FixestFormula.fixed_effects
     _check_weights(weights, data)
 

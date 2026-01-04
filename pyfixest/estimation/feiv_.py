@@ -271,7 +271,7 @@ class Feiv(Feols):
         fixest_module = import_module("pyfixest.estimation")
         fit_ = fixest_module.feols
 
-        fml_first_stage = self.FixestFormula.fml_first_stage
+        fml_first_stage = self.FixestFormula.first_stage
         # Append fixed effects manually since fml_first_stage doesn't include them
         # (see Formula.fml_first_stage docstring for explanation)
         if self._has_fixef and fml_first_stage is not None:

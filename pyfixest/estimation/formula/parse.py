@@ -88,10 +88,12 @@ class Formula:
     @property
     def fml(self) -> str:
         """
+        Reconstruct the full formula string from its components.
 
         Returns
         -------
         str
+            The complete formula string in fixest format.
         """
         independent = self.independent
         if not self.intercept:
@@ -104,7 +106,7 @@ class Formula:
         return formula
 
     @property
-    def fml_first_stage(self) -> str | None:
+    def first_stage(self) -> str | None:
         """
         Return the first stage formula for IV regression.
 
@@ -130,7 +132,7 @@ class Formula:
         return f"{self.endogenous}~{independent}"
 
     @property
-    def fml_second_stage(self) -> str:
+    def second_stage(self) -> str:
         """
         Return the second stage formula for model matrix creation.
 
@@ -197,10 +199,13 @@ class ParsedFormula:
     @property
     def is_multiple(self) -> bool:
         """
+        Check if the formula specifies multiple estimations.
 
         Returns
         -------
         bool
+            True if the formula includes multiple dependent variables, stepwise
+            specifications, or multiple fixed effects specifications.
         """
         return (
             (len(self.dependent) > 1)
@@ -211,20 +216,24 @@ class ParsedFormula:
     @property
     def is_fixed_effects(self) -> bool:
         """
+        Check if the formula includes fixed effects.
 
         Returns
         -------
         bool
+            True if fixed effects are specified in the formula.
         """
         return self.fixed_effects is not None
 
     @property
     def is_iv(self) -> bool:
         """
+        Check if the formula specifies an instrumental variables regression.
 
         Returns
         -------
         bool
+            True if endogenous variables and instruments are specified.
         """
         return self.endogenous is not None
 
@@ -242,12 +251,19 @@ class ParsedFormula:
         return kwargs
 
     @property
-    def FixestFormulaDict(self) -> dict[str | None, list[Formula]]:
+    def specifications(self) -> dict[str | None, list[Formula]]:
         """
+        Generate all formula specifications from stepwise syntax.
+
+        For multiple estimation formulas (using sw, csw, sw0, csw0), this expands
+        the specification into individual Formula objects. Results are grouped by
+        their fixed effects specification.
 
         Returns
         -------
-        dict[str, list[Formula]]
+        dict[str | None, list[Formula]]
+            Dictionary mapping fixed effects specifications to lists of Formula objects.
+            The key is the fixed effects string, or None if no fixed effects.
         """
         # Get formulas by group of fixed effects
         estimations: defaultdict[str | None, list[Formula]] = defaultdict(list[Formula])
@@ -297,15 +313,19 @@ def _parse_parts(formula: str) -> tuple[str, list[str]]:
     parts = re.split(_Pattern.parts, formula.strip())
     if len(parts) > max_parts:
         raise FormulaSyntaxError(
-            f"Formula can have at most 3 parts `dependent ~ independent | fixed effects | endogenous ~ instruments`, "
+            f"Formula can have at most {max_parts} parts `dependent ~ independent | fixed effects | endogenous ~ instruments`, "
             f"received {len(parts)}: {formula}"
         )
-    number_tildes: int = sum("~" in part for part in parts)
-    if number_tildes < min_tildes:
-        raise FormulaSyntaxError("Formula string must have at least one `~`.")
-    elif number_tildes > max_tildes:
+    n_tildes_per_part: list[int] = [part.count("~") for part in parts]
+    if max(n_tildes_per_part) > 1:
         raise FormulaSyntaxError(
-            "Formula string can have at most two `~`: in the main part and optionally in an instrumental variable part."
+            f"A formula part can contain at most 1 `~`: {[part for part, n_tildes in zip(parts, n_tildes_per_part) if n_tildes > 1]}"
+        )
+    elif sum(n_tildes_per_part) < min_tildes:
+        raise FormulaSyntaxError(f"Formula string must have at least {min_tildes} `~`.")
+    elif sum(n_tildes_per_part) > max_tildes:
+        raise FormulaSyntaxError(
+            f"Formula string can have at most {max_tildes} `~`: in the main part and optionally in an instrumental variable part."
         )
     main_part = parts.pop(0)
     return main_part, parts
@@ -421,11 +441,10 @@ def parse(formula: str, intercept: bool = True, sort: bool = False) -> ParsedFor
     formula : str
         A one to three sided formula string in the form
         "Y1 + Y2 ~ X1 + X2 | FE1 + FE2 | endogvar ~ exogvar".
-    intercept: bool
-    sort: bool
-
-    sort: Optional[bool]
-        Sort variables lexicographically within formula parts. Defaults to False.
+    intercept : bool, default=True
+        Whether to include an intercept in the model.
+    sort : bool, default=False
+        Sort variables lexicographically within formula parts.
 
     Returns
     -------

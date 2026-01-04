@@ -58,9 +58,9 @@ def _get_weights(data: pd.DataFrame, weights: str) -> pd.Series:
 
 @dataclass(frozen=True, kw_only=True)
 class _ModelMatrixKey:
-    main: str = "fml_second_stage"
+    main: str = "second_stage"
     fixed_effects: str = "fe"
-    instrumental_variable: str = "fml_first_stage"
+    instrumental_variable: str = "first_stage"
     weights: str = "weights"
 
 
@@ -293,7 +293,7 @@ class ModelMatrix:
         self.na_index_str = ",".join(str(i) for i in dropped_rows)
 
 
-def get(
+def create_model_matrix(
     formula: Formula,
     data: pd.DataFrame,
     weights: str | None = None,
@@ -302,23 +302,40 @@ def get(
     context: Union[int, Mapping[str, Any]] = 0,
 ) -> ModelMatrix:
     """
+    Create a ModelMatrix from a formula and data.
+
+    This function constructs model matrices for econometric estimation by parsing
+    formulas and extracting the necessary components (dependent/independent variables,
+    fixed effects, instruments, weights) from the provided data.
 
     Parameters
     ----------
-    formula: Formula
-    data: pd.DataFrame
-    weights: str or None
-    drop_singletons: bool
-    ensure_full_rank: bool
-    context : int or Mapping[str, Any]
-        A dictionary containing additional context variables to be used by
-        formulaic during the creation of the model matrix. This can include
-        custom factorization functions, transformations, or any other
-        variables that need to be available in the formula environment.
+    formula : Formula
+        A Formula object specifying the model structure, including dependent and
+        independent variables, fixed effects, and instrumental variables.
+    data : pd.DataFrame
+        The input data containing all variables referenced in the formula.
+        The index will be reset during processing.
+    weights : str or None, default=None
+        Column name in data to use as observation weights. Weights must be
+        non-negative numeric values. If None, no weighting is applied.
+    drop_singletons : bool, default=False
+        If True, observations that are singletons in any fixed effect category
+        are dropped from the model.
+    ensure_full_rank : bool, default=True
+        If True, formulaic will ensure the design matrix is full rank by
+        dropping collinear columns.
+    context : int or Mapping[str, Any], default=0
+        Additional context variables for formulaic during model matrix creation.
+        Can be an integer (stack frame depth) or a dictionary of variables to
+        make available in the formula environment (e.g., custom transformations).
 
     Returns
     -------
     ModelMatrix
+        A ModelMatrix object containing the processed dependent and independent
+        variables, fixed effects, instruments, weights, and metadata about
+        dropped observations.
 
     """
     # Process input data
@@ -326,7 +343,7 @@ def get(
     n_observations: Final[int] = data.shape[0]
     # Collate kwargs to be passed to formulaic.Formula
     formula_kwargs: dict[str, str] = {
-        _ModelMatrixKey.main: formula.fml_second_stage
+        _ModelMatrixKey.main: formula.second_stage
     }  # Main formula
     if formula.fixed_effects is not None:
         fixed_effects = _interact_fixed_effects(
@@ -338,10 +355,10 @@ def get(
                 _ModelMatrixKey.fixed_effects: f"{'+'.join(f'__fixed_effect__({fe})' for fe in fixed_effects.columns)}-1"
             }
         )
-    if formula.fml_first_stage is not None:
+    if formula.first_stage is not None:
         # Instrumental variable
         formula_kwargs.update(
-            {_ModelMatrixKey.instrumental_variable: formula.fml_first_stage}
+            {_ModelMatrixKey.instrumental_variable: formula.first_stage}
         )
     if weights is not None:
         data[weights] = _get_weights(data, weights)

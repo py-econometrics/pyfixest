@@ -125,7 +125,7 @@ class FeolsCompressed(Feols):
             sample_split_value,
         )
 
-        if FixestFormula.fml_first_stage is not None:
+        if FixestFormula.first_stage is not None:
             raise NotImplementedError(
                 "Compression is not supported with IV regression."
             )

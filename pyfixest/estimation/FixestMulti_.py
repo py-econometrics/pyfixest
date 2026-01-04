@@ -230,7 +230,7 @@ class FixestMulti:
             or self._run_split
             or (isinstance(quantile, list) and len(quantile) > 1)
         )
-        self.FixestFormulaDict = formulas.FixestFormulaDict
+        self.FixestFormulaDict = formulas.specifications
         self._method = estimation
         self._is_iv = formulas.is_iv
         # self._fml_dict = fxst_fml.condensed_fml_dict

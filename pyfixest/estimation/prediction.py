@@ -59,7 +59,7 @@ def get_design_matrix_and_yhat(
                 )
 
             if hasattr(model, "_model_spec") and model._model_spec is not None:
-                rhs_spec = model._model_spec.fml_second_stage.rhs
+                rhs_spec = model._model_spec.second_stage.rhs
                 X = rhs_spec.get_model_matrix(newdata, context=context)
             else:
                 xfml = model._fml.split("|")[0].split("~")[1]

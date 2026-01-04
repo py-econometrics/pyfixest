@@ -409,7 +409,7 @@ class Feols:
 
     def prepare_model_matrix(self):
         "Prepare model matrices for estimation."
-        model_matrix = model_matrix_fixest.get(
+        model_matrix = model_matrix_fixest.create_model_matrix(
             formula=self.FixestFormula,
             data=self._data,
             drop_singletons=self._drop_singletons,
