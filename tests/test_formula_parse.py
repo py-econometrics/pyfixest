@@ -7,6 +7,7 @@ This module contains:
 - Part 3: Edge case tests
 """
 
+import numpy as np
 import pytest
 
 import pyfixest as pf
@@ -408,6 +409,24 @@ def test_correct_number_of_models(test_data, formula: str, expected_n_models: in
     )
 
 
+def test_explicit_no_fe_coefficients_match(test_data):
+    """Verify Y ~ X1 | 0 produces same coefficients as Y ~ X1."""
+    fit_implicit = pf.feols("Y ~ X1", data=test_data)
+    fit_explicit = pf.feols("Y ~ X1 | 0", data=test_data)
+
+    assert np.allclose(fit_implicit.coef().values, fit_explicit.coef().values)
+    assert np.allclose(fit_implicit.se().values, fit_explicit.se().values)
+
+
+def test_explicit_no_fe_iv_coefficients_match(test_data):
+    """Verify Y ~ 1 | 0 | Y2 ~ X1 produces same coefficients as Y ~ 1 | Y2 ~ X1."""
+    fit_implicit = pf.feols("Y ~ 1 | Y2 ~ X1", data=test_data)
+    fit_explicit = pf.feols("Y ~ 1 | 0 | Y2 ~ X1", data=test_data)
+
+    assert np.allclose(fit_implicit.coef().values, fit_explicit.coef().values)
+    assert np.allclose(fit_implicit.se().values, fit_explicit.se().values)
+
+
 # Properties test data
 PROPERTY_TEST_FORMULAS = [
     # (formula, is_iv, is_multiple, has_fe)
@@ -575,3 +594,47 @@ class TestEdgeCases:
         assert parsed.is_fixed_effects is True
         assert parsed.fixed_effects.constant == ["f1"]
         assert parsed.endogenous == ["Z1"]
+
+    def test_explicit_no_fe_syntax(self):
+        """Test explicit no fixed effects syntax: Y ~ X1 | 0."""
+        parsed_explicit = parse("Y ~ X1 | 0")
+        parsed_implicit = parse("Y ~ X1")
+
+        # Both should resolve to None FE in specifications
+        specs_explicit = parsed_explicit.specifications
+        specs_implicit = parsed_implicit.specifications
+
+        assert list(specs_explicit.keys()) == [None]
+        assert list(specs_implicit.keys()) == [None]
+
+        # Formulas should be equivalent
+        fml_explicit = specs_explicit[None][0]
+        fml_implicit = specs_implicit[None][0]
+        assert fml_explicit.fml == fml_implicit.fml
+        assert fml_explicit.fixed_effects is None
+        assert fml_implicit.fixed_effects is None
+
+    def test_explicit_no_fe_syntax_with_iv(self):
+        """Test explicit no fixed effects with IV: Y ~ 1 | 0 | Z1 ~ X1."""
+        parsed_explicit = parse("Y ~ 1 | 0 | Z1 ~ X1")
+        parsed_implicit = parse("Y ~ 1 | Z1 ~ X1")
+
+        # Both should resolve to None FE in specifications
+        specs_explicit = parsed_explicit.specifications
+        specs_implicit = parsed_implicit.specifications
+
+        assert list(specs_explicit.keys()) == [None]
+        assert list(specs_implicit.keys()) == [None]
+
+        # Both should be IV regressions
+        assert parsed_explicit.is_iv is True
+        assert parsed_implicit.is_iv is True
+
+        # Formulas should be equivalent
+        fml_explicit = specs_explicit[None][0]
+        fml_implicit = specs_implicit[None][0]
+        assert fml_explicit.fml == fml_implicit.fml
+        assert fml_explicit.fixed_effects is None
+        assert fml_implicit.fixed_effects is None
+        assert fml_explicit.endogenous == fml_implicit.endogenous
+        assert fml_explicit.instruments == fml_implicit.instruments
