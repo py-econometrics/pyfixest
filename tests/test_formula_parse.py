@@ -384,6 +384,11 @@ class TestParseErrors:
         with pytest.raises(FormulaSyntaxError, match="Three-part formula"):
             parse("Y ~ X1 | f1 | f2")
 
+    def test_three_parts_with_tilde_in_fe_raises_error(self):
+        """Test that Y ~ X | Z ~ W | A ~ B raises an error (FE part has tilde)."""
+        with pytest.raises(FormulaSyntaxError, match="fixed effects.*cannot contain"):
+            parse("Y ~ X | Z ~ W | A ~ B")
+
     def test_three_parts_with_iv_is_valid(self):
         """Test that Y ~ X | f1 | Z ~ W parses correctly."""
         parsed = parse("Y ~ X1 | f1 | Z ~ W")

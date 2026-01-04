@@ -317,11 +317,6 @@ def _parse_parts(formula: str) -> tuple[str, list[str]]:
                or `dependent ~ independent | endogenous ~ instruments` (IV)
     - 3 parts: `dependent ~ independent | fixed_effects | endogenous ~ instruments` (IV with FE)
 
-    Tilde requirements by position (0-indexed):
-    - Part 0 (main): ALWAYS needs exactly 1 tilde
-    - Part 1 (FE):   NEVER has a tilde
-    - Part 2 (IV):   ALWAYS needs exactly 1 tilde (if exists)
-
     Parameters
     ----------
     formula : str
@@ -377,10 +372,15 @@ def _parse_parts(formula: str) -> tuple[str, list[str]]:
             )
     elif len(parts) == 3:
         # Format: Y ~ X | fe | endog ~ instr
-        # Parts 0 and 2 must have tildes
+        # Parts 0 and 2 must have tildes, part 1 must NOT
         if not has_tilde(parts[0]):
             raise FormulaSyntaxError(
                 f"First part must contain '~' (dependent ~ independent): '{parts[0]}'"
+            )
+        if has_tilde(parts[1]):
+            raise FormulaSyntaxError(
+                f"Second part (fixed effects) cannot contain '~': '{parts[1]}'. "
+                "Fixed effects should be specified as 'f1 + f2', not as a formula."
             )
         if not has_tilde(parts[2]):
             raise FormulaSyntaxError(
