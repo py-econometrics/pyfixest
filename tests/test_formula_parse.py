@@ -247,7 +247,7 @@ class TestFormulaDataclass:
             endogenous="Z1",
             instruments="X2",
         )
-        assert f.fml == "Y~X1|Z1~X2|f1"
+        assert f.fml == "Y~X1|f1|Z1~X2"
 
     def test_fml_no_intercept(self):
         """Test formula without intercept."""
