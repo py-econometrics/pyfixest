@@ -329,12 +329,11 @@ impl Demeaner for MultiFEDemeaner<'_> {
             return self.finalize_output(input, iter1, conv1);
         }
 
-        // Phase 2: 2-FE sub-convergence
-        let (iter2, conv2) = self.two_fe_subconvergence_phase(input);
+        // Phase 2: 2-FE sub-convergence (refines only first 2 FEs)
+        // Note: Don't return early on Phase 2 convergence!
+        // Phase 2 only refines the first 2 FEs. The 3rd+ FEs still need Phase 3.
+        let (iter2, _conv2) = self.two_fe_subconvergence_phase(input);
         let total_iter = iter1 + iter2;
-        if conv2 == ConvergenceState::Converged {
-            return self.finalize_output(input, total_iter, conv2);
-        }
 
         // Phase 3: Re-acceleration with all FEs
         let (iter3, conv3) = self.reacceleration_phase(input, total_iter);

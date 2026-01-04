@@ -426,7 +426,7 @@ impl Default for FixestConfig {
 ///
 /// Used throughout the demeaning module to represent convergence state
 /// in a self-documenting way, avoiding ambiguous boolean returns.
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ConvergenceState {
     /// Algorithm has converged; iteration can stop.
     Converged,
