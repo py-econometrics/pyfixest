@@ -413,9 +413,90 @@ def test_i_with_same_var_standalone(df_test):
 
 
 # =============================================================================
-# Run as script for debugging
+# Null Value Handling Tests
 # =============================================================================
 
 
-if __name__ == "__main__":
-    pytest.main([__file__, "-v", "-s"])
+@pytest.fixture(scope="module")
+def df_with_nulls() -> pd.DataFrame:
+    """Create test data with null values in various positions."""
+    np.random.seed(42)
+    n = 100
+
+    df = pd.DataFrame(
+        {
+            "Y": np.random.randn(n),
+            "X1": np.random.randn(n),
+            "X2": np.random.randn(n),
+            "f_str": np.random.choice(["A", "B", "C"], n),
+            "f_int": np.random.choice([1, 2, 3], n),
+            "fe": np.random.choice(range(5), n),
+        }
+    )
+
+    # Introduce nulls in different variables at different positions
+    df.loc[[5, 15, 25, 35, 45], "Y"] = np.nan  # Nulls in dependent variable
+    df.loc[[10, 20, 30], "X1"] = np.nan  # Nulls in continuous variable
+    df.loc[[12, 22, 32], "f_str"] = np.nan  # Nulls in factor variable
+    df.loc[[14, 24], "X2"] = np.nan  # Nulls in another continuous variable
+
+    return df
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize(
+    "fml",
+    [
+        "Y ~ i(f_str)",  # Simple i() with nulls in Y and f_str
+        "Y ~ i(f_str, X1)",  # i() with continuous, nulls in Y, f_str, X1
+        "Y ~ i(f_str) + X2",  # i() with covariate, nulls in multiple vars
+        "Y ~ i(f_int)",  # i() with integer factor
+        "Y ~ i(f_int, X1)",  # i() with integer factor and continuous
+    ],
+)
+def test_null_handling(df_with_nulls, fml):
+    """Test that null values are handled consistently between pyfixest and fixest."""
+    py_names, py_values, r_names, r_values = compare_with_r(fml, df_with_nulls)
+    assert_models_match(py_names, py_values, r_names, r_values)
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize(
+    "fml",
+    [
+        "Y ~ i(f_str) | fe",  # With fixed effects
+        "Y ~ i(f_str, X1) | fe",  # i() with continuous and FE
+        "Y ~ i(f_str) + X2 | fe",  # i() with covariate and FE
+    ],
+)
+def test_null_handling_with_fe(df_with_nulls, fml):
+    """Test null handling with fixed effects."""
+    py_names, py_values, r_names, r_values = compare_with_r(fml, df_with_nulls)
+    assert_models_match(py_names, py_values, r_names, r_values)
+
+
+@pytest.mark.against_r_core
+def test_null_handling_with_ref(df_with_nulls):
+    """Test null handling with explicit reference level."""
+    fml = "Y ~ i(f_str, ref='A')"
+    py_names, py_values, r_names, r_values = compare_with_r(fml, df_with_nulls)
+    assert_models_match(py_names, py_values, r_names, r_values)
+
+
+@pytest.mark.against_r_core
+def test_null_handling_nobs(df_with_nulls):
+    """Test that number of observations matches after null removal."""
+    fml = "Y ~ i(f_str, X1) + X2"
+
+    fit_py = feols(fml, df_with_nulls)
+    fit_r = fixest.feols(ro.Formula(fml), df_with_nulls)
+
+    # Extract number of observations from R
+    ro.globalenv["fit_tmp"] = fit_r
+    r_nobs = int(ro.r("fit_tmp$nobs")[0])
+    ro.r("rm(fit_tmp)")
+
+    # Compare number of observations
+    assert fit_py._N == r_nobs, (
+        f"Number of observations mismatch: py={fit_py._N}, r={r_nobs}"
+    )

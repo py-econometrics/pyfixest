@@ -1,6 +1,7 @@
 from collections.abc import Hashable
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, Final, Optional
 
+import numpy as np
 import pandas as pd
 from formulaic.materializers.types import FactorValues
 from formulaic.transforms.contrasts import TreatmentContrasts, encode_contrasts
@@ -105,107 +106,141 @@ def _encode_i(
     """
     # Extract values - may be wrapped in dict for null detection
     unwrapped = values.__wrapped__ if isinstance(values, FactorValues) else values
-
-    # Extract data and var2 from dict if present
-    if isinstance(unwrapped, dict) and "__data__" in unwrapped:
-        data = unwrapped["__data__"]
-        var2 = unwrapped.get("__var2__")
-    else:
-        data = unwrapped
-        var2 = None
-
+    data = unwrapped["__data__"] if var2_name is not None else unwrapped
+    var2 = unwrapped.get("__var2__") if var2_name is not None else None
     # Convert to pandas Series and drop specified rows
-    factor_series = pd.Series(data)
-    factor_series = factor_series.drop(index=factor_series.index[drop_rows])
-
-    # --- Binning (optional) ---
-    if bin is not None:
-        factor_series = _apply_binning(factor_series, bin, encoder_state)
-
-    # --- Get levels from state or data ---
-    levels = encoder_state.get("levels")
-
-    # --- Use formulaic's encode_contrasts for the dummy encoding ---
-    # Create a dedicated sub-state for encode_contrasts to avoid key collisions
-    contrasts_state = encoder_state.setdefault("_contrasts_state", {})
-
-    # Build contrasts: TreatmentContrasts with base (ref or UNSET) and drop
-    contrasts = TreatmentContrasts(
-        base=ref if ref is not None else UNSET, drop=reduced_rank or ref is not None
+    data = pd.Series(data)
+    data.drop(index=data.index[drop_rows], inplace=True)
+    if var2 is not None:
+        var2 = pd.Series(var2)
+        var2.drop(index=var2.index[drop_rows], inplace=True)
+    dummies = _encode_factor(
+        pd.Series(data),
+        ref=ref,
+        bins=bin,
+        reduced_rank=reduced_rank and var2 is None,
+        encoder_state=encoder_state,
+        model_spec=model_spec,
     )
-
-    encoded = encode_contrasts(
-        factor_series,
-        contrasts=contrasts,
-        levels=levels,
-        reduced_rank=ref is not None,
-        output="pandas",
-        _state=contrasts_state,
-        _spec=model_spec,
-    )
-
-    # Extract the underlying DataFrame and levels from state
-    dummies = encoded.__wrapped__
-    levels_encoded = list(dummies.columns)  # These are the levels that were kept
-
-    # Store levels in our state for consistency across train/predict
-    if "levels" not in encoder_state:
-        encoder_state["levels"] = contrasts_state.get("categories", levels_encoded)
-
-    # --- No interaction: apply fixest naming and return ---
-    if var2 is None or var2_name is None:
-        col_names = [f"{factor_name}::{level}" for level in levels_encoded]
-        dummies.columns = col_names
+    # Three options: (i) no interaction, (ii) interaction with continuous variable, (ii) factor-factor interaction
+    if var2 is None:
+        # (i) No interaction: return categorical encoding of single variable
+        dummies.rename(
+            columns={level: f"{factor_name}::{level}" for level in dummies.columns},
+            inplace=True,
+        )
         return FactorValues(
             dummies,
             kind="categorical",
+            # spans_intercept is True only when no reference level was dropped
+            # (i.e., ref is None and reduced_rank is False)
             spans_intercept=(ref is None and not reduced_rank),
-            column_names=tuple(col_names),
-            encoded=True,
+            column_names=tuple(dummies.columns),
             format="{field}",  # Use column names directly
         )
-
-    # # --- Check if user specified to force var2 to categorical ---
-    # force_categorical_prefix = re.match(r"^i\.(?P<variable>.+)$", var2)
-    # if force_categorical := force_categorical_prefix is not None:
-    #     var2 = force_categorical_prefix["variable"]
-
-    # --- Handle interaction with var2 ---
-    var2_series = pd.Series(
-        var2.__wrapped__ if isinstance(var2, FactorValues) else var2
-    )
-    var2_series = var2_series.drop(index=var2_series.index[drop_rows])
-    if bin2 is not None:
-        var2_series = _apply_binning(var2_series, bin2, encoder_state)
-
-    if ref2 is None and _is_numeric(var2_series):
-        # Factor x Continuous interaction
-        # Fixest naming: factor_name::level:var2_name (e.g., cyl::4:wt)
-        result = dummies.multiply(var2_series, axis=0)
-        col_names = [f"{factor_name}::{level}:{var2_name}" for level in levels_encoded]
-        result.columns = col_names
+    elif ref2 is None and bin2 is None and _is_numeric(var2):
+        # (ii) interaction with continuous variable
+        result = dummies.multiply(var2, axis=0)
+        result.rename(
+            columns={
+                level: f"{factor_name}::{level}:{var2_name}"
+                for level in dummies.columns
+            },
+            inplace=True,
+        )
         return FactorValues(
             result,
             kind="numerical",
             spans_intercept=False,
-            column_names=tuple(col_names),
-            encoded=True,
+            column_names=tuple(result.columns),
             format="{field}",
         )
     else:
-        # Factor x Factor interaction
-        return _factor_factor_interaction(
-            dummies,
-            levels_encoded,
-            var2_series,
-            ref,
-            ref2,
-            factor_name,
-            var2_name,
-            reduced_rank,
-            encoder_state,
-            model_spec,
+        # (iii) factor-factor interaction
+        dummies2 = _encode_factor(
+            data=var2,
+            ref=ref2,
+            bins=bin2,
+            reduced_rank=False,
+            encoder_state=encoder_state,
+            model_spec=model_spec,
         )
+        interacted = pd.DataFrame(
+            _interact_dummies(
+                left=dummies.to_numpy(),
+                right=dummies2.to_numpy(),
+            ),
+            columns=[
+                f"{factor_name}::{l1}:{var2_name}::{l2}"
+                for l1 in dummies.columns
+                for l2 in dummies2.columns
+            ],
+            index=dummies.index,
+        )
+        # Drop reference level
+        if ref is None:
+            ref = encoder_state[f"__contrasts_{factor_name}__"]["levels"][0]
+        if ref2 is None:
+            ref2 = encoder_state[f"__contrasts_{var2_name}__"]["levels"][0]
+        interacted.drop(
+            f"{factor_name}::{ref}:{var2_name}::{ref2}",
+            axis=1,
+            inplace=True,
+            errors="ignore",
+        )
+        return FactorValues(
+            interacted,
+            kind="categorical",
+            spans_intercept=True,
+            column_names=tuple(interacted.columns),
+            format="{field}",  # Use column names directly
+        )
+
+
+def _encode_factor(
+    data: pd.Series,
+    ref: Optional[Hashable],
+    bins: Optional[dict],
+    reduced_rank: bool,
+    encoder_state: dict[str, Any],
+    model_spec: "ModelSpec",
+) -> pd.DataFrame:
+    # --- Binning (optional) ---
+    if bins is not None:
+        data = _apply_binning(data, bins, encoder_state)
+    contrasts_key: Final[str] = f"__contrasts_{data.name}__"
+    contrasts_state = encoder_state.get(contrasts_key)
+    if contrasts_state is None:
+        # Create a dedicated sub-state for encode_contrasts to avoid key collisions
+        contrasts_state = encoder_state.setdefault(contrasts_key, {})
+    # Drop a level if: (1) model has intercept (reduced_rank=True), OR (2) ref is explicitly specified
+    # This replicates the old monkey-patched behavior: drop=reduced_rank or ref is not None
+    encoded = encode_contrasts(
+        data,
+        contrasts=TreatmentContrasts(base=ref if ref is not None else UNSET),
+        levels=contrasts_state.get("levels"),
+        reduced_rank=reduced_rank or ref is not None,
+        output="pandas",
+        _state=contrasts_state,
+        _spec=model_spec,
+    )
+    dummies = encoded.__wrapped__
+    if "levels" not in contrasts_state:
+        encoder_state[f"__contrasts_{data.name}__"].update(
+            {"levels": dummies.columns.tolist()}
+        )
+    return dummies
+
+
+def _interact_dummies(left: np.ndarray, right: np.ndarray) -> np.ndarray:
+    # Compute all pairwise products using broadcasting
+    # arr1[:, :, None] has shape (n_rows, n_levels1, 1)
+    # arr2[:, None, :] has shape (n_rows, 1, n_levels2)
+    return np.reshape(
+        # Product has shape (n_rows, n_levels1, n_levels2)
+        left[:, :, None] * right[:, None, :],
+        shape=(len(left), -1),
+    )
 
 
 def _is_numeric(series: pd.Series) -> bool:
@@ -215,7 +250,7 @@ def _is_numeric(series: pd.Series) -> bool:
     )
 
 
-def _apply_binning(series: pd.Series, bin: dict, state: dict) -> pd.Series:
+def _apply_binning(series: pd.Series, bins: dict, state: dict) -> pd.Series:
     """
     Apply binning: bin={'low': ['a','b'], 'high': ['c','d']}.
 
@@ -223,83 +258,9 @@ def _apply_binning(series: pd.Series, bin: dict, state: dict) -> pd.Series:
     """
     if "bin_mapping" not in state:
         mapping = {}
-        for new_level, old_levels in bin.items():
+        for new_level, old_levels in bins.items():
             for old in old_levels:
                 mapping[old] = new_level
         state["bin_mapping"] = mapping
     # Use replace() instead of map() to keep unmapped values unchanged
     return series.replace(state["bin_mapping"])
-
-
-def _factor_factor_interaction(
-    dummies1: pd.DataFrame,
-    levels1: list,
-    var2: pd.Series,
-    ref: Optional[Hashable],
-    ref2: Optional[Hashable],
-    factor_name: str,
-    var2_name: str,
-    reduced_rank: bool,
-    state: dict,
-    model_spec: "ModelSpec",
-) -> FactorValues:
-    """Handle Factor x Factor interaction using encode_contrasts for var2."""
-    # Create a dedicated sub-state for var2's encode_contrasts
-    contrasts_state2 = state.setdefault("_contrasts_state2", {})
-
-    # Get existing levels from state, or None to infer from data
-    levels2 = state.get("levels2")
-
-    # Use encode_contrasts for var2
-    contrasts2 = TreatmentContrasts(
-        base=ref2 if ref2 is not None else UNSET, drop=reduced_rank or ref2 is not None
-    )
-
-    encoded2 = encode_contrasts(
-        var2,
-        contrasts=contrasts2,
-        levels=levels2,
-        reduced_rank=False,
-        output="pandas",
-        _state=contrasts_state2,
-        _spec=model_spec,
-    )
-
-    dummies2 = encoded2.__wrapped__
-    levels2_encoded = list(dummies2.columns)
-
-    # Store levels2 in state for consistency
-    if "levels2" not in state:
-        state["levels2"] = contrasts_state2.get("categories", levels2_encoded)
-
-    # Create all pairwise interactions with fixest-style names
-    # For factor x factor: factor1::level1:factor2::level2 (e.g., cyl_f::4:gear_f::4)
-    result_cols = {}
-    col_names = []
-    for l1 in levels1:
-        for l2 in levels2_encoded:
-            col_name = f"{factor_name}::{l1}:{var2_name}::{l2}"
-            result_cols[col_name] = dummies1[l1] * dummies2[l2]
-            col_names.append(col_name)
-
-    # To match R's fixest behavior: when no explicit references are provided,
-    # drop the first combination (reference levels of both factors).
-    # This handles collinearity with the intercept in typical models.
-    # Note: reduced_rank is always False for factor-factor interactions,
-    # so we use ref/ref2 to determine when to drop.
-    if ref is None and ref2 is None and len(col_names) > 0:
-        # Remove first combination from result
-        first_col = col_names[0]
-        del result_cols[first_col]
-        col_names = col_names[1:]
-
-    result = pd.DataFrame(result_cols, index=dummies1.index)
-
-    return FactorValues(
-        result,
-        kind="categorical",
-        spans_intercept=False,
-        column_names=tuple(col_names),
-        encoded=True,
-        format="{field}",  # Use column names directly
-    )
