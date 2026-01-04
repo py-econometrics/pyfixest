@@ -1,18 +1,10 @@
-import itertools
-import warnings
-from dataclasses import dataclass, field
-from statistics import kde_random
+import sys
+from dataclasses import dataclass
 from typing import Any, Optional, Union
-from pyfixest.estimation.estimation import feols
 
 import numpy as np
 import pandas as pd
-from joblib import Parallel, delayed
-from numpy.typing import NDArray
-from scipy.sparse import diags, hstack, spmatrix, vstack
-from scipy.sparse.linalg import lsqr
 from scipy.stats import t
-from tqdm import tqdm
 
 @dataclass
 class SensitivityAnalysis:
@@ -23,9 +15,11 @@ class SensitivityAnalysis:
 
     Parameters
     ----------
-    To be added.
+    model: pyfixest.Feols
+        A fitted `pyfixest` model object (e.g., from `feols()`).
+    X: str, Optional
+        The name of the treatment variable to analyze by default. If None, operations requiring a treatment variable must specify it explicitly.
     """
-   # Core Inputs - LIST IN PROGRESS
     model: Any
     X: Optional[str] = None
 
@@ -35,6 +29,16 @@ class SensitivityAnalysis:
        Calculate the partial R2 for a given variable.
 
        The partial R2 explains how much of the residual variance of the outcome is explained by the covariate.
+
+       Parameters
+       ----------
+       X: str, Optional
+            The name of the covariate for which to compute the partial R2. If None, returns partial R2s for all covariates in the model.
+
+       Returns
+       -------
+       float or np.ndarray
+            The partial R2 value(s).
        """
        df = self.model._df_t
        names = self.model._coefnames
@@ -52,6 +56,16 @@ class SensitivityAnalysis:
         Compute the partial (Cohen's) f2 for a linear regression model.
 
         The partial f2 is a measure of effect size (a transformation of the partial R2).
+
+        Parameters
+        ----------
+        X: str, Optional
+            The name of the covariate for which to compute the partial R2. If None, returns partial R2s for all covariates in the model.
+
+        Returns
+        -------
+        float or np.ndarray
+            The partial f2 value(s).
         """
         df = self.model._df_t
         names = self.model._coefnames
@@ -66,7 +80,24 @@ class SensitivityAnalysis:
     # robustness value function
     def robustness_value(self, X: Optional[str] = None, q = 1, alpha = 1.0) -> Union[float, np.ndarray]:
         """
-        Compute the robustness value of the regression coefficient.
+        Compute the robustness value (RV) of the regression coefficient.
+
+        The RV describes the minimum strength of association (partial R2) that an unobserved confounder would need to have with both the treatment and the outcome to change the research conclusions (e.g., reduce effect by q% or render it insignificant).
+
+        Parameters
+        ----------
+        X : str, optional
+            The name of the covariate.
+        q : float, default 1.0
+            The proportion of reduction in the coefficient estimate (e.g., 1.0 = 100% reduction to zero).
+        alpha : float, default 1.0
+            The significance level. If 1.0 (default), computes RV for the point estimate (RV_q).
+            If < 1.0 (e.g., 0.05), computes RV for statistical significance (RV_qa)
+
+        Returns
+        -------
+        float or np.ndarray
+            The robustness value(s).
         """
         df = self.model._df_t
         f2 = self.partial_f2(X = X)
@@ -88,7 +119,26 @@ class SensitivityAnalysis:
         """
         Compute the sensitivity statistics for the model.
 
-        Returns the RV, partial R2 and partial f2.
+        Parameters
+        ----------
+        X : str, optional
+            The name of the covariate.
+        q : float, default 1.0
+            The percent reduction for the Robustness Value.
+        alpha : float, default 0.05
+            The significance level for the Robustness Value.
+
+        Returns
+        -------
+        dict
+            A dictionary containing:
+            - 'estimate': Coefficient estimate
+            - 'se': Standard Error
+            - 'df': Degrees of Freedom
+            - 'partial_R2': Partial R2 of the covariate
+            - 'partial_f2': Partial f2 of the covariate
+            - 'rv_q': Robustness Value for point estimate
+            - 'rv_qa': Robustness Value for statistical significance
         """
         estimate = self.model._beta_hat
         se = self.model._se
@@ -110,32 +160,50 @@ class SensitivityAnalysis:
         return sensitivity_stats_df
 
     # Compute Omitted Variable Bias Bounds
-    def ovb_bounds(self, treatment, benchmark_covariates, kd, ky):
+    def ovb_bounds(self, treatment, benchmark_covariates, kd=[1, 2, 3], ky=None, alpha=0.05, adjusted_estimate=True, bound="partial r2"):
         """
         Compute bounds on omitted variable bias using observed covariates as benchmarks.
 
         Parameters
         ----------
-        Self
-        Benchmark Covariates
-        kd
-        ky
-        adjusted_estimate: bool
-        bound_type: str
+        treatment : str
+            The name of the treatment variable.
+        benchmark_covariates : str or list of str
+            The names of the observed covariates to use for benchmarking.
+        kd : float or list of floats, default [1, 2, 3]
+            The multiplier for the strength of the confounder with the treatment
+            relative to the benchmark covariate.
+        ky : float or list of floats, optional
+            The multiplier for the strength of the confounder with the outcome.
+            If None, defaults to the same values as `kd`.
+        alpha : float, default 0.05
+            Significance level for computing confidence intervals of the adjusted estimates.
+        adjusted_estimate : bool, default True
+            If True, computes the adjusted estimate, SE, t-statistic, and CI.
+        bound : str, default "partial r2"
+            The type of bound to compute. Currently only "partial r2" is supported.
+
+        Returns
+        -------
+        pd.DataFrame
+            A DataFrame containing the sensitivity bounds and (optional) adjusted statistics.
         """
+        df = self.model._df_t
+
         if ky is None:
             ky = kd
 
         if bound != "partial r2":
-            sys.exit('Only partial r2 is implemented as of now.')
+            raise ValueError("Only partial r2 is implemented as of now.")
 
-        bounds = self._ovb_bounds_partial_r2(model = model, treatment = treatment, benchmark_covariates = benchmark_covariates, kd = kd, ky = ky)
+        bounds = self._ovb_bounds_partial_r2(treatment = treatment, benchmark_covariates = benchmark_covariates, kd = kd, ky = ky)
 
         if adjusted_estimate:
             bounds['treatment'] = treatment
-            bounds['adjusted_estimate'] = self.adjusted_estimate(bounds['r2dz_x'], bounds['r2yz_dx'], reduce = True)
-            bounds['adjusted_se'] = self.adjusted_se(bounds['r2dz_x'], bounds['r2yz_dx'])
-            bounds['adjusted_t'] = self.adjusted_t(bounds['r2dz_x'], bounds['r2yz_dx'], reduce = True, h0 = 0)
+            bounds['adjusted_estimate'] = self.adjusted_estimate(bounds['r2dz_x'], bounds['r2yz_dx'], treatment = treatment, reduce = True)
+            bounds['adjusted_se'] = self.adjusted_se(bounds['r2dz_x'], bounds['r2yz_dx'], treatment = treatment)
+            bounds['adjusted_t'] = self.adjusted_t(bounds['r2dz_x'], bounds['r2yz_dx'], treatment = treatment, reduce = True, h0 = 0)
+            se_multiple = abs(t.ppf(alpha / 2, df))
             bounds['adjusted_lower_CI'] = bounds['adjusted_estimate'] - se_multiple * bounds['adjusted_se']
             bounds['adjusted_upper_CI'] = bounds['adjusted_estimate'] + se_multiple * bounds['adjusted_se']
 
@@ -146,23 +214,40 @@ class SensitivityAnalysis:
         Compute OVB bounds based on partial R2.
 
         This function should not be called directly. It is called under the ovb_bounds user facing function.
+
+        Parameters
+        ----------
+        treatment : str
+            The treatment variable.
+        benchmark_covariates : str or list
+            Benchmarks.
+        kd, ky : float or list
+            Strength multipliers.
+
+        Returns
+        -------
+        pd.DataFrame
+            DataFrame with 'r2dz_x' and 'r2yz_dx' columns.
         """
+        from pyfixest.estimation.estimation import feols
         model = self.model
         if (model is None or treatment is None):
-            sys.exit('ovb_partial_r2 requires a model object and a treatment variable')
+            raise ValueError('ovb_partial_r2 requires a model object and a treatment variable')
 
         data = model._data
-        X = model._X
-        fixef = model._fixef
+        X = pd.DataFrame(model._X, columns=model._coefnames)
+
+        if treatment not in X.columns:
+            raise ValueError(f"Treatment '{treatment}' not found in model coefficients.")
 
         non_treatment = X.drop(columns = treatment)
-        covariate_names = non_treatment.columns.tolist()
+        covariate_names = [
+            col for col in non_treatment.columns
+            if col != "Intercept"
+        ]
         covariates = ' + '.join(covariate_names)
 
-        if fixef == "0":
-            formula = f"{treatment} ~ {covariates}"
-        else:
-            formula = f"{treatment} ~ {covariates} | {fixef}"
+        formula = f"{treatment} ~ {covariates}"
 
         treatment_model = feols(formula, data = data)
         treatment_sens = treatment_model.sensitivity_analysis()
@@ -185,7 +270,7 @@ class SensitivityAnalysis:
                 r2dz_x = kd_val * (r2dxj_x / (1-r2dxj_x))
 
                 if r2dz_x >= 1:
-                    raise ValueError(f"Implied bound on r2dz.x >= 1 for benchmark {b} with kd={k_d_val}."
+                    raise ValueError(f"Implied bound on r2dz.x >= 1 for benchmark {b} with kd={kd_val}."
                                      "Impossible scenario. Try a lower kd.")
                 r2zxj_xd = kd_val * (r2dxj_x**2) / ((1 - kd_val * r2dxj_x) * (1 - r2dxj_x))
 
@@ -199,51 +284,189 @@ class SensitivityAnalysis:
                     r2yz_dx = 1.0
 
                 bounds_list.append({
-                    'bound_label': f"{k_d_val}x {b}",  # Simple label maker
+                    'bound_label': f"{kd_val}x {b}",  # Simple label maker
                     'r2dz_x': r2dz_x,
                     'r2yz_dx': r2yz_dx,
                     'benchmark_covariate': b,
-                    'kd': k_d_val,
-                    'ky': k_y_val
+                    'kd': kd_val,
+                    'ky': ky_val
                 })
 
         return pd.DataFrame(bounds_list)
 
-    def bias(self, r2dz_x, r2yz_dx):
+    def bias(self, r2dz_x, r2yz_dx, treatment):
         """
         Compute the bias for the partial R2 parametrization.
+
+        Parameters
+        ----------
+        r2dz_x : float or np.ndarray
+            Partial R2 of confounder with treatment.
+        r2yz_dx : float or np.ndarray
+            Partial R2 of confounder with outcome.
+        treatment : str
+            The treatment variable.
+
+        Returns
+        -------
+        float or np.ndarray
+            The estimated bias amount (in units of the coefficient).
         """
         df = self.model._df_t
-        se = self.model._se
+        idx = self.model._coefnames.index(treatment)
+        se = self.model._se[idx]
 
         r2dz_x, r2yz_dx = np.array(r2dz_x), np.array(r2yz_dx)
         bias_factor = np.sqrt((r2yz_dx * r2dz_x) / (1 - r2dz_x))
 
         return bias_factor * se * np.sqrt(df)
 
-    def adjusted_estimate(self, r2dz_x, r2yz_dx, reduce=True):
+    def adjusted_estimate(self, r2dz_x, r2yz_dx, treatment, reduce=True):
         """
         Compute the bias-adjusted coefficient estimate.
-        """
-        estimate = self.model._beta_hat
-        if reduce:
-            return np.sign(estimate) * (abs(estimate) - self.bias(r2dz_x, r2yz_dx))
-        else:
-            return np.sign(estimate) * (abs(estimate) + self.bias(r2dz_x, r2yz_dx))
 
-    def adjusted_se(self, r2dz_x, r2yz_dx):
+        Parameters
+        ----------
+        r2dz_x, r2yz_dx : float or np.ndarray
+            Partial R2 parameters of the confounder.
+        treatment : str
+            The treatment variable.
+        reduce : bool, default True
+            If True, assumes bias moves the estimate toward zero (conservative).
+            If False, assumes bias moves estimate away from zero.
+
+        Returns
+        -------
+        float or np.ndarray
+            The adjusted coefficient.
+        """
+        idx = self.model._coefnames.index(treatment)
+        estimate = self.model._beta_hat[idx]
+
+        if reduce:
+            return np.sign(estimate) * (abs(estimate) - self.bias(r2dz_x, r2yz_dx, treatment = treatment))
+        else:
+            return np.sign(estimate) * (abs(estimate) + self.bias(r2dz_x, r2yz_dx, treatment = treatment))
+
+    def adjusted_se(self, r2dz_x, r2yz_dx, treatment):
         """
         Compute the bias-adjusted Standard Error estimate.
+
+        Parameters
+        ----------
+        r2dz_x, r2yz_dx : float or np.ndarray
+            Partial R2 parameters of the confounder.
+        treatment : str
+            The treatment variable.
+
+        Returns
+        -------
+        float or np.ndarray
+            The adjusted standard error.
         """
         df = self.model._df_t
-        se = self.model._se
+        idx = self.model._coefnames.index(treatment)
+        se = self.model._se[idx]
 
         return np.sqrt((1 - r2yz_dx) / (1 - r2dz_x)) * se * np.sqrt(df / (df - 1))
 
-    def adjusted_t(self, r2dz_x, r2yz_dx, reduce=True, h0=0):
+    def adjusted_t(self, r2dz_x, r2yz_dx, treatment, reduce=True, h0=0):
         """
         Compute the bias-adjusted t-statistic.
+
+        Parameters
+        ----------
+        r2dz_x, r2yz_dx : float or np.ndarray
+            Partial R2 parameters of the confounder.
+        treatment : str
+            The treatment variable.
+        reduce : bool, default True
+            Whether to reduce the estimate magnitude.
+        h0 : float, default 0
+            The null hypothesis value for the t-test.
+
+        Returns
+        -------
+        float or np.ndarray
+            The adjusted t-statistic.
         """
-        new_estimate = self.adjusted_estimate(r2dx_x, r2yz_dx, reduce = reduce)
-        new_se = self.adjusted_se(r2dx_x, r2yz_dx)
+        new_estimate = self.adjusted_estimate(r2dz_x, r2yz_dx, treatment = treatment, reduce = reduce)
+        new_se = self.adjusted_se(r2dz_x, r2yz_dx, treatment = treatment)
         return (new_estimate - h0) / new_se
+
+    def summary(self, treatment=None, benchmark_covariates=None, kd=[1, 2, 3], ky=None, q=1, alpha=0.05, reduce=True, decimals=3):
+        """
+        Print a summary of the sensitivity analysis.
+
+        Parameters
+        ----------
+        treatment : str
+            The name of the treatment variable. If None, defaults to the first variable.
+        benchmark_covariates : list or str, optional
+            The list of covariates to use for bounding. If provided, the bounds table is printed.
+        kd : list, optional
+            Multipliers for the strength of the confounder with the treatment (default [1, 2, 3]).
+        ky : list, optional
+            Multipliers for the strength of the confounder with the outcome (default same as kd).
+        q : float
+            The percent reduction in the estimate considered problematic (default 1 = 100%).
+        alpha : float
+            Significance level for the Robustness Value (default 0.05).
+        reduce : bool
+            Whether the bias reduces the absolute value of the estimate (default True).
+        decimals : int
+            Number of decimal places to print.
+        """
+        if treatment is None:
+            treatment = self.model._coefnames[0]
+
+        if ky is None:
+            ky = kd
+
+        formula = self.model._fml
+        stats = self.sensitivity_stats(X=treatment, q=q, alpha=alpha)
+        est = stats['estimate']
+        se = stats['se']
+        t_stat = est / se
+        partial_r2 = stats['partial_R2']
+        rv_q = stats['rv_q']
+        rv_qa = stats['rv_qa']
+
+        print("Sensitivity Analysis to Unobserved Confounding\n")
+        print(f"Model Formula: {formula}\n")
+
+        print(f"Null hypothesis: q = {q} and reduce = {reduce} ")
+
+        h0 = (1 - q) * est
+        print(f"-- The null hypothesis deemed problematic is H0:tau = {h0:.{decimals}f} \n")
+
+        print(f"Unadjusted Estimates of '{treatment}':")
+        print(f"  Coef. estimate: {est:.{decimals}f}")
+        print(f"  Standard Error: {se:.{decimals}f}")
+        print(f"  t-value: {t_stat:.{decimals}f} \n")
+
+        print("Sensitivity Statistics:")
+        print(f"  Partial R2 of treatment with outcome: {partial_r2:.{decimals}f}")
+        print(f"  Robustness Value, q = {q} : {rv_q:.{decimals}f}")
+        print(f"  Robustness Value, q = {q} alpha = {alpha} : {rv_qa:.{decimals}f} \n")
+
+        if benchmark_covariates is not None:
+            print("Bounds on omitted variable bias:")
+
+            bounds_df = self.ovb_bounds(
+                treatment=treatment,
+                benchmark_covariates=benchmark_covariates,
+                kd=kd,
+                ky=ky,
+                alpha=alpha,
+                adjusted_estimate=True
+            )
+
+            cols = ['bound_label', 'r2dz_x', 'r2yz_dx', 'treatment',
+                    'adjusted_estimate', 'adjusted_se', 'adjusted_t',
+                    'adjusted_lower_CI', 'adjusted_upper_CI']
+
+            cols = [c for c in cols if c in bounds_df.columns]
+
+            print(bounds_df[cols].to_string(index=True, float_format=lambda x: f"{x:.{6}f}" if abs(
+                x) < 1e-3 else f"{x:.{decimals}f}"))
