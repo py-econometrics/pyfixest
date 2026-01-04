@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from pyfixest.estimation.estimation import feols
+from pyfixest.estimation import feols
 
 
 def test_multicollinearity_error():

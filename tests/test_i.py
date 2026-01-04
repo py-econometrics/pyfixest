@@ -20,7 +20,7 @@ import rpy2.robjects as ro
 from rpy2.robjects import pandas2ri
 from rpy2.robjects.packages import importr
 
-from pyfixest.estimation.estimation import feols
+from pyfixest.estimation import feols
 
 pandas2ri.activate()
 

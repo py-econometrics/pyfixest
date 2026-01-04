@@ -3,7 +3,7 @@ from typing import Optional, cast
 import pandas as pd
 
 from pyfixest.did.did import DID
-from pyfixest.estimation.estimation import feols
+from pyfixest.estimation import feols
 from pyfixest.estimation.feols_ import Feols
 
 

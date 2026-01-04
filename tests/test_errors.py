@@ -12,7 +12,7 @@ from pyfixest.errors import (
     UnderDeterminedIVError,
     VcovTypeNotSupportedError,
 )
-from pyfixest.estimation.estimation import feols, fepois
+from pyfixest.estimation import feols, fepois
 from pyfixest.estimation.FormulaParser import FixestFormulaParser
 from pyfixest.estimation.multcomp import rwolf
 from pyfixest.report.summarize import etable, summary

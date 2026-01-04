@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 from scipy.stats import norm
 
-from pyfixest.estimation.estimation import feols
+from pyfixest.estimation import feols
 from pyfixest.estimation.feols_ import Feols
 
 from .did2s import DID

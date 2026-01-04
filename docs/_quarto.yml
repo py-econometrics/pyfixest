@@ -31,6 +31,8 @@ website:
         file: changelog.qmd
       - text: "Contributing"
         file: contributing.qmd
+      - text: "Sprint 2026"
+        file: pyfixest-sprint.md
       - text: Learn more
         menu:
         - text: "Regression Tables and Summary Statistics"
@@ -76,10 +78,10 @@ quartodoc:
       desc: |
         User facing estimation functions
       contents:
-        - estimation.estimation.feols
-        - estimation.estimation.fepois
-        - estimation.estimation.feglm
-        - estimation.estimation.quantreg
+        - estimation.api.feols.feols
+        - estimation.api.fepois.fepois
+        - estimation.api.feglm.feglm
+        - estimation.api.quantreg.quantreg
         - did.estimation.did2s
         - did.estimation.lpdid
         - did.estimation.event_study
