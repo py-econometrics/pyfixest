@@ -99,10 +99,10 @@ class Formula:
         if not self.intercept:
             independent = f"{independent}-1"
         formula = f"{self.dependent}~{independent}"
-        if self.endogenous is not None and self.instruments is not None:
-            formula = f"{formula}|{self.endogenous}~{self.instruments}"
         if self.fixed_effects is not None:
             formula = f"{formula}|{self.fixed_effects}"
+        if self.endogenous is not None and self.instruments is not None:
+            formula = f"{formula}|{self.endogenous}~{self.instruments}"
         return formula
 
     @property
