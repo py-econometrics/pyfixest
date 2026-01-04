@@ -309,42 +309,87 @@ class _Pattern:
 
 def _parse_parts(formula: str) -> tuple[str, list[str]]:
     """
-    Parse parts of a one- to three-sided formula string of the form 
-    "`dependent ~ independent | fixed effects | endogenous ~ instruments`".
+    Parse parts of a one- to three-sided formula string.
+
+    Valid formats:
+    - 1 part:  `dependent ~ independent` (OLS)
+    - 2 parts: `dependent ~ independent | fixed_effects` (OLS with FE)
+               or `dependent ~ independent | endogenous ~ instruments` (IV)
+    - 3 parts: `dependent ~ independent | fixed_effects | endogenous ~ instruments` (IV with FE)
+
+    Tilde requirements by position (0-indexed):
+    - Part 0 (main): ALWAYS needs exactly 1 tilde
+    - Part 1 (FE):   NEVER has a tilde
+    - Part 2 (IV):   ALWAYS needs exactly 1 tilde (if exists)
 
     Parameters
     ----------
-    formula: str
-        The three sided formula string.
+    formula : str
+        The formula string to parse.
 
     Returns
     -------
-        main_part: str
-        other_parts: list[str]
+    tuple[str, list[str]]
+        main_part: The first part containing `dependent ~ independent`
+        other_parts: Remaining parts (fixed effects and/or IV specification)
+
+    Raises
+    ------
+    FormulaSyntaxError
+        If the formula has invalid structure.
     """
     max_parts: Final[int] = 3
-    min_tildes: Final[int] = 1
-    max_tildes: Final[int] = 2
 
     parts = re.split(_Pattern.parts, formula.strip())
+
+    # Check: at most 3 parts
     if len(parts) > max_parts:
         raise FormulaSyntaxError(
-            f"Formula can have at most {max_parts} parts `dependent ~ independent | fixed effects | endogenous ~ instruments`, "
-            f"received {len(parts)}: {formula}"
+            f"Formula can have at most {max_parts} parts separated by '|'. "
+            f"Received {len(parts)}: '{formula}'"
         )
-    n_tildes_per_part: list[int] = [part.count("~") for part in parts]
-    if max(n_tildes_per_part) > 1:
+
+    def has_tilde(part: str) -> bool:
+        return "~" in part
+
+    def has_multiple_tildes(part: str) -> bool:
+        return part.count("~") > 1
+
+    # Check: no part has more than one tilde
+    parts_with_multiple_tildes = [p for p in parts if has_multiple_tildes(p)]
+    if parts_with_multiple_tildes:
         raise FormulaSyntaxError(
-            f"A formula part can contain at most 1 `~`: {[part for part, n_tildes in zip(parts, n_tildes_per_part) if n_tildes > 1]}"
+            f"Each formula part can contain at most one '~'. "
+            f"Invalid parts: {parts_with_multiple_tildes}"
         )
-    elif sum(n_tildes_per_part) < min_tildes:
-        raise FormulaSyntaxError(f"Formula string must have at least {min_tildes} `~`.")
-    elif sum(n_tildes_per_part) > max_tildes:
-        raise FormulaSyntaxError(
-            f"Formula string can have at most {max_tildes} `~`: in the main part and optionally in an instrumental variable part."
-        )
-    main_part = parts.pop(0)
-    return main_part, parts
+
+    # Check structure based on number of parts
+    if len(parts) == 1:
+        # Format: Y ~ X
+        if not has_tilde(parts[0]):
+            raise FormulaSyntaxError(f"Formula must contain '~': '{formula}'")
+    elif len(parts) == 2:
+        # Format: Y ~ X | fe  OR  Y ~ X | endog ~ instr
+        # Part 0 must have a tilde
+        if not has_tilde(parts[0]):
+            raise FormulaSyntaxError(
+                f"First part must contain '~' (dependent ~ independent): '{parts[0]}'"
+            )
+    elif len(parts) == 3:
+        # Format: Y ~ X | fe | endog ~ instr
+        # Parts 0 and 2 must have tildes
+        if not has_tilde(parts[0]):
+            raise FormulaSyntaxError(
+                f"First part must contain '~' (dependent ~ independent): '{parts[0]}'"
+            )
+        if not has_tilde(parts[2]):
+            raise FormulaSyntaxError(
+                "Three-part formula requires IV specification in third part: "
+                "'dependent ~ independent | fixed_effects | endogenous ~ instruments'. "
+            )
+
+    main_part, *other_parts = parts
+    return main_part, other_parts
 
 
 def _parse_dependent_independent(part: str) -> tuple[list[str], list[str]]:

@@ -379,6 +379,26 @@ class TestParseErrors:
         with pytest.raises((FormulaSyntaxError, ValueError)):
             parse("Y ~ X1 ~ X2 ~ X3")
 
+    def test_three_parts_without_iv_raises_error(self):
+        """Test that Y ~ X | f1 | f2 raises an error (should be Y ~ X | f1 + f2)."""
+        with pytest.raises(FormulaSyntaxError, match="Three-part formula"):
+            parse("Y ~ X1 | f1 | f2")
+
+    def test_three_parts_with_iv_is_valid(self):
+        """Test that Y ~ X | f1 | Z ~ W parses correctly."""
+        parsed = parse("Y ~ X1 | f1 | Z ~ W")
+        assert parsed.is_iv is True
+        assert parsed.is_fixed_effects is True
+        assert parsed.fixed_effects.constant == ["f1"]
+        assert parsed.endogenous == ["Z"]
+
+    def test_multiple_fe_with_plus_is_valid(self):
+        """Test that Y ~ X | f1 + f2 parses correctly."""
+        parsed = parse("Y ~ X1 | f1 + f2")
+        assert parsed.is_iv is False
+        assert parsed.is_fixed_effects is True
+        assert parsed.fixed_effects.constant == ["f1", "f2"]
+
 
 # =============================================================================
 # Part 2: Multiple Estimation & Structure Tests
