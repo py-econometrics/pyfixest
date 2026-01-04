@@ -3,10 +3,10 @@ website:
   - contents:
     - reference/index.qmd
     - contents:
-      - reference/estimation.api.feols.qmd
-      - reference/estimation.api.fepois.qmd
-      - reference/estimation.api.feglm.qmd
-      - reference/estimation.api.quantreg.qmd
+      - reference/estimation.api.feols.feols.qmd
+      - reference/estimation.api.fepois.fepois.qmd
+      - reference/estimation.api.feglm.feglm.qmd
+      - reference/estimation.api.quantreg.quantreg.qmd
       - reference/did.estimation.did2s.qmd
       - reference/did.estimation.lpdid.qmd
       - reference/did.estimation.event_study.qmd
