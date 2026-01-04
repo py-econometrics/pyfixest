@@ -291,6 +291,22 @@ class ParsedFormula:
         dict[str | None, list[Formula]]
             Dictionary mapping fixed effects specifications to lists of Formula objects.
             The key is the fixed effects string, or None if no fixed effects.
+
+        Examples
+        --------
+        >>> parse("Y ~ sw(X1, X2) | f1").specifications
+        {
+            "f1": [
+                Formula(dependent="Y", independent="X1", fixed_effects="f1"),
+                Formula(dependent="Y", independent="X2", fixed_effects="f1"),
+            ]
+        }
+
+        >>> parse("Y ~ X1 | sw(f1, f2)").specifications
+        {
+            "f1": [Formula(dependent="Y", independent="X1", fixed_effects="f1")],
+            "f2": [Formula(dependent="Y", independent="X1", fixed_effects="f2")],
+        }
         """
         # Get formulas by group of fixed effects
         estimations: defaultdict[str | None, list[Formula]] = defaultdict(list[Formula])
