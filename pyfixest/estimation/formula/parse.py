@@ -220,12 +220,24 @@ class ParsedFormula:
         -------
         bool
             True if the formula includes multiple dependent variables, stepwise
-            specifications, or multiple fixed effects specifications.
+            specifications in any part (independent, fixed effects, endogenous,
+            or instruments).
         """
         return (
             (len(self.dependent) > 1)
             or self.independent.is_multiple
             or (self.fixed_effects is not None and self.fixed_effects.is_multiple)
+            or self._has_multiple_estimation_in_iv
+        )
+
+    @property
+    def _has_multiple_estimation_in_iv(self) -> bool:
+        """Check if endogenous or instruments contain multiple estimation syntax."""
+        if self.endogenous is None and self.instruments is None:
+            return False
+        iv_variables = (self.endogenous or []) + (self.instruments or [])
+        return any(
+            re.match(_Pattern.multiple_estimation, var) for var in iv_variables
         )
 
     @property
@@ -455,24 +467,6 @@ def _parse_instrumental_variable(
             raise UnderDeterminedIVError(
                 "The IV system is underdetermined. "
                 "Please provide as many or more instruments as endogenous variables."
-            )
-        endogenous_have_multiple_estimation = [
-            variable
-            for variable in endogenous
-            if re.match(_Pattern.multiple_estimation, variable)
-        ]
-        if endogenous_have_multiple_estimation:
-            raise FormulaSyntaxError(
-                "Endogenous variables cannot have multiple estimations."
-            )
-        instruments_have_multiple_estimation = [
-            variable
-            for variable in instruments
-            if re.match(_Pattern.multiple_estimation, variable)
-        ]
-        if instruments_have_multiple_estimation:
-            raise FormulaSyntaxError(
-                "Instruments cannot have multiple estimations."
             )
         if len(endogenous) > 1:
             raise FormulaSyntaxError(
