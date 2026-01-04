@@ -6,6 +6,7 @@ format:
 toc: true
 toc-title: "On this page"
 toc-location: left
+freeze: auto
 ---
 
 `PyFixest` supports event study designs via the canonical two-way fixed effects design, the 2-Step imputation estimator, and local projections.
