@@ -38,6 +38,7 @@ from pyfixest.estimation.ritest import (
     _get_ritest_stats_slow,
     _plot_ritest_pvalue,
 )
+from pyfixest.estimation.sensitivity import SensitivityAnalysis
 from pyfixest.estimation.solvers import solve_ols
 from pyfixest.estimation.vcov_utils import (
     _check_cluster_df,
@@ -2662,6 +2663,9 @@ class Feols:
             self._N += X_new.shape[0]
 
         return beta_n_plus_1
+
+    def sensitivity_analysis(self) -> SensitivityAnalysis:
+        return SensitivityAnalysis(self)
 
 
 def _feols_input_checks(Y: np.ndarray, X: np.ndarray, weights: np.ndarray):
