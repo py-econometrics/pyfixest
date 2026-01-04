@@ -363,6 +363,16 @@ class TestParseErrors:
         with pytest.raises(NotImplementedError):
             parse("Y ~ 1 | sw(f1, f2) | Z1 ~ X1")
 
+    def test_multiple_estimation_in_endogenous(self):
+        """Test error for multiple estimation in endogenous variables."""
+        with pytest.raises(FormulaSyntaxError, match="Endogenous variables"):
+            parse("Y ~ X1 | sw(Z1, Z2) ~ W")
+
+    def test_multiple_estimation_in_instruments(self):
+        """Test error for multiple estimation in instruments."""
+        with pytest.raises(FormulaSyntaxError, match="Instruments"):
+            parse("Y ~ X1 | Z ~ sw(W1, W2)")
+
     def test_too_many_formula_parts(self):
         """Test error for too many formula parts."""
         with pytest.raises(FormulaSyntaxError):

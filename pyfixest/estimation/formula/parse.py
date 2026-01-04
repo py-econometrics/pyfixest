@@ -465,6 +465,15 @@ def _parse_instrumental_variable(
             raise FormulaSyntaxError(
                 "Endogenous variables cannot have multiple estimations."
             )
+        instruments_have_multiple_estimation = [
+            variable
+            for variable in instruments
+            if re.match(_Pattern.multiple_estimation, variable)
+        ]
+        if instruments_have_multiple_estimation:
+            raise FormulaSyntaxError(
+                "Instruments cannot have multiple estimations."
+            )
         if len(endogenous) > 1:
             raise FormulaSyntaxError(
                 "Multiple endogenous variables are currently not supported."
