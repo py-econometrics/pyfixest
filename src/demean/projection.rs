@@ -248,9 +248,35 @@ impl<'a> MultiFEProjector<'a> {
     fn accumulate_fe_contributions(&mut self, fe_idx: usize, coef: &[f64]) {
         let start = self.ctx.index.coef_start[fe_idx];
         let fe = self.ctx.index.group_ids_for_fe(fe_idx);
+        let n = self.scratch.len().min(fe.len());
 
-        for (sum, &g) in self.scratch.iter_mut().zip(fe.iter()) {
-            *sum += coef[start + g];
+        // Manual 4x unrolling for better instruction-level parallelism.
+        unsafe {
+            let scratch_ptr = self.scratch.as_mut_ptr();
+            let fe_ptr = fe.as_ptr();
+            let coef_ptr = coef.as_ptr().add(start);
+
+            let chunks = n / 4;
+            let mut i = 0;
+
+            for _ in 0..chunks {
+                let g0 = *fe_ptr.add(i);
+                let g1 = *fe_ptr.add(i + 1);
+                let g2 = *fe_ptr.add(i + 2);
+                let g3 = *fe_ptr.add(i + 3);
+
+                *scratch_ptr.add(i) += *coef_ptr.add(g0);
+                *scratch_ptr.add(i + 1) += *coef_ptr.add(g1);
+                *scratch_ptr.add(i + 2) += *coef_ptr.add(g2);
+                *scratch_ptr.add(i + 3) += *coef_ptr.add(g3);
+
+                i += 4;
+            }
+
+            // Handle remainder
+            for j in i..n {
+                *scratch_ptr.add(j) += *coef_ptr.add(*fe_ptr.add(j));
+            }
         }
     }
 
@@ -333,22 +359,11 @@ impl Projector for MultiFEProjector<'_> {
     fn compute_ssr(&mut self, coef: &[f64]) -> f64 {
         let n_fe = self.ctx.index.n_fe;
 
-        // Compute SSR: Σ (input[i] - Σ_q coef[fe_q[i]])²
-        //
-        // We iterate over FEs in the outer loop and observations in the inner loop.
-        // This improves cache locality because:
-        // 1. group_ids_for_fe(q) returns a contiguous slice for FE q
-        // 2. We access the scratch buffer sequentially
-        // 3. The coefficient array (typically small) stays in the cache
-
         // Accumulate coefficient sums per observation using the scratch buffer
+        // (reuses the optimized unrolled gather loop)
         self.scratch.fill(0.0);
         for q in 0..n_fe {
-            let offset = self.ctx.index.coef_start[q];
-            let fe_ids = self.ctx.index.group_ids_for_fe(q);
-            for (sum, &g) in self.scratch.iter_mut().zip(fe_ids.iter()) {
-                *sum += coef[offset + g];
-            }
+            self.accumulate_fe_contributions(q, coef);
         }
 
         // Compute SSR from residuals
