@@ -510,7 +510,7 @@ def _parse_multiple_estimation(variables: list[str]) -> _MultipleEstimation:
     return _MultipleEstimation(constant=single, variable=multiple, kind=kind)
 
 
-def parse(formula: str, intercept: bool = True, sort: bool = False) -> ParsedFormula:
+def parse(formula: str, intercept: bool = True) -> ParsedFormula:
     """
     Parse a fixest model formula.
 
@@ -537,8 +537,6 @@ def parse(formula: str, intercept: bool = True, sort: bool = False) -> ParsedFor
         if FORMULAIC_FEATURE_FLAG is not DefaultFormulaParser.FeatureFlags.ALL:
             independent = [*endogenous, *independent]
         instruments = ["+".join(instruments)]
-    if sort:
-        list.sort(independent)
     return ParsedFormula(
         formula=formula,
         dependent=dependent,

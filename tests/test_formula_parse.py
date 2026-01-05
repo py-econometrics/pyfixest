@@ -201,14 +201,6 @@ class TestParseFunction:
             assert parsed.fixed_effects is not None
             assert parsed.fixed_effects.constant == expected_fe
 
-    def test_parse_with_sort(self):
-        """Test sort parameter."""
-        parsed_unsorted = parse("Y ~ Z + A + M", sort=False)
-        parsed_sorted = parse("Y ~ Z + A + M", sort=True)
-
-        assert parsed_unsorted.independent.constant == ["Z", "A", "M"]
-        assert parsed_sorted.independent.constant == ["A", "M", "Z"]
-
     def test_parse_intercept_parameter(self):
         """Test intercept parameter is passed through."""
         with_intercept = parse("Y ~ X1", intercept=True)
@@ -576,14 +568,6 @@ class TestEdgeCases:
         parsed = parse("Y ~ X1 | f1")
         fml_dict = parsed.specifications
         assert "f1" in fml_dict
-
-    def test_sort_parameter_effect(self):
-        """Test sort parameter sorts independent variables."""
-        parsed_unsorted = parse("Y ~ Z + A + M", sort=False)
-        parsed_sorted = parse("Y ~ Z + A + M", sort=True)
-
-        assert parsed_unsorted.independent.constant == ["Z", "A", "M"]
-        assert parsed_sorted.independent.constant == ["A", "M", "Z"]
 
     def test_intercept_parameter_in_formula(self):
         """Test intercept parameter affects Formula generation."""
