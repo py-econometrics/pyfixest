@@ -5,8 +5,6 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Final
 
-from formulaic.parser import DefaultFormulaParser
-
 from pyfixest.errors import (
     DuplicateKeyError,
     EndogVarsAsCovarsError,
@@ -14,7 +12,6 @@ from pyfixest.errors import (
     InstrumentsAsCovarsError,
     UnderDeterminedIVError,
 )
-from pyfixest.estimation.formula import FORMULAIC_FEATURE_FLAG
 
 
 class _MultipleEstimationType(StrEnum):
@@ -155,12 +152,6 @@ class Formula:
         independent = f"{self.independent}"
         if not self.intercept:
             independent = f"{independent}-1"
-        if (
-            FORMULAIC_FEATURE_FLAG is DefaultFormulaParser.FeatureFlags.ALL
-            and self.endogenous is not None
-            and self.instruments is not None
-        ):
-            independent = f"{independent}+[{self.endogenous}~{self.instruments}]"
         return f"{self.dependent}~{independent}"
 
 
@@ -534,8 +525,7 @@ def parse(formula: str, intercept: bool = True) -> ParsedFormula:
     fixed_effects = _parse_fixed_effects(other_parts)
     endogenous, instruments = _parse_instrumental_variable(other_parts, independent)
     if endogenous is not None and instruments is not None:
-        if FORMULAIC_FEATURE_FLAG is not DefaultFormulaParser.FeatureFlags.ALL:
-            independent = [*endogenous, *independent]
+        independent = [*endogenous, *independent]
         instruments = ["+".join(instruments)]
     return ParsedFormula(
         formula=formula,
