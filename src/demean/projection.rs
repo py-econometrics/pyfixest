@@ -95,7 +95,7 @@ impl<'a> TwoFEProjector<'a> {
         }
     }
 
-    /// Compute beta coefficients from alpha, storing result in scratch buffer.
+    /// Compute beta coefficients from alpha, storing the result in the scratch buffer.
     ///
     /// For each group g1 in FE1:
     ///   beta[g1] = (in_out[g1] - Σ alpha[g0] * w) / group_weight[g1]
@@ -176,7 +176,7 @@ impl Projector for TwoFEProjector<'_> {
         coef_out[n0..n0 + n1].copy_from_slice(&self.scratch[..n1]);
     }
 
-    /// Compute sum of squared residuals for the given coefficients.
+    /// Compute the sum of squared residuals for the given coefficients.
     ///
     /// # Side Effects
     ///

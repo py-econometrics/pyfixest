@@ -180,7 +180,7 @@ impl MultiFEBuffers {
         }
     }
 
-    /// Reset all buffers to zero for a new solve.
+    /// Reset all buffers to zero for a new call to solve.
     #[inline]
     fn reset(&mut self) {
         self.mu.fill(0.0);
@@ -188,7 +188,7 @@ impl MultiFEBuffers {
     }
 }
 
-/// Demeaner for 3+ fixed effects: multi-phase strategy.
+/// Demeaner for 3+ fixed effects: multiphase strategy.
 ///
 /// Owns working buffers that are reused across multiple `solve()` calls.
 ///
@@ -311,7 +311,7 @@ impl<'a> MultiFEDemeaner<'a> {
         }
     }
 
-    /// Compute final output and return result.
+    /// Compute the final output and return the result.
     fn finalize_output(
         &self,
         input: &[f64],

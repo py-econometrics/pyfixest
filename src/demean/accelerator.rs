@@ -204,7 +204,7 @@ impl IronsTuckGrand {
 
     /// Perform the core Irons-Tuck acceleration step.
     ///
-    /// Returns `Converged` if convergence detected, `NotConverged` to continue.
+    /// Returns `Converged` if convergence is detected, `NotConverged` to continue.
     #[inline]
     fn acceleration_step_check<P: Projector>(
         &mut self,
@@ -335,16 +335,16 @@ impl IronsTuckGrand {
     ///
     /// # How it works
     ///
-    /// Every `iter_grand_acc` iterations, this function is called to advance a
+    /// Every `iter_grand_acc` iteration, this function is called to advance a
     /// 3-phase state machine:
     ///
     /// 1. **Collect1st**: Store current `gx` as the first snapshot (`y`)
     /// 2. **Collect2nd**: Store current `gx` as the second snapshot (`gy`)
-    /// 3. **Collect3rdAndAccelerate**: Store current `gx` as third snapshot (`ggy`),
+    /// 3. **Collect3rdAndAccelerate**: Store current `gx` as the third snapshot (`ggy`),
     ///    then apply Irons-Tuck to (y, gy, ggy) to extrapolate toward the fixed point
     ///
     /// After phase 3, the cycle repeats. This means actual acceleration happens
-    /// every `3 × iter_grand_acc` iterations.
+    /// every `3 × iter_grand_acc` iteration.
     #[inline]
     fn grand_acceleration_step<P: Projector>(
         &mut self,

@@ -113,7 +113,7 @@ pub(crate) fn demean(
             // Body closure: called for each column, reusing thread-local state
             |demeaner, (k, mut col)| {
                 let col_view = x.column(k);
-                // Zero-copy if column is contiguous (F-order), otherwise copy
+                // Zero-copy if the column is contiguous (F-order), otherwise copy
                 let result = if let Some(slice) = col_view.as_slice() {
                     demeaner.solve(slice)
                 } else {
