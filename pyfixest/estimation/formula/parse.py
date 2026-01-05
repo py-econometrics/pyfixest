@@ -236,9 +236,7 @@ class ParsedFormula:
         if self.endogenous is None and self.instruments is None:
             return False
         iv_variables = (self.endogenous or []) + (self.instruments or [])
-        return any(
-            re.match(_Pattern.multiple_estimation, var) for var in iv_variables
-        )
+        return any(re.match(_Pattern.multiple_estimation, var) for var in iv_variables)
 
     @property
     def is_fixed_effects(self) -> bool:

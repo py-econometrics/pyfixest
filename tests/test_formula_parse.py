@@ -7,6 +7,8 @@ This module contains:
 - Part 3: Edge case tests
 """
 
+import re
+
 import numpy as np
 import pytest
 
@@ -396,7 +398,9 @@ class TestParseErrors:
 
     def test_three_parts_with_tilde_in_fe_raises_error(self):
         """Test that Y ~ X | Z ~ W | A ~ B raises an error (FE part has tilde)."""
-        with pytest.raises(FormulaSyntaxError, match="fixed effects.*cannot contain"):
+        with pytest.raises(
+            FormulaSyntaxError, match=re.compile("fixed effects.*cannot contain")
+        ):
             parse("Y ~ X | Z ~ W | A ~ B")
 
     def test_three_parts_with_iv_is_valid(self):
