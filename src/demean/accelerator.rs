@@ -436,10 +436,11 @@ mod tests {
         let n1 = ctx.index.n_groups[1];
         let n_coef = n0 + n1;
 
-        let in_out = ctx.apply_design_matrix_t(&input);
+        let mut coef_sums = vec![0.0; n_coef];
+        ctx.apply_design_matrix_t(&input, &mut coef_sums);
         let mut coef = vec![0.0; n_coef];
         let mut accelerator = IronsTuckGrand::new(config, n_coef);
-        let mut projector = TwoFEProjector::new(&ctx, &in_out, &input);
+        let mut projector = TwoFEProjector::new(&ctx, &coef_sums, &input);
 
         let (iter, convergence) = accelerator.run(&mut projector, &mut coef, maxiter);
 

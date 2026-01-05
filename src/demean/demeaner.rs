@@ -44,16 +44,21 @@ pub trait Demeaner {
 
 /// Demeaner for 1 fixed effect: O(n) closed-form solution.
 ///
-/// No iteration or buffers needed - direct computation.
+/// Owns a reusable buffer for the coefficient-space sums.
 pub struct SingleFEDemeaner<'a> {
     ctx: &'a DemeanContext,
+    /// Weighted sums per group (Dᵀ · input), reused across solves.
+    coef_sums_buffer: Vec<f64>,
 }
 
 impl<'a> SingleFEDemeaner<'a> {
     /// Create a new single-FE demeaner.
     #[inline]
     pub fn new(ctx: &'a DemeanContext) -> Self {
-        Self { ctx }
+        Self {
+            ctx,
+            coef_sums_buffer: vec![0.0; ctx.index.n_coef],
+        }
     }
 }
 
@@ -61,16 +66,16 @@ impl Demeaner for SingleFEDemeaner<'_> {
     fn solve(&mut self, input: &[f64]) -> DemeanResult {
         let n_obs = self.ctx.index.n_obs;
 
-        // Apply Dᵀ to get coefficient-space sums
-        let in_out = self.ctx.apply_design_matrix_t(input);
+        // Apply Dᵀ to get coefficient-space sums (reuses buffer)
+        self.ctx.apply_design_matrix_t(input, &mut self.coef_sums_buffer);
 
         let fe0 = self.ctx.index.group_ids_for_fe(0);
         let group_weights = self.ctx.group_weights_for_fe(0);
 
         // output[i] = input[i] - group_mean[fe0[i]]
-        // where group_mean[g] = in_out[g] / group_weights[g]
+        // where group_mean[g] = coef_sums_buffer[g] / group_weights[g]
         let demeaned: Vec<f64> = (0..n_obs)
-            .map(|i| input[i] - in_out[fe0[i]] / group_weights[fe0[i]])
+            .map(|i| input[i] - self.coef_sums_buffer[fe0[i]] / group_weights[fe0[i]])
             .collect();
 
         // Single FE is a closed-form solution, always converges in 0 iterations
@@ -92,7 +97,9 @@ impl Demeaner for SingleFEDemeaner<'_> {
 pub struct TwoFEDemeaner<'a> {
     ctx: &'a DemeanContext,
     config: &'a FixestConfig,
-    /// Coefficient array [alpha | beta], reused across calls to solve
+    /// Weighted sums per group (Dᵀ · input), reused across solves.
+    coef_sums_buffer: Vec<f64>,
+    /// Coefficient array [alpha | beta], reused across calls to solve.
     coef: Vec<f64>,
     /// Accelerator with internal buffers, reused across solves
     accelerator: IronsTuckGrand,
@@ -109,6 +116,7 @@ impl<'a> TwoFEDemeaner<'a> {
         Self {
             ctx,
             config,
+            coef_sums_buffer: vec![0.0; n_coef],
             coef: vec![0.0; n_coef],
             accelerator: IronsTuckGrand::new(*config, n_coef),
         }
@@ -120,14 +128,14 @@ impl Demeaner for TwoFEDemeaner<'_> {
         let n_obs = self.ctx.index.n_obs;
         let n0 = self.ctx.index.n_groups[0];
 
-        // Apply Dᵀ to get coefficient-space sums
-        let in_out = self.ctx.apply_design_matrix_t(input);
+        // Apply Dᵀ to get coefficient-space sums (reuses buffer)
+        self.ctx.apply_design_matrix_t(input, &mut self.coef_sums_buffer);
 
         // Reset coefficient array for this call to solve
         self.coef.fill(0.0);
 
-        // Create the projector (lightweight, references in_out and input)
-        let mut projector = TwoFEProjector::new(self.ctx, &in_out, input);
+        // Create the projector (lightweight, references coef_sums_buffer and input)
+        let mut projector = TwoFEProjector::new(self.ctx, &self.coef_sums_buffer, input);
 
         // Run acceleration loop
         let (iter, convergence) = self
@@ -165,8 +173,10 @@ struct MultiFEBuffers {
     coef: Vec<f64>,
     /// Coefficient array for 2-FE sub-convergence (coefficient-space, first 2 FEs only)
     coef_2fe: Vec<f64>,
-    /// Effective input after subtracting mu (observation-space)
+    /// Effective input after subtracting mu (observation-space).
     effective_input: Vec<f64>,
+    /// Weighted sums per group (Dᵀ · input), reused across phases.
+    coef_sums_buffer: Vec<f64>,
 }
 
 impl MultiFEBuffers {
@@ -177,6 +187,7 @@ impl MultiFEBuffers {
             coef: vec![0.0; n_coef],
             coef_2fe: vec![0.0; n_coef_2fe],
             effective_input: vec![0.0; n_obs],
+            coef_sums_buffer: vec![0.0; n_coef],
         }
     }
 
@@ -229,14 +240,16 @@ impl<'a> MultiFEDemeaner<'a> {
 
     /// Phase 1: Warmup with all FEs to get initial estimates.
     fn warmup_phase(&mut self, input: &[f64]) -> (usize, ConvergenceState) {
-        let in_out = self.ctx.apply_design_matrix_t(input);
-        let mut projector = MultiFEProjector::new(self.ctx, &in_out, input);
+        self.ctx
+            .apply_design_matrix_t(input, &mut self.buffers.coef_sums_buffer);
+        let mut projector = MultiFEProjector::new(self.ctx, &self.buffers.coef_sums_buffer, input);
 
         let (iter, convergence) = self
             .multi_acc
             .run(&mut projector, &mut self.buffers.coef, self.config.iter_warmup);
 
-        self.ctx.apply_design_matrix(&self.buffers.coef, &mut self.buffers.mu);
+        self.ctx
+            .apply_design_matrix(&self.buffers.coef, &mut self.buffers.mu);
         (iter, convergence)
     }
 
@@ -252,14 +265,17 @@ impl<'a> MultiFEDemeaner<'a> {
             self.buffers.effective_input[i] = input[i] - self.buffers.mu[i];
         }
 
-        // Apply Dᵀ to residuals (only need first 2 FEs)
-        let in_out_full = self.ctx.apply_design_matrix_t(&self.buffers.effective_input);
-        let in_out_2fe: Vec<f64> = in_out_full[..n_coef_2fe].to_vec();
+        // Apply Dᵀ to residuals (reuses buffer, only first 2 FEs used below)
+        self.ctx
+            .apply_design_matrix_t(&self.buffers.effective_input, &mut self.buffers.coef_sums_buffer);
 
-        // Run 2-FE acceleration
+        // Run 2-FE acceleration (use slice of coef_sums_buffer, no copy needed)
         self.buffers.coef_2fe.fill(0.0);
-        let mut projector =
-            TwoFEProjector::new(self.ctx, &in_out_2fe, &self.buffers.effective_input);
+        let mut projector = TwoFEProjector::new(
+            self.ctx,
+            &self.buffers.coef_sums_buffer[..n_coef_2fe],
+            &self.buffers.effective_input,
+        );
         let (iter, convergence) = self.two_acc.run(
             &mut projector,
             &mut self.buffers.coef_2fe,
@@ -287,15 +303,17 @@ impl<'a> MultiFEDemeaner<'a> {
             self.buffers.effective_input[i] = input[i] - self.buffers.mu[i];
         }
 
-        let in_out = self.ctx.apply_design_matrix_t(&self.buffers.effective_input);
+        self.ctx
+            .apply_design_matrix_t(&self.buffers.effective_input, &mut self.buffers.coef_sums_buffer);
         self.buffers.coef.fill(0.0);
 
-        let mut projector = MultiFEProjector::new(self.ctx, &in_out, input);
+        let mut projector = MultiFEProjector::new(self.ctx, &self.buffers.coef_sums_buffer, input);
         let (iter, convergence) =
             self.multi_acc
                 .run(&mut projector, &mut self.buffers.coef, remaining);
 
-        self.ctx.apply_design_matrix(&self.buffers.coef, &mut self.buffers.mu);
+        self.ctx
+            .apply_design_matrix(&self.buffers.coef, &mut self.buffers.mu);
         (iter, convergence)
     }
 

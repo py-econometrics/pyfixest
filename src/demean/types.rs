@@ -384,25 +384,31 @@ impl DemeanContext {
 
     /// Apply transpose of design matrix: Dᵀ · values.
     ///
-    /// Computes weighted sums of `values` for each group in each FE.
-    /// Returns a vector of length `n_coef` with the aggregated sums.
+    /// Computes weighted sums of `values` for each group in each FE,
+    /// writing the result to `out`. The buffer is zeroed before accumulation.
     #[inline]
-    pub fn apply_design_matrix_t(&self, values: &[f64]) -> Vec<f64> {
-        let mut result = vec![0.0; self.index.n_coef];
+    pub fn apply_design_matrix_t(&self, values: &[f64], out: &mut [f64]) {
+        debug_assert_eq!(
+            out.len(),
+            self.index.n_coef,
+            "output buffer length ({}) must match n_coef ({})",
+            out.len(),
+            self.index.n_coef
+        );
+        out.fill(0.0);
         for q in 0..self.index.n_fe {
             let offset = self.index.coef_start[q];
             let fe_ids = self.index.group_ids_for_fe(q);
             if self.weights.is_uniform {
                 for (i, &g) in fe_ids.iter().enumerate() {
-                    result[offset + g] += values[i];
+                    out[offset + g] += values[i];
                 }
             } else {
                 for (i, &g) in fe_ids.iter().enumerate() {
-                    result[offset + g] += values[i] * self.weights.per_obs[i];
+                    out[offset + g] += values[i] * self.weights.per_obs[i];
                 }
             }
         }
-        result
     }
 
     /// Apply design matrix and add to output: output += D · coef.

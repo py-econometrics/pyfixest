@@ -77,7 +77,8 @@ pub trait Projector {
 /// where alpha are the coefficients for FE 0 and beta for FE 1.
 pub struct TwoFEProjector<'a> {
     ctx: &'a DemeanContext,
-    in_out: &'a [f64],
+    /// Weighted sums per group (Dᵀ · input).
+    coef_sums: &'a [f64],
     input: &'a [f64],
     scratch: Vec<f64>,
 }
@@ -85,11 +86,11 @@ pub struct TwoFEProjector<'a> {
 impl<'a> TwoFEProjector<'a> {
     /// Create a new 2-FE projector.
     #[inline]
-    pub fn new(ctx: &'a DemeanContext, in_out: &'a [f64], input: &'a [f64]) -> Self {
+    pub fn new(ctx: &'a DemeanContext, coef_sums: &'a [f64], input: &'a [f64]) -> Self {
         let n1 = ctx.index.n_groups[1];
         Self {
             ctx,
-            in_out,
+            coef_sums,
             input,
             scratch: vec![0.0; n1],
         }
@@ -98,7 +99,7 @@ impl<'a> TwoFEProjector<'a> {
     /// Compute beta coefficients from alpha, storing the result in the scratch buffer.
     ///
     /// For each group g1 in FE1:
-    ///   beta[g1] = (in_out[g1] - Σ alpha[g0] * w) / group_weight[g1]
+    ///   beta[g1] = (coef_sums[g1] - Σ alpha[g0] * w) / group_weight[g1]
     #[inline(always)]
     fn compute_beta_from_alpha(&mut self, alpha: &[f64]) {
         let n0 = self.ctx.index.n_groups[0];
@@ -107,7 +108,7 @@ impl<'a> TwoFEProjector<'a> {
         let fe1 = self.ctx.index.group_ids_for_fe(1);
         let sw1 = self.ctx.group_weights_for_fe(1);
 
-        self.scratch[..n1].copy_from_slice(&self.in_out[n0..n0 + n1]);
+        self.scratch[..n1].copy_from_slice(&self.coef_sums[n0..n0 + n1]);
 
         if self.ctx.weights.is_uniform {
             for (&g0, &g1) in fe0.iter().zip(fe1.iter()) {
@@ -128,7 +129,7 @@ impl<'a> TwoFEProjector<'a> {
     /// Compute alpha coefficients from beta (stored in scratch), writing to alpha_out.
     ///
     /// For each group g0 in FE0:
-    ///   alpha[g0] = (in_out[g0] - Σ beta[g1] * w) / group_weight[g0]
+    ///   alpha[g0] = (coef_sums[g0] - Σ beta[g1] * w) / group_weight[g0]
     #[inline(always)]
     fn compute_alpha_from_beta(&self, alpha_out: &mut [f64]) {
         let n0 = self.ctx.index.n_groups[0];
@@ -136,7 +137,7 @@ impl<'a> TwoFEProjector<'a> {
         let fe1 = self.ctx.index.group_ids_for_fe(1);
         let sw0 = self.ctx.group_weights_for_fe(0);
 
-        alpha_out[..n0].copy_from_slice(&self.in_out[..n0]);
+        alpha_out[..n0].copy_from_slice(&self.coef_sums[..n0]);
 
         if self.ctx.weights.is_uniform {
             for (&g0, &g1) in fe0.iter().zip(fe1.iter()) {
@@ -221,7 +222,8 @@ impl Projector for TwoFEProjector<'_> {
 /// matching fixest's algorithm.
 pub struct MultiFEProjector<'a> {
     ctx: &'a DemeanContext,
-    in_out: &'a [f64],
+    /// Weighted sums per group (Dᵀ · input).
+    coef_sums: &'a [f64],
     input: &'a [f64],
     scratch: Vec<f64>,
 }
@@ -229,11 +231,11 @@ pub struct MultiFEProjector<'a> {
 impl<'a> MultiFEProjector<'a> {
     /// Create a new multi-FE projector.
     #[inline]
-    pub fn new(ctx: &'a DemeanContext, in_out: &'a [f64], input: &'a [f64]) -> Self {
+    pub fn new(ctx: &'a DemeanContext, coef_sums: &'a [f64], input: &'a [f64]) -> Self {
         let n_obs = ctx.index.n_obs;
         Self {
             ctx,
-            in_out,
+            coef_sums,
             input,
             scratch: vec![0.0; n_obs],
         }
@@ -255,7 +257,7 @@ impl<'a> MultiFEProjector<'a> {
     /// Update coefficients for a single FE given the accumulated other-FE sums.
     ///
     /// For each group g in FE q:
-    ///   coef_out[g] = (in_out[g] - Σ scratch[i] * w) / group_weight[g]
+    ///   coef_out[g] = (coef_sums[g] - Σ scratch[i] * w) / group_weight[g]
     #[inline(always)]
     fn update_fe_coefficients(&self, fe_idx: usize, coef_out: &mut [f64]) {
         let start = self.ctx.index.coef_start[fe_idx];
@@ -263,9 +265,9 @@ impl<'a> MultiFEProjector<'a> {
         let fe = self.ctx.index.group_ids_for_fe(fe_idx);
         let group_weights = self.ctx.group_weights_for_fe(fe_idx);
 
-        // Initialize from in_out
+        // Initialize from coef_sums
         coef_out[start..start + n_groups]
-            .copy_from_slice(&self.in_out[start..start + n_groups]);
+            .copy_from_slice(&self.coef_sums[start..start + n_groups]);
 
         // Subtract accumulated other-FE contributions
         if self.ctx.weights.is_uniform {
