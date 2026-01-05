@@ -106,18 +106,51 @@ impl FixedEffectsIndex {
     /// # Panics
     ///
     /// Panics in debug builds if `n_obs == 0` or `n_fe == 0`.
+    #[allow(dead_code)]
     pub fn new(flist: &ArrayView2<usize>) -> Self {
+        Self::with_reorder(flist, false)
+    }
+
+    /// Create a fixed effects index, optionally reordering FEs by size.
+    ///
+    /// When `reorder_fe` is true, fixed effects are sorted by number of groups
+    /// (largest first). This matches R's fixest behavior and improves convergence
+    /// for 3+ FE cases by making the 2-FE sub-convergence phase work on the
+    /// largest FEs first.
+    ///
+    /// # Arguments
+    ///
+    /// * `flist` - Fixed effect group IDs with shape `(n_obs, n_fe)`.
+    /// * `reorder_fe` - Whether to reorder FEs by size (largest first).
+    ///
+    /// # Returns
+    ///
+    /// A `FixedEffectsIndex` with `original_order` tracking the mapping from
+    /// current indices to original indices.
+    pub fn with_reorder(flist: &ArrayView2<usize>, reorder_fe: bool) -> Self {
         let (n_obs, n_fe) = flist.dim();
 
         debug_assert!(n_obs > 0, "Cannot create FixedEffectsIndex with 0 observations");
         debug_assert!(n_fe > 0, "Cannot create FixedEffectsIndex with 0 fixed effects");
 
-        // Compute n_groups: max group_id + 1 for each FE
-        let n_groups: Vec<usize> = (0..n_fe)
+        // Compute n_groups: max group_id + 1 for each FE (in original order)
+        let n_groups_original: Vec<usize> = (0..n_fe)
             .map(|j| flist.column(j).iter().max().unwrap_or(&0) + 1)
             .collect();
 
-        // Compute coefficient start indices (cumulative sum of n_groups)
+        // Determine the order: either sorted by size or identity
+        let order: Vec<usize> = if reorder_fe && n_fe > 1 {
+            let mut indices: Vec<usize> = (0..n_fe).collect();
+            indices.sort_by_key(|&i| std::cmp::Reverse(n_groups_original[i]));
+            indices
+        } else {
+            (0..n_fe).collect()
+        };
+
+        // Reorder n_groups according to the sort order
+        let n_groups: Vec<usize> = order.iter().map(|&i| n_groups_original[i]).collect();
+
+        // Compute coefficient start indices (cumulative sum of reordered n_groups)
         let mut coef_start = vec![0usize; n_fe];
         for q in 1..n_fe {
             coef_start[q] = coef_start[q - 1] + n_groups[q - 1];
@@ -125,11 +158,11 @@ impl FixedEffectsIndex {
         let n_coef: usize = n_groups.iter().sum();
 
         // Transpose group_ids from row-major (obs, fe) to column-major (fe, obs)
-        // This layout is better for the inner loops which iterate over observations
+        // applying the reordering during the transpose (zero extra cost)
         let mut group_ids = vec![0usize; n_fe * n_obs];
-        for q in 0..n_fe {
-            for (i, &g) in flist.column(q).iter().enumerate() {
-                group_ids[q * n_obs + i] = g;
+        for (new_q, &old_q) in order.iter().enumerate() {
+            for (i, &g) in flist.column(old_q).iter().enumerate() {
+                group_ids[new_q * n_obs + i] = g;
             }
         }
 
@@ -305,7 +338,27 @@ impl DemeanContext {
     /// # Panics
     ///
     /// Panics in debug builds if `weights.len() != flist.nrows()`.
+    #[allow(dead_code)]
     pub fn new(flist: &ArrayView2<usize>, weights: &ArrayView1<f64>) -> Self {
+        Self::with_config(flist, weights, false)
+    }
+
+    /// Create a demeaning context with configuration options.
+    ///
+    /// # Arguments
+    ///
+    /// * `flist` - Fixed effect group IDs with shape `(n_obs, n_fe)`
+    /// * `weights` - Per-observation weights (length: `n_obs`)
+    /// * `reorder_fe` - Whether to reorder FEs by size (largest first)
+    ///
+    /// # Panics
+    ///
+    /// Panics in debug builds if `weights.len() != flist.nrows()`.
+    pub fn with_config(
+        flist: &ArrayView2<usize>,
+        weights: &ArrayView1<f64>,
+        reorder_fe: bool,
+    ) -> Self {
         debug_assert_eq!(
             weights.len(),
             flist.nrows(),
@@ -314,7 +367,7 @@ impl DemeanContext {
             flist.nrows()
         );
 
-        let index = FixedEffectsIndex::new(flist);
+        let index = FixedEffectsIndex::with_reorder(flist, reorder_fe);
         let weights = ObservationWeights::new(weights, &index);
         Self { index, weights }
     }
@@ -366,6 +419,7 @@ impl DemeanContext {
             }
         }
     }
+
 }
 
 // =============================================================================
@@ -396,6 +450,12 @@ pub struct FixestConfig {
 
     /// Iterations between SSR-based convergence checks.
     pub ssr_check_interval: usize,
+
+    /// Whether to reorder fixed effects by size (largest first).
+    /// This matches fixest's default behavior and improves convergence
+    /// for 3+ FE cases by making the 2-FE sub-convergence phase work
+    /// on the largest FEs first.
+    pub reorder_fe: bool,
 }
 
 impl Default for FixestConfig {
@@ -414,6 +474,8 @@ impl Default for FixestConfig {
             iter_grand_acc: 4,
             // SSR convergence check frequency
             ssr_check_interval: 40,
+            // Reorder FEs by size (matches fixest's fixef.reorder = TRUE default)
+            reorder_fe: true,
         }
     }
 }
@@ -432,4 +494,22 @@ pub enum ConvergenceState {
     Converged,
     /// Algorithm has not yet converged; continue iterating.
     NotConverged,
+}
+
+// =============================================================================
+// DemeanResult
+// =============================================================================
+
+/// Result of a demeaning operation (single column).
+#[derive(Debug, Clone)]
+pub struct DemeanResult {
+    /// Demeaned data (single column, length `n_obs`).
+    pub demeaned: Vec<f64>,
+
+    /// Convergence state.
+    pub convergence: ConvergenceState,
+
+    /// Number of iterations used (0 for closed-form solutions).
+    #[allow(dead_code)]
+    pub iterations: usize,
 }

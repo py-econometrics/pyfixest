@@ -32,7 +32,7 @@ pub mod projection;
 pub mod types;
 
 use demeaner::{Demeaner, MultiFEDemeaner, SingleFEDemeaner, TwoFEDemeaner};
-use types::{ConvergenceState, DemeanContext, FixestConfig};
+use types::{ConvergenceState, DemeanContext, DemeanResult, FixestConfig};
 
 use ndarray::{Array2, ArrayView1, ArrayView2, Zip};
 use numpy::{PyArray2, PyReadonlyArray1, PyReadonlyArray2};
@@ -64,7 +64,7 @@ impl<'a> ThreadLocalDemeaner<'a> {
 
     /// Solve the demeaning problem, reusing internal buffers.
     #[inline]
-    fn solve(&mut self, input: &[f64]) -> (Vec<f64>, usize, ConvergenceState) {
+    fn solve(&mut self, input: &[f64]) -> DemeanResult {
         match self {
             ThreadLocalDemeaner::Single(d) => d.solve(input),
             ThreadLocalDemeaner::Two(d) => d.solve(input),
@@ -77,6 +77,12 @@ impl<'a> ThreadLocalDemeaner<'a> {
 ///
 /// Uses `for_each_init` to create one demeaner per thread, reusing buffers
 /// across all columns processed by that thread.
+///
+/// # Returns
+///
+/// A tuple of (demeaned_data, success) where:
+/// - `demeaned_data`: The demeaned data as an `Array2<f64>`
+/// - `success`: True if all columns converged
 pub(crate) fn demean(
     x: &ArrayView2<f64>,
     flist: &ArrayView2<usize>,
@@ -95,7 +101,8 @@ pub(crate) fn demean(
     let not_converged = Arc::new(AtomicUsize::new(0));
     let mut res = Array2::<f64>::zeros((n_samples, n_features));
 
-    let ctx = DemeanContext::new(flist, weights);
+    // Use reorder_fe from config (default true, matching fixest)
+    let ctx = DemeanContext::with_config(flist, weights, config.reorder_fe);
 
     res.axis_iter_mut(ndarray::Axis(1))
         .into_par_iter()
@@ -107,20 +114,22 @@ pub(crate) fn demean(
             |demeaner, (k, mut col)| {
                 let col_view = x.column(k);
                 // Zero-copy if column is contiguous (F-order), otherwise copy
-                let (result, _iter, convergence) = if let Some(slice) = col_view.as_slice() {
+                let result = if let Some(slice) = col_view.as_slice() {
                     demeaner.solve(slice)
                 } else {
                     let xk: Vec<f64> = col_view.to_vec();
                     demeaner.solve(&xk)
                 };
 
-                if convergence == ConvergenceState::NotConverged {
+                if result.convergence == ConvergenceState::NotConverged {
                     not_converged.fetch_add(1, Ordering::SeqCst);
                 }
 
-                Zip::from(&mut col).and(&result).for_each(|col_elm, &val| {
-                    *col_elm = val;
-                });
+                Zip::from(&mut col)
+                    .and(&result.demeaned)
+                    .for_each(|col_elm, &val| {
+                        *col_elm = val;
+                    });
             },
         );
 
@@ -129,6 +138,8 @@ pub(crate) fn demean(
 }
 
 /// Python-exposed function for accelerated demeaning.
+///
+/// Returns a tuple of (demeaned_array, success).
 #[pyfunction]
 #[pyo3(signature = (x, flist, weights, tol=1e-8, maxiter=100_000))]
 pub fn _demean_rs(
@@ -143,10 +154,9 @@ pub fn _demean_rs(
     let flist_arr = flist.as_array();
     let weights_arr = weights.as_array();
 
-    let (out, success) =
-        py.detach(|| demean(&x_arr, &flist_arr, &weights_arr, tol, maxiter));
+    let (demeaned, success) = py.detach(|| demean(&x_arr, &flist_arr, &weights_arr, tol, maxiter));
 
-    let pyarray = PyArray2::from_owned_array(py, out);
+    let pyarray = PyArray2::from_owned_array(py, demeaned);
     Ok((pyarray.into(), success))
 }
 
@@ -174,11 +184,11 @@ mod tests {
 
         let config = FixestConfig::default();
         let mut demeaner = TwoFEDemeaner::new(&ctx, &config);
-        let (result, iter, convergence) = demeaner.solve(&input);
+        let result = demeaner.solve(&input);
 
-        assert_eq!(convergence, ConvergenceState::Converged, "Should converge");
-        assert!(iter < 100, "Should converge quickly");
-        assert!(result.iter().all(|&v| v.is_finite()));
+        assert_eq!(result.convergence, ConvergenceState::Converged, "Should converge");
+        assert!(result.iterations < 100, "Should converge quickly");
+        assert!(result.demeaned.iter().all(|&v| v.is_finite()));
     }
 
     #[test]
@@ -200,10 +210,10 @@ mod tests {
 
         let config = FixestConfig::default();
         let mut demeaner = MultiFEDemeaner::new(&ctx, &config);
-        let (result, _iter, convergence) = demeaner.solve(&input);
+        let result = demeaner.solve(&input);
 
-        assert_eq!(convergence, ConvergenceState::Converged);
-        assert!(result.iter().all(|&v| v.is_finite()));
+        assert_eq!(result.convergence, ConvergenceState::Converged);
+        assert!(result.demeaned.iter().all(|&v| v.is_finite()));
     }
 
     #[test]
@@ -222,14 +232,15 @@ mod tests {
         let input: Vec<f64> = (0..n_obs).map(|i| (i as f64) * 0.1).collect();
 
         let mut demeaner = SingleFEDemeaner::new(&ctx);
-        let (result, iter, convergence) = demeaner.solve(&input);
+        let result = demeaner.solve(&input);
 
-        assert_eq!(convergence, ConvergenceState::Converged, "Single FE should always converge");
-        assert_eq!(iter, 0, "Single FE should be closed-form (0 iterations)");
+        assert_eq!(result.convergence, ConvergenceState::Converged, "Single FE should always converge");
+        assert_eq!(result.iterations, 0, "Single FE should be closed-form (0 iterations)");
 
         // Verify demeaning: each group's sum should be approximately 0
         for g in 0..n_groups {
             let group_sum: f64 = result
+                .demeaned
                 .iter()
                 .enumerate()
                 .filter(|(i, _)| i % n_groups == g)
@@ -267,11 +278,11 @@ mod tests {
         let input: Vec<f64> = (0..n_obs).map(|i| (i as f64) * 0.1).collect();
         let config = FixestConfig::default();
         let mut demeaner = TwoFEDemeaner::new(&ctx, &config);
-        let (result, _iter, convergence) = demeaner.solve(&input);
+        let result = demeaner.solve(&input);
 
-        assert_eq!(convergence, ConvergenceState::Converged, "Weighted regression should converge");
+        assert_eq!(result.convergence, ConvergenceState::Converged, "Weighted regression should converge");
         assert!(
-            result.iter().all(|&v| v.is_finite()),
+            result.demeaned.iter().all(|&v| v.is_finite()),
             "All results should be finite"
         );
     }
@@ -293,15 +304,15 @@ mod tests {
 
         let config = FixestConfig::default();
         let mut demeaner = TwoFEDemeaner::new(&ctx, &config);
-        let (result, _iter, convergence) = demeaner.solve(&input);
+        let result = demeaner.solve(&input);
 
-        assert_eq!(convergence, ConvergenceState::Converged, "Singleton groups should converge");
+        assert_eq!(result.convergence, ConvergenceState::Converged, "Singleton groups should converge");
 
         // With singleton groups in FE 0, each observation's own mean is subtracted,
         // then adjusted for FE 1. The result should be all zeros since each
         // observation perfectly absorbs its own value in FE 0.
         assert!(
-            result.iter().all(|&v| v.abs() < 1e-10),
+            result.demeaned.iter().all(|&v| v.abs() < 1e-10),
             "Singleton groups should yield near-zero residuals"
         );
     }
@@ -323,11 +334,11 @@ mod tests {
 
         let config = FixestConfig::default();
         let mut demeaner = TwoFEDemeaner::new(&ctx, &config);
-        let (result, _iter, convergence) = demeaner.solve(&input);
+        let result = demeaner.solve(&input);
 
-        assert_eq!(convergence, ConvergenceState::Converged, "Small groups should converge");
+        assert_eq!(result.convergence, ConvergenceState::Converged, "Small groups should converge");
         assert!(
-            result.iter().all(|&v| v.is_finite()),
+            result.demeaned.iter().all(|&v| v.is_finite()),
             "All results should be finite"
         );
     }
@@ -382,12 +393,12 @@ mod tests {
         let input1: Vec<f64> = (0..n_obs).map(|i| (i as f64) * 0.1).collect();
         let input2: Vec<f64> = (0..n_obs).map(|i| (i as f64) * 0.2 + 1.0).collect();
 
-        let (result1a, _, _) = demeaner.solve(&input1);
-        let (result2, _, _) = demeaner.solve(&input2);
-        let (result1b, _, _) = demeaner.solve(&input1);
+        let result1a = demeaner.solve(&input1);
+        let result2 = demeaner.solve(&input2);
+        let result1b = demeaner.solve(&input1);
 
         // Results for the same input should be identical
-        for (a, b) in result1a.iter().zip(result1b.iter()) {
+        for (a, b) in result1a.demeaned.iter().zip(result1b.demeaned.iter()) {
             assert!(
                 (a - b).abs() < 1e-12,
                 "Buffer reuse should produce identical results"
@@ -396,7 +407,11 @@ mod tests {
 
         // Results for different inputs should be different
         assert!(
-            result1a.iter().zip(result2.iter()).any(|(a, b)| (a - b).abs() > 0.01),
+            result1a
+                .demeaned
+                .iter()
+                .zip(result2.demeaned.iter())
+                .any(|(a, b)| (a - b).abs() > 0.01),
             "Different inputs should produce different results"
         );
     }

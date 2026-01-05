@@ -15,7 +15,7 @@
 
 use crate::demean::accelerator::IronsTuckGrand;
 use crate::demean::projection::{MultiFEProjector, TwoFEProjector};
-use crate::demean::types::{ConvergenceState, DemeanContext, FixestConfig};
+use crate::demean::types::{ConvergenceState, DemeanContext, DemeanResult, FixestConfig};
 
 // =============================================================================
 // Demeaner Trait
@@ -26,12 +26,16 @@ use crate::demean::types::{ConvergenceState, DemeanContext, FixestConfig};
 /// Demeaners own references to their context and configuration, as well as
 /// working buffers that are reused across multiple `solve()` calls.
 pub trait Demeaner {
-    /// Solve the demeaning problem.
+    /// Solve the demeaning problem for a single column.
     ///
     /// # Returns
     ///
-    /// Tuple of (demeaned_output, iterations_used, convergence_state)
-    fn solve(&mut self, input: &[f64]) -> (Vec<f64>, usize, ConvergenceState);
+    /// A `DemeanResult` containing:
+    /// - `demeaned`: The input with fixed effects removed
+    /// - `success`: Whether the algorithm converged
+    /// - `iterations`: Number of iterations (0 for closed-form solutions)
+    /// - `coefficients`: FE coefficients (`None` for 3+ FE case)
+    fn solve(&mut self, input: &[f64]) -> DemeanResult;
 }
 
 // =============================================================================
@@ -54,7 +58,7 @@ impl<'a> SingleFEDemeaner<'a> {
 }
 
 impl Demeaner for SingleFEDemeaner<'_> {
-    fn solve(&mut self, input: &[f64]) -> (Vec<f64>, usize, ConvergenceState) {
+    fn solve(&mut self, input: &[f64]) -> DemeanResult {
         let n_obs = self.ctx.index.n_obs;
 
         // Apply Dᵀ to get coefficient-space sums
@@ -63,18 +67,18 @@ impl Demeaner for SingleFEDemeaner<'_> {
         let fe0 = self.ctx.index.group_ids_for_fe(0);
         let group_weights = self.ctx.group_weights_for_fe(0);
 
-        // coef[g] = in_out[g] / group_weights[g]
-        let coef: Vec<f64> = in_out
-            .iter()
-            .zip(group_weights.iter())
-            .map(|(&io, &sw)| io / sw)
+        // output[i] = input[i] - group_mean[fe0[i]]
+        // where group_mean[g] = in_out[g] / group_weights[g]
+        let demeaned: Vec<f64> = (0..n_obs)
+            .map(|i| input[i] - in_out[fe0[i]] / group_weights[fe0[i]])
             .collect();
 
-        // output[i] = input[i] - coef[fe0[i]]
-        let output: Vec<f64> = (0..n_obs).map(|i| input[i] - coef[fe0[i]]).collect();
-
         // Single FE is a closed-form solution, always converges in 0 iterations
-        (output, 0, ConvergenceState::Converged)
+        DemeanResult {
+            demeaned,
+            convergence: ConvergenceState::Converged,
+            iterations: 0,
+        }
     }
 }
 
@@ -112,7 +116,7 @@ impl<'a> TwoFEDemeaner<'a> {
 }
 
 impl Demeaner for TwoFEDemeaner<'_> {
-    fn solve(&mut self, input: &[f64]) -> (Vec<f64>, usize, ConvergenceState) {
+    fn solve(&mut self, input: &[f64]) -> DemeanResult {
         let n_obs = self.ctx.index.n_obs;
         let n0 = self.ctx.index.n_groups[0];
 
@@ -134,11 +138,15 @@ impl Demeaner for TwoFEDemeaner<'_> {
         let fe0 = self.ctx.index.group_ids_for_fe(0);
         let fe1 = self.ctx.index.group_ids_for_fe(1);
 
-        let result: Vec<f64> = (0..n_obs)
+        let demeaned: Vec<f64> = (0..n_obs)
             .map(|i| input[i] - self.coef[fe0[i]] - self.coef[n0 + fe1[i]])
             .collect();
 
-        (result, iter, convergence)
+        DemeanResult {
+            demeaned,
+            convergence,
+            iterations: iter,
+        }
     }
 }
 
@@ -153,7 +161,7 @@ impl Demeaner for TwoFEDemeaner<'_> {
 struct MultiFEBuffers {
     /// Accumulated fixed effects per observation (observation-space)
     mu: Vec<f64>,
-    /// Coefficient array for all FEs (coefficient-space)
+    /// Working coefficient array for accelerator (reset each phase)
     coef: Vec<f64>,
     /// Coefficient array for 2-FE sub-convergence (coefficient-space, first 2 FEs only)
     coef_2fe: Vec<f64>,
@@ -303,24 +311,29 @@ impl<'a> MultiFEDemeaner<'a> {
         }
     }
 
-    /// Compute final output and return result tuple.
+    /// Compute final output and return result.
     fn finalize_output(
         &self,
         input: &[f64],
         iter: usize,
         convergence: ConvergenceState,
-    ) -> (Vec<f64>, usize, ConvergenceState) {
-        let output: Vec<f64> = input
+    ) -> DemeanResult {
+        let demeaned: Vec<f64> = input
             .iter()
             .zip(self.buffers.mu.iter())
             .map(|(&x, &mu)| x - mu)
             .collect();
-        (output, iter, convergence)
+
+        DemeanResult {
+            demeaned,
+            convergence,
+            iterations: iter,
+        }
     }
 }
 
 impl Demeaner for MultiFEDemeaner<'_> {
-    fn solve(&mut self, input: &[f64]) -> (Vec<f64>, usize, ConvergenceState) {
+    fn solve(&mut self, input: &[f64]) -> DemeanResult {
         self.buffers.reset();
 
         // Phase 1: Warmup with all FEs
