@@ -48,22 +48,47 @@ use std::ops::Range;
 ///
 /// # Memory Layout
 ///
-/// Group IDs are stored in column-major order for cache efficiency during iteration:
-/// ```text
-/// group_ids = [fe0_obs0, fe0_obs1, ..., fe0_obsN, fe1_obs0, fe1_obs1, ..., fe1_obsN, ...]
-///              |-------- FE 0 ----------|         |-------- FE 1 ----------|
-/// ```
+/// Two key arrays with different purposes and sizes:
 ///
-/// Access pattern: `group_ids[fe_index * n_obs + obs_index]`
+/// ## 1. Group IDs Array (`group_ids`)
 ///
-/// # Example
+/// Maps each observation to its group index for each fixed effect.
+/// - **Size**: `N × Q` (observations × fixed effects)
+/// - **Layout**: Column-major (all FE0 IDs first, then all FE1 IDs, etc.)
 ///
 /// ```text
-/// 1000 observations, 2 fixed effects (individual, year):
-/// - n_groups = [100, 10]      // 100 individuals, 10 years
-/// - coef_start = [0, 100]     // individuals at 0..100, years at 100..110
-/// - n_coef = 110              // total coefficients
+/// group_ids = [fe0_obs0, fe0_obs1, ..., fe0_obsN,  fe1_obs0, fe1_obs1, ..., fe1_obsN, ...]
+///              |-------- N entries ---------|      |-------- N entries ---------|
 /// ```
+///
+/// Access: `group_ids[fe_index * n_obs + obs_index]`
+///
+/// ## 2. Coefficient Array (`coef`)
+///
+/// Stores the actual FE coefficient values being solved for.
+/// - **Size**: `n_coef` = sum of all group counts
+/// - **Layout**: FE0 coefficients first, then FE1, etc.
+/// - **Indexing**: `coef_start[q]` gives the offset for FE q
+///
+/// ```text
+/// coef = [α₀, α₁, ..., α_{n0-1},  γ₀, γ₁, ..., γ_{n1-1}, ...]
+///         |---- n_groups[0] ----|  |---- n_groups[1] ----|
+///         coef_start[0]=0          coef_start[1]=n0
+/// ```
+///
+/// ## Example: 1000 obs, 100 individuals, 10 years
+///
+/// | Array      | Size  | Contents                           |
+/// |------------|-------|-------------------------------------|
+/// | group_ids  | 2000  | Which individual/year each obs is  |
+/// | coef       | 110   | The 100 α + 10 γ coefficient values|
+///
+/// To get coefficient for observation i in FE q:
+/// ```rust
+/// let group = group_ids[q * n_obs + i];
+/// let coef_value = coef[coef_start[q] + group];
+/// ```
+
 pub struct FixedEffectsIndex {
     /// Number of observations (N).
     pub n_obs: usize,
@@ -386,6 +411,24 @@ impl DemeanContext {
     ///
     /// Computes weighted sums of `values` for each group in each FE,
     /// writing the result to `out`. The buffer is zeroed before accumulation.
+    ///
+    /// # Example
+    ///
+    /// With 4 observations, 2 firms (FE0), 2 years (FE1):
+    ///
+    /// ```text
+    /// values = [10, 20, 30, 40]  (e.g., y values)
+    /// firm   = [ 0,  0,  1,  1]  (obs 0,1 → firm 0; obs 2,3 → firm 1)
+    /// year   = [ 0,  1,  0,  1]  (obs 0,2 → year 0; obs 1,3 → year 1)
+    ///
+    /// out = [S₀[0], S₀[1], S₁[0], S₁[1]]
+    ///     = [10+20, 30+40, 10+30, 20+40]
+    ///     = [  30,    70,    40,    60 ]
+    ///       ├─ FE0 ─┤ ├─ FE1 ─┤
+    /// ```
+    ///
+    /// Used to precompute per-group sums of y (coefficient sums S)
+    /// and per-group sums of weights (group weights W).
     #[inline]
     pub fn apply_design_matrix_t(&self, values: &[f64], out: &mut [f64]) {
         debug_assert_eq!(
@@ -415,6 +458,10 @@ impl DemeanContext {
     ///
     /// For each observation, looks up its coefficient for each FE and adds to output.
     /// Computes: `output[i] += Σ_q coef[offset_q + fe_q[i]]`
+    ///
+    /// Used for: final residuals (r = y - D·coef), periodic SSR convergence checks,
+    /// and 3+ FE projector scratch computation (every iteration). The 2-FE projector
+    /// avoids calling this in its inner loop by working entirely in coefficient space.
     #[inline]
     pub fn apply_design_matrix(&self, coef: &[f64], output: &mut [f64]) {
         for q in 0..self.index.n_fe {
