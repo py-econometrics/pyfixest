@@ -230,7 +230,7 @@ def test_single_fit_feols(
 
     # long story, but categories need to be strings to be converted to R factors,
     # this then produces 'nan' values in the pd.DataFrame ...
-    data.where(data != "nan", np.nan, inplace=True)
+    data = data.where(data != "nan", np.nan, inplace=False)
 
     # test fixed effects that are not floats, but ints or categoricals, etc
 
@@ -458,7 +458,7 @@ def test_single_fit_feols_empty(
 
     # long story, but categories need to be strings to be converted to R factors,
     # this then produces 'nan' values in the pd.DataFrame ...
-    data.where(data != "nan", np.nan, inplace=True)
+    data = data.where(data != "nan", np.nan, inplace=False)
 
     # test fixed effects that are not floats, but ints or categoricals, etc
 
@@ -523,7 +523,7 @@ def test_single_fit_fepois(
 
     # long story, but categories need to be strings to be converted to R factors,
     # this then produces 'nan' values in the pd.DataFrame ...
-    data.where(data != "nan", np.nan, inplace=True)
+    data = data.where(data != "nan", np.nan, inplace=False)
 
     # test fixed effects that are not floats, but ints or categoricals, etc
     data = _convert_f3(data, f3_type)
@@ -690,7 +690,7 @@ def test_single_fit_iv(
 
     # long story, but categories need to be strings to be converted to R factors,
     # this then produces 'nan' values in the pd.DataFrame ...
-    data.where(data != "nan", np.nan, inplace=True)
+    data = data.where(data != "nan", np.nan, inplace=False)
 
     # test fixed effects that are not floats, but ints or categoricals, etc
     # data = _convert_f3(data, f3_type)
@@ -972,7 +972,7 @@ def test_glm_vs_fixest(N, seed, dropna, fml, inference, family):
 def test_multi_fit(N, seed, beta_type, error_type, dropna, fml_multi):
     """Test pyfixest against fixest_multi objects."""
     data = get_data(N=N, seed=seed, beta_type=beta_type, error_type=error_type)
-    data.where(data != "nan", np.nan, inplace=True)
+    data = data.where(data != "nan", np.nan, inplace=False)
 
     if dropna:
         data = data.dropna()
@@ -990,7 +990,7 @@ def test_multi_fit(N, seed, beta_type, error_type, dropna, fml_multi):
             data["f1"] = pd.Categorical(data.f1.astype(str))
             data["f2"] = pd.Categorical(data.f2.astype(str))
             data["f3"] = pd.Categorical(data.f3.astype(str))
-            data.where(data != "nan", np.nan, inplace=True)
+            data = data.where(data != "nan", np.nan, inplace=False)
             pyfixest = feols(fml=fml_multi, data=data)
         else:
             raise ValueError("Code fails with an uninformative error message.")
@@ -1046,7 +1046,7 @@ def test_split_fit(N, seed, beta_type, error_type, dropna, fml_multi, split, fsp
         pytest.skip("split and fsplit are both None.")
 
     data = get_data(N=N, seed=seed, beta_type=beta_type, error_type=error_type)
-    data.where(data != "nan", np.nan, inplace=True)
+    data = data.where(data != "nan", np.nan, inplace=False)
 
     if dropna:
         data = data.dropna()
@@ -1064,7 +1064,7 @@ def test_split_fit(N, seed, beta_type, error_type, dropna, fml_multi, split, fsp
             data["f1"] = pd.Categorical(data.f1.astype(str))
             data["f2"] = pd.Categorical(data.f2.astype(str))
             data["f3"] = pd.Categorical(data.f3.astype(str))
-            data.where(data != "nan", np.nan, inplace=True)
+            data = data.where(data != "nan", np.nan, inplace=False)
             pyfixest = feols(fml=fml_multi, data=data)
         else:
             raise ValueError("Code fails with an uninformative error message.")
