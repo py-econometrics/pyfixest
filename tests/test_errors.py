@@ -49,7 +49,7 @@ def test_cluster_na():
     data = get_data()
     data = data.dropna()
     data["f3"] = data["f3"].astype("int64")
-    data["f3"][5] = np.nan
+    data.loc[5, "f3"] = np.nan
 
     with pytest.raises(NanInClusterVarError):
         feols(fml="Y ~ X1", data=data, vcov={"CRV1": "f3"})
@@ -1043,7 +1043,7 @@ def test_errors_hac():
 
     # Error 7: duplicate time periods in data
     data["time2"] = data["time"]
-    data["time2"][0] = data["time2"][1]
+    data.loc[0, "time2"] = data.loc[1, "time2"]
     with pytest.raises(
         ValueError,
         match=r"There are duplicate time periods in the data. This is not supported for HAC SEs\.",
@@ -1057,7 +1057,7 @@ def test_errors_hac():
 
     # Error 8: duplicate time periods for the same panel id
     data["time3"] = data["time"]
-    data["time3"][0] = data["time3"][1]
+    data.loc[0, "time3"] = data.loc[1, "time3"]
     for vcov in ["NW", "DK"]:
         with pytest.raises(
             ValueError,

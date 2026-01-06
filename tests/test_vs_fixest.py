@@ -230,7 +230,7 @@ def test_single_fit_feols(
 
     # long story, but categories need to be strings to be converted to R factors,
     # this then produces 'nan' values in the pd.DataFrame ...
-    data[data == "nan"] = np.nan
+    data.where(data != "nan", np.nan, inplace=True)
 
     # test fixed effects that are not floats, but ints or categoricals, etc
 
@@ -458,7 +458,7 @@ def test_single_fit_feols_empty(
 
     # long story, but categories need to be strings to be converted to R factors,
     # this then produces 'nan' values in the pd.DataFrame ...
-    data[data == "nan"] = np.nan
+    data.where(data != "nan", np.nan, inplace=True)
 
     # test fixed effects that are not floats, but ints or categoricals, etc
 
@@ -523,7 +523,7 @@ def test_single_fit_fepois(
 
     # long story, but categories need to be strings to be converted to R factors,
     # this then produces 'nan' values in the pd.DataFrame ...
-    data[data == "nan"] = np.nan
+    data.where(data != "nan", np.nan, inplace=True)
 
     # test fixed effects that are not floats, but ints or categoricals, etc
     data = _convert_f3(data, f3_type)
@@ -690,7 +690,7 @@ def test_single_fit_iv(
 
     # long story, but categories need to be strings to be converted to R factors,
     # this then produces 'nan' values in the pd.DataFrame ...
-    data[data == "nan"] = np.nan
+    data.where(data != "nan", np.nan, inplace=True)
 
     # test fixed effects that are not floats, but ints or categoricals, etc
     # data = _convert_f3(data, f3_type)
@@ -972,7 +972,7 @@ def test_glm_vs_fixest(N, seed, dropna, fml, inference, family):
 def test_multi_fit(N, seed, beta_type, error_type, dropna, fml_multi):
     """Test pyfixest against fixest_multi objects."""
     data = get_data(N=N, seed=seed, beta_type=beta_type, error_type=error_type)
-    data[data == "nan"] = np.nan
+    data.where(data != "nan", np.nan, inplace=True)
 
     if dropna:
         data = data.dropna()
@@ -990,7 +990,7 @@ def test_multi_fit(N, seed, beta_type, error_type, dropna, fml_multi):
             data["f1"] = pd.Categorical(data.f1.astype(str))
             data["f2"] = pd.Categorical(data.f2.astype(str))
             data["f3"] = pd.Categorical(data.f3.astype(str))
-            data[data == "nan"] = np.nan
+            data.where(data != "nan", np.nan, inplace=True)
             pyfixest = feols(fml=fml_multi, data=data)
         else:
             raise ValueError("Code fails with an uninformative error message.")
@@ -1046,7 +1046,7 @@ def test_split_fit(N, seed, beta_type, error_type, dropna, fml_multi, split, fsp
         pytest.skip("split and fsplit are both None.")
 
     data = get_data(N=N, seed=seed, beta_type=beta_type, error_type=error_type)
-    data[data == "nan"] = np.nan
+    data.where(data != "nan", np.nan, inplace=True)
 
     if dropna:
         data = data.dropna()
@@ -1064,7 +1064,7 @@ def test_split_fit(N, seed, beta_type, error_type, dropna, fml_multi, split, fsp
             data["f1"] = pd.Categorical(data.f1.astype(str))
             data["f2"] = pd.Categorical(data.f2.astype(str))
             data["f3"] = pd.Categorical(data.f3.astype(str))
-            data[data == "nan"] = np.nan
+            data.where(data != "nan", np.nan, inplace=True)
             pyfixest = feols(fml=fml_multi, data=data)
         else:
             raise ValueError("Code fails with an uninformative error message.")
@@ -1175,7 +1175,7 @@ def test_wls_na():
     data = data.dropna()
 
     # case 1: NA in weights
-    data["weights"].iloc[0] = np.nan
+    data.loc[data.index[0], "weights"] = np.nan
 
     fit_py = feols("Y ~ X1", data=data, weights="weights")
     fit_r = fixest.feols(
@@ -1194,7 +1194,7 @@ def test_wls_na():
     )
 
     # case 2: NA in weights and X1
-    data["X1"].iloc[0] = np.nan
+    data.loc[data.index[0], "X1"] = np.nan
     fit_py = feols("Y ~ X1", data=data, weights="weights")
     fit_r = fixest.feols(
         ro.Formula("Y ~ X1"),
@@ -1211,7 +1211,7 @@ def test_wls_na():
     )
 
     # case 3: more NAs in X1:
-    data["X1"].iloc[0:10] = np.nan
+    data.loc[data.index[0:10], "X1"] = np.nan
     fit_py = feols("Y ~ X1", data=data, weights="weights")
     fit_r = fixest.feols(
         ro.Formula("Y ~ X1"),
@@ -1321,7 +1321,7 @@ def test_wald_test(fml, data):
 def test_singleton_dropping():
     data = get_data()
     # create a singleton fixed effect
-    data["f1"].iloc[data.shape[0] - 1] = 999999
+    data.loc[data.index[data.shape[0] - 1], "f1"] = 999999
 
     fit_py = feols("Y ~ X1 | f1", data=data, fixef_rm="singleton")
     fit_py2 = feols("Y ~ X1 | f1", data=data, fixef_rm="none")
@@ -1523,7 +1523,7 @@ def test_ssc(fml, dropna, weights, vcov, k_adj, G_adj, k_fixef, model):
 def test_inf_dropping(fml, weights):
     "Test that infinite values are dropped correctly."
     data = pf.get_data(model="Fepois").dropna()
-    data["Y"].iloc[0] = 0
+    data.loc[data.index[0], "Y"] = 0
 
     # test that two 0's in dependent variable are dropped
     # and that warning is triggered
