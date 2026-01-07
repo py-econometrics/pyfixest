@@ -34,7 +34,6 @@ pub trait Demeaner {
     /// - `demeaned`: The input with fixed effects removed
     /// - `success`: Whether the algorithm converged
     /// - `iterations`: Number of iterations (0 for closed-form solutions)
-    /// - `coefficients`: FE coefficients (`None` for 3+ FE case)
     fn solve(&mut self, input: &[f64]) -> DemeanResult;
 }
 
