@@ -229,7 +229,7 @@ class SensitivityAnalysis:
         pd.DataFrame
             DataFrame with 'r2dz_x' and 'r2yz_dx' columns.
         """
-        from pyfixest.estimation.estimation import feols
+        from pyfixest.estimation.api import feols
         model = self.model
         if (model is None or treatment is None):
             raise ValueError('ovb_partial_r2 requires a model object and a treatment variable')
