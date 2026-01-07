@@ -319,12 +319,12 @@ impl IronsTuckGrand {
             return ConvergenceState::Converged;
         }
 
-        let coef = vprod / ssq;
+        let omega = vprod / ssq;
         x.iter_mut()
             .zip(gx.iter())
             .zip(ggx.iter())
             .for_each(|((x_i, &gx_i), &ggx_i)| {
-                *x_i = ggx_i - coef * (ggx_i - gx_i);
+                *x_i = ggx_i - omega * (ggx_i - gx_i);
             });
 
         ConvergenceState::NotConverged
