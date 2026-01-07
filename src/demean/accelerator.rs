@@ -313,6 +313,8 @@ impl IronsTuckGrand {
             })
             .fold((0.0, 0.0), |(vp, sq), (dvp, dsq)| (vp + dvp, sq + dsq));
 
+        // ssq = Σ(δ²x)² where δ²x = ggx - 2·gx + x.
+        //  At fixed point x*, all three equal x*, so δ²x = 0.
         if ssq == 0.0 {
             return ConvergenceState::Converged;
         }
