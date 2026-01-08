@@ -194,12 +194,14 @@ impl IronsTuckGrand {
     /// This method should be called after `run()` has completed to retrieve
     /// the final coefficients from the internal `gx` buffer.
     #[inline]
-    fn finalize_output(&self, coef: &mut [f64],
-                           iter: usize,
-                           convergence: ConvergenceState,) -> (usize, ConvergenceState) {
+    fn finalize_output(
+        &self,
+        coef: &mut [f64],
+        iter: usize,
+        convergence: ConvergenceState,
+    ) -> (usize, ConvergenceState) {
         coef.copy_from_slice(&self.buffers.gx);
         (iter, convergence)
-
     }
 
     /// Perform the core Irons-Tuck acceleration step.
@@ -212,17 +214,16 @@ impl IronsTuckGrand {
         coef: &mut [f64],
         iter: usize,
     ) -> ConvergenceState {
-        let conv_range = projector.convergence_range();
-        let (cs, ce) = (conv_range.start, conv_range.end);
+        let std::ops::Range { start, end } = projector.convergence_range();
 
         // Double projection for Irons-Tuck: G(G(x))
         projector.project(&self.buffers.gx, &mut self.buffers.ggx);
 
         // Irons-Tuck acceleration
         if Self::accelerate(
-            &mut coef[cs..ce],
-            &self.buffers.gx[cs..ce],
-            &self.buffers.ggx[cs..ce],
+            &mut coef[start..end],
+            &self.buffers.gx[start..end],
+            &self.buffers.ggx[start..end],
         ) == ConvergenceState::Converged
         {
             return ConvergenceState::Converged;
@@ -230,7 +231,7 @@ impl IronsTuckGrand {
 
         // Post-acceleration projection (after warmup)
         if iter >= self.config.iter_proj_after_acc {
-            self.buffers.temp[cs..ce].copy_from_slice(&coef[cs..ce]);
+            self.buffers.temp[start..end].copy_from_slice(&coef[start..end]);
             projector.project(&self.buffers.temp, coef);
         }
 
@@ -281,9 +282,9 @@ impl IronsTuckGrand {
         coef: &[f64],
     ) -> ConvergenceState {
         projector.project(coef, &mut self.buffers.gx);
-        let conv_range = projector.convergence_range();
-        let (cs, ce) = (conv_range.start, conv_range.end);
-        if Self::should_continue(&coef[cs..ce], &self.buffers.gx[cs..ce], self.config.tol) {
+        let std::ops::Range { start, end } = projector.convergence_range();
+        if Self::should_continue(&coef[start..end], &self.buffers.gx[start..end], self.config.tol)
+        {
             ConvergenceState::NotConverged
         } else {
             ConvergenceState::Converged
@@ -351,23 +352,22 @@ impl IronsTuckGrand {
         projector: &mut P,
         phase: GrandPhase,
     ) -> GrandStepResult {
-        let conv_range = projector.convergence_range();
-        let (cs, ce) = (conv_range.start, conv_range.end);
+        let std::ops::Range { start, end } = projector.convergence_range();
         match phase {
             GrandPhase::Collect1st => {
-                self.buffers.y[cs..ce].copy_from_slice(&self.buffers.gx[cs..ce]);
+                self.buffers.y[start..end].copy_from_slice(&self.buffers.gx[start..end]);
                 GrandStepResult::Continue(GrandPhase::Collect2nd)
             }
             GrandPhase::Collect2nd => {
-                self.buffers.gy[cs..ce].copy_from_slice(&self.buffers.gx[cs..ce]);
+                self.buffers.gy[start..end].copy_from_slice(&self.buffers.gx[start..end]);
                 GrandStepResult::Continue(GrandPhase::Collect3rdAndAccelerate)
             }
             GrandPhase::Collect3rdAndAccelerate => {
-                self.buffers.ggy[cs..ce].copy_from_slice(&self.buffers.gx[cs..ce]);
+                self.buffers.ggy[start..end].copy_from_slice(&self.buffers.gx[start..end]);
                 let convergence = Self::accelerate(
-                    &mut self.buffers.y[cs..ce],
-                    &self.buffers.gy[cs..ce],
-                    &self.buffers.ggy[cs..ce],
+                    &mut self.buffers.y[start..end],
+                    &self.buffers.gy[start..end],
+                    &self.buffers.ggy[start..end],
                 );
                 if convergence == ConvergenceState::Converged {
                     return GrandStepResult::Done(ConvergenceState::Converged);
@@ -411,7 +411,7 @@ mod tests {
     use super::*;
     use crate::demean::projection::TwoFEProjector;
     use crate::demean::types::DemeanContext;
-    use ndarray::{Array1, Array2};
+    use ndarray::Array2;
 
     /// Create a test problem with 2 fixed effects
     fn create_test_problem(n_obs: usize) -> (DemeanContext, Vec<f64>) {
@@ -421,8 +421,7 @@ mod tests {
             flist[[i, 0]] = i % 10;
             flist[[i, 1]] = i % 5;
         }
-        let weights = Array1::<f64>::ones(n_obs);
-        let ctx = DemeanContext::new(&flist.view(), Some(&weights.view()));
+        let ctx = DemeanContext::new(&flist.view(), None);
         let input: Vec<f64> = (0..n_obs).map(|i| (i as f64) * 0.1).collect();
         (ctx, input)
     }
@@ -433,8 +432,8 @@ mod tests {
         let config = FixestConfig::default();
         let maxiter = config.maxiter;
 
-        let n0 = ctx.index.n_groups[0];
-        let n1 = ctx.index.n_groups[1];
+        let n0 = ctx.fe_infos[0].n_groups;
+        let n1 = ctx.fe_infos[1].n_groups;
         let n_coef = n0 + n1;
 
         let mut coef_sums = vec![0.0; n_coef];

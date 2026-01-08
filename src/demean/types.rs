@@ -3,7 +3,7 @@
 //! # Overview
 //!
 //! Fixed effects demeaning removes group means from data. For example, with
-//! individual and time-fixed effects, we remove both individual-specific and
+//! individual and time fixed effects, we remove both individual-specific and
 //! time-specific means from each observation.
 //!
 //! # Two Spaces
@@ -27,301 +27,72 @@
 //!
 //! # Main Types
 //!
-//! - [`FixedEffectsIndex`]: Maps observations to their group IDs for each FE
-//! - [`ObservationWeights`]: Per-observation and per-group weight sums
-//! - [`DemeanContext`]: Combines index and weights, provides scatter/gather operations
+//! - [`Dimensions`]: Problem shape (n_obs, n_fe, n_coef)
+//! - [`Weights`]: Observation-level weights (None = uniform weights)
+//! - [`FixedEffectInfo`]: Per-FE group IDs and weights
+//! - [`DemeanContext`]: Combines all of the above, provides scatter/gather operations
 //! - [`FixestConfig`]: Algorithm parameters (tolerance, max iterations, etc.)
 
-use ndarray::{ArrayView1, ArrayView2};
-use std::ops::Range;
+use ndarray::{Array2, ArrayView1, ArrayView2};
 
 // =============================================================================
-// FixedEffectsIndex
+// Dimensions
 // =============================================================================
 
-/// Index mapping observations to fixed effect groups.
+/// Problem dimensions for fixed effects demeaning.
 ///
-/// # Purpose
+/// The algorithm operates in two spaces:
+/// - **Observation space**: length `n_obs` (input/output data)
+/// - **Coefficient space**: length `n_coef` (one coefficient per group per FE)
 ///
-/// Maps each observation to its group ID for each fixed effect. For example,
-/// observation 42 might belong to individual 7 and time period 3.
+/// # Example
 ///
-/// # Memory Layout
-///
-/// Two key arrays with different purposes and sizes:
-///
-/// ## 1. Group IDs Array (`group_ids`)
-///
-/// Maps each observation to its group index for each fixed effect.
-/// - **Size**: `N × Q` (observations × fixed effects)
-/// - **Layout**: Column-major (all FE0 IDs first, then all FE1 IDs, etc.)
-///
-/// ```text
-/// group_ids = [fe0_obs0, fe0_obs1, ..., fe0_obsN,  fe1_obs0, fe1_obs1, ..., fe1_obsN, ...]
-///              |-------- N entries ---------|      |-------- N entries ---------|
-/// ```
-///
-/// Access: `group_ids[fe_index * n_obs + obs_index]`
-///
-/// ## 2. Coefficient Array (`coef`)
-///
-/// Stores the actual FE coefficient values being solved for.
-/// - **Size**: `n_coef` = sum of all group counts
-/// - **Layout**: FE0 coefficients first, then FE1, etc.
-/// - **Indexing**: `coef_start[q]` gives the offset for FE q
-///
-/// ```text
-/// coef = [α₀, α₁, ..., α_{n0-1},  γ₀, γ₁, ..., γ_{n1-1}, ...]
-///         |---- n_groups[0] ----|  |---- n_groups[1] ----|
-///         coef_start[0]=0          coef_start[1]=n0
-/// ```
-///
-/// ## Example: 1000 obs, 100 individuals, 10 years
-///
-/// | Array      | Size  | Contents                           |
-/// |------------|-------|-------------------------------------|
-/// | group_ids  | 2000  | Which individual/year each obs is  |
-/// | coef       | 110   | The 100 α + 10 γ coefficient values|
-///
-/// To get coefficient for observation i in FE q:
-/// ```rust
-/// let group = group_ids[q * n_obs + i];
-/// let coef_value = coef[coef_start[q] + group];
-/// ```
-
-pub struct FixedEffectsIndex {
+/// With 10,000 observations, 500 firms, and 20 years:
+/// - `n_obs = 10_000`
+/// - `n_fe = 2`
+/// - `n_coef = 520` (500 firm coefficients + 20 year coefficients)
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct Dimensions {
     /// Number of observations (N).
     pub n_obs: usize,
-
-    /// Number of fixed effects (e.g., 2 for individual and time).
+    /// Number of fixed effects (Q). E.g., 2 for firm + year.
     pub n_fe: usize,
-
-    /// Flat group IDs in column-major order.
-    /// Index with `fe * n_obs + obs` to get the group ID for observation `obs` in FE `fe`.
-    pub group_ids: Vec<usize>,
-
-    /// Number of groups in each fixed effect.
-    /// Example: `[100, 10]` means FE 0 has 100 groups, FE 1 has 10 groups.
-    pub n_groups: Vec<usize>,
-
-    /// Starting index in coefficient arrays for each FE.
-    /// Example: `[0, 100]` means FE 0 coefficients are at indices 0..100,
-    /// FE 1 coefficients are at indices 100..110.
-    pub coef_start: Vec<usize>,
-
-    /// Total number of coefficients (sum of `n_groups`).
+    /// Total coefficients: sum of group counts across all FEs.
     pub n_coef: usize,
-
-    /// Mapping from original FE index to reordered position.
-    ///
-    /// `original_to_reordered[original_q]` gives the position of original
-    /// FE `original_q` in the reordered (sorted by size) layout.
-    original_to_reordered: Vec<usize>,
 }
 
-impl FixedEffectsIndex {
-    /// Create a fixed effects index from the input array.
-    ///
-    /// # Arguments
-    ///
-    /// * `flist` - Fixed effect group IDs with shape `(n_obs, n_fe)`.
-    ///   Each row is one observation, each column is one fixed effect.
-    ///   Values must be 0-indexed group IDs.
-    ///
-    /// # Computed Fields
-    ///
-    /// - `n_groups`: Computed as `max(group_id) + 1` for each FE
-    /// - `coef_start`: Cumulative sum of `n_groups`
-    /// - `group_ids`: Transposed to column-major order for cache efficiency
-    ///
-    /// # Panics
-    ///
-    /// Panics in debug builds if `n_obs == 0` or `n_fe == 0`.
-    pub fn new(flist: &ArrayView2<usize>) -> Self {
-        let (n_obs, n_fe) = flist.dim();
-
-        debug_assert!(n_obs > 0, "Cannot create FixedEffectsIndex with 0 observations");
-        debug_assert!(n_fe > 0, "Cannot create FixedEffectsIndex with 0 fixed effects");
-
-        // Compute n_groups: max group_id + 1 for each FE (in original order)
-        let n_groups_original: Vec<usize> = (0..n_fe)
-            .map(|j| flist.column(j).iter().max().unwrap_or(&0) + 1)
-            .collect();
-
-        // Sort FEs by size (largest first) for optimal convergence.
-        // This matches fixest's default behavior and allows excluding the largest
-        // FE from convergence checking (since FE 0 will be at the start of the
-        // coefficient array, we can efficiently check just the suffix).
-        let order: Vec<usize> = if n_fe > 1 {
-            let mut indices: Vec<usize> = (0..n_fe).collect();
-            indices.sort_by_key(|&i| std::cmp::Reverse(n_groups_original[i]));
-            indices
-        } else {
-            (0..n_fe).collect()
-        };
-
-        // Reorder n_groups according to the sort order
-        let n_groups: Vec<usize> = order.iter().map(|&i| n_groups_original[i]).collect();
-
-        // Compute coefficient start indices (cumulative sum of reordered n_groups)
-        let mut coef_start = vec![0usize; n_fe];
-        for q in 1..n_fe {
-            coef_start[q] = coef_start[q - 1] + n_groups[q - 1];
-        }
-        let n_coef: usize = n_groups.iter().sum();
-
-        // Transpose group_ids from row-major (obs, fe) to column-major (fe, obs)
-        // applying the reordering during the transpose (zero extra cost)
-        let mut group_ids = vec![0usize; n_fe * n_obs];
-        for (new_q, &old_q) in order.iter().enumerate() {
-            for (i, &g) in flist.column(old_q).iter().enumerate() {
-                group_ids[new_q * n_obs + i] = g;
-            }
-        }
-
-        // Compute inverse mapping: original_to_reordered[original_q] = reordered_q
-        // order[reordered_q] = original_q, so we invert this
-        let mut original_to_reordered = vec![0usize; n_fe];
-        for (reordered_q, &original_q) in order.iter().enumerate() {
-            original_to_reordered[original_q] = reordered_q;
-        }
-
-        Self {
-            n_obs,
-            n_fe,
-            group_ids,
-            n_groups,
-            coef_start,
-            n_coef,
-            original_to_reordered,
-        }
-    }
-
-    /// Get the group IDs for all observations in fixed effect `fe`.
-    ///
-    /// Returns a slice of length `n_obs` where `result[i]` is the group ID
-    /// for observation `i` in this fixed effect.
-    ///
-    /// # Example
-    ///
-    /// ```ignore
-    /// let individual_ids = index.group_ids_for_fe(0);  // [7, 3, 7, 12, ...]
-    /// let year_ids = index.group_ids_for_fe(1);        // [0, 1, 0, 2, ...]
-    /// ```
-    #[inline(always)]
-    pub fn group_ids_for_fe(&self, fe: usize) -> &[usize] {
-        let start = fe * self.n_obs;
-        &self.group_ids[start..start + self.n_obs]
-    }
-
-    /// Get the coefficient index range for fixed effect `fe`.
-    ///
-    /// Returns the range of indices in coefficient arrays that correspond
-    /// to this fixed effect's groups.
-    #[inline(always)]
-    pub fn coef_range_for_fe(&self, fe: usize) -> Range<usize> {
-        let start = self.coef_start[fe];
-        let end = if fe + 1 < self.n_fe {
-            self.coef_start[fe + 1]
-        } else {
-            self.n_coef
-        };
-        start..end
-    }
-
-    /// Reorder coefficients from internal (sorted by FE size) to original FE order.
-    ///
-    /// During solving, FEs are reordered by size (largest first) for optimal
-    /// convergence. This method restores coefficients to the original FE order
-    /// as they appeared in the input.
-    ///
-    /// # Arguments
-    ///
-    /// * `coef` - Coefficient array in internal (reordered) layout
-    ///
-    /// # Returns
-    ///
-    /// Coefficient array in original FE order.
-    ///
-    /// # Layout
-    ///
-    /// Input layout (reordered, largest FE first):
-    /// ```text
-    /// [FE_reord_0 | FE_reord_1 | ... | FE_reord_{n_fe-1}]
-    /// ```
-    ///
-    /// Output layout (original order):
-    /// ```text
-    /// [FE_orig_0 | FE_orig_1 | ... | FE_orig_{n_fe-1}]
-    /// ```
-    pub fn reorder_coefficients_to_original(&self, coef: &[f64]) -> Vec<f64> {
-        debug_assert_eq!(
-            coef.len(),
-            self.n_coef,
-            "coefficient length ({}) must match n_coef ({})",
-            coef.len(),
-            self.n_coef
-        );
-
-        let mut out = vec![0.0; self.n_coef];
-        let mut out_pos = 0;
-
-        // For each FE in original order
-        for original_q in 0..self.n_fe {
-            let reordered_q = self.original_to_reordered[original_q];
-            let src_start = self.coef_start[reordered_q];
-            let len = self.n_groups[reordered_q];
-
-            out[out_pos..out_pos + len].copy_from_slice(&coef[src_start..src_start + len]);
-            out_pos += len;
-        }
-
-        out
-    }
-}
 
 // =============================================================================
-// ObservationWeights
+// FixedEffectInfo
 // =============================================================================
 
-/// Observation weights and their aggregation to group level.
+/// Information for a single fixed effect.
 ///
-/// Only created when weights are non-uniform. For unweighted regression,
-/// `DemeanContext.weights` is `None`.
-pub struct ObservationWeights {
-    /// Weight for each observation (length: `n_obs`).
-    pub per_obs: Vec<f64>,
-
-    /// Sum of observation weights for each group (length: `n_coef`).
-    pub per_group: Vec<f64>,
-}
-
-impl ObservationWeights {
-    /// Create observation weights from the input array.
-    pub fn new(weights: &ArrayView1<f64>, index: &FixedEffectsIndex) -> Self {
-        // Aggregate observation weights to group level
-        let mut per_group = vec![0.0; index.n_coef];
-        for q in 0..index.n_fe {
-            let offset = index.coef_start[q];
-            let fe_offset = q * index.n_obs;
-            for (i, &w) in weights.iter().enumerate() {
-                let g = index.group_ids[fe_offset + i];
-                per_group[offset + g] += w;
-            }
-        }
-
-        // Avoid division by zero for empty groups
-        for w in &mut per_group {
-            if *w == 0.0 {
-                *w = 1.0;
-            }
-        }
-
-        Self {
-            per_obs: weights.to_vec(),
-            per_group,
-        }
-    }
+/// Each fixed effect (e.g., firm, year) has its own group structure.
+/// This struct holds the mapping from observations to groups and the
+/// precomputed weight sums needed for computing group means.
+///
+/// # Coefficient Layout
+///
+/// Coefficients for all FEs are stored in a single flat array:
+/// ```text
+/// [FE0_group0, ..., FE0_groupK, FE1_group0, ..., FE1_groupM, ...]
+/// ```
+/// The `coef_start` field gives the offset where this FE's coefficients begin.
+#[derive(Clone, Debug)]
+pub(crate) struct FixedEffectInfo {
+    /// Number of groups in this FE. E.g., 500 firms.
+    pub n_groups: usize,
+    /// Starting index in coefficient arrays for this FE.
+    pub coef_start: usize,
+    /// Group ID for each observation (length: `n_obs`).
+    /// `group_ids[i]` gives the group index (0..n_groups) for observation i.
+    pub group_ids: Vec<usize>,
+    /// Inverse of group weights (length: `n_groups`).
+    /// Precomputed as `1.0 / sum_of_observation_weights_per_group` to replace
+    /// division with multiplication in hot loops. For unweighted case, this is
+    /// `1.0 / count_of_observations_per_group`.
+    pub inv_group_weights: Vec<f64>,
 }
 
 // =============================================================================
@@ -330,75 +101,163 @@ impl ObservationWeights {
 
 /// Complete context for fixed effects demeaning operations.
 ///
-/// Combines the fixed effects index with optional observation weights.
-/// When `weights` is `None`, uses the fast unweighted path.
+/// Combines problem dimensions, observation weights, and per-FE information.
+/// Provides the core scatter/gather operations used by the iterative algorithm.
+///
+/// # Construction
+///
+/// Use [`DemeanContext::new`] to create a context from input arrays. The context
+/// is reused across multiple columns being demeaned.
+///
+/// # FE Ordering
+///
+/// Fixed effects are always reordered by size (largest first) to match fixest's
+/// behavior and ensure optimal convergence properties.
+///
+/// # Uniform Weights Fast Path
+///
+/// When `weights` is `None`, all observations are equally weighted. This enables
+/// optimized code paths that skip weight multiplication in hot loops.
+///
+/// # Operations
+///
+/// - [`apply_design_matrix_t`](Self::apply_design_matrix_t): Scatter values to coefficient space
+/// - [`apply_design_matrix`](Self::apply_design_matrix): Gather coefficients to observation space
 pub struct DemeanContext {
-    /// Fixed effects index (observation → group mapping).
-    pub index: FixedEffectsIndex,
-
-    /// Group counts (length: `n_coef`). Used as denominator for unweighted case.
-    pub group_counts: Vec<f64>,
-
-    /// Observation weights. `None` for unweighted regression (fast path).
-    pub weights: Option<ObservationWeights>,
+    /// Problem dimensions.
+    pub(crate) dims: Dimensions,
+    /// Observation-level weights (length: `n_obs`). None means uniform weights (unweighted case).
+    pub(crate) weights: Option<Vec<f64>>,
+    /// Per-fixed-effect information (in internal/reordered order).
+    pub(crate) fe_infos: Vec<FixedEffectInfo>,
+    /// Mapping from internal FE index to original FE index.
+    /// `fe_order[q]` gives the original column index for internal FE `q`.
+    /// Used to reorder coefficients back to original order when returning.
+    pub(crate) fe_order: Vec<usize>,
 }
 
 impl DemeanContext {
     /// Create a demeaning context from input arrays.
     ///
-    /// Fixed effects are automatically reordered by size (largest first) for
-    /// optimal convergence. This matches fixest's default behavior.
+    /// Fixed effects are automatically reordered by size (largest first) to
+    /// match fixest's behavior and ensure optimal convergence.
     ///
     /// # Arguments
     ///
-    /// * `flist` - Fixed effect group IDs with shape `(n_obs, n_fe)`
-    /// * `weights` - Per-observation weights, or `None` for unweighted regression
+    /// * `flist` - Fixed effect group IDs with shape `(n_obs, n_fe)`.
+    ///   Each row is one observation, each column is one fixed effect.
+    ///   Values must be 0-indexed group IDs.
+    /// * `weights` - Per-observation weights (length: `n_obs`), or None for unweighted.
+    ///
+    /// # Panics
+    ///
+    /// Panics if:
+    /// - `flist` has zero rows or columns
+    /// - `weights.len() != flist.nrows()`
+    ///
+    /// # Empty Groups
+    ///
+    /// Groups with no observations (e.g., sparse group IDs) are handled by setting
+    /// their weight to 1, matching fixest's approach. Since no observation belongs
+    /// to these groups, their coefficients are never used in computations.
     pub fn new(flist: &ArrayView2<usize>, weights: Option<&ArrayView1<f64>>) -> Self {
-        let index = FixedEffectsIndex::new(flist);
+        let (n_obs, n_fe) = flist.dim();
 
-        // Always compute group counts (needed for unweighted case)
-        let mut group_counts = vec![0.0; index.n_coef];
-        for q in 0..index.n_fe {
-            let offset = index.coef_start[q];
-            let fe_offset = q * index.n_obs;
-            for i in 0..index.n_obs {
-                let g = index.group_ids[fe_offset + i];
-                group_counts[offset + g] += 1.0;
-            }
-        }
-        // Avoid division by zero for empty groups
-        for c in &mut group_counts {
-            if *c == 0.0 {
-                *c = 1.0;
-            }
-        }
-
-        let weights = weights.map(|w| {
-            debug_assert_eq!(
+        assert!(n_obs > 0, "Cannot create DemeanContext with 0 observations");
+        assert!(n_fe > 0, "Cannot create DemeanContext with 0 fixed effects");
+        if let Some(w) = weights {
+            assert_eq!(
                 w.len(),
-                flist.nrows(),
+                n_obs,
                 "weights length ({}) must match number of observations ({})",
                 w.len(),
-                flist.nrows()
+                n_obs
             );
-            ObservationWeights::new(w, &index)
-        });
+        }
+
+        // Compute n_groups for each FE (max group_id + 1)
+        // Panics if any column is empty (which shouldn't happen with n_obs > 0)
+        let n_groups_original: Vec<usize> = (0..n_fe)
+            .map(|j| {
+                flist
+                    .column(j)
+                    .iter()
+                    .max()
+                    .expect("FE column should not be empty when n_obs > 0")
+                    + 1
+            })
+            .collect();
+
+        // Always reorder FEs by size (largest first) - matches fixest behavior
+        let order: Vec<usize> = if n_fe > 1 {
+            let mut indices: Vec<usize> = (0..n_fe).collect();
+            indices.sort_by_key(|&i| std::cmp::Reverse(n_groups_original[i]));
+            indices
+        } else {
+            vec![0]
+        };
+
+        // Compute dimensions
+        let n_groups: Vec<usize> = order.iter().map(|&i| n_groups_original[i]).collect();
+        let mut coef_starts = vec![0usize; n_fe];
+        for q in 1..n_fe {
+            coef_starts[q] = coef_starts[q - 1] + n_groups[q - 1];
+        }
+        let n_coef: usize = n_groups.iter().sum();
+
+        let dims = Dimensions { n_obs, n_fe, n_coef };
+
+        // Build observation weights (None if uniform)
+        let obs_weights = weights.map(|w| w.to_vec());
+
+        // Build per-FE info
+        let mut fe_infos = Vec::with_capacity(n_fe);
+        for q in 0..n_fe {
+            let original_col = order[q];
+
+            // Extract group IDs for this FE
+            let group_ids: Vec<usize> = flist.column(original_col).iter().copied().collect();
+
+            // Aggregate observation weights to group level
+            let mut group_weights = vec![0.0; n_groups[q]];
+            match &obs_weights {
+                Some(w) => {
+                    for (i, &g) in group_ids.iter().enumerate() {
+                        group_weights[g] += w[i];
+                    }
+                }
+                None => {
+                    // Unweighted: count observations per group
+                    for &g in group_ids.iter() {
+                        group_weights[g] += 1.0;
+                    }
+                }
+            }
+
+            // Handle empty groups (weight=0) by setting weight to 1, matching fixest's approach.
+            // This is defensive programming - empty groups are never accessed since no
+            // observation belongs to them, but this prevents any potential division by zero.
+            for w in &mut group_weights {
+                if *w == 0.0 {
+                    *w = 1.0;
+                }
+            }
+
+            let inv_group_weights: Vec<f64> = group_weights.iter().map(|&w| 1.0 / w).collect();
+
+            fe_infos.push(FixedEffectInfo {
+                n_groups: n_groups[q],
+                coef_start: coef_starts[q],
+                group_ids,
+                inv_group_weights,
+            });
+        }
 
         Self {
-            index,
-            group_counts,
-            weights,
-        }
-    }
-
-    /// Get the weight sums for all groups in fixed effect `fe`.
-    /// Returns group counts for unweighted, weighted sums for weighted.
-    #[inline(always)]
-    pub fn group_weights_for_fe(&self, fe: usize) -> &[f64] {
-        let range = self.index.coef_range_for_fe(fe);
-        match &self.weights {
-            Some(w) => &w.per_group[range],
-            None => &self.group_counts[range],
+            dims,
+            weights: obs_weights,
+            fe_infos,
+            fe_order: order,
         }
     }
 
@@ -411,43 +270,46 @@ impl DemeanContext {
     /// Computes weighted sums of `values` for each group in each FE,
     /// writing the result to `out`. The buffer is zeroed before accumulation.
     ///
+    /// # Arguments
+    ///
+    /// * `values` - Input values in observation space (length: `n_obs`)
+    /// * `out` - Output buffer in coefficient space (length: `n_coef`)
+    ///
     /// # Example
     ///
     /// With 4 observations, 2 firms (FE0), 2 years (FE1):
     ///
     /// ```text
-    /// values = [10, 20, 30, 40]  (e.g., y values)
-    /// firm   = [ 0,  0,  1,  1]  (obs 0,1 → firm 0; obs 2,3 → firm 1)
-    /// year   = [ 0,  1,  0,  1]  (obs 0,2 → year 0; obs 1,3 → year 1)
+    /// values = [10, 20, 30, 40]
+    /// firm   = [ 0,  0,  1,  1]
+    /// year   = [ 0,  1,  0,  1]
     ///
-    /// out = [S₀[0], S₀[1], S₁[0], S₁[1]]
-    ///     = [10+20, 30+40, 10+30, 20+40]
-    ///     = [  30,    70,    40,    60 ]
-    ///       ├─ FE0 ─┤ ├─ FE1 ─┤
+    /// out = [10+20, 30+40, 10+30, 20+40] = [30, 70, 40, 60]
+    ///       |-- FE0 --|  |-- FE1 --|
     /// ```
-    ///
-    /// Used to precompute per-group sums of y (coefficient sums S)
-    /// and per-group sums of weights (group weights W).
     #[inline]
     pub fn apply_design_matrix_t(&self, values: &[f64], out: &mut [f64]) {
         debug_assert_eq!(
             out.len(),
-            self.index.n_coef,
+            self.dims.n_coef,
             "output buffer length ({}) must match n_coef ({})",
             out.len(),
-            self.index.n_coef
+            self.dims.n_coef
         );
         out.fill(0.0);
-        for q in 0..self.index.n_fe {
-            let offset = self.index.coef_start[q];
-            let fe_ids = self.index.group_ids_for_fe(q);
-            if let Some(w) = &self.weights {
-                for (i, &g) in fe_ids.iter().enumerate() {
-                    out[offset + g] += values[i] * w.per_obs[i];
+
+        for fe in &self.fe_infos {
+            let offset = fe.coef_start;
+            match &self.weights {
+                None => {
+                    for (i, &g) in fe.group_ids.iter().enumerate() {
+                        out[offset + g] += values[i];
+                    }
                 }
-            } else {
-                for (i, &g) in fe_ids.iter().enumerate() {
-                    out[offset + g] += values[i];
+                Some(w) => {
+                    for (i, &g) in fe.group_ids.iter().enumerate() {
+                        out[offset + g] += values[i] * w[i];
+                    }
                 }
             }
         }
@@ -456,22 +318,46 @@ impl DemeanContext {
     /// Apply design matrix and add to output: output += D · coef.
     ///
     /// For each observation, looks up its coefficient for each FE and adds to output.
-    /// Computes: `output[i] += Σ_q coef[offset_q + fe_q[i]]`
     ///
-    /// Used for: final residuals (r = y - D·coef), periodic SSR convergence checks,
-    /// and 3+ FE projector scratch computation (every iteration). The 2-FE projector
-    /// avoids calling this in its inner loop by working entirely in coefficient space.
+    /// # Arguments
+    ///
+    /// * `coef` - Coefficients in coefficient space (length: `n_coef`)
+    /// * `output` - Output buffer in observation space (length: `n_obs`), accumulated into
     #[inline]
     pub fn apply_design_matrix(&self, coef: &[f64], output: &mut [f64]) {
-        for q in 0..self.index.n_fe {
-            let offset = self.index.coef_start[q];
-            let fe_ids = self.index.group_ids_for_fe(q);
-            for (i, &g) in fe_ids.iter().enumerate() {
+        for fe in &self.fe_infos {
+            let offset = fe.coef_start;
+            for (i, &g) in fe.group_ids.iter().enumerate() {
                 output[i] += coef[offset + g];
             }
         }
     }
 
+    /// Reorder coefficients from internal order to original FE order.
+    ///
+    /// The input `coef` is in internal order (potentially reordered by size).
+    /// Returns coefficients in the original FE column order from the input flist.
+    #[must_use]
+    pub fn reorder_coef_to_original(&self, coef: &[f64]) -> Vec<f64> {
+        let n_fe = self.dims.n_fe;
+
+        // Build inverse mapping: original_fe_index -> internal_fe_index
+        let mut internal_idx = vec![0usize; n_fe];
+        for (q, &orig) in self.fe_order.iter().enumerate() {
+            internal_idx[orig] = q;
+        }
+
+        // Reorder coefficients
+        let mut out = Vec::with_capacity(self.dims.n_coef);
+        for orig_fe in 0..n_fe {
+            let q = internal_idx[orig_fe];
+            let fe = &self.fe_infos[q];
+            let start = fe.coef_start;
+            let end = start + fe.n_groups;
+            out.extend_from_slice(&coef[start..end]);
+        }
+        out
+    }
 }
 
 // =============================================================================
@@ -483,7 +369,7 @@ impl DemeanContext {
 /// These parameters control the convergence behavior of the iterative
 /// demeaning algorithm. The defaults match R's fixest package.
 #[derive(Clone, Copy)]
-pub struct FixestConfig {
+pub(crate) struct FixestConfig {
     /// Convergence tolerance for coefficient changes.
     pub tol: f64,
 
@@ -508,17 +394,11 @@ impl Default for FixestConfig {
     /// Default values match R's fixest package for consistency.
     fn default() -> Self {
         Self {
-            // Default tolerance matches fixest's `fixest_options("demean_tol")`
             tol: 1e-6,
-            // Generous iteration limit to handle difficult convergence cases
             maxiter: 100_000,
-            // Warmup iterations before 2-FE sub-convergence (fixest default)
             iter_warmup: 15,
-            // Post-acceleration projection starts after this many iterations
             iter_proj_after_acc: 40,
-            // Grand acceleration frequency (every N iterations)
             iter_grand_acc: 4,
-            // SSR convergence check frequency
             ssr_check_interval: 40,
         }
     }
@@ -529,14 +409,12 @@ impl Default for FixestConfig {
 // =============================================================================
 
 /// Whether the iterative algorithm has converged.
-///
-/// Used throughout the demeaning module to represent the convergence state
-/// in a self-documenting way, avoiding ambiguous boolean returns.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum ConvergenceState {
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub(crate) enum ConvergenceState {
     /// Algorithm has converged; iteration can stop.
     Converged,
     /// Algorithm has not yet converged; continue iterating.
+    #[default]
     NotConverged,
 }
 
@@ -546,20 +424,13 @@ pub enum ConvergenceState {
 
 /// Result of a demeaning operation (single column).
 #[derive(Debug, Clone)]
-pub struct DemeanResult {
-    /// Demeaned data (single column, length `n_obs`).
+pub(crate) struct DemeanResult {
+    /// Demeaned data (length: `n_obs`).
     pub demeaned: Vec<f64>,
 
-    /// Fixed effect coefficients in original FE order.
-    ///
-    /// The coefficients are laid out as:
-    /// ```text
-    /// [FE_0 coefficients | FE_1 coefficients | ... | FE_{n_fe-1} coefficients]
-    /// ```
-    /// where FE indices follow the original input order (before internal reordering).
-    ///
-    /// For FE `q`, coefficients are at indices `coef_start_original[q]..coef_start_original[q+1]`
-    /// where `coef_start_original` is the cumulative sum of `n_groups_original`.
+    /// Fixed effect coefficients in original FE order (length: `n_coef`).
+    /// Laid out as `[FE0_coefs..., FE1_coefs..., ...]` where FE0, FE1, etc.
+    /// are in the original input order (not reordered).
     pub fe_coefficients: Vec<f64>,
 
     /// Convergence state.
@@ -568,4 +439,24 @@ pub struct DemeanResult {
     /// Number of iterations used (0 for closed-form solutions).
     #[allow(dead_code)]
     pub iterations: usize,
+}
+
+// =============================================================================
+// DemeanMultiResult
+// =============================================================================
+
+/// Result of demeaning multiple columns.
+///
+/// Returned by the [`demean`](super::demean) function which processes
+/// multiple columns in parallel.
+pub(crate) struct DemeanMultiResult {
+    /// Demeaned data with shape `(n_samples, n_features)`.
+    pub demeaned: Array2<f64>,
+
+    /// Fixed effect coefficients with shape `(n_coef, n_features)`.
+    /// Each column contains the FE coefficients for the corresponding input column.
+    pub fe_coefficients: Array2<f64>,
+
+    /// True if all columns converged successfully.
+    pub success: bool,
 }
