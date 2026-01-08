@@ -24,9 +24,9 @@ def compute_CCV_AAIW(data, depvar, cluster, seed, nmx, pk):
     The code is based on a Python implementation of the AAIW authors
     published under CC0 1.0 Deed and available at
     https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/27VMOT.
-    This code was written independently of Daniel Pailanir and Damian Clarke's Stata 
-    implementation available at https://github.com/Daniel-Pailanir/TSCB-CCV. 
-    Output results are tested against output results from the Stata implementation 
+    This code was written independently of Daniel Pailanir and Damian Clarke's Stata
+    implementation available at https://github.com/Daniel-Pailanir/TSCB-CCV.
+    Output results are tested against output results from the Stata implementation
     to demonstrate consistency.
 
     """
