@@ -1,7 +1,7 @@
 import pytest
 import pandas as pd
 import numpy as np
-from pyfixest.estimation import feols
+from pyfixest.estimation import feols, fepois
 from pyfixest.utils.utils import get_data
 
 
@@ -177,3 +177,42 @@ def test_error_handling():
     # Since X1 and X2 are correlated, a massive kd will imply R2 > 1
     with pytest.raises(ValueError, match="Impossible scenario"):
         sens.ovb_bounds(treatment="X1", benchmark_covariates="X2", kd=1000)
+
+
+def test_sensitivity_analysis_feols_supported():
+    """
+    Test that sensitivity analysis works for Feols (OLS) models.
+    """
+    data = get_data()
+    fit = feols("Y ~ X1 + X2", data=data)
+
+    # Should not raise
+    sens = fit.sensitivity_analysis()
+    assert sens is not None
+
+
+def test_sensitivity_analysis_fepois_not_supported():
+    """
+    Test that sensitivity analysis raises error for Poisson models.
+    """
+    data = get_data()
+    data = data.dropna()  # Remove NaN values first
+    data["Y_count"] = np.abs(data["Y"]).astype(int) + 1
+
+    fit = fepois("Y_count ~ X1 + X2", data=data)
+
+    with pytest.raises(ValueError, match="only supported for OLS"):
+        fit.sensitivity_analysis()
+
+
+def test_sensitivity_analysis_feiv_not_supported():
+    """
+    Test that sensitivity analysis raises error for IV models.
+    """
+    data = get_data()
+    data["Z1"] = data["X1"] + np.random.normal(0, 0.1, len(data))  # Instrument
+
+    fit = feols("Y ~ 1 | X1 ~ Z1", data=data)
+
+    with pytest.raises(ValueError, match="only supported for OLS"):
+        fit.sensitivity_analysis()

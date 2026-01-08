@@ -23,7 +23,12 @@ class SensitivityAnalysis:
     model: Any
     X: Optional[str] = None
 
-   # let's start with R_2
+    def __post_init__(self):
+        if not getattr(self.model, '_supports_sensitivity_analysis', False):
+            raise ValueError(
+                "Sensitivity analysis is only supported for OLS models (Feols)."
+            )
+
     def partial_r2(self, X: Optional[str] = None) -> Union[float, np.ndarray]:
        """
        Calculate the partial R2 for a given variable.
@@ -50,7 +55,6 @@ class SensitivityAnalysis:
        idx = names.index(X)
        return tstat[idx]**2 / (tstat[idx]**2 + df)
 
-    # define partial f2
     def partial_f2(self, X: Optional[str] = None) -> Union[float, np.ndarray]:
         """
         Compute the partial (Cohen's) f2 for a linear regression model.
@@ -77,7 +81,6 @@ class SensitivityAnalysis:
         idx = names.index(X)
         return tstat[idx]**2 / df
 
-    # robustness value function
     def robustness_value(self, X: Optional[str] = None, q = 1, alpha = 1.0) -> Union[float, np.ndarray]:
         """
         Compute the robustness value (RV) of the regression coefficient.
@@ -114,7 +117,6 @@ class SensitivityAnalysis:
 
         return rv
 
-    # sensitivity stats function to report these
     def sensitivity_stats(self, X: Optional[str] = None, q = 1, alpha = 0.05) -> dict:
         """
         Compute the sensitivity statistics for the model.
@@ -159,7 +161,6 @@ class SensitivityAnalysis:
 
         return sensitivity_stats_df
 
-    # Compute Omitted Variable Bias Bounds
     def ovb_bounds(self, treatment, benchmark_covariates, kd=[1, 2, 3], ky=None, alpha=0.05, adjusted_estimate=True, bound="partial r2"):
         """
         Compute bounds on omitted variable bias using observed covariates as benchmarks.
