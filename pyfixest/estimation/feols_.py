@@ -408,6 +408,7 @@ class Feols:
         self.test_treatment_heterogeneity = _not_implemented_did
         self.aggregate = _not_implemented_did
         self.iplot_aggregate = _not_implemented_did
+        self._supports_sensitivity_analysis = True
 
     def prepare_model_matrix(self):
         "Prepare model matrices for estimation."
@@ -2665,6 +2666,8 @@ class Feols:
         return beta_n_plus_1
 
     def sensitivity_analysis(self) -> SensitivityAnalysis:
+        if not self._supports_sensitivity_analysis:
+            raise ValueError("Sensitivity Analysis is only supported for OLS methods (Feols).")
         return SensitivityAnalysis(self)
 
 

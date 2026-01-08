@@ -146,6 +146,7 @@ class Fepois(Feols):
         self._Y_hat_response = np.array([])
         self.deviance = None
         self._Xbeta = np.array([])
+        self._supports_sensitivity_analysis = False
 
     def prepare_model_matrix(self):
         "Prepare model inputs for estimation."
