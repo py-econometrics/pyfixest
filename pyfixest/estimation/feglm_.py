@@ -91,6 +91,7 @@ class Feglm(Feols, ABC):
         self._Xbeta = np.empty(0)
 
         self._method = "feglm"
+        self._supports_sensitivity_analysis = False
 
     def prepare_model_matrix(self):
         "Prepare model inputs for estimation."
