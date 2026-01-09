@@ -9,7 +9,7 @@ import pandas as pd
 from tqdm import tqdm
 
 from pyfixest.estimation.feols_ import Feols, PredictionErrorOptions, PredictionType
-from pyfixest.estimation.FormulaParser import FixestFormula
+from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.literals import (
     DemeanerBackendOptions,
     SolverOptions,
@@ -125,7 +125,7 @@ class FeolsCompressed(Feols):
             sample_split_value,
         )
 
-        if FixestFormula.fml_first_stage is not None:
+        if FixestFormula.first_stage is not None:
             raise NotImplementedError(
                 "Compression is not supported with IV regression."
             )

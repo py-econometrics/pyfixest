@@ -393,15 +393,13 @@ def test_i_error():
     data = get_data()
     data["f2"] = pd.Categorical(data["f2"])
 
-    with pytest.raises(ValueError):
-        feols("Y ~ i(f1, f2)", data)
-
-    data["f2"] = data["f2"].astype("object")
-    with pytest.raises(ValueError):
-        feols("Y ~ i(f1, f2)", data)
-
     with pytest.raises(FactorEvaluationError):
+        # Incorrectly specified reference (a instead of 'a')
         feols("Y ~ i(f1, X1, ref=a)", data)
+
+    with pytest.raises(ValueError):
+        # Reference level not in data
+        feols("Y ~ i(f1, X1, ref='a')", data)
 
 
 def test_plot_error():

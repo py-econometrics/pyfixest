@@ -10,7 +10,7 @@ from scipy.linalg import cho_factor, solve_triangular
 from scipy.stats import norm
 
 from pyfixest.estimation.feols_ import Feols
-from pyfixest.estimation.FormulaParser import FixestFormula
+from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.literals import (
     QuantregMethodOptions,
     SolverOptions,
