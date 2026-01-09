@@ -101,8 +101,8 @@ pub(crate) fn demean(
     let not_converged = Arc::new(AtomicUsize::new(0));
     let mut res = Array2::<f64>::zeros((n_samples, n_features));
 
-    // Use reorder_fe from config (default true, matching fixest)
-    let ctx = DemeanContext::with_config(flist, weights, config.reorder_fe);
+    // FEs are automatically reordered by size (largest first) for optimal convergence
+    let ctx = DemeanContext::new(flist, weights);
 
     res.axis_iter_mut(ndarray::Axis(1))
         .into_par_iter()
