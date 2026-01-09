@@ -111,6 +111,12 @@ pub struct FixedEffectsIndex {
 
     /// Total number of coefficients (sum of `n_groups`).
     pub n_coef: usize,
+
+    /// Mapping from original FE index to reordered position.
+    ///
+    /// `original_to_reordered[original_q]` gives the position of original
+    /// FE `original_q` in the reordered (sorted by size) layout.
+    original_to_reordered: Vec<usize>,
 }
 
 impl FixedEffectsIndex {
@@ -173,6 +179,13 @@ impl FixedEffectsIndex {
             }
         }
 
+        // Compute inverse mapping: original_to_reordered[original_q] = reordered_q
+        // order[reordered_q] = original_q, so we invert this
+        let mut original_to_reordered = vec![0usize; n_fe];
+        for (reordered_q, &original_q) in order.iter().enumerate() {
+            original_to_reordered[original_q] = reordered_q;
+        }
+
         Self {
             n_obs,
             n_fe,
@@ -180,6 +193,7 @@ impl FixedEffectsIndex {
             n_groups,
             coef_start,
             n_coef,
+            original_to_reordered,
         }
     }
 
@@ -213,6 +227,56 @@ impl FixedEffectsIndex {
             self.n_coef
         };
         start..end
+    }
+
+    /// Reorder coefficients from internal (sorted by FE size) to original FE order.
+    ///
+    /// During solving, FEs are reordered by size (largest first) for optimal
+    /// convergence. This method restores coefficients to the original FE order
+    /// as they appeared in the input.
+    ///
+    /// # Arguments
+    ///
+    /// * `coef` - Coefficient array in internal (reordered) layout
+    ///
+    /// # Returns
+    ///
+    /// Coefficient array in original FE order.
+    ///
+    /// # Layout
+    ///
+    /// Input layout (reordered, largest FE first):
+    /// ```text
+    /// [FE_reord_0 | FE_reord_1 | ... | FE_reord_{n_fe-1}]
+    /// ```
+    ///
+    /// Output layout (original order):
+    /// ```text
+    /// [FE_orig_0 | FE_orig_1 | ... | FE_orig_{n_fe-1}]
+    /// ```
+    pub fn reorder_coefficients_to_original(&self, coef: &[f64]) -> Vec<f64> {
+        debug_assert_eq!(
+            coef.len(),
+            self.n_coef,
+            "coefficient length ({}) must match n_coef ({})",
+            coef.len(),
+            self.n_coef
+        );
+
+        let mut out = vec![0.0; self.n_coef];
+        let mut out_pos = 0;
+
+        // For each FE in original order
+        for original_q in 0..self.n_fe {
+            let reordered_q = self.original_to_reordered[original_q];
+            let src_start = self.coef_start[reordered_q];
+            let len = self.n_groups[reordered_q];
+
+            out[out_pos..out_pos + len].copy_from_slice(&coef[src_start..src_start + len]);
+            out_pos += len;
+        }
+
+        out
     }
 }
 
@@ -515,6 +579,18 @@ pub enum ConvergenceState {
 pub struct DemeanResult {
     /// Demeaned data (single column, length `n_obs`).
     pub demeaned: Vec<f64>,
+
+    /// Fixed effect coefficients in original FE order.
+    ///
+    /// The coefficients are laid out as:
+    /// ```text
+    /// [FE_0 coefficients | FE_1 coefficients | ... | FE_{n_fe-1} coefficients]
+    /// ```
+    /// where FE indices follow the original input order (before internal reordering).
+    ///
+    /// For FE `q`, coefficients are at indices `coef_start_original[q]..coef_start_original[q+1]`
+    /// where `coef_start_original` is the cumulative sum of `n_groups_original`.
+    pub fe_coefficients: Vec<f64>,
 
     /// Convergence state.
     pub convergence: ConvergenceState,

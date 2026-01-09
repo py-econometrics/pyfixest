@@ -64,6 +64,7 @@ impl<'a> SingleFEDemeaner<'a> {
 impl Demeaner for SingleFEDemeaner<'_> {
     fn solve(&mut self, input: &[f64]) -> DemeanResult {
         let n_obs = self.ctx.index.n_obs;
+        let n_coef = self.ctx.index.n_coef;
 
         // Apply Dᵀ to get coefficient-space sums (reuses buffer)
         self.ctx.apply_design_matrix_t(input, &mut self.coef_sums_buffer);
@@ -71,15 +72,21 @@ impl Demeaner for SingleFEDemeaner<'_> {
         let fe0 = self.ctx.index.group_ids_for_fe(0);
         let group_weights = self.ctx.group_weights_for_fe(0);
 
-        // output[i] = input[i] - group_mean[fe0[i]]
-        // where group_mean[g] = coef_sums_buffer[g] / group_weights[g]
+        // Compute FE coefficients: coef[g] = sum[g] / weight[g]
+        let fe_coefficients: Vec<f64> = (0..n_coef)
+            .map(|g| self.coef_sums_buffer[g] / group_weights[g])
+            .collect();
+
+        // output[i] = input[i] - coef[fe0[i]]
         let demeaned: Vec<f64> = (0..n_obs)
-            .map(|i| input[i] - self.coef_sums_buffer[fe0[i]] / group_weights[fe0[i]])
+            .map(|i| input[i] - fe_coefficients[fe0[i]])
             .collect();
 
         // Single FE is a closed-form solution, always converges in 0 iterations
+        // No reordering needed for 1 FE
         DemeanResult {
             demeaned,
+            fe_coefficients,
             convergence: ConvergenceState::Converged,
             iterations: 0,
         }
@@ -149,8 +156,12 @@ impl Demeaner for TwoFEDemeaner<'_> {
             .map(|i| input[i] - self.coef[fe0[i]] - self.coef[n0 + fe1[i]])
             .collect();
 
+        // Reorder coefficients back to original FE order
+        let fe_coefficients = self.ctx.index.reorder_coefficients_to_original(&self.coef);
+
         DemeanResult {
             demeaned,
+            fe_coefficients,
             convergence,
             iterations: iter,
         }
@@ -168,6 +179,8 @@ impl Demeaner for TwoFEDemeaner<'_> {
 struct MultiFEBuffers {
     /// Accumulated fixed effects per observation (observation-space)
     mu: Vec<f64>,
+    /// Accumulated coefficients across all phases (coefficient-space)
+    total_coef: Vec<f64>,
     /// Working coefficient array for accelerator (reset each phase)
     coef: Vec<f64>,
     /// Coefficient array for 2-FE sub-convergence (coefficient-space, first 2 FEs only)
@@ -183,6 +196,7 @@ impl MultiFEBuffers {
     fn new(n_obs: usize, n_coef: usize, n_coef_2fe: usize) -> Self {
         Self {
             mu: vec![0.0; n_obs],
+            total_coef: vec![0.0; n_coef],
             coef: vec![0.0; n_coef],
             coef_2fe: vec![0.0; n_coef_2fe],
             effective_input: vec![0.0; n_obs],
@@ -194,6 +208,7 @@ impl MultiFEBuffers {
     #[inline]
     fn reset(&mut self) {
         self.mu.fill(0.0);
+        self.total_coef.fill(0.0);
         self.coef.fill(0.0);
     }
 }
@@ -247,6 +262,10 @@ impl<'a> MultiFEDemeaner<'a> {
             .multi_acc
             .run(&mut projector, &mut self.buffers.coef, self.config.iter_warmup);
 
+        // Accumulate coefficients and apply to mu
+        for (tc, &c) in self.buffers.total_coef.iter_mut().zip(self.buffers.coef.iter()) {
+            *tc += c;
+        }
         self.ctx
             .apply_design_matrix(&self.buffers.coef, &mut self.buffers.mu);
         (iter, convergence)
@@ -281,6 +300,10 @@ impl<'a> MultiFEDemeaner<'a> {
             self.config.maxiter / 2,
         );
 
+        // Accumulate 2-FE coefficients to total_coef (first 2 FEs only)
+        for (tc, &c) in self.buffers.total_coef[..n_coef_2fe].iter_mut().zip(self.buffers.coef_2fe.iter()) {
+            *tc += c;
+        }
         // Add 2-FE coefficients to mu
         self.add_2fe_coefficients_to_mu();
         (iter, convergence)
@@ -311,6 +334,10 @@ impl<'a> MultiFEDemeaner<'a> {
             self.multi_acc
                 .run(&mut projector, &mut self.buffers.coef, remaining);
 
+        // Accumulate coefficients and apply to mu
+        for (tc, &c) in self.buffers.total_coef.iter_mut().zip(self.buffers.coef.iter()) {
+            *tc += c;
+        }
         self.ctx
             .apply_design_matrix(&self.buffers.coef, &mut self.buffers.mu);
         (iter, convergence)
@@ -341,8 +368,12 @@ impl<'a> MultiFEDemeaner<'a> {
             .map(|(&x, &mu)| x - mu)
             .collect();
 
+        // Reorder coefficients back to original FE order
+        let fe_coefficients = self.ctx.index.reorder_coefficients_to_original(&self.buffers.total_coef);
+
         DemeanResult {
             demeaned,
+            fe_coefficients,
             convergence,
             iterations: iter,
         }

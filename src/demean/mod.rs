@@ -34,9 +34,10 @@ pub mod types;
 use demeaner::{Demeaner, MultiFEDemeaner, SingleFEDemeaner, TwoFEDemeaner};
 use types::{ConvergenceState, DemeanContext, DemeanResult, FixestConfig};
 
-use ndarray::{Array2, ArrayView1, ArrayView2, Zip};
+use ndarray::{Array2, ArrayView1, ArrayView2};
 use numpy::{PyArray2, PyReadonlyArray1, PyReadonlyArray2};
 use pyo3::prelude::*;
+use pyo3::types::PyDict;
 use rayon::prelude::*;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
@@ -73,6 +74,13 @@ impl<'a> ThreadLocalDemeaner<'a> {
     }
 }
 
+/// Result of batch demeaning operation.
+pub(crate) struct DemeanBatchResult {
+    pub demeaned: Array2<f64>,
+    pub fe_coefficients: Array2<f64>,
+    pub success: bool,
+}
+
 /// Demean using accelerated coefficient-space iteration.
 ///
 /// Uses `for_each_init` to create one demeaner per thread, reusing buffers
@@ -80,8 +88,9 @@ impl<'a> ThreadLocalDemeaner<'a> {
 ///
 /// # Returns
 ///
-/// A tuple of (demeaned_data, success) where:
-/// - `demeaned_data`: The demeaned data as an `Array2<f64>`
+/// A `DemeanBatchResult` containing:
+/// - `demeaned`: The demeaned data as an `Array2<f64>`
+/// - `fe_coefficients`: FE coefficients as an `Array2<f64>`
 /// - `success`: True if all columns converged
 pub(crate) fn demean(
     x: &ArrayView2<f64>,
@@ -89,7 +98,7 @@ pub(crate) fn demean(
     weights: &ArrayView1<f64>,
     tol: f64,
     maxiter: usize,
-) -> (Array2<f64>, bool) {
+) -> DemeanBatchResult {
     let (n_samples, n_features) = x.dim();
 
     let config = FixestConfig {
@@ -99,65 +108,89 @@ pub(crate) fn demean(
     };
 
     let not_converged = Arc::new(AtomicUsize::new(0));
-    let mut res = Array2::<f64>::zeros((n_samples, n_features));
+    let mut demeaned = Array2::<f64>::zeros((n_samples, n_features));
 
     // FEs are automatically reordered by size (largest first) for optimal convergence
     let ctx = DemeanContext::new(flist, weights);
+    let n_coef = ctx.index.n_coef;
 
-    res.axis_iter_mut(ndarray::Axis(1))
+    let mut fe_coefficients = Array2::<f64>::zeros((n_coef, n_features));
+
+    // Process columns in parallel, collecting both demeaned values and FE coefficients
+    let results: Vec<(usize, DemeanResult)> = demeaned
+        .axis_iter_mut(ndarray::Axis(1))
         .into_par_iter()
         .enumerate()
-        .for_each_init(
-            // Init closure: called once per thread to create the thread-local state
+        .map_init(
             || ThreadLocalDemeaner::new(&ctx, &config),
-            // Body closure: called for each column, reusing thread-local state
-            |demeaner, (k, mut col)| {
+            |demeaner, (k, _)| {
                 let col_view = x.column(k);
-                // Zero-copy if the column is contiguous (F-order), otherwise copy
                 let result = if let Some(slice) = col_view.as_slice() {
                     demeaner.solve(slice)
                 } else {
                     let xk: Vec<f64> = col_view.to_vec();
                     demeaner.solve(&xk)
                 };
-
-                if result.convergence == ConvergenceState::NotConverged {
-                    not_converged.fetch_add(1, Ordering::SeqCst);
-                }
-
-                Zip::from(&mut col)
-                    .and(&result.demeaned)
-                    .for_each(|col_elm, &val| {
-                        *col_elm = val;
-                    });
+                (k, result)
             },
-        );
+        )
+        .collect();
+
+    // Copy results back (sequential, but fast)
+    for (k, result) in results {
+        if result.convergence == ConvergenceState::NotConverged {
+            not_converged.fetch_add(1, Ordering::SeqCst);
+        }
+
+        // Copy demeaned values
+        for (i, &val) in result.demeaned.iter().enumerate() {
+            demeaned[[i, k]] = val;
+        }
+
+        // Copy FE coefficients
+        for (i, &val) in result.fe_coefficients.iter().enumerate() {
+            fe_coefficients[[i, k]] = val;
+        }
+    }
 
     let success = not_converged.load(Ordering::SeqCst) == 0;
-    (res, success)
+    DemeanBatchResult {
+        demeaned,
+        fe_coefficients,
+        success,
+    }
 }
 
 /// Python-exposed function for accelerated demeaning.
 ///
-/// Returns a tuple of (demeaned_array, success).
+/// Returns a dict with:
+/// - "demeaned": Array of demeaned values (n_samples, n_features)
+/// - "fe_coefficients": Array of FE coefficients (n_coef, n_features)
+/// - "success": Boolean indicating convergence
 #[pyfunction]
 #[pyo3(signature = (x, flist, weights, tol=1e-8, maxiter=100_000))]
-pub fn _demean_rs(
-    py: Python<'_>,
+pub fn _demean_rs<'py>(
+    py: Python<'py>,
     x: PyReadonlyArray2<f64>,
     flist: PyReadonlyArray2<usize>,
     weights: PyReadonlyArray1<f64>,
     tol: f64,
     maxiter: usize,
-) -> PyResult<(Py<PyArray2<f64>>, bool)> {
+) -> PyResult<Bound<'py, PyDict>> {
     let x_arr = x.as_array();
     let flist_arr = flist.as_array();
     let weights_arr = weights.as_array();
 
-    let (demeaned, success) = py.detach(|| demean(&x_arr, &flist_arr, &weights_arr, tol, maxiter));
+    let result = py.detach(|| demean(&x_arr, &flist_arr, &weights_arr, tol, maxiter));
 
-    let pyarray = PyArray2::from_owned_array(py, demeaned);
-    Ok((pyarray.into(), success))
+    let dict = PyDict::new(py);
+    dict.set_item("demeaned", PyArray2::from_owned_array(py, result.demeaned))?;
+    dict.set_item(
+        "fe_coefficients",
+        PyArray2::from_owned_array(py, result.fe_coefficients),
+    )?;
+    dict.set_item("success", result.success)?;
+    Ok(dict)
 }
 
 #[cfg(test)]
@@ -414,5 +447,310 @@ mod tests {
                 .any(|(a, b)| (a - b).abs() > 0.01),
             "Different inputs should produce different results"
         );
+    }
+
+    // =========================================================================
+    // FE Coefficient Tests
+    // =========================================================================
+
+    /// Helper: compute residuals by applying FE coefficients to observations.
+    /// Returns input[i] - sum_q(coef[fe_q[i]]) for each observation.
+    fn apply_coefficients(
+        input: &[f64],
+        flist: &Array2<usize>,
+        fe_coefficients: &[f64],
+        n_groups: &[usize],
+    ) -> Vec<f64> {
+        let n_obs = input.len();
+        let n_fe = flist.ncols();
+
+        // Compute coefficient offsets for each FE
+        let mut coef_offsets = vec![0usize; n_fe];
+        for q in 1..n_fe {
+            coef_offsets[q] = coef_offsets[q - 1] + n_groups[q - 1];
+        }
+
+        (0..n_obs)
+            .map(|i| {
+                let mut fe_sum = 0.0;
+                for q in 0..n_fe {
+                    let g = flist[[i, q]];
+                    fe_sum += fe_coefficients[coef_offsets[q] + g];
+                }
+                input[i] - fe_sum
+            })
+            .collect()
+    }
+
+    #[test]
+    fn test_single_fe_coefficients() {
+        let n_obs = 100;
+        let n_groups = 10;
+
+        let mut flist = Array2::<usize>::zeros((n_obs, 1));
+        for i in 0..n_obs {
+            flist[[i, 0]] = i % n_groups;
+        }
+
+        let weights = Array1::<f64>::ones(n_obs);
+        let ctx = DemeanContext::new(&flist.view(), &weights.view());
+        let input: Vec<f64> = (0..n_obs).map(|i| (i as f64) * 0.1).collect();
+
+        let mut demeaner = SingleFEDemeaner::new(&ctx);
+        let result = demeaner.solve(&input);
+
+        // Verify coefficients are correct: applying them should give same residuals
+        let reconstructed = apply_coefficients(&input, &flist, &result.fe_coefficients, &[n_groups]);
+
+        for (i, (&demeaned, &reconstructed)) in
+            result.demeaned.iter().zip(reconstructed.iter()).enumerate()
+        {
+            assert!(
+                (demeaned - reconstructed).abs() < 1e-10,
+                "Obs {}: demeaned ({}) != reconstructed ({})",
+                i,
+                demeaned,
+                reconstructed
+            );
+        }
+
+        // Verify coefficient count
+        assert_eq!(
+            result.fe_coefficients.len(),
+            n_groups,
+            "Should have {} coefficients",
+            n_groups
+        );
+    }
+
+    #[test]
+    fn test_two_fe_coefficients_correct() {
+        let n_obs = 100;
+        let n_groups_0 = 10;
+        let n_groups_1 = 5;
+
+        let mut flist = Array2::<usize>::zeros((n_obs, 2));
+        for i in 0..n_obs {
+            flist[[i, 0]] = i % n_groups_0;
+            flist[[i, 1]] = i % n_groups_1;
+        }
+
+        let weights = Array1::<f64>::ones(n_obs);
+        let ctx = DemeanContext::new(&flist.view(), &weights.view());
+        let input: Vec<f64> = (0..n_obs).map(|i| (i as f64) * 0.1).collect();
+
+        let config = FixestConfig::default();
+        let mut demeaner = TwoFEDemeaner::new(&ctx, &config);
+        let result = demeaner.solve(&input);
+
+        // Verify coefficients are correct: applying them should give same residuals
+        let reconstructed =
+            apply_coefficients(&input, &flist, &result.fe_coefficients, &[n_groups_0, n_groups_1]);
+
+        for (i, (&demeaned, &reconstructed)) in
+            result.demeaned.iter().zip(reconstructed.iter()).enumerate()
+        {
+            assert!(
+                (demeaned - reconstructed).abs() < 1e-8,
+                "Obs {}: demeaned ({}) != reconstructed ({})",
+                i,
+                demeaned,
+                reconstructed
+            );
+        }
+
+        // Verify coefficient count
+        assert_eq!(
+            result.fe_coefficients.len(),
+            n_groups_0 + n_groups_1,
+            "Should have {} coefficients",
+            n_groups_0 + n_groups_1
+        );
+    }
+
+    #[test]
+    fn test_two_fe_coefficients_ordering() {
+        // Test that coefficients are returned in ORIGINAL FE order, not reordered
+        let n_obs = 100;
+
+        // FE 0: 5 groups (smaller), FE 1: 20 groups (larger)
+        // Internally, FEs get reordered by size (largest first), so FE 1 becomes internal FE 0
+        // But the coefficients should be returned in original order: [FE0 coeffs | FE1 coeffs]
+        let n_groups_0 = 5; // smaller
+        let n_groups_1 = 20; // larger
+
+        let mut flist = Array2::<usize>::zeros((n_obs, 2));
+        for i in 0..n_obs {
+            flist[[i, 0]] = i % n_groups_0;
+            flist[[i, 1]] = i % n_groups_1;
+        }
+
+        let weights = Array1::<f64>::ones(n_obs);
+        let ctx = DemeanContext::new(&flist.view(), &weights.view());
+        let input: Vec<f64> = (0..n_obs).map(|i| (i as f64) * 0.1).collect();
+
+        let config = FixestConfig::default();
+        let mut demeaner = TwoFEDemeaner::new(&ctx, &config);
+        let result = demeaner.solve(&input);
+
+        // Verify coefficient count matches original ordering
+        assert_eq!(
+            result.fe_coefficients.len(),
+            n_groups_0 + n_groups_1,
+            "Should have {} coefficients",
+            n_groups_0 + n_groups_1
+        );
+
+        // Verify coefficients are in original order by reconstructing residuals
+        // using the ORIGINAL flist (not reordered)
+        let reconstructed =
+            apply_coefficients(&input, &flist, &result.fe_coefficients, &[n_groups_0, n_groups_1]);
+
+        for (i, (&demeaned, &reconstructed)) in
+            result.demeaned.iter().zip(reconstructed.iter()).enumerate()
+        {
+            assert!(
+                (demeaned - reconstructed).abs() < 1e-8,
+                "Obs {}: demeaned ({}) != reconstructed ({}) - coefficients may be in wrong order",
+                i,
+                demeaned,
+                reconstructed
+            );
+        }
+    }
+
+    #[test]
+    fn test_three_fe_coefficients_correct() {
+        let n_obs = 120;
+        let n_groups_0 = 10;
+        let n_groups_1 = 6;
+        let n_groups_2 = 4;
+
+        let mut flist = Array2::<usize>::zeros((n_obs, 3));
+        for i in 0..n_obs {
+            flist[[i, 0]] = i % n_groups_0;
+            flist[[i, 1]] = i % n_groups_1;
+            flist[[i, 2]] = i % n_groups_2;
+        }
+
+        let weights = Array1::<f64>::ones(n_obs);
+        let ctx = DemeanContext::new(&flist.view(), &weights.view());
+        let input: Vec<f64> = (0..n_obs).map(|i| (i as f64) * 0.1).collect();
+
+        let config = FixestConfig::default();
+        let mut demeaner = MultiFEDemeaner::new(&ctx, &config);
+        let result = demeaner.solve(&input);
+
+        // Verify coefficients are correct
+        let reconstructed = apply_coefficients(
+            &input,
+            &flist,
+            &result.fe_coefficients,
+            &[n_groups_0, n_groups_1, n_groups_2],
+        );
+
+        for (i, (&demeaned, &reconstructed)) in
+            result.demeaned.iter().zip(reconstructed.iter()).enumerate()
+        {
+            assert!(
+                (demeaned - reconstructed).abs() < 1e-6,
+                "Obs {}: demeaned ({}) != reconstructed ({})",
+                i,
+                demeaned,
+                reconstructed
+            );
+        }
+
+        // Verify coefficient count
+        assert_eq!(
+            result.fe_coefficients.len(),
+            n_groups_0 + n_groups_1 + n_groups_2,
+        );
+    }
+
+    #[test]
+    fn test_three_fe_coefficients_ordering() {
+        // Test that 3-FE coefficients are returned in original order
+        let n_obs = 120;
+
+        // Create FEs with different sizes to trigger reordering
+        // Original: FE0=3 groups (smallest), FE1=15 groups (largest), FE2=8 groups (middle)
+        // Reordered internally: FE1, FE2, FE0
+        let n_groups_0 = 3; // smallest
+        let n_groups_1 = 15; // largest
+        let n_groups_2 = 8; // middle
+
+        let mut flist = Array2::<usize>::zeros((n_obs, 3));
+        for i in 0..n_obs {
+            flist[[i, 0]] = i % n_groups_0;
+            flist[[i, 1]] = i % n_groups_1;
+            flist[[i, 2]] = i % n_groups_2;
+        }
+
+        let weights = Array1::<f64>::ones(n_obs);
+        let ctx = DemeanContext::new(&flist.view(), &weights.view());
+        let input: Vec<f64> = (0..n_obs).map(|i| (i as f64) * 0.1).collect();
+
+        let config = FixestConfig::default();
+        let mut demeaner = MultiFEDemeaner::new(&ctx, &config);
+        let result = demeaner.solve(&input);
+
+        // Verify coefficients work with ORIGINAL flist ordering
+        let reconstructed = apply_coefficients(
+            &input,
+            &flist,
+            &result.fe_coefficients,
+            &[n_groups_0, n_groups_1, n_groups_2],
+        );
+
+        for (i, (&demeaned, &reconstructed)) in
+            result.demeaned.iter().zip(reconstructed.iter()).enumerate()
+        {
+            assert!(
+                (demeaned - reconstructed).abs() < 1e-6,
+                "Obs {}: demeaned ({}) != reconstructed ({}) - coefficients may be in wrong order",
+                i,
+                demeaned,
+                reconstructed
+            );
+        }
+    }
+
+    #[test]
+    fn test_weighted_coefficients() {
+        let n_obs = 100;
+        let n_groups_0 = 10;
+        let n_groups_1 = 5;
+
+        let mut flist = Array2::<usize>::zeros((n_obs, 2));
+        for i in 0..n_obs {
+            flist[[i, 0]] = i % n_groups_0;
+            flist[[i, 1]] = i % n_groups_1;
+        }
+
+        // Non-uniform weights
+        let weights: Array1<f64> = (0..n_obs).map(|i| 1.0 + (i % 3) as f64).collect();
+        let ctx = DemeanContext::new(&flist.view(), &weights.view());
+        let input: Vec<f64> = (0..n_obs).map(|i| (i as f64) * 0.1).collect();
+
+        let config = FixestConfig::default();
+        let mut demeaner = TwoFEDemeaner::new(&ctx, &config);
+        let result = demeaner.solve(&input);
+
+        // Verify coefficients are correct with weighted reconstruction
+        let reconstructed =
+            apply_coefficients(&input, &flist, &result.fe_coefficients, &[n_groups_0, n_groups_1]);
+
+        for (i, (&demeaned, &reconstructed)) in
+            result.demeaned.iter().zip(reconstructed.iter()).enumerate()
+        {
+            assert!(
+                (demeaned - reconstructed).abs() < 1e-8,
+                "Weighted obs {}: demeaned ({}) != reconstructed ({})",
+                i,
+                demeaned,
+                reconstructed
+            );
+        }
     }
 }

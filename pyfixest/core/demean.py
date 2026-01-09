@@ -1,7 +1,12 @@
+from typing import Any
+
 import numpy as np
 from numpy.typing import NDArray
 
 from ._core_impl import _demean_rs
+
+# Type alias for the dict returned by _demean_rs
+DemeanResultDict = dict[str, Any]
 
 
 def demean(
@@ -70,10 +75,12 @@ def demean(
     print(pf.feols(fml, data).coef())
     ```
     """
-    return _demean_rs(
+    # _demean_rs now returns a dict with demeaned, fe_coefficients, success
+    result: DemeanResultDict = _demean_rs(  # type: ignore[assignment]
         x.astype(np.float64, copy=False),
         flist.astype(np.uint64, copy=False),
         weights.astype(np.float64, copy=False),
         tol,
         maxiter,
     )
+    return result["demeaned"], result["success"]
