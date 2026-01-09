@@ -23,6 +23,7 @@
 //! which handles the iteration strategy.
 
 use crate::demean::types::DemeanContext;
+use std::ops::Range;
 
 // =============================================================================
 // Projector Trait
@@ -55,11 +56,20 @@ pub trait Projector {
     /// Compute the sum of squared residuals for the given coefficients.
     fn compute_ssr(&mut self, coef: &[f64]) -> f64;
 
-    /// Length of the coefficient slice to use for convergence checking.
+    /// Range of coefficients to use for convergence checking.
     ///
-    /// This may be smaller than `coef_len()` when not all coefficients
-    /// need to be checked (e.g., for 2-FE only alpha is checked).
-    fn convergence_len(&self) -> usize;
+    /// # Why not all coefficients?
+    ///
+    /// At a fixed point, if any (n_fe - 1) fixed effects have converged,
+    /// the remaining one must also have converged (its inputs are stable,
+    /// so its output is stable). This allows us to skip checking one FE.
+    ///
+    /// # Which FE to exclude?
+    ///
+    /// Following fixest's approach, we exclude the **last FE** (smallest after
+    /// reordering). In the reverse sweep, this FE is processed first using
+    /// stale data from the previous iteration. Returns `0..n_coef - n_groups[n_fe-1]`.
+    fn convergence_range(&self) -> Range<usize>;
 }
 
 // =============================================================================
@@ -207,8 +217,9 @@ impl Projector for TwoFEProjector<'_> {
     }
 
     #[inline(always)]
-    fn convergence_len(&self) -> usize {
-        self.ctx.index.n_groups[0]
+    fn convergence_range(&self) -> Range<usize> {
+        // Exclude FE 1 (last/smallest), check only FE 0
+        0..self.ctx.index.n_groups[0]
     }
 }
 
@@ -378,7 +389,8 @@ impl Projector for MultiFEProjector<'_> {
     }
 
     #[inline(always)]
-    fn convergence_len(&self) -> usize {
-        self.ctx.index.n_coef - self.ctx.index.n_groups[self.ctx.index.n_fe - 1]
+    fn convergence_range(&self) -> Range<usize> {
+        // Exclude last FE (smallest), check FEs 0 through n_fe-2
+        0..self.ctx.index.n_coef - self.ctx.index.n_groups[self.ctx.index.n_fe - 1]
     }
 }

@@ -212,16 +212,17 @@ impl IronsTuckGrand {
         coef: &mut [f64],
         iter: usize,
     ) -> ConvergenceState {
-        let conv_len = projector.convergence_len();
+        let conv_range = projector.convergence_range();
+        let (cs, ce) = (conv_range.start, conv_range.end);
 
         // Double projection for Irons-Tuck: G(G(x))
         projector.project(&self.buffers.gx, &mut self.buffers.ggx);
 
         // Irons-Tuck acceleration
         if Self::accelerate(
-            &mut coef[..conv_len],
-            &self.buffers.gx[..conv_len],
-            &self.buffers.ggx[..conv_len],
+            &mut coef[cs..ce],
+            &self.buffers.gx[cs..ce],
+            &self.buffers.ggx[cs..ce],
         ) == ConvergenceState::Converged
         {
             return ConvergenceState::Converged;
@@ -229,7 +230,7 @@ impl IronsTuckGrand {
 
         // Post-acceleration projection (after warmup)
         if iter >= self.config.iter_proj_after_acc {
-            self.buffers.temp[..conv_len].copy_from_slice(&coef[..conv_len]);
+            self.buffers.temp[cs..ce].copy_from_slice(&coef[cs..ce]);
             projector.project(&self.buffers.temp, coef);
         }
 
@@ -280,12 +281,9 @@ impl IronsTuckGrand {
         coef: &[f64],
     ) -> ConvergenceState {
         projector.project(coef, &mut self.buffers.gx);
-        let conv_len = projector.convergence_len();
-        if Self::should_continue(
-            &coef[..conv_len],
-            &self.buffers.gx[..conv_len],
-            self.config.tol,
-        ) {
+        let conv_range = projector.convergence_range();
+        let (cs, ce) = (conv_range.start, conv_range.end);
+        if Self::should_continue(&coef[cs..ce], &self.buffers.gx[cs..ce], self.config.tol) {
             ConvergenceState::NotConverged
         } else {
             ConvergenceState::Converged
@@ -353,22 +351,23 @@ impl IronsTuckGrand {
         projector: &mut P,
         phase: GrandPhase,
     ) -> GrandStepResult {
-        let conv_len = projector.convergence_len();
+        let conv_range = projector.convergence_range();
+        let (cs, ce) = (conv_range.start, conv_range.end);
         match phase {
             GrandPhase::Collect1st => {
-                self.buffers.y[..conv_len].copy_from_slice(&self.buffers.gx[..conv_len]);
+                self.buffers.y[cs..ce].copy_from_slice(&self.buffers.gx[cs..ce]);
                 GrandStepResult::Continue(GrandPhase::Collect2nd)
             }
             GrandPhase::Collect2nd => {
-                self.buffers.gy[..conv_len].copy_from_slice(&self.buffers.gx[..conv_len]);
+                self.buffers.gy[cs..ce].copy_from_slice(&self.buffers.gx[cs..ce]);
                 GrandStepResult::Continue(GrandPhase::Collect3rdAndAccelerate)
             }
             GrandPhase::Collect3rdAndAccelerate => {
-                self.buffers.ggy[..conv_len].copy_from_slice(&self.buffers.gx[..conv_len]);
+                self.buffers.ggy[cs..ce].copy_from_slice(&self.buffers.gx[cs..ce]);
                 let convergence = Self::accelerate(
-                    &mut self.buffers.y[..conv_len],
-                    &self.buffers.gy[..conv_len],
-                    &self.buffers.ggy[..conv_len],
+                    &mut self.buffers.y[cs..ce],
+                    &self.buffers.gy[cs..ce],
+                    &self.buffers.ggy[cs..ce],
                 );
                 if convergence == ConvergenceState::Converged {
                     return GrandStepResult::Done(ConvergenceState::Converged);
