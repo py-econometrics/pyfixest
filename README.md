@@ -334,6 +334,7 @@ Thanks goes to these wonderful people:
       <td align="center" valign="top" width="12.5%"><a href="https://github.com/pdoupe"><img src="https://avatars.githubusercontent.com/u/215010049?v=4?s=80" width="80px;" alt="Patrick Doupe"/><br /><sub><b>Patrick Doupe</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=pdoupe" title="Code">💻</a></td>
       <td align="center" valign="top" width="12.5%"><a href="http://www.linkedin.com/in/ariadnaaz/"><img src="https://avatars.githubusercontent.com/u/35080247?v=4?s=80" width="80px;" alt="Ariadna Albors Zumel"/><br /><sub><b>Ariadna Albors Zumel</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=Ariadnaaz" title="Code">💻</a></td>
       <td align="center" valign="top" width="12.5%"><a href="https://github.com/blucap"><img src="https://avatars.githubusercontent.com/u/614800?v=4?s=80" width="80px;" alt="Martien Lubberink"/><br /><sub><b>Martien Lubberink</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=blucap" title="Code">💻</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="https://github.com/jonpcohen"><img src="https://avatars.githubusercontent.com/u/48955223?v=4?s=80" width="80px;" alt="jonpcohen"/><br /><sub><b>jonpcohen</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=jonpcohen" title="Documentation">📖</a></td>
     </tr>
   </tbody>
 </table>
