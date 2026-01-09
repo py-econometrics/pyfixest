@@ -19,7 +19,7 @@ def _crv1_meat_loop_rs(
 def _demean_rs(
     x: NDArray[np.float64],
     flist: NDArray[np.uint64],
-    weights: NDArray[np.float64],
+    weights: NDArray[np.float64] | None = None,
     tol: float = 1e-08,
     maxiter: int = 100_000,
 ) -> DemeanResult: ...

@@ -286,51 +286,19 @@ impl FixedEffectsIndex {
 
 /// Observation weights and their aggregation to group level.
 ///
-/// # Purpose
-///
-/// In weighted least squares, observations have different weights (e.g., inverse
-/// variance weights). To compute weighted group means, we need:
-///
-/// 1. Per-observation weights for the numerator: `Σ(weight[i] * value[i])`
-/// 2. Per-group weight sums for the denominator: `Σ(weight[i])` for each group
-///
-/// # Uniform Weights Fast Path
-///
-/// When all weights are 1.0 (unweighted regression), `is_uniform = true` enables
-/// optimized code paths that skip multiplication by weights.
+/// Only created when weights are non-uniform. For unweighted regression,
+/// `DemeanContext.weights` is `None`.
 pub struct ObservationWeights {
     /// Weight for each observation (length: `n_obs`).
-    /// Used when scattering values to coefficient space.
     pub per_obs: Vec<f64>,
 
     /// Sum of observation weights for each group (length: `n_coef`).
-    /// Used as denominator when computing group means.
-    /// Layout matches coefficient space: `[fe0_group0, ..., fe0_groupK, fe1_group0, ...]`.
     pub per_group: Vec<f64>,
-
-    /// True if all observation weights are 1.0 (enables the fast path).
-    pub is_uniform: bool,
 }
 
 impl ObservationWeights {
     /// Create observation weights from the input array.
-    ///
-    /// # Arguments
-    ///
-    /// * `weights` - Per-observation weights (length: `n_obs`)
-    /// * `index` - Fixed effects index (needed to aggregate weights to groups)
-    ///
-    /// # Computed Fields
-    ///
-    /// - `is_uniform`: True if all weights are 1.0 (within floating-point tolerance)
-    /// - `per_group`: Sum of observation weights for each group
     pub fn new(weights: &ArrayView1<f64>, index: &FixedEffectsIndex) -> Self {
-        // Tolerance for detecting uniform weights (all 1.0).
-        // Using 1e-10 to account for floating-point representation errors
-        // while being strict enough to intentionally catch non-uniform weights.
-        const UNIFORM_WEIGHT_TOL: f64 = 1e-10;
-        let is_uniform = weights.iter().all(|&w| (w - 1.0).abs() < UNIFORM_WEIGHT_TOL);
-
         // Aggregate observation weights to group level
         let mut per_group = vec![0.0; index.n_coef];
         for q in 0..index.n_fe {
@@ -352,7 +320,6 @@ impl ObservationWeights {
         Self {
             per_obs: weights.to_vec(),
             per_group,
-            is_uniform,
         }
     }
 }
@@ -363,39 +330,17 @@ impl ObservationWeights {
 
 /// Complete context for fixed effects demeaning operations.
 ///
-/// # Purpose
-///
-/// Combines the fixed effects index (which observation belongs to which groups)
-/// with observation weights. Provides the core scatter/gather operations needed
-/// by the iterative demeaning algorithm.
-///
-/// # Operations
-///
-/// The demeaning algorithm repeatedly:
-///
-/// 1. **Scatter**: Aggregate residuals from observations to group coefficients
-/// 2. **Gather**: Subtract group coefficients from observations
-///
-/// These operations transform data between observation space (N values) and
-/// coefficient space (`n_coef` values).
-///
-/// # Example Usage
-///
-/// ```ignore
-/// let ctx = DemeanContext::new(&flist, &weights);
-///
-/// // Apply Dᵀ to get coefficient-space sums
-/// let coef_sums = ctx.apply_design_matrix_t(&input);
-///
-/// // Compute group means: coef[g] = coef_sums[g] / group_weight[g]
-/// // ... (done in solver)
-/// ```
+/// Combines the fixed effects index with optional observation weights.
+/// When `weights` is `None`, uses the fast unweighted path.
 pub struct DemeanContext {
     /// Fixed effects index (observation → group mapping).
     pub index: FixedEffectsIndex,
 
-    /// Observation weights and group-level aggregations.
-    pub weights: ObservationWeights,
+    /// Group counts (length: `n_coef`). Used as denominator for unweighted case.
+    pub group_counts: Vec<f64>,
+
+    /// Observation weights. `None` for unweighted regression (fast path).
+    pub weights: Option<ObservationWeights>,
 }
 
 impl DemeanContext {
@@ -407,29 +352,54 @@ impl DemeanContext {
     /// # Arguments
     ///
     /// * `flist` - Fixed effect group IDs with shape `(n_obs, n_fe)`
-    /// * `weights` - Per-observation weights (length: `n_obs`)
-    ///
-    /// # Panics
-    ///
-    /// Panics in debug builds if `weights.len() != flist.nrows()`.
-    pub fn new(flist: &ArrayView2<usize>, weights: &ArrayView1<f64>) -> Self {
-        debug_assert_eq!(
-            weights.len(),
-            flist.nrows(),
-            "weights length ({}) must match number of observations ({})",
-            weights.len(),
-            flist.nrows()
-        );
-
+    /// * `weights` - Per-observation weights, or `None` for unweighted regression
+    pub fn new(flist: &ArrayView2<usize>, weights: Option<&ArrayView1<f64>>) -> Self {
         let index = FixedEffectsIndex::new(flist);
-        let weights = ObservationWeights::new(weights, &index);
-        Self { index, weights }
+
+        // Always compute group counts (needed for unweighted case)
+        let mut group_counts = vec![0.0; index.n_coef];
+        for q in 0..index.n_fe {
+            let offset = index.coef_start[q];
+            let fe_offset = q * index.n_obs;
+            for i in 0..index.n_obs {
+                let g = index.group_ids[fe_offset + i];
+                group_counts[offset + g] += 1.0;
+            }
+        }
+        // Avoid division by zero for empty groups
+        for c in &mut group_counts {
+            if *c == 0.0 {
+                *c = 1.0;
+            }
+        }
+
+        let weights = weights.map(|w| {
+            debug_assert_eq!(
+                w.len(),
+                flist.nrows(),
+                "weights length ({}) must match number of observations ({})",
+                w.len(),
+                flist.nrows()
+            );
+            ObservationWeights::new(w, &index)
+        });
+
+        Self {
+            index,
+            group_counts,
+            weights,
+        }
     }
 
     /// Get the weight sums for all groups in fixed effect `fe`.
+    /// Returns group counts for unweighted, weighted sums for weighted.
     #[inline(always)]
     pub fn group_weights_for_fe(&self, fe: usize) -> &[f64] {
-        &self.weights.per_group[self.index.coef_range_for_fe(fe)]
+        let range = self.index.coef_range_for_fe(fe);
+        match &self.weights {
+            Some(w) => &w.per_group[range],
+            None => &self.group_counts[range],
+        }
     }
 
     // =========================================================================
@@ -471,13 +441,13 @@ impl DemeanContext {
         for q in 0..self.index.n_fe {
             let offset = self.index.coef_start[q];
             let fe_ids = self.index.group_ids_for_fe(q);
-            if self.weights.is_uniform {
+            if let Some(w) = &self.weights {
                 for (i, &g) in fe_ids.iter().enumerate() {
-                    out[offset + g] += values[i];
+                    out[offset + g] += values[i] * w.per_obs[i];
                 }
             } else {
                 for (i, &g) in fe_ids.iter().enumerate() {
-                    out[offset + g] += values[i] * self.weights.per_obs[i];
+                    out[offset + g] += values[i];
                 }
             }
         }

@@ -422,7 +422,7 @@ mod tests {
             flist[[i, 1]] = i % 5;
         }
         let weights = Array1::<f64>::ones(n_obs);
-        let ctx = DemeanContext::new(&flist.view(), &weights.view());
+        let ctx = DemeanContext::new(&flist.view(), Some(&weights.view()));
         let input: Vec<f64> = (0..n_obs).map(|i| (i as f64) * 0.1).collect();
         (ctx, input)
     }

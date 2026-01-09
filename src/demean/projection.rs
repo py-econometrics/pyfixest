@@ -120,14 +120,13 @@ impl<'a> TwoFEProjector<'a> {
 
         self.scratch[..n1].copy_from_slice(&self.coef_sums[n0..n0 + n1]);
 
-        if self.ctx.weights.is_uniform {
-            for (&g0, &g1) in fe0.iter().zip(fe1.iter()) {
-                self.scratch[g1] -= alpha[g0];
+        if let Some(w) = &self.ctx.weights {
+            for ((&g0, &g1), &wo) in fe0.iter().zip(fe1.iter()).zip(w.per_obs.iter()) {
+                self.scratch[g1] -= alpha[g0] * wo;
             }
         } else {
-            for ((&g0, &g1), &w) in fe0.iter().zip(fe1.iter()).zip(self.ctx.weights.per_obs.iter())
-            {
-                self.scratch[g1] -= alpha[g0] * w;
+            for (&g0, &g1) in fe0.iter().zip(fe1.iter()) {
+                self.scratch[g1] -= alpha[g0];
             }
         }
 
@@ -149,14 +148,13 @@ impl<'a> TwoFEProjector<'a> {
 
         alpha_out[..n0].copy_from_slice(&self.coef_sums[..n0]);
 
-        if self.ctx.weights.is_uniform {
-            for (&g0, &g1) in fe0.iter().zip(fe1.iter()) {
-                alpha_out[g0] -= self.scratch[g1];
+        if let Some(w) = &self.ctx.weights {
+            for ((&g0, &g1), &wo) in fe0.iter().zip(fe1.iter()).zip(w.per_obs.iter()) {
+                alpha_out[g0] -= self.scratch[g1] * wo;
             }
         } else {
-            for ((&g0, &g1), &w) in fe0.iter().zip(fe1.iter()).zip(self.ctx.weights.per_obs.iter())
-            {
-                alpha_out[g0] -= self.scratch[g1] * w;
+            for (&g0, &g1) in fe0.iter().zip(fe1.iter()) {
+                alpha_out[g0] -= self.scratch[g1];
             }
         }
 
@@ -307,17 +305,13 @@ impl<'a> MultiFEProjector<'a> {
             .copy_from_slice(&self.coef_sums[start..start + n_groups]);
 
         // Subtract accumulated other-FE contributions
-        if self.ctx.weights.is_uniform {
-            for (&g, &sum) in fe.iter().zip(self.scratch.iter()) {
-                coef_out[start + g] -= sum;
+        if let Some(w) = &self.ctx.weights {
+            for ((&g, &sum), &wo) in fe.iter().zip(self.scratch.iter()).zip(w.per_obs.iter()) {
+                coef_out[start + g] -= sum * wo;
             }
         } else {
-            for ((&g, &sum), &w) in fe
-                .iter()
-                .zip(self.scratch.iter())
-                .zip(self.ctx.weights.per_obs.iter())
-            {
-                coef_out[start + g] -= sum * w;
+            for (&g, &sum) in fe.iter().zip(self.scratch.iter()) {
+                coef_out[start + g] -= sum;
             }
         }
 

@@ -70,10 +70,14 @@ def demean(
     print(pf.feols(fml, data).coef())
     ```
     """
+    # Check if weights are uniform (all equal) - use fast unweighted path
+    weights_f64 = weights.astype(np.float64, copy=False)
+    is_uniform = np.allclose(weights_f64, weights_f64.flat[0], atol=1e-10, rtol=0)
+
     result = _demean_rs(
         x.astype(np.float64, copy=False),
         flist.astype(np.uint64, copy=False),
-        weights.astype(np.float64, copy=False),
+        None if is_uniform else weights_f64,
         tol,
         maxiter,
     )

@@ -95,7 +95,7 @@ pub(crate) struct DemeanBatchResult {
 pub(crate) fn demean(
     x: &ArrayView2<f64>,
     flist: &ArrayView2<usize>,
-    weights: &ArrayView1<f64>,
+    weights: Option<&ArrayView1<f64>>,
     tol: f64,
     maxiter: usize,
 ) -> DemeanBatchResult {
@@ -168,20 +168,20 @@ pub(crate) fn demean(
 /// - "fe_coefficients": Array of FE coefficients (n_coef, n_features)
 /// - "success": Boolean indicating convergence
 #[pyfunction]
-#[pyo3(signature = (x, flist, weights, tol=1e-8, maxiter=100_000))]
+#[pyo3(signature = (x, flist, weights=None, tol=1e-8, maxiter=100_000))]
 pub fn _demean_rs<'py>(
     py: Python<'py>,
     x: PyReadonlyArray2<f64>,
     flist: PyReadonlyArray2<usize>,
-    weights: PyReadonlyArray1<f64>,
+    weights: Option<PyReadonlyArray1<f64>>,
     tol: f64,
     maxiter: usize,
 ) -> PyResult<Bound<'py, PyDict>> {
     let x_arr = x.as_array();
     let flist_arr = flist.as_array();
-    let weights_arr = weights.as_array();
+    let weights_arr = weights.as_ref().map(|w| w.as_array());
 
-    let result = py.detach(|| demean(&x_arr, &flist_arr, &weights_arr, tol, maxiter));
+    let result = py.detach(|| demean(&x_arr, &flist_arr, weights_arr.as_ref(), tol, maxiter));
 
     let dict = PyDict::new(py);
     dict.set_item("demeaned", PyArray2::from_owned_array(py, result.demeaned))?;
@@ -212,7 +212,7 @@ mod tests {
 
         let weights = Array1::<f64>::ones(n_obs);
 
-        let ctx = DemeanContext::new(&flist.view(), &weights.view());
+        let ctx = DemeanContext::new(&flist.view(), Some(&weights.view()));
         let input: Vec<f64> = (0..n_obs).map(|i| (i as f64) * 0.1).collect();
 
         let config = FixestConfig::default();
@@ -238,7 +238,7 @@ mod tests {
 
         let weights = Array1::<f64>::ones(n_obs);
 
-        let ctx = DemeanContext::new(&flist.view(), &weights.view());
+        let ctx = DemeanContext::new(&flist.view(), Some(&weights.view()));
         let input: Vec<f64> = (0..n_obs).map(|i| (i as f64) * 0.1).collect();
 
         let config = FixestConfig::default();
@@ -261,7 +261,7 @@ mod tests {
         }
 
         let weights = Array1::<f64>::ones(n_obs);
-        let ctx = DemeanContext::new(&flist.view(), &weights.view());
+        let ctx = DemeanContext::new(&flist.view(), Some(&weights.view()));
         let input: Vec<f64> = (0..n_obs).map(|i| (i as f64) * 0.1).collect();
 
         let mut demeaner = SingleFEDemeaner::new(&ctx);
@@ -301,11 +301,11 @@ mod tests {
 
         // Non-uniform weights: 1.0, 2.0, 3.0, 1.0, 2.0, 3.0, ...
         let weights: Array1<f64> = (0..n_obs).map(|i| 1.0 + (i % 3) as f64).collect();
-        let ctx = DemeanContext::new(&flist.view(), &weights.view());
+        let ctx = DemeanContext::new(&flist.view(), Some(&weights.view()));
 
         assert!(
-            !ctx.weights.is_uniform,
-            "Weights should be detected as non-uniform"
+            ctx.weights.is_some(),
+            "Weights should be Some when provided"
         );
 
         let input: Vec<f64> = (0..n_obs).map(|i| (i as f64) * 0.1).collect();
@@ -332,7 +332,7 @@ mod tests {
         }
 
         let weights = Array1::<f64>::ones(n_obs);
-        let ctx = DemeanContext::new(&flist.view(), &weights.view());
+        let ctx = DemeanContext::new(&flist.view(), Some(&weights.view()));
         let input: Vec<f64> = (0..n_obs).map(|i| (i as f64) * 0.1).collect();
 
         let config = FixestConfig::default();
@@ -362,7 +362,7 @@ mod tests {
         }
 
         let weights = Array1::<f64>::ones(n_obs);
-        let ctx = DemeanContext::new(&flist.view(), &weights.view());
+        let ctx = DemeanContext::new(&flist.view(), Some(&weights.view()));
         let input: Vec<f64> = (0..n_obs).map(|i| (i as f64) * 0.1).collect();
 
         let config = FixestConfig::default();
@@ -386,21 +386,19 @@ mod tests {
             flist[[i, 1]] = i % 3;
         }
 
-        // Test uniform weights (all 1.0)
-        let uniform_weights = Array1::<f64>::ones(n_obs);
-        let ctx_uniform = DemeanContext::new(&flist.view(), &uniform_weights.view());
+        // Test with no weights (None) - unweighted case
+        let ctx_unweighted = DemeanContext::new(&flist.view(), None);
         assert!(
-            ctx_uniform.weights.is_uniform,
-            "All-ones weights should be detected as uniform"
+            ctx_unweighted.weights.is_none(),
+            "No weights should result in weights=None"
         );
 
-        // Test non-uniform weights
-        let mut non_uniform_weights = Array1::<f64>::ones(n_obs);
-        non_uniform_weights[0] = 2.0;
-        let ctx_non_uniform = DemeanContext::new(&flist.view(), &non_uniform_weights.view());
+        // Test with weights (Some) - weighted case
+        let weights = Array1::<f64>::ones(n_obs);
+        let ctx_weighted = DemeanContext::new(&flist.view(), Some(&weights.view()));
         assert!(
-            !ctx_non_uniform.weights.is_uniform,
-            "Varying weights should be detected as non-uniform"
+            ctx_weighted.weights.is_some(),
+            "Provided weights should result in weights=Some"
         );
     }
 
@@ -417,7 +415,7 @@ mod tests {
         }
 
         let weights = Array1::<f64>::ones(n_obs);
-        let ctx = DemeanContext::new(&flist.view(), &weights.view());
+        let ctx = DemeanContext::new(&flist.view(), Some(&weights.view()));
         let config = FixestConfig::default();
 
         // Create a single demeaner and use it multiple times
@@ -493,7 +491,7 @@ mod tests {
         }
 
         let weights = Array1::<f64>::ones(n_obs);
-        let ctx = DemeanContext::new(&flist.view(), &weights.view());
+        let ctx = DemeanContext::new(&flist.view(), Some(&weights.view()));
         let input: Vec<f64> = (0..n_obs).map(|i| (i as f64) * 0.1).collect();
 
         let mut demeaner = SingleFEDemeaner::new(&ctx);
@@ -536,7 +534,7 @@ mod tests {
         }
 
         let weights = Array1::<f64>::ones(n_obs);
-        let ctx = DemeanContext::new(&flist.view(), &weights.view());
+        let ctx = DemeanContext::new(&flist.view(), Some(&weights.view()));
         let input: Vec<f64> = (0..n_obs).map(|i| (i as f64) * 0.1).collect();
 
         let config = FixestConfig::default();
@@ -586,7 +584,7 @@ mod tests {
         }
 
         let weights = Array1::<f64>::ones(n_obs);
-        let ctx = DemeanContext::new(&flist.view(), &weights.view());
+        let ctx = DemeanContext::new(&flist.view(), Some(&weights.view()));
         let input: Vec<f64> = (0..n_obs).map(|i| (i as f64) * 0.1).collect();
 
         let config = FixestConfig::default();
@@ -634,7 +632,7 @@ mod tests {
         }
 
         let weights = Array1::<f64>::ones(n_obs);
-        let ctx = DemeanContext::new(&flist.view(), &weights.view());
+        let ctx = DemeanContext::new(&flist.view(), Some(&weights.view()));
         let input: Vec<f64> = (0..n_obs).map(|i| (i as f64) * 0.1).collect();
 
         let config = FixestConfig::default();
@@ -688,7 +686,7 @@ mod tests {
         }
 
         let weights = Array1::<f64>::ones(n_obs);
-        let ctx = DemeanContext::new(&flist.view(), &weights.view());
+        let ctx = DemeanContext::new(&flist.view(), Some(&weights.view()));
         let input: Vec<f64> = (0..n_obs).map(|i| (i as f64) * 0.1).collect();
 
         let config = FixestConfig::default();
@@ -730,7 +728,7 @@ mod tests {
 
         // Non-uniform weights
         let weights: Array1<f64> = (0..n_obs).map(|i| 1.0 + (i % 3) as f64).collect();
-        let ctx = DemeanContext::new(&flist.view(), &weights.view());
+        let ctx = DemeanContext::new(&flist.view(), Some(&weights.view()));
         let input: Vec<f64> = (0..n_obs).map(|i| (i as f64) * 0.1).collect();
 
         let config = FixestConfig::default();
