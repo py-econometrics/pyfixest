@@ -264,26 +264,26 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.api.feols.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.api.feols</span></a>
+  <a href="../reference/estimation.api.feols.feols.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.api.feols.feols</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.api.fepois.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.api.fepois</span></a>
+  <a href="../reference/estimation.api.fepois.fepois.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.api.fepois.fepois</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.api.feglm.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.api.feglm</span></a>
+  <a href="../reference/estimation.api.feglm.feglm.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.api.feglm.feglm</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.api.quantreg.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.api.quantreg</span></a>
+  <a href="../reference/estimation.api.quantreg.quantreg.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.api.quantreg.quantreg</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -509,7 +509,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    sample_split_value<span class="op">=</span><span class="va">None</span>,</span>
 <span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Non user-facing class to estimate an IV model using a 2SLS estimator.</p>
-<p>Inherits from the Feols class. Users should not directly instantiate this class, but rather use the <a href="../reference/estimation.api.feols.html">feols()</a> function. Note that no demeaning is performed in this class: demeaning is performed in the FixestMulti class (to allow for caching of demeaned variables for multiple estimation).</p>
+<p>Inherits from the Feols class. Users should not directly instantiate this class, but rather use the <a href="../reference/estimation.api.feols.qmd">feols()</a> function. Note that no demeaning is performed in this class: demeaning is performed in the FixestMulti class (to allow for caching of demeaned variables for multiple estimation).</p>
 <section id="parameters" class="level2 doc-section doc-section-parameters">
 <h2 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters">Parameters</h2>
 <table class="caption-top table">
@@ -872,7 +872,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="example" class="level4 doc-section doc-section-example">
 <h4 class="doc-section doc-section-example anchored" data-anchor-id="example">Example</h4>
 <p>The following is an example usage of this method:</p>
-<pre><code>::: {#25b8e0bc .cell execution_count=1}
+<pre><code>::: {#fce495a7 .cell execution_count=1}
 ``` {.python .cell-code}
 import numpy as np
 import pandas as pd
@@ -936,7 +936,7 @@ print("Effective F stat :", F_stat_eff_pf)
 ::: {.cell-output .cell-output-display}
 ```{=html}
 
-            &lt;div id="maqalj"&gt;&lt;/div&gt;
+            &lt;div id="3nQJQp"&gt;&lt;/div&gt;
             &lt;script type="text/javascript" data-lets-plot-script="library"&gt;
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -960,9 +960,9 @@ print("Effective F stat :", F_stat_eff_pf)
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("maqalj").appendChild(div);
+                        document.getElementById("3nQJQp").appendChild(div);
                     };
-                    var e = document.getElementById("maqalj");
+                    var e = document.getElementById("3nQJQp");
                     e.appendChild(script);
                 })()
             &lt;/script&gt;
@@ -973,7 +973,7 @@ print("Effective F stat :", F_stat_eff_pf)
 ::: {.cell-output .cell-output-display}
 ```{=html}
 
-            &lt;div id="LVhX1B"&gt;&lt;/div&gt;
+            &lt;div id="vK8Hjb"&gt;&lt;/div&gt;
             &lt;script type="text/javascript" data-lets-plot-script="library"&gt;
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -997,9 +997,9 @@ print("Effective F stat :", F_stat_eff_pf)
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("LVhX1B").appendChild(div);
+                        document.getElementById("vK8Hjb").appendChild(div);
                     };
-                    var e = document.getElementById("LVhX1B");
+                    var e = document.getElementById("vK8Hjb");
                     e.appendChild(script);
                 })()
             &lt;/script&gt;
@@ -1009,8 +1009,8 @@ print("Effective F stat :", F_stat_eff_pf)
 
 ::: {.cell-output .cell-output-stdout}
 ```
-(Unadjusted) F stat : 52.81535560457488
-Effective F stat : 48.61288119858695
+(Unadjusted) F stat : 52.81535560457472
+Effective F stat : 48.61288119858678
 ```
 :::
 :::</code></pre>
