@@ -22,8 +22,9 @@
 //! Projectors are used with [`IronsTuckGrand`](crate::demean::accelerator::IronsTuckGrand)
 //! which handles the iteration strategy.
 
+use super::sweep::{GaussSeidelSweeper, TwoFESweeper};
 use crate::demean::types::DemeanContext;
-use std::ops::Range;
+use smallvec::SmallVec;
 
 // =============================================================================
 // Projector Trait
@@ -31,23 +32,11 @@ use std::ops::Range;
 
 /// A projection operation for fixed-effects demeaning.
 ///
-/// Projectors hold all context needed for projection: the [`DemeanContext`],
-/// scattered input sums, original input values, and scratch buffers.
-/// This makes the projection interface simple and clear.
-///
-/// Projectors are used with [`IronsTuckGrand`](crate::demean_accelerated::accelerator::IronsTuckGrand)
-/// which handles the iteration strategy.
-///
-/// # Performance
-///
-/// All methods are called in tight loops and should be marked `#[inline(always)]`.
-/// Using static dispatch (`impl Projector` or generics) ensures zero overhead.
+/// Projectors hold all context needed for projection and provide the core
+/// operations used by accelerators. All methods are called in tight loops
+/// and should be optimized for performance.
 pub trait Projector {
     /// Total number of coefficients this projector operates on.
-    ///
-    /// This defines the required size of coefficient arrays passed to
-    /// `project()` and `compute_ssr()`. Accelerator buffers must be
-    /// sized to match this value.
     fn coef_len(&self) -> usize;
 
     /// Project coefficients: coef_in → coef_out.
@@ -58,18 +47,8 @@ pub trait Projector {
 
     /// Range of coefficients to use for convergence checking.
     ///
-    /// # Why not all coefficients?
-    ///
-    /// At a fixed point, if any (n_fe - 1) fixed effects have converged,
-    /// the remaining one must also have converged (its inputs are stable,
-    /// so its output is stable). This allows us to skip checking one FE.
-    ///
-    /// # Which FE to exclude?
-    ///
-    /// Following fixest's approach, we exclude the **last FE** (smallest after
-    /// reordering). In the reverse sweep, this FE is processed first using
-    /// stale data from the previous iteration. Returns `0..n_coef - n_groups[n_fe-1]`.
-    fn convergence_range(&self) -> Range<usize>;
+    /// May be smaller than `0..coef_len()` when not all coefficients need checking.
+    fn convergence_range(&self) -> std::ops::Range<usize>;
 }
 
 // =============================================================================
@@ -86,10 +65,25 @@ pub trait Projector {
 /// Coefficients are stored as `[alpha_0, ..., alpha_{n0-1}, beta_0, ..., beta_{n1-1}]`
 /// where alpha are the coefficients for FE 0 and beta for FE 1.
 pub struct TwoFEProjector<'a> {
-    ctx: &'a DemeanContext,
-    /// Weighted sums per group (Dᵀ · input).
-    coef_sums: &'a [f64],
+    // Dimensions
+    n_obs: usize,
+    n0: usize,
+    n1: usize,
+
+    // Sweepers for each direction
+    /// Computes alpha from beta
+    alpha_sweeper: TwoFESweeper<'a>,
+    /// Computes beta from alpha
+    beta_sweeper: TwoFESweeper<'a>,
+
+    // Group ID pointers (needed for SSR computation)
+    fe0_group_ids_ptr: *const usize,
+    fe1_group_ids_ptr: *const usize,
+
+    // Input data
     input: &'a [f64],
+
+    // Scratch buffer for beta coefficients
     scratch: Vec<f64>,
 }
 
@@ -97,69 +91,38 @@ impl<'a> TwoFEProjector<'a> {
     /// Create a new 2-FE projector.
     #[inline]
     pub fn new(ctx: &'a DemeanContext, coef_sums: &'a [f64], input: &'a [f64]) -> Self {
-        let n1 = ctx.index.n_groups[1];
+        let fe0_info = &ctx.fe_infos[0];
+        let fe1_info = &ctx.fe_infos[1];
+        let n0 = fe0_info.n_groups;
+        let n1 = fe1_info.n_groups;
+        let weights_ptr = ctx.weights.as_ref().map(|w| w.as_ptr());
+
         Self {
-            ctx,
-            coef_sums,
+            n_obs: ctx.dims.n_obs,
+            n0,
+            n1,
+            // alpha_sweeper: computes alpha from beta (out=fe0, other=fe1)
+            alpha_sweeper: TwoFESweeper::new(
+                ctx.dims.n_obs,
+                weights_ptr,
+                fe0_info,
+                fe1_info,
+                coef_sums,
+                0, // alpha starts at offset 0
+            ),
+            // beta_sweeper: computes beta from alpha (out=fe1, other=fe0)
+            beta_sweeper: TwoFESweeper::new(
+                ctx.dims.n_obs,
+                weights_ptr,
+                fe1_info,
+                fe0_info,
+                coef_sums,
+                n0, // beta starts at offset n0
+            ),
+            fe0_group_ids_ptr: fe0_info.group_ids.as_ptr(),
+            fe1_group_ids_ptr: fe1_info.group_ids.as_ptr(),
             input,
             scratch: vec![0.0; n1],
-        }
-    }
-
-    /// Compute beta coefficients from alpha, storing the result in the scratch buffer.
-    ///
-    /// For each group g1 in FE1:
-    ///   beta[g1] = (coef_sums[g1] - Σ alpha[g0] * w) / group_weight[g1]
-    #[inline(always)]
-    fn compute_beta_from_alpha(&mut self, alpha: &[f64]) {
-        let n0 = self.ctx.index.n_groups[0];
-        let n1 = self.ctx.index.n_groups[1];
-        let fe0 = self.ctx.index.group_ids_for_fe(0);
-        let fe1 = self.ctx.index.group_ids_for_fe(1);
-        let sw1 = self.ctx.group_weights_for_fe(1);
-
-        self.scratch[..n1].copy_from_slice(&self.coef_sums[n0..n0 + n1]);
-
-        if let Some(w) = &self.ctx.weights {
-            for ((&g0, &g1), &wo) in fe0.iter().zip(fe1.iter()).zip(w.per_obs.iter()) {
-                self.scratch[g1] -= alpha[g0] * wo;
-            }
-        } else {
-            for (&g0, &g1) in fe0.iter().zip(fe1.iter()) {
-                self.scratch[g1] -= alpha[g0];
-            }
-        }
-
-        for (b, &sw) in self.scratch[..n1].iter_mut().zip(sw1.iter()) {
-            *b /= sw;
-        }
-    }
-
-    /// Compute alpha coefficients from beta (stored in scratch), writing to alpha_out.
-    ///
-    /// For each group g0 in FE0:
-    ///   alpha[g0] = (coef_sums[g0] - Σ beta[g1] * w) / group_weight[g0]
-    #[inline(always)]
-    fn compute_alpha_from_beta(&self, alpha_out: &mut [f64]) {
-        let n0 = self.ctx.index.n_groups[0];
-        let fe0 = self.ctx.index.group_ids_for_fe(0);
-        let fe1 = self.ctx.index.group_ids_for_fe(1);
-        let sw0 = self.ctx.group_weights_for_fe(0);
-
-        alpha_out[..n0].copy_from_slice(&self.coef_sums[..n0]);
-
-        if let Some(w) = &self.ctx.weights {
-            for ((&g0, &g1), &wo) in fe0.iter().zip(fe1.iter()).zip(w.per_obs.iter()) {
-                alpha_out[g0] -= self.scratch[g1] * wo;
-            }
-        } else {
-            for (&g0, &g1) in fe0.iter().zip(fe1.iter()) {
-                alpha_out[g0] -= self.scratch[g1];
-            }
-        }
-
-        for (a, &sw) in alpha_out[..n0].iter_mut().zip(sw0.iter()) {
-            *a /= sw;
         }
     }
 }
@@ -167,57 +130,95 @@ impl<'a> TwoFEProjector<'a> {
 impl Projector for TwoFEProjector<'_> {
     #[inline(always)]
     fn coef_len(&self) -> usize {
-        self.ctx.index.n_groups[0] + self.ctx.index.n_groups[1]
+        self.n0 + self.n1
     }
 
     #[inline(always)]
     fn project(&mut self, coef_in: &[f64], coef_out: &mut [f64]) {
-        let n0 = self.ctx.index.n_groups[0];
-        let n1 = self.ctx.index.n_groups[1];
-
-        // Step 1: alpha_in -> beta
-        self.compute_beta_from_alpha(&coef_in[..n0]);
+        // Step 1: alpha_in -> beta (stored in scratch)
+        self.beta_sweeper.sweep(&coef_in[..self.n0], &mut self.scratch);
 
         // Step 2: beta -> alpha_out
-        self.compute_alpha_from_beta(coef_out);
+        self.alpha_sweeper.sweep(&self.scratch, &mut coef_out[..self.n0]);
 
         // Step 3: Copy beta to output
-        coef_out[n0..n0 + n1].copy_from_slice(&self.scratch[..n1]);
+        coef_out[self.n0..self.n0 + self.n1].copy_from_slice(&self.scratch);
     }
 
-    /// Compute the sum of squared residuals for the given coefficients.
-    ///
-    /// # Side Effects
-    ///
-    /// This method recomputes beta from alpha and stores it in `self.scratch`.
-    /// After this call, `self.scratch[..n1]` contains the beta coefficients
-    /// derived from `coef[..n0]` (the alpha coefficients).
-    ///
-    /// This is intentional: the SSR computation needs consistent alpha/beta pairs,
-    /// and recomputing beta ensures correctness even if the caller's `coef` array
-    /// has stale beta values.
     #[inline(always)]
     fn compute_ssr(&mut self, coef: &[f64]) -> f64 {
-        let n0 = self.ctx.index.n_groups[0];
-        let fe0 = self.ctx.index.group_ids_for_fe(0);
-        let fe1 = self.ctx.index.group_ids_for_fe(1);
-
         // Compute beta from alpha (updates self.scratch)
-        self.compute_beta_from_alpha(&coef[..n0]);
+        self.beta_sweeper.sweep(&coef[..self.n0], &mut self.scratch);
 
         // Compute SSR: Σ (input[i] - alpha[fe0[i]] - beta[fe1[i]])²
+        // Use 4x unrolling for better ILP
+        let n_obs = self.n_obs;
+        let chunks = n_obs / 4;
+        let mut i = 0usize;
         let mut ssr = 0.0;
-        for ((&g0, &g1), &x) in fe0.iter().zip(fe1.iter()).zip(self.input.iter()) {
-            let resid = x - coef[g0] - self.scratch[g1];
-            ssr += resid * resid;
+
+        // SAFETY: All pointer accesses are valid because:
+        // - i < n_obs throughout (loop bounds ensure this)
+        // - fe0_ptr, fe1_ptr point to arrays of length n_obs (from FixedEffectInfo)
+        // - input_ptr points to array of length n_obs (from caller)
+        // - group IDs (g0_*, g1_*) are always < n0 or < n1 respectively
+        //   (invariant from DemeanContext construction)
+        // - alpha_ptr points to coef with length >= n0, beta_ptr to scratch with length n1
+        unsafe {
+            let alpha_ptr = coef.as_ptr();
+            let beta_ptr = self.scratch.as_ptr();
+            let input_ptr = self.input.as_ptr();
+            let fe0_ptr = self.fe0_group_ids_ptr;
+            let fe1_ptr = self.fe1_group_ids_ptr;
+
+            for _ in 0..chunks {
+                let g0_0 = *fe0_ptr.add(i);
+                let g0_1 = *fe0_ptr.add(i + 1);
+                let g0_2 = *fe0_ptr.add(i + 2);
+                let g0_3 = *fe0_ptr.add(i + 3);
+
+                let g1_0 = *fe1_ptr.add(i);
+                let g1_1 = *fe1_ptr.add(i + 1);
+                let g1_2 = *fe1_ptr.add(i + 2);
+                let g1_3 = *fe1_ptr.add(i + 3);
+
+                debug_assert!(g0_0 < self.n0 && g0_1 < self.n0 && g0_2 < self.n0 && g0_3 < self.n0,
+                    "FE0 group ID out of bounds: max({}, {}, {}, {}) >= n0 ({})",
+                    g0_0, g0_1, g0_2, g0_3, self.n0);
+                debug_assert!(g1_0 < self.n1 && g1_1 < self.n1 && g1_2 < self.n1 && g1_3 < self.n1,
+                    "FE1 group ID out of bounds: max({}, {}, {}, {}) >= n1 ({})",
+                    g1_0, g1_1, g1_2, g1_3, self.n1);
+
+                let resid0 =
+                    *input_ptr.add(i) - *alpha_ptr.add(g0_0) - *beta_ptr.add(g1_0);
+                let resid1 =
+                    *input_ptr.add(i + 1) - *alpha_ptr.add(g0_1) - *beta_ptr.add(g1_1);
+                let resid2 =
+                    *input_ptr.add(i + 2) - *alpha_ptr.add(g0_2) - *beta_ptr.add(g1_2);
+                let resid3 =
+                    *input_ptr.add(i + 3) - *alpha_ptr.add(g0_3) - *beta_ptr.add(g1_3);
+
+                ssr += resid0 * resid0 + resid1 * resid1 + resid2 * resid2 + resid3 * resid3;
+                i += 4;
+            }
+
+            // Handle remainder
+            while i < n_obs {
+                let g0 = *fe0_ptr.add(i);
+                let g1 = *fe1_ptr.add(i);
+                debug_assert!(g0 < self.n0, "FE0 group ID ({}) >= n0 ({})", g0, self.n0);
+                debug_assert!(g1 < self.n1, "FE1 group ID ({}) >= n1 ({})", g1, self.n1);
+                let resid = *input_ptr.add(i) - *alpha_ptr.add(g0) - *beta_ptr.add(g1);
+                ssr += resid * resid;
+                i += 1;
+            }
         }
         ssr
     }
 
     #[inline(always)]
-    fn convergence_range(&self) -> Range<usize> {
-        // Exclude FE 1 (last/smallest), check only FE 0
-        0..self.ctx.index.n_groups[0]
+    fn convergence_range(&self) -> std::ops::Range<usize> {
+        0..self.n0
     }
 }
 
@@ -227,100 +228,39 @@ impl Projector for TwoFEProjector<'_> {
 
 /// Projector for 3+ fixed effects.
 ///
-/// Uses a general Q-FE projection that processes FEs in reverse order,
-/// matching fixest's algorithm.
+/// Uses Gauss-Seidel block updates, processing FEs in reverse order
+/// to match fixest's algorithm.
 pub struct MultiFEProjector<'a> {
     ctx: &'a DemeanContext,
-    /// Weighted sums per group (Dᵀ · input).
-    coef_sums: &'a [f64],
     input: &'a [f64],
-    scratch: Vec<f64>,
+    /// Pre-created sweepers for each FE (stored in reverse order for iteration).
+    sweepers: Vec<GaussSeidelSweeper<'a>>,
+    /// Precomputed (group_ids_ptr, coef_start) for each FE, used in SSR computation.
+    /// SmallVec avoids heap allocation for typical 3-4 FE cases.
+    fe_ptrs: SmallVec<[(*const usize, usize); 4]>,
 }
 
 impl<'a> MultiFEProjector<'a> {
-    /// Create a new multi-FE projector.
     #[inline]
     pub fn new(ctx: &'a DemeanContext, coef_sums: &'a [f64], input: &'a [f64]) -> Self {
-        let n_obs = ctx.index.n_obs;
+        // Pre-create sweepers in reverse order (how they're processed)
+        let sweepers: Vec<_> = (0..ctx.dims.n_fe)
+            .rev()
+            .map(|q| GaussSeidelSweeper::new(ctx, coef_sums, q))
+            .collect();
+
+        // Precompute FE pointers for SSR computation (avoids per-call allocation)
+        let fe_ptrs: SmallVec<[(*const usize, usize); 4]> = ctx
+            .fe_infos
+            .iter()
+            .map(|fe| (fe.group_ids.as_ptr(), fe.coef_start))
+            .collect();
+
         Self {
             ctx,
-            coef_sums,
             input,
-            scratch: vec![0.0; n_obs],
-        }
-    }
-
-    /// Accumulate coefficient contributions from one FE into the scratch buffer.
-    ///
-    /// For each observation i: scratch[i] += coef[start + fe[i]]
-    #[inline(always)]
-    fn accumulate_fe_contributions(&mut self, fe_idx: usize, coef: &[f64]) {
-        let start = self.ctx.index.coef_start[fe_idx];
-        let fe = self.ctx.index.group_ids_for_fe(fe_idx);
-        let n = self.scratch.len().min(fe.len());
-
-        // Manual 4x unrolling for better instruction-level parallelism.
-        unsafe {
-            let scratch_ptr = self.scratch.as_mut_ptr();
-            let fe_ptr = fe.as_ptr();
-            let coef_ptr = coef.as_ptr().add(start);
-
-            let chunks = n / 4;
-            let mut i = 0;
-
-            for _ in 0..chunks {
-                let g0 = *fe_ptr.add(i);
-                let g1 = *fe_ptr.add(i + 1);
-                let g2 = *fe_ptr.add(i + 2);
-                let g3 = *fe_ptr.add(i + 3);
-
-                *scratch_ptr.add(i) += *coef_ptr.add(g0);
-                *scratch_ptr.add(i + 1) += *coef_ptr.add(g1);
-                *scratch_ptr.add(i + 2) += *coef_ptr.add(g2);
-                *scratch_ptr.add(i + 3) += *coef_ptr.add(g3);
-
-                i += 4;
-            }
-
-            // Handle remainder
-            for j in i..n {
-                *scratch_ptr.add(j) += *coef_ptr.add(*fe_ptr.add(j));
-            }
-        }
-    }
-
-    /// Update coefficients for a single FE given the accumulated other-FE sums.
-    ///
-    /// For each group g in FE q:
-    ///   coef_out[g] = (coef_sums[g] - Σ scratch[i] * w) / group_weight[g]
-    #[inline(always)]
-    fn update_fe_coefficients(&self, fe_idx: usize, coef_out: &mut [f64]) {
-        let start = self.ctx.index.coef_start[fe_idx];
-        let n_groups = self.ctx.index.n_groups[fe_idx];
-        let fe = self.ctx.index.group_ids_for_fe(fe_idx);
-        let group_weights = self.ctx.group_weights_for_fe(fe_idx);
-
-        // Initialize from coef_sums
-        coef_out[start..start + n_groups]
-            .copy_from_slice(&self.coef_sums[start..start + n_groups]);
-
-        // Subtract accumulated other-FE contributions
-        if let Some(w) = &self.ctx.weights {
-            for ((&g, &sum), &wo) in fe.iter().zip(self.scratch.iter()).zip(w.per_obs.iter()) {
-                coef_out[start + g] -= sum * wo;
-            }
-        } else {
-            for (&g, &sum) in fe.iter().zip(self.scratch.iter()) {
-                coef_out[start + g] -= sum;
-            }
-        }
-
-        // Normalize by group weights
-        for (coef, &sw) in coef_out[start..start + n_groups]
-            .iter_mut()
-            .zip(group_weights.iter())
-        {
-            *coef /= sw;
+            sweepers,
+            fe_ptrs,
         }
     }
 }
@@ -328,63 +268,83 @@ impl<'a> MultiFEProjector<'a> {
 impl Projector for MultiFEProjector<'_> {
     #[inline(always)]
     fn coef_len(&self) -> usize {
-        self.ctx.index.n_coef
+        self.ctx.dims.n_coef
     }
 
-    /// Project coefficients using reverse-order FE updates.
-    ///
-    /// For each FE q from (n_fe-1) down to 0:
-    ///   1. Accumulate contributions from FEs before q (from coef_in)
-    ///   2. Accumulate contributions from FEs after q (from coef_out, already computed)
-    ///   3. Update coef_out for FE q
     #[inline(always)]
     fn project(&mut self, coef_in: &[f64], coef_out: &mut [f64]) {
-        let n_fe = self.ctx.index.n_fe;
-
-        for q in (0..n_fe).rev() {
-            // Reset scratch buffer
-            self.scratch.fill(0.0);
-
-            // Accumulate from FEs before q (use coef_in)
-            for h in 0..q {
-                self.accumulate_fe_contributions(h, coef_in);
-            }
-
-            // Accumulate from FEs after q (use coef_out, already computed)
-            for h in (q + 1)..n_fe {
-                self.accumulate_fe_contributions(h, coef_out);
-            }
-
-            // Update coefficients for FE q
-            self.update_fe_coefficients(q, coef_out);
+        for sweeper in &self.sweepers {
+            sweeper.sweep(coef_in, coef_out);
         }
     }
 
     #[inline(always)]
     fn compute_ssr(&mut self, coef: &[f64]) -> f64 {
-        let n_fe = self.ctx.index.n_fe;
+        let n_obs = self.ctx.dims.n_obs;
+        let coef_ptr = coef.as_ptr();
+        let input_ptr = self.input.as_ptr();
 
-        // Accumulate coefficient sums per observation using the scratch buffer
-        // (reuses the optimized unrolled gather loop)
-        self.scratch.fill(0.0);
-        for q in 0..n_fe {
-            self.accumulate_fe_contributions(q, coef);
+        let mut ssr = 0.0;
+
+        // SAFETY: All pointer accesses are valid because:
+        // - i < n_obs throughout (loop bounds ensure this)
+        // - group_ids_ptr for each FE points to array of length n_obs (from FixedEffectInfo)
+        // - input_ptr points to array of length n_obs (from caller)
+        // - group IDs are always < n_groups for their respective FE
+        //   (invariant from DemeanContext construction)
+        // - coef_start + g < coef.len() because coef_start is the FE's offset and
+        //   g < n_groups for that FE (DemeanContext guarantees this layout)
+        unsafe {
+            // Main loop with 4x unrolling
+            let chunks = n_obs / 4;
+            let mut i = 0usize;
+
+            for _ in 0..chunks {
+                let mut sum0 = 0.0;
+                let mut sum1 = 0.0;
+                let mut sum2 = 0.0;
+                let mut sum3 = 0.0;
+
+                for &(group_ids_ptr, coef_start) in &self.fe_ptrs {
+                    let g0 = *group_ids_ptr.add(i);
+                    let g1 = *group_ids_ptr.add(i + 1);
+                    let g2 = *group_ids_ptr.add(i + 2);
+                    let g3 = *group_ids_ptr.add(i + 3);
+
+                    sum0 += *coef_ptr.add(coef_start + g0);
+                    sum1 += *coef_ptr.add(coef_start + g1);
+                    sum2 += *coef_ptr.add(coef_start + g2);
+                    sum3 += *coef_ptr.add(coef_start + g3);
+                }
+
+                let resid0 = *input_ptr.add(i) - sum0;
+                let resid1 = *input_ptr.add(i + 1) - sum1;
+                let resid2 = *input_ptr.add(i + 2) - sum2;
+                let resid3 = *input_ptr.add(i + 3) - sum3;
+
+                ssr += resid0 * resid0 + resid1 * resid1 + resid2 * resid2 + resid3 * resid3;
+                i += 4;
+            }
+
+            // Handle remainder
+            while i < n_obs {
+                let mut sum = 0.0;
+                for &(group_ids_ptr, coef_start) in &self.fe_ptrs {
+                    let g = *group_ids_ptr.add(i);
+                    sum += *coef_ptr.add(coef_start + g);
+                }
+                let resid = *input_ptr.add(i) - sum;
+                ssr += resid * resid;
+                i += 1;
+            }
         }
 
-        // Compute SSR from residuals
-        self.input
-            .iter()
-            .zip(self.scratch.iter())
-            .map(|(&x, &sum)| {
-                let resid = x - sum;
-                resid * resid
-            })
-            .sum()
+        ssr
     }
 
     #[inline(always)]
-    fn convergence_range(&self) -> Range<usize> {
-        // Exclude last FE (smallest), check FEs 0 through n_fe-2
-        0..self.ctx.index.n_coef - self.ctx.index.n_groups[self.ctx.index.n_fe - 1]
+    fn convergence_range(&self) -> std::ops::Range<usize> {
+        let n_fe = self.ctx.dims.n_fe;
+        0..(self.ctx.dims.n_coef - self.ctx.fe_infos[n_fe - 1].n_groups)
     }
 }

@@ -192,7 +192,8 @@ ALL_F3 = ["str", "object", "int", "categorical", "float"]
 SINGLE_F3 = ALL_F3[0]
 BACKEND_F3 = [
     *[("numba", t) for t in ALL_F3],
-    *[(b, SINGLE_F3) for b in ("jax", "rust", "cupy", "scipy")],
+    *[("rust", t) for t in ALL_F3],
+    *[(b, SINGLE_F3) for b in ("jax", "cupy", "scipy")],
 ]
 
 
