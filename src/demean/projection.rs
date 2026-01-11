@@ -151,17 +151,14 @@ impl Projector for TwoFEProjector<'_> {
         self.beta_sweeper.sweep(&coef[..self.n0], &mut self.scratch);
 
         // Compute SSR: Σ (input[i] - alpha[fe0[i]] - beta[fe1[i]])²
-        // Use 4x unrolling for better ILP
         let n_obs = self.n_obs;
-        let chunks = n_obs / 4;
-        let mut i = 0usize;
         let mut ssr = 0.0;
 
         // SAFETY: All pointer accesses are valid because:
         // - i < n_obs throughout (loop bounds ensure this)
         // - fe0_ptr, fe1_ptr point to arrays of length n_obs (from FixedEffectInfo)
         // - input_ptr points to array of length n_obs (from caller)
-        // - group IDs (g0_*, g1_*) are always < n0 or < n1 respectively
+        // - group IDs (g0, g1) are always < n0 or < n1 respectively
         //   (invariant from DemeanContext construction)
         // - alpha_ptr points to coef with length >= n0, beta_ptr to scratch with length n1
         unsafe {
@@ -171,46 +168,15 @@ impl Projector for TwoFEProjector<'_> {
             let fe0_ptr = self.fe0_group_ids_ptr;
             let fe1_ptr = self.fe1_group_ids_ptr;
 
-            for _ in 0..chunks {
-                let g0_0 = *fe0_ptr.add(i);
-                let g0_1 = *fe0_ptr.add(i + 1);
-                let g0_2 = *fe0_ptr.add(i + 2);
-                let g0_3 = *fe0_ptr.add(i + 3);
-
-                let g1_0 = *fe1_ptr.add(i);
-                let g1_1 = *fe1_ptr.add(i + 1);
-                let g1_2 = *fe1_ptr.add(i + 2);
-                let g1_3 = *fe1_ptr.add(i + 3);
-
-                debug_assert!(g0_0 < self.n0 && g0_1 < self.n0 && g0_2 < self.n0 && g0_3 < self.n0,
-                    "FE0 group ID out of bounds: max({}, {}, {}, {}) >= n0 ({})",
-                    g0_0, g0_1, g0_2, g0_3, self.n0);
-                debug_assert!(g1_0 < self.n1 && g1_1 < self.n1 && g1_2 < self.n1 && g1_3 < self.n1,
-                    "FE1 group ID out of bounds: max({}, {}, {}, {}) >= n1 ({})",
-                    g1_0, g1_1, g1_2, g1_3, self.n1);
-
-                let resid0 =
-                    *input_ptr.add(i) - *alpha_ptr.add(g0_0) - *beta_ptr.add(g1_0);
-                let resid1 =
-                    *input_ptr.add(i + 1) - *alpha_ptr.add(g0_1) - *beta_ptr.add(g1_1);
-                let resid2 =
-                    *input_ptr.add(i + 2) - *alpha_ptr.add(g0_2) - *beta_ptr.add(g1_2);
-                let resid3 =
-                    *input_ptr.add(i + 3) - *alpha_ptr.add(g0_3) - *beta_ptr.add(g1_3);
-
-                ssr += resid0 * resid0 + resid1 * resid1 + resid2 * resid2 + resid3 * resid3;
-                i += 4;
-            }
-
-            // Handle remainder
-            while i < n_obs {
+            for i in 0..n_obs {
                 let g0 = *fe0_ptr.add(i);
                 let g1 = *fe1_ptr.add(i);
+
                 debug_assert!(g0 < self.n0, "FE0 group ID ({}) >= n0 ({})", g0, self.n0);
                 debug_assert!(g1 < self.n1, "FE1 group ID ({}) >= n1 ({})", g1, self.n1);
+
                 let resid = *input_ptr.add(i) - *alpha_ptr.add(g0) - *beta_ptr.add(g1);
                 ssr += resid * resid;
-                i += 1;
             }
         }
         ssr
@@ -295,39 +261,7 @@ impl Projector for MultiFEProjector<'_> {
         // - coef_start + g < coef.len() because coef_start is the FE's offset and
         //   g < n_groups for that FE (DemeanContext guarantees this layout)
         unsafe {
-            // Main loop with 4x unrolling
-            let chunks = n_obs / 4;
-            let mut i = 0usize;
-
-            for _ in 0..chunks {
-                let mut sum0 = 0.0;
-                let mut sum1 = 0.0;
-                let mut sum2 = 0.0;
-                let mut sum3 = 0.0;
-
-                for &(group_ids_ptr, coef_start) in &self.fe_ptrs {
-                    let g0 = *group_ids_ptr.add(i);
-                    let g1 = *group_ids_ptr.add(i + 1);
-                    let g2 = *group_ids_ptr.add(i + 2);
-                    let g3 = *group_ids_ptr.add(i + 3);
-
-                    sum0 += *coef_ptr.add(coef_start + g0);
-                    sum1 += *coef_ptr.add(coef_start + g1);
-                    sum2 += *coef_ptr.add(coef_start + g2);
-                    sum3 += *coef_ptr.add(coef_start + g3);
-                }
-
-                let resid0 = *input_ptr.add(i) - sum0;
-                let resid1 = *input_ptr.add(i + 1) - sum1;
-                let resid2 = *input_ptr.add(i + 2) - sum2;
-                let resid3 = *input_ptr.add(i + 3) - sum3;
-
-                ssr += resid0 * resid0 + resid1 * resid1 + resid2 * resid2 + resid3 * resid3;
-                i += 4;
-            }
-
-            // Handle remainder
-            while i < n_obs {
+            for i in 0..n_obs {
                 let mut sum = 0.0;
                 for &(group_ids_ptr, coef_start) in &self.fe_ptrs {
                     let g = *group_ids_ptr.add(i);
@@ -335,7 +269,6 @@ impl Projector for MultiFEProjector<'_> {
                 }
                 let resid = *input_ptr.add(i) - sum;
                 ssr += resid * resid;
-                i += 1;
             }
         }
 
