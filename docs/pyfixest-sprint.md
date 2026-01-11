@@ -3,7 +3,7 @@
 
 We're organizing a PyFixest development sprint in partnership with [AppliedAI](https://www.appliedai.de/) at their Heilbronn office. This is a chance to help shape the future of econometrics software in Python, and to work alongside PyFixest's core development team and AppliedAI's engineers for a few focused days of coding.
 
-**Dates:** Either February 27th–March 1st, March 2nd–4th, or March 4th–6th (we'll confirm by January 14th)
+**Dates:** March 4th–6th 2026.
 
 **Interested in joining?** Reach out to [Alex](mailto:alexander-fischer1801@t-online.de) with a brief note about your background and motivation. We have some funding available to support student participation.
 
@@ -12,7 +12,7 @@ We're organizing a PyFixest development sprint in partnership with [AppliedAI](
 Our main goals for the sprint:
 
 - **Rust backend:** Finalize the port from Numba to Rust and deprecate the Numba dependency, with continued optimization of our core demeaning algorithm
-- **GPU acceleration:** Continue building out JAX, CuPy, and potentially PyTorch backends
+- **GPU acceleration:** Continue building out JAX, CuPy, and potentially PyTorch backends, potentially re-implementing the [LSMR algorithm](https://web.stanford.edu/group/SOL/software/lsmr/LSMR-SISC-2011.pdf) by hand
 - **Internal refactor:** Introduce a cleaner class hierarchy with a proper base estimation class
 - **NumPy-style API:** Rewrite estimation classes (Feols, Fepois, etc.) to follow sklearn-style conventions
 
@@ -24,7 +24,7 @@ We're also hoping to make progress on:
 - **Narwhals integration:** Better support for running analyses with either pandas or polars
 - **maketables cleanup:** Refactor the codebase and open PRs to third-party packages (doubleML, CausalPy, econML, etc.)
 - **moderndid contributions:** Port our DiD estimators (Gardner, local projections, Sun & Abraham) to the moderndid package
-- **Documentation:** Add practical how-to guides
+- **Documentation:** Add how-to guides and add a *statistical documentation* in which we explan the math behind all estimators
 
 ### What would be helpful
 
