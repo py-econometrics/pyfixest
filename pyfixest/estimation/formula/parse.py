@@ -46,8 +46,18 @@ class _MultipleEstimation:
             )
         elif self.kind is not None and self.kind.name.startswith("csw"):
             # Cumulative stepwise estimation
+            # Only keep unique variables before cumulating
+            # For example, csw(f1, f1+f2) should only produce f1 and f1+f2 (but not f1+f1+f2)
+            unique_variables = list(
+                dict.fromkeys(  # order-preserving deduplication
+                    itertools.chain.from_iterable(
+                        re.split(_Pattern.variables, variable)
+                        for variable in self.variable
+                    )
+                )
+            )
             cumulative_slice: list[list[str]] = [
-                self.variable[: i + 1] for i, _ in enumerate(self.variable)
+                unique_variables[: i + 1] for i, _ in enumerate(unique_variables)
             ]
             estimation_steps.extend(
                 ["+".join(self.constant + v) for v in cumulative_slice]
@@ -317,7 +327,9 @@ class ParsedFormula:
 class _Pattern:
     parts: re.Pattern = re.compile(r"\s*\|\s*")
     dependence: re.Pattern = re.compile(r"\s*~\s*")
-    variables: re.Pattern = re.compile(r"\s*\+\s*")
+    # Matches '+' only when not enclosed by parantheses
+    # This avoids splitting variables within multiple estimation syntax, e.g., sw(f1, f1+f2)
+    variables: re.Pattern = re.compile(r"\s*\+(?![^(]*\))\s*")
     args: re.Pattern = re.compile(r"\s*,\s*")
     multiple_estimation: re.Pattern = re.compile(
         rf"(?P<key>{'|'.join(e.name for e in _MultipleEstimationType)})\((?P<variables>.*?)\)"

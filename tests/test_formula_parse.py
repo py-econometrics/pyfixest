@@ -76,6 +76,17 @@ class TestParseMultipleEstimation:
                 ["x", "y", "z"],
                 _MultipleEstimationType.csw0,
             ),
+            # Multiple estimation with sums of variables (e.g., f1+f2 as a single step)
+            (["sw0(f1,f1+f2)"], [], ["f1", "f1+f2"], _MultipleEstimationType.sw0),
+            (["csw0(f1,f1+f2)"], [], ["f1", "f1+f2"], _MultipleEstimationType.csw0),
+            (["sw(f1,f1+f2)"], [], ["f1", "f1+f2"], _MultipleEstimationType.sw),
+            (["csw(f1,f1+f2)"], [], ["f1", "f1+f2"], _MultipleEstimationType.csw),
+            (
+                ["a", "sw0(f1,f1+f2,f1+f2+f3)"],
+                ["a"],
+                ["f1", "f1+f2", "f1+f2+f3"],
+                _MultipleEstimationType.sw0,
+            ),
         ],
     )
     def test_parse_multiple_estimation(
@@ -139,6 +150,33 @@ class TestMultipleEstimationSteps:
             # No multiple estimation (kind=None)
             (["x", "y"], [], None, ["x+y"]),
             (["x"], [], None, ["x"]),
+            # Multiple estimation with sums of variables - sequential (no deduplication needed)
+            ([], ["f1", "f1+f2"], _MultipleEstimationType.sw0, ["0", "f1", "f1+f2"]),
+            ([], ["f1", "f1+f2"], _MultipleEstimationType.sw, ["f1", "f1+f2"]),
+            (
+                ["x"],
+                ["f1", "f1+f2"],
+                _MultipleEstimationType.sw0,
+                ["x", "x+f1", "x+f1+f2"],
+            ),
+            # Multiple estimation with sums of variables - cumulative (deduplication needed)
+            # csw0(f1, f1+f2) should produce: 0, f1, f1+f2 (not f1+f1+f2)
+            ([], ["f1", "f1+f2"], _MultipleEstimationType.csw0, ["0", "f1", "f1+f2"]),
+            ([], ["f1", "f1+f2"], _MultipleEstimationType.csw, ["f1", "f1+f2"]),
+            # csw0(f1, f1+f2, f1+f2+f3) should produce: 0, f1, f1+f2, f1+f2+f3
+            (
+                [],
+                ["f1", "f1+f2", "f1+f2+f3"],
+                _MultipleEstimationType.csw0,
+                ["0", "f1", "f1+f2", "f1+f2+f3"],
+            ),
+            # With constant: x + csw0(f1, f1+f2) should produce: x, x+f1, x+f1+f2
+            (
+                ["x"],
+                ["f1", "f1+f2"],
+                _MultipleEstimationType.csw0,
+                ["x", "x+f1", "x+f1+f2"],
+            ),
         ],
     )
     def test_multiple_estimation_steps(self, constant, variable, kind, expected_steps):
