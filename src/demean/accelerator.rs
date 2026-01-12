@@ -421,7 +421,7 @@ mod tests {
             flist[[i, 0]] = i % 10;
             flist[[i, 1]] = i % 5;
         }
-        let ctx = DemeanContext::new(&flist.view(), None);
+        let ctx = DemeanContext::new(&flist.view(), None, false);
         let input: Vec<f64> = (0..n_obs).map(|i| (i as f64) * 0.1).collect();
         (ctx, input)
     }

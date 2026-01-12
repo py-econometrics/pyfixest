@@ -111,8 +111,9 @@ pub(crate) struct FixedEffectInfo {
 ///
 /// # FE Ordering
 ///
-/// Fixed effects are always reordered by size (largest first) to match fixest's
-/// behavior and ensure optimal convergence properties.
+/// Fixed effects can optionally be reordered by size (largest first) via the
+/// `reorder_fe` parameter. When enabled, this matches fixest's behavior and
+/// can improve convergence for some datasets.
 ///
 /// # Uniform Weights Fast Path
 ///
@@ -139,15 +140,14 @@ pub struct DemeanContext {
 impl DemeanContext {
     /// Create a demeaning context from input arrays.
     ///
-    /// Fixed effects are automatically reordered by size (largest first) to
-    /// match fixest's behavior and ensure optimal convergence.
-    ///
     /// # Arguments
     ///
     /// * `flist` - Fixed effect group IDs with shape `(n_obs, n_fe)`.
     ///   Each row is one observation, each column is one fixed effect.
     ///   Values must be 0-indexed group IDs.
     /// * `weights` - Per-observation weights (length: `n_obs`), or None for unweighted.
+    /// * `reorder_fe` - If true, reorder FEs by size (largest first) before demeaning.
+    ///   This can improve convergence for some datasets.
     ///
     /// # Panics
     ///
@@ -160,7 +160,11 @@ impl DemeanContext {
     /// Groups with no observations (e.g., sparse group IDs) are handled by setting
     /// their weight to 1, matching fixest's approach. Since no observation belongs
     /// to these groups, their coefficients are never used in computations.
-    pub fn new(flist: &ArrayView2<usize>, weights: Option<&ArrayView1<f64>>) -> Self {
+    pub fn new(
+        flist: &ArrayView2<usize>,
+        weights: Option<&ArrayView1<f64>>,
+        reorder_fe: bool,
+    ) -> Self {
         let (n_obs, n_fe) = flist.dim();
 
         assert!(n_obs > 0, "Cannot create DemeanContext with 0 observations");
@@ -188,13 +192,13 @@ impl DemeanContext {
             })
             .collect();
 
-        // Always reorder FEs by size (largest first) - matches fixest behavior
-        let order: Vec<usize> = if n_fe > 1 {
+        // Optionally reorder FEs by size (largest first)
+        let order: Vec<usize> = if reorder_fe && n_fe > 1 {
             let mut indices: Vec<usize> = (0..n_fe).collect();
             indices.sort_by_key(|&i| std::cmp::Reverse(n_groups_original[i]));
             indices
         } else {
-            vec![0]
+            (0..n_fe).collect()
         };
 
         // Compute dimensions
@@ -388,6 +392,11 @@ pub(crate) struct FixestConfig {
 
     /// Iterations between SSR-based convergence checks.
     pub ssr_check_interval: usize,
+
+    /// Whether to reorder fixed effects by size (largest first) before demeaning.
+    /// When true, FEs are processed in order of decreasing group count, which
+    /// can improve convergence for some datasets. Default is false.
+    pub reorder_fe: bool,
 }
 
 impl Default for FixestConfig {
@@ -400,6 +409,7 @@ impl Default for FixestConfig {
             iter_proj_after_acc: 40,
             iter_grand_acc: 4,
             ssr_check_interval: 40,
+            reorder_fe: false,
         }
     }
 }

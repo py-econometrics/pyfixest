@@ -88,6 +88,7 @@ impl<'a> ThreadLocalDemeaner<'a> {
 /// * `weights` - Per-observation weights, or None for unweighted
 /// * `tol` - Convergence tolerance
 /// * `maxiter` - Maximum iterations
+/// * `reorder_fe` - Whether to reorder FEs by size (largest first)
 ///
 /// # Returns
 ///
@@ -98,20 +99,22 @@ pub(crate) fn demean(
     weights: Option<&ArrayView1<f64>>,
     tol: f64,
     maxiter: usize,
+    reorder_fe: bool,
 ) -> DemeanMultiResult {
     let (n_samples, n_features) = x.dim();
 
     let config = FixestConfig {
         tol,
         maxiter,
+        reorder_fe,
         ..FixestConfig::default()
     };
 
     let not_converged = Arc::new(AtomicUsize::new(0));
     let mut demeaned = Array2::<f64>::zeros((n_samples, n_features));
 
-    // Create context (FEs are always reordered by size, matching fixest)
-    let ctx = DemeanContext::new(flist, weights);
+    // Create context with optional FE reordering
+    let ctx = DemeanContext::new(flist, weights, config.reorder_fe);
     let n_coef = ctx.dims.n_coef;
 
     let mut fe_coefficients = Array2::<f64>::zeros((n_coef, n_features));
@@ -175,6 +178,7 @@ pub(crate) fn demean(
 /// * `weights` - Per-observation weights, or None for unweighted (fast path)
 /// * `tol` - Convergence tolerance (default: 1e-8)
 /// * `maxiter` - Maximum iterations (default: 100_000)
+/// * `reorder_fe` - Whether to reorder FEs by size (default: false)
 ///
 /// # Returns
 ///
@@ -183,7 +187,7 @@ pub(crate) fn demean(
 /// - "fe_coefficients": Array of FE coefficients (n_coef, n_features)
 /// - "success": Boolean indicating convergence
 #[pyfunction]
-#[pyo3(signature = (x, flist, weights=None, tol=1e-8, maxiter=100_000))]
+#[pyo3(signature = (x, flist, weights=None, tol=1e-8, maxiter=100_000, reorder_fe=false))]
 pub fn _demean_rs<'py>(
     py: Python<'py>,
     x: PyReadonlyArray2<f64>,
@@ -191,12 +195,22 @@ pub fn _demean_rs<'py>(
     weights: Option<PyReadonlyArray1<f64>>,
     tol: f64,
     maxiter: usize,
+    reorder_fe: bool,
 ) -> PyResult<Bound<'py, PyDict>> {
     let x_arr = x.as_array();
     let flist_arr = flist.as_array();
     let weights_arr = weights.as_ref().map(|w| w.as_array());
 
-    let result = py.detach(|| demean(&x_arr, &flist_arr, weights_arr.as_ref(), tol, maxiter));
+    let result = py.detach(|| {
+        demean(
+            &x_arr,
+            &flist_arr,
+            weights_arr.as_ref(),
+            tol,
+            maxiter,
+            reorder_fe,
+        )
+    });
 
     let dict = PyDict::new(py);
     dict.set_item("demeaned", PyArray2::from_owned_array(py, result.demeaned))?;
@@ -226,7 +240,7 @@ mod tests {
         }
 
         // Unweighted case
-        let ctx = DemeanContext::new(&flist.view(), None);
+        let ctx = DemeanContext::new(&flist.view(), None, false);
         let input: Vec<f64> = (0..n_obs).map(|i| (i as f64) * 0.1).collect();
 
         let config = FixestConfig::default();
@@ -255,7 +269,7 @@ mod tests {
         }
 
         // Unweighted case
-        let ctx = DemeanContext::new(&flist.view(), None);
+        let ctx = DemeanContext::new(&flist.view(), None, false);
         let input: Vec<f64> = (0..n_obs).map(|i| (i as f64) * 0.1).collect();
 
         let config = FixestConfig::default();
@@ -298,7 +312,7 @@ mod tests {
             flist[[i, 0]] = i % n_groups;
         }
 
-        let ctx = DemeanContext::new(&flist.view(), None);
+        let ctx = DemeanContext::new(&flist.view(), None, false);
         let input: Vec<f64> = (0..n_obs).map(|i| (i as f64) * 0.1).collect();
 
         let mut demeaner = SingleFEDemeaner::new(&ctx);
@@ -346,7 +360,7 @@ mod tests {
         // Non-uniform weights: 1.0, 2.0, 3.0, 1.0, 2.0, 3.0, ...
         let weights: ndarray::Array1<f64> = (0..n_obs).map(|i| 1.0 + (i % 3) as f64).collect();
         let ctx =
-            DemeanContext::new(&flist.view(), Some(&weights.view()));
+            DemeanContext::new(&flist.view(), Some(&weights.view()), false);
 
         assert!(
             ctx.weights.is_some(),
@@ -380,7 +394,7 @@ mod tests {
         }
 
         // Test with no weights (None) - unweighted case
-        let ctx_unweighted = DemeanContext::new(&flist.view(), None);
+        let ctx_unweighted = DemeanContext::new(&flist.view(), None, false);
         assert!(
             ctx_unweighted.weights.is_none(),
             "No weights should result in weights=None"
@@ -389,7 +403,7 @@ mod tests {
         // Test with weights (Some) - weighted case
         let weights: ndarray::Array1<f64> = (0..n_obs).map(|i| 1.0 + (i % 2) as f64).collect();
         let ctx_weighted =
-            DemeanContext::new(&flist.view(), Some(&weights.view()));
+            DemeanContext::new(&flist.view(), Some(&weights.view()), false);
         assert!(
             ctx_weighted.weights.is_some(),
             "Provided weights should result in weights=Some"
@@ -408,7 +422,7 @@ mod tests {
             flist[[i, 1]] = i % 5;
         }
 
-        let ctx = DemeanContext::new(&flist.view(), None);
+        let ctx = DemeanContext::new(&flist.view(), None, false);
         let config = FixestConfig::default();
 
         // Create a single demeaner and use it multiple times
@@ -448,7 +462,7 @@ mod tests {
     fn test_single_observation() {
         // Edge case: only 1 observation
         let flist = Array2::<usize>::zeros((1, 2));
-        let ctx = DemeanContext::new(&flist.view(), None);
+        let ctx = DemeanContext::new(&flist.view(), None, false);
 
         let input = vec![42.0];
         let config = FixestConfig::default();
@@ -469,7 +483,7 @@ mod tests {
         let n_obs = 50;
         let flist = Array2::<usize>::zeros((n_obs, 2)); // All zeros = single group each
 
-        let ctx = DemeanContext::new(&flist.view(), None);
+        let ctx = DemeanContext::new(&flist.view(), None, false);
         let input: Vec<f64> = (0..n_obs).map(|i| (i as f64) * 0.1).collect();
 
         let config = FixestConfig::default();
@@ -498,7 +512,7 @@ mod tests {
             flist[[i, 1]] = i % 5;
         }
 
-        let ctx = DemeanContext::new(&flist.view(), None);
+        let ctx = DemeanContext::new(&flist.view(), None, false);
         let input: Vec<f64> = (0..n_obs).map(|i| (i as f64) * 0.1).collect();
 
         let config = FixestConfig::default();
@@ -525,7 +539,7 @@ mod tests {
             .collect();
 
         let ctx =
-            DemeanContext::new(&flist.view(), Some(&weights.view()));
+            DemeanContext::new(&flist.view(), Some(&weights.view()), false);
         let input: Vec<f64> = (0..n_obs).map(|i| (i as f64) * 0.1).collect();
 
         let config = FixestConfig::default();
@@ -560,7 +574,7 @@ mod tests {
             flist[[i, 1]] = i % 5;
         }
 
-        let ctx = DemeanContext::new(&flist.view(), None);
+        let ctx = DemeanContext::new(&flist.view(), None, false);
         let input: Vec<f64> = (0..n_obs).map(|i| (i as f64) * 0.1).collect();
 
         // Use maxiter=1 - algorithm may or may not converge depending on data
@@ -592,7 +606,7 @@ mod tests {
             flist[[i, 1]] = i % 3;
         }
 
-        let ctx = DemeanContext::new(&flist.view(), None);
+        let ctx = DemeanContext::new(&flist.view(), None, false);
         let input: Vec<f64> = (0..n_obs).map(|i| (i as f64) * 0.1).collect();
 
         let config = FixestConfig {

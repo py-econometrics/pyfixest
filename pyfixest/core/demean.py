@@ -10,6 +10,7 @@ def demean(
     weights: NDArray[np.float64],
     tol: float = 1e-08,
     maxiter: int = 100_000,
+    reorder_fe: bool = False,
 ) -> tuple[NDArray, bool]:
     """
     Demean an array.
@@ -30,6 +31,9 @@ def demean(
         Tolerance criterion for convergence. Defaults to 1e-08.
     maxiter : int, optional
         Maximum number of iterations. Defaults to 100_000.
+    reorder_fe : bool, optional
+        Whether to reorder fixed effects by size (largest first) before demeaning.
+        This can improve convergence for some datasets. Defaults to False.
 
     Returns
     -------
@@ -80,5 +84,6 @@ def demean(
         None if is_uniform else weights_f64,
         tol,
         maxiter,
+        reorder_fe,
     )
     return result["demeaned"], result["success"]

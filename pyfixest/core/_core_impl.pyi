@@ -22,6 +22,7 @@ def _demean_rs(
     weights: NDArray[np.float64] | None = None,
     tol: float = 1e-08,
     maxiter: int = 100_000,
+    reorder_fe: bool = False,
 ) -> DemeanResult: ...
 def _count_fixef_fully_nested_all_rs(
     all_fixef_array: NDArray,
