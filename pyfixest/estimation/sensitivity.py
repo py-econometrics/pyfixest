@@ -1,6 +1,6 @@
 import sys
 from dataclasses import dataclass
-from typing import Any, Optional, Union
+from typing import Any, Optional, Union, List
 
 import numpy as np
 import pandas as pd
@@ -29,7 +29,9 @@ class SensitivityAnalysis:
                 "Sensitivity analysis is only supported for OLS models (Feols)."
             )
 
-    def partial_r2(self, X: Optional[str] = None) -> Union[float, np.ndarray]:
+    def partial_r2(self,
+                   X: Optional[str] = None
+    ) -> Union[float, np.ndarray]:
        """
        Calculate the partial R2 for a given variable.
 
@@ -55,7 +57,9 @@ class SensitivityAnalysis:
        idx = names.index(X)
        return tstat[idx]**2 / (tstat[idx]**2 + df)
 
-    def partial_f2(self, X: Optional[str] = None) -> Union[float, np.ndarray]:
+    def partial_f2(self,
+                   X: Optional[str] = None
+    ) -> Union[float, np.ndarray]:
         """
         Compute the partial (Cohen's) f2 for a linear regression model.
 
@@ -81,7 +85,11 @@ class SensitivityAnalysis:
         idx = names.index(X)
         return tstat[idx]**2 / df
 
-    def robustness_value(self, X: Optional[str] = None, q = 1, alpha = 1.0) -> Union[float, np.ndarray]:
+    def robustness_value(self,
+                         X: Optional[str] = None,
+                         q: float = 1,
+                         alpha: float = 1.0
+    ) -> Union[float, np.ndarray]:
         """
         Compute the robustness value (RV) of the regression coefficient.
 
@@ -117,7 +125,11 @@ class SensitivityAnalysis:
 
         return rv
 
-    def sensitivity_stats(self, X: Optional[str] = None, q = 1, alpha = 0.05) -> dict:
+    def sensitivity_stats(self,
+                          X: Optional[str] = None,
+                          q: float = 1,
+                          alpha: float = 0.05
+    ) -> dict:
         """
         Compute the sensitivity statistics for the model.
 
@@ -161,7 +173,15 @@ class SensitivityAnalysis:
 
         return sensitivity_stats_df
 
-    def ovb_bounds(self, treatment, benchmark_covariates, kd=[1, 2, 3], ky=None, alpha=0.05, adjusted_estimate=True, bound="partial r2"):
+    def ovb_bounds(self,
+                   treatment: str,
+                   benchmark_covariates: Union[str, List[str]],
+                   kd: Union[float, List[float]] = [1, 2, 3],
+                   ky: Optional[Union[float, List[float]]] = None,
+                   alpha: float = 0.05,
+                   adjusted_estimate: bool = True,
+                   bound: str = "partial r2"
+    ):
         """
         Compute bounds on omitted variable bias using observed covariates as benchmarks.
 
@@ -210,7 +230,12 @@ class SensitivityAnalysis:
 
         return bounds
 
-    def _ovb_bounds_partial_r2(self, treatment, benchmark_covariates, kd, ky):
+    def _ovb_bounds_partial_r2(self,
+                               treatment: str,
+                               benchmark_covariates: Union[str, List[str]],
+                               kd: Union[float, List[float]] = [1, 2, 3],
+                               ky: Optional[Union[float, List[float]]] = None
+    ):
         """
         Compute OVB bounds based on partial R2.
 
@@ -295,7 +320,11 @@ class SensitivityAnalysis:
 
         return pd.DataFrame(bounds_list)
 
-    def bias(self, r2dz_x, r2yz_dx, treatment):
+    def bias(self,
+             r2dz_x: Union[float, np.ndarray],
+             r2yz_dx: Union[float, np.ndarray],
+             treatment: str
+    ):
         """
         Compute the bias for the partial R2 parametrization.
 
@@ -322,7 +351,12 @@ class SensitivityAnalysis:
 
         return bias_factor * se * np.sqrt(df)
 
-    def adjusted_estimate(self, r2dz_x, r2yz_dx, treatment, reduce=True):
+    def adjusted_estimate(self,
+                          r2dz_x: Union[float, np.ndarray],
+                          r2yz_dx: Union[float, np.ndarray],
+                          treatment: str,
+                          reduce: bool = True
+    ):
         """
         Compute the bias-adjusted coefficient estimate.
 
@@ -349,7 +383,11 @@ class SensitivityAnalysis:
         else:
             return np.sign(estimate) * (abs(estimate) + self.bias(r2dz_x, r2yz_dx, treatment = treatment))
 
-    def adjusted_se(self, r2dz_x, r2yz_dx, treatment):
+    def adjusted_se(self,
+                    r2dz_x: Union[float, np.ndarray],
+                    r2yz_dx: Union[float, np.ndarray],
+                    treatment: str
+    ):
         """
         Compute the bias-adjusted Standard Error estimate.
 
@@ -371,7 +409,12 @@ class SensitivityAnalysis:
 
         return np.sqrt((1 - r2yz_dx) / (1 - r2dz_x)) * se * np.sqrt(df / (df - 1))
 
-    def adjusted_t(self, r2dz_x, r2yz_dx, treatment, reduce=True, h0=0):
+    def adjusted_t(self,
+                   r2dz_x: Union[float, np.ndarray],
+                   r2yz_dx: Union[float, np.ndarray],
+                   treatment: str,
+                   reduce: bool = True,
+                   h0: float = 0):
         """
         Compute the bias-adjusted t-statistic.
 
@@ -395,7 +438,15 @@ class SensitivityAnalysis:
         new_se = self.adjusted_se(r2dz_x, r2yz_dx, treatment = treatment)
         return (new_estimate - h0) / new_se
 
-    def summary(self, treatment=None, benchmark_covariates=None, kd=[1, 2, 3], ky=None, q=1, alpha=0.05, reduce=True, decimals=3):
+    def summary(self,
+                benchmark_covariates: Union[str, List[str]],
+                kd: Union[float, List[float]] = [1, 2, 3],
+                ky: Optional[Union[float, List[float]]] = None,
+                q: float = 1,
+                alpha: float = 0.05,
+                reduce: bool = True,
+                decimals: int = 3
+    ):
         """
         Print a summary of the sensitivity analysis.
 
@@ -471,3 +522,45 @@ class SensitivityAnalysis:
 
             print(bounds_df[cols].to_string(index=True, float_format=lambda x: f"{x:.{6}f}" if abs(
                 x) < 1e-3 else f"{x:.{decimals}f}"))
+
+    def plot(self,
+             treatment: str,
+             plot_type: str = "contour",
+             sensitivity_of: str = "estimate",
+             benchmark_covariates: Optional[Union[str, list]] = None,
+             **kwargs
+    ):
+        """
+        Provide the contour and extreme sensitivity plots of the sensitivity analysis results.
+
+        Parameters
+        ----------
+        treatment : str
+            Name of the treatment variable.
+        plot_type : str, default "contour"
+            Either "contour" or "extreme".
+        sensitivity_of : str, default "estimate"
+            Either "estimate" or "t-value".
+        **kwargs
+            Additional arguments passed to plotting functions.
+
+        """
+        from pyfixest.report.visualize import ovb_contour_plot, ovb_extreme_plot
+
+        if plot_type == "contour":
+            return ovb_contour_plot(
+                sens = self,
+                treatment = treatment,
+                sensitivity_of = sensitivity_of,
+                **kwargs
+            )
+        elif plot_type == "extreme" and sensitivity_of == "t-value":
+            raise NotImplementedError("Extreme sensitivity plots for t-values not yet implemented.")
+        elif plot_type == "extreme":
+            return ovb_extreme_plot(
+                sens = self,
+                treatment = treatment,
+                **kwargs
+            )
+        else:
+            raise ValueError('plot_type must be "contour" or "extreme"')
