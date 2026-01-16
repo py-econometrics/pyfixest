@@ -892,6 +892,7 @@ def _get_model_df(
 
     return df_model
 
+
 def ovb_contour_plot(
     sens: "SensitivityAnalysis",
     treatment: str,
@@ -917,7 +918,7 @@ def ovb_contour_plot(
     round_dig: int = 3,
     n_levels: Optional[int] = None,
     figsize: tuple = (6, 6),
-    ax: Optional[plt.Axes] = None
+    ax: Optional[plt.Axes] = None,
 ):
     """
     Create contour plots of omitted variable bias for sensitivity analysis.
@@ -998,16 +999,16 @@ def ovb_contour_plot(
 
     if benchmark_covariates is not None:
         bounds = sens.ovb_bounds(
-            treatment=treatment,
-            benchmark_covariates=benchmark_covariates,
-            kd=kd,
-            ky=ky
+            treatment=treatment, benchmark_covariates=benchmark_covariates, kd=kd, ky=ky
         )
         r2dz_x = bounds["r2dz_x"].values
         r2yz_dx = bounds["r2yz_dx"].values
         bound_label = bounds["bound_label"].values
-        bound_value = bounds["adjusted_estimate"].values if sensitivity_of == "estimate" else bounds[
-            "adjusted_t"].values
+        bound_value = (
+            bounds["adjusted_estimate"].values
+            if sensitivity_of == "estimate"
+            else bounds["adjusted_t"].values
+        )
 
     if lim is None:
         if r2dz_x is None:
@@ -1023,17 +1024,17 @@ def ovb_contour_plot(
 
     if lim > 1.0:
         lim = 1 - 1e-12
-        print('Warning: Contour limit larger than 1 was set to 1.')
+        print("Warning: Contour limit larger than 1 was set to 1.")
     elif lim < 0:
         lim = 0.4
-        print('Warning: Contour limit less than 0 was set to 0.4.')
+        print("Warning: Contour limit less than 0 was set to 0.4.")
 
     if lim_y > 1.0:
         lim_y = 1 - 1e-12
-        print('Warning: Contour limit larger than 1 was set to 1.')
+        print("Warning: Contour limit larger than 1 was set to 1.")
     elif lim_y < 0:
         lim_y = 0.4
-        print('Warning: Contour limit less than 0 was set to 0.4.')
+        print("Warning: Contour limit less than 0 was set to 0.4.")
 
     if label_bump_x is None:
         label_bump_x = lim / 30.0
@@ -1048,20 +1049,18 @@ def ovb_contour_plot(
 
     if sensitivity_of == "estimate":
         z_axis = sens.adjusted_estimate(
-            r2dz_x = R2DZ,
-            r2yz_dx = R2YZ,
-            treatment = treatment,
-            reduce = reduce
+            r2dz_x=R2DZ, r2yz_dx=R2YZ, treatment=treatment, reduce=reduce
         )
         plot_estimate = estimate
     else:
         z_axis = sens.adjusted_t(
-            r2dz_x = R2DZ,
-            r2yz_dx = R2YZ,
-            treatment = treatment,
-            reduce = reduce,
-            h0 = estimate_threshold
+            r2dz_x=R2DZ,
+            r2yz_dx=R2YZ,
+            treatment=treatment,
+            reduce=reduce,
+            h0=estimate_threshold,
         )
+        plot_estimate = estimate / se  # t-value = estimate / se
 
     # Handle edge cases (R2DZ >= 1)
     z_axis = np.where(R2DZ >= 1, np.nan, z_axis)
@@ -1078,18 +1077,36 @@ def ovb_contour_plot(
         levels = []
         current = z_min
         while current < z_max:
-            if not np.isclose(current, threshold, atol = 1e-8):
+            if not np.isclose(current, threshold, atol=1e-8):
                 levels.append(current)
             current += delta
     else:
-        levels = [lvl for lvl in np.linspace(z_min, z_max, 10)
-                  if not np.isclose(lvl, threshold, atol = 1e-8)]
+        levels = [
+            lvl
+            for lvl in np.linspace(z_min, z_max, 10)
+            if not np.isclose(lvl, threshold, atol=1e-8)
+        ]
 
-    CS = ax.contour(grid_values_x, grid_values_y, z_axis, colors=col_thr_line, linewidths = 1.0, linestyles = "solid", levels=levels)
+    CS = ax.contour(
+        grid_values_x,
+        grid_values_y,
+        z_axis,
+        colors=col_thr_line,
+        linewidths=1.0,
+        linestyles="solid",
+        levels=levels,
+    )
     ax.clabel(CS, inline=True, fontsize=8, fmt="%1.3g", colors="gray")
 
-    CS_thr = ax.contour(grid_values_x, grid_values_y, z_axis,
-                        colors=col_thr_line, linewidths=1.0, linestyles=[(0, (7, 3))], levels=[threshold])
+    CS_thr = ax.contour(
+        grid_values_x,
+        grid_values_y,
+        z_axis,
+        colors=col_thr_line,
+        linewidths=1.0,
+        linestyles=[(0, (7, 3))],
+        levels=[threshold],
+    )
     ax.clabel(CS_thr, inline=True, fontsize=8, fmt="%1.3g", colors="gray")
 
     # Unadjusted point
@@ -1112,16 +1129,21 @@ def ovb_contour_plot(
             if label_text:
                 value = round(bound_value[i], round_dig)
                 label = f"{bound_label[i]}\n({value})"
-                ax.annotate(label, (r2dz_x[i] + label_bump_x, r2yz_dx[i] + label_bump_y))
+                ax.annotate(
+                    label, (r2dz_x[i] + label_bump_x, r2yz_dx[i] + label_bump_y)
+                )
 
         # Add margin
     x0, x1, y0, y1 = ax.axis()
-    ax.axis((x0, x1 + plot_margin_fraction * lim, y0, y1 + plot_margin_fraction * lim_y))
+    ax.axis(
+        (x0, x1 + plot_margin_fraction * lim, y0, y1 + plot_margin_fraction * lim_y)
+    )
 
     plt.tight_layout()
     plt.close()
 
     return fig
+
 
 def ovb_extreme_plot(
     sens: "SensitivityAnalysis",
@@ -1137,7 +1159,7 @@ def ovb_extreme_plot(
     xlab: Optional[str] = None,
     ylab: Optional[str] = None,
     figsize: tuple = (8, 4.8),
-    ax: Optional[plt.Axes] = None
+    ax: Optional[plt.Axes] = None,
 ):
     """
     Extreme scenario plots of omitted variable bias for sensitivity analysis.
@@ -1189,10 +1211,7 @@ def ovb_extreme_plot(
 
     if benchmark_covariates is not None:
         bounds = sens.ovb_bounds(
-            treatment=treatment,
-            benchmark_covariates=benchmark_covariates,
-            kd=kd,
-            ky=ky
+            treatment=treatment, benchmark_covariates=benchmark_covariates, kd=kd, ky=ky
         )
         r2dz_x_bounds = bounds["r2dz_x"].values
 
@@ -1218,16 +1237,19 @@ def ovb_extreme_plot(
     for i, r2yz in enumerate(r2yz_dx):
         # Use existing method
         y = sens.adjusted_estimate(
-            r2dz_x=r2d_values,
-            r2yz_dx=r2yz,
-            treatment=treatment,
-            reduce=reduce
+            r2dz_x=r2d_values, r2yz_dx=r2yz, treatment=treatment, reduce=reduce
         )
         y = np.where(r2d_values >= 1, np.nan, y)
 
         if i == 0:
-            ax.plot(r2d_values, y, label=f"{int(round(r2yz * 100))}%",
-                    linewidth=1.5, linestyle="solid", color="black")
+            ax.plot(
+                r2d_values,
+                y,
+                label=f"{int(round(r2yz * 100))}%",
+                linewidth=1.5,
+                linestyle="solid",
+                color="black",
+            )
             ax.axhline(y=threshold, color="r", linestyle="--")
             lim_y1 = np.nanmax(y) + np.abs(np.nanmax(y)) / 15
             lim_y2 = np.nanmin(y) - np.abs(np.nanmin(y)) / 15
@@ -1237,8 +1259,14 @@ def ovb_extreme_plot(
                 for rug in r2dz_x_bounds:
                     ax.axvline(x=rug, ymin=0, ymax=0.022, color="r", linewidth=2.5)
         else:
-            ax.plot(r2d_values, y, label=f"{int(round(r2yz * 100))}%",
-                    linewidth=np.abs(2.1 - 0.5 * i), linestyle="--", color="black")
+            ax.plot(
+                r2d_values,
+                y,
+                label=f"{int(round(r2yz * 100))}%",
+                linewidth=np.abs(2.1 - 0.5 * i),
+                linestyle="--",
+                color="black",
+            )
 
         # Legend and formatting
     ax.legend(ncol=len(r2yz_dx), frameon=False)

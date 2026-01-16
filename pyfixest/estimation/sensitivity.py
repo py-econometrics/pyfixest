@@ -439,7 +439,8 @@ class SensitivityAnalysis:
         return (new_estimate - h0) / new_se
 
     def summary(self,
-                benchmark_covariates: Union[str, List[str]],
+                treatment: Optional[str] = None,
+                benchmark_covariates: Optional[Union[str, List[str]]] = None,
                 kd: Union[float, List[float]] = [1, 2, 3],
                 ky: Optional[Union[float, List[float]]] = None,
                 q: float = 1,
