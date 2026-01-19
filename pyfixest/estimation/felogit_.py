@@ -87,13 +87,13 @@ class Felogit(Feglm):
     def _get_b(self, theta: np.ndarray) -> np.ndarray:
         return np.log(1 + np.exp(theta))
 
-    def _get_mu(self, theta: np.ndarray) -> np.ndarray:
-        return np.exp(theta) / (1 + np.exp(theta))
+    def _get_mu(self, eta: np.ndarray) -> np.ndarray:
+        return np.exp(eta) / (1 + np.exp(eta))
 
     def _get_link(self, mu: np.ndarray) -> np.ndarray:
         return np.log(mu / (1 - mu))
 
-    def _update_detadmu(self, mu: np.ndarray) -> np.ndarray:
+    def _get_gprime(self, mu: np.ndarray) -> np.ndarray:
         return 1 / (mu * (1 - mu))
 
     def _get_theta(self, mu: np.ndarray) -> np.ndarray:

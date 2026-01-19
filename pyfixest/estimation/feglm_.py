@@ -162,12 +162,12 @@ class Feglm(Feols, ABC):
         deviance = self._get_deviance(self._Y.flatten(), mu)
         deviance_old = deviance + 1.0
 
-        W_tilde_final = None
+        sqrt_W_final = None
 
         for r in range(self.maxiter):
             if r > 0:
                 converged = self._check_convergence(
-                    crit=self._get_diff(deviance=deviance, last=deviance_old),
+                    crit=self._get_relative_deviance_change(deviance, deviance_old),
                     tol=self.tol,
                     r=r,
                     maxiter=self.maxiter,
@@ -177,13 +177,13 @@ class Feglm(Feols, ABC):
                     self.convergence = True
                     break
 
-            detadmu = self._update_detadmu(mu=mu)
+            gprime = self._get_gprime(mu=mu)
             W = self._update_W(mu=mu)
-            W_tilde = self._update_W_tilde(W=W)  # sqrt(W)
+            sqrt_W = np.sqrt(W)
 
-            z = eta + (self._Y.flatten() - mu) * detadmu
+            z = eta + (self._Y.flatten() - mu) * gprime
 
-            z_resid, X_resid = self.residualize(
+            z_tilde, X_tilde = self.residualize(
                 v=z,
                 X=self._X,
                 flist=self._fe,
@@ -192,16 +192,16 @@ class Feglm(Feols, ABC):
                 maxiter=self._fixef_maxiter,
             )
 
-            WX = W_tilde.flatten()[:, None] * X_resid
-            WZ = W_tilde.flatten() * z_resid
+            WX = sqrt_W.flatten()[:, None] * X_tilde
+            WZ = sqrt_W.flatten() * z_tilde
 
             beta_new = np.linalg.lstsq(WX, WZ, rcond=None)[0].flatten()
 
-            # Residual demeaned, not weighted
-            resid = z_resid - X_resid @ beta_new
-            eta_new = z - resid
+            # Residual from demeaned regression (not weighted)
+            e_new = z_tilde - X_tilde @ beta_new
+            eta_new = z - e_new
 
-            mu_new = self._get_mu(theta=eta_new)
+            mu_new = self._get_mu(eta=eta_new)
             deviance_new = self._get_deviance(self._Y.flatten(), mu_new)
 
             # Step-halving if deviance did not decrease
@@ -210,7 +210,7 @@ class Feglm(Feols, ABC):
             while deviance_new >= deviance and alpha > step_halfing_tolerance:
                 alpha /= 2.0
                 eta_try = eta + alpha * (eta_new - eta)
-                mu_try = self._get_mu(theta=eta_try)
+                mu_try = self._get_mu(eta=eta_try)
                 deviance_try = self._get_deviance(self._Y.flatten(), mu_try)
                 if deviance_try < deviance:
                     eta_new = eta_try
@@ -231,12 +231,12 @@ class Feglm(Feols, ABC):
             mu = mu_new
             deviance = deviance_new
 
-            z_resid_final = z_resid
-            X_resid_final = X_resid
-            W_tilde_final = W_tilde
+            z_tilde_final = z_tilde
+            X_tilde_final = X_tilde
+            sqrt_W_final = sqrt_W
 
-        WX_final = W_tilde_final.flatten()[:, None] * X_resid_final
-        WZ_final = W_tilde_final.flatten() * z_resid_final
+        WX_final = sqrt_W_final.flatten()[:, None] * X_tilde_final
+        WZ_final = sqrt_W_final.flatten() * z_tilde_final
         self._beta_hat = np.linalg.lstsq(WX_final, WZ_final, rcond=None)[0].flatten()
 
         self._Y_hat_response = mu.flatten()
@@ -252,11 +252,11 @@ class Feglm(Feols, ABC):
         self._u_hat_response = (self._Y.flatten() - mu).flatten()
 
         # Compute working residual from DEMEANED quantities
-        resid_final = z_resid_final - X_resid_final @ self._beta_hat
+        e_final = z_tilde_final - X_tilde_final @ self._beta_hat
         self._u_hat_working = (
             self._u_hat_response
             if self._method == "feglm-gaussian"
-            else resid_final.flatten()
+            else e_final.flatten()
         )
 
         self._scores_response = self._u_hat_response[:, None] * self._X
@@ -283,28 +283,24 @@ class Feglm(Feols, ABC):
         return self._bread
 
     def _update_v(
-        self, y: np.ndarray, mu: np.ndarray, detadmu: np.ndarray
+        self, y: np.ndarray, mu: np.ndarray, gprime: np.ndarray
     ) -> np.ndarray:
         "Get (running) dependent variable v for the GLM family."
-        return (y - mu) * detadmu
+        return (y - mu) * gprime
 
     def _update_W(self, mu: np.ndarray) -> np.ndarray:
-        "Get (running) weights W for the GLM family."
-        return 1 / (self._update_detadmu(mu=mu) ** 2 * self._get_V(mu=mu))
-
-    def _update_W_tilde(self, W: np.ndarray) -> np.ndarray:
-        "Get W_tilde (formula 3.2)."
-        return np.sqrt(W)
+        "Compute IRLS weights: w = 1 / (g'(μ)² · V(μ))."
+        return 1 / (self._get_gprime(mu=mu) ** 2 * self._get_V(mu=mu))
 
     def _update_v_tilde(
-        self, y: np.ndarray, mu: np.ndarray, W_tilde: np.ndarray, detadmu: np.ndarray
+        self, y: np.ndarray, mu: np.ndarray, sqrt_W: np.ndarray, gprime: np.ndarray
     ) -> np.ndarray:
-        "Get v_tilde (formula 3.2)."
-        return W_tilde * ((y - mu) * detadmu)
+        "Get sqrt(W) * v for weighted least squares transformation."
+        return sqrt_W * ((y - mu) * gprime)
 
-    def _update_X_tilde(self, W_tilde: np.ndarray, X: np.ndarray) -> np.ndarray:
-        "Get X_tilde (formula 3.2)."
-        return W_tilde.reshape(-1, 1) * X
+    def _update_X_tilde(self, sqrt_W: np.ndarray, X: np.ndarray) -> np.ndarray:
+        "Get sqrt(W) * X for weighted least squares transformation."
+        return sqrt_W.reshape(-1, 1) * X
 
     def _update_beta_diff(
         self, X_dotdot: np.ndarray, v_dotdot: np.ndarray
@@ -317,25 +313,28 @@ class Feglm(Feols, ABC):
 
     def _update_eta(
         self,
-        W_tilde: np.ndarray,
-        Z: np.ndarray,
-        Z_dotdot: np.ndarray,
-        X_dotdot: np.ndarray,
+        sqrt_W: np.ndarray,
+        z: np.ndarray,
+        z_tilde: np.ndarray,
+        X_tilde: np.ndarray,
         beta_diff: np.ndarray,
         eta: np.ndarray,
     ) -> np.ndarray:
-        # Compute residual from demeaned regression
-        resid = Z_dotdot - X_dotdot @ beta_diff
+        # Compute residual from demeaned regression: e = z̃ - X̃β
+        e = z_tilde - X_tilde @ beta_diff
         # Unweight the residual
-        resid_unweighted = resid / W_tilde
-        # New eta = Z - residual (this recovers FE)
-        return Z - resid_unweighted
+        e_unweighted = e / sqrt_W
+        # New eta = z - e (this recovers FE)
+        return z - e_unweighted
 
     def _get_gradient(self, Z: np.ndarray, W: np.ndarray, v: np.ndarray) -> np.ndarray:
         return Z.T @ W @ v
 
-    def _get_diff(self, deviance: np.ndarray, last: np.ndarray) -> np.ndarray:
-        return np.abs(deviance - last) / (0.1 + np.abs(last))
+    def _get_relative_deviance_change(
+        self, deviance: np.ndarray, deviance_old: np.ndarray
+    ) -> np.ndarray:
+        "Compute relative change in deviance for convergence check."
+        return np.abs(deviance - deviance_old) / (0.1 + np.abs(deviance_old))
 
     def residualize(
         self,
@@ -350,7 +349,7 @@ class Feglm(Feols, ABC):
         if flist is None:
             return v, X
         else:
-            vX_resid, success = self._demean_func(
+            vX_tilde, success = self._demean_func(
                 x=np.c_[v, X],
                 flist=flist.astype(np.uintp),
                 weights=weights,
@@ -360,7 +359,7 @@ class Feglm(Feols, ABC):
             if success is False:
                 raise ValueError(f"Demeaning failed after {maxiter} iterations.")
             else:
-                return vX_resid[:, 0], vX_resid[:, 1:]
+                return vX_tilde[:, 0], vX_tilde[:, 1:]
 
     def _check_convergence(
         self,
@@ -392,10 +391,10 @@ class Feglm(Feols, ABC):
         mu: np.ndarray,
         deviance: np.ndarray,
         beta_update_diff: np.ndarray,
-        W_tilde: np.ndarray,
-        Z: np.ndarray,
-        Z_dotdot: np.ndarray,
-        X_dotdot: np.ndarray,
+        sqrt_W: np.ndarray,
+        z: np.ndarray,
+        z_tilde: np.ndarray,
+        X_tilde: np.ndarray,
         deviance_old: np.ndarray,
         step_halfing_tolerance: float,
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
@@ -406,14 +405,14 @@ class Feglm(Feols, ABC):
         while alpha > step_halfing_tolerance:
             beta_try = beta + alpha * beta_update_diff
             eta_try = self._update_eta(
-                W_tilde=W_tilde.flatten(),
-                Z=Z,
-                Z_dotdot=Z_dotdot,
-                X_dotdot=X_dotdot,
+                sqrt_W=sqrt_W.flatten(),
+                z=z,
+                z_tilde=z_tilde,
+                X_tilde=X_tilde,
                 beta_diff=alpha * beta_update_diff,
                 eta=eta,
             )
-            mu_try = self._get_mu(theta=eta_try)
+            mu_try = self._get_mu(eta=eta_try)
             deviance_try = self._get_deviance(Y.flatten(), mu_try)
             if deviance_try < deviance_old:
                 beta = beta_try
@@ -529,18 +528,18 @@ class Feglm(Feols, ABC):
         pass
 
     @abstractmethod
-    def _get_mu(self, theta: np.ndarray) -> np.ndarray:
-        "Get the mean mu(theta) for the GLM family."
+    def _get_mu(self, eta: np.ndarray) -> np.ndarray:
+        "Apply inverse link function: μ = g⁻¹(η)."
         pass
 
     @abstractmethod
     def _get_link(self, mu: np.ndarray) -> np.ndarray:
-        "Get the link function theta(mu) for the GLM family."
+        "Apply link function: η = g(μ)."
         pass
 
     @abstractmethod
-    def _update_detadmu(self, mu: np.ndarray) -> np.ndarray:
-        "Get the derivative of mu(theta) with respect to theta for the GLM family."
+    def _get_gprime(self, mu: np.ndarray) -> np.ndarray:
+        "Get the derivative of the link function g'(μ) = dη/dμ."
         pass
 
     @abstractmethod

@@ -100,13 +100,13 @@ class Feprobit(Feglm):
         raise ValueError("The function _get_b is not implemented for the probit model.")
         return None
 
-    def _get_mu(self, theta: np.ndarray) -> np.ndarray:
-        return norm.cdf(theta)
+    def _get_mu(self, eta: np.ndarray) -> np.ndarray:
+        return norm.cdf(eta)
 
     def _get_link(self, mu: np.ndarray) -> np.ndarray:
         return norm.ppf(mu)
 
-    def _update_detadmu(self, mu: np.ndarray) -> np.ndarray:
+    def _get_gprime(self, mu: np.ndarray) -> np.ndarray:
         return 1 / norm.pdf(norm.ppf(mu))
 
     def _get_theta(self, mu: np.ndarray) -> np.ndarray:

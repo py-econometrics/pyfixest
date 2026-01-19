@@ -82,13 +82,13 @@ class Fegaussian(Feglm):
     def _get_b(self, theta: np.ndarray) -> np.ndarray:
         return theta**2 / 2
 
-    def _get_mu(self, theta: np.ndarray) -> np.ndarray:
-        return theta
+    def _get_mu(self, eta: np.ndarray) -> np.ndarray:
+        return eta
 
     def _get_link(self, mu: np.ndarray) -> np.ndarray:
         return mu
 
-    def _update_detadmu(self, mu: np.ndarray) -> np.ndarray:
+    def _get_gprime(self, mu: np.ndarray) -> np.ndarray:
         return np.ones_like(mu)
 
     def _get_theta(self, mu: np.ndarray) -> np.ndarray:
