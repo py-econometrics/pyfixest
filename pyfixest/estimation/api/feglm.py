@@ -39,8 +39,11 @@ def feglm(
     fsplit: Optional[str] = None,
 ) -> Union[Feols, Fepois, FixestMulti]:
     """
-    Estimate GLM regression models (currently without fixed effects, this is work in progress).
-    This feature is currently experimental, full support will be released with pyfixest 0.29.
+    Estimate GLM regression models with fixed effects. 
+    The implementation is based on ideas developd in: 
+    - Bergé (2018): https://ideas.repec.org/p/luc/wpaper/18-13.html
+    - Correia, Guimaraes, Zylkin (2019): https://journals.sagepub.com/doi/pdf/10.1177/1536867X20909691
+    - Stamann (2018): https://arxiv.org/pdf/1707.01815
 
     Parameters
     ----------
