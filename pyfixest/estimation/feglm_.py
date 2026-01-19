@@ -324,18 +324,6 @@ class Feglm(Feols, ABC):
         beta_diff: np.ndarray,
         eta: np.ndarray,
     ) -> np.ndarray:
-        """
-        Get the eta update following the Fepois pattern.
-
-        The approach is:
-        1. Compute weighted residual: resid = Z_dotdot - X_dotdot @ beta_diff
-        2. Unweight: resid_unweighted = resid / W_tilde
-        3. New eta = Z - resid_unweighted
-
-        This recovers the fixed effects contribution since Z contains
-        the full working response and the residual is computed from
-        demeaned quantities.
-        """
         # Compute residual from demeaned regression
         resid = Z_dotdot - X_dotdot @ beta_diff
         # Unweight the residual
