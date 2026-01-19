@@ -147,7 +147,10 @@ class Feglm(Feols, ABC):
         """
         Fit the GLM model via iterated weighted least squares.
 
-        Following Stammann (2018) and Correia, Guimarães & Zylkin (2019).
+        The implementation follows ideas developed in 
+        - Bergé (2018): https://ideas.repec.org/p/luc/wpaper/18-13.html
+        - Correia, Guimaraes, Zylkin (2019): https://journals.sagepub.com/doi/pdf/10.1177/1536867X20909691
+        - Stamann (2018): https://arxiv.org/pdf/1707.01815
         """
         _mean = np.mean(self._Y)
         if self._method in ("feglm-logit", "feglm-probit"):
@@ -174,17 +177,12 @@ class Feglm(Feols, ABC):
                     self.convergence = True
                     break
 
-            # Step 1: Compute IRLS weights (Section 2.2)
-            # w_i = 1 / [V(mu_i) * g'(mu_i)^2]
             detadmu = self._update_detadmu(mu=mu)
             W = self._update_W(mu=mu)
             W_tilde = self._update_W_tilde(W=W)  # sqrt(W)
 
-            # Step 2: Compute working response (Section 2.2)
-            # z = eta + (y - mu) * g'(mu)   [unweighted]
             z = eta + (self._Y.flatten() - mu) * detadmu
 
-            # Step 3: Within-transform using weighted alternating projections
             z_resid, X_resid = self.residualize(
                 v=z,
                 X=self._X,
@@ -194,21 +192,15 @@ class Feglm(Feols, ABC):
                 maxiter=self._fixef_maxiter,
             )
 
-            # Step 4: Weighted least squares on demeaned data
             WX = W_tilde.flatten()[:, None] * X_resid
             WZ = W_tilde.flatten() * z_resid
 
             beta_new = np.linalg.lstsq(WX, WZ, rcond=None)[0].flatten()
 
-            # Step 5: Compute residuals and update linear predictor
             # Residual demeaned, not weighted
             resid = z_resid - X_resid @ beta_new
-
-            # Key formula from Section 3.5:
-            # η_new = z - e where both z and e are unweighted
             eta_new = z - resid
 
-            # Step 6: Update conditional mean
             mu_new = self._get_mu(theta=eta_new)
             deviance_new = self._get_deviance(self._Y.flatten(), mu_new)
 
@@ -227,7 +219,6 @@ class Feglm(Feols, ABC):
                     break
 
             if deviance_new >= deviance and alpha <= step_halfing_tolerance:
-                # Accept if close to convergence
                 if self._get_diff(deviance=deviance_new, last=deviance) < self.tol:
                     pass
                 else:
@@ -235,7 +226,6 @@ class Feglm(Feols, ABC):
                         f"Step-halving failed. Deviance: {deviance_new:.6f} vs {deviance:.6f}"
                     )
 
-            # Update for next iteration
             deviance_old = deviance
             eta = eta_new
             mu = mu_new
@@ -245,7 +235,6 @@ class Feglm(Feols, ABC):
             X_resid_final = X_resid
             W_tilde_final = W_tilde
 
-        # Final beta from last iteration
         WX_final = W_tilde_final.flatten()[:, None] * X_resid_final
         WZ_final = W_tilde_final.flatten() * z_resid_final
         self._beta_hat = np.linalg.lstsq(WX_final, WZ_final, rcond=None)[0].flatten()
