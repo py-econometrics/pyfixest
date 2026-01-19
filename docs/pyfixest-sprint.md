@@ -1,7 +1,7 @@
 # PyFixest Sprint in Heilbronn
 
 
-We're organizing a PyFixest development sprint in partnership with [AppliedAI](https://www.appliedai.de/) at their Heilbronn office. This is a chance to help shape the future of econometrics software in Python, and to work alongside PyFixest's core development team and AppliedAI's engineers for a few focused days of coding.
+We're organizing a PyFixest development sprint in partnership with the [appliedAI Institute](https://appliedai-institute.de/) at their Heilbronn office. This is a chance to help shape the future of econometrics software in Python, and to work alongside PyFixest's core development team and AppliedAI's engineers for a few focused days of coding.
 
 **Dates:** March 4th–6th 2026.
 
