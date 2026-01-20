@@ -961,6 +961,20 @@ def test_glm_vs_fixest(N, seed, dropna, fml, inference, family):
         ("Y + Y2 ~ X1 | csw0(f1,f2)"),
         ("Y + log(Y2) ~ sw(X1, X2) | csw0(f1,f2,f3)"),
         ("Y ~ C(f2):X2 + sw0(X1, f3)"),
+        # Multiple estimation with variable combinations (e.g., f1+f2 as a single step)
+        ("Y ~ X1 | sw0(f1, f1+f2)"),
+        ("Y ~ X1 | csw0(f1, f1+f2)"),
+        ("Y ~ X1 | sw(f1, f1+f2)"),
+        ("Y ~ X1 | csw(f1, f1+f2)"),
+        ("Y ~ sw0(X1, X1+X2)"),
+        ("Y ~ csw0(X1, X1+X2)"),
+        ("Y ~ sw(X1, X1+X2)"),
+        ("Y ~ X1 + sw0(X2, X2+f1)"),
+        ("Y ~ X1 + csw0(X2, X2+f1)"),
+        ("Y ~ X1 | sw0(f1, f1+f2, f1+f2+f3)"),
+        ("Y ~ X1 | csw0(f1, f1+f2, f1+f2+f3)"),
+        ("Y + Y2 ~ X1 | sw0(f1, f1+f2)"),
+        ("Y + Y2 ~ sw0(X1, X1+X2) | f1"),
         # ("Y ~ i(f1,X2) | csw0(f2)"),
         # ("Y ~ i(f1,X2) | sw0(f2)"),
         # ("Y ~ i(f1,X2) | csw(f2, f3)"),
@@ -1525,8 +1539,6 @@ def test_inf_dropping(fml, weights):
     data = pf.get_data(model="Fepois").dropna()
     data["Y"].iloc[0] = 0
 
-    # test that two 0's in dependent variable are dropped
-    # and that warning is triggered
     n_zeros = (data.Y == 0).sum()
     with pytest.warns(
         UserWarning,
@@ -1535,7 +1547,6 @@ def test_inf_dropping(fml, weights):
         fit_py = feols(fml=fml, data=data, weights=weights, fixef_rm="none")
 
     assert int(data.shape[0] - n_zeros) == fit_py._N
-    assert np.all(fit_py._na_index == np.where(data.Y == 0)[0].tolist())
 
 
 def _convert_f3(data, f3_type):

@@ -58,6 +58,10 @@ class EmptyVcovError(Exception):  # noqa: D101
     pass
 
 
+class FormulaSyntaxError(Exception):  # noqa: D101
+    pass
+
+
 __all__ = [
     "CovariateInteractionError",
     "DepvarIsNotNumericError",
@@ -67,6 +71,7 @@ __all__ = [
     "EndogVarsAsCovarsError",
     "FeatureDeprecationError",
     "FixedEffectInteractionError",
+    "FormulaSyntaxError",
     "InstrumentsAsCovarsError",
     "MatrixNotFullRankError",
     "NanInClusterVarError",
