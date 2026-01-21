@@ -813,6 +813,11 @@ def test_glm_errors():
         pf.feglm("Y ~ X1", data=data, family="logit")
 
     data["Y"] = np.where(data["Y"] > 0, 1, 0)
+
+    # Fixed effects are supported for Gaussian family
+    pf.feglm("Y ~ X1 | f1", data=data, family="gaussian")
+
+    # But not for other families
     with pytest.raises(
         NotImplementedError, match=r"Fixed effects are not yet supported for GLMs."
     ):
