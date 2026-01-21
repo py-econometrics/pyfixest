@@ -220,26 +220,19 @@ class Feglm(Feols, ABC):
             z_tilde_final = z_tilde
             X_tilde_final = X_tilde
             sqrt_W_final = sqrt_W
+            beta_final = beta_new
 
-        WX_final = sqrt_W_final.flatten()[:, None] * X_tilde_final
-        WZ_final = sqrt_W_final.flatten() * z_tilde_final
-        tXX_final = WX_final.T @ WX_final
-        tXz_final = WX_final.T @ WZ_final
-        self._beta_hat = solve_ols(tXX_final, tXz_final, self._solver)
-
+        self._beta_hat = beta_final
         self._Y_hat_response = mu.flatten()
         self._Y_hat_link = eta.flatten()
 
-        # Update for inference
+        # Update weights for inference
         self._weights = W
         self._irls_weights = W
-
         if self._weights.ndim == 1:
             self._weights = self._weights.reshape((self._N, 1))
 
         self._u_hat_response = (self._Y.flatten() - mu).flatten()
-
-        # Compute working residual from DEMEANED quantities
         e_final = z_tilde_final - X_tilde_final @ self._beta_hat
         self._u_hat_working = (
             self._u_hat_response
@@ -250,18 +243,22 @@ class Feglm(Feols, ABC):
         self._scores_response = self._u_hat_response[:, None] * self._X
         self._scores_working = self._u_hat_working[:, None] * self._X
 
-        self._u_hat = (WZ_final - WX_final @ self._beta_hat).flatten()
-        self._Y = WZ_final
-        self._X = WX_final
+        sqrt_W_vec = sqrt_W_final.flatten()
+        X_wls = sqrt_W_vec[:, None] * X_tilde_final
+        z_wls = sqrt_W_vec * z_tilde_final
+
+        self._u_hat = (z_wls - X_wls @ self._beta_hat).flatten()
+        self._Y = z_wls
+        self._X = X_wls
         self._Z = self._X
 
         self._scores = self._u_hat[:, None] * self._X
 
-        self._tZX = np.transpose(self._Z) @ self._X
+        self._tZX = self._Z.T @ self._X
         self._tZXinv = np.linalg.inv(self._tZX)
         self._Xbeta = eta
 
-        self._hessian = WX_final.T @ WX_final
+        self._hessian = X_wls.T @ X_wls
         self.deviance = deviance
 
         if self.convergence:
