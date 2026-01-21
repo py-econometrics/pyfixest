@@ -812,6 +812,7 @@ def test_glm_errors():
     ):
         pf.feglm("Y ~ X1", data=data, family="logit")
 
+
 def test_prediction_errors_glm():
     "Test that the prediction errors not supported for GLM models."
     data = pf.get_data()
