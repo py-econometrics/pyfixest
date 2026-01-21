@@ -11,6 +11,7 @@ from pyfixest.errors import (
 from pyfixest.estimation.backends import BACKENDS
 from pyfixest.estimation.feols_ import Feols, PredictionErrorOptions, PredictionType
 from pyfixest.estimation.fepois_ import _check_for_separation
+from pyfixest.estimation.solvers import solve_ols
 from pyfixest.estimation.FormulaParser import FixestFormula
 from pyfixest.estimation.literals import DemeanerBackendOptions
 from pyfixest.utils.dev_utils import DataFrameType
@@ -195,7 +196,9 @@ class Feglm(Feols, ABC):
             WX = sqrt_W.flatten()[:, None] * X_tilde
             WZ = sqrt_W.flatten() * z_tilde
 
-            beta_new = np.linalg.lstsq(WX, WZ, rcond=None)[0].flatten()
+            tXX = WX.T @ WX
+            tXz = WX.T @ WZ
+            beta_new = solve_ols(tXX, tXz, self._solver)
 
             # Residual from demeaned regression (not weighted)
             e_new = z_tilde - X_tilde @ beta_new
@@ -237,7 +240,9 @@ class Feglm(Feols, ABC):
 
         WX_final = sqrt_W_final.flatten()[:, None] * X_tilde_final
         WZ_final = sqrt_W_final.flatten() * z_tilde_final
-        self._beta_hat = np.linalg.lstsq(WX_final, WZ_final, rcond=None)[0].flatten()
+        tXX_final = WX_final.T @ WX_final
+        tXz_final = WX_final.T @ WZ_final
+        self._beta_hat = solve_ols(tXX_final, tXz_final, self._solver)
 
         self._Y_hat_response = mu.flatten()
         self._Y_hat_link = eta.flatten()
