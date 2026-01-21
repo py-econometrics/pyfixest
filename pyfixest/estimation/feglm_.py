@@ -163,8 +163,6 @@ class Feglm(Feols, ABC):
         deviance = self._get_deviance(self._Y.flatten(), mu)
         deviance_old = deviance + 1.0
 
-        sqrt_W_final = None
-
         for r in range(self.maxiter):
             if r > 0:
                 converged = self._check_convergence(
