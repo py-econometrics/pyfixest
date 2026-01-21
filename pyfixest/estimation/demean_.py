@@ -116,9 +116,9 @@ def demean_model(
                         f"Demeaning failed after {fixef_maxiter} iterations."
                     )
 
-                YX_demeaned = pd.DataFrame(YX_demean_new)
-                YX_demeaned = np.concatenate([YX_demeaned_old, YX_demean_new], axis=1)
-                YX_demeaned = pd.DataFrame(YX_demeaned)
+                YX_demeaned = pd.DataFrame(
+                    np.concatenate([YX_demeaned_old, YX_demean_new], axis=1)
+                )
 
                 # check if var_diff_names is a list
                 if isinstance(var_diff_names, str):
