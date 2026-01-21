@@ -208,26 +208,9 @@ class Feglm(Feols, ABC):
             deviance_new = self._get_deviance(self._Y.flatten(), mu_new)
 
             # Step-halving if deviance did not decrease
-            alpha = 1.0
-            step_halfing_tolerance = 1e-12
-            while deviance_new >= deviance and alpha > step_halfing_tolerance:
-                alpha /= 2.0
-                eta_try = eta + alpha * (eta_new - eta)
-                mu_try = self._get_mu(eta=eta_try)
-                deviance_try = self._get_deviance(self._Y.flatten(), mu_try)
-                if deviance_try < deviance:
-                    eta_new = eta_try
-                    mu_new = mu_try
-                    deviance_new = deviance_try
-                    break
-
-            if deviance_new >= deviance and alpha <= step_halfing_tolerance:
-                if self._get_diff(deviance=deviance_new, last=deviance) < self.tol:
-                    pass
-                else:
-                    raise RuntimeError(
-                        f"Step-halving failed. Deviance: {deviance_new:.6f} vs {deviance:.6f}"
-                    )
+            eta_new, mu_new, deviance_new = self._step_halving(
+                eta, eta_new, mu_new, deviance, deviance_new
+            )
 
             deviance_old = deviance
             eta = eta_new
@@ -340,6 +323,40 @@ class Feglm(Feols, ABC):
     ) -> np.ndarray:
         "Compute relative change in deviance for convergence check."
         return np.abs(deviance - deviance_old) / (0.1 + np.abs(deviance_old))
+
+    def _step_halving(
+        self,
+        eta: np.ndarray,
+        eta_new: np.ndarray,
+        mu_new: np.ndarray,
+        deviance: np.ndarray,
+        deviance_new: np.ndarray,
+        step_halving_tol: float = 1e-12,
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """
+        Apply step-halving if deviance did not decrease.
+
+        Returns updated (eta_new, mu_new, deviance_new).
+        """
+        if deviance_new < deviance:
+            return eta_new, mu_new, deviance_new
+
+        alpha = 1.0
+        while alpha > step_halving_tol:
+            alpha /= 2.0
+            eta_try = eta + alpha * (eta_new - eta)
+            mu_try = self._get_mu(eta=eta_try)
+            deviance_try = self._get_deviance(self._Y.flatten(), mu_try)
+            if deviance_try < deviance:
+                return eta_try, mu_try, deviance_try
+
+        # Step-halving exhausted - check if change is within tolerance
+        if self._get_relative_deviance_change(deviance_new, deviance) < self.tol:
+            return eta_new, mu_new, deviance_new
+
+        raise RuntimeError(
+            f"Step-halving failed. Deviance: {deviance_new:.6f} vs {deviance:.6f}"
+        )
 
     def residualize(
         self,
