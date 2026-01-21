@@ -516,7 +516,7 @@ class Feglm(Feols, ABC):
         yhat = super().predict(newdata=newdata, type="link", atol=atol, btol=btol)
         if type == "response":
             return self._get_mu(
-                theta=yhat.to_numpy() if isinstance(yhat, pd.DataFrame) else yhat
+                eta=yhat.to_numpy() if isinstance(yhat, pd.DataFrame) else yhat
             )
         else:
             return yhat
