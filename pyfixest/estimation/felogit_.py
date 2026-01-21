@@ -6,6 +6,7 @@ import pandas as pd
 
 from pyfixest.estimation.feglm_ import Feglm
 from pyfixest.estimation.FormulaParser import FixestFormula
+from pyfixest.estimation.literals import DemeanerBackendOptions
 
 
 class Felogit(Feglm):
@@ -33,6 +34,7 @@ class Felogit(Feglm):
             "scipy.sparse.linalg.lsqr",
             "jax",
         ],
+        demeaner_backend: DemeanerBackendOptions = "numba",
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
@@ -56,6 +58,7 @@ class Felogit(Feglm):
             tol=tol,
             maxiter=maxiter,
             solver=solver,
+            demeaner_backend=demeaner_backend,
             store_data=store_data,
             copy_data=copy_data,
             lean=lean,
@@ -84,13 +87,13 @@ class Felogit(Feglm):
     def _get_b(self, theta: np.ndarray) -> np.ndarray:
         return np.log(1 + np.exp(theta))
 
-    def _get_mu(self, theta: np.ndarray) -> np.ndarray:
-        return np.exp(theta) / (1 + np.exp(theta))
+    def _get_mu(self, eta: np.ndarray) -> np.ndarray:
+        return np.exp(eta) / (1 + np.exp(eta))
 
     def _get_link(self, mu: np.ndarray) -> np.ndarray:
         return np.log(mu / (1 - mu))
 
-    def _update_detadmu(self, mu: np.ndarray) -> np.ndarray:
+    def _get_gprime(self, mu: np.ndarray) -> np.ndarray:
         return 1 / (mu * (1 - mu))
 
     def _get_theta(self, mu: np.ndarray) -> np.ndarray:

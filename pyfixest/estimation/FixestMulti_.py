@@ -339,7 +339,13 @@ class FixestMulti:
                         "lookup_demeaned_data": lookup_demeaned_data,
                     }
 
-                    if self._method in {"feols", "fepois"}:
+                    if self._method in {
+                        "feols",
+                        "fepois",
+                        "feglm-logit",
+                        "feglm-probit",
+                        "feglm-gaussian",
+                    }:
                         model_kwargs.update(
                             {
                                 "demeaner_backend": demeaner_backend,
