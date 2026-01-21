@@ -11,9 +11,9 @@ from pyfixest.errors import (
 from pyfixest.estimation.backends import BACKENDS
 from pyfixest.estimation.feols_ import Feols, PredictionErrorOptions, PredictionType
 from pyfixest.estimation.fepois_ import _check_for_separation
-from pyfixest.estimation.solvers import solve_ols
 from pyfixest.estimation.FormulaParser import FixestFormula
 from pyfixest.estimation.literals import DemeanerBackendOptions
+from pyfixest.estimation.solvers import solve_ols
 from pyfixest.utils.dev_utils import DataFrameType
 
 
@@ -148,7 +148,7 @@ class Feglm(Feols, ABC):
         """
         Fit the GLM model via iterated weighted least squares.
 
-        The implementation follows ideas developed in 
+        The implementation follows ideas developed in
         - Bergé (2018): https://ideas.repec.org/p/luc/wpaper/18-13.html
         - Correia, Guimaraes, Zylkin (2019): https://journals.sagepub.com/doi/pdf/10.1177/1536867X20909691
         - Stamann (2018): https://arxiv.org/pdf/1707.01815
