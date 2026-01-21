@@ -303,11 +303,8 @@ class Feglm(Feols, ABC):
         beta_diff: np.ndarray,
         eta: np.ndarray,
     ) -> np.ndarray:
-        # Compute residual from demeaned regression: e = z̃ - X̃β
         e = z_tilde - X_tilde @ beta_diff
-        # Unweight the residual
         e_unweighted = e / sqrt_W
-        # New eta = z - e (this recovers FE)
         return z - e_unweighted
 
     def _get_gradient(self, Z: np.ndarray, W: np.ndarray, v: np.ndarray) -> np.ndarray:
