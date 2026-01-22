@@ -1,6 +1,6 @@
 from pyfixest.core.collinear import find_collinear_variables
 from pyfixest.core.crv1 import crv1_meat_loop
-from pyfixest.core.demean import demean
+from pyfixest.core.demean import demean as demean_rust
 from pyfixest.core.nested_fixed_effects import count_fixef_fully_nested_all
 from pyfixest.estimation.demean_ import demean as demean_nb
 from pyfixest.estimation.numba.find_collinear_variables_nb import (
@@ -53,7 +53,7 @@ BACKENDS = {
         "nonnested": count_fixef_fully_nested_all_nb,
     },
     "rust": {
-        "demean": demean,
+        "demean": demean_rust,
         "collinear": find_collinear_variables,
         "crv1_meat": crv1_meat_loop,
         "nonnested": count_fixef_fully_nested_all,
