@@ -15,6 +15,26 @@ ModelInputType = Union[
     FixestMulti, Feols, Fepois, Feiv, list[Union[Feols, Fepois, Feiv]]
 ]
 
+_METHOD_DISPLAY_NAMES: dict[str, str] = {
+    "fepois": "Poisson",
+    "feglm-logit": "Logit",
+    "feglm-probit": "Probit",
+    "feglm-gaussian": "Gaussian",
+    "twfe": "TWFE",
+    "did2s": "DID2S",
+}
+
+
+def _get_estimation_method_name(fxst: Feols) -> str:
+    """Get the display name for an estimation method."""
+    if fxst._method == "feols":
+        return "IV" if fxst._is_iv else "OLS"
+    if "quantreg" in fxst._method:
+        return f"quantreg: q = {fxst._quantile}"  # type: ignore
+    if fxst._method in _METHOD_DISPLAY_NAMES:
+        return _METHOD_DISPLAY_NAMES[fxst._method]
+    raise ValueError(f"Unknown estimation method: {fxst._method}")
+
 
 def etable(
     models: ModelInputType,
@@ -290,18 +310,7 @@ def summary(models: ModelInputType, digits: int = 3) -> None:
 
         df = fxst.tidy().round(digits)
 
-        if fxst._method == "feols":
-            estimation_method = "IV" if fxst._is_iv else "OLS"
-        elif fxst._method == "fepois":
-            estimation_method = "Poisson"
-        elif fxst._method == "twfe":
-            estimation_method = "TWFE"
-        elif fxst._method == "did2s":
-            estimation_method = "DID2S"
-        elif "quantreg" in fxst._method:
-            estimation_method = f"quantreg: q = {fxst._quantile}"  # type: ignore
-        else:
-            raise ValueError("Unknown estimation method.")
+        estimation_method = _get_estimation_method_name(fxst)
         print("###")
         print("")
         print("Estimation: ", estimation_method)
