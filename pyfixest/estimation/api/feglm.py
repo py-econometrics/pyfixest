@@ -39,9 +39,9 @@ def feglm(
     fsplit: Optional[str] = None,
 ) -> Union[Feols, Fepois, FixestMulti]:
     """
-    The `feglm()` function can be used to estimate GLM regressions
-    with fixed effects. The GLM family can be specified with the function 
-    argument `family`. Supported are `logit`, `probit`, `gaussian`. 
+    Estimate GLM regression models with fixed effects.
+
+    Supported families: `logit`, `probit`, `gaussian`.
 
     References
     ----------
@@ -175,7 +175,6 @@ def feglm(
 
     Examples
     --------
-
     The following example regresses `Y` on `X1` and `X2` with fixed effects for
     `f1` and `f2`: fixed effects are specified after the `|` symbol.
 
