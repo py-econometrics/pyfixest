@@ -39,12 +39,21 @@ def feglm(
     fsplit: Optional[str] = None,
 ) -> Union[Feols, Fepois, FixestMulti]:
     """
-    Estimate GLM regression models with fixed effects.
+    The `feglm()` function can be used to estimate GLM regressions
+    with fixed effects. The GLM family can be specified with the function 
+    argument `family`. Supported are `logit`, `probit`, `gaussian`. 
 
-    The implementation is based on ideas developd in:
-    - Bergé (2018): https://ideas.repec.org/p/luc/wpaper/18-13.html
-    - Correia, Guimaraes, Zylkin (2019): https://journals.sagepub.com/doi/pdf/10.1177/1536867X20909691
-    - Stamann (2018): https://arxiv.org/pdf/1707.01815
+    References
+    ----------
+    - Bergé, L. (2018). Efficient estimation of maximum likelihood models with
+      multiple fixed-effects: the R package FENmlm.
+      [CREA Discussion Paper](https://ideas.repec.org/p/luc/wpaper/18-13.html).
+    - Correia, S., Guimaraes, P., & Zylkin, T. (2019). ppmlhdfe: Fast Poisson
+      Estimation with High-Dimensional Fixed Effects.
+      [The Stata Journal](https://journals.sagepub.com/doi/pdf/10.1177/1536867X20909691).
+    - Stammann, A. (2018). Fast and Feasible Estimation of Generalized Linear
+      Models with High-Dimensional k-way Fixed Effects.
+      [arXiv:1707.01815](https://arxiv.org/pdf/1707.01815).
 
     Parameters
     ----------
@@ -166,8 +175,7 @@ def feglm(
 
     Examples
     --------
-    The `fepois()` function can be used to estimate a simple Poisson regression
-    model with fixed effects.
+
     The following example regresses `Y` on `X1` and `X2` with fixed effects for
     `f1` and `f2`: fixed effects are specified after the `|` symbol.
 
