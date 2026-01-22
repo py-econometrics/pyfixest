@@ -37,6 +37,7 @@ def feglm(
     context: Optional[Union[int, Mapping[str, Any]]] = None,
     split: Optional[str] = None,
     fsplit: Optional[str] = None,
+    accelerate: bool = True,
 ) -> Union[Feols, Fepois, FixestMulti]:
     """
     Estimate GLM regression models with fixed effects.
@@ -294,6 +295,7 @@ def feglm(
         iwls_maxiter=iwls_maxiter,
         collin_tol=collin_tol,
         separation_check=separation_check,
+        accelerate=accelerate,
     )
 
     if fixest._is_multiple_estimation:

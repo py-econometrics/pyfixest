@@ -44,6 +44,7 @@ class Feprobit(Feglm):
         sample_split_value: Optional[Union[str, int]] = None,
         separation_check: Optional[list[str]] = None,
         context: Union[int, Mapping[str, Any]] = 0,
+        accelerate: bool = True,
     ):
         super().__init__(
             FixestFormula=FixestFormula,
@@ -68,6 +69,7 @@ class Feprobit(Feglm):
             sample_split_value=sample_split_value,
             separation_check=separation_check,
             context=context,
+            accelerate=accelerate,
         )
 
         self._method = "feglm-probit"

@@ -42,6 +42,7 @@ class Fegaussian(Feglm):
         separation_check: Optional[list[str]] = None,
         context: Union[int, Mapping[str, Any]] = 0,
         demeaner_backend: DemeanerBackendOptions = "numba",
+        accelerate: bool = True,
     ):
         super().__init__(
             FixestFormula=FixestFormula,
@@ -66,6 +67,7 @@ class Fegaussian(Feglm):
             separation_check=separation_check,
             context=context,
             demeaner_backend=demeaner_backend,
+            accelerate=accelerate,
         )
 
         self._method = "feglm-gaussian"
