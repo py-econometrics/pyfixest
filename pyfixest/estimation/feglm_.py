@@ -9,7 +9,12 @@ from pyfixest.errors import (
     NonConvergenceError,
 )
 from pyfixest.estimation.backends import BACKENDS
-from pyfixest.estimation.feols_ import Feols, PredictionErrorOptions, PredictionType
+from pyfixest.estimation.feols_ import (
+    Feols,
+    PredictionErrorOptions,
+    PredictionType,
+    _drop_multicollinear_variables,
+)
 from pyfixest.estimation.fepois_ import _check_for_separation
 from pyfixest.estimation.FormulaParser import FixestFormula
 from pyfixest.estimation.literals import DemeanerBackendOptions
@@ -190,6 +195,22 @@ class Feglm(Feols, ABC):
                 tol=self._fixef_tol,
                 maxiter=self._fixef_maxiter,
             )
+
+            if r == 0 and self._fe is not None and X_tilde.shape[1] > 1:
+                # Need to check for collinearity with fixed effects
+                # It is sufficient to do this once after the first demeaning step
+                X_tilde, self._coefnames, self._collin_vars, self._collin_index = (
+                    _drop_multicollinear_variables(
+                        X_tilde,
+                        self._coefnames,
+                        self._collin_tol,
+                        backend_func=self._find_collinear_variables_func,
+                    )
+                )
+                # Drop covariates collinear with fixed effects
+                self._X = self._X[:, ~np.array(self._collin_index)]
+                # Update the number of coefficients
+                self._k = self._X.shape[1]
 
             WX = sqrt_W.flatten()[:, None] * X_tilde
             WZ = sqrt_W.flatten() * z_tilde
