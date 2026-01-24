@@ -175,14 +175,12 @@ class Fepois(Feols):
             )
 
         if na_separation:
-            self._Y = self._Y.drop(na_separation, axis=0, inplace=False)
-            self._X = self._X.drop(na_separation, axis=0, inplace=False)
-            self._fe = self._fe.drop(na_separation, axis=0, inplace=False)
-            self._data = self._data.drop(na_separation, axis=0, inplace=False)
+            self._Y.drop(na_separation, axis=0, inplace=True)
+            self._X.drop(na_separation, axis=0, inplace=True)
+            self._fe.drop(na_separation, axis=0, inplace=True)
+            self._data.drop(na_separation, axis=0, inplace=True)
             if self._weights_df is not None:
-                self._weights_df = self._weights_df.drop(
-                    na_separation, axis=0, inplace=False
-                )
+                self._weights_df.drop(na_separation, axis=0, inplace=True)
             self._N = self._Y.shape[0]
             self._N_rows = self._N
             # Re-set weights after dropping rows (handles both weighted and unweighted)
