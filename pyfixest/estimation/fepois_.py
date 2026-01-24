@@ -320,9 +320,9 @@ class Fepois(Feols):
             Z_resid = ZX_resid[:, 0].reshape((self._N, 1))  # z_resid
             X_resid = ZX_resid[:, 1:]  # x_resid
 
-            if i == 0 and self._fe is not None and X_resid.shape[1] > 1:
-                # Need to check for collinearity with fixed effects
-                # It is sufficient to do this once after the first demeaning step
+            if i == 0:
+                # Check multicollinearity
+                # We do this here after the first demeaning to also catch collinearity with fixed effects
                 X_resid, self._coefnames, self._collin_vars, self._collin_index = (
                     _drop_multicollinear_variables(
                         X_resid,
@@ -331,9 +331,10 @@ class Fepois(Feols):
                         backend_func=self._find_collinear_variables_func,
                     )
                 )
-                # Drop covariates collinear with fixed effects
-                self._X = self._X[:, ~np.array(self._collin_index)]
-                # Update the number of coefficients
+                if self._collin_index:
+                    # Drop covariates collinear with fixed effects
+                    self._X = self._X[:, ~np.array(self._collin_index)]
+                self._X_is_empty = self._X.shape[1] == 0
                 self._k = self._X.shape[1]
             WX = np.sqrt(combined_weights) * X_resid
             WZ = np.sqrt(combined_weights) * Z_resid

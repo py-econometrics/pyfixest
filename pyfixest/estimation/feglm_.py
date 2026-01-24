@@ -196,9 +196,9 @@ class Feglm(Feols, ABC):
                 maxiter=self._fixef_maxiter,
             )
 
-            if r == 0 and self._fe is not None and X_tilde.shape[1] > 1:
-                # Need to check for collinearity with fixed effects
-                # It is sufficient to do this once after the first demeaning step
+            if r == 0:
+                # Check multicollinearity
+                # We do this here after the first demeaning to also catch collinearity with fixed effects
                 X_tilde, self._coefnames, self._collin_vars, self._collin_index = (
                     _drop_multicollinear_variables(
                         X_tilde,
@@ -207,9 +207,11 @@ class Feglm(Feols, ABC):
                         backend_func=self._find_collinear_variables_func,
                     )
                 )
-                # Drop covariates collinear with fixed effects
-                self._X = self._X[:, ~np.array(self._collin_index)]
-                # Update the number of coefficients
+                if self._collin_index:
+                    # Drop covariates collinear with fixed effects
+                    self._X = self._X[:, ~np.array(self._collin_index)]
+                    # Update the number of coefficients
+                self._X_is_empty = self._X.shape[1] == 0
                 self._k = self._X.shape[1]
 
             WX = sqrt_W.flatten()[:, None] * X_tilde
