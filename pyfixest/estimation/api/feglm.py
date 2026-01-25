@@ -37,6 +37,7 @@ def feglm(
     context: Optional[Union[int, Mapping[str, Any]]] = None,
     split: Optional[str] = None,
     fsplit: Optional[str] = None,
+    accelerate: bool = True,
 ) -> Union[Feols, Fepois, FixestMulti]:
     """
     Estimate GLM regression models with fixed effects.
@@ -167,6 +168,12 @@ def feglm(
     fsplit: Optional[str]
         This argument is the same as split but also includes the full sample as the first estimation.
 
+    accelerate: Optional[bool]
+        Whether to use acceleration tricks developed in the ppmlhdfe paper (warm start and adaptive fixed effects
+        tolerance) for models with fixed effects. Produces numerically identical results faster, so we
+        recommend to always set it to True.
+
+
     Returns
     -------
     object
@@ -294,6 +301,7 @@ def feglm(
         iwls_maxiter=iwls_maxiter,
         collin_tol=collin_tol,
         separation_check=separation_check,
+        accelerate=accelerate,
     )
 
     if fixest._is_multiple_estimation:

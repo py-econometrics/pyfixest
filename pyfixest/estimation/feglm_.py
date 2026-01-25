@@ -55,6 +55,7 @@ class Feglm(Feols, ABC):
         sample_split_value: Optional[Union[str, int]] = None,
         separation_check: Optional[list[str]] = None,
         context: Union[int, Mapping[str, Any]] = 0,
+        accelerate: bool = True,
     ):
         super().__init__(
             FixestFormula=FixestFormula,
@@ -87,6 +88,7 @@ class Feglm(Feols, ABC):
         self.tol = tol
         self.convergence = False
         self.separation_check = separation_check
+        self._accelerate = accelerate
 
         self._demeaner_backend = demeaner_backend
         try:
@@ -168,10 +170,20 @@ class Feglm(Feols, ABC):
         deviance = self._get_deviance(self._Y.flatten(), mu)
         deviance_old = deviance + 1.0
 
+        # Warm-start (for ppmlhdfe accelerations)
+        z_prev = None
+        z_tilde_prev = None
+        X_tilde_prev = None
+        accelerate = self._accelerate and self._fe is not None
+        inner_tol = self._fixef_tol
+
         for r in range(self.maxiter):
             if r > 0:
+                rel_deviance_change = self._get_relative_deviance_change(
+                    deviance, deviance_old
+                )
                 converged = self._check_convergence(
-                    crit=self._get_relative_deviance_change(deviance, deviance_old),
+                    rel_deviance_change=rel_deviance_change,
                     tol=self.tol,
                     r=r,
                     maxiter=self.maxiter,
@@ -181,18 +193,29 @@ class Feglm(Feols, ABC):
                     self.convergence = True
                     break
 
+                # Adaptive tolerance as in ppmlhdfe
+                if accelerate and rel_deviance_change < 10 * inner_tol:
+                    inner_tol = inner_tol / 10
+
             gprime = self._get_gprime(mu=mu)
             W = self._update_W(mu=mu)
             sqrt_W = np.sqrt(W)
 
             z = eta + (self._Y.flatten() - mu) * gprime
 
+            if accelerate and r > 0:
+                z_input = z_tilde_prev + (z - z_prev)
+                X_input = X_tilde_prev
+            else:
+                z_input = z
+                X_input = self._X
+
             z_tilde, X_tilde = self.residualize(
-                v=z,
-                X=self._X,
+                v=z_input,
+                X=X_input,
                 flist=self._fe,
                 weights=W.flatten(),
-                tol=self._fixef_tol,
+                tol=inner_tol,
                 maxiter=self._fixef_maxiter,
             )
 
@@ -232,6 +255,10 @@ class Feglm(Feols, ABC):
             eta_new, mu_new, deviance_new = self._step_halving(
                 eta, eta_new, mu_new, deviance, deviance_new
             )
+
+            z_prev = z
+            z_tilde_prev = z_tilde
+            X_tilde_prev = X_tilde
 
             deviance_old = deviance
             eta = eta_new
@@ -400,7 +427,7 @@ class Feglm(Feols, ABC):
 
     def _check_convergence(
         self,
-        crit: float,
+        rel_deviance_change: float,
         tol: float,
         r: int,
         maxiter: int,
@@ -409,7 +436,7 @@ class Feglm(Feols, ABC):
         if model == "feglm-gaussian":
             converged = True
         else:
-            converged = crit < tol
+            converged = rel_deviance_change < tol
             if r == maxiter:
                 raise NonConvergenceError(
                     f"""

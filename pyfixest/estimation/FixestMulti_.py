@@ -251,6 +251,7 @@ class FixestMulti:
         iwls_maxiter: int = 25,
         iwls_tol: float = 1e-08,
         separation_check: Optional[list[str]] = None,
+        accelerate: bool = True,
     ) -> None:
         """
         Estimate multiple regression models.
@@ -364,6 +365,17 @@ class FixestMulti:
                                 "separation_check": separation_check,
                                 "tol": iwls_tol,
                                 "maxiter": iwls_maxiter,
+                            }
+                        )
+
+                    if self._method in {
+                        "feglm-logit",
+                        "feglm-probit",
+                        "feglm-gaussian",
+                    }:
+                        model_kwargs.update(
+                            {
+                                "accelerate": accelerate,
                             }
                         )
 

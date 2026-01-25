@@ -42,6 +42,7 @@ class Felogit(Feglm):
         sample_split_var: Optional[str] = None,
         sample_split_value: Optional[Union[str, int]] = None,
         separation_check: Optional[list[str]] = None,
+        accelerate: bool = True,
     ):
         super().__init__(
             FixestFormula=FixestFormula,
@@ -66,6 +67,7 @@ class Felogit(Feglm):
             sample_split_var=sample_split_var,
             sample_split_value=sample_split_value,
             separation_check=separation_check,
+            accelerate=accelerate,
         )
 
         self._method = "feglm-logit"
