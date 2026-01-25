@@ -1,7 +1,7 @@
 # PyFixest Sprint in Heilbronn
 
 
-We're organizing a PyFixest development sprint in partnership with the [appliedAI Institute](https://appliedai-institute.de/) at their Heilbronn office. This is a chance to help shape the future of econometrics software in Python, and to work alongside PyFixest's core development team and AppliedAI's engineers for a few focused days of coding.
+We're organizing a PyFixest development sprint in partnership with the [appliedAI Institute](https://appliedai-institute.de/) at their Heilbronn office. 
 
 **Dates:** March 4th–6th 2026.
 
@@ -12,9 +12,9 @@ We're organizing a PyFixest development sprint in partnership with the [applied
 Our main goals for the sprint:
 
 - **Rust backend:** Finalize the port from Numba to Rust and deprecate the Numba dependency, with continued optimization of our core demeaning algorithm
-- **GPU acceleration:** Continue building out JAX, CuPy, and potentially PyTorch backends, potentially re-implementing the [LSMR algorithm](https://web.stanford.edu/group/SOL/software/lsmr/LSMR-SISC-2011.pdf) by hand
+- **GPU acceleration:** Continue building out JAX, CuPy, and potentially PyTorch backends, potentially re-implementing the [LSMR algorithm](https://web.stanford.edu/group/SOL/software/lsmr/LSMR-SISC-2011.pdf) by hand & run experiments on pre-conditioning
 - **Internal refactor:** Introduce a cleaner class hierarchy with a proper base estimation class
-- **NumPy-style API:** Rewrite estimation classes (Feols, Fepois, etc.) to follow sklearn-style conventions
+- **NumPy-style API:** Rewrite estimation classes (Feols, Fepois, etc.) to follow sklearn-style conventions. Users should be able to fit a regression model by passing `data`, `X` or `y` to `Feols`. If data is passed, a `Feols.from_formula` method creates the design matrix. Core functional estimation APIs (`feols()`, `fepois`, etc) remain as they are. 
 
 
 We're also hoping to make progress on:
