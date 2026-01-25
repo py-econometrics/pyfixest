@@ -174,9 +174,9 @@ class Feglm(Feols, ABC):
 
         for r in range(self.maxiter):
             if r > 0:
-                crit = self._get_relative_deviance_change(deviance, deviance_old)
+                rel_deviance_change = self._get_relative_deviance_change(deviance, deviance_old)
                 converged = self._check_convergence(
-                    crit=crit,
+                    rel_deviance_change=rel_deviance_change,
                     tol=self.tol,
                     r=r,
                     maxiter=self.maxiter,
@@ -188,7 +188,7 @@ class Feglm(Feols, ABC):
 
                 # Adaptive tolerance as in ppmlhdfe
                 if accelerate:
-                    if crit < 10 * inner_tol:
+                    if rel_deviance_change < 10 * inner_tol:
                         inner_tol = inner_tol / 10
 
             gprime = self._get_gprime(mu=mu)
@@ -403,7 +403,7 @@ class Feglm(Feols, ABC):
 
     def _check_convergence(
         self,
-        crit: float,
+        rel_deviance_change: float,
         tol: float,
         r: int,
         maxiter: int,
@@ -412,7 +412,7 @@ class Feglm(Feols, ABC):
         if model == "feglm-gaussian":
             converged = True
         else:
-            converged = crit < tol
+            converged = rel_deviance_change < tol
             if r == maxiter:
                 raise NonConvergenceError(
                     f"""
