@@ -202,17 +202,18 @@ ul.task-list li input[type="checkbox"] {
 
 <section id="pyfixest-sprint-in-heilbronn" class="level1">
 <h1>PyFixest Sprint in Heilbronn</h1>
-<p>We’re organizing a PyFixest development sprint in partnership with the&nbsp;<a href="https://appliedai-institute.de/">appliedAI Institute</a>&nbsp;at their Heilbronn office. This is a chance to help shape the future of econometrics software in Python, and to work alongside PyFixest’s core development team and AppliedAI’s engineers for a few focused days of coding.</p>
+<p>We’re organizing a PyFixest development sprint in partnership with the&nbsp;<a href="https://appliedai-institute.de/">appliedAI Institute</a>&nbsp;at their Heilbronn office.</p>
 <p><strong>Dates:</strong> March 4th–6th 2026.</p>
 <p><strong>Interested in joining?</strong>&nbsp;Reach out to&nbsp;<a href="mailto:alexander-fischer1801@t-online.de">Alex</a>&nbsp;with a brief note about your background and motivation. We have some funding available to support student participation.</p>
 <section id="what-were-working-on" class="level3">
 <h3 class="anchored" data-anchor-id="what-were-working-on">What we’re working on</h3>
 <p>Our main goals for the sprint:</p>
 <ul>
-<li><strong>Rust backend:</strong>&nbsp;Finalize the port from Numba to Rust and deprecate the Numba dependency, with continued optimization of our core demeaning algorithm</li>
-<li><strong>GPU acceleration:</strong>&nbsp;Continue building out JAX, CuPy, and potentially PyTorch backends, potentially re-implementing the <a href="https://web.stanford.edu/group/SOL/software/lsmr/LSMR-SISC-2011.pdf">LSMR algorithm</a> by hand</li>
-<li><strong>Internal refactor:</strong>&nbsp;Introduce a cleaner class hierarchy with a proper base estimation class</li>
-<li><strong>NumPy-style API:</strong>&nbsp;Rewrite estimation classes (Feols, Fepois, etc.) to follow sklearn-style conventions</li>
+<li><strong>Rust backend:</strong>&nbsp;Finalize the port from Numba to Rust and deprecate the Numba dependency, with continued optimization of our core demeaning algorithm. We still have to port logic for HAC standard errors and randomisation inference.</li>
+<li><strong>GPU acceleration:</strong>&nbsp;Continue building out JAX, CuPy, and potentially PyTorch backends (for Mac users), potentially re-implementing the <a href="https://web.stanford.edu/group/SOL/software/lsmr/LSMR-SISC-2011.pdf">LSMR algorithm</a> by hand &amp; run experiments on pre-conditioning</li>
+<li><strong>Internal refactor:</strong>&nbsp;Introduce a cleaner class hierarchy with a proper base estimation class. Currently, all estimation classes inherit from <code>Feols</code>.</li>
+<li><strong>NumPy-style API:</strong>&nbsp;Rewrite estimation classes (Feols, Fepois, etc.) to follow sklearn-style conventions. Users should be able to fit a regression model by passing <code>data</code>, <code>X</code> or <code>y</code> to <code>Feols</code>. If data is passed, a <code>Feols.from_formula</code> method creates the design matrix. Core functional estimation APIs (<code>feols()</code>, <code>fepois</code>, etc) remain as they are.</li>
+<li><strong>Clean Handling of Regression Weights</strong>: The logic for weighted least squares (WLS) is currently a bit hard to follow, as dependent variable and design matrix are pre-multiplied with <code>np.sqrt(weights)</code>. By reading the code, it is not always immediately clear if <code>self._X</code> is already weighted, or not yet. This of course can lead to confusion and bugs, which we should strive to avoid =)</li>
 </ul>
 <p>We’re also hoping to make progress on:</p>
 <ul>
@@ -220,13 +221,15 @@ ul.task-list li input[type="checkbox"] {
 <li><strong>Varying slopes support:</strong>&nbsp;Add varying slopes to the demeaning algorithm and extend the formula API</li>
 <li><strong>Narwhals integration:</strong>&nbsp;Better support for running analyses with either pandas or polars</li>
 <li><strong>maketables cleanup:</strong>&nbsp;Refactor the codebase and open PRs to third-party packages (doubleML, CausalPy, econML, etc.)</li>
-<li><strong>moderndid contributions:</strong>&nbsp;Port our DiD estimators (Gardner, local projections, Sun &amp; Abraham) to the moderndid package</li>
 <li><strong>Documentation:</strong>&nbsp;Add how-to guides and add a <em>statistical documentation</em> in which we explan the math behind all estimators</li>
+<li><strong>Instrumental Variables</strong>: We want to support IV models with more than one endogenous variable, and implement a range of diagnostics.</li>
+<li><strong>moderndid contributions:</strong>&nbsp;Port our DiD estimators (Gardner, local projections, Sun &amp; Abraham) to the <a href="https://github.com/jordandeklerk/moderndid">moderndid</a> package</li>
+<li><strong>Tests</strong>: The <code>pyfixest</code> test suite has grown quite a lot over time, and resembles more of a djungle than an english garden. It would be great to clean things up little bit. In particular, it would be lovely to move away from <code>rpy2</code>/ use modern features of it.</li>
 </ul>
 </section>
 <section id="what-would-be-helpful" class="level3">
 <h3 class="anchored" data-anchor-id="what-would-be-helpful">What would be helpful</h3>
-<p>If you’re excited about econometrics tooling and want to contribute, we’d love to have you. You don’t need to be an expert in Rust or GPU programming—the AppliedAI team brings deep experience in both, so this is a great opportunity to learn. And if you’ve been looking for a way to get started with open source, we’d be happy to help you make your first contributions.</p>
+<p>If you’re excited about econometrics tooling and want to contribute, we’d love to have you. You don’t need to be an expert in Rust or GPU programming. If you’ve been looking for a way to get started with open source, we’d be happy to help you make your first contributions.</p>
 
 
 </section>
