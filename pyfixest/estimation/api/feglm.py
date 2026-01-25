@@ -170,8 +170,8 @@ def feglm(
 
     accelerate: Optional[bool]
         Whether to use acceleration tricks developed in the ppmlhdfe paper (warm start and adaptive fixed effects
-        tolerance) for models with fixed effects. Produces numerically identical results faster, so we 
-        recommend to always set it to True. 
+        tolerance) for models with fixed effects. Produces numerically identical results faster, so we
+        recommend to always set it to True.
 
 
     Returns
