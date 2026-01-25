@@ -168,6 +168,12 @@ def feglm(
     fsplit: Optional[str]
         This argument is the same as split but also includes the full sample as the first estimation.
 
+    accelerate: Optional[bool]
+        Whether to use acceleration tricks developed in the ppmlhdfe paper (warm start and adaptive fixed effects
+        tolerance) for models with fixed effects. Produces numerically identical results faster, so we 
+        recommend to always set it to True. 
+
+
     Returns
     -------
     object
