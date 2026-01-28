@@ -111,72 +111,6 @@ class CupyFWLDemeaner:
         else:
             return True
 
-    def _compute_column_scale(
-        self,
-        D: "sp_sparse.csr_matrix | cp_sparse.csr_matrix",
-        weights: "NDArray[Any] | Any",
-    ) -> "NDArray[Any] | Any":
-        """
-        Compute M_inv = 1/sqrt(sum of weights per group) for preconditioning.
-
-        Computes from the sparse design matrix D using D.T @ weights,
-        which gives the sum of weights for each column (group) efficiently.
-
-        Parameters
-        ----------
-        D : sparse matrix of shape (n_obs, n_groups)
-            Fixed effects design matrix (binary indicator matrix).
-        weights : array of shape (n_obs,)
-            Observation weights.
-
-        Returns
-        -------
-        M_inv : array of shape (n_groups,)
-            Inverse scaling factors for each column of D.
-        """
-        # D.T @ weights gives sum of weights per group (since D is binary)
-        # This is O(nnz) and matches D's column structure exactly
-        group_weights = D.T @ weights
-
-        # Convert sparse matrix result to dense array if needed
-        group_weights = self.xp.asarray(group_weights).ravel()
-
-        # Check for empty groups - raise error
-        if self.xp.any(group_weights == 0):
-            raise ValueError(
-                "Empty fixed effect groups detected. "
-                "This may indicate singleton observations that should be dropped."
-            )
-
-        M_inv = 1.0 / self.xp.sqrt(group_weights)
-        return M_inv
-
-    def _create_preconditioned_operator(
-        self,
-        D: "sp_sparse.csr_matrix | cp_sparse.csr_matrix",
-        M_inv: "NDArray[Any] | Any",
-    ) -> "sp_LinearOperator | Any":
-        """
-        Create LinearOperator for D @ diag(M_inv).
-
-        matvec:  (D @ M) @ z = D @ (M_inv * z)
-        rmatvec: (D @ M).T @ u = M_inv * (D.T @ u)
-        """
-        n_rows, n_cols = D.shape
-
-        def matvec(z):
-            return D @ (M_inv * z)
-
-        def rmatvec(u):
-            return M_inv * (D.T @ u)
-
-        return self.LinearOperator(
-            shape=(n_rows, n_cols),
-            matvec=matvec,
-            rmatvec=rmatvec,
-            dtype=D.dtype,
-        )
-
     def _solve_lsmr_loop(
         self,
         D_weighted: "sp_sparse.csr_matrix | cp_sparse.csr_matrix",
@@ -192,10 +126,16 @@ class CupyFWLDemeaner:
         theta = self.xp.zeros((D_k, X_k), dtype=x_unweighted.dtype)
         success = True
 
-        # Setup operator and scaling based on preconditioning setting
         if self.use_preconditioner:
-            M_inv = self._compute_column_scale(D_unweighted, weights)
-            A_op = self._create_preconditioned_operator(D_weighted, M_inv)
+            group_weights = self.xp.asarray(D_unweighted.T @ weights).ravel()
+            M_inv = 1.0 / self.xp.sqrt(group_weights)
+
+            A_op = self.LinearOperator(
+                shape=D_weighted.shape,
+                matvec=lambda z: D_weighted @ (M_inv * z),
+                rmatvec=lambda u: M_inv * (D_weighted.T @ u),
+                dtype=D_weighted.dtype,
+            )
         else:
             M_inv = None
             A_op = D_weighted
@@ -211,7 +151,7 @@ class CupyFWLDemeaner:
             )
             z = result[0]
 
-            # Recover theta from preconditioned solution: theta = M_inv * z
+            # Recover theta from preconditioned solution
             if M_inv is not None:
                 theta[:, k] = M_inv * z
             else:
