@@ -268,6 +268,8 @@ class Fepois(Feols):
             Demeaned dependent variable (from the last iteration of the IRLS
             algorithm).
         """
+        self.to_array()
+
         stop_iterating = False
         crit = 1
 
