@@ -549,7 +549,6 @@ class Feols:
         -------
         None
         """
-        
         self.demean()
         self.to_array()
         self.drop_multicol_vars()
