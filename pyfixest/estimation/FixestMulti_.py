@@ -426,7 +426,6 @@ class FixestMulti:
                     FIT.prepare_model_matrix()
                     if isinstance(FIT, (Felogit, Feprobit, Fegaussian)):
                         FIT._check_dependent_variable()
-                    # All model classes handle preprocessing in get_fit()
                     FIT.get_fit()
                     # if X is empty: no inference (empty X only as shorthand for demeaning)
                     if not FIT._X_is_empty:
