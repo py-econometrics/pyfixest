@@ -336,6 +336,9 @@ Thanks goes to these wonderful people:
       <td align="center" valign="top" width="12.5%"><a href="https://github.com/blucap"><img src="https://avatars.githubusercontent.com/u/614800?v=4?s=80" width="80px;" alt="Martien Lubberink"/><br /><sub><b>Martien Lubberink</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=blucap" title="Code">💻</a></td>
       <td align="center" valign="top" width="12.5%"><a href="https://github.com/jonpcohen"><img src="https://avatars.githubusercontent.com/u/48955223?v=4?s=80" width="80px;" alt="jonpcohen"/><br /><sub><b>jonpcohen</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=jonpcohen" title="Documentation">📖</a></td>
     </tr>
+    <tr>
+      <td align="center" valign="top" width="12.5%"><a href="https://github.com/rhstanton"><img src="https://avatars.githubusercontent.com/u/2153614?v=4?s=80" width="80px;" alt="rhstanton"/><br /><sub><b>rhstanton</b></sub></a><br /><a href="#userTesting-rhstanton" title="User Testing">📓</a> <a href="https://github.com/py-econometrics/pyfixest/issues?q=author%3Arhstanton" title="Bug reports">🐛</a></td>
+    </tr>
   </tbody>
 </table>
 
