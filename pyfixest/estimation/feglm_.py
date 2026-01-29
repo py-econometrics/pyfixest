@@ -160,6 +160,8 @@ class Feglm(Feols, ABC):
         - Correia, Guimaraes, Zylkin (2019): https://journals.sagepub.com/doi/pdf/10.1177/1536867X20909691
         - Stamann (2018): https://arxiv.org/pdf/1707.01815
         """
+        self.to_array()
+
         _mean = np.mean(self._Y)
         if self._method in ("feglm-logit", "feglm-probit"):
             mu = np.full_like(self._Y.flatten(), 0.5, dtype=float)

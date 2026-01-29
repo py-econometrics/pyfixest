@@ -549,6 +549,11 @@ class Feols:
         -------
         None
         """
+        self.demean()
+        self.to_array()
+        self.drop_multicol_vars()
+        self.wls_transform()
+
         if self._X_is_empty:
             self._u_hat = self._Y
         else:

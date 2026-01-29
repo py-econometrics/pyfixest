@@ -235,6 +235,10 @@ class FeolsCompressed(Feols):
         self._Yprimeprime = compressed_dict.Yprimeprime.to_pandas()
         self._data = compressed_dict.df_compressed.to_pandas()
 
+    def demean(self):
+        "Compression 'handles demeaning' via Mundlak transform."
+        pass
+
     def vcov(
         self,
         vcov: Union[str, dict[str, str]],

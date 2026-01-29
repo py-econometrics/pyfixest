@@ -6,7 +6,6 @@ from typing import Any, Optional, Union
 import pandas as pd
 
 from pyfixest.estimation.fegaussian_ import Fegaussian
-from pyfixest.estimation.feglm_ import Feglm
 from pyfixest.estimation.feiv_ import Feiv
 from pyfixest.estimation.felogit_ import Felogit
 from pyfixest.estimation.feols_ import Feols, _check_vcov_input, _deparse_vcov_input
@@ -425,18 +424,8 @@ class FixestMulti:
                     FIT = ModelClass(**model_kwargs)
 
                     FIT.prepare_model_matrix()
-                    if type(FIT) in [Feols, Feiv]:
-                        FIT.demean()
-                    FIT.to_array()
                     if isinstance(FIT, (Felogit, Feprobit, Fegaussian)):
                         FIT._check_dependent_variable()
-                    # NOTE: Fepois and Feglm handle multicollinearity in IWLS algorithm
-                    if type(FIT) not in [Fepois, Feglm]:
-                        FIT.drop_multicol_vars()
-                    # NOTE: Fepois handles weights internally in its IWLS algorithm
-                    if type(FIT) in [Feols, Feiv, FeolsCompressed]:
-                        FIT.wls_transform()
-
                     FIT.get_fit()
                     # if X is empty: no inference (empty X only as shorthand for demeaning)
                     if not FIT._X_is_empty:
