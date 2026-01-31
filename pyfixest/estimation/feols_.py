@@ -1102,7 +1102,7 @@ class Feols:
         None
         """
         # some bookkeeping
-        self._fml = self.FixestFormula.fml
+        self._fml = self.FixestFormula.formula
         self._depvar = depvar
         self._Y_untransformed = Y
         self._data = pd.DataFrame()

@@ -93,9 +93,9 @@ class Quantreg(Feols):
         self._quantile_maxiter = quantile_maxiter
 
         self._model_name = (
-            FixestFormula.fml
+            FixestFormula.formula
             if self._sample_split_var is None
-            else f"{FixestFormula.fml} (Sample: {self._sample_split_var} = {self._sample_split_value})"
+            else f"{FixestFormula.formula} (Sample: {self._sample_split_var} = {self._sample_split_value})"
         )
         # update with quantile name
         self._model_name = f"{self._model_name} (q = {quantile})"

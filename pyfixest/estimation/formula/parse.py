@@ -9,12 +9,15 @@ from pyfixest.estimation.formula.utils import _split_paranthesis_preserving
 
 @dataclass(kw_only=True, frozen=True, slots=True)
 class Formula:
+    """A formulaic-compliant formula."""
+
     second_stage: str
     fixed_effects: str | None
     first_stage: str | None
 
     @property
     def formula(self) -> str:
+        """Full fixest-style formula."""
         formula = self.second_stage
         if self.fixed_effects is not None:
             formula = f"{formula} | {self.fixed_effects}"
@@ -36,8 +39,8 @@ class Formula:
         """Group parsed formulas into dictionary keyed by fixed effects."""
         formulas = cls.parse(formula)
         result: dict[str | None, list[Formula]] = {}
-        for formula in formulas:
-            result.setdefault(formula.fixed_effects, []).append(formula)
+        for parsed_formula in formulas:
+            result.setdefault(parsed_formula.fixed_effects, []).append(parsed_formula)
         return result
 
 
