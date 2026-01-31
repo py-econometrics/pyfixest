@@ -1,6 +1,8 @@
+import re
 import warnings
 
 import numpy as np
+import pandas as pd
 
 
 def log(array: np.ndarray) -> np.ndarray:
@@ -26,3 +28,61 @@ def log(array: np.ndarray) -> np.ndarray:
         )
     np.log(array, out=result, where=valid)
     return result
+
+
+def _split_paranthesis_preserving(string: str, separator: str) -> list[str]:
+    """Split on top-level separator, respecting nested parentheses."""
+    args: list[str] = []
+    depth = 0
+    current: list[str] = []
+    for c in string:
+        if c == "(":
+            depth += 1
+        elif c == ")":
+            depth -= 1
+        elif c == separator and depth == 0:
+            args.append("".join(current).strip())
+            current = []
+            continue
+        current.append(c)
+    args.append("".join(current).strip())
+    return args
+
+
+def _interact_fixed_effects(fixed_effects: str, data: pd.DataFrame) -> pd.DataFrame:
+    fes = re.split(r"\s*\+\s*", fixed_effects)
+    for fixed_effect in fes:
+        if "^" not in fixed_effect:
+            continue
+        # Encode interacted fixed effects
+        vars = fixed_effect.split("^")
+        data[fixed_effect.replace("^", "_")] = (
+            data[vars[0]]
+            .astype(pd.StringDtype())
+            .str.cat(
+                data[vars[1:]].astype(pd.StringDtype()),
+                sep="^",
+                na_rep=None,  # a row containing a missing value in any of the columns (before concatenation) will have a missing value in the result
+            )
+        )
+    return data.loc[:, [fe.replace("^", "_") for fe in fes]]
+
+
+def _factorize(series: pd.Series) -> np.ndarray:
+    factorized, _ = pd.factorize(series, use_na_sentinel=True)
+    # use_sentinel=True replaces np.nan with -1, so we revert to np.nan
+    factorized = np.where(factorized == -1, np.nan, factorized)
+    return factorized
+
+
+def _get_weights(data: pd.DataFrame, weights: str) -> pd.Series:
+    w = data[weights]
+    try:
+        w = pd.to_numeric(w, errors="raise")
+    except ValueError:
+        raise ValueError(f"The weights column '{weights}' must be numeric.")
+    if not (w.dropna() > 0.0).all():
+        raise ValueError(
+            f"The weights column '{weights}' must have only non-negative values."
+        )
+    return w

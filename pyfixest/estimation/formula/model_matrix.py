@@ -1,4 +1,3 @@
-import re
 import warnings
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -12,48 +11,14 @@ from formulaic.parser import DefaultFormulaParser
 from pyfixest.estimation.detect_singletons_ import detect_singletons
 from pyfixest.estimation.formula import FORMULAIC_FEATURE_FLAG
 from pyfixest.estimation.formula.factor_interaction import factor_interaction
-from pyfixest.estimation.formula.parse import Formula, _Pattern
-from pyfixest.estimation.formula.utils import log
+from pyfixest.estimation.formula.parse import Formula
+from pyfixest.estimation.formula.utils import (
+    _factorize,
+    _get_weights,
+    _interact_fixed_effects,
+    log,
+)
 from pyfixest.utils.utils import capture_context
-
-
-def _factorize(series: pd.Series) -> np.ndarray:
-    factorized, _ = pd.factorize(series, use_na_sentinel=True)
-    # use_sentinel=True replaces np.nan with -1, so we revert to np.nan
-    factorized = np.where(factorized == -1, np.nan, factorized)
-    return factorized
-
-
-def _interact_fixed_effects(fixed_effects: str, data: pd.DataFrame) -> pd.DataFrame:
-    fes = re.split(_Pattern.variables, fixed_effects)
-    for fixed_effect in fes:
-        if "^" not in fixed_effect:
-            continue
-        # Encode interacted fixed effects
-        vars = fixed_effect.split("^")
-        data[fixed_effect.replace("^", "_")] = (
-            data[vars[0]]
-            .astype(pd.StringDtype())
-            .str.cat(
-                data[vars[1:]].astype(pd.StringDtype()),
-                sep="^",
-                na_rep=None,  # a row containing a missing value in any of the columns (before concatenation) will have a missing value in the result
-            )
-        )
-    return data.loc[:, [fe.replace("^", "_") for fe in fes]]
-
-
-def _get_weights(data: pd.DataFrame, weights: str) -> pd.Series:
-    w = data[weights]
-    try:
-        w = pd.to_numeric(w, errors="raise")
-    except ValueError:
-        raise ValueError(f"The weights column '{weights}' must be numeric.")
-    if not (w.dropna() > 0.0).all():
-        raise ValueError(
-            f"The weights column '{weights}' must have only non-negative values."
-        )
-    return w
 
 
 @dataclass(frozen=True, kw_only=True)
