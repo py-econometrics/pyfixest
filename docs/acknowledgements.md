@@ -7,7 +7,7 @@ Unless explicitly noted otherwise, all PyFixest code is written independently fr
 
 ## fixest (R)
 
-If science is made by "standing on the should of giants", in case of `PyFixest`, there is mostly one giant - Laurent Bergé's formidable fixest R package. `fixest` is so good we decided to stick to its API and conventions as closely as Python allows when starting to work on a fixed effects regression package in Python. Without `fixest`, PyFixest likely wouldn't exist - or at the very least, it would look very different.
+If science is made by "standing on the shoulders of giants", in case of `PyFixest`, there is mostly one giant - Laurent Bergé's formidable fixest R package. `fixest` is so good we decided to stick to its API and conventions as closely as Python allows when starting to work on a fixed effects regression package in Python. Without `fixest`, PyFixest likely wouldn't exist - or at the very least, it would look very different.
 
 We have borrowed the following API conventions and ideas directly from fixest:
 
@@ -56,6 +56,12 @@ standard errors, t-statistics, p-values, confidence intervals, etc for OLS, IV, 
 | [**did2s**](https://github.com/kylebutts/did2s) | R | PyFixest's DID2S estimator's API is strongly inspired by Kyle Butts' R package (MIT license) and we have relied on Kyle's writeup of the method for our own implementation. Tests compare coefficients and standard errors against the R implementation |
 | [**lpdid**](https://github.com/alexCardazzi/lpdid) | R / Stata | PyFixest's local-projections DID estimator is "highly influenced by Alex Cardazzi's R code (published under MIT) for the lpdid package" (source comment in `lpdid.py`). Test data (`.dta` files) and reference values are obtained from both R and Stata runs |
 
+### Panel data visualization
+
+| Package | Language | Role |
+|---|---|---|
+| [**panelView**](https://yiqingxu.org/packages/panelView/) | R | Yiqing Xu & Licheng Liu. PyFixest's `panelview()` function for visualizing treatment patterns and outcomes in panel data is inspired by the panelView R package |
+
 ### Wild cluster bootstrap
 
 | Package | Language | Role |
@@ -90,16 +96,15 @@ standard errors, t-statistics, p-values, confidence intervals, etc for OLS, IV, 
 
 | Package / Author | Language | Role |
 |---|---|---|
-| **b_est** | Stata | Gelbach (2016). PyFixest's `decompose()` method is tested against hardcoded results from Stata. Test data is loaded from `gelbach.dta` |
-| [Apoorva Lal](https://gist.github.com/apoorvalal/e7dc9f3e52dcd9d51854b28b3e8a7ba4) | Python | The initial implementation of Gelbach's decomposition was based on Apoorva Lal's gist |
+| **b1x2** | Stata | Gelbach (2016). PyFixest's `decompose()` method is tested against hardcoded results from Gelbach's `b1x2` Stata package.|
+| [Apoorva Lal](https://gist.github.com/apoorvalal/e7dc9f3e52dcd9d51854b28b3e8a7ba4) | Python | The initial implementation of Gelbach's decomposition was based on Apoorva's gist |
 
 ### Demeaning and fixed effects recovery
 
 | Package | Language | Role |
 |---|---|---|
-| [**lfe**](https://cran.r-project.org/package=lfe) | R | Simen Gaure's lfe was a pioneer for high-dimensional fixed effects regression in R. We based our first implementation of the MAP algorithm on the description in the "how lfe works" vignette and learned how to obtain estimates of swept-out fixed effects post-estimation by using the LSMR solver |
-| [**FixedEffectModels.jl**](https://github.com/FixedEffects/FixedEffectModels.jl) | Julia | Matthieu Gomez's package pointed the way to using the LSMR algorithm as an alternative to alternating projections for demeaning |
-| [**pyhdfe**](https://github.com/jeffgortmaker/pyhdfe) | Python | PyFixest's demeaning results are tested against pyhdfe to ensure equivalence |
+| [**lfe**](https://cran.r-project.org/package=lfe) | R | We based our first implementation of the MAP algorithm on the description in the "how lfe works" vignette and learned how to obtain estimates of swept-out fixed effects post-estimation by using the LSMR solver |
+| [**pyhdfe**](https://github.com/jeffgortmaker/pyhdfe) | Python | PyFixest's demeaning results are tested against pyhdfe to ensure equivalence. `pyfixest`'s first MVP ran its demeaning algorithm based on `pyhdfe`. |
 
 ---
 
@@ -111,7 +116,3 @@ Python and R:
 | Package | Language | Role |
 |---|---|---|
 | [**rpy2**](https://rpy2.github.io/) | Python | The bridge between Python and R that powers all cross-language test comparisons |
-| [**broom**](https://broom.tidymodels.org/) | R | Used via rpy2 to tidy fixest regression output in test comparisons |
-| [**stats**](https://stat.ethz.ch/R-manual/R-devel/library/stats/) | R | Base R stats package used in tests (e.g. `p.adjust()` for Bonferroni corrections, formula objects for R model fits) |
-| [**reticulate**](https://rstudio.github.io/reticulate/) | R | Used in R test scripts to call PyFixest from R |
-| [**statsmodels**](https://www.statsmodels.org/) | Python | Quantile regression results are cross-checked against statsmodels |
