@@ -224,9 +224,7 @@ class FixestMulti:
         self._quantile_tol = quantile_tol
         self._quantile_maxiter = quantile_maxiter
 
-        formula_dictionary = Formula.parse_to_dict(
-            fml
-        )  # , intercept=not drop_intercept)
+        formula_dictionary = Formula.parse_to_dict(fml)
         self._is_multiple_estimation = (
             sum(len(v) for v in formula_dictionary.values()) > 1
             or self._run_split

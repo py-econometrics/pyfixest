@@ -170,7 +170,9 @@ class ModelMatrix:
         model_matrix: formulaic.ModelMatrix,
         drop_rows: set[int],
         drop_singletons: bool = True,
+        drop_intercept: bool = False,
     ) -> None:
+        self._drop_intercept = drop_intercept
         self._model_spec = model_matrix.model_spec
         self._collect_columns(model_matrix)
         self._collect_data(model_matrix)
@@ -236,7 +238,7 @@ class ModelMatrix:
         if self.fixed_effects is not None:
             # Ensure fixed effects are `int32`
             self._data[self._fixed_effects] = self.fixed_effects.astype("int32")
-            # Intercept not meaningful in the presence of fixed effects
+        if self.fixed_effects is not None or self._drop_intercept:
             self._independent = [col for col in self._independent if col != "Intercept"]
             if self._instruments is not None:
                 self._instruments = [
@@ -263,6 +265,7 @@ def create_model_matrix(
     data: pd.DataFrame,
     weights: str | None = None,
     drop_singletons: bool = False,
+    drop_intercept: bool = False,
     ensure_full_rank: bool = True,
     context: Union[int, Mapping[str, Any]] = 0,
 ) -> ModelMatrix:
@@ -287,6 +290,10 @@ def create_model_matrix(
     drop_singletons : bool, default=False
         If True, observations that are singletons in any fixed effect category
         are dropped from the model.
+    drop_intercept : bool, default=False
+        If True, the intercept column is removed from the independent variables
+        and instruments matrices. The intercept is always removed when fixed
+        effects are present, regardless of this parameter.
     ensure_full_rank : bool, default=True
         If True, formulaic will ensure the design matrix is full rank by
         dropping collinear columns.
@@ -347,5 +354,8 @@ def create_model_matrix(
         model_matrix[_ModelMatrixKey.main]["lhs"].index
     )
     return ModelMatrix(
-        model_matrix, drop_rows=drop_rows, drop_singletons=drop_singletons
+        model_matrix,
+        drop_rows=drop_rows,
+        drop_singletons=drop_singletons,
+        drop_intercept=drop_intercept,
     )

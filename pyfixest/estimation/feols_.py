@@ -413,6 +413,7 @@ class Feols:
             formula=self.FixestFormula,
             data=self._data,
             drop_singletons=self._drop_singletons,
+            drop_intercept=self._drop_intercept,
             weights=self._weights_name,
             context=self._context,
         )
