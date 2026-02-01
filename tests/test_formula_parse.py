@@ -23,10 +23,10 @@ from pyfixest.errors import (
 from pyfixest.estimation.formula.parse import (
     Formula,
     _MultipleEstimation,
-    _MultipleEstimationType,
     _parse_multiple_estimation,
     parse,
 )
+from pyfixest.estimation.formula.utils import _MultipleEstimationType
 
 # =============================================================================
 # Fixtures

@@ -1,5 +1,6 @@
 import re
 import warnings
+from enum import StrEnum
 
 import numpy as np
 import pandas as pd
@@ -105,3 +106,16 @@ def _get_weights(data: pd.DataFrame, weights: str) -> pd.Series:
             f"The weights column '{weights}' must have only non-negative values."
         )
     return w
+
+
+class _MultipleEstimationType(StrEnum):
+    # See https://lrberge.github.io/fixest/reference/stepwise.html
+    sw = "sequential stepwise"
+    csw = "cumulative stepwise"
+    sw0 = "sequential stepwise with zero step"
+    csw0 = "cumulative stepwise with zero step"
+
+
+_MULTIPLE_ESTIMATION_PATTERN = re.compile(
+    rf"\b({'|'.join(me.name for me in _MultipleEstimationType)})\b\(.+\)"
+)

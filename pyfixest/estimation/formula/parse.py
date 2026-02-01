@@ -1,11 +1,12 @@
 import re
 from dataclasses import dataclass
-from enum import StrEnum
 from typing import Final
 
 from pyfixest.errors import FormulaSyntaxError
 from pyfixest.estimation.formula.utils import (
+    _MULTIPLE_ESTIMATION_PATTERN,
     _get_position_of_first_parenthesis_pair,
+    _MultipleEstimationType,
     _split_paranthesis_preserving,
 )
 
@@ -46,19 +47,6 @@ class Formula:
         for parsed_formula in formulas:
             result.setdefault(parsed_formula.fixed_effects, []).append(parsed_formula)
         return result
-
-
-class _MultipleEstimationType(StrEnum):
-    # See https://lrberge.github.io/fixest/reference/stepwise.html
-    sw = "sequential stepwise"
-    csw = "cumulative stepwise"
-    sw0 = "sequential stepwise with zero step"
-    csw0 = "cumulative stepwise with zero step"
-
-
-_MULTIPLE_ESTIMATION_PATTERN = re.compile(
-    rf"\b({'|'.join(me.name for me in _MultipleEstimationType)})\b\(.+\)"
-)
 
 
 def _validate(formula: str) -> None:
@@ -166,6 +154,10 @@ def _split_formula_into_parts(formula: str) -> Formula:
     parts = re.split(r"\s*\|\s*", formula)
     second_stage = parts.pop(0).strip()
     first_stage = next((part.strip() for part in parts if "~" in part), None)
+    if first_stage is not None:
+        # Add endogenous variables as covariates in second_stage
+        endogenous, _ = re.split(r"\s*~\s*", first_stage)
+        second_stage = f"{second_stage} + {endogenous}"
     fixed_effects = next((part.strip() for part in parts if "~" not in part), None)
     if fixed_effects == "1":
         fixed_effects = None
