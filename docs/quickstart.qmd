@@ -6,6 +6,7 @@ format:
 toc: true
 toc-title: "On this page"
 toc-location: left
+freeze: auto
 ---
 
 # OLS with Fixed Effects
@@ -427,36 +428,53 @@ q1 = np.array([2.0, 1.0])
 fit.wald_test(R=R1, q=q1)
 ```
 
-# Other GLMs (without fixed effects)
+# Generalized Linear Models (GLMs) with Fixed Effects
 
-`PyFixest` experimentally supports a range of other GLMs without fixed effects (adding fixed effect support is WIP) via the `pf.feglm()` function. Full support with all bells and whistles (in particular, fixed effects demeaning) is planned for PyFixest 0.29.
+`PyFixest` supports GLMs (logit, probit, gaussian) with high-dimensional fixed effects via `pf.feglm()`. Fixed effects are specified after the `|` symbol, just like in `feols()`.
 
 ```{python}
-data_glm = pf.get_data(N=100, seed = 170)
+data_glm = pf.get_data()
 data_glm["Y"] = np.where(data_glm["Y"] > 0, 1, 0)
 
-fit_gaussian = pf.feglm(fml = "Y~X1", data = data_glm, family = "gaussian")
-fit_logit = pf.feglm(fml = "Y~X1", data = data_glm, family = "logit")
-fit_probit = pf.feglm(fml = "Y~X1", data = data_glm, family = "probit")
+# Logit with fixed effects
+fit_fe = pf.feglm("Y ~ X1 + X2 | f1", data=data_glm, family="logit")
+fit_fe.summary()
+```
 
-pf.etable([
-    fit_gaussian,
-    fit_logit,
-    fit_probit,
-])
+Fixed effects estimation via demeaning produces identical point estimates as one-hot encoding the fixed effects via `C()`:
+
+```{python}
+# Compare FE demeaning vs one-hot encoding
+fit_onehot = pf.feglm("Y ~ X1 + X2 + C(f1)", data=data_glm, family="logit")
+
+# Coefficients are identical
+print("FE demeaning:", fit_fe.coef().values)
+print("One-hot:     ", fit_onehot.coef()[["X1", "X2"]].values)
+```
+
+Note that standard errors differ between the two approaches due to different degrees of freedom adjustments.
+
+You can compare different GLM families using `etable()`:
+
+```{python}
+fit_gaussian = pf.feglm("Y ~ X1 + X2 | f1", data=data_glm, family="gaussian")
+fit_logit = pf.feglm("Y ~ X1 + X2 | f1", data=data_glm, family="logit")
+fit_probit = pf.feglm("Y ~ X1 + X2 | f1", data=data_glm, family="probit")
+
+pf.etable([fit_gaussian, fit_logit, fit_probit])
 ```
 
 You can make predictions on the `response` and `link` scale via the `predict()` method:
 
 ```{python}
-fit_logit.predict(type = "response")[0:5]
-fit_logit.predict(type = "link")[0:5]
+fit_logit.predict(type="response")[0:5]
+fit_logit.predict(type="link")[0:5]
 ```
 
 You can compute the **average marginal effect** via the [marginaleffects package](https://github.com/vincentarelbundock/pymarginaleffects):
 
 ```{python}
-avg_slopes(fit_logit, variables = "X1")
+avg_slopes(fit_logit, variables="X1")
 ```
 
 Please take a look at the [marginaleffects book](https://marginaleffects.com/) to learn about other transformations that the `marginaleffects` package supports.

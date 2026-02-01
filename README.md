@@ -28,9 +28,9 @@
 
 `PyFixest` is a Python package for fast high-dimensional fixed effects regression.
 
-The package aims to mimic the syntax and functionality of the formidable [fixest](https://github.com/lrberge/fixest) package as closely as Python allows: if you know `fixest` well, the goal is that you won't have to read the docs to get started! In particular, this means that all of `fixest's` defaults are mirrored by `PyFixest`.
+The package aims to mimic the syntax and functionality of [Laurent Bergé's](https://sites.google.com/site/laurentrberge/) formidable [fixest](https://github.com/lrberge/fixest) package as closely as Python allows: if you know `fixest` well, the goal is that you won't have to read the docs to get started! In particular, this means that all of `fixest's` defaults are mirrored by `PyFixest`.
 
-For a quick introduction, you can take a look at the [quickstart](https://py-econometrics.github.io/pyfixest/quickstart.html) or the regression chapter of [Arthur Turrell's](https://github.com/aeturrell) book on [Coding for Economists](https://aeturrell.github.io/coding-for-economists/econmt-regression.html#imports). You can find documentation of all user facing functions in the [Function Reference](https://py-econometrics.github.io/pyfixest/reference/) section of the [documentation](https://py-econometrics.github.io/pyfixest/pyfixest.html).
+For a quick introduction, you can take a look at the [quickstart](https://py-econometrics.github.io/pyfixest/quickstart.html) or the regression chapter of [Coding for Economists](https://aeturrell.github.io/coding-for-economists/econmt-regression.html#imports). You can find documentation of all user facing functions in the [Function Reference](https://py-econometrics.github.io/pyfixest/reference/) section of the [documentation](https://py-econometrics.github.io/pyfixest/pyfixest.html).
 
 For questions on `PyFixest`, head on over to our [github discussions](https://github.com/py-econometrics/pyfixest/discussions), or (more informally) join our [Discord server](https://discord.gg/gBAydeDMVK).
 
@@ -43,7 +43,7 @@ You can also leave a message through the donation form - your support and encour
 
 -   **OLS**, **WLS** and **IV** Regression with Fixed-Effects Demeaning via [Frisch-Waugh-Lovell](https://bookdown.org/ts_robinson1994/10EconometricTheorems/frisch.html)
 -   **Poisson Regression** following the [pplmhdfe algorithm](https://journals.sagepub.com/doi/full/10.1177/1536867X20909691)
--   Probit, Logit and Gaussian Family **GLMs** (currently without fixed effects demeaning, this is WIP)
+-   Probit, Logit and Gaussian Family **GLMs** with High-Dimensional Fixed Effects
 -   **Quantile Regression** using an Interior Point Solver
 -   Multiple Estimation Syntax
 -   Several **Robust**, **Cluster Robust** and **HAC Variance-Covariance** Estimators
@@ -330,10 +330,11 @@ Thanks goes to these wonderful people:
       <td align="center" valign="top" width="12.5%"><a href="http://bobbyho.me"><img src="https://avatars.githubusercontent.com/u/10739091?v=4?s=80" width="80px;" alt="Bobby Ho"/><br /><sub><b>Bobby Ho</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=bobby1030" title="Documentation">📖</a></td>
       <td align="center" valign="top" width="12.5%"><a href="https://github.com/Erica-Ryan"><img src="https://avatars.githubusercontent.com/u/27149581?v=4?s=80" width="80px;" alt="Erica Ryan"/><br /><sub><b>Erica Ryan</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=Erica-Ryan" title="Code">💻</a></td>
       <td align="center" valign="top" width="12.5%"><a href="https://github.com/souhil25"><img src="https://avatars.githubusercontent.com/u/185626340?v=4?s=80" width="80px;" alt="Souhil Abdelmalek Louddad"/><br /><sub><b>Souhil Abdelmalek Louddad</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=souhil25" title="Documentation">📖</a></td>
-      <td align="center" valign="top" width="12.5%"><a href="http://dpananos.github.io"><img src="https://avatars.githubusercontent.com/u/20362941?v=4?s=80" width="80px;" alt="Demetri Pananos"/><br /><sub><b>Demetri Pananos</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=Dpananos" title="Code">💻</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="http://dpananos.github.io"><img src="https://avatars.githubusercontent.com/u/20362941?v=4?s=80" width="80px;" alt="Demetri Pananos"/><br /><sub><b>Demetri Pananos</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=Dpananos" title="Code">💻</a> <a href="https://github.com/py-econometrics/pyfixest/pulls?q=is%3Apr+reviewed-by%3ADpananos" title="Reviewed Pull Requests">👀</a></td>
       <td align="center" valign="top" width="12.5%"><a href="https://github.com/pdoupe"><img src="https://avatars.githubusercontent.com/u/215010049?v=4?s=80" width="80px;" alt="Patrick Doupe"/><br /><sub><b>Patrick Doupe</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=pdoupe" title="Code">💻</a></td>
       <td align="center" valign="top" width="12.5%"><a href="http://www.linkedin.com/in/ariadnaaz/"><img src="https://avatars.githubusercontent.com/u/35080247?v=4?s=80" width="80px;" alt="Ariadna Albors Zumel"/><br /><sub><b>Ariadna Albors Zumel</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=Ariadnaaz" title="Code">💻</a></td>
       <td align="center" valign="top" width="12.5%"><a href="https://github.com/blucap"><img src="https://avatars.githubusercontent.com/u/614800?v=4?s=80" width="80px;" alt="Martien Lubberink"/><br /><sub><b>Martien Lubberink</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=blucap" title="Code">💻</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="https://github.com/jonpcohen"><img src="https://avatars.githubusercontent.com/u/48955223?v=4?s=80" width="80px;" alt="jonpcohen"/><br /><sub><b>jonpcohen</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=jonpcohen" title="Documentation">📖</a></td>
     </tr>
   </tbody>
 </table>
@@ -346,6 +347,8 @@ Thanks goes to these wonderful people:
 This project follows the [all-contributors](https://github.com/all-contributors/all-contributors) specification. Contributions of any kind welcome!
 
 ## Acknowledgements
+
+First and foremost, we want to acknowledge [Laurent Bergé's](https://sites.google.com/site/laurentrberge/) formidable [fixest](https://github.com/lrberge/fixest), which [is so good we decided to stick to its API and conventions](https://youtu.be/kSQxGGA7Rr4?si=8-wTbzLPnIZQ7lYI&t=576) as closely as Python allows. Without `fixest`, `PyFixest` likely wouldn't exist - or at the very least, it would look very different.
 
 We thank all institutions that have funded or supported work on PyFixest!
 

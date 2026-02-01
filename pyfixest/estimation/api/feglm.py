@@ -37,10 +37,24 @@ def feglm(
     context: Optional[Union[int, Mapping[str, Any]]] = None,
     split: Optional[str] = None,
     fsplit: Optional[str] = None,
+    accelerate: bool = True,
 ) -> Union[Feols, Fepois, FixestMulti]:
     """
-    Estimate GLM regression models (currently without fixed effects, this is work in progress).
-    This feature is currently experimental, full support will be released with pyfixest 0.29.
+    Estimate GLM regression models with fixed effects.
+
+    Supported families: `logit`, `probit`, `gaussian`.
+
+    References
+    ----------
+    - Bergé, L. (2018). Efficient estimation of maximum likelihood models with
+      multiple fixed-effects: the R package FENmlm.
+      [CREA Discussion Paper](https://ideas.repec.org/p/luc/wpaper/18-13.html).
+    - Correia, S., Guimaraes, P., & Zylkin, T. (2019). ppmlhdfe: Fast Poisson
+      Estimation with High-Dimensional Fixed Effects.
+      [The Stata Journal](https://journals.sagepub.com/doi/pdf/10.1177/1536867X20909691).
+    - Stammann, A. (2018). Fast and Feasible Estimation of Generalized Linear
+      Models with High-Dimensional k-way Fixed Effects.
+      [arXiv:1707.01815](https://arxiv.org/pdf/1707.01815).
 
     Parameters
     ----------
@@ -154,6 +168,12 @@ def feglm(
     fsplit: Optional[str]
         This argument is the same as split but also includes the full sample as the first estimation.
 
+    accelerate: Optional[bool]
+        Whether to use acceleration tricks developed in the ppmlhdfe paper (warm start and adaptive fixed effects
+        tolerance) for models with fixed effects. Produces numerically identical results faster, so we
+        recommend to always set it to True.
+
+
     Returns
     -------
     object
@@ -162,8 +182,6 @@ def feglm(
 
     Examples
     --------
-    The `fepois()` function can be used to estimate a simple Poisson regression
-    model with fixed effects.
     The following example regresses `Y` on `X1` and `X2` with fixed effects for
     `f1` and `f2`: fixed effects are specified after the `|` symbol.
 
@@ -283,6 +301,7 @@ def feglm(
         iwls_maxiter=iwls_maxiter,
         collin_tol=collin_tol,
         separation_check=separation_check,
+        accelerate=accelerate,
     )
 
     if fixest._is_multiple_estimation:

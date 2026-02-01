@@ -9,6 +9,7 @@ from numpy.typing import NDArray
 try:
     import cupy as cp
     import cupyx.scipy.sparse as cp_sparse
+    from cupyx.scipy.sparse.linalg import LinearOperator as cp_LinearOperator
     from cupyx.scipy.sparse.linalg import lsmr as cp_lsmr
 
     CUPY_AVAILABLE = True
@@ -16,9 +17,11 @@ except ImportError:
     CUPY_AVAILABLE = False
     cp = None
     cp_sparse = None
+    cp_LinearOperator = None
     cp_lsmr = None
 
 import scipy.sparse as sp_sparse
+from scipy.sparse.linalg import LinearOperator as sp_LinearOperator
 from scipy.sparse.linalg import lsmr as sp_lsmr
 from scipy.sparse.linalg import spsolve as sp_spsolve
 
@@ -38,6 +41,7 @@ class CupyFWLDemeaner:
         solver_maxiter: Optional[int] = None,
         warn_on_cpu_fallback: bool = True,
         dtype: type = np.float64,
+        use_preconditioner: bool = True,
     ):
         """
         Initialize CuPy FWL demeaner.
@@ -58,6 +62,9 @@ class CupyFWLDemeaner:
             Warn when falling back to CPU despite use_gpu=True.
         dtype : type, default=np.float64
             Data type for GPU computations (np.float32 or np.float64).
+        use_preconditioner : bool, default=True
+            Whether to use diagonal preconditioning for LSMR. Preconditioning
+            improves convergence when fixed effect group sizes vary.
         """
         if use_gpu is None:
             self.use_gpu = CUPY_AVAILABLE and self._gpu_available()
@@ -77,17 +84,20 @@ class CupyFWLDemeaner:
         self.solver_maxiter = solver_maxiter
         self.warn_on_cpu_fallback = warn_on_cpu_fallback
         self.dtype = dtype
+        self.use_preconditioner = use_preconditioner
 
         if self.use_gpu:
             self.xp = cp
             self.sparse = cp_sparse
             self.lsmr = cp_lsmr
             self.spsolve = cp_sparse.linalg.spsolve
+            self.LinearOperator = cp_LinearOperator
         else:
             self.xp = np
             self.sparse = sp_sparse
             self.lsmr = sp_lsmr
             self.spsolve = sp_spsolve
+            self.LinearOperator = sp_LinearOperator
 
     @staticmethod
     def _gpu_available() -> bool:
@@ -107,24 +117,46 @@ class CupyFWLDemeaner:
         x_weighted: "NDArray[Any] | Any",
         D_unweighted: "sp_sparse.csr_matrix | cp_sparse.csr_matrix",
         x_unweighted: "NDArray[Any] | Any",
+        weights: "NDArray[Any] | Any",
     ) -> tuple["NDArray[Any] | Any", bool]:
-        "Solve OLS Equations via LSMR solver."
+        "Solve OLS Equations via LSMR solver with optional diagonal preconditioning."
         X_k = x_unweighted.shape[1]
         D_k = D_weighted.shape[1]
         x_demeaned = self.xp.zeros_like(x_unweighted)
         theta = self.xp.zeros((D_k, X_k), dtype=x_unweighted.dtype)
         success = True
 
+        if self.use_preconditioner:
+            group_weights = self.xp.asarray(D_unweighted.T @ weights).ravel()
+            M_inv = 1.0 / self.xp.sqrt(group_weights)
+
+            A_op = self.LinearOperator(
+                shape=D_weighted.shape,
+                matvec=lambda z: D_weighted @ (M_inv * z),
+                rmatvec=lambda u: M_inv * (D_weighted.T @ u),
+                dtype=D_weighted.dtype,
+            )
+        else:
+            M_inv = None
+            A_op = D_weighted
+
         for k in range(X_k):
             result = self.lsmr(
-                D_weighted,
+                A_op,
                 x_weighted[:, k],
                 damp=0.0,
                 atol=self.solver_atol,
                 btol=self.solver_btol,
                 maxiter=self.solver_maxiter,
             )
-            theta[:, k] = result[0]
+            z = result[0]
+
+            # Recover theta from preconditioned solution
+            if M_inv is not None:
+                theta[:, k] = M_inv * z
+            else:
+                theta[:, k] = z
+
             istop = result[1]
             success = success and (istop in [1, 2, 3])
 
@@ -209,7 +241,7 @@ class CupyFWLDemeaner:
             D_weighted = D_device
 
         x_demeaned, success = self._solve_lsmr_loop(
-            D_weighted, x_weighted, D_device, x_device
+            D_weighted, x_weighted, D_device, x_device, weights_device
         )
 
         if self.use_gpu:

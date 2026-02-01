@@ -55,6 +55,41 @@ maketables.MTable(df, caption="My Table").make(type="gt")
 - Set the default parameters for the MAP algorithm to a tolerance of `1e-06` and maximum number of iterations of `10_000`.
 - Adds support for weights for poisson regression via `feopis()`.
 
+### GLMs with High-Dimensional Fixed Effects
+
+`feglm()` now supports high-dimensional fixed effects for logit, probit, and gaussian families! Fixed effects are specified after the `|` symbol, just like in `feols()` and `fepois()`.
+
+```{python}
+import numpy as np
+
+data_glm = pf.get_data()
+data_glm["Y"] = np.where(data_glm["Y"] > 0, 1, 0)
+
+# Logit with fixed effects
+fit_logit = pf.feglm("Y ~ X1 + X2 | f1", data=data_glm, family="logit")
+fit_logit.summary()
+```
+
+Fixed effects estimation via demeaning produces identical point estimates as one-hot encoding the fixed effects via `C()`:
+
+```{python}
+# Compare FE demeaning vs one-hot encoding
+fit_logit_onehot = pf.feglm("Y ~ X1 + X2 + C(f1)", data=data_glm, family="logit")
+
+pf.etable([fit_logit, fit_logit_onehot])
+```
+
+Note that standard errors may differ between the two approaches due to different degrees of freedom adjustments.
+
+All three GLM families (gaussian, logit, probit) support fixed effects:
+
+```{python}
+fit_gaussian = pf.feglm("Y ~ X1 + X2 | f1", data=data_glm, family="gaussian")
+fit_probit = pf.feglm("Y ~ X1 + X2 | f1", data=data_glm, family="probit")
+
+pf.etable([fit_gaussian, fit_logit, fit_probit])
+```
+
 ## PyFixest 0.40.1
 
 ### Breaking Changes for compatibility with `fixest` 0.13
