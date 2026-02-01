@@ -16,8 +16,8 @@ class Formula:
     """A formulaic-compliant formula."""
 
     second_stage: str
-    fixed_effects: str | None
-    first_stage: str | None
+    fixed_effects: str | None = None
+    first_stage: str | None = None
 
     @property
     def formula(self) -> str:

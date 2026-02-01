@@ -314,16 +314,12 @@ def _did2s_vcov(
     # Create Formula objects for the new model_matrix system
     # First stage: convert fixed effects to dummy variables (C() syntax)
     FML1 = Formula(
-        dependent=yname,
-        independent=first_stage_fml.replace("~", "").strip(),
-        intercept=False,  # first_stage typically has ~0
+        second_stage=f"{yname} ~ {first_stage_fml.replace('~', '').strip()}",
     )
 
     # Second stage: use the formula as-is (new system handles i() syntax natively)
     FML2 = Formula(
-        dependent=yname,
-        independent=second_stage.replace("~", "").strip(),
-        intercept=False,  # intercept dropped due to fixed effects in first stage
+        second_stage=f"{yname} ~ {second_stage.replace('~', '').strip()}",
     )
 
     mm_first_stage = model_matrix.create_model_matrix(
