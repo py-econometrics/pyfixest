@@ -228,7 +228,7 @@ class FixestMulti:
             fml
         )  # , intercept=not drop_intercept)
         self._is_multiple_estimation = (
-            len(formula_dictionary) > 1
+            sum(len(v) for v in formula_dictionary.values()) > 1
             or self._run_split
             or (isinstance(quantile, list) and len(quantile) > 1)
         )

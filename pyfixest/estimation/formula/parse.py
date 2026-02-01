@@ -4,7 +4,10 @@ from enum import StrEnum
 from typing import Final
 
 from pyfixest.errors import FormulaSyntaxError
-from pyfixest.estimation.formula.utils import _split_paranthesis_preserving
+from pyfixest.estimation.formula.utils import (
+    _get_position_of_first_parenthesis_pair,
+    _split_paranthesis_preserving,
+)
 
 
 @dataclass(kw_only=True, frozen=True, slots=True)
@@ -29,6 +32,7 @@ class Formula:
     def parse(cls, formula: str) -> list["Formula"]:
         """Parse fixest-style formula."""
         _validate(formula)
+        formula = _preprocess(formula)
         return [
             _split_formula_into_parts(formula)
             for formula in _expand_all_multiple_estimation(formula)
@@ -53,7 +57,7 @@ class _MultipleEstimationType(StrEnum):
 
 
 _MULTIPLE_ESTIMATION_PATTERN = re.compile(
-    rf"\b({'|'.join(me.name for me in _MultipleEstimationType)})\b\("
+    rf"\b({'|'.join(me.name for me in _MultipleEstimationType)})\b\(.+\)"
 )
 
 
@@ -105,23 +109,31 @@ def _validate(formula: str) -> None:
             )
 
 
+def _preprocess(formula: str) -> str:
+    """Convert multiple dependent variables to multiple estimation syntax.
+    Y + Y2 ~ X1 + X2 will be converted to sw(Y, Y2) ~ X1 + X2.
+    """
+    dependents, rhs = re.split(r"\s*~\s*", formula, maxsplit=1)
+    dependents = _split_paranthesis_preserving(dependents.strip(), separator="+")
+    if len(dependents) > 1:
+        # Multiple dependent variables
+        formula = f"sw({', '.join(dependents)}) ~ {rhs}"
+    return formula
+
+
 def _expand_first_multiple_estimation(formula: str) -> list[str] | None:
     """Expand the first multiple estimation syntax in formula."""
     match = _MULTIPLE_ESTIMATION_PATTERN.search(formula)
     if not match:
         return None
-
     kind = _MultipleEstimationType[match.group(1)]
-    # Find position of matching closing parenthesis
-    position = match.end()
-    depth = 1
-    while position < len(formula) and depth:
-        depth += (formula[position] == "(") - (formula[position] == ")")
-        position += 1
-
-    call = formula[match.start() : position]
+    paranthesis_open, paranthesis_closed = _get_position_of_first_parenthesis_pair(
+        string=formula[match.start() :]
+    )
+    paranthesis_open += match.start()
+    paranthesis_closed += match.start()
     arguments = _split_paranthesis_preserving(
-        string=formula[match.end() : position - 1],
+        string=formula[paranthesis_open:paranthesis_closed],
         separator=",",
     )
     if kind.name.startswith("csw"):
@@ -129,8 +141,11 @@ def _expand_first_multiple_estimation(formula: str) -> list[str] | None:
         arguments = [" + ".join(arguments[: i + 1]) for i, _ in enumerate(arguments)]
     if kind.name.endswith("0"):
         # Add zero step
-        arguments = ["0", *arguments]
-    return [formula.replace(call, argument) for argument in arguments]
+        arguments = ["1", *arguments]
+    multiple_estimation_call = formula[match.start() : paranthesis_closed + 1]
+    return [
+        formula.replace(multiple_estimation_call, argument) for argument in arguments
+    ]
 
 
 def _expand_all_multiple_estimation(formula: str) -> list[str]:
@@ -152,7 +167,7 @@ def _split_formula_into_parts(formula: str) -> Formula:
     second_stage = parts.pop(0).strip()
     first_stage = next((part.strip() for part in parts if "~" in part), None)
     fixed_effects = next((part.strip() for part in parts if "~" not in part), None)
-    if fixed_effects == "0":
+    if fixed_effects == "1":
         fixed_effects = None
     return Formula(
         second_stage=second_stage, fixed_effects=fixed_effects, first_stage=first_stage

@@ -49,6 +49,25 @@ def _split_paranthesis_preserving(string: str, separator: str) -> list[str]:
     return args
 
 
+def _get_position_of_first_parenthesis_pair(string: str) -> tuple[int, int]:
+    position_open = string.find("(")
+    if position_open == -1:
+        raise ValueError(f"No parenthesis in `{string}`")
+    else:
+        position_open += 1
+    position: int = position_open
+    depth: int = 1
+    while position < len(string) and depth:
+        position += 1
+        if string[position] == "(":
+            depth += 1
+        elif string[position] == ")":
+            depth -= 1
+    if depth != 0:
+        raise ValueError(f"Unmatched '(' in `{string}`")
+    return position_open, position
+
+
 def _interact_fixed_effects(fixed_effects: str, data: pd.DataFrame) -> pd.DataFrame:
     fes = re.split(r"\s*\+\s*", fixed_effects)
     for fixed_effect in fes:
