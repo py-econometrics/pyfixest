@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>On Small Sample Corrections</title>
+<title>acknowledgements</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -69,39 +69,10 @@ ul.task-list li input[type="checkbox"] {
   }
 }</script>
 
-  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
-
-<script type="text/javascript">
-const typesetMath = (el) => {
-  if (window.MathJax) {
-    // MathJax Typeset
-    window.MathJax.typeset([el]);
-  } else if (window.katex) {
-    // KaTeX Render
-    var mathElements = el.getElementsByClassName("math");
-    var macros = [];
-    for (var i = 0; i < mathElements.length; i++) {
-      var texText = mathElements[i].firstChild;
-      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
-        window.katex.render(texText.data, mathElements[i], {
-          displayMode: mathElements[i].classList.contains('display'),
-          throwOnError: false,
-          macros: macros,
-          fleqn: false
-        });
-      }
-    }
-  }
-}
-window.Quarto = {
-  typesetMath
-};
-</script>
 
 </head>
 
-<body class="floating nav-fixed quarto-light">
+<body class="nav-fixed fullcontent quarto-light">
 
 <div id="quarto-search-results"></div>
   <header id="quarto-header" class="headroom fixed-top">
@@ -138,7 +109,7 @@ window.Quarto = {
 <span class="menu-text">Contributing</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./acknowledgements.html"> 
+    <a class="nav-link active" href="./acknowledgements.html" aria-current="page"> 
 <span class="menu-text">Acknowledgements</span></a>
   </li>  
   <li class="nav-item">
@@ -225,168 +196,382 @@ window.Quarto = {
 <!-- content -->
 <div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
 <!-- sidebar -->
-  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
-    <nav id="TOC" role="doc-toc" class="toc-active">
-    <h2 id="toc-title">On this page</h2>
-   
-  <ul>
-  <li><a href="#small-sample-adjustments" id="toc-small-sample-adjustments" class="nav-link active" data-scroll-target="#small-sample-adjustments">Small Sample Adjustments</a>
-  <ul class="collapse">
-  <li><a href="#k_adj-true" id="toc-k_adj-true" class="nav-link" data-scroll-target="#k_adj-true"><code>k_adj = True</code></a></li>
-  <li><a href="#k_fixef" id="toc-k_fixef" class="nav-link" data-scroll-target="#k_fixef"><code>k_fixef</code></a>
-  <ul class="collapse">
-  <li><a href="#k_fixef-none" id="toc-k_fixef-none" class="nav-link" data-scroll-target="#k_fixef-none"><code>k_fixef = "none"</code></a></li>
-  <li><a href="#k_fixef-full" id="toc-k_fixef-full" class="nav-link" data-scroll-target="#k_fixef-full"><code>k_fixef = "full"</code></a></li>
-  <li><a href="#k_fixef-nonnested" id="toc-k_fixef-nonnested" class="nav-link" data-scroll-target="#k_fixef-nonnested"><code>k_fixef = "nonnested"</code></a></li>
-  </ul></li>
-  <li><a href="#g_adj" id="toc-g_adj" class="nav-link" data-scroll-target="#g_adj"><code>G_adj</code></a></li>
-  <li><a href="#g_df" id="toc-g_df" class="nav-link" data-scroll-target="#g_df"><code>G_df</code></a></li>
-  </ul></li>
-  <li><a href="#more-on-inference" id="toc-more-on-inference" class="nav-link" data-scroll-target="#more-on-inference">More on Inference</a></li>
-  <li><a href="#in-code" id="toc-in-code" class="nav-link" data-scroll-target="#in-code">In Code</a></li>
-  </ul>
-</nav>
-</nav>
-<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
 <!-- margin-sidebar -->
-    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
-    </div>
+    
 <!-- main -->
-<main class="content" id="quarto-document-content">
-
-<header id="title-block-header" class="quarto-title-block default">
-<div class="quarto-title">
-<h1 class="title">On Small Sample Corrections</h1>
-</div>
+<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"></header>
 
 
 
-<div class="quarto-title-meta">
 
-    
-  
-    
-  </div>
-  
-
-
-</header>
-
-
-<p>The <code>fixest</code> R package provides various options for small sample corrections. While it has an excellent <a href="https://cran.r-project.org/web/packages/fixest/vignettes/standard_errors.html">vignette</a> on the topic, reproducing its behavior in <code>pyfixest</code> took more time than expected. So that future developers (and my future self) can stay sane, I’ve compiled all of my hard-earned understanding of how small sample adjustments work in <code>fixest</code> and how they are implemented in <code>pyfixest</code> in this document.</p>
-<p>In both <code>fixest</code> and <code>pyfixest</code>, small sample corrections are controlled by the <code>ssc</code> function. In <code>pyfixest</code>, <code>ssc</code> accepts four arguments: <code>k_adj</code>, <code>G_adj</code>, <code>k_fixef</code> and <code>G_df</code>.</p>
-<p>Based on these inputs, the adjusted variance-covariance matrix is computed as:</p>
-<pre><code>vcov_k_adj = adj_val(N, df_k) if k_adj else 1
-          * G_adj_val(G, G_df) if G_adj else 1
-          * vcov</code></pre>
-<p>Where:</p>
-<ul>
-<li><strong><code>k_adj</code></strong>: Enables or disables the first scalar adjustment.</li>
-<li><strong><code>G_adj</code></strong>: Enables or disables the second scalar adjustment. This argument is only relevant / applied to clustered errors.</li>
-<li><strong><code>vcov</code></strong>: The unadjusted variance-covariance matrix.</li>
-<li><strong><code>df_k</code></strong>: The number of estimated parameters considered in the first adjustment. Impacts <code>adj_val</code>.</li>
-<li><strong><code>k_fixef</code></strong>: Determines how <code>df_k</code> is computed (how fixed effects are counted).</li>
-<li><strong><code>G_df</code></strong>: Determines how <code>G_adj_val</code> is computed (only relevant for multi-way clustering).</li>
-<li><strong><code>G</code></strong>: The number of unique clusters (<code>G = N</code> for heteroskedastic errors).</li>
-</ul>
-<p>Outside of this formula, we have <strong><code>df_t</code></strong>, which is the degrees of freedom used for p-values and confidence intervals:</p>
-<ul>
-<li><code>df_t = N - df_k</code> for IID or heteroskedastic errors.</li>
-<li><code>df_t = G - 1</code> for clustered errors.</li>
-</ul>
-<hr>
-<section id="small-sample-adjustments" class="level1">
-<h1>Small Sample Adjustments</h1>
-<section id="k_adj-true" class="level2">
-<h2 class="anchored" data-anchor-id="k_adj-true"><code>k_adj = True</code></h2>
-<p>If <code>k_adj = True</code>, the adjustment factor is:</p>
-<p><code>adj_val = (N - 1) / (N - df_k)</code></p>
-<p>If <code>k_adj = False</code>, no adjustment is applied.</p>
-<p>Note that for <code>k_adj = True</code> and heteroskedastic errors, the applied correction is <code>N / (N-k)</code>.</p>
-<hr>
+<section id="acknowledgements" class="level1">
+<h1>Acknowledgements</h1>
+<p>PyFixest is a Python package for fast high-dimensional fixed effects regression. Like many open-source software projects, PyFixest builds on work and ideas first developed in other packages. In this section, we want to acknowledge and express our appreciation for the authors of these packages and their creativity and hard work.</p>
 </section>
-<section id="k_fixef" class="level2">
-<h2 class="anchored" data-anchor-id="k_fixef"><code>k_fixef</code></h2>
-<p>The <code>k_fixef</code> argument controls how fixed effects contribute to <code>df_k</code>, and thus to <code>adj_val</code>. It supports three options:</p>
-<ul>
-<li><strong><code>"none"</code></strong></li>
-<li><strong><code>"full"</code></strong></li>
-<li><strong><code>"nonnested"</code></strong></li>
-</ul>
-<section id="k_fixef-none" class="level3">
-<h3 class="anchored" data-anchor-id="k_fixef-none"><code>k_fixef = "none"</code></h3>
-<p>Fixed effects are ignored when counting parameters:</p>
-<ul>
-<li><strong>Example</strong>:
-<ul>
-<li><code>Y ~ X1 | f1</code> → <code>k = 1</code></li>
-<li><code>Y ~ X1 + X2 | f1</code> → <code>k = 2</code></li>
-</ul></li>
-</ul>
-</section>
-<section id="k_fixef-full" class="level3">
-<h3 class="anchored" data-anchor-id="k_fixef-full"><code>k_fixef = "full"</code></h3>
-<p>Fixed effects are fully counted. For <code>n_fe</code> total fixed effects and each fixed effect <code>f_i</code>, we set <code>df_k = k + k_fe</code>,</p>
-<ul>
-<li><p>If there is <strong>more than one</strong> fixed effect, we drop one level from each fixed effects except the first (to avoid multicollinearity) <code>k_fe = sum_{i=1}^{n_fe} levels(f_i) - (n_fe - 1)</code></p></li>
-<li><p>If there is <strong>only one</strong> fixed effect: <code>k_fe = sum_{i=1}^{n_fe} levels(f_i) = levels(f_1)</code></p></li>
-</ul>
-</section>
-<section id="k_fixef-nonnested" class="level3">
-<h3 class="anchored" data-anchor-id="k_fixef-nonnested"><code>k_fixef = "nonnested"</code></h3>
-<p>Fixed effects may be <strong>nested</strong> within cluster variables (e.g., district FEs nested in state clusters). If <code>k_fixef = "nonnested"</code>, nested fixed effects do not count toward <code>k_fe</code>:</p>
-<p><code>k_fe = sum_{i=1}^{n_fe} levels(f_i) - k_fe_nested - (n_fe - 1)</code></p>
-<p>where <code>k_fe_nested</code> is the count of nested fixed effects. For cluster fixed effects, <code>k_fe_nested = G</code>, the number of clusters.</p>
+<section id="software" class="level1">
+<h1>Software</h1>
 <blockquote class="blockquote">
-<p>⚠️ <em>Note:</em> If you already subtracted a level from a nested FE, you may need to add it back.</p>
+<p>Unless explicitly stated otherwise, all PyFixest code is written independently from scratch. The packages listed below have influenced PyFixest’s API design or algorithmic choices, or are used for testing PyFixest as reference implementations, but no source code has been copied except where explicitly stated (with license and permission details provided inline). ## fixest (R)</p>
 </blockquote>
+<p>If open source software is made by “standing on the shoulders of giants”, in case of <code>PyFixest</code>, there is mostly one very big giant - <a href="https://sites.google.com/site/laurentrberge/">Laurent Bergé’s</a> formidable <a href="https://github.com/lrberge/fixest/">fixest</a> R package. <code>fixest</code> is so good we decided to stick to its API and conventions as closely as Python allows when starting to work on a fixed effects regression package in Python. Without <code>fixest</code>, PyFixest likely wouldn’t exist - or at the very least, it would look very different. Most importantly, <code>fixest</code> has shaped our understanding of what a user-friendly regression package should look like and what functionality it should offer.</p>
+<p>More concretely, we have borrowed the following API conventions and ideas directly from fixest:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Feature</th>
+<th>What PyFixest borrows</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Formula syntax</strong></td>
+<td><code>feols()</code>, <code>fepois()</code>, <code>feglm()</code> function and argument names; the <code>i()</code> interaction operator; multiple estimation syntax via <code>sw()</code>, <code>sw0()</code>, <code>csw()</code>, <code>csw0()</code>; fixed effects interactions via <code>fe1^fe2</code></td>
+</tr>
+<tr class="even">
+<td><strong>Multiple Estimation Optimizations</strong></td>
+<td>The core idea that most of the work of fixed effects regression can be pooled / cached when estimating multiple models with the same fixed effects structure</td>
+</tr>
+<tr class="odd">
+<td><strong>Demeaning / FWL</strong></td>
+<td>The alternating-projections algorithm in PyFixest is a standalone implementation in numba/rust, but uses the same convergence criteria and default parameters</td>
+</tr>
+<tr class="even">
+<td><strong>Small-sample corrections</strong></td>
+<td>The <code>ssc()</code> function to control small sample adjustments, and all of its defaults - <code>adj</code>, <code>fixef_K</code>, <code>cluster_adj</code>, <code>cluster_df</code> - mirror fixest exactly (see fixest’s <a href="https://cran.r-project.org/web/packages/fixest/vignettes/standard_errors.html">standard errors vignette</a>)</td>
+</tr>
+<tr class="odd">
+<td><strong>Collinearity detection</strong></td>
+<td>The algorithm is a Rust/Numba re-implementation of Laurent Berge’s <a href="https://github.com/lrberge/fixest/blob/a4d1a9bea20aa7ab7ab0e0f1d2047d8097971ad7/src/lm_related.cpp#L130">C++ routine in fixest</a>, re-licensed under MIT with Laurent’s permission</td>
+</tr>
+<tr class="even">
+<td><strong>Post-estimation</strong></td>
+<td><code>etable()</code>, <code>coefplot()</code>, <code>iplot()</code>, <code>coef()</code> etc mirror fixest’s output and plotting functionality</td>
+</tr>
+<tr class="odd">
+<td><strong>On the fly variance covariance adjustments</strong></td>
+<td>As in <code>fixest</code>, you can adjust the vcov post estimation by calling a <code>vcov()</code> method on the results object (<code>Feols</code> in pyfixest and <code>fixest</code> in <code>fixest</code>)</td>
+</tr>
+<tr class="even">
+<td><strong>Predict method for fixed effects</strong></td>
+<td>The <code>predict()</code> and <code>fixef()</code> methods in PyFixest mirrors fixest’s functionality for obtaining fitted values, fixed effects, and linear predictions</td>
+</tr>
+</tbody>
+</table>
+<p>You can learn more about fixest <a href="https://github.com/lrberge/fixest">on github</a>, via its <a href="https://lrberge.github.io/fixest/">documentation</a>, or by reading the <a href="https://arxiv.org/abs/2601.21749">associated paper</a>.</p>
+<p>PyFixest is tested against fixest via <strong>rpy2</strong> to ensure numerical equivalence (usually <code>rtol = 1e-08</code>, <code>atol = 1e-08</code>) for coefficients, standard errors, t-statistics, p-values, confidence intervals, etc for OLS, IV, Poisson, and GLM models.</p>
+<hr>
+<section id="by-functionality" class="level2">
+<h2 class="anchored" data-anchor-id="by-functionality">By functionality</h2>
+<section id="poisson-regression" class="level3">
+<h3 class="anchored" data-anchor-id="poisson-regression">Poisson regression</h3>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Package</th>
+<th>Language</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><a href="https://github.com/sergiocorreia/ppmlhdfe"><strong>ppmlhdfe</strong></a></td>
+<td>Stata</td>
+<td>PyFixest’s Poisson estimator (<code>fepois</code>) implements the ppmlhdfe algorithm as described in Correia, Guimaraes &amp; Zylkin (2020), including its separation detection and acceleration strategies. Test datasets for separation examples are taken from the ppmlhdfe repository (MIT license)</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="instrumental-variables" class="level3">
+<h3 class="anchored" data-anchor-id="instrumental-variables">Instrumental variables</h3>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Package</th>
+<th>Language</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><a href="https://yiqingxu.org/packages/ivDiag/"><strong>ivDiag</strong></a></td>
+<td>R</td>
+<td>The IV diagnostics implementations are validated against ivDiag.</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="quantile-regression" class="level3">
+<h3 class="anchored" data-anchor-id="quantile-regression">Quantile regression</h3>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Package</th>
+<th>Language</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><a href="https://cran.r-project.org/package=quantreg"><strong>quantreg</strong></a></td>
+<td>R</td>
+<td>PyFixest’s <code>quantreg()</code> implementation is tested against R’s quantreg package (by Roger Koenker) for coefficient and NID standard error equivalence</td>
+</tr>
+<tr class="even">
+<td><a href="https://ideas.repec.org/c/boc/bocode/s457369.html"><strong>qreg2</strong></a></td>
+<td>Stata</td>
+<td>PyFixest’s cluster-robust standard errors for quantile regression are tested against Stata’s qreg2 output, which is based on work by Parente &amp; Santos Silva (2016).</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="difference-in-differences" class="level3">
+<h3 class="anchored" data-anchor-id="difference-in-differences">Difference-in-Differences</h3>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Package</th>
+<th>Language</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><a href="https://github.com/kylebutts/did2s"><strong>did2s</strong></a></td>
+<td>R</td>
+<td>PyFixest’s DID2S estimator’s API is strongly inspired by Kyle Butts’ R package (MIT license) and we have relied on Kyle’s writeup of the method for our own implementation. Tests compare coefficients and standard errors against the R implementation</td>
+</tr>
+<tr class="even">
+<td><a href="https://github.com/alexCardazzi/lpdid"><strong>lpdid</strong></a></td>
+<td>R</td>
+<td>PyFixest’s local-projections DID estimator is highly influenced by Alex Cardazzi’s R code (published under MIT) for the lpdid package. We also test against the R implementation</td>
+</tr>
+<tr class="odd">
+<td><a href="https://github.com/danielegirardi/lpdid"><strong>lpdid</strong></a></td>
+<td>Stata</td>
+<td>We also test our implementation against Daniel Busch’s and Daniele Girardi’s Stata implementation of local-projections DID.</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="panel-data-visualization" class="level3">
+<h3 class="anchored" data-anchor-id="panel-data-visualization">Panel data visualization</h3>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Package</th>
+<th>Language</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><a href="https://yiqingxu.org/packages/panelView/"><strong>panelView</strong></a></td>
+<td>R</td>
+<td>PyFixest’s <code>panelview()</code> function for visualizing treatment patterns and outcomes in panel data is inspired by the panelView R package by Mou, Liu and Xu.</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="randomization-inference" class="level3">
+<h3 class="anchored" data-anchor-id="randomization-inference">Randomization inference</h3>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Package</th>
+<th>Language</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><a href="https://github.com/grantmcdermott/ritest"><strong>ritest</strong></a></td>
+<td>R</td>
+<td>PyFixest’s <code>ritest()</code> method’s API heavily borrows from Grant McDermott’s R port and is tested against it.</td>
+</tr>
+<tr class="even">
+<td><a href="https://github.com/simonheb/ritest"><strong>ritest</strong></a></td>
+<td>Stata</td>
+<td>Grant’s <code>ritest</code> is itself inspired by Simon Heß <code>ritest</code> Stata package.</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="wild-cluster-bootstrap" class="level3">
+<h3 class="anchored" data-anchor-id="wild-cluster-bootstrap">Wild cluster bootstrap</h3>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Package</th>
+<th>Language</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><a href="https://github.com/py-econometrics/wildboottest"><strong>wildboottest</strong></a></td>
+<td>Python</td>
+<td>PyFixest loads classes from <code>wildboottest</code> to run wild bootstrap inference. <code>wildboottest</code> is a Python port of <code>fwildclusterboot</code>.</td>
+</tr>
+<tr class="even">
+<td><a href="https://github.com/s3alfisc/fwildclusterboot"><strong>fwildclusterboot</strong></a></td>
+<td>R</td>
+<td>An R implementation of the “fast and wild” algorithm by Roodman et al.</td>
+</tr>
+<tr class="odd">
+<td><a href="https://github.com/droodman/boottest"><strong>boottest</strong></a></td>
+<td>Stata</td>
+<td>Roodman et al.&nbsp;(2019). The fast wild cluster bootstrap methodology traces back to Roodman’s Stata boottest package</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="multiple-hypothesis-testing-romano-wolf" class="level3">
+<h3 class="anchored" data-anchor-id="multiple-hypothesis-testing-romano-wolf">Multiple hypothesis testing (Romano-Wolf)</h3>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Package</th>
+<th>Language</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><a href="https://github.com/s3alfisc/wildrwolf"><strong>wildrwolf</strong></a></td>
+<td>R</td>
+<td>PyFixest’s <code>rwolf()</code> Romano-Wolf correction is tested against the wildrwolf R package for both HC and CRV inference.</td>
+</tr>
+<tr class="even">
+<td><a href="https://github.com/s3alfisc/wildwyoung"><strong>wildwyoung</strong></a></td>
+<td>R</td>
+<td>An R implementation of the Westfall-Young correction using the wild bootstrap</td>
+</tr>
+<tr class="odd">
+<td><a href="https://github.com/damiancclarke/rwolf"><strong>rwolf</strong></a></td>
+<td>Stata</td>
+<td>A Stata implementation of the Romano-Wolf stepdown procedure that inspired development of <code>rwolf</code>.</td>
+</tr>
+<tr class="even">
+<td><a href="https://github.com/reifjulian/wyoung"><strong>wyoung</strong></a></td>
+<td>Stata</td>
+<td>A Stata implementation of the Westfall-Young stepdown procedure by Jones, Molitor &amp; Reif.</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="causal-cluster-variance" class="level3">
+<h3 class="anchored" data-anchor-id="causal-cluster-variance">Causal cluster variance</h3>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Package</th>
+<th>Language</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><a href="https://github.com/Daniel-Pailanir/TSCB-CCV"><strong>TSCB-CCV</strong></a></td>
+<td>Stata</td>
+<td>Pailanir &amp; Clarke. PyFixest’s CCV implementation (Abadie et al., QJE 2023) is tested against Daniel Pailanir and Damian Clarke’s Stata implementation. Test data is loaded from Stata <code>.dta</code> files</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="gelbach-decomposition" class="level3">
+<h3 class="anchored" data-anchor-id="gelbach-decomposition">Gelbach decomposition</h3>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Package / Author</th>
+<th>Language</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><a href="https://ideas.repec.org/c/boc/bocode/s457814.html"><strong>b1x2</strong></a></td>
+<td>Stata</td>
+<td>PyFixest’s <code>decompose()</code> method is tested against hardcoded results from Gelbach’s <code>b1x2</code> Stata package.</td>
+</tr>
+<tr class="even">
+<td><a href="https://gist.github.com/apoorvalal/e7dc9f3e52dcd9d51854b28b3e8a7ba4">Apoorva’s Linear Mediation Gist</a></td>
+<td>Python</td>
+<td>The initial implementation of Gelbach’s decomposition was based on Apoorva’s gist</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="demeaning-and-fixed-effects-recovery" class="level3">
+<h3 class="anchored" data-anchor-id="demeaning-and-fixed-effects-recovery">Demeaning and fixed effects recovery</h3>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Package</th>
+<th>Language</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><a href="https://cran.r-project.org/web/packages/lfe/vignettes/lfehow.pdf"><strong>lfe</strong></a></td>
+<td>R</td>
+<td>We based our first implementation of the MAP algorithm on the description in the “how lfe works” vignette.</td>
+</tr>
+<tr class="even">
+<td><a href="https://github.com/jeffgortmaker/pyhdfe"><strong>pyhdfe</strong></a></td>
+<td>Python</td>
+<td>PyFixest’s demeaning results are tested against pyhdfe to ensure equivalence. <code>pyfixest</code>’s first MVP was built using <code>pyhdfe</code> it ran its demeaning algorithm via <code>pyhdfe</code> MAP algo.</td>
+</tr>
+</tbody>
+</table>
 <hr>
 </section>
 </section>
-<section id="g_adj" class="level2">
-<h2 class="anchored" data-anchor-id="g_adj"><code>G_adj</code></h2>
-<p>This argument is only relevant for clustered errors.</p>
-<p>If <code>G_adj = True</code>, we apply a second correction:</p>
-<p><code>G_df_val = G / (G - 1)</code></p>
-<p>Where:</p>
-<ul>
-<li><code>G</code> is the number of clusters for clustered errors, or <code>N</code> for heteroskedastic errors.</li>
-<li>This follows the approach in R’s <code>sandwich</code> package, interpreting heteroskedastic errors as “singleton clusters.”</li>
-</ul>
-<blockquote class="blockquote">
-<p><em>Tip:</em> If <code>G_adj = True</code> for IID errors, <code>G_df_val</code> defaults to <code>1</code>. For <em>heteroskedastic erros</em>, despite its name, <code>G_adj=True</code> will apply an adjustment of (N-1) / N, as there are <span class="math inline">\(G = N\)</span> singleton clusters.</p>
-</blockquote>
-<hr>
+<section id="test-infrastructure" class="level2">
+<h2 class="anchored" data-anchor-id="test-infrastructure">Test infrastructure</h2>
+<p>The following packages are used in PyFixest’s test suite to bridge between Python and R:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Package</th>
+<th>Language</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><a href="https://rpy2.github.io/"><strong>rpy2</strong></a></td>
+<td>Python</td>
+<td>The bridge between Python and R that powers all cross-language test comparisons</td>
+</tr>
+</tbody>
+</table>
 </section>
-<section id="g_df" class="level2">
-<h2 class="anchored" data-anchor-id="g_df"><code>G_df</code></h2>
-<p>Relevant only for <strong>multi-way clustering</strong>. Two-way clustering, for example, can be written as:</p>
-<p><code>vcov = ssc_A * vcov_A + ssc_B * vcov_B - ssc_AB * vcov_AB</code></p>
-<p>where <code>A</code> and <code>B</code> are clustering dimensions, with <code>G_AB &gt; G_A &gt; G_B</code>.</p>
+<section id="other-software" class="level2">
+<h2 class="anchored" data-anchor-id="other-software">Other Software</h2>
+<p>Here we list other foundational software without which a project like <code>PyFixest</code> would not be possible:</p>
 <ul>
-<li>If <code>G_df = "min"</code>, then G is set to the minimum value of <code>G_A</code>, <code>G_B</code>, and <code>G_AB</code>.</li>
-<li>If <code>G_df = "conventional"</code>, each clustering dimension uses its own cluster count (<code>G_A</code>, <code>G_B</code>, etc.) for its respective adjustment.</li>
+<li><code>formulaic</code></li>
+<li><code>numpy</code></li>
+<li><code>numba</code></li>
+<li><code>pandas</code></li>
+<li><code>scipy</code></li>
+<li><code>matplotlib</code></li>
+<li><code>great-tables</code> / <code>maketables</code></li>
+<li><code>pyo3</code></li>
 </ul>
-<hr>
 </section>
 </section>
-<section id="more-on-inference" class="level1">
-<h1>More on Inference</h1>
-<p>For computing critical values:</p>
+<section id="papers-and-algorithms" class="level1">
+<h1>Papers and Algorithms</h1>
 <ul>
-<li><strong>OLS and IV</strong>: use t-statistics with <code>df_t = N - df_k</code> (non-clustered) or <code>df_t = G - 1</code> (clustered).</li>
-<li><strong>GLMs</strong>: use z-statistics (normal approximation).</li>
+<li>Bergé, L. R., Butts, K., &amp; McDermott, G. (2026). “Fast and user-friendly econometrics estimations: The R package fixest.” <a href="https://arxiv.org/abs/2601.21749">arXiv:2601.21749</a>.</li>
+<li>Correia, S., Guimarães, P., &amp; Zylkin, T. (2020). “ppmlhdfe: Fast Poisson estimation with high-dimensional fixed effects.” <em>The Stata Journal</em>, 20(1). <a href="https://arxiv.org/abs/1903.01690">arXiv:1903.01690</a>.</li>
+<li>Gaure, S. (2013). “OLS with multiple high dimensional category variables.” <em>Computational Statistics &amp; Data Analysis</em>, 66, 8-18. <a href="https://cran.r-project.org/web/packages/lfe/vignettes/lfehow.pdf">Vignette: How lfe works</a>.</li>
+<li>Guimarães, P. &amp; Portugal, P. (2010). “A simple feasible procedure to fit models with high-dimensional fixed effects.” <em>The Stata Journal</em>, 10(4), 628-649. <a href="https://doi.org/10.1177/1536867X1101000406">DOI:10.1177/1536867X1101000406</a>.</li>
+<li>Koenker, R. &amp; Ng, P. (2005). “A Frisch-Newton Algorithm for Sparse Quantile Regression.” <em>Acta Mathematicae Applicatae Sinica</em>, 21(2), 225-236. <a href="https://doi.org/10.1007/s10255-005-0231-1">DOI:10.1007/s10255-005-0231-1</a>.</li>
 </ul>
-<p>For multi-way clustering:</p>
-<ul>
-<li><strong>Two-way</strong>: <code>df_t = min(G_1 - 1, G_2 - 1)</code></li>
-<li><strong>Three-way</strong>: <code>df_t = min(G_1 - 1, G_2 - 1, G_3 - 1)</code> <em>(not currently supported)</em></li>
-</ul>
-<p>See <a href="https://github.com/py-econometrics/pyfixest/blob/864da9c0d1797aff70e3f5b420e4c73f7256642d/pyfixest/estimation/feols_.py#L851">this implementation</a> for details.</p>
-</section>
-<section id="in-code" class="level1">
-<h1>In Code</h1>
-<p>All of the above logic is implemented <a href="https://github.com/py-econometrics/pyfixest/blob/69acf9d22eab4300853d80264ee6d01bc4bdcb35/pyfixest/utils/utils.py#L108">here</a>.</p>
 
 
 </section>
