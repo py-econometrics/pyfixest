@@ -350,6 +350,8 @@ This project follows the [all-contributors](https://github.com/all-contributors/
 
 First and foremost, we want to acknowledge [Laurent Bergé's](https://sites.google.com/site/laurentrberge/) formidable [fixest](https://github.com/lrberge/fixest), which [is so good we decided to stick to its API and conventions](https://youtu.be/kSQxGGA7Rr4?si=8-wTbzLPnIZQ7lYI&t=576) as closely as Python allows. Without `fixest`, `PyFixest` likely wouldn't exist - or at the very least, it would look very different.
 
+For a full list of software packages and papers that have influenced PyFixest, please take a look at the [Acknowledgements page](https://py-econometrics.github.io/pyfixest/acknowledgements.html).
+
 We thank all institutions that have funded or supported work on PyFixest!
 
 <img src="figures/aai-institute-logo.svg" width="185">
