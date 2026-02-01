@@ -42,13 +42,13 @@ standard errors, t-statistics, p-values, confidence intervals, etc for OLS, IV, 
 
 | Package | Language | Role |
 |---|---|---|
-| [**ivDiag**](https://yiqingxu.org/packages/ivDiag/) | R | The IV diagnostics implementations are validated against ivDiag. |
+| [**ivDiag**](https://yiqingxu.org/packages/ivDiag/) | R | The IV diagnostics implementations are validated against ivDiag by Lal et al. |
 
 ### Quantile regression
 
 | Package | Language | Role |
 |---|---|---|
-| [**quantreg**](https://cran.r-project.org/package=quantreg) | R | PyFixest's `quantreg()` implementation is tested against R's quantreg package (by Roger Koenker) for coefficient and NID standard error equivalence |
+| [**quantreg**](https://cran.r-project.org/package=quantreg) | R | PyFixest's `quantreg()` implementation is tested against R's quantreg package (by Roger Koenker) for coefficient and NID standard error equivalence. |
 | [**qreg2**](https://ideas.repec.org/c/boc/bocode/s457369.html) | Stata | PyFixest's cluster-robust standard errors for quantile regression are tested against Stata's qreg2 output, which is based on work by Parente & Santos Silva (2016). |
 
 ### Difference-in-Differences
@@ -56,8 +56,8 @@ standard errors, t-statistics, p-values, confidence intervals, etc for OLS, IV, 
 | Package | Language | Role |
 |---|---|---|
 | [**did2s**](https://github.com/kylebutts/did2s) | R | PyFixest's DID2S estimator's API is strongly inspired by Kyle Butts' R package (MIT license) and we have relied on Kyle's writeup of the method for our own implementation. Tests compare coefficients and standard errors against the R implementation |
-| [**lpdid**](https://github.com/alexCardazzi/lpdid) | R | PyFixest's local-projections DID estimator is highly influenced by Alex Cardazzi's R code (published under MIT) for the lpdid package. We also test against the R implementation |
-| [**lpdid**](https://github.com/danielegirardi/lpdid) | Stata | We also test our implementation against Daniel Busch's and Daniele Girardi's Stata implementation of local-projections DID. |
+| [**lpdid**](https://github.com/alexCardazzi/lpdid) | R | PyFixest's local-projections DID estimator is highly influenced by Alex Cardazzi's R code (published under MIT) for the lpdid package. We also test against Alex' package. |
+| [**lpdid**](https://github.com/danielegirardi/lpdid) | Stata | We also test our implementation against Daniel Busch and Daniele Girardi's Stata implementation of the local-projections estimator. |
 
 ### Panel data visualization
 
@@ -69,7 +69,7 @@ standard errors, t-statistics, p-values, confidence intervals, etc for OLS, IV, 
 
 | Package | Language | Role |
 |---|---|---|
-| [**ritest**](https://github.com/grantmcdermott/ritest) | R | PyFixest's `ritest()` method's API heavily borrows from Grant McDermott's R port and is tested against it. |
+| [**ritest**](https://github.com/grantmcdermott/ritest) | R | PyFixest's `ritest()` method's API heavily borrows from Grant McDermott's R package and is tested against it. |
 | [**ritest**](https://github.com/simonheb/ritest) | Stata | Grant's `ritest` is itself inspired by Simon Heß `ritest` Stata package.|
 
 ### Wild cluster bootstrap
@@ -85,7 +85,7 @@ standard errors, t-statistics, p-values, confidence intervals, etc for OLS, IV, 
 | Package | Language | Role |
 |---|---|---|
 | [**wildrwolf**](https://github.com/s3alfisc/wildrwolf) | R | PyFixest's `rwolf()` Romano-Wolf correction is tested against the wildrwolf R package for both HC and CRV inference. |
-| [**wildwyoung**](https://github.com/s3alfisc/wildwyoung) | R | An R implementation of the Westfall-Young correction using the wild bootstrap |
+| [**wildwyoung**](https://github.com/s3alfisc/wildwyoung) | R | An R implementation of the Westfall-Young correction using the wild bootstrap. |
 | [**rwolf**](https://github.com/damiancclarke/rwolf) | Stata | A Stata implementation of the Romano-Wolf stepdown procedure that inspired development of `rwolf`. |
 | [**wyoung**](https://github.com/reifjulian/wyoung) | Stata | A Stata implementation of the Westfall-Young stepdown procedure by Jones, Molitor & Reif.|
 
@@ -93,21 +93,21 @@ standard errors, t-statistics, p-values, confidence intervals, etc for OLS, IV, 
 
 | Package | Language | Role |
 |---|---|---|
-| [**TSCB-CCV**](https://github.com/Daniel-Pailanir/TSCB-CCV) | Stata | Pailanir & Clarke. PyFixest's CCV implementation (Abadie et al., QJE 2023) is tested against Daniel Pailanir and Damian Clarke's Stata implementation. Test data is loaded from Stata `.dta` files |
+| [**TSCB-CCV**](https://github.com/Daniel-Pailanir/TSCB-CCV) | Stata | Pailanir & Clarke. PyFixest's CCV implementation (Abadie et al., QJE 2023) is tested against Daniel Pailanir and Damian Clarke's Stata implementation.|
 
 ### Gelbach decomposition
 
 | Package / Author | Language | Role |
 |---|---|---|
 | [**b1x2**](https://ideas.repec.org/c/boc/bocode/s457814.html)| Stata |PyFixest's `decompose()` method is tested against hardcoded results from Gelbach's `b1x2` Stata package.|
-| [Apoorva's Linear Mediation Gist](https://gist.github.com/apoorvalal/e7dc9f3e52dcd9d51854b28b3e8a7ba4) | Python | The initial implementation of Gelbach's decomposition was based on Apoorva's gist |
+| [Apoorva's Linear Mediation Gist](https://gist.github.com/apoorvalal/e7dc9f3e52dcd9d51854b28b3e8a7ba4) | Python | The initial implementation of Gelbach's decomposition in `PyFixest` was based on Apoorva's gist |
 
 ### Demeaning and fixed effects recovery
 
 | Package | Language | Role |
 |---|---|---|
 | [**lfe**](https://cran.r-project.org/web/packages/lfe/vignettes/lfehow.pdf) | R | We based our first implementation of the MAP algorithm on the description in the "how lfe works" vignette. |
-| [**pyhdfe**](https://github.com/jeffgortmaker/pyhdfe) | Python | PyFixest's demeaning results are tested against pyhdfe to ensure equivalence. `pyfixest`'s first MVP was built using `pyhdfe` it ran its demeaning algorithm via `pyhdfe` MAP algo. |
+| [**pyhdfe**](https://github.com/jeffgortmaker/pyhdfe) | Python | PyFixest's demeaning results are tested against Jeff Gortmaker's `pyhdfe`. `pyfixest`'s first MVP was built using `pyhdfe` it ran its demeaning algorithm via `pyhdfe` MAP algo. |
 
 ---
 
@@ -118,7 +118,7 @@ Python and R:
 
 | Package | Language | Role |
 |---|---|---|
-| [**rpy2**](https://rpy2.github.io/) | Python | The bridge between Python and R that powers all cross-language test comparisons |
+| [**rpy2**](https://rpy2.github.io/) | Python | The bridge between Python and R that powers all cross-language test comparisons. |
 
 ## Other Software
 
