@@ -1,6 +1,6 @@
 # Acknowledgements
 
-PyFixest is a Python package for fast high-dimensional fixed effects regression. Like many open-source software projects, PyFixest builds on work and ideas first developed in other packages. In this section, we want to acknowledge and express our appreciation for the authors of these packages and their creativity and hard work.
+Like many open-source software projects, PyFixest builds on work and ideas first developed in other packages. In this section, we want to acknowledge and express our appreciation for the authors of these packages and their creativity and hard work.
 
 # Software
 
