@@ -7,9 +7,9 @@ PyFixest is a Python package for fast high-dimensional fixed effects regression.
 > Unless explicitly stated otherwise, all PyFixest code is written independently from scratch. The packages listed below have influenced PyFixest's API design or algorithmic choices, or are used for testing PyFixest as reference implementations, but no source code has been copied except where explicitly stated (with license and permission details provided inline).
 ## fixest (R)
 
-If open source software is made by "standing on the shoulders of giants", in case of `PyFixest`, there is mostly one very big giant - [Laurent Bergé's](https://sites.google.com/site/laurentrberge/) formidable [fixest](https://github.com/lrberge/fixest/) R package. `fixest` is so good we decided to stick to its API and conventions as closely as Python allows when starting to work on a fixed effects regression package in Python. Without `fixest`, PyFixest likely wouldn't exist - or at the very least, it would look very different.
+If open source software is made by "standing on the shoulders of giants", in case of `PyFixest`, there is mostly one very big giant - [Laurent Bergé's](https://sites.google.com/site/laurentrberge/) formidable [fixest](https://github.com/lrberge/fixest/) R package. `fixest` is so good we decided to stick to its API and conventions as closely as Python allows when starting to work on a fixed effects regression package in Python. Without `fixest`, PyFixest likely wouldn't exist - or at the very least, it would look very different. Most importantly, `fixest` has shaped our understanding of what a user-friendly regression package should look like and what functionality it should offer.
 
-We have borrowed the following API conventions and ideas directly from fixest:
+More concretely, we have borrowed the following API conventions and ideas directly from fixest:
 
 | Feature | What PyFixest borrows |
 |---|---|
