@@ -1,3 +1,4 @@
+import re
 import warnings
 from collections.abc import Mapping
 from importlib import import_module
@@ -673,7 +674,7 @@ def _check_for_separation_ir(
     separation_na: set[int] = set()
     tmp_suffix = "_separationTmp"
     # build formula
-    name_dependent, rest = fml.split("~")
+    name_dependent, rest = re.split(r"\s*~\s*", fml, maxsplit=1)
     name_dependent_separation = "U"
     if name_dependent_separation in data.columns:
         name_dependent_separation += tmp_suffix
