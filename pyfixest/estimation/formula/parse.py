@@ -155,9 +155,12 @@ def _split_formula_into_parts(formula: str) -> Formula:
     second_stage = parts.pop(0).strip()
     first_stage = next((part.strip() for part in parts if "~" in part), None)
     if first_stage is not None:
-        # Add endogenous variables as covariates in second_stage
-        endogenous, _ = re.split(r"\s*~\s*", first_stage)
+        # Add endogenous variables as covariates in second stage
+        endogenous, _ = re.split(r"\s*~\s*", first_stage, maxsplit=1)
         second_stage = f"{second_stage} + {endogenous}"
+        # Add exogenous variables as covariates in first stage
+        _, independent = re.split(r"\s*~\s*", second_stage, maxsplit=1)
+        first_stage = f"{first_stage} + {independent} - {endogenous}"
     fixed_effects = next((part.strip() for part in parts if "~" not in part), None)
     if fixed_effects in ("0", "1"):
         fixed_effects = None
