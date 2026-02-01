@@ -1,16 +1,13 @@
 # Acknowledgements
 
-PyFixest is a Python package for fast high-dimensional fixed effects regression. Like many open-source software projects, PyFixest builds on work on ideas first developed in other packages. In this section, we want to acknowledge and express our appreciation for the authors of these packages and their hard work and creativity that PyFixest builds on.
-
-> Unless explicitly stated otherwise, all PyFixest code is written independently from scratch. The packages listed below have influenced PyFixest's API design or algorithmic choices, or are used for testing PyFixest as reference implementations, but no source code has been copied except where explicitly stated (with license and permission details provided inline).
+PyFixest is a Python package for fast high-dimensional fixed effects regression. Like many open-source software projects, PyFixest builds on work and ideas first developed in other packages. In this section, we want to acknowledge and express our appreciation for the authors of these packages and their creativity and hard work.
 
 # Software
 
+> Unless explicitly stated otherwise, all PyFixest code is written independently from scratch. The packages listed below have influenced PyFixest's API design or algorithmic choices, or are used for testing PyFixest as reference implementations, but no source code has been copied except where explicitly stated (with license and permission details provided inline).
 ## fixest (R)
 
-If science is made by "standing on the shoulders of giants", in case of `PyFixest`, there is mostly one giant - Laurent Bergé's formidable fixest R package. `fixest` is so good we decided to stick to its API and conventions as closely as Python allows when starting to work on a fixed effects regression package in Python. Without `fixest`, PyFixest likely wouldn't exist - or at the very least, it would look very different.
-
-You can learn more about fixest [on github](https://github.com/lrberge/fixest), via its [documentation](https://lrberge.github.io/fixest/), or by reading the [associated paper](https://arxiv.org/abs/2601.21749). 
+If open source software is made by "standing on the shoulders of giants", in case of `PyFixest`, there is mostly one very big giant - [Laurent Bergé's](https://sites.google.com/site/laurentrberge/) formidable [fixest](https://github.com/lrberge/fixest/) R package. `fixest` is so good we decided to stick to its API and conventions as closely as Python allows when starting to work on a fixed effects regression package in Python. Without `fixest`, PyFixest likely wouldn't exist - or at the very least, it would look very different.
 
 We have borrowed the following API conventions and ideas directly from fixest:
 
@@ -24,6 +21,8 @@ We have borrowed the following API conventions and ideas directly from fixest:
 | **Post-estimation** | `etable()`, `coefplot()`, `iplot()`, `coef()` etc mirror fixest's output and plotting functionality |
 | **On the fly variance covariance adjustments** | As in `fixest`, you can adjust the vcov post estimation by calling a `vcov()` method on the results object (`Feols` in pyfixest and `fixest` in `fixest`) |
 | **Predict method for fixed effects** | The `predict()`  and `fixef()` methods in PyFixest mirrors fixest's functionality for obtaining fitted values, fixed effects, and linear predictions |
+
+You can learn more about fixest [on github](https://github.com/lrberge/fixest), via its [documentation](https://lrberge.github.io/fixest/), or by reading the [associated paper](https://arxiv.org/abs/2601.21749). 
 
 PyFixest is tested against fixest via **rpy2** to ensure numerical equivalence
 (usually `rtol = 1e-08`, `atol = 1e-08`) for coefficients,
@@ -100,7 +99,7 @@ standard errors, t-statistics, p-values, confidence intervals, etc for OLS, IV, 
 
 | Package / Author | Language | Role |
 |---|---|---|
-| https://ideas.repec.org/c/boc/bocode/s457814.html| Stata |PyFixest's `decompose()` method is tested against hardcoded results from Gelbach's `b1x2` Stata package.|
+| [**b1x2**](https://ideas.repec.org/c/boc/bocode/s457814.html)| Stata |PyFixest's `decompose()` method is tested against hardcoded results from Gelbach's `b1x2` Stata package.|
 | [Apoorva's Linear Mediation Gist](https://gist.github.com/apoorvalal/e7dc9f3e52dcd9d51854b28b3e8a7ba4) | Python | The initial implementation of Gelbach's decomposition was based on Apoorva's gist |
 
 ### Demeaning and fixed effects recovery
