@@ -159,7 +159,7 @@ def _split_formula_into_parts(formula: str) -> Formula:
         endogenous, _ = re.split(r"\s*~\s*", first_stage)
         second_stage = f"{second_stage} + {endogenous}"
     fixed_effects = next((part.strip() for part in parts if "~" not in part), None)
-    if fixed_effects == "1":
+    if fixed_effects in ("0", "1"):
         fixed_effects = None
     return Formula(
         second_stage=second_stage, fixed_effects=fixed_effects, first_stage=first_stage
