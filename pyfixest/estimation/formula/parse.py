@@ -85,7 +85,9 @@ class Formula:
         second_stage = self._second_stage
         if self._first_stage is not None:
             # Add endogenous variables as covariates in second stage
-            second_stage = f"{second_stage} + {self.endogenous}"
+            # Prepend endogenous before exogenous to match R's fixest column ordering
+            dependent, exogenous = re.split(r"\s*~\s*", second_stage, maxsplit=1)
+            second_stage = f"{dependent} ~ {self.endogenous} + {exogenous}"
         return second_stage
 
     @property
