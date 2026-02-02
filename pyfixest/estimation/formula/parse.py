@@ -3,7 +3,14 @@ import re
 from dataclasses import dataclass
 from typing import Final
 
-from pyfixest.errors import FormulaSyntaxError
+import formulaic
+
+from pyfixest.errors import (
+    EndogVarsAsCovarsError,
+    FormulaSyntaxError,
+    InstrumentsAsCovarsError,
+    UnderDeterminedIVError,
+)
 from pyfixest.estimation.formula.utils import (
     _MULTIPLE_ESTIMATION_PATTERN,
     _get_position_of_first_parenthesis_pair,
@@ -16,19 +23,84 @@ from pyfixest.estimation.formula.utils import (
 class Formula:
     """A formulaic-compliant formula."""
 
-    second_stage: str
-    fixed_effects: str | None = None
-    first_stage: str | None = None
+    _second_stage: str
+    _fixed_effects: str | None = None
+    _first_stage: str | None = None
+
+    def __post_init__(self) -> None:
+        if self._first_stage is not None:
+            second_stage = formulaic.Formula(self._second_stage)
+            first_stage = formulaic.Formula(self._first_stage)
+            exogenous = second_stage.rhs.required_variables
+            endogenous = first_stage.lhs.required_variables
+            instruments = first_stage.rhs.required_variables
+            if len(endogenous) > 1:
+                raise FormulaSyntaxError(
+                    "Multiple endogenous variables are currently not supported."
+                )
+            if len(endogenous) > len(instruments):
+                raise UnderDeterminedIVError(
+                    "The IV system is underdetermined. "
+                    "Please provide at least as many instruments as endogenous variables."
+                )
+            endogenous_are_covariates = endogenous.intersection(exogenous)
+            if endogenous_are_covariates:
+                raise EndogVarsAsCovarsError(
+                    f"Endogeneous variables specified as covariates: {endogenous_are_covariates}"
+                )
+            instruments_are_covariates = instruments.intersection(exogenous)
+            if instruments_are_covariates:
+                raise InstrumentsAsCovarsError(
+                    f"Instruments specified as covariates: {instruments_are_covariates}"
+                )
 
     @property
     def formula(self) -> str:
         """Full fixest-style formula."""
-        formula = self.second_stage
-        if self.fixed_effects is not None:
-            formula = f"{formula} | {self.fixed_effects}"
-        if self.first_stage is not None:
-            formula = f"{formula} | {self.first_stage}"
+        formula = self._second_stage
+        if self._fixed_effects is not None:
+            formula = f"{formula} | {self._fixed_effects}"
+        if self._first_stage is not None:
+            formula = f"{formula} | {self._first_stage}"
         return formula
+
+    @property
+    def endogenous(self) -> str | None:
+        """Endogenous variables of an instrumental variable specification."""
+        if self._first_stage is None:
+            return None
+        else:
+            endogenous, _ = re.split(r"\s*~\s*", self._first_stage, maxsplit=1)
+            return endogenous
+
+    @property
+    def exogenous(self) -> str:
+        """Exogenous aka covariates aka independent variables."""
+        _, exogenous = re.split(r"\s*~\s*", self._second_stage, maxsplit=1)
+        return exogenous
+
+    @property
+    def second_stage(self) -> str:
+        """The second stage formula."""
+        second_stage = self._second_stage
+        if self._first_stage is not None:
+            # Add endogenous variables as covariates in second stage
+            second_stage = f"{second_stage} + {self.endogenous}"
+        return second_stage
+
+    @property
+    def first_stage(self) -> str | None:
+        """The first stage formula of an instrumental variable specification."""
+        if self._first_stage is None:
+            return None
+        else:
+            # Add exogenous variables as covariates in first stage
+            return f"{self._first_stage} + {self.exogenous}"
+
+    @property
+    def fixed_effects(self) -> str | None:
+        """The fixed effects of a formula."""
+        return self._fixed_effects
 
     @classmethod
     def parse(cls, formula: str) -> list["Formula"]:
@@ -46,7 +118,7 @@ class Formula:
         formulas = cls.parse(formula)
         result: dict[str | None, list[Formula]] = {}
         for parsed_formula in formulas:
-            result.setdefault(parsed_formula.fixed_effects, []).append(parsed_formula)
+            result.setdefault(parsed_formula._fixed_effects, []).append(parsed_formula)
         return result
 
 
@@ -168,16 +240,11 @@ def _split_formula_into_parts(formula: str) -> Formula:
     parts = re.split(r"\s*\|\s*", formula)
     second_stage = parts.pop(0).strip()
     first_stage = next((part.strip() for part in parts if "~" in part), None)
-    if first_stage is not None:
-        # Add endogenous variables as covariates in second stage
-        endogenous, _ = re.split(r"\s*~\s*", first_stage, maxsplit=1)
-        second_stage = f"{second_stage} + {endogenous}"
-        # Add exogenous variables as covariates in first stage
-        _, independent = re.split(r"\s*~\s*", second_stage, maxsplit=1)
-        first_stage = f"{first_stage} + {independent} - {endogenous}"
     fixed_effects = next((part.strip() for part in parts if "~" not in part), None)
     if fixed_effects in ("0", "1"):
         fixed_effects = None
     return Formula(
-        second_stage=second_stage, fixed_effects=fixed_effects, first_stage=first_stage
+        _second_stage=second_stage,
+        _fixed_effects=fixed_effects,
+        _first_stage=first_stage,
     )

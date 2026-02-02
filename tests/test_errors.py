@@ -6,7 +6,11 @@ from formulaic.errors import FactorEvaluationError
 import pyfixest as pf
 from pyfixest.errors import (
     DuplicateKeyError,
+    EndogVarsAsCovarsError,
+    FormulaSyntaxError,
+    InstrumentsAsCovarsError,
     NanInClusterVarError,
+    UnderDeterminedIVError,
     VcovTypeNotSupportedError,
 )
 from pyfixest.estimation import feols, fepois
@@ -91,14 +95,16 @@ def test_iv_errors():
     data = get_data()
 
     # under determined
-    # with pytest.raises(UnderDeterminedIVError):
-    #     feols(fml="Y ~ X1 | Z1 + Z2 ~ 24 ", data=data)
-    # # instrument specified as covariate
-    # with pytest.raises(InstrumentsAsCovarsError):
-    #     feols(fml="Y ~ X1 | Z1  ~ X1 + X2", data=data)
-    # # endogenous variable specified as covariate
-    # with pytest.raises(EndogVarsAsCovarsError):
-    #     feols(fml="Y ~ Z1 | Z1  ~ X1", data=data)
+    with pytest.raises(FormulaSyntaxError):
+        feols(fml="Y ~ X1 | Z1 + Z2 ~ X2", data=data)
+    with pytest.raises(UnderDeterminedIVError):
+        feols(fml="Y ~ X1 | Z1 ~ 1", data=data)
+    # instrument specified as covariate
+    with pytest.raises(InstrumentsAsCovarsError):
+        feols(fml="Y ~ X1 | Z1  ~ X1 + X2", data=data)
+    # endogenous variable specified as covariate
+    with pytest.raises(EndogVarsAsCovarsError):
+        feols(fml="Y ~ Z1 | Z1  ~ X1", data=data)
 
     # instrument specified as covariate
     # with pytest.raises(InstrumentsAsCovarsError):

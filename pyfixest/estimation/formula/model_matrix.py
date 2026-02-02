@@ -313,32 +313,10 @@ def create_model_matrix(
     # Process input data
     data.reset_index(drop=True, inplace=True)  # Sanitise index
     n_observations: Final[int] = data.shape[0]
-    # Collate kwargs to be passed to formulaic.Formula
-    formula_kwargs: dict[str, str] = {
-        _ModelMatrixKey.main: formula.second_stage
-    }  # Main formula
-    if formula.fixed_effects is not None:
-        fixed_effects = _interact_fixed_effects(
-            fixed_effects=formula.fixed_effects, data=data
-        )
-        data[fixed_effects.columns] = fixed_effects
-        formula_kwargs.update(
-            {
-                _ModelMatrixKey.fixed_effects: f"{'+'.join(f'__fixed_effect__({fe})' for fe in fixed_effects.columns)}-1"
-            }
-        )
-    if formula.first_stage is not None:
-        # Instrumental variable
-        formula_kwargs.update(
-            {_ModelMatrixKey.instrumental_variable: formula.first_stage}
-        )
-    if weights is not None:
-        data[weights] = _get_weights(data, weights)
-        formula_kwargs.update({_ModelMatrixKey.weights: f"{weights}-1"})
-    model_matrix = formulaic.Formula(
-        formula_kwargs,
-        _parser=DefaultFormulaParser(feature_flags=FORMULAIC_FEATURE_FLAG),
-    ).get_model_matrix(
+    formula_formulaic = _get_formulaic_formula(
+        formula=formula, data=data, weights=weights
+    )
+    model_matrix = formula_formulaic.get_model_matrix(
         data=data,
         ensure_full_rank=ensure_full_rank,
         na_action="drop",
@@ -359,3 +337,34 @@ def create_model_matrix(
         drop_singletons=drop_singletons,
         drop_intercept=drop_intercept,
     )
+
+
+def _get_formulaic_formula(
+    formula: Formula,
+    data: pd.DataFrame,
+    weights: str | None = None,
+) -> formulaic.Formula:
+    # Collate kwargs to be passed to formulaic.Formula
+    formula_kwargs: dict[str, str] = {_ModelMatrixKey.main: formula.second_stage}
+    if formula.fixed_effects is not None:
+        fixed_effects = _interact_fixed_effects(
+            fixed_effects=formula.fixed_effects, data=data
+        )
+        data[fixed_effects.columns] = fixed_effects
+        formula_kwargs.update(
+            {
+                _ModelMatrixKey.fixed_effects: f"{'+'.join(f'__fixed_effect__({fe})' for fe in fixed_effects.columns)}-1"
+            }
+        )
+    if formula.first_stage is not None:
+        formula_kwargs.update(
+            {_ModelMatrixKey.instrumental_variable: formula.first_stage}
+        )
+    if weights is not None:
+        data[weights] = _get_weights(data, weights)
+        formula_kwargs.update({_ModelMatrixKey.weights: f"{weights}-1"})
+    formula_formulaic = formulaic.Formula(
+        formula_kwargs,
+        _parser=DefaultFormulaParser(feature_flags=FORMULAIC_FEATURE_FLAG),
+    )
+    return formula_formulaic
