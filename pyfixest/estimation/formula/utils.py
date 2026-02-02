@@ -69,12 +69,8 @@ def _get_position_of_first_parenthesis_pair(string: str) -> tuple[int, int]:
     return position_open, position
 
 
-def _encode_fixed_effects(
-    fixed_effects: str, data: pd.DataFrame, deduplicate: bool = True
-) -> str:
-    fes = re.split(r"\s*\+\s*", fixed_effects)
-    if deduplicate:
-        fes = set(fes)
+def _encode_fixed_effects(fixed_effects: str, data: pd.DataFrame) -> str:
+    fes = set(re.split(r"\s*\+\s*", fixed_effects))
     for fixed_effect in fes:
         if "^" not in fixed_effect:
             continue
