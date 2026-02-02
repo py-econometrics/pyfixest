@@ -559,6 +559,11 @@ class Feols:
         -------
         None
         """
+        self.demean()
+        self.to_array()
+        self.drop_multicol_vars()
+        self.wls_transform()
+
         if self._X_is_empty:
             self._u_hat = self._Y
         else:
@@ -1668,8 +1673,8 @@ class Feols:
 
         res_ccv.name = "CCV"
 
-        res_crv1 = self.tidy().xs(treatment)
-        res_crv1.name = "CRV1"  # type: ignore[union-attr]
+        res_crv1 = cast(pd.Series, self.tidy().xs(treatment))
+        res_crv1.name = "CRV1"
 
         return pd.concat([res_ccv, res_crv1], axis=1).T
 
@@ -1979,7 +1984,7 @@ class Feols:
         else:
             # drop intercept, potentially multicollinear vars
             X = X[self._coefnames].to_numpy()
-            if self._method == "fepois":
+            if self._method == "fepois" or self._method.startswith("feglm"):
                 # determine residuals from estimated linear predictor
                 # equation (5.2) in Stammann (2018) http://arxiv.org/abs/1707.01815
                 Y = self._Y_hat_link

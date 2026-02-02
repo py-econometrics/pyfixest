@@ -252,6 +252,7 @@ class FixestMulti:
         iwls_maxiter: int = 25,
         iwls_tol: float = 1e-08,
         separation_check: Optional[list[str]] = None,
+        accelerate: bool = True,
     ) -> None:
         """
         Estimate multiple regression models.
@@ -341,7 +342,13 @@ class FixestMulti:
                         "lookup_demeaned_data": lookup_demeaned_data,
                     }
 
-                    if self._method in {"feols", "fepois"}:
+                    if self._method in {
+                        "feols",
+                        "fepois",
+                        "feglm-logit",
+                        "feglm-probit",
+                        "feglm-gaussian",
+                    }:
                         model_kwargs.update(
                             {
                                 "demeaner_backend": demeaner_backend,
@@ -359,6 +366,17 @@ class FixestMulti:
                                 "separation_check": separation_check,
                                 "tol": iwls_tol,
                                 "maxiter": iwls_maxiter,
+                            }
+                        )
+
+                    if self._method in {
+                        "feglm-logit",
+                        "feglm-probit",
+                        "feglm-gaussian",
+                    }:
+                        model_kwargs.update(
+                            {
+                                "accelerate": accelerate,
                             }
                         )
 
@@ -408,16 +426,8 @@ class FixestMulti:
                     FIT = ModelClass(**model_kwargs)
 
                     FIT.prepare_model_matrix()
-                    if type(FIT) in [Feols, Feiv]:
-                        FIT.demean()
-                    FIT.to_array()
                     if isinstance(FIT, (Felogit, Feprobit, Fegaussian)):
                         FIT._check_dependent_variable()
-                    FIT.drop_multicol_vars()
-                    # NOTE: Fepois handles weights internally in its IWLS algorithm
-                    if type(FIT) in [Feols, Feiv, FeolsCompressed]:
-                        FIT.wls_transform()
-
                     FIT.get_fit()
                     # if X is empty: no inference (empty X only as shorthand for demeaning)
                     if not FIT._X_is_empty:

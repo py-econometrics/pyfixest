@@ -12,7 +12,12 @@ from pyfixest.errors import (
     NonConvergenceError,
 )
 from pyfixest.estimation.demean_ import demean
-from pyfixest.estimation.feols_ import Feols, PredictionErrorOptions, PredictionType
+from pyfixest.estimation.feols_ import (
+    Feols,
+    PredictionErrorOptions,
+    PredictionType,
+    _drop_multicollinear_variables,
+)
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.literals import (
     DemeanerBackendOptions,
@@ -264,6 +269,8 @@ class Fepois(Feols):
             Demeaned dependent variable (from the last iteration of the IRLS
             algorithm).
         """
+        self.to_array()
+
         stop_iterating = False
         crit = 1
 
@@ -286,7 +293,6 @@ class Fepois(Feols):
                 Z = eta + self._Y / mu - 1
                 reg_Z = Z.copy()
                 last = self._compute_deviance(self._Y, mu)
-
             else:
                 # update w and Z
                 Z = eta + self._Y / mu - 1  # eq (8)
@@ -301,7 +307,9 @@ class Fepois(Feols):
 
             combined_weights = self._weights * mu
 
-            if self._fe is not None:
+            if self._fe is None:
+                ZX_resid = ZX
+            else:
                 ZX_resid, success = demean(
                     x=ZX,
                     flist=self._fe.astype(np.uintp),
@@ -311,12 +319,26 @@ class Fepois(Feols):
                 )
                 if success is False:
                     raise ValueError("Demeaning failed after 100_000 iterations.")
-            else:
-                ZX_resid = ZX
 
             Z_resid = ZX_resid[:, 0].reshape((self._N, 1))  # z_resid
             X_resid = ZX_resid[:, 1:]  # x_resid
 
+            if i == 0:
+                # Check multicollinearity
+                # We do this here after the first demeaning to also catch collinearity with fixed effects
+                X_resid, self._coefnames, self._collin_vars, self._collin_index = (
+                    _drop_multicollinear_variables(
+                        X_resid,
+                        self._coefnames,
+                        self._collin_tol,
+                        backend_func=self._find_collinear_variables_func,
+                    )
+                )
+                if self._collin_index:
+                    # Drop covariates collinear with fixed effects
+                    self._X = self._X[:, ~np.array(self._collin_index)]
+                self._X_is_empty = self._X.shape[1] == 0
+                self._k = self._X.shape[1]
             WX = np.sqrt(combined_weights) * X_resid
             WZ = np.sqrt(combined_weights) * Z_resid
 

@@ -50,7 +50,7 @@ def test_cluster_na():
     data = get_data()
     data = data.dropna()
     data["f3"] = data["f3"].astype("int64")
-    data["f3"][5] = np.nan
+    data.loc[5, "f3"] = np.nan
 
     with pytest.raises(NanInClusterVarError):
         feols(fml="Y ~ X1", data=data, vcov={"CRV1": "f3"})
@@ -813,12 +813,6 @@ def test_glm_errors():
     ):
         pf.feglm("Y ~ X1", data=data, family="logit")
 
-    data["Y"] = np.where(data["Y"] > 0, 1, 0)
-    with pytest.raises(
-        NotImplementedError, match=r"Fixed effects are not yet supported for GLMs."
-    ):
-        pf.feglm("Y ~ X1 | f1", data=data, family="probit")
-
 
 def test_prediction_errors_glm():
     "Test that the prediction errors not supported for GLM models."
@@ -1044,7 +1038,7 @@ def test_errors_hac():
 
     # Error 7: duplicate time periods in data
     data["time2"] = data["time"]
-    data["time2"][0] = data["time2"][1]
+    data.loc[0, "time2"] = data.loc[1, "time2"]
     with pytest.raises(
         ValueError,
         match=r"There are duplicate time periods in the data. This is not supported for HAC SEs\.",
@@ -1058,7 +1052,7 @@ def test_errors_hac():
 
     # Error 8: duplicate time periods for the same panel id
     data["time3"] = data["time"]
-    data["time3"][0] = data["time3"][1]
+    data.loc[0, "time3"] = data.loc[1, "time3"]
     for vcov in ["NW", "DK"]:
         with pytest.raises(
             ValueError,

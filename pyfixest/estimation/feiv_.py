@@ -240,6 +240,11 @@ class Feiv(Feols):
 
     def get_fit(self) -> None:
         """Fit a IV model using a 2SLS estimator."""
+        self.demean()
+        self.to_array()
+        self.drop_multicol_vars()
+        self.wls_transform()
+
         # Start Second Stage
         self._tZX = self._Z.T @ self._X
         self._tXZ = self._X.T @ self._Z

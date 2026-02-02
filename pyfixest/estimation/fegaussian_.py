@@ -6,6 +6,7 @@ import pandas as pd
 
 from pyfixest.estimation.feglm_ import Feglm
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
+from pyfixest.estimation.literals import DemeanerBackendOptions
 
 
 class Fegaussian(Feglm):
@@ -40,6 +41,8 @@ class Fegaussian(Feglm):
         sample_split_value: Optional[Union[str, int]] = None,
         separation_check: Optional[list[str]] = None,
         context: Union[int, Mapping[str, Any]] = 0,
+        demeaner_backend: DemeanerBackendOptions = "numba",
+        accelerate: bool = True,
     ):
         super().__init__(
             FixestFormula=FixestFormula,
@@ -63,6 +66,8 @@ class Fegaussian(Feglm):
             sample_split_value=sample_split_value,
             separation_check=separation_check,
             context=context,
+            demeaner_backend=demeaner_backend,
+            accelerate=accelerate,
         )
 
         self._method = "feglm-gaussian"
@@ -79,13 +84,13 @@ class Fegaussian(Feglm):
     def _get_b(self, theta: np.ndarray) -> np.ndarray:
         return theta**2 / 2
 
-    def _get_mu(self, theta: np.ndarray) -> np.ndarray:
-        return theta
+    def _get_mu(self, eta: np.ndarray) -> np.ndarray:
+        return eta
 
     def _get_link(self, mu: np.ndarray) -> np.ndarray:
         return mu
 
-    def _update_detadmu(self, mu: np.ndarray) -> np.ndarray:
+    def _get_gprime(self, mu: np.ndarray) -> np.ndarray:
         return np.ones_like(mu)
 
     def _get_theta(self, mu: np.ndarray) -> np.ndarray:
