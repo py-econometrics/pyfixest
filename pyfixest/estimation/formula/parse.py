@@ -62,7 +62,7 @@ class Formula:
             formula = f"{formula} | {self._fixed_effects}"
         if self._first_stage is not None:
             formula = f"{formula} | {self._first_stage}"
-        return formula
+        return formula.replace(" ", "")
 
     @property
     def endogenous(self) -> str | None:
