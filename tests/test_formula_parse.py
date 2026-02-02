@@ -69,6 +69,53 @@ class TestMultipleEstimationExpansion:
                     "Y ~ A + X1 + X2 + X3",
                 ],
             ),
+            # mvsw() cases - all combinations of arguments, with zero step
+            (
+                "Y ~ mvsw(X1, X2)",
+                ["Y ~ 1", "Y ~ X1", "Y ~ X2", "Y ~ X1 + X2"],
+            ),
+            (
+                "Y ~ mvsw(X1, X2, X3)",
+                [
+                    "Y ~ 1",
+                    "Y ~ X1",
+                    "Y ~ X2",
+                    "Y ~ X3",
+                    "Y ~ X1 + X2",
+                    "Y ~ X1 + X3",
+                    "Y ~ X2 + X3",
+                    "Y ~ X1 + X2 + X3",
+                ],
+            ),
+            (
+                "Y ~ A + mvsw(X1, X2)",
+                ["Y ~ A + 1", "Y ~ A + X1", "Y ~ A + X2", "Y ~ A + X1 + X2"],
+            ),
+            (
+                "Y ~ A + mvsw(X1, X2, X3)",
+                [
+                    "Y ~ A + 1",
+                    "Y ~ A + X1",
+                    "Y ~ A + X2",
+                    "Y ~ A + X3",
+                    "Y ~ A + X1 + X2",
+                    "Y ~ A + X1 + X3",
+                    "Y ~ A + X2 + X3",
+                    "Y ~ A + X1 + X2 + X3",
+                ],
+            ),
+            # mvsw() with single argument
+            ("Y ~ mvsw(X1)", ["Y ~ 1", "Y ~ X1"]),
+            # mvsw() with fixed effects
+            (
+                "Y ~ mvsw(X1, X2) | f1",
+                ["Y ~ 1 | f1", "Y ~ X1 | f1", "Y ~ X2 | f1", "Y ~ X1 + X2 | f1"],
+            ),
+            # mvsw() in fixed effects
+            (
+                "Y ~ X1 | mvsw(f1, f2)",
+                ["Y ~ X1 | 1", "Y ~ X1 | f1", "Y ~ X1 | f2", "Y ~ X1 | f1 + f2"],
+            ),
             # Multiple estimation with sums of variables
             ("Y ~ sw0(f1, f1+f2)", ["Y ~ 1", "Y ~ f1", "Y ~ f1+f2"]),
             ("Y ~ csw0(f1, f1+f2)", ["Y ~ 1", "Y ~ f1", "Y ~ f1 + f1+f2"]),
@@ -93,6 +140,8 @@ class TestFormulaParse:
             ("Y ~ csw(X1, X2)", 2),
             ("Y ~ sw0(X1, X2)", 3),
             ("Y ~ csw0(X1, X2)", 3),
+            ("Y ~ mvsw(X1, X2)", 4),
+            ("Y ~ mvsw(X1, X2, X3)", 8),
         ],
     )
     def test_parse_count(self, formula, expected_count):
@@ -203,6 +252,9 @@ class TestValidation:
         ("Y ~ csw0(X1, X2)", 3),
         ("Y + Y2 ~ X1", 2),
         ("Y ~ X1 | sw(f1, f2)", 2),
+        ("Y ~ mvsw(X1, X2)", 4),
+        ("Y ~ mvsw(X1, X2, Z1)", 8),
+        ("Y ~ mvsw(X1, X2) | f1", 4),
         ("Y ~ sw(X1, X2) | csw(f1, f2)", 4),  # 2 x 2
     ],
 )

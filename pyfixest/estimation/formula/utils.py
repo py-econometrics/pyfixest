@@ -31,7 +31,7 @@ def log(array: np.ndarray) -> np.ndarray:
     return result
 
 
-def _split_paranthesis_preserving(string: str, separator: str) -> list[str]:
+def _split_parenthesis_preserving(string: str, separator: str) -> list[str]:
     """Split on top-level separator, respecting nested parentheses."""
     args: list[str] = []
     depth = 0
@@ -114,6 +114,7 @@ class _MultipleEstimationType(StrEnum):
     csw = "cumulative stepwise"
     sw0 = "sequential stepwise with zero step"
     csw0 = "cumulative stepwise with zero step"
+    mvsw = "multiverse stepwise"
 
 
 _MULTIPLE_ESTIMATION_PATTERN = re.compile(

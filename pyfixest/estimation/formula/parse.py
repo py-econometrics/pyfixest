@@ -1,3 +1,4 @@
+import itertools
 import re
 from dataclasses import dataclass
 from typing import Final
@@ -7,7 +8,7 @@ from pyfixest.estimation.formula.utils import (
     _MULTIPLE_ESTIMATION_PATTERN,
     _get_position_of_first_parenthesis_pair,
     _MultipleEstimationType,
-    _split_paranthesis_preserving,
+    _split_parenthesis_preserving,
 )
 
 
@@ -51,7 +52,7 @@ class Formula:
 
 def _validate(formula: str) -> None:
     max_parts: Final[int] = 3
-    parts = _split_paranthesis_preserving(string=formula, separator="|")
+    parts = _split_parenthesis_preserving(string=formula, separator="|")
 
     # Check: at most 3 parts
     if len(parts) > max_parts:
@@ -102,7 +103,7 @@ def _preprocess(formula: str) -> str:
     Y + Y2 ~ X1 + X2 will be converted to sw(Y, Y2) ~ X1 + X2.
     """
     dependents, rhs = re.split(r"\s*~\s*", formula, maxsplit=1)
-    dependents = _split_paranthesis_preserving(dependents.strip(), separator="+")
+    dependents = _split_parenthesis_preserving(dependents.strip(), separator="+")
     if len(dependents) > 1:
         # Multiple dependent variables
         formula = f"sw({', '.join(dependents)}) ~ {rhs}"
@@ -115,22 +116,35 @@ def _expand_first_multiple_estimation(formula: str) -> list[str] | None:
     if not match:
         return None
     kind = _MultipleEstimationType[match.group(1)]
-    paranthesis_open, paranthesis_closed = _get_position_of_first_parenthesis_pair(
+    parenthesis_open, parenthesis_closed = _get_position_of_first_parenthesis_pair(
         string=formula[match.start() :]
     )
-    paranthesis_open += match.start()
-    paranthesis_closed += match.start()
-    arguments = _split_paranthesis_preserving(
-        string=formula[paranthesis_open:paranthesis_closed],
+    parenthesis_open += match.start()
+    parenthesis_closed += match.start()
+    arguments = _split_parenthesis_preserving(
+        string=formula[parenthesis_open:parenthesis_closed],
         separator=",",
     )
-    if kind.name.startswith("csw"):
+    if kind is _MultipleEstimationType.mvsw:
+        # Multiverse stepwise: all combinations of arguments
+        arguments = [
+            " + ".join(combination)
+            for combination in itertools.chain.from_iterable(
+                itertools.combinations(arguments, r=length)
+                for length in range(1, len(arguments) + 1)
+            )
+        ]
+    elif kind is _MultipleEstimationType.csw or kind is _MultipleEstimationType.csw0:
         # Cumulative stepwise
         arguments = [" + ".join(arguments[: i + 1]) for i, _ in enumerate(arguments)]
-    if kind.name.endswith("0"):
+    if (
+        kind is _MultipleEstimationType.sw0
+        or kind is _MultipleEstimationType.csw0
+        or kind is _MultipleEstimationType.mvsw  # Following fixest there's no mvsw0
+    ):
         # Add zero step
         arguments = ["1", *arguments]
-    multiple_estimation_call = formula[match.start() : paranthesis_closed + 1]
+    multiple_estimation_call = formula[match.start() : parenthesis_closed + 1]
     return [
         formula.replace(multiple_estimation_call, argument) for argument in arguments
     ]
