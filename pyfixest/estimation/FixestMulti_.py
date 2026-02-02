@@ -301,9 +301,9 @@ class FixestMulti:
             for _, fval in enumerate(_fixef_keys):
                 fixef_key_models = FixestFormulaDict.get(fval)
 
-                # dictionary to cache demeaned data with index: na_index_str,
+                # dictionary to cache demeaned data keyed by na_index,
                 # only relevant for `.feols()`
-                lookup_demeaned_data: dict[str, pd.DataFrame] = {}
+                lookup_demeaned_data: dict[frozenset[int], pd.DataFrame] = {}
 
                 for FixestFormula in fixef_key_models:  # type: ignore
                     # loop over both dictfe and dictfe_iv (if the latter is not None)

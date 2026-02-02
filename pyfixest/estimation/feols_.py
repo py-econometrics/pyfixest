@@ -253,7 +253,7 @@ class Feols:
         collin_tol: float,
         fixef_tol: float,
         fixef_maxiter: int,
-        lookup_demeaned_data: dict[str, pd.DataFrame],
+        lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
         solver: SolverOptions = "np.linalg.solve",
         demeaner_backend: DemeanerBackendOptions = "numba",
         store_data: bool = True,
@@ -425,8 +425,7 @@ class Feols:
         self._endogvar = model_matrix.endogenous
         self._Z = model_matrix.instruments
         self._weights_df = model_matrix.weights
-        # self._na_index = model_matrix.get("na_index")
-        self._na_index_str = model_matrix.na_index_str
+        self._na_index = model_matrix.na_index
         # TODO: set dynamically based on naming set in pyfixest.estimation.formula.factor_interaction._encode_i
         is_icovar = (
             self._X.columns.str.contains(r"^.+::.+$") if not self._X.empty else None
@@ -505,7 +504,7 @@ class Feols:
                 self._fe,
                 self._weights.flatten(),
                 self._lookup_demeaned_data,
-                self._na_index_str,
+                self._na_index,
                 self._fixef_tol,
                 self._fixef_maxiter,
                 self._demean_func,

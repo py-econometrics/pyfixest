@@ -54,8 +54,8 @@ class ModelMatrix:
         Observation weights for weighted estimation.
     model_spec : formulaic.ModelSpec
         The underlying formulaic model specification.
-    na_index_str : str
-        Comma-separated string of row indices that were dropped.
+    na_index : frozenset[int]
+        Indices of rows that were dropped.
     """
 
     @property
@@ -165,6 +165,11 @@ class ModelMatrix:
         """
         return self._model_spec
 
+    @property
+    def na_index(self) -> frozenset[int]:
+        """Integer positions of rows dropped in model matrix creation."""
+        return self._na_index
+
     def __init__(
         self,
         model_matrix: formulaic.ModelMatrix,
@@ -257,7 +262,7 @@ class ModelMatrix:
                 warnings.warn(
                     f"{is_singleton.sum()} singleton fixed effect(s) dropped from the model."
                 )
-        self.na_index_str = ",".join(str(i) for i in dropped_rows)
+        self._na_index = frozenset(dropped_rows)
 
 
 def create_model_matrix(
