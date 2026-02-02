@@ -314,12 +314,12 @@ def _did2s_vcov(
     # Create Formula objects for the new model_matrix system
     # First stage: convert fixed effects to dummy variables (C() syntax)
     FML1 = Formula(
-        second_stage=f"{yname} ~ {first_stage_fml.replace('~', '').strip()}",
+        second_stage=f"{yname} ~ {first_stage_fml.replace('~', '').strip()} - 1",
     )
 
     # Second stage: use the formula as-is (new system handles i() syntax natively)
     FML2 = Formula(
-        second_stage=f"{yname} ~ {second_stage.replace('~', '').strip()}",
+        second_stage=f"{yname} ~ {second_stage.replace('~', '').strip()} - 1",
     )
 
     mm_first_stage = model_matrix.create_model_matrix(
@@ -328,6 +328,7 @@ def _did2s_vcov(
         weights=None,
         drop_singletons=False,
         ensure_full_rank=True,
+        drop_intercept=True,
     )
     X1 = mm_first_stage.independent
 
@@ -337,6 +338,7 @@ def _did2s_vcov(
         weights=None,
         drop_singletons=False,
         ensure_full_rank=True,
+        drop_intercept=True,
     )
     X2 = mm_second_stage.independent
 
@@ -363,10 +365,7 @@ def _did2s_vcov(
     X10 = X10.tocsr()
     X2 = X2.tocsr()  # type: ignore
 
-    for (
-        _,
-        g,
-    ) in enumerate(clustid):
+    for _, g in enumerate(clustid):
         idx_g: np.ndarray = cluster_col.values == g
         X10g = X10[idx_g, :]
         X2g = X2[idx_g, :]
