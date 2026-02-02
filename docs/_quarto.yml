@@ -37,36 +37,36 @@ website:
         file: pyfixest-sprint.md
       - text: Learn more
         menu:
-        - text: "Regression Tables and Summary Statistics"
-          file: table-layout.qmd
-        - text: "Hypothesis Testing and Marginal Effects"
-          file: marginaleffects.qmd
-        - text: "Difference-in-Differences Estimation"
-          file: difference-in-differences.qmd
-        - file: multiple_testing.ipynb
-          text: "Multiple Testing Corrections"
-        - file: regression_decomposition.ipynb
-          text: "Regression Decomposition"
-        - file: ssc.qmd
-          text: "On Small Sample Corrections"
-        - file: quantile-regression.qmd
-          text: "Quantile Regression"
-        #- text: "Compare fixest & PyFixest"
-        #  file: compare-fixest-pyfixest.qmd
-        - text: "Compare Stata & PyFixest"
-          file: stata-2-pyfixest.qmd
-        - text: "PyFixest on the GPU via CuPy"
-          file: pyfixest-gpu-cupy.ipynb
-        - text: "PyFixest on the GPU via JAX"
-          file: pyfixest_gpu.ipynb
-        - text: "Other Resources around PyFixest"
-          file: resources.qmd
-        - text: "Replicating 'The Effect' with PyFixest"
-          file: replicating-the-effect.qmd
-        - text: "Replicating 'The Mixtape' with PyFixest"
-          file: mixtape.ipynb
-        - text: "Replicating 'Causal Inference for the Brave and True' with PyFixest"
-          file: brave_true.ipynb
+          - text: "Regression Tables and Summary Statistics"
+            file: table-layout.qmd
+          - text: "Hypothesis Testing and Marginal Effects"
+            file: marginaleffects.qmd
+          - text: "Difference-in-Differences Estimation"
+            file: difference-in-differences.qmd
+          - file: multiple_testing.ipynb
+            text: "Multiple Testing Corrections"
+          - file: regression_decomposition.ipynb
+            text: "Regression Decomposition"
+          - file: ssc.qmd
+            text: "On Small Sample Corrections"
+          - file: quantile-regression.qmd
+            text: "Quantile Regression"
+          #- text: "Compare fixest & PyFixest"
+          #  file: compare-fixest-pyfixest.qmd
+          - text: "Compare Stata & PyFixest"
+            file: stata-2-pyfixest.qmd
+          - text: "PyFixest on the GPU via CuPy"
+            file: pyfixest-gpu-cupy.ipynb
+          - text: "PyFixest on the GPU via JAX"
+            file: pyfixest_gpu.ipynb
+          - text: "Other Resources around PyFixest"
+            file: resources.qmd
+          - text: "Replicating 'The Effect' with PyFixest"
+            file: replicating-the-effect.qmd
+          - text: "Replicating 'The Mixtape' with PyFixest"
+            file: mixtape.ipynb
+          - text: "Replicating 'Causal Inference for the Brave and True' with PyFixest"
+            file: brave_true.ipynb
 
 quartodoc:
   package: pyfixest
@@ -121,7 +121,6 @@ quartodoc:
         Internal APIs for formula parsing and model matrix construction
       contents:
         - estimation.formula.parse.Formula
-        - estimation.formula.parse.parse
         - estimation.formula.model_matrix.ModelMatrix
         - estimation.formula.factor_interaction.factor_interaction
     - title: Misc / Utilities
