@@ -179,6 +179,19 @@ def check_relative_diff(x1, x2, tol, msg=None):
     assert np.all(np.abs(x1 - x2) / np.abs(x1) < tol), msg
 
 
+def _get_vcov_diag(py_model, r_model, coefname, is_iv=False):
+    """Get the variance of a named coefficient from both Python and R models."""
+    py_idx = py_model._coefnames.index(coefname)
+    py_vcov = py_model._vcov[py_idx, py_idx]
+    # Get R coefficient names (pandas2ri strips names from auto-converted arrays)
+    ro.globalenv[".tmp.model"] = r_model
+    r_names = list(ro.r("names(coef(.tmp.model))"))
+    r_name = f"fit_{coefname}" if is_iv else coefname
+    r_idx = r_names.index(r_name)
+    r_vcov = np.array(stats.vcov(r_model))[r_idx, r_idx]
+    return py_vcov, r_vcov
+
+
 test_counter_feols = 0
 test_counter_fepois = 0
 test_counter_feiv = 0
@@ -282,7 +295,7 @@ def test_single_fit_feols(
     py_pval = mod.pvalue().xs("X1")
     py_tstat = mod.tstat().xs("X1")
     py_confint = mod.confint().xs("X1").values
-    py_vcov = mod._vcov[0, 0]
+    py_vcov, r_vcov = _get_vcov_diag(mod, r_fixest, "X1")
 
     py_nobs = mod._N
     py_resid = mod.resid()
@@ -296,7 +309,6 @@ def test_single_fit_feols(
     r_pval = df_X1["p.value"]
     r_tstat = df_X1["statistic"]
     r_confint = df_X1[["conf.low", "conf.high"]].values.astype(np.float64)
-    r_vcov = stats.vcov(r_fixest)[0, 0]
 
     r_nobs = int(stats.nobs(r_fixest)[0])
     r_df_k = int(ro.r('attr(r_fixest$cov.scaled, "df.K")')[0])
@@ -568,7 +580,6 @@ def test_single_fit_fepois(
     py_tstat = mod.tstat().xs("X1")
     py_confint = mod.confint().xs("X1").values
     py_nobs = mod._N
-    py_vcov = mod._vcov[0, 0]
     py_deviance = mod.deviance
     py_resid = mod.resid()
     py_irls_weights = mod._irls_weights.flatten()
@@ -582,6 +593,7 @@ def test_single_fit_fepois(
     df_X1 = _get_r_df(r_fixest)
     ro.globalenv["r_fixest"] = r_fixest
 
+    py_vcov, r_vcov = _get_vcov_diag(mod, r_fixest, "X1")
     r_coef = df_X1["estimate"]
     r_se = df_X1["std.error"]
     r_pval = df_X1["p.value"]
@@ -589,7 +601,6 @@ def test_single_fit_fepois(
     r_confint = df_X1[["conf.low", "conf.high"]].values.astype(np.float64)
     r_nobs = int(stats.nobs(r_fixest)[0])
     r_resid = stats.residuals(r_fixest)
-    r_vcov = stats.vcov(r_fixest)[0, 0]
     r_deviance = r_fixest.rx2("deviance")
     r_irls_weights = r_fixest.rx2("irls_weights")
     r_df_k = int(ro.r('attr(r_fixest$cov.scaled, "df.K")')[0])
@@ -718,7 +729,7 @@ def test_single_fit_iv(
     py_pval = mod.pvalue().xs("X1")
     py_tstat = mod.tstat().xs("X1")
     py_confint = mod.confint().xs("X1").values
-    py_vcov = mod._vcov[0, 0]
+    py_vcov, r_vcov = _get_vcov_diag(mod, r_fixest, "X1", is_iv=True)
 
     py_nobs = mod._N
     py_resid = mod.resid()
@@ -730,7 +741,6 @@ def test_single_fit_iv(
     r_pval = df_X1["p.value"]
     r_tstat = df_X1["statistic"]
     r_confint = df_X1[["conf.low", "conf.high"]].values.astype(np.float64)
-    r_vcov = stats.vcov(r_fixest)[0, 0]
 
     r_nobs = int(stats.nobs(r_fixest)[0])
     r_resid = stats.resid(r_fixest)
@@ -904,8 +914,7 @@ def test_glm_vs_fixest(N, seed, dropna, fml, inference, family):
     )
 
     # Compare variance-covariance matrices
-    py_vcov = fit_py._vcov[0, 0]
-    r_vcov = stats.vcov(fit_r)[0, 0]
+    py_vcov, r_vcov = _get_vcov_diag(fit_py, fit_r, "X1")
     check_absolute_diff(
         py_vcov,
         r_vcov,
