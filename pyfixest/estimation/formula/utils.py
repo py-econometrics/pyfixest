@@ -69,8 +69,12 @@ def _get_position_of_first_parenthesis_pair(string: str) -> tuple[int, int]:
     return position_open, position
 
 
-def _interact_fixed_effects(fixed_effects: str, data: pd.DataFrame) -> pd.DataFrame:
+def _encode_fixed_effects(
+    fixed_effects: str, data: pd.DataFrame, deduplicate: bool = True
+) -> str:
     fes = re.split(r"\s*\+\s*", fixed_effects)
+    if deduplicate:
+        fes = set(fes)
     for fixed_effect in fes:
         if "^" not in fixed_effect:
             continue
@@ -85,7 +89,7 @@ def _interact_fixed_effects(fixed_effects: str, data: pd.DataFrame) -> pd.DataFr
                 na_rep=None,  # a row containing a missing value in any of the columns (before concatenation) will have a missing value in the result
             )
         )
-    return data.loc[:, [fe.replace("^", "_") for fe in fes]]
+    return " + ".join(f"__fixed_effect__({fe.replace('^', '_')})" for fe in fes)
 
 
 def _factorize(series: pd.Series) -> np.ndarray:

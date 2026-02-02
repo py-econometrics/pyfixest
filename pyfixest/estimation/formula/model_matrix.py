@@ -13,9 +13,9 @@ from pyfixest.estimation.formula import FORMULAIC_FEATURE_FLAG
 from pyfixest.estimation.formula.factor_interaction import factor_interaction
 from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.formula.utils import (
+    _encode_fixed_effects,
     _factorize,
     _get_weights,
-    _interact_fixed_effects,
     log,
 )
 from pyfixest.utils.utils import capture_context
@@ -347,15 +347,10 @@ def _get_formulaic_formula(
     # Collate kwargs to be passed to formulaic.Formula
     formula_kwargs: dict[str, str] = {_ModelMatrixKey.main: formula.second_stage}
     if formula.fixed_effects is not None:
-        fixed_effects = _interact_fixed_effects(
+        fixed_effects_formula = _encode_fixed_effects(
             fixed_effects=formula.fixed_effects, data=data
         )
-        data[fixed_effects.columns] = fixed_effects
-        formula_kwargs.update(
-            {
-                _ModelMatrixKey.fixed_effects: f"{'+'.join(f'__fixed_effect__({fe})' for fe in fixed_effects.columns)}-1"
-            }
-        )
+        formula_kwargs.update({_ModelMatrixKey.fixed_effects: fixed_effects_formula})
     if formula.first_stage is not None:
         formula_kwargs.update(
             {_ModelMatrixKey.instrumental_variable: formula.first_stage}
