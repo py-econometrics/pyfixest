@@ -12,7 +12,7 @@ from pyfixest.estimation.feols_ import Feols, _check_vcov_input, _deparse_vcov_i
 from pyfixest.estimation.feols_compressed_ import FeolsCompressed
 from pyfixest.estimation.fepois_ import Fepois
 from pyfixest.estimation.feprobit_ import Feprobit
-from pyfixest.estimation.formula.parse import parse
+from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.literals import (
     DemeanerBackendOptions,
     QuantregMethodOptions,
@@ -224,15 +224,19 @@ class FixestMulti:
         self._quantile_tol = quantile_tol
         self._quantile_maxiter = quantile_maxiter
 
-        formulas = parse(fml, intercept=not drop_intercept)
+        formula_dictionary = Formula.parse_to_dict(fml)
         self._is_multiple_estimation = (
-            formulas.is_multiple
+            sum(len(v) for v in formula_dictionary.values()) > 1
             or self._run_split
             or (isinstance(quantile, list) and len(quantile) > 1)
         )
-        self.FixestFormulaDict = formulas.specifications
+        self.FixestFormulaDict = formula_dictionary
         self._method = estimation
-        self._is_iv = formulas.is_iv
+        self._is_iv = any(
+            formula.first_stage is not None
+            for _, formulas in formula_dictionary.items()
+            for formula in formulas
+        )
         # self._fml_dict = fxst_fml.condensed_fml_dict
         # self._fml_dict_iv = fxst_fml.condensed_fml_dict_iv
         self._ssc_dict = ssc if ssc is not None else {}

@@ -266,9 +266,9 @@ class Feols:
         self._sample_split_value = sample_split_value
         self._sample_split_var = sample_split_var
         self._model_name = (
-            FixestFormula.fml
+            FixestFormula.formula
             if self._sample_split_var is None
-            else f"{FixestFormula.fml} (Sample: {self._sample_split_var} = {self._sample_split_value})"
+            else f"{FixestFormula.formula} (Sample: {self._sample_split_var} = {self._sample_split_value})"
         )
         self._model_name_plot = self._model_name
         self._method = "feols"
@@ -312,7 +312,7 @@ class Feols:
 
         # attributes that have to be enriched outside of the class -
         # not really optimal code change later
-        self._fml = FixestFormula.fml
+        self._fml = FixestFormula.formula
         self._has_fixef = False
         self._fixef = FixestFormula.fixed_effects
         # self._coefnames = None
@@ -413,6 +413,7 @@ class Feols:
             formula=self.FixestFormula,
             data=self._data,
             drop_singletons=self._drop_singletons,
+            drop_intercept=self._drop_intercept,
             weights=self._weights_name,
             context=self._context,
         )
@@ -1102,7 +1103,7 @@ class Feols:
         None
         """
         # some bookkeeping
-        self._fml = self.FixestFormula.fml
+        self._fml = self.FixestFormula.formula
         self._depvar = depvar
         self._Y_untransformed = Y
         self._data = pd.DataFrame()

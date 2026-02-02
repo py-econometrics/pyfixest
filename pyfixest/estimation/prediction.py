@@ -1,3 +1,4 @@
+import re
 import warnings
 from collections.abc import Mapping
 from typing import Any, Optional, Union
@@ -112,7 +113,7 @@ def _get_fixed_effects_prediction_component(
         if model._sumFE is None:
             model.fixef(atol, btol)
 
-        fvals = model._fixef.split("+")
+        fvals = re.split(r"\s*\+\s*", model._fixef)
 
         # warn if newdata types do not match
         mismatched_fixef_types = [
