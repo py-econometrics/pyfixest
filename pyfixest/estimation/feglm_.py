@@ -16,9 +16,9 @@ from pyfixest.estimation.feols_ import (
     _drop_multicollinear_variables,
 )
 from pyfixest.estimation.fepois_ import _check_for_separation
+from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.literals import DemeanerBackendOptions
 from pyfixest.estimation.solvers import solve_ols
-from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.utils.dev_utils import DataFrameType
 
 

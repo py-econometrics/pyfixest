@@ -22,7 +22,7 @@ More concretely, we have borrowed the following API conventions and ideas direct
 | **On the fly variance covariance adjustments** | As in `fixest`, you can adjust the vcov post estimation by calling a `vcov()` method on the results object (`Feols` in pyfixest and `fixest` in `fixest`) |
 | **Predict method for fixed effects** | The `predict()`  and `fixef()` methods in PyFixest mirrors fixest's functionality for obtaining fitted values, fixed effects, and linear predictions |
 
-You can learn more about fixest [on github](https://github.com/lrberge/fixest), via its [documentation](https://lrberge.github.io/fixest/), or by reading the [associated paper](https://arxiv.org/abs/2601.21749). 
+You can learn more about fixest [on github](https://github.com/lrberge/fixest), via its [documentation](https://lrberge.github.io/fixest/), or by reading the [associated paper](https://arxiv.org/abs/2601.21749).
 
 PyFixest is tested against fixest via **rpy2** to ensure numerical equivalence
 (usually `rtol = 1e-08`, `atol = 1e-08`) for coefficients,
