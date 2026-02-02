@@ -85,7 +85,9 @@ def _encode_fixed_effects(fixed_effects: str, data: pd.DataFrame) -> str:
                 na_rep=None,  # a row containing a missing value in any of the columns (before concatenation) will have a missing value in the result
             )
         )
-    return " + ".join(f"__fixed_effect__({fe.replace('^', '_')})" for fe in fes)
+    encoded_fixed_effects = (f"__fixed_effect__({fe.replace('^', '_')})" for fe in fes)
+    fixed_effects_formula = f"{' + '.join(encoded_fixed_effects)} - 1"
+    return fixed_effects_formula
 
 
 def _factorize(series: pd.Series) -> np.ndarray:
