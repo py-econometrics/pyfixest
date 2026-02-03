@@ -18,10 +18,10 @@ class Feiv(Feols):
     Non user-facing class to estimate an IV model using a 2SLS estimator.
 
     Inherits from the Feols class. Users should not directly instantiate this class,
-    but rather use the [feols()](/reference/estimation.feols.qmd) function. Note that
+    but rather use the [feols()](estimation.estimation.feols.qmd) function. Note that
     no demeaning is performed in this class: demeaning is performed in the
-    [FixestMulti](/reference/estimation.fixest_multi.qmd) class (to allow for caching
-    of demeaned variables for multiple estimation).
+    FixestMulti class (to allow for caching of demeaned variables for multiple
+    estimation).
 
     Parameters
     ----------
@@ -114,7 +114,7 @@ class Feiv(Feols):
     _f_stat_1st_stage : scalar
         F-statistics of First Stage regression for evaluation of IV weakness.
         The computed F-statistics test the following null hypothesis :
-        # H0 : β_{z_1} = 0 & ... & β_{z_{p_iv}} = 0 where z_1, ..., z_{p_iv}
+        # H0 : beta_{z_1} = 0 & ... & beta_{z_{p_iv}} = 0 where z_1, ..., z_{p_iv}
         # are the instrument variables
         # H1 : H0 does not hold
         Note that this F-statistics is adjusted to heteroskedasticity /
