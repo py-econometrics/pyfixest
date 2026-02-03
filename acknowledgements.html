@@ -211,9 +211,11 @@ ul.task-list li input[type="checkbox"] {
 <section id="software" class="level1">
 <h1>Software</h1>
 <blockquote class="blockquote">
-<p>Unless explicitly stated otherwise, all PyFixest code is written independently from scratch. The packages listed below have influenced PyFixest’s API design or algorithmic choices, or are used for testing PyFixest as reference implementations, but no source code has been copied except where explicitly stated (with license and permission details provided inline). ## fixest (R)</p>
+<p>Unless explicitly stated otherwise, all PyFixest code is written independently from scratch. The packages listed below have influenced PyFixest’s API design or algorithmic choices, or are used for testing PyFixest as reference implementations, but no source code has been copied except where explicitly stated (with license and permission details provided inline).</p>
 </blockquote>
-<p>If open source software is made by “standing on the shoulders of giants”, in case of <code>PyFixest</code>, there is mostly one very big giant - <a href="https://sites.google.com/site/laurentrberge/">Laurent Bergé’s</a> formidable <a href="https://github.com/lrberge/fixest/">fixest</a> R package. <code>fixest</code> is so good we decided to stick to its API and conventions as closely as Python allows when starting to work on a fixed effects regression package in Python. Without <code>fixest</code>, PyFixest likely wouldn’t exist - or at the very least, it would look very different. Most importantly, <code>fixest</code> has shaped our understanding of what a user-friendly regression package should look like and what functionality it should offer.</p>
+<section id="fixest-r" class="level2">
+<h2 class="anchored" data-anchor-id="fixest-r">fixest (R)</h2>
+<p>If open source software is made by “standing on the shoulders of giants”, in case of <code>PyFixest</code>, there is mostly one very big giant - <a href="https://sites.google.com/site/laurentrberge/">Laurent Bergé’s</a> formidable <a href="https://github.com/lrberge/fixest/">fixest</a> R package. <code>fixest</code> is so good we decided to stick to its API and conventions as closely as Python allows when starting to work on a fixed effects regression package in Python. Without <code>fixest</code>, PyFixest likely wouldn’t exist - or at the very least, it would look very different. Most importantly, <code>fixest</code> has shaped our understanding of how a user-friendly regression package should look like and what functionality it should offer.</p>
 <p>More concretely, we have borrowed the following API conventions and ideas directly from fixest:</p>
 <table class="caption-top table">
 <thead>
@@ -260,6 +262,7 @@ ul.task-list li input[type="checkbox"] {
 <p>You can learn more about fixest <a href="https://github.com/lrberge/fixest">on github</a>, via its <a href="https://lrberge.github.io/fixest/">documentation</a>, or by reading the <a href="https://arxiv.org/abs/2601.21749">associated paper</a>.</p>
 <p>PyFixest is tested against fixest via <strong>rpy2</strong> to ensure numerical equivalence (usually <code>rtol = 1e-08</code>, <code>atol = 1e-08</code>) for coefficients, standard errors, t-statistics, p-values, confidence intervals, etc for OLS, IV, Poisson, and GLM models.</p>
 <hr>
+</section>
 <section id="by-functionality" class="level2">
 <h2 class="anchored" data-anchor-id="by-functionality">By functionality</h2>
 <section id="poisson-regression" class="level3">
@@ -338,7 +341,7 @@ ul.task-list li input[type="checkbox"] {
 <tr class="odd">
 <td><a href="https://github.com/kylebutts/did2s"><strong>did2s</strong></a></td>
 <td>R</td>
-<td>PyFixest’s DID2S estimator’s API is strongly inspired by Kyle Butts’ R package (MIT license) and we have relied on Kyle’s writeup of the method for our own implementation. Tests compare coefficients and standard errors against the R implementation</td>
+<td>PyFixest’s DID2S estimator’s API is strongly inspired by Kyle Butts’ R package (MIT license) and we have relied on Kyle’s writeup of the method for our own implementation. Tests compare coefficients and standard errors against the R implementation. Additionally, PyFixest’s <code>event_study()</code> function is inspired by the <a href="https://kylebutts.github.io/did2s/articles/event_study.html"><code>event_study()</code> function</a> in <code>did2s</code>.</td>
 </tr>
 <tr class="even">
 <td><a href="https://github.com/alexCardazzi/lpdid"><strong>lpdid</strong></a></td>
