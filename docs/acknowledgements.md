@@ -56,7 +56,7 @@ standard errors, t-statistics, p-values, confidence intervals, etc for OLS, IV, 
 
 | Package | Language | Role |
 |---|---|---|
-| [**did2s**](https://github.com/kylebutts/did2s) | R | PyFixest's DID2S estimator's API is strongly inspired by Kyle Butts' R package (MIT license) and we have relied on Kyle's writeup of the method for our own implementation. Tests compare coefficients and standard errors against the R implementation. Additionally, PyFixest's `event_study()` function is inspired by the [`event_study()` function](https://kylebutts.github.io/did2s/articles/event_study.html) in `did2s`.
+| [**did2s**](https://github.com/kylebutts/did2s) | R | PyFixest's DID2S estimator's API is strongly inspired by Kyle Butts' R package (MIT license) and we have relied on Kyle's writeup of the method for our own implementation. Tests compare coefficients and standard errors against the R implementation. Additionally, PyFixest's `event_study()` function is inspired by the [`event_study()` function](https://kylebutts.github.io/did2s/articles/event_study.html) in `did2s`.  |
 | [**lpdid**](https://github.com/alexCardazzi/lpdid) | R | PyFixest's local-projections DID estimator is highly influenced by Alex Cardazzi's R code (published under MIT) for the lpdid package. We also test against Alex' package. |
 | [**lpdid**](https://github.com/danielegirardi/lpdid) | Stata | We also test our implementation against Daniel Busch and Daniele Girardi's Stata implementation of the local-projections estimator. |
 
