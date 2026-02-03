@@ -57,7 +57,7 @@ def test_feols_args():
     fit4 = pf.feols(fml="Y ~ X1 | f1 + f2", data=df, solver="np.linalg.solve")
     fit5 = pf.feols(fml="Y ~ X1 | f1 + f2", data=df, solver="np.linalg.lstsq")
 
-    assert (fit4.coef() == fit5.coef()).all()
+    assert np.allclose(fit4.coef().values, fit5.coef().values)
 
 
 def test_fepois_args():

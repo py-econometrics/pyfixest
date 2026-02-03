@@ -7,7 +7,7 @@ description = "Fast high dimensional fixed effect estimation following syntax of
 channels = ["conda-forge"]
 name = "pyfixest"
 platforms = ["linux-64", "win-64", "osx-arm64", "osx-64"]
-version = "0.30.2"
+version = "0.40.0"
 
 [tasks]
 
@@ -20,10 +20,12 @@ numba=">=0.58.0"
 seaborn=">=0.13.2"
 tabulate=">=0.9.0"
 tqdm=">=4.0.0"
-great_tables=">=0.10.0"
 numpy=">=1.25.2"
 narwhals=">=1.13.3"
 joblib=">=1.4.2,<2"
+
+[pypi-dependencies]
+maketables = ">=0.1.0"
 
 [feature.dev]
 platforms = ["linux-64", "osx-arm64", "osx-64"]
@@ -63,9 +65,10 @@ jaxlib = ">=0.4.38, <0.8"
 "tests" = "pytest -rs -n 9 --cov-report=term tests"
 "tests-against-r-core" = 'pytest -rs tests -n 9 -m "against_r_core" --cov=pyfixest --cov-report=xml'
 "tests-against-r-extended"  = 'pytest -rs tests -n 9 -m "against_r_extended" --cov=pyfixest --cov-report=xml'
-"tests-regular" = 'pytest tests -n 9 -m "not (extended or against_r_core or against_r_extended or plots)" --cov=pyfixest --cov-report=xml'
+"tests-regular" = 'pytest tests -n 9 -m "not (extended or against_r_core or against_r_extended or plots or hac)" --cov=pyfixest --cov-report=xml'
 "tests-extended" = 'pytest tests -n 9 -m "extended" --cov=pyfixest --cov-report=xml'
 "tests-fixest" = "pytest -rs tests/test_vs_fixest.py -n 9 --cov=pyfixest --cov-report=xml"
+"tests-hac" = { cmd = "pytest tests/test_hac_vs_fixest.py -v -n 9", env = { OMP_NUM_THREADS = "1", OPENBLAS_NUM_THREADS = "1", MKL_NUM_THREADS = "1", VECLIB_MAXIMUM_THREADS = "1", NUMEXPR_NUM_THREADS = "1" } }
 "debug" = "python pyfixest/debug.py"
 "update-test-data" = "Rscript tests/r_test_comparisons.R"
 "install-r-extended" = "Rscript r_test_requirements.R"

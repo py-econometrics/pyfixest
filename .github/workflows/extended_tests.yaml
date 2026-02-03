@@ -49,7 +49,7 @@ jobs:
 
       - name: Compile Rust extension (no wheel)
         run: |
-          pixi r maturin-develop
+          pixi r -e dev maturin-develop
 
       - name: Run long tests with coverage
         run: pixi run tests-extended

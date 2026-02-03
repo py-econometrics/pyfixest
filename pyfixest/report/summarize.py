@@ -1,24 +1,39 @@
-import re
 import warnings
-from collections import Counter
-from collections.abc import ValuesView
 from typing import Optional, Union
 
+import maketables
 import numpy as np
 import pandas as pd
-from tabulate import tabulate  # type: ignore[import-untyped]
 
 from pyfixest.estimation.feiv_ import Feiv
 from pyfixest.estimation.feols_ import Feols
 from pyfixest.estimation.fepois_ import Fepois
 from pyfixest.estimation.FixestMulti_ import FixestMulti
-from pyfixest.report.make_table import make_table
-from pyfixest.report.utils import _relabel_expvar
-from pyfixest.utils.dev_utils import _select_order_coefs
+from pyfixest.report.utils import _post_processing_input_checks
 
 ModelInputType = Union[
     FixestMulti, Feols, Fepois, Feiv, list[Union[Feols, Fepois, Feiv]]
 ]
+
+_METHOD_DISPLAY_NAMES: dict[str, str] = {
+    "fepois": "Poisson",
+    "feglm-logit": "Logit",
+    "feglm-probit": "Probit",
+    "feglm-gaussian": "Gaussian",
+    "twfe": "TWFE",
+    "did2s": "DID2S",
+}
+
+
+def _get_estimation_method_name(fxst: Feols) -> str:
+    """Get the display name for an estimation method."""
+    if fxst._method == "feols":
+        return "IV" if fxst._is_iv else "OLS"
+    if "quantreg" in fxst._method:
+        return f"quantreg: q = {fxst._quantile}"  # type: ignore
+    if fxst._method in _METHOD_DISPLAY_NAMES:
+        return _METHOD_DISPLAY_NAMES[fxst._method]
+    raise ValueError(f"Unknown estimation method: {fxst._method}")
 
 
 def etable(
@@ -34,8 +49,9 @@ def etable(
     labels: Optional[dict] = None,
     cat_template: Optional[str] = None,
     show_fe: Optional[bool] = True,
-    show_se_type: Optional[bool] = True,
     felabels: Optional[dict] = None,
+    fe_present: str = "x",
+    fe_absent: str = "-",
     notes: str = "",
     model_heads: Optional[list] = None,
     head_order: Optional[str] = "dh",
@@ -44,7 +60,10 @@ def etable(
 ) -> Union[pd.DataFrame, str, None]:
     r"""
     Generate a table summarizing the results of multiple regression models.
-    It supports various output formats including html (via great tables),  markdown, and LaTeX.
+
+    This function uses the maketables package internally to create publication-ready
+    regression tables. It supports various output formats including HTML (via Great Tables),
+    markdown, and LaTeX.
 
     Parameters
     ----------
@@ -102,13 +121,17 @@ def etable(
         are also possible.
     show_fe: bool, optional
         Whether to show the rows with fixed effects markers. Default is True.
-    show_se_type: bool, optional
-        Whether to show the rows with standard error type. Default is True.
     felabels: dict, optional
         A dictionary to relabel the fixed effects. Only needed if you want to relabel
         the FE lines with a different label than the one specied for the respective
         variable in the labels dictionary.
         The command is applied after the `keep` and `drop` commands.
+    fe_present: str, optional
+        Symbol to use when a fixed effect is present in a model. Default is "x".
+        Common alternatives include "Y", "YES", "✓", "✅", or any custom string.
+    fe_absent: str, optional
+        Symbol to use when a fixed effect is absent from a model. Default is "-".
+        Common alternatives include "N", "NO", "✗", "", or any custom string.
     digits: int
         The number of digits to round to.
     thousands_sep: bool, optional
@@ -154,8 +177,10 @@ def etable(
     pf.etable([fit1, fit2])
     ```
     """
+    # Apply pyfixest default for signif_code (different from maketables default)
     if signif_code is None:
         signif_code = [0.001, 0.01, 0.05]
+
     assert isinstance(signif_code, list) and len(signif_code) == 3, (
         "signif_code must be a list of length 3"
     )
@@ -168,29 +193,6 @@ def etable(
             "signif_code must be in increasing order"
         )
 
-    cat_template = "" if cat_template is None else cat_template
-
-    models = _post_processing_input_checks(models)
-
-    if labels is None:
-        labels = {}
-    if custom_stats is None:
-        custom_stats = dict()
-    if keep is None:
-        keep = []
-    if drop is None:
-        drop = []
-
-    if custom_stats:
-        assert isinstance(custom_stats, dict), "custom_stats must be a dict"
-        for key in custom_stats:
-            assert isinstance(custom_stats[key], list), (
-                "custom_stats values must be a list"
-            )
-            assert len(custom_stats[key]) == len(models), (
-                f"custom_stats {key} must have the same number as models"
-            )
-
     assert type in [
         "df",
         "tex",
@@ -199,12 +201,13 @@ def etable(
         "gt",
     ], "type must be either 'df', 'md', 'html', 'gt' or 'tex'"
 
+    models_list = _post_processing_input_checks(models)
+
     if model_heads is not None:
-        assert len(model_heads) == len(models), (
+        assert len(model_heads) == len(models_list), (
             "model_heads must have the same length as models"
         )
 
-    # Check if head_order is allowed string & remove h when no model_heads provided
     assert head_order in [
         "dh",
         "hd",
@@ -212,315 +215,57 @@ def etable(
         "h",
         "",
     ], "head_order must be one of 'd', 'h', 'dh', 'hd', ''"
-    if model_heads is None and "h" in head_order:
-        head_order = head_order.replace("h", "")
 
-    # Check if custom_model_stats is a dictionary and the provided lists have the same length as models
     if custom_model_stats is not None:
         assert isinstance(custom_model_stats, dict), "custom_model_stats must be a dict"
         for stat, values in custom_model_stats.items():
             assert isinstance(stat, str), "custom_model_stats keys must be strings"
             assert isinstance(values, list), "custom_model_stats values must lists"
-            assert len(values) == len(models), (
+            assert len(values) == len(models_list), (
                 "lists in custom_model_stats values must have the same length as models"
             )
 
-    dep_var_list = []
-    nobs_list = []
-    fixef_list: list[str] = []
-    n_coefs = []
-    se_type_list = []
-    r2_list = []
-    adj_r2_list = []
-    r2_within_list = []
-
-    # Define code for R2, interaction & line break depending on output type
-    if type in ["gt", "html"]:
-        interactionSymbol = " &#215; "
-        R2code = "R<sup>2</sup>"
-        adj_R2_code = "Adj. R<sup>2</sup>"
-        R2_within_code = "R<sup>2</sup> Within"
-        lbcode = "<br>"
-    elif type == "tex":
-        interactionSymbol = " $\\times$ "
-        R2code = "$R^2$"
-        adj_R2_code = "Adj. $R^2$"
-        R2_within_code = "$R^2$ Within"
-        lbcode = r"\\"
-    else:
-        interactionSymbol = " x "
-        R2code = "R2"
-        adj_R2_code = "Adj. R2"
-        R2_within_code = "R2 Within"
-        lbcode = "\n"
-
-    for model in models:
-        dep_var_list.append(model._depvar)
-        n_coefs.append(len(model._coefnames))
-
-        _nobs_kwargs = kwargs.copy()
-        _nobs_kwargs["integer"] = True
-        _nobs_kwargs["scientific_notation"] = False
-        nobs_list.append(_number_formatter(model._N, **_nobs_kwargs))
-
-        if not np.isnan(model._r2):
-            r2_list.append(_number_formatter(model._r2, **kwargs))
-        else:
-            r2_list.append("-")
-
-        if not np.isnan(model._adj_r2):
-            adj_r2_list.append(_number_formatter(model._adj_r2, **kwargs))
-        else:
-            adj_r2_list.append("-")
-
-        if not np.isnan(model._r2_within):
-            r2_within_list.append(_number_formatter(model._r2_within, **kwargs))
-        else:
-            r2_within_list.append("-")
-
-        if model._vcov_type == "CRV":
-            se_type_list.append("by: " + "+".join(model._clustervar))
-        else:
-            se_type_list.append(model._vcov_type)
-
-        if model._fixef is not None and model._fixef != "0":
-            fixef_list += model._fixef.split("+")
-
-    # find all fixef variables when the user does not want to hide the FE rows
-    if show_fe:
-        # drop "" from fixef_list
-        fixef_list = [x for x in fixef_list if x]
-        # keep only unique values
-        fixef_list = list(set(fixef_list))
-        n_fixef = len(fixef_list)
-    else:
-        fixef_list = []
-        n_fixef = 0
-
-    # First create a dataframe for the model stats such as R2, nobs, etc.
-    model_stats_df = pd.DataFrame()
-    if custom_model_stats is not None:
-        for stat, values in custom_model_stats.items():
-            model_stats_df[stat] = values
-    model_stats_df["Observations"] = nobs_list
-    if show_se_type:
-        model_stats_df["S.E. type"] = se_type_list
-    model_stats_df[R2code] = r2_list
-    n_model_stats = model_stats_df.shape[1]
-    if any(x != "-" for x in r2_within_list):
-        model_stats_df[R2_within_code] = r2_within_list
-    else:
-        model_stats_df[adj_R2_code] = adj_r2_list
-    # Transpose
-    model_stats_df = model_stats_df.T
-
-    # Create a dataframe for the Fixed Effects markers
-    fe_df = pd.DataFrame()
-    # when at least one model has a fixed effect & the user wants to show them
-    if fixef_list:
-        for fixef in fixef_list:
-            # check if not empty string
-            if fixef:
-                for i, model in enumerate(models):
-                    if (
-                        model._fixef is not None
-                        and fixef in model._fixef.split("+")
-                        and not model._use_mundlak
-                    ):
-                        fe_df.loc[i, fixef] = "x"
-                    else:
-                        fe_df.loc[i, fixef] = "-"
-        # Sort by model
-        fe_df.sort_index(inplace=True)
-        # Transpose
-        fe_df = fe_df.T
-    else:
-        show_fe = False
-
-    # Finally, collect & format estimated coefficients and standard errors etc.
-    coef_fmt_elements, coef_fmt_title = _parse_coef_fmt(coef_fmt, custom_stats)
-    etable_list = []
-    for i, model in enumerate(models):
-        model_tidy_df = model.tidy()
-        model_tidy_df.reset_index(
-            inplace=True
-        )  # If rounding here and p = 0.0499, it will be rounded to 0.05 and miss threshold.
-        model_tidy_df["stars"] = (
-            np.where(
-                model_tidy_df["Pr(>|t|)"] < signif_code[0],
-                "***",
-                np.where(
-                    model_tidy_df["Pr(>|t|)"] < signif_code[1],
-                    "**",
-                    np.where(model_tidy_df["Pr(>|t|)"] < signif_code[2], "*", ""),
-                ),
-            )
-            if signif_code
-            else ""
-        )
-        model_tidy_df[coef_fmt_title] = ""
-        for element in coef_fmt_elements:
-            if element == "b":
-                model_tidy_df[coef_fmt_title] += (
-                    model_tidy_df["Estimate"].apply(_number_formatter, **kwargs)
-                    + model_tidy_df["stars"]
-                )
-            elif element == "se":
-                model_tidy_df[coef_fmt_title] += model_tidy_df["Std. Error"].apply(
-                    _number_formatter, **kwargs
-                )
-            elif element == "t":
-                model_tidy_df[coef_fmt_title] += model_tidy_df["t value"].apply(
-                    _number_formatter, **kwargs
-                )
-            elif element == "p":
-                model_tidy_df[coef_fmt_title] += model_tidy_df["Pr(>|t|)"].apply(
-                    _number_formatter, **kwargs
-                )
-            elif element in custom_stats:
-                assert len(custom_stats[element][i]) == len(
-                    model_tidy_df["Estimate"]
-                ), (
-                    f"custom_stats {element} has unequal length to the number of coefficients in model_tidy_df {i}"
-                )
-                model_tidy_df[coef_fmt_title] += pd.Series(
-                    custom_stats[element][i]
-                ).apply(_number_formatter, **kwargs)
-            elif element == "\n":  # Replace output specific code for newline
-                model_tidy_df[coef_fmt_title] += lbcode
-            else:
-                model_tidy_df[coef_fmt_title] += element
-        model_tidy_df[coef_fmt_title] = pd.Categorical(model_tidy_df[coef_fmt_title])
-        model_tidy_df = model_tidy_df[["Coefficient", coef_fmt_title]]
-        model_tidy_df = pd.melt(
-            model_tidy_df,
-            id_vars=["Coefficient"],
-            var_name="Metric",
-            value_name=f"est{i + 1}",
-        )
-        model_tidy_df = model_tidy_df.drop("Metric", axis=1).set_index("Coefficient")
-        etable_list.append(model_tidy_df)
-
-    res = pd.concat(etable_list, axis=1)
-    if keep or drop:
-        idxs = _select_order_coefs(res.index.tolist(), keep, drop, exact_match)
-    else:
-        idxs = res.index
-    res = res.loc[idxs, :].reset_index()
-    # a lot of work to replace the NaNs with empty strings
-    # reason: "" not a level of the category, might lead to a pandas error
-    for column in res.columns:
-        if (
-            isinstance(res[column].dtype, pd.CategoricalDtype)
-            and "" not in res[column].cat.categories
-        ):
-            res[column] = res[column].cat.add_categories([""])
-
-        # Replace NA values with the empty string
-        res[column] = res[column].fillna("")
-
-    res.rename(columns={"Coefficient": "index"}, inplace=True)
-    res.set_index("index", inplace=True)
-
-    # Move the intercept row (if there is one) to the bottom of the table
-    if "Intercept" in res.index:
-        intercept_row = res.loc["Intercept"]
-        res = res.drop("Intercept")
-        res = pd.concat([res, pd.DataFrame([intercept_row])])
-
-    # Relabel variables
-    if (labels != {}) or (cat_template != ""):
-        # Relabel dependent variables
-        dep_var_list = [labels.get(k, k) for k in dep_var_list]
-
-        # Relabel explanatory variables
-        res_index = res.index.to_series()
-        res_index = res_index.apply(
-            lambda x: _relabel_expvar(x, labels or {}, interactionSymbol, cat_template)
-        )
-        res.set_index(res_index, inplace=True)
-
-    # Relabel fixed effects
-    if show_fe:
-        if felabels is None:
-            felabels = dict()
-        if labels is None:
-            labels = dict()
-        # When the user provides a dictionary for fixed effects, then use it
-        # When a corresponsing variable is not in the felabel dictionary, then use the labels dictionary
-        # When in neither then just use the original variable name
-        fe_index = fe_df.index.to_series()
-        fe_index = fe_index.apply(lambda x: felabels.get(x, labels.get(x, x)))
-        fe_df.set_index(fe_index, inplace=True)
-
-    model_stats_df.columns = res.columns
-    if show_fe:
-        fe_df.columns = res.columns
-
-    depvars = pd.DataFrame({"depvar": dep_var_list}).T
-    depvars.columns = res.columns
+    table = maketables.ETable(
+        models=models_list,
+        signif_code=signif_code,
+        coef_fmt=coef_fmt,
+        custom_stats=custom_stats,
+        custom_model_stats=custom_model_stats,
+        keep=keep if keep else [],
+        drop=drop if drop else [],
+        exact_match=exact_match,
+        labels=labels,
+        cat_template=cat_template,
+        show_fe=show_fe,
+        felabels=felabels,
+        fe_present=fe_present,
+        fe_absent=fe_absent,
+        notes=notes,
+        model_heads=model_heads,
+        head_order=head_order,
+        **kwargs,
+    )
 
     if type == "df":
-        res_all = pd.concat([depvars, res, fe_df, model_stats_df])
-        return res_all
+        return table.df
     elif type == "md":
-        res_all = pd.concat([depvars, res, fe_df, model_stats_df]).reset_index()
-        # Generate notes string if user has not provided any
-        if notes is None:
-            if signif_code:
-                notes = f"Significance levels: * p < {signif_code[2]}, ** p < {signif_code[1]}, *** p < {signif_code[0]}"
-            else:
-                notes = f"Format of coefficient cell: {coef_fmt_title}"
-        res_all = _tabulate_etable_md(
-            df=res_all,
-            n_coef=res.shape[0],
-            n_fixef=n_fixef,
-            n_models=len(models),
-            n_model_stats=n_model_stats,
-        )
-        print(res_all)
-        print(notes)
+        result = table.df.to_markdown()
+        print(result)
         return None
-
-    elif type in ["tex", "gt"]:
-        # Prepare Multiindex for columns
-        id_dep = dep_var_list  # depvars
-        id_head = [""] * len(models) if model_heads is None else model_heads
-        id_num = [f"({s})" for s in range(1, len(models) + 1)]  # model numbers
-
-        # Concatenate the dataframes for coefficients, fixed effects, and model stats
-        # and add keys identifying the three parts which will allow make_table
-        # to format the table correctly inserting line between the parts
-        res_all = pd.concat([res, fe_df, model_stats_df], keys=["coef", "fe", "stats"])
-
-        # When no depvars & headlines should be displayed then use simple index
-        # otherwise generate MultiIndex & determine order of index levels as specified by head_order
-        if head_order == "":
-            res_all.columns = pd.Index(id_num)
-        else:
-            cindex = [{"h": id_head, "d": id_dep}[c] for c in head_order] + [id_num]
-            res_all.columns = pd.MultiIndex.from_arrays(cindex)
-
-        # Generate generic note string if none is provided
-        if notes == "":
-            if type == "gt":
-                notes = (
-                    f"Significance levels: * p < {signif_code[2]}, ** p < {signif_code[1]}, *** p < {signif_code[0]}. "
-                    + f"Format of coefficient cell:\n{coef_fmt_title}"
-                )
-            elif type == "tex":
-                notes = (
-                    f"Significance levels: $*$ p $<$ {signif_code[2]}, $**$ p $<$ {signif_code[1]}, $***$ p $<$ {signif_code[0]}. "
-                    + f"Format of coefficient cell: {coef_fmt_title}"
-                )
-        return make_table(
-            res_all,
-            type=type,
-            notes=notes,
-            rgroup_display=False,
-            file_name=file_name,
-            **kwargs,
-        )
+    elif type == "tex":
+        result = table.make(type="tex")
+        if file_name is not None:
+            with open(file_name, "w") as f:
+                f.write(result)
+        return result
+    elif type == "html":
+        return table.make(type="html")
+    elif type == "gt":
+        result = table.make(type="gt")
+        if file_name is not None:
+            with open(file_name, "w") as f:
+                f.write(result.as_raw_html())
+        return result
 
     return None
 
@@ -565,18 +310,7 @@ def summary(models: ModelInputType, digits: int = 3) -> None:
 
         df = fxst.tidy().round(digits)
 
-        if fxst._method == "feols":
-            estimation_method = "IV" if fxst._is_iv else "OLS"
-        elif fxst._method == "fepois":
-            estimation_method = "Poisson"
-        elif fxst._method == "twfe":
-            estimation_method = "TWFE"
-        elif fxst._method == "did2s":
-            estimation_method = "DID2S"
-        elif "quantreg" in fxst._method:
-            estimation_method = f"quantreg: q = {fxst._quantile}"  # type: ignore
-        else:
-            raise ValueError("Unknown estimation method.")
+        estimation_method = _get_estimation_method_name(fxst)
         print("###")
         print("")
         print("Estimation: ", estimation_method)
@@ -605,295 +339,10 @@ def summary(models: ModelInputType, digits: int = 3) -> None:
         if not np.isnan(fxst._r2_within):
             to_print += f"R2 Within: {np.round(fxst._r2_within, digits)} "
         if fxst.deviance is not None:
-            to_print += f"Deviance: {np.round(fxst.deviance[0], digits)} "
+            deviance_value = np.asarray(fxst.deviance).squeeze()
+            to_print += f"Deviance: {np.round(deviance_value, digits)} "
 
         print(to_print)
-
-
-def _post_processing_input_checks(
-    models: ModelInputType,
-    check_duplicate_model_names: bool = False,
-    rename_models: Optional[dict[str, str]] = None,
-) -> list[Union[Feols, Fepois, Feiv]]:
-    """
-    Perform input checks for post-processing models.
-
-    Parameters
-    ----------
-        models : Union[List[Union[Feols, Fepois, Feiv]], FixestMulti]
-                The models to be checked. This can either be a list of models
-                (Feols, Fepois, Feiv) or a single FixestMulti object.
-        check_duplicate_model_names : bool, optional
-                Whether to check for duplicate model names. Default is False.
-                Mostly used to avoid overlapping models in plots created via
-                pf.coefplot() and pf.iplot().
-        rename_models : dict, optional
-                A dictionary to rename the models. The keys are the original model names
-                and the values are the new model names.
-
-    Returns
-    -------
-        List[Union[Feols, Fepois]]
-            A list of checked and validated models. The returned list contains only
-            Feols and Fepois types.
-
-    Raises
-    ------
-        TypeError: If the models argument is not of the expected type.
-
-    """
-    models_list: list[Union[Feols, Fepois, Feiv]] = []
-
-    if isinstance(models, (Feols, Fepois, Feiv)):
-        models_list = [models]
-    elif isinstance(models, FixestMulti):
-        models_list = models.to_list()
-    elif isinstance(models, (list, ValuesView)):
-        if all(isinstance(m, (Feols, Fepois, Feiv)) for m in models):
-            models_list = models
-        else:
-            raise TypeError(
-                "All elements in the models list must be instances of Feols, Feiv, or Fepois."
-            )
-    else:
-        raise TypeError("Invalid type for models argument.")
-
-    if check_duplicate_model_names or rename_models is not None:
-        all_model_names = [model._model_name for model in models_list]
-
-    if check_duplicate_model_names:
-        # create model_name_plot attribute to differentiate between models with the
-        # same model_name / model formula
-        for model in models_list:
-            model._model_name_plot = model._model_name
-
-        counter = Counter(all_model_names)
-        duplicate_model_names = [item for item, count in counter.items() if count > 1]
-
-        for duplicate_model in duplicate_model_names:
-            duplicates = [
-                model for model in models_list if model._model_name == duplicate_model
-            ]
-            for i, model in enumerate(duplicates):
-                model._model_name_plot = f"Model {i}: {model._model_name}"
-                warnings.warn(
-                    f"The _model_name attribute {model._model_name}' is duplicated for models in the `models` you provided. To avoid overlapping model names / plots, the _model_name_plot attribute has been changed to '{model._model_name_plot}'."
-                )
-
-        if rename_models is not None:
-            model_name_diff = set(rename_models.keys()) - set(all_model_names)
-            if model_name_diff:
-                warnings.warn(
-                    f"""
-                    The following model names specified in rename_models are not found in the models:
-                    {model_name_diff}
-                    """
-                )
-
-    return models_list
-
-
-def _tabulate_etable_md(df, n_coef, n_fixef, n_models, n_model_stats):
-    """
-    Format and tabulate a DataFrame.
-
-    Parameters
-    ----------
-    - df (pandas.DataFrame): The DataFrame to be formatted and tabulated.
-    - n_coef (int): The number of coefficients.
-    - n_fixef (int): The number of fixed effects.
-    - n_models (int): The number of models.
-    - n_model_stats (int): The number of rows with model statistics.
-
-    Returns
-    -------
-    - formatted_table (str): The formatted table as a string.
-    """
-    # Format the DataFrame for tabulate
-    table = tabulate(
-        df,
-        headers="keys",
-        showindex=False,
-        colalign=["left"] + n_models * ["right"],
-    )
-
-    # Split the table into header and body
-    header, body = table.split("\n", 1)
-
-    # Add separating line after the third row
-    body_lines = body.split("\n")
-    body_lines.insert(2, "-" * len(body_lines[0]))
-    if n_fixef > 0:
-        body_lines.insert(-n_model_stats - n_fixef, "-" * len(body_lines[0]))
-    body_lines.insert(-n_model_stats, "-" * len(body_lines[0]))
-    body_lines.append("-" * len(body_lines[0]))
-
-    # Join the lines back together
-    formatted_table = "\n".join([header, "\n".join(body_lines)])
-
-    # Print the formatted table
-    return formatted_table
-
-
-def _parse_coef_fmt(coef_fmt: str, custom_stats: dict):
-    """
-    Parse the coef_fmt string.
-
-    Parameters
-    ----------
-    coef_fmt: str
-        The coef_fmt string.
-    custom_stats: dict
-        A dictionary of custom statistics. Key should be lowercased (e.g., simul_intv).
-        If you provide "b", "se", "t", or "p" as a key, it will overwrite the default
-        values.
-
-    Returns
-    -------
-    coef_fmt_elements: str
-        The parsed coef_fmt string.
-    coef_fmt_title: str
-        The title for the coef_fmt string.
-    """
-    custom_elements = list(custom_stats.keys())
-    if any([x in ["b", "se", "t", "p"] for x in custom_elements]):
-        raise ValueError(
-            "You cannot use 'b', 'se', 't', or 'p' as a key in custom_stats."
-        )
-
-    title_map = {
-        "b": "Coefficient",
-        "se": "Std. Error",
-        "t": "t-stats",
-        "p": "p-value",
-    }
-
-    allowed_elements = [
-        "b",
-        "se",
-        "t",
-        "p",
-        " ",
-        "\n",
-        r"\(",
-        r"\)",
-        r"\[",
-        r"\]",
-        ",",
-        *custom_elements,
-    ]
-    allowed_elements.sort(key=len, reverse=True)
-
-    coef_fmt_elements = re.findall("|".join(allowed_elements), coef_fmt)
-    coef_fmt_title = "".join([title_map.get(x, x) for x in coef_fmt_elements])
-
-    return coef_fmt_elements, coef_fmt_title
-
-
-def _number_formatter(x: float, **kwargs) -> str:
-    """
-    Format a number.
-
-    Parameters
-    ----------
-    x: float
-        The series to be formatted.
-    digits: int
-        The number of digits to round to.
-    thousands_sep: bool, optional
-        The thousands separator. Default is False.
-    scientific_notation: bool, optional
-        Whether to use scientific notation. Default is True.
-    scientific_notation_threshold: int, optional
-        The threshold for using scientific notation. Default is 10_000.
-    integer: bool, optional
-        Whether to format the number as an integer. Default is False.
-
-    Returns
-    -------
-    formatted_x: pd.Series
-        The formatted series.
-    """
-    digits = kwargs.get("digits", 3)
-    thousands_sep = kwargs.get("thousands_sep", False)
-    scientific_notation = kwargs.get("scientific_notation", True)
-    scientific_notation_threshold = kwargs.get("scientific_notation_threshold", 10_000)
-    integer = kwargs.get("integer", False)
-
-    assert digits >= 0, "digits must be a positive integer"
-
-    if integer:
-        digits = 0
-    x = np.round(x, digits)
-
-    if scientific_notation and x > scientific_notation_threshold:
-        return f"%.{digits}E" % x
-
-    x_str = f"{x:,}" if thousands_sep else str(x)
-
-    if "." not in x_str:
-        x_str += ".0"  # Add a decimal point if it's an integer
-    _int, _float = str(x_str).split(".")
-    _float = _float.ljust(digits, "0")
-    return _int if digits == 0 else f"{_int}.{_float}"
-
-
-def _relabel_index(index, labels=None, stats_labels=None):
-    if stats_labels is None:
-        if isinstance(index, pd.MultiIndex):
-            index = pd.MultiIndex.from_tuples(
-                [tuple(labels.get(k, k) for k in i) for i in index]
-            )
-        else:
-            index = [labels.get(k, k) for k in index]
-    else:
-        # if stats_labels is provided, we relabel the lowest level of the index with it
-        if isinstance(index, pd.MultiIndex):
-            new_index = []
-            for i in index:
-                new_index.append(
-                    tuple(
-                        [labels.get(k, k) for k in i[:-1]]
-                        + [stats_labels.get(i[-1], i[-1])]
-                    )
-                )
-            index = pd.MultiIndex.from_tuples(new_index)
-        else:
-            index = [stats_labels.get(k, k) for k in index]
-    return index
-
-
-def _format_mean_std(
-    data: pd.Series, digits: int = 2, newline: bool = True, type=str
-) -> str:
-    """
-    Calculate the mean and standard deviation of a pandas Series and return as a string of the format "mean /n (std)".
-
-    Parameters
-    ----------
-    data : pd.Series
-        The pandas Series for which to calculate the mean and standard deviation.
-    digits : int, optional
-        The number of decimal places to round the mean and standard deviation to. The default is 2.
-    newline : bool, optional
-        Whether to add a newline character between the mean and standard deviation. The default is True.
-    type : str, optional
-        The type of the table output.
-
-    Returns
-    -------
-    _format_mean_std : str
-        The mean and standard deviation of the pandas Series formated as a string.
-
-    """
-    mean = data.mean()
-    std = data.std()
-    if newline:
-        if type == "gt":
-            return f"{mean:.{digits}f}<br>({std:.{digits}f})"
-        elif type == "tex":
-            return f"{mean:.{digits}f}\\\\({std:.{digits}f})"
-    return f"{mean:.{digits}f} ({std:.{digits}f})"
 
 
 def dtable(
@@ -914,6 +363,11 @@ def dtable(
     r"""
     Generate descriptive statistics tables and create a booktab style table in
     the desired format (gt or tex).
+
+    .. deprecated:: 0.41.0
+        This function is deprecated and will be removed in a future version.
+        Please use `maketables.DTable()` directly instead.
+        See https://py-econometrics.github.io/maketables/ for documentation.
 
     Parameters
     ----------
@@ -950,7 +404,7 @@ def dtable(
         are hidden and the user provides no notes string the labels of the stats are
         listed in the table notes. The default is False.
     kwargs : dict
-        Additional arguments to be passed to the make_table function.
+        Additional arguments to be passed to maketables.DTable.
 
     Returns
     -------
@@ -968,189 +422,37 @@ def dtable(
     pf.dtable(df, vars = ["Y", "X1", "X2", "f1"])
     ```
     """
-    if stats is None:
-        stats = ["count", "mean", "std"]
-    if labels is None:
-        labels = {}
-    if stats_labels is None:
-        stats_labels = {}
-    assert isinstance(df, pd.DataFrame), "df must be a pandas DataFrame."
-    assert all(pd.api.types.is_numeric_dtype(df[var]) for var in vars), (
-        "Variables must be numerical."
-    )
-    assert type in ["gt", "tex", "df"], "type must be either 'gt' or 'tex' or 'df'."
-    assert byrow is None or byrow in df.columns, (
-        "byrow must be a column in the DataFrame."
-    )
-    assert bycol is None or all(col in df.columns for col in bycol), (
-        "bycol must be a list of columns in the DataFrame."
+    warnings.warn(
+        "pf.dtable() is deprecated and will be removed in a future version. "
+        "Please use maketables.DTable() directly. "
+        "See https://py-econometrics.github.io/maketables/ for documentation.",
+        FutureWarning,
+        stacklevel=2,
     )
 
-    # Default stats labels dictionary
-    stats_dict = {
-        "count": "N",
-        "mean": "Mean",
-        "std": "Std. Dev.",
-        "mean_std": "Mean (Std. Dev.)",
-        "mean_newline_std": "Mean (Std. Dev.)",
-        "min": "Min",
-        "max": "Max",
-        "var": "Variance",
-        "median": "Median",
-    }
-    stats_dict.update(stats_labels or {})
+    table = maketables.DTable(
+        df=df,
+        vars=vars,
+        stats=stats,
+        bycol=bycol,
+        byrow=byrow,
+        labels=labels,
+        stats_labels=stats_labels,
+        digits=digits,
+        notes=notes,
+        counts_row_below=counts_row_below,
+        hide_stats=hide_stats,
+        **kwargs,
+    )
 
-    # Define custom aggregation functions
-    def mean_std(x):
-        return _format_mean_std(x, digits=digits, newline=False, type=type)
+    # Handle output based on type parameter
+    if type == "df":
+        return table.df
+    elif type == "gt":
+        return table.make(type="gt")
+    elif type == "tex":
+        return table.make(type="tex")
+    elif type == "html":
+        return table.make(type="html")
 
-    def mean_newline_std(x):
-        return _format_mean_std(x, digits=digits, newline=True, type=type)
-
-    # Create a dictionary to map stat names to custom functions
-    custom_funcs = {"mean_std": mean_std, "mean_newline_std": mean_newline_std}
-
-    # Prepare the aggregation dictionary allowing custom functions
-    agg_funcs = {var: [custom_funcs.get(stat, stat) for stat in stats] for var in vars}
-
-    # Calculate the desired statistics
-    if (byrow is not None) and (bycol is not None):
-        bylist = [byrow, *bycol]
-        res = df.groupby(bylist).agg(agg_funcs)
-    if (byrow is None) and (bycol is None):
-        res = df.agg(agg_funcs)
-    elif (byrow is not None) and (bycol is None):
-        res = df.groupby(byrow).agg(agg_funcs)
-    elif (byrow is None) and (bycol is not None):
-        res = df.groupby(bycol).agg(agg_funcs)
-
-    # Set counts_row_below to false when byrow is not None
-    # or when 'count' is not in stats
-    if (byrow is not None) or ("count" not in stats):
-        counts_row_below = False
-
-    # Round all floats to required decimal places
-    # Convert to string to preserve the formatting
-    format_string = ",." + str(digits) + "f"
-
-    # Reshaping of table (just transpose when no multiindex)
-    if res.columns.nlevels == 1:
-        # Check whether number of obs should be displayed at the bottom
-        if counts_row_below:
-            # Only when all counts are the same within each row
-            if res.loc["count"].nunique() == 1:
-                # collect the number of obs
-                nobs = res.loc["count"].iloc[0]
-                # Drop the count row
-                res = res.drop("count", axis=0)
-                if "count" in stats:
-                    stats.remove("count")
-            else:
-                counts_row_below = False
-
-        # Transpose
-        res = res.transpose(copy=True)
-
-        # print(res)
-        # Format the statistics
-        for col in res.columns:
-            # Format the statistics
-            # for some reason count stats are displayed as floats when no multiindex,
-            # so we need to convert them to integers
-            if res[col].name == "count":
-                res[col] = res[col].apply(lambda x: f"{x:.0f}")
-            elif res[col].dtype == float:
-                res[col] = res[col].apply(lambda x: f"{x:{format_string}}")
-
-        # Add the number of observations at the bottom of the table
-        if counts_row_below:
-            obs_row = [str(int(nobs))] + [""] * (len(res.columns) - 1)
-            res.loc[stats_dict["count"]] = obs_row
-
-    else:
-        # When there is a multiindex in the columns
-        # First check whether number of obs should be displayed at the bottom
-        if counts_row_below:
-            # collect the number of obs for each row
-            count_columns = res.xs("count", axis=1, level=-1)
-            # Ensure count_columns is always a DataFrame
-            if isinstance(count_columns, pd.Series):
-                count_columns = count_columns.to_frame()
-            # when all counts are the same within each row,
-            # generate a vector with the counts
-            if count_columns.nunique(axis=1).eq(1).all():
-                nobs = count_columns.iloc[:, 0]
-                # Drop the count column
-                res = res.drop("count", axis=1, level=-1)
-                if "count" in stats:
-                    stats.remove("count")
-                # And append the counts as an additional column
-                # with the value being assigned to the column of the first stat
-                # and labeled as defined in the stats_dict
-                res[stats_dict["count"], stats[0]] = nobs
-            else:
-                counts_row_below = False
-
-        # Format the statistics
-        for col in res.columns:
-            if res[col].dtype == float:
-                res[col] = res[col].apply(lambda x: f"{x:{format_string}}")
-
-        # Now some reshaping to bring the multiindex dataframe in the form of a typical descriptive statistics table
-        res = pd.DataFrame(res.stack(level=0, future_stack=True))
-
-        # First bring the variables to the rows:
-        # Assign name to the column index
-        res.columns.names = ["Statistics"]
-        if bycol is not None:
-            # Then bring the column objects to the columns:
-            res = pd.DataFrame(res.unstack(level=tuple(bycol)))
-            # Finally we want to have the objects first and then the statistics
-            if not isinstance(res.columns, pd.MultiIndex):
-                res.columns = pd.MultiIndex.from_tuples(res.columns)  # type: ignore
-            res.columns = res.columns.reorder_levels([*bycol, "Statistics"])
-            # And sort it properly by the variables
-            # (we want to preserve the order of the lowest level for the stats)
-            levels_to_sort = list(range(res.columns.nlevels - 1))
-            res = res.sort_index(axis=1, level=levels_to_sort, sort_remaining=False)
-
-        # When hide_stats is True, we remove the names of the statistics
-        # And add a note to the table listing the statistics when the user
-        # has not provided a notes string
-        if hide_stats:
-            res.columns = res.columns.droplevel(-1)
-            if notes == "":
-                notes = (
-                    "Note: Displayed statistics are "
-                    + ", ".join([stats_dict.get(k, k) for k in stats])
-                    + "."
-                )
-
-    # Replace all NaNs with empty strings
-    res = res.fillna("")
-
-    # Relabel Variable names in row and column indices
-    res.columns = _relabel_index(res.columns, labels, stats_dict)
-    res.index = _relabel_index(res.index, labels)
-
-    # When counts_row_below: Turn row index into a multiindex
-    # to set up a second panel for the number of observations
-    # that make_table will thus separate by a line
-    if counts_row_below:
-        res.index = pd.MultiIndex.from_tuples([("stats", i) for i in res.index])
-        # Modify the last tuple in the MultiIndex
-        new_index = list(res.index)
-        new_index[-1] = ("nobs", stats_dict["count"])
-        res.index = pd.MultiIndex.from_tuples(new_index)
-
-    # Show row groups iff byrow is not None
-    rgroup_display = byrow is not None
-
-    # Generate the table
-    if type in ["gt", "tex"]:
-        # And make a booktab
-        return make_table(
-            res, type=type, notes=notes, rgroup_display=rgroup_display, **kwargs
-        )
-    else:
-        return res
+    return table.make(type="gt")

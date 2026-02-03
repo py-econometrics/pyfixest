@@ -5,12 +5,18 @@ from typing import Any, Optional, Protocol, Union
 
 import numpy as np
 import pandas as pd
+from scipy.special import gammaln
 
 from pyfixest.errors import (
     NonConvergenceError,
 )
 from pyfixest.estimation.demean_ import demean
-from pyfixest.estimation.feols_ import Feols, PredictionErrorOptions, PredictionType
+from pyfixest.estimation.feols_ import (
+    Feols,
+    PredictionErrorOptions,
+    PredictionType,
+    _drop_multicollinear_variables,
+)
 from pyfixest.estimation.FormulaParser import FixestFormula
 from pyfixest.estimation.literals import (
     DemeanerBackendOptions,
@@ -60,7 +66,7 @@ class Fepois(Feols):
         Defaults to "scipy.linalg.solve".
     demeaner_backend: DemeanerBackendOptions.
         The backend used for demeaning.
-    fixef_tol: float, default = 1e-08.
+    fixef_tol: float, default = 1e-06.
         Tolerance level for the convergence of the demeaning algorithm.
     context : int or Mapping[str, Any]
         A dictionary containing additional context variables to be used by
@@ -177,8 +183,12 @@ class Fepois(Feols):
             self._X.drop(na_separation, axis=0, inplace=True)
             self._fe.drop(na_separation, axis=0, inplace=True)
             self._data.drop(na_separation, axis=0, inplace=True)
+            if self._weights_df is not None:
+                self._weights_df.drop(na_separation, axis=0, inplace=True)
             self._N = self._Y.shape[0]
-            self._N_rows = self._N  # ok as weights not supported
+            self._N_rows = self._N
+            # Re-set weights after dropping rows (handles both weighted and unweighted)
+            self._weights = self._set_weights()
 
             self.na_index = np.concatenate([self.na_index, np.array(na_separation)])
             self.n_separation_na = len(na_separation)
@@ -197,6 +207,37 @@ class Fepois(Feols):
             self._fe = self._fe.to_numpy()
             if self._fe.ndim == 1:
                 self._fe = self._fe.reshape((self._N, 1))
+
+    def _compute_deviance(
+        self, Y: np.ndarray, mu: np.ndarray, weights: Optional[np.ndarray] = None
+    ):
+        """
+        Deviance is defined as twice the difference in log likelihood between the
+        saturated model and the model being fit.
+
+        deviance = 2 * (log_likelihood_saturated - log_likelihood_fitted)
+
+        See [1] chapter 5.6 for more details.
+        [1] Dobson, Annette J., and Adrian G. Barnett. An introduction to generalized linear models. Chapman and Hall/CRC, 2018.
+        """
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            if weights is None:
+                weights = np.ones_like(Y)
+            weights = weights.flatten()
+            Y_flat = Y.flatten()
+            mu_flat = mu.flatten()
+            deviance = np.float64(
+                2
+                * np.sum(
+                    weights
+                    * (
+                        np.where(Y_flat == 0, 0, Y_flat * np.log(Y_flat / mu_flat))
+                        - (Y_flat - mu_flat)
+                    )
+                )
+            )
+        return deviance
 
     def get_fit(self) -> None:
         """
@@ -226,51 +267,33 @@ class Fepois(Feols):
             Demeaned dependent variable (from the last iteration of the IRLS
             algorithm).
         """
-        _Y = self._Y
-        _X = self._X
-        _fe = self._fe
-        _N = self._N
-        _convergence = self.convergence  # False
-        _maxiter = self.maxiter
-        _tol = self.tol
-        _fixef_tol = self._fixef_tol
-        _fixef_maxiter = self._fixef_maxiter
-        _solver = self._solver
-
-        def compute_deviance(_Y: np.ndarray, mu: np.ndarray):
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-                deviance = (
-                    2 * np.sum(np.where(_Y == 0, 0, _Y * np.log(_Y / mu)) - (_Y - mu))
-                ).flatten()
-            return deviance
+        self.to_array()
 
         stop_iterating = False
         crit = 1
 
-        for i in range(_maxiter):
+        for i in range(self.maxiter):
             if stop_iterating:
-                _convergence = True
+                self.convergence = True
                 break
-            if i == _maxiter:
+            if i == self.maxiter:
                 raise NonConvergenceError(
                     f"""
-                    The IRLS algorithm did not converge with {_maxiter}
+                    The IRLS algorithm did not converge with {self.maxiter}
                     iterations. Try to increase the maximum number of iterations.
                     """
                 )
 
             if i == 0:
-                _mean = np.mean(_Y)
-                mu = (_Y + _mean) / 2
+                _mean = np.mean(self._Y)
+                mu = (self._Y + _mean) / 2
                 eta = np.log(mu)
-                Z = eta + _Y / mu - 1
+                Z = eta + self._Y / mu - 1
                 reg_Z = Z.copy()
-                last = compute_deviance(_Y, mu)
-
+                last = self._compute_deviance(self._Y, mu)
             else:
                 # update w and Z
-                Z = eta + _Y / mu - 1  # eq (8)
+                Z = eta + self._Y / mu - 1  # eq (8)
                 reg_Z = Z.copy()  # eq (9)
 
             # tighten HDFE tolerance - currently not possible with PyHDFE
@@ -278,49 +301,64 @@ class Fepois(Feols):
             #    inner_tol = inner_tol / 10
 
             # Step 1: weighted demeaning
-            ZX = np.concatenate([reg_Z, _X], axis=1)
+            ZX = np.concatenate([reg_Z, self._X], axis=1)
 
-            if _fe is not None:
-                # ZX_resid = algorithm.residualize(ZX, mu)
+            combined_weights = self._weights * mu
+
+            if self._fe is None:
+                ZX_resid = ZX
+            else:
                 ZX_resid, success = demean(
                     x=ZX,
-                    flist=_fe.astype(np.uintp),
-                    weights=mu.flatten(),
-                    tol=_fixef_tol,
-                    maxiter=_fixef_maxiter,
+                    flist=self._fe.astype(np.uintp),
+                    weights=combined_weights.flatten(),
+                    tol=self._fixef_tol,
+                    maxiter=self._fixef_maxiter,
                 )
                 if success is False:
                     raise ValueError("Demeaning failed after 100_000 iterations.")
-            else:
-                ZX_resid = ZX
 
-            Z_resid = ZX_resid[:, 0].reshape((_N, 1))  # z_resid
+            Z_resid = ZX_resid[:, 0].reshape((self._N, 1))  # z_resid
             X_resid = ZX_resid[:, 1:]  # x_resid
 
-            # Step 2: estimate WLS
-            WX = np.sqrt(mu) * X_resid
-            WZ = np.sqrt(mu) * Z_resid
+            if i == 0:
+                # Check multicollinearity
+                # We do this here after the first demeaning to also catch collinearity with fixed effects
+                X_resid, self._coefnames, self._collin_vars, self._collin_index = (
+                    _drop_multicollinear_variables(
+                        X_resid,
+                        self._coefnames,
+                        self._collin_tol,
+                        backend_func=self._find_collinear_variables_func,
+                    )
+                )
+                if self._collin_index:
+                    # Drop covariates collinear with fixed effects
+                    self._X = self._X[:, ~np.array(self._collin_index)]
+                self._X_is_empty = self._X.shape[1] == 0
+                self._k = self._X.shape[1]
+            WX = np.sqrt(combined_weights) * X_resid
+            WZ = np.sqrt(combined_weights) * Z_resid
 
             XWX = WX.transpose() @ WX
             XWZ = WX.transpose() @ WZ
 
-            delta_new = solve_ols(XWX, XWZ, _solver).reshape(
+            delta_new = solve_ols(XWX, XWZ, self._solver).reshape(
                 (-1, 1)
             )  # eq (10), delta_new -> reg_z
             resid = Z_resid - X_resid @ delta_new
 
-            mu_old = mu.copy()
             # more updating
             eta = Z - resid
             mu = np.exp(eta)
 
             # same criterion as fixest
             # https://github.com/lrberge/fixest/blob/6b852fa277b947cea0bad8630986225ddb2d6f1b/R/ESTIMATION_FUNS.R#L2746
-            deviance = compute_deviance(_Y, mu)
+            deviance = self._compute_deviance(self._Y, mu)
             crit = np.abs(deviance - last) / (0.1 + np.abs(last))
-            last = deviance.copy()
+            last = deviance
 
-            stop_iterating = crit < _tol
+            stop_iterating = crit < self.tol
 
         self._beta_hat = delta_new.flatten()
         self._Y_hat_response = mu.flatten()
@@ -329,20 +367,43 @@ class Fepois(Feols):
         # needed for the calculation of the vcov
 
         # update for inference
-        self._weights = mu_old
-        self._irls_weights = mu
-        # if only one dim
-        if self._weights.ndim == 1:
-            self._weights = self._weights.reshape((self._N, 1))
+        user_weights = self._weights.flatten()
+        self._irls_weights = combined_weights.flatten()
 
         self._u_hat = (WZ - WX @ delta_new).flatten()
         self._u_hat_working = resid
         self._u_hat_response = self._Y - np.exp(eta)
 
+        y = self._Y.flatten()
+        self._y_hat_null = np.full_like(
+            y, np.average(y, weights=user_weights), dtype=float
+        )
+
+        self._loglik = np.sum(
+            user_weights
+            * (y * np.log(self._Y_hat_response) - self._Y_hat_response - gammaln(y + 1))
+        )
+
+        # cant replicate fixest atm
+        if self._has_weights:
+            self._loglik_null = None
+            self._pseudo_r2 = None
+        else:
+            self._loglik_null = np.sum(
+                user_weights
+                * (y * np.log(self._y_hat_null) - self._y_hat_null - gammaln(y + 1))
+            )
+            self._pseudo_r2 = 1 - (self._loglik / self._loglik_null)
+        self._pearson_chi2 = np.sum(
+            user_weights * (y - self._Y_hat_response) ** 2 / self._Y_hat_response
+        )
+
+        self._weights = combined_weights
+        self.deviance = self._compute_deviance(y, mu, user_weights)
+
         self._Y = WZ
         self._X = WX
         self._Z = self._X
-        self.deviance = deviance
 
         self._tZX = np.transpose(self._Z) @ self._X
         self._tZXinv = np.linalg.inv(self._tZX)
@@ -351,7 +412,7 @@ class Fepois(Feols):
         self._scores = self._u_hat[:, None] * self._X
         self._hessian = XWX
 
-        if _convergence:
+        if self.convergence:
             self._convergence = True
 
     def resid(self, type: str = "response") -> np.ndarray:
@@ -439,15 +500,6 @@ class Fepois(Feols):
             Otherwise, returns a np.ndarray with the predicted values of the model or the prediction
             standard errors if argument "se_fit=True".
         """
-        if self._has_fixef:
-            raise NotImplementedError(
-                "Prediction with fixed effects is not yet implemented for Poisson regression."
-            )
-        if newdata is not None:
-            raise NotImplementedError(
-                "Prediction with function argument `newdata` is not yet implemented for Poisson regression."
-            )
-
         if se_fit:
             raise NotImplementedError(
                 "Prediction with standard errors is not implemented for Poisson regression."

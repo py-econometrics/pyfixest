@@ -33,8 +33,11 @@ from pyfixest.estimation.feols_ import Feols
 from pyfixest.estimation.fepois_ import Fepois
 from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.quantreg.quantreg_ import Quantreg
-from pyfixest.report.summarize import _post_processing_input_checks
-from pyfixest.report.utils import _check_label_keys_in_covars, _relabel_expvar
+from pyfixest.report.utils import (
+    _check_label_keys_in_covars,
+    _post_processing_input_checks,
+    _relabel_expvar,
+)
 from pyfixest.utils.dev_utils import _select_order_coefs
 
 ModelInputType = Union[
@@ -878,7 +881,7 @@ def _get_model_df(
             .merge(df_joint, on="Coefficient", how="left")
         )
 
-        df_joint_full["fml"] += " (joint CIs)"
+        df_joint_full["fml"] += " (joint CIs)"  # type: ignore[operator]
 
         if joint == "both":
             df_model = pd.concat([df_model, df_joint_full], axis=0)

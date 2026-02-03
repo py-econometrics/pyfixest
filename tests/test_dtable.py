@@ -29,9 +29,10 @@ def test_minimal_input(sample_df):
     result = pf.dtable(sample_df, vars=["var1"], type="df")
 
     # Creating the expected DataFrame
+    # Note: maketables formats count as "5.00" instead of "5"
     expected = pd.DataFrame(
         {
-            "N": ["5"],  # As 'N' is stored as a string
+            "N": ["5.00"],  # maketables formats all values with decimals
             "Mean": ["3.00"],  # Format numbers to strings with 2 decimal places
             "Std. Dev.": ["1.58"],
         },
@@ -55,7 +56,7 @@ def test_multiple_stats(sample_df):
 
     expected = pd.DataFrame(
         {
-            "N": ["5"],
+            "N": ["5.00"],  # maketables formats all values with decimals
             "Mean": ["3.00"],
             "Min": ["1.00"],
             "Max": ["5.00"],
@@ -224,7 +225,7 @@ def test_counts_row_below(sample_df):
 
     expected = pd.DataFrame(
         {
-            "Mean": ["3.00", "5"],
+            "Mean": ["3.00", "5.00"],  # maketables formats count as "5.00"
         },
         index=pd.MultiIndex.from_tuples(
             [("stats", "var1"), ("nobs", "N")], names=["stats", "count"]
@@ -351,3 +352,9 @@ def test_invalid_bycol(sample_df):
         AssertionError, match=r"bycol must be a list of columns in the DataFrame\."
     ):
         pf.dtable(sample_df, vars=["var1"], bycol=["non_existent_column"])
+
+
+def test_dtable_deprecation_warning(sample_df):
+    """Test that dtable() emits a deprecation warning."""
+    with pytest.warns(FutureWarning, match=r"pf\.dtable\(\) is deprecated"):
+        pf.dtable(sample_df, vars=["var1"], type="df")

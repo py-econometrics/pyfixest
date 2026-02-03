@@ -8,6 +8,7 @@ from scipy.stats import norm
 
 from pyfixest.estimation.feglm_ import Feglm
 from pyfixest.estimation.FormulaParser import FixestFormula
+from pyfixest.estimation.literals import DemeanerBackendOptions
 
 
 class Feprobit(Feglm):
@@ -35,6 +36,7 @@ class Feprobit(Feglm):
             "scipy.sparse.linalg.lsqr",
             "jax",
         ],
+        demeaner_backend: DemeanerBackendOptions = "numba",
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
@@ -42,6 +44,7 @@ class Feprobit(Feglm):
         sample_split_value: Optional[Union[str, int]] = None,
         separation_check: Optional[list[str]] = None,
         context: Union[int, Mapping[str, Any]] = 0,
+        accelerate: bool = True,
     ):
         super().__init__(
             FixestFormula=FixestFormula,
@@ -58,6 +61,7 @@ class Feprobit(Feglm):
             tol=tol,
             maxiter=maxiter,
             solver=solver,
+            demeaner_backend=demeaner_backend,
             store_data=store_data,
             copy_data=copy_data,
             lean=lean,
@@ -65,6 +69,7 @@ class Feprobit(Feglm):
             sample_split_value=sample_split_value,
             separation_check=separation_check,
             context=context,
+            accelerate=accelerate,
         )
 
         self._method = "feglm-probit"
@@ -97,13 +102,13 @@ class Feprobit(Feglm):
         raise ValueError("The function _get_b is not implemented for the probit model.")
         return None
 
-    def _get_mu(self, theta: np.ndarray) -> np.ndarray:
-        return norm.cdf(theta)
+    def _get_mu(self, eta: np.ndarray) -> np.ndarray:
+        return norm.cdf(eta)
 
     def _get_link(self, mu: np.ndarray) -> np.ndarray:
         return norm.ppf(mu)
 
-    def _update_detadmu(self, mu: np.ndarray) -> np.ndarray:
+    def _get_gprime(self, mu: np.ndarray) -> np.ndarray:
         return 1 / norm.pdf(norm.ppf(mu))
 
     def _get_theta(self, mu: np.ndarray) -> np.ndarray:
