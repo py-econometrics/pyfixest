@@ -3,8 +3,7 @@ project:
   output-dir: _site
 
 execute:
-  # point quarto to the correct python environment
-  python: "/pyfixest/.pixi/envs/docs/Scripts/python.exe"
+  python: "/Users/afischer/Documents/pyfixest/.pixi/envs/docs/bin/python3"
 
 metadata-files:
   - _sidebar.yml
@@ -72,7 +71,7 @@ quartodoc:
   package: pyfixest
   title: "PyFixest Function Reference"
   parser: numpy
-  rewrite_all_pages: False
+  rewrite_all_pages: True
   sidebar: _sidebar.yml
 
   sections:
@@ -101,6 +100,8 @@ quartodoc:
         - estimation.feprobit_.Feprobit
         - estimation.fegaussian_.Fegaussian
         - estimation.feols_compressed_.FeolsCompressed
+        - estimation.FixestMulti_.FixestMulti
+        - estimation.quantreg.quantreg_.Quantreg
         #- did.did.DID
         #- did.did2s.DID2s
         #- did.lpdid.LPDID
