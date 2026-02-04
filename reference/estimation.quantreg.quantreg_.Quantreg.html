@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>estimation.model_matrix_fixest</title>
+<title>estimation.quantreg.quantreg_.quantreg</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -58,7 +58,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </style>
 
 
-<script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" integrity="sha384-ZvpUoO/+PpLXR1lu4jmpXWu80pZlYUAfxl5NsBMWOEPSjUn/6Z/hRTt8+pR6L4N2" crossorigin="anonymous"></script><script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
 <script src="../site_libs/quarto-nav/headroom.min.js"></script>
 <script src="../site_libs/clipboard/clipboard.min.js"></script>
 <script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
@@ -103,9 +103,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     "search-label": "Search"
   }
 }</script>
-<script src="https://cdn.jsdelivr.net/npm/requirejs@2.3.6/require.min.js" integrity="sha384-c9c+LnTbwQ3aujuU7ULEPVvgLs+Fn6fJUvIGTsuu1ZcCf11fiEubah0ttpca4ntM sha384-6V1/AdqZRWk1KAlWbKBlGhN7VG4iE/yAZcO6NZPMF8od0vukrvr0tg4qY6NSrItx" crossorigin="anonymous"></script>
-
-<script type="application/javascript">define('jquery', [],function() {return window.jQuery;})</script>
 
 
 </head>
@@ -235,7 +232,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/estimation.demean.html">Misc / Utilities</a></li><li class="breadcrumb-item"><a href="../reference/estimation.model_matrix_fixest.html">estimation.model_matrix_fixest</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/estimation.feols_.Feols.html">Estimation Classes</a></li><li class="breadcrumb-item"><a href="../reference/estimation.quantreg.quantreg_.Quantreg.html">estimation.quantreg.quantreg_.Quantreg</a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
     </div>
@@ -387,7 +384,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.quantreg.quantreg_.Quantreg.html" class="sidebar-item-text sidebar-link">
+  <a href="../reference/estimation.quantreg.quantreg_.Quantreg.html" class="sidebar-item-text sidebar-link active">
  <span class="menu-text">estimation.quantreg.quantreg_.Quantreg</span></a>
   </div>
 </li>
@@ -469,7 +466,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.model_matrix_fixest.html" class="sidebar-item-text sidebar-link active">
+  <a href="../reference/estimation.model_matrix_fixest.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">estimation.model_matrix_fixest</span></a>
   </div>
 </li>
@@ -482,250 +479,143 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <!-- margin-sidebar -->
     
 <!-- main -->
-<main class="content" id="quarto-document-content">
-
-<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/estimation.demean.html">Misc / Utilities</a></li><li class="breadcrumb-item"><a href="../reference/estimation.model_matrix_fixest.html">estimation.model_matrix_fixest</a></li></ol></nav>
-<div class="quarto-title">
-<h1 class="title">estimation.model_matrix_fixest</h1>
-</div>
+<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/estimation.feols_.Feols.html">Estimation Classes</a></li><li class="breadcrumb-item"><a href="../reference/estimation.quantreg.quantreg_.Quantreg.html">estimation.quantreg.quantreg_.Quantreg</a></li></ol></nav></header>
 
 
 
-<div class="quarto-title-meta">
 
-    
-  
-    
-  </div>
-  
-
-
-</header>
-
-
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>estimation.model_matrix_fixest(</span>
+<section id="pyfixest.estimation.quantreg.quantreg_.Quantreg" class="level1">
+<h1>estimation.quantreg.quantreg_.Quantreg</h1>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>estimation.quantreg.quantreg_.Quantreg(</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    FixestFormula,</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    data,</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    drop_singletons<span class="op">=</span><span class="va">False</span>,</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    weights<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    drop_intercept<span class="op">=</span><span class="va">False</span>,</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    context<span class="op">=</span><span class="dv">0</span>,</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>Create model matrices for fixed effects estimation.</p>
-<p>This function processes the data and then calls <code>formulaic.Formula.get_model_matrix()</code> to create the model matrices.</p>
-<section id="parameters" class="level2 doc-section doc-section-parameters">
-<h2 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters">Parameters</h2>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    ssc_dict,</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    drop_singletons,</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    drop_intercept,</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    weights,</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    weights_type,</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    collin_tol,</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    fixef_tol,</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    fixef_maxiter,</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    lookup_demeaned_data,</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    solver<span class="op">=</span><span class="st">'np.linalg.solve'</span>,</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    demeaner_backend<span class="op">=</span><span class="st">'numba'</span>,</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    store_data<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    copy_data<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    lean<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    context<span class="op">=</span><span class="dv">0</span>,</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    sample_split_var<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    sample_split_value<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>    quantile<span class="op">=</span><span class="fl">0.5</span>,</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>    method<span class="op">=</span><span class="st">'fn'</span>,</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>    quantile_tol<span class="op">=</span><span class="fl">1e-06</span>,</span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>    quantile_maxiter<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>    seed<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Quantile regression model.</p>
+<section id="attributes" class="level2">
+<h2 class="anchored" data-anchor-id="attributes">Attributes</h2>
 <table class="caption-top table">
-<colgroup>
-<col style="width: 4%">
-<col style="width: 16%">
-<col style="width: 75%">
-<col style="width: 3%">
-</colgroup>
 <thead>
 <tr class="header">
 <th>Name</th>
-<th>Type</th>
-<th>Description</th>
-<th>Default</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>FixestFormula</td>
-<td>A pyfixest.estimation.FormulaParser.FixestFormula object</td>
-<td>that contains information on the model formula, the formula of the first and second stage, dependent variable, covariates, fixed effects, endogenous variables (if any), and instruments (if any).</td>
-<td><em>required</em></td>
-</tr>
-<tr class="even">
-<td>data</td>
-<td>pd.DataFrame</td>
-<td>The input DataFrame containing the data.</td>
-<td><em>required</em></td>
-</tr>
-<tr class="odd">
-<td>drop_singletons</td>
-<td>bool</td>
-<td>Whether to drop singleton fixed effects. Default is False.</td>
-<td><code>False</code></td>
-</tr>
-<tr class="even">
-<td>weights</td>
-<td>str or None</td>
-<td>A string specifying the name of the weights column in <code>data</code>. Default is None.</td>
-<td><code>None</code></td>
-</tr>
-<tr class="odd">
-<td>data</td>
-<td>pd.DataFrame</td>
-<td>The input DataFrame containing the data.</td>
-<td><em>required</em></td>
-</tr>
-<tr class="even">
-<td>drop_intercept</td>
-<td>bool</td>
-<td>Whether to drop the intercept from the model matrix. Default is False. If True, the intercept is dropped ex post from the model matrix created by formulaic.</td>
-<td><code>False</code></td>
-</tr>
-<tr class="odd">
-<td>context</td>
-<td>int or Mapping[str, Any]</td>
-<td>A dictionary containing additional context variables to be used by formulaic during the creation of the model matrix. This can include custom factorization functions, transformations, or any other variables that need to be available in the formula environment.</td>
-<td><code>0</code></td>
-</tr>
-</tbody>
-</table>
-</section>
-<section id="returns" class="level2 doc-section doc-section-returns">
-<h2 class="doc-section doc-section-returns anchored" data-anchor-id="returns">Returns</h2>
-<table class="caption-top table">
-<colgroup>
-<col style="width: 0%">
-<col style="width: 0%">
-<col style="width: 98%">
-</colgroup>
-<thead>
-<tr class="header">
-<th>Name</th>
-<th>Type</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td></td>
-<td>dict</td>
-<td>A dictionary with the following keys and value types: - ‘Y’ : pd.DataFrame The dependent variable. - ‘X’ : pd.DataFrame The Design Matrix. - ‘fe’ : Optional[pd.DataFrame] The model’s fixed effects. None if not applicable. - ‘endogvar’ : Optional[pd.DataFrame] The model’s endogenous variable(s), None if not applicable. - ‘Z’ : np.ndarray The model’s set of instruments (exogenous covariates plus instruments). None if not applicable. - ‘weights_df’ : Optional[pd.DataFrame] DataFrame containing weights, None if weights are not used. - ‘na_index’ : np.ndarray Array indicating rows droppled beause of NA values or singleton fixed effects. - ‘na_index_str’ : str String representation of ‘na_index’. - ’_icovars’ : Optional[list[str]] List of variables interacted with i() syntax, None if not applicable. - ‘X_is_empty’ : bool Flag indicating whether X is empty. - ‘model_spec’ : formulaic ModelSpec The model specification used to create the model matrices.</td>
+<td><a href="#pyfixest.estimation.quantreg.quantreg_.Quantreg.objective_value">objective_value</a></td>
+<td>Compute the total loss of the quantile regression model.</td>
 </tr>
 </tbody>
 </table>
 </section>
-<section id="examples" class="level2 doc-section doc-section-examples">
-<h2 class="doc-section doc-section-examples anchored" data-anchor-id="examples">Examples</h2>
-<div id="6e95b557" class="cell" data-execution_count="1">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.estimation.model_matrix_fixest_ <span class="im">import</span> model_matrix_fixest</span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> pf.get_data()</span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 + f1 + f2"</span>, data<span class="op">=</span>data)</span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>FixestFormula <span class="op">=</span> fit.FixestFormula</span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>mm <span class="op">=</span> model_matrix_fixest(FixestFormula, data)</span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>mm</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display">
-
-            <div id="h1Vv7x"></div>
-            <script type="text/javascript" data-lets-plot-script="library">
-                if(!window.letsPlotCallQueue) {
-                    window.letsPlotCallQueue = [];
-                }; 
-                window.letsPlotCall = function(f) {
-                    window.letsPlotCallQueue.push(f);
-                };
-                (function() {
-                    var script = document.createElement("script");
-                    script.type = "text/javascript";
-                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.7.3/js-package/distr/lets-plot.min.js";
-                    script.onload = function() {
-                        window.letsPlotCall = function(f) {f();};
-                        window.letsPlotCallQueue.forEach(function(f) {f();});
-                        window.letsPlotCallQueue = [];
-                        
-                    };
-                    script.onerror = function(event) {
-                        window.letsPlotCall = function(f) {};    // noop
-                        window.letsPlotCallQueue = [];
-                        var div = document.createElement("div");
-                        div.style.color = 'darkred';
-                        div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("h1Vv7x").appendChild(div);
-                    };
-                    var e = document.getElementById("h1Vv7x");
-                    e.appendChild(script);
-                })()
-            </script>
-            
-</div>
-<div class="cell-output cell-output-display">
-
-            <div id="dZtq4y"></div>
-            <script type="text/javascript" data-lets-plot-script="library">
-                if(!window.letsPlotCallQueue) {
-                    window.letsPlotCallQueue = [];
-                }; 
-                window.letsPlotCall = function(f) {
-                    window.letsPlotCallQueue.push(f);
-                };
-                (function() {
-                    var script = document.createElement("script");
-                    script.type = "text/javascript";
-                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.7.3/js-package/distr/lets-plot.min.js";
-                    script.onload = function() {
-                        window.letsPlotCall = function(f) {f();};
-                        window.letsPlotCallQueue.forEach(function(f) {f();});
-                        window.letsPlotCallQueue = [];
-                        
-                    };
-                    script.onerror = function(event) {
-                        window.letsPlotCall = function(f) {};    // noop
-                        window.letsPlotCallQueue = [];
-                        var div = document.createElement("div");
-                        div.style.color = 'darkred';
-                        div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("dZtq4y").appendChild(div);
-                    };
-                    var e = document.getElementById("dZtq4y");
-                    e.appendChild(script);
-                })()
-            </script>
-            
-</div>
-<div class="cell-output cell-output-display" data-execution_count="1">
-<pre><code>{'Y':             Y
- 3    3.319513
- 4    0.134420
- 5   -0.278350
- 6   -1.519790
- 7   -2.072451
- ..        ...
- 995 -2.876714
- 996  1.430674
- 997 -0.494217
- 998 -1.047594
- 999  0.105551
- 
- [997 rows x 1 columns],
- 'X':      Intercept   X1    f1    f2
- 3          1.0  1.0   1.0  10.0
- 4          1.0  2.0  19.0  20.0
- 5          1.0  2.0  13.0   3.0
- 6          1.0  1.0   2.0  16.0
- 7          1.0  0.0   2.0  23.0
- ..         ...  ...   ...   ...
- 995        1.0  2.0  14.0  23.0
- 996        1.0  0.0  19.0  17.0
- 997        1.0  1.0   3.0   5.0
- 998        1.0  0.0  18.0  20.0
- 999        1.0  2.0   4.0  19.0
- 
- [997 rows x 4 columns],
- 'fe': None,
- 'endogvar': None,
- 'Z': None,
- 'weights_df': None,
- 'na_index': array([0, 1, 2]),
- 'na_index_str': '0,1,2',
- 'icovars': None,
- 'X_is_empty': False,
- 'model_spec': .fml_second_stage:
-     .lhs:
-         ModelSpec(formula=Y, materializer='pandas', materializer_params={}, ensure_full_rank=True, na_action=&lt;NAAction.DROP: 'drop'&gt;, output='pandas', cluster_by=&lt;ClusterBy.NONE: 'none'&gt;, structure=[EncodedTermStructure(term=Y, scoped_terms=[Y], columns=['Y'])], transform_state={}, encoder_state={'Y': (&lt;Kind.NUMERICAL: 'numerical'&gt;, {})})
-     .rhs:
-         ModelSpec(formula=1 + X1 + f1 + f2, materializer='pandas', materializer_params={}, ensure_full_rank=True, na_action=&lt;NAAction.DROP: 'drop'&gt;, output='pandas', cluster_by=&lt;ClusterBy.NONE: 'none'&gt;, structure=[EncodedTermStructure(term=1, scoped_terms=[1], columns=['Intercept']), EncodedTermStructure(term=X1, scoped_terms=[X1], columns=['X1']), EncodedTermStructure(term=f1, scoped_terms=[f1], columns=['f1']), EncodedTermStructure(term=f2, scoped_terms=[f2], columns=['f2'])], transform_state={}, encoder_state={'X1': (&lt;Kind.NUMERICAL: 'numerical'&gt;, {}), 'f1': (&lt;Kind.NUMERICAL: 'numerical'&gt;, {}), 'f2': (&lt;Kind.NUMERICAL: 'numerical'&gt;, {})})}</code></pre>
-</div>
-</div>
+<section id="methods" class="level2">
+<h2 class="anchored" data-anchor-id="methods">Methods</h2>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><a href="#pyfixest.estimation.quantreg.quantreg_.Quantreg.fit_qreg_fn">fit_qreg_fn</a></td>
+<td>Fit a quantile regression model using the Frisch-Newton Interior Point Solver.</td>
+</tr>
+<tr class="even">
+<td><a href="#pyfixest.estimation.quantreg.quantreg_.Quantreg.fit_qreg_pfn">fit_qreg_pfn</a></td>
+<td>Fit a quantile regression model using the Frisch-Newton Interior Point Solver with pre-processing.</td>
+</tr>
+<tr class="odd">
+<td><a href="#pyfixest.estimation.quantreg.quantreg_.Quantreg.get_fit">get_fit</a></td>
+<td>Fit a quantile regression model using the interior point method.</td>
+</tr>
+<tr class="even">
+<td><a href="#pyfixest.estimation.quantreg.quantreg_.Quantreg.get_performance">get_performance</a></td>
+<td>Compute performance metrics for the quantile regression model.</td>
+</tr>
+<tr class="odd">
+<td><a href="#pyfixest.estimation.quantreg.quantreg_.Quantreg.prepare_model_matrix">prepare_model_matrix</a></td>
+<td>Prepare model inputs for estimation.</td>
+</tr>
+<tr class="even">
+<td><a href="#pyfixest.estimation.quantreg.quantreg_.Quantreg.to_array">to_array</a></td>
+<td>Turn estimation DataFrames to np arrays.</td>
+</tr>
+</tbody>
+</table>
+<section id="pyfixest.estimation.quantreg.quantreg_.Quantreg.fit_qreg_fn" class="level3">
+<h3 class="anchored" data-anchor-id="pyfixest.estimation.quantreg.quantreg_.Quantreg.fit_qreg_fn">fit_qreg_fn</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>estimation.quantreg.quantreg_.Quantreg.fit_qreg_fn(</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    X,</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    Y,</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    q,</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    tol<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    maxiter<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    beta_init<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Fit a quantile regression model using the Frisch-Newton Interior Point Solver.</p>
+</section>
+<section id="pyfixest.estimation.quantreg.quantreg_.Quantreg.fit_qreg_pfn" class="level3">
+<h3 class="anchored" data-anchor-id="pyfixest.estimation.quantreg.quantreg_.Quantreg.fit_qreg_pfn">fit_qreg_pfn</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>estimation.quantreg.quantreg_.Quantreg.fit_qreg_pfn(</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    X,</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    Y,</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    q,</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    m<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    tol<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    maxiter<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    beta_init<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    rng<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    eta<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Fit a quantile regression model using the Frisch-Newton Interior Point Solver with pre-processing.</p>
+</section>
+<section id="pyfixest.estimation.quantreg.quantreg_.Quantreg.get_fit" class="level3">
+<h3 class="anchored" data-anchor-id="pyfixest.estimation.quantreg.quantreg_.Quantreg.get_fit">get_fit</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>estimation.quantreg.quantreg_.Quantreg.get_fit()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Fit a quantile regression model using the interior point method.</p>
+</section>
+<section id="pyfixest.estimation.quantreg.quantreg_.Quantreg.get_performance" class="level3">
+<h3 class="anchored" data-anchor-id="pyfixest.estimation.quantreg.quantreg_.Quantreg.get_performance">get_performance</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>estimation.quantreg.quantreg_.Quantreg.get_performance()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Compute performance metrics for the quantile regression model.</p>
+</section>
+<section id="pyfixest.estimation.quantreg.quantreg_.Quantreg.prepare_model_matrix" class="level3">
+<h3 class="anchored" data-anchor-id="pyfixest.estimation.quantreg.quantreg_.Quantreg.prepare_model_matrix">prepare_model_matrix</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>estimation.quantreg.quantreg_.Quantreg.prepare_model_matrix()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Prepare model inputs for estimation.</p>
+</section>
+<section id="pyfixest.estimation.quantreg.quantreg_.Quantreg.to_array" class="level3">
+<h3 class="anchored" data-anchor-id="pyfixest.estimation.quantreg.quantreg_.Quantreg.to_array">to_array</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>estimation.quantreg.quantreg_.Quantreg.to_array()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Turn estimation DataFrames to np arrays.</p>
 
 
+</section>
+</section>
 </section>
 
 </main> <!-- /main -->

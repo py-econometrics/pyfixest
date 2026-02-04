@@ -379,6 +379,18 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
  <span class="menu-text">estimation.feols_compressed_.FeolsCompressed</span></a>
   </div>
 </li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.FixestMulti_.FixestMulti.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.FixestMulti_.FixestMulti</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.quantreg.quantreg_.Quantreg.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.quantreg.quantreg_.Quantreg</span></a>
+  </div>
+</li>
       </ul>
   </li>
         <li class="sidebar-item sidebar-item-section">
@@ -513,7 +525,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    sample_split_value<span class="op">=</span><span class="va">None</span>,</span>
 <span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Non user-facing class to estimate an IV model using a 2SLS estimator.</p>
-<p>Inherits from the Feols class. Users should not directly instantiate this class, but rather use the <a href="../reference/estimation.api.feols.qmd">feols()</a> function. Note that no demeaning is performed in this class: demeaning is performed in the FixestMulti class (to allow for caching of demeaned variables for multiple estimation).</p>
+<p>Inherits from the Feols class. Users should not directly instantiate this class, but rather use the <a href="../reference/estimation.api.feols.feols.html">feols()</a> function. Note that no demeaning is performed in this class: demeaning is performed in the FixestMulti class (to allow for caching of demeaned variables for multiple estimation).</p>
 <section id="parameters" class="level2 doc-section doc-section-parameters">
 <h2 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters">Parameters</h2>
 <table class="caption-top table">
@@ -613,7 +625,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <colgroup>
 <col style="width: 5%">
 <col style="width: 3%">
-<col style="width: 90%">
+<col style="width: 91%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -756,7 +768,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tr class="odd">
 <td>_f_stat_1st_stage</td>
 <td>scalar</td>
-<td>F-statistics of First Stage regression for evaluation of IV weakness. The computed F-statistics test the following null hypothesis : # H0 : β_{z_1} = 0 &amp; … &amp; β_{z_{p_iv}} = 0 where z_1, …, z_{p_iv} # are the instrument variables # H1 : H0 does not hold Note that this F-statistics is adjusted to heteroskedasticity / clusters if users set specification of variance-covariance matrix type</td>
+<td>F-statistics of First Stage regression for evaluation of IV weakness. The computed F-statistics test the following null hypothesis : # H0 : beta_{z_1} = 0 &amp; … &amp; beta_{z_{p_iv}} = 0 where z_1, …, z_{p_iv} # are the instrument variables # H1 : H0 does not hold Note that this F-statistics is adjusted to heteroskedasticity / clusters if users set specification of variance-covariance matrix type</td>
 </tr>
 <tr class="even">
 <td>_eff_F</td>
@@ -876,7 +888,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="example" class="level4 doc-section doc-section-example">
 <h4 class="doc-section doc-section-example anchored" data-anchor-id="example">Example</h4>
 <p>The following is an example usage of this method:</p>
-<pre><code>::: {#7e5c41df .cell execution_count=1}
+<pre><code>::: {#a517bb89 .cell execution_count=1}
 ``` {.python .cell-code}
 import numpy as np
 import pandas as pd
@@ -940,7 +952,7 @@ print("Effective F stat :", F_stat_eff_pf)
 ::: {.cell-output .cell-output-display}
 ```{=html}
 
-            &lt;div id="UX0O1P"&gt;&lt;/div&gt;
+            &lt;div id="GPqKGS"&gt;&lt;/div&gt;
             &lt;script type="text/javascript" data-lets-plot-script="library"&gt;
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -964,9 +976,9 @@ print("Effective F stat :", F_stat_eff_pf)
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("UX0O1P").appendChild(div);
+                        document.getElementById("GPqKGS").appendChild(div);
                     };
-                    var e = document.getElementById("UX0O1P");
+                    var e = document.getElementById("GPqKGS");
                     e.appendChild(script);
                 })()
             &lt;/script&gt;
@@ -977,7 +989,7 @@ print("Effective F stat :", F_stat_eff_pf)
 ::: {.cell-output .cell-output-display}
 ```{=html}
 
-            &lt;div id="QdHDiR"&gt;&lt;/div&gt;
+            &lt;div id="H6ebN7"&gt;&lt;/div&gt;
             &lt;script type="text/javascript" data-lets-plot-script="library"&gt;
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -1001,9 +1013,9 @@ print("Effective F stat :", F_stat_eff_pf)
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("QdHDiR").appendChild(div);
+                        document.getElementById("H6ebN7").appendChild(div);
                     };
-                    var e = document.getElementById("QdHDiR");
+                    var e = document.getElementById("H6ebN7");
                     e.appendChild(script);
                 })()
             &lt;/script&gt;
@@ -1013,8 +1025,8 @@ print("Effective F stat :", F_stat_eff_pf)
 
 ::: {.cell-output .cell-output-stdout}
 ```
-(Unadjusted) F stat : 52.81535560457472
-Effective F stat : 48.61288119858678
+(Unadjusted) F stat : 52.81535560457488
+Effective F stat : 48.61288119858695
 ```
 :::
 :::</code></pre>

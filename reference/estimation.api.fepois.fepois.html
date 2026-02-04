@@ -379,6 +379,18 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
  <span class="menu-text">estimation.feols_compressed_.FeolsCompressed</span></a>
   </div>
 </li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.FixestMulti_.FixestMulti.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.FixestMulti_.FixestMulti</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.quantreg.quantreg_.Quantreg.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.quantreg.quantreg_.Quantreg</span></a>
+  </div>
+</li>
       </ul>
   </li>
         <li class="sidebar-item sidebar-item-section">
@@ -679,11 +691,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="returns" class="level2 doc-section doc-section-returns">
 <h2 class="doc-section doc-section-returns anchored" data-anchor-id="returns">Returns</h2>
 <table class="caption-top table">
-<colgroup>
-<col style="width: 6%">
-<col style="width: 6%">
-<col style="width: 87%">
-</colgroup>
 <thead>
 <tr class="header">
 <th>Name</th>
@@ -695,7 +702,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tr class="odd">
 <td></td>
 <td>object</td>
-<td>An instance of the <code>Fepois</code> class or an instance of class <code>FixestMulti</code> for multiple models specified via <code>fml</code>.</td>
+<td>An instance of the <a href="../reference/estimation.fepois_.Fepois.html">Fepois</a> class or an instance of class <a href="../reference/estimation.FixestMulti_.FixestMulti.html">FixestMulti</a> for multiple models specified via <code>fml</code>.</td>
 </tr>
 </tbody>
 </table>
@@ -703,7 +710,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="examples" class="level2 doc-section doc-section-examples">
 <h2 class="doc-section doc-section-examples anchored" data-anchor-id="examples">Examples</h2>
 <p>The <code>fepois()</code> function can be used to estimate a simple Poisson regression model with fixed effects. The following example regresses <code>Y</code> on <code>X1</code> and <code>X2</code> with fixed effects for <code>f1</code> and <code>f2</code>: fixed effects are specified after the <code>|</code> symbol.</p>
-<div id="d9406bea" class="cell" data-execution_count="1">
+<div id="2455f373" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> pf.get_data(model <span class="op">=</span> <span class="st">"Fepois"</span>)</span>
@@ -711,7 +718,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>fit.summary()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 
-            <div id="oUUtVk"></div>
+            <div id="HharDs"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -735,9 +742,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("oUUtVk").appendChild(div);
+                        document.getElementById("HharDs").appendChild(div);
                     };
-                    var e = document.getElementById("oUUtVk");
+                    var e = document.getElementById("HharDs");
                     e.appendChild(script);
                 })()
             </script>
@@ -745,7 +752,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <div class="cell-output cell-output-display">
 
-            <div id="KYF63p"></div>
+            <div id="YwbB2z"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -769,9 +776,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("KYF63p").appendChild(div);
+                        document.getElementById("YwbB2z").appendChild(div);
                     };
-                    var e = document.getElementById("KYF63p");
+                    var e = document.getElementById("YwbB2z");
                     e.appendChild(script);
                 })()
             </script>
