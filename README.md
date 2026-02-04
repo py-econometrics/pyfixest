@@ -338,6 +338,7 @@ Thanks goes to these wonderful people:
     </tr>
     <tr>
       <td align="center" valign="top" width="12.5%"><a href="https://github.com/rhstanton"><img src="https://avatars.githubusercontent.com/u/2153614?v=4?s=80" width="80px;" alt="rhstanton"/><br /><sub><b>rhstanton</b></sub></a><br /><a href="#userTesting-rhstanton" title="User Testing">📓</a> <a href="https://github.com/py-econometrics/pyfixest/issues?q=author%3Arhstanton" title="Bug reports">🐛</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="https://github.com/mdizadi"><img src="https://avatars.githubusercontent.com/u/16979129?v=4?s=80" width="80px;" alt="mdizadi"/><br /><sub><b>mdizadi</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=mdizadi" title="Code">💻</a> <a href="https://github.com/py-econometrics/pyfixest/commits?author=mdizadi" title="Documentation">📖</a></td>
     </tr>
   </tbody>
 </table>
