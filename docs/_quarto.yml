@@ -3,7 +3,7 @@ project:
   output-dir: _site
 
 execute:
-  python: "/Users/afischer/Documents/pyfixest/.pixi/envs/docs/bin/python3"
+  python: "../.pixi/envs/docs/bin/python3"
 
 metadata-files:
   - _sidebar.yml
