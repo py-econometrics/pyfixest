@@ -22,6 +22,8 @@ website:
       - reference/estimation.feprobit_.Feprobit.qmd
       - reference/estimation.fegaussian_.Fegaussian.qmd
       - reference/estimation.feols_compressed_.FeolsCompressed.qmd
+      - reference/estimation.FixestMulti_.FixestMulti.qmd
+      - reference/estimation.quantreg.quantreg_.Quantreg.qmd
       section: Estimation Classes
     - contents:
       - reference/did.visualize.panelview.qmd

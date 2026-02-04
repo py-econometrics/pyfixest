@@ -42,7 +42,9 @@ def feglm(
     """
     Estimate GLM regression models with fixed effects.
 
-    Supported families: `logit`, `probit`, `gaussian`.
+    Supported families: [logit](/reference/estimation.felogit_.Felogit.qmd),
+    [probit](/reference/estimation.feprobit_.Feprobit.qmd),
+    [gaussian](/reference/estimation.fegaussian_.Fegaussian.qmd).
 
     References
     ----------
@@ -177,8 +179,11 @@ def feglm(
     Returns
     -------
     object
-        An instance of the `Fepois` class or an instance of class `FixestMulti`
-        for multiple models specified via `fml`.
+        An instance of the [Feglm](/reference/estimation.feglm_.Feglm.qmd) class
+        (or one of its subclasses: [Felogit](/reference/estimation.felogit_.Felogit.qmd),
+        [Feprobit](/reference/estimation.feprobit_.Feprobit.qmd),
+        [Fegaussian](/reference/estimation.fegaussian_.Fegaussian.qmd)) or an instance of
+        class [FixestMulti](/reference/estimation.FixestMulti_.FixestMulti.qmd) for multiple models specified via `fml`.
 
     Examples
     --------

@@ -178,8 +178,8 @@ def fepois(
     Returns
     -------
     object
-        An instance of the `Fepois` class or an instance of class `FixestMulti`
-        for multiple models specified via `fml`.
+        An instance of the [Fepois](/reference/estimation.fepois_.Fepois.qmd) class
+        or an instance of class [FixestMulti](/reference/estimation.FixestMulti_.FixestMulti.qmd) for multiple models specified via `fml`.
 
     Examples
     --------
