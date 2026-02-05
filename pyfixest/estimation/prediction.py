@@ -1,3 +1,4 @@
+import re
 import warnings
 from collections.abc import Mapping
 from typing import Any, Optional, Union
@@ -59,7 +60,7 @@ def get_design_matrix_and_yhat(
                 )
 
             if hasattr(model, "_model_spec") and model._model_spec is not None:
-                rhs_spec = model._model_spec.fml_second_stage.rhs
+                rhs_spec = model._model_spec.second_stage.rhs
                 X = rhs_spec.get_model_matrix(newdata, context=context)
             else:
                 xfml = model._fml.split("|")[0].split("~")[1]
@@ -112,7 +113,7 @@ def _get_fixed_effects_prediction_component(
         if model._sumFE is None:
             model.fixef(atol, btol)
 
-        fvals = model._fixef.split("+")
+        fvals = re.split(r"\s*\+\s*", model._fixef)
 
         # warn if newdata types do not match
         mismatched_fixef_types = [

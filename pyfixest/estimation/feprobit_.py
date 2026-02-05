@@ -7,7 +7,7 @@ import pandas as pd
 from scipy.stats import norm
 
 from pyfixest.estimation.feglm_ import Feglm
-from pyfixest.estimation.FormulaParser import FixestFormula
+from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.literals import DemeanerBackendOptions
 
 
@@ -26,7 +26,7 @@ class Feprobit(Feglm):
         collin_tol: float,
         fixef_tol: float,
         fixef_maxiter: int,
-        lookup_demeaned_data: dict[str, pd.DataFrame],
+        lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
         tol: float,
         maxiter: int,
         solver: Literal[

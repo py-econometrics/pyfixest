@@ -507,7 +507,7 @@ multi_fit.etable()
 You can access an individual model by its name - i.e. a formula - via the `all_fitted_models` attribute.
 
 ```{python}
-multi_fit.all_fitted_models["Y~X1"].tidy()
+multi_fit.all_fitted_models["Y ~ X1"].tidy()
 ```
 
 or equivalently via the `fetch_model` method:

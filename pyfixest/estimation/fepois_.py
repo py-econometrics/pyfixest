@@ -1,3 +1,4 @@
+import re
 import warnings
 from collections.abc import Mapping
 from importlib import import_module
@@ -17,7 +18,7 @@ from pyfixest.estimation.feols_ import (
     PredictionType,
     _drop_multicollinear_variables,
 )
-from pyfixest.estimation.FormulaParser import FixestFormula
+from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.literals import (
     DemeanerBackendOptions,
     SolverOptions,
@@ -94,7 +95,7 @@ class Fepois(Feols):
         collin_tol: float,
         fixef_tol: float,
         fixef_maxiter: int,
-        lookup_demeaned_data: dict[str, pd.DataFrame],
+        lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
         tol: float,
         maxiter: int,
         solver: SolverOptions = "np.linalg.solve",
@@ -694,7 +695,7 @@ def _check_for_separation_ir(
     separation_na: set[int] = set()
     tmp_suffix = "_separationTmp"
     # build formula
-    name_dependent, rest = fml.split("~")
+    name_dependent, rest = re.split(r"\s*~\s*", fml, maxsplit=1)
     name_dependent_separation = "U"
     if name_dependent_separation in data.columns:
         name_dependent_separation += tmp_suffix
