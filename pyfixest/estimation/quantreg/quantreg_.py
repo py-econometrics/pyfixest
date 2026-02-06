@@ -165,9 +165,6 @@ class Quantreg(Feols):
 
     def get_fit(self) -> None:
         """Fit a quantile regression model using the interior point method."""
-        self.to_array()
-        self.drop_multicol_vars()
-
         res = self._fit(X=self._X, Y=self._Y)
 
         self._beta_hat = res[0]
