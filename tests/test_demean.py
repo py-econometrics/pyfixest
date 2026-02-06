@@ -3,7 +3,8 @@ import pandas as pd
 import pyhdfe
 import pytest
 
-from pyfixest.core import demean as demean_rs
+from pyfixest.core._core_impl import _demean_rs
+from pyfixest.core.demean import demean as demean_rs
 from pyfixest.estimation.cupy.demean_cupy_ import demean_cupy32, demean_cupy64
 from pyfixest.estimation.demean_ import _set_demeaner_backend, demean, demean_model
 from pyfixest.estimation.jax.demean_jax_ import demean_jax
@@ -11,8 +12,20 @@ from pyfixest.estimation.jax.demean_jax_ import demean_jax
 
 @pytest.mark.parametrize(
     argnames="demean_func",
-    argvalues=[demean, demean_jax, demean_rs, demean_cupy32, demean_cupy64],
-    ids=["demean_numba", "demean_jax", "demean_rs", "demean_cupy32", "demean_cupy64"],
+    argvalues=[
+        demean,
+        demean_jax,
+        demean_rs,
+        demean_cupy32,
+        demean_cupy64,
+    ],
+    ids=[
+        "demean_numba",
+        "demean_jax",
+        "demean_rs",
+        "demean_cupy32",
+        "demean_cupy64",
+    ],
 )
 def test_demean(benchmark, demean_func):
     rng = np.random.default_rng(929291)
@@ -65,8 +78,20 @@ def test_set_demeaner_backend():
 
 @pytest.mark.parametrize(
     argnames="demean_func",
-    argvalues=[demean, demean_jax, demean_rs, demean_cupy32, demean_cupy64],
-    ids=["demean_numba", "demean_jax", "demean_rs", "demean_cupy32", "demean_cupy64"],
+    argvalues=[
+        demean,
+        demean_jax,
+        demean_rs,
+        demean_cupy32,
+        demean_cupy64,
+    ],
+    ids=[
+        "demean_numba",
+        "demean_jax",
+        "demean_rs",
+        "demean_cupy32",
+        "demean_cupy64",
+    ],
 )
 def test_demean_model_no_fixed_effects(benchmark, demean_func):
     """Test demean_model when there are no fixed effects."""
@@ -100,8 +125,20 @@ def test_demean_model_no_fixed_effects(benchmark, demean_func):
 
 @pytest.mark.parametrize(
     argnames="demean_func",
-    argvalues=[demean, demean_jax, demean_rs, demean_cupy32, demean_cupy64],
-    ids=["demean_numba", "demean_jax", "demean_rs", "demean_cupy32", "demean_cupy64"],
+    argvalues=[
+        demean,
+        demean_jax,
+        demean_rs,
+        demean_cupy32,
+        demean_cupy64,
+    ],
+    ids=[
+        "demean_numba",
+        "demean_jax",
+        "demean_rs",
+        "demean_cupy32",
+        "demean_cupy64",
+    ],
 )
 def test_demean_model_with_fixed_effects(benchmark, demean_func):
     """Test demean_model with fixed effects."""
@@ -146,8 +183,20 @@ def test_demean_model_with_fixed_effects(benchmark, demean_func):
 
 @pytest.mark.parametrize(
     argnames="demean_func",
-    argvalues=[demean, demean_jax, demean_rs, demean_cupy32, demean_cupy64],
-    ids=["demean_numba", "demean_jax", "demean_rs", "demean_cupy32", "demean_cupy64"],
+    argvalues=[
+        demean,
+        demean_jax,
+        demean_rs,
+        demean_cupy32,
+        demean_cupy64,
+    ],
+    ids=[
+        "demean_numba",
+        "demean_jax",
+        "demean_rs",
+        "demean_cupy32",
+        "demean_cupy64",
+    ],
 )
 def test_demean_model_with_weights(benchmark, demean_func):
     """Test demean_model with weights."""
@@ -194,8 +243,20 @@ def test_demean_model_with_weights(benchmark, demean_func):
 
 @pytest.mark.parametrize(
     argnames="demean_func",
-    argvalues=[demean, demean_jax, demean_rs, demean_cupy32, demean_cupy64],
-    ids=["demean_numba", "demean_jax", "demean_rs", "demean_cupy32", "demean_cupy64"],
+    argvalues=[
+        demean,
+        demean_jax,
+        demean_rs,
+        demean_cupy32,
+        demean_cupy64,
+    ],
+    ids=[
+        "demean_numba",
+        "demean_jax",
+        "demean_rs",
+        "demean_cupy32",
+        "demean_cupy64",
+    ],
 )
 def test_demean_model_caching(benchmark, demean_func):
     """Test the caching behavior of demean_model."""
@@ -263,8 +324,20 @@ def test_demean_model_caching(benchmark, demean_func):
 
 @pytest.mark.parametrize(
     argnames="demean_func",
-    argvalues=[demean, demean_jax, demean_rs, demean_cupy32, demean_cupy64],
-    ids=["demean_numba", "demean_jax", "demean_rs", "demean_cupy32", "demean_cupy64"],
+    argvalues=[
+        demean,
+        demean_jax,
+        demean_rs,
+        demean_cupy32,
+        demean_cupy64,
+    ],
+    ids=[
+        "demean_numba",
+        "demean_jax",
+        "demean_rs",
+        "demean_cupy32",
+        "demean_cupy64",
+    ],
 )
 def test_demean_model_maxiter_convergence_failure(demean_func):
     """Test that demean_model fails when maxiter is too small."""
@@ -297,8 +370,20 @@ def test_demean_model_maxiter_convergence_failure(demean_func):
 
 @pytest.mark.parametrize(
     argnames="demean_func",
-    argvalues=[demean, demean_jax, demean_rs, demean_cupy32, demean_cupy64],
-    ids=["demean_numba", "demean_jax", "demean_rs", "demean_cupy32", "demean_cupy64"],
+    argvalues=[
+        demean,
+        demean_jax,
+        demean_rs,
+        demean_cupy32,
+        demean_cupy64,
+    ],
+    ids=[
+        "demean_numba",
+        "demean_jax",
+        "demean_rs",
+        "demean_cupy32",
+        "demean_cupy64",
+    ],
 )
 def test_demean_model_custom_maxiter_success(demean_func):
     """Test that demean_model succeeds with reasonable maxiter."""
@@ -433,3 +518,205 @@ def generate_complex_fixed_effects_data():
     flist = np.column_stack([id_indiv, id_firm, id_year]).astype(np.uint64)
     weights = rng.uniform(0.5, 2.0, n)
     return X, flist, weights
+
+
+# =============================================================================
+# FE Coefficient Tests
+# =============================================================================
+
+
+def _apply_fe_coefficients(x, flist, fe_coefficients, n_groups):
+    """
+    Apply FE coefficients to reconstruct residuals.
+
+    Returns x[i] - sum_q(coef[fe_q[i]]) for each observation.
+    """
+    n_obs, n_features = x.shape
+    n_fe = flist.shape[1]
+
+    # Compute coefficient offsets for each FE
+    coef_offsets = np.zeros(n_fe, dtype=int)
+    for q in range(1, n_fe):
+        coef_offsets[q] = coef_offsets[q - 1] + n_groups[q - 1]
+
+    reconstructed = np.zeros_like(x)
+    for k in range(n_features):
+        for i in range(n_obs):
+            fe_sum = 0.0
+            for q in range(n_fe):
+                g = int(flist[i, q])
+                fe_sum += fe_coefficients[coef_offsets[q] + g, k]
+            reconstructed[i, k] = x[i, k] - fe_sum
+
+    return reconstructed
+
+
+def test_fe_coefficients_single_fe():
+    """Test FE coefficients are correct for single FE."""
+    n_obs = 100
+    n_groups = 10
+
+    rng = np.random.default_rng(42)
+    x = rng.normal(0, 1, (n_obs, 2))
+    flist = (np.arange(n_obs) % n_groups).reshape(-1, 1).astype(np.uint64)
+    weights = np.ones(n_obs)
+
+    result = _demean_rs(x, flist, weights)
+
+    assert result["success"], "Should converge"
+    assert result["fe_coefficients"].shape == (n_groups, 2), "Wrong coefficient shape"
+
+    # Verify coefficients: applying them should give same residuals as demeaned
+    reconstructed = _apply_fe_coefficients(
+        x, flist, result["fe_coefficients"], [n_groups]
+    )
+
+    np.testing.assert_allclose(
+        result["demeaned"],
+        reconstructed,
+        rtol=1e-10,
+        atol=1e-10,
+        err_msg="FE coefficients don't reconstruct demeaned values",
+    )
+
+
+def test_fe_coefficients_two_fe():
+    """Test FE coefficients are correct for two FEs."""
+    n_obs = 100
+    n_groups_0 = 10
+    n_groups_1 = 5
+
+    rng = np.random.default_rng(42)
+    x = rng.normal(0, 1, (n_obs, 3))
+    flist = np.column_stack(
+        [np.arange(n_obs) % n_groups_0, np.arange(n_obs) % n_groups_1]
+    ).astype(np.uint64)
+    weights = np.ones(n_obs)
+
+    result = _demean_rs(x, flist, weights)
+
+    assert result["success"], "Should converge"
+    assert result["fe_coefficients"].shape == (n_groups_0 + n_groups_1, 3)
+
+    # Verify coefficients reconstruct demeaned values
+    reconstructed = _apply_fe_coefficients(
+        x, flist, result["fe_coefficients"], [n_groups_0, n_groups_1]
+    )
+
+    np.testing.assert_allclose(
+        result["demeaned"],
+        reconstructed,
+        rtol=1e-8,
+        atol=1e-8,
+        err_msg="FE coefficients don't reconstruct demeaned values",
+    )
+
+
+def test_fe_coefficients_ordering():
+    """Test that FE coefficients are in original FE order, not reordered."""
+    n_obs = 100
+
+    # FE 0: 5 groups (smaller), FE 1: 20 groups (larger)
+    # Internally, FEs get reordered by size (largest first)
+    # But coefficients should be returned in original order
+    n_groups_0 = 5  # smaller
+    n_groups_1 = 20  # larger
+
+    rng = np.random.default_rng(42)
+    x = rng.normal(0, 1, (n_obs, 2))
+    flist = np.column_stack(
+        [np.arange(n_obs) % n_groups_0, np.arange(n_obs) % n_groups_1]
+    ).astype(np.uint64)
+    weights = np.ones(n_obs)
+
+    result = _demean_rs(x, flist, weights)
+
+    # Verify coefficient shape matches original order
+    assert result["fe_coefficients"].shape == (n_groups_0 + n_groups_1, 2)
+
+    # Verify coefficients work with original flist ordering
+    reconstructed = _apply_fe_coefficients(
+        x, flist, result["fe_coefficients"], [n_groups_0, n_groups_1]
+    )
+
+    np.testing.assert_allclose(
+        result["demeaned"],
+        reconstructed,
+        rtol=1e-8,
+        atol=1e-8,
+        err_msg="Coefficients may be in wrong order",
+    )
+
+
+def test_fe_coefficients_three_fe():
+    """Test FE coefficients are correct for three FEs."""
+    n_obs = 120
+
+    # Create FEs with different sizes to trigger reordering
+    # Original: FE0=3 groups (smallest), FE1=15 groups (largest), FE2=8 groups (middle)
+    n_groups_0 = 3
+    n_groups_1 = 15
+    n_groups_2 = 8
+
+    rng = np.random.default_rng(42)
+    x = rng.normal(0, 1, (n_obs, 2))
+    flist = np.column_stack(
+        [
+            np.arange(n_obs) % n_groups_0,
+            np.arange(n_obs) % n_groups_1,
+            np.arange(n_obs) % n_groups_2,
+        ]
+    ).astype(np.uint64)
+    weights = np.ones(n_obs)
+
+    result = _demean_rs(x, flist, weights)
+
+    assert result["success"], "Should converge"
+    assert result["fe_coefficients"].shape == (
+        n_groups_0 + n_groups_1 + n_groups_2,
+        2,
+    )
+
+    # Verify coefficients reconstruct demeaned values
+    reconstructed = _apply_fe_coefficients(
+        x, flist, result["fe_coefficients"], [n_groups_0, n_groups_1, n_groups_2]
+    )
+
+    np.testing.assert_allclose(
+        result["demeaned"],
+        reconstructed,
+        rtol=1e-6,
+        atol=1e-6,
+        err_msg="FE coefficients don't reconstruct demeaned values",
+    )
+
+
+def test_fe_coefficients_weighted():
+    """Test FE coefficients are correct with non-uniform weights."""
+    n_obs = 100
+    n_groups_0 = 10
+    n_groups_1 = 5
+
+    rng = np.random.default_rng(42)
+    x = rng.normal(0, 1, (n_obs, 2))
+    flist = np.column_stack(
+        [np.arange(n_obs) % n_groups_0, np.arange(n_obs) % n_groups_1]
+    ).astype(np.uint64)
+    weights = rng.uniform(0.5, 2.0, n_obs)
+
+    result = _demean_rs(x, flist, weights)
+
+    assert result["success"], "Should converge"
+
+    # Verify coefficients reconstruct demeaned values
+    reconstructed = _apply_fe_coefficients(
+        x, flist, result["fe_coefficients"], [n_groups_0, n_groups_1]
+    )
+
+    np.testing.assert_allclose(
+        result["demeaned"],
+        reconstructed,
+        rtol=1e-8,
+        atol=1e-8,
+        err_msg="Weighted FE coefficients don't reconstruct demeaned values",
+    )

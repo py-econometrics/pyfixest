@@ -1,7 +1,10 @@
 import numpy as np
 import pytest
 
-from pyfixest.estimation.detect_singletons_ import detect_singletons
+from pyfixest.core.detect_singletons import detect_singletons as detect_singletons_rust
+from pyfixest.estimation.detect_singletons_ import (
+    detect_singletons as detect_singletons_numba,
+)
 from pyfixest.estimation.jax.detect_singletons_jax import detect_singletons_jax
 
 input1 = np.array([[0, 2, 1], [0, 2, 1], [0, 1, 3], [0, 1, 2], [0, 1, 2]])
@@ -20,8 +23,8 @@ solution3 = np.array([False, False, False, False, False])
 )
 @pytest.mark.parametrize(
     argnames="detection_function",
-    argvalues=[detect_singletons, detect_singletons_jax],
-    ids=["numba", "jax"],
+    argvalues=[detect_singletons_rust, detect_singletons_numba, detect_singletons_jax],
+    ids=["rust", "numba", "jax"],
 )
 def test_correctness(input, solution, detection_function):
     assert np.array_equal(detection_function(input), solution)
@@ -29,8 +32,8 @@ def test_correctness(input, solution, detection_function):
 
 @pytest.mark.parametrize(
     argnames="detection_function",
-    argvalues=[detect_singletons, detect_singletons_jax],
-    ids=["numba", "jax"],
+    argvalues=[detect_singletons_rust, detect_singletons_numba, detect_singletons_jax],
+    ids=["rust", "numba", "jax"],
 )
 def test_single_column(detection_function):
     """Test with a single fixed effect column."""
@@ -42,8 +45,8 @@ def test_single_column(detection_function):
 
 @pytest.mark.parametrize(
     argnames="detection_function",
-    argvalues=[detect_singletons, detect_singletons_jax],
-    ids=["numba", "jax"],
+    argvalues=[detect_singletons_rust, detect_singletons_numba, detect_singletons_jax],
+    ids=["rust", "numba", "jax"],
 )
 def test_all_singletons(detection_function):
     """Test when all observations are singletons."""
@@ -55,8 +58,8 @@ def test_all_singletons(detection_function):
 
 @pytest.mark.parametrize(
     argnames="detection_function",
-    argvalues=[detect_singletons, detect_singletons_jax],
-    ids=["numba", "jax"],
+    argvalues=[detect_singletons_rust, detect_singletons_numba, detect_singletons_jax],
+    ids=["rust", "numba", "jax"],
 )
 def test_no_singletons(detection_function):
     """Test when there are no singletons."""
@@ -68,8 +71,8 @@ def test_no_singletons(detection_function):
 
 @pytest.mark.parametrize(
     argnames="detection_function",
-    argvalues=[detect_singletons, detect_singletons_jax],
-    ids=["numba", "jax"],
+    argvalues=[detect_singletons_rust, detect_singletons_numba, detect_singletons_jax],
+    ids=["rust", "numba", "jax"],
 )
 def test_large_input(detection_function):
     """Test with a larger input to check performance and correctness."""
@@ -84,9 +87,44 @@ def test_large_input(detection_function):
     )
 
     # For large input, we compare against the Numba implementation as reference
-    reference = detect_singletons(input_data)
+    reference = detect_singletons_numba(input_data)
     result = detection_function(input_data)
 
     assert np.array_equal(result, reference)
     assert len(result) == N
     assert result.dtype == np.bool_
+
+
+# Tests specific to the Rust wrapper's Python preprocessing logic
+
+
+@pytest.mark.parametrize("dtype", [np.float32, np.float64])
+def test_rust_wrapper_rejects_float_dtypes(dtype):
+    """Test that the Rust wrapper raises TypeError for float dtypes."""
+    input_data = np.array([[0, 1], [0, 1], [1, 2]], dtype=dtype)
+    with pytest.raises(TypeError, match="Fixed effects must be integers"):
+        detect_singletons_rust(input_data)
+
+
+@pytest.mark.parametrize(
+    "dtype", [np.int8, np.int16, np.int32, np.int64, np.uint8, np.uint16, np.uint32]
+)
+def test_rust_wrapper_accepts_integer_dtypes(dtype):
+    """Test that the Rust wrapper accepts all integer dtypes."""
+    input_data = np.array([[0, 1], [0, 1], [1, 2], [1, 2]], dtype=dtype)
+    expected = np.array([False, False, False, False])
+    result = detect_singletons_rust(input_data)
+    assert np.array_equal(result, expected)
+
+
+@pytest.mark.parametrize("order", ["C", "F"])
+def test_rust_wrapper_handles_memory_layout(order):
+    """Test that the Rust wrapper handles both C and F memory layouts."""
+    input_data = np.array(
+        [[0, 2, 1], [0, 2, 1], [0, 1, 3], [0, 1, 2], [0, 1, 2]],
+        dtype=np.int64,
+        order=order,
+    )
+    expected = np.array([False, False, True, False, False])
+    result = detect_singletons_rust(input_data)
+    assert np.array_equal(result, expected)
