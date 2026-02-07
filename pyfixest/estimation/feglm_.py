@@ -239,7 +239,6 @@ class Feglm(Feols, ABC):
                 self._collin_vars = []
                 self._collin_index = []
 
-                # Cholesky check: detect multicollinearity among X columns
                 (X_tilde, self._coefnames, chol_vars, chol_idx) = (
                     _drop_multicollinear_variables_chol(
                         X_demeaned=X_tilde,
@@ -253,7 +252,6 @@ class Feglm(Feols, ABC):
                 self._collin_vars.extend(chol_vars)
                 self._collin_index.extend(chol_idx)
 
-                # Variance ratio check: detect variables absorbed by FEs
                 (X_tilde, self._coefnames, var_vars, var_idx) = (
                     _drop_multicollinear_variables_var(
                         X_tilde,

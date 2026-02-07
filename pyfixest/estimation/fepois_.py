@@ -338,7 +338,6 @@ class Fepois(Feols):
                 self._collin_vars = []
                 self._collin_index = []
 
-                # Cholesky check: detect multicollinearity among X columns
                 (X_resid, self._coefnames, chol_vars, chol_idx) = (
                     _drop_multicollinear_variables_chol(
                         X_demeaned=X_resid,
@@ -352,7 +351,6 @@ class Fepois(Feols):
                 self._collin_vars.extend(chol_vars)
                 self._collin_index.extend(chol_idx)
 
-                # Variance ratio check: detect variables absorbed by FEs
                 (X_resid, self._coefnames, var_vars, var_idx) = (
                     _drop_multicollinear_variables_var(
                         X_resid,

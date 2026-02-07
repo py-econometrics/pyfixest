@@ -553,12 +553,11 @@ class Feols:
             self._collin_index.extend(chol_idx)
 
         # Variance ratio check: detect variables absorbed by FEs
-        X_pre_norms = getattr(self, "_X_raw_sumsq", None)
         (self._X, self._coefnames, var_collin_vars, var_collin_idx) = (
             _drop_multicollinear_variables_var(
                 self._X,
                 self._coefnames,
-                X_pre_norms,
+                self._X_raw_sumsq,
                 self._collin_tol_var,
                 self._has_fixef,
             )
