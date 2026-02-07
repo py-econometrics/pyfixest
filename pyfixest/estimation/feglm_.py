@@ -165,7 +165,6 @@ class Feglm(Feols, ABC):
         """
         self.to_array()
 
-        # Save pre-demeaned norms for variance ratio collinearity check
         if self._has_fixef:
             self._X_raw_sumsq = (self._X**2).sum(axis=0)
         else:
@@ -233,7 +232,7 @@ class Feglm(Feols, ABC):
             if r == 0:
                 # Check multicollinearity
                 # We do this here after the first demeaning to also catch collinearity with fixed effects
-                (X_tilde, self._coefnames, self._collin_vars, collin_idx) = (
+                (X_tilde, self._coefnames, self._collin_vars, self._collin_index) = (
                     drop_multicollinear_variables(
                         X_tilde,
                         self._coefnames,
@@ -244,9 +243,8 @@ class Feglm(Feols, ABC):
                         self._has_fixef,
                     )
                 )
-                if collin_idx:
-                    self._X = np.delete(self._X, collin_idx, axis=1)
-                self._collin_index = collin_idx
+                if self._collin_index:
+                    self._X = np.delete(self._X, self._collin_index, axis=1)
                 self._X_is_empty = self._X.shape[1] == 0
                 self._k = self._X.shape[1]
 

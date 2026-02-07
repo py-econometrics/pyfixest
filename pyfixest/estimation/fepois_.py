@@ -331,7 +331,7 @@ class Fepois(Feols):
             if i == 0:
                 # Check multicollinearity
                 # We do this here after the first demeaning to also catch collinearity with fixed effects
-                (X_resid, self._coefnames, self._collin_vars, collin_idx) = (
+                (X_resid, self._coefnames, self._collin_vars, self._collin_index) = (
                     drop_multicollinear_variables(
                         X_resid,
                         self._coefnames,
@@ -342,9 +342,8 @@ class Fepois(Feols):
                         self._has_fixef,
                     )
                 )
-                if collin_idx:
-                    self._X = np.delete(self._X, collin_idx, axis=1)
-                self._collin_index = collin_idx
+                if self._collin_index:
+                    self._X = np.delete(self._X, self._collin_index, axis=1)
                 self._X_is_empty = self._X.shape[1] == 0
                 self._k = self._X.shape[1]
             WX = np.sqrt(combined_weights) * X_resid

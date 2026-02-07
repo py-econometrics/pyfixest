@@ -496,7 +496,6 @@ class Feols:
     def demean(self):
         "Demean the dependent variable and covariates by the fixed effect(s)."
         if self._has_fixef:
-            # Save pre-demeaned norms for variance ratio collinearity check
             self._X_raw_sumsq = (self._X.to_numpy() ** 2).sum(axis=0)
             self._Yd, self._Xd = demean_model(
                 self._Y,
