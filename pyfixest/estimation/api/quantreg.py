@@ -196,7 +196,7 @@ def quantreg(
 
     fixef_rm = "none"
     fixef_tol = 1e-06
-    fixef_maxiter = 100_000
+    fixef_maxiter = 10_000
     iwls_tol = 1e-08
     iwls_maxiter = 25
 

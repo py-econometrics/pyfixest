@@ -24,7 +24,7 @@ def feglm(
     ssc: Optional[dict[str, Union[str, bool]]] = None,
     fixef_rm: FixedRmOptions = "singleton",
     fixef_tol: float = 1e-06,
-    fixef_maxiter: int = 100_000,
+    fixef_maxiter: int = 10_000,
     iwls_tol: float = 1e-08,
     iwls_maxiter: int = 25,
     collin_tol: float = 1e-09,
