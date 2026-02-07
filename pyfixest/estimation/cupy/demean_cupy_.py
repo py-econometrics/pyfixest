@@ -187,7 +187,7 @@ class CupyFWLDemeaner:
             Weights (1.0 for equal weighting).
         tol : float, default=1e-6
             Convergence tolerance. Internally
-            tightened by a factor of 1e-4 for LSMR's atol/btol to account for
+            tightened by a factor of 1e-2 for LSMR's atol/btol to account for
             the difference between LSMR's relative stopping criterion and the
             absolute element-wise criterion used by MAP.
         maxiter : int, default=100_000
@@ -204,8 +204,8 @@ class CupyFWLDemeaner:
         """
 
         # tighten tolerance to account for looser LSMR tolerance
-        self.solver_atol = tol * 1e-4
-        self.solver_btol = tol * 1e-4
+        self.solver_atol = tol * 1e-2
+        self.solver_btol = tol * 1e-2
 
         # Override maxiter if not set in __init__
         if self.solver_maxiter is None:
