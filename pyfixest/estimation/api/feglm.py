@@ -6,6 +6,7 @@ from pyfixest.estimation.feols_ import Feols
 from pyfixest.estimation.fepois_ import Fepois
 from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.literals import (
+    DemeanerBackendOptions,
     FixedRmOptions,
     SolverOptions,
     VcovTypeOptions,
@@ -31,6 +32,7 @@ def feglm(
     collin_tol_var: Optional[float] = None,
     separation_check: Optional[list[str]] = None,
     solver: SolverOptions = "scipy.linalg.solve",
+    demeaner_backend: DemeanerBackendOptions = "numba",
     drop_intercept: bool = False,
     copy_data: bool = True,
     store_data: bool = True,
@@ -136,6 +138,19 @@ def feglm(
         The solver to use for the regression. Can be "np.linalg.lstsq",
         "np.linalg.solve", "scipy.linalg.solve", "scipy.sparse.linalg.lsqr" and "jax".
         Defaults to "scipy.linalg.solve".
+
+    demeaner_backend: DemeanerBackendOptions, optional
+        The backend to use for demeaning. Options include:
+        - "numba" (default): CPU-based demeaning using Numba JIT via the Alternating Projections Algorithm.
+        - "rust": CPU-based demeaning implemented in Rust via the Alternating Projections Algorithm.
+        - "jax": CPU or GPU-accelerated using JAX (requires jax/jaxlib) via the Alternating Projections Algorithm.
+        - "cupy" or "cupy64": GPU-accelerated using CuPy with float64 precision via direct application of the Frisch-Waugh-Lovell Theorem on sparse
+          matrices (requires cupy & GPU, defaults to scipy/CPU if no GPU available)
+        - "cupy32": GPU-accelerated using CuPy with float32 precision via direct application of the Frisch-Waugh-Lovell Theorem on sparse
+          matrices (requires cupy & GPU, defaults to scipy/CPU and float64 if no GPU available)
+        - "scipy": Direct application of the Frisch-Waugh-Lovell Theorem on sparse matrice.
+          Forces to use a scipy-sparse backend even when cupy is installed and GPU is available.
+        Defaults to "numba".
 
     drop_intercept : bool, optional
         Whether to drop the intercept from the model, by default False.
@@ -314,6 +329,7 @@ def feglm(
         iwls_maxiter=iwls_maxiter,
         collin_tol=collin_tol,
         separation_check=separation_check,
+        demeaner_backend=demeaner_backend,
         accelerate=accelerate,
         collin_tol_var=collin_tol_var,
     )
