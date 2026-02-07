@@ -15,10 +15,7 @@ from scipy.stats import chi2, f, norm, t
 
 from pyfixest.errors import EmptyVcovError, VcovTypeNotSupportedError
 from pyfixest.estimation.backends import BACKENDS
-from pyfixest.estimation.collinearity import (
-    _drop_multicollinear_variables_chol,
-    _drop_multicollinear_variables_var,
-)
+from pyfixest.estimation.collinearity import drop_multicollinear_variables
 from pyfixest.estimation.decomposition import GelbachDecomposition, _decompose_arg_check
 from pyfixest.estimation.demean_ import demean_model
 from pyfixest.estimation.FormulaParser import FixestFormula
@@ -536,36 +533,17 @@ class Feols:
 
     def drop_multicol_vars(self):
         "Detect and drop multicollinear variables."
-        self._collin_vars = []
-        self._collin_index = []
-
-        # Cholesky check: detect multicollinearity among X columns
-        if self._X.shape[1] > 0:
-            (self._X, self._coefnames, chol_vars, chol_idx) = (
-                _drop_multicollinear_variables_chol(
-                    X_demeaned=self._X,
-                    coefnames=self._coefnames,
-                    collin_tol=self._collin_tol,
-                    backend_func=self._find_collinear_variables_func,
-                )
-            )
-            self._collin_vars.extend(chol_vars)
-            self._collin_index.extend(chol_idx)
-
-        # Variance ratio check: detect variables absorbed by FEs
-        (self._X, self._coefnames, var_collin_vars, var_collin_idx) = (
-            _drop_multicollinear_variables_var(
+        (self._X, self._coefnames, self._collin_vars, self._collin_index) = (
+            drop_multicollinear_variables(
                 self._X,
                 self._coefnames,
+                self._collin_tol,
+                self._find_collinear_variables_func,
                 self._X_raw_sumsq,
                 self._collin_tol_var,
                 self._has_fixef,
             )
         )
-        self._collin_vars.extend(var_collin_vars)
-        self._collin_index.extend(var_collin_idx)
-
-        # update X_is_empty
         self._X_is_empty = self._X.shape[1] == 0
         self._k = self._X.shape[1] if not self._X_is_empty else 0
 

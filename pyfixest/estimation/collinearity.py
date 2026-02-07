@@ -89,7 +89,6 @@ def _drop_multicollinear_variables_var(
     coefnames: list[str],
     X_raw_sumsq: Optional[np.ndarray],
     collin_tol_var: float,
-    has_fixef: bool,
 ) -> tuple[np.ndarray, list[str], list[str], list[int]]:
     """
     Detect variables absorbed by fixed effects via variance ratio.
@@ -107,8 +106,6 @@ def _drop_multicollinear_variables_var(
         Squared column norms of X before demeaning.
     collin_tol_var : float
         Tolerance for the variance ratio check.
-    has_fixef : bool
-        Whether the model has fixed effects.
 
     Returns
     -------
@@ -121,12 +118,7 @@ def _drop_multicollinear_variables_var(
     collin_index : list[int]
         Indices of absorbed variables.
     """
-    if (
-        X_raw_sumsq is None
-        or collin_tol_var <= 0
-        or X_demeaned.shape[1] == 0
-        or not has_fixef
-    ):
+    if X_raw_sumsq is None or X_demeaned.shape[1] == 0:
         return X_demeaned, coefnames, [], []
 
     demeaned_norms = (X_demeaned**2).sum(axis=0)
@@ -150,3 +142,72 @@ def _drop_multicollinear_variables_var(
     coefnames = np.delete(names_array, collin_index).tolist()
 
     return X_demeaned, coefnames, collin_vars, collin_index.tolist()
+
+
+def drop_multicollinear_variables(
+    X_demeaned: np.ndarray,
+    coefnames: list[str],
+    collin_tol: float,
+    backend_func: Callable,
+    X_raw_sumsq: Optional[np.ndarray],
+    collin_tol_var: float,
+    has_fixef: bool,
+) -> tuple[np.ndarray, list[str], list[str], list[int]]:
+    """
+    Run Cholesky + variance ratio collinearity checks.
+
+    Parameters
+    ----------
+    X_demeaned : numpy.ndarray
+        The demeaned design matrix.
+    coefnames : list[str]
+        The names of the coefficients.
+    collin_tol : float
+        Tolerance for the Cholesky multicollinearity check.
+    backend_func : Callable
+        Backend function for the Cholesky check.
+    X_raw_sumsq : numpy.ndarray or None
+        Squared column norms of X before demeaning.
+    collin_tol_var : float
+        Tolerance for the variance ratio check.
+    has_fixef : bool
+        Whether the model has fixed effects.
+
+    Returns
+    -------
+    X_demeaned : numpy.ndarray
+        The design matrix after removing collinear variables.
+    coefnames : list[str]
+        Coefficient names after removing collinear variables.
+    collin_vars : list[str]
+        Names of all removed variables.
+    collin_index : list[int]
+        Indices of removed variables (relative to the original input columns).
+    """
+    N = X_demeaned.shape[1]
+    collin_vars = []
+    collin_index = []
+
+    if N > 0:
+        (X_demeaned, coefnames, chol_vars, chol_idx) = (
+            _drop_multicollinear_variables_chol(
+                X_demeaned, coefnames, collin_tol, backend_func
+            )
+        )
+        collin_vars.extend(chol_vars)
+        collin_index.extend(chol_idx)
+
+    if has_fixef and collin_tol_var > 0 and X_demeaned.shape[1] > 0:
+        if chol_idx:
+            X_raw_sumsq = np.delete(X_raw_sumsq, chol_idx)
+        (X_demeaned, coefnames, var_vars, var_idx) = (
+            _drop_multicollinear_variables_var(
+                X_demeaned, coefnames, X_raw_sumsq, collin_tol_var
+            )
+        )
+        collin_vars.extend(var_vars)
+        if var_idx:
+            remaining = np.delete(np.arange(N), chol_idx)
+            collin_index.extend(remaining[var_idx].tolist())
+
+    return X_demeaned, coefnames, collin_vars, collin_index

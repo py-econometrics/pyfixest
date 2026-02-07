@@ -9,10 +9,7 @@ from pyfixest.errors import (
     NonConvergenceError,
 )
 from pyfixest.estimation.backends import BACKENDS
-from pyfixest.estimation.collinearity import (
-    _drop_multicollinear_variables_chol,
-    _drop_multicollinear_variables_var,
-)
+from pyfixest.estimation.collinearity import drop_multicollinear_variables
 from pyfixest.estimation.feols_ import (
     Feols,
     PredictionErrorOptions,
@@ -236,37 +233,20 @@ class Feglm(Feols, ABC):
             if r == 0:
                 # Check multicollinearity
                 # We do this here after the first demeaning to also catch collinearity with fixed effects
-                self._collin_vars = []
-                self._collin_index = []
-
-                (X_tilde, self._coefnames, chol_vars, chol_idx) = (
-                    _drop_multicollinear_variables_chol(
-                        X_demeaned=X_tilde,
-                        coefnames=self._coefnames,
-                        collin_tol=self._collin_tol,
-                        backend_func=self._find_collinear_variables_func,
-                    )
-                )
-                if chol_idx:
-                    self._X = self._X[:, ~np.array(chol_idx)]
-                self._collin_vars.extend(chol_vars)
-                self._collin_index.extend(chol_idx)
-
-                (X_tilde, self._coefnames, var_vars, var_idx) = (
-                    _drop_multicollinear_variables_var(
+                (X_tilde, self._coefnames, self._collin_vars, collin_idx) = (
+                    drop_multicollinear_variables(
                         X_tilde,
                         self._coefnames,
+                        self._collin_tol,
+                        self._find_collinear_variables_func,
                         self._X_raw_sumsq,
                         self._collin_tol_var,
                         self._has_fixef,
                     )
                 )
-                if var_idx:
-                    self._X = np.delete(self._X, var_idx, axis=1)
-                    self._X_raw_sumsq = np.delete(self._X_raw_sumsq, var_idx)
-                self._collin_vars.extend(var_vars)
-                self._collin_index.extend(var_idx)
-
+                if collin_idx:
+                    self._X = np.delete(self._X, collin_idx, axis=1)
+                self._collin_index = collin_idx
                 self._X_is_empty = self._X.shape[1] == 0
                 self._k = self._X.shape[1]
 
