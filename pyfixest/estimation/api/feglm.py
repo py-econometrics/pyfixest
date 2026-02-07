@@ -25,10 +25,11 @@ def feglm(
     ssc: Optional[dict[str, Union[str, bool]]] = None,
     fixef_rm: FixedRmOptions = "singleton",
     fixef_tol: float = 1e-06,
-    fixef_maxiter: int = 100_000,
+    fixef_maxiter: int = 10_000,
     iwls_tol: float = 1e-08,
     iwls_maxiter: int = 25,
     collin_tol: float = 1e-09,
+    collin_tol_var: Optional[float] = None,
     separation_check: Optional[list[str]] = None,
     solver: SolverOptions = "scipy.linalg.solve",
     demeaner_backend: DemeanerBackendOptions = "numba",
@@ -107,7 +108,8 @@ def feglm(
 
     fixef_tol: float, optional
         Tolerance for the fixed effects demeaning algorithm. Defaults to 1e-06.
-        Currently does not do anything, as fixed effects are not supported for GLMs.
+        For LSMR-based backends (cupy, cupy32, cupy64, scipy), the tolerance is
+        passed directly as LSMR's atol and btol parameters.
 
     fixef_maxiter: int, optional
          Maximum iterations for the demeaning algorithm.
@@ -121,6 +123,12 @@ def feglm(
 
     collin_tol : float, optional
         Tolerance for collinearity check, by default 1e-10.
+
+    collin_tol_var : float, optional
+        Tolerance for the variance ratio collinearity check.
+        Default is None: auto-enabled with threshold 1e-6 for LSMR
+        backends (cupy, cupy32, cupy64, scipy), disabled for
+        MAP backends (numba, rust, jax). Set to 0 to disable explicitly.
 
     separation_check: list[str], optional
         Methods to identify and drop separated observations.
@@ -323,6 +331,7 @@ def feglm(
         separation_check=separation_check,
         demeaner_backend=demeaner_backend,
         accelerate=accelerate,
+        collin_tol_var=collin_tol_var,
     )
 
     if fixest._is_multiple_estimation:

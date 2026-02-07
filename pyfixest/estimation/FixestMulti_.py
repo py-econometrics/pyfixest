@@ -247,6 +247,7 @@ class FixestMulti:
         vcov_kwargs: Optional[dict[str, Any]] = None,
         demeaner_backend: DemeanerBackendOptions = "numba",
         collin_tol: float = 1e-6,
+        collin_tol_var: Optional[float] = None,
         iwls_maxiter: int = 25,
         iwls_tol: float = 1e-08,
         separation_check: Optional[list[str]] = None,
@@ -272,6 +273,9 @@ class FixestMulti:
             Defaults to "numba".
         collin_tol : float, optional
             The tolerance level for the multicollinearity check. Default is 1e-6.
+        collin_tol_var : float, optional
+            Tolerance for the variance ratio collinearity check. Default is None
+            (auto-enable for LSMR backends with threshold 1e-6).
         iwls_maxiter : int, optional
             The maximum number of iterations for the IWLS algorithm. Default is 25.
             Only relevant for non-linear estimation strategies.
@@ -350,6 +354,7 @@ class FixestMulti:
                         model_kwargs.update(
                             {
                                 "demeaner_backend": demeaner_backend,
+                                "collin_tol_var": collin_tol_var,
                             }
                         )
 

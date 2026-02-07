@@ -9,11 +9,11 @@ from pyfixest.errors import (
     NonConvergenceError,
 )
 from pyfixest.estimation.backends import BACKENDS
+from pyfixest.estimation.collinearity import drop_multicollinear_variables
 from pyfixest.estimation.feols_ import (
     Feols,
     PredictionErrorOptions,
     PredictionType,
-    _drop_multicollinear_variables,
 )
 from pyfixest.estimation.fepois_ import _check_for_separation
 from pyfixest.estimation.FormulaParser import FixestFormula
@@ -48,6 +48,7 @@ class Feglm(Feols, ABC):
             "jax",
         ],
         demeaner_backend: DemeanerBackendOptions = "numba",
+        collin_tol_var: Optional[float] = None,
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
@@ -70,12 +71,14 @@ class Feglm(Feols, ABC):
             fixef_maxiter=fixef_maxiter,
             lookup_demeaned_data=lookup_demeaned_data,
             solver=solver,
+            collin_tol_var=collin_tol_var,
             store_data=store_data,
             copy_data=copy_data,
             lean=lean,
             sample_split_var=sample_split_var,
             sample_split_value=sample_split_value,
             context=context,
+            demeaner_backend=demeaner_backend,
         )
 
         _glm_input_checks(
@@ -162,6 +165,11 @@ class Feglm(Feols, ABC):
         """
         self.to_array()
 
+        if self._has_fixef:
+            self._X_raw_sumsq = (self._X**2).sum(axis=0)
+        else:
+            self._X_raw_sumsq = None
+
         _mean = np.mean(self._Y)
         if self._method in ("feglm-logit", "feglm-probit"):
             mu = np.full_like(self._Y.flatten(), 0.5, dtype=float)
@@ -224,18 +232,19 @@ class Feglm(Feols, ABC):
             if r == 0:
                 # Check multicollinearity
                 # We do this here after the first demeaning to also catch collinearity with fixed effects
-                X_tilde, self._coefnames, self._collin_vars, self._collin_index = (
-                    _drop_multicollinear_variables(
+                (X_tilde, self._coefnames, self._collin_vars, self._collin_index) = (
+                    drop_multicollinear_variables(
                         X_tilde,
                         self._coefnames,
                         self._collin_tol,
-                        backend_func=self._find_collinear_variables_func,
+                        self._find_collinear_variables_func,
+                        self._X_raw_sumsq,
+                        self._collin_tol_var,
+                        self._has_fixef,
                     )
                 )
                 if self._collin_index:
-                    # Drop covariates collinear with fixed effects
-                    self._X = self._X[:, ~np.array(self._collin_index)]
-                    # Update the number of coefficients
+                    self._X = np.delete(self._X, self._collin_index, axis=1)
                 self._X_is_empty = self._X.shape[1] == 0
                 self._k = self._X.shape[1]
 

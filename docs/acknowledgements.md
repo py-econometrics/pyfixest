@@ -109,6 +109,7 @@ standard errors, t-statistics, p-values, confidence intervals, etc for OLS, IV, 
 |---|---|---|
 | [**lfe**](https://cran.r-project.org/web/packages/lfe/vignettes/lfehow.pdf) | R | We based our first implementation of the MAP algorithm on the description in the "how lfe works" vignette. |
 | [**pyhdfe**](https://github.com/jeffgortmaker/pyhdfe) | Python | PyFixest's demeaning results are tested against Jeff Gortmaker's `pyhdfe`. `pyfixest`'s first MVP was built using `pyhdfe` it ran its demeaning algorithm via `pyhdfe` MAP algo. |
+| [**FixedEffects.jl**](https://github.com/FixedEffects/FixedEffects.jl) | Julia | Matthieu Gomez's Julia package for high-dimensional fixed effects. PyFixest's variance-ratio collinearity check for LSMR backends (`collin_tol_var`) and the default LSMR convergence tolerance (`1e-6`) are informed by the defaults and approach in FixedEffects.jl. |
 
 ---
 
