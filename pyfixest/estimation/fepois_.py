@@ -271,7 +271,6 @@ class Fepois(Feols):
         """
         self.to_array()
 
-        # Save pre-demeaned norms for variance ratio collinearity check
         if self._has_fixef:
             self._X_raw_sumsq = (self._X**2).sum(axis=0)
         else:
