@@ -11,11 +11,14 @@ from pyfixest.errors import (
     NonConvergenceError,
 )
 from pyfixest.estimation.demean_ import demean
+from pyfixest.estimation.collinearity import (
+    _drop_multicollinear_variables_chol,
+    _drop_multicollinear_variables_var,
+)
 from pyfixest.estimation.feols_ import (
     Feols,
     PredictionErrorOptions,
     PredictionType,
-    _drop_multicollinear_variables,
 )
 from pyfixest.estimation.FormulaParser import FixestFormula
 from pyfixest.estimation.literals import (
@@ -98,6 +101,7 @@ class Fepois(Feols):
         tol: float,
         maxiter: int,
         solver: SolverOptions = "np.linalg.solve",
+        collin_tol_var: Optional[float] = None,
         demeaner_backend: DemeanerBackendOptions = "numba",
         context: Union[int, Mapping[str, Any]] = 0,
         store_data: bool = True,
@@ -120,6 +124,7 @@ class Fepois(Feols):
             fixef_maxiter=fixef_maxiter,
             lookup_demeaned_data=lookup_demeaned_data,
             solver=solver,
+            collin_tol_var=collin_tol_var,
             store_data=store_data,
             copy_data=copy_data,
             lean=lean,
@@ -269,6 +274,12 @@ class Fepois(Feols):
         """
         self.to_array()
 
+        # Save pre-demeaned norms for variance ratio collinearity check
+        if self._has_fixef:
+            self._X_pre_norms = (self._X**2).sum(axis=0)
+        else:
+            self._X_pre_norms = None
+
         stop_iterating = False
         crit = 1
 
@@ -324,17 +335,39 @@ class Fepois(Feols):
             if i == 0:
                 # Check multicollinearity
                 # We do this here after the first demeaning to also catch collinearity with fixed effects
-                X_resid, self._coefnames, self._collin_vars, self._collin_index = (
-                    _drop_multicollinear_variables(
+                self._collin_vars = []
+                self._collin_index = []
+
+                # Cholesky check: detect multicollinearity among X columns
+                (X_resid, self._coefnames, chol_vars, chol_idx) = (
+                    _drop_multicollinear_variables_chol(
                         X_resid,
                         self._coefnames,
                         self._collin_tol,
                         backend_func=self._find_collinear_variables_func,
                     )
                 )
-                if self._collin_index:
-                    # Drop covariates collinear with fixed effects
-                    self._X = self._X[:, ~np.array(self._collin_index)]
+                if chol_idx:
+                    self._X = self._X[:, ~np.array(chol_idx)]
+                self._collin_vars.extend(chol_vars)
+                self._collin_index.extend(chol_idx)
+
+                # Variance ratio check: detect variables absorbed by FEs
+                (X_resid, self._coefnames, var_vars, var_idx) = (
+                    _drop_multicollinear_variables_var(
+                        X_resid,
+                        self._coefnames,
+                        self._X_pre_norms,
+                        self._collin_tol_var,
+                        self._has_fixef,
+                    )
+                )
+                if var_idx:
+                    self._X = np.delete(self._X, var_idx, axis=1)
+                    self._X_pre_norms = np.delete(self._X_pre_norms, var_idx)
+                self._collin_vars.extend(var_vars)
+                self._collin_index.extend(var_idx)
+
                 self._X_is_empty = self._X.shape[1] == 0
                 self._k = self._X.shape[1]
             WX = np.sqrt(combined_weights) * X_resid

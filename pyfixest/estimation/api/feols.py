@@ -27,6 +27,7 @@ def feols(
     fixef_tol=1e-06,
     fixef_maxiter: int = 10_000,
     collin_tol: float = 1e-09,
+    collin_tol_var: Optional[float] = None,
     drop_intercept: bool = False,
     copy_data: bool = True,
     store_data: bool = True,
@@ -88,6 +89,13 @@ def feols(
 
     collin_tol : float, optional
         Tolerance for collinearity check, by default 1e-10.
+
+    collin_tol_var : float, optional
+        Tolerance for the variance ratio collinearity check. Detects variables
+        absorbed by fixed effects by comparing ||x_demeaned||^2 / ||x||^2
+        against this threshold. Default is None: auto-enabled with threshold
+        1e-6 for LSMR backends (cupy, cupy32, cupy64, scipy), disabled for
+        MAP backends (numba, rust, jax). Set to 0 to disable explicitly.
 
     fixef_tol: float, optional
         Tolerance for the fixed effects demeaning algorithm. Defaults to 1e-06.
@@ -518,6 +526,7 @@ def feols(
         vcov_kwargs=vcov_kwargs,
         collin_tol=collin_tol,
         demeaner_backend=demeaner_backend,
+        collin_tol_var=collin_tol_var,
     )
 
     if fixest._is_multiple_estimation:
