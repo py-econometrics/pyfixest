@@ -6,8 +6,8 @@ from typing import Any, Literal, Optional, Union
 import numpy as np
 import pandas as pd
 
-from pyfixest.estimation.demean_ import demean_model
 from pyfixest.estimation.collinearity import _drop_multicollinear_variables_chol
+from pyfixest.estimation.demean_ import demean_model
 from pyfixest.estimation.feols_ import Feols
 from pyfixest.estimation.FormulaParser import FixestFormula
 from pyfixest.estimation.literals import DemeanerBackendOptions

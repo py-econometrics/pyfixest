@@ -123,7 +123,7 @@ def feglm(
         Tolerance for collinearity check, by default 1e-10.
 
     collin_tol_var : float, optional
-        Tolerance for the variance ratio collinearity check. 
+        Tolerance for the variance ratio collinearity check.
         Default is None: auto-enabled with threshold 1e-6 for LSMR
         backends (cupy, cupy32, cupy64, scipy), disabled for
         MAP backends (numba, rust, jax). Set to 0 to disable explicitly.

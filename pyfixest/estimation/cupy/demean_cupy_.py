@@ -199,7 +199,6 @@ class CupyFWLDemeaner:
         success : bool
             True if solver converged/succeeded.
         """
-
         self.solver_atol = tol
         self.solver_btol = tol
 

@@ -294,9 +294,7 @@ class Feols:
         self._collin_tol = collin_tol
         _LSMR_BACKENDS = {"scipy", "cupy", "cupy32", "cupy64"}
         if collin_tol_var is None:
-            self._collin_tol_var = (
-                1e-6 if demeaner_backend in _LSMR_BACKENDS else 0
-            )
+            self._collin_tol_var = 1e-6 if demeaner_backend in _LSMR_BACKENDS else 0
         else:
             self._collin_tol_var = collin_tol_var
         self._fixef_tol = fixef_tol
