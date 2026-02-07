@@ -108,11 +108,9 @@ pf.feols("Y ~ X1 | f1 + f2", data=data, demean_backend="cupy64")
 
 ## Benchmarks
 
-All benchmarks follow the [fixest
-benchmarks](https://github.com/lrberge/fixest/tree/master/_BENCHMARK).
-All non-pyfixest timings are taken from the `fixest` benchmarks.
+All benchmarks follow the benchmarks set up by the [fixest](https://github.com/kylebutts/fixest_benchmarks) team. All benchmarks [here](https://github.com/s3alfisc/fixest_benchmarks).
 
-![](benchmarks/lets-plot-images/benchmarks_ols.svg)
+![](https://raw.githubusercontent.com/s3alfisc/fixest_benchmarks/main/results/plot_ols.svg)
 ![](benchmarks/lets-plot-images/benchmarks_poisson.svg)
 ![](benchmarks/quantreg_benchmarks.png)
 
