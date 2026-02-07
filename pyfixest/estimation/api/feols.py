@@ -91,18 +91,15 @@ def feols(
         Tolerance for collinearity check, by default 1e-10.
 
     collin_tol_var : float, optional
-        Tolerance for the variance ratio collinearity check. Detects variables
-        absorbed by fixed effects by comparing ||x_demeaned||^2 / ||x||^2
-        against this threshold. Default is None: auto-enabled with threshold
-        1e-6 for LSMR backends (cupy, cupy32, cupy64, scipy), disabled for
+        Tolerance for the variance ratio collinearity check. 
+        Default is None: auto-enabled with threshold 1e-6 for LSMR
+        backends (cupy, cupy32, cupy64, scipy), disabled for
         MAP backends (numba, rust, jax). Set to 0 to disable explicitly.
 
     fixef_tol: float, optional
         Tolerance for the fixed effects demeaning algorithm. Defaults to 1e-06.
         For LSMR-based backends (cupy, cupy32, cupy64, scipy), the tolerance is
-        internally tightened by a factor of 1e-2 (i.e. atol = btol = fixef_tol * 1e-2)
-        to account for the difference between LSMR's relative stopping criterion
-        and MAP's absolute element-wise criterion.
+        passed directly as LSMR's atol and btol parameters.
 
     fixef_maxiter: int, optional
          Maximum number of iterations for the demeaning algorithm. Defaults to 100,000.
