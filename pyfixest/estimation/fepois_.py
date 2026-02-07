@@ -10,7 +10,6 @@ from scipy.special import gammaln
 from pyfixest.errors import (
     NonConvergenceError,
 )
-from pyfixest.estimation.demean_ import demean
 from pyfixest.estimation.feols_ import (
     Feols,
     PredictionErrorOptions,
@@ -308,7 +307,7 @@ class Fepois(Feols):
             if self._fe is None:
                 ZX_resid = ZX
             else:
-                ZX_resid, success = demean(
+                ZX_resid, success = self._demean_func(
                     x=ZX,
                     flist=self._fe.astype(np.uintp),
                     weights=combined_weights.flatten(),
