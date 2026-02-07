@@ -276,9 +276,9 @@ class Fepois(Feols):
 
         # Save pre-demeaned norms for variance ratio collinearity check
         if self._has_fixef:
-            self._X_pre_norms = (self._X**2).sum(axis=0)
+            self._X_raw_sumsq = (self._X**2).sum(axis=0)
         else:
-            self._X_pre_norms = None
+            self._X_raw_sumsq = None
 
         stop_iterating = False
         crit = 1
@@ -341,9 +341,9 @@ class Fepois(Feols):
                 # Cholesky check: detect multicollinearity among X columns
                 (X_resid, self._coefnames, chol_vars, chol_idx) = (
                     _drop_multicollinear_variables_chol(
-                        X_resid,
-                        self._coefnames,
-                        self._collin_tol,
+                        X_demeaned=X_resid,
+                        coefnames=self._coefnames,
+                        collin_tol=self._collin_tol,
                         backend_func=self._find_collinear_variables_func,
                     )
                 )
@@ -357,14 +357,14 @@ class Fepois(Feols):
                     _drop_multicollinear_variables_var(
                         X_resid,
                         self._coefnames,
-                        self._X_pre_norms,
+                        self._X_raw_sumsq,
                         self._collin_tol_var,
                         self._has_fixef,
                     )
                 )
                 if var_idx:
                     self._X = np.delete(self._X, var_idx, axis=1)
-                    self._X_pre_norms = np.delete(self._X_pre_norms, var_idx)
+                    self._X_raw_sumsq = np.delete(self._X_raw_sumsq, var_idx)
                 self._collin_vars.extend(var_vars)
                 self._collin_index.extend(var_idx)
 

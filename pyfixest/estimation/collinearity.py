@@ -7,19 +7,19 @@ import numpy as np
 
 
 def _drop_multicollinear_variables_chol(
-    X: np.ndarray,
-    names: list[str],
+    X_demeaned: np.ndarray,
+    coefnames: list[str],
     collin_tol: float,
     backend_func: Callable,
 ) -> tuple[np.ndarray, list[str], list[str], list[int]]:
     """
-    Check for multicollinearity via Cholesky decomposition of X'X.
+    Check for multicollinearity in the design matrices X and Z.
 
     Parameters
     ----------
-    X : numpy.ndarray
-        The design matrix X.
-    names : list[str]
+    X_demeaned : numpy.ndarray
+        A demeaned matrix. 
+    coefnames : list[str]
         The names of the coefficients.
     collin_tol : float
         The tolerance level for the multicollinearity check.
@@ -28,18 +28,18 @@ def _drop_multicollinear_variables_chol(
 
     Returns
     -------
-    Xd : numpy.ndarray
-        The design matrix X after checking for multicollinearity.
-    names : list[str]
+    X_demeaned : numpy.ndarray
+        X_demeaned excluding multicollinear variables.
+    coefnames : list[str]
         The names of the coefficients, excluding those identified as collinear.
     collin_vars : list[str]
         The collinear variables identified during the check.
-    collin_index : list[int]
-        Indices of the collinear variables.
+    collin_index : numpy.ndarray
+        Logical array, where True indicates that the variable is collinear.
     """
     # TODO: avoid doing this computation twice, e.g. compute tXXinv here as fixest does
 
-    tXX = X.T @ X
+    tXX = X_demeaned.T @ X_demeaned
     id_excl, n_excl, all_removed = backend_func(tXX, collin_tol)
 
     collin_vars = []
@@ -52,7 +52,7 @@ def _drop_multicollinear_variables_chol(
             """
         )
 
-    names_array = np.array(names)
+    names_array = np.array(coefnames)
     if n_excl > 0:
         collin_vars = names_array[id_excl].tolist()
         if len(collin_vars) > 5:
@@ -70,8 +70,8 @@ def _drop_multicollinear_variables_chol(
             """
         )
 
-        X = np.delete(X, id_excl, axis=1)
-        if X.ndim == 2 and X.shape[1] == 0:
+        X_demeaned = np.delete(X_demeaned, id_excl, axis=1)
+        if X_demeaned.ndim == 2 and X_demeaned.shape[1] == 0:
             raise ValueError(
                 """
                 All variables are collinear. Please check your model specification.
@@ -81,13 +81,13 @@ def _drop_multicollinear_variables_chol(
         names_array = np.delete(names_array, id_excl)
         collin_index = id_excl.tolist()
 
-    return X, list(names_array), collin_vars, collin_index
+    return X_demeaned, list(names_array), collin_vars, collin_index
 
 
 def _drop_multicollinear_variables_var(
     X_demeaned: np.ndarray,
     coefnames: list[str],
-    X_pre_norms: Optional[np.ndarray],
+    X_raw_sumsq: Optional[np.ndarray],
     collin_tol_var: float,
     has_fixef: bool,
 ) -> tuple[np.ndarray, list[str], list[str], list[int]]:
@@ -103,27 +103,26 @@ def _drop_multicollinear_variables_var(
         The demeaned design matrix.
     coefnames : list[str]
         The names of the coefficients.
-    X_pre_norms : numpy.ndarray or None
+    X_raw_sumsq : numpy.ndarray or None
         Squared column norms of X before demeaning.
     collin_tol_var : float
-        Tolerance for the variance ratio check. Variables with
-        ||x_demeaned||^2 / ||x||^2 below this are flagged as absorbed.
+        Tolerance for the variance ratio check.
     has_fixef : bool
         Whether the model has fixed effects.
 
     Returns
     -------
-    X_clean : numpy.ndarray
+    X_demeaned : numpy.ndarray
         The design matrix after removing absorbed variables.
-    names_clean : list[str]
+    coefnames : list[str]
         Coefficient names after removing absorbed variables.
-    absorbed_names : list[str]
+    collin_vars : list[str]
         Names of absorbed variables.
-    absorbed_indices : list[int]
+    collin_index : list[int]
         Indices of absorbed variables.
     """
     if (
-        X_pre_norms is None
+        X_raw_sumsq is None
         or collin_tol_var <= 0
         or X_demeaned.shape[1] == 0
         or not has_fixef
@@ -131,24 +130,23 @@ def _drop_multicollinear_variables_var(
         return X_demeaned, coefnames, [], []
 
     demeaned_norms = (X_demeaned**2).sum(axis=0)
-    ratios = demeaned_norms / X_pre_norms
+    ratios = demeaned_norms / X_raw_sumsq
     absorbed_mask = ratios < collin_tol_var
     if not absorbed_mask.any():
         return X_demeaned, coefnames, [], []
 
-    absorbed_indices = np.where(absorbed_mask)[0]
-    absorbed_names = [coefnames[i] for i in absorbed_indices]
-    absorbed_set = set(absorbed_indices)
-    X_clean = np.delete(X_demeaned, absorbed_indices, axis=1)
-    names_clean = [
-        n for i, n in enumerate(coefnames) if i not in absorbed_set
-    ]
+    collin_index = np.where(absorbed_mask)[0]
+    names_array = np.array(coefnames)
+    collin_vars = names_array[collin_index].tolist()
 
     warnings.warn(
         f"""
-        {len(absorbed_names)} variables dropped (absorbed by fixed effects).
-        The following variables are dropped: {absorbed_names}.
+        {len(collin_vars)} variables dropped (absorbed by fixed effects).
+        The following variables are dropped: {collin_vars}.
         """
     )
 
-    return X_clean, names_clean, absorbed_names, absorbed_indices.tolist()
+    X_demeaned = np.delete(X_demeaned, collin_index, axis=1)
+    coefnames = np.delete(names_array, collin_index).tolist()
+
+    return X_demeaned, coefnames, collin_vars, collin_index.tolist()

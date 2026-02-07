@@ -235,10 +235,10 @@ class Feiv(Feols):
             self._collin_vars_z,
             self._collin_index_z,
         ) = _drop_multicollinear_variables_chol(
-            self._Z,
-            self._coefnames_z,
-            self._collin_tol,
-            self._find_collinear_variables_func,
+            X_demeaned=self._Z,
+            coefnames=self._coefnames_z,
+            collin_tol=self._collin_tol,
+            backend_func=self._find_collinear_variables_func,
         )
 
     def get_fit(self) -> None:

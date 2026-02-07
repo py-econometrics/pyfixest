@@ -36,8 +36,8 @@ class CupyFWLDemeaner:
     def __init__(
         self,
         use_gpu: Optional[bool] = None,
-        solver_atol: float = 1e-10,
-        solver_btol: float = 1e-10,
+        solver_atol: float = 1e-6,
+        solver_btol: float = 1e-6,
         solver_maxiter: Optional[int] = None,
         warn_on_cpu_fallback: bool = True,
         dtype: type = np.float64,
@@ -52,9 +52,9 @@ class CupyFWLDemeaner:
             Force GPU usage (True), CPU usage (False), or auto-detect (None).
             Auto-detect checks if CuPy is available and GPU is accessible. If
             both are True, runs on the GPU via CuPy.
-        solver_atol : float, default=1e-10
+        solver_atol : float, default=1e-6
             Absolute tolerance for LSMR stopping criterion.
-        solver_btol : float, default=1e-10
+        solver_btol : float, default=1e-6
             Relative tolerance for LSMR stopping criterion.
         solver_maxiter : int, optional
             Maximum LSMR iterations. If None, uses LSMR's default.

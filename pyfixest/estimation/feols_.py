@@ -502,7 +502,7 @@ class Feols:
         "Demean the dependent variable and covariates by the fixed effect(s)."
         if self._has_fixef:
             # Save pre-demeaned norms for variance ratio collinearity check
-            self._X_pre_norms = (self._X.to_numpy() ** 2).sum(axis=0)
+            self._X_raw_sumsq = (self._X.to_numpy() ** 2).sum(axis=0)
             self._Yd, self._Xd = demean_model(
                 self._Y,
                 self._X,
@@ -516,7 +516,7 @@ class Feols:
                 # self._demeaner_backend,
             )
         else:
-            self._X_pre_norms = None
+            self._X_raw_sumsq = None
             self._Yd, self._Xd = self._Y, self._X
 
     def to_array(self):
@@ -543,9 +543,9 @@ class Feols:
         if self._X.shape[1] > 0:
             (self._X, self._coefnames, chol_vars, chol_idx) = (
                 _drop_multicollinear_variables_chol(
-                    self._X,
-                    self._coefnames,
-                    self._collin_tol,
+                    X_demeaned=self._X,
+                    coefnames=self._coefnames,
+                    collin_tol=self._collin_tol,
                     backend_func=self._find_collinear_variables_func,
                 )
             )
@@ -553,7 +553,7 @@ class Feols:
             self._collin_index.extend(chol_idx)
 
         # Variance ratio check: detect variables absorbed by FEs
-        X_pre_norms = getattr(self, "_X_pre_norms", None)
+        X_pre_norms = getattr(self, "_X_raw_sumsq", None)
         (self._X, self._coefnames, var_collin_vars, var_collin_idx) = (
             _drop_multicollinear_variables_var(
                 self._X,
