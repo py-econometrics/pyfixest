@@ -36,8 +36,8 @@ class CupyFWLDemeaner:
     def __init__(
         self,
         use_gpu: Optional[bool] = None,
-        solver_atol: float = 1e-8,
-        solver_btol: float = 1e-8,
+        solver_atol: float = 1e-10,
+        solver_btol: float = 1e-10,
         solver_maxiter: Optional[int] = None,
         warn_on_cpu_fallback: bool = True,
         dtype: type = np.float64,
@@ -52,9 +52,9 @@ class CupyFWLDemeaner:
             Force GPU usage (True), CPU usage (False), or auto-detect (None).
             Auto-detect checks if CuPy is available and GPU is accessible. If
             both are True, runs on the GPU via CuPy.
-        solver_atol : float, default=1e-8
+        solver_atol : float, default=1e-10
             Absolute tolerance for LSMR stopping criterion.
-        solver_btol : float, default=1e-8
+        solver_btol : float, default=1e-10
             Relative tolerance for LSMR stopping criterion.
         solver_maxiter : int, optional
             Maximum LSMR iterations. If None, uses LSMR's default.
@@ -169,7 +169,7 @@ class CupyFWLDemeaner:
         x: NDArray[Any],
         flist: NDArray[Any],
         weights: NDArray[Any],
-        tol: float = 1e-8,
+        tol: float = 1e-6,
         maxiter: int = 100_000,
         fe_sparse_matrix: Optional["sp_sparse.csr_matrix"] = None,
     ) -> tuple[NDArray[Any], bool]:
@@ -185,8 +185,11 @@ class CupyFWLDemeaner:
             Usually not used within pyfixest internals.
         weights : np.ndarray, shape (n_obs,)
             Weights (1.0 for equal weighting).
-        tol : float, default=1e-8
-            Convergence tolerance. Used for both atol and btol of lsmr algo.
+        tol : float, default=1e-6
+            Convergence tolerance. Internally
+            tightened by a factor of 1e-4 for LSMR's atol/btol to account for
+            the difference between LSMR's relative stopping criterion and the
+            absolute element-wise criterion used by MAP.
         maxiter : int, default=100_000
             Maximum iterations for lsmr iterations.
         fe_sparse_matrix : scipy.sparse.csr_matrix, optional
@@ -199,6 +202,11 @@ class CupyFWLDemeaner:
         success : bool
             True if solver converged/succeeded.
         """
+
+        # tighten tolerance to account for looser LSMR tolerance
+        self.solver_atol = tol * 1e-4
+        self.solver_btol = tol * 1e-4
+
         # Override maxiter if not set in __init__
         if self.solver_maxiter is None:
             self.solver_maxiter = maxiter
@@ -266,7 +274,7 @@ def demean_cupy(
     x: NDArray[np.float64],
     flist: Optional[NDArray[np.uint64]] = None,
     weights: Optional[NDArray[np.float64]] = None,
-    tol: float = 1e-8,
+    tol: float = 1e-6,
     maxiter: int = 100_000,
     dtype: type = np.float64,
 ) -> tuple[NDArray[np.float64], bool]:
@@ -297,7 +305,7 @@ def demean_cupy32(
     x: NDArray[np.float64],
     flist: Optional[NDArray[np.uint64]] = None,
     weights: Optional[NDArray[np.float64]] = None,
-    tol: float = 1e-8,
+    tol: float = 1e-6,
     maxiter: int = 100_000,
 ) -> tuple[NDArray[np.float64], bool]:
     """
@@ -313,7 +321,7 @@ def demean_cupy64(
     x: NDArray[np.float64],
     flist: Optional[NDArray[np.uint64]] = None,
     weights: Optional[NDArray[np.float64]] = None,
-    tol: float = 1e-8,
+    tol: float = 1e-6,
     maxiter: int = 100_000,
 ) -> tuple[NDArray[np.float64], bool]:
     """
@@ -328,7 +336,7 @@ def demean_scipy(
     x: NDArray[np.float64],
     flist: Optional[NDArray[np.uint64]] = None,
     weights: Optional[NDArray[np.float64]] = None,
-    tol: float = 1e-8,
+    tol: float = 1e-6,
     maxiter: int = 100_000,
 ) -> tuple[NDArray[np.float64], bool]:
     "Scipy demeaner using float64 precision (CPU-only, no GPU)."

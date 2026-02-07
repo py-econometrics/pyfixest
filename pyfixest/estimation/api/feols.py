@@ -91,6 +91,10 @@ def feols(
 
     fixef_tol: float, optional
         Tolerance for the fixed effects demeaning algorithm. Defaults to 1e-06.
+        For LSMR-based backends (cupy, cupy32, cupy64, scipy), the tolerance is
+        internally tightened by a factor of 1e-4 (i.e. atol = btol = fixef_tol * 1e-4)
+        to account for the difference between LSMR's relative stopping criterion
+        and MAP's absolute element-wise criterion.
 
     fixef_maxiter: int, optional
          Maximum number of iterations for the demeaning algorithm. Defaults to 100,000.
