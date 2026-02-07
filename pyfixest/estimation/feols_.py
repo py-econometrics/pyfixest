@@ -292,6 +292,7 @@ class Feols:
         self._weights_type = weights_type
         self._has_weights = weights is not None
         self._collin_tol = collin_tol
+        self._X_raw_sumsq = None
         _LSMR_BACKENDS = {"scipy", "cupy", "cupy32", "cupy64"}
         if collin_tol_var is None:
             self._collin_tol_var = 1e-6 if demeaner_backend in _LSMR_BACKENDS else 0
