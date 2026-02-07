@@ -108,7 +108,7 @@ pf.feols("Y ~ X1 | f1 + f2", data=data, demean_backend="cupy64")
 
 ## Benchmarks
 
-All benchmarks follow the benchmarks set up by the [fixest](https://github.com/kylebutts/fixest_benchmarks) team. All benchmarks [here](https://github.com/s3alfisc/fixest_benchmarks).
+All benchmarks follow the benchmarks set up by the [fixest](https://github.com/kylebutts/fixest_benchmarks) team. All benchmarks [here](https://github.com/s3alfisc/fixest_benchmarks). Benchmarks were run on a Mac mini (Apple M4, 10 cores, 16 GB RAM).
 
 ![](https://raw.githubusercontent.com/s3alfisc/fixest_benchmarks/main/results/plot_ols.svg)
 ![](benchmarks/lets-plot-images/benchmarks_poisson.svg)
