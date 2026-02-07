@@ -197,7 +197,12 @@ def drop_multicollinear_variables(
         collin_vars.extend(chol_vars)
         collin_index.extend(chol_idx)
 
-    if has_fixef and collin_tol_var > 0 and X_raw_sumsq is not None and X_demeaned.shape[1] > 0:
+    if (
+        has_fixef
+        and collin_tol_var > 0
+        and X_raw_sumsq is not None
+        and X_demeaned.shape[1] > 0
+    ):
         if chol_idx:
             X_raw_sumsq = np.delete(X_raw_sumsq, chol_idx)
         (X_demeaned, coefnames, var_vars, var_idx) = _drop_multicollinear_variables_var(
