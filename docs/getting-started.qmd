@@ -91,4 +91,4 @@ pf.quantreg("Y ~ X1 + X2", data=data, quantile=0.5).summary()
 | [Difference-in-Differences](tutorials/difference-in-differences.qmd) | TWFE, Gardner's DID2S, event studies |
 | [Quantile Regression](tutorials/quantile-regression.qmd) | Interior-point quantile regression |
 
-See also the [How-To Guides](how-to/marginaleffects.qmd) for task-oriented recipes and the [Function Reference](reference/index.qmd) for the full API.
+Browse all tutorials in the [Tutorial Gallery](tutorials/index.qmd), or see the [How-To Guides](how-to/marginaleffects.qmd) for task-oriented recipes and the [Function Reference](reference/index.qmd) for the full API.

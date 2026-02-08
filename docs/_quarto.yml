@@ -24,6 +24,9 @@ website:
         file: getting-started.qmd
       - text: "Tutorials"
         menu:
+        - text: "All Tutorials"
+          file: tutorials/index.qmd
+        - text: "---"
         - text: "OLS with Fixed Effects"
           file: tutorials/ols-fixed-effects.qmd
         - text: "Standard Errors & Inference"
