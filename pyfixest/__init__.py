@@ -28,6 +28,8 @@ from pyfixest.report import coefplot, dtable, etable, iplot, make_table, qplot, 
 from pyfixest.utils import (
     get_data,
     get_ssc,
+    get_twin_data,
+    get_worker_panel,
     ssc,
 )
 
@@ -47,6 +49,8 @@ __all__ = [
     "fepois",
     "get_data",
     "get_ssc",
+    "get_twin_data",
+    "get_worker_panel",
     "iplot",
     "lpdid",
     "make_table",

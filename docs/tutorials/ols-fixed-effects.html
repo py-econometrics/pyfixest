@@ -1,0 +1,1856 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.25">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>OLS with Fixed Effects</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" integrity="sha384-ZvpUoO/+PpLXR1lu4jmpXWu80pZlYUAfxl5NsBMWOEPSjUn/6Z/hRTt8+pR6L4N2" crossorigin="anonymous"></script><script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-7b89279ff1a6dce999919e0e67d4d9ec.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-838cb846b2414f11caac439a21f6b75f.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<script src="https://cdn.jsdelivr.net/npm/requirejs@2.3.6/require.min.js" integrity="sha384-c9c+LnTbwQ3aujuU7ULEPVvgLs+Fn6fJUvIGTsuu1ZcCf11fiEubah0ttpca4ntM sha384-6V1/AdqZRWk1KAlWbKBlGhN7VG4iE/yAZcO6NZPMF8od0vukrvr0tg4qY6NSrItx" crossorigin="anonymous"></script>
+
+<script type="application/javascript">define('jquery', [],function() {return window.jQuery;})</script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+</head>
+
+<body class="floating nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a href="../index.html" class="navbar-brand navbar-brand-logo">
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../pyfixest.html"> 
+<span class="menu-text">PyFixest</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../getting-started.html"> 
+<span class="menu-text">Getting Started</span></a>
+  </li>  
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-tutorials" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Tutorials</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-tutorials">    
+        <li>
+    <a class="dropdown-item" href="../tutorials/ols-fixed-effects.html">
+ <span class="dropdown-text">OLS with Fixed Effects</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../tutorials/standard-errors.html">
+ <span class="dropdown-text">Standard Errors &amp; Inference</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../tutorials/instrumental-variables.html">
+ <span class="dropdown-text">Instrumental Variables</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../tutorials/poisson-glm.html">
+ <span class="dropdown-text">Poisson &amp; GLMs</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../tutorials/multiple-estimation.html">
+ <span class="dropdown-text">Multiple Estimation</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li>
+    <a class="dropdown-item" href="../tutorials/regression-tables.html">
+ <span class="dropdown-text">Regression Tables</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../tutorials/difference-in-differences.html">
+ <span class="dropdown-text">Difference-in-Differences</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../tutorials/quantile-regression.html">
+ <span class="dropdown-text">Quantile Regression</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-how-to-guides" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">How-To Guides</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-how-to-guides">    
+        <li>
+    <a class="dropdown-item" href="../how-to/marginaleffects.html">
+ <span class="dropdown-text">Hypothesis Testing &amp; Marginal Effects</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../how-to/multiple_testing.html">
+ <span class="dropdown-text">Multiple Testing Corrections</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../how-to/regression_decomposition.html">
+ <span class="dropdown-text">Regression Decomposition</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../how-to/pyfixest_gpu.html">
+ <span class="dropdown-text">PyFixest on the GPU</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li>
+    <a class="dropdown-item" href="../how-to/compare-fixest-pyfixest.html">
+ <span class="dropdown-text">Compare fixest &amp; PyFixest</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../how-to/stata-2-pyfixest.html">
+ <span class="dropdown-text">Translate Stata to PyFixest</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-explanation" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Explanation</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-explanation">    
+        <li>
+    <a class="dropdown-item" href="../explanation/ssc.html">
+ <span class="dropdown-text">On Small Sample Corrections</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-textbook-replications" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Textbook Replications</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-textbook-replications">    
+        <li>
+    <a class="dropdown-item" href="../textbook-replications/replicating-the-effect.html">
+ <span class="dropdown-text">Replicating ‘The Effect’</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../textbook-replications/mixtape.html">
+ <span class="dropdown-text">Replicating ‘The Mixtape’</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../textbook-replications/brave_true.html">
+ <span class="dropdown-text">Causal Inference for the Brave and True</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../textbook-replications/resources.html">
+ <span class="dropdown-text">Other Resources</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" href="../reference/index.html"> 
+<span class="menu-text">Function Reference</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../changelog.html"> 
+<span class="menu-text">Changelog</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../contributing.html"> 
+<span class="menu-text">Contributing</span></a>
+  </li>  
+</ul>
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/py-econometrics/pyfixest/"> <i class="bi bi-github" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#what-are-fixed-effects" id="toc-what-are-fixed-effects" class="nav-link active" data-scroll-target="#what-are-fixed-effects">What Are Fixed Effects?</a></li>
+  <li><a href="#application-1-twin-studies-returns-to-education" id="toc-application-1-twin-studies-returns-to-education" class="nav-link" data-scroll-target="#application-1-twin-studies-returns-to-education">Application 1: Twin Studies — Returns to Education</a>
+  <ul class="collapse">
+  <li><a href="#naive-ols-biased" id="toc-naive-ols-biased" class="nav-link" data-scroll-target="#naive-ols-biased">Naive OLS (biased)</a></li>
+  <li><a href="#twin-pair-fixed-effects" id="toc-twin-pair-fixed-effects" class="nav-link" data-scroll-target="#twin-pair-fixed-effects">Twin-Pair Fixed Effects</a></li>
+  <li><a href="#compare-side-by-side" id="toc-compare-side-by-side" class="nav-link" data-scroll-target="#compare-side-by-side">Compare Side by Side</a></li>
+  </ul></li>
+  <li><a href="#application-2-worker-firm-panel-two-way-fixed-effects" id="toc-application-2-worker-firm-panel-two-way-fixed-effects" class="nav-link" data-scroll-target="#application-2-worker-firm-panel-two-way-fixed-effects">Application 2: Worker-Firm Panel — Two-Way Fixed Effects</a>
+  <ul class="collapse">
+  <li><a href="#one-way-fe-worker-fixed-effects-only" id="toc-one-way-fe-worker-fixed-effects-only" class="nav-link" data-scroll-target="#one-way-fe-worker-fixed-effects-only">One-Way FE: Worker Fixed Effects Only</a></li>
+  <li><a href="#two-way-fe-worker-firm-fixed-effects" id="toc-two-way-fe-worker-firm-fixed-effects" class="nav-link" data-scroll-target="#two-way-fe-worker-firm-fixed-effects">Two-Way FE: Worker + Firm Fixed Effects</a></li>
+  <li><a href="#adding-year-fixed-effects" id="toc-adding-year-fixed-effects" class="nav-link" data-scroll-target="#adding-year-fixed-effects">Adding Year Fixed Effects</a></li>
+  <li><a href="#compare-all-specifications" id="toc-compare-all-specifications" class="nav-link" data-scroll-target="#compare-all-specifications">Compare All Specifications</a></li>
+  </ul></li>
+  <li><a href="#under-the-hood-demeaning" id="toc-under-the-hood-demeaning" class="nav-link" data-scroll-target="#under-the-hood-demeaning">Under the Hood: Demeaning</a></li>
+  <li><a href="#updating-coefficients-online" id="toc-updating-coefficients-online" class="nav-link" data-scroll-target="#updating-coefficients-online">Updating Coefficients Online</a></li>
+  </ul>
+</nav>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">OLS with Fixed Effects</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>Prerequisites
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>You should have read the <a href="../getting-started.html">Getting Started</a> page and have <code>pyfixest</code> installed.</p>
+</div>
+</div>
+<section id="what-are-fixed-effects" class="level2">
+<h2 class="anchored" data-anchor-id="what-are-fixed-effects">What Are Fixed Effects?</h2>
+<p>A fixed effect model includes group-specific intercepts that absorb unobserved heterogeneity. The canonical panel data model is:</p>
+<p><span class="math display">\[
+Y_{it} = \beta X_{it} + \alpha_i + \psi_t + \varepsilon_{it}
+\]</span></p>
+<p>where <span class="math inline">\(\alpha_i\)</span> is an individual fixed effect (constant across time) and <span class="math inline">\(\psi_t\)</span> is a time fixed effect (constant across individuals). Fixed effects are not limited to panel data — any categorical grouping variable can serve as a fixed effect (e.g., cluster-randomized trials with cluster FE, or wage regressions with worker and firm FE).</p>
+<p><code>PyFixest</code> estimates these models efficiently via iterative demeaning, avoiding the need to create thousands of dummy variables.</p>
+</section>
+<section id="application-1-twin-studies-returns-to-education" class="level2">
+<h2 class="anchored" data-anchor-id="application-1-twin-studies-returns-to-education">Application 1: Twin Studies — Returns to Education</h2>
+<p>How much does an extra year of education raise wages? Naive OLS overstates the return because <em>ability</em> drives both education and wages. Twin studies (Ashenfelter &amp; Krueger, 1994) solve this by comparing twins who share the same genetic endowment.</p>
+<div id="7c373c41" class="cell" data-execution_count="1">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>twins <span class="op">=</span> pf.get_twin_data(N_pairs<span class="op">=</span><span class="dv">500</span>, seed<span class="op">=</span><span class="dv">42</span>)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>twins.head()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+
+            <div id="ODoXUt"></div>
+            <script type="text/javascript" data-lets-plot-script="library">
+                if(!window.letsPlotCallQueue) {
+                    window.letsPlotCallQueue = [];
+                }; 
+                window.letsPlotCall = function(f) {
+                    window.letsPlotCallQueue.push(f);
+                };
+                (function() {
+                    var script = document.createElement("script");
+                    script.type = "text/javascript";
+                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.7.3/js-package/distr/lets-plot.min.js";
+                    script.onload = function() {
+                        window.letsPlotCall = function(f) {f();};
+                        window.letsPlotCallQueue.forEach(function(f) {f();});
+                        window.letsPlotCallQueue = [];
+                        
+                    };
+                    script.onerror = function(event) {
+                        window.letsPlotCall = function(f) {};    // noop
+                        window.letsPlotCallQueue = [];
+                        var div = document.createElement("div");
+                        div.style.color = 'darkred';
+                        div.textContent = 'Error loading Lets-Plot JS';
+                        document.getElementById("ODoXUt").appendChild(div);
+                    };
+                    var e = document.getElementById("ODoXUt");
+                    e.appendChild(script);
+                })()
+            </script>
+            
+</div>
+<div class="cell-output cell-output-display">
+
+            <div id="0AdVe1"></div>
+            <script type="text/javascript" data-lets-plot-script="library">
+                if(!window.letsPlotCallQueue) {
+                    window.letsPlotCallQueue = [];
+                }; 
+                window.letsPlotCall = function(f) {
+                    window.letsPlotCallQueue.push(f);
+                };
+                (function() {
+                    var script = document.createElement("script");
+                    script.type = "text/javascript";
+                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.7.3/js-package/distr/lets-plot.min.js";
+                    script.onload = function() {
+                        window.letsPlotCall = function(f) {f();};
+                        window.letsPlotCallQueue.forEach(function(f) {f();});
+                        window.letsPlotCallQueue = [];
+                        
+                    };
+                    script.onerror = function(event) {
+                        window.letsPlotCall = function(f) {};    // noop
+                        window.letsPlotCallQueue = [];
+                        var div = document.createElement("div");
+                        div.style.color = 'darkred';
+                        div.textContent = 'Error loading Lets-Plot JS';
+                        document.getElementById("0AdVe1").appendChild(div);
+                    };
+                    var e = document.getElementById("0AdVe1");
+                    e.appendChild(script);
+                })()
+            </script>
+            
+</div>
+<div class="cell-output cell-output-display" data-execution_count="1">
+<div>
+
+<table class="dataframe table table-sm table-striped small">
+  <thead>
+    <tr>
+      <th></th>
+      <th>twin_pair_id</th>
+      <th>twin_id</th>
+      <th>ability</th>
+      <th>educ</th>
+      <th>age</th>
+      <th>experience</th>
+      <th>log_wage</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>1</td>
+      <td>1</td>
+      <td>0.304717</td>
+      <td>14.880083</td>
+      <td>38.0</td>
+      <td>17.119917</td>
+      <td>3.241823</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>1</td>
+      <td>2</td>
+      <td>0.304717</td>
+      <td>13.942729</td>
+      <td>49.0</td>
+      <td>29.057271</td>
+      <td>3.379130</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>2</td>
+      <td>1</td>
+      <td>-1.039984</td>
+      <td>10.041047</td>
+      <td>33.0</td>
+      <td>16.958953</td>
+      <td>2.303006</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>2</td>
+      <td>2</td>
+      <td>-1.039984</td>
+      <td>8.475001</td>
+      <td>32.0</td>
+      <td>17.524999</td>
+      <td>2.057258</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>3</td>
+      <td>1</td>
+      <td>0.750451</td>
+      <td>8.000000</td>
+      <td>35.0</td>
+      <td>21.000000</td>
+      <td>3.449381</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+</div>
+</div>
+<section id="naive-ols-biased" class="level3">
+<h3 class="anchored" data-anchor-id="naive-ols-biased">Naive OLS (biased)</h3>
+<p>Without controlling for ability, the coefficient on <code>educ</code> captures both the true return and the ability premium:</p>
+<div id="93ccc1cf" class="cell" data-execution_count="2">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>fit_naive <span class="op">=</span> pf.feols(<span class="st">"log_wage ~ educ + experience"</span>, data<span class="op">=</span>twins)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>fit_naive.summary()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>###
+
+Estimation:  OLS
+Dep. var.: log_wage, Fixed effects: 0
+Inference:  iid
+Observations:  1000
+
+| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5% |   97.5% |
+|:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
+| Intercept     |      1.113 |        0.091 |    12.163 |      0.000 |  0.933 |   1.292 |
+| educ          |      0.114 |        0.007 |    17.548 |      0.000 |  0.101 |   0.127 |
+| experience    |      0.019 |        0.001 |    12.851 |      0.000 |  0.016 |   0.022 |
+---
+RMSE: 0.407 R2: 0.283 </code></pre>
+</div>
+</div>
+</section>
+<section id="twin-pair-fixed-effects" class="level3">
+<h3 class="anchored" data-anchor-id="twin-pair-fixed-effects">Twin-Pair Fixed Effects</h3>
+<p>Adding twin-pair fixed effects absorbs the shared unobserved ability, isolating the within-pair variation in education:</p>
+<div id="c6283161" class="cell" data-execution_count="3">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>fit_fe <span class="op">=</span> pf.feols(<span class="st">"log_wage ~ educ + experience | twin_pair_id"</span>, data<span class="op">=</span>twins)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>fit_fe.summary()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>OMP: Info #276: omp_set_nested routine deprecated, please use omp_set_max_active_levels instead.</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>###
+
+Estimation:  OLS
+Dep. var.: log_wage, Fixed effects: twin_pair_id
+Inference:  iid
+Observations:  1000
+
+| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5% |   97.5% |
+|:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
+| educ          |      0.088 |        0.007 |    11.863 |      0.000 |  0.073 |   0.103 |
+| experience    |      0.020 |        0.002 |    12.516 |      0.000 |  0.016 |   0.023 |
+---
+RMSE: 0.214 R2: 0.801 R2 Within: 0.34 </code></pre>
+</div>
+</div>
+</section>
+<section id="compare-side-by-side" class="level3">
+<h3 class="anchored" data-anchor-id="compare-side-by-side">Compare Side by Side</h3>
+<p>The FE estimate (~0.08) is smaller than the naive OLS estimate, consistent with upward ability bias:</p>
+<div id="888f2cba" class="cell" data-execution_count="4">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>pf.etable(</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    [fit_naive, fit_fe],</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    labels<span class="op">=</span>{<span class="st">"log_wage"</span>: <span class="st">"Log Hourly Wage"</span>, <span class="st">"educ"</span>: <span class="st">"Years of Education"</span>, <span class="st">"experience"</span>: <span class="st">"Experience"</span>},</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    felabels<span class="op">=</span>{<span class="st">"twin_pair_id"</span>: <span class="st">"Twin Pair FE"</span>},</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    caption<span class="op">=</span><span class="st">"Returns to Education: Naive OLS vs Twin FE"</span>,</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="4">
+<div id="edprljmjtw" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<style>
+#edprljmjtw table {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
+        }
+
+#edprljmjtw thead, tbody, tfoot, tr, td, th { border-style: none; }
+ tr { background-color: transparent; }
+#edprljmjtw p { margin: 0; padding: 0; }
+ #edprljmjtw .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: hidden; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
+ #edprljmjtw .gt_caption { padding-top: 4px; padding-bottom: 4px; }
+ #edprljmjtw .gt_title { color: #333333; font-size: 125%; font-weight: initial; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
+ #edprljmjtw .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 3px; padding-bottom: 5px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
+ #edprljmjtw .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #edprljmjtw .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
+ #edprljmjtw .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #edprljmjtw .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 4px; padding-bottom: 5px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
+ #edprljmjtw .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
+ #edprljmjtw .gt_column_spanner_outer:first-child { padding-left: 0; }
+ #edprljmjtw .gt_column_spanner_outer:last-child { padding-right: 0; }
+ #edprljmjtw .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; vertical-align: bottom; padding-top: 4px; padding-bottom: 4px; overflow-x: hidden; display: inline-block; width: 100%; }
+ #edprljmjtw .gt_spanner_row { border-bottom-style: hidden; }
+ #edprljmjtw .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
+ #edprljmjtw .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; vertical-align: middle; }
+ #edprljmjtw .gt_from_md> :first-child { margin-top: 0; }
+ #edprljmjtw .gt_from_md> :last-child { margin-bottom: 0; }
+ #edprljmjtw .gt_row { padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
+ #edprljmjtw .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
+ #edprljmjtw .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
+ #edprljmjtw .gt_row_group_first td { border-top-width: 0.5px; }
+ #edprljmjtw .gt_row_group_first th { border-top-width: 0.5px; }
+ #edprljmjtw .gt_striped { color: #333333; background-color: #F4F4F4; }
+ #edprljmjtw .gt_table_body { border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
+ #edprljmjtw .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
+ #edprljmjtw .gt_sourcenote { font-size: 90%; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
+ #edprljmjtw .gt_left { text-align: left; }
+ #edprljmjtw .gt_center { text-align: center; }
+ #edprljmjtw .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
+ #edprljmjtw .gt_font_normal { font-weight: normal; }
+ #edprljmjtw .gt_font_bold { font-weight: bold; }
+ #edprljmjtw .gt_font_italic { font-style: italic; }
+ #edprljmjtw .gt_super { font-size: 65%; }
+ #edprljmjtw .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
+ #edprljmjtw .gt_asterisk { font-size: 100%; vertical-align: 0; }
+ 
+</style>
+<table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
+<thead>
+
+  <tr class="gt_heading">
+    <td colspan="3" class="gt_heading gt_title gt_font_normal">Returns to Education: Naive OLS vs Twin FE</td>
+  </tr>
+<tr class="gt_col_headings gt_spanner_row">
+  <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="2" colspan="1" scope="col" id=""></th>
+  <th class="gt_center gt_columns_top_border gt_column_spanner_outer" rowspan="1" colspan="2" scope="colgroup" id="Log-Hourly-Wage">
+    <span class="gt_column_spanner">Log Hourly Wage</span>
+  </th>
+</tr>
+<tr class="gt_col_headings">
+  <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1" scope="col" id="0">(1)</th>
+  <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1" scope="col" id="1">(2)</th>
+</tr>
+</thead>
+<tbody class="gt_table_body">
+  <tr class="gt_group_heading_row">
+    <th class="gt_group_heading" colspan="3">coef</th>
+  </tr>
+  <tr>
+    <th class="gt_row gt_left gt_stub">Years of Education</th>
+    <td class="gt_row gt_center">0.114*** <br> (0.007)</td>
+    <td class="gt_row gt_center">0.088*** <br> (0.007)</td>
+  </tr>
+  <tr>
+    <th class="gt_row gt_left gt_stub">Experience</th>
+    <td class="gt_row gt_center">0.019*** <br> (0.001)</td>
+    <td class="gt_row gt_center">0.020*** <br> (0.002)</td>
+  </tr>
+  <tr>
+    <th class="gt_row gt_left gt_stub">Intercept</th>
+    <td class="gt_row gt_center">1.113*** <br> (0.091)</td>
+    <td class="gt_row gt_center"></td>
+  </tr>
+  <tr class="gt_group_heading_row">
+    <th class="gt_group_heading" colspan="3">fe</th>
+  </tr>
+  <tr>
+    <th class="gt_row gt_left gt_stub">Twin Pair FE</th>
+    <td class="gt_row gt_center">-</td>
+    <td class="gt_row gt_center">x</td>
+  </tr>
+  <tr class="gt_group_heading_row">
+    <th class="gt_group_heading" colspan="3">stats</th>
+  </tr>
+  <tr>
+    <th class="gt_row gt_left gt_stub">Observations</th>
+    <td class="gt_row gt_center">1000</td>
+    <td class="gt_row gt_center">1000</td>
+  </tr>
+  <tr>
+    <th class="gt_row gt_left gt_stub">S.E. type</th>
+    <td class="gt_row gt_center">iid</td>
+    <td class="gt_row gt_center">iid</td>
+  </tr>
+  <tr>
+    <th class="gt_row gt_left gt_stub">R<sup>2</sup></th>
+    <td class="gt_row gt_center">0.283</td>
+    <td class="gt_row gt_center">0.801</td>
+  </tr>
+  <tr>
+    <th class="gt_row gt_left gt_stub">R<sup>2</sup> Within</th>
+    <td class="gt_row gt_center">-</td>
+    <td class="gt_row gt_center">0.340</td>
+  </tr>
+</tbody>
+  <tfoot class="gt_sourcenotes">
+  
+  <tr>
+    <td class="gt_sourcenote" colspan="3">Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001. Format of coefficient cell:
+Coefficient 
+ (Std. Error)</td>
+  </tr>
+
+</tfoot>
+
+</table>
+
+</div>
+        
+</div>
+</div>
+<div id="06737d79" class="cell" data-execution_count="5">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>pf.coefplot([fit_naive, fit_fe], keep<span class="op">=</span><span class="st">"educ"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="5">
+   <div id="reOhxN"></div>
+   <script type="text/javascript" data-lets-plot-script="plot">
+   
+   (function() {
+   // ----------
+   
+   const forceImmediateRender = false;
+   const responsive = false;
+   
+   let sizing = {
+       width_mode: "MIN",
+       height_mode: "SCALED",
+       width: null, 
+       height: null 
+   };
+   
+   const preferredWidth = document.body.dataset.letsPlotPreferredWidth;
+   if (preferredWidth !== undefined) {
+       sizing = {
+           width_mode: 'FIXED',
+           height_mode: 'SCALED',
+           width: parseFloat(preferredWidth)
+       };
+   }
+   
+   const containerDiv = document.getElementById("reOhxN");
+   let fig = null;
+   
+   function renderPlot() {
+       if (fig === null) {
+           const plotSpec = {
+"data":{
+"Coefficient":["educ","educ","educ","educ"],
+"Estimate":[0.11421314363891215,0.08804913053082983,0.11421314363891215,0.08804913053082983],
+"2.5%":[0.10144129742596628,0.07346628392819354,0.10144129742596628,0.07346628392819354],
+"97.5%":[0.12698498985185802,0.10263197713346611,0.12698498985185802,0.10263197713346611],
+"Model":["log_wage~educ+experience","log_wage~educ+experience|twin_pair_id","log_wage~educ+experience","log_wage~educ+experience|twin_pair_id"]
+},
+"mapping":{
+"x":"Coefficient",
+"y":"Estimate",
+"color":"Model"
+},
+"data_meta":{
+"series_annotations":[{
+"type":"int",
+"column":"level_0"
+},{
+"type":"str",
+"column":"Coefficient"
+},{
+"type":"int",
+"column":"index"
+},{
+"type":"float",
+"column":"Estimate"
+},{
+"type":"float",
+"column":"Std. Error"
+},{
+"type":"float",
+"column":"t value"
+},{
+"type":"float",
+"column":"Pr(>|t|)"
+},{
+"type":"float",
+"column":"2.5%"
+},{
+"type":"float",
+"column":"97.5%"
+},{
+"type":"str",
+"column":"Model"
+}]
+},
+"guides":{
+"y":{
+"title":"Estimate and 95.0% Confidence Interval"
+}
+},
+"coord":{
+"name":"flip",
+"flip":true
+},
+"ggsize":{
+"width":500.0,
+"height":300.0
+},
+"theme":{
+"axis_text_x":{
+"angle":0.0,
+"blank":false
+}
+},
+"kind":"plot",
+"scales":[],
+"layers":[{
+"geom":"point",
+"mapping":{
+},
+"position":{
+"name":"dodge",
+"width":0.5
+},
+"data_meta":{
+},
+"data":{
+}
+},{
+"geom":"errorbar",
+"mapping":{
+"ymin":"2.5%",
+"ymax":"97.5%"
+},
+"position":{
+"name":"dodge",
+"width":0.5
+},
+"data_meta":{
+},
+"width":0.05,
+"data":{
+}
+},{
+"geom":"hline",
+"mapping":{
+},
+"data_meta":{
+},
+"yintercept":0.0,
+"linetype":"dashed",
+"color":"black",
+"data":{
+}
+}],
+"metainfo_list":[],
+"spec_id":"1"
+};
+           window.letsPlotCall(function() { fig = LetsPlot.buildPlotFromProcessedSpecs(plotSpec, containerDiv, sizing); });
+       } else {
+           fig.updateView({});
+       }
+   }
+   
+   const renderImmediately = 
+       forceImmediateRender || (
+           sizing.width_mode === 'FIXED' && 
+           (sizing.height_mode === 'FIXED' || sizing.height_mode === 'SCALED')
+       );
+   
+   if (renderImmediately) {
+       renderPlot();
+   }
+   
+   if (!renderImmediately || responsive) {
+       // Set up observer for initial sizing or continuous monitoring
+       var observer = new ResizeObserver(function(entries) {
+           for (let entry of entries) {
+               if (entry.contentBoxSize && 
+                   entry.contentBoxSize[0].inlineSize > 0) {
+                   if (!responsive && observer) {
+                       observer.disconnect();
+                       observer = null;
+                   }
+                   renderPlot();
+                   if (!responsive) {
+                       break;
+                   }
+               }
+           }
+       });
+       
+       observer.observe(containerDiv);
+   }
+   
+   // ----------
+   })();
+   
+   </script>
+</div>
+</div>
+</section>
+</section>
+<section id="application-2-worker-firm-panel-two-way-fixed-effects" class="level2">
+<h2 class="anchored" data-anchor-id="application-2-worker-firm-panel-two-way-fixed-effects">Application 2: Worker-Firm Panel — Two-Way Fixed Effects</h2>
+<p>Wages depend on both <em>who you are</em> (worker ability) and <em>where you work</em> (firm pay premiums). A two-way fixed effects model separates these (Abowd, Kramarz &amp; Margolis, 1999).</p>
+<div id="f3fbf35c" class="cell" data-execution_count="6">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>panel <span class="op">=</span> pf.get_worker_panel(N_workers<span class="op">=</span><span class="dv">500</span>, N_firms<span class="op">=</span><span class="dv">50</span>, N_years<span class="op">=</span><span class="dv">11</span>, seed<span class="op">=</span><span class="dv">42</span>)</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>panel.head()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="6">
+<div>
+
+<table class="dataframe table table-sm table-striped small">
+  <thead>
+    <tr>
+      <th></th>
+      <th>worker_id</th>
+      <th>firm_id</th>
+      <th>year</th>
+      <th>female</th>
+      <th>experience</th>
+      <th>tenure</th>
+      <th>log_wage</th>
+      <th>worker_fe</th>
+      <th>firm_fe</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>0</td>
+      <td>48</td>
+      <td>2000</td>
+      <td>1</td>
+      <td>1</td>
+      <td>1</td>
+      <td>0.406292</td>
+      <td>0.152359</td>
+      <td>0.212055</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>1</td>
+      <td>30</td>
+      <td>2000</td>
+      <td>0</td>
+      <td>2</td>
+      <td>1</td>
+      <td>-0.382227</td>
+      <td>-0.519992</td>
+      <td>-0.108531</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>2</td>
+      <td>18</td>
+      <td>2000</td>
+      <td>1</td>
+      <td>2</td>
+      <td>1</td>
+      <td>0.411605</td>
+      <td>0.375226</td>
+      <td>0.269345</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>3</td>
+      <td>22</td>
+      <td>2000</td>
+      <td>1</td>
+      <td>0</td>
+      <td>1</td>
+      <td>1.232769</td>
+      <td>0.470282</td>
+      <td>0.400735</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>4</td>
+      <td>8</td>
+      <td>2000</td>
+      <td>1</td>
+      <td>2</td>
+      <td>1</td>
+      <td>-1.335275</td>
+      <td>-0.975518</td>
+      <td>-0.167872</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+</div>
+</div>
+<section id="one-way-fe-worker-fixed-effects-only" class="level3">
+<h3 class="anchored" data-anchor-id="one-way-fe-worker-fixed-effects-only">One-Way FE: Worker Fixed Effects Only</h3>
+<div id="4824897b" class="cell" data-execution_count="7">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>fit_worker <span class="op">=</span> pf.feols(<span class="st">"log_wage ~ experience + tenure + female | worker_id"</span>, data<span class="op">=</span>panel)</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>fit_worker.summary()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>###
+
+Estimation:  OLS
+Dep. var.: log_wage, Fixed effects: worker_id
+Inference:  iid
+Observations:  5500
+
+| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5% |   97.5% |
+|:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
+| experience    |      0.021 |        0.001 |    15.047 |      0.000 |  0.018 |   0.024 |
+| tenure        |      0.013 |        0.002 |     5.330 |      0.000 |  0.008 |   0.017 |
+---
+RMSE: 0.299 R2: 0.776 R2 Within: 0.08 </code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/Users/afischer/Documents/pyfixest/pyfixest/estimation/feols_.py:2847: UserWarning: 
+            1 variables dropped due to multicollinearity.
+            The following variables are dropped: ['female'].
+            
+  warnings.warn(</code></pre>
+</div>
+</div>
+</section>
+<section id="two-way-fe-worker-firm-fixed-effects" class="level3">
+<h3 class="anchored" data-anchor-id="two-way-fe-worker-firm-fixed-effects">Two-Way FE: Worker + Firm Fixed Effects</h3>
+<div id="d5a30f8a" class="cell" data-execution_count="8">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>fit_twoway <span class="op">=</span> pf.feols(<span class="st">"log_wage ~ experience + tenure + female | worker_id + firm_id"</span>, data<span class="op">=</span>panel)</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>fit_twoway.summary()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>###
+
+Estimation:  OLS
+Dep. var.: log_wage, Fixed effects: worker_id+firm_id
+Inference:  iid
+Observations:  5500
+
+| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5% |   97.5% |
+|:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
+| experience    |      0.021 |        0.001 |    22.547 |      0.000 |  0.019 |   0.023 |
+| tenure        |      0.011 |        0.002 |     6.830 |      0.000 |  0.008 |   0.014 |
+---
+RMSE: 0.192 R2: 0.908 R2 Within: 0.159 </code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/Users/afischer/Documents/pyfixest/pyfixest/estimation/feols_.py:2847: UserWarning: 
+            1 variables dropped due to multicollinearity.
+            The following variables are dropped: ['female'].
+            
+  warnings.warn(</code></pre>
+</div>
+</div>
+</section>
+<section id="adding-year-fixed-effects" class="level3">
+<h3 class="anchored" data-anchor-id="adding-year-fixed-effects">Adding Year Fixed Effects</h3>
+<div id="d5833a12" class="cell" data-execution_count="9">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>fit_full <span class="op">=</span> pf.feols(<span class="st">"log_wage ~ experience + tenure + female | worker_id + firm_id + year"</span>, data<span class="op">=</span>panel)</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>fit_full.summary()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>###
+
+Estimation:  OLS
+Dep. var.: log_wage, Fixed effects: worker_id+firm_id+year
+Inference:  iid
+Observations:  5500
+
+| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5% |   97.5% |
+|:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
+| experience    |      0.020 |        0.002 |     9.897 |      0.000 |  0.016 |   0.024 |
+| tenure        |      0.010 |        0.002 |     6.125 |      0.000 |  0.007 |   0.013 |
+---
+RMSE: 0.191 R2: 0.908 R2 Within: 0.027 </code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/Users/afischer/Documents/pyfixest/pyfixest/estimation/feols_.py:2847: UserWarning: 
+            1 variables dropped due to multicollinearity.
+            The following variables are dropped: ['female'].
+            
+  warnings.warn(</code></pre>
+</div>
+</div>
+</section>
+<section id="compare-all-specifications" class="level3">
+<h3 class="anchored" data-anchor-id="compare-all-specifications">Compare All Specifications</h3>
+<div id="78e224a2" class="cell" data-execution_count="10">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>pf.etable(</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>    [fit_worker, fit_twoway, fit_full],</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>    labels<span class="op">=</span>{<span class="st">"log_wage"</span>: <span class="st">"Log Wage"</span>, <span class="st">"experience"</span>: <span class="st">"Experience"</span>, <span class="st">"tenure"</span>: <span class="st">"Tenure"</span>, <span class="st">"female"</span>: <span class="st">"Female"</span>},</span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>    felabels<span class="op">=</span>{<span class="st">"worker_id"</span>: <span class="st">"Worker FE"</span>, <span class="st">"firm_id"</span>: <span class="st">"Firm FE"</span>, <span class="st">"year"</span>: <span class="st">"Year FE"</span>},</span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>    caption<span class="op">=</span><span class="st">"Worker-Firm Panel: Adding Fixed Effects Progressively"</span>,</span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="10">
+<div id="duunihydxd" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<style>
+#duunihydxd table {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
+        }
+
+#duunihydxd thead, tbody, tfoot, tr, td, th { border-style: none; }
+ tr { background-color: transparent; }
+#duunihydxd p { margin: 0; padding: 0; }
+ #duunihydxd .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: hidden; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
+ #duunihydxd .gt_caption { padding-top: 4px; padding-bottom: 4px; }
+ #duunihydxd .gt_title { color: #333333; font-size: 125%; font-weight: initial; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
+ #duunihydxd .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 3px; padding-bottom: 5px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
+ #duunihydxd .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #duunihydxd .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
+ #duunihydxd .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #duunihydxd .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 4px; padding-bottom: 5px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
+ #duunihydxd .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
+ #duunihydxd .gt_column_spanner_outer:first-child { padding-left: 0; }
+ #duunihydxd .gt_column_spanner_outer:last-child { padding-right: 0; }
+ #duunihydxd .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; vertical-align: bottom; padding-top: 4px; padding-bottom: 4px; overflow-x: hidden; display: inline-block; width: 100%; }
+ #duunihydxd .gt_spanner_row { border-bottom-style: hidden; }
+ #duunihydxd .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
+ #duunihydxd .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; vertical-align: middle; }
+ #duunihydxd .gt_from_md> :first-child { margin-top: 0; }
+ #duunihydxd .gt_from_md> :last-child { margin-bottom: 0; }
+ #duunihydxd .gt_row { padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
+ #duunihydxd .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
+ #duunihydxd .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
+ #duunihydxd .gt_row_group_first td { border-top-width: 0.5px; }
+ #duunihydxd .gt_row_group_first th { border-top-width: 0.5px; }
+ #duunihydxd .gt_striped { color: #333333; background-color: #F4F4F4; }
+ #duunihydxd .gt_table_body { border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
+ #duunihydxd .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
+ #duunihydxd .gt_sourcenote { font-size: 90%; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
+ #duunihydxd .gt_left { text-align: left; }
+ #duunihydxd .gt_center { text-align: center; }
+ #duunihydxd .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
+ #duunihydxd .gt_font_normal { font-weight: normal; }
+ #duunihydxd .gt_font_bold { font-weight: bold; }
+ #duunihydxd .gt_font_italic { font-style: italic; }
+ #duunihydxd .gt_super { font-size: 65%; }
+ #duunihydxd .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
+ #duunihydxd .gt_asterisk { font-size: 100%; vertical-align: 0; }
+ 
+</style>
+<table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
+<thead>
+
+  <tr class="gt_heading">
+    <td colspan="4" class="gt_heading gt_title gt_font_normal">Worker-Firm Panel: Adding Fixed Effects Progressively</td>
+  </tr>
+<tr class="gt_col_headings gt_spanner_row">
+  <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="2" colspan="1" scope="col" id=""></th>
+  <th class="gt_center gt_columns_top_border gt_column_spanner_outer" rowspan="1" colspan="3" scope="colgroup" id="Log-Wage">
+    <span class="gt_column_spanner">Log Wage</span>
+  </th>
+</tr>
+<tr class="gt_col_headings">
+  <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1" scope="col" id="0">(1)</th>
+  <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1" scope="col" id="1">(2)</th>
+  <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1" scope="col" id="2">(3)</th>
+</tr>
+</thead>
+<tbody class="gt_table_body">
+  <tr class="gt_group_heading_row">
+    <th class="gt_group_heading" colspan="4">coef</th>
+  </tr>
+  <tr>
+    <th class="gt_row gt_left gt_stub">Experience</th>
+    <td class="gt_row gt_center">0.021*** <br> (0.001)</td>
+    <td class="gt_row gt_center">0.021*** <br> (0.001)</td>
+    <td class="gt_row gt_center">0.020*** <br> (0.002)</td>
+  </tr>
+  <tr>
+    <th class="gt_row gt_left gt_stub">Tenure</th>
+    <td class="gt_row gt_center">0.013*** <br> (0.002)</td>
+    <td class="gt_row gt_center">0.011*** <br> (0.002)</td>
+    <td class="gt_row gt_center">0.010*** <br> (0.002)</td>
+  </tr>
+  <tr class="gt_group_heading_row">
+    <th class="gt_group_heading" colspan="4">fe</th>
+  </tr>
+  <tr>
+    <th class="gt_row gt_left gt_stub">Worker FE</th>
+    <td class="gt_row gt_center">x</td>
+    <td class="gt_row gt_center">x</td>
+    <td class="gt_row gt_center">x</td>
+  </tr>
+  <tr>
+    <th class="gt_row gt_left gt_stub">Firm FE</th>
+    <td class="gt_row gt_center">-</td>
+    <td class="gt_row gt_center">x</td>
+    <td class="gt_row gt_center">x</td>
+  </tr>
+  <tr>
+    <th class="gt_row gt_left gt_stub">Year FE</th>
+    <td class="gt_row gt_center">-</td>
+    <td class="gt_row gt_center">-</td>
+    <td class="gt_row gt_center">x</td>
+  </tr>
+  <tr class="gt_group_heading_row">
+    <th class="gt_group_heading" colspan="4">stats</th>
+  </tr>
+  <tr>
+    <th class="gt_row gt_left gt_stub">Observations</th>
+    <td class="gt_row gt_center">5500</td>
+    <td class="gt_row gt_center">5500</td>
+    <td class="gt_row gt_center">5500</td>
+  </tr>
+  <tr>
+    <th class="gt_row gt_left gt_stub">S.E. type</th>
+    <td class="gt_row gt_center">iid</td>
+    <td class="gt_row gt_center">iid</td>
+    <td class="gt_row gt_center">iid</td>
+  </tr>
+  <tr>
+    <th class="gt_row gt_left gt_stub">R<sup>2</sup></th>
+    <td class="gt_row gt_center">0.776</td>
+    <td class="gt_row gt_center">0.908</td>
+    <td class="gt_row gt_center">0.908</td>
+  </tr>
+  <tr>
+    <th class="gt_row gt_left gt_stub">R<sup>2</sup> Within</th>
+    <td class="gt_row gt_center">0.080</td>
+    <td class="gt_row gt_center">0.159</td>
+    <td class="gt_row gt_center">0.027</td>
+  </tr>
+</tbody>
+  <tfoot class="gt_sourcenotes">
+  
+  <tr>
+    <td class="gt_sourcenote" colspan="4">Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001. Format of coefficient cell:
+Coefficient 
+ (Std. Error)</td>
+  </tr>
+
+</tfoot>
+
+</table>
+
+</div>
+        
+</div>
+</div>
+</section>
+</section>
+<section id="under-the-hood-demeaning" class="level2">
+<h2 class="anchored" data-anchor-id="under-the-hood-demeaning">Under the Hood: Demeaning</h2>
+<p>Fixed effects estimation works by <em>demeaning</em> — subtracting group means from both sides of the equation. This is equivalent to including dummy variables but far more efficient.</p>
+<p>Let’s verify this manually with the <code>pf.get_data()</code> synthetic data:</p>
+<div id="0e94ac3a" class="cell" data-execution_count="11">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> pf.get_data()</span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> _demean(df, column, by):</span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> df[column] <span class="op">-</span> df.groupby(by)[column].transform(<span class="st">"mean"</span>)</span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a>fit_fe_demo <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 | group_id"</span>, data<span class="op">=</span>data, vcov<span class="op">=</span><span class="st">"HC1"</span>)</span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a>fit_demeaned <span class="op">=</span> pf.feols(</span>
+<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Y_dm ~ X1_dm"</span>,</span>
+<span id="cb20-12"><a href="#cb20-12" aria-hidden="true" tabindex="-1"></a>    data<span class="op">=</span>data.assign(</span>
+<span id="cb20-13"><a href="#cb20-13" aria-hidden="true" tabindex="-1"></a>        Y_dm<span class="op">=</span><span class="kw">lambda</span> df: _demean(df, <span class="st">"Y"</span>, <span class="st">"group_id"</span>),</span>
+<span id="cb20-14"><a href="#cb20-14" aria-hidden="true" tabindex="-1"></a>        X1_dm<span class="op">=</span><span class="kw">lambda</span> df: _demean(df, <span class="st">"X1"</span>, <span class="st">"group_id"</span>),</span>
+<span id="cb20-15"><a href="#cb20-15" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb20-16"><a href="#cb20-16" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span><span class="st">"HC1"</span>,</span>
+<span id="cb20-17"><a href="#cb20-17" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb20-18"><a href="#cb20-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-19"><a href="#cb20-19" aria-hidden="true" tabindex="-1"></a>pf.etable([fit_fe_demo, fit_demeaned], caption<span class="op">=</span><span class="st">"FE via feols() vs Manual Demeaning"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="11">
+<div id="wvozumtfxm" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<style>
+#wvozumtfxm table {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
+        }
+
+#wvozumtfxm thead, tbody, tfoot, tr, td, th { border-style: none; }
+ tr { background-color: transparent; }
+#wvozumtfxm p { margin: 0; padding: 0; }
+ #wvozumtfxm .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: hidden; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
+ #wvozumtfxm .gt_caption { padding-top: 4px; padding-bottom: 4px; }
+ #wvozumtfxm .gt_title { color: #333333; font-size: 125%; font-weight: initial; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
+ #wvozumtfxm .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 3px; padding-bottom: 5px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
+ #wvozumtfxm .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #wvozumtfxm .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
+ #wvozumtfxm .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #wvozumtfxm .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 4px; padding-bottom: 5px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
+ #wvozumtfxm .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
+ #wvozumtfxm .gt_column_spanner_outer:first-child { padding-left: 0; }
+ #wvozumtfxm .gt_column_spanner_outer:last-child { padding-right: 0; }
+ #wvozumtfxm .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; vertical-align: bottom; padding-top: 4px; padding-bottom: 4px; overflow-x: hidden; display: inline-block; width: 100%; }
+ #wvozumtfxm .gt_spanner_row { border-bottom-style: hidden; }
+ #wvozumtfxm .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
+ #wvozumtfxm .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; vertical-align: middle; }
+ #wvozumtfxm .gt_from_md> :first-child { margin-top: 0; }
+ #wvozumtfxm .gt_from_md> :last-child { margin-bottom: 0; }
+ #wvozumtfxm .gt_row { padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
+ #wvozumtfxm .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
+ #wvozumtfxm .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
+ #wvozumtfxm .gt_row_group_first td { border-top-width: 0.5px; }
+ #wvozumtfxm .gt_row_group_first th { border-top-width: 0.5px; }
+ #wvozumtfxm .gt_striped { color: #333333; background-color: #F4F4F4; }
+ #wvozumtfxm .gt_table_body { border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
+ #wvozumtfxm .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
+ #wvozumtfxm .gt_sourcenote { font-size: 90%; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
+ #wvozumtfxm .gt_left { text-align: left; }
+ #wvozumtfxm .gt_center { text-align: center; }
+ #wvozumtfxm .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
+ #wvozumtfxm .gt_font_normal { font-weight: normal; }
+ #wvozumtfxm .gt_font_bold { font-weight: bold; }
+ #wvozumtfxm .gt_font_italic { font-style: italic; }
+ #wvozumtfxm .gt_super { font-size: 65%; }
+ #wvozumtfxm .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
+ #wvozumtfxm .gt_asterisk { font-size: 100%; vertical-align: 0; }
+ 
+</style>
+<table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
+<thead>
+
+  <tr class="gt_heading">
+    <td colspan="3" class="gt_heading gt_title gt_font_normal">FE via feols() vs Manual Demeaning</td>
+  </tr>
+<tr class="gt_col_headings gt_spanner_row">
+  <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="2" colspan="1" scope="col" id=""></th>
+  <th class="gt_center gt_columns_top_border gt_column_spanner_outer" rowspan="1" colspan="1" scope="col" id="Y">
+    <span class="gt_column_spanner">Y</span>
+  </th>
+  <th class="gt_center gt_columns_top_border gt_column_spanner_outer" rowspan="1" colspan="1" scope="col" id="Y_dm">
+    <span class="gt_column_spanner">Y_dm</span>
+  </th>
+</tr>
+<tr class="gt_col_headings">
+  <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1" scope="col" id="0">(1)</th>
+  <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1" scope="col" id="1">(2)</th>
+</tr>
+</thead>
+<tbody class="gt_table_body">
+  <tr class="gt_group_heading_row">
+    <th class="gt_group_heading" colspan="3">coef</th>
+  </tr>
+  <tr>
+    <th class="gt_row gt_left gt_stub">X1</th>
+    <td class="gt_row gt_center">-1.019*** <br> (0.083)</td>
+    <td class="gt_row gt_center"></td>
+  </tr>
+  <tr>
+    <th class="gt_row gt_left gt_stub">X1_dm</th>
+    <td class="gt_row gt_center"></td>
+    <td class="gt_row gt_center">-1.019*** <br> (0.083)</td>
+  </tr>
+  <tr>
+    <th class="gt_row gt_left gt_stub">Intercept</th>
+    <td class="gt_row gt_center"></td>
+    <td class="gt_row gt_center">0.003 <br> (0.068)</td>
+  </tr>
+  <tr class="gt_group_heading_row">
+    <th class="gt_group_heading" colspan="3">fe</th>
+  </tr>
+  <tr>
+    <th class="gt_row gt_left gt_stub">group_id</th>
+    <td class="gt_row gt_center">x</td>
+    <td class="gt_row gt_center">-</td>
+  </tr>
+  <tr class="gt_group_heading_row">
+    <th class="gt_group_heading" colspan="3">stats</th>
+  </tr>
+  <tr>
+    <th class="gt_row gt_left gt_stub">Observations</th>
+    <td class="gt_row gt_center">998</td>
+    <td class="gt_row gt_center">998</td>
+  </tr>
+  <tr>
+    <th class="gt_row gt_left gt_stub">S.E. type</th>
+    <td class="gt_row gt_center">hetero</td>
+    <td class="gt_row gt_center">hetero</td>
+  </tr>
+  <tr>
+    <th class="gt_row gt_left gt_stub">R<sup>2</sup></th>
+    <td class="gt_row gt_center">0.137</td>
+    <td class="gt_row gt_center">0.126</td>
+  </tr>
+  <tr>
+    <th class="gt_row gt_left gt_stub">R<sup>2</sup> Within</th>
+    <td class="gt_row gt_center">0.126</td>
+    <td class="gt_row gt_center">-</td>
+  </tr>
+</tbody>
+  <tfoot class="gt_sourcenotes">
+  
+  <tr>
+    <td class="gt_sourcenote" colspan="3">Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001. Format of coefficient cell:
+Coefficient 
+ (Std. Error)</td>
+  </tr>
+
+</tfoot>
+
+</table>
+
+</div>
+        
+</div>
+</div>
+<p>The coefficients are identical. <code>PyFixest</code> uses the same logic but scales to millions of observations and multiple high-dimensional fixed effects.</p>
+</section>
+<section id="updating-coefficients-online" class="level2">
+<h2 class="anchored" data-anchor-id="updating-coefficients-online">Updating Coefficients Online</h2>
+<p>You can update the coefficients of a model via the <code>update()</code> method, useful for online learning where data arrives sequentially:</p>
+<div id="078bce45" class="cell" data-execution_count="12">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>data_sub <span class="op">=</span> data.sample(frac<span class="op">=</span><span class="fl">0.5</span>, random_state<span class="op">=</span><span class="dv">42</span>)</span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>m <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 + X2"</span>, data<span class="op">=</span>data_sub)</span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>m._beta_hat</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="12">
+<pre><code>array([ 0.78027192, -0.98445642, -0.17457317])</code></pre>
+</div>
+</div>
+<div id="66a30a78" class="cell" data-execution_count="13">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>remaining <span class="op">=</span> data.drop(data_sub.index)</span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>new_ids <span class="op">=</span> remaining.index[:<span class="dv">5</span>]</span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>X_new <span class="op">=</span> np.c_[np.ones(<span class="bu">len</span>(new_ids)), data.loc[new_ids][[<span class="st">"X1"</span>, <span class="st">"X2"</span>]].values]</span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>y_new <span class="op">=</span> data.loc[new_ids][<span class="st">"Y"</span>].values</span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>m.update(X_new, y_new)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="13">
+<pre><code>array([nan, nan, nan])</code></pre>
+</div>
+</div>
+<div id="397b8313" class="cell" data-execution_count="14">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb25"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Verify: same as fitting on the combined data</span></span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>combined_idx <span class="op">=</span> data_sub.index.append(pd.Index(new_ids))</span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>pf.feols(<span class="st">"Y ~ X1 + X2"</span>, data<span class="op">=</span>data.loc[combined_idx]).coef().values</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="14">
+<pre><code>array([ 0.78099183, -0.98268024, -0.17505231])</code></pre>
+</div>
+</div>
+<div class="callout callout-style-default callout-tip callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Tip</span>Next Steps
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<ul>
+<li><a href="../tutorials/standard-errors.html">Standard Errors &amp; Inference</a> — learn about robust, cluster-robust, and bootstrap inference.</li>
+<li><a href="../tutorials/regression-tables.html">Regression Tables</a> — customize publication-ready output tables.</li>
+</ul>
+</div>
+</div>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

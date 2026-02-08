@@ -1,0 +1,16 @@
+---
+title: "Instrumental Variables"
+format:
+  html:
+    html-table-processing: none
+toc: true
+toc-title: "On this page"
+toc-location: left
+---
+
+::: {.callout-warning}
+## Coming Soon
+This tutorial is under construction. It will cover IV estimation with fixed effects, first-stage diagnostics, the effective F-statistic, and applications inspired by compulsory schooling and A/B non-compliance.
+:::
+
+For now, see the [Getting Started](../getting-started.qmd) guide for a quick IV example, and the [Function Reference](../reference/index.qmd) for detailed API documentation.

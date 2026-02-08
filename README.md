@@ -29,7 +29,7 @@
 
 The package aims to mimic the syntax and functionality of the formidable [fixest](https://github.com/lrberge/fixest) package as closely as Python allows: if you know `fixest` well, the goal is that you won't have to read the docs to get started! In particular, this means that all of `fixest's` defaults are mirrored by `PyFixest`.
 
-For a quick introduction, you can take a look at the [quickstart](https://py-econometrics.github.io/pyfixest/quickstart.html) or the regression chapter of [Arthur Turrell's](https://github.com/aeturrell) book on [Coding for Economists](https://aeturrell.github.io/coding-for-economists/econmt-regression.html#imports). You can find documentation of all user facing functions in the [Function Reference](https://py-econometrics.github.io/pyfixest/reference/) section of the [documentation](https://py-econometrics.github.io/pyfixest/pyfixest.html).
+For a quick introduction, take a look at the [Getting Started](https://py-econometrics.github.io/pyfixest/getting-started.html) guide or dive into the [Tutorials](https://py-econometrics.github.io/pyfixest/tutorials/ols-fixed-effects.html). You can also check the regression chapter of [Arthur Turrell's](https://github.com/aeturrell) book on [Coding for Economists](https://aeturrell.github.io/coding-for-economists/econmt-regression.html#imports). Full API documentation is in the [Function Reference](https://py-econometrics.github.io/pyfixest/reference/).
 
 For questions on `PyFixest`, head on over to our [github discussions](https://github.com/py-econometrics/pyfixest/discussions), or (more informally) join our [Discord server](https://discord.gg/gBAydeDMVK).
 

@@ -285,6 +285,146 @@ def get_panel_dgp_stagg(
     return result
 
 
+def get_twin_data(N_pairs=500, seed=42):
+    """Generate twin study data for returns to education.
+
+    Inspired by Ashenfelter & Krueger (1994). Each twin pair shares an
+    unobserved ``ability`` component. The true return to education is 0.08
+    log-points per year; naive OLS is biased upward because ability is
+    correlated with both education and wages.
+
+    Parameters
+    ----------
+    N_pairs : int
+        Number of twin pairs.  Total observations = 2 * N_pairs.
+    seed : int
+        Random seed for reproducibility.
+
+    Returns
+    -------
+    pd.DataFrame
+        Columns: twin_pair_id, twin_id, ability, educ, age, experience,
+        log_wage.
+    """
+    rng = np.random.default_rng(seed)
+
+    twin_pair_id = np.repeat(np.arange(1, N_pairs + 1), 2)
+    twin_id = np.tile([1, 2], N_pairs)
+
+    # Shared unobserved ability within each pair
+    ability_pair = rng.normal(0, 1, size=N_pairs)
+    ability = np.repeat(ability_pair, 2)
+
+    # Education: correlated with ability (source of OV bias)
+    educ = 12 + 0.5 * ability + rng.normal(0, 2, size=2 * N_pairs)
+    educ = np.clip(educ, 8, 20)  # realistic bounds
+
+    # Age and experience
+    age = rng.integers(25, 55, size=2 * N_pairs).astype(float)
+    experience = np.maximum(0, age - educ - 6)
+
+    # Log wage: true return to education = 0.08
+    log_wage = (
+        1.5
+        + 0.08 * educ
+        + 0.3 * ability
+        + 0.02 * experience
+        + rng.normal(0, 0.3, size=2 * N_pairs)
+    )
+
+    return pd.DataFrame(
+        {
+            "twin_pair_id": twin_pair_id,
+            "twin_id": twin_id,
+            "ability": ability,
+            "educ": educ,
+            "age": age,
+            "experience": experience,
+            "log_wage": log_wage,
+        }
+    )
+
+
+def get_worker_panel(N_workers=500, N_firms=50, N_years=11, seed=42):
+    """Generate a worker-firm panel dataset with two-way fixed effects.
+
+    Inspired by Abowd, Kramarz & Margolis (1999).  Workers switch firms
+    with ~20 % probability each year.  Both worker and firm fixed effects
+    contribute to wages.
+
+    Parameters
+    ----------
+    N_workers : int
+        Number of workers.
+    N_firms : int
+        Number of firms.
+    N_years : int
+        Number of years in the panel (starting from 2000).
+    seed : int
+        Random seed for reproducibility.
+
+    Returns
+    -------
+    pd.DataFrame
+        Columns: worker_id, firm_id, year, female, experience, tenure,
+        log_wage, worker_fe, firm_fe.
+    """
+    rng = np.random.default_rng(seed)
+
+    # Worker and firm fixed effects
+    worker_fe = rng.normal(0, 0.5, size=N_workers)
+    firm_fe = rng.normal(0, 0.3, size=N_firms)
+
+    # Time-invariant worker characteristics
+    female = rng.binomial(1, 0.5, size=N_workers)
+
+    # Initial firm assignment
+    firm_assignment = rng.integers(0, N_firms, size=N_workers)
+
+    records = []
+    tenure_counter = np.ones(N_workers, dtype=int)
+
+    for t in range(N_years):
+        year = 2000 + t
+
+        # ~20% of workers switch firms each year (after year 0)
+        if t > 0:
+            switchers = rng.random(N_workers) < 0.20
+            firm_assignment[switchers] = rng.integers(
+                0, N_firms, size=switchers.sum()
+            )
+            tenure_counter[switchers] = 1
+            tenure_counter[~switchers] += 1
+
+        experience = t + rng.integers(0, 5, size=N_workers)
+
+        log_wage = (
+            worker_fe
+            + firm_fe[firm_assignment]
+            + 0.02 * experience
+            + 0.01 * tenure_counter
+            - 0.05 * female
+            + rng.normal(0, 0.2, size=N_workers)
+        )
+
+        for i in range(N_workers):
+            records.append(
+                {
+                    "worker_id": i,
+                    "firm_id": firm_assignment[i],
+                    "year": year,
+                    "female": female[i],
+                    "experience": experience[i],
+                    "tenure": tenure_counter[i],
+                    "log_wage": log_wage[i],
+                    "worker_fe": worker_fe[i],
+                    "firm_fe": firm_fe[firm_assignment[i]],
+                }
+            )
+
+    return pd.DataFrame(records)
+
+
 def gelbach_data(nobs):
     "Create data for testing of Gelbach Decomposition."
     rng = np.random.default_rng(49392)

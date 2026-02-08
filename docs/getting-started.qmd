@@ -1,0 +1,94 @@
+---
+title: "Getting Started with PyFixest"
+format:
+  html:
+    html-table-processing: none
+toc: true
+toc-title: "On this page"
+toc-location: left
+---
+
+`PyFixest` is a Python package for fast high-dimensional fixed effects regression, closely mirroring the syntax of R's [fixest](https://github.com/lrberge/fixest) package.
+
+## Installation
+
+```bash
+pip install -U pyfixest
+```
+
+## Your First Regression
+
+```{python}
+import pyfixest as pf
+
+data = pf.get_data()
+data.head()
+```
+
+Estimate an OLS model with fixed effects using `feols()`. The formula syntax separates covariates from fixed effects with `|`:
+
+```{python}
+fit = pf.feols("Y ~ X1 | f1 + f2", data=data)
+fit.summary()
+```
+
+Display a formatted regression table:
+
+```{python}
+pf.etable(fit)
+```
+
+Visualize coefficients:
+
+```{python}
+fit.coefplot()
+```
+
+## Quick Feature Tour
+
+**Multiple estimation** --- estimate several specifications at once:
+
+```{python}
+multi_fit = pf.feols("Y ~ X1 | csw0(f1, f2)", data=data)
+multi_fit.etable()
+```
+
+**Instrumental variables** --- use three-part formula syntax `depvar ~ exog | fixef | endog ~ instruments`:
+
+```{python}
+pf.feols("Y ~ 1 | f1 | X1 ~ Z1", data=data).summary()
+```
+
+**Poisson regression** for count data:
+
+```{python}
+pois_data = pf.get_data(model="Fepois")
+pf.fepois("Y ~ X1 | f1 + f2", data=pois_data).summary()
+```
+
+**Cluster-robust standard errors** --- adjust inference on-the-fly:
+
+```{python}
+fit.vcov({"CRV1": "group_id"}).summary()
+```
+
+**Quantile regression**:
+
+```{python}
+pf.quantreg("Y ~ X1 + X2", data=data, quantile=0.5).summary()
+```
+
+## Where to Go Next
+
+| Tutorial | Description |
+|---|---|
+| [OLS with Fixed Effects](tutorials/ols-fixed-effects.qmd) | Twin studies, worker-firm panels, demeaning intuition |
+| [Standard Errors & Inference](tutorials/standard-errors.qmd) | HC, cluster-robust, wild bootstrap, randomization inference |
+| [Instrumental Variables](tutorials/instrumental-variables.qmd) | IV estimation, diagnostics, first-stage F-statistics |
+| [Poisson & GLMs](tutorials/poisson-glm.qmd) | Count data models, logit, probit |
+| [Multiple Estimation](tutorials/multiple-estimation.qmd) | `sw`, `csw`, split samples, multi-dep-var syntax |
+| [Regression Tables](tutorials/regression-tables.qmd) | Publication-ready tables with Great Tables |
+| [Difference-in-Differences](tutorials/difference-in-differences.qmd) | TWFE, Gardner's DID2S, event studies |
+| [Quantile Regression](tutorials/quantile-regression.qmd) | Interior-point quantile regression |
+
+See also the [How-To Guides](how-to/marginaleffects.qmd) for task-oriented recipes and the [Function Reference](reference/index.qmd) for the full API.

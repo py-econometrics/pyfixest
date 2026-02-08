@@ -1,0 +1,175 @@
+---
+title: "OLS with Fixed Effects"
+format:
+  html:
+    html-table-processing: none
+toc: true
+toc-title: "On this page"
+toc-location: left
+---
+
+::: {.callout-note}
+## Prerequisites
+You should have read the [Getting Started](../getting-started.qmd) page and have `pyfixest` installed.
+:::
+
+## What Are Fixed Effects?
+
+A fixed effect model includes group-specific intercepts that absorb unobserved heterogeneity. The canonical panel data model is:
+
+$$
+Y_{it} = \beta X_{it} + \alpha_i + \psi_t + \varepsilon_{it}
+$$
+
+where $\alpha_i$ is an individual fixed effect (constant across time) and $\psi_t$ is a time fixed effect (constant across individuals). Fixed effects are not limited to panel data --- any categorical grouping variable can serve as a fixed effect (e.g., cluster-randomized trials with cluster FE, or wage regressions with worker and firm FE).
+
+`PyFixest` estimates these models efficiently via iterative demeaning, avoiding the need to create thousands of dummy variables.
+
+## Application 1: Twin Studies --- Returns to Education
+
+How much does an extra year of education raise wages? Naive OLS overstates the return because *ability* drives both education and wages. Twin studies (Ashenfelter & Krueger, 1994) solve this by comparing twins who share the same genetic endowment.
+
+```{python}
+import pyfixest as pf
+
+twins = pf.get_twin_data(N_pairs=500, seed=42)
+twins.head()
+```
+
+### Naive OLS (biased)
+
+Without controlling for ability, the coefficient on `educ` captures both the true return and the ability premium:
+
+```{python}
+fit_naive = pf.feols("log_wage ~ educ + experience", data=twins)
+fit_naive.summary()
+```
+
+### Twin-Pair Fixed Effects
+
+Adding twin-pair fixed effects absorbs the shared unobserved ability, isolating the within-pair variation in education:
+
+```{python}
+fit_fe = pf.feols("log_wage ~ educ + experience | twin_pair_id", data=twins)
+fit_fe.summary()
+```
+
+### Compare Side by Side
+
+The FE estimate (~0.08) is smaller than the naive OLS estimate, consistent with upward ability bias:
+
+```{python}
+pf.etable(
+    [fit_naive, fit_fe],
+    labels={"log_wage": "Log Hourly Wage", "educ": "Years of Education", "experience": "Experience"},
+    felabels={"twin_pair_id": "Twin Pair FE"},
+    caption="Returns to Education: Naive OLS vs Twin FE",
+)
+```
+
+```{python}
+pf.coefplot([fit_naive, fit_fe], keep="educ")
+```
+
+## Application 2: Worker-Firm Panel --- Two-Way Fixed Effects
+
+Wages depend on both *who you are* (worker ability) and *where you work* (firm pay premiums). A two-way fixed effects model separates these (Abowd, Kramarz & Margolis, 1999).
+
+```{python}
+panel = pf.get_worker_panel(N_workers=500, N_firms=50, N_years=11, seed=42)
+panel.head()
+```
+
+### One-Way FE: Worker Fixed Effects Only
+
+```{python}
+fit_worker = pf.feols("log_wage ~ experience + tenure + female | worker_id", data=panel)
+fit_worker.summary()
+```
+
+### Two-Way FE: Worker + Firm Fixed Effects
+
+```{python}
+fit_twoway = pf.feols("log_wage ~ experience + tenure + female | worker_id + firm_id", data=panel)
+fit_twoway.summary()
+```
+
+### Adding Year Fixed Effects
+
+```{python}
+fit_full = pf.feols("log_wage ~ experience + tenure + female | worker_id + firm_id + year", data=panel)
+fit_full.summary()
+```
+
+### Compare All Specifications
+
+```{python}
+pf.etable(
+    [fit_worker, fit_twoway, fit_full],
+    labels={"log_wage": "Log Wage", "experience": "Experience", "tenure": "Tenure", "female": "Female"},
+    felabels={"worker_id": "Worker FE", "firm_id": "Firm FE", "year": "Year FE"},
+    caption="Worker-Firm Panel: Adding Fixed Effects Progressively",
+)
+```
+
+## Under the Hood: Demeaning
+
+Fixed effects estimation works by *demeaning* --- subtracting group means from both sides of the equation. This is equivalent to including dummy variables but far more efficient.
+
+Let's verify this manually with the `pf.get_data()` synthetic data:
+
+```{python}
+import pandas as pd
+
+data = pf.get_data()
+
+def _demean(df, column, by):
+    return df[column] - df.groupby(by)[column].transform("mean")
+
+fit_fe_demo = pf.feols("Y ~ X1 | group_id", data=data, vcov="HC1")
+
+fit_demeaned = pf.feols(
+    "Y_dm ~ X1_dm",
+    data=data.assign(
+        Y_dm=lambda df: _demean(df, "Y", "group_id"),
+        X1_dm=lambda df: _demean(df, "X1", "group_id"),
+    ),
+    vcov="HC1",
+)
+
+pf.etable([fit_fe_demo, fit_demeaned], caption="FE via feols() vs Manual Demeaning")
+```
+
+The coefficients are identical. `PyFixest` uses the same logic but scales to millions of observations and multiple high-dimensional fixed effects.
+
+## Updating Coefficients Online
+
+You can update the coefficients of a model via the `update()` method, useful for online learning where data arrives sequentially:
+
+```{python}
+import numpy as np
+
+data_sub = data.sample(frac=0.5, random_state=42)
+m = pf.feols("Y ~ X1 + X2", data=data_sub)
+m._beta_hat
+```
+
+```{python}
+remaining = data.drop(data_sub.index)
+new_ids = remaining.index[:5]
+X_new = np.c_[np.ones(len(new_ids)), data.loc[new_ids][["X1", "X2"]].values]
+y_new = data.loc[new_ids]["Y"].values
+m.update(X_new, y_new)
+```
+
+```{python}
+# Verify: same as fitting on the combined data
+combined_idx = data_sub.index.append(pd.Index(new_ids))
+pf.feols("Y ~ X1 + X2", data=data.loc[combined_idx]).coef().values
+```
+
+::: {.callout-tip}
+## Next Steps
+- [Standard Errors & Inference](standard-errors.qmd) --- learn about robust, cluster-robust, and bootstrap inference.
+- [Regression Tables](regression-tables.qmd) --- customize publication-ready output tables.
+:::
