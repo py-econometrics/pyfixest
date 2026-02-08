@@ -58,6 +58,8 @@ website:
           file: pyfixest-gpu-cupy.ipynb
         - text: "PyFixest on the GPU via JAX"
           file: pyfixest_gpu.ipynb
+        - text: "Variance Reduction in AB Tests"
+          file: panel_variance_reduction.ipynb
         - text: "Other Resources around PyFixest"
           file: resources.qmd
         - text: "Replicating 'The Effect' with PyFixest"
