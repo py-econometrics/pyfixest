@@ -1,0 +1,109 @@
+# PyFixest
+
+> Fast high-dimensional fixed effects regression in Python, closely mirroring the syntax of the R package fixest.
+
+PyFixest supports OLS, IV, Poisson, GLM (Logit/Probit), and quantile regression with high-dimensional fixed effects, as well as difference-in-differences estimators. It provides robust and cluster-robust inference, wild cluster bootstrap, multiple hypothesis corrections, and publication-ready tables.
+
+## Docs
+
+- [Getting Started](https://py-econometrics.github.io/pyfixest/quickstart.html): [markdown](https://py-econometrics.github.io/pyfixest/quickstart.html.md)
+- [API Reference](https://py-econometrics.github.io/pyfixest/reference/): [markdown](https://py-econometrics.github.io/pyfixest/reference/index.html.md)
+- [Changelog](https://py-econometrics.github.io/pyfixest/changelog.html): [markdown](https://py-econometrics.github.io/pyfixest/changelog.html.md)
+
+All documentation pages are available as clean markdown by appending `.md` to the HTML URL (e.g., `quickstart.html` → `quickstart.html.md`).
+
+## Core API
+
+### Estimation Functions
+
+- `pyfixest.feols(fml, data, vcov, weights, ssc, fixef_rm, ...)`: OLS/WLS/IV regression with fixed effects.
+- `pyfixest.fepois(fml, data, vcov, ...)`: Poisson regression with fixed effects (ppmlhdfe algorithm).
+- `pyfixest.feglm(fml, data, family, vcov, ...)`: GLM regression (family: "logit", "probit", "gaussian") with fixed effects.
+- `pyfixest.quantreg(fml, data, quantile, ...)`: Quantile regression via interior point solver.
+
+### Difference-in-Differences
+
+- `pyfixest.did2s(data, yname, idname, tname, first_stage, second_stage, treatment, cluster)`: Gardner (2022) two-stage DID.
+- `pyfixest.event_study(data, yname, idname, tname, gname, estimator, att)`: Event study with multiple estimators ("twfe", "did2s", "lpdid", "saturated_twfe").
+- `pyfixest.lpdid(data, yname, idname, tname, gname, att)`: Local projections DID.
+- `pyfixest.SaturatedEventStudy(data, yname, idname, tname, gname, ...)`: Fully saturated event-study estimator.
+
+### Reporting
+
+- `pyfixest.etable(models, type, ...)`: Publication-ready regression tables (type: "gt" for Great Tables, "tex" for LaTeX, "md" for Markdown).
+- `pyfixest.dtable(data, vars, labels, stats, type)`: Descriptive statistics tables.
+- `pyfixest.coefplot(models, ...)`: Coefficient plots via matplotlib/lets-plot.
+- `pyfixest.iplot(models, ...)`: Interaction/event-study plots.
+
+### Multiple Testing
+
+- `pyfixest.rwolf(models, param, reps, seed)`: Romano-Wolf stepdown adjusted p-values.
+- `pyfixest.bonferroni(models, param)`: Bonferroni correction.
+- `pyfixest.wyoung(models, param, reps, seed)`: Westfall-Young adjusted p-values.
+
+### Utilities
+
+- `pyfixest.get_data()`: Load example dataset.
+- `pyfixest.ssc(adj, fixef_k, cluster_adj, cluster_df)`: Small sample correction specification.
+
+## Formula Syntax
+
+PyFixest uses a fixest-style formula syntax:
+
+- Basic OLS: `"Y ~ X1 + X2"`
+- With fixed effects: `"Y ~ X1 + X2 | FE1 + FE2"`
+- IV regression: `"Y ~ 1 | FE1 | X_endog ~ Z_instrument"`
+- Multiple depvars: `"Y1 + Y2 ~ X1"`
+- Stepwise: `"Y ~ csw(X1, X2, X3)"` or `"Y ~ sw(X1, X2)"`
+- Interactions: `"Y ~ i(treatment, period, ref=0)"` or `"Y ~ X1 * X2"`
+- Interacted FEs: `"Y ~ X1 | FE1 ^ FE2"`
+
+## Variance-Covariance Options
+
+Pass to the `vcov` argument:
+
+- `"iid"` — IID errors
+- `"hetero"` — HC1 heteroskedasticity-robust (alias: `"HC1"`, `"HC2"`, `"HC3"`)
+- `{"CRV1": "cluster_var"}` — Cluster-robust variance
+- `{"CRV3": "cluster_var"}` — Leave-one-cluster-out jackknife
+- `"nw"` — Newey-West HAC (requires panel_id and time_id)
+- `"dk"` — Driscoll-Kraay HAC (requires panel_id and time_id)
+
+## Model Methods
+
+After estimation, model objects support:
+
+- `.summary()` — Print regression summary
+- `.tidy()` — Tidy DataFrame of coefficients, SEs, t-stats, p-values, CIs
+- `.coef()` — Coefficient values
+- `.se()` — Standard errors
+- `.pvalue()` — P-values
+- `.confint()` — Confidence intervals
+- `.predict(newdata)` — Predictions
+- `.resid()` — Residuals
+- `.vcov()` — Variance-covariance matrix
+- `.wildboottest(param, reps, seed)` — Wild cluster bootstrap inference
+- `.ccv(treatment, pk, qk, ...)` — Causal cluster variance estimator
+- `.rio(param, reps, ...)` — Randomization inference
+
+## Quick Example
+
+```python
+import pyfixest as pf
+
+data = pf.get_data()
+
+# OLS with two-way fixed effects
+fit = pf.feols("Y ~ X1 + X2 | f1 + f2", data=data, vcov={"CRV1": "f1"})
+fit.summary()
+
+# Multiple estimations
+fits = pf.feols("Y + Y2 ~ csw(X1, X2) | f1 + f2", data=data)
+pf.etable(fits)
+
+# IV regression
+fit_iv = pf.feols("Y ~ 1 | f1 | X1 ~ Z1", data=data)
+
+# Poisson regression
+fit_pois = pf.fepois("Y ~ X1 + X2 | f1", data=data)
+```

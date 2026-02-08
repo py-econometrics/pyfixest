@@ -1,6 +1,8 @@
 project:
   type: website
   output-dir: _site
+  post-render:
+    - _scripts/generate_llms_md.py
 
 execute:
   python: "../.pixi/envs/docs/bin/python3"
