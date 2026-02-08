@@ -1,0 +1,480 @@
+---
+title: "Translating Stata to PyFixest"
+aliases:
+  - /stata-2-pyfixest.html
+format:
+  html:
+    html-table-processing: none
+toc: true
+toc-title: "On this page"
+toc-location: left
+---
+
+# How to Get Started
+
+This guide will focus on how to replicate the regression results you would get in Stata
+with the Python package `pyfixest` and assumes you know how to do things like install
+Python packages and load data into Pandas.  For a broader introduction to doing
+econmetrics in Python you might check out Arthur Turrell's
+[Coding for Economist](https://aeturrell.github.io/coding-for-economists/intro.html),
+which includes a section on
+[Coming from Stata](https://aeturrell.github.io/coding-for-economists/coming-from-stata.html),
+or [Tidy Finance with Python](https://www.tidy-finance.org/python/) by Christopher
+Scheuch, Stefan Voigt, Patrick Weiss, and Christoph Frey. You can also check out the fixest section
+of [stata2r](https://stata2r.github.io/fixest/) as there is a lot of overlap between fixest and PyFixest
+syntax.
+
+# Data
+
+`pyfixest` includes a function to generate a dataset for testing.
+
+```{python}
+import pyfixest as pf
+df = pf.get_data()
+```
+
+If you want to use the same dataset in Stata, you can save the data to your home
+directory as a .dta file with
+
+```{python, eval = FALSE}
+import os
+df.to_stata(os.path.join(os.path.expanduser("~"), "pyfixest-data.dta"))
+```
+
+and then load the data in Stata with
+
+```stata
+cd ~
+use pyfixest-data.dta
+```
+
+# Basic OLS
+
+To do a basic linear regression in `pyfixest` you would simply use
+
+```{python}
+fit1 = pf.feols("Y ~ X1", data = df)
+fit2 = pf.feols("Y ~ X1 + X2", data = df)
+```
+
+which is equivalent to
+
+```stata
+reg Y X1
+
+*       Source |       SS           df       MS      Number of obs   =       998
+* -------------+----------------------------------   F(1, 996)       =    139.30
+*        Model |  650.171727         1  650.171727   Prob > F        =    0.0000
+*     Residual |  4648.80985       996  4.66747977   R-squared       =    0.1227
+* -------------+----------------------------------   Adj R-squared   =    0.1218
+*        Total |  5298.98157       997  5.31492635   Root MSE        =    2.1604
+*
+* ------------------------------------------------------------------------------
+*            Y | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+* -------------+----------------------------------------------------------------
+*           X1 |  -1.000086   .0847353   -11.80   0.000    -1.166366   -.8338056
+*        _cons |   .9185178   .1118212     8.21   0.000     .6990856     1.13795
+* ------------------------------------------------------------------------------
+
+reg y X1 X2
+
+*       Source |       SS           df       MS      Number of obs   =       998
+* -------------+----------------------------------   F(2, 995)       =    106.99
+*        Model |  937.866146         2  468.933073   Prob > F        =    0.0000
+*     Residual |  4361.11543       995  4.38303058   R-squared       =    0.1770
+* -------------+----------------------------------   Adj R-squared   =    0.1753
+*        Total |  5298.98157       997  5.31492635   Root MSE        =    2.0936
+*
+* ------------------------------------------------------------------------------
+*            Y | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+* -------------+----------------------------------------------------------------
+*           X1 |  -.9929358   .0821175   -12.09   0.000    -1.154079   -.8317925
+*           X2 |  -.1763424    .021766    -8.10   0.000    -.2190549   -.1336299
+*        _cons |   .8887791   .1084224     8.20   0.000     .6760163    1.101542
+* ------------------------------------------------------------------------------
+```
+
+in Stata.  However, you should note that this will only run the regressions and store
+the results in `fit1` and `fit2`.  To show the results you can use some of the following
+methods and functions.
+
+```{python}
+fit1.summary() # Basic summary statisticsmodels
+```
+
+```{python}
+fit1.tidy() # Estimates, std errors, t-values, etc. in a "tidy" tablemodels
+```
+
+```{python}
+pf.report.etable([fit1, fit2]) # Customizable table that can include results for multiple models
+```
+
+You can also access individual parts of the results with a variety of methods like
+
+```{python}
+fit1.coef() # Get the coefficients
+```
+
+```{python}
+fit1.se() # Get the standard errors
+```
+
+```{python}
+fit1.pvalue() # Get the p-values
+```
+
+## Robust Standard Errors
+
+To get heteroskedasticity robust standard errors you can use
+
+```{python}
+fit3 = pf.feols("Y ~ X1 + X2", data=df, vcov="HC1")
+fit3.summary()
+```
+
+which is equivalent to
+
+```stata
+reg Y X1 X2, robust
+
+* Linear regression                               Number of obs     =        998
+*                                                 F(2, 995)         =     107.91
+*                                                 Prob > F          =     0.0000
+*                                                 R-squared         =     0.1770
+*                                                 Root MSE          =     2.0936
+*
+* ------------------------------------------------------------------------------
+*              |               Robust
+*            Y | Coefficient  std. err.      t    P>|t|     [95% conf. interval]
+* -------------+----------------------------------------------------------------
+*           X1 |  -.9929358   .0798259   -12.44   0.000    -1.149582   -.8362893
+*           X2 |  -.1763424   .0216936    -8.13   0.000    -.2189129   -.1337719
+*        _cons |   .8887791   .1077457     8.25   0.000     .6773442    1.100214
+* ------------------------------------------------------------------------------
+```
+
+or
+
+```stata
+reg Y X1 X2, vce(robust)
+
+* Identical output to above
+```
+
+or you can choose a different type of robust standard errors like "HC3" using
+
+```{python}
+fit4 = pf.feols("Y ~ X1 + X2", data=df, vcov="HC3")
+fit4.summary()
+```
+
+Note: This will not exactly match the output of the equivalent Stata command, which is
+
+```stata
+reg Y X1 X2, vce(hc3)
+
+* Linear regression                               Number of obs     =        998
+*                                                 F(2, 995)         =     107.38
+*                                                 Prob > F          =     0.0000
+*                                                 R-squared         =     0.1770
+*                                                 Root MSE          =     2.0936
+*
+* ------------------------------------------------------------------------------
+*              |             Robust HC3
+*            Y | Coefficient  std. err.      t    P>|t|     [95% conf. interval]
+* -------------+----------------------------------------------------------------
+*           X1 |  -.9929358   .0799832   -12.41   0.000    -1.149891   -.8359807
+*           X2 |  -.1763424   .0217734    -8.10   0.000    -.2190693   -.1336154
+*        _cons |   .8887791   .1079372     8.23   0.000     .6769684     1.10059
+* ------------------------------------------------------------------------------
+```
+
+this is because by default, `pyfixest` uses two small sample size corrections for HC3
+robust standard errors, while Stata only uses one of them. You can turn off the
+correction that Stata doesn't use with the `ssc` argument.
+
+```{python}
+fit5 = pf.feols("Y ~ X1 + X2", data=df, vcov="HC3", ssc=pf.ssc(k_adj = False))
+fit5.summary()
+```
+
+which matches Stata exactly.  You can read all about the small sample size corrections
+implememnted by `pyfixest` at
+[On Small Sample Corrections](https://py-econometrics.github.io/pyfixest/explanation/ssc.html).
+
+## Clustered Standard Errors
+
+To cluster the standard errors by group you can use
+
+```{python}
+fit6 = pf.feols("Y ~ X1 + X2", data=df.dropna(subset=['f1']), vcov={"CRV1": "f1"})
+fit6.summary()
+```
+
+which is equivalent to
+
+```stata
+reg Y X1 X2, vce(cluster f1)
+
+* Linear regression                               Number of obs     =        997
+*                                                 F(2, 29)          =     102.51
+*                                                 Prob > F          =     0.0000
+*                                                 R-squared         =     0.1774
+*                                                 Root MSE          =      2.094
+*
+*                                     (Std. err. adjusted for 30 clusters in f1)
+* ------------------------------------------------------------------------------
+*              |               Robust
+*            Y | Coefficient  std. err.      t    P>|t|     [95% conf. interval]
+* -------------+----------------------------------------------------------------
+*           X1 |  -.9951969   .0757246   -13.14   0.000    -1.150071   -.8403227
+*           X2 |  -.1766173    .019799    -8.92   0.000    -.2171109   -.1361237
+*        _cons |   .8895569   .2622066     3.39   0.002     .3532841     1.42583
+* ------------------------------------------------------------------------------
+```
+
+Note: clustered standard errors are not supported with missing values in the cluster
+variable, which is why we drop the rows with missing values for `f1`.
+
+For two way clustering you would need to use
+
+```{python}
+fit7 = pf.feols(
+  "Y ~ X1 + X2",
+  data=df.dropna(subset=['f1', 'f2']),
+  vcov={"CRV1": "f1 + f2"}
+)
+fit7.summary()
+```
+
+Note: This will not exactly match the output of the equivalent Stata command, which is
+
+```stata
+reg Y X1 X2, vce(cluster f1 f2)
+
+* Linear regression                                       Number of obs =    997
+* Clusters per comb.:                                     Cluster comb. =      3
+*   min =  30                                             F(2, 29)      =  88.58
+*   avg = 211                                             Prob > F      = 0.0000
+*   max = 572                                             R-squared     = 0.1774
+*                                                         Adj R-squared = 0.1758
+*                                                         Root MSE      = 2.0940
+*
+*                                   (Std. err. adjusted for multiway clustering)
+* ------------------------------------------------------------------------------
+*              |               Robust
+*            Y | Coefficient  std. err.      t    P>|t|     [95% conf. interval]
+* -------------+----------------------------------------------------------------
+*           X1 |  -.9951969    .074771   -13.31   0.000    -1.148121   -.8422731
+*           X2 |  -.1766173     .02376    -7.43   0.000     -.225212   -.1280226
+*        _cons |   .8895569   .3016464     2.95   0.006     .2726208    1.506493
+* ------------------------------------------------------------------------------
+* Cluster combinations formed by f1 and f2.
+```
+
+this is because by default, `pyfixest` uses a small sample size correction that adjusts
+each clustering dimentsion by whichever dimension has the smallest number of clusters,
+while in Stata the default is to adjust each dimension based on the number of clusters
+in that dimension. You can use the same correction as Stata through the `ssc` argument.
+
+```{python}
+fit8 = pf.feols(
+  "Y ~ X1 + X2",
+  df.dropna(subset=['f1', 'f2']),
+  vcov={"CRV1": "f1 + f2"},
+  ssc=pf.ssc(G_df="conventional")
+)
+fit8.summary()
+```
+
+As a reminder, for an excellent breakdown on small sample correction in the `pyfixest` package, you can check out
+[On Small Sample Correction](https://py-econometrics.github.io/pyfixest/explanation/ssc.html).
+
+# Fixed Effect Regressions
+
+To do a fixed effect regression with one fixed effect you could use
+
+```{python}
+fit9 = pf.feols("Y ~ X1 + X2 | f1", data=df, vcov="iid")
+fit9.summary()
+```
+
+which is equivalent to
+
+```stata
+xtset f1
+xtreg Y X1 X2, fe
+
+* Fixed-effects (within) regression               Number of obs     =        997
+* Group variable: f1                              Number of groups  =         30
+*
+* R-squared:                                      Obs per group:
+*      Within  = 0.2388                                         min =         23
+*      Between = 0.0770                                         avg =       33.2
+*      Overall = 0.1774                                         max =         48
+*
+*                                                 F(2, 965)         =     151.33
+* corr(u_i, Xb) = 0.0268                          Prob > F          =     0.0000
+*
+* ------------------------------------------------------------------------------
+*            Y | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+* -------------+----------------------------------------------------------------
+*           X1 |  -.9495256   .0663728   -14.31   0.000    -1.079777   -.8192739
+*           X2 |  -.1742253   .0175957    -9.90   0.000    -.2087555   -.1396951
+*        _cons |    .842222   .0872525     9.65   0.000     .6709955    1.013448
+* -------------+----------------------------------------------------------------
+*      sigma_u |  1.2570454
+*      sigma_e |  1.6751049
+*          rho |  .36026283   (fraction of variance due to u_i)
+* ------------------------------------------------------------------------------
+* F test that all u_i=0: F(29, 965) = 20.29                    Prob > F = 0.0000
+```
+
+or
+
+```stata
+reghdfe Y X1 X2, absorb(f1)
+
+* HDFE Linear regression                            Number of obs   =        997
+* Absorbing 1 HDFE group                            F(   2,    965) =     151.33
+*                                                   Prob > F        =     0.0000
+*                                                   R-squared       =     0.4890
+*                                                   Adj R-squared   =     0.4726
+*                                                   Within R-sq.    =     0.2388
+*                                                   Root MSE        =     1.6751
+*
+* ------------------------------------------------------------------------------
+*            Y | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+* -------------+----------------------------------------------------------------
+*           X1 |  -.9495256   .0663728   -14.31   0.000    -1.079777   -.8192739
+*           X2 |  -.1742253   .0175957    -9.90   0.000    -.2087555   -.1396951
+*        _cons |    .842222   .0872525     9.65   0.000     .6709955    1.013448
+* ------------------------------------------------------------------------------
+*
+* Absorbed degrees of freedom:
+* -----------------------------------------------------+
+*  Absorbed FE | Categories  - Redundant  = Num. Coefs |
+* -------------+---------------------------------------|
+*           f1 |        30           0          30     |
+* -----------------------------------------------------+
+```
+
+To use cluster robust standard errors, specify the `vcov` argument:
+
+```{python}
+# Standard iid inference
+fit10 = pf.feols("Y ~ X1 + X2 | f1", data=df)
+fit10.summary()
+
+# Cluster robust standard errors
+fit10_clustered = pf.feols("Y ~ X1 + X2 | f1", data=df, vcov={"CRV1": "f1"})
+fit10_clustered.summary()
+```
+
+The clustered version `fit10_clustered` is equivalent to
+
+```stata
+xtset f1
+xtreg Y X1 X2, fe vce(cluster f1)
+
+* Fixed-effects (within) regression               Number of obs     =        997
+* Group variable: f1                              Number of groups  =         30
+*
+* R-squared:                                      Obs per group:
+*      Within  = 0.2388                                         min =         23
+*      Between = 0.0770                                         avg =       33.2
+*      Overall = 0.1774                                         max =         48
+*
+*                                                 F(2, 29)          =     146.33
+* corr(u_i, Xb) = 0.0268                          Prob > F          =     0.0000
+*
+*                                     (Std. err. adjusted for 30 clusters in f1)
+* ------------------------------------------------------------------------------
+*              |               Robust
+*            Y | Coefficient  std. err.      t    P>|t|     [95% conf. interval]
+* -------------+----------------------------------------------------------------
+*           X1 |  -.9495256   .0665572   -14.27   0.000     -1.08565   -.8134009
+*           X2 |  -.1742253    .018409    -9.46   0.000    -.2118759   -.1365746
+*        _cons |    .842222   .0694639    12.12   0.000     .7001523    .9842916
+* -------------+----------------------------------------------------------------
+*      sigma_u |  1.2570454
+*      sigma_e |  1.6751049
+*          rho |  .36026283   (fraction of variance due to u_i)
+* ------------------------------------------------------------------------------
+```
+
+or
+
+```stata
+reghdfe Y X1 X2, absorb(f1) cluster(f1)
+
+* HDFE Linear regression                            Number of obs   =        997
+* Absorbing 1 HDFE group                            F(   2,     29) =     146.33
+* Statistics robust to heteroskedasticity           Prob > F        =     0.0000
+*                                                   R-squared       =     0.4890
+*                                                   Adj R-squared   =     0.4726
+*                                                   Within R-sq.    =     0.2388
+* Number of clusters (f1)      =         30         Root MSE        =     1.6751
+*
+*                                     (Std. err. adjusted for 30 clusters in f1)
+* ------------------------------------------------------------------------------
+*              |               Robust
+*            Y | Coefficient  std. err.      t    P>|t|     [95% conf. interval]
+* -------------+----------------------------------------------------------------
+*           X1 |  -.9495256   .0665572   -14.27   0.000     -1.08565   -.8134009
+*           X2 |  -.1742253    .018409    -9.46   0.000    -.2118759   -.1365746
+*        _cons |    .842222   .0694639    12.12   0.000     .7001523    .9842916
+* ------------------------------------------------------------------------------
+*
+* Absorbed degrees of freedom:
+* -----------------------------------------------------+
+*  Absorbed FE | Categories  - Redundant  = Num. Coefs |
+* -------------+---------------------------------------|
+*           f1 |        30          30           0    *|
+* -----------------------------------------------------+
+* * = FE nested within cluster; treated as redundant for DoF computation
+```
+
+For multiple fixed effects you could do
+
+```{python}
+fit11 = pf.feols("Y ~ X1 + X2 | f1 + f2", data=df)
+fit11.summary()
+```
+
+which is equivalent to
+
+```stata
+reghdfe Y X1 X2, absorb(f1 f2) cluster(f1)
+
+* HDFE Linear regression                            Number of obs   =        997
+* Absorbing 2 HDFE groups                           F(   2,     29) =     182.76
+* Statistics robust to heteroskedasticity           Prob > F        =     0.0000
+*                                                   R-squared       =     0.6590
+*                                                   Adj R-squared   =     0.6372
+*                                                   Within R-sq.    =     0.3026
+* Number of clusters (f1)      =         30         Root MSE        =     1.3893
+*
+*                                     (Std. err. adjusted for 30 clusters in f1)
+* ------------------------------------------------------------------------------
+*              |               Robust
+*            Y | Coefficient  std. err.      t    P>|t|     [95% conf. interval]
+* -------------+----------------------------------------------------------------
+*           X1 |  -.9240462   .0618743   -14.93   0.000    -1.050593   -.7974991
+*           X2 |  -.1741073   .0148338   -11.74   0.000    -.2044458   -.1437689
+*        _cons |   .8156588    .064596    12.63   0.000     .6835452    .9477723
+* ------------------------------------------------------------------------------
+*
+* Absorbed degrees of freedom:
+* -----------------------------------------------------+
+*  Absorbed FE | Categories  - Redundant  = Num. Coefs |
+* -------------+---------------------------------------|
+*           f1 |        30          30           0    *|
+*           f2 |        30           1          29     |
+* -----------------------------------------------------+
+* * = FE nested within cluster; treated as redundant for DoF computation
+```
+
+Note: To cluster standard errors by a specific group, use the `vcov` argument.
+See the `fit8` example above for how to specify two way clustering.

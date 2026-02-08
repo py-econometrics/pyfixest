@@ -1,0 +1,18 @@
+---
+title: "Poisson & GLMs"
+description: "Count data models, logit, probit, and marginal effects for generalized linear models."
+categories: [Core Estimation]
+format:
+  html:
+    html-table-processing: none
+toc: true
+toc-title: "On this page"
+toc-location: left
+---
+
+::: {.callout-warning}
+## Coming Soon
+This tutorial is under construction. It will cover Poisson regression for count data, logit/probit GLMs, marginal effects, and applications with patent counts and firm-year panels.
+:::
+
+For now, see the [Getting Started](../getting-started.qmd) guide for a quick Poisson example, and the [Function Reference](../reference/index.qmd) for detailed API documentation.

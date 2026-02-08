@@ -1,0 +1,22 @@
+---
+title: "How-To Guides"
+subtitle: "Practical recipes for common PyFixest tasks."
+listing:
+  type: grid
+  contents:
+    - marginaleffects.qmd
+    - multiple_testing.ipynb
+    - regression_decomposition.ipynb
+    - pyfixest_gpu.ipynb
+    - compare-fixest-pyfixest.qmd
+    - stata-2-pyfixest.qmd
+  sort: false
+  categories: true
+  fields: [title, description, categories]
+  grid-columns: 2
+  grid-item-border: true
+page-layout: full
+toc: false
+---
+
+Task-oriented guides that show you how to accomplish specific goals with PyFixest.
