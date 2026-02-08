@@ -4,8 +4,8 @@ subtitle: "Reproduce textbook examples and classic empirical results with PyFixe
 listing:
   type: grid
   contents:
-    - brave_true.ipynb
-    - mixtape.ipynb
+    - brave_true.qmd
+    - mixtape.qmd
     - replicating-the-effect.qmd
     - resources.qmd
   sort: false

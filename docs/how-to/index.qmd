@@ -1,15 +1,18 @@
 ---
-title: "How-To Guides"
-subtitle: "Practical recipes for common PyFixest tasks."
+title: "Guides"
+subtitle: "Practical recipes and deeper dives for PyFixest practitioners."
+aliases:
+  - /explanation/index.html
 listing:
   type: grid
   contents:
     - marginaleffects.qmd
-    - multiple_testing.ipynb
-    - regression_decomposition.ipynb
-    - pyfixest_gpu.ipynb
+    - multiple_testing.qmd
+    - regression_decomposition.qmd
+    - pyfixest_gpu.qmd
     - compare-fixest-pyfixest.qmd
     - stata-2-pyfixest.qmd
+    - ssc.qmd
   sort: false
   categories: true
   fields: [title, description, categories]
