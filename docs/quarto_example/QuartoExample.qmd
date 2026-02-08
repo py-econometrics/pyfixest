@@ -9,6 +9,7 @@ format:
           \usepackage{booktabs}
           \usepackage{makecell}
           \usepackage{threeparttable}
+          \usepackage{tabularx}
 execute:
   echo: false
   warning: false

@@ -1,6 +1,6 @@
 [project]
 name = "pyfixest"
-version = "0.30.2"
+version = "0.40.1"
 description = "Fast high dimensional fixed effect estimation following syntax of the fixest R package."
 authors = [
     { name = "Alexander Fischer", email = "alexander-fischer1801@t-online.de" },
@@ -9,6 +9,28 @@ authors = [
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
+dependencies = [
+    "scipy>=1.6,<1.16",
+    "formulaic>=1.1.0",
+    "pandas>=1.1.0",
+    "numba>=0.58.0",
+    "seaborn>=0.13.2",
+    "tabulate>=0.9.0",
+    "tqdm>=4.0.0",
+    "maketables>=0.1.0",
+    "numpy>=1.25.2",
+    "narwhals>=1.13.3",
+    "joblib>=1.4.2,<2",
+]
+
+[project.optional-dependencies]
+jax = [
+    "jax>=0.4.15",
+    "jaxlib>=0.4.15",
+]
+plots = [
+    "lets-plot>=4.0.0",
+]
 
 [build-system]
 requires = ["maturin>=1.8,<2.0"]
@@ -34,6 +56,7 @@ markers = [
   "against_r_extended: mark test to be part of the test suite that depends on other R modules",
   "extended: mark test to be part of the extended test suite",
   "plots: marks all tests for plotting functionality, tests only triggered when using tag in github issue",
+  "hac: marks all tests for HAC SEs"
 ]
 
 filterwarnings = [
@@ -90,6 +113,7 @@ ignore = [
 "pyfixest/summarize.py" = ["D103"]
 "pyfixest/visualize.py" = ["D103"]
 "scripts/*.py" = ["D103"]
+"benchmarks/gpu_big_benchmarks.py" = ["E402", "F821", "RUF059", "B018", "TRY300"]
 
 [tool.ruff.lint.pycodestyle]
 max-doc-length = 88

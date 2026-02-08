@@ -18,10 +18,10 @@ class Feiv(Feols):
     Non user-facing class to estimate an IV model using a 2SLS estimator.
 
     Inherits from the Feols class. Users should not directly instantiate this class,
-    but rather use the [feols()](/reference/estimation.feols.qmd) function. Note that
+    but rather use the [feols()](/reference/estimation.api.feols.feols.qmd) function. Note that
     no demeaning is performed in this class: demeaning is performed in the
-    [FixestMulti](/reference/estimation.fixest_multi.qmd) class (to allow for caching
-    of demeaned variables for multiple estimation).
+    FixestMulti class (to allow for caching of demeaned variables for multiple
+    estimation).
 
     Parameters
     ----------
@@ -114,7 +114,7 @@ class Feiv(Feols):
     _f_stat_1st_stage : scalar
         F-statistics of First Stage regression for evaluation of IV weakness.
         The computed F-statistics test the following null hypothesis :
-        # H0 : β_{z_1} = 0 & ... & β_{z_{p_iv}} = 0 where z_1, ..., z_{p_iv}
+        # H0 : beta_{z_1} = 0 & ... & beta_{z_{p_iv}} = 0 where z_1, ..., z_{p_iv}
         # are the instrument variables
         # H1 : H0 does not hold
         Note that this F-statistics is adjusted to heteroskedasticity /
@@ -240,22 +240,21 @@ class Feiv(Feols):
 
     def get_fit(self) -> None:
         """Fit a IV model using a 2SLS estimator."""
-        _X = self._X
-        _Z = self._Z
-        _Y = self._Y
-
-        _solver = self._solver
+        self.demean()
+        self.to_array()
+        self.drop_multicol_vars()
+        self.wls_transform()
 
         # Start Second Stage
-        self._tZX = _Z.T @ _X
-        self._tXZ = _X.T @ _Z
-        self._tZy = _Z.T @ _Y
-        self._tZZinv = np.linalg.inv(_Z.T @ _Z)
+        self._tZX = self._Z.T @ self._X
+        self._tXZ = self._X.T @ self._Z
+        self._tZy = self._Z.T @ self._Y
+        self._tZZinv = np.linalg.inv(self._Z.T @ self._Z)
 
         H = self._tXZ @ self._tZZinv
         A = H @ self._tZX
         B = H @ self._tZy
-        self._beta_hat = solve_ols(A, B, _solver)
+        self._beta_hat = solve_ols(A, B, self._solver)
 
         # residuals
         self._u_hat = self._Y.flatten() - (self._X @ self._beta_hat).flatten()
@@ -343,7 +342,7 @@ class Feiv(Feols):
 
             import numpy as np
             import pandas as pd
-            from pyfixest.estimation.estimation import feols
+            from pyfixest.estimation import feols
 
             # Set random seed for reproducibility
             np.random.seed(1)
@@ -452,11 +451,6 @@ class Feiv(Feols):
 
             # Create an identity matrix of size p_iv by p_iv
             # Pad the identity matrix with zeros to make it of size p_iv by k
-            p_iv = self._p_iv  # number of IVs
-            k = (
-                self._model_1st_stage._k
-            )  # number of estimated coefficients of 1st stage
-
             # Extract all the IV indexes and its first index
             self._iv_loc = [
                 self._coefnames_z.index(x)
@@ -470,8 +464,8 @@ class Feiv(Feols):
             # H1 : H0 does not hold
 
             # Pad identity matrix to implement wald-test
-            R = np.zeros((p_iv, k))
-            R[:, self._iv_loc] = np.eye(p_iv)
+            R = np.zeros((self._p_iv, self._model_1st_stage._k))
+            R[:, self._iv_loc] = np.eye(self._p_iv)
 
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")

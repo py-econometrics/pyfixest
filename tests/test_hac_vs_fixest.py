@@ -1,3 +1,13 @@
+"""
+Tests for HAC (Heteroskedasticity and Autocorrelation Consistent) standard errors.
+
+IMPORTANT: These tests require single-threaded BLAS for deterministic results.
+Multi-threaded BLAS libraries can produce slightly different numerical results
+(~1-4% variance in vcov elements) due to different parallel reduction orders,
+even though both implementations are mathematically correct. The conftest.py
+fixture `single_thread_blas` handles this automatically.
+"""
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -52,7 +62,7 @@ def data_panel(N=1000, T=30, seed=421):
     treat[(np.isin(units, treated_units)) & (time >= midpoint)] = 1
     ever_treated = np.isin(units, treated_units).astype(int)
     alpha = rng.normal(0, 1, N)
-    gamma = np.random.normal(0, 0.5, T)
+    gamma = rng.normal(0, 0.5, T)
 
     # Generate AR(1) errors within each unit (rho=0.8 for strong autocorrelation)
     epsilon = np.empty(N * T)
@@ -243,16 +253,16 @@ BACKEND_F3 = [
 ]
 
 
-@pytest.mark.against_r_core
+@pytest.mark.hac
 @pytest.mark.parametrize("inference", ["NW", "DK"])
 @pytest.mark.parametrize(
     "vcov_kwargs",
     [
         {"lag": 2, "time_id": "year"},
-        {"lag": 4, "time_id": "year"},
+        {"lag": 8, "time_id": "year"},
         # now add panel id
         {"lag": 2, "time_id": "year", "panel_id": "unit"},
-        {"lag": 4, "time_id": "year", "panel_id": "unit"},
+        {"lag": 8, "time_id": "year", "panel_id": "unit"},
         # lag not required when panel_id is provided
         {"time_id": "year", "panel_id": "unit"},
     ],
@@ -336,7 +346,7 @@ def test_single_fit_feols_hac_panel(
     check_absolute_diff(py_vcov, r_vcov, 1e-05, "py_vcov != r_vcov")
 
 
-@pytest.mark.against_r_core
+@pytest.mark.hac
 @pytest.mark.parametrize("inference", ["NW", "DK"])
 @pytest.mark.parametrize(
     "vcov_kwargs",
@@ -354,9 +364,9 @@ def test_single_fit_feols_hac_panel(
     "balanced",
     [
         "balanced-consecutive",
-        # "balanced-non-consecutive",
-        # "non-balanced-consecutive",
-        # "non-balanced-non-consecutive",
+        "balanced-non-consecutive",
+        "non-balanced-consecutive",
+        "non-balanced-non-consecutive",
     ],
 )
 @pytest.mark.parametrize("fml", poisson_fmls)
@@ -415,7 +425,7 @@ def test_single_fit_fepois_hac_panel(
     check_absolute_diff(py_vcov, r_vcov, 1e-04, "py_vcov != r_vcov")
 
 
-@pytest.mark.against_r_core
+@pytest.mark.hac
 @pytest.mark.parametrize("inference", ["NW", "DK"])
 @pytest.mark.parametrize(
     "vcov_kwargs",
@@ -527,7 +537,7 @@ def test_single_fit_feglm_hac_panel(
     check_absolute_diff(py_vcov, r_vcov, 1e-04, "py_vcov != r_vcov")
 
 
-@pytest.mark.against_r_core
+@pytest.mark.hac
 def test_vcov_updating(data_panel):
     fit_hetero = pf.feols("Y ~ treat", data=data_panel, vcov="hetero")
     fit_nw = pf.feols(

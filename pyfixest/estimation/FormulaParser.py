@@ -47,7 +47,7 @@ class FixestFormulaParser:
         # multiple estimations into dictionaries that separate a 'constant'
         # part common to all estimations from a varying part with key of the
         # 'type' of variation, e.g. 'sw' or 'csw'.
-        depvars_list = depvars.split("+")
+        depvars_list = re.split(r"\s*\+\s*", depvars)
         covars_dict = _input_formula_to_dict(
             covars
         )  # e.g. {'constant': [], 'csw': ['X1', 'X2']}
@@ -72,7 +72,7 @@ class FixestFormulaParser:
         instruments_formulas_list = []
         if endogvars is not None and instruments is not None:
             self.is_iv = True
-            endogvars_list = endogvars.split("+")
+            endogvars_list = re.split(r"\s*\+\s*", endogvars)
             instruments_dict = _input_formula_to_dict(instruments)
             instruments_formulas_list = _dict_to_list_of_formulas(instruments_dict)
             self.condensed_fml_dict_iv = collect_fml_dict(
@@ -377,8 +377,8 @@ class FixestFormula:
         if instruments is not None:
             instruments_as_covars = [
                 element
-                for element in instruments.split("+")
-                if element in covars.split("+")
+                for element in re.split(r"\s*\+\s*", instruments)
+                if element in re.split(r"\s*\+\s*", covars)
             ]
 
             if instruments_as_covars:
@@ -485,7 +485,7 @@ def _deparse_fml(
     -------
     tuple
         A tuple containing the decomposed parts of the formula as strings:
-        (depvars, covars, fevars,endogvars, instruments).
+        (depvars, covars, fevars, endogvars, instruments).
         `endogvars` and `instruments` may be `None` if not applicable.
 
     Raises
@@ -496,7 +496,6 @@ def _deparse_fml(
 
     Notes
     -----
-    - The function cleans the formula string of spaces before processing.
     - Fixed effects variables are set to "0" if not explicitly provided in
       the formula.
     - The function automatically adds endogenous variables to the covariates
@@ -516,12 +515,9 @@ def _deparse_fml(
     the fixed effects variables, and `w1` is the endogenous
     variable with `w2+w3` as its instruments.
     """
-    # Clean up the formula string
-    fml = "".join(fml.split())
-
     # Split the formula string into its components
-    fml_split = fml.split("|")
-    depvars, covars = fml_split[0].split("~")
+    fml_split = re.split(r"\s*\|\s*", fml.strip())
+    depvars, covars = re.split(r"\s*~\s*", fml_split[0])
 
     if len(fml_split) == 1:
         fevars = "0"
@@ -530,7 +526,7 @@ def _deparse_fml(
     elif len(fml_split) == 2:
         if "~" in fml_split[1]:
             fevars = "0"
-            endogvars, instruments = fml_split[1].split("~")
+            endogvars, instruments = re.split(r"\s*~\s*", fml_split[1])
             # add endogenous variable to "covars" - yes, bad naming
             _check_endogvars_as_covars(endogvars, covars)
             covars = endogvars if covars == "1" else f"{endogvars}+{covars}"
@@ -540,7 +536,7 @@ def _deparse_fml(
             instruments = None
     elif len(fml_split) == 3:
         fevars = fml_split[1]
-        endogvars, instruments = fml_split[2].split("~")
+        endogvars, instruments = re.split(r"\s*~\s*", fml_split[2])
         _check_endogvars_as_covars(endogvars, covars)
 
         # add endogenous variable to "covars" - yes, bad naming
@@ -550,10 +546,10 @@ def _deparse_fml(
     instruments_list = []
 
     if endogvars is not None and not isinstance(endogvars, list):
-        endogvars_list = endogvars.split("+")
+        endogvars_list = re.split(r"\s*\+\s*", endogvars)
 
     if instruments is not None and not isinstance(instruments, list):
-        instruments_list = instruments.split("+")
+        instruments_list = re.split(r"\s*\+\s*", instruments)
 
     if endogvars_list and instruments_list:
         if len(endogvars_list) > len(instruments_list):
@@ -591,7 +587,9 @@ def _check_endogvars_as_covars(endogvars: str, covars: str):
     None
     """
     endogvars_as_covars = [
-        element for element in endogvars.split("+") if element in covars.split("+")
+        element
+        for element in re.split(r"\s*\+\s*", endogvars)
+        if element in re.split(r"\s*\+\s*", covars)
     ]
 
     if endogvars_as_covars:
@@ -660,7 +658,7 @@ def _input_formula_to_dict(x: str) -> dict[str, list[str]]:
      'csw0': [['y1', 'y2', 'y3']]}
     """
     # Split the formula into its constituent variables
-    var_split = x.split("+")
+    var_split = re.split(r"\s*\+\s*", x)
 
     res_s: dict[str, list[str]] = {"constant": []}
     for var in var_split:

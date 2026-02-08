@@ -2,8 +2,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from pyfixest.estimation import feols
 from pyfixest.estimation.ccv import _compute_CCV
-from pyfixest.estimation.estimation import feols
 
 
 @pytest.fixture
@@ -21,12 +21,13 @@ def compute_CCV_AAIW(data, depvar, cluster, seed, nmx, pk):
     """
     Compute the CCV variance using a slight variation of AAIW's code.
 
-    The code is based on a Python implementation of the authours
+    The code is based on a Python implementation of the AAIW authors
     published under CC0 1.0 Deed and available at
     https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/27VMOT.
-    This function has also benefitted from Daniel Pailanir
-    and Damian Clarke's implementation in Stata available at
-    https://github.com/Daniel-Pailanir/TSCB-CCV and published under GPL3 License.
+    This code was written independently of Daniel Pailanir and Damian Clarke's Stata
+    implementation available at https://github.com/Daniel-Pailanir/TSCB-CCV.
+    Output results are tested against output results from the Stata implementation
+    to demonstrate consistency.
 
     """
     rng = np.random.default_rng(seed)

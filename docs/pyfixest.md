@@ -3,7 +3,7 @@
 # PyFixest: Fast High-Dimensional Fixed Effects Regression in Python
 
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/license/mit)
-![Python Versions](https://img.shields.io/badge/Python-3.9–3.12-blue)
+![Python Versions](https://img.shields.io/badge/Python-3.9–3.14-blue)
 [![PyPI -Version](https://img.shields.io/pypi/v/pyfixest.svg)](https://pypi.org/project/pyfixest/)
 [![Project Chat][chat-badge]][chat-url]
 [![image](https://codecov.io/gh/py-econometrics/pyfixest/branch/master/graph/badge.svg)](https://codecov.io/gh/py-econometrics/pyfixest)
@@ -16,6 +16,7 @@
 [![Citation](https://img.shields.io/badge/Cite%20as-PyFixest-blue)](https://github.com/py-econometrics/pyfixest?tab=readme-ov-file#how-to-cite)
 [![Documentation](https://img.shields.io/badge/Cite%20as-PyFixest-green)](https://py-econometrics.github.io/pyfixest/pyfixest.html)
 [![Function Reference](https://img.shields.io/badge/Cite%20as-PyFixest-yellow)](https://py-econometrics.github.io/pyfixest/reference/)
+[![DeepWiki](https://img.shields.io/badge/DeepWiki-pyfixest-blue)](https://deepwiki.com/py-econometrics/pyfixest)
 
 
 [pixi-badge]:https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/prefix-dev/pixi/main/assets/badge/v0.json&style=flat-square
@@ -26,9 +27,13 @@
 
 `PyFixest` is a Python package for fast high-dimensional fixed effects regression.
 
-The package aims to mimic the syntax and functionality of the formidable [fixest](https://github.com/lrberge/fixest) package as closely as Python allows: if you know `fixest` well, the goal is that you won't have to read the docs to get started! In particular, this means that all of `fixest's` defaults are mirrored by `PyFixest`.
+The package aims to mimic the syntax and functionality of [Laurent Bergé's](https://sites.google.com/site/laurentrberge/) formidable [fixest](https://github.com/lrberge/fixest) package as closely as Python allows: if you know `fixest` well, the goal is that you won't have to read the docs to get started! In particular, this means that all of `fixest's` defaults are mirrored by `PyFixest`.
 
+<<<<<<< HEAD
 For a quick introduction, take a look at the [Getting Started](getting-started.qmd) guide, or dive into the [Tutorials](tutorials/ols-fixed-effects.qmd) for hands-on applications. You can also check the regression chapter of [Arthur Turrell's](https://github.com/aeturrell) book on [Coding for Economists](https://aeturrell.github.io/coding-for-economists/econmt-regression.html#imports). Full API documentation is in the [Function Reference](reference/index.qmd).
+=======
+For a quick introduction, you can take a look at the [quickstart](https://py-econometrics.github.io/pyfixest/quickstart.html) or the regression chapter of [Coding for Economists](https://aeturrell.github.io/coding-for-economists/econmt-regression.html#imports). You can find documentation of all user facing functions in the [Function Reference](https://py-econometrics.github.io/pyfixest/reference/) section of the [documentation](https://py-econometrics.github.io/pyfixest/pyfixest.html).
+>>>>>>> master
 
 For questions on `PyFixest`, head on over to our [github discussions](https://github.com/py-econometrics/pyfixest/discussions), or (more informally) join our [Discord server](https://discord.gg/gBAydeDMVK).
 
@@ -72,6 +77,26 @@ or the development version from github by running
 
 ``` py
 pip install git+https://github.com/py-econometrics/pyfixest.git
+```
+
+
+### GPU Acceleration (Optional)
+
+PyFixest supports GPU-accelerated fixed effects demeaning via CuPy. To enable GPU acceleration, install CuPy matching your CUDA version:
+
+```bash
+# For CUDA 11.x, 12.x, 13.x
+pip install cupy-cuda11x
+pip install cupy-cuda12x
+pip install cupy-cuda13x
+```
+
+Once installed, you can use GPU-accelerated demeaning by setting the `demean_backend` parameter:
+
+```python
+# Use GPU with float32 and float64 precision
+pf.feols("Y ~ X1 | f1 + f2", data=data, demean_backend="cupy32")
+pf.feols("Y ~ X1 | f1 + f2", data=data, demean_backend="cupy64")
 ```
 
 ## Benchmarks
@@ -230,6 +255,8 @@ Thanks for showing interest in contributing to `pyfixest`! We appreciate all
 contributions and constructive feedback, whether that be reporting bugs, requesting
 new features, or suggesting improvements to documentation.
 
+**Upcoming:** We're hosting a [PyFixest Sprint in Heilbronn](pyfixest-sprint.md) with [AppliedAI](https://www.appliedai.de/) in late February/early March 2026. Interested in joining? [Learn more and get in touch](pyfixest-sprint.md).
+
 If you'd like to get involved, but are not yet sure how, please feel free to send us an [email](alexander-fischer1801@t-online.de). Some familiarity with
 either Python or econometrics will help, but you really don't need to be a `numpy` core developer or have published in [Econometrica](https://onlinelibrary.wiley.com/journal/14680262) =) We'd be more than happy to invest time to help you get started!
 
@@ -263,7 +290,11 @@ This project follows the [all-contributors](https://github.com/all-contributors/
 
 ## Acknowledgements
 
-We thank all institutions that have funded or supported work on PyFixest!
+First and foremost, we want to acknowledge [Laurent Bergé's](https://sites.google.com/site/laurentrberge/) formidable [fixest](https://github.com/lrberge/fixest), which [is so good we decided to stick to its API and conventions](https://youtu.be/kSQxGGA7Rr4?si=8-wTbzLPnIZQ7lYI&t=576) as closely as Python allows.
+
+For a full list of software packages and papers that have influenced PyFixest, please take a look at the [Acknowledgements page](https://py-econometrics.github.io/pyfixest/acknowledgements.html).
+
+We also want to thank all institutions that have funded or supported work on PyFixest!
 
 <img src="../figures/aai-institute-logo.svg" width="185">
 

@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 
 import pyfixest as pf
-from pyfixest.estimation.estimation import feols
+from pyfixest.estimation import feols
 from pyfixest.report.visualize import _HAS_LETS_PLOT, coefplot, iplot, set_figsize
 from pyfixest.utils.utils import get_data
 
