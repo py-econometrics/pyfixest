@@ -65,6 +65,8 @@ website:
           file: how-to/compare-fixest-pyfixest.qmd
         - text: "Compare Stata & PyFixest"
           file: how-to/stata-2-pyfixest.qmd
+        - text: "Variance Reduction in AB Tests"
+          file: how-to/panel_variance_reduction.qmd
         - text: "On Small Sample Corrections"
           file: how-to/ssc.qmd
       - text: "Textbook Replications"
