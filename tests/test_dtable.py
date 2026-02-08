@@ -29,9 +29,10 @@ def test_minimal_input(sample_df):
     result = pf.dtable(sample_df, vars=["var1"], type="df")
 
     # Creating the expected DataFrame
+    # Note: maketables formats count as "5.00" instead of "5"
     expected = pd.DataFrame(
         {
-            "N": ["5"],  # As 'N' is stored as a string
+            "N": ["5.00"],  # maketables formats all values with decimals
             "Mean": ["3.00"],  # Format numbers to strings with 2 decimal places
             "Std. Dev.": ["1.58"],
         },
@@ -55,7 +56,7 @@ def test_multiple_stats(sample_df):
 
     expected = pd.DataFrame(
         {
-            "N": ["5"],
+            "N": ["5.00"],  # maketables formats all values with decimals
             "Mean": ["3.00"],
             "Min": ["1.00"],
             "Max": ["5.00"],
@@ -224,7 +225,7 @@ def test_counts_row_below(sample_df):
 
     expected = pd.DataFrame(
         {
-            "Mean": ["3.00", "5"],
+            "Mean": ["3.00", "5.00"],  # maketables formats count as "5.00"
         },
         index=pd.MultiIndex.from_tuples(
             [("stats", "var1"), ("nobs", "N")], names=["stats", "count"]
@@ -327,20 +328,20 @@ def test_two_bycol_groups(sample_df):
 
 def test_invalid_dataframe():
     """Test with an invalid dataframe and ensure it raises an error."""
-    with pytest.raises(AssertionError, match="df must be a pandas DataFrame."):
+    with pytest.raises(AssertionError, match=r"df must be a pandas DataFrame\."):
         pf.dtable("not_a_dataframe", vars=["var1"])
 
 
 def test_non_numeric_column(sample_df):
     """Test with non-numeric column and ensure it raises an error."""
-    with pytest.raises(AssertionError, match="Variables must be numerical."):
+    with pytest.raises(AssertionError, match=r"Variables must be numerical\."):
         pf.dtable(sample_df, vars=["group"])
 
 
 def test_invalid_byrow(sample_df):
     """Test with an invalid `byrow` column that doesn't exist."""
     with pytest.raises(
-        AssertionError, match="byrow must be a column in the DataFrame."
+        AssertionError, match=r"byrow must be a column in the DataFrame\."
     ):
         pf.dtable(sample_df, vars=["var1"], byrow="non_existent_column")
 
@@ -348,6 +349,12 @@ def test_invalid_byrow(sample_df):
 def test_invalid_bycol(sample_df):
     """Test with an invalid `bycol` column that doesn't exist."""
     with pytest.raises(
-        AssertionError, match="bycol must be a list of columns in the DataFrame."
+        AssertionError, match=r"bycol must be a list of columns in the DataFrame\."
     ):
         pf.dtable(sample_df, vars=["var1"], bycol=["non_existent_column"])
+
+
+def test_dtable_deprecation_warning(sample_df):
+    """Test that dtable() emits a deprecation warning."""
+    with pytest.warns(FutureWarning, match=r"pf\.dtable\(\) is deprecated"):
+        pf.dtable(sample_df, vars=["var1"], type="df")

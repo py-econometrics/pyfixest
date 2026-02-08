@@ -186,11 +186,14 @@ class QuantregMulti:
         return self.all_quantregs
 
     def vcov(
-        self, vcov: Union[str, dict[str, str]], data: Optional[DataFrameType] = None
+        self,
+        vcov: Union[str, dict[str, str]],
+        vcov_kwargs: Optional[dict[str, Union[str, int]]] = None,
+        data: Optional[DataFrameType] = None,
     ):
         "Compute variance-covariance matrices for all models in the quantile regression process."
         [
-            QuantReg.vcov(vcov=vcov, data=data)
+            QuantReg.vcov(vcov=vcov, vcov_kwargs=vcov_kwargs, data=data)
             for QuantReg in self.all_quantregs.values()
         ]
 

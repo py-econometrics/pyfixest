@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 from scipy.stats import norm
 
-from pyfixest.estimation.estimation import feols
+from pyfixest.estimation import feols
 from pyfixest.estimation.feols_ import Feols
 
 from .did2s import DID
@@ -104,7 +104,7 @@ class SaturatedEventStudy(DID):
         """Plot DID estimates."""
         cmp = plt.get_cmap("Set1")
 
-        fig, ax = plt.subplots(figsize=(10, 6))
+        _, ax = plt.subplots(figsize=(10, 6))
 
         for cohort, values in self._res_cohort_eventtime_dict.items():
             time = np.array(values["time"], dtype=float)
@@ -259,7 +259,7 @@ class SaturatedEventStudy(DID):
         ci_upper = df_agg["97.5%"].values.astype(float)
 
         cmp = plt.get_cmap("Set1")
-        fig, ax = plt.subplots(figsize=(10, 6))
+        _, ax = plt.subplots(figsize=(10, 6))
 
         ax.plot(time, est, marker="o", color=cmp(len(ax.lines)))
         ax.fill_between(time, ci_lower, ci_upper, alpha=0.3, color=cmp(len(ax.lines)))

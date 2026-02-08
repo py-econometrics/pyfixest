@@ -85,6 +85,7 @@ class Quantreg(Feols):
         self._supports_wildboottest = False
         self._support_crv3_inference = False
         self._supports_cluster_causal_variance = False
+        self._support_hac_inference = False
 
         self._quantile = quantile
         self._method = f"quantreg_{method}"
@@ -164,6 +165,9 @@ class Quantreg(Feols):
 
     def get_fit(self) -> None:
         """Fit a quantile regression model using the interior point method."""
+        self.to_array()
+        self.drop_multicol_vars()
+
         res = self._fit(X=self._X, Y=self._Y)
 
         self._beta_hat = res[0]
@@ -201,7 +205,7 @@ class Quantreg(Feols):
         np.ndarray,
     ]:
         """Fit a quantile regression model using the Frisch-Newton Interior Point Solver."""
-        N, k = X.shape
+        N, _ = X.shape
         if tol is None:
             tol = 1e-06
         if maxiter is None:

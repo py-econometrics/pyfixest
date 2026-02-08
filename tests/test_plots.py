@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 
 import pyfixest as pf
-from pyfixest.estimation.estimation import feols
+from pyfixest.estimation import feols
 from pyfixest.report.visualize import _HAS_LETS_PLOT, coefplot, iplot, set_figsize
 from pyfixest.utils.utils import get_data
 
@@ -78,7 +78,7 @@ def test_set_figsize_not_none_bad_backend():
 @pytest.mark.extended
 def test_set_figsize_none_bad_backend():
     with pytest.raises(
-        ValueError, match="plot_backend must be either 'lets_plot' or 'matplotlib'."
+        ValueError, match=r"plot_backend must be either 'lets_plot' or 'matplotlib'\."
     ):
         set_figsize(None, "bad_backend")
 

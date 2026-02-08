@@ -6,6 +6,7 @@ format:
 toc: true
 toc-title: "On this page"
 toc-location: left
+freeze: auto
 ---
 
 This notebook replicates code examples from Nick Huntington-Klein's book on causal inference, [The Effect](https://theeffectbook.net/).

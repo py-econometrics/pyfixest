@@ -152,6 +152,7 @@ class FixestMulti:
         estimation: str,
         fml: str,
         vcov: Union[None, str, dict[str, str]] = None,
+        vcov_kwargs: Optional[dict[str, Any]] = None,
         weights: Union[None, str] = None,
         ssc: Optional[dict[str, Union[str, bool]]] = None,
         fixef_rm: str = "none",
@@ -177,6 +178,9 @@ class FixestMulti:
             A string or dictionary specifying the type of variance-covariance
             matrix to use for inference.
             See `feols()` or `fepois()`.
+        vcov_kwargs : dict[str, Any], optional
+            Additional keyword arguments for the variance-covariance matrix.
+             See `feols()` or `fepois()`.
         weights : Union[None, np.ndarray], optional
             An array of weights.
             Either None or a 1D array of length N. Default is None.
@@ -240,11 +244,13 @@ class FixestMulti:
         self,
         vcov: Union[str, dict[str, str], None],
         solver: SolverOptions,
+        vcov_kwargs: Optional[dict[str, Any]] = None,
         demeaner_backend: DemeanerBackendOptions = "numba",
         collin_tol: float = 1e-6,
         iwls_maxiter: int = 25,
         iwls_tol: float = 1e-08,
         separation_check: Optional[list[str]] = None,
+        accelerate: bool = True,
     ) -> None:
         """
         Estimate multiple regression models.
@@ -254,9 +260,11 @@ class FixestMulti:
         vcov : Union[str, dict[str, str]]
             A string or dictionary specifying the type of variance-covariance
             matrix to use for inference.
-            - If a string, can be one of "iid", "hetero", "HC1", "HC2", "HC3".
+            - If a string, can be one of "iid", "hetero", "HC1", "HC2", "HC3", "NW", "DK".
             - If a dictionary, it should have the format {"CRV1": "clustervar"}
             for CRV1 inference or {"CRV3": "clustervar"} for CRV3 inference.
+         vcov_kwargs : Optional[dict[str, Any]], optional
+             Additional keyword arguments for the variance-covariance matrix. Defaults to None.
         solver: SolverOptions
             Solver to use for the estimation.
         demeaner_backend: DemeanerBackendOptions, optional
@@ -278,34 +286,13 @@ class FixestMulti:
         -------
             None
         """
-        _is_iv = self._is_iv
-        _data = self._data
-        _method = self._method
-        _drop_singletons = self._drop_singletons
-        _ssc_dict = self._ssc_dict
-        _drop_intercept = self._drop_intercept
-        _weights = self._weights
-        _fixef_tol = self._fixef_tol
-        _fixef_maxiter = self._fixef_maxiter
-        _weights_type = self._weights_type
-        _lean = self._lean
-        _store_data = self._store_data
-        _copy_data = self._copy_data
-        _run_split = self._run_split
-        _run_full = self._run_full
-        _splitvar = self._splitvar
-        _context = self._context
-        _quantreg_method = self._quantreg_method
-        _quantreg_multi_method = self._quantreg_multi_method
-        _quantile = self._quantile
-        _quantile_tol = self._quantile_tol
-        _quantile_maxiter = self._quantile_maxiter
-
         FixestFormulaDict = self.FixestFormulaDict
         _fixef_keys = list(FixestFormulaDict.keys())
 
-        all_splits = (["all"] if _run_full else []) + (
-            _data[_splitvar].dropna().unique().tolist() if _run_split else []
+        all_splits = (["all"] if self._run_full else []) + (
+            self._data[self._splitvar].dropna().unique().tolist()
+            if self._run_split
+            else []
         )
 
         for sample_split_value in all_splits:
@@ -334,33 +321,39 @@ class FixestMulti:
 
                     model_kwargs = {
                         "FixestFormula": FixestFormula,
-                        "data": _data,
-                        "ssc_dict": _ssc_dict,
-                        "drop_singletons": _drop_singletons,
-                        "drop_intercept": _drop_intercept,
-                        "weights": _weights,
-                        "weights_type": _weights_type,
+                        "data": self._data,
+                        "ssc_dict": self._ssc_dict,
+                        "drop_singletons": self._drop_singletons,
+                        "drop_intercept": self._drop_intercept,
+                        "weights": self._weights,
+                        "weights_type": self._weights_type,
                         "solver": solver,
                         "collin_tol": collin_tol,
-                        "fixef_tol": _fixef_tol,
-                        "fixef_maxiter": _fixef_maxiter,
-                        "store_data": _store_data,
-                        "copy_data": _copy_data,
-                        "lean": _lean,
-                        "context": _context,
+                        "fixef_tol": self._fixef_tol,
+                        "fixef_maxiter": self._fixef_maxiter,
+                        "store_data": self._store_data,
+                        "copy_data": self._copy_data,
+                        "lean": self._lean,
+                        "context": self._context,
                         "sample_split_value": sample_split_value,
-                        "sample_split_var": _splitvar,
+                        "sample_split_var": self._splitvar,
                         "lookup_demeaned_data": lookup_demeaned_data,
                     }
 
-                    if _method in {"feols", "fepois"}:
+                    if self._method in {
+                        "feols",
+                        "fepois",
+                        "feglm-logit",
+                        "feglm-probit",
+                        "feglm-gaussian",
+                    }:
                         model_kwargs.update(
                             {
                                 "demeaner_backend": demeaner_backend,
                             }
                         )
 
-                    if _method in {
+                    if self._method in {
                         "fepois",
                         "feglm-logit",
                         "feglm-probit",
@@ -374,20 +367,31 @@ class FixestMulti:
                             }
                         )
 
-                    if _method in ["quantreg", "quantreg_multi"]:
+                    if self._method in {
+                        "feglm-logit",
+                        "feglm-probit",
+                        "feglm-gaussian",
+                    }:
                         model_kwargs.update(
                             {
-                                "quantile": _quantile,
-                                "method": _quantreg_method,
-                                "quantile_tol": _quantile_tol,
-                                "quantile_maxiter": _quantile_maxiter,
+                                "accelerate": accelerate,
+                            }
+                        )
+
+                    if self._method in ["quantreg", "quantreg_multi"]:
+                        model_kwargs.update(
+                            {
+                                "quantile": self._quantile,
+                                "method": self._quantreg_method,
+                                "quantile_tol": self._quantile_tol,
+                                "quantile_maxiter": self._quantile_maxiter,
                                 "seed": self._seed,
                             }
                         )
-                    if _method == "quantreg_multi":
+                    if self._method == "quantreg_multi":
                         model_kwargs.update(
                             {
-                                "multi_method": _quantreg_multi_method,
+                                "multi_method": self._quantreg_multi_method,
                             }
                         )
 
@@ -403,7 +407,7 @@ class FixestMulti:
                         ("quantreg_multi", None): QuantregMulti,
                     }
 
-                    if _method == "compression":
+                    if self._method == "compression":
                         model_kwargs.update(
                             {
                                 "reps": self._reps,
@@ -412,21 +416,16 @@ class FixestMulti:
                         )
 
                     model_key = (
-                        (_method, _is_iv) if _method == "feols" else (_method, None)
+                        (self._method, self._is_iv)
+                        if self._method == "feols"
+                        else (self._method, None)
                     )
                     ModelClass = model_map[model_key]  # type: ignore
                     FIT = ModelClass(**model_kwargs)
 
                     FIT.prepare_model_matrix()
-                    if type(FIT) in [Feols, Feiv]:
-                        FIT.demean()
-                    FIT.to_array()
                     if isinstance(FIT, (Felogit, Feprobit, Fegaussian)):
                         FIT._check_dependent_variable()
-                    FIT.drop_multicol_vars()
-                    if isinstance(FIT, (Feols, Feiv, FeolsCompressed)):
-                        FIT.wls_transform()
-
                     FIT.get_fit()
                     # if X is empty: no inference (empty X only as shorthand for demeaning)
                     if not FIT._X_is_empty:
@@ -434,13 +433,14 @@ class FixestMulti:
                         vcov_type = _get_vcov_type(vcov, fval)
                         FIT.vcov(
                             vcov=vcov_type,
+                            vcov_kwargs=vcov_kwargs,
                             data=FIT._data
                             if not isinstance(FIT, QuantregMulti)
                             else FIT.all_quantregs[FIT.quantiles[0]]._data,
                         )  #  a little hacky, but works
 
                         FIT.get_inference()
-                        if _method == "feols" and not FIT._is_iv:
+                        if self._method == "feols" and not FIT._is_iv:
                             FIT.get_performance()
                         if isinstance(FIT, Feiv):
                             FIT.first_stage()
@@ -467,7 +467,11 @@ class FixestMulti:
         """
         return list(self.all_fitted_models.values())
 
-    def vcov(self, vcov: Union[str, dict[str, str]]):
+    def vcov(
+        self,
+        vcov: Union[str, dict[str, str]],
+        vcov_kwargs: Optional[dict[str, Union[str, int]]] = None,
+    ):
         """
         Update regression inference "on the fly".
 
@@ -483,6 +487,8 @@ class FixestMulti:
             - If a string, can be one of "iid", "hetero", "HC1", "HC2", "HC3".
             - If a dictionary, it should have the format {"CRV1": "clustervar"}
             for CRV1 inference or {"CRV3": "clustervar"} for CRV3 inference.
+        vcov_kwargs : Optional[dict[str, any]]
+             Additional keyword arguments for the variance-covariance matrix.
 
         Returns
         -------
@@ -492,7 +498,7 @@ class FixestMulti:
             fxst = self.all_fitted_models[model]
             _data = fxst._data
 
-            _check_vcov_input(vcov, _data)
+            _check_vcov_input(vcov=vcov, vcov_kwargs=vcov_kwargs, data=_data)
             (
                 fxst._vcov_type,
                 fxst._vcov_type_detail,
@@ -500,7 +506,7 @@ class FixestMulti:
                 _,
             ) = _deparse_vcov_input(vcov, False, False)
 
-            fxst.vcov(vcov=vcov)
+            fxst.vcov(vcov=vcov, vcov_kwargs=vcov_kwargs)
             fxst.get_inference()
 
         return self
@@ -607,8 +613,8 @@ class FixestMulti:
         impose_null: bool = True,
         bootstrap_type: str = "11",
         seed: Optional[int] = None,
-        adj: bool = True,
-        cluster_adj: bool = True,
+        k_adj: bool = True,
+        G_adj: bool = True,
     ) -> pd.DataFrame:
         """
         Run a wild cluster bootstrap for all regressions in the Fixest object.
@@ -636,10 +642,10 @@ class FixestMulti:
             Either '11', '31', '13', or '33'. Default is '11'.
         seed : Union[str, None], optional
             Option to provide a random seed. Default is None.
-        adj:bool, optional
+        k_adj: bool, optional
             Whether to adjust the original coefficients with the bootstrap distribution.
             Default is True.
-        cluster_adj : bool, optional
+        G_adj : bool, optional
             Whether to adjust standard errors for clustering in the bootstrap.
             Default is True.
 
@@ -661,8 +667,8 @@ class FixestMulti:
                 impose_null,
                 bootstrap_type,
                 seed,
-                adj,
-                cluster_adj,
+                k_adj,
+                G_adj,
             )
 
             pvalue = boot_res["Pr(>|t|)"]
@@ -715,8 +721,8 @@ def _drop_singletons(fixef_rm: str) -> bool:
     """
     Drop singleton fixed effects.
 
-    Checks if the fixef_rm argument is set to "singleton". If so, returns True,
-    else False.
+    Checks if the fixef_rm argument is set to "singleton".
+    If so, returns True,else False.
 
     Parameters
     ----------
@@ -728,4 +734,4 @@ def _drop_singletons(fixef_rm: str) -> bool:
     bool
         drop_singletons (bool) : Whether to drop singletons.
     """
-    return fixef_rm == "singleton"
+    return fixef_rm in ["singleton"]

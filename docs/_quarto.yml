@@ -3,8 +3,7 @@ project:
   output-dir: _site
 
 execute:
-  # point quarto to the correct python environment
-  python: "/pyfixest/.pixi/envs/docs/Scripts/python.exe"
+  python: "../.pixi/envs/docs/bin/python3"
 
 metadata-files:
   - _sidebar.yml
@@ -31,10 +30,10 @@ website:
         file: changelog.qmd
       - text: "Contributing"
         file: contributing.qmd
-      - text: Tutorials
-        menu:
-        - text: "Variance Reduction in AB Tests"
-          file: panel_variance_reduction.ipynb
+      - text: "Acknowledgements"
+        file: acknowledgements.md
+      - text: "Sprint 2026"
+        file: pyfixest-sprint.md
       - text: Learn more
         menu:
         - text: "Regression Tables and Summary Statistics"
@@ -51,12 +50,16 @@ website:
           text: "On Small Sample Corrections"
         - file: quantile-regression.qmd
           text: "Quantile Regression"
-        - text: "Compare fixest & PyFixest"
-          file: compare-fixest-pyfixest.qmd
+        #- text: "Compare fixest & PyFixest"
+        #  file: compare-fixest-pyfixest.qmd
         - text: "Compare Stata & PyFixest"
           file: stata-2-pyfixest.qmd
-        - text: "PyFixest on the GPU"
+        - text: "PyFixest on the GPU via CuPy"
+          file: pyfixest-gpu-cupy.ipynb
+        - text: "PyFixest on the GPU via JAX"
           file: pyfixest_gpu.ipynb
+        - text: "Variance Reduction in AB Tests"
+          file: panel_variance_reduction.ipynb
         - text: "Other Resources around PyFixest"
           file: resources.qmd
         - text: "Replicating 'The Effect' with PyFixest"
@@ -70,7 +73,7 @@ quartodoc:
   package: pyfixest
   title: "PyFixest Function Reference"
   parser: numpy
-  rewrite_all_pages: False
+  rewrite_all_pages: True
   sidebar: _sidebar.yml
 
   sections:
@@ -78,9 +81,10 @@ quartodoc:
       desc: |
         User facing estimation functions
       contents:
-        - estimation.estimation.feols
-        - estimation.estimation.fepois
-        - estimation.estimation.feglm
+        - estimation.api.feols.feols
+        - estimation.api.fepois.fepois
+        - estimation.api.feglm.feglm
+        - estimation.api.quantreg.quantreg
         - did.estimation.did2s
         - did.estimation.lpdid
         - did.estimation.event_study
@@ -98,6 +102,8 @@ quartodoc:
         - estimation.feprobit_.Feprobit
         - estimation.fegaussian_.Fegaussian
         - estimation.feols_compressed_.FeolsCompressed
+        - estimation.FixestMulti_.FixestMulti
+        - estimation.quantreg.quantreg_.Quantreg
         #- did.did.DID
         #- did.did2s.DID2s
         #- did.lpdid.LPDID

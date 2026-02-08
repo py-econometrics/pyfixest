@@ -8,10 +8,17 @@ import pandas as pd
 from pyfixest.errors import (
     NonConvergenceError,
 )
-from pyfixest.estimation.demean_ import demean
-from pyfixest.estimation.feols_ import Feols, PredictionErrorOptions, PredictionType
+from pyfixest.estimation.backends import BACKENDS
+from pyfixest.estimation.feols_ import (
+    Feols,
+    PredictionErrorOptions,
+    PredictionType,
+    _drop_multicollinear_variables,
+)
 from pyfixest.estimation.fepois_ import _check_for_separation
 from pyfixest.estimation.FormulaParser import FixestFormula
+from pyfixest.estimation.literals import DemeanerBackendOptions
+from pyfixest.estimation.solvers import solve_ols
 from pyfixest.utils.dev_utils import DataFrameType
 
 
@@ -40,6 +47,7 @@ class Feglm(Feols, ABC):
             "scipy.sparse.linalg.lsqr",
             "jax",
         ],
+        demeaner_backend: DemeanerBackendOptions = "numba",
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
@@ -47,6 +55,7 @@ class Feglm(Feols, ABC):
         sample_split_value: Optional[Union[str, int]] = None,
         separation_check: Optional[list[str]] = None,
         context: Union[int, Mapping[str, Any]] = 0,
+        accelerate: bool = True,
     ):
         super().__init__(
             FixestFormula=FixestFormula,
@@ -69,15 +78,28 @@ class Feglm(Feols, ABC):
             context=context,
         )
 
-        _glm_input_checks(drop_singletons=drop_singletons, tol=tol, maxiter=maxiter)
+        _glm_input_checks(
+            drop_singletons=drop_singletons,
+            tol=tol,
+            maxiter=maxiter,
+        )
 
         self.maxiter = maxiter
         self.tol = tol
         self.convergence = False
         self.separation_check = separation_check
+        self._accelerate = accelerate
+
+        self._demeaner_backend = demeaner_backend
+        try:
+            impl = BACKENDS[demeaner_backend]
+        except KeyError:
+            raise ValueError(f"Unknown demeaner backend {demeaner_backend!r}")
+        self._demean_func = impl["demean"]
 
         self._support_crv3_inference = True
         self._support_iid_inference = True
+        self._support_hac_inference = True
         self._supports_cluster_causal_variance = False
         self._support_decomposition = False
 
@@ -90,9 +112,6 @@ class Feglm(Feols, ABC):
     def prepare_model_matrix(self):
         "Prepare model inputs for estimation."
         super().prepare_model_matrix()
-
-        if self._fe is not None:
-            raise NotImplementedError("Fixed effects are not yet supported for GLMs.")
 
         # check for separation
         na_separation: list[int] = []
@@ -136,149 +155,187 @@ class Feglm(Feols, ABC):
         """
         Fit the GLM model via iterated weighted least squares.
 
-        All equations in the code refer to Stammann 'Fast and Feasible
-        Estimation of Generalized Linear Models with High-Dimensional
-        k-way fixed effects': https://arxiv.org/pdf/1707.01815
+        The implementation follows ideas developed in
+        - Bergé (2018): https://ideas.repec.org/p/luc/wpaper/18-13.html
+        - Correia, Guimaraes, Zylkin (2019): https://journals.sagepub.com/doi/pdf/10.1177/1536867X20909691
+        - Stamann (2018): https://arxiv.org/pdf/1707.01815
         """
-        _Y = self._Y
-        _X = self._X
-        _fe = self._fe
-        _N = self._N
-        _convergence = self.convergence  # False
-        _maxiter = self.maxiter
-        _tol = self.tol
-        _fixef_tol = self._fixef_tol
-        _fixef_maxiter = self._fixef_maxiter
-        _solver = self._solver
+        self.to_array()
 
-        # initialize
+        _mean = np.mean(self._Y)
+        if self._method in ("feglm-logit", "feglm-probit"):
+            mu = np.full_like(self._Y.flatten(), 0.5, dtype=float)
+        else:
+            mu = np.full_like(self._Y.flatten(), _mean, dtype=float)
 
-        beta = np.zeros(_X.shape[1])
-        eta = np.zeros(_N)
-        mu = self._get_mu(theta=eta)
-        deviance = self._get_deviance(_Y.flatten(), mu)
-        deviance_old = deviance.copy() + 1
+        eta = self._get_link(mu)
+        deviance = self._get_deviance(self._Y.flatten(), mu)
+        deviance_old = deviance + 1.0
 
-        for r in range(_maxiter):
-            if r == 0:
-                pass
-            else:
+        # Warm-start (for ppmlhdfe accelerations)
+        z_prev = None
+        z_tilde_prev = None
+        X_tilde_prev = None
+        accelerate = self._accelerate and self._fe is not None
+        inner_tol = self._fixef_tol
+
+        for r in range(self.maxiter):
+            if r > 0:
+                rel_deviance_change = self._get_relative_deviance_change(
+                    deviance, deviance_old
+                )
                 converged = self._check_convergence(
-                    crit=self._get_diff(deviance=deviance, last=deviance_old),
-                    tol=_tol,
+                    rel_deviance_change=rel_deviance_change,
+                    tol=self.tol,
                     r=r,
-                    maxiter=_maxiter,
+                    maxiter=self.maxiter,
                     model=self._method,
                 )
                 if converged:
+                    self.convergence = True
                     break
 
-            # Step 1: _get weights w_tilde(r-1) and v(r-1) (eq. 2.5)
-            detadmu = self._update_detadmu(mu=mu)
+                # Adaptive tolerance as in ppmlhdfe
+                if accelerate and rel_deviance_change < 10 * inner_tol:
+                    inner_tol = inner_tol / 10
+
+            gprime = self._get_gprime(mu=mu)
             W = self._update_W(mu=mu)
+            sqrt_W = np.sqrt(W)
 
-            # Step 2: _get v_tilde(r-1) and X_tilde(r-1) (eq. 3.2)
-            W_tilde = self._update_W_tilde(W=W)
-            X_tilde = self._update_X_tilde(W_tilde=W_tilde, X=_X)
-            v_tilde = self._update_v_tilde(
-                y=_Y.flatten(), mu=mu, W_tilde=W_tilde.flatten(), detadmu=detadmu
+            z = eta + (self._Y.flatten() - mu) * gprime
+
+            if accelerate and r > 0:
+                z_input = z_tilde_prev + (z - z_prev)
+                X_input = X_tilde_prev
+            else:
+                z_input = z
+                X_input = self._X
+
+            z_tilde, X_tilde = self.residualize(
+                v=z_input,
+                X=X_input,
+                flist=self._fe,
+                weights=W.flatten(),
+                tol=inner_tol,
+                maxiter=self._fixef_maxiter,
             )
 
-            # Step 3 compute v_dotdot(r-1) and X_dotdot(r-1) - demeaning
-            v_dotdot, X_dotdot = self.residualize(
-                v=v_tilde,
-                X=X_tilde,
-                flist=_fe,
-                weights=W_tilde.flatten(),
-                tol=_fixef_tol,
-                maxiter=_fixef_maxiter,
+            if r == 0:
+                # Check multicollinearity
+                # We do this here after the first demeaning to also catch collinearity with fixed effects
+                X_tilde, self._coefnames, self._collin_vars, self._collin_index = (
+                    _drop_multicollinear_variables(
+                        X_tilde,
+                        self._coefnames,
+                        self._collin_tol,
+                        backend_func=self._find_collinear_variables_func,
+                    )
+                )
+                if self._collin_index:
+                    # Drop covariates collinear with fixed effects
+                    self._X = self._X[:, ~np.array(self._collin_index)]
+                    # Update the number of coefficients
+                self._X_is_empty = self._X.shape[1] == 0
+                self._k = self._X.shape[1]
+
+            WX = sqrt_W.flatten()[:, None] * X_tilde
+            WZ = sqrt_W.flatten() * z_tilde
+
+            tXX = WX.T @ WX
+            tXz = WX.T @ WZ
+            beta_new = solve_ols(tXX, tXz, self._solver)
+
+            # Residual from demeaned regression (not weighted)
+            e_new = z_tilde - X_tilde @ beta_new
+            eta_new = z - e_new
+
+            mu_new = self._get_mu(eta=eta_new)
+            deviance_new = self._get_deviance(self._Y.flatten(), mu_new)
+
+            # Step-halving if deviance did not decrease
+            eta_new, mu_new, deviance_new = self._step_halving(
+                eta, eta_new, mu_new, deviance, deviance_new
             )
 
-            # Step 4: compute (beta(r) - beta(r-1)) and check for convergence, _update beta(r-1) s(eq. 3.5)
-            beta_update_diff = self._update_beta_diff(
-                X_dotdot=X_dotdot, v_dotdot=v_dotdot
-            )
+            z_prev = z
+            z_tilde_prev = z_tilde
+            X_tilde_prev = X_tilde
 
-            # Step 5: _update using step halfing (if required)
+            deviance_old = deviance
+            eta = eta_new
+            mu = mu_new
+            deviance = deviance_new
 
-            deviance_old = deviance.copy()
+            z_tilde_final = z_tilde
+            X_tilde_final = X_tilde
+            sqrt_W_final = sqrt_W
+            beta_final = beta_new
 
-            beta, eta, mu, deviance = self._update_eta_step_halfing(
-                Y=_Y,
-                beta=beta,
-                eta=eta,
-                mu=mu,
-                deviance=deviance_old,
-                beta_update_diff=beta_update_diff,
-                W_tilde=W_tilde.flatten(),
-                v_tilde=v_tilde,
-                v_dotdot=v_dotdot,
-                X_dotdot=X_dotdot,
-                deviance_old=deviance_old,
-                step_halfing_tolerance=1e-12,
-            )
-
-        self._beta_hat = beta.flatten()
+        self._beta_hat = beta_final
         self._Y_hat_response = mu.flatten()
         self._Y_hat_link = eta.flatten()
 
-        # _update for inference
+        # Update weights for inference
         self._weights = W
         self._irls_weights = W
-
-        # if only one dim
         if self._weights.ndim == 1:
             self._weights = self._weights.reshape((self._N, 1))
 
-        self._u_hat_response = (self._Y.flatten() - self._get_mu(theta=eta)).flatten()
+        self._u_hat_response = (self._Y.flatten() - mu).flatten()
+        e_final = z_tilde_final - X_tilde_final @ self._beta_hat
         self._u_hat_working = (
             self._u_hat_response
             if self._method == "feglm-gaussian"
-            else (v_dotdot / W_tilde).flatten()
+            else e_final.flatten()
         )
 
         self._scores_response = self._u_hat_response[:, None] * self._X
         self._scores_working = self._u_hat_working[:, None] * self._X
 
-        self._scores = self._get_score(y=_Y.flatten(), X=_X, mu=mu, eta=eta)
+        sqrt_W_vec = sqrt_W_final.flatten()
+        X_wls = sqrt_W_vec[:, None] * X_tilde_final
+        z_wls = sqrt_W_vec * z_tilde_final
 
-        self._u_hat = self._u_hat_working
-        self._tZX = np.transpose(self._Z) @ self._X
+        self._u_hat = (z_wls - X_wls @ self._beta_hat).flatten()
+        self._Y = z_wls
+        self._X = X_wls
+        self._Z = self._X
+
+        self._scores = self._u_hat[:, None] * self._X
+
+        self._tZX = self._Z.T @ self._X
         self._tZXinv = np.linalg.inv(self._tZX)
         self._Xbeta = eta
 
-        self._hessian = X_dotdot.T @ X_dotdot
+        self._hessian = X_wls.T @ X_wls
         self.deviance = deviance
 
-        if _convergence:
+        if self.convergence:
             self._convergence = True
 
     def _vcov_iid(self):
         return self._bread
 
     def _update_v(
-        self, y: np.ndarray, mu: np.ndarray, detadmu: np.ndarray
+        self, y: np.ndarray, mu: np.ndarray, gprime: np.ndarray
     ) -> np.ndarray:
         "Get (running) dependent variable v for the GLM family."
-        return (y - mu) * detadmu
+        return (y - mu) * gprime
 
     def _update_W(self, mu: np.ndarray) -> np.ndarray:
-        "Get (running) weights W for the GLM family."
-        return 1 / (self._update_detadmu(mu=mu) ** 2 * self._get_V(mu=mu))
-
-    def _update_W_tilde(self, W: np.ndarray) -> np.ndarray:
-        "Get W_tilde (formula 3.2)."
-        return np.sqrt(W)
+        "Compute IRLS weights: w = 1 / (g'(μ)² · V(μ))."
+        return 1 / (self._get_gprime(mu=mu) ** 2 * self._get_V(mu=mu))
 
     def _update_v_tilde(
-        self, y: np.ndarray, mu: np.ndarray, W_tilde: np.ndarray, detadmu: np.ndarray
+        self, y: np.ndarray, mu: np.ndarray, sqrt_W: np.ndarray, gprime: np.ndarray
     ) -> np.ndarray:
-        "Get v_tilde (formula 3.2)."
-        return W_tilde * ((y - mu) * detadmu)
+        "Get sqrt(W) * v for weighted least squares transformation."
+        return sqrt_W * ((y - mu) * gprime)
 
-    def _update_X_tilde(self, W_tilde: np.ndarray, X: np.ndarray) -> np.ndarray:
-        "Get X_tilde (formula 3.2)."
-        return W_tilde.reshape(-1, 1) * X
+    def _update_X_tilde(self, sqrt_W: np.ndarray, X: np.ndarray) -> np.ndarray:
+        "Get sqrt(W) * X for weighted least squares transformation."
+        return sqrt_W.reshape(-1, 1) * X
 
     def _update_beta_diff(
         self, X_dotdot: np.ndarray, v_dotdot: np.ndarray
@@ -291,21 +348,59 @@ class Feglm(Feols, ABC):
 
     def _update_eta(
         self,
-        W_tilde: np.ndarray,
-        v_tilde: np.ndarray,
-        v_dotdot: np.ndarray,
-        X_dotdot: np.ndarray,
+        sqrt_W: np.ndarray,
+        z: np.ndarray,
+        z_tilde: np.ndarray,
+        X_tilde: np.ndarray,
         beta_diff: np.ndarray,
         eta: np.ndarray,
     ) -> np.ndarray:
-        "Get the eta _update (formula 4.5)."
-        return eta + X_dotdot @ beta_diff / W_tilde
+        e = z_tilde - X_tilde @ beta_diff
+        e_unweighted = e / sqrt_W
+        return z - e_unweighted
 
     def _get_gradient(self, Z: np.ndarray, W: np.ndarray, v: np.ndarray) -> np.ndarray:
         return Z.T @ W @ v
 
-    def _get_diff(self, deviance: np.ndarray, last: np.ndarray) -> np.ndarray:
-        return np.abs(deviance - last) / (0.1 + np.abs(last))
+    def _get_relative_deviance_change(
+        self, deviance: np.ndarray, deviance_old: np.ndarray
+    ) -> np.ndarray:
+        "Compute relative change in deviance for convergence check."
+        return np.abs(deviance - deviance_old) / (0.1 + np.abs(deviance_old))
+
+    def _step_halving(
+        self,
+        eta: np.ndarray,
+        eta_new: np.ndarray,
+        mu_new: np.ndarray,
+        deviance: np.ndarray,
+        deviance_new: np.ndarray,
+        step_halving_tol: float = 1e-12,
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """
+        Apply step-halving if deviance did not decrease.
+
+        Returns updated (eta_new, mu_new, deviance_new).
+        """
+        if deviance_new < deviance:
+            return eta_new, mu_new, deviance_new
+
+        alpha = 1.0
+        while alpha > step_halving_tol:
+            alpha /= 2.0
+            eta_try = eta + alpha * (eta_new - eta)
+            mu_try = self._get_mu(eta=eta_try)
+            deviance_try = self._get_deviance(self._Y.flatten(), mu_try)
+            if deviance_try < deviance:
+                return eta_try, mu_try, deviance_try
+
+        # Step-halving exhausted - check if change is within tolerance
+        if self._get_relative_deviance_change(deviance_new, deviance) < self.tol:
+            return eta_new, mu_new, deviance_new
+
+        raise RuntimeError(
+            f"Step-halving failed. Deviance: {deviance_new:.6f} vs {deviance:.6f}"
+        )
 
     def residualize(
         self,
@@ -320,17 +415,21 @@ class Feglm(Feols, ABC):
         if flist is None:
             return v, X
         else:
-            vX_resid, success = demean(
-                x=np.c_[v, X], flist=flist, weights=weights, tol=tol, maxiter=maxiter
+            vX_tilde, success = self._demean_func(
+                x=np.c_[v, X],
+                flist=flist.astype(np.uintp),
+                weights=weights,
+                tol=tol,
+                maxiter=maxiter,
             )
             if success is False:
                 raise ValueError(f"Demeaning failed after {maxiter} iterations.")
             else:
-                return vX_resid[:, 0], vX_resid[:, 1:]
+                return vX_tilde[:, 0], vX_tilde[:, 1:]
 
     def _check_convergence(
         self,
-        crit: float,
+        rel_deviance_change: float,
         tol: float,
         r: int,
         maxiter: int,
@@ -339,7 +438,7 @@ class Feglm(Feols, ABC):
         if model == "feglm-gaussian":
             converged = True
         else:
-            converged = crit < tol
+            converged = rel_deviance_change < tol
             if r == maxiter:
                 raise NonConvergenceError(
                     f"""
@@ -358,10 +457,10 @@ class Feglm(Feols, ABC):
         mu: np.ndarray,
         deviance: np.ndarray,
         beta_update_diff: np.ndarray,
-        W_tilde: np.ndarray,
-        v_tilde: np.ndarray,
-        v_dotdot: np.ndarray,
-        X_dotdot: np.ndarray,
+        sqrt_W: np.ndarray,
+        z: np.ndarray,
+        z_tilde: np.ndarray,
+        X_tilde: np.ndarray,
         deviance_old: np.ndarray,
         step_halfing_tolerance: float,
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
@@ -372,14 +471,14 @@ class Feglm(Feols, ABC):
         while alpha > step_halfing_tolerance:
             beta_try = beta + alpha * beta_update_diff
             eta_try = self._update_eta(
-                W_tilde=W_tilde.flatten(),
-                v_tilde=v_tilde,
-                v_dotdot=v_dotdot,
-                X_dotdot=X_dotdot,
+                sqrt_W=sqrt_W.flatten(),
+                z=z,
+                z_tilde=z_tilde,
+                X_tilde=X_tilde,
                 beta_diff=alpha * beta_update_diff,
                 eta=eta,
             )
-            mu_try = self._get_mu(theta=eta_try)
+            mu_try = self._get_mu(eta=eta_try)
             deviance_try = self._get_deviance(Y.flatten(), mu_try)
             if deviance_try < deviance_old:
                 beta = beta_try
@@ -464,7 +563,7 @@ class Feglm(Feols, ABC):
         yhat = super().predict(newdata=newdata, type="link", atol=atol, btol=btol)
         if type == "response":
             return self._get_mu(
-                theta=yhat.to_numpy() if isinstance(yhat, pd.DataFrame) else yhat
+                eta=yhat.to_numpy() if isinstance(yhat, pd.DataFrame) else yhat
             )
         else:
             return yhat
@@ -495,18 +594,18 @@ class Feglm(Feols, ABC):
         pass
 
     @abstractmethod
-    def _get_mu(self, theta: np.ndarray) -> np.ndarray:
-        "Get the mean mu(theta) for the GLM family."
+    def _get_mu(self, eta: np.ndarray) -> np.ndarray:
+        "Apply inverse link function: μ = g⁻¹(η)."
         pass
 
     @abstractmethod
     def _get_link(self, mu: np.ndarray) -> np.ndarray:
-        "Get the link function theta(mu) for the GLM family."
+        "Apply link function: η = g(μ)."
         pass
 
     @abstractmethod
-    def _update_detadmu(self, mu: np.ndarray) -> np.ndarray:
-        "Get the derivative of mu(theta) with respect to theta for the GLM family."
+    def _get_gprime(self, mu: np.ndarray) -> np.ndarray:
+        "Get the derivative of the link function g'(μ) = dη/dμ."
         pass
 
     @abstractmethod
@@ -521,31 +620,12 @@ class Feglm(Feols, ABC):
 
 
 def _glm_input_checks(drop_singletons: bool, tol: float, maxiter: int):
-    """
-    Perform input checks for Fepois constructor arguments.
-
-    Parameters
-    ----------
-    drop_singletons : bool
-        Whether to drop singleton fixed effects.
-    tol : float
-        Tolerance level for convergence check.
-    maxiter : int
-        Maximum number of iterations.
-
-    Returns
-    -------
-    None
-    """
-    # drop singletons must be logical
     if not isinstance(drop_singletons, bool):
         raise TypeError("drop_singletons must be logical.")
-    # tol must be numeric and between 0 and 1
     if not isinstance(tol, (int, float)):
         raise TypeError("tol must be numeric.")
     if tol <= 0 or tol >= 1:
         raise AssertionError("tol must be between 0 and 1.")
-    # maxiter must be integer and greater than 0
     if not isinstance(maxiter, int):
         raise TypeError("maxiter must be integer.")
     if maxiter <= 0:

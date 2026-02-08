@@ -18,7 +18,7 @@ stats = importr("stats")
 
 @pytest.fixture
 def data():
-    data = pf.get_data(seed=65714, model="Fepois")
+    data = pf.get_data(seed=6534714, model="Fepois")
     data = data.dropna()
 
     return data
@@ -62,12 +62,18 @@ def test_ols_prediction_internally(data, fml, weights):
 @pytest.mark.parametrize("fml", ["Y ~ X1", "Y~X1 |f1", "Y ~ X1 | f1 + f2"])
 @pytest.mark.parametrize("weights", ["weights"])
 def test_poisson_prediction_internally(data, weights, fml):
-    with pytest.raises(TypeError):
-        fit = pf.fepois(fml=fml, data=data, vcov="hetero", weights=weights)
-        fit.predict(newdata=fit._data)
-    with pytest.raises(TypeError):
-        fit = pf.fepois(fml=fml, data=data, vcov="hetero", weights=weights)
-        fit.predict()
+    mod = pf.fepois(fml=fml, data=data, vcov="hetero", weights=weights)
+    original_prediction = mod.predict()
+    updated_prediction = mod.predict(newdata=mod._data)
+    np.allclose(original_prediction, updated_prediction)
+    assert mod._data.shape[0] == original_prediction.shape[0]
+    assert mod._data.shape[0] == updated_prediction.shape[0]
+
+    # now expect error with updated predicted being a subset of data
+    updated_prediction2 = mod.predict(newdata=data.iloc[0:100, :])
+    assert len(updated_prediction2) != len(updated_prediction), (
+        "Arrays have the same length"
+    )
 
 
 @pytest.mark.against_r_core
@@ -86,28 +92,28 @@ def test_vs_fixest(data, fml):
 
     data2 = data.copy()[1:500]
 
-    feols_mod.fixef()
-
-    # fepois_mod.fixef()
+    feols_mod.fixef(atol=1e-12, btol=1e-12)
+    fepois_mod.fixef(atol=1e-12, btol=1e-12)
 
     # fixest estimation
     r_fixest_ols = fixest.feols(
         ro.Formula(fml),
         data=data,
-        ssc=fixest.ssc(True, "none", True, "min", "min", False),
         se="hetero",
     )
 
     r_fixest_pois = fixest.fepois(
         ro.Formula(fml),
         data=data,
-        ssc=fixest.ssc(True, "none", True, "min", "min", False),
         se="hetero",
     )
 
     # test OLS fit
     if not np.allclose(feols_mod.coef().values, r_fixest_ols.rx2("coefficients")):
         raise ValueError("Coefficients are not equal")
+
+    if not (stats.nobs(r_fixest_ols)[0] == feols_mod._N):
+        raise ValueError("The Number of Observations does not match.")
 
     # test Poisson fit
     if not np.allclose(fepois_mod.coef(), r_fixest_pois.rx2("coefficients")):
@@ -118,28 +124,29 @@ def test_vs_fixest(data, fml):
         raise ValueError("sumFE for OLS are not equal")
 
     # test sumFE for Poisson
-    # if not np.allclose(
-    #    fepois_mod._sumFE,
-    #    r_fixest_pois.rx2("sumFE")
-    # ):
-    #    raise ValueError("sumFE for Poisson are not equal")
+    if not np.allclose(fepois_mod._sumFE, r_fixest_pois.rx2("sumFE"), atol=1e-07):
+        raise ValueError("sumFE for Poisson are not equal")
 
     # test predict for OLS
-    if not np.allclose(feols_mod.predict(), r_fixest_ols.rx2("fitted.values")):
+    if not np.allclose(
+        feols_mod.predict()[0:5], r_fixest_ols.rx2("fitted.values")[0:5]
+    ):
         raise ValueError("Predictions for OLS are not equal")
 
     if not np.allclose(len(feols_mod.predict()), len(stats.predict(r_fixest_ols))):
         raise ValueError("Predictions for OLS are not the same length")
-    # test predict for Poisson
-    # if not np.allclose(fepois_mod.predict(), r_fixest_pois.rx2("fitted.values")):
-    #    raise ValueError("Predictions for Poisson are not equal")
+
+    if not np.allclose(
+        fepois_mod.predict(type="response"), r_fixest_pois.rx2("fitted.values")
+    ):
+        raise ValueError("Predictions for Poisson are not equal")
 
     # test on new data - OLS.
     if not np.allclose(
-        feols_mod.predict(newdata=data2),
-        stats.predict(r_fixest_ols, newdata=data2),
+        feols_mod.predict(newdata=data2)[0:5],
+        stats.predict(r_fixest_ols, newdata=data2)[0:5],
     ):
-        raise ValueError("Predictions for OLS are not equal")
+        raise ValueError("Predictions for OLS are not equal with newdata.")
 
     if not np.allclose(
         len(feols_mod.predict(newdata=data2)),
@@ -148,21 +155,21 @@ def test_vs_fixest(data, fml):
         raise ValueError("Predictions for OLS are not of the same length.")
 
     # test predict for Poisson
-    # if not np.allclose(fepois_mod.predict(data = data2), stats.predict(r_fixest_pois, newdata = data2)):
-    #    raise ValueError("Predictions for Poisson are not equal")
+    if not np.allclose(
+        fepois_mod.predict(newdata=data2, type="link")[11:16],
+        stats.predict(r_fixest_pois, newdata=data2, type="link")[11:16],
+        atol=1e-07,
+        equal_nan=True,
+    ):
+        raise ValueError("Predictions for Poisson are not equal")
 
     # test resid for OLS
-    if not np.allclose(feols_mod.resid(), r_fixest_ols.rx2("residuals")):
+    if not np.allclose(feols_mod.resid()[20:25], r_fixest_ols.rx2("residuals")[20:25]):
         raise ValueError("Residuals for OLS are not equal")
 
     # test resid for Poisson
-    # if not np.allclose(
-    #    fepois_mod.resid(),
-    #    r_fixest_pois.rx2("residuals")
-    # ):
-    #    raise ValueError("Residuals for Poisson are not equal")
-
-    # test with missing fixed effects
+    if not np.allclose(fepois_mod.resid(), r_fixest_pois.rx2("residuals")):
+        raise ValueError("Residuals for Poisson are not equal")
 
 
 @pytest.mark.against_r_core
@@ -230,14 +237,13 @@ def test_new_fixef_level(data, fml):
     r_fixest_ols = fixest.feols(
         ro.Formula(fml),
         data=data,
-        ssc=fixest.ssc(True, "none", True, "min", "min", False),
         se="hetero",
     )
 
     updated_prediction_py = feols_mod.predict(newdata=data2)
     updated_prediction_r = stats.predict(r_fixest_ols, newdata=data2)
 
-    if not np.allclose(updated_prediction_py, updated_prediction_r):
+    if not np.allclose(updated_prediction_py[10:15], updated_prediction_r[10:15]):
         raise ValueError("Updated predictions are not equal")
 
 

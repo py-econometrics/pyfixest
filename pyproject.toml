@@ -1,147 +1,45 @@
 [project]
 name = "pyfixest"
+version = "0.40.1"
 description = "Fast high dimensional fixed effect estimation following syntax of the fixest R package."
-requires-python = ">= 3.9"
-version = "0.30.2"
 authors = [
-  { name = "Alexander Fischer", email = "alexander-fischer1801@t-online.de" },
-  { name = "Styfen Schär" },
+    { name = "Alexander Fischer", email = "alexander-fischer1801@t-online.de" },
+    { name = "Styfen Schär" },
 ]
 readme = "README.md"
+requires-python = ">=3.9"
 license = { text = "MIT" }
-
 dependencies = [
-  "scipy>=1.6,<1.16",
-  "formulaic>=1.1.0",
-  "pandas>=1.1.0",
-  "numba>=0.58.0",
-  "seaborn>=0.13.2",
-  "tabulate>=0.9.0",
-  "tqdm>=4.0.0",
-  "great-tables>=0.10.0",
-  "numpy>=1.25.2",
-  "narwhals>=1.13.3",
-  "joblib>=1.4.2,<2",]
-
-[tool.pixi.feature.dev.dependencies]
-rpy2 = ">=3.5.11,<4"
-pixi-pycharm = ">=0.0.8,<0.0.9"
-r = "*"
-r-fixest = ">=0.12.1,<0.13"
-r-sandwich = ">=3.0_2,<4"
-r-broom = ">=1.0.5,<2"
-r-car = ">=3.1_2,<4"
-r-quantreg = ">=5.0"
+    "scipy>=1.6,<1.16",
+    "formulaic>=1.1.0",
+    "pandas>=1.1.0",
+    "numba>=0.58.0",
+    "seaborn>=0.13.2",
+    "tabulate>=0.9.0",
+    "tqdm>=4.0.0",
+    "maketables>=0.1.0",
+    "numpy>=1.25.2",
+    "narwhals>=1.13.3",
+    "joblib>=1.4.2,<2",
+]
 
 [project.optional-dependencies]
-dev = [
-  "pytest>=7.2.0",
-  "pytest-cov>=4.1.0",
-  "pytest-xdist>=3.5.0",
-  "pyhdfe>=0.2.0",
-  "doubleml==0.7.1",
-  "wildboottest>=0.3.2",
-  "ipykernel>=6.29.5,<7",
-  "duckdb>=1.1.3",
-  "polars>=1.0.0",
-  "pyarrow>=14.0",
-  "jax>=0.4.15",
-  "jaxlib>=0.4.15",
-  "pytest-benchmark>=5.1.0,<6"
-]
-
-lint = [
-  "pre-commit==3.6.0",
-  "ruff>=0.4.0",
-  "mypy>=1.10.0",
-]
-
-build = [
-  "pip",
-  "maturin>=1.8.0",
-]
-
-plots = [
-  "lets-plot>=4.0.0",
-]
-
-docs = [
-  "jupyterlab>=4.0.12",
-  "jupytext==1.16.1",
-  "watermark==2.4.3",
-  "wildboottest>=0.3.2",
-  "causaldata>=0.1.4,<0.2",
-  "pylatex>=1.4.2,<2",
-  "marginaleffects>=0.0.10",
-  "pyarrow>=14.0",
-  "jax>=0.4.15",
-  "jaxlib>=0.4.15",
-  "lets-plot>=4.0.0",
-  "quartodoc>=0.9.1,<0.10",
-]
-
 jax = [
-  "jax>=0.4.15",
-  "jaxlib>=0.4.15",
+    "jax>=0.4.15",
+    "jaxlib>=0.4.15",
 ]
-
-[tool.pixi.feature.build.dependencies]
-python-build = ">=1.2.2,<2"
+plots = [
+    "lets-plot>=4.0.0",
+]
 
 [build-system]
 requires = ["maturin>=1.8,<2.0"]
 build-backend = "maturin"
 
-[tool.pixi.project]
-channels = ["conda-forge"]
-platforms = ["linux-64", "win-64", "osx-arm64", "osx-64"]
-
-[tool.pixi.pypi-dependencies]
-pyfixest = { path = ".", editable = true }
-
-[tool.pixi.environments]
-default = { solve-group = "default" }
-dev = { features = ["dev"], solve-group = "default" }
-build = { features = ["build"], solve-group = "default" }
-lint = { features = ["lint"], solve-group = "default" }
-docs = { features = ["docs"], solve-group = "default" }
-jax = { features = ["jax"], solve-group = "default" }
-plots = { features = ["plots"], solve-group = "default" }
-
-[tool.pixi.feature.dev.tasks]
-tests = "pytest -rs -n 4 --cov-report=term tests"
-tests-against-r-core = "pytest -rs tests -n 4 -m \"against_r_core\" --cov=pyfixest --cov-report=xml"
-tests-against-r-extended = "pytest -rs tests -n 4 -m \"against_r_extended\" --cov=pyfixest --cov-report=xml"
-tests-regular = "pytest tests -n 4 -m \"not (extended or against_r_core or against_r_extended or plots)\" --cov=pyfixest --cov-report=xml"
-tests-extended = "pytest tests -n 4 -m \"extended\" --cov=pyfixest --cov-report=xml"
-tests-fixest = "pytest -rs tests/test_vs_fixest.py -n 4 --cov=pyfixest --cov-report=xml"
-tests-plots-dev = "pixi run --environment dev pytest tests/test_plots.py -n 4"
-tests-plots = "pixi run --environment plots pytest tests/test_plots.py -n 4"
-tests-rerun = "pytest --lf -n 4"
-debug = "python pyfixest/debug.py"
-update-test-data = "Rscript tests/r_test_comparisons.R"
-install-r-extended = "Rscript r_test_requirements.R"
-render-notebooks = "python scripts/run_notebooks.py"
-
-[tool.pixi.feature.lint.tasks]
-lint = "pre-commit run ruff --all-files"
-mypy = "pre-commit run mypy --all-files"
-
-[tool.pixi.feature.build.tasks]
-build-pip = 'python -m build .'
-maturin-develop = "maturin develop --release --strip"
-
-
-[tool.pixi.feature.docs.tasks]
-docs-build = "quartodoc build --verbose --config docs/_quarto.yml"
-docs-render = "quarto render docs"
-docs-preview = "quarto preview docs"
-
-[tool.pixi.feature.docs.dependencies]
-rpy2 = ">=3.5.11,<4"
-r = "*"
-r-fixest = ">=0.12.1,<0.13"
-r-broom = ">=1.0.5,<2"
+[tool.maturin]
+module-name = "pyfixest.core._core_impl"
+features = ["pyo3/extension-module"]
+python-source = "."
 
 [tool.pytest.ini_options]
 addopts = [
@@ -158,7 +56,9 @@ markers = [
   "against_r_extended: mark test to be part of the test suite that depends on other R modules",
   "extended: mark test to be part of the extended test suite",
   "plots: marks all tests for plotting functionality, tests only triggered when using tag in github issue",
+  "hac: marks all tests for HAC SEs"
 ]
+
 filterwarnings = [
   "ignore::FutureWarning:rpy2",
   "ignore::DeprecationWarning:rpy2",
@@ -213,6 +113,7 @@ ignore = [
 "pyfixest/summarize.py" = ["D103"]
 "pyfixest/visualize.py" = ["D103"]
 "scripts/*.py" = ["D103"]
+"benchmarks/gpu_big_benchmarks.py" = ["E402", "F821", "RUF059", "B018", "TRY300"]
 
 [tool.ruff.lint.pycodestyle]
 max-doc-length = 88
@@ -241,7 +142,3 @@ module = [
   "tqdm.*",
 ]
 ignore_missing_imports = true
-
-[tool.maturin]
-module-name = "pyfixest.core._core_impl"
-features = ["pyo3/extension-module"]
