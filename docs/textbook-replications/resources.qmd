@@ -1,0 +1,42 @@
+---
+title: Learning Econometrics with PyFixest
+aliases:
+  - /resources.html
+format:
+  html:
+    html-table-processing: none
+toc: true
+toc-title: "On this page"
+toc-location: left
+---
+
+A few classes and textbooks have adopted PyFixest for teaching. And for core textbooks in causal inference that have not (yet =) ) , we have (or are planning to) write PyFixest translations (there are also multiple current "good first issues" for this if you'd like to help us).
+
+## Textbooks
+
+- Data Analysis for Business, Economics, and Policy ("Gabor's Data Analysis"). [Data and code](https://gabors-data-analysis.com/data-and-code/) and [Jupyter Notebooks on github](https://github.com/gabors-data-analysis/da_case_studies)
+- Coding for Economists: [Regression](https://aeturrell.github.io/coding-for-economists/econmt-regression.html)
+- Tidy Finance comes with a [chapter on fixed effects](https://www.tidy-finance.org/python/fixed-effects-and-clustered-standard-errors.html) and clustered standard errors and [Differene-in-Differences estimation](https://www.tidy-finance.org/python/difference-in-differences.html) that uses pyfixest
+- The Effect (first edition): [our PyFixest translation](https://py-econometrics.github.io/pyfixest/textbook-replications/replicating-the-effect.html)
+- The Panel Data Chapter in [the Mixtape](https://mixtape.scunning.com/08-panel_data#data-exercise-survey-of-adult-service-providers). You can find a PyFixest translation [here](https://py-econometrics.github.io/pyfixest/replicating-the-mixtape.html)
+
+Textbooks / textbook chapters that we still want to cover:
+
+- The Difference-in-Differences chapter in the Mixtape ([github issue here](https://github.com/py-econometrics/pyfixest/issues/998))
+- All of the Python translation of Ding's textbook on causal inference ([github issue here](https://github.com/py-econometrics/pyfixest/issues/957))
+- The "Brave and True" chapters on [Dummy Regression](https://matheusfacure.github.io/python-causality-handbook/06-Grouped-and-Dummy-Regression.html), [Instrumental Variables](https://matheusfacure.github.io/python-causality-handbook/08-Instrumental-Variables.html), [Difference-in-Differences](https://matheusfacure.github.io/python-causality-handbook/13-Difference-in-Differences.html) and [Panel Data and Fixed Effects](https://matheusfacure.github.io/python-causality-handbook/14-Panel-Data-and-Fixed-Effects.html).
+
+## Classes
+
+If you are teaching with pyfixest, we'd love to hear from you!
+
+- Econometrics II (taught by Vladislav Morozov at UBonn): Great intro to fixed effects estimation theory. Slides on fixed effects [here](https://vladislav-morozov.github.io/econometrics-2/slides/panel/fe.html#/title-slide), full class notes [here](https://vladislav-morozov.github.io/econometrics-2/), [github repository](https://github.com/vladislav-morozov/econometrics-2)
+- Empirical Economics (taught at University of Utrecht 2025-2026) - MSc class in empirical economics.
+- ECON 526 - MA-level course in quantitative economics, data science, and causal inference in economics, taught at the University of Brisith Columbia. [Class notes here](https://github.com/ubcecon/ECON526/tree/main_2025)
+
+
+## Blog Posts, Notebooks, Videos
+
+If you've written a blog post that illustrates how to use pyfixest, please let us know, we'd love to link to it.
+
+- PyData Berlin Presentation (2024) on PyFixest: [link](https://www.youtube.com/watch?v=kSQxGGA7Rr4)
