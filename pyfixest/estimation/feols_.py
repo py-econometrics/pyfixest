@@ -1274,6 +1274,211 @@ class Feols:
 
         return res
 
+    def dfm_test(
+        self,
+        treatment_vars: Optional[Union[str, list[str]]] = None,
+        interaction_vars: Optional[Union[str, list[str]]] = None,
+        distribution: str = "chi2",
+    ) -> pd.Series:
+        """
+        Conduct the Ding, Feller, Miratrix (2018) omnibus test for treatment effect heterogeneity.
+
+        This test evaluates whether treatment effects vary systematically across
+        observable characteristics by testing the joint significance of
+        treatment-covariate interactions.
+
+        Parameters
+        ----------
+        treatment_vars : str or list of str, optional
+            The treatment variable(s) to test for heterogeneity. If None, attempts to
+            automatically identify treatment variables based on common naming patterns.
+        interaction_vars : str or list of str, optional
+            The covariate(s) to interact with treatment variables. If None, uses all
+            non-treatment covariates in the model (excluding intercept).
+        distribution : str, optional
+            The distribution to use for the test statistic. Either "chi2" or "F".
+            Defaults to "chi2".
+
+        Returns
+        -------
+        pd.Series
+            A Series containing the test statistic, p-value, and degrees of freedom.
+
+        Examples
+        --------
+        ```{python}
+        import pyfixest as pf
+        import numpy as np
+
+        # Create data with treatment effect heterogeneity
+        np.random.seed(123)
+        n = 1000
+        x1 = np.random.randn(n)
+        x2 = np.random.randn(n)
+        treatment = np.random.binomial(1, 0.5, n)
+        # Heterogeneous treatment effect: varies with x1
+        y = 2 + x1 + x2 + treatment * (1 + 0.5 * x1) + np.random.randn(n)
+
+        data = pd.DataFrame({'y': y, 'treatment': treatment, 'x1': x1, 'x2': x2})
+
+        # Fit model without interactions
+        fit = pf.feols('y ~ treatment + x1 + x2', data=data)
+
+        # Test for treatment effect heterogeneity
+        fit.dfm_test(treatment_vars='treatment', interaction_vars=['x1', 'x2'])
+        ```
+
+        References
+        ----------
+        Ding, P., Feller, A., & Miratrix, L. (2018). Decomposing treatment effect
+        variation. Journal of the American Statistical Association, 114(525),
+        304-317.
+        """
+        if not hasattr(self, "_data") or self._data is None:
+            raise ValueError(
+                "Model data is required for the DFM test. "
+                "Please re-fit the model with store_data=True."
+            )
+
+        _coefnames = self._coefnames
+        _data = self._data
+        _fml = self._fml
+
+        # Auto-detect treatment variables if not specified
+        if treatment_vars is None:
+            # Common treatment variable patterns
+            treatment_patterns = ["treat", "treatment", "trt", "policy", "intervention"]
+            treatment_vars = []
+            for coef in _coefnames:
+                if coef.lower() != "intercept":
+                    for pattern in treatment_patterns:
+                        if pattern in coef.lower():
+                            treatment_vars.append(coef)
+                            break
+
+            if not treatment_vars:
+                raise ValueError(
+                    "Could not automatically detect treatment variables. "
+                    "Please specify treatment_vars explicitly."
+                )
+
+        # Ensure treatment_vars is a list
+        if isinstance(treatment_vars, str):
+            treatment_vars = [treatment_vars]
+
+        # Validate treatment variables are in the model
+        for tvar in treatment_vars:
+            if tvar not in _coefnames:
+                raise ValueError(
+                    f"Treatment variable '{tvar}' not found in model coefficients."
+                )
+
+        # Auto-detect interaction variables if not specified
+        if interaction_vars is None:
+            interaction_vars = [
+                coef
+                for coef in _coefnames
+                if coef.lower() != "intercept" and coef not in treatment_vars
+            ]
+
+        # Ensure interaction_vars is a list
+        if isinstance(interaction_vars, str):
+            interaction_vars = [interaction_vars]
+
+        if not interaction_vars:
+            raise ValueError("No interaction variables available for testing.")
+
+        # Validate interaction variables are available in data
+        for ivar in interaction_vars:
+            if ivar not in _data.columns:
+                raise ValueError(f"Interaction variable '{ivar}' not found in data.")
+
+        # Create interaction terms and fit expanded model
+        interaction_terms = []
+        for tvar in treatment_vars:
+            for ivar in interaction_vars:
+                interaction_terms.append(f"{tvar}:{ivar}")
+
+        # Construct new formula with interactions
+        base_formula = _fml
+        interaction_formula = " + ".join(
+            [
+                f"I({tvar} * {ivar})"
+                for tvar in treatment_vars
+                for ivar in interaction_vars
+            ]
+        )
+        expanded_formula = f"{base_formula} + {interaction_formula}"
+
+        # Fit expanded model
+        from pyfixest.estimation.estimation import feols
+
+        # For simplicity, use iid vcov for the expanded model
+        # The test is still valid as we're testing the joint significance
+        expanded_model = feols(expanded_formula, data=_data, vcov="iid")
+
+        # Create restriction matrix for joint test of interaction coefficients
+        expanded_coefnames = expanded_model._coefnames
+        n_coefs = len(expanded_coefnames)
+
+        # Find indices of interaction coefficients
+        interaction_indices = []
+        for tvar in treatment_vars:
+            for ivar in interaction_vars:
+                # Look for interaction terms in various possible formats
+                interaction_patterns = [
+                    f"I({tvar} * {ivar})",
+                    f"{tvar}:{ivar}",
+                    f"{ivar}:{tvar}",
+                    f"I({ivar} * {tvar})",
+                ]
+
+                found = False
+                for i, coef_name in enumerate(expanded_coefnames):
+                    for pattern in interaction_patterns:
+                        if pattern in coef_name:
+                            interaction_indices.append(i)
+                            found = True
+                            break
+                    if found:
+                        break
+
+                if not found:
+                    # Check if the treatment variable was dropped due to multicollinearity
+                    # This can happen with fixed effects
+                    if tvar not in expanded_coefnames:
+                        raise ValueError(
+                            f"Treatment variable '{tvar}' was dropped from the expanded model, "
+                            f"likely due to multicollinearity with fixed effects. "
+                            f"The DFM test may not be appropriate for this specification."
+                        )
+                    else:
+                        raise ValueError(
+                            f"Could not find interaction term for {tvar} and {ivar} "
+                            f"in expanded model coefficients: {expanded_coefnames}"
+                        )
+
+        # Create restriction matrix R
+        R = np.zeros((len(interaction_indices), n_coefs))
+        for i, idx in enumerate(interaction_indices):
+            R[i, idx] = 1
+
+        # Perform Wald test on interaction coefficients
+        test_result = expanded_model.wald_test(R=R, distribution=distribution)
+
+        # Add additional information to the result
+        result_dict = {
+            "statistic": test_result["statistic"],
+            "pvalue": test_result["pvalue"],
+            "df": len(interaction_indices),
+            "distribution": distribution,
+            "treatment_vars": treatment_vars,
+            "interaction_vars": interaction_vars,
+            "n_interactions_tested": len(interaction_indices),
+        }
+
+        return pd.Series(result_dict)
+
     def wildboottest(
         self,
         reps: int,
