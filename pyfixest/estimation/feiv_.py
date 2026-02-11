@@ -6,8 +6,9 @@ from typing import Any, Literal, Optional, Union
 import numpy as np
 import pandas as pd
 
+from pyfixest.estimation.collinearity import _drop_multicollinear_variables_chol
 from pyfixest.estimation.demean_ import demean_model
-from pyfixest.estimation.feols_ import Feols, _drop_multicollinear_variables
+from pyfixest.estimation.feols_ import Feols
 from pyfixest.estimation.FormulaParser import FixestFormula
 from pyfixest.estimation.literals import DemeanerBackendOptions
 from pyfixest.estimation.solvers import solve_ols
@@ -155,6 +156,7 @@ class Feiv(Feols):
             "jax",
         ] = "scipy.linalg.solve",
         demeaner_backend: DemeanerBackendOptions = "numba",
+        collin_tol_var: Optional[float] = None,
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
@@ -175,6 +177,7 @@ class Feiv(Feols):
             fixef_maxiter=fixef_maxiter,
             lookup_demeaned_data=lookup_demeaned_data,
             solver=solver,
+            collin_tol_var=collin_tol_var,
             store_data=store_data,
             copy_data=copy_data,
             lean=lean,
@@ -231,11 +234,11 @@ class Feiv(Feols):
             self._coefnames_z,
             self._collin_vars_z,
             self._collin_index_z,
-        ) = _drop_multicollinear_variables(
-            self._Z,
-            self._coefnames_z,
-            self._collin_tol,
-            self._find_collinear_variables_func,
+        ) = _drop_multicollinear_variables_chol(
+            X_demeaned=self._Z,
+            coefnames=self._coefnames_z,
+            collin_tol=self._collin_tol,
+            backend_func=self._find_collinear_variables_func,
         )
 
     def get_fit(self) -> None:

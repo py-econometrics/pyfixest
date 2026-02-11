@@ -31,6 +31,7 @@ def fepois(
     iwls_tol: float = 1e-08,
     iwls_maxiter: int = 25,
     collin_tol: float = 1e-09,
+    collin_tol_var: Optional[float] = None,
     separation_check: Optional[list[str]] = None,
     solver: SolverOptions = "scipy.linalg.solve",
     demeaner_backend: DemeanerBackendOptions = "numba",
@@ -99,6 +100,8 @@ def fepois(
 
     fixef_tol: float, optional
         Tolerance for the fixed effects demeaning algorithm. Defaults to 1e-06.
+        For LSMR-based backends (cupy, cupy32, cupy64, scipy), the tolerance is
+        passed directly as LSMR's atol and btol parameters.
 
     fixef_maxiter: int, optional
          Maximum number of iterations for the demeaning algorithm. Defaults to 100,000.
@@ -111,6 +114,12 @@ def fepois(
 
     collin_tol : float, optional
         Tolerance for collinearity check, by default 1e-10.
+
+    collin_tol_var : float, optional
+        Tolerance for the variance ratio collinearity check.
+        Default is None: auto-enabled with threshold 1e-6 for LSMR
+        backends (cupy, cupy32, cupy64, scipy), disabled for
+        MAP backends (numba, rust, jax). Set to 0 to disable explicitly.
 
     separation_check: list[str], optional
         Methods to identify and drop separated observations.
@@ -267,6 +276,7 @@ def fepois(
         collin_tol=collin_tol,
         separation_check=separation_check,
         demeaner_backend=demeaner_backend,
+        collin_tol_var=collin_tol_var,
     )
 
     if fixest._is_multiple_estimation:

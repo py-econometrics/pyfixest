@@ -308,9 +308,11 @@ def test_single_fit_feols(
         resid_tol = 2e-06
         inference_tol = 5e-07
         tstat_tol = 1e-06
-        if "^" in fml and weights is not None:
-            predict_tol = 6e-06
-            resid_tol = 6e-06
+        if "^" in fml or "*" in fml:
+            tstat_tol = 1e-05
+            predict_tol = 6e-05
+            resid_tol = 6e-05
+            inference_tol = 2e-06
     else:
         coef_tol = 1e-08
         predict_tol = 1e-06

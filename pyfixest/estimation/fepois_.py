@@ -10,11 +10,11 @@ from scipy.special import gammaln
 from pyfixest.errors import (
     NonConvergenceError,
 )
+from pyfixest.estimation.collinearity import drop_multicollinear_variables
 from pyfixest.estimation.feols_ import (
     Feols,
     PredictionErrorOptions,
     PredictionType,
-    _drop_multicollinear_variables,
 )
 from pyfixest.estimation.FormulaParser import FixestFormula
 from pyfixest.estimation.literals import (
@@ -97,6 +97,7 @@ class Fepois(Feols):
         tol: float,
         maxiter: int,
         solver: SolverOptions = "np.linalg.solve",
+        collin_tol_var: Optional[float] = None,
         demeaner_backend: DemeanerBackendOptions = "numba",
         context: Union[int, Mapping[str, Any]] = 0,
         store_data: bool = True,
@@ -119,6 +120,7 @@ class Fepois(Feols):
             fixef_maxiter=fixef_maxiter,
             lookup_demeaned_data=lookup_demeaned_data,
             solver=solver,
+            collin_tol_var=collin_tol_var,
             store_data=store_data,
             copy_data=copy_data,
             lean=lean,
@@ -268,6 +270,11 @@ class Fepois(Feols):
         """
         self.to_array()
 
+        if self._has_fixef:
+            self._X_raw_sumsq = (self._X**2).sum(axis=0)
+        else:
+            self._X_raw_sumsq = None
+
         stop_iterating = False
         crit = 1
 
@@ -323,17 +330,19 @@ class Fepois(Feols):
             if i == 0:
                 # Check multicollinearity
                 # We do this here after the first demeaning to also catch collinearity with fixed effects
-                X_resid, self._coefnames, self._collin_vars, self._collin_index = (
-                    _drop_multicollinear_variables(
+                (X_resid, self._coefnames, self._collin_vars, self._collin_index) = (
+                    drop_multicollinear_variables(
                         X_resid,
                         self._coefnames,
                         self._collin_tol,
-                        backend_func=self._find_collinear_variables_func,
+                        self._find_collinear_variables_func,
+                        self._X_raw_sumsq,
+                        self._collin_tol_var,
+                        self._has_fixef,
                     )
                 )
                 if self._collin_index:
-                    # Drop covariates collinear with fixed effects
-                    self._X = self._X[:, ~np.array(self._collin_index)]
+                    self._X = np.delete(self._X, self._collin_index, axis=1)
                 self._X_is_empty = self._X.shape[1] == 0
                 self._k = self._X.shape[1]
             WX = np.sqrt(combined_weights) * X_resid
