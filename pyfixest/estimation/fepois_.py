@@ -11,8 +11,6 @@ from pyfixest.errors import (
     NonConvergenceError,
 )
 from pyfixest.estimation.collinearity import drop_multicollinear_variables
-from pyfixest.estimation.demean_ import demean
-
 from pyfixest.estimation.feols_ import (
     Feols,
     PredictionErrorOptions,
