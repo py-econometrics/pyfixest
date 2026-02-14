@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from scipy.stats import norm
 
-from pyfixest.estimation.feglm_ import Feglm
+from pyfixest.estimation.models.feglm_ import Feglm
 from pyfixest.estimation.FormulaParser import FixestFormula
 from pyfixest.estimation.literals import DemeanerBackendOptions
 

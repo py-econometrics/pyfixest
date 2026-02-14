@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 
 from pyfixest.estimation.demean_ import demean_model
-from pyfixest.estimation.feols_ import Feols, _drop_multicollinear_variables
+from pyfixest.estimation.models.feols_ import Feols, _drop_multicollinear_variables
 from pyfixest.estimation.FormulaParser import FixestFormula
 from pyfixest.estimation.literals import DemeanerBackendOptions
 from pyfixest.estimation.solvers import solve_ols

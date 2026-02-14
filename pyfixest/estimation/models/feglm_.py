@@ -9,13 +9,13 @@ from pyfixest.errors import (
     NonConvergenceError,
 )
 from pyfixest.estimation.backends import BACKENDS
-from pyfixest.estimation.feols_ import (
+from pyfixest.estimation.models.feols_ import (
     Feols,
     PredictionErrorOptions,
     PredictionType,
     _drop_multicollinear_variables,
 )
-from pyfixest.estimation.fepois_ import _check_for_separation
+from pyfixest.estimation.models.fepois_ import _check_for_separation
 from pyfixest.estimation.FormulaParser import FixestFormula
 from pyfixest.estimation.literals import DemeanerBackendOptions
 from pyfixest.estimation.solvers import solve_ols

@@ -10,7 +10,7 @@ from scipy.special import gammaln
 from pyfixest.errors import (
     NonConvergenceError,
 )
-from pyfixest.estimation.feols_ import (
+from pyfixest.estimation.models.feols_ import (
     Feols,
     PredictionErrorOptions,
     PredictionType,
