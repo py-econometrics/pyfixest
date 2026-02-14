@@ -93,20 +93,19 @@ SCENARIOS: dict[str, DGPConfig] = {
         sorting_wf=0.3,
         seed=42,
     ),
-    "extreme": DGPConfig(
-        n_workers=200_000,
-        n_firms=20_000,
-        n_years=30,
-        p_move=0.01,
-        pareto_shape=0.5,
-        n_clusters=20,
-        p_between_cluster=0.05,
-        p_observe=0.5,
-        selection_worker=2.0,
-        p_survive=0.85,
-        selection_firm=3.0,
-        spell_concentration=10.0,
-        sorting_wf=0.5,
+    "large": DGPConfig(
+        n_workers=150_000,
+        n_firms=15_000,
+        n_years=15,
+        p_move=0.02,
+        pareto_shape=2.0,
+        n_clusters=10,
+        p_between_cluster=0.1,
+        p_observe=0.8,
+        selection_worker=0.5,
+        p_survive=0.95,
+        selection_firm=1.0,
+        spell_concentration=3.0,
         seed=42,
     ),
 }
@@ -115,38 +114,28 @@ SCENARIOS: dict[str, DGPConfig] = {
 # Parameter sweep definitions
 # ---------------------------------------------------------------------------
 
-_MEDIUM_DEFAULTS = asdict(SCENARIOS["medium"])
+_SWEEP_DEFAULTS = asdict(SCENARIOS["large"])
 
 
 def _sweep_config(**overrides: object) -> DGPConfig:
-    """Create a DGPConfig from medium defaults with overrides."""
-    params = {**_MEDIUM_DEFAULTS, **overrides}
+    """Create a DGPConfig from large defaults with overrides."""
+    params = {**_SWEEP_DEFAULTS, **overrides}
     return DGPConfig(**params)
 
 
 MOBILITY_SWEEP = {
     f"mobility_p{p}": _sweep_config(p_move=p)
-    for p in [0.01, 0.02, 0.05, 0.10, 0.15, 0.20, 0.30]
+    for p in [0.01, 0.10, 0.30]
 }
 
 PARETO_SWEEP = {
     f"pareto_th{th}": _sweep_config(pareto_shape=th)
-    for th in [0.5, 1.0, 1.5, 2.0, 3.0, 5.0, 10.0]
+    for th in [1.0, 3.0, 10.0]
 }
 
 CLUSTER_SWEEP = {
     f"cluster_k{k}_p{p}": _sweep_config(n_clusters=k, p_between_cluster=p)
-    for k, p in [(1, 1.0), (5, 0.5), (5, 0.1), (10, 0.1), (10, 0.05), (20, 0.05)]
-}
-
-BALANCE_SWEEP = {
-    f"balance_p{p}": _sweep_config(p_observe=p)
-    for p in [0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
-}
-
-SURVIVAL_SWEEP = {
-    f"survival_p{p}_g{g}": _sweep_config(p_survive=p, selection_firm=g)
-    for p, g in [(1.0, 0), (0.98, 0.5), (0.95, 1.0), (0.92, 1.5), (0.90, 2.0), (0.85, 3.0)]
+    for k, p in [(1, 1.0), (5, 0.1), (20, 0.05)]
 }
 
 GROUP_COUNT_SWEEP = {
@@ -154,11 +143,9 @@ GROUP_COUNT_SWEEP = {
         n_workers=nw, n_firms=nf, n_years=10, p_observe=1.0, p_survive=1.0,
     )
     for nw, nf in [
-        (1_000, 100),
-        (5_000, 500),
-        (10_000, 1_000),
-        (25_000, 2_500),
-        (50_000, 5_000),
+        (3_000, 300),
+        (30_000, 3_000),
+        (150_000, 15_000),
     ]
 }
 
@@ -166,8 +153,6 @@ ALL_SWEEPS: dict[str, dict[str, DGPConfig]] = {
     "mobility": MOBILITY_SWEEP,
     "pareto": PARETO_SWEEP,
     "cluster": CLUSTER_SWEEP,
-    "balance": BALANCE_SWEEP,
-    "survival": SURVIVAL_SWEEP,
     "group_count": GROUP_COUNT_SWEEP,
 }
 
@@ -175,13 +160,11 @@ SWEEP_META: dict[str, dict[str, str]] = {
     "mobility": {"x_col": "p_move", "x_label": "Move Probability (p_move)"},
     "pareto": {"x_col": "pareto_shape", "x_label": "Pareto Shape (theta)"},
     "cluster": {"x_col": "scenario", "x_label": "Cluster Config"},
-    "balance": {"x_col": "p_observe", "x_label": "Observation Probability (p_observe)"},
-    "survival": {"x_col": "p_survive", "x_label": "Survival Probability (p_survive)"},
     "group_count": {"x_col": "n_workers", "x_label": "Number of Workers"},
 }
 
 # Features sweep: same DGP config, varying n_features
-FEATURES_SWEEP_VALUES = [1, 2, 5, 10, 20]
+FEATURES_SWEEP_VALUES = [1, 5, 20]
 
 
 # ---------------------------------------------------------------------------
@@ -304,7 +287,7 @@ def _run_features_sweep(
 ) -> list[BenchmarkResult]:
     """Run the features sweep: same medium DGP, varying n_features."""
     all_results: list[BenchmarkResult] = []
-    config = SCENARIOS["medium"]
+    config = SCENARIOS["large"]
 
     for n_feat in FEATURES_SWEEP_VALUES:
         name = f"features_{n_feat}"
@@ -444,6 +427,10 @@ def main() -> None:
             df = _add_config_cols(df, sweep_results)
             df.to_csv(RESULTS_DIR / f"sweep_{sweep_name}.csv", index=False)
 
+            sweep_summary = summarize_results(df)
+            print(f"\n--- {sweep_name} sweep summary ---")
+            print(format_summary_table(sweep_summary))
+
             meta = SWEEP_META[sweep_name]
             plot_sweep(
                 df,
@@ -469,6 +456,10 @@ def main() -> None:
 
             df = results_to_dataframe(features_results)
             df.to_csv(RESULTS_DIR / "sweep_features.csv", index=False)
+
+            features_summary = summarize_results(df)
+            print("\n--- features sweep summary ---")
+            print(format_summary_table(features_summary))
 
             plot_features_sweep(
                 df, output_path=RESULTS_DIR / "sweep_features.png",

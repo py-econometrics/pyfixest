@@ -1,0 +1,10 @@
+scenario,backend,n_obs,n_workers,n_firms,n_years,connected_set_fraction,demean_time_seconds,demean_converged,feols_time_seconds,feols_converged,demean_n_iterations,demean_time_per_iter,n_features,n_factors
+features_1,numba,1771765,149910,14991,15,1.0,2.4553583749993777,True,,,,,1,3
+features_1,rust,1771765,149910,14991,15,1.0,2.0659458340005585,True,,,,,1,3
+features_1,scipy,1771765,149910,14991,15,1.0,6.913716250000107,True,,,,,1,3
+features_5,numba,1771765,149910,14991,15,1.0,4.362716625000758,True,,,,,5,3
+features_5,rust,1771765,149910,14991,15,1.0,4.0285784170000625,True,,,,,5,3
+features_5,scipy,1771765,149910,14991,15,1.0,17.995678207999845,True,,,,,5,3
+features_20,numba,1771765,149910,14991,15,1.0,13.755068958000265,True,,,,,20,3
+features_20,rust,1771765,149910,14991,15,1.0,13.810327458999382,True,,,,,20,3
+features_20,scipy,1771765,149910,14991,15,1.0,59.90724504100035,True,,,,,20,3
