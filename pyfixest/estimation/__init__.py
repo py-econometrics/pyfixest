@@ -11,18 +11,18 @@ from pyfixest.estimation.demean_ import (
 from pyfixest.estimation.detect_singletons_ import (
     detect_singletons,
 )
-from pyfixest.estimation.fegaussian_ import Fegaussian
-from pyfixest.estimation.feiv_ import (
+from pyfixest.estimation.models.fegaussian_ import Fegaussian
+from pyfixest.estimation.models.feiv_ import (
     Feiv,
 )
-from pyfixest.estimation.felogit_ import Felogit
-from pyfixest.estimation.feols_ import (
+from pyfixest.estimation.models.felogit_ import Felogit
+from pyfixest.estimation.models.feols_ import (
     Feols,
 )
-from pyfixest.estimation.fepois_ import (
+from pyfixest.estimation.models.fepois_ import (
     Fepois,
 )
-from pyfixest.estimation.feprobit_ import Feprobit
+from pyfixest.estimation.models.feprobit_ import Feprobit
 from pyfixest.estimation.FixestMulti_ import (
     FixestMulti,
 )
