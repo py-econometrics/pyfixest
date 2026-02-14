@@ -38,42 +38,60 @@ Each sweep varies a single parameter while holding everything else at the `large
 | **group_count** | `n_workers` / `n_firms` | 3k/300, 30k/3k, 150k/15k | Pure scaling test with a fully balanced, fully connected panel (no missingness, no firm exit). Isolates per-iteration cost from convergence difficulty. |
 | **features** | `n_features` | 1, 5, 20 | Number of columns demeaned simultaneously. Same DGP, same iterations — tests whether the backend vectorizes across features efficiently. |
 
-## Step 1: Baseline the existing backends
+## Quick start
+
+### Run your first benchmarks
 
 ```bash
-# Run scenarios (easy/medium/hard/large)
-pixi run -e dev python -m benchmarks.run_benchmarks --scenarios --backends numba rust scipy --reps 3 --save-baseline v1
-
-# Run parameter sweeps
-pixi run -e dev python -m benchmarks.run_benchmarks --sweeps --backends numba rust scipy --reps 3 --save-baseline v1-sweeps
+pixi run -e dev python -m benchmarks.run_benchmarks --scenarios --backends numba rust scipy --reps 3
 ```
 
-Results are in `benchmarks/results/`. Baselines are saved to `benchmarks/results/baselines/`.
+Results are cached in `benchmarks/results/`.
 
-## Step 2: Implement your algorithm
+### Add a new backend and compare
+
+```bash
+pixi run -e dev python -m benchmarks.run_benchmarks --scenarios --backends jax --reps 3
+```
+
+This runs only JAX, merges with the cached numba/rust/scipy results, and prints:
+- A **comparison table** with all backends side-by-side
+- A **diff table** showing JAX vs the cached backends (speedup, delta %)
+
+### Re-run a backend (replaces cached results)
+
+```bash
+pixi run -e dev python -m benchmarks.run_benchmarks --scenarios --backends numba --reps 5
+```
+
+The cached numba results are replaced; rust/scipy/jax results are kept.
+
+### Clean run (discard cache)
+
+```bash
+pixi run -e dev python -m benchmarks.run_benchmarks --scenarios --backends numba --reps 3 --no-cache
+```
+
+### Implement a new backend
 
 Register your backend in `pyfixest/estimation/backends.py`. Your `demean` function can return either:
 
 - `(result, converged)` — standard 2-tuple
 - `(result, converged, n_iterations)` — 3-tuple, enables iteration tracking
 
-## Step 3: Compare against the baseline
+### Named baselines
+
+You can save and compare against named baselines for more formal comparisons:
 
 ```bash
-# Scenarios
+# Save a named baseline
+pixi run -e dev python -m benchmarks.run_benchmarks --scenarios --backends numba rust scipy --reps 3 --save-baseline v1
+
+# Compare against it later
 pixi run -e dev python -m benchmarks.run_benchmarks --scenarios --backends numba rust scipy mybackend --reps 3 --baseline v1
-
-# Sweeps
-pixi run -e dev python -m benchmarks.run_benchmarks --sweeps --backends numba rust scipy mybackend --reps 3 --baseline v1-sweeps
 ```
 
-This prints a comparison table with speedup, delta %, and geometric mean. Your new backend appears as "new". Output is also saved to `benchmarks/results/baseline_comparison_*.txt` and `*.png`.
-
-You can save and compare in one step by combining both flags:
-
-```bash
-pixi run -e dev python -m benchmarks.run_benchmarks --scenarios --backends numba rust scipy mybackend --reps 3 --save-baseline v2 --baseline v1
-```
+This prints a comparison table with speedup, delta %, and geometric mean. Baselines are saved to `benchmarks/results/baselines/`.
 
 ## CLI Reference
 
@@ -83,10 +101,13 @@ pixi run -e dev python -m benchmarks.run_benchmarks --scenarios --backends numba
 --all                 Run everything (default)
 --backends B [B ...]  Backends to benchmark (default: numba)
 --reps N              Repetitions per scenario (default: 3)
+--no-cache            Don't merge with cached results; overwrite result CSVs
 --save-baseline NAME  Save results as a named baseline
 --baseline NAME       Compare against a saved baseline
 --sweep-name NAME     Run a single sweep (e.g. mobility, features, group_count)
 --n-features N        Columns to demean (default: 1)
 --fe-columns COL ...  FE columns (default: worker_id firm_id year)
 --feols               Also benchmark feols() (slower)
+--modal               Run benchmarks on a remote Modal GPU
+--modal-gpu TYPE      Modal GPU type (default: T4). Options: T4, A10G, L4, A100, H100
 ```

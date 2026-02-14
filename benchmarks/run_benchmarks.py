@@ -7,7 +7,7 @@ sweeps, then orchestrates data generation, benchmarking, and plotting.
 Usage:
     python -m benchmarks.run_benchmarks [--scenarios] [--sweeps] [--all]
         [--feols] [--reps N] [--n-features N] [--fe-columns COL ...]
-        [--sweep-name NAME]
+        [--sweep-name NAME] [--no-cache] [--modal] [--modal-gpu TYPE]
 """
 
 from __future__ import annotations
@@ -228,6 +228,39 @@ def _load_baseline(name: str) -> pd.DataFrame:
 # ---------------------------------------------------------------------------
 
 
+def _merge_cached_results(new_df: pd.DataFrame, csv_path: Path) -> pd.DataFrame:
+    """Merge new results with cached results, replacing by (scenario, backend).
+
+    Rows in the cached CSV whose (scenario, backend) key appears in *new_df*
+    are dropped and replaced by the new data.  Cached rows for other backends
+    are preserved.
+    """
+    if not csv_path.exists():
+        return new_df
+    cached_df = pd.read_csv(csv_path)
+    new_keys = new_df[["scenario", "backend"]].drop_duplicates()
+    cached_df = cached_df.merge(
+        new_keys, on=["scenario", "backend"], how="left", indicator=True,
+    )
+    cached_df = cached_df[cached_df["_merge"] == "left_only"].drop(columns="_merge")
+    return pd.concat([cached_df, new_df], ignore_index=True)
+
+
+def _show_cached_diff(
+    summary: pd.DataFrame,
+    backends: list[str],
+    section_name: str,
+) -> None:
+    """Print a diff table comparing current-run backends against cached ones."""
+    cached_backends = set(summary["backend"].unique()) - set(backends)
+    if not cached_backends:
+        return
+    current_summary = summary[summary["backend"].isin(backends)]
+    cached_summary = summary[summary["backend"].isin(cached_backends)]
+    print(f"\n--- Diff vs Cached Backends ({section_name}) ---")
+    print(format_baseline_comparison_table(current_summary, cached_summary))
+
+
 def _run_scenario_suite(
     scenarios: dict[str, DGPConfig],
     n_reps: int,
@@ -278,30 +311,6 @@ def _add_config_cols(df: pd.DataFrame, results: list[BenchmarkResult]) -> pd.Dat
             # Overwrite with config values for group_count sweep
             df[col] = config_df[col]
     return df
-
-
-def _run_features_sweep(
-    n_reps: int,
-    backends: list[str],
-    fe_columns: list[str] | None = None,
-) -> list[BenchmarkResult]:
-    """Run the features sweep: same medium DGP, varying n_features."""
-    all_results: list[BenchmarkResult] = []
-    config = SCENARIOS["large"]
-
-    for n_feat in FEATURES_SWEEP_VALUES:
-        name = f"features_{n_feat}"
-        print(f"\n{'='*60}")
-        print(f"Features sweep: n_features={n_feat}")
-        print(f"{'='*60}")
-        results = run_benchmark(
-            config, name,
-            n_repetitions=n_reps, backends=backends, run_feols=False,
-            n_features=n_feat, fe_columns=fe_columns,
-        )
-        all_results.extend(results)
-
-    return all_results
 
 
 # ---------------------------------------------------------------------------
@@ -357,6 +366,18 @@ def main() -> None:
         "--baseline", type=str, default=None, metavar="NAME",
         help="Compare current results against a previously saved baseline.",
     )
+    parser.add_argument(
+        "--no-cache", action="store_true",
+        help="Don't merge with cached results; overwrite result CSVs.",
+    )
+    parser.add_argument(
+        "--modal", action="store_true",
+        help="Run benchmarks on a remote Modal GPU.",
+    )
+    parser.add_argument(
+        "--modal-gpu", type=str, default="T4",
+        help="Modal GPU type (default: T4). Options: T4, A10G, L4, A100, H100.",
+    )
     args = parser.parse_args()
 
     if not (args.scenarios or args.sweeps or args.all):
@@ -364,6 +385,13 @@ def main() -> None:
 
     backends = args.backends
     print(f"Backends: {backends}")
+
+    if args.modal:
+        from benchmarks.modal_runner import create_runner
+        _run_suite = create_runner(args.modal_gpu)
+        print(f"Modal mode: GPU={args.modal_gpu}")
+    else:
+        _run_suite = _run_scenario_suite
 
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -374,23 +402,27 @@ def main() -> None:
         print("\n" + "=" * 60)
         print("MAIN SCENARIOS")
         print("=" * 60)
-        scenario_results = _run_scenario_suite(
+        scenario_results = _run_suite(
             SCENARIOS, args.reps, backends, args.feols,
             n_features=args.n_features, fe_columns=args.fe_columns,
         )
         all_results.extend(scenario_results)
 
         df = results_to_dataframe(scenario_results)
-        df.to_csv(RESULTS_DIR / "scenario_results.csv", index=False)
+        csv_path = RESULTS_DIR / "scenario_results.csv"
+        if not args.no_cache:
+            df = _merge_cached_results(df, csv_path)
+        df.to_csv(csv_path, index=False)
 
         summary = summarize_results(df)
         summary.to_csv(RESULTS_DIR / "scenario_summary.csv", index=False)
 
         print("\n--- Scenario Summary ---")
         print(format_summary_table(summary))
-        if len(backends) > 1:
+        if summary["backend"].nunique() > 1:
             print("\n--- Backend Comparison ---")
             print(format_comparison_table(summary))
+        _show_cached_diff(summary, backends, "scenarios")
         save_table(summary, RESULTS_DIR / "scenario_table.txt")
 
         plot_scenario_times(summary, RESULTS_DIR / "scenario_times.png")
@@ -417,7 +449,7 @@ def main() -> None:
             print(f"SWEEP: {sweep_name}")
             print(f"{'='*60}")
 
-            sweep_results = _run_scenario_suite(
+            sweep_results = _run_suite(
                 sweep_configs, args.reps, backends, args.feols,
                 n_features=args.n_features, fe_columns=args.fe_columns,
             )
@@ -425,11 +457,15 @@ def main() -> None:
 
             df = results_to_dataframe(sweep_results)
             df = _add_config_cols(df, sweep_results)
-            df.to_csv(RESULTS_DIR / f"sweep_{sweep_name}.csv", index=False)
+            csv_path = RESULTS_DIR / f"sweep_{sweep_name}.csv"
+            if not args.no_cache:
+                df = _merge_cached_results(df, csv_path)
+            df.to_csv(csv_path, index=False)
 
             sweep_summary = summarize_results(df)
             print(f"\n--- {sweep_name} sweep summary ---")
             print(format_summary_table(sweep_summary))
+            _show_cached_diff(sweep_summary, backends, f"sweep:{sweep_name}")
 
             meta = SWEEP_META[sweep_name]
             plot_sweep(
@@ -449,17 +485,27 @@ def main() -> None:
             print("SWEEP: features")
             print(f"{'='*60}")
 
-            features_results = _run_features_sweep(
-                args.reps, backends, fe_columns=args.fe_columns,
-            )
+            all_features_results: list[BenchmarkResult] = []
+            for n_feat in FEATURES_SWEEP_VALUES:
+                feat_results = _run_suite(
+                    {f"features_{n_feat}": SCENARIOS["large"]},
+                    args.reps, backends, False,
+                    n_features=n_feat, fe_columns=args.fe_columns,
+                )
+                all_features_results.extend(feat_results)
+            features_results = all_features_results
             all_results.extend(features_results)
 
             df = results_to_dataframe(features_results)
-            df.to_csv(RESULTS_DIR / "sweep_features.csv", index=False)
+            csv_path = RESULTS_DIR / "sweep_features.csv"
+            if not args.no_cache:
+                df = _merge_cached_results(df, csv_path)
+            df.to_csv(csv_path, index=False)
 
             features_summary = summarize_results(df)
             print("\n--- features sweep summary ---")
             print(format_summary_table(features_summary))
+            _show_cached_diff(features_summary, backends, "sweep:features")
 
             plot_features_sweep(
                 df, output_path=RESULTS_DIR / "sweep_features.png",
@@ -469,7 +515,10 @@ def main() -> None:
     if all_results:
         combined_df = results_to_dataframe(all_results)
         combined_df = _add_config_cols(combined_df, all_results)
-        combined_df.to_csv(RESULTS_DIR / "all_results.csv", index=False)
+        csv_path = RESULTS_DIR / "all_results.csv"
+        if not args.no_cache:
+            combined_df = _merge_cached_results(combined_df, csv_path)
+        combined_df.to_csv(csv_path, index=False)
 
         plot_time_vs_connected_set(
             combined_df, RESULTS_DIR / "time_vs_connected_set.png"
