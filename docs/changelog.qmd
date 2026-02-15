@@ -126,7 +126,7 @@ work in progress.
 We add CuPy and SciPy Backend to run the demeaning algorithm on the GPU via the sparse LSMR solver. For problems
 where the standard demeaner struggles to converge, this strategy can lead to significant speedups if paired with a GPU.
 
-![Complex Fixed Effects Benchmark](https://raw.githubusercontent.com/py-econometrics/pyfixest/master/benchmarks/complex_benchmarks.png)
+![Complex Fixed Effects Benchmark](https://raw.githubusercontent.com/py-econometrics/pyfixest/master/benchmarks/legacy_benchmarks/complex_benchmarks.png)
 
 ### HAC Standard Errors
 

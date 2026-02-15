@@ -73,6 +73,11 @@ jaxlib = ">=0.4.38, <0.8"
 "update-test-data" = "Rscript tests/r_test_comparisons.R"
 "install-r-extended" = "Rscript r_test_requirements.R"
 "render-notebooks" = "python scripts/run_notebooks.py"
+"bench-scenarios" = "python -m benchmarks.scripts.run_benchmarks --scenarios"
+"bench-sweeps" = "python -m benchmarks.scripts.run_benchmarks --sweeps"
+"bench-all" = "python -m benchmarks.scripts.run_benchmarks --all"
+"bench-plots" = "python -m benchmarks.scripts.plot_results"
+"bench-dgp-tests" = "pytest benchmarks/tests/test_dgp.py -v"
 
 [feature.docs.dependencies]
 jupyterlab = ">=4.0.12"
