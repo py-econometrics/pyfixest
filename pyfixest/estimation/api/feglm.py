@@ -2,8 +2,8 @@ from collections.abc import Mapping
 from typing import Any, Optional, Union
 
 from pyfixest.estimation.api.utils import _estimation_input_checks
-from pyfixest.estimation.models.feols_ import Feols
-from pyfixest.estimation.models.fepois_ import Fepois
+from pyfixest.estimation.feols_ import Feols
+from pyfixest.estimation.fepois_ import Fepois
 from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.literals import (
     DemeanerBackendOptions,
