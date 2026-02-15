@@ -8,7 +8,7 @@ import pytest
 
 from benchmarks.bench import _prepare_demean_inputs
 from benchmarks.plot import format_baseline_comparison_table
-from benchmarks.run_benchmarks import _load_baseline, _save_baseline
+from benchmarks.scripts.run_benchmarks import _load_baseline, _save_baseline
 
 
 @pytest.fixture
@@ -106,7 +106,7 @@ class TestBaselineSaveLoad:
     """Tests for baseline save and load roundtrip."""
 
     def test_save_and_load_roundtrip(self, sample_summary, monkeypatch, tmp_path):
-        import benchmarks.run_benchmarks as rb
+        import benchmarks.scripts.run_benchmarks as rb
 
         monkeypatch.setattr(rb, "BASELINES_DIR", tmp_path)
         _save_baseline(sample_summary, "test_v1")
@@ -116,7 +116,7 @@ class TestBaselineSaveLoad:
         )
 
     def test_load_missing_baseline_raises(self, monkeypatch, tmp_path):
-        import benchmarks.run_benchmarks as rb
+        import benchmarks.scripts.run_benchmarks as rb
 
         monkeypatch.setattr(rb, "BASELINES_DIR", tmp_path)
         with pytest.raises(FileNotFoundError, match="nonexistent"):

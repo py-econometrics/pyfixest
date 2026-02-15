@@ -5,7 +5,7 @@ Reads CSVs from results/individual_benchmarks/ and writes PNGs to
 results/plots/.
 
 Usage:
-    python -m benchmarks.plot_results [--baseline NAME]
+    python -m benchmarks.scripts.plot_results [--baseline NAME]
 """
 
 from __future__ import annotations
@@ -27,7 +27,7 @@ from benchmarks.plot import (
     plot_time_vs_nobs,
 )
 
-RESULTS_DIR = Path(__file__).parent / "results"
+RESULTS_DIR = Path(__file__).parent.parent / "results"
 CSV_DIR = RESULTS_DIR / "individual_benchmarks"
 PLOTS_DIR = RESULTS_DIR / "plots"
 BASELINES_DIR = RESULTS_DIR / "baselines"

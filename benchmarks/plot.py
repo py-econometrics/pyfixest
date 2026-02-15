@@ -42,6 +42,13 @@ def format_summary_table(
     """
     display = summary_df.copy()
 
+    # Preserve original scenario order
+    scenario_order = display["scenario"].unique()
+    display["scenario"] = pd.Categorical(
+        display["scenario"], categories=scenario_order, ordered=True,
+    )
+    display = display.sort_values("scenario")
+
     # Format columns for readability
     display["n_obs"] = display["n_obs"].apply(lambda x: f"{x:,.0f}")
     display["n_workers"] = display["n_workers"].apply(lambda x: f"{x:,.0f}")
@@ -125,6 +132,9 @@ def format_comparison_table(
     if len(backends) <= 1:
         return format_summary_table(summary_df, tablefmt)
 
+    # Preserve original scenario order
+    scenario_order = summary_df["scenario"].unique()
+
     # Pivot: scenario x backend -> median time
     pivot = summary_df.pivot_table(
         index="scenario",
@@ -132,6 +142,7 @@ def format_comparison_table(
         values="demean_time_median",
         aggfunc="first",
     )
+    pivot = pivot.reindex(scenario_order)
 
     # Add obs count
     obs_by_scenario = (

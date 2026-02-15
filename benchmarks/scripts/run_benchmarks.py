@@ -5,7 +5,7 @@ Defines benchmark scenarios (easy through extreme) and single-parameter
 sweeps, then orchestrates data generation, benchmarking, and plotting.
 
 Usage:
-    python -m benchmarks.run_benchmarks [--scenarios] [--sweeps] [--all]
+    python -m benchmarks.scripts.run_benchmarks [--scenarios] [--sweeps] [--all]
         [--feols] [--reps N] [--n-features N] [--fe-columns COL ...]
         [--sweep-name NAME] [--no-cache] [--modal] [--modal-gpu TYPE]
 """
@@ -33,7 +33,7 @@ from benchmarks.plot import (
     save_table,
 )
 
-RESULTS_DIR = Path(__file__).parent / "results"
+RESULTS_DIR = Path(__file__).parent.parent / "results"
 CSV_DIR = RESULTS_DIR / "individual_benchmarks"
 BASELINES_DIR = RESULTS_DIR / "baselines"
 

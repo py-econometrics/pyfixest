@@ -43,7 +43,13 @@ Each sweep varies a single parameter while holding everything else at the `large
 ### Run your first benchmarks
 
 ```bash
-pixi run -e dev python -m benchmarks.run_benchmarks --scenarios --backends numba rust scipy --reps 3
+pixi run -e dev python -m benchmarks.scripts.run_benchmarks --scenarios --backends numba rust scipy --reps 3
+```
+
+For the `sweeps` benchmarks, run 
+
+```bash
+pixi run -e dev python -m benchmarks.scripts.run_benchmarks --sweeps --backends numba rust scipy --reps 3
 ```
 
 Results are cached in `benchmarks/results/`.
@@ -51,7 +57,7 @@ Results are cached in `benchmarks/results/`.
 ### Add a new backend and compare
 
 ```bash
-pixi run -e dev python -m benchmarks.run_benchmarks --scenarios --backends jax --reps 3
+pixi run -e dev python -m benchmarks.scripts.run_benchmarks --scenarios --backends jax --reps 3
 ```
 
 This runs only JAX, merges with the cached numba/rust/scipy results, and prints:
@@ -61,7 +67,7 @@ This runs only JAX, merges with the cached numba/rust/scipy results, and prints:
 ### Re-run a backend (replaces cached results)
 
 ```bash
-pixi run -e dev python -m benchmarks.run_benchmarks --scenarios --backends numba --reps 5
+pixi run -e dev python -m benchmarks.scripts.run_benchmarks --scenarios --backends numba --reps 5
 ```
 
 The cached numba results are replaced; rust/scipy/jax results are kept.
@@ -69,7 +75,7 @@ The cached numba results are replaced; rust/scipy/jax results are kept.
 ### Clean run (discard cache)
 
 ```bash
-pixi run -e dev python -m benchmarks.run_benchmarks --scenarios --backends numba --reps 3 --no-cache
+pixi run -e dev python -m benchmarks.scripts.run_benchmarks --scenarios --backends numba --reps 3 --no-cache
 ```
 
 ### Implement a new backend
@@ -85,10 +91,10 @@ You can save and compare against named baselines for more formal comparisons:
 
 ```bash
 # Save a named baseline
-pixi run -e dev python -m benchmarks.run_benchmarks --scenarios --backends numba rust scipy --reps 3 --save-baseline v1
+pixi run -e dev python -m benchmarks.scripts.run_benchmarks --scenarios --backends numba rust scipy --reps 3 --save-baseline v1
 
 # Compare against it later
-pixi run -e dev python -m benchmarks.run_benchmarks --scenarios --backends numba rust scipy mybackend --reps 3 --baseline v1
+pixi run -e dev python -m benchmarks.scripts.run_benchmarks --scenarios --backends numba rust scipy mybackend --reps 3 --baseline v1
 ```
 
 This prints a comparison table with speedup, delta %, and geometric mean. Baselines are saved to `benchmarks/results/baselines/`.
