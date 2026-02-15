@@ -23,6 +23,7 @@ from pyfixest.estimation.formula.utils import (
 class Formula:
     """A formulaic-compliant formula."""
 
+    # second and first stage are formulas **excluding** fixed effects
     _second_stage: str
     _fixed_effects: str | None = None
     _first_stage: str | None = None
@@ -104,7 +105,10 @@ class Formula:
 
     @classmethod
     def parse(cls, formula: str) -> list["Formula"]:
-        """Parse fixest-style formula."""
+        """
+        Parse fixest-style formula. In case of multiple estimation syntax, 
+        returns a list of multiple regression formulas. 
+        """
         _validate(formula)
         formula = _preprocess(formula)
         return [

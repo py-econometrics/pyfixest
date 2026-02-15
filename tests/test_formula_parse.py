@@ -107,6 +107,34 @@ class TestMultipleEstimationExpansion:
             ("Y ~ csw0(f1, f1+f2)", ["Y ~ 1", "Y ~ f1", "Y ~ f1 + f1+f2"]),
             # Fixed effects with multiple estimation
             ("Y ~ X1 | sw(f1, f2)", ["Y ~ X1 | f1", "Y ~ X1 | f2"]),
+            # Two operators in the same formula part
+            (
+                "Y ~ sw(X1, X2) + csw(X3, X4)",
+                [
+                    "Y ~ X1 + X3",
+                    "Y ~ X1 + X3 + X4",
+                    "Y ~ X2 + X3",
+                    "Y ~ X2 + X3 + X4",
+                ],
+            ),
+            # Three operators in the same formula part
+            (
+                "Y ~ sw(X1, X2) + csw(X3, X4) + sw0(X5, X6)",
+                [
+                    "Y ~ X1 + X3 + 1",
+                    "Y ~ X1 + X3 + X5",
+                    "Y ~ X1 + X3 + X6",
+                    "Y ~ X1 + X3 + X4 + 1",
+                    "Y ~ X1 + X3 + X4 + X5",
+                    "Y ~ X1 + X3 + X4 + X6",
+                    "Y ~ X2 + X3 + 1",
+                    "Y ~ X2 + X3 + X5",
+                    "Y ~ X2 + X3 + X6",
+                    "Y ~ X2 + X3 + X4 + 1",
+                    "Y ~ X2 + X3 + X4 + X5",
+                    "Y ~ X2 + X3 + X4 + X6",
+                ],
+            ),
         ],
     )
     def test_expand_all_multiple_estimation(self, formula, expected):
