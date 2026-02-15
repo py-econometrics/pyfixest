@@ -135,6 +135,39 @@ class TestMultipleEstimationExpansion:
                     "Y ~ X2 + X3 + X4 + X6",
                 ],
             ),
+            # Multiple estimation in covariates and fixed effects
+            (
+                "Y ~ sw(X1, X2) | sw(f1, f2)",
+                [
+                    "Y ~ X1 | f1",
+                    "Y ~ X1 | f2",
+                    "Y ~ X2 | f1",
+                    "Y ~ X2 | f2",
+                ],
+            ),
+            (
+                "Y ~ csw(X1, X2) | csw(f1, f2)",
+                [
+                    "Y ~ X1 | f1",
+                    "Y ~ X1 | f1 + f2",
+                    "Y ~ X1 + X2 | f1",
+                    "Y ~ X1 + X2 | f1 + f2",
+                ],
+            ),
+            # Multiple estimation in dependent vars, covariates, and fixed effects
+            (
+                "sw(Y1, Y2) ~ sw(X1, X2) | sw(f1, f2)",
+                [
+                    "Y1 ~ X1 | f1",
+                    "Y1 ~ X1 | f2",
+                    "Y1 ~ X2 | f1",
+                    "Y1 ~ X2 | f2",
+                    "Y2 ~ X1 | f1",
+                    "Y2 ~ X1 | f2",
+                    "Y2 ~ X2 | f1",
+                    "Y2 ~ X2 | f2",
+                ],
+            ),
         ],
     )
     def test_expand_all_multiple_estimation(self, formula, expected):
@@ -156,6 +189,28 @@ class TestFormulaParse:
             ("Y ~ csw0(X1, X2)", 3),
             ("Y ~ mvsw(X1, X2)", 4),
             ("Y ~ mvsw(X1, X2, X3)", 8),
+            # With fixed effects
+            ("Y ~ X1 | f1", 1),
+            ("Y ~ sw(X1, X2) | f1", 2),
+            ("Y ~ csw(X1, X2) | f1", 2),
+            ("Y ~ sw0(X1, X2) | f1", 3),
+            ("Y ~ csw0(X1, X2) | f1", 3),
+            ("Y ~ mvsw(X1, X2) | f1", 4),
+            # Multiple estimation in fixed effects
+            ("Y ~ X1 | sw(f1, f2)", 2),
+            ("Y ~ X1 | csw(f1, f2)", 2),
+            ("Y ~ X1 | sw0(f1, f2)", 3),
+            ("Y ~ X1 | csw0(f1, f2)", 3),
+            ("Y ~ X1 | mvsw(f1, f2)", 4),
+            # Multiple estimation in covariates and fixed effects
+            ("Y ~ sw(X1, X2) | sw(f1, f2)", 4),
+            ("Y ~ csw(X1, X2) | csw(f1, f2)", 4),
+            ("Y ~ sw0(X1, X2) | sw0(f1, f2)", 9),
+            ("Y ~ mvsw(X1, X2) | sw(f1, f2)", 8),
+            # Multiple estimation in dependent vars, covariates, and fixed effects
+            ("Y + Y2 ~ sw(X1, X2) | sw(f1, f2)", 8),
+            ("sw(Y1, Y2) ~ csw(X1, X2) | csw(f1, f2)", 8),
+            ("Y + Y2 + Y3 ~ sw(X1, X2) | sw(f1, f2)", 12),
         ],
     )
     def test_parse_count(self, formula, expected_count):
