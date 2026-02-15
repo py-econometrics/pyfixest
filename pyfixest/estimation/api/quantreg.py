@@ -164,7 +164,7 @@ def quantreg(
     Returns
     -------
     object
-        An instance of the Quantreg class or FixestMulti class for multiple models specified via `fml`.
+        An instance of the [Quantreg](/reference/estimation.quantreg.quantreg_.Quantreg.qmd) class or [FixestMulti](/reference/estimation.FixestMulti_.FixestMulti.qmd) class for multiple models specified via `fml`.
 
     Examples
     --------

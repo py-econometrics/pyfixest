@@ -6,6 +6,7 @@ from pyfixest.estimation.feols_ import Feols
 from pyfixest.estimation.fepois_ import Fepois
 from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.literals import (
+    DemeanerBackendOptions,
     FixedRmOptions,
     SolverOptions,
     VcovTypeOptions,
@@ -30,6 +31,7 @@ def feglm(
     collin_tol: float = 1e-09,
     separation_check: Optional[list[str]] = None,
     solver: SolverOptions = "scipy.linalg.solve",
+    demeaner_backend: DemeanerBackendOptions = "numba",
     drop_intercept: bool = False,
     copy_data: bool = True,
     store_data: bool = True,
@@ -42,7 +44,9 @@ def feglm(
     """
     Estimate GLM regression models with fixed effects.
 
-    Supported families: `logit`, `probit`, `gaussian`.
+    Supported families: [logit](/reference/estimation.felogit_.Felogit.qmd),
+    [probit](/reference/estimation.feprobit_.Feprobit.qmd),
+    [gaussian](/reference/estimation.fegaussian_.Fegaussian.qmd).
 
     References
     ----------
@@ -127,6 +131,19 @@ def feglm(
         "np.linalg.solve", "scipy.linalg.solve", "scipy.sparse.linalg.lsqr" and "jax".
         Defaults to "scipy.linalg.solve".
 
+    demeaner_backend: DemeanerBackendOptions, optional
+        The backend to use for demeaning. Options include:
+        - "numba" (default): CPU-based demeaning using Numba JIT via the Alternating Projections Algorithm.
+        - "rust": CPU-based demeaning implemented in Rust via the Alternating Projections Algorithm.
+        - "jax": CPU or GPU-accelerated using JAX (requires jax/jaxlib) via the Alternating Projections Algorithm.
+        - "cupy" or "cupy64": GPU-accelerated using CuPy with float64 precision via direct application of the Frisch-Waugh-Lovell Theorem on sparse
+          matrices (requires cupy & GPU, defaults to scipy/CPU if no GPU available)
+        - "cupy32": GPU-accelerated using CuPy with float32 precision via direct application of the Frisch-Waugh-Lovell Theorem on sparse
+          matrices (requires cupy & GPU, defaults to scipy/CPU and float64 if no GPU available)
+        - "scipy": Direct application of the Frisch-Waugh-Lovell Theorem on sparse matrice.
+          Forces to use a scipy-sparse backend even when cupy is installed and GPU is available.
+        Defaults to "numba".
+
     drop_intercept : bool, optional
         Whether to drop the intercept from the model, by default False.
 
@@ -177,8 +194,11 @@ def feglm(
     Returns
     -------
     object
-        An instance of the `Fepois` class or an instance of class `FixestMulti`
-        for multiple models specified via `fml`.
+        An instance of the [Feglm](/reference/estimation.feglm_.Feglm.qmd) class
+        (or one of its subclasses: [Felogit](/reference/estimation.felogit_.Felogit.qmd),
+        [Feprobit](/reference/estimation.feprobit_.Feprobit.qmd),
+        [Fegaussian](/reference/estimation.fegaussian_.Fegaussian.qmd)) or an instance of
+        class [FixestMulti](/reference/estimation.FixestMulti_.FixestMulti.qmd) for multiple models specified via `fml`.
 
     Examples
     --------
@@ -301,6 +321,7 @@ def feglm(
         iwls_maxiter=iwls_maxiter,
         collin_tol=collin_tol,
         separation_check=separation_check,
+        demeaner_backend=demeaner_backend,
         accelerate=accelerate,
     )
 

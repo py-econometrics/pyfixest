@@ -5,9 +5,10 @@ Like many open-source software projects, PyFixest builds on work and ideas first
 # Software
 
 > Unless explicitly stated otherwise, all PyFixest code is written independently from scratch. The packages listed below have influenced PyFixest's API design or algorithmic choices, or are used for testing PyFixest as reference implementations, but no source code has been copied except where explicitly stated (with license and permission details provided inline).
+
 ## fixest (R)
 
-If open source software is made by "standing on the shoulders of giants", in case of `PyFixest`, there is mostly one very big giant - [Laurent Bergé's](https://sites.google.com/site/laurentrberge/) formidable [fixest](https://github.com/lrberge/fixest/) R package. `fixest` is so good we decided to stick to its API and conventions as closely as Python allows when starting to work on a fixed effects regression package in Python. Without `fixest`, PyFixest likely wouldn't exist - or at the very least, it would look very different. Most importantly, `fixest` has shaped our understanding of what a user-friendly regression package should look like and what functionality it should offer.
+If open source software is made by "standing on the shoulders of giants", in case of `PyFixest`, there is mostly one very big giant - [Laurent Bergé's](https://sites.google.com/site/laurentrberge/) formidable [fixest](https://github.com/lrberge/fixest/) R package. `fixest` is so good we decided to stick to its API and conventions as closely as Python allows when starting to work on a fixed effects regression package in Python. Without `fixest`, PyFixest likely wouldn't exist - or at the very least, it would look very different. Most importantly, `fixest` has shaped our understanding of how a user-friendly regression package should look like and what functionality it should offer.
 
 More concretely, we have borrowed the following API conventions and ideas directly from fixest:
 
@@ -55,7 +56,7 @@ standard errors, t-statistics, p-values, confidence intervals, etc for OLS, IV, 
 
 | Package | Language | Role |
 |---|---|---|
-| [**did2s**](https://github.com/kylebutts/did2s) | R | PyFixest's DID2S estimator's API is strongly inspired by Kyle Butts' R package (MIT license) and we have relied on Kyle's writeup of the method for our own implementation. Tests compare coefficients and standard errors against the R implementation |
+| [**did2s**](https://github.com/kylebutts/did2s) | R | PyFixest's DID2S estimator's API is strongly inspired by Kyle Butts' R package (MIT license) and we have relied on Kyle's writeup of the method for our own implementation. Tests compare coefficients and standard errors against the R implementation. Additionally, PyFixest's `event_study()` function is inspired by the [`event_study()` function](https://kylebutts.github.io/did2s/articles/event_study.html) in `did2s`.  |
 | [**lpdid**](https://github.com/alexCardazzi/lpdid) | R | PyFixest's local-projections DID estimator is highly influenced by Alex Cardazzi's R code (published under MIT) for the lpdid package. We also test against Alex' package. |
 | [**lpdid**](https://github.com/danielegirardi/lpdid) | Stata | We also test our implementation against Daniel Busch and Daniele Girardi's Stata implementation of the local-projections estimator. |
 

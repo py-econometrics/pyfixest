@@ -71,10 +71,10 @@ class Feols:
     Non user-facing class to estimate a linear regression via OLS.
 
     Users should not directly instantiate this class,
-    but rather use the [feols()](/reference/estimation.api.feols.qmd) function. Note that
+    but rather use the [feols()](/reference/estimation.api.feols.feols.qmd) function. Note that
     no demeaning is performed in this class: demeaning is performed in the
-    FixestMulti class (to allow for caching
-    of demeaned variables for multiple estimation).
+    FixestMulti class (to allow for caching of demeaned variables for multiple
+    estimation).
 
     Parameters
     ----------
@@ -1160,8 +1160,8 @@ class Feols:
         """
         Conduct Wald test.
 
-        Compute a Wald test for a linear hypothesis of the form R * β = q.
-        where R is m x k matrix, β is a k x 1 vector of coefficients,
+        Compute a Wald test for a linear hypothesis of the form R * beta = q.
+        where R is m x k matrix, beta is a k x 1 vector of coefficients,
         and q is m x 1 vector.
         By default, tests the joint null hypothesis that all coefficients are zero.
 
