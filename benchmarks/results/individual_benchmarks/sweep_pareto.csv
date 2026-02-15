@@ -1,0 +1,4 @@
+scenario,backend,n_obs,n_workers,n_firms,n_years,connected_set_fraction,demean_time_seconds,demean_converged,feols_time_seconds,feols_converged,demean_n_iterations,demean_time_per_iter,n_features,n_factors,p_move,pareto_shape,n_clusters,p_between_cluster,p_observe,p_survive,selection_firm,sorting_wf
+pareto_th1.0,scipy,1764967,150000,15000,15,0.9960709486666791,9.93902854099997,True,,,,,1,3,0.02,1.0,10,0.1,0.8,0.95,1.0,0.0
+pareto_th3.0,scipy,1771912,150000,15000,15,1.0,7.495049542000061,True,,,,,1,3,0.02,3.0,10,0.1,0.8,0.95,1.0,0.0
+pareto_th10.0,scipy,1772753,150000,15000,15,1.0,7.888469708999992,True,,,,,1,3,0.02,10.0,10,0.1,0.8,0.95,1.0,0.0

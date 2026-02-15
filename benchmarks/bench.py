@@ -256,6 +256,7 @@ def run_benchmark(
     run_feols: bool = False,
     n_features: int = 1,
     fe_columns: list[str] | None = None,
+    verbose: bool = True,
 ) -> list[BenchmarkResult]:
     """Run a benchmark scenario across one or more backends.
 
@@ -275,6 +276,8 @@ def run_benchmark(
         Number of columns to demean. Default 1.
     fe_columns : list[str] or None
         Which FE columns to use. Default ["worker_id", "firm_id", "year"].
+    verbose : bool
+        Whether to print progress details. Default True.
 
     Returns
     -------
@@ -291,33 +294,37 @@ def run_benchmark(
     results: list[BenchmarkResult] = []
 
     # Generate data once with a fixed seed, then run n_repetitions timed calls
-    print(
-        f"  [{scenario_name}] Generating data (seed={config.seed})..."
-    )
+    if verbose:
+        print(
+            f"  [{scenario_name}] Generating data (seed={config.seed})..."
+        )
 
     dgp = ThreeWayFEData(config)
     dgp_result = dgp.simulate()
 
     if dgp_result.n_obs == 0:
-        print(
-            f"  [{scenario_name}] No observations generated, skipping."
-        )
+        if verbose:
+            print(
+                f"  [{scenario_name}] No observations generated, skipping."
+            )
         return results
 
-    print(
-        f"  [{scenario_name}] {dgp_result.n_obs:,} obs, "
-        f"{dgp_result.n_workers_observed:,} workers, "
-        f"{dgp_result.n_firms_observed:,} firms."
-    )
+    if verbose:
+        print(
+            f"  [{scenario_name}] {dgp_result.n_obs:,} obs, "
+            f"{dgp_result.n_workers_observed:,} workers, "
+            f"{dgp_result.n_firms_observed:,} firms."
+        )
 
     for backend in backends:
         for rep in range(n_repetitions):
-            print(
-                f"  [{scenario_name}] Rep {rep + 1}/{n_repetitions}: "
-                f"demean({backend}, {n_features} col(s))...",
-                end="",
-                flush=True,
-            )
+            if verbose:
+                print(
+                    f"  [{scenario_name}] Rep {rep + 1}/{n_repetitions}: "
+                    f"demean({backend}, {n_features} col(s))...",
+                    end="",
+                    flush=True,
+                )
             demean_time, demean_conv, n_iters = _run_demean(
                 dgp_result.data, backend,
                 n_features=n_features, fe_columns=fe_columns,
@@ -325,20 +332,23 @@ def run_benchmark(
             time_per_iter = (
                 demean_time / n_iters if n_iters is not None and n_iters > 0 else None
             )
-            iters_str = f", iters={n_iters}" if n_iters is not None else ""
-            print(f" {demean_time:.3f}s, converged={demean_conv}{iters_str}")
+            if verbose:
+                iters_str = f", iters={n_iters}" if n_iters is not None else ""
+                print(f" {demean_time:.3f}s, converged={demean_conv}{iters_str}")
 
             feols_time = None
             feols_conv = None
             if run_feols:
-                print(
-                    f"  [{scenario_name}] Rep {rep + 1}: "
-                    f"feols({backend})...",
-                    end="",
-                    flush=True,
-                )
+                if verbose:
+                    print(
+                        f"  [{scenario_name}] Rep {rep + 1}: "
+                        f"feols({backend})...",
+                        end="",
+                        flush=True,
+                    )
                 feols_time, feols_conv = _run_feols(dgp_result.data, backend)
-                print(f" {feols_time:.3f}s, converged={feols_conv}")
+                if verbose:
+                    print(f" {feols_time:.3f}s, converged={feols_conv}")
 
             results.append(
                 BenchmarkResult(

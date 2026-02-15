@@ -76,6 +76,7 @@ jaxlib = ">=0.4.38, <0.8"
 "bench-scenarios" = "python -m benchmarks.run_benchmarks --scenarios"
 "bench-sweeps" = "python -m benchmarks.run_benchmarks --sweeps"
 "bench-all" = "python -m benchmarks.run_benchmarks --all"
+"bench-plots" = "python -m benchmarks.plot_results"
 "bench-dgp-tests" = "pytest benchmarks/tests/test_dgp.py -v"
 
 [feature.docs.dependencies]

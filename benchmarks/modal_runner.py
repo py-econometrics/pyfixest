@@ -106,6 +106,7 @@ def create_runner(gpu_type: str = "T4"):
         run_feols: bool,
         n_features: int = 1,
         fe_columns: list[str] | None = None,
+        progress_bar: object | None = None,
     ) -> list[BenchmarkResult]:
         """Run benchmarks remotely on Modal and return local results."""
         from benchmarks.bench import BenchmarkResult
@@ -129,6 +130,8 @@ def create_runner(gpu_type: str = "T4"):
         for d in result_dicts:
             config = DGPConfigCls(**d.pop("config"))
             results.append(BenchmarkResult(config=config, **d))
+        if progress_bar is not None:
+            progress_bar.update(len(scenarios))
         return results
 
     return run_suite
