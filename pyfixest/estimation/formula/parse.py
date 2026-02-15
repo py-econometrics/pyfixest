@@ -15,7 +15,7 @@ from pyfixest.estimation.formula.utils import (
     _MULTIPLE_ESTIMATION_PATTERN,
     _get_position_of_first_parenthesis_pair,
     _MultipleEstimationType,
-    _split_parenthesis_preserving,
+    _str_split_by_sep,
 )
 
 
@@ -124,7 +124,7 @@ class Formula:
 
 def _validate(formula: str) -> None:
     max_parts: Final[int] = 3
-    parts = _split_parenthesis_preserving(string=formula, separator="|")
+    parts = _str_split_by_sep(string=formula, separator="|")
 
     # Check: at most 3 parts
     if len(parts) > max_parts:
@@ -175,7 +175,7 @@ def _preprocess(formula: str) -> str:
     Y + Y2 ~ X1 + X2 will be converted to sw(Y, Y2) ~ X1 + X2.
     """
     dependents, rhs = re.split(r"\s*~\s*", formula, maxsplit=1)
-    dependents = _split_parenthesis_preserving(dependents.strip(), separator="+")
+    dependents = _str_split_by_sep(dependents.strip(), separator="+")
     if len(dependents) > 1:
         # Multiple dependent variables
         formula = f"sw({', '.join(dependents)}) ~ {rhs}"
@@ -193,10 +193,15 @@ def _expand_first_multiple_estimation(formula: str) -> list[str] | None:
     )
     parenthesis_open += match.start()
     parenthesis_closed += match.start()
-    arguments = _split_parenthesis_preserving(
+    arguments = _str_split_by_sep(
         string=formula[parenthesis_open:parenthesis_closed],
         separator=",",
     )
+    if len(arguments) < 2 and kind is not _MultipleEstimationType.mvsw:
+        raise FormulaSyntaxError(
+            f"'{kind.name}(...)' requires at least 2 arguments, got {len(arguments)}. "
+            f"Check for extra parentheses, e.g. sw((a, b)) should be sw(a, b)."
+        )
     if kind is _MultipleEstimationType.mvsw:
         # Multiverse stepwise: all combinations of arguments
         arguments = [

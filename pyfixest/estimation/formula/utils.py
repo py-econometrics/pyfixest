@@ -31,8 +31,12 @@ def log(array: np.ndarray) -> np.ndarray:
     return result
 
 
-def _split_parenthesis_preserving(string: str, separator: str) -> list[str]:
-    """Split on top-level separator, respecting nested parentheses."""
+def _str_split_by_sep(string: str, separator: str = "+") -> list[str]:
+    """
+    Split on top-level *separator*, skipping any occurrences nested inside
+    parentheses.  The main use-case is splitting formula terms on ``+``
+    without breaking apart multi-estimation operators like ``sw(a, b + c)``.
+    """
     args: list[str] = []
     depth = 0
     current: list[str] = []
@@ -51,6 +55,12 @@ def _split_parenthesis_preserving(string: str, separator: str) -> list[str]:
 
 
 def _get_position_of_first_parenthesis_pair(string: str) -> tuple[int, int]:
+    """
+    Return ``(start, end)`` indices of the content inside the first matched
+    parenthesis pair, so that ``string[start:end]`` gives the inner content.
+
+    Example: ``"sw(X1, X2)"`` → ``(3, 9)`` and ``string[3:9] == "X1, X2"``.
+    """
     position_open = string.find("(")
     if position_open == -1:
         raise ValueError(f"No parenthesis in `{string}`")

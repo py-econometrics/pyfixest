@@ -222,6 +222,20 @@ class TestValidation:
         with pytest.raises(FormulaSyntaxError):
             Formula.parse("Y | f1")
 
+    @pytest.mark.parametrize(
+        "formula",
+        [
+            "Y ~ sw((X1, X2))",
+            "Y ~ csw((X1, X2))",
+            "Y ~ sw0((X1, X2))",
+            "Y ~ csw0((X1, X2))",
+        ],
+    )
+    def test_extra_parens_in_multiple_estimation(self, formula):
+        """sw((a, b)) should error — extra parens swallow the separator."""
+        with pytest.raises(FormulaSyntaxError, match="at least 2 arguments"):
+            Formula.parse(formula)
+
 
 # =============================================================================
 # Part 2: Edge Case Tests
