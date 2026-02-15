@@ -4,7 +4,7 @@ import pandas as pd
 
 from pyfixest.did.did import DID
 from pyfixest.estimation import feols
-from pyfixest.estimation.models.feols_ import Feols
+from pyfixest.estimation.feols_ import Feols
 
 
 class TWFE(DID):
