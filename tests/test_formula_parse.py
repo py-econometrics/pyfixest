@@ -3,15 +3,29 @@ Tests for the formula parsing implementation in pyfixest/estimation/formula/pars
 
 This module contains:
 - Part 1: Unit tests for Formula.parse() and internal parsing functions
-- Part 2: Edge case tests
+- Part 2: End-to-end compatibility tests via feols()
+- Part 3: Edge case tests
 """
 
 import re
 
+import numpy as np
 import pytest
 
+import pyfixest as pf
 from pyfixest.errors import FormulaSyntaxError
 from pyfixest.estimation.formula.parse import Formula, _expand_all_multiple_estimation
+
+# =============================================================================
+# Fixtures
+# =============================================================================
+
+
+@pytest.fixture(scope="module")
+def test_data():
+    """Generate test data for compatibility tests."""
+    return pf.get_data(N=500, seed=12345)
+
 
 # =============================================================================
 # Part 1: Unit Tests for formula/parse.py
@@ -458,7 +472,57 @@ class TestValidation:
 
 
 # =============================================================================
-# Part 2: Edge Case Tests
+# Part 2: End-to-end compatibility tests via feols()
+# =============================================================================
+
+
+@pytest.mark.parametrize(
+    "formula,expected_n_models",
+    [
+        ("Y ~ X1", 1),
+        ("Y ~ sw(X1, X2)", 2),
+        ("Y ~ csw(X1, X2)", 2),
+        ("Y ~ sw0(X1, X2)", 3),
+        ("Y ~ csw0(X1, X2)", 3),
+        ("Y + Y2 ~ X1", 2),
+        ("Y ~ X1 | sw(f1, f2)", 2),
+        ("Y ~ mvsw(X1, X2)", 4),
+        ("Y ~ mvsw(X1, X2, Z1)", 8),
+        ("Y ~ mvsw(X1, X2) | f1", 4),
+        ("Y ~ sw(X1, X2) | csw(f1, f2)", 4),  # 2 x 2
+    ],
+)
+def test_correct_number_of_models(test_data, formula: str, expected_n_models: int):
+    """Verify the correct number of models are generated from multiple estimation syntax."""
+    fit = pf.feols(formula, data=test_data)
+
+    n_models = len(fit.to_list()) if hasattr(fit, "to_list") else 1
+
+    assert n_models == expected_n_models, (
+        f"Expected {expected_n_models} models for '{formula}', got {n_models}"
+    )
+
+
+def test_explicit_no_fe_coefficients_match(test_data):
+    """Verify Y ~ X1 | 1 produces same coefficients as Y ~ X1."""
+    fit_implicit = pf.feols("Y ~ X1", data=test_data)
+    fit_explicit = pf.feols("Y ~ X1 | 1", data=test_data)
+
+    assert np.allclose(fit_implicit.coef().values, fit_explicit.coef().values)
+    assert np.allclose(fit_implicit.se().values, fit_explicit.se().values)
+
+
+def test_explicit_no_fe_iv_coefficients_match(test_data):
+    """Verify Y ~ 1 | 1 | Y2 ~ X1 produces same coefficients as Y ~ 1 | Y2 ~ X1."""
+    fit_implicit = pf.feols("Y ~ 1 | Y2 ~ X1", data=test_data)
+    fit_explicit = pf.feols("Y ~ 1 | 1 | Y2 ~ X1", data=test_data)
+
+    assert np.allclose(fit_implicit.coef().values, fit_explicit.coef().values)
+    assert np.allclose(fit_implicit.se().values, fit_explicit.se().values)
+
+
+# =============================================================================
+# Part 3: Edge Case Tests
 # =============================================================================
 
 

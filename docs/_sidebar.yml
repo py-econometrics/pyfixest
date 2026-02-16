@@ -35,6 +35,12 @@ website:
       - reference/did.visualize.panelview.qmd
       section: Summarize and Visualize
     - contents:
+      - reference/estimation.formula.parse.Formula.qmd
+      - reference/estimation.formula.parse.parse.qmd
+      - reference/estimation.formula.model_matrix.ModelMatrix.qmd
+      - reference/estimation.formula.factor_interaction.factor_interaction.qmd
+      section: Formula Parsing & Model Matrix
+    - contents:
       - reference/estimation.demean.qmd
       - reference/estimation.detect_singletons.qmd
       - reference/estimation.model_matrix_fixest.qmd

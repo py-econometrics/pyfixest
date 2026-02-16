@@ -62,7 +62,7 @@ def _count_G_for_ssc_correction(
 
 
 def _get_vcov_type(
-    vcov: Union[str, dict[str, str], None]
+    vcov: Union[str, dict[str, str], None],
 ) -> Union[str, dict[str, str]]:
     """
     Pass the specified vcov type.
@@ -74,6 +74,7 @@ def _get_vcov_type(
     ----------
     vcov : Union[str, dict[str, str], None]
         The specified vcov type.
+
     Returns
     -------
     str

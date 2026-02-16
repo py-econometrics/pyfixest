@@ -8,7 +8,7 @@ import pandas as pd
 
 from pyfixest.estimation.demean_ import demean_model
 from pyfixest.estimation.feols_ import Feols, _drop_multicollinear_variables
-from pyfixest.estimation.FormulaParser import FixestFormula
+from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.literals import DemeanerBackendOptions
 from pyfixest.estimation.solvers import solve_ols
 
@@ -146,7 +146,7 @@ class Feiv(Feols):
         collin_tol: float,
         fixef_tol: float,
         fixef_maxiter: int,
-        lookup_demeaned_data: dict[str, pd.DataFrame],
+        lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
         solver: Literal[
             "np.linalg.lstsq",
             "np.linalg.solve",
@@ -214,7 +214,7 @@ class Feiv(Feols):
                 self._fe,
                 self._weights.flatten(),
                 self._lookup_demeaned_data,
-                self._na_index_str,
+                self._na_index,
                 self._fixef_tol,
                 self._fixef_maxiter,
                 self._demean_func,
@@ -276,8 +276,10 @@ class Feiv(Feols):
         fixest_module = import_module("pyfixest.estimation")
         fit_ = fixest_module.feols
 
-        fml_first_stage = self.FixestFormula.fml_first_stage.replace(" ", "")
-        if self._has_fixef:
+        fml_first_stage = self.FixestFormula.first_stage
+        # Append fixed effects manually since fml_first_stage doesn't include them
+        # (see Formula.fml_first_stage docstring for explanation)
+        if self._has_fixef and fml_first_stage is not None:
             fml_first_stage += f" | {self._fixef}"
 
         # Type hint to reflect that vcov_detail can be either a dict or a str
