@@ -23,6 +23,8 @@ __all__ = [
     "fepois",
     "get_data",
     "get_ssc",
+    "get_twin_data",
+    "get_worker_panel",
     "iplot",
     "lpdid",
     "panelview",
@@ -67,6 +69,8 @@ _lazy_imports = {
     "make_table": "pyfixest.report",
     # utils
     "get_data": "pyfixest.utils",
+    "get_twin_data": "pyfixest.utils",
+    "get_worker_panel": "pyfixest.utils",
     "ssc": "pyfixest.utils",
     "get_ssc": "pyfixest.utils",
 }

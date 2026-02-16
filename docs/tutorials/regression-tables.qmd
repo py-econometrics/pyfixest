@@ -1,0 +1,570 @@
+---
+title: "Regression Tables"
+aliases:
+  - /table-layout.html
+description: "Publication-ready tables with Great Tables or LaTeX booktabs — customize labels, significance stars, and output formats."
+categories: [Workflow]
+format:
+  html:
+    html-table-processing: none
+toc: true
+toc-title: "On this page"
+toc-location: left
+---
+## Table Layout with PyFixest
+
+::: {.callout-note}
+## Migration Notice
+Starting with pyfixest 0.41.0 (currently in development), the table functionality is powered by [maketables](https://py-econometrics.github.io/maketables/).
+The `pf.etable()` API remains unchanged. `pf.dtable()` is deprecated (use `DTable()` directly) and `pf.make_table()` has been removed (use `maketables.MTable()` directly).
+:::
+
+Pyfixest comes with functions to generate publication-ready tables. Regression tables are generated with `pf.etable()`, which can output different formats, for instance using the [Great Tables](https://posit-dev.github.io/great-tables/articles/intro.html) package or generating formatted LaTex Tables using [booktabs](https://ctan.org/pkg/booktabs?lang=en). Descriptive statistics tables can be created with `DTable()` and custom tables with `maketables.MTable()`.
+
+To begin, we load some libraries and fit a set of regression models.
+
+```{python}
+import numpy as np
+import pandas as pd
+import pylatex as pl  # for the latex table; note: not a dependency of pyfixest - needs manual installation
+from maketables import DTable
+from great_tables import loc, style  # great_tables is used by maketables internally
+from IPython.display import FileLink, display
+
+import pyfixest as pf
+
+%load_ext autoreload
+%autoreload 2
+
+data = pf.get_data()
+
+fit1 = pf.feols("Y ~ X1 + X2 | f1", data=data)
+fit2 = pf.feols("Y ~ X1 + X2 | f1 + f2", data=data)
+fit3 = pf.feols("Y ~ X1 *X2 | f1 + f2", data=data)
+fit4 = pf.feols("Y2 ~ X1 + X2 | f1", data=data)
+fit5 = pf.feols("Y2 ~ X1 + X2 | f1 + f2", data=data)
+fit6 = pf.feols("Y2 ~ X1 *X2 | f1 + f2", data=data)
+```
+
+# Regression Tables via `pf.etable()`
+
+## Basic Usage
+
+We can compare all regression models via the pyfixest-internal `pf.etable()` function:
+
+
+```{python}
+pf.etable([fit1, fit2, fit3, fit4, fit5, fit6])
+```
+
+You can also estimate and display multiple regressions with one line of code using the (py)fixest stepwise notation:
+
+```{python}
+pf.etable(pf.feols("Y+Y2~csw(X1,X2,X1:X2)", data=data))
+```
+
+## Keep and drop variables
+`etable` allows us to do a few things out of the box. For example, we can only keep the variables that we'd like, which keeps all variables that fit the provided regex match.
+
+
+```{python}
+pf.etable([fit1, fit2, fit3, fit4, fit5, fit6], keep="X1")
+```
+
+We can use the `exact_match` argument to select a specific set of variables:
+
+```{python}
+pf.etable([fit1, fit2, fit3, fit4, fit5, fit6], keep=["X1", "X2"], exact_match=True)
+```
+
+We can also easily **drop** variables via the `drop` argument:
+
+```{python}
+pf.etable([fit1, fit2, fit3, fit4, fit5, fit6], drop=["X1"])
+```
+
+## Display p-values or confidence intervals
+By default, `pf.etable()` reports **standard errors**. But we can also ask to output p-values or confidence intervals via the `coef_fmt` function argument.
+
+
+```{python}
+pf.etable([fit1, fit2, fit3, fit4, fit5, fit6], coef_fmt="b \n (se) \n [p]")
+```
+
+## Significance levels and rounding
+Additionally, we can also overwrite the defaults for the reported significance levels and control the rounding of results via the `signif_code` and `digits` function arguments:
+
+
+```{python}
+pf.etable([fit1, fit2, fit3, fit4, fit5, fit6], signif_code=[0.01, 0.05, 0.1], digits=5)
+```
+
+
+## Other output formats
+By default, `pf.etable()` returns a GT object (see [the Great Tables package](https://posit-dev.github.io/great-tables/articles/intro.html)), but you can also opt to dataframe, markdown, or latex output via the `type` argument.
+
+
+```{python}
+# Pandas styler output:
+pf.etable(
+    [fit1, fit2, fit3, fit4, fit5, fit6],
+    signif_code=[0.01, 0.05, 0.1],
+    digits=5,
+    coef_fmt="b (se)",
+    type="df",
+)
+```
+
+```{python}
+# Markdown output:
+pf.etable(
+    [fit1, fit2, fit3, fit4, fit5, fit6],
+    signif_code=[0.01, 0.05, 0.1],
+    digits=5,
+    type="md",
+)
+```
+
+To obtain latex output use `type = "tex"`. If you want to save the table as a tex file, you can use the `file_name=` argument to specify the respective path where it should be saved. Etable will use latex packages `booktabs`, `threeparttable`, `makecell`, and `tabularx` for the table layout, so don't forget to include these packages in your latex document.
+
+```{python}
+# LaTex output (include latex packages booktabs, threeparttable, makecell, and tabularx in your document):
+tab = pf.etable(
+    [fit1, fit2, fit3, fit4, fit5, fit6],
+    signif_code=[0.01, 0.05, 0.1],
+    digits=2,
+    type="tex",
+)
+```
+
+The following code generates a pdf including the regression table which you can display clicking on the link below the cell:
+
+```{python}
+## Use pylatex to create a tex file with the table
+
+
+def make_pdf(tab, file):
+    "Create a PDF document with tex table."
+    doc = pl.Document()
+    doc.packages.append(pl.Package("booktabs"))
+    doc.packages.append(pl.Package("threeparttable"))
+    doc.packages.append(pl.Package("makecell"))
+    doc.packages.append(pl.Package("tabularx"))
+
+    with (
+        doc.create(pl.Section("A PyFixest LateX Table")),
+        doc.create(pl.Table(position="htbp")) as table,
+    ):
+        table.append(pl.NoEscape(tab))
+
+    doc.generate_pdf(file, clean_tex=False)
+
+
+# Compile latex to pdf & display a button with the hyperlink to the pdf
+# requires tex installation
+run = False
+if run:
+    make_pdf(tab, "latexdocs/SampleTableDoc")
+display(FileLink("latexdocs/SampleTableDoc.pdf"))
+```
+
+
+## Rename variables
+You can also rename variables if you want to have a more readable output. Just pass a dictionary to the `labels` argument. Note that interaction terms will also be relabeled using the specified labels for the interacted variables (if you want to manually relabel an interaction term differently, add it to the dictionary).
+
+
+```{python}
+labels = {
+    "Y": "Wage",
+    "Y2": "Wealth",
+    "X1": "Age",
+    "X2": "Years of Schooling",
+    "f1": "Industry",
+    "f2": "Year",
+}
+
+pf.etable([fit1, fit2, fit3, fit4, fit5, fit6], labels=labels)
+```
+
+If you want to label the rows indicating the inclusion of fixed effects not with the variable label but with a custom label, you can pass on a separate dictionary to the `felabels` argument.
+
+
+```{python}
+pf.etable(
+    [fit1, fit2, fit3, fit4, fit5, fit6],
+    labels=labels,
+    felabels={"f1": "Industry Fixed Effects", "f2": "Year Fixed Effects"},
+)
+```
+
+## Rename categorical variables
+
+By default, categorical variables are returned using the formulaic "C(variable)[T.value]" notation. Via the `cat_template` argument,
+you can rename categorical variables via a specified template *{variable}={value}*. This works when either the variable is categorial in the DataFrame, or the C() or i() operators are used in the regresson formula.
+´
+```{python}
+
+# Add a categorical variable
+data['job'] = np.random.choice(["Managerial", "Admin", "Blue collar"], size=len(data), p=[1/3, 1/3, 1/3])
+# Add a label for this variable to the dictionary
+labels['job']="Job Family"
+
+fit7 = pf.feols("Y ~ X1 + X2 + job", data = data)
+
+pf.etable([fit7], labels=labels, cat_template = "{variable}::{value}")
+```
+
+But you can also remove the variable name and only keep the levels (categories) by specifying *cat_template="{value}"*. Note that the labeling of categories also works in interaction terms:
+
+```{python}
+
+fit7 = pf.feols("Y ~ X1 + X2 + job", data = data)
+fit8 = pf.feols("Y ~ X1 + X2 + job*X2", data = data)
+
+pf.etable([fit7, fit8], labels=labels, cat_template="{value}")
+```
+##  Change reference category
+You can also change the reference category of a categorical variable using the `ref` argument in the  interaction `i()` operator. For example, repeating the last estimation but changing the reference category to "Managerial" instead of "Admin":
+
+```{python}
+
+fit9 = pf.feols("Y ~ X1 + X2 + i(job,ref='Managerial') + i(job,X2,ref='Managerial')", data = data)
+
+pf.etable([fit9], labels=labels, cat_template="{value}")
+```
+
+Notice that this process will change the `_coefnames`. In this example, the new `_coefnames` are:
+```{python}
+fit9._coefnames
+```
+
+## Custom model headlines
+You can also add custom headers for each model by passing a list of strings to the `model_headers` argument.
+
+
+```{python}
+pf.etable(
+    [fit1, fit2, fit3, fit4, fit5, fit6],
+    labels=labels,
+    model_heads=["US", "China", "EU", "US", "China", "EU"],
+)
+```
+
+Or change the ordering of headlines having headlines first and then dependent variables using the `head_order` argument. "hd" stands for headlines then dependent variables, "dh" for dependent variables then headlines. Assigning "d" or "h" can be used to only show dependent variables or only headlines. When head_order="" only model numbers are shown.
+
+
+```{python}
+pf.etable(
+    [fit1, fit4, fit2, fit5, fit3, fit6],
+    labels=labels,
+    model_heads=["US", "US", "China", "China", "EU", "EU"],
+    head_order="hd",
+)
+```
+
+
+Remove the dependent variables from the headers:
+
+```{python}
+pf.etable(
+    [fit1, fit4, fit2, fit5, fit3, fit6],
+    labels=labels,
+    model_heads=["US", "US", "China", "China", "EU", "EU"],
+    head_order="",
+)
+```
+
+## Further custom model information
+You can add further custom model statistics/information to the bottom of the table by using the `custom_stats` argument to which you pass a dictionary with the name of the row and lists of values. The length of the lists must be equal to the number of models.
+
+
+```{python}
+pf.etable(
+    [fit1, fit2, fit3, fit4, fit5, fit6],
+    labels=labels,
+    custom_model_stats={
+        "Number of Clusters": [42, 42, 42, 37, 37, 37],
+        "Additional Info": ["A", "A", "B", "B", "C", "C"],
+    },
+)
+```
+
+
+## Custom table notes
+You can replace the default table notes with your own notes using the `notes` argument.
+
+```{python}
+mynotes = "Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet."
+pf.etable(
+    [fit1, fit4, fit2, fit5, fit3, fit6],
+    labels=labels,
+    model_heads=["US", "US", "China", "China", "EU", "EU"],
+    head_order="hd",
+    notes=mynotes,
+)
+```
+
+
+## Publication-ready LaTex tables
+With few lines of code you thus obtain a publication-ready latex table:
+
+
+```{python}
+tab = pf.etable(
+    [fit1, fit4, fit2, fit5, fit3, fit6],
+    labels=labels,
+    model_heads=["US", "US", "China", "China", "EU", "EU"],
+    head_order="hd",
+    type="tex",
+    notes=mynotes,
+    show_fe=True,
+    show_se_type=False,
+    custom_model_stats={
+        "Number of Clusters": [42, 42, 42, 37, 37, 37],
+    },
+)
+
+# Compile latex to pdf & display a button with the hyperlink to the pdf
+run = False
+if run:
+    make_pdf(tab, "latexdocs/SampleTableDoc2")
+display(FileLink("latexdocs/SampleTableDoc2.pdf"))
+```
+
+
+# Rendering Tables in Quarto
+When you use quarto you can include latex tables generated by pyfixest when rendering the qmd file as pdf. Just specify `output: asis` in the code block options of the respective chunk and print the LaTex string returned by etable. Don't forget to include the `\usepackage` commands for necessary latex packages in the YAML block. Here you find a sample [qmd file](https://github.com/py-econometrics/pyfixest/blob/master/docs/quarto_example/QuartoExample.qmd).
+
+When you render either a jupyter notebook or qmd file to html it is advisable to turn html-table-processing off in quarto as otherwise quarto adds further formatting which alters how your tables look like. You can do this in a raw cell at the top of your document.
+
+<pre><code>---
+format:
+  html:
+    html-table-processing: none
+---</code></pre>
+
+# Descriptive Statistics via `DTable()`
+
+::: {.callout-warning}
+## Deprecation Notice
+`pf.dtable()` will be deprecated in the future. Please use `DTable` from the `maketables` package.
+:::
+
+The function `DTable()` allows to display descriptive statistics for a set of variables in the same layout.
+
+## Basic Usage of DTable
+Specify the variables you want to display the descriptive statistics for. You can also use a dictionary to rename the variables and add a caption.
+
+
+
+```{python}
+DTable(
+    data,
+    vars=["Y", "Y2", "X1", "X2"],
+    labels=labels,
+    caption="Descriptive statistics",
+    digits=2,
+)
+```
+
+
+Choose the set of statistics to be displayed with `stats`. You can use any pandas aggregation functions.
+
+
+```{python}
+DTable(
+    data,
+    vars=["Y", "Y2", "X1", "X2"],
+    stats=["count", "mean", "std", "min", "max"],
+    labels=labels,
+    caption="Descriptive statistics",
+)
+```
+
+
+## Summarize by characteristics in columns and rows
+You can summarize by characteristics using the `bycol` argument when groups are to be displayed in columns. When the number of observations is the same for all variables in a group, you can also opt to display the number of observations only once for each group byin a separate line at the bottom of the table with `counts_row_below==True`.
+
+
+```{python}
+# Generate some categorial data
+data["country"] = np.random.choice(["US", "EU"], data.shape[0])
+data["occupation"] = np.random.choice(["Blue collar", "White collar"], data.shape[0])
+
+# Drop nan values to have balanced data
+data.dropna(inplace=True)
+
+DTable(
+    data,
+    vars=["Y", "Y2", "X1", "X2"],
+    labels=labels,
+    bycol=["country", "occupation"],
+    stats=["count", "mean", "std"],
+    caption="Descriptive statistics",
+    stats_labels={"count": "Number of observations"},
+    counts_row_below=True,
+)
+```
+
+
+You can also use custom aggregation functions to compute further statistics or affect how statistics are presented. Pyfixest provides two such functions `mean_std` and `mean_newline_std` which compute the mean and standard deviation and display both the same cell (either with line break between them or not). This allows to have more compact tables when you want to show statistics for many characteristcs in the columns.
+
+You can also hide the display of the statistics labels in the header with `hide_stats_labels=True`. In that case a table note will be added naming the statistics displayed using its label (if you have not provided a custom note).
+
+
+```{python}
+DTable(
+    data,
+    vars=["Y", "Y2", "X1", "X2"],
+    labels=labels,
+    bycol=["country", "occupation"],
+    stats=["mean_newline_std", "count"],
+    caption="Descriptive statistics",
+    stats_labels={"count": "Number of observations"},
+    counts_row_below=True,
+    hide_stats=True,
+)
+```
+
+
+You can also split by characteristics in both columns and rows. Note that you can only use one grouping variable in rows, but several in columns (as shown above).
+
+
+```{python}
+DTable(
+    data,
+    vars=["Y", "Y2", "X1", "X2"],
+    labels=labels,
+    bycol=["country"],
+    byrow="occupation",
+    stats=["count", "mean", "std"],
+    caption="Descriptive statistics",
+)
+```
+
+
+And you can again export descriptive statistics tables also to LaTex:
+
+
+```{python}
+dtab = DTable(
+    data,
+    vars=["Y", "Y2", "X1", "X2"],
+    labels=labels,
+    bycol=["country"],
+    byrow="occupation",
+    stats=["count", "mean", "std"],
+    type="tex",
+)
+
+run = False
+if run:
+    make_pdf(dtab, "latexdocs/SampleTableDoc3")
+display(FileLink("latexdocs/SampleTableDoc3.pdf"))
+```
+
+
+# Custom Styling with Great Tables
+You can use the rich set of methods offered by [Great Tables](https://posit-dev.github.io/great-tables/articles/intro.html) to further customize the table display when the type is "gt".
+
+## Example Styling
+
+```{python}
+(
+    pf.etable([fit1, fit2, fit3, fit4, fit5, fit6])
+    .tab_options(
+        column_labels_background_color="cornsilk",
+        stub_background_color="whitesmoke",
+    )
+    .tab_style(
+        style=style.fill(color="mistyrose"),
+        locations=loc.body(columns="(3)", rows=["X2"]),
+    )
+)
+```
+
+## Defining Table Styles: Some Examples
+
+You can easily define table styles that you can apply to all tables in your project. Just define a dictionary with the respective values for the tab options (see the [Great Tables documentation](https://posit-dev.github.io/great-tables/reference/GT.tab_options.html#great_tables.GT.tab_options)) and use the style with `.tab_options(**style_dict)`.
+
+
+```{python}
+style_print = {
+    "table_font_size": "12px",
+    "heading_title_font_size": "12px",
+    "source_notes_font_size": "8px",
+    "data_row_padding": "3px",
+    "column_labels_padding": "3px",
+    "row_group_border_top_style": "hidden",
+    "table_body_border_top_style": "None",
+    "table_body_border_bottom_width": "1px",
+    "column_labels_border_top_width": "1px",
+    "table_width": "14cm",
+}
+
+
+style_presentation = {
+    "table_font_size": "16px",
+    "table_font_color_light": "white",
+    "table_body_border_top_style": "hidden",
+    "table_body_border_bottom_style": "hidden",
+    "heading_title_font_size": "18px",
+    "source_notes_font_size": "12px",
+    "data_row_padding": "3px",
+    "column_labels_padding": "6px",
+    "column_labels_background_color": "midnightblue",
+    "stub_background_color": "whitesmoke",
+    "row_group_background_color": "whitesmoke",
+    "table_background_color": "whitesmoke",
+    "heading_background_color": "white",
+    "source_notes_background_color": "white",
+    "column_labels_border_bottom_color": "white",
+    "column_labels_font_weight": "bold",
+    "row_group_font_weight": "bold",
+    "table_width": "18cm",
+}
+```
+
+
+```{python}
+t1 = DTable(
+    data,
+    vars=["Y", "Y2", "X1", "X2"],
+    stats=["count", "mean", "std", "min", "max"],
+    labels=labels,
+    caption="Descriptive statistics",
+)
+
+t2 = pf.etable(
+    [fit1, fit2, fit3, fit4, fit5, fit6],
+    labels=labels,
+    show_se=False,
+    felabels={"f1": "Industry Fixed Effects", "f2": "Year Fixed Effects"},
+    caption="Regression results",
+)
+```
+
+
+```{python}
+display(t1.make(type="gt", gt_style=style_print))
+display(t2.tab_options(**style_print))
+```
+
+
+```{python}
+style_printDouble = {
+    "table_font_size": "12px",
+    "heading_title_font_size": "12px",
+    "source_notes_font_size": "8px",
+    "data_row_padding": "3px",
+    "column_labels_padding": "3px",
+    "table_body_border_bottom_style": "double",
+    "column_labels_border_top_style": "double",
+    "column_labels_border_bottom_width": "0.5px",
+    "row_group_border_top_style": "hidden",
+    "table_body_border_top_style": "None",
+    "table_width": "14cm",
+}
+display(t1.make(type="gt", gt_style=style_printDouble))
+display(t2.tab_options(**style_printDouble))
+```

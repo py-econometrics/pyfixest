@@ -1,0 +1,30 @@
+---
+title: "Tutorials"
+subtitle: "Hands-on guides to PyFixest, grounded in real economic applications."
+listing:
+  type: grid
+  contents:
+    - ols-fixed-effects.qmd
+    - standard-errors.qmd
+    - instrumental-variables.qmd
+    - poisson-glm.qmd
+    - multiple-estimation.qmd
+    - regression-tables.qmd
+    - difference-in-differences.qmd
+    - quantile-regression.qmd
+  sort: false
+  categories: true
+  fields: [title, description, categories]
+  grid-columns: 2
+  grid-item-border: true
+page-layout: full
+toc: false
+---
+
+Each tutorial is self-contained — explicit imports, data loading, no hidden state.
+Start with **OLS with Fixed Effects** if you're new, or jump to any topic that fits your problem.
+
+::: {.callout-tip}
+## Suggested reading order
+OLS with Fixed Effects &rarr; Standard Errors &rarr; Instrumental Variables &rarr; Poisson & GLMs &rarr; Multiple Estimation &rarr; Regression Tables
+:::
