@@ -168,6 +168,86 @@ class TestMultipleEstimationExpansion:
                     "Y2 ~ X2 | f2",
                 ],
             ),
+            # Multiple dep vars with sw in covariates and csw in fixed effects
+            (
+                "sw(Y1, Y2) ~ sw(X1, X2) | csw(f1, f2)",
+                [
+                    "Y1 ~ X1 | f1",
+                    "Y1 ~ X1 | f1 + f2",
+                    "Y1 ~ X2 | f1",
+                    "Y1 ~ X2 | f1 + f2",
+                    "Y2 ~ X1 | f1",
+                    "Y2 ~ X1 | f1 + f2",
+                    "Y2 ~ X2 | f1",
+                    "Y2 ~ X2 | f1 + f2",
+                ],
+            ),
+            # sw0 in covariates + sw in fixed effects
+            (
+                "Y ~ sw0(X1, X2) | sw(f1, f2)",
+                [
+                    "Y ~ 1 | f1",
+                    "Y ~ 1 | f2",
+                    "Y ~ X1 | f1",
+                    "Y ~ X1 | f2",
+                    "Y ~ X2 | f1",
+                    "Y ~ X2 | f2",
+                ],
+            ),
+            # csw in covariates + csw0 in fixed effects
+            (
+                "Y ~ csw(X1, X2) | csw0(f1, f2)",
+                [
+                    "Y ~ X1 | 1",
+                    "Y ~ X1 | f1",
+                    "Y ~ X1 | f1 + f2",
+                    "Y ~ X1 + X2 | 1",
+                    "Y ~ X1 + X2 | f1",
+                    "Y ~ X1 + X2 | f1 + f2",
+                ],
+            ),
+            # sw(dep vars) + csw(covariates) + sw(fixed effects)
+            (
+                "sw(Y1, Y2) ~ csw(X1, X2) | sw(f1, f2)",
+                [
+                    "Y1 ~ X1 | f1",
+                    "Y1 ~ X1 | f2",
+                    "Y1 ~ X1 + X2 | f1",
+                    "Y1 ~ X1 + X2 | f2",
+                    "Y2 ~ X1 | f1",
+                    "Y2 ~ X1 | f2",
+                    "Y2 ~ X1 + X2 | f1",
+                    "Y2 ~ X1 + X2 | f2",
+                ],
+            ),
+            # mvsw in covariates + sw in fixed effects
+            (
+                "Y ~ mvsw(X1, X2) | sw(f1, f2)",
+                [
+                    "Y ~ 1 | f1",
+                    "Y ~ 1 | f2",
+                    "Y ~ X1 | f1",
+                    "Y ~ X1 | f2",
+                    "Y ~ X2 | f1",
+                    "Y ~ X2 | f2",
+                    "Y ~ X1 + X2 | f1",
+                    "Y ~ X1 + X2 | f2",
+                ],
+            ),
+            # mvsw in covariates + csw in fixed effects
+            (
+                "Y ~ mvsw(X1, X2) | csw(f1, f2)",
+                [
+                    "Y ~ 1 | f1",
+                    "Y ~ 1 | f1 + f2",
+                    "Y ~ X1 | f1",
+                    "Y ~ X1 | f1 + f2",
+                    "Y ~ X2 | f1",
+                    "Y ~ X2 | f1 + f2",
+                    "Y ~ X1 + X2 | f1",
+                    "Y ~ X1 + X2 | f1 + f2",
+                ],
+            ),
         ],
     )
     def test_expand_all_multiple_estimation(self, formula, expected):
@@ -268,6 +348,63 @@ class TestFormulaParse:
         """Cross-product: sw in both independent and FE."""
         result = Formula.parse("Y ~ sw(X1, X2) | sw(f1, f2)")
         assert len(result) == 4  # 2 x 2
+
+    def test_parse_multiple_dep_vars_with_sw_and_csw(self):
+        """Y1 + Y2 (preprocessed to sw) + sw in covars + csw in FE."""
+        result = Formula.parse("Y1 + Y2 ~ sw(X1, X2) | csw(f1, f2)")
+        assert len(result) == 8  # 2 dep * 2 covars * 2 FE
+        second_stages = [f.second_stage for f in result]
+        fixed_effects = [f.fixed_effects for f in result]
+        assert second_stages == [
+            "Y1 ~ X1", "Y1 ~ X1", "Y1 ~ X2", "Y1 ~ X2",
+            "Y2 ~ X1", "Y2 ~ X1", "Y2 ~ X2", "Y2 ~ X2",
+        ]
+        assert fixed_effects == [
+            "f1", "f1 + f2", "f1", "f1 + f2",
+            "f1", "f1 + f2", "f1", "f1 + f2",
+        ]
+
+    def test_parse_csw0_in_fe_maps_to_none(self):
+        """csw0 in FE produces a '1' zero-step which maps to fixed_effects=None."""
+        result = Formula.parse("Y ~ X1 | csw0(f1, f2)")
+        assert len(result) == 3
+        assert result[0].fixed_effects is None  # zero step: "1" -> None
+        assert result[1].fixed_effects == "f1"
+        assert result[2].fixed_effects == "f1 + f2"
+
+    def test_parse_sw0_in_fe_maps_to_none(self):
+        """sw0 in FE produces a '1' zero-step which maps to fixed_effects=None."""
+        result = Formula.parse("Y ~ X1 | sw0(f1, f2)")
+        assert len(result) == 3
+        assert result[0].fixed_effects is None  # zero step: "1" -> None
+        assert result[1].fixed_effects == "f1"
+        assert result[2].fixed_effects == "f2"
+
+    def test_parse_mvsw_covars_with_csw_fe(self):
+        """mvsw in covariates combined with csw in fixed effects."""
+        result = Formula.parse("Y ~ mvsw(X1, X2) | csw(f1, f2)")
+        assert len(result) == 8  # 4 mvsw * 2 csw
+        second_stages = [f.second_stage for f in result]
+        fixed_effects = [f.fixed_effects for f in result]
+        assert second_stages == [
+            "Y ~ 1", "Y ~ 1",
+            "Y ~ X1", "Y ~ X1",
+            "Y ~ X2", "Y ~ X2",
+            "Y ~ X1 + X2", "Y ~ X1 + X2",
+        ]
+        assert fixed_effects == [
+            "f1", "f1 + f2",
+            "f1", "f1 + f2",
+            "f1", "f1 + f2",
+            "f1", "f1 + f2",
+        ]
+
+    def test_parse_to_dict_csw0_fe_groups(self):
+        """parse_to_dict should group csw0 FE correctly, with None for zero-step."""
+        result = Formula.parse_to_dict("Y ~ X1 | csw0(f1, f2)")
+        assert None in result  # zero step
+        assert "f1" in result
+        assert "f1 + f2" in result
 
 
 class TestValidation:
