@@ -38,8 +38,7 @@ def data():
     return df_het
 
 
-@pytest.mark.skipif(import_check is False, reason="R package did2s not installed.")
-@pytest.mark.against_r_extended
+@pytest.mark.against_r_core
 def test_event_study(data):
     """Test the event_study() function."""
     fit_did2s = event_study(
@@ -80,8 +79,7 @@ def test_event_study(data):
     np.testing.assert_allclose(fit_did2s.se(), float(r_df[2]), atol=1e-05, rtol=1e-05)
 
 
-@pytest.mark.skipif(import_check is False, reason="R package did2s not installed.")
-@pytest.mark.against_r_extended
+@pytest.mark.against_r_core
 @pytest.mark.parametrize("weights", [None, "weights"])
 def test_did2s(data, weights):
     """Test the did2s() function."""
@@ -439,6 +437,56 @@ def test_fully_interacted_mpdata(mpdata_path):
     # run plotting
     fit_saturated.iplot()
     fit_saturated.iplot_aggregate()
+
+
+def test_saturated_event_study_int_vs_float_dtypes():
+    """Coefficients from _saturated_event_study must be identical regardless of
+    whether rel_time / first_treated_period are int or float."""
+    from pyfixest.did.did import DID
+    from pyfixest.did.saturated_twfe import _saturated_event_study
+
+    df = pd.read_csv(
+        resources.files("pyfixest.did.data").joinpath("df_het.csv")
+    )
+    tname, idname, gname = "year", "unit", "g"
+
+    df["is_treated"] = (df[tname] >= df[gname]) * (df[gname] > 0)
+    df = df.merge(
+        df.assign(first_treated_period=df[tname] * df["is_treated"])
+        .groupby(idname)["first_treated_period"]
+        .apply(lambda x: x[x > 0].min()),
+        on=idname,
+    )
+    df["rel_time"] = df[tname] - df["first_treated_period"]
+    df["first_treated_period"] = (
+        df["first_treated_period"].replace(np.nan, 0).astype(int)
+    )
+    df["rel_time"] = df["rel_time"].replace(np.nan, np.inf)
+
+    # ints
+    df_int = df.copy()
+    m_int, _ = _saturated_event_study(
+        df_int, outcome="dep_var", time_id=tname, unit_id=idname, cluster=idname
+    )
+
+    # floats
+    df_float = df.copy()
+    df_float["rel_time"] = df_float["rel_time"].astype(float)
+    df_float["first_treated_period"] = df_float["first_treated_period"].astype(float)
+    m_float, _ = _saturated_event_study(
+        df_float, outcome="dep_var", time_id=tname, unit_id=idname, cluster=idname
+    )
+
+    np.testing.assert_allclose(
+        np.sort(m_int.coef().values),
+        np.sort(m_float.coef().values),
+        err_msg="Saturated event study coefficients differ between int and float dtypes",
+    )
+    np.testing.assert_allclose(
+        np.sort(m_int.se().values),
+        np.sort(m_float.se().values),
+        err_msg="Saturated event study standard errors differ between int and float dtypes",
+    )
 
 
 def _get_r_did2s_results(data, weights):
