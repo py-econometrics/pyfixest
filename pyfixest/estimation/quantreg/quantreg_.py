@@ -10,7 +10,7 @@ from scipy.linalg import cho_factor, solve_triangular
 from scipy.stats import norm
 
 from pyfixest.estimation.feols_ import Feols
-from pyfixest.estimation.formula.parse import Formula as FixestFormula
+from pyfixest.estimation.FormulaParser import FixestFormula
 from pyfixest.estimation.literals import (
     QuantregMethodOptions,
     SolverOptions,
@@ -37,7 +37,7 @@ class Quantreg(Feols):
         collin_tol: float,
         fixef_tol: float,
         fixef_maxiter: int,
-        lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
+        lookup_demeaned_data: dict[str, pd.DataFrame],
         solver: SolverOptions = "np.linalg.solve",
         demeaner_backend: Literal["numba", "jax"] = "numba",
         store_data: bool = True,
@@ -93,9 +93,9 @@ class Quantreg(Feols):
         self._quantile_maxiter = quantile_maxiter
 
         self._model_name = (
-            FixestFormula.formula
+            FixestFormula.fml
             if self._sample_split_var is None
-            else f"{FixestFormula.formula} (Sample: {self._sample_split_var} = {self._sample_split_value})"
+            else f"{FixestFormula.fml} (Sample: {self._sample_split_var} = {self._sample_split_value})"
         )
         # update with quantile name
         self._model_name = f"{self._model_name} (q = {quantile})"

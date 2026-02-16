@@ -12,8 +12,8 @@ def demean_model(
     X: pd.DataFrame,
     fe: Optional[pd.DataFrame],
     weights: Optional[np.ndarray],
-    lookup_demeaned_data: dict[frozenset[int], Any],
-    na_index: frozenset[int],
+    lookup_demeaned_data: dict[str, Any],
+    na_index_str: str,
     fixef_tol: float,
     fixef_maxiter: int,
     demean_func: Callable,
@@ -42,9 +42,9 @@ def demean_model(
         A dictionary with keys for each fixed effects combination and potentially
         values of demeaned data frames. The function checks this dictionary to
         see if some of the variables have already been demeaned.
-    na_index : frozenset[int]
-        A frozenset of indices of dropped rows. Used as a hashable cache key
-        for demeaned variables.
+    na_index_str : str
+        A string with indices of dropped columns. Used for caching of demeaned
+        variables.
     fixef_tol: float
         The tolerance for the demeaning algorithm.
     fixef_maxiter: int
@@ -79,9 +79,9 @@ def demean_model(
     if fe is not None:
         fe_array = fe.to_numpy()
         # check if looked dict has data for na_index
-        if lookup_demeaned_data.get(na_index) is not None:
+        if lookup_demeaned_data.get(na_index_str) is not None:
             # get data out of lookup table: list of [algo, data]
-            value = lookup_demeaned_data.get(na_index)
+            value = lookup_demeaned_data.get(na_index_str)
             if value is not None:
                 try:
                     _, YX_demeaned_old = value
@@ -146,7 +146,7 @@ def demean_model(
             YX_demeaned = pd.DataFrame(YX_demeaned)
             YX_demeaned.columns = yx_names
 
-        lookup_demeaned_data[na_index] = [None, YX_demeaned]
+        lookup_demeaned_data[na_index_str] = [None, YX_demeaned]
 
     else:
         # nothing to demean here

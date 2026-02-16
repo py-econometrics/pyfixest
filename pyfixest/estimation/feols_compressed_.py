@@ -9,7 +9,7 @@ import pandas as pd
 from tqdm import tqdm
 
 from pyfixest.estimation.feols_ import Feols, PredictionErrorOptions, PredictionType
-from pyfixest.estimation.formula.parse import Formula as FixestFormula
+from pyfixest.estimation.FormulaParser import FixestFormula
 from pyfixest.estimation.literals import (
     DemeanerBackendOptions,
     SolverOptions,
@@ -91,7 +91,7 @@ class FeolsCompressed(Feols):
         collin_tol: float,
         fixef_tol: float,
         fixef_maxiter: int,
-        lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
+        lookup_demeaned_data: dict[str, pd.DataFrame],
         solver: SolverOptions = "np.linalg.solve",
         demeaner_backend: DemeanerBackendOptions = "numba",
         store_data: bool = True,
@@ -125,7 +125,7 @@ class FeolsCompressed(Feols):
             sample_split_value,
         )
 
-        if FixestFormula.first_stage is not None:
+        if FixestFormula.fml_first_stage is not None:
             raise NotImplementedError(
                 "Compression is not supported with IV regression."
             )
