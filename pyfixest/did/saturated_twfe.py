@@ -318,7 +318,7 @@ def _saturated_event_study(
     unit_id: str,
     cluster: Optional[str] = None,
 ):
-    ff = f"{outcome} ~ i(rel_time, first_treated_period, ref = -1.0, ref2=0.0) | {unit_id} + {time_id}"
+    ff = f"{outcome} ~ i(rel_time, first_treated_period, ref = -1, ref2=0) | {unit_id} + {time_id}"
     m = feols(fml=ff, data=df, vcov={"CRV1": cluster})  # type: ignore
     res = m.tidy().reset_index()
     res = res.join(
