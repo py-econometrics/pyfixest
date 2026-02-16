@@ -441,13 +441,11 @@ def test_fully_interacted_mpdata(mpdata_path):
 
 def test_saturated_event_study_int_vs_float_dtypes():
     """Coefficients from _saturated_event_study must be identical regardless of
-    whether rel_time / first_treated_period are int or float."""
-    from pyfixest.did.did import DID
+    whether rel_time / first_treated_period are int or float.
+    """
     from pyfixest.did.saturated_twfe import _saturated_event_study
 
-    df = pd.read_csv(
-        resources.files("pyfixest.did.data").joinpath("df_het.csv")
-    )
+    df = pd.read_csv(resources.files("pyfixest.did.data").joinpath("df_het.csv"))
     tname, idname, gname = "year", "unit", "g"
 
     df["is_treated"] = (df[tname] >= df[gname]) * (df[gname] > 0)

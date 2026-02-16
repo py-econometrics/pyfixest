@@ -84,9 +84,7 @@ class ModelMatrix:
 
     def _collect_columns(self, model_matrix: formulaic.ModelMatrix) -> None:
         self._dependent = self._get_columns(model_matrix, _ModelMatrixKey.main, "lhs")
-        self._independent = self._get_columns(
-            model_matrix, _ModelMatrixKey.main, "rhs"
-        )
+        self._independent = self._get_columns(model_matrix, _ModelMatrixKey.main, "rhs")
         self._fixed_effects = self._get_columns(
             model_matrix, _ModelMatrixKey.fixed_effects
         )
@@ -128,7 +126,10 @@ class ModelMatrix:
             # Ensure fixed effects are `int32`
             self._data[self._fixed_effects] = self.fixed_effects.astype("int32")
         if self.fixed_effects is not None or self._drop_intercept:
-            self._independent = [col for col in self._independent if col != "Intercept"]
+            if self._independent is not None:
+                self._independent = [
+                    col for col in self._independent if col != "Intercept"
+                ]
             if self._instruments is not None:
                 self._instruments = [
                     col for col in self._instruments if col != "Intercept"
@@ -159,7 +160,8 @@ class ModelMatrix:
             DataFrame containing the dependent variable(s) (left-hand side
             of the main equation).
         """
-        return self._data.loc[:, self._dependent]
+        cols = self._dependent or []
+        return self._data[cols]
 
     @property
     def independent(self) -> pd.DataFrame:
@@ -173,7 +175,8 @@ class ModelMatrix:
             of the main equation). Intercept columns are excluded when fixed
             effects are present.
         """
-        return self._data.loc[:, self._independent]
+        cols = self._independent or []
+        return self._data[cols]
 
     @property
     def fixed_effects(self) -> Optional[pd.DataFrame]:

@@ -370,12 +370,24 @@ class TestFormulaParse:
         second_stages = [f.second_stage for f in result]
         fixed_effects = [f.fixed_effects for f in result]
         assert second_stages == [
-            "Y1 ~ X1", "Y1 ~ X1", "Y1 ~ X2", "Y1 ~ X2",
-            "Y2 ~ X1", "Y2 ~ X1", "Y2 ~ X2", "Y2 ~ X2",
+            "Y1 ~ X1",
+            "Y1 ~ X1",
+            "Y1 ~ X2",
+            "Y1 ~ X2",
+            "Y2 ~ X1",
+            "Y2 ~ X1",
+            "Y2 ~ X2",
+            "Y2 ~ X2",
         ]
         assert fixed_effects == [
-            "f1", "f1 + f2", "f1", "f1 + f2",
-            "f1", "f1 + f2", "f1", "f1 + f2",
+            "f1",
+            "f1 + f2",
+            "f1",
+            "f1 + f2",
+            "f1",
+            "f1 + f2",
+            "f1",
+            "f1 + f2",
         ]
 
     def test_parse_csw0_in_fe_maps_to_none(self):
@@ -395,22 +407,30 @@ class TestFormulaParse:
         assert result[2].fixed_effects == "f2"
 
     def test_parse_mvsw_covars_with_csw_fe(self):
-        """mvsw in covariates combined with csw in fixed effects."""
+        """Mvsw in covariates combined with csw in fixed effects."""
         result = Formula.parse("Y ~ mvsw(X1, X2) | csw(f1, f2)")
         assert len(result) == 8  # 4 mvsw * 2 csw
         second_stages = [f.second_stage for f in result]
         fixed_effects = [f.fixed_effects for f in result]
         assert second_stages == [
-            "Y ~ 1", "Y ~ 1",
-            "Y ~ X1", "Y ~ X1",
-            "Y ~ X2", "Y ~ X2",
-            "Y ~ X1 + X2", "Y ~ X1 + X2",
+            "Y ~ 1",
+            "Y ~ 1",
+            "Y ~ X1",
+            "Y ~ X1",
+            "Y ~ X2",
+            "Y ~ X2",
+            "Y ~ X1 + X2",
+            "Y ~ X1 + X2",
         ]
         assert fixed_effects == [
-            "f1", "f1 + f2",
-            "f1", "f1 + f2",
-            "f1", "f1 + f2",
-            "f1", "f1 + f2",
+            "f1",
+            "f1 + f2",
+            "f1",
+            "f1 + f2",
+            "f1",
+            "f1 + f2",
+            "f1",
+            "f1 + f2",
         ]
 
     def test_parse_to_dict_csw0_fe_groups(self):

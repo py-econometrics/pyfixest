@@ -24,8 +24,8 @@ a rewritten `i()` operator that closely follows R's `fixest` syntax, and new mul
 
 #### New `i()` operator
 
-The `i()` operator now follows the `fixest` naming convention, using `::` to separate variable names from levels. It further 
-provides two new arguments: `ref2` and `bin2` that allow to set 
+The `i()` operator now follows the `fixest` naming convention, using `::` to separate variable names from levels. It further
+provides two new arguments: `ref2` and `bin2` that allow to set
 reference levels for interacted variables and to bin categoricals.
 
 **Simple categorical encoding:**
@@ -84,7 +84,7 @@ fits = pf.feols("Y ~ mvsw(X1, X2)", data=df)
 pf.etable(fits)
 ```
 
-Multiple estimation operators can be combined: 
+Multiple estimation operators can be combined:
 
 ```{python}
 # mvsw: all combinations of X1 and X2
@@ -92,7 +92,7 @@ fits = pf.feols("Y ~ sw(X1, X2) + csw(f1,f2)", data=df)
 pf.etable(fits)
 ```
 
-Last, you can run operations within the operators: 
+Last, you can run operations within the operators:
 
 ```{python}
 # mvsw: all combinations of X1 and X2

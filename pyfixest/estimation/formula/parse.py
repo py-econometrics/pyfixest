@@ -106,8 +106,8 @@ class Formula:
     @classmethod
     def parse(cls, formula: str) -> list["Formula"]:
         """
-        Parse fixest-style formula. In case of multiple estimation syntax, 
-        returns a list of multiple regression formulas. 
+        Parse fixest-style formula. In case of multiple estimation syntax,
+        returns a list of multiple regression formulas.
         """
         _validate(formula)
         formula = _preprocess(formula)
