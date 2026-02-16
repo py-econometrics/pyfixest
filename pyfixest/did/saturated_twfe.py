@@ -203,14 +203,15 @@ class SaturatedEventStudy(DID):
         treated_periods = list(period_set)
 
         df_agg = pd.DataFrame(
-            index=pd.Index(treated_periods, name="period"),
+            index=treated_periods,
             columns=["Estimate", "Std. Error", "t value", "Pr(>|t|)", "2.5%", "97.5%"],
         )
+        df_agg.index.name = "period"
 
         for period in treated_periods:
             R = np.zeros(len(coefs))
             for cohort in cohort_list:
-                cohort_pattern = rf"^(?:.+)::{period}:(?:.+)::{cohort}$"
+                cohort_pattern = rf"\[{re.escape(str(period))}\]:.*{re.escape(cohort)}$"
                 match_idx = [
                     i
                     for i, name in enumerate(coefnames)
@@ -318,20 +319,28 @@ def _saturated_event_study(
     unit_id: str,
     cluster: Optional[str] = None,
 ):
-    ff = f"{outcome} ~ i(rel_time, first_treated_period, ref = -1, ref2=0) | {unit_id} + {time_id}"
-    m = feols(fml=ff, data=df, vcov={"CRV1": cluster})  # type: ignore
-    res = m.tidy().reset_index()
-    res = res.join(
-        res["Coefficient"].str.extract(
-            r".+::(?P<time>.+):.+::(?P<cohort>.+)", expand=True
-        )
+    cohort_dummies = pd.get_dummies(
+        df.first_treated_period, drop_first=True, prefix="cohort_dummy"
     )
-    res["time"] = res["time"].astype(float)
+    df_int = pd.concat([df, cohort_dummies], axis=1)
+
+    ff = f"""
+                {outcome} ~
+                {"+".join([f"i(rel_time, {x}, ref = -1.0)" for x in cohort_dummies.columns.tolist()])}
+                | {unit_id} + {time_id}
+                """
+    m = feols(fml=ff, data=df_int, vcov={"CRV1": cluster})  # type: ignore
+    res = m.tidy()
     # create a dict with cohort specific effect curves
     res_cohort_eventtime_dict: dict[str, dict[str, pd.DataFrame | np.ndarray]] = {}
-    for cohort, res_cohort in res.groupby("cohort"):
-        event_time = res_cohort["time"].to_numpy()
-        res_cohort_eventtime_dict[str(cohort)] = {"est": res_cohort, "time": event_time}
+    for cohort in cohort_dummies.columns:
+        res_cohort = res.filter(like=cohort, axis=0)
+        event_time = (
+            res_cohort.index.str.extract(r"\[(?:T\.)?(-?\d+(?:\.\d+)?)\]")
+            .astype(float)
+            .values.flatten()
+        )
+        res_cohort_eventtime_dict[cohort] = {"est": res_cohort, "time": event_time}
 
     return m, res_cohort_eventtime_dict
 
@@ -357,10 +366,11 @@ def _test_treatment_heterogeneity(
     """
     mmres = model.tidy().reset_index()
     P = mmres.shape[0]
-    mmres[["time", "cohort"]] = mmres["Coefficient"].str.extract(
-        r".+::(?P<time>.+):.+::(?P<cohort>.+)", expand=True
+    mmres[["time", "cohort"]] = mmres.Coefficient.str.split(":", expand=True)
+    mmres["time"] = mmres.time.str.extract(r"\[(?:T\.)?(-?\d+(?:\.\d+)?)\]").astype(
+        float
     )
-    mmres["time"] = mmres["time"].astype(float)
+    mmres["cohort"] = mmres.cohort.str.extract(r"(\d+)")
     # indices of coefficients that are deviations from common event study coefs
     event_study_coefs = mmres.loc[~(mmres.cohort.isna()) & (mmres.time > 0)].index
     # Method 2 (K x P) - more efficient

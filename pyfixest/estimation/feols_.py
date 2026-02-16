@@ -17,8 +17,7 @@ from pyfixest.errors import EmptyVcovError, VcovTypeNotSupportedError
 from pyfixest.estimation.backends import BACKENDS
 from pyfixest.estimation.decomposition import GelbachDecomposition, _decompose_arg_check
 from pyfixest.estimation.demean_ import demean_model
-from pyfixest.estimation.formula import model_matrix as model_matrix_fixest
-from pyfixest.estimation.formula.parse import Formula as FixestFormula
+from pyfixest.estimation.FormulaParser import FixestFormula
 from pyfixest.estimation.literals import (
     DemeanerBackendOptions,
     PredictionErrorOptions,
@@ -26,6 +25,7 @@ from pyfixest.estimation.literals import (
     SolverOptions,
     _validate_literal_argument,
 )
+from pyfixest.estimation.model_matrix_fixest_ import model_matrix_fixest
 from pyfixest.estimation.prediction import (
     _compute_prediction_error,
     _get_fixed_effects_prediction_component,
@@ -52,6 +52,7 @@ from pyfixest.estimation.vcov_utils import (
 )
 from pyfixest.utils.dev_utils import (
     DataFrameType,
+    _drop_cols,
     _extract_variable_level,
     _narwhals_to_pandas,
     _select_order_coefs,
@@ -253,7 +254,7 @@ class Feols:
         collin_tol: float,
         fixef_tol: float,
         fixef_maxiter: int,
-        lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
+        lookup_demeaned_data: dict[str, pd.DataFrame],
         solver: SolverOptions = "np.linalg.solve",
         demeaner_backend: DemeanerBackendOptions = "numba",
         store_data: bool = True,
@@ -266,9 +267,9 @@ class Feols:
         self._sample_split_value = sample_split_value
         self._sample_split_var = sample_split_var
         self._model_name = (
-            FixestFormula.formula
+            FixestFormula.fml
             if self._sample_split_var is None
-            else f"{FixestFormula.formula} (Sample: {self._sample_split_var} = {self._sample_split_value})"
+            else f"{FixestFormula.fml} (Sample: {self._sample_split_var} = {self._sample_split_value})"
         )
         self._model_name_plot = self._model_name
         self._method = "feols"
@@ -312,9 +313,9 @@ class Feols:
 
         # attributes that have to be enriched outside of the class -
         # not really optimal code change later
-        self._fml = FixestFormula.formula
+        self._fml = FixestFormula.fml
         self._has_fixef = False
-        self._fixef = FixestFormula.fixed_effects
+        self._fixef = FixestFormula._fval
         # self._coefnames = None
         self._icovars = None
 
@@ -409,8 +410,8 @@ class Feols:
 
     def prepare_model_matrix(self):
         "Prepare model matrices for estimation."
-        model_matrix = model_matrix_fixest.create_model_matrix(
-            formula=self.FixestFormula,
+        mm_dict = model_matrix_fixest(
+            FixestFormula=self.FixestFormula,
             data=self._data,
             drop_singletons=self._drop_singletons,
             drop_intercept=self._drop_intercept,
@@ -418,41 +419,31 @@ class Feols:
             context=self._context,
         )
 
-        self._Y = model_matrix.dependent
-        self._Y_untransformed = model_matrix.dependent.copy()
-        self._X = model_matrix.independent
-        self._fe = model_matrix.fixed_effects
-        self._endogvar = model_matrix.endogenous
-        self._Z = model_matrix.instruments
-        self._weights_df = model_matrix.weights
-        self._na_index = model_matrix.na_index
-        # TODO: set dynamically based on naming set in pyfixest.estimation.formula.factor_interaction._encode_i
-        is_icovar = (
-            self._X.columns.str.contains(r"^.+::.+$") if not self._X.empty else None
-        )
-        self._icovars = (
-            self._X.columns[is_icovar].tolist()
-            if is_icovar is not None and is_icovar.any()
-            else None
-        )
-        self._X_is_empty = not model_matrix.independent.shape[0] > 0
-        self._model_spec = model_matrix.model_spec
+        self._Y = mm_dict.get("Y")
+        self._Y_untransformed = mm_dict.get("Y").copy()
+        self._X = mm_dict.get("X")
+        self._fe = mm_dict.get("fe")
+        self._endogvar = mm_dict.get("endogvar")
+        self._Z = mm_dict.get("Z")
+        self._weights_df = mm_dict.get("weights_df")
+        self._na_index = mm_dict.get("na_index")
+        self._na_index_str = mm_dict.get("na_index_str")
+        self._icovars = mm_dict.get("icovars")
+        self._X_is_empty = mm_dict.get("X_is_empty")
+        self._model_spec = mm_dict.get("model_spec")
 
         self._coefnames = self._X.columns.tolist()
         self._coefnames_z = self._Z.columns.tolist() if self._Z is not None else None
         self._depvar = self._Y.columns[0]
 
         self._has_fixef = self._fe is not None
-        self._fixef = self.FixestFormula.fixed_effects
+        self._fixef = self.FixestFormula._fval
 
         self._k_fe = self._fe.nunique(axis=0) if self._has_fixef else None
         self._n_fe = len(self._k_fe) if self._has_fixef else 0
 
-        # update data
-        self._data.drop(
-            self._data.index[~self._data.index.isin(model_matrix.dependent.index)],
-            inplace=True,
-        )
+        # update data:
+        self._data = _drop_cols(self._data, self._na_index)
 
         self._weights = self._set_weights()
         self._N, self._N_rows = self._set_nobs()
@@ -504,7 +495,7 @@ class Feols:
                 self._fe,
                 self._weights.flatten(),
                 self._lookup_demeaned_data,
-                self._na_index,
+                self._na_index_str,
                 self._fixef_tol,
                 self._fixef_maxiter,
                 self._demean_func,
@@ -756,7 +747,7 @@ class Feols:
 
             k_fe_nested = 0
             n_fe_fully_nested = 0
-            if self._fixef is not None and self._ssc_dict["k_fixef"] == "nonnested":
+            if self._has_fixef and self._ssc_dict["k_fixef"] == "nonnested":
                 k_fe_nested_flag, n_fe_fully_nested = self._count_nested_fixef_func(
                     all_fixef_array=np.array(
                         self._fixef.replace("^", "_").split("+"), dtype=str
@@ -1107,7 +1098,7 @@ class Feols:
         None
         """
         # some bookkeeping
-        self._fml = self.FixestFormula.formula
+        self._fml = self.FixestFormula.fml
         self._depvar = depvar
         self._Y_untransformed = Y
         self._data = pd.DataFrame()
@@ -2556,9 +2547,7 @@ class Feols:
 
         else:
             weights = self._weights.flatten()
-            fval_df = (
-                self._data[self._fixef.split("+")] if self._fixef is not None else None
-            )
+            fval_df = self._data[self._fixef.split("+")] if self._has_fixef else None
             D = self._data[resampvar_].to_numpy()
 
             ri_stats = _get_ritest_stats_fast(

@@ -8,7 +8,7 @@ import pandas as pd
 from formulaic import Formula
 
 from pyfixest.estimation.detect_singletons_ import detect_singletons
-from pyfixest.estimation.formula.parse import Formula as FixestFormula
+from pyfixest.estimation.FormulaParser import FixestFormula
 from pyfixest.utils.utils import capture_context
 
 
@@ -92,23 +92,12 @@ def model_matrix_fixest(
     mm = model_matrix_fixest(FixestFormula, data)
     mm
     ```
-
-    .. deprecated::
-        This function will be deprecated in a future version.
-        Use `pyfixest.estimation.formula.model_matrix.create_model_matrix()` with a `Formula` object instead.
-        See https://py-econometrics.github.io/pyfixest/reference/estimation.formula.model_matrix.ModelMatrix.html
     """
-    warnings.warn(
-        "model_matrix_fixest is deprecated and will be removed in a future version. "
-        "Use `pyfixest.estimation.formula.model_matrix.create_model_matrix()` with a `Formula` object instead. "
-        "See https://py-econometrics.github.io/pyfixest/reference/estimation.formula.model_matrix.ModelMatrix.html",
-        FutureWarning,
-        stacklevel=2,
-    )
+    FixestFormula.check_syntax()
 
-    fml_second_stage = FixestFormula.second_stage
-    fml_first_stage = FixestFormula.first_stage
-    fval = FixestFormula.fixed_effects
+    fml_second_stage = FixestFormula.fml_second_stage
+    fml_first_stage = FixestFormula.fml_first_stage
+    fval = FixestFormula._fval
     _check_weights(weights, data)
 
     pattern = (
@@ -134,14 +123,13 @@ def model_matrix_fixest(
         else fml_first_stage
     )
 
-    if fval is not None:
-        fval, data = _fixef_interactions(fval=fval, data=data)
+    fval, data = _fixef_interactions(fval=fval, data=data)
     _is_iv = fml_first_stage is not None
 
     fml_kwargs = {
         "fml_second_stage": fml_second_stage,
         **({"fml_first_stage": fml_first_stage} if _is_iv else {}),
-        **({"fe": wrap_factorize(fval)} if fval is not None else {}),
+        **({"fe": wrap_factorize(fval)} if fval != "0" else {}),
         **({"weights": weights} if weights is not None else {}),
     }
 
@@ -160,7 +148,7 @@ def model_matrix_fixest(
     if _is_iv:
         endogvar = mm["fml_first_stage"]["lhs"]
         Z = mm["fml_first_stage"]["rhs"]
-    if fval is not None:
+    if fval != "0":
         fe = mm["fe"]
     if weights is not None:
         weights_df = mm["weights"]
