@@ -120,13 +120,6 @@ def test_iv_errors():
     # wild bootstrap
     with pytest.raises(NotImplementedError):
         feols(fml="Y ~ 1 | Z1 ~ X1 ", data=data).wildboottest(param="Z1", reps=999)
-    # multi estimation error
-    # with pytest.raises(NotImplementedError):
-    #     feols(fml="Y + Y2 ~ 1 | Z1 ~ X1 ", data=data)
-    # with pytest.raises(NotImplementedError):
-    #     feols(fml="Y  ~ 1 | sw(f2, f3) | Z1 ~ X1 ", data=data)
-    # with pytest.raises(NotImplementedError):
-    #     feols(fml="Y  ~ 1 | csw(f2, f3) | Z1 ~ X1 ", data=data)
     # unsupported HC vcov
     with pytest.raises(VcovTypeNotSupportedError):
         feols(fml="Y  ~ 1 | Z1 ~ X1", vcov="HC2", data=data)

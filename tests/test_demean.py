@@ -174,14 +174,14 @@ def test_demean_model_with_weights(benchmark, demean_func):
         demean_func=demean_func,
     )
 
-    # Run without weights for comparison
+    # Run without weights for comparison (fresh lookup dict to avoid cache hit)
     Yd_unweighted, Xd_unweighted = demean_model(
         Y=Y,
         X=X,
         fe=fe,
         weights=np.ones(N),
         lookup_demeaned_data={},
-        na_index=frozenset({1}),
+        na_index=frozenset(),
         fixef_tol=1e-6,
         fixef_maxiter=10_000,
         demean_func=demean_func,
