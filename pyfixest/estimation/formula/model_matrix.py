@@ -58,6 +58,96 @@ class ModelMatrix:
         Indices of rows that were dropped.
     """
 
+    def __init__(
+        self,
+        model_matrix: formulaic.ModelMatrix,
+        drop_rows: set[int],
+        drop_singletons: bool = True,
+        drop_intercept: bool = False,
+    ) -> None:
+        self._drop_intercept = drop_intercept
+        self._model_spec = model_matrix.model_spec
+        self._collect_columns(model_matrix)
+        self._collect_data(model_matrix)
+        self._process(dropped_rows=drop_rows, drop_singletons=drop_singletons)
+
+    @staticmethod
+    def _get_columns(mm: formulaic.ModelMatrix, *keys: str) -> list[str] | None:
+        """Extract column names by traversing nested keys, or None if missing."""
+        try:
+            result = mm
+            for k in keys:
+                result = result[k]
+            return result.columns.tolist()
+        except KeyError:
+            return None
+
+    def _collect_columns(self, model_matrix: formulaic.ModelMatrix) -> None:
+        self._dependent = self._get_columns(model_matrix, _ModelMatrixKey.main, "lhs")
+        self._independent = self._get_columns(
+            model_matrix, _ModelMatrixKey.main, "rhs"
+        )
+        self._fixed_effects = self._get_columns(
+            model_matrix, _ModelMatrixKey.fixed_effects
+        )
+        self._endogenous = self._get_columns(
+            model_matrix, _ModelMatrixKey.instrumental_variable, "lhs"
+        )
+        self._instruments = self._get_columns(
+            model_matrix, _ModelMatrixKey.instrumental_variable, "rhs"
+        )
+        self._weights = self._get_columns(model_matrix, _ModelMatrixKey.weights)
+
+    def _collect_data(self, model_matrix: formulaic.ModelMatrix) -> None:
+        datas: list[pd.DataFrame] = list(model_matrix._flatten())
+        if not all(datas[0].index.identical(other.index) for other in datas[1:]):
+            raise ValueError("All design matrix data must have the same index.")
+        data = pd.concat(datas, ignore_index=False, axis=1)
+        self._data = data.loc[:, ~data.columns.duplicated()]
+
+    def _process(self, dropped_rows: set[int], drop_singletons: bool = False) -> None:
+        if self.dependent.shape[1] != 1:
+            # If the dependent variable is not numeric, formulaic's contrast encoding kicks in
+            # creating multiple columns for the dependent variable
+            # TODO: Make this check more explicit?
+            raise TypeError("The dependent variable must be numeric.")
+        if self.endogenous is not None and self.endogenous.shape[1] != 1:
+            raise TypeError("The endogenous variable must be numeric.")
+        # Drop rows with non-finite values
+        is_infinite = pd.Series(
+            ~np.isfinite(self._data).all(axis=1), index=self._data.index
+        )
+        if is_infinite.any():
+            infinite_indices = is_infinite[is_infinite].index.tolist()
+            dropped_rows |= set(infinite_indices)
+            self._data.drop(infinite_indices, inplace=True)
+            warnings.warn(
+                f"{is_infinite.sum()} rows with infinite values dropped from the model.",
+            )
+        if self.fixed_effects is not None:
+            # Ensure fixed effects are `int32`
+            self._data[self._fixed_effects] = self.fixed_effects.astype("int32")
+        if self.fixed_effects is not None or self._drop_intercept:
+            self._independent = [col for col in self._independent if col != "Intercept"]
+            if self._instruments is not None:
+                self._instruments = [
+                    col for col in self._instruments if col != "Intercept"
+                ]
+        # Drop singletons if specified
+        if drop_singletons and self.fixed_effects is not None:
+            is_singleton = pd.Series(
+                detect_singletons(self.fixed_effects.to_numpy()),
+                index=self._data.index,
+            )
+            if is_singleton.any():
+                singleton_indices = self._data[is_singleton].index.tolist()
+                dropped_rows |= set(singleton_indices)
+                self._data.drop(singleton_indices, inplace=True)
+                warnings.warn(
+                    f"{is_singleton.sum()} singleton fixed effect(s) dropped from the model."
+                )
+        self._na_index = frozenset(dropped_rows)
+
     @property
     def dependent(self) -> pd.DataFrame:
         """
@@ -169,100 +259,6 @@ class ModelMatrix:
     def na_index(self) -> frozenset[int]:
         """Integer positions of rows dropped in model matrix creation."""
         return self._na_index
-
-    def __init__(
-        self,
-        model_matrix: formulaic.ModelMatrix,
-        drop_rows: set[int],
-        drop_singletons: bool = True,
-        drop_intercept: bool = False,
-    ) -> None:
-        self._drop_intercept = drop_intercept
-        self._model_spec = model_matrix.model_spec
-        self._collect_columns(model_matrix)
-        self._collect_data(model_matrix)
-        self._process(dropped_rows=drop_rows, drop_singletons=drop_singletons)
-
-    def _collect_columns(self, model_matrix: formulaic.ModelMatrix) -> None:
-        # Extract dependent and independent variables (always present)
-        self._dependent = model_matrix[_ModelMatrixKey.main]["lhs"].columns.tolist()
-        self._independent = model_matrix[_ModelMatrixKey.main]["rhs"].columns.tolist()
-        # Extract fixed effects (optional)
-        try:
-            self._fixed_effects = model_matrix[
-                _ModelMatrixKey.fixed_effects
-            ].columns.tolist()
-        except KeyError:
-            self._fixed_effects = None
-        # Extract endogenous variables
-        try:
-            self._endogenous = model_matrix[_ModelMatrixKey.instrumental_variable][
-                "lhs"
-            ].columns.tolist()
-        except KeyError:
-            self._endogenous = None
-        # Extract instruments
-        try:
-            self._instruments = model_matrix[_ModelMatrixKey.instrumental_variable][
-                "rhs"
-            ].columns.tolist()
-        except KeyError:
-            self._instruments = None
-        # Extract weights (optional)
-        try:
-            self._weights = model_matrix[_ModelMatrixKey.weights].columns.tolist()
-        except KeyError:
-            self._weights = None
-
-    def _collect_data(self, model_matrix: formulaic.ModelMatrix) -> None:
-        datas: list[pd.DataFrame] = list(model_matrix._flatten())
-        if not all(datas[0].index.identical(other.index) for other in datas[1:]):
-            raise ValueError("All design matrix data must have the same index.")
-        data = pd.concat(datas, ignore_index=False, axis=1)
-        self._data = data.loc[:, ~data.columns.duplicated()]
-
-    def _process(self, dropped_rows: set[int], drop_singletons: bool = False) -> None:
-        if self.dependent.shape[1] != 1:
-            # If the dependent variable is not numeric, formulaic's contrast encoding kicks in
-            # creating multiple columns for the dependent variable
-            # TODO: Make this check more explicit?
-            raise TypeError("The dependent variable must be numeric.")
-        if self.endogenous is not None and self.endogenous.shape[1] != 1:
-            raise TypeError("The endogenous variable must be numeric.")
-        # Drop rows with non-finite values
-        is_infinite = pd.Series(
-            ~np.isfinite(self._data).all(axis=1), index=self._data.index
-        )
-        if is_infinite.any():
-            infinite_indices = is_infinite[is_infinite].index.tolist()
-            dropped_rows |= set(infinite_indices)
-            self._data.drop(infinite_indices, inplace=True)
-            warnings.warn(
-                f"{is_infinite.sum()} rows with infinite values dropped from the model.",
-            )
-        if self.fixed_effects is not None:
-            # Ensure fixed effects are `int32`
-            self._data[self._fixed_effects] = self.fixed_effects.astype("int32")
-        if self.fixed_effects is not None or self._drop_intercept:
-            self._independent = [col for col in self._independent if col != "Intercept"]
-            if self._instruments is not None:
-                self._instruments = [
-                    col for col in self._instruments if col != "Intercept"
-                ]
-        # Drop singletons if specified
-        if drop_singletons and self.fixed_effects is not None:
-            is_singleton = pd.Series(
-                detect_singletons(self.fixed_effects.to_numpy()),
-                index=self._data.index,
-            )
-            if is_singleton.any():
-                singleton_indices = self._data[is_singleton].index.tolist()
-                dropped_rows |= set(singleton_indices)
-                self._data.drop(singleton_indices, inplace=True)
-                warnings.warn(
-                    f"{is_singleton.sum()} singleton fixed effect(s) dropped from the model."
-                )
-        self._na_index = frozenset(dropped_rows)
 
 
 def create_model_matrix(
