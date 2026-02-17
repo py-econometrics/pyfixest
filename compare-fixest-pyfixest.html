@@ -283,7 +283,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>This vignette compares estimation results from <code>fixest</code> with <code>pyfixest</code> via the <code>rpy2</code> package.</p>
 <section id="setup" class="level2">
 <h2 class="anchored" data-anchor-id="setup">Setup</h2>
-<div id="14f3c8f0" class="cell" data-execution_count="1">
+<div id="6b947e8b" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> rpy2.robjects <span class="im">as</span> ro</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> rpy2.robjects <span class="im">import</span> pandas2ri</span>
@@ -312,11 +312,11 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="iid-inference" class="level3">
 <h3 class="anchored" data-anchor-id="iid-inference">IID Inference</h3>
 <p>First, we estimate a model via `pyfixest. We compute “iid” standard errors.</p>
-<div id="7bf82053" class="cell" data-execution_count="2">
+<div id="61fad3f1" class="cell" data-execution_count="2">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(fml<span class="op">=</span><span class="st">"Y ~ X1 + X2 | f1 + f2"</span>, data<span class="op">=</span>data, vcov<span class="op">=</span><span class="st">"iid"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 
-            <div id="SuXxfe"></div>
+            <div id="BKkmEB"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -340,9 +340,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("SuXxfe").appendChild(div);
+                        document.getElementById("BKkmEB").appendChild(div);
                     };
-                    var e = document.getElementById("SuXxfe");
+                    var e = document.getElementById("BKkmEB");
                     e.appendChild(script);
                 })()
             </script>
@@ -350,7 +350,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <div class="cell-output cell-output-display">
 
-            <div id="DsXPh3"></div>
+            <div id="h4cJNf"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -374,9 +374,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("DsXPh3").appendChild(div);
+                        document.getElementById("h4cJNf").appendChild(div);
                     };
-                    var e = document.getElementById("DsXPh3");
+                    var e = document.getElementById("h4cJNf");
                     e.appendChild(script);
                 })()
             </script>
@@ -384,13 +384,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 <p>We estimate the same model with weights:</p>
-<div id="7f770cf7" class="cell" data-execution_count="3">
+<div id="e2edabf7" class="cell" data-execution_count="3">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>fit_weights <span class="op">=</span> pf.feols(</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    fml<span class="op">=</span><span class="st">"Y ~ X1 + X2 | f1 + f2"</span>, data<span class="op">=</span>data, weights<span class="op">=</span><span class="st">"weights"</span>, vcov<span class="op">=</span><span class="st">"iid"</span></span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>Via <code>r-fixest</code> and <code>rpy2</code>, we get</p>
-<div id="52a53aab" class="cell" data-execution_count="4">
+<div id="8d912c41" class="cell" data-execution_count="4">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>r_fit <span class="op">=</span> fixest.feols(</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    ro.Formula(<span class="st">"Y ~ X1 + X2 | f1 + f2"</span>),</span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    data<span class="op">=</span>data,</span>
@@ -414,7 +414,7 @@ WARNING:rpy2.rinterface_lib.callbacks:R[write to console]: NOTE: 3 observations 
 
 R[write to console]: NOTE: 3 observations removed because of NA values (LHS: 1, RHS: 1, Fixed-effects: 1).</code></pre>
 <p>Let’s compare how close the covariance matrices are:</p>
-<div id="dac8df7f" class="cell" data-execution_count="5">
+<div id="db750ee6" class="cell" data-execution_count="5">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>fit_vcov <span class="op">=</span> fit._vcov</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>r_vcov <span class="op">=</span> stats.vcov(r_fit)</span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>fit_vcov <span class="op">-</span> r_vcov</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -424,7 +424,7 @@ R[write to console]: NOTE: 3 observations removed because of NA values (LHS: 1, 
 </div>
 </div>
 <p>And for WLS:</p>
-<div id="2c9dceda" class="cell" data-execution_count="6">
+<div id="0b693d54" class="cell" data-execution_count="6">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>fit_weights._vcov <span class="op">-</span> stats.vcov(r_fit_weights)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="6">
 <pre><code>array([[ 1.68051337e-18, -1.27054942e-21],
@@ -432,7 +432,7 @@ R[write to console]: NOTE: 3 observations removed because of NA values (LHS: 1, 
 </div>
 </div>
 <p>We conclude by comparing all estimation results via the <code>tidy</code> methods:</p>
-<div id="331d22ba" class="cell" data-execution_count="7">
+<div id="f47f4728" class="cell" data-execution_count="7">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>fit.tidy()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="7">
 <div>
@@ -484,7 +484,7 @@ R[write to console]: NOTE: 3 observations removed because of NA values (LHS: 1, 
 </div>
 </div>
 </div>
-<div id="d8283fc0" class="cell" data-execution_count="8">
+<div id="92d95dc1" class="cell" data-execution_count="8">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>pd.DataFrame(broom.tidy_fixest(r_fit)).T</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="8">
 <div>
@@ -524,7 +524,7 @@ R[write to console]: NOTE: 3 observations removed because of NA values (LHS: 1, 
 </div>
 </div>
 </div>
-<div id="b3fb15f7" class="cell" data-execution_count="9">
+<div id="5695465a" class="cell" data-execution_count="9">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>fit_weights.tidy()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="9">
 <div>
@@ -576,7 +576,7 @@ R[write to console]: NOTE: 3 observations removed because of NA values (LHS: 1, 
 </div>
 </div>
 </div>
-<div id="d58c7e6a" class="cell" data-execution_count="10">
+<div id="9cd8d9a2" class="cell" data-execution_count="10">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>pd.DataFrame(broom.tidy_fixest(r_fit_weights)).T</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="10">
 <div>
@@ -620,13 +620,13 @@ R[write to console]: NOTE: 3 observations removed because of NA values (LHS: 1, 
 <section id="heteroskedastic-errors" class="level3">
 <h3 class="anchored" data-anchor-id="heteroskedastic-errors">Heteroskedastic Errors</h3>
 <p>We repeat the same exercise with heteroskedastic (HC1) errors:</p>
-<div id="9e5aa6dc" class="cell" data-execution_count="11">
+<div id="2b89aacc" class="cell" data-execution_count="11">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(fml<span class="op">=</span><span class="st">"Y ~ X1 + X2 | f1 + f2"</span>, data<span class="op">=</span>data, vcov<span class="op">=</span><span class="st">"hetero"</span>)</span>
 <span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>fit_weights <span class="op">=</span> pf.feols(</span>
 <span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>    fml<span class="op">=</span><span class="st">"Y ~ X1 + X2 | f1 + f2"</span>, data<span class="op">=</span>data, vcov<span class="op">=</span><span class="st">"hetero"</span>, weights<span class="op">=</span><span class="st">"weights"</span></span>
 <span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<div id="935db105" class="cell" data-execution_count="12">
+<div id="d62b2399" class="cell" data-execution_count="12">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>r_fit <span class="op">=</span> fixest.feols(</span>
 <span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>    ro.Formula(<span class="st">"Y ~ X1 + X2 | f1 + f2"</span>),</span>
 <span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>    data<span class="op">=</span>data,</span>
@@ -647,14 +647,14 @@ WARNING:rpy2.rinterface_lib.callbacks:R[write to console]: NOTE: 3 observations 
 </div>
 </div>
 <p>As before, we compare the variance covariance matrices:</p>
-<div id="bcee72e7" class="cell" data-execution_count="13">
+<div id="f98f66d6" class="cell" data-execution_count="13">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>fit._vcov <span class="op">-</span> stats.vcov(r_fit)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="13">
 <pre><code>array([[-1.08100378e-14, -1.51722114e-15],
        [-1.51722119e-15, -3.55911386e-15]])</code></pre>
 </div>
 </div>
-<div id="374e04c8" class="cell" data-execution_count="14">
+<div id="1f0de59f" class="cell" data-execution_count="14">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>fit_weights._vcov <span class="op">-</span> stats.vcov(r_fit_weights)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="14">
 <pre><code>array([[-7.68563815e-15,  2.60362300e-15],
@@ -662,7 +662,7 @@ WARNING:rpy2.rinterface_lib.callbacks:R[write to console]: NOTE: 3 observations 
 </div>
 </div>
 <p>We conclude by comparing all estimation results via the <code>tidy</code> methods:</p>
-<div id="1bea9bb4" class="cell" data-execution_count="15">
+<div id="0300fdcb" class="cell" data-execution_count="15">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb22"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>fit.tidy()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="15">
 <div>
@@ -714,7 +714,7 @@ WARNING:rpy2.rinterface_lib.callbacks:R[write to console]: NOTE: 3 observations 
 </div>
 </div>
 </div>
-<div id="9e2e5ed7" class="cell" data-execution_count="16">
+<div id="5f43f99f" class="cell" data-execution_count="16">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>pd.DataFrame(broom.tidy_fixest(r_fit)).T</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="16">
 <div>
@@ -754,7 +754,7 @@ WARNING:rpy2.rinterface_lib.callbacks:R[write to console]: NOTE: 3 observations 
 </div>
 </div>
 </div>
-<div id="65bc68ad" class="cell" data-execution_count="17">
+<div id="152a1da3" class="cell" data-execution_count="17">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb24"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>fit_weights.tidy()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="17">
 <div>
@@ -806,7 +806,7 @@ WARNING:rpy2.rinterface_lib.callbacks:R[write to console]: NOTE: 3 observations 
 </div>
 </div>
 </div>
-<div id="88254107" class="cell" data-execution_count="18">
+<div id="3e2f77ba" class="cell" data-execution_count="18">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb25"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>pd.DataFrame(broom.tidy_fixest(r_fit_weights)).T</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="18">
 <div>
@@ -850,7 +850,7 @@ WARNING:rpy2.rinterface_lib.callbacks:R[write to console]: NOTE: 3 observations 
 <section id="cluster-robust-errors" class="level3">
 <h3 class="anchored" data-anchor-id="cluster-robust-errors">Cluster-Robust Errors</h3>
 <p>We conclude with cluster robust errors.</p>
-<div id="9b90f4d4" class="cell" data-execution_count="19">
+<div id="5931180c" class="cell" data-execution_count="19">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb26"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(fml<span class="op">=</span><span class="st">"Y ~ X1 + X2 | f1 + f2"</span>, data<span class="op">=</span>data, vcov<span class="op">=</span>{<span class="st">"CRV1"</span>: <span class="st">"f1"</span>})</span>
 <span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>fit_weights <span class="op">=</span> pf.feols(</span>
 <span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>    fml<span class="op">=</span><span class="st">"Y ~ X1 + X2 | f1 + f2"</span>, data<span class="op">=</span>data, vcov<span class="op">=</span>{<span class="st">"CRV1"</span>: <span class="st">"f1"</span>}, weights<span class="op">=</span><span class="st">"weights"</span></span>
@@ -874,14 +874,14 @@ WARNING:rpy2.rinterface_lib.callbacks:R[write to console]: NOTE: 3 observations 
 </code></pre>
 </div>
 </div>
-<div id="56709136" class="cell" data-execution_count="20">
+<div id="0008d539" class="cell" data-execution_count="20">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb28"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>fit._vcov <span class="op">-</span> stats.vcov(r_fit)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="20">
 <pre><code>array([[ 2.86079212e-14, -4.95778972e-15],
        [-4.95778972e-15, -9.43703123e-16]])</code></pre>
 </div>
 </div>
-<div id="66729b53" class="cell" data-execution_count="21">
+<div id="ef628807" class="cell" data-execution_count="21">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb30"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>fit_weights._vcov <span class="op">-</span> stats.vcov(r_fit_weights)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="21">
 <pre><code>array([[ 7.00025975e-15,  1.26505760e-14],
@@ -889,7 +889,7 @@ WARNING:rpy2.rinterface_lib.callbacks:R[write to console]: NOTE: 3 observations 
 </div>
 </div>
 <p>We conclude by comparing all estimation results via the <code>tidy</code> methods:</p>
-<div id="e321aef2" class="cell" data-execution_count="22">
+<div id="eb624184" class="cell" data-execution_count="22">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb32"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>fit.tidy()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="22">
 <div>
@@ -941,7 +941,7 @@ WARNING:rpy2.rinterface_lib.callbacks:R[write to console]: NOTE: 3 observations 
 </div>
 </div>
 </div>
-<div id="fc3bc0d9" class="cell" data-execution_count="23">
+<div id="53820c9c" class="cell" data-execution_count="23">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb33"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>pd.DataFrame(broom.tidy_fixest(r_fit)).T</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="23">
 <div>
@@ -981,7 +981,7 @@ WARNING:rpy2.rinterface_lib.callbacks:R[write to console]: NOTE: 3 observations 
 </div>
 </div>
 </div>
-<div id="ef9e5d4e" class="cell" data-execution_count="24">
+<div id="113eb7d5" class="cell" data-execution_count="24">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb34"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>fit_weights.tidy()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="24">
 <div>
@@ -1033,7 +1033,7 @@ WARNING:rpy2.rinterface_lib.callbacks:R[write to console]: NOTE: 3 observations 
 </div>
 </div>
 </div>
-<div id="c500ff26" class="cell" data-execution_count="25">
+<div id="ed88ce29" class="cell" data-execution_count="25">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb35"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>pd.DataFrame(broom.tidy_fixest(r_fit_weights)).T</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="25">
 <div>
@@ -1077,10 +1077,10 @@ WARNING:rpy2.rinterface_lib.callbacks:R[write to console]: NOTE: 3 observations 
 </section>
 <section id="poisson-regression" class="level2">
 <h2 class="anchored" data-anchor-id="poisson-regression">Poisson Regression</h2>
-<div id="3f0bc0a3" class="cell" data-execution_count="26">
+<div id="898626da" class="cell" data-execution_count="26">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb36"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> pf.get_data(model<span class="op">=</span><span class="st">"Fepois"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<div id="27639983" class="cell" data-execution_count="27">
+<div id="1f7fd833" class="cell" data-execution_count="27">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb37"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>fit_iid <span class="op">=</span> pf.fepois(fml<span class="op">=</span><span class="st">"Y ~ X1 + X2 | f1 + f2"</span>, data<span class="op">=</span>data, vcov<span class="op">=</span><span class="st">"iid"</span>, iwls_tol<span class="op">=</span><span class="fl">1e-10</span>)</span>
 <span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a>fit_hetero <span class="op">=</span> pf.fepois(</span>
 <span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a>    fml<span class="op">=</span><span class="st">"Y ~ X1 + X2 | f1 + f2"</span>, data<span class="op">=</span>data, vcov<span class="op">=</span><span class="st">"hetero"</span>, iwls_tol<span class="op">=</span><span class="fl">1e-10</span></span>
@@ -1124,21 +1124,21 @@ WARNING:rpy2.rinterface_lib.callbacks:R[write to console]: NOTES: 3 observations
 </code></pre>
 </div>
 </div>
-<div id="0b4f6c37" class="cell" data-execution_count="28">
+<div id="155a85b5" class="cell" data-execution_count="28">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb39"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a>fit_iid._vcov <span class="op">-</span> stats.vcov(fit_r_iid)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="28">
 <pre><code>array([[ 1.28462055e-08, -6.97520098e-10],
        [-6.97520098e-10,  1.80739283e-09]])</code></pre>
 </div>
 </div>
-<div id="090f1801" class="cell" data-execution_count="29">
+<div id="1ba70678" class="cell" data-execution_count="29">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb41"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a>fit_hetero._vcov <span class="op">-</span> stats.vcov(fit_r_hetero)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="29">
 <pre><code>array([[ 2.31981933e-08, -7.87424679e-10],
        [-7.87424679e-10,  3.27120926e-09]])</code></pre>
 </div>
 </div>
-<div id="e4f9bdb2" class="cell" data-execution_count="30">
+<div id="0c71039e" class="cell" data-execution_count="30">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb43"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a>fit_crv._vcov <span class="op">-</span> stats.vcov(fit_r_crv)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="30">
 <pre><code>array([[ 1.63339756e-08, -1.24809110e-10],
@@ -1146,7 +1146,7 @@ WARNING:rpy2.rinterface_lib.callbacks:R[write to console]: NOTES: 3 observations
 </div>
 </div>
 <p>We conclude by comparing all estimation results via the <code>tidy</code> methods:</p>
-<div id="04476437" class="cell" data-execution_count="31">
+<div id="8b43e1f1" class="cell" data-execution_count="31">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb45"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a>fit_iid.tidy()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="31">
 <div>
@@ -1198,7 +1198,7 @@ WARNING:rpy2.rinterface_lib.callbacks:R[write to console]: NOTES: 3 observations
 </div>
 </div>
 </div>
-<div id="aecac43c" class="cell" data-execution_count="32">
+<div id="4aca4a34" class="cell" data-execution_count="32">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb46"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a>pd.DataFrame(broom.tidy_fixest(fit_r_iid)).T</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="32">
 <div>
@@ -1238,7 +1238,7 @@ WARNING:rpy2.rinterface_lib.callbacks:R[write to console]: NOTES: 3 observations
 </div>
 </div>
 </div>
-<div id="00db1677" class="cell" data-execution_count="33">
+<div id="b4c46396" class="cell" data-execution_count="33">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb47"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a>fit_hetero.tidy()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="33">
 <div>
@@ -1290,7 +1290,7 @@ WARNING:rpy2.rinterface_lib.callbacks:R[write to console]: NOTES: 3 observations
 </div>
 </div>
 </div>
-<div id="ab52d35f" class="cell" data-execution_count="34">
+<div id="a3525e61" class="cell" data-execution_count="34">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb48"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a>pd.DataFrame(broom.tidy_fixest(fit_r_hetero)).T</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="34">
 <div>
@@ -1330,7 +1330,7 @@ WARNING:rpy2.rinterface_lib.callbacks:R[write to console]: NOTES: 3 observations
 </div>
 </div>
 </div>
-<div id="5c6d388e" class="cell" data-execution_count="35">
+<div id="35e9da33" class="cell" data-execution_count="35">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb49"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a>fit_crv.tidy()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="35">
 <div>
@@ -1382,7 +1382,7 @@ WARNING:rpy2.rinterface_lib.callbacks:R[write to console]: NOTES: 3 observations
 </div>
 </div>
 </div>
-<div id="672658a6" class="cell" data-execution_count="36">
+<div id="289f4acd" class="cell" data-execution_count="36">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb50"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a>pd.DataFrame(broom.tidy_fixest(fit_r_crv)).T</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="36">
 <div>
