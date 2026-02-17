@@ -6,9 +6,9 @@ import numpy as np
 import pandas as pd
 from scipy.stats import norm
 
-from pyfixest.estimation.feglm_ import Feglm
+from pyfixest.estimation.models.feglm_ import Feglm
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
-from pyfixest.estimation.literals import DemeanerBackendOptions
+from pyfixest.estimation.internals.literals import DemeanerBackendOptions
 
 
 class Feprobit(Feglm):

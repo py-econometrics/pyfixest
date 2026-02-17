@@ -11,18 +11,18 @@ from scipy.special import gammaln
 from pyfixest.errors import (
     NonConvergenceError,
 )
-from pyfixest.estimation.feols_ import (
+from pyfixest.estimation.models.feols_ import (
     Feols,
     PredictionErrorOptions,
     PredictionType,
     _drop_multicollinear_variables,
 )
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
-from pyfixest.estimation.literals import (
+from pyfixest.estimation.internals.literals import (
     DemeanerBackendOptions,
     SolverOptions,
 )
-from pyfixest.estimation.solvers import solve_ols
+from pyfixest.estimation.internals.solvers import solve_ols
 from pyfixest.utils.dev_utils import DataFrameType, _check_series_or_dataframe
 
 

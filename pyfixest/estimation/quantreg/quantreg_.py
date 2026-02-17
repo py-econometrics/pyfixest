@@ -9,9 +9,9 @@ import pandas as pd
 from scipy.linalg import cho_factor, solve_triangular
 from scipy.stats import norm
 
-from pyfixest.estimation.feols_ import Feols
+from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
-from pyfixest.estimation.literals import (
+from pyfixest.estimation.internals.literals import (
     QuantregMethodOptions,
     SolverOptions,
 )
@@ -19,7 +19,7 @@ from pyfixest.estimation.quantreg.frisch_newton_ip import (
     frisch_newton_solver,
 )
 from pyfixest.estimation.quantreg.utils import get_hall_sheather_bandwidth
-from pyfixest.estimation.vcov_utils import bucket_argsort
+from pyfixest.estimation.post_estimation.vcov_utils import bucket_argsort
 
 
 class Quantreg(Feols):

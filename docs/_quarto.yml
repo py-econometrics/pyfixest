@@ -88,8 +88,8 @@ quartodoc:
         - did.estimation.did2s
         - did.estimation.lpdid
         - did.estimation.event_study
-        - estimation.bonferroni
-        - estimation.rwolf
+        - estimation.post_estimation.bonferroni
+        - estimation.post_estimation.rwolf
     - title: Estimation Classes
       desc: |
         Details on Methods and Attributes
@@ -130,6 +130,10 @@ quartodoc:
       desc: |
         PyFixest internals and utilities
       contents:
-        - estimation.demean
-        - estimation.detect_singletons
-        - estimation.model_matrix_fixest
+        - estimation.internals.demean
+        - estimation.internals.detect_singletons
+    - title: Deprecated
+      desc: |
+        Deprecated APIs scheduled for removal
+      contents:
+        - estimation.deprecated.model_matrix_fixest

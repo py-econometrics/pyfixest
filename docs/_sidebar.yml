@@ -10,8 +10,8 @@ website:
       - reference/did.estimation.did2s.qmd
       - reference/did.estimation.lpdid.qmd
       - reference/did.estimation.event_study.qmd
-      - reference/estimation.bonferroni.qmd
-      - reference/estimation.rwolf.qmd
+      - reference/estimation.post_estimation.bonferroni.qmd
+      - reference/estimation.post_estimation.rwolf.qmd
       section: Estimation Functions
     - contents:
       - reference/estimation.models.feols_.Feols.qmd
@@ -41,9 +41,11 @@ website:
       - reference/estimation.formula.factor_interaction.factor_interaction.qmd
       section: Formula Parsing & Model Matrix
     - contents:
-      - reference/estimation.demean.qmd
-      - reference/estimation.detect_singletons.qmd
-      - reference/estimation.model_matrix_fixest.qmd
+      - reference/estimation.internals.demean.qmd
+      - reference/estimation.internals.detect_singletons.qmd
       section: Misc / Utilities
+    - contents:
+      - reference/estimation.deprecated.model_matrix_fixest.qmd
+      section: Deprecated
     id: reference
   - id: dummy-sidebar
