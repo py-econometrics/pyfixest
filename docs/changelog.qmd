@@ -17,6 +17,15 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ## PyFixest 0.50.0 (In Development)
 
+::: {.callout-tip}
+You can install the latest pre-release to try out the new features:
+
+```{.bash .code-copy}
+pip install pyfixest==0.50.0a1
+pip install --pre pyfixest
+```
+:::
+
 ### Reworked Formula Parsing and New `i()` Operator
 
 The formula parsing module has been significantly reworked. The new implementation introduces a cleaner `Formula` class,
