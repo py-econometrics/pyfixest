@@ -122,9 +122,11 @@ class ModelMatrix:
             warnings.warn(
                 f"{is_infinite.sum()} rows with infinite values dropped from the model.",
             )
-        if self.fixed_effects is not None:
+        if self._fixed_effects is not None:
             # Ensure fixed effects are `int32`
-            self._data[self._fixed_effects] = self.fixed_effects.astype("int32")
+            self._data[self._fixed_effects] = self._data[self._fixed_effects].astype(
+                "int32"
+            )
         if self.fixed_effects is not None or self._drop_intercept:
             if self._independent is not None:
                 self._independent = [
