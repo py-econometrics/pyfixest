@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>Marginal Effects and Hypothesis Tests via marginaleffects</title>
+<title>estimation.formula.parse.formula</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -58,24 +58,24 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </style>
 
 
-<script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" integrity="sha384-ZvpUoO/+PpLXR1lu4jmpXWu80pZlYUAfxl5NsBMWOEPSjUn/6Z/hRTt8+pR6L4N2" crossorigin="anonymous"></script><script src="site_libs/quarto-nav/quarto-nav.js"></script>
-<script src="site_libs/quarto-nav/headroom.min.js"></script>
-<script src="site_libs/clipboard/clipboard.min.js"></script>
-<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
-<script src="site_libs/quarto-search/fuse.min.js"></script>
-<script src="site_libs/quarto-search/quarto-search.js"></script>
-<meta name="quarto:offset" content="./">
-<script src="site_libs/quarto-html/quarto.js" type="module"></script>
-<script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
-<script src="site_libs/quarto-html/axe/axe-check.js" type="module"></script>
-<script src="site_libs/quarto-html/popper.min.js"></script>
-<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
-<script src="site_libs/quarto-html/anchor.min.js"></script>
-<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="site_libs/quarto-html/quarto-syntax-highlighting-7b89279ff1a6dce999919e0e67d4d9ec.css" rel="stylesheet" id="quarto-text-highlighting-styles">
-<script src="site_libs/bootstrap/bootstrap.min.js"></script>
-<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="site_libs/bootstrap/bootstrap-381776df98abee29e77bfaddc64fade2.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-7b89279ff1a6dce999919e0e67d4d9ec.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-381776df98abee29e77bfaddc64fade2.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -103,50 +103,18 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     "search-label": "Search"
   }
 }</script>
-<script src="https://cdn.jsdelivr.net/npm/requirejs@2.3.6/require.min.js" integrity="sha384-c9c+LnTbwQ3aujuU7ULEPVvgLs+Fn6fJUvIGTsuu1ZcCf11fiEubah0ttpca4ntM sha384-6V1/AdqZRWk1KAlWbKBlGhN7VG4iE/yAZcO6NZPMF8od0vukrvr0tg4qY6NSrItx" crossorigin="anonymous"></script>
 
-<script type="application/javascript">define('jquery', [],function() {return window.jQuery;})</script>
-
-  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
-
-<script type="text/javascript">
-const typesetMath = (el) => {
-  if (window.MathJax) {
-    // MathJax Typeset
-    window.MathJax.typeset([el]);
-  } else if (window.katex) {
-    // KaTeX Render
-    var mathElements = el.getElementsByClassName("math");
-    var macros = [];
-    for (var i = 0; i < mathElements.length; i++) {
-      var texText = mathElements[i].firstChild;
-      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
-        window.katex.render(texText.data, mathElements[i], {
-          displayMode: mathElements[i].classList.contains('display'),
-          throwOnError: false,
-          macros: macros,
-          fleqn: false
-        });
-      }
-    }
-  }
-}
-window.Quarto = {
-  typesetMath
-};
-</script>
 
 </head>
 
-<body class="floating nav-fixed quarto-light">
+<body class="nav-sidebar floating nav-fixed fullcontent quarto-light">
 
 <div id="quarto-search-results"></div>
   <header id="quarto-header" class="headroom fixed-top">
     <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
       <div class="navbar-container container-fluid">
       <div class="navbar-brand-container mx-auto">
-    <a href="./index.html" class="navbar-brand navbar-brand-logo">
+    <a href="../index.html" class="navbar-brand navbar-brand-logo">
     </a>
   </div>
             <div id="quarto-search" class="" title="Search"></div>
@@ -156,31 +124,31 @@ window.Quarto = {
           <div class="collapse navbar-collapse" id="navbarCollapse">
             <ul class="navbar-nav navbar-nav-scroll me-auto">
   <li class="nav-item">
-    <a class="nav-link" href="./pyfixest.html"> 
+    <a class="nav-link" href="../pyfixest.html"> 
 <span class="menu-text">PyFixest</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./quickstart.html"> 
+    <a class="nav-link" href="../quickstart.html"> 
 <span class="menu-text">Quickstart</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./reference/index.html"> 
+    <a class="nav-link active" href="../reference/index.html" aria-current="page"> 
 <span class="menu-text">Function Reference</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./changelog.html"> 
+    <a class="nav-link" href="../changelog.html"> 
 <span class="menu-text">Changelog</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./contributing.html"> 
+    <a class="nav-link" href="../contributing.html"> 
 <span class="menu-text">Contributing</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./acknowledgements.html"> 
+    <a class="nav-link" href="../acknowledgements.html"> 
 <span class="menu-text">Acknowledgements</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./pyfixest-sprint.html"> 
+    <a class="nav-link" href="../pyfixest-sprint.html"> 
 <span class="menu-text">Sprint 2026</span></a>
   </li>  
   <li class="nav-item dropdown ">
@@ -189,63 +157,63 @@ window.Quarto = {
     </a>
     <ul class="dropdown-menu" aria-labelledby="nav-menu-learn-more">    
         <li>
-    <a class="dropdown-item" href="./table-layout.html">
+    <a class="dropdown-item" href="../table-layout.html">
  <span class="dropdown-text">Regression Tables and Summary Statistics</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="./marginaleffects.html">
+    <a class="dropdown-item" href="../marginaleffects.html">
  <span class="dropdown-text">Hypothesis Testing and Marginal Effects</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="./difference-in-differences.html">
+    <a class="dropdown-item" href="../difference-in-differences.html">
  <span class="dropdown-text">Difference-in-Differences Estimation</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="./multiple_testing.html">
+    <a class="dropdown-item" href="../multiple_testing.html">
  <span class="dropdown-text">Multiple Testing Corrections</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="./regression_decomposition.html">
+    <a class="dropdown-item" href="../regression_decomposition.html">
  <span class="dropdown-text">Regression Decomposition</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="./ssc.html">
+    <a class="dropdown-item" href="../ssc.html">
  <span class="dropdown-text">On Small Sample Corrections</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="./quantile-regression.html">
+    <a class="dropdown-item" href="../quantile-regression.html">
  <span class="dropdown-text">Quantile Regression</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="./stata-2-pyfixest.html">
+    <a class="dropdown-item" href="../stata-2-pyfixest.html">
  <span class="dropdown-text">Compare Stata &amp; PyFixest</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="./pyfixest-gpu-cupy.html">
+    <a class="dropdown-item" href="../pyfixest-gpu-cupy.html">
  <span class="dropdown-text">PyFixest on the GPU via CuPy</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="./pyfixest_gpu.html">
+    <a class="dropdown-item" href="../pyfixest_gpu.html">
  <span class="dropdown-text">PyFixest on the GPU via JAX</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="./panel_variance_reduction.html">
+    <a class="dropdown-item" href="../panel_variance_reduction.html">
  <span class="dropdown-text">Variance Reduction in AB Tests</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="./resources.html">
+    <a class="dropdown-item" href="../resources.html">
  <span class="dropdown-text">Other Resources around PyFixest</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="./replicating-the-effect.html">
+    <a class="dropdown-item" href="../replicating-the-effect.html">
  <span class="dropdown-text">Replicating ‘The Effect’ with PyFixest</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="./mixtape.html">
+    <a class="dropdown-item" href="../mixtape.html">
  <span class="dropdown-text">Replicating ‘The Mixtape’ with PyFixest</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="./brave_true.html">
+    <a class="dropdown-item" href="../brave_true.html">
  <span class="dropdown-text">Replicating ‘Causal Inference for the Brave and True’ with PyFixest</span></a>
   </li>  
     </ul>
@@ -263,249 +231,369 @@ window.Quarto = {
 </div>
       </div> <!-- /container-fluid -->
     </nav>
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/estimation.formula.parse.Formula.html">Formula Parsing &amp; Model Matrix</a></li><li class="breadcrumb-item"><a href="../reference/estimation.formula.parse.Formula.html">estimation.formula.parse.Formula</a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+    </div>
+  </nav>
 </header>
 <!-- content -->
 <div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
 <!-- sidebar -->
   <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
-    <nav id="TOC" role="doc-toc" class="toc-active">
-    <h2 id="toc-title">On this page</h2>
-   
-  <ul>
-  <li><a href="#non-linear-hypothesis-tests-ratio-estimates" id="toc-non-linear-hypothesis-tests-ratio-estimates" class="nav-link active" data-scroll-target="#non-linear-hypothesis-tests-ratio-estimates">Non-Linear Hypothesis Tests: Ratio Estimates</a>
-  <ul class="collapse">
-  <li><a href="#the-multivariate-delta-method" id="toc-the-multivariate-delta-method" class="nav-link" data-scroll-target="#the-multivariate-delta-method">The Multivariate Delta Method</a></li>
-  <li><a href="#using-the-delta-method-via-marginaleffects" id="toc-using-the-delta-method-via-marginaleffects" class="nav-link" data-scroll-target="#using-the-delta-method-via-marginaleffects">Using the Delta Method via <code>marginaleffects</code>:</a></li>
-  </ul></li>
-  </ul>
-</nav>
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+      <a href="../index.html" class="sidebar-logo-link">
+      </a>
+      </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">PyFixest Function Reference</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
+ <span class="menu-text">Estimation Functions</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.api.feols.feols.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.api.feols.feols</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.api.fepois.fepois.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.api.fepois.fepois</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.api.feglm.feglm.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.api.feglm.feglm</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.api.quantreg.quantreg.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.api.quantreg.quantreg</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/did.estimation.did2s.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">did.estimation.did2s</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/did.estimation.lpdid.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">did.estimation.lpdid</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/did.estimation.event_study.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">did.estimation.event_study</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.bonferroni.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.bonferroni</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.rwolf.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.rwolf</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
+ <span class="menu-text">Estimation Classes</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.feols_.Feols.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.feols_.Feols</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.fepois_.Fepois.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.fepois_.Fepois</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.feiv_.Feiv.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.feiv_.Feiv</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.feglm_.Feglm.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.feglm_.Feglm</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.felogit_.Felogit.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.felogit_.Felogit</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.feprobit_.Feprobit.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.feprobit_.Feprobit</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.fegaussian_.Fegaussian.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.fegaussian_.Fegaussian</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.feols_compressed_.FeolsCompressed.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.feols_compressed_.FeolsCompressed</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.FixestMulti_.FixestMulti.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.FixestMulti_.FixestMulti</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.quantreg.quantreg_.Quantreg.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.quantreg.quantreg_.Quantreg</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true">
+ <span class="menu-text">Summarize and Visualize</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/did.visualize.panelview.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">did.visualize.panelview</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/report.summary.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">report.summary</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/report.etable.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">report.etable</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/report.dtable.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">report.dtable</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/report.coefplot.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">report.coefplot</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/report.iplot.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">report.iplot</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/did.visualize.panelview.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">did.visualize.panelview</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true">
+ <span class="menu-text">Formula Parsing &amp; Model Matrix</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.formula.parse.Formula.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text">estimation.formula.parse.Formula</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.formula.model_matrix.ModelMatrix.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.formula.model_matrix.ModelMatrix</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.formula.factor_interaction.factor_interaction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.formula.factor_interaction.factor_interaction</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true">
+ <span class="menu-text">Misc / Utilities</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-5" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.demean.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.demean</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.detect_singletons.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.detect_singletons</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.model_matrix_fixest.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.model_matrix_fixest</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+    </ul>
+    </div>
 </nav>
 <div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
 <!-- margin-sidebar -->
-    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
-    </div>
+    
 <!-- main -->
-<main class="content" id="quarto-document-content">
-
-<header id="title-block-header" class="quarto-title-block default">
-<div class="quarto-title">
-<h1 class="title">Marginal Effects and Hypothesis Tests via <code>marginaleffects</code></h1>
-</div>
+<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/estimation.formula.parse.Formula.html">Formula Parsing &amp; Model Matrix</a></li><li class="breadcrumb-item"><a href="../reference/estimation.formula.parse.Formula.html">estimation.formula.parse.Formula</a></li></ol></nav></header>
 
 
 
-<div class="quarto-title-meta">
 
-    
-  
-    
-  </div>
-  
-
-
-</header>
-
-
-<p>We can compute marginal effects and linear and non-linear hypothesis tests via the excellent <a href="https://github.com/vincentarelbundock/pymarginaleffects">marginaleffects</a> package.</p>
-<div id="f5f47cc5" class="cell" data-execution_count="1">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> marginaleffects <span class="im">import</span> hypotheses</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> pf.get_data()</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 + X2"</span>, data<span class="op">=</span>data)</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>fit.tidy()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display">
-
-            <div id="KzFda5"></div>
-            <script type="text/javascript" data-lets-plot-script="library">
-                if(!window.letsPlotCallQueue) {
-                    window.letsPlotCallQueue = [];
-                }; 
-                window.letsPlotCall = function(f) {
-                    window.letsPlotCallQueue.push(f);
-                };
-                (function() {
-                    var script = document.createElement("script");
-                    script.type = "text/javascript";
-                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.7.3/js-package/distr/lets-plot.min.js";
-                    script.onload = function() {
-                        window.letsPlotCall = function(f) {f();};
-                        window.letsPlotCallQueue.forEach(function(f) {f();});
-                        window.letsPlotCallQueue = [];
-                        
-                    };
-                    script.onerror = function(event) {
-                        window.letsPlotCall = function(f) {};    // noop
-                        window.letsPlotCallQueue = [];
-                        var div = document.createElement("div");
-                        div.style.color = 'darkred';
-                        div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("KzFda5").appendChild(div);
-                    };
-                    var e = document.getElementById("KzFda5");
-                    e.appendChild(script);
-                })()
-            </script>
-            
-</div>
-<div class="cell-output cell-output-display">
-
-            <div id="lvdTV5"></div>
-            <script type="text/javascript" data-lets-plot-script="library">
-                if(!window.letsPlotCallQueue) {
-                    window.letsPlotCallQueue = [];
-                }; 
-                window.letsPlotCall = function(f) {
-                    window.letsPlotCallQueue.push(f);
-                };
-                (function() {
-                    var script = document.createElement("script");
-                    script.type = "text/javascript";
-                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.7.3/js-package/distr/lets-plot.min.js";
-                    script.onload = function() {
-                        window.letsPlotCall = function(f) {f();};
-                        window.letsPlotCallQueue.forEach(function(f) {f();});
-                        window.letsPlotCallQueue = [];
-                        
-                    };
-                    script.onerror = function(event) {
-                        window.letsPlotCall = function(f) {};    // noop
-                        window.letsPlotCallQueue = [];
-                        var div = document.createElement("div");
-                        div.style.color = 'darkred';
-                        div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("lvdTV5").appendChild(div);
-                    };
-                    var e = document.getElementById("lvdTV5");
-                    e.appendChild(script);
-                })()
-            </script>
-            
-</div>
-<div class="cell-output cell-output-display" data-execution_count="1">
-<div>
-
-<table class="dataframe table table-sm table-striped small">
-  <thead>
-    <tr>
-      <th></th>
-      <th>Estimate</th>
-      <th>Std. Error</th>
-      <th>t value</th>
-      <th>Pr(&gt;|t|)</th>
-      <th>2.5%</th>
-      <th>97.5%</th>
-    </tr>
-    <tr>
-      <th>Coefficient</th>
-      <th></th>
-      <th></th>
-      <th></th>
-      <th></th>
-      <th></th>
-      <th></th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>Intercept</th>
-      <td>0.888779</td>
-      <td>0.108422</td>
-      <td>8.197374</td>
-      <td>8.881784e-16</td>
-      <td>0.676016</td>
-      <td>1.101542</td>
-    </tr>
-    <tr>
-      <th>X1</th>
-      <td>-0.992936</td>
-      <td>0.082117</td>
-      <td>-12.091650</td>
-      <td>0.000000e+00</td>
-      <td>-1.154079</td>
-      <td>-0.831792</td>
-    </tr>
-    <tr>
-      <th>X2</th>
-      <td>-0.176342</td>
-      <td>0.021766</td>
-      <td>-8.101743</td>
-      <td>1.554312e-15</td>
-      <td>-0.219055</td>
-      <td>-0.133630</td>
-    </tr>
-  </tbody>
+<section id="pyfixest.estimation.formula.parse.Formula" class="level1">
+<h1>estimation.formula.parse.Formula</h1>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>estimation.formula.parse.Formula(</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    _second_stage,</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    _fixed_effects<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    _first_stage<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>A formulaic-compliant formula.</p>
+<section id="attributes" class="level2">
+<h2 class="anchored" data-anchor-id="attributes">Attributes</h2>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><a href="#pyfixest.estimation.formula.parse.Formula.endogenous">endogenous</a></td>
+<td>Endogenous variables of an instrumental variable specification.</td>
+</tr>
+<tr class="even">
+<td><a href="#pyfixest.estimation.formula.parse.Formula.exogenous">exogenous</a></td>
+<td>Exogenous aka covariates aka independent variables.</td>
+</tr>
+<tr class="odd">
+<td><a href="#pyfixest.estimation.formula.parse.Formula.first_stage">first_stage</a></td>
+<td>The first stage formula of an instrumental variable specification.</td>
+</tr>
+<tr class="even">
+<td><a href="#pyfixest.estimation.formula.parse.Formula.fixed_effects">fixed_effects</a></td>
+<td>The fixed effects of a formula.</td>
+</tr>
+<tr class="odd">
+<td><a href="#pyfixest.estimation.formula.parse.Formula.formula">formula</a></td>
+<td>Full fixest-style formula.</td>
+</tr>
+<tr class="even">
+<td><a href="#pyfixest.estimation.formula.parse.Formula.second_stage">second_stage</a></td>
+<td>The second stage formula.</td>
+</tr>
+</tbody>
 </table>
-</div>
-</div>
-</div>
-<p>Suppose we were interested in testing the hypothesis that <span class="math inline">\(X_{1} = X_{2}\)</span>. Given the relatively large differences in coefficients and small standard errors, we will likely reject the null that the two parameters are equal.</p>
-<p>We can run the formal test via the <code>hypotheses</code> function from the <code>marginaleffects</code> package.</p>
-<div id="836c6d70" class="cell" data-execution_count="2">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>hypotheses(fit, <span class="st">"X1 - X2 = 0"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display" data-execution_count="2">
-<div><style>
-.dataframe > thead > tr,
-.dataframe > tbody > tr {
-  text-align: right;
-  white-space: pre-wrap;
-}
-</style>
-<small>shape: (1, 8)</small><table class="dataframe table table-sm table-striped small"><thead><tr><th>term</th><th>estimate</th><th>std_error</th><th>statistic</th><th>p_value</th><th>s_value</th><th>conf_low</th><th>conf_high</th></tr><tr><td>str</td><td>f64</td><td>f64</td><td>f64</td><td>f64</td><td>f64</td><td>f64</td><td>f64</td></tr></thead><tbody><tr><td>"X1-X2=0"</td><td>-0.816593</td><td>0.085179</td><td>-9.586797</td><td>0.0</td><td>inf</td><td>-0.983541</td><td>-0.649646</td></tr></tbody></table></div>
-</div>
-</div>
-<p>And indeed, we reject the null of equality of coefficients: we get a p-value of zero and a confidence interval that does not contain 0.</p>
-<section id="non-linear-hypothesis-tests-ratio-estimates" class="level2">
-<h2 class="anchored" data-anchor-id="non-linear-hypothesis-tests-ratio-estimates">Non-Linear Hypothesis Tests: Ratio Estimates</h2>
-<p>We can also test run-linear hypotheses, in which case <code>marginaleffects</code> will automatically compute correct standard errors based on the estimated covariance matrix and the Delta method. This is for example useful for computing inferential statistics for the “relative uplift” in an AB test.</p>
-<p>For the moment, let’s assume that <span class="math inline">\(X1\)</span> is a randomly assigned treatment variable. As before, <span class="math inline">\(Y\)</span> is our variable / KPI of interest.</p>
-<p>Under randomization, the model intercept measures the “baseline”, i.e.&nbsp;the population average of <span class="math inline">\(Y\)</span> in the absence of treatment. To compute a relative uplift, we might compute</p>
-<div id="a092b437" class="cell" data-execution_count="3">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>(fit.coef().xs(<span class="st">"X1"</span>) <span class="op">/</span> fit.coef().xs(<span class="st">"Intercept"</span>) <span class="op">-</span> <span class="dv">1</span>) <span class="op">*</span> <span class="dv">100</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display" data-execution_count="3">
-<pre><code>np.float64(-211.71906665561212)</code></pre>
-</div>
-</div>
-<p>So we have a really big negative treatment effect of around minus 212%! To conduct correct inference on this ratio statistic, we need to use the delta method.</p>
-<section id="the-multivariate-delta-method" class="level3">
-<h3 class="anchored" data-anchor-id="the-multivariate-delta-method">The Multivariate Delta Method</h3>
-<p>In a nutshell, the delta method provides a way to approximate the asympotic distribution of any non-linear transformation <span class="math inline">\(g()\)</span> or one or more random variables.</p>
-<p>In the case of the ratio statistics, this non-linear transformation can be denoted as <span class="math inline">\(g(\theta_{1}, \theta_{2}) = \theta_{1} / \theta_{2}\)</span>.</p>
-<p>Here’s the <strong>Delta Method theorem</strong>:</p>
-<p>First, we define <span class="math inline">\(\theta = (\theta_{1}, \theta_{2})'\)</span> and <span class="math inline">\(\mu = (\mu_{1}, \mu_{2})'\)</span>.</p>
-<p>By the law of large numbers, we know that</p>
-<p><span class="math display">\[
-\sqrt{N} (\theta - \mu) \rightarrow_{d} N(0_{2}, \Sigma_{2,2}) \text{ if } N \rightarrow \infty.
-\]</span></p>
-<p>By the <strong>Delta Method</strong>, we can then approximate the limit distribution of <span class="math inline">\(g(\theta)\)</span> as</p>
-<p><span class="math display">\[
-\sqrt{N}  (g(\theta) - g(\mu)) \rightarrow_{d} N(0_{1}, g'(\theta) \times \Sigma \times g(\theta)) \text{ if } N \rightarrow \infty.
-\]</span>.</p>
-<p><a href="https://stats.stackexchange.com/questions/291594/estimation-of-population-ratio-using-delta-method">Here’s a long derivation of how to use the the delta method for inference of ratio statistics.</a>. The key steps from the formula above is to derive the expression for the asymptotic variance $ g’() g()$.</p>
-<p>But hey - we’re lucky, because marginaleffects will do all this work for us: we don’t have to derive analytic gradients ourselves =)</p>
 </section>
-<section id="using-the-delta-method-via-marginaleffects" class="level3">
-<h3 class="anchored" data-anchor-id="using-the-delta-method-via-marginaleffects">Using the Delta Method via <code>marginaleffects</code>:</h3>
-<p>We can employ the Delta Method via <code>marginaleffects</code> via the <code>hypotheses</code> function:</p>
-<div id="871bac2d" class="cell" data-execution_count="4">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>hypotheses(fit, <span class="st">"(X1 / Intercept - 1) * 100 = 0"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display" data-execution_count="4">
-<div><style>
-.dataframe > thead > tr,
-.dataframe > tbody > tr {
-  text-align: right;
-  white-space: pre-wrap;
-}
-</style>
-<small>shape: (1, 8)</small><table class="dataframe table table-sm table-striped small"><thead><tr><th>term</th><th>estimate</th><th>std_error</th><th>statistic</th><th>p_value</th><th>s_value</th><th>conf_low</th><th>conf_high</th></tr><tr><td>str</td><td>f64</td><td>f64</td><td>f64</td><td>f64</td><td>f64</td><td>f64</td><td>f64</td></tr></thead><tbody><tr><td>"(X1/Intercept-1)*100=0"</td><td>-211.719067</td><td>8.478682</td><td>-24.970751</td><td>0.0</td><td>inf</td><td>-228.336979</td><td>-195.101155</td></tr></tbody></table></div>
-</div>
-</div>
-<p>As before, we get an estimate of around -212%. Additionally, we obtain a 95% CI via the Delta Method of [-228%, -195%].</p>
-<p>Besides hypopotheses testing, you can do a range of other cool things with the <code>marginaleffects</code> package. For example (and likely unsurprisingly), you can easily compute all sorts of marginal effects for your regression models. For all the details, we highly recommend to take a look at the <a href="https://marginaleffects.com/index.html">marginaleffects zoo book!</a>.</p>
+<section id="methods" class="level2">
+<h2 class="anchored" data-anchor-id="methods">Methods</h2>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><a href="#pyfixest.estimation.formula.parse.Formula.parse">parse</a></td>
+<td>Parse fixest-style formula. In case of multiple estimation syntax,</td>
+</tr>
+<tr class="even">
+<td><a href="#pyfixest.estimation.formula.parse.Formula.parse_to_dict">parse_to_dict</a></td>
+<td>Group parsed formulas into dictionary keyed by fixed effects.</td>
+</tr>
+</tbody>
+</table>
+<section id="pyfixest.estimation.formula.parse.Formula.parse" class="level3">
+<h3 class="anchored" data-anchor-id="pyfixest.estimation.formula.parse.Formula.parse">parse</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>estimation.formula.parse.Formula.parse(formula)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Parse fixest-style formula. In case of multiple estimation syntax, returns a list of multiple regression formulas.</p>
+</section>
+<section id="pyfixest.estimation.formula.parse.Formula.parse_to_dict" class="level3">
+<h3 class="anchored" data-anchor-id="pyfixest.estimation.formula.parse.Formula.parse_to_dict">parse_to_dict</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>estimation.formula.parse.Formula.parse_to_dict(formula)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Group parsed formulas into dictionary keyed by fixed effects.</p>
 
 
+</section>
 </section>
 </section>
 
