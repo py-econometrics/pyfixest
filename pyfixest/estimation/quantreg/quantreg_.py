@@ -9,9 +9,15 @@ import pandas as pd
 from scipy.linalg import cho_factor, solve_triangular
 from scipy.stats import norm
 
+<<<<<<< HEAD
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.literals import (
+=======
+from pyfixest.estimation.feols_ import Feols
+from pyfixest.estimation.formula.parse import Formula as FixestFormula
+from pyfixest.estimation.literals import (
+>>>>>>> master
     QuantregMethodOptions,
     SolverOptions,
 )

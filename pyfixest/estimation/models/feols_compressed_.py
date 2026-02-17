@@ -8,9 +8,15 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
+<<<<<<< HEAD:pyfixest/estimation/models/feols_compressed_.py
 from pyfixest.estimation.models.feols_ import Feols, PredictionErrorOptions, PredictionType
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.literals import (
+=======
+from pyfixest.estimation.feols_ import Feols, PredictionErrorOptions, PredictionType
+from pyfixest.estimation.formula.parse import Formula as FixestFormula
+from pyfixest.estimation.literals import (
+>>>>>>> master:pyfixest/estimation/feols_compressed_.py
     DemeanerBackendOptions,
     SolverOptions,
 )

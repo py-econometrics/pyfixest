@@ -8,7 +8,11 @@ import pandas as pd
 from scipy.stats import norm
 
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
+<<<<<<< HEAD
 from pyfixest.estimation.internals.literals import (
+=======
+from pyfixest.estimation.literals import (
+>>>>>>> master
     QuantregMethodOptions,
     QuantregMultiOptions,
     SolverOptions,

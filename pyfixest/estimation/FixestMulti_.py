@@ -5,6 +5,7 @@ from typing import Any, Optional, Union
 
 import pandas as pd
 
+<<<<<<< HEAD
 from pyfixest.estimation.models.fegaussian_ import Fegaussian
 from pyfixest.estimation.models.feiv_ import Feiv
 from pyfixest.estimation.models.felogit_ import Felogit
@@ -14,6 +15,17 @@ from pyfixest.estimation.models.fepois_ import Fepois
 from pyfixest.estimation.models.feprobit_ import Feprobit
 from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.internals.literals import (
+=======
+from pyfixest.estimation.fegaussian_ import Fegaussian
+from pyfixest.estimation.feiv_ import Feiv
+from pyfixest.estimation.felogit_ import Felogit
+from pyfixest.estimation.feols_ import Feols, _check_vcov_input, _deparse_vcov_input
+from pyfixest.estimation.feols_compressed_ import FeolsCompressed
+from pyfixest.estimation.fepois_ import Fepois
+from pyfixest.estimation.feprobit_ import Feprobit
+from pyfixest.estimation.formula.parse import Formula
+from pyfixest.estimation.literals import (
+>>>>>>> master
     DemeanerBackendOptions,
     QuantregMethodOptions,
     QuantregMultiOptions,

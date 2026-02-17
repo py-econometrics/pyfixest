@@ -18,7 +18,11 @@ from pyfixest.estimation.models.feols_ import (
     _drop_multicollinear_variables,
 )
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
+<<<<<<< HEAD:pyfixest/estimation/models/fepois_.py
 from pyfixest.estimation.internals.literals import (
+=======
+from pyfixest.estimation.literals import (
+>>>>>>> master:pyfixest/estimation/fepois_.py
     DemeanerBackendOptions,
     SolverOptions,
 )

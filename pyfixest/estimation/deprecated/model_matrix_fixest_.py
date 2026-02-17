@@ -7,7 +7,11 @@ import numpy as np
 import pandas as pd
 from formulaic import Formula
 
+<<<<<<< HEAD:pyfixest/estimation/deprecated/model_matrix_fixest_.py
 from pyfixest.estimation.internals.detect_singletons_ import detect_singletons
+=======
+from pyfixest.estimation.detect_singletons_ import detect_singletons
+>>>>>>> master:pyfixest/estimation/model_matrix_fixest_.py
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.utils.utils import capture_context
 

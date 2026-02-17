@@ -8,7 +8,11 @@ import numpy as np
 import pandas as pd
 from formulaic.parser import DefaultFormulaParser
 
+<<<<<<< HEAD
 from pyfixest.estimation.internals.detect_singletons_ import detect_singletons
+=======
+from pyfixest.estimation.detect_singletons_ import detect_singletons
+>>>>>>> master
 from pyfixest.estimation.formula import FORMULAIC_FEATURE_FLAG
 from pyfixest.estimation.formula.factor_interaction import factor_interaction
 from pyfixest.estimation.formula.parse import Formula
@@ -122,9 +126,17 @@ class ModelMatrix:
             warnings.warn(
                 f"{is_infinite.sum()} rows with infinite values dropped from the model.",
             )
+<<<<<<< HEAD
         if self.fixed_effects is not None:
             # Ensure fixed effects are `int32`
             self._data[self._fixed_effects] = self.fixed_effects.astype("int32")
+=======
+        if self._fixed_effects is not None:
+            # Ensure fixed effects are `int32`
+            self._data[self._fixed_effects] = self._data[self._fixed_effects].astype(
+                "int32"
+            )
+>>>>>>> master
         if self.fixed_effects is not None or self._drop_intercept:
             if self._independent is not None:
                 self._independent = [

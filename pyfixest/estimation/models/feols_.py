@@ -14,19 +14,32 @@ from scipy.sparse.linalg import lsqr
 from scipy.stats import chi2, f, norm, t
 
 from pyfixest.errors import EmptyVcovError, VcovTypeNotSupportedError
+<<<<<<< HEAD:pyfixest/estimation/models/feols_.py
 from pyfixest.estimation.internals.backends import BACKENDS
 from pyfixest.estimation.post_estimation.decomposition import GelbachDecomposition, _decompose_arg_check
 from pyfixest.estimation.internals.demean_ import demean_model
 from pyfixest.estimation.formula import model_matrix as model_matrix_fixest
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.literals import (
+=======
+from pyfixest.estimation.backends import BACKENDS
+from pyfixest.estimation.decomposition import GelbachDecomposition, _decompose_arg_check
+from pyfixest.estimation.demean_ import demean_model
+from pyfixest.estimation.formula import model_matrix as model_matrix_fixest
+from pyfixest.estimation.formula.parse import Formula as FixestFormula
+from pyfixest.estimation.literals import (
+>>>>>>> master:pyfixest/estimation/feols_.py
     DemeanerBackendOptions,
     PredictionErrorOptions,
     PredictionType,
     SolverOptions,
     _validate_literal_argument,
 )
+<<<<<<< HEAD:pyfixest/estimation/models/feols_.py
 from pyfixest.estimation.post_estimation.prediction import (
+=======
+from pyfixest.estimation.prediction import (
+>>>>>>> master:pyfixest/estimation/feols_.py
     _compute_prediction_error,
     _get_fixed_effects_prediction_component,
     get_design_matrix_and_yhat,

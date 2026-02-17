@@ -962,18 +962,49 @@ def test_glm_vs_fixest(N, seed, dropna, fml, inference, family):
         ("Y + Y2 ~ X1 | csw0(f1,f2)"),
         ("Y + log(Y2) ~ sw(X1, X2) | csw0(f1,f2,f3)"),
         ("Y ~ C(f2):X2 + sw0(X1, f3)"),
+<<<<<<< HEAD
         # Multiple estimation with variable combinations (e.g., f1+f2 as a single step)
         ("Y ~ X1 | sw0(f1, f1+f2)"),
         ("Y ~ X1 | csw0(f1, f1+f2)"),
         ("Y ~ X1 | sw(f1, f1+f2)"),
+=======
+        # TODO: enable once fixest bug is fixed, see https://github.com/lrberge/fixest/issues/631
+        pytest.param(
+            "Y ~ X1 | sw0(f1, f1+f2)",
+            marks=pytest.mark.skip(reason="fixest nparams bug (#631)"),
+        ),
+        pytest.param(
+            "Y ~ X1 | csw0(f1, f1+f2)",
+            marks=pytest.mark.skip(reason="fixest nparams bug (#631)"),
+        ),
+        pytest.param(
+            "Y ~ X1 | sw(f1, f1+f2)",
+            marks=pytest.mark.skip(reason="fixest nparams bug (#631)"),
+        ),
+        pytest.param(
+            "Y ~ X1 | sw0(f1, f1+f2, f1+f2+f3)",
+            marks=pytest.mark.skip(reason="fixest nparams bug (#631)"),
+        ),
+        pytest.param(
+            "Y ~ X1 | csw0(f1, f1+f2, f1+f2+f3)",
+            marks=pytest.mark.skip(reason="fixest nparams bug (#631)"),
+        ),
+        pytest.param(
+            "Y ~ X1 | mvsw(f1, f2)",
+            marks=pytest.mark.skip(reason="fixest nparams bug (#631)"),
+        ),
+>>>>>>> master
         ("Y ~ X1 | csw(f1, f1+f2)"),
         ("Y ~ sw0(X1, X1+X2)"),
         ("Y ~ csw0(X1, X1+X2)"),
         ("Y ~ sw(X1, X1+X2)"),
         ("Y ~ X1 + sw0(X2, X2+f1)"),
         ("Y ~ X1 + csw0(X2, X2+f1)"),
+<<<<<<< HEAD
         ("Y ~ X1 | sw0(f1, f1+f2, f1+f2+f3)"),
         ("Y ~ X1 | csw0(f1, f1+f2, f1+f2+f3)"),
+=======
+>>>>>>> master
         ("Y + Y2 ~ X1 | sw0(f1, f1+f2)"),
         ("Y + Y2 ~ sw0(X1, X1+X2) | f1"),
         # mvsw() cases - multiverse stepwise (all combinations)
@@ -981,7 +1012,10 @@ def test_glm_vs_fixest(N, seed, dropna, fml, inference, family):
         ("Y ~ mvsw(X1, X2) | f1"),
         ("Y ~ X1 + mvsw(X2, f1)"),
         ("Y ~ X1 + mvsw(X2, f1) | f2"),
+<<<<<<< HEAD
         ("Y ~ X1 | mvsw(f1, f2)"),
+=======
+>>>>>>> master
         ("Y + Y2 ~ mvsw(X1, X2)"),
         ("Y + Y2 ~ mvsw(X1, X2) | f1"),
         ("Y ~ mvsw(X1, X2, f1)"),

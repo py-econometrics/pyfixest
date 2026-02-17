@@ -4,9 +4,15 @@ from typing import Any, Literal, Optional, Union
 import numpy as np
 import pandas as pd
 
+<<<<<<< HEAD:pyfixest/estimation/models/fegaussian_.py
 from pyfixest.estimation.models.feglm_ import Feglm
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.literals import DemeanerBackendOptions
+=======
+from pyfixest.estimation.feglm_ import Feglm
+from pyfixest.estimation.formula.parse import Formula as FixestFormula
+from pyfixest.estimation.literals import DemeanerBackendOptions
+>>>>>>> master:pyfixest/estimation/fegaussian_.py
 
 
 class Fegaussian(Feglm):

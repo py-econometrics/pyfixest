@@ -15,10 +15,17 @@ from pyfixest.estimation.models.feols_ import (
     PredictionType,
     _drop_multicollinear_variables,
 )
+<<<<<<< HEAD:pyfixest/estimation/models/feglm_.py
 from pyfixest.estimation.models.fepois_ import _check_for_separation
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.literals import DemeanerBackendOptions
 from pyfixest.estimation.internals.solvers import solve_ols
+=======
+from pyfixest.estimation.fepois_ import _check_for_separation
+from pyfixest.estimation.formula.parse import Formula as FixestFormula
+from pyfixest.estimation.literals import DemeanerBackendOptions
+from pyfixest.estimation.solvers import solve_ols
+>>>>>>> master:pyfixest/estimation/feglm_.py
 from pyfixest.utils.dev_utils import DataFrameType
 
 
