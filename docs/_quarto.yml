@@ -88,20 +88,20 @@ quartodoc:
         - did.estimation.did2s
         - did.estimation.lpdid
         - did.estimation.event_study
-        - estimation.bonferroni
-        - estimation.rwolf
+        - estimation.post_estimation.multcomp.bonferroni
+        - estimation.post_estimation.multcomp.rwolf
     - title: Estimation Classes
       desc: |
         Details on Methods and Attributes
       contents:
-        - estimation.feols_.Feols
-        - estimation.fepois_.Fepois
-        - estimation.feiv_.Feiv
-        - estimation.feglm_.Feglm
-        - estimation.felogit_.Felogit
-        - estimation.feprobit_.Feprobit
-        - estimation.fegaussian_.Fegaussian
-        - estimation.feols_compressed_.FeolsCompressed
+        - estimation.models.feols_.Feols
+        - estimation.models.fepois_.Fepois
+        - estimation.models.feiv_.Feiv
+        - estimation.models.feglm_.Feglm
+        - estimation.models.felogit_.Felogit
+        - estimation.models.feprobit_.Feprobit
+        - estimation.models.fegaussian_.Fegaussian
+        - estimation.models.feols_compressed_.FeolsCompressed
         - estimation.FixestMulti_.FixestMulti
         - estimation.quantreg.quantreg_.Quantreg
         #- did.did.DID
@@ -130,6 +130,6 @@ quartodoc:
       desc: |
         PyFixest internals and utilities
       contents:
-        - estimation.demean
-        - estimation.detect_singletons
-        - estimation.model_matrix_fixest
+        - estimation.internals.demean_.demean
+        - estimation.internals.detect_singletons_.detect_singletons
+        - estimation.deprecated.model_matrix_fixest_.model_matrix_fixest

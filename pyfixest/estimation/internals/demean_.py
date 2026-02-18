@@ -4,7 +4,7 @@ import numba as nb
 import numpy as np
 import pandas as pd
 
-from pyfixest.estimation.literals import DemeanerBackendOptions
+from pyfixest.estimation.internals.literals import DemeanerBackendOptions
 
 
 def demean_model(
@@ -245,7 +245,7 @@ def demean(
     import numpy as np
     import pyfixest as pf
     from pyfixest.utils.dgps import get_blw
-    from pyfixest.estimation.demean_ import demean
+    from pyfixest.estimation.internals.demean_ import demean
     from formulaic import model_matrix
 
     fml = "y ~ treat | state + year"

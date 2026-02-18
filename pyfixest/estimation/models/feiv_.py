@@ -6,11 +6,11 @@ from typing import Any, Literal, Optional, Union
 import numpy as np
 import pandas as pd
 
-from pyfixest.estimation.demean_ import demean_model
-from pyfixest.estimation.feols_ import Feols, _drop_multicollinear_variables
+from pyfixest.estimation.internals.demean_ import demean_model
+from pyfixest.estimation.models.feols_ import Feols, _drop_multicollinear_variables
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
-from pyfixest.estimation.literals import DemeanerBackendOptions
-from pyfixest.estimation.solvers import solve_ols
+from pyfixest.estimation.internals.literals import DemeanerBackendOptions
+from pyfixest.estimation.internals.solvers import solve_ols
 
 
 class Feiv(Feols):

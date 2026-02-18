@@ -8,9 +8,9 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-from pyfixest.estimation.feols_ import Feols, PredictionErrorOptions, PredictionType
+from pyfixest.estimation.models.feols_ import Feols, PredictionErrorOptions, PredictionType
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
-from pyfixest.estimation.literals import (
+from pyfixest.estimation.internals.literals import (
     DemeanerBackendOptions,
     SolverOptions,
 )

@@ -7,7 +7,7 @@ from scipy.sparse.linalg import spsolve
 
 from pyfixest.did.did import DID
 from pyfixest.estimation import feols
-from pyfixest.estimation.feols_ import Feols
+from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.formula import model_matrix
 from pyfixest.estimation.formula.parse import Formula
 

@@ -1,16 +1,18 @@
+import warnings
 from collections.abc import Mapping
 from typing import Any, Literal, Optional, Union
 
 import numpy as np
 import pandas as pd
+from scipy.stats import norm
 
-from pyfixest.estimation.feglm_ import Feglm
+from pyfixest.estimation.models.feglm_ import Feglm
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
-from pyfixest.estimation.literals import DemeanerBackendOptions
+from pyfixest.estimation.internals.literals import DemeanerBackendOptions
 
 
-class Fegaussian(Feglm):
-    "Class for the estimation of a fixed-effects GLM with normal errors."
+class Feprobit(Feglm):
+    "Class for the estimation of a fixed-effects probit model."
 
     def __init__(
         self,
@@ -34,6 +36,7 @@ class Fegaussian(Feglm):
             "scipy.sparse.linalg.lsqr",
             "jax",
         ],
+        demeaner_backend: DemeanerBackendOptions = "numba",
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
@@ -41,7 +44,6 @@ class Fegaussian(Feglm):
         sample_split_value: Optional[Union[str, int]] = None,
         separation_check: Optional[list[str]] = None,
         context: Union[int, Mapping[str, Any]] = 0,
-        demeaner_backend: DemeanerBackendOptions = "numba",
         accelerate: bool = True,
     ):
         super().__init__(
@@ -59,6 +61,7 @@ class Fegaussian(Feglm):
             tol=tol,
             maxiter=maxiter,
             solver=solver,
+            demeaner_backend=demeaner_backend,
             store_data=store_data,
             copy_data=copy_data,
             lean=lean,
@@ -66,40 +69,56 @@ class Fegaussian(Feglm):
             sample_split_value=sample_split_value,
             separation_check=separation_check,
             context=context,
-            demeaner_backend=demeaner_backend,
             accelerate=accelerate,
         )
 
-        self._method = "feglm-gaussian"
+        self._method = "feglm-probit"
 
     def _check_dependent_variable(self) -> None:
-        pass
+        "Check if the dependent variable is binary with values 0 and 1."
+        Y_unique = np.unique(self._Y)
+        if len(Y_unique) != 2:
+            raise ValueError("The dependent variable must have two unique values.")
+        if np.any(~np.isin(Y_unique, [0, 1])):
+            raise ValueError("The dependent variable must be binary (0 or 1).")
 
     def _get_deviance(self, y: np.ndarray, mu: np.ndarray) -> np.ndarray:
-        return np.sum((y - mu) ** 2)
+        ll_fitted = np.sum(y * np.log(mu) + (1 - y) * np.log(1 - mu))
+
+        # divide by zero warnings because of the log(0) terms
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            ll_saturated = np.sum(
+                np.where(y == 0, 0, y * np.log(y))
+                + np.where(y == 1, 0, (1 - y) * np.log(1 - y))
+            )
+
+        return -2.0 * (ll_fitted - ll_saturated)
 
     def _get_dispersion_phi(self, theta: np.ndarray) -> float:
-        return np.var(theta)
+        return 1.0
 
     def _get_b(self, theta: np.ndarray) -> np.ndarray:
-        return theta**2 / 2
+        raise ValueError("The function _get_b is not implemented for the probit model.")
+        return None
 
     def _get_mu(self, eta: np.ndarray) -> np.ndarray:
-        return eta
+        return norm.cdf(eta)
 
     def _get_link(self, mu: np.ndarray) -> np.ndarray:
-        return mu
+        return norm.ppf(mu)
 
     def _get_gprime(self, mu: np.ndarray) -> np.ndarray:
-        return np.ones_like(mu)
+        return 1 / norm.pdf(norm.ppf(mu))
 
     def _get_theta(self, mu: np.ndarray) -> np.ndarray:
-        return mu
+        return norm.ppf(mu)
 
     def _get_V(self, mu: np.ndarray) -> np.ndarray:
-        return np.ones_like(mu)
+        return mu * (1 - mu)
 
     def _get_score(
         self, y: np.ndarray, X: np.ndarray, mu: np.ndarray, eta: np.ndarray
     ) -> np.ndarray:
-        return (y - mu)[:, None] * X
+        residual = (y - mu) / (mu * (1 - mu)) * norm.pdf(eta)
+        return residual[:, None] * X
