@@ -612,7 +612,7 @@ class Feols:
         Returns
         -------
         Feols
-            An instance of class [Feols](/reference/estimation.feols_.Feols.qmd) with updated inference.
+            An instance of class [Feols](/reference/estimation.models.feols_.Feols.qmd) with updated inference.
         """
         # Assuming `data` is the DataFrame in question
 
@@ -1624,7 +1624,7 @@ class Feols:
         N = self._N
         G = len(unique_clusters)
 
-        ccv_module = import_module("pyfixest.estimation.ccv")
+        ccv_module = import_module("pyfixest.estimation.post_estimation.ccv")
         _compute_CCV = ccv_module._compute_CCV
 
         vcov_splits = 0.0
@@ -1677,7 +1677,7 @@ class Feols:
 
         return pd.concat([res_ccv, res_crv1], axis=1).T
 
-        ccv_module = import_module("pyfixest.estimation.ccv")
+        ccv_module = import_module("pyfixest.estimation.post_estimation.ccv")
         _ccv = ccv_module._ccv
 
         return _ccv(

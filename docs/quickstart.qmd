@@ -493,7 +493,7 @@ Additionally, we support `split` and `fsplit` function arguments.
 > - `fsplit` works just as `split`, but fits the model on the full sample as well.
 
 If multiple regression syntax is used,
-`feols()` and `fepois` returns an instance of a `FixestMulti` object, which essentially consists of a dicionary of `Fepois` or [Feols](/reference/estimation.feols_.Feols.qmd) instances.
+`feols()` and `fepois` returns an instance of a `FixestMulti` object, which essentially consists of a dicionary of `Fepois` or [Feols](/reference/estimation.models.feols_.Feols.qmd) instances.
 
 ```{python}
 multi_fit = pf.feols(fml="Y ~ X1 | csw0(f1, f2)", data=data, vcov="HC1")

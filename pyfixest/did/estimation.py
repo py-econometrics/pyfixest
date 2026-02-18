@@ -54,7 +54,7 @@ def event_study(
     Returns
     -------
     object
-        A fitted model object of class [Feols](/reference/estimation.feols_.Feols.qmd).
+        A fitted model object of class [Feols](/reference/estimation.models.feols_.Feols.qmd).
 
     Examples
     --------
@@ -212,7 +212,7 @@ def did2s(
     Returns
     -------
     object
-        A fitted model object of class [Feols](/reference/estimation.feols_.Feols.qmd).
+        A fitted model object of class [Feols](/reference/estimation.models.feols_.Feols.qmd).
 
     Examples
     --------

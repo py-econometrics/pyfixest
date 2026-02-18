@@ -184,7 +184,7 @@ def feols(
     Returns
     -------
     object
-        An instance of the [Feols](/reference/estimation.feols_.Feols.qmd) class or
+        An instance of the [Feols](/reference/estimation.models.feols_.Feols.qmd) class or
         [FixestMulti](/reference/estimation.FixestMulti_.FixestMulti.qmd) class for multiple models specified via `fml`.
 
     Examples
@@ -205,7 +205,7 @@ def feols(
     fit.summary()
     ```
 
-    Calling `feols()` returns an instance of the [Feols](/reference/estimation.feols_.Feols.qmd)
+    Calling `feols()` returns an instance of the [Feols](/reference/estimation.models.feols_.Feols.qmd)
     class. The `summary()` method can be used to print the results.
 
     An alternative way to retrieve model results is via the `tidy()` method, which
