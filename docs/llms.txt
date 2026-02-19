@@ -71,7 +71,7 @@ Pass to the `vcov` argument:
 
 ## Model Methods
 
-After estimation, model objects support:
+After estimation, model objects support (full API: https://py-econometrics.github.io/pyfixest/reference/estimation.feols_.Feols.md):
 
 - `.summary()` — Print regression summary
 - `.tidy()` — Tidy DataFrame of coefficients, SEs, t-stats, p-values, CIs
@@ -84,7 +84,8 @@ After estimation, model objects support:
 - `.vcov()` — Variance-covariance matrix
 - `.wildboottest(param, reps, seed)` — Wild cluster bootstrap inference
 - `.ccv(treatment, pk, qk, ...)` — Causal cluster variance estimator
-- `.rio(param, reps, ...)` — Randomization inference
+- `.ritest(param, reps, ...)` — Randomization inference
+- `.decompose(param, x1_vars, type, ...)` — Gelbach (2016) decomposition for mediation analysis (explains coefficient change from short to long model)
 
 ## Quick Example
 

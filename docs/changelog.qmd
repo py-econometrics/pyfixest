@@ -15,7 +15,105 @@ fit2 = pf.feols("Y ~ X1 + X2", data = df)
 fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 ```
 
-## PyFixest 0.41.0 (In Development)
+## PyFixest 0.50.0 (In Development)
+
+::: {.callout-tip}
+You can install the latest pre-release to try out the new features:
+
+```{.bash .code-copy}
+pip install pyfixest==0.50.0a1
+pip install --pre pyfixest
+```
+:::
+
+### Reworked Formula Parsing and New `i()` Operator
+
+The formula parsing module has been significantly reworked. The new implementation introduces a cleaner `Formula` class,
+a rewritten `i()` operator that closely follows R's `fixest` syntax, and new multiple estimation operators.
+
+#### New `i()` operator
+
+The `i()` operator now follows the `fixest` naming convention, using `::` to separate variable names from levels. It further
+provides two new arguments: `ref2` and `bin2` that allow to set
+reference levels for interacted variables and to bin categoricals.
+
+**Simple categorical encoding:**
+
+```{python}
+# Coefficient per level, first level dropped when intercept is present
+fit = pf.feols("Y ~ i(f1, ref=1)", data=df)
+fit.coef().head()
+```
+
+**Factor x Continuous interaction:**
+
+```{python}
+# Each level of f1 gets its own slope on X1
+fit = pf.feols("Y ~ i(f1, X1, ref=1)", data=df)
+fit.coef().head()
+```
+
+**Factor x Factor interaction** with `ref2`:
+
+The `ref2` argument controls the reference level of the second variable in a factor-by-factor interaction.
+
+```{python}
+import numpy as np
+df["group"] = np.where(df["f1"] < 15, "A", "B")
+
+# Full interaction: f1 levels x group levels
+# ref drops from f1, ref2 drops from group
+fit = pf.feols("Y ~ i(f1, group, ref=1, ref2='A')", data=df)
+fit.coef().head()
+```
+
+**Binning** with `bin` and `bin2`:
+
+The `bin` parameter merges categorical levels before encoding. This is useful for collapsing sparse categories.
+Values not in the mapping are kept unchanged, matching R `fixest` behavior.
+
+```{python}
+df["size"] = np.where(df["f1"] < 10, "small", np.where(df["f1"] < 20, "medium", "large"))
+
+# Merge 'small' and 'medium' into 'not_large', then use as reference
+fit = pf.feols("Y ~ i(size, bin={'not_large': ['small','medium']}, ref='not_large')", data=df)
+fit.coef()
+```
+
+`bin2` applies binning to the second variable in a factor-by-factor interaction.
+
+#### `mvsw()` and multiple estimation
+
+
+`mvsw()` for **multiverse stepwise** — generates all $2^k$ combinations of the provided variables, including the intercept-only model.
+
+```{python}
+# mvsw: all combinations of X1 and X2
+fits = pf.feols("Y ~ mvsw(X1, X2)", data=df)
+pf.etable(fits)
+```
+
+Multiple estimation operators can be combined:
+
+```{python}
+# mvsw: all combinations of X1 and X2
+fits = pf.feols("Y ~ sw(X1, X2) + csw(f1,f2)", data=df)
+pf.etable(fits)
+```
+
+Last, you can run operations within the operators:
+
+```{python}
+# mvsw: all combinations of X1 and X2
+fits = pf.feols("Y ~ sw(X1, f1 + X2)", data=df)
+pf.etable(fits)
+```
+
+#### Deprecations
+
+- `FixestFormulaParser` is deprecated in favor of `Formula.parse()`. A `FutureWarning` is emitted when the old class is used.
+- `model_matrix_fixest()` is deprecated in favor of `create_model_matrix()`.
+
 
 ### Migration to maketables
 
