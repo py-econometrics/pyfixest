@@ -16,7 +16,7 @@ from pyfixest.estimation.feols_ import (
     _drop_multicollinear_variables,
 )
 from pyfixest.estimation.fepois_ import _check_for_separation
-from pyfixest.estimation.FormulaParser import FixestFormula
+from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.literals import DemeanerBackendOptions
 from pyfixest.estimation.solvers import solve_ols
 from pyfixest.utils.dev_utils import DataFrameType
@@ -37,7 +37,7 @@ class Feglm(Feols, ABC):
         collin_tol: float,
         fixef_tol: float,
         fixef_maxiter: int,
-        lookup_demeaned_data: dict[str, pd.DataFrame],
+        lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
         tol: float,
         maxiter: int,
         solver: Literal[

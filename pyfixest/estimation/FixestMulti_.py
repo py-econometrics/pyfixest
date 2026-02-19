@@ -12,7 +12,7 @@ from pyfixest.estimation.feols_ import Feols, _check_vcov_input, _deparse_vcov_i
 from pyfixest.estimation.feols_compressed_ import FeolsCompressed
 from pyfixest.estimation.fepois_ import Fepois
 from pyfixest.estimation.feprobit_ import Feprobit
-from pyfixest.estimation.FormulaParser import FixestFormulaParser
+from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.literals import (
     DemeanerBackendOptions,
     QuantregMethodOptions,
@@ -214,7 +214,6 @@ class FixestMulti:
         self._ssc_dict: dict[str, Union[str, bool]] = {}
         self._drop_singletons = False
         self._is_multiple_estimation = False
-        self._drop_intercept = False
         self._weights = weights
         self._has_weights = False
         if weights is not None:
@@ -225,16 +224,19 @@ class FixestMulti:
         self._quantile_tol = quantile_tol
         self._quantile_maxiter = quantile_maxiter
 
-        FML = FixestFormulaParser(fml)
-        FML.set_fixest_multi_flag()
+        formula_dictionary = Formula.parse_to_dict(fml)
         self._is_multiple_estimation = (
-            FML._is_multiple_estimation
+            sum(len(v) for v in formula_dictionary.values()) > 1
             or self._run_split
             or (isinstance(quantile, list) and len(quantile) > 1)
         )
-        self.FixestFormulaDict = FML.FixestFormulaDict
+        self.FixestFormulaDict = formula_dictionary
         self._method = estimation
-        self._is_iv = FML.is_iv
+        self._is_iv = any(
+            formula.first_stage is not None
+            for _, formulas in formula_dictionary.items()
+            for formula in formulas
+        )
         # self._fml_dict = fxst_fml.condensed_fml_dict
         # self._fml_dict_iv = fxst_fml.condensed_fml_dict_iv
         self._ssc_dict = ssc if ssc is not None else {}
@@ -299,9 +301,9 @@ class FixestMulti:
             for _, fval in enumerate(_fixef_keys):
                 fixef_key_models = FixestFormulaDict.get(fval)
 
-                # dictionary to cache demeaned data with index: na_index_str,
+                # dictionary to cache demeaned data keyed by na_index,
                 # only relevant for `.feols()`
-                lookup_demeaned_data: dict[str, pd.DataFrame] = {}
+                lookup_demeaned_data: dict[frozenset[int], pd.DataFrame] = {}
 
                 for FixestFormula in fixef_key_models:  # type: ignore
                     # loop over both dictfe and dictfe_iv (if the latter is not None)
@@ -430,7 +432,7 @@ class FixestMulti:
                     # if X is empty: no inference (empty X only as shorthand for demeaning)
                     if not FIT._X_is_empty:
                         # inference
-                        vcov_type = _get_vcov_type(vcov, fval)
+                        vcov_type = _get_vcov_type(vcov)
                         FIT.vcov(
                             vcov=vcov_type,
                             vcov_kwargs=vcov_kwargs,
