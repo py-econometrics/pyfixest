@@ -5,7 +5,11 @@ import pytest
 
 from pyfixest.core import demean as demean_rs
 from pyfixest.estimation.cupy.demean_cupy_ import demean_cupy32, demean_cupy64
-from pyfixest.estimation.internals.demean_ import _set_demeaner_backend, demean, demean_model
+from pyfixest.estimation.internals.demean_ import (
+    _set_demeaner_backend,
+    demean,
+    demean_model,
+)
 from pyfixest.estimation.jax.demean_jax_ import demean_jax
 
 

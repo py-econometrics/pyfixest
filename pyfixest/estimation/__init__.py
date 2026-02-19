@@ -1,10 +1,16 @@
-from pyfixest.estimation.internals import literals
 from pyfixest.estimation.api import (
     feglm,
     feols,
     fepois,
     quantreg,
 )
+from pyfixest.estimation.deprecated.model_matrix_fixest_ import (
+    model_matrix_fixest,
+)
+from pyfixest.estimation.FixestMulti_ import (
+    FixestMulti,
+)
+from pyfixest.estimation.internals import literals
 from pyfixest.estimation.internals.demean_ import (
     demean,
 )
@@ -23,12 +29,6 @@ from pyfixest.estimation.models.fepois_ import (
     Fepois,
 )
 from pyfixest.estimation.models.feprobit_ import Feprobit
-from pyfixest.estimation.FixestMulti_ import (
-    FixestMulti,
-)
-from pyfixest.estimation.deprecated.model_matrix_fixest_ import (
-    model_matrix_fixest,
-)
 from pyfixest.estimation.post_estimation.multcomp import (
     bonferroni,
     rwolf,

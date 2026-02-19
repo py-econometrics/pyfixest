@@ -7,8 +7,8 @@ import numpy as np
 import pandas as pd
 from formulaic import Formula
 
-from pyfixest.estimation.internals.detect_singletons_ import detect_singletons
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
+from pyfixest.estimation.internals.detect_singletons_ import detect_singletons
 from pyfixest.utils.utils import capture_context
 
 

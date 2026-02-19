@@ -14,29 +14,16 @@ from scipy.sparse.linalg import lsqr
 from scipy.stats import chi2, f, norm, t
 
 from pyfixest.errors import EmptyVcovError, VcovTypeNotSupportedError
-from pyfixest.estimation.internals.backends import BACKENDS
-from pyfixest.estimation.post_estimation.decomposition import GelbachDecomposition, _decompose_arg_check
-from pyfixest.estimation.internals.demean_ import demean_model
 from pyfixest.estimation.formula import model_matrix as model_matrix_fixest
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
+from pyfixest.estimation.internals.backends import BACKENDS
+from pyfixest.estimation.internals.demean_ import demean_model
 from pyfixest.estimation.internals.literals import (
     DemeanerBackendOptions,
     PredictionErrorOptions,
     PredictionType,
     SolverOptions,
     _validate_literal_argument,
-)
-from pyfixest.estimation.post_estimation.prediction import (
-    _compute_prediction_error,
-    _get_fixed_effects_prediction_component,
-    get_design_matrix_and_yhat,
-)
-from pyfixest.estimation.post_estimation.ritest import (
-    _decode_resampvar,
-    _get_ritest_pvalue,
-    _get_ritest_stats_fast,
-    _get_ritest_stats_slow,
-    _plot_ritest_pvalue,
 )
 from pyfixest.estimation.internals.solvers import solve_ols
 from pyfixest.estimation.internals.vcov_utils import (
@@ -49,6 +36,22 @@ from pyfixest.estimation.internals.vcov_utils import (
     _nw_meat_panel,
     _nw_meat_time,
     _prepare_twoway_clustering,
+)
+from pyfixest.estimation.post_estimation.decomposition import (
+    GelbachDecomposition,
+    _decompose_arg_check,
+)
+from pyfixest.estimation.post_estimation.prediction import (
+    _compute_prediction_error,
+    _get_fixed_effects_prediction_component,
+    get_design_matrix_and_yhat,
+)
+from pyfixest.estimation.post_estimation.ritest import (
+    _decode_resampvar,
+    _get_ritest_pvalue,
+    _get_ritest_stats_fast,
+    _get_ritest_stats_slow,
+    _plot_ritest_pvalue,
 )
 from pyfixest.utils.dev_utils import (
     DataFrameType,

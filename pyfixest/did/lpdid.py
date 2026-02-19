@@ -5,8 +5,8 @@ import pandas as pd
 
 from pyfixest.did.did import DID
 from pyfixest.estimation import feols
-from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.internals.literals import VcovTypeOptions
+from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.report.visualize import _HAS_LETS_PLOT, _coefplot
 
 

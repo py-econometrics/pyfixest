@@ -4,10 +4,10 @@ from collections import Counter
 from collections.abc import ValuesView
 from typing import Optional, Union
 
+from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.models.feiv_ import Feiv
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.models.fepois_ import Fepois
-from pyfixest.estimation.FixestMulti_ import FixestMulti
 
 ModelInputType = Union[
     FixestMulti, Feols, Fepois, Feiv, list[Union[Feols, Fepois, Feiv]]

@@ -8,7 +8,10 @@ import pandas as pd
 from pyfixest.errors import (
     NonConvergenceError,
 )
+from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.backends import BACKENDS
+from pyfixest.estimation.internals.literals import DemeanerBackendOptions
+from pyfixest.estimation.internals.solvers import solve_ols
 from pyfixest.estimation.models.feols_ import (
     Feols,
     PredictionErrorOptions,
@@ -16,9 +19,6 @@ from pyfixest.estimation.models.feols_ import (
     _drop_multicollinear_variables,
 )
 from pyfixest.estimation.models.fepois_ import _check_for_separation
-from pyfixest.estimation.formula.parse import Formula as FixestFormula
-from pyfixest.estimation.internals.literals import DemeanerBackendOptions
-from pyfixest.estimation.internals.solvers import solve_ols
 from pyfixest.utils.dev_utils import DataFrameType
 
 

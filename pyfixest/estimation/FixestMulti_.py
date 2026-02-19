@@ -5,13 +5,6 @@ from typing import Any, Optional, Union
 
 import pandas as pd
 
-from pyfixest.estimation.models.fegaussian_ import Fegaussian
-from pyfixest.estimation.models.feiv_ import Feiv
-from pyfixest.estimation.models.felogit_ import Felogit
-from pyfixest.estimation.models.feols_ import Feols, _check_vcov_input, _deparse_vcov_input
-from pyfixest.estimation.models.feols_compressed_ import FeolsCompressed
-from pyfixest.estimation.models.fepois_ import Fepois
-from pyfixest.estimation.models.feprobit_ import Feprobit
 from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.internals.literals import (
     DemeanerBackendOptions,
@@ -19,9 +12,20 @@ from pyfixest.estimation.internals.literals import (
     QuantregMultiOptions,
     SolverOptions,
 )
+from pyfixest.estimation.internals.vcov_utils import _get_vcov_type
+from pyfixest.estimation.models.fegaussian_ import Fegaussian
+from pyfixest.estimation.models.feiv_ import Feiv
+from pyfixest.estimation.models.felogit_ import Felogit
+from pyfixest.estimation.models.feols_ import (
+    Feols,
+    _check_vcov_input,
+    _deparse_vcov_input,
+)
+from pyfixest.estimation.models.feols_compressed_ import FeolsCompressed
+from pyfixest.estimation.models.fepois_ import Fepois
+from pyfixest.estimation.models.feprobit_ import Feprobit
 from pyfixest.estimation.quantreg.quantreg_ import Quantreg
 from pyfixest.estimation.quantreg.QuantregMulti import QuantregMulti
-from pyfixest.estimation.internals.vcov_utils import _get_vcov_type
 from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
 from pyfixest.utils.utils import capture_context
 
