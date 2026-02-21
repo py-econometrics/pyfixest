@@ -789,7 +789,6 @@ fit_twfe = feols(
 
 iplot([fit, fit_twfe], coord_flip=False, figsize = (900, 400), title = "TWFE vs DID2S")
 ```
-![](figures/event_study.svg)
 
 
 
