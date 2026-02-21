@@ -13,7 +13,7 @@ This will launch a github codespace (there is a free tier for 60h a month, thank
 
 ## Local Development
 
-Please refer to the [contributing section](https://py-econometrics.github.io/pyfixest/contributing.html) of our documentation to get started with local development.
+Please refer to the [contributing section](https://pyfixest.org/contributing.html) of our documentation to get started with local development.
 
 For a comprehensive overview of the codebase architecture and internals, check out the [DeepWiki](https://deepwiki.com/py-econometrics/pyfixest). While not perfect and correct in all regards, we think it is a pretty good starting point to learn about the codebase!
 

@@ -196,7 +196,7 @@ def fepois(
     fit.summary()
     ```
 
-    For more examples on the use of other function arguments, please take a look at the documentation of the [feols()](https://py-econometrics.github.io/pyfixest/reference/estimation.api.feols.html#pyfixest.estimation.api.feols) function.
+    For more examples on the use of other function arguments, please take a look at the documentation of the [feols()](https://pyfixest.org/reference/estimation.api.feols.html#pyfixest.estimation.api.feols) function.
     """
     if separation_check is None:
         separation_check = ["fe"]
