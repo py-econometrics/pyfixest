@@ -1,8 +1,8 @@
 from collections.abc import Mapping
 from typing import Any, Optional, Union
 
-from pyfixest.estimation.api.utils import _estimation_input_checks
-from pyfixest.estimation.FixestMulti_ import FixestMulti
+from pyfixest.estimation.api.utils import _run_estimation
+from pyfixest.estimation.fixest_multi import FixestMulti
 from pyfixest.estimation.internals.literals import (
     DemeanerBackendOptions,
     FixedRmOptions,
@@ -12,8 +12,6 @@ from pyfixest.estimation.internals.literals import (
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.models.fepois_ import Fepois
 from pyfixest.utils.dev_utils import DataFrameType
-from pyfixest.utils.utils import capture_context
-from pyfixest.utils.utils import ssc as ssc_func
 
 
 def feglm(
@@ -198,7 +196,7 @@ def feglm(
         (or one of its subclasses: [Felogit](/reference/estimation.models.felogit_.Felogit.qmd),
         [Feprobit](/reference/estimation.models.feprobit_.Feprobit.qmd),
         [Fegaussian](/reference/estimation.models.fegaussian_.Fegaussian.qmd)) or an instance of
-        class [FixestMulti](/reference/estimation.FixestMulti_.FixestMulti.qmd) for multiple models specified via `fml`.
+        class [FixestMulti](/reference/estimation.fixest_multi.FixestMulti.qmd) for multiple models specified via `fml`.
 
     Examples
     --------
@@ -250,15 +248,12 @@ def feglm(
 
     if separation_check is None:
         separation_check = ["fe"]
-    if ssc is None:
-        ssc = ssc_func()
     # WLS currently not supported for GLM regression
     weights = None
     weights_type = "aweights"
 
-    context = {} if context is None else capture_context(context)
-
-    _estimation_input_checks(
+    return _run_estimation(
+        estimation=f"feglm-{family}",
         fml=fml,
         data=data,
         vcov=vcov,
@@ -267,22 +262,6 @@ def feglm(
         ssc=ssc,
         fixef_rm=fixef_rm,
         collin_tol=collin_tol,
-        copy_data=copy_data,
-        store_data=store_data,
-        lean=lean,
-        fixef_tol=fixef_tol,
-        fixef_maxiter=fixef_maxiter,
-        weights_type=weights_type,
-        use_compression=False,
-        reps=None,
-        seed=None,
-        split=split,
-        fsplit=fsplit,
-        separation_check=separation_check,
-    )
-
-    fixest = FixestMulti(
-        data=data,
         copy_data=copy_data,
         store_data=store_data,
         lean=lean,
@@ -295,37 +274,12 @@ def feglm(
         split=split,
         fsplit=fsplit,
         context=context,
-    )
-
-    # same checks as for Poisson regression
-    fixest._prepare_estimation(
-        estimation=f"feglm-{family}",
-        fml=fml,
-        vcov=vcov,
-        vcov_kwargs=vcov_kwargs,
-        weights=weights,
-        ssc=ssc,
-        fixef_rm=fixef_rm,
+        separation_check=separation_check,
         drop_intercept=drop_intercept,
-    )
-    if fixest._is_iv:
-        raise NotImplementedError(
-            "IV Estimation is not supported for Poisson Regression"
-        )
-
-    fixest._estimate_all_models(
-        vcov=vcov,
         solver=solver,
-        vcov_kwargs=vcov_kwargs,
         iwls_tol=iwls_tol,
         iwls_maxiter=iwls_maxiter,
-        collin_tol=collin_tol,
-        separation_check=separation_check,
         demeaner_backend=demeaner_backend,
         accelerate=accelerate,
+        iv_error_message="IV Estimation is not supported for Poisson Regression",
     )
-
-    if fixest._is_multiple_estimation:
-        return fixest
-    else:
-        return fixest.fetch_model(0, print_fml=False)

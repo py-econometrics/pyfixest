@@ -1,8 +1,18 @@
-from typing import Optional, Union
+from collections.abc import Mapping
+from typing import Any, Optional, Union
 
 import pandas as pd
 
+from pyfixest.estimation.fixest_multi import FixestMulti
+from pyfixest.estimation.internals.literals import (
+    DemeanerBackendOptions,
+    QuantregMethodOptions,
+    QuantregMultiOptions,
+    SolverOptions,
+)
 from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
+from pyfixest.utils.utils import capture_context
+from pyfixest.utils.utils import ssc as ssc_func
 
 
 def _estimation_input_checks(
@@ -181,3 +191,120 @@ def _estimation_input_checks(
                 raise ValueError(
                     f"The variable '{vcov_kwargs['panel_id']}' is not in the data."
                 )
+
+
+def _run_estimation(
+    *,
+    estimation: str,
+    fml: str,
+    data: DataFrameType,
+    vcov: Optional[Union[str, dict[str, str]]],
+    vcov_kwargs: Optional[dict[str, Union[str, int]]],
+    weights: Union[None, str],
+    ssc: Optional[dict[str, Union[str, bool]]],
+    fixef_rm: str,
+    collin_tol: float,
+    copy_data: bool,
+    store_data: bool,
+    lean: bool,
+    fixef_tol: float,
+    fixef_maxiter: int,
+    weights_type: str,
+    use_compression: bool,
+    reps: Optional[int],
+    seed: Optional[int],
+    split: Optional[str],
+    fsplit: Optional[str],
+    context: Optional[Union[int, Mapping[str, Any]]],
+    separation_check: Optional[list[str]] = None,
+    drop_intercept: bool = False,
+    solver: SolverOptions = "scipy.linalg.solve",
+    demeaner_backend: DemeanerBackendOptions = "numba",
+    iwls_tol: float = 1e-08,
+    iwls_maxiter: int = 25,
+    accelerate: bool = True,
+    quantile: Optional[Union[float, list[float]]] = None,
+    quantile_tol: float = 1e-06,
+    quantile_maxiter: Optional[int] = None,
+    quantreg_method: QuantregMethodOptions = "fn",
+    quantreg_multi_method: QuantregMultiOptions = "cfm1",
+    iv_error_message: Optional[str] = None,
+):
+    if ssc is None:
+        ssc = ssc_func()
+    context = {} if context is None else capture_context(context)
+
+    _estimation_input_checks(
+        fml=fml,
+        data=data,
+        vcov=vcov,
+        vcov_kwargs=vcov_kwargs,
+        weights=weights,
+        ssc=ssc,
+        fixef_rm=fixef_rm,
+        collin_tol=collin_tol,
+        copy_data=copy_data,
+        store_data=store_data,
+        lean=lean,
+        fixef_tol=fixef_tol,
+        fixef_maxiter=fixef_maxiter,
+        weights_type=weights_type,
+        use_compression=use_compression,
+        reps=reps,
+        seed=seed,
+        split=split,
+        fsplit=fsplit,
+        separation_check=separation_check,
+    )
+
+    fixest = FixestMulti(
+        data=data,
+        copy_data=copy_data,
+        store_data=store_data,
+        lean=lean,
+        fixef_tol=fixef_tol,
+        fixef_maxiter=fixef_maxiter,
+        weights_type=weights_type,
+        use_compression=use_compression,
+        reps=reps,
+        seed=seed,
+        split=split,
+        fsplit=fsplit,
+        context=context,
+        quantreg_method=quantreg_method,
+        quantreg_multi_method=quantreg_multi_method,
+    )
+
+    fixest._prepare_estimation(
+        estimation=estimation,
+        fml=fml,
+        vcov=vcov,
+        vcov_kwargs=vcov_kwargs,
+        weights=weights,
+        ssc=ssc,
+        fixef_rm=fixef_rm,
+        drop_intercept=drop_intercept,
+        quantile=quantile,
+        quantile_tol=quantile_tol,
+        quantile_maxiter=quantile_maxiter,
+    )
+
+    if iv_error_message is not None and fixest._is_iv:
+        raise NotImplementedError(iv_error_message)
+
+    fixest._estimate_all_models(
+        vcov=vcov,
+        solver=solver,
+        vcov_kwargs=vcov_kwargs,
+        demeaner_backend=demeaner_backend,
+        collin_tol=collin_tol,
+        iwls_maxiter=iwls_maxiter,
+        iwls_tol=iwls_tol,
+        separation_check=separation_check,
+        accelerate=accelerate,
+    )
+
+    if fixest._is_multiple_estimation:
+        return fixest
+    else:
+        return fixest.fetch_model(0, print_fml=False)

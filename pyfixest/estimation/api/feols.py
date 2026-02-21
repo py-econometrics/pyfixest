@@ -1,8 +1,8 @@
 from collections.abc import Mapping
 from typing import Any, Optional, Union
 
-from pyfixest.estimation.api.utils import _estimation_input_checks
-from pyfixest.estimation.FixestMulti_ import FixestMulti
+from pyfixest.estimation.api.utils import _run_estimation
+from pyfixest.estimation.fixest_multi import FixestMulti
 from pyfixest.estimation.internals.literals import (
     DemeanerBackendOptions,
     FixedRmOptions,
@@ -12,8 +12,6 @@ from pyfixest.estimation.internals.literals import (
 )
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.utils.dev_utils import DataFrameType
-from pyfixest.utils.utils import capture_context
-from pyfixest.utils.utils import ssc as ssc_func
 
 
 def feols(
@@ -185,7 +183,7 @@ def feols(
     -------
     object
         An instance of the [Feols](/reference/estimation.models.feols_.Feols.qmd) class or
-        [FixestMulti](/reference/estimation.FixestMulti_.FixestMulti.qmd) class for multiple models specified via `fml`.
+        [FixestMulti](/reference/estimation.fixest_multi.FixestMulti.qmd) class for multiple models specified via `fml`.
 
     Examples
     --------
@@ -452,11 +450,9 @@ def feols(
     fit_D.ccv(treatment = "D", cluster = "group_id")
     ```
     """
-    if ssc is None:
-        ssc = ssc_func()
-    context = {} if context is None else capture_context(context)
-
-    _estimation_input_checks(
+    estimation = "feols" if not use_compression else "compression"
+    return _run_estimation(
+        estimation=estimation,
         fml=fml,
         data=data,
         vcov=vcov,
@@ -465,21 +461,6 @@ def feols(
         ssc=ssc,
         fixef_rm=fixef_rm,
         collin_tol=collin_tol,
-        copy_data=copy_data,
-        store_data=store_data,
-        lean=lean,
-        fixef_tol=fixef_tol,
-        fixef_maxiter=fixef_maxiter,
-        weights_type=weights_type,
-        use_compression=use_compression,
-        reps=reps,
-        seed=seed,
-        split=split,
-        fsplit=fsplit,
-    )
-
-    fixest = FixestMulti(
-        data=data,
         copy_data=copy_data,
         store_data=store_data,
         lean=lean,
@@ -492,31 +473,7 @@ def feols(
         split=split,
         fsplit=fsplit,
         context=context,
-    )
-
-    estimation = "feols" if not use_compression else "compression"
-
-    fixest._prepare_estimation(
-        estimation=estimation,
-        fml=fml,
-        vcov=vcov,
-        vcov_kwargs=vcov_kwargs,
-        weights=weights,
-        ssc=ssc,
-        fixef_rm=fixef_rm,
         drop_intercept=drop_intercept,
-    )
-
-    # demean all models: based on fixed effects x split x missing value combinations
-    fixest._estimate_all_models(
-        vcov=vcov,
         solver=solver,
-        vcov_kwargs=vcov_kwargs,
-        collin_tol=collin_tol,
         demeaner_backend=demeaner_backend,
     )
-
-    if fixest._is_multiple_estimation:
-        return fixest
-    else:
-        return fixest.fetch_model(0, print_fml=False)
