@@ -103,6 +103,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     "search-label": "Search"
   }
 }</script>
+<!-- Cloudflare Web Analytics --><script defer="" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon="{&quot;token&quot;: &quot;bfa3a9287252444c8aa02b664fea7f09&quot;}"></script><!-- End Cloudflare Web Analytics -->
 <script src="https://cdn.jsdelivr.net/npm/requirejs@2.3.6/require.min.js" integrity="sha384-c9c+LnTbwQ3aujuU7ULEPVvgLs+Fn6fJUvIGTsuu1ZcCf11fiEubah0ttpca4ntM sha384-6V1/AdqZRWk1KAlWbKBlGhN7VG4iE/yAZcO6NZPMF8od0vukrvr0tg4qY6NSrItx" crossorigin="anonymous"></script>
 
 <script type="application/javascript">define('jquery', [],function() {return window.jQuery;})</script>
@@ -635,7 +636,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="examples" class="level2 doc-section doc-section-examples">
 <h2 class="doc-section doc-section-examples anchored" data-anchor-id="examples">Examples</h2>
-<div id="387b6841" class="cell" data-execution_count="1">
+<div id="7e191304" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.estimation.deprecated.model_matrix_fixest_ <span class="im">import</span> model_matrix_fixest</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -647,7 +648,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>mm</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 
-            <div id="iK7ROZ"></div>
+            <div id="5Joq8z"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -671,9 +672,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("iK7ROZ").appendChild(div);
+                        document.getElementById("5Joq8z").appendChild(div);
                     };
-                    var e = document.getElementById("iK7ROZ");
+                    var e = document.getElementById("5Joq8z");
                     e.appendChild(script);
                 })()
             </script>
@@ -681,7 +682,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <div class="cell-output cell-output-display">
 
-            <div id="Om4Q2B"></div>
+            <div id="jF19TZ"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -705,16 +706,16 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("Om4Q2B").appendChild(div);
+                        document.getElementById("jF19TZ").appendChild(div);
                     };
-                    var e = document.getElementById("Om4Q2B");
+                    var e = document.getElementById("jF19TZ");
                     e.appendChild(script);
                 })()
             </script>
             
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>/tmp/ipykernel_6836/1137470569.py:8: FutureWarning: model_matrix_fixest is deprecated and will be removed in a future version. Use `pyfixest.estimation.formula.model_matrix.create_model_matrix()` with a `Formula` object instead. See https://py-econometrics.github.io/pyfixest/reference/estimation.formula.model_matrix.ModelMatrix.html
+<pre><code>/tmp/ipykernel_6817/1137470569.py:8: FutureWarning: model_matrix_fixest is deprecated and will be removed in a future version. Use `pyfixest.estimation.formula.model_matrix.create_model_matrix()` with a `Formula` object instead. See https://pyfixest.org/reference/estimation.formula.model_matrix.ModelMatrix.html
   mm = model_matrix_fixest(FixestFormula, data)</code></pre>
 </div>
 <div class="cell-output cell-output-display" data-execution_count="1">
@@ -761,7 +762,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
          ModelSpec(formula=X1 + f1 + f2, materializer='pandas', materializer_params={}, ensure_full_rank=True, na_action=&lt;NAAction.DROP: 'drop'&gt;, output='pandas', cluster_by=&lt;ClusterBy.NONE: 'none'&gt;, structure=[EncodedTermStructure(term=X1, scoped_terms=[X1], columns=['X1']), EncodedTermStructure(term=f1, scoped_terms=[f1], columns=['f1']), EncodedTermStructure(term=f2, scoped_terms=[f2], columns=['f2'])], transform_state={}, encoder_state={'X1': (&lt;Kind.NUMERICAL: 'numerical'&gt;, {}), 'f1': (&lt;Kind.NUMERICAL: 'numerical'&gt;, {}), 'f2': (&lt;Kind.NUMERICAL: 'numerical'&gt;, {})})}</code></pre>
 </div>
 </div>
-<p>.. deprecated:: This function will be deprecated in a future version. Use <code>pyfixest.estimation.formula.model_matrix.create_model_matrix()</code> with a <code>Formula</code> object instead. See https://py-econometrics.github.io/pyfixest/reference/estimation.formula.model_matrix.ModelMatrix.html</p>
+<p>.. deprecated:: This function will be deprecated in a future version. Use <code>pyfixest.estimation.formula.model_matrix.create_model_matrix()</code> with a <code>Formula</code> object instead. See https://pyfixest.org/reference/estimation.formula.model_matrix.ModelMatrix.html</p>
 
 
 </section>
