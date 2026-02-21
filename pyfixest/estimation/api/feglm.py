@@ -2,15 +2,15 @@ from collections.abc import Mapping
 from typing import Any, Optional, Union
 
 from pyfixest.estimation.api.utils import _estimation_input_checks
-from pyfixest.estimation.feols_ import Feols
-from pyfixest.estimation.fepois_ import Fepois
 from pyfixest.estimation.FixestMulti_ import FixestMulti
-from pyfixest.estimation.literals import (
+from pyfixest.estimation.internals.literals import (
     DemeanerBackendOptions,
     FixedRmOptions,
     SolverOptions,
     VcovTypeOptions,
 )
+from pyfixest.estimation.models.feols_ import Feols
+from pyfixest.estimation.models.fepois_ import Fepois
 from pyfixest.utils.dev_utils import DataFrameType
 from pyfixest.utils.utils import capture_context
 from pyfixest.utils.utils import ssc as ssc_func
@@ -44,9 +44,9 @@ def feglm(
     """
     Estimate GLM regression models with fixed effects.
 
-    Supported families: [logit](/reference/estimation.felogit_.Felogit.qmd),
-    [probit](/reference/estimation.feprobit_.Feprobit.qmd),
-    [gaussian](/reference/estimation.fegaussian_.Fegaussian.qmd).
+    Supported families: [logit](/reference/estimation.models.felogit_.Felogit.qmd),
+    [probit](/reference/estimation.models.feprobit_.Feprobit.qmd),
+    [gaussian](/reference/estimation.models.fegaussian_.Fegaussian.qmd).
 
     References
     ----------
@@ -194,10 +194,10 @@ def feglm(
     Returns
     -------
     object
-        An instance of the [Feglm](/reference/estimation.feglm_.Feglm.qmd) class
-        (or one of its subclasses: [Felogit](/reference/estimation.felogit_.Felogit.qmd),
-        [Feprobit](/reference/estimation.feprobit_.Feprobit.qmd),
-        [Fegaussian](/reference/estimation.fegaussian_.Fegaussian.qmd)) or an instance of
+        An instance of the [Feglm](/reference/estimation.models.feglm_.Feglm.qmd) class
+        (or one of its subclasses: [Felogit](/reference/estimation.models.felogit_.Felogit.qmd),
+        [Feprobit](/reference/estimation.models.feprobit_.Feprobit.qmd),
+        [Fegaussian](/reference/estimation.models.fegaussian_.Fegaussian.qmd)) or an instance of
         class [FixestMulti](/reference/estimation.FixestMulti_.FixestMulti.qmd) for multiple models specified via `fml`.
 
     Examples

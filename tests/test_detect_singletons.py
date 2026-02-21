@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from pyfixest.estimation.detect_singletons_ import detect_singletons
+from pyfixest.estimation.internals.detect_singletons_ import detect_singletons
 from pyfixest.estimation.jax.detect_singletons_jax import detect_singletons_jax
 
 input1 = np.array([[0, 2, 1], [0, 2, 1], [0, 1, 3], [0, 1, 2], [0, 1, 2]])

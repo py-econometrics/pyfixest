@@ -7,8 +7,8 @@ import numpy as np
 import pandas as pd
 from formulaic import Formula
 
-from pyfixest.estimation.detect_singletons_ import detect_singletons
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
+from pyfixest.estimation.internals.detect_singletons_ import detect_singletons
 from pyfixest.utils.utils import capture_context
 
 
@@ -83,7 +83,7 @@ def model_matrix_fixest(
     --------
     ```{python}
     import pyfixest as pf
-    from pyfixest.estimation.model_matrix_fixest_ import model_matrix_fixest
+    from pyfixest.estimation.deprecated.model_matrix_fixest_ import model_matrix_fixest
 
     data = pf.get_data()
     fit = pf.feols("Y ~ X1 + f1 + f2", data=data)

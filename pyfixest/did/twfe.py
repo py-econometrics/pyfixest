@@ -4,7 +4,7 @@ import pandas as pd
 
 from pyfixest.did.did import DID
 from pyfixest.estimation import feols
-from pyfixest.estimation.feols_ import Feols
+from pyfixest.estimation.models.feols_ import Feols
 
 
 class TWFE(DID):
@@ -83,7 +83,7 @@ class TWFE(DID):
         """
         Variance-covariance matrix.
 
-        The vcov matrix is calculated via the [Feols](/reference/estimation.feols_.Feols.qmd) object.
+        The vcov matrix is calculated via the [Feols](/reference/estimation.models.feols_.Feols.qmd) object.
 
         Notes
         -----
