@@ -1,4 +1,4 @@
-"""Backward-compatible shim. Real module at pyfixest.estimation.models.feiv_."""
+"""Backward-compatible shim. Real module at pyfixest.estimation.compat.feiv."""
 
-from pyfixest.estimation.models.feiv_ import *  # noqa: F403
-from pyfixest.estimation.models.feiv_ import Feiv  # noqa: F401
+from pyfixest.estimation.compat.feiv import *  # noqa: F403
+from pyfixest.estimation.compat.feiv import Feiv  # noqa: F401

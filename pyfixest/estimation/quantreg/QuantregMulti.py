@@ -3,6 +3,6 @@
 Prefer importing from `pyfixest.estimation.quantreg.quantreg_multi`.
 """
 
-from pyfixest.estimation.quantreg.quantreg_multi import QuantregMulti
+from pyfixest.estimation.compat.quantreg_multi import QuantregMulti
 
 __all__ = ["QuantregMulti"]

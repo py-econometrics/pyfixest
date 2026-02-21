@@ -1,4 +1,4 @@
-"""Backward-compatible shim. Real module at pyfixest.estimation.models.fepois_."""
+"""Backward-compatible shim. Real module at pyfixest.estimation.compat.fepois."""
 
-from pyfixest.estimation.models.fepois_ import *  # noqa: F403
-from pyfixest.estimation.models.fepois_ import Fepois  # noqa: F401
+from pyfixest.estimation.compat.fepois import *  # noqa: F403
+from pyfixest.estimation.compat.fepois import Fepois  # noqa: F401

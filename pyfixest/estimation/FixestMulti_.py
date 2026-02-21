@@ -3,6 +3,6 @@
 Prefer importing from `pyfixest.estimation.fixest_multi`.
 """
 
-from pyfixest.estimation.fixest_multi import FixestMulti
+from pyfixest.estimation.compat.fixest_multi import FixestMulti
 
 __all__ = ["FixestMulti"]
