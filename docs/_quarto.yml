@@ -5,6 +5,10 @@ project:
 execute:
   python: "../.pixi/envs/docs/bin/python3"
 
+format:
+  html:
+    include-in-header: analytics.html
+
 metadata-files:
   - _sidebar.yml
 
