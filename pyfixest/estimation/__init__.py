@@ -4,9 +4,6 @@ from pyfixest.estimation.api import (
     fepois,
     quantreg,
 )
-from pyfixest.estimation.deprecated.model_matrix_fixest_ import (
-    model_matrix_fixest,
-)
 from pyfixest.estimation.FixestMulti_ import (
     FixestMulti,
 )
@@ -52,7 +49,6 @@ __all__ = [
     "feols",
     "fepois",
     "literals",
-    "model_matrix_fixest",
     "quantreg",
     "rwolf",
     "wyoung",

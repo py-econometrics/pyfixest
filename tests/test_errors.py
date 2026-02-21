@@ -5,7 +5,6 @@ from formulaic.errors import FactorEvaluationError
 
 import pyfixest as pf
 from pyfixest.errors import (
-    DuplicateKeyError,
     EndogVarsAsCovarsError,
     FormulaSyntaxError,
     InstrumentsAsCovarsError,
@@ -14,7 +13,6 @@ from pyfixest.errors import (
     VcovTypeNotSupportedError,
 )
 from pyfixest.estimation import feols, fepois
-from pyfixest.estimation.deprecated.FormulaParser import FixestFormulaParser
 from pyfixest.estimation.post_estimation.multcomp import rwolf
 from pyfixest.report.summarize import etable, summary
 from pyfixest.utils.dgps import gelbach_data
@@ -24,25 +22,6 @@ from pyfixest.utils.utils import get_data, ssc
 @pytest.fixture
 def data():
     return pf.get_data()
-
-
-def test_formula_parser2():
-    with pytest.raises(DuplicateKeyError):
-        FixestFormulaParser("y ~ sw(a, b) +  sw(c, d)| sw(X3, X4))")
-
-
-def test_formula_parser3():
-    with pytest.raises(DuplicateKeyError):
-        FixestFormulaParser("y ~ sw(a, b) +  csw(c, d)| sw(X3, X4))")
-
-
-# def test_formula_parser2():
-#    with pytest.raises(FixedEffectInteractionError):
-#        FixestFormulaParser('y ~ X1 + X2 | X3:X4')
-
-# def test_formula_parser3():
-#    with pytest.raises(CovariateInteractionError):
-#        FixestFormulaParser('y ~ X1 + X2^X3')
 
 
 def test_cluster_na():

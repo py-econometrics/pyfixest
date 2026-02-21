@@ -42,7 +42,6 @@ website:
     - contents:
       - reference/estimation.internals.demean_.demean.qmd
       - reference/estimation.internals.detect_singletons_.detect_singletons.qmd
-      - reference/estimation.deprecated.model_matrix_fixest_.model_matrix_fixest.qmd
       section: Misc / Utilities
     id: reference
   - id: dummy-sidebar
