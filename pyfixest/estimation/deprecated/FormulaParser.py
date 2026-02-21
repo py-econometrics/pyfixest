@@ -45,7 +45,7 @@ class FixestFormulaParser:
         warnings.warn(
             "FixestFormulaParser is deprecated and will be removed in a future version. "
             "Use `pyfixest.estimation.formula.parse.parse()` instead. "
-            "See https://py-econometrics.github.io/pyfixest/reference/estimation.formula.parse.parse.html",
+            "See https://pyfixest.org/reference/estimation.formula.parse.parse.html",
             FutureWarning,
             stacklevel=2,
         )

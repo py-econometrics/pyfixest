@@ -199,7 +199,7 @@ fit5.summary()
 
 which matches Stata exactly.  You can read all about the small sample size corrections
 implememnted by `pyfixest` at
-[On Small Sample Corrections](https://py-econometrics.github.io/pyfixest/ssc.html).
+[On Small Sample Corrections](https://pyfixest.org/ssc.html).
 
 ## Clustered Standard Errors
 
@@ -287,7 +287,7 @@ fit8.summary()
 ```
 
 As a reminder, for an excellent breakdown on small sample correction in the `pyfixest` package, you can check out
-[On Small Sample Correction](https://py-econometrics.github.io/pyfixest/ssc.html).
+[On Small Sample Correction](https://pyfixest.org/ssc.html).
 
 # Fixed Effect Regressions
 

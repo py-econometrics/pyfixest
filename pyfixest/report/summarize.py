@@ -164,7 +164,7 @@ def etable(
 
     Examples
     --------
-    For more examples, take a look at the [regression tables and summary statistics vignette](https://py-econometrics.github.io/pyfixest/table-layout.html).
+    For more examples, take a look at the [regression tables and summary statistics vignette](https://pyfixest.org/table-layout.html).
 
     ```{python}
     import pyfixest as pf
@@ -412,7 +412,7 @@ def dtable(
 
     Examples
     --------
-    For more examples, take a look at the [regression tables and summary statistics vignette](https://py-econometrics.github.io/pyfixest/table-layout.html).
+    For more examples, take a look at the [regression tables and summary statistics vignette](https://pyfixest.org/table-layout.html).
 
     ```{python}
     import pyfixest as pf

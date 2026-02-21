@@ -96,12 +96,12 @@ def model_matrix_fixest(
     .. deprecated::
         This function will be deprecated in a future version.
         Use `pyfixest.estimation.formula.model_matrix.create_model_matrix()` with a `Formula` object instead.
-        See https://py-econometrics.github.io/pyfixest/reference/estimation.formula.model_matrix.ModelMatrix.html
+        See https://pyfixest.org/reference/estimation.formula.model_matrix.ModelMatrix.html
     """
     warnings.warn(
         "model_matrix_fixest is deprecated and will be removed in a future version. "
         "Use `pyfixest.estimation.formula.model_matrix.create_model_matrix()` with a `Formula` object instead. "
-        "See https://py-econometrics.github.io/pyfixest/reference/estimation.formula.model_matrix.ModelMatrix.html",
+        "See https://pyfixest.org/reference/estimation.formula.model_matrix.ModelMatrix.html",
         FutureWarning,
         stacklevel=2,
     )

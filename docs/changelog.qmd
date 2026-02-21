@@ -248,7 +248,7 @@ fit_c = pf.feols(fml = "Y ~ i(X1, f1)", data = df)
 fit_c.iplot(cat_template = "{variable}::{value}")
 ```
 
-This is particularly useful for Difference-in-Differences and event studies. You can find an example use case in the DiD [vignette](https://py-econometrics.github.io/pyfixest/difference-in-differences.html#one-shot-adoption-static-and-dynamic-specifications).
+This is particularly useful for Difference-in-Differences and event studies. You can find an example use case in the DiD [vignette](https://pyfixest.org/difference-in-differences.html#one-shot-adoption-static-and-dynamic-specifications).
 
 Going forward, we will deprecate the `rename_event_study_coefs` function, which is no longer needed (and did not work anyways).
 
@@ -353,7 +353,7 @@ pf.etable([fit_nb, fit_rust], digits = 8)
 ```
 
 - We now support **quantile regression**, including a Frisch-Newton Interior Point Solver with and without preprocessing, iid, heteroskedastic and cluster robust standard errors, fast algorithms for the entire quantile regression process, and some visualisations. In particular the algorithms for the quantile regression process show excellent performance. You can
-learn more about all features and take a look at more systematic benchmarks in the [quantreg vignette](https://py-econometrics.github.io/pyfixest/quantile-regression.html).
+learn more about all features and take a look at more systematic benchmarks in the [quantreg vignette](https://pyfixest.org/quantile-regression.html).
 
 ```{python}
 #| eval: false
