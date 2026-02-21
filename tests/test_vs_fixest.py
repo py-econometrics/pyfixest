@@ -11,7 +11,7 @@ from rpy2.robjects.packages import importr
 
 import pyfixest as pf
 from pyfixest.estimation import feols
-from pyfixest.estimation.FixestMulti_ import FixestMulti
+from pyfixest.estimation.fixest_multi import FixestMulti
 from pyfixest.utils.utils import get_data, ssc
 
 pandas2ri.activate()

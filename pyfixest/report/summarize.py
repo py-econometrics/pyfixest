@@ -5,7 +5,7 @@ import maketables
 import numpy as np
 import pandas as pd
 
-from pyfixest.estimation.FixestMulti_ import FixestMulti
+from pyfixest.estimation.fixest_multi import FixestMulti
 from pyfixest.estimation.models.feiv_ import Feiv
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.models.fepois_ import Fepois

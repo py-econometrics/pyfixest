@@ -4,7 +4,7 @@ from pyfixest.estimation.api import (
     fepois,
     quantreg,
 )
-from pyfixest.estimation.FixestMulti_ import (
+from pyfixest.estimation.fixest_multi import (
     FixestMulti,
 )
 from pyfixest.estimation.internals import literals
