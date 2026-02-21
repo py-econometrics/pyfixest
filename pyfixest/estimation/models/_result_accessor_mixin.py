@@ -15,8 +15,33 @@ from pyfixest.utils.utils import simultaneous_crit_val
 class ResultAccessorMixin:
     """Mixin providing result-accessor methods for fitted models."""
 
+    # Type declarations for attributes provided by the host class (Feols).
+    _vcov: np.ndarray
+    _beta_hat: np.ndarray
+    _se: np.ndarray
+    _tstat: np.ndarray
+    _pvalue: np.ndarray
+    _conf_int: np.ndarray
+    _u_hat: np.ndarray
+    _weights: np.ndarray
+    _Y: np.ndarray
+    _Y_untransformed: pd.Series
+    _coefnames: list[str]
+    _method: str
+    _drop_intercept: bool
+    _has_fixef: bool
+    _k_fe: pd.Series
+    _N: int
+    _k: int
+    _df_t: int
+    _rmse: float
+    _r2: float
+    _adj_r2: float
+    _r2_within: float
+    _adj_r2_within: float
+
     def _bind_report_methods(self):
-        """Bind summary, coefplot, and iplot from pyfixest.report as instance methods."""
+        """Bind summary, coefplot, iplot, and etable from pyfixest.report as instance methods."""
         _module = import_module("pyfixest.report")
 
         _tmp = _module.summary
@@ -31,10 +56,9 @@ class ResultAccessorMixin:
         self.iplot = functools.partial(_tmp, models=[self])
         self.iplot.__doc__ = _tmp.__doc__
 
-        _tmp = _module.etable 
+        _tmp = _module.etable
         self.etable = functools.partial(_tmp, models=[self])
         self.etable.__doc__ = _tmp.__doc__
-
 
     def get_inference(self, alpha: float = 0.05) -> None:
         """

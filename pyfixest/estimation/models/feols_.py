@@ -13,7 +13,6 @@ from scipy.sparse.linalg import lsqr
 from scipy.stats import chi2, f, t
 
 from pyfixest.errors import VcovTypeNotSupportedError
-from pyfixest.estimation.models._result_accessor_mixin import ResultAccessorMixin
 from pyfixest.estimation.formula import model_matrix as model_matrix_fixest
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.backends import BACKENDS
@@ -37,6 +36,7 @@ from pyfixest.estimation.internals.vcov_utils import (
     _nw_meat_time,
     _prepare_twoway_clustering,
 )
+from pyfixest.estimation.models._result_accessor_mixin import ResultAccessorMixin
 from pyfixest.estimation.post_estimation.decomposition import (
     GelbachDecomposition,
     _decompose_arg_check,
@@ -539,7 +539,7 @@ class Feols(ResultAccessorMixin):
         self._k = self._X.shape[1] if not self._X_is_empty else 0
 
     def _get_predictors(self) -> None:
-        self._Y_hat_link = self._Y_untransformed.values.flatten() - self.resid()
+        self._Y_hat_link = self._Y_untransformed.to_numpy().flatten() - self.resid()
         self._Y_hat_response = self._Y_hat_link
 
     def get_fit(self) -> None:
@@ -1072,7 +1072,7 @@ class Feols(ResultAccessorMixin):
             self._data = _data
 
         self._ssc_dict = _ssc_dict
-        self._k_fe = _k_fe
+        self._k_fe = _k_fe  # type: ignore[assignment]
         if fval != "0":
             self._has_fixef = True
             self._fixef = fval
