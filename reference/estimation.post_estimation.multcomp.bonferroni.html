@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>estimation.detect_singletons</title>
+<title>estimation.post_estimation.multcomp.bonferroni</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -58,7 +58,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </style>
 
 
-<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" integrity="sha384-ZvpUoO/+PpLXR1lu4jmpXWu80pZlYUAfxl5NsBMWOEPSjUn/6Z/hRTt8+pR6L4N2" crossorigin="anonymous"></script><script src="../site_libs/quarto-nav/quarto-nav.js"></script>
 <script src="../site_libs/quarto-nav/headroom.min.js"></script>
 <script src="../site_libs/clipboard/clipboard.min.js"></script>
 <script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
@@ -75,7 +75,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <link href="../site_libs/quarto-html/quarto-syntax-highlighting-7b89279ff1a6dce999919e0e67d4d9ec.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-381776df98abee29e77bfaddc64fade2.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-b9c55ee423fe9b09b80369c068559168.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -103,6 +103,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     "search-label": "Search"
   }
 }</script>
+<script src="https://cdn.jsdelivr.net/npm/requirejs@2.3.6/require.min.js" integrity="sha384-c9c+LnTbwQ3aujuU7ULEPVvgLs+Fn6fJUvIGTsuu1ZcCf11fiEubah0ttpca4ntM sha384-6V1/AdqZRWk1KAlWbKBlGhN7VG4iE/yAZcO6NZPMF8od0vukrvr0tg4qY6NSrItx" crossorigin="anonymous"></script>
+
+<script type="application/javascript">define('jquery', [],function() {return window.jQuery;})</script>
 
 
 </head>
@@ -236,7 +239,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/estimation.demean.html">Misc / Utilities</a></li><li class="breadcrumb-item"><a href="../reference/estimation.detect_singletons.html">estimation.detect_singletons</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/estimation.api.feols.feols.html">Estimation Functions</a></li><li class="breadcrumb-item"><a href="../reference/estimation.post_estimation.multcomp.bonferroni.html">estimation.post_estimation.multcomp.bonferroni</a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
     </div>
@@ -311,14 +314,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.bonferroni.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.bonferroni</span></a>
+  <a href="../reference/estimation.post_estimation.multcomp.bonferroni.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text">estimation.post_estimation.multcomp.bonferroni</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.rwolf.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.rwolf</span></a>
+  <a href="../reference/estimation.post_estimation.multcomp.rwolf.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.post_estimation.multcomp.rwolf</span></a>
   </div>
 </li>
       </ul>
@@ -334,50 +337,50 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.feols_.Feols.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.feols_.Feols</span></a>
+  <a href="../reference/estimation.models.feols_.Feols.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.models.feols_.Feols</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.fepois_.Fepois.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.fepois_.Fepois</span></a>
+  <a href="../reference/estimation.models.fepois_.Fepois.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.models.fepois_.Fepois</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.feiv_.Feiv.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.feiv_.Feiv</span></a>
+  <a href="../reference/estimation.models.feiv_.Feiv.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.models.feiv_.Feiv</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.feglm_.Feglm.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.feglm_.Feglm</span></a>
+  <a href="../reference/estimation.models.feglm_.Feglm.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.models.feglm_.Feglm</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.felogit_.Felogit.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.felogit_.Felogit</span></a>
+  <a href="../reference/estimation.models.felogit_.Felogit.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.models.felogit_.Felogit</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.feprobit_.Feprobit.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.feprobit_.Feprobit</span></a>
+  <a href="../reference/estimation.models.feprobit_.Feprobit.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.models.feprobit_.Feprobit</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.fegaussian_.Fegaussian.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.fegaussian_.Fegaussian</span></a>
+  <a href="../reference/estimation.models.fegaussian_.Fegaussian.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.models.fegaussian_.Fegaussian</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.feols_compressed_.FeolsCompressed.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.feols_compressed_.FeolsCompressed</span></a>
+  <a href="../reference/estimation.models.feols_compressed_.FeolsCompressed.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.models.feols_compressed_.FeolsCompressed</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -487,20 +490,20 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <ul id="quarto-sidebar-section-5" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.demean.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.demean</span></a>
+  <a href="../reference/estimation.internals.demean_.demean.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.internals.demean_.demean</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.detect_singletons.html" class="sidebar-item-text sidebar-link active">
- <span class="menu-text">estimation.detect_singletons</span></a>
+  <a href="../reference/estimation.internals.detect_singletons_.detect_singletons.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.internals.detect_singletons_.detect_singletons</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.model_matrix_fixest.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.model_matrix_fixest</span></a>
+  <a href="../reference/estimation.deprecated.model_matrix_fixest_.model_matrix_fixest.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.deprecated.model_matrix_fixest_.model_matrix_fixest</span></a>
   </div>
 </li>
       </ul>
@@ -512,24 +515,38 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <!-- margin-sidebar -->
     
 <!-- main -->
-<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/estimation.demean.html">Misc / Utilities</a></li><li class="breadcrumb-item"><a href="../reference/estimation.detect_singletons.html">estimation.detect_singletons</a></li></ol></nav></header>
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/estimation.api.feols.feols.html">Estimation Functions</a></li><li class="breadcrumb-item"><a href="../reference/estimation.post_estimation.multcomp.bonferroni.html">estimation.post_estimation.multcomp.bonferroni</a></li></ol></nav>
+<div class="quarto-title">
+<h1 class="title">estimation.post_estimation.multcomp.bonferroni</h1>
+</div>
 
 
 
+<div class="quarto-title-meta">
 
-<section id="pyfixest.estimation.detect_singletons" class="level1">
-<h1>estimation.detect_singletons</h1>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>estimation.detect_singletons(ids)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>Detect singleton fixed effects in a dataset.</p>
-<p>This function iterates over the columns of a 2D numpy array representing fixed effects to identify singleton fixed effects. An observation is considered a singleton if it is the only one in its group (fixed effect identifier).</p>
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>estimation.post_estimation.multcomp.bonferroni(models, param)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Compute Bonferroni adjusted p-values for multiple hypothesis testing.</p>
+<p>For each model, it is assumed that tests to adjust are of the form “param = 0”.</p>
 <section id="parameters" class="level2 doc-section doc-section-parameters">
 <h2 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters">Parameters</h2>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 4%">
-<col style="width: 6%">
-<col style="width: 83%">
-<col style="width: 6%">
+<col style="width: 5%">
+<col style="width: 48%">
+<col style="width: 38%">
+<col style="width: 7%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -541,9 +558,15 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </thead>
 <tbody>
 <tr class="odd">
-<td>ids</td>
-<td>np.ndarray</td>
-<td>A 2D numpy array representing fixed effects, with a shape of (n_samples, n_features). Elements should be non-negative integers representing fixed effect identifiers.</td>
+<td>models</td>
+<td>A supported model object (Feols, Fepois, Feiv, FixestMulti) or a list of</td>
+<td>Feols, Fepois &amp; Feiv models.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td>param</td>
+<td>str</td>
+<td>The parameter for which the p-values should be adjusted.</td>
 <td><em>required</em></td>
 </tr>
 </tbody>
@@ -553,9 +576,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h2 class="doc-section doc-section-returns anchored" data-anchor-id="returns">Returns</h2>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 6%">
+<col style="width: 7%">
 <col style="width: 12%">
-<col style="width: 81%">
+<col style="width: 80%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -567,19 +590,147 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tbody>
 <tr class="odd">
 <td></td>
-<td>numpy.ndarray</td>
-<td>A boolean array of shape (n_samples,), indicating which observations have a singleton fixed effect.</td>
+<td>pd.DataFrame</td>
+<td>A DataFrame containing estimation statistics, including the Bonferroni adjusted p-values.</td>
 </tr>
 </tbody>
 </table>
 </section>
-<section id="notes" class="level2 doc-section doc-section-notes">
-<h2 class="doc-section doc-section-notes anchored" data-anchor-id="notes">Notes</h2>
-<p>The algorithm iterates over columns to identify fixed effects. After each column is processed, it updates the record of non-singleton rows. This approach accounts for the possibility that removing an observation in one column can lead to the emergence of new singletons in subsequent columns.</p>
-<p>For performance reasons, the input array should be in column-major order. Operating on a row-major array can lead to significant performance losses.</p>
+<section id="examples" class="level2 doc-section doc-section-examples">
+<h2 class="doc-section doc-section-examples anchored" data-anchor-id="examples">Examples</h2>
+<div id="4e9dff3b" class="cell" data-execution_count="1">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.utils <span class="im">import</span> get_data</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> get_data().dropna()</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>fit1 <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1"</span>, data<span class="op">=</span>data)</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>fit2 <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 + X2"</span>, data<span class="op">=</span>data)</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>bonf_df <span class="op">=</span> pf.bonferroni([fit1, fit2], param<span class="op">=</span><span class="st">"X1"</span>)</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>bonf_df</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+
+            <div id="FDZvyA"></div>
+            <script type="text/javascript" data-lets-plot-script="library">
+                if(!window.letsPlotCallQueue) {
+                    window.letsPlotCallQueue = [];
+                }; 
+                window.letsPlotCall = function(f) {
+                    window.letsPlotCallQueue.push(f);
+                };
+                (function() {
+                    var script = document.createElement("script");
+                    script.type = "text/javascript";
+                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.7.3/js-package/distr/lets-plot.min.js";
+                    script.onload = function() {
+                        window.letsPlotCall = function(f) {f();};
+                        window.letsPlotCallQueue.forEach(function(f) {f();});
+                        window.letsPlotCallQueue = [];
+                        
+                    };
+                    script.onerror = function(event) {
+                        window.letsPlotCall = function(f) {};    // noop
+                        window.letsPlotCallQueue = [];
+                        var div = document.createElement("div");
+                        div.style.color = 'darkred';
+                        div.textContent = 'Error loading Lets-Plot JS';
+                        document.getElementById("FDZvyA").appendChild(div);
+                    };
+                    var e = document.getElementById("FDZvyA");
+                    e.appendChild(script);
+                })()
+            </script>
+            
+</div>
+<div class="cell-output cell-output-display">
+
+            <div id="1t8bJX"></div>
+            <script type="text/javascript" data-lets-plot-script="library">
+                if(!window.letsPlotCallQueue) {
+                    window.letsPlotCallQueue = [];
+                }; 
+                window.letsPlotCall = function(f) {
+                    window.letsPlotCallQueue.push(f);
+                };
+                (function() {
+                    var script = document.createElement("script");
+                    script.type = "text/javascript";
+                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.7.3/js-package/distr/lets-plot.min.js";
+                    script.onload = function() {
+                        window.letsPlotCall = function(f) {f();};
+                        window.letsPlotCallQueue.forEach(function(f) {f();});
+                        window.letsPlotCallQueue = [];
+                        
+                    };
+                    script.onerror = function(event) {
+                        window.letsPlotCall = function(f) {};    // noop
+                        window.letsPlotCallQueue = [];
+                        var div = document.createElement("div");
+                        div.style.color = 'darkred';
+                        div.textContent = 'Error loading Lets-Plot JS';
+                        document.getElementById("1t8bJX").appendChild(div);
+                    };
+                    var e = document.getElementById("1t8bJX");
+                    e.appendChild(script);
+                })()
+            </script>
+            
+</div>
+<div class="cell-output cell-output-display" data-execution_count="1">
+<div>
 
 
-</section>
+<table class="dataframe caption-top table table-sm table-striped small" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">est0</th>
+<th data-quarto-table-cell-role="th">est1</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">Estimate</th>
+<td>-1.001930</td>
+<td>-0.995197</td>
+</tr>
+<tr class="even">
+<th data-quarto-table-cell-role="th">Std. Error</th>
+<td>0.084823</td>
+<td>0.082194</td>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">t value</th>
+<td>-11.811964</td>
+<td>-12.107957</td>
+</tr>
+<tr class="even">
+<th data-quarto-table-cell-role="th">Pr(&gt;|t|)</th>
+<td>0.000000</td>
+<td>0.000000</td>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">2.5%</th>
+<td>-1.168383</td>
+<td>-1.156490</td>
+</tr>
+<tr class="even">
+<th data-quarto-table-cell-role="th">97.5%</th>
+<td>-0.835476</td>
+<td>-0.833904</td>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">Bonferroni Pr(&gt;|t|)</th>
+<td>0.000000</td>
+<td>0.000000</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+</div>
+</div>
+
+
 </section>
 
 </main> <!-- /main -->

@@ -75,7 +75,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <link href="site_libs/quarto-html/quarto-syntax-highlighting-7b89279ff1a6dce999919e0e67d4d9ec.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="site_libs/bootstrap/bootstrap-381776df98abee29e77bfaddc64fade2.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-b9c55ee423fe9b09b80369c068559168.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -318,7 +318,7 @@ window.Quarto = {
 <p>See also <a href="https://www.nber.org/conferences/si-2023-methods-lectures-linear-panel-event-studies">NBER SI methods lectures on Linear Panel Event Studies</a>.</p>
 <section id="setup" class="level2">
 <h2 class="anchored" data-anchor-id="setup">Setup</h2>
-<div id="63823694" class="cell" data-execution_count="1">
+<div id="041199ea" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> importlib <span class="im">import</span> resources</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
@@ -333,7 +333,7 @@ window.Quarto = {
 <span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>autoreload <span class="dv">2</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 
-            <div id="xeZcTj"></div>
+            <div id="4lJCSI"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -357,9 +357,9 @@ window.Quarto = {
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("xeZcTj").appendChild(div);
+                        document.getElementById("4lJCSI").appendChild(div);
                     };
-                    var e = document.getElementById("xeZcTj");
+                    var e = document.getElementById("4lJCSI");
                     e.appendChild(script);
                 })()
             </script>
@@ -367,7 +367,7 @@ window.Quarto = {
 </div>
 <div class="cell-output cell-output-display">
 
-            <div id="w6tjg0"></div>
+            <div id="vDD5Jb"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -391,21 +391,21 @@ window.Quarto = {
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("w6tjg0").appendChild(div);
+                        document.getElementById("vDD5Jb").appendChild(div);
                     };
-                    var e = document.getElementById("w6tjg0");
+                    var e = document.getElementById("vDD5Jb");
                     e.appendChild(script);
                 })()
             </script>
             
 </div>
 <div class="cell-output cell-output-stdout">
-<pre><code>pyfixest: 0.50.0a1
-pandas  : 2.3.3
+<pre><code>pandas  : 2.3.3
+pyfixest: 0.40.1
 </code></pre>
 </div>
 </div>
-<div id="40c4b0bd" class="cell" data-execution_count="2">
+<div id="ac63c1c9" class="cell" data-execution_count="2">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># one-shot adoption data - parallel trends is true</span></span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>df_one_cohort <span class="op">=</span> get_sharkfin()</span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>df_one_cohort.head()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -469,7 +469,7 @@ pandas  : 2.3.3
 </div>
 </div>
 </div>
-<div id="5c86d838" class="cell" data-execution_count="3">
+<div id="9f734d19" class="cell" data-execution_count="3">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># multi-cohort adoption data</span></span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>df_multi_cohort <span class="op">=</span> pd.read_csv(</span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    resources.files(<span class="st">"pyfixest.did.data"</span>).joinpath(<span class="st">"df_het.csv"</span>)</span>
@@ -593,7 +593,7 @@ pandas  : 2.3.3
 <section id="examining-treatment-timing" class="level2">
 <h2 class="anchored" data-anchor-id="examining-treatment-timing">Examining Treatment Timing</h2>
 <p>Before any DiD estimation, we need to examine the treatment timing, since it is crucial to our choice of estimator.</p>
-<div id="2414a5b2" class="cell" data-execution_count="4">
+<div id="834768f0" class="cell" data-execution_count="4">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>pf.panelview(</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    df_one_cohort,</span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    unit<span class="op">=</span><span class="st">"unit"</span>,</span>
@@ -614,7 +614,7 @@ pandas  : 2.3.3
 </div>
 </div>
 </div>
-<div id="f3af9629" class="cell" data-execution_count="5">
+<div id="215a5d69" class="cell" data-execution_count="5">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>pf.panelview(</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    df_multi_cohort,</span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    unit<span class="op">=</span><span class="st">"unit"</span>,</span>
@@ -637,7 +637,7 @@ pandas  : 2.3.3
 </div>
 <p>We immediately see that we have staggered adoption of treatment in the second case, which implies that a naive application of 2WFE might yield biased estimates under substantial effect heterogeneity.</p>
 <p>We can also plot treatment assignment in a disaggregated fashion, which gives us a sense of cohort sizes.</p>
-<div id="13b5da88" class="cell" data-execution_count="6">
+<div id="aab72f32" class="cell" data-execution_count="6">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>pf.panelview(</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    df_multi_cohort,</span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    unit<span class="op">=</span><span class="st">"unit"</span>,</span>
@@ -661,7 +661,7 @@ pandas  : 2.3.3
 <section id="inspecting-the-outcome-variable" class="level2">
 <h2 class="anchored" data-anchor-id="inspecting-the-outcome-variable">Inspecting the Outcome Variable</h2>
 <p><code>pf.panelview()</code> further allows us to inspect the “outcome” variable over time:</p>
-<div id="518e14b1" class="cell" data-fig-height="0.1" data-fig-width="0.4" data-execution_count="7">
+<div id="8bee3bae" class="cell" data-fig-height="0.1" data-fig-width="0.4" data-execution_count="7">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>pf.panelview(</span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    df_multi_cohort,</span>
 <span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    outcome<span class="op">=</span><span class="st">"dep_var"</span>,</span>
@@ -674,7 +674,7 @@ pandas  : 2.3.3
 <span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>    figsize<span class="op">=</span>(<span class="dv">7</span>, <span class="fl">2.5</span>),</span>
 <span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stderr">
-<pre><code>/home/runner/work/pyfixest/pyfixest/pyfixest/did/visualize.py:197: FutureWarning: DataFrameGroupBy.apply operated on the grouping columns. This behavior is deprecated, and in a future version of pandas the grouping columns will be excluded from the operation. Either pass `include_groups=False` to exclude the groupings or explicitly select the grouping columns after groupby to silence this warning.
+<pre><code>/Users/afischer/Documents/pyfixest/pyfixest/did/visualize.py:197: FutureWarning: DataFrameGroupBy.apply operated on the grouping columns. This behavior is deprecated, and in a future version of pandas the grouping columns will be excluded from the operation. Either pass `include_groups=False` to exclude the groupings or explicitly select the grouping columns after groupby to silence this warning.
   .apply(get_treatment_start)</code></pre>
 </div>
 <div class="cell-output cell-output-display">
@@ -687,7 +687,7 @@ pandas  : 2.3.3
 </div>
 <p>We immediately see that the first cohort is switched into treatment in 2000, while the second cohort is switched into treatment by 2010. Before each cohort is switched into treatment, the trends are parallel.</p>
 <p>We can additionally inspect individual units by dropping the collapse_to_cohort argument. Because we have a large sample, we might want to inspect only a subset of units.</p>
-<div id="858b1384" class="cell" data-fig-height="1" data-fig-width="4" data-execution_count="8">
+<div id="7fccc865" class="cell" data-fig-height="1" data-fig-width="4" data-execution_count="8">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>pf.panelview(</span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>    df_multi_cohort,</span>
 <span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    outcome<span class="op">=</span><span class="st">"dep_var"</span>,</span>
@@ -711,13 +711,16 @@ pandas  : 2.3.3
 <section id="one-shot-adoption-static-and-dynamic-specifications" class="level2">
 <h2 class="anchored" data-anchor-id="one-shot-adoption-static-and-dynamic-specifications">One-shot adoption: Static and Dynamic Specifications</h2>
 <p>After taking a first look at the data, let’s turn to estimation. We return to the <code>df_one_cohort</code> data set (without staggered treatment rollout).</p>
-<div id="fca16311" class="cell" data-execution_count="9">
+<div id="099ee7f1" class="cell" data-execution_count="9">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>fit_static_twfe <span class="op">=</span> pf.feols(</span>
 <span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Y ~ treat | unit + year"</span>,</span>
 <span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>    df_one_cohort,</span>
 <span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span>{<span class="st">"CRV1"</span>: <span class="st">"unit"</span>},</span>
 <span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>fit_static_twfe.summary()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>OMP: Info #276: omp_set_nested routine deprecated, please use omp_set_max_active_levels instead.</code></pre>
+</div>
 <div class="cell-output cell-output-stdout">
 <pre><code>###
 
@@ -734,28 +737,28 @@ RMSE: 0.701 R2: 0.905 R2 Within: 0.003 </code></pre>
 </div>
 </div>
 <p>Since this is a single-cohort dataset, this estimate is consistent for the ATT under parallel trends. We can estimate heterogeneous effects by time by interacting time with the treated group:</p>
-<div id="54ba869f" class="cell" data-execution_count="10">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>fit_dynamic_twfe <span class="op">=</span> pf.feols(</span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Y ~ i(year, ever_treated,  ref = 14) | unit + year"</span>,</span>
-<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>    df_one_cohort,</span>
-<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span>{<span class="st">"CRV1"</span>: <span class="st">"unit"</span>},</span>
-<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div id="80a9a7f4" class="cell" data-execution_count="10">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>fit_dynamic_twfe <span class="op">=</span> pf.feols(</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Y ~ i(year, ever_treated,  ref = 14) | unit + year"</span>,</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>    df_one_cohort,</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span>{<span class="st">"CRV1"</span>: <span class="st">"unit"</span>},</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<div id="d010d20f" class="cell" data-execution_count="11">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>fit_dynamic_twfe.iplot(</span>
-<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>    coord_flip<span class="op">=</span><span class="va">False</span>,</span>
-<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>    title<span class="op">=</span><span class="st">"Event Study"</span>,</span>
-<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>    figsize<span class="op">=</span>[<span class="dv">1200</span>, <span class="dv">400</span>],</span>
-<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>    yintercept<span class="op">=</span><span class="dv">0</span>,</span>
-<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>    xintercept<span class="op">=</span><span class="fl">13.5</span>,</span>
-<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>    labels<span class="op">=</span>rename_event_study_coefs(fit_dynamic_twfe._coefnames),</span>
-<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div id="625bcffd" class="cell" data-execution_count="11">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>fit_dynamic_twfe.iplot(</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>    coord_flip<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>    title<span class="op">=</span><span class="st">"Event Study"</span>,</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>    figsize<span class="op">=</span>[<span class="dv">1200</span>, <span class="dv">400</span>],</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>    yintercept<span class="op">=</span><span class="dv">0</span>,</span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>    xintercept<span class="op">=</span><span class="fl">13.5</span>,</span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>    labels<span class="op">=</span>rename_event_study_coefs(fit_dynamic_twfe._coefnames),</span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stderr">
-<pre><code>/tmp/ipykernel_6140/3569604189.py:7: DeprecationWarning: The function `_relabel_expvar` is deprecated as we have adjusted the naming of variables interacted via the i() operator with pyfixest 0.50. For regression tables, please rely on the `labels` and `cat_template` arguments of `pf.etable()` instead. 
+<pre><code>/var/folders/98/c353q4p95v5_fz62gr5c9td80000gn/T/ipykernel_15240/3569604189.py:7: DeprecationWarning: The function `_relabel_expvar` is deprecated as we have adjusted the naming of variables interacted via the i() operator with pyfixest 0.50. For regression tables, please rely on the `labels` and `cat_template` arguments of `pf.etable()` instead. 
   labels=rename_event_study_coefs(fit_dynamic_twfe._coefnames),</code></pre>
 </div>
 <div class="cell-output cell-output-display" data-execution_count="11">
-   <div id="daGqu5"></div>
+   <div id="hOTujt"></div>
    <script type="text/javascript" data-lets-plot-script="plot">
    
    (function() {
@@ -780,7 +783,7 @@ RMSE: 0.701 R2: 0.905 R2 Within: 0.003 </code></pre>
        };
    }
    
-   const containerDiv = document.getElementById("daGqu5");
+   const containerDiv = document.getElementById("hOTujt");
    let fig = null;
    
    function renderPlot() {
@@ -788,9 +791,9 @@ RMSE: 0.701 R2: 0.905 R2 Within: 0.003 </code></pre>
            const plotSpec = {
 "data":{
 "Coefficient":["year::0:ever_treated","year::1:ever_treated","year::2:ever_treated","year::3:ever_treated","year::4:ever_treated","year::5:ever_treated","year::6:ever_treated","year::7:ever_treated","year::8:ever_treated","year::9:ever_treated","year::10:ever_treated","year::11:ever_treated","year::12:ever_treated","year::13:ever_treated","year::15:ever_treated","year::16:ever_treated","year::17:ever_treated","year::18:ever_treated","year::19:ever_treated","year::20:ever_treated","year::21:ever_treated","year::22:ever_treated","year::23:ever_treated","year::24:ever_treated","year::25:ever_treated","year::26:ever_treated","year::27:ever_treated","year::28:ever_treated","year::29:ever_treated"],
-"Estimate":[-0.11793283974656323,-0.05873668086088966,-0.08000343580727608,-0.08379134398914433,-0.0087488511406939,0.005462239132208161,-0.03792992222408442,-0.047858895285600715,-0.04635988251882374,-0.132268068624434,-0.18717489395203796,-0.08522349395857208,-0.04316759558772849,-0.02873607027764283,0.13735875479469067,0.3202363651170552,0.35905884723796533,0.46798125389692136,0.43820157848587077,0.4180836898460737,0.4400262834863099,0.4499893016972542,-0.08217326994918246,-0.11627011066492664,-0.13906483994322769,-0.16796427436573738,-0.14675611869060365,-0.1296979881745266,-0.11725958933841635],
-"2.5%":[-0.2646937839901564,-0.21544636873281042,-0.2398158670926036,-0.2459214827744856,-0.16741793715498915,-0.15657366276689105,-0.20237330351720467,-0.2130095847163686,-0.2066914880720485,-0.2841721014147618,-0.3238043269330351,-0.20994852273623563,-0.1540971746066174,-0.11056264387154388,0.05700897525261463,0.2146371694476038,0.2391081162035128,0.3398250238703864,0.3030291624102574,0.27828503291377615,0.2930538712475217,0.29968376424169335,-0.23793906288420297,-0.27354535803545305,-0.29912440202624113,-0.335869887028804,-0.3129969653284205,-0.2982050869771896,-0.28783945099742725],
-"97.5%":[0.028828104497029952,0.09797300701103112,0.07980899547805144,0.07833879479619694,0.14992023487360134,0.1674981410313074,0.12651345906903583,0.11729179414516716,0.11397172303440102,0.019635964165893832,-0.05054546097104079,0.039501534819091466,0.06776198343116044,0.053090503316258225,0.21770853433676673,0.42583556078650664,0.47900957827241786,0.5961374839234563,0.5733739945614842,0.5578823467783712,0.5869986957250981,0.6002948391528151,0.07359252298583806,0.041005136705599785,0.020994722139785732,-5.866170267077031E-5,0.019484727947213176,0.03880911062813641,0.05332027232059458],
+"Estimate":[-0.11793283974656142,-0.05873668086088776,-0.08000343580727418,-0.08379134398914258,-0.008748851140692224,0.005462239132209692,-0.03792992222408285,-0.047858895285599085,-0.04635988251882213,-0.13226806862443194,-0.18717489395203615,-0.08522349395857057,-0.043167595587726725,-0.02873607027764111,0.1373587547946926,0.3202363651170568,0.35905884723796727,0.46798125389692313,0.4382015784858732,0.41808368984607586,0.4400262834863111,0.44998930169725637,-0.08217326994918135,-0.11627011066492493,-0.13906483994322646,-0.16796427436573594,-0.1467561186906023,-0.12969798817452496,-0.11725958933841533],
+"2.5%":[-0.2646937839901558,-0.21544636873280976,-0.23981586709260283,-0.24592148277448506,-0.16741793715498826,-0.15657366276689025,-0.20237330351720398,-0.21300958471636788,-0.20669148807204774,-0.28417210141476024,-0.3238043269330341,-0.2099485227362348,-0.15409717460661623,-0.11056264387154215,0.057008975252615834,0.21463716944760447,0.2391081162035139,0.33982502387038716,0.3030291624102585,0.27828503291377715,0.2930538712475217,0.29968376424169435,-0.23793906288420313,-0.27354535803545277,-0.29912440202624146,-0.335869887028804,-0.3129969653284205,-0.2982050869771893,-0.28783945099742764],
+"97.5%":[0.028828104497032978,0.09797300701103423,0.07980899547805448,0.07833879479619989,0.14992023487360384,0.16749814103130964,0.1265134590690383,0.11729179414516971,0.11397172303440349,0.01963596416589633,-0.05054546097103818,0.03950153481909366,0.0677619834311628,0.05309050331625993,0.21770853433676934,0.4258355607865091,0.47900957827242063,0.5961374839234591,0.573373994561488,0.5578823467783746,0.5869986957251005,0.6002948391528184,0.07359252298584044,0.04100513670560291,0.020994722139788535,-5.866170266788373E-5,0.019484727947215896,0.038809110628139326,0.053320272320596954],
 "Model":["Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year"]
 },
 "mapping":{
@@ -959,22 +962,22 @@ P(\beta \in [a, b]) = P(\beta_k \in [a_k, b_k] \forall k) \rightarrow 1 - \alpha
 \]</span></p>
 <p>These bands can be constructed by using a carefully chosen critical value <span class="math inline">\(c\)</span> that <a href="https://www.annualreviews.org/docserver/fulltext/statistics/10/1/annurev-statistics-040120-022239.pdf?expires=1724543273&amp;id=id&amp;accname=guest&amp;checksum=0D11ADF816FFFA0AE21BD7EDC6DB1801#page=14">accounts for the covariance between coefficients using the multiplier bootstrap</a>. In pointwise inference, the critical value is <span class="math inline">\(c = z_{1 - \alpha/2} = 1.96\)</span> for <span class="math inline">\(\alpha = 0.05\)</span>; the corresponding critical value for simultaneous inference is typically larger. These are also known as <code>sup-t</code> bands in the literature (see lec 3 of the NBER SI methods lectures linked above).</p>
 <p>This is implemented in the <code>confint(joint=True)</code> method in the <code>feols</code> class. If we pass the <code>joint='both'</code> argument to <code>iplot</code>, we get the simultaneous confidence bands (for all event study coefficients) in addition to the pointwise confidence intervals. Note that simultaneous inference for all event study coefficients may be overly conservative, especially when the number of coefficients is large; one may instead choose to perform joint inference for <a href="https://gist.github.com/apoorvalal/8a7687d3620577fd5214f1d43fc740b3">all pre-treatment coefficients and all post-treatment coefficients separately</a>.</p>
-<div id="6b693b80" class="cell" data-execution_count="12">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>fit_dynamic_twfe.iplot(</span>
-<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>    coord_flip<span class="op">=</span><span class="va">False</span>,</span>
-<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>    title<span class="op">=</span><span class="st">"Event Study"</span>,</span>
-<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>    figsize<span class="op">=</span>[<span class="dv">1200</span>, <span class="dv">400</span>],</span>
-<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>    yintercept<span class="op">=</span><span class="dv">0</span>,</span>
-<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>    xintercept<span class="op">=</span><span class="fl">13.5</span>,</span>
-<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>    joint<span class="op">=</span><span class="st">"both"</span>,</span>
-<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>    labels<span class="op">=</span>rename_event_study_coefs(fit_dynamic_twfe._coefnames),</span>
-<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div id="35e76740" class="cell" data-execution_count="12">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>fit_dynamic_twfe.iplot(</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>    coord_flip<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>    title<span class="op">=</span><span class="st">"Event Study"</span>,</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>    figsize<span class="op">=</span>[<span class="dv">1200</span>, <span class="dv">400</span>],</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>    yintercept<span class="op">=</span><span class="dv">0</span>,</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>    xintercept<span class="op">=</span><span class="fl">13.5</span>,</span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>    joint<span class="op">=</span><span class="st">"both"</span>,</span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>    labels<span class="op">=</span>rename_event_study_coefs(fit_dynamic_twfe._coefnames),</span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stderr">
-<pre><code>/tmp/ipykernel_6140/3057495514.py:8: DeprecationWarning: The function `_relabel_expvar` is deprecated as we have adjusted the naming of variables interacted via the i() operator with pyfixest 0.50. For regression tables, please rely on the `labels` and `cat_template` arguments of `pf.etable()` instead. 
+<pre><code>/var/folders/98/c353q4p95v5_fz62gr5c9td80000gn/T/ipykernel_15240/3057495514.py:8: DeprecationWarning: The function `_relabel_expvar` is deprecated as we have adjusted the naming of variables interacted via the i() operator with pyfixest 0.50. For regression tables, please rely on the `labels` and `cat_template` arguments of `pf.etable()` instead. 
   labels=rename_event_study_coefs(fit_dynamic_twfe._coefnames),</code></pre>
 </div>
 <div class="cell-output cell-output-display" data-execution_count="12">
-   <div id="Blwg7o"></div>
+   <div id="dRHE5j"></div>
    <script type="text/javascript" data-lets-plot-script="plot">
    
    (function() {
@@ -999,7 +1002,7 @@ P(\beta \in [a, b]) = P(\beta_k \in [a_k, b_k] \forall k) \rightarrow 1 - \alpha
        };
    }
    
-   const containerDiv = document.getElementById("Blwg7o");
+   const containerDiv = document.getElementById("dRHE5j");
    let fig = null;
    
    function renderPlot() {
@@ -1007,9 +1010,9 @@ P(\beta \in [a, b]) = P(\beta_k \in [a_k, b_k] \forall k) \rightarrow 1 - \alpha
            const plotSpec = {
 "data":{
 "Coefficient":["year::0:ever_treated","year::1:ever_treated","year::2:ever_treated","year::3:ever_treated","year::4:ever_treated","year::5:ever_treated","year::6:ever_treated","year::7:ever_treated","year::8:ever_treated","year::9:ever_treated","year::10:ever_treated","year::11:ever_treated","year::12:ever_treated","year::13:ever_treated","year::15:ever_treated","year::16:ever_treated","year::17:ever_treated","year::18:ever_treated","year::19:ever_treated","year::20:ever_treated","year::21:ever_treated","year::22:ever_treated","year::23:ever_treated","year::24:ever_treated","year::25:ever_treated","year::26:ever_treated","year::27:ever_treated","year::28:ever_treated","year::29:ever_treated","year::0:ever_treated","year::1:ever_treated","year::2:ever_treated","year::3:ever_treated","year::4:ever_treated","year::5:ever_treated","year::6:ever_treated","year::7:ever_treated","year::8:ever_treated","year::9:ever_treated","year::10:ever_treated","year::11:ever_treated","year::12:ever_treated","year::13:ever_treated","year::15:ever_treated","year::16:ever_treated","year::17:ever_treated","year::18:ever_treated","year::19:ever_treated","year::20:ever_treated","year::21:ever_treated","year::22:ever_treated","year::23:ever_treated","year::24:ever_treated","year::25:ever_treated","year::26:ever_treated","year::27:ever_treated","year::28:ever_treated","year::29:ever_treated"],
-"Estimate":[-0.11793283974656323,-0.05873668086088966,-0.08000343580727608,-0.08379134398914433,-0.0087488511406939,0.005462239132208161,-0.03792992222408442,-0.047858895285600715,-0.04635988251882374,-0.132268068624434,-0.18717489395203796,-0.08522349395857208,-0.04316759558772849,-0.02873607027764283,0.13735875479469067,0.3202363651170552,0.35905884723796533,0.46798125389692136,0.43820157848587077,0.4180836898460737,0.4400262834863099,0.4499893016972542,-0.08217326994918246,-0.11627011066492664,-0.13906483994322769,-0.16796427436573738,-0.14675611869060365,-0.1296979881745266,-0.11725958933841635,-0.11793283974656323,-0.05873668086088966,-0.08000343580727608,-0.08379134398914433,-0.0087488511406939,0.005462239132208161,-0.03792992222408442,-0.047858895285600715,-0.04635988251882374,-0.132268068624434,-0.18717489395203796,-0.08522349395857208,-0.04316759558772849,-0.02873607027764283,0.13735875479469067,0.3202363651170552,0.35905884723796533,0.46798125389692136,0.43820157848587077,0.4180836898460737,0.4400262834863099,0.4499893016972542,-0.08217326994918246,-0.11627011066492664,-0.13906483994322769,-0.16796427436573738,-0.14675611869060365,-0.1296979881745266,-0.11725958933841635],
-"2.5%":[-0.2646937839901564,-0.21544636873281042,-0.2398158670926036,-0.2459214827744856,-0.16741793715498915,-0.15657366276689105,-0.20237330351720467,-0.2130095847163686,-0.2066914880720485,-0.2841721014147618,-0.3238043269330351,-0.20994852273623563,-0.1540971746066174,-0.11056264387154388,0.05700897525261463,0.2146371694476038,0.2391081162035128,0.3398250238703864,0.3030291624102574,0.27828503291377615,0.2930538712475217,0.29968376424169335,-0.23793906288420297,-0.27354535803545305,-0.29912440202624113,-0.335869887028804,-0.3129969653284205,-0.2982050869771896,-0.28783945099742725,-0.3385401906777494,-0.2942987323648386,-0.32022945297715,-0.3275012806339619,-0.2472562205276571,-0.23810604300131546,-0.28511706668009945,-0.29610924749993817,-0.2873663093576512,-0.3606063805803492,-0.39255281261096375,-0.2727070123787494,-0.20991414177136744,-0.1517357125146428,0.016578992140253893,0.16150231678308477,0.17875193280541535,0.2753400402743411,0.23501381090164214,0.207941873652913,0.21910105919673709,0.22405380762382338,-0.3163164823835128,-0.35268229694706477,-0.37966233789698445,-0.4203557577197563,-0.3966451677311651,-0.3829936103276115,-0.373670936354163],
-"97.5%":[0.028828104497029952,0.09797300701103112,0.07980899547805144,0.07833879479619694,0.14992023487360134,0.1674981410313074,0.12651345906903583,0.11729179414516716,0.11397172303440102,0.019635964165893832,-0.05054546097104079,0.039501534819091466,0.06776198343116044,0.053090503316258225,0.21770853433676673,0.42583556078650664,0.47900957827241786,0.5961374839234563,0.5733739945614842,0.5578823467783712,0.5869986957250981,0.6002948391528151,0.07359252298583806,0.041005136705599785,0.020994722139785732,-5.866170267077031E-5,0.019484727947213176,0.03880911062813641,0.05332027232059458,0.10267451118462291,0.1768253706430593,0.16022258136259782,0.15991859265567326,0.2297585182462693,0.2490305212657318,0.2092572222319306,0.20039145692873672,0.19464654432000367,0.09607024333148123,0.018203024706887838,0.10226002446160522,0.12357895059591048,0.09426357195935713,0.25813851744912747,0.47897041345102565,0.5393657616705153,0.6606224675195016,0.6413893460700995,0.6282255060392343,0.6609515077758827,0.6759247957706851,0.1519699424851479,0.1201420756172115,0.10153265801052908,0.08442720898828157,0.1031329303499578,0.12359763397855827,0.1391517576773303],
+"Estimate":[-0.11793283974656142,-0.05873668086088776,-0.08000343580727418,-0.08379134398914258,-0.008748851140692224,0.005462239132209692,-0.03792992222408285,-0.047858895285599085,-0.04635988251882213,-0.13226806862443194,-0.18717489395203615,-0.08522349395857057,-0.043167595587726725,-0.02873607027764111,0.1373587547946926,0.3202363651170568,0.35905884723796727,0.46798125389692313,0.4382015784858732,0.41808368984607586,0.4400262834863111,0.44998930169725637,-0.08217326994918135,-0.11627011066492493,-0.13906483994322646,-0.16796427436573594,-0.1467561186906023,-0.12969798817452496,-0.11725958933841533,-0.11793283974656142,-0.05873668086088776,-0.08000343580727418,-0.08379134398914258,-0.008748851140692224,0.005462239132209692,-0.03792992222408285,-0.047858895285599085,-0.04635988251882213,-0.13226806862443194,-0.18717489395203615,-0.08522349395857057,-0.043167595587726725,-0.02873607027764111,0.1373587547946926,0.3202363651170568,0.35905884723796727,0.46798125389692313,0.4382015784858732,0.41808368984607586,0.4400262834863111,0.44998930169725637,-0.08217326994918135,-0.11627011066492493,-0.13906483994322646,-0.16796427436573594,-0.1467561186906023,-0.12969798817452496,-0.11725958933841533],
+"2.5%":[-0.2646937839901558,-0.21544636873280976,-0.23981586709260283,-0.24592148277448506,-0.16741793715498826,-0.15657366276689025,-0.20237330351720398,-0.21300958471636788,-0.20669148807204774,-0.28417210141476024,-0.3238043269330341,-0.2099485227362348,-0.15409717460661623,-0.11056264387154215,0.057008975252615834,0.21463716944760447,0.2391081162035139,0.33982502387038716,0.3030291624102585,0.27828503291377715,0.2930538712475217,0.29968376424169435,-0.23793906288420313,-0.27354535803545277,-0.29912440202624146,-0.335869887028804,-0.3129969653284205,-0.2982050869771893,-0.28783945099742764,-0.338540190677748,-0.29429873236483706,-0.3202294529771482,-0.3275012806339604,-0.2472562205276551,-0.23810604300131347,-0.2851170666800976,-0.2961092474999363,-0.2873663093576493,-0.36060638058034633,-0.3925528126109618,-0.27270701237874767,-0.20991414177136553,-0.15173571251464024,0.01657899214025553,0.16150231678308602,0.1787519328054172,0.27534004027434267,0.2350138109016439,0.2079418736529148,0.2191010591967379,0.22405380762382524,-0.3163164823835121,-0.35268229694706366,-0.379662337896984,-0.4203557577197554,-0.3966451677311641,-0.38299361032761015,-0.3736709363541624],
+"97.5%":[0.028828104497032978,0.09797300701103423,0.07980899547805448,0.07833879479619989,0.14992023487360384,0.16749814103130964,0.1265134590690383,0.11729179414516971,0.11397172303440349,0.01963596416589633,-0.05054546097103818,0.03950153481909366,0.0677619834311628,0.05309050331625993,0.21770853433676934,0.4258355607865091,0.47900957827242063,0.5961374839234591,0.573373994561488,0.5578823467783746,0.5869986957251005,0.6002948391528184,0.07359252298584044,0.04100513670560291,0.020994722139788535,-5.866170266788373E-5,0.019484727947215896,0.038809110628139326,0.053320272320596954,0.10267451118462513,0.1768253706430615,0.1602225813625999,0.1599185926556752,0.2297585182462707,0.24903052126573286,0.20925722223193194,0.20039145692873814,0.19464654432000505,0.09607024333148248,0.018203024706889503,0.10226002446160654,0.12357895059591206,0.09426357195935803,0.25813851744912963,0.47897041345102753,0.5393657616705173,0.6606224675195036,0.6413893460701026,0.6282255060392369,0.6609515077758843,0.6759247957706875,0.1519699424851494,0.1201420756172138,0.1015326580105311,0.08442720898828357,0.10313293034995955,0.12359763397856025,0.13915175767733168],
 "Model":["Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)"]
 },
 "mapping":{
@@ -1174,43 +1177,43 @@ P(\beta \in [a, b]) = P(\beta_k \in [a_k, b_k] \forall k) \rightarrow 1 - \alpha
 <section id="two-way-fixed-effects" class="level3">
 <h3 class="anchored" data-anchor-id="two-way-fixed-effects">Two-Way Fixed Effects</h3>
 <p>As a baseline model, we can estimate a simple two-way fixed effects DiD regression via <code>feols()</code>:</p>
-<div id="735cbc6e" class="cell" data-execution_count="13">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>fit_twfe <span class="op">=</span> pf.feols(</span>
-<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">"dep_var ~ i(rel_year, ref=-1.0) | state + year"</span>,</span>
-<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>    df_multi_cohort,</span>
-<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span>{<span class="st">"CRV1"</span>: <span class="st">"state"</span>},</span>
-<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div id="c5564d19" class="cell" data-execution_count="13">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>fit_twfe <span class="op">=</span> pf.feols(</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">"dep_var ~ i(rel_year, ref=-1.0) | state + year"</span>,</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>    df_multi_cohort,</span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span>{<span class="st">"CRV1"</span>: <span class="st">"state"</span>},</span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>You can also estimate a TWFE model via the <code>event_study()</code> function, which aims to provide a common interface to multiple difference-in-differences implementations:</p>
-<div id="c56b0fcf" class="cell" data-execution_count="14">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>fit_twfe_event <span class="op">=</span> pf.event_study(</span>
-<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>    data<span class="op">=</span>df_multi_cohort,</span>
-<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>    yname<span class="op">=</span><span class="st">"dep_var"</span>,</span>
-<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>    idname<span class="op">=</span><span class="st">"unit"</span>,</span>
-<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>    tname<span class="op">=</span><span class="st">"year"</span>,</span>
-<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>    gname<span class="op">=</span><span class="st">"g"</span>,</span>
-<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>    estimator<span class="op">=</span><span class="st">"twfe"</span>,</span>
-<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</div>
-</section>
-<section id="fully-interacted-saturated-event-study-sun-abraham" class="level3">
-<h3 class="anchored" data-anchor-id="fully-interacted-saturated-event-study-sun-abraham">Fully-Interacted / Saturated Event Study (Sun-Abraham)</h3>
-<p>In a similar spirit, you can fit a fully-interacted difference-in-differences model by selecting the <code>estimator = "saturated"</code>:</p>
-<div id="5b7cdc3b" class="cell" data-execution_count="15">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>fit_saturated <span class="op">=</span> pf.event_study(</span>
+<div id="ad5a904a" class="cell" data-execution_count="14">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>fit_twfe_event <span class="op">=</span> pf.event_study(</span>
 <span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>    data<span class="op">=</span>df_multi_cohort,</span>
 <span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>    yname<span class="op">=</span><span class="st">"dep_var"</span>,</span>
 <span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>    idname<span class="op">=</span><span class="st">"unit"</span>,</span>
 <span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>    tname<span class="op">=</span><span class="st">"year"</span>,</span>
 <span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>    gname<span class="op">=</span><span class="st">"g"</span>,</span>
-<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>    estimator<span class="op">=</span><span class="st">"saturated"</span>,</span>
-<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a>fit_saturated.iplot()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>    estimator<span class="op">=</span><span class="st">"twfe"</span>,</span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="fully-interacted-saturated-event-study-sun-abraham" class="level3">
+<h3 class="anchored" data-anchor-id="fully-interacted-saturated-event-study-sun-abraham">Fully-Interacted / Saturated Event Study (Sun-Abraham)</h3>
+<p>In a similar spirit, you can fit a fully-interacted difference-in-differences model by selecting the <code>estimator = "saturated"</code>:</p>
+<div id="a2bfb019" class="cell" data-execution_count="15">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>fit_saturated <span class="op">=</span> pf.event_study(</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>    data<span class="op">=</span>df_multi_cohort,</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>    yname<span class="op">=</span><span class="st">"dep_var"</span>,</span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>    idname<span class="op">=</span><span class="st">"unit"</span>,</span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>    tname<span class="op">=</span><span class="st">"year"</span>,</span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>    gname<span class="op">=</span><span class="st">"g"</span>,</span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>    estimator<span class="op">=</span><span class="st">"saturated"</span>,</span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a>fit_saturated.iplot()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stderr">
-<pre><code>/home/runner/work/pyfixest/pyfixest/pyfixest/did/saturated_twfe.py:68: UserWarning: The SaturatedEventStudyClass is currently in beta. Please report any issues you may encounter.
+<pre><code>/Users/afischer/Documents/pyfixest/pyfixest/did/saturated_twfe.py:68: UserWarning: The SaturatedEventStudyClass is currently in beta. Please report any issues you may encounter.
   warnings.warn(
-/home/runner/work/pyfixest/pyfixest/pyfixest/estimation/feols_.py:2772: UserWarning: 
+/Users/afischer/Documents/pyfixest/pyfixest/estimation/models/feols_.py:2772: UserWarning: 
             22 variables dropped due to multicollinearity.
             The following variables are dropped: 
     rel_time::-20.0:first_treated_period::2000
@@ -1231,8 +1234,8 @@ P(\beta \in [a, b]) = P(\beta_k \in [a_k, b_k] \forall k) \rightarrow 1 - \alpha
 </div>
 </div>
 <p>We can obtain treatment effects by period via the <code>aggregate()</code> method</p>
-<div id="0edd0879" class="cell" data-execution_count="16">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb22"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>fit_saturated.aggregate(weighting <span class="op">=</span> <span class="st">"shares"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div id="066ad83b" class="cell" data-execution_count="16">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>fit_saturated.aggregate(weighting <span class="op">=</span> <span class="st">"shares"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="16">
 <div>
 
@@ -1624,10 +1627,10 @@ P(\beta \in [a, b]) = P(\beta_k \in [a_k, b_k] \forall k) \rightarrow 1 - \alpha
 </div>
 </div>
 <p>and plot the effects</p>
-<div id="a63868ef" class="cell" data-execution_count="17">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>fit_saturated.iplot_aggregate(weighting <span class="op">=</span> <span class="st">"shares"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div id="2907a1c3" class="cell" data-execution_count="17">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb24"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>fit_saturated.iplot_aggregate(weighting <span class="op">=</span> <span class="st">"shares"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stderr">
-<pre><code>/home/runner/work/pyfixest/pyfixest/pyfixest/did/saturated_twfe.py:270: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+<pre><code>/Users/afischer/Documents/pyfixest/pyfixest/did/saturated_twfe.py:270: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
   ax.legend()</code></pre>
 </div>
 <div class="cell-output cell-output-display">
@@ -1646,8 +1649,8 @@ P(\beta \in [a, b]) = P(\beta_k \in [a_k, b_k] \forall k) \rightarrow 1 - \alpha
 <p>The use of the two-way fixed effects regression in empirical social science was historically motivated by folk wisdom that it uncovers the Average Treatment effect on the Treated (ATT) as in the canonical two-period two-group case. This belief has come under scrutiny recently due to recent results in applied econometrics showing that it fails to uncover meaningful averages of heterogeneous treatment effects in the presence of effect heterogeneity over time and across adoption cohorts, and several heterogeneity-robust alternatives have been proposed. However, these estimators often have higher variance and are therefore under-powered for many applications, which poses a bias-variance tradeoff that is challenging for researchers to navigate. In this paper, we propose simple tests of linear restrictions that can be used to test for differences in dynamic treatment effects over cohorts, which allows us to test for when the two-way fixed effects regression is likely to yield biased estimates of the ATT.</p>
 </blockquote>
 <p>You can employ the proposed test after running a saturated event study by calling the <code>test_treatment_heterogeneity()</code> method:</p>
-<div id="ee3b5dd7" class="cell" data-execution_count="18">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb25"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>fit_saturated.test_treatment_heterogeneity()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div id="a9dd09ad" class="cell" data-execution_count="18">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb26"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>fit_saturated.test_treatment_heterogeneity()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="18">
 <pre><code>statistic    3256.497337
 pvalue          0.000000
@@ -1659,52 +1662,52 @@ dtype: float64</code></pre>
 <section id="gardners-2-step-estimator" class="level3">
 <h3 class="anchored" data-anchor-id="gardners-2-step-estimator">Gardner’s 2-Step Estimator</h3>
 <p>To do the same via Gardners 2-stage estimator, we employ the the <code>pf.did2s()</code> function:</p>
-<div id="8625637d" class="cell" data-execution_count="19">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb27"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>fit_did2s <span class="op">=</span> pf.did2s(</span>
-<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>    df_multi_cohort,</span>
-<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>    yname<span class="op">=</span><span class="st">"dep_var"</span>,</span>
-<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a>    first_stage<span class="op">=</span><span class="st">"~ 0 | unit + year"</span>,</span>
-<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a>    second_stage<span class="op">=</span><span class="st">"~i(rel_year,ref=-1.0)"</span>,</span>
-<span id="cb27-6"><a href="#cb27-6" aria-hidden="true" tabindex="-1"></a>    treatment<span class="op">=</span><span class="st">"treat"</span>,</span>
-<span id="cb27-7"><a href="#cb27-7" aria-hidden="true" tabindex="-1"></a>    cluster<span class="op">=</span><span class="st">"state"</span>,</span>
-<span id="cb27-8"><a href="#cb27-8" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div id="aa9054b6" class="cell" data-execution_count="19">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb28"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>fit_did2s <span class="op">=</span> pf.did2s(</span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>    df_multi_cohort,</span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>    yname<span class="op">=</span><span class="st">"dep_var"</span>,</span>
+<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a>    first_stage<span class="op">=</span><span class="st">"~ 0 | unit + year"</span>,</span>
+<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a>    second_stage<span class="op">=</span><span class="st">"~i(rel_year,ref=-1.0)"</span>,</span>
+<span id="cb28-6"><a href="#cb28-6" aria-hidden="true" tabindex="-1"></a>    treatment<span class="op">=</span><span class="st">"treat"</span>,</span>
+<span id="cb28-7"><a href="#cb28-7" aria-hidden="true" tabindex="-1"></a>    cluster<span class="op">=</span><span class="st">"state"</span>,</span>
+<span id="cb28-8"><a href="#cb28-8" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="local-projections-dube-et-al" class="level3">
 <h3 class="anchored" data-anchor-id="local-projections-dube-et-al">Local Projections (Dube et al)</h3>
 <p>Last, we can estimate the ATT for each time period via local projections by using the <code>lpdid()</code> function:</p>
-<div id="87d6114b" class="cell" data-execution_count="20">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb28"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>fit_lpdid <span class="op">=</span> pf.lpdid(</span>
-<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>    data<span class="op">=</span>df_multi_cohort,</span>
-<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>    yname<span class="op">=</span><span class="st">"dep_var"</span>,</span>
-<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a>    gname<span class="op">=</span><span class="st">"g"</span>,</span>
-<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a>    tname<span class="op">=</span><span class="st">"year"</span>,</span>
-<span id="cb28-6"><a href="#cb28-6" aria-hidden="true" tabindex="-1"></a>    idname<span class="op">=</span><span class="st">"unit"</span>,</span>
-<span id="cb28-7"><a href="#cb28-7" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span>{<span class="st">"CRV1"</span>: <span class="st">"state"</span>},</span>
-<span id="cb28-8"><a href="#cb28-8" aria-hidden="true" tabindex="-1"></a>    pre_window<span class="op">=-</span><span class="dv">20</span>,</span>
-<span id="cb28-9"><a href="#cb28-9" aria-hidden="true" tabindex="-1"></a>    post_window<span class="op">=</span><span class="dv">20</span>,</span>
-<span id="cb28-10"><a href="#cb28-10" aria-hidden="true" tabindex="-1"></a>    att<span class="op">=</span><span class="va">False</span>,</span>
-<span id="cb28-11"><a href="#cb28-11" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div id="c3e69f1b" class="cell" data-execution_count="20">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb29"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>fit_lpdid <span class="op">=</span> pf.lpdid(</span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>    data<span class="op">=</span>df_multi_cohort,</span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a>    yname<span class="op">=</span><span class="st">"dep_var"</span>,</span>
+<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a>    gname<span class="op">=</span><span class="st">"g"</span>,</span>
+<span id="cb29-5"><a href="#cb29-5" aria-hidden="true" tabindex="-1"></a>    tname<span class="op">=</span><span class="st">"year"</span>,</span>
+<span id="cb29-6"><a href="#cb29-6" aria-hidden="true" tabindex="-1"></a>    idname<span class="op">=</span><span class="st">"unit"</span>,</span>
+<span id="cb29-7"><a href="#cb29-7" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span>{<span class="st">"CRV1"</span>: <span class="st">"state"</span>},</span>
+<span id="cb29-8"><a href="#cb29-8" aria-hidden="true" tabindex="-1"></a>    pre_window<span class="op">=-</span><span class="dv">20</span>,</span>
+<span id="cb29-9"><a href="#cb29-9" aria-hidden="true" tabindex="-1"></a>    post_window<span class="op">=</span><span class="dv">20</span>,</span>
+<span id="cb29-10"><a href="#cb29-10" aria-hidden="true" tabindex="-1"></a>    att<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb29-11"><a href="#cb29-11" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>Let’s look at some results:</p>
-<div id="532a5523" class="cell" data-execution_count="21">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb29"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>figsize <span class="op">=</span> [<span class="dv">1200</span>, <span class="dv">400</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div id="af41c18a" class="cell" data-execution_count="21">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb30"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>figsize <span class="op">=</span> [<span class="dv">1200</span>, <span class="dv">400</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<div id="ca3792b6" class="cell" data-execution_count="22">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb30"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>fit_twfe.iplot(</span>
-<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>    coord_flip<span class="op">=</span><span class="va">False</span>,</span>
-<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>    title<span class="op">=</span><span class="st">"TWFE-Estimator"</span>,</span>
-<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a>    figsize<span class="op">=</span>figsize,</span>
-<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a>    xintercept<span class="op">=</span><span class="fl">18.5</span>,</span>
-<span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a>    yintercept<span class="op">=</span><span class="dv">0</span>,</span>
-<span id="cb30-7"><a href="#cb30-7" aria-hidden="true" tabindex="-1"></a>    labels<span class="op">=</span>rename_event_study_coefs(fit_twfe._coefnames),  <span class="co"># rename coefficients</span></span>
-<span id="cb30-8"><a href="#cb30-8" aria-hidden="true" tabindex="-1"></a>).show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div id="28791aec" class="cell" data-execution_count="22">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb31"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>fit_twfe.iplot(</span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>    coord_flip<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>    title<span class="op">=</span><span class="st">"TWFE-Estimator"</span>,</span>
+<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a>    figsize<span class="op">=</span>figsize,</span>
+<span id="cb31-5"><a href="#cb31-5" aria-hidden="true" tabindex="-1"></a>    xintercept<span class="op">=</span><span class="fl">18.5</span>,</span>
+<span id="cb31-6"><a href="#cb31-6" aria-hidden="true" tabindex="-1"></a>    yintercept<span class="op">=</span><span class="dv">0</span>,</span>
+<span id="cb31-7"><a href="#cb31-7" aria-hidden="true" tabindex="-1"></a>    labels<span class="op">=</span>rename_event_study_coefs(fit_twfe._coefnames),  <span class="co"># rename coefficients</span></span>
+<span id="cb31-8"><a href="#cb31-8" aria-hidden="true" tabindex="-1"></a>).show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stderr">
-<pre><code>/tmp/ipykernel_6140/383819466.py:7: DeprecationWarning: The function `_relabel_expvar` is deprecated as we have adjusted the naming of variables interacted via the i() operator with pyfixest 0.50. For regression tables, please rely on the `labels` and `cat_template` arguments of `pf.etable()` instead. 
+<pre><code>/var/folders/98/c353q4p95v5_fz62gr5c9td80000gn/T/ipykernel_15240/383819466.py:7: DeprecationWarning: The function `_relabel_expvar` is deprecated as we have adjusted the naming of variables interacted via the i() operator with pyfixest 0.50. For regression tables, please rely on the `labels` and `cat_template` arguments of `pf.etable()` instead. 
   labels=rename_event_study_coefs(fit_twfe._coefnames),  # rename coefficients</code></pre>
 </div>
 <div class="cell-output cell-output-display">
-   <div id="4UbUQx"></div>
+   <div id="EzPXHW"></div>
    <script type="text/javascript" data-lets-plot-script="plot">
    
    (function() {
@@ -1729,7 +1732,7 @@ dtype: float64</code></pre>
        };
    }
    
-   const containerDiv = document.getElementById("4UbUQx");
+   const containerDiv = document.getElementById("EzPXHW");
    let fig = null;
    
    function renderPlot() {
@@ -1737,9 +1740,9 @@ dtype: float64</code></pre>
            const plotSpec = {
 "data":{
 "Coefficient":["rel_year::-inf","rel_year::-20.0","rel_year::-19.0","rel_year::-18.0","rel_year::-17.0","rel_year::-16.0","rel_year::-15.0","rel_year::-14.0","rel_year::-13.0","rel_year::-12.0","rel_year::-11.0","rel_year::-10.0","rel_year::-9.0","rel_year::-8.0","rel_year::-7.0","rel_year::-6.0","rel_year::-5.0","rel_year::-4.0","rel_year::-3.0","rel_year::-2.0","rel_year::0.0","rel_year::1.0","rel_year::2.0","rel_year::3.0","rel_year::4.0","rel_year::5.0","rel_year::6.0","rel_year::7.0","rel_year::8.0","rel_year::9.0","rel_year::10.0","rel_year::11.0","rel_year::12.0","rel_year::13.0","rel_year::14.0","rel_year::15.0","rel_year::16.0","rel_year::17.0","rel_year::18.0","rel_year::19.0","rel_year::20.0"],
-"Estimate":[0.1280530624357021,-0.09944466441184384,6.235199753705955E-4,0.004124766186676007,0.02189908545945559,-0.03693340882839075,0.06957783836539112,0.0377344231702938,0.06177914337446631,0.08991270466789318,9.82248746539991E-4,-0.11303282051984768,-0.06922462711948502,-0.061289513093659216,-0.0020224309371188096,-0.05580979472637338,-0.06500868193868402,-0.009849959807211296,0.0463380799009441,0.01594731289374525,1.4064044908225615,1.6605518884803792,1.728790053893492,1.8548389960026759,1.9586760781129222,2.0821612836358216,2.191061994921299,2.279072842371411,2.364593439335091,2.3721626936772324,2.649271188090791,2.7535908715364332,2.813935474227459,2.756069650642743,2.863427021642733,2.9866523455332232,2.9630322165965093,2.9725964211140763,2.9350513290126106,2.918706513680983,2.979701202491579],
-"2.5%":[-0.03080774649808521,-0.264752390899862,-0.16774636908209947,-0.1774099825354582,-0.1514755890285654,-0.23303994198671377,-0.09489875317320377,-0.13752593665094798,-0.10689188479561487,-0.08187083528883586,-0.15907464527282922,-0.24439448942404784,-0.18465024083967446,-0.18342347916189936,-0.1327365037530781,-0.18666932874005973,-0.1961429334698896,-0.11728679973913428,-0.08103372597211836,-0.11646532546427875,1.2938224522236021,1.5289656538601037,1.6138766603498205,1.7368465942004268,1.8147261521226667,1.9529592610149664,2.0524404216411707,2.127291831867154,2.246027280469099,2.257721255734442,2.5356035511883217,2.600774560148337,2.653442814455869,2.5975022579559686,2.6643497148186066,2.7978533369947955,2.790181663157526,2.7856582935921996,2.74460028115057,2.7483541440935833,2.8020968794714687],
-"97.5%":[0.2869138713694894,0.06586306207617436,0.16899340903284069,0.18565951490881022,0.1952737599474766,0.15917312432993228,0.234054429903986,0.21299478299153557,0.23045017154454747,0.2616962446246222,0.1610391427659092,0.01832884838435246,0.046200986600704444,0.060844452974580916,0.12869164187884047,0.07504973928731298,0.06612556959252157,0.09758688012471167,0.17370988577400656,0.14835995125176926,1.5189865294215208,1.7921381231006546,1.8437034474371634,1.972831397804925,2.1026260041031777,2.211363306256677,2.3296835682014274,2.4308538528756682,2.4831595982010835,2.4866041316200227,2.7629388249932605,2.9064071829245295,2.974428133999049,2.9146370433295172,3.0625043284668596,3.175451354071651,3.1358827700354928,3.159534548635953,3.125502376874651,3.0890588832683825,3.1573055255116893],
+"Estimate":[0.1280530624356816,-0.09944466441186448,6.235199753501709E-4,0.0041247661866553684,0.02189908545943477,-0.036933408828411306,0.06957783836537086,0.03773442317027258,0.06177914337444653,0.08991270466787236,9.822487465295502E-4,-0.11303282051986834,-0.06922462711950585,-0.061289513093680255,-0.0020224309371402924,-0.05580979472639471,-0.06500868193870427,-0.00984995980723369,0.04633807990092391,0.015947312893723933,1.4064044908225413,1.6605518884803565,1.7287900538934713,1.8548389960026528,1.9586760781129011,2.0821612836358008,2.1910619949212764,2.2790728423713893,2.364593439335071,2.372162693677217,2.649271188090771,2.7535908715364057,2.813935474227433,2.756069650642718,2.8634270216427087,2.9866523455331992,2.9630322165964853,2.9725964211140496,2.9350513290125866,2.918706513680961,2.979701202491552],
+"2.5%":[-0.030807746498103084,-0.26475239089988456,-0.16774636908212087,-0.17740998253548135,-0.15147558902858788,-0.23303994198673786,-0.09489875317322578,-0.13752593665097146,-0.10689188479563178,-0.08187083528886142,-0.15907464527284126,-0.24439448942406938,-0.18465024083969267,-0.18342347916192348,-0.1327365037530943,-0.18666932874007547,-0.19614293346991066,-0.11728679973915693,-0.08103372597214172,-0.11646532546430118,1.2938224522235822,1.5289656538600842,1.6138766603497952,1.7368465942004028,1.8147261521226423,1.9529592610149542,2.0524404216411454,2.127291831867131,2.246027280469074,2.257721255734429,2.5356035511883035,2.6007745601483148,2.6534428144558433,2.5975022579559433,2.6643497148185857,2.797853336994778,2.790181663157508,2.7856582935921783,2.7446002811505545,2.7483541440935637,2.802096879471444],
+"97.5%":[0.2869138713694663,0.06586306207615561,0.16899340903282123,0.18565951490879207,0.19527375994745744,0.15917312432991523,0.23405442990396752,0.21299478299151664,0.23045017154452485,0.26169624462460617,0.16103914276590037,0.018328848384332727,0.04620098660068098,0.06084445297456296,0.12869164187881368,0.07504973928728603,0.06612556959250213,0.09758688012468955,0.17370988577398955,0.14835995125174906,1.5189865294215004,1.7921381231006288,1.8437034474371474,1.9728313978049028,2.10262600410316,2.211363306256647,2.3296835682014074,2.430853852875648,2.4831595982010684,2.486604131620005,2.7629388249932387,2.9064071829244966,2.974428133999023,2.914637043329493,3.0625043284668316,3.1754513540716207,3.1358827700354626,3.159534548635921,3.1255023768746186,3.0890588832683585,3.15730552551166],
 "Model":["dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year"]
 },
 "mapping":{
@@ -1896,16 +1899,16 @@ dtype: float64</code></pre>
    </script>
 </div>
 </div>
-<div id="36bfba5e" class="cell" data-execution_count="23">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb32"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>fit_lpdid.iplot(</span>
-<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>    coord_flip<span class="op">=</span><span class="va">False</span>,</span>
-<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a>    title<span class="op">=</span><span class="st">"Local-Projections-Estimator"</span>,</span>
-<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a>    figsize<span class="op">=</span>figsize,</span>
-<span id="cb32-5"><a href="#cb32-5" aria-hidden="true" tabindex="-1"></a>    yintercept<span class="op">=</span><span class="dv">0</span>,</span>
-<span id="cb32-6"><a href="#cb32-6" aria-hidden="true" tabindex="-1"></a>    xintercept<span class="op">=</span><span class="fl">18.5</span>,</span>
-<span id="cb32-7"><a href="#cb32-7" aria-hidden="true" tabindex="-1"></a>).show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div id="59c8d3ae" class="cell" data-execution_count="23">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb33"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>fit_lpdid.iplot(</span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>    coord_flip<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>    title<span class="op">=</span><span class="st">"Local-Projections-Estimator"</span>,</span>
+<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>    figsize<span class="op">=</span>figsize,</span>
+<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a>    yintercept<span class="op">=</span><span class="dv">0</span>,</span>
+<span id="cb33-6"><a href="#cb33-6" aria-hidden="true" tabindex="-1"></a>    xintercept<span class="op">=</span><span class="fl">18.5</span>,</span>
+<span id="cb33-7"><a href="#cb33-7" aria-hidden="true" tabindex="-1"></a>).show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
-   <div id="zCY725"></div>
+   <div id="B95hi0"></div>
    <script type="text/javascript" data-lets-plot-script="plot">
    
    (function() {
@@ -1930,7 +1933,7 @@ dtype: float64</code></pre>
        };
    }
    
-   const containerDiv = document.getElementById("zCY725");
+   const containerDiv = document.getElementById("B95hi0");
    let fig = null;
    
    function renderPlot() {
@@ -1938,9 +1941,9 @@ dtype: float64</code></pre>
            const plotSpec = {
 "data":{
 "Coefficient":["time_to_treatment::-20","time_to_treatment::-19","time_to_treatment::-18","time_to_treatment::-17","time_to_treatment::-16","time_to_treatment::-15","time_to_treatment::-14","time_to_treatment::-13","time_to_treatment::-12","time_to_treatment::-11","time_to_treatment::-10","time_to_treatment::-9","time_to_treatment::-8","time_to_treatment::-7","time_to_treatment::-6","time_to_treatment::-5","time_to_treatment::-4","time_to_treatment::-3","time_to_treatment::-2","time_to_treatment::0","time_to_treatment::1","time_to_treatment::2","time_to_treatment::3","time_to_treatment::4","time_to_treatment::5","time_to_treatment::6","time_to_treatment::7","time_to_treatment::8","time_to_treatment::9","time_to_treatment::10","time_to_treatment::11","time_to_treatment::12","time_to_treatment::13","time_to_treatment::14","time_to_treatment::15","time_to_treatment::16","time_to_treatment::17","time_to_treatment::18","time_to_treatment::19","time_to_treatment::20"],
-"Estimate":[-0.07305529455102057,-0.005747539400753715,0.019862595898581595,0.0755613194783191,-0.051277562684252105,0.047891216349789587,0.030061024401231366,0.03986968384484261,0.04845789728984681,-0.012820133350277497,0.013685361040923882,0.0051998981285973035,0.016416277464837314,0.05641673885681884,0.0016957198969680782,-0.06496834258802509,0.010741616233677876,0.04275993550129886,0.0032290159332871242,1.4520234748273066,1.6676220565025492,1.7336997045580052,1.8436118199851639,1.9620937493794017,2.08808356358576,2.18196604372757,2.254678404642131,2.348473587127565,2.3603848643067775,2.516113933361753,2.5529779943100888,2.603938509344382,2.578044287902035,2.722968845556726,2.9092747255962252,2.8593251547084924,2.907943168261159,2.8736781792414066,2.8828072503191615,2.911501018068635],
-"2.5%":[-0.2272172766523859,-0.1670700586084853,-0.17114762452140675,-0.09839081142269912,-0.22467756818724255,-0.11500764428838851,-0.1301345106499768,-0.13448828156159565,-0.11740856214252185,-0.1778212132667099,-0.11574797121541741,-0.11008024082082961,-0.1077645144171558,-0.06865967673907453,-0.12155178659801844,-0.1896824463496264,-0.09892973087903476,-0.07749915399392934,-0.11865072513025429,1.3363431157797134,1.5248748576801463,1.625286020209566,1.7294373275440607,1.8189029384537494,1.962242744258791,2.041883930043748,2.1170793502306977,2.227339837055906,2.2206593574383975,2.3975249304388946,2.3711839927988105,2.412231721161751,2.401891620382779,2.5167480629209833,2.7210109316903197,2.6739497917518142,2.7277574304593997,2.658860445512023,2.671979873230292,2.7125289161146497],
-"97.5%":[0.08110668755034477,0.1555749798069779,0.2108728163185699,0.2495134503793373,0.12212244281873835,0.2107900769879677,0.19025655945243955,0.21422764925128085,0.21432435672221548,0.15218094656615494,0.14311869329726518,0.12048003707802422,0.14059706934683042,0.1814931544527122,0.1249432263919546,0.0597457611735762,0.12041296334639051,0.16301902499652707,0.12510875699682855,1.5677038338748999,1.8103692553249522,1.8421133889064443,1.957786312426267,2.105284560305054,2.2139243829127286,2.322048157411392,2.3922774590535645,2.469607337199224,2.5001103711751576,2.6347029362846115,2.734771995821367,2.795645297527013,2.754196955421291,2.9291896281924683,3.0975385195021308,3.0447005176651705,3.0881289060629187,3.08849591297079,3.093634627408031,3.11047312002262],
+"Estimate":[-0.07305529455102057,-0.0057475394007537135,0.019862595898581595,0.0755613194783191,-0.05127756268425213,0.04789121634978956,0.030061024401231356,0.03986968384484262,0.048457897289846806,-0.012820133350277539,0.013685361040923886,0.005199898128597284,0.0164162774648373,0.05641673885681884,0.0016957198969680817,-0.06496834258802511,0.010741616233677911,0.04275993550129887,0.003229015933287153,1.452023474827307,1.6676220565025497,1.7336997045580052,1.8436118199851643,1.9620937493794017,2.0880835635857604,2.1819660437275696,2.254678404642132,2.3484735871275646,2.3603848643067784,2.516113933361753,2.552977994310091,2.603938509344384,2.5780442879020358,2.7229688455567262,2.9092747255962252,2.8593251547084924,2.907943168261159,2.8736781792414066,2.8828072503191615,2.911501018068635],
+"2.5%":[-0.2272172766523859,-0.1670700586084853,-0.17114762452140675,-0.09839081142269912,-0.22467756818724258,-0.1150076442883886,-0.13013451064997683,-0.13448828156159562,-0.11740856214252182,-0.17782121326670994,-0.11574797121541744,-0.11008024082082965,-0.10776451441715584,-0.06865967673907453,-0.12155178659801848,-0.18968244634962642,-0.09892973087903473,-0.07749915399392934,-0.1186507251302543,1.3363431157797139,1.5248748576801467,1.625286020209566,1.729437327544061,1.8189029384537494,1.9622427442587915,2.0418839300437477,2.1170793502306986,2.2273398370559057,2.2206593574383984,2.3975249304388946,2.3711839927988128,2.4122317211617528,2.40189162038278,2.5167480629209837,2.7210109316903197,2.6739497917518142,2.7277574304593997,2.658860445512023,2.671979873230292,2.7125289161146497],
+"97.5%":[0.08110668755034477,0.1555749798069779,0.2108728163185699,0.2495134503793373,0.12212244281873832,0.2107900769879677,0.19025655945243952,0.21422764925128088,0.21432435672221545,0.15218094656615486,0.1431186932972652,0.12048003707802421,0.14059706934683044,0.1814931544527122,0.12494322639195464,0.05974576117357619,0.12041296334639054,0.1630190249965271,0.1251087569968286,1.5677038338749003,1.8103692553249526,1.8421133889064443,1.9577863124262675,2.105284560305054,2.2139243829127295,2.3220481574113916,2.3922774590535654,2.4696073371992235,2.5001103711751584,2.6347029362846115,2.734771995821369,2.795645297527015,2.7541969554212917,2.9291896281924688,3.0975385195021308,3.0447005176651705,3.0881289060629187,3.08849591297079,3.093634627408031,3.11047312002262],
 "Model":["lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid"]
 },
 "mapping":{
@@ -2098,41 +2101,41 @@ dtype: float64</code></pre>
 </div>
 </div>
 <p>What if we are not interested in the ATT per treatment period, but in a pooled effects?</p>
-<div id="19f21908" class="cell" data-execution_count="24">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb33"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>fit_twfe <span class="op">=</span> pf.feols(</span>
-<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">"dep_var ~ i(treat) | unit + year"</span>,</span>
-<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>    df_multi_cohort,</span>
-<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span>{<span class="st">"CRV1"</span>: <span class="st">"state"</span>},</span>
-<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb33-6"><a href="#cb33-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb33-7"><a href="#cb33-7" aria-hidden="true" tabindex="-1"></a>fit_did2s <span class="op">=</span> pf.did2s(</span>
-<span id="cb33-8"><a href="#cb33-8" aria-hidden="true" tabindex="-1"></a>    df_multi_cohort,</span>
-<span id="cb33-9"><a href="#cb33-9" aria-hidden="true" tabindex="-1"></a>    yname<span class="op">=</span><span class="st">"dep_var"</span>,</span>
-<span id="cb33-10"><a href="#cb33-10" aria-hidden="true" tabindex="-1"></a>    first_stage<span class="op">=</span><span class="st">"~ 0 | unit + year"</span>,</span>
-<span id="cb33-11"><a href="#cb33-11" aria-hidden="true" tabindex="-1"></a>    second_stage<span class="op">=</span><span class="st">"~i(treat)"</span>,</span>
-<span id="cb33-12"><a href="#cb33-12" aria-hidden="true" tabindex="-1"></a>    treatment<span class="op">=</span><span class="st">"treat"</span>,</span>
-<span id="cb33-13"><a href="#cb33-13" aria-hidden="true" tabindex="-1"></a>    cluster<span class="op">=</span><span class="st">"state"</span>,</span>
-<span id="cb33-14"><a href="#cb33-14" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb33-15"><a href="#cb33-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb33-16"><a href="#cb33-16" aria-hidden="true" tabindex="-1"></a>fit_lpdid <span class="op">=</span> pf.lpdid(</span>
-<span id="cb33-17"><a href="#cb33-17" aria-hidden="true" tabindex="-1"></a>    data<span class="op">=</span>df_multi_cohort,</span>
-<span id="cb33-18"><a href="#cb33-18" aria-hidden="true" tabindex="-1"></a>    yname<span class="op">=</span><span class="st">"dep_var"</span>,</span>
-<span id="cb33-19"><a href="#cb33-19" aria-hidden="true" tabindex="-1"></a>    gname<span class="op">=</span><span class="st">"g"</span>,</span>
-<span id="cb33-20"><a href="#cb33-20" aria-hidden="true" tabindex="-1"></a>    tname<span class="op">=</span><span class="st">"year"</span>,</span>
-<span id="cb33-21"><a href="#cb33-21" aria-hidden="true" tabindex="-1"></a>    idname<span class="op">=</span><span class="st">"unit"</span>,</span>
-<span id="cb33-22"><a href="#cb33-22" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span>{<span class="st">"CRV1"</span>: <span class="st">"state"</span>},</span>
-<span id="cb33-23"><a href="#cb33-23" aria-hidden="true" tabindex="-1"></a>    pre_window<span class="op">=-</span><span class="dv">20</span>,</span>
-<span id="cb33-24"><a href="#cb33-24" aria-hidden="true" tabindex="-1"></a>    post_window<span class="op">=</span><span class="dv">20</span>,</span>
-<span id="cb33-25"><a href="#cb33-25" aria-hidden="true" tabindex="-1"></a>    att<span class="op">=</span><span class="va">True</span>,</span>
-<span id="cb33-26"><a href="#cb33-26" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb33-27"><a href="#cb33-27" aria-hidden="true" tabindex="-1"></a>pd.concat(</span>
-<span id="cb33-28"><a href="#cb33-28" aria-hidden="true" tabindex="-1"></a>    [</span>
-<span id="cb33-29"><a href="#cb33-29" aria-hidden="true" tabindex="-1"></a>        fit_twfe.tidy().assign(estimator<span class="op">=</span><span class="st">"TWFE"</span>),</span>
-<span id="cb33-30"><a href="#cb33-30" aria-hidden="true" tabindex="-1"></a>        fit_did2s.tidy().assign(estimator<span class="op">=</span><span class="st">"DID2s"</span>),</span>
-<span id="cb33-31"><a href="#cb33-31" aria-hidden="true" tabindex="-1"></a>        fit_lpdid.tidy().assign(estimator<span class="op">=</span><span class="st">"LPDID"</span>).drop(<span class="st">"N"</span>, axis<span class="op">=</span><span class="dv">1</span>),</span>
-<span id="cb33-32"><a href="#cb33-32" aria-hidden="true" tabindex="-1"></a>    ],</span>
-<span id="cb33-33"><a href="#cb33-33" aria-hidden="true" tabindex="-1"></a>    axis<span class="op">=</span><span class="dv">0</span>,</span>
-<span id="cb33-34"><a href="#cb33-34" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div id="48b8d3b1" class="cell" data-execution_count="24">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb34"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>fit_twfe <span class="op">=</span> pf.feols(</span>
+<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">"dep_var ~ i(treat) | unit + year"</span>,</span>
+<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a>    df_multi_cohort,</span>
+<span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span>{<span class="st">"CRV1"</span>: <span class="st">"state"</span>},</span>
+<span id="cb34-5"><a href="#cb34-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb34-6"><a href="#cb34-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-7"><a href="#cb34-7" aria-hidden="true" tabindex="-1"></a>fit_did2s <span class="op">=</span> pf.did2s(</span>
+<span id="cb34-8"><a href="#cb34-8" aria-hidden="true" tabindex="-1"></a>    df_multi_cohort,</span>
+<span id="cb34-9"><a href="#cb34-9" aria-hidden="true" tabindex="-1"></a>    yname<span class="op">=</span><span class="st">"dep_var"</span>,</span>
+<span id="cb34-10"><a href="#cb34-10" aria-hidden="true" tabindex="-1"></a>    first_stage<span class="op">=</span><span class="st">"~ 0 | unit + year"</span>,</span>
+<span id="cb34-11"><a href="#cb34-11" aria-hidden="true" tabindex="-1"></a>    second_stage<span class="op">=</span><span class="st">"~i(treat)"</span>,</span>
+<span id="cb34-12"><a href="#cb34-12" aria-hidden="true" tabindex="-1"></a>    treatment<span class="op">=</span><span class="st">"treat"</span>,</span>
+<span id="cb34-13"><a href="#cb34-13" aria-hidden="true" tabindex="-1"></a>    cluster<span class="op">=</span><span class="st">"state"</span>,</span>
+<span id="cb34-14"><a href="#cb34-14" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb34-15"><a href="#cb34-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-16"><a href="#cb34-16" aria-hidden="true" tabindex="-1"></a>fit_lpdid <span class="op">=</span> pf.lpdid(</span>
+<span id="cb34-17"><a href="#cb34-17" aria-hidden="true" tabindex="-1"></a>    data<span class="op">=</span>df_multi_cohort,</span>
+<span id="cb34-18"><a href="#cb34-18" aria-hidden="true" tabindex="-1"></a>    yname<span class="op">=</span><span class="st">"dep_var"</span>,</span>
+<span id="cb34-19"><a href="#cb34-19" aria-hidden="true" tabindex="-1"></a>    gname<span class="op">=</span><span class="st">"g"</span>,</span>
+<span id="cb34-20"><a href="#cb34-20" aria-hidden="true" tabindex="-1"></a>    tname<span class="op">=</span><span class="st">"year"</span>,</span>
+<span id="cb34-21"><a href="#cb34-21" aria-hidden="true" tabindex="-1"></a>    idname<span class="op">=</span><span class="st">"unit"</span>,</span>
+<span id="cb34-22"><a href="#cb34-22" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span>{<span class="st">"CRV1"</span>: <span class="st">"state"</span>},</span>
+<span id="cb34-23"><a href="#cb34-23" aria-hidden="true" tabindex="-1"></a>    pre_window<span class="op">=-</span><span class="dv">20</span>,</span>
+<span id="cb34-24"><a href="#cb34-24" aria-hidden="true" tabindex="-1"></a>    post_window<span class="op">=</span><span class="dv">20</span>,</span>
+<span id="cb34-25"><a href="#cb34-25" aria-hidden="true" tabindex="-1"></a>    att<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb34-26"><a href="#cb34-26" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb34-27"><a href="#cb34-27" aria-hidden="true" tabindex="-1"></a>pd.concat(</span>
+<span id="cb34-28"><a href="#cb34-28" aria-hidden="true" tabindex="-1"></a>    [</span>
+<span id="cb34-29"><a href="#cb34-29" aria-hidden="true" tabindex="-1"></a>        fit_twfe.tidy().assign(estimator<span class="op">=</span><span class="st">"TWFE"</span>),</span>
+<span id="cb34-30"><a href="#cb34-30" aria-hidden="true" tabindex="-1"></a>        fit_did2s.tidy().assign(estimator<span class="op">=</span><span class="st">"DID2s"</span>),</span>
+<span id="cb34-31"><a href="#cb34-31" aria-hidden="true" tabindex="-1"></a>        fit_lpdid.tidy().assign(estimator<span class="op">=</span><span class="st">"LPDID"</span>).drop(<span class="st">"N"</span>, axis<span class="op">=</span><span class="dv">1</span>),</span>
+<span id="cb34-32"><a href="#cb34-32" aria-hidden="true" tabindex="-1"></a>    ],</span>
+<span id="cb34-33"><a href="#cb34-33" aria-hidden="true" tabindex="-1"></a>    axis<span class="op">=</span><span class="dv">0</span>,</span>
+<span id="cb34-34"><a href="#cb34-34" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="24">
 <div>
 
@@ -2164,7 +2167,7 @@ dtype: float64</code></pre>
       <th>treat::True</th>
       <td>2.230482</td>
       <td>0.024709</td>
-      <td>90.271444</td>
+      <td>90.271446</td>
       <td>0.0</td>
       <td>2.182052</td>
       <td>2.278911</td>

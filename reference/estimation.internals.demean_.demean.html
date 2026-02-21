@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>estimation.bonferroni</title>
+<title>estimation.internals.demean_.demean</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -75,7 +75,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <link href="../site_libs/quarto-html/quarto-syntax-highlighting-7b89279ff1a6dce999919e0e67d4d9ec.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-381776df98abee29e77bfaddc64fade2.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-b9c55ee423fe9b09b80369c068559168.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -239,7 +239,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/estimation.api.feols.feols.html">Estimation Functions</a></li><li class="breadcrumb-item"><a href="../reference/estimation.bonferroni.html">estimation.bonferroni</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/estimation.internals.demean_.demean.html">Misc / Utilities</a></li><li class="breadcrumb-item"><a href="../reference/estimation.internals.demean_.demean.html">estimation.internals.demean_.demean</a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
     </div>
@@ -314,14 +314,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.bonferroni.html" class="sidebar-item-text sidebar-link active">
- <span class="menu-text">estimation.bonferroni</span></a>
+  <a href="../reference/estimation.post_estimation.multcomp.bonferroni.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.post_estimation.multcomp.bonferroni</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.rwolf.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.rwolf</span></a>
+  <a href="../reference/estimation.post_estimation.multcomp.rwolf.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.post_estimation.multcomp.rwolf</span></a>
   </div>
 </li>
       </ul>
@@ -337,50 +337,50 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.feols_.Feols.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.feols_.Feols</span></a>
+  <a href="../reference/estimation.models.feols_.Feols.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.models.feols_.Feols</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.fepois_.Fepois.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.fepois_.Fepois</span></a>
+  <a href="../reference/estimation.models.fepois_.Fepois.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.models.fepois_.Fepois</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.feiv_.Feiv.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.feiv_.Feiv</span></a>
+  <a href="../reference/estimation.models.feiv_.Feiv.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.models.feiv_.Feiv</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.feglm_.Feglm.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.feglm_.Feglm</span></a>
+  <a href="../reference/estimation.models.feglm_.Feglm.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.models.feglm_.Feglm</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.felogit_.Felogit.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.felogit_.Felogit</span></a>
+  <a href="../reference/estimation.models.felogit_.Felogit.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.models.felogit_.Felogit</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.feprobit_.Feprobit.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.feprobit_.Feprobit</span></a>
+  <a href="../reference/estimation.models.feprobit_.Feprobit.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.models.feprobit_.Feprobit</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.fegaussian_.Fegaussian.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.fegaussian_.Fegaussian</span></a>
+  <a href="../reference/estimation.models.fegaussian_.Fegaussian.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.models.fegaussian_.Fegaussian</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.feols_compressed_.FeolsCompressed.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.feols_compressed_.FeolsCompressed</span></a>
+  <a href="../reference/estimation.models.feols_compressed_.FeolsCompressed.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.models.feols_compressed_.FeolsCompressed</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -490,20 +490,20 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <ul id="quarto-sidebar-section-5" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.demean.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.demean</span></a>
+  <a href="../reference/estimation.internals.demean_.demean.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text">estimation.internals.demean_.demean</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.detect_singletons.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.detect_singletons</span></a>
+  <a href="../reference/estimation.internals.detect_singletons_.detect_singletons.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.internals.detect_singletons_.detect_singletons</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.model_matrix_fixest.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.model_matrix_fixest</span></a>
+  <a href="../reference/estimation.deprecated.model_matrix_fixest_.model_matrix_fixest.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.deprecated.model_matrix_fixest_.model_matrix_fixest</span></a>
   </div>
 </li>
       </ul>
@@ -517,9 +517,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <!-- main -->
 <main class="content" id="quarto-document-content">
 
-<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/estimation.api.feols.feols.html">Estimation Functions</a></li><li class="breadcrumb-item"><a href="../reference/estimation.bonferroni.html">estimation.bonferroni</a></li></ol></nav>
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/estimation.internals.demean_.demean.html">Misc / Utilities</a></li><li class="breadcrumb-item"><a href="../reference/estimation.internals.demean_.demean.html">estimation.internals.demean_.demean</a></li></ol></nav>
 <div class="quarto-title">
-<h1 class="title">estimation.bonferroni</h1>
+<h1 class="title">estimation.internals.demean_.demean</h1>
 </div>
 
 
@@ -536,17 +536,23 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>estimation.bonferroni(models, param)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>Compute Bonferroni adjusted p-values for multiple hypothesis testing.</p>
-<p>For each model, it is assumed that tests to adjust are of the form “param = 0”.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>estimation.internals.demean_.demean(</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    x,</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    flist,</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    weights,</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    tol<span class="op">=</span><span class="fl">1e-08</span>,</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    maxiter<span class="op">=</span><span class="dv">100000</span>,</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Demean an array.</p>
+<p>Workhorse for demeaning an input array <code>x</code> based on the specified fixed effects and weights via the alternating projections algorithm.</p>
 <section id="parameters" class="level2 doc-section doc-section-parameters">
 <h2 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters">Parameters</h2>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 5%">
-<col style="width: 48%">
-<col style="width: 38%">
-<col style="width: 7%">
+<col style="width: 6%">
+<col style="width: 10%">
+<col style="width: 75%">
+<col style="width: 8%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -558,16 +564,34 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </thead>
 <tbody>
 <tr class="odd">
-<td>models</td>
-<td>A supported model object (Feols, Fepois, Feiv, FixestMulti) or a list of</td>
-<td>Feols, Fepois &amp; Feiv models.</td>
+<td>x</td>
+<td>numpy.ndarray</td>
+<td>Input array of shape (n_samples, n_features). Needs to be of type float.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
-<td>param</td>
-<td>str</td>
-<td>The parameter for which the p-values should be adjusted.</td>
+<td>flist</td>
+<td>numpy.ndarray</td>
+<td>Array of shape (n_samples, n_factors) specifying the fixed effects. Needs to already be converted to integers.</td>
 <td><em>required</em></td>
+</tr>
+<tr class="odd">
+<td>weights</td>
+<td>numpy.ndarray</td>
+<td>Array of shape (n_samples,) specifying the weights.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td>tol</td>
+<td>float</td>
+<td>Tolerance criterion for convergence. Defaults to 1e-08.</td>
+<td><code>1e-08</code></td>
+</tr>
+<tr class="odd">
+<td>maxiter</td>
+<td>int</td>
+<td>Maximum number of iterations. Defaults to 100_000.</td>
+<td><code>100000</code></td>
 </tr>
 </tbody>
 </table>
@@ -576,9 +600,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h2 class="doc-section doc-section-returns anchored" data-anchor-id="returns">Returns</h2>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 7%">
-<col style="width: 12%">
-<col style="width: 80%">
+<col style="width: 4%">
+<col style="width: 16%">
+<col style="width: 79%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -590,26 +614,46 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tbody>
 <tr class="odd">
 <td></td>
-<td>pd.DataFrame</td>
-<td>A DataFrame containing estimation statistics, including the Bonferroni adjusted p-values.</td>
+<td>tuple[numpy.ndarray, bool]</td>
+<td>A tuple containing the demeaned array of shape (n_samples, n_features) and a boolean indicating whether the algorithm converged successfully.</td>
 </tr>
 </tbody>
 </table>
 </section>
 <section id="examples" class="level2 doc-section doc-section-examples">
 <h2 class="doc-section doc-section-examples anchored" data-anchor-id="examples">Examples</h2>
-<div id="e6c2bcb3" class="cell" data-execution_count="1">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.utils <span class="im">import</span> get_data</span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> get_data().dropna()</span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>fit1 <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1"</span>, data<span class="op">=</span>data)</span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>fit2 <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 + X2"</span>, data<span class="op">=</span>data)</span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>bonf_df <span class="op">=</span> pf.bonferroni([fit1, fit2], param<span class="op">=</span><span class="st">"X1"</span>)</span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>bonf_df</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div id="fbf4978f" class="cell" data-execution_count="1">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.utils.dgps <span class="im">import</span> get_blw</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.estimation.internals.demean_ <span class="im">import</span> demean</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> formulaic <span class="im">import</span> model_matrix</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>fml <span class="op">=</span> <span class="st">"y ~ treat | state + year"</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> get_blw()</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>data.head()</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>Y, rhs <span class="op">=</span> model_matrix(fml, data)</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>X <span class="op">=</span> rhs[<span class="dv">0</span>].drop(columns<span class="op">=</span><span class="st">"Intercept"</span>)</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>fe <span class="op">=</span> rhs[<span class="dv">1</span>].drop(columns<span class="op">=</span><span class="st">"Intercept"</span>)</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>YX <span class="op">=</span> np.concatenate([Y, X], axis<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="co"># to numpy</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>Y <span class="op">=</span> Y.to_numpy()</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>X <span class="op">=</span> X.to_numpy()</span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>YX <span class="op">=</span> np.concatenate([Y, X], axis<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>fe <span class="op">=</span> fe.to_numpy().astype(<span class="bu">int</span>)  <span class="co"># demean requires fixed effects as ints!</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>YX_demeaned, success <span class="op">=</span> demean(YX, fe, weights <span class="op">=</span> np.ones(YX.shape[<span class="dv">0</span>]))</span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>Y_demeaned <span class="op">=</span> YX_demeaned[:, <span class="dv">0</span>]</span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>X_demeaned <span class="op">=</span> YX_demeaned[:, <span class="dv">1</span>:]</span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(np.linalg.lstsq(X_demeaned, Y_demeaned, rcond<span class="op">=</span><span class="va">None</span>)[<span class="dv">0</span>])</span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(pf.feols(fml, data).coef())</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 
-            <div id="E2Rv14"></div>
+            <div id="OJserx"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -633,9 +677,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("E2Rv14").appendChild(div);
+                        document.getElementById("OJserx").appendChild(div);
                     };
-                    var e = document.getElementById("E2Rv14");
+                    var e = document.getElementById("OJserx");
                     e.appendChild(script);
                 })()
             </script>
@@ -643,7 +687,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <div class="cell-output cell-output-display">
 
-            <div id="eAkpoN"></div>
+            <div id="vE4Ae1"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -667,66 +711,19 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("eAkpoN").appendChild(div);
+                        document.getElementById("vE4Ae1").appendChild(div);
                     };
-                    var e = document.getElementById("eAkpoN");
+                    var e = document.getElementById("vE4Ae1");
                     e.appendChild(script);
                 })()
             </script>
             
 </div>
-<div class="cell-output cell-output-display" data-execution_count="1">
-<div>
-
-
-<table class="dataframe caption-top table table-sm table-striped small" data-border="1">
-<thead>
-<tr class="header">
-<th data-quarto-table-cell-role="th"></th>
-<th data-quarto-table-cell-role="th">est0</th>
-<th data-quarto-table-cell-role="th">est1</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<th data-quarto-table-cell-role="th">Estimate</th>
-<td>-1.001930</td>
-<td>-0.995197</td>
-</tr>
-<tr class="even">
-<th data-quarto-table-cell-role="th">Std. Error</th>
-<td>0.084823</td>
-<td>0.082194</td>
-</tr>
-<tr class="odd">
-<th data-quarto-table-cell-role="th">t value</th>
-<td>-11.811964</td>
-<td>-12.107957</td>
-</tr>
-<tr class="even">
-<th data-quarto-table-cell-role="th">Pr(&gt;|t|)</th>
-<td>0.000000</td>
-<td>0.000000</td>
-</tr>
-<tr class="odd">
-<th data-quarto-table-cell-role="th">2.5%</th>
-<td>-1.168383</td>
-<td>-1.156490</td>
-</tr>
-<tr class="even">
-<th data-quarto-table-cell-role="th">97.5%</th>
-<td>-0.835476</td>
-<td>-0.833904</td>
-</tr>
-<tr class="odd">
-<th data-quarto-table-cell-role="th">Bonferroni Pr(&gt;|t|)</th>
-<td>0.000000</td>
-<td>0.000000</td>
-</tr>
-</tbody>
-</table>
-
-</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[-6.69571417]
+Coefficient
+treat   -6.695714
+Name: Estimate, dtype: float64</code></pre>
 </div>
 </div>
 
