@@ -1,10 +1,11 @@
-from typing import Optional, Union
+import warnings
+from typing import Any, Optional, Union
 
 import numba as nb
 import numpy as np
 import pandas as pd
 
-from pyfixest.errors import NanInClusterVarError
+from pyfixest.errors import NanInClusterVarError, VcovTypeNotSupportedError
 from pyfixest.utils.dev_utils import _narwhals_to_pandas
 
 
@@ -81,6 +82,145 @@ def _get_vcov_type(
         vcov_type (str) : The specified vcov type, or "iid" by default.
     """
     return vcov if vcov is not None else "iid"
+
+
+def _check_vcov_input(
+    vcov: Union[str, dict[str, str]],
+    vcov_kwargs: Optional[dict[str, Any]],
+    data: pd.DataFrame,
+):
+    """
+    Check the input for the vcov argument in the Feols class.
+
+    Parameters
+    ----------
+    vcov : Union[str, dict[str, str]]
+        The vcov argument passed to the Feols class.
+    vcov_kwargs : Optional[dict[str, Any]]
+        The vcov_kwargs argument passed to the Feols class.
+    data : pd.DataFrame
+        The data passed to the Feols class.
+
+    Returns
+    -------
+    None
+    """
+    assert isinstance(vcov, (dict, str, list)), "vcov must be a dict, string or list"
+    if isinstance(vcov, dict):
+        assert next(iter(vcov.keys())) in [
+            "CRV1",
+            "CRV3",
+        ], "vcov dict key must be CRV1 or CRV3"
+        assert isinstance(next(iter(vcov.values())), str), (
+            "vcov dict value must be a string"
+        )
+        deparse_vcov = next(iter(vcov.values())).split("+")
+        assert len(deparse_vcov) <= 2, "not more than twoway clustering is supported"
+
+    if isinstance(vcov, list):
+        assert all(isinstance(v, str) for v in vcov), "vcov list must contain strings"
+        assert all(v in data.columns for v in vcov), (
+            "vcov list must contain columns in the data"
+        )
+    if isinstance(vcov, str):
+        assert vcov in [
+            "iid",
+            "hetero",
+            "HC1",
+            "HC2",
+            "HC3",
+            "NW",
+            "DK",
+            "nid",
+        ], (
+            "vcov string must be iid, hetero, HC1, HC2, HC3, NW, or DK, or for quantile regression, 'nid'."
+        )
+
+        # check that time_id is provided if vcov is NW or DK
+        if (
+            vcov in {"NW", "DK"}
+            and vcov_kwargs is not None
+            and "time_id" not in vcov_kwargs
+        ):
+            raise ValueError("Missing required 'time_id' for NW/DK vcov")
+
+
+def _deparse_vcov_input(vcov: Union[str, dict[str, str]], has_fixef: bool, is_iv: bool):
+    """
+    Deparse the vcov argument passed to the Feols class.
+
+    Parameters
+    ----------
+    vcov : Union[str, dict[str, str]]
+        The vcov argument passed to the Feols class.
+    has_fixef : bool
+        Whether the regression has fixed effects.
+    is_iv : bool
+        Whether the regression is an IV regression.
+
+    Returns
+    -------
+    vcov_type : str
+        The type of vcov to be used. Either "iid", "hetero", or "CRV".
+    vcov_type_detail : str or list
+        The type of vcov to be used, with more detail. Options include "iid",
+        "hetero", "HC1", "HC2", "HC3", "CRV1", or "CRV3".
+    is_clustered : bool
+        Indicates whether the vcov is clustered.
+    clustervar : str
+        The name of the cluster variable.
+    """
+    if isinstance(vcov, dict):
+        vcov_type_detail = next(iter(vcov.keys()))
+        deparse_vcov = next(iter(vcov.values())).split("+")
+        if isinstance(deparse_vcov, str):
+            deparse_vcov = [deparse_vcov]
+        deparse_vcov = [x.replace(" ", "") for x in deparse_vcov]
+    elif isinstance(vcov, (list, str)):
+        vcov_type_detail = vcov
+    else:
+        raise TypeError("arg vcov needs to be a dict, string or list")
+
+    if vcov_type_detail == "iid":
+        vcov_type = "iid"
+        is_clustered = False
+    elif vcov_type_detail in ["hetero", "HC1", "HC2", "HC3"]:
+        vcov_type = "hetero"
+        is_clustered = False
+        if vcov_type_detail in ["HC2", "HC3"]:
+            if has_fixef:
+                raise VcovTypeNotSupportedError(
+                    "HC2 and HC3 inference types are not supported for regressions with fixed effects."
+                )
+            if is_iv:
+                raise VcovTypeNotSupportedError(
+                    "HC2 and HC3 inference types are not supported for IV regressions."
+                )
+    elif vcov_type_detail in ["NW", "DK"]:
+        vcov_type = "HAC"
+        is_clustered = False
+
+    elif vcov_type_detail in ["CRV1", "CRV3"]:
+        vcov_type = "CRV"
+        is_clustered = True
+
+    elif vcov_type_detail == "nid":
+        vcov_type = "nid"
+        is_clustered = False
+
+    clustervar = deparse_vcov if is_clustered else None
+
+    # loop over clustervar to change "^" to "_"
+    if clustervar and "^" in clustervar:
+        clustervar = [x.replace("^", "_") for x in clustervar]
+        warnings.warn(
+            f"""
+            The '^' character in the cluster variable name is replaced by '_'.
+            In consequence, the clustering variable(s) is (are) named {clustervar}.
+            """
+        )
+
+    return vcov_type, vcov_type_detail, is_clustered, clustervar
 
 
 @nb.njit(parallel=False)
