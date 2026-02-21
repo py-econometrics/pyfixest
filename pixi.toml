@@ -14,7 +14,6 @@ version = "0.50.0a1"
 
 [dependencies]
 scipy=">=1.6,<1.16"
-formulaic=">=1.1.0"
 pandas=">=1.1.0"
 numba=">=0.58.0"
 seaborn=">=0.13.2"
@@ -26,6 +25,7 @@ joblib=">=1.4.2,<2"
 
 [pypi-dependencies]
 maketables = ">=0.1.0"
+formulaic = { git = "https://github.com/leostimpfle/formulaic", rev = "add_interaction_operator" }
 
 [feature.dev]
 platforms = ["linux-64", "osx-arm64", "osx-64"]

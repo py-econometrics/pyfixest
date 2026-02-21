@@ -329,7 +329,7 @@ def create_model_matrix(
         output="pandas",
         context={
             "log": log,  # custom log settings infinite to nan
-            "i": factor_interaction,  # fixest::i()-style syntax
+            # "i": factor_interaction,  # fixest::i()-style syntax
             "__fixed_effect__": _factorize,
         }
         | {**capture_context(context)},
