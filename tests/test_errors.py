@@ -14,8 +14,8 @@ from pyfixest.errors import (
     VcovTypeNotSupportedError,
 )
 from pyfixest.estimation import feols, fepois
-from pyfixest.estimation.FormulaParser import FixestFormulaParser
-from pyfixest.estimation.multcomp import rwolf
+from pyfixest.estimation.deprecated.FormulaParser import FixestFormulaParser
+from pyfixest.estimation.post_estimation.multcomp import rwolf
 from pyfixest.report.summarize import etable, summary
 from pyfixest.utils.dgps import gelbach_data
 from pyfixest.utils.utils import get_data, ssc

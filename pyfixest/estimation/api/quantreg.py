@@ -3,7 +3,7 @@ from typing import Any, Optional, Union
 
 from pyfixest.estimation.api.utils import _estimation_input_checks
 from pyfixest.estimation.FixestMulti_ import FixestMulti
-from pyfixest.estimation.literals import (
+from pyfixest.estimation.internals.literals import (
     QuantregMethodOptions,
     QuantregMultiOptions,
     SolverOptions,
@@ -182,7 +182,7 @@ def quantreg(
     ```
 
     For details around inference, estimation techniques, (fast) fitting and visualizing the full quantile regression
-    process, please take a look at the dedicated [vignette](https://py-econometrics.github.io/pyfixest/quantile-regression.html).
+    process, please take a look at the dedicated [vignette](https://pyfixest.org/quantile-regression.html).
     """
     # WLS currently not supported for quantile regression
     weights = None

@@ -1,10 +1,16 @@
 project:
   type: website
   output-dir: _site
+  post-render:
+    - _scripts/generate_llms_md.py
 
 execute:
   freeze: auto
   python: "../.pixi/envs/docs/bin/python3"
+
+format:
+  html:
+    include-in-header: analytics.html
 
 metadata-files:
   - _sidebar.yml
@@ -90,6 +96,42 @@ website:
         file: acknowledgements.md
       - text: "Sprint 2026"
         file: pyfixest-sprint.md
+      - text: "Skills"
+        file: skills.md
+      - text: Learn more
+        menu:
+        - text: "Regression Tables and Summary Statistics"
+          file: table-layout.qmd
+        - text: "Hypothesis Testing and Marginal Effects"
+          file: marginaleffects.qmd
+        - text: "Difference-in-Differences Estimation"
+          file: difference-in-differences.qmd
+        - file: multiple_testing.ipynb
+          text: "Multiple Testing Corrections"
+        - file: regression_decomposition.ipynb
+          text: "Regression Decomposition"
+        - file: ssc.qmd
+          text: "On Small Sample Corrections"
+        - file: quantile-regression.qmd
+          text: "Quantile Regression"
+        #- text: "Compare fixest & PyFixest"
+        #  file: compare-fixest-pyfixest.qmd
+        - text: "Compare Stata & PyFixest"
+          file: stata-2-pyfixest.qmd
+        - text: "PyFixest on the GPU via CuPy"
+          file: pyfixest-gpu-cupy.ipynb
+        - text: "PyFixest on the GPU via JAX"
+          file: pyfixest_gpu.ipynb
+        - text: "Variance Reduction in AB Tests"
+          file: panel_variance_reduction.ipynb
+        - text: "Other Resources around PyFixest"
+          file: resources.qmd
+        - text: "Replicating 'The Effect' with PyFixest"
+          file: replicating-the-effect.qmd
+        - text: "Replicating 'The Mixtape' with PyFixest"
+          file: mixtape.ipynb
+        - text: "Replicating 'Causal Inference for the Brave and True' with PyFixest"
+          file: brave_true.ipynb
 
 quartodoc:
   package: pyfixest
@@ -110,20 +152,20 @@ quartodoc:
         - did.estimation.did2s
         - did.estimation.lpdid
         - did.estimation.event_study
-        - estimation.bonferroni
-        - estimation.rwolf
+        - estimation.post_estimation.multcomp.bonferroni
+        - estimation.post_estimation.multcomp.rwolf
     - title: Estimation Classes
       desc: |
         Details on Methods and Attributes
       contents:
-        - estimation.feols_.Feols
-        - estimation.fepois_.Fepois
-        - estimation.feiv_.Feiv
-        - estimation.feglm_.Feglm
-        - estimation.felogit_.Felogit
-        - estimation.feprobit_.Feprobit
-        - estimation.fegaussian_.Fegaussian
-        - estimation.feols_compressed_.FeolsCompressed
+        - estimation.models.feols_.Feols
+        - estimation.models.fepois_.Fepois
+        - estimation.models.feiv_.Feiv
+        - estimation.models.feglm_.Feglm
+        - estimation.models.felogit_.Felogit
+        - estimation.models.feprobit_.Feprobit
+        - estimation.models.fegaussian_.Fegaussian
+        - estimation.models.feols_compressed_.FeolsCompressed
         - estimation.FixestMulti_.FixestMulti
         - estimation.quantreg.quantreg_.Quantreg
         #- did.did.DID
@@ -152,6 +194,6 @@ quartodoc:
       desc: |
         PyFixest internals and utilities
       contents:
-        - estimation.demean
-        - estimation.detect_singletons
-        - estimation.model_matrix_fixest
+        - estimation.internals.demean_.demean
+        - estimation.internals.detect_singletons_.detect_singletons
+        - estimation.deprecated.model_matrix_fixest_.model_matrix_fixest
