@@ -348,7 +348,20 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-85"><a href="#cb1-85" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`.wildboottest(param, reps, seed)`</span> — Wild cluster bootstrap inference</span>
 <span id="cb1-86"><a href="#cb1-86" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`.ccv(treatment, pk, qk, ...)`</span> — Causal cluster variance estimator</span>
 <span id="cb1-87"><a href="#cb1-87" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`.ritest(param, reps, ...)`</span> — Randomization inference</span>
-<span id="cb1-88"><a href="#cb1-88" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`.decompose(param, x1_vars, type, ...)`</span> — Gelbach (2016) decomposition</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb1-88"><a href="#cb1-88" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`.decompose(param, x1_vars, type, ...)`</span> — Gelbach (2016) decomposition</span>
+<span id="cb1-89"><a href="#cb1-89" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-90"><a href="#cb1-90" aria-hidden="true" tabindex="-1"></a><span class="fu">## etable Basics</span></span>
+<span id="cb1-91"><a href="#cb1-91" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-92"><a href="#cb1-92" aria-hidden="true" tabindex="-1"></a>For regression tables, use <span class="in">`pf.etable()`</span>.</span>
+<span id="cb1-93"><a href="#cb1-93" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-94"><a href="#cb1-94" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Build tables: <span class="in">`pf.etable([fit1, fit2, ...])`</span> or <span class="in">`pf.etable(pf.feols("Y~csw(X1,X2)", data))`</span>.</span>
+<span id="cb1-95"><a href="#cb1-95" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Output formats: <span class="in">`type="gt"`</span> (default), <span class="in">`"md"`</span>, <span class="in">`"tex"`</span>, <span class="in">`"df"`</span>.</span>
+<span id="cb1-96"><a href="#cb1-96" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Keep/drop variables: <span class="in">`keep="X1"`</span> or <span class="in">`drop=["X2"]`</span>.</span>
+<span id="cb1-97"><a href="#cb1-97" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Labels and fixed effects labels: <span class="in">`labels={...}`</span>, <span class="in">`felabels={...}`</span>.</span>
+<span id="cb1-98"><a href="#cb1-98" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Show p-values or CIs: <span class="in">`coef_fmt="b (se) [p]"`</span> shows the coefficient - b; standard error in parentheses, pvalue in paranteres.</span>
+<span id="cb1-99"><a href="#cb1-99" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Title/caption: <span class="in">`caption="Regression Results"`</span>.</span>
+<span id="cb1-100"><a href="#cb1-100" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Rename variables: <span class="in">`labels={"X1": "Age", "X2": "Schooling"}`</span>.</span>
+<span id="cb1-101"><a href="#cb1-101" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Column headers for dependent variables: <span class="in">`model_heads=[...]`</span> and <span class="in">`head_order="hd"`</span>/<span class="in">`"dh"`</span> to control header order (headlines vs depvars).</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 
 
 </section>
