@@ -17,7 +17,9 @@ You should have read the [Getting Started](../getting-started.qmd) page and have
 
 ## What Are Fixed Effects?
 
-A fixed effect model includes group-specific intercepts that absorb unobserved heterogeneity. The canonical panel data model is:
+A fixed effect model includes group-specific intercepts that absorb unobserved heterogeneity. 
+
+The canonical panel data model is:
 
 $$
 Y_{it} = \beta X_{it} + \alpha_i + \psi_t + \varepsilon_{it}
@@ -29,7 +31,7 @@ where $\alpha_i$ is an individual fixed effect (constant across time) and $\psi_
 
 In the following section, we introduce two chanonical use cases of fixed effects regression.
 
-## Application 1: Twin Studies --- Returns to Education
+## Application 1: Twin Studies and the Returns to Education
 
 One of the most foundational question in the economics of education is "wow much does an extra year of education raise wages"? 
 If we were to simply regress years of education on realized wages, we would likely overstates the return to education as there is a selection bias: *ability* drives both education and wages. Or, in other words, kids with high innate (but unobserved) ability end up with more years of education, but also higher wages! The relation between education and wages might be spurios, as both are driven by the same latent factor. 
@@ -82,7 +84,7 @@ pf.etable(
 pf.coefplot([fit_naive, fit_fe], keep="educ")
 ```
 
-## Application 2: Worker-Firm Panel --- Two-Way Fixed Effects
+## Application 2: AKM Worker-Firm Regressions
 
 Wages of workers depend on both *worker characteristics*  and *workplace characteristics*. Higher-skill worker might earn more, but there might also be workplace-premia. A two-way fixed effects model as formulated in Abowd, Kramarz & Margolis (AKM, 1999) separates these effects.
 
