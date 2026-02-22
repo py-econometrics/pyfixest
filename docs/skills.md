@@ -1,14 +1,17 @@
-# PyFixest
+# Skills
 
-> Fast high-dimensional fixed effects regression in Python, closely mirroring the syntax of the R package fixest.
+This page provides a ready-to-use skill file for analytics projects that use PyFixest. The goal is to make LLM-assisted analysis more reliable by giving the model a concise, authoritative reference for PyFixest usage.
 
-## Docs
+## How To Use
 
-- [Getting Started](https://pyfixest.org/pyfixest/quickstart.html): [markdown](https://pyfixest.org/pyfixest/quickstart.html.md)
-- [API Reference](https://pyfixest.org/pyfixest/reference/): [markdown](https://pyfixest.org/pyfixest/reference/index.html.md)
-- [Changelog](https://pyfixest.org/pyfixest/changelog.html): [markdown](https://pyfixest.org/pyfixest/changelog.html.md)
+1. Copy the skill content below into a file named `SKILL.md` or `Agent.md` (or a tool-specific skill file) in your analytics project.
+2. Ensure your LLM tool is configured to read project skills.
+3. Use the formula and inference guidelines below as the authoritative PyFixest reference for the model.
 
-All documentation pages are available as clean markdown by appending `.md` to the HTML URL (e.g., `quickstart.html` → `quickstart.html.md`).
+## Skill File (PyFixest)
+
+```markdown
+# PyFixest Skill
 
 ## Core API (4 functions)
 
@@ -35,15 +38,15 @@ IV behavior:
 Other syntax:
 - Multiple depvars are expanded to multiple estimations: `"Y1 + Y2 ~ X1"` behaves like `"sw(Y1, Y2) ~ X1"`.
 - `i()` creates indicator expansions and interactions:
-  - `i(cat)` expands to dummies for each level of `cat` (one omitted).
-  - `i(cat, ref="Base")` sets the omitted reference level explicitly.
-  - `i(cat, x)` interacts a categorical `cat` with a numeric `x` (varying slopes by category).
-  - `i(cat1, cat2, ref2="Base")` interacts two categorical variables; `ref2` sets the omitted level of `cat2`.
-  - Example (cat × numeric): `Y ~ i(industry, exposure)` creates industry-specific slopes on `exposure`.
-  - Example (cat × cat): `Y ~ i(state, year, ref2=2000)` creates state-by-year indicators with 2000 as the base year.
+- `i(cat)` expands to dummies for each level of `cat` (one omitted).
+- `i(cat, ref="Base")` sets the omitted reference level explicitly.
+- `i(cat, x)` interacts a categorical `cat` with a numeric `x` (varying slopes by category).
+- `i(cat1, cat2, ref2="Base")` interacts two categorical variables; `ref2` sets the omitted level of `cat2`.
+- Example (cat × numeric): `Y ~ i(industry, exposure)` creates industry-specific slopes on `exposure`.
+- Example (cat × cat): `Y ~ i(state, year, ref2=2000)` creates state-by-year indicators with 2000 as the base year.
 - Standard interactions still work:
-  - `X1 * X2` expands to `X1 + X2 + X1:X2`.
-  - `X1:X2` is the interaction term only (no main effects).
+- `X1 * X2` expands to `X1 + X2 + X1:X2`.
+- `X1:X2` is the interaction term only (no main effects).
 - Interacted FEs: `"Y ~ X1 | FE1 ^ FE2"` (creates a combined FE).
 
 ### Multiple Estimation Operators
@@ -73,7 +76,6 @@ Combining operators example:
 You can run regressions for subsamples by using the `split` and `fsplit` arguments, where both split by the 
 provided variable, but `fsplit` also provides a fit for the full sample. 
 
-
 ## Inference (vcov)
 
 Pass to `vcov`:
@@ -102,3 +104,4 @@ Model objects support:
 - `.ccv(treatment, pk, qk, ...)` — Causal cluster variance estimator
 - `.ritest(param, reps, ...)` — Randomization inference
 - `.decompose(param, x1_vars, type, ...)` — Gelbach (2016) decomposition
+```

@@ -22,18 +22,67 @@ def strip_yaml_frontmatter(text: str) -> str:
     return re.sub(r"\A---\n.*?\n---\n*", "", text, count=1, flags=re.DOTALL)
 
 
+MAX_OUTPUT_CHARS = 4000
+MAX_CELL_OUTPUT_CHARS = 8000
+
+
+def _truncate(text: str, max_chars: int) -> str:
+    if len(text) <= max_chars:
+        return text
+    return text[:max_chars] + "\n...[truncated]..."
+
+
+def _format_output(output: dict) -> list[str]:
+    parts: list[str] = []
+    output_type = output.get("output_type")
+    if output_type == "stream":
+        text = output.get("text", "")
+        if text:
+            parts.append(f"```text\n{_truncate(text, MAX_OUTPUT_CHARS)}\n```")
+    elif output_type in ("execute_result", "display_data"):
+        data = output.get("data", {})
+        if "text/markdown" in data:
+            parts.append(_truncate("".join(data["text/markdown"]), MAX_OUTPUT_CHARS))
+        elif "text/plain" in data:
+            parts.append(f"```text\n{_truncate(''.join(data['text/plain']), MAX_OUTPUT_CHARS)}\n```")
+        else:
+            for mime in data.keys():
+                if mime.startswith("image/"):
+                    parts.append(f"[{mime} omitted]")
+                    break
+    elif output_type == "error":
+        tb = "\n".join(output.get("traceback", []))
+        if tb:
+            parts.append(f"```text\n{_truncate(tb, MAX_OUTPUT_CHARS)}\n```")
+    return parts
+
+
 def notebook_to_markdown(nb_path: Path) -> str:
-    """Extract markdown and code cells from a Jupyter notebook."""
+    """Extract markdown, code, and outputs from a Jupyter notebook."""
     with open(nb_path, encoding="utf-8") as f:
         nb = json.load(f)
 
     parts: list[str] = []
     for cell in nb.get("cells", []):
         source = "".join(cell.get("source", []))
-        if cell["cell_type"] == "markdown":
+        cell_type = cell.get("cell_type")
+        if cell_type == "markdown":
             parts.append(source)
-        elif cell["cell_type"] == "code":
+        elif cell_type == "code":
             parts.append(f"```python\n{source}\n```")
+            output_parts: list[str] = []
+            output_chars = 0
+            for output in cell.get("outputs", []):
+                for out_part in _format_output(output):
+                    output_chars += len(out_part)
+                    if output_chars > MAX_CELL_OUTPUT_CHARS:
+                        output_parts.append("```text\n...[outputs truncated]...\n```")
+                        break
+                    output_parts.append(out_part)
+                if output_chars > MAX_CELL_OUTPUT_CHARS:
+                    break
+            if output_parts:
+                parts.extend(output_parts)
     return "\n\n".join(parts)
 
 

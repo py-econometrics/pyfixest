@@ -425,7 +425,7 @@ def dtable(
     warnings.warn(
         "pf.dtable() is deprecated and will be removed in a future version. "
         "Please use maketables.DTable() directly. "
-        "See https://py-econometrics.github.io/maketables/ for documentation.",
+        "See https://pyfixest.org/maketables/ for documentation.",
         FutureWarning,
         stacklevel=2,
     )
