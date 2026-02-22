@@ -7,7 +7,7 @@
 - [Getting Started](https://pyfixest.org/quickstart.html): [markdown](https://pyfixest.org/quickstart.html.md)
 - [API Reference](https://pyfixest.org/reference/): [markdown](https://pyfixest.org/reference/index.html.md)
 - [feols API](https://pyfixest.org/reference/estimation.api.feols.feols.html): [markdown](https://pyfixest.org/reference/estimation.api.feols.feols.html.md)
-- [etable details](https://pyfixest.org/table-layout.html): [markdown](https://pyfixest.org/table-layout.html.md)
+- [Regression Tables (etable)](https://pyfixest.org/table-layout.html): [markdown](https://pyfixest.org/table-layout.html.md)
 - [Changelog](https://pyfixest.org/changelog.html): [markdown](https://pyfixest.org/changelog.html.md)
 
 All documentation pages are available as clean markdown by appending `.md` to the HTML URL (e.g., `quickstart.html` → `quickstart.html.md`).
@@ -104,3 +104,16 @@ Model objects support:
 - `.ccv(treatment, pk, qk, ...)` — Causal cluster variance estimator
 - `.ritest(param, reps, ...)` — Randomization inference
 - `.decompose(param, x1_vars, type, ...)` — Gelbach (2016) decomposition
+
+## etable Basics
+
+For regression tables, use `pf.etable()`.
+
+- Build tables: `pf.etable([fit1, fit2, ...])` or `pf.etable(pf.feols("Y~csw(X1,X2)", data))`.
+- Output formats: `type="gt"` (default), `"md"`, `"tex"`, `"df"`.
+- Keep/drop variables: `keep="X1"` or `drop=["X2"]`.
+- Labels and fixed effects labels: `labels={...}`, `felabels={...}`.
+- Show p-values or CIs: `coef_fmt="b (se) [p]"` shows the coefficient - b; standard error in parentheses, pvalue in paranteres.
+- Title/caption: `caption="Regression Results"`.
+- Rename variables: `labels={"X1": "Age", "X2": "Schooling"}`.
+- Column headers for dependent variables: `model_heads=[...]` and `head_order="hd"`/`"dh"` to control header order (headlines vs depvars).
