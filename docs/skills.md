@@ -37,16 +37,11 @@ IV behavior:
 
 Other syntax:
 - Multiple depvars are expanded to multiple estimations: `"Y1 + Y2 ~ X1"` behaves like `"sw(Y1, Y2) ~ X1"`.
-- `i()` creates indicator expansions and interactions:
-- `i(cat)` expands to dummies for each level of `cat` (one omitted).
-- `i(cat, ref="Base")` sets the omitted reference level explicitly.
-- `i(cat, x)` interacts a categorical `cat` with a numeric `x` (varying slopes by category).
-- `i(cat1, cat2, ref2="Base")` interacts two categorical variables; `ref2` sets the omitted level of `cat2`.
-- Example (cat × numeric): `Y ~ i(industry, exposure)` creates industry-specific slopes on `exposure`.
-- Example (cat × cat): `Y ~ i(state, year, ref2=2000)` creates state-by-year indicators with 2000 as the base year.
-- Standard interactions still work:
-- `X1 * X2` expands to `X1 + X2 + X1:X2`.
-- `X1:X2` is the interaction term only (no main effects).
+- `i()` creates indicator expansions and interactions. It expands categorical variables into dummies and can interact a categorical variable with a numeric or another categorical variable.
+  Examples: `i(cat)`, `i(cat, ref="Base")`, `i(cat, x)` (numeric `x` gives varying slopes; categorical `x` gives cat-by-x indicators), `i(cat1, cat2, ref2="Base")`.
+  Example (cat × numeric): `Y ~ i(industry, exposure)` creates industry-specific slopes on `exposure`.
+  Example (cat × cat): `Y ~ i(state, year, ref2=2000)` creates state-by-year indicators with 2000 as the base year.
+- Standard interactions work as well. `X1 * X2` expands to `X1 + X2 + X1:X2`, while `X1:X2` is the interaction term only.
 - Interacted FEs: `"Y ~ X1 | FE1 ^ FE2"` (creates a combined FE).
 
 ### Multiple Estimation Operators

@@ -5,10 +5,9 @@
 ## Docs
 
 - [Getting Started](https://pyfixest.org/quickstart.html): [markdown](https://pyfixest.org/quickstart.html.md)
-- [API Reference](https://pyfixest.org/reference/)
-- [feols API](https://www.pyfixest.org/reference/estimation.api.feols.feols.html): [markdown](https://www.pyfixest.org/reference/estimation.api.feols.feols.html.md)
-- [etable details](https://www.pyfixest.org/table-layout.html): [markdown](https://www.pyfixest.org/table-layout.html.md)
-
+- [API Reference](https://pyfixest.org/reference/): [markdown](https://pyfixest.org/reference/index.html.md)
+- [feols API](https://pyfixest.org/reference/estimation.api.feols.feols.html): [markdown](https://pyfixest.org/reference/estimation.api.feols.feols.html.md)
+- [etable details](https://pyfixest.org/table-layout.html): [markdown](https://pyfixest.org/table-layout.html.md)
 - [Changelog](https://pyfixest.org/changelog.html): [markdown](https://pyfixest.org/changelog.html.md)
 
 All documentation pages are available as clean markdown by appending `.md` to the HTML URL (e.g., `quickstart.html` → `quickstart.html.md`).
@@ -40,11 +39,11 @@ Other syntax:
 - `i()` creates indicator expansions and interactions:
   - `i(cat)` expands to dummies for each level of `cat` (one omitted).
   - `i(cat, ref="Base")` sets the omitted reference level explicitly.
-  - `i(cat, x)` interacts a categorical `cat` with a numeric `x` (varying slopes by category).
+  - `i(cat, x)` interacts `cat` with `x`. If `x` is numeric, this yields category-specific slopes. If `x` is categorical, this yields cat-by-x indicators.
   - `i(cat1, cat2, ref2="Base")` interacts two categorical variables; `ref2` sets the omitted level of `cat2`.
   - Example (cat × numeric): `Y ~ i(industry, exposure)` creates industry-specific slopes on `exposure`.
   - Example (cat × cat): `Y ~ i(state, year, ref2=2000)` creates state-by-year indicators with 2000 as the base year.
-- Standard interactions still work:
+- Standard interactions work as well:
   - `X1 * X2` expands to `X1 + X2 + X1:X2`.
   - `X1:X2` is the interaction term only (no main effects).
 - Interacted FEs: `"Y ~ X1 | FE1 ^ FE2"` (creates a combined FE).
