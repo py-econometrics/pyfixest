@@ -10,7 +10,7 @@ toc-location: left
 
 ::: {.callout-note}
 ## Migration Notice
-Starting with pyfixest 0.41.0 (currently in development), the table functionality is powered by [maketables](https://pyfixest.org/maketables/).
+Starting with pyfixest 0.41.0 (currently in development), the table functionality is powered by [maketables](https://py-econometrics.github.io/maketables/).
 The `pf.etable()` API remains unchanged. `pf.dtable()` is deprecated (use `DTable()` directly) and `pf.make_table()` has been removed (use `maketables.MTable()` directly).
 :::
 
