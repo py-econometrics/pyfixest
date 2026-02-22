@@ -1,0 +1,90 @@
+We can compute marginal effects and linear and non-linear hypothesis tests via the excellent [marginaleffects](https://github.com/vincentarelbundock/pymarginaleffects) package.
+
+
+```{python}
+from marginaleffects import hypotheses
+
+import pyfixest as pf
+
+data = pf.get_data()
+fit = pf.feols("Y ~ X1 + X2", data=data)
+
+fit.tidy()
+```
+
+
+Suppose we were interested in testing the hypothesis that $X_{1} = X_{2}$. Given the relatively large differences in coefficients and
+small standard errors, we will likely reject the null that the two parameters are equal.
+
+We can run the formal test via the `hypotheses` function from the `marginaleffects` package.
+
+
+```{python}
+hypotheses(fit, "X1 - X2 = 0")
+```
+
+
+And indeed, we reject the null of equality of coefficients: we get a p-value of zero and a confidence interval that does not contain 0.
+
+## Non-Linear Hypothesis Tests: Ratio Estimates
+
+We can also test run-linear hypotheses, in which case `marginaleffects` will automatically compute correct standard errors
+based on the estimated covariance matrix and the Delta method. This is for example useful for computing inferential
+statistics for the "relative uplift" in an AB test.
+
+For the moment, let's assume that $X1$ is a randomly assigned treatment variable. As before, $Y$ is our variable / KPI of interest.
+
+Under randomization, the model intercept measures the "baseline", i.e. the population average of $Y$ in the absence of treatment. To compute a relative uplift, we might compute
+
+
+```{python}
+(fit.coef().xs("X1") / fit.coef().xs("Intercept") - 1) * 100
+```
+
+
+So we have a really big negative treatment effect of around minus 212%! To conduct correct inference on this
+ratio statistic, we need to use the delta method.
+
+
+### The Multivariate Delta Method
+
+In a nutshell, the delta method provides a way to approximate the asympotic distribution of any non-linear transformation $g()$ or one or more random variables.
+
+In the case of the ratio statistics, this non-linear transformation can be denoted as $g(\theta_{1}, \theta_{2}) = \theta_{1} / \theta_{2}$.
+
+Here's the **Delta Method theorem**:
+
+First, we define $\theta = (\theta_{1}, \theta_{2})'$ and $\mu = (\mu_{1}, \mu_{2})'$.
+
+By the law of large numbers, we know that
+
+$$
+\sqrt{N} (\theta - \mu) \rightarrow_{d} N(0_{2}, \Sigma_{2,2}) \text{ if } N \rightarrow \infty.
+$$
+
+By the **Delta Method**, we can then approximate the limit distribution of $g(\theta)$ as
+
+
+$$
+\sqrt{N}  (g(\theta) - g(\mu)) \rightarrow_{d} N(0_{1}, g'(\theta) \times \Sigma \times g(\theta)) \text{ if } N \rightarrow \infty.
+$$.
+
+[Here's a long derivation of how to use the the delta method for inference of ratio statistics.](https://stats.stackexchange.com/questions/291594/estimation-of-population-ratio-using-delta-method). The key steps from the formula above is to derive the expression for the asymptotic variance $ g'(\theta) \times \Sigma \times g(\theta)$.
+
+But hey - we're lucky, because marginaleffects will do all this work for us: we don't have to derive analytic gradients ourselves =)
+
+### Using the Delta Method via `marginaleffects`:
+
+We can employ the Delta Method via `marginaleffects` via the `hypotheses` function:
+
+
+```{python}
+hypotheses(fit, "(X1 / Intercept - 1) * 100 = 0")
+```
+
+As before, we get an estimate of around -212%. Additionally, we obtain a 95% CI via the Delta Method of [-228%, -195%].
+
+Besides hypopotheses testing, you can do a range of other cool things with the `marginaleffects` package.
+For example (and likely unsurprisingly), you can easily compute all sorts of marginal effects for your regression models.
+For all the details, we highly recommend to take a look
+at the [marginaleffects zoo book!](https://marginaleffects.com/index.html).

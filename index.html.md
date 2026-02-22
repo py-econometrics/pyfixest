@@ -1,0 +1,7 @@
+<meta http-equiv="refresh" content="0; url=pyfixest.html" />
+<script>
+  window.location.replace("pyfixest.html");
+</script>
+
+If you are not redirected automatically, go to
+[PyFixest Documentation](pyfixest.html).

@@ -1,0 +1,238 @@
+## Overview
+
+Thanks for showing interest in contributing to `pyfixest`! We appreciate all
+contributions and constructive feedback, whether that be reporting bugs, requesting
+new features, or suggesting improvements to documentation.
+
+If you'd like to get involved, but are not yet sure how, please feel free to send us an [email](alexander-fischer1801@t-online.de). Some familiarity with
+either Python or econometrics will help, but you really don't need to be a `numpy` core developer or have published in [Econometrica](https://onlinelibrary.wiley.com/journal/14680262) =) We'd be more than happy to invest time to help you get started!
+
+::: {.callout-note}
+## PyFixest Sprint in Heilbronn
+
+We're hosting a [PyFixest Sprint](pyfixest-sprint.md) with [AppliedAI](https://www.appliedai.de/) in late February/early March 2026. If you're interested in contributing to PyFixest in person, [learn more and get in touch](pyfixest-sprint.md)!
+:::
+
+For a comprehensive overview of the codebase architecture and internals, check out the [DeepWiki](https://deepwiki.com/py-econometrics/pyfixest). While not perfect and correct in all regards, we think it is a pretty good starting point to learn about the codebase!
+
+## Quick Start with GitHub Codespaces
+
+If you are new to open source / Python development, the fastest way to start contributing might be with **GitHub Codespaces**.
+You start by forking the repository. You can then launch a codespace by clicking
+
+[![Open in Codespaces](https://img.shields.io/badge/Open%20in-Codespaces-blue?logo=github)](https://github.com/py-econometrics/pyfixest/codespaces)
+
+This will launch a github codespace (there is a free tier for 60h a month, thank you github!).
+
+If you run
+
+```{.bash .code-copy}
+# set up env and install dependencies
+pixi install -e dev
+# compile rust dependencies
+pixi run -e dev maturin-develop
+```
+`pixi` will install the development environment and all dependencies.
+
+Now, create a new Python script `debug.py` at the root of the repository and
+paste the following:
+
+```{python}
+import pyfixest as pf
+
+data = pf.get_data()
+fit = pf.feols("Y ~ X1", data=data)
+```
+
+You can now run the script by typing
+
+```{.bash .code-copy}
+pixi r -e dev python3 debug.py
+```
+
+or run unit tests
+
+```{.bash .code-copy}
+pixi run tests-regular
+```
+
+After changing the docs, you can build them by running
+
+```{.bash .code-copy}
+# compile rust in docs environment
+pixi run -e dev maturin-develop
+# build, render, preview docs
+docs-build
+docs-render
+docs-preview
+```
+
+Note that the entire process might take a few minutes.
+
+## Reporting bugs
+
+We use [GitHub issues](https://github.com/py-econometrics/pyfixest/issues) to track bugs. You can report a bug by opening a new issue or contribute to an existing issue if
+related to the bug you are reporting.
+
+Before creating a bug report, please check that your bug has not already been reported, and that your bug exists on the latest version of pyfixest. If you find a closed issue that seems to report the same bug you're experiencing, open a new issue and include a link to the original issue in your issue description.
+
+Please include as many details as possible in your bug report. The information helps the maintainers resolve the issue faster.
+
+## Suggesting enhancements
+
+We use [GitHub issues](https://github.com/py-econometrics/pyfixest/issues?q=is%3Aissue+is%3Aopen+label%3Aenhancement) to track bugs and suggested enhancements. You can suggest an enhancement by opening a new feature request. Before creating an enhancement suggestion, please check that a similar issue does not already exist.
+
+Please describe the behavior you want and why, and provide examples of how pyfixest would be used if your feature were added.
+
+## Contributing to the codebase
+
+### Setting up your local environment
+
+Would you like to contribute to pyfixest, or run some of the unit tests locally? Awesome!
+Here's how you can get started:
+
+First, you'll want to fork the pyfixest GitHub repository. Then, clone your forked repo with git:
+
+```{.bash .code-copy}
+git clone https://github.com/<username>/pyfixest.git
+cd pyfixest
+```
+
+To work on pyfixest, you'll need Python and R installed. If you're planning to work on the documentation, be sure to have Quarto installed as well.
+Note: an R installation is only needed if you plan to run the unit tests locally.
+
+For guidance on installing R and Python, check out the sections below.
+
+### Package Management via `pixi`
+
+
+`PyFixest` is using [pixi](https://pixi.sh/latest/).
+
+To install `pixi`, just follow the [installation instructions](https://pixi.sh/latest/#installation) from the `pixi` documentation.
+
+Once `pixi` is installed, you can initialize the project environment and install all dependencies with
+
+```{.bash .code-copy}
+cd path-to-pyfixest
+pixi install
+```
+
+After installation, you can activate a custom `pixi` environment for `pyfixest` by typing:
+
+```{.bash .code-copy}
+pixi shell
+```
+
+You'll now be in the `pixi` environment and ready to go!
+
+For most development tasks, it’s best to activate the development environment since it includes all the necessary dependencies for development.
+
+```{.bash .code-copy}
+pixi shell --environment dev    # open the dev environment
+```
+
+### `Pixi` tasks
+
+To help with development, we've included several handy pixi tasks.
+
+For example, we use `ruff` and `pre-commit` to ensure code consistency across the project.
+
+To run (and install) all pre-commit hooks, you can run
+
+```{.bash .code-copy}
+pixi run -e lint pre-commit
+```
+
+We’ve included other tasks to help with testing. Almost all the necessary dependencies to run tests are included in the dev environment,
+except for R packages unavailable through conda-forge.
+
+In a first step, we need to compile the provided Rust code, which we can do by running
+
+```{.bash .code-copy}
+pixi run -e dev maturin-develop
+```
+
+Note that you do not require a global Rust installation - we install Rust via conda!
+
+We can then run all dev tasks:
+
+```{.bash .code-copy}
+# attempt to install non-conda R dependencies
+pixi run install-r-extended
+# run all tests via pytest
+pixi run -e dev tests
+# run all tests excluding very computationally demanding tests or R-based tests
+pixi run -e dev tests-regular
+# run all -e dev tests that depend on the extra R dependencies
+# rerun failed tests
+pixi run -e dev tests-against-r-extended
+pixi run -e dev tests-rerun
+```
+
+Building the documentation is also straightforward. We’ve got tasks to build, render, and preview the docs. As before,
+we first need to compile the Rust extensions, this time in the docs env, by running
+
+```{.bash .code-copy}
+pixi run -e docs maturin-develop
+```
+
+Then we can build the documentation with quartodoc.
+
+```{.bash .code-copy}
+# Build documentation and website
+pixi run -e docs docs-build
+# render the docs
+pixi run -e docs docs-render
+# preview the docs
+pixi run -e docs docs-preview
+```
+
+Keep in mind that you’ll need quarto installed to build the documentation locally.
+
+## Installing Python, R and Quarto
+
+#### Installing Python
+
+The minimal Python version to develop `pyfixest` is `3.9`. You can installed it on Mac/Linux via [Hombrew](https://brew.sh/):
+
+```{.bash .code-copy}
+brew install python@3.11 # specify the version of python you prefer
+```
+
+On Windows via [Winget](https://winget.run/pkg/Python/Python.3.11):
+```{.bash .code-copy}
+winget install -e --id Python.Python.3.11
+```
+
+### Installing R
+
+Note that R and R dependencies available through conda-forge are installed by pixi to the local project if you use the dev environment.
+Some extra R dependencies may require additional development tools not included in the environment, for example:
+
+Depending on your local set up, you may need to install additional libraries to compile those extra dependencies, like a version of `gcc` and `cmake`.
+
+### Installing Quarto
+
+Documentation for `pyfixest` is written, compiled, and published using Quarto.
+
+To install Quarto, run:
+
+On MacOS via [Homebrew](https://formulae.brew.sh/cask/quarto#default):
+
+```{.bash .code-copy}
+brew install --cask quarto
+```
+
+On Linux (Ubuntu using `gdebi`):
+
+```{.bash .code-copy}
+sudo curl -o quarto-linux-amd64.deb -L <https://github.com/quarto-dev/quarto-cli/releases/download/v${QUARTO_VERSION}/quarto-${QUARTO_VERSION}-linux-amd64.deb>
+sudo gdebi quarto-linux-amd64.deb
+```
+
+On Windows:
+
+```{.bash .code-copy}
+scoop bucket add extras
+scoop install extras/quarto
+```

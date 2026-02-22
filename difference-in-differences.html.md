@@ -1,0 +1,394 @@
+`PyFixest` supports event study designs via the canonical two-way fixed effects design, the 2-Step imputation estimator, and local projections.
+
+See also [NBER SI methods lectures on Linear Panel Event Studies](https://www.nber.org/conferences/si-2023-methods-lectures-linear-panel-event-studies).
+
+## Setup
+
+```{python}
+from importlib import resources
+
+import pandas as pd
+
+import pyfixest as pf
+from pyfixest.report.utils import rename_event_study_coefs
+from pyfixest.utils.dgps import get_sharkfin
+
+%load_ext watermark
+%watermark --iversions
+%load_ext autoreload
+%autoreload 2
+```
+
+
+
+```{python}
+# one-shot adoption data - parallel trends is true
+df_one_cohort = get_sharkfin()
+df_one_cohort.head()
+```
+
+
+
+```{python}
+# multi-cohort adoption data
+df_multi_cohort = pd.read_csv(
+    resources.files("pyfixest.did.data").joinpath("df_het.csv")
+)
+df_multi_cohort.head()
+```
+
+
+## Examining Treatment Timing
+
+Before any DiD estimation, we need to examine the treatment timing, since it is crucial to our choice of estimator.
+
+
+```{python}
+pf.panelview(
+    df_one_cohort,
+    unit="unit",
+    time="year",
+    treat="treat",
+    collapse_to_cohort=True,
+    sort_by_timing=True,
+    ylab="Cohort",
+    xlab="Year",
+    title="Treatment Assignment Cohorts",
+    figsize=(6, 5),
+)
+```
+
+
+
+```{python}
+pf.panelview(
+    df_multi_cohort,
+    unit="unit",
+    time="year",
+    treat="treat",
+    collapse_to_cohort=True,
+    sort_by_timing=True,
+    ylab="Cohort",
+    xlab="Year",
+    title="Treatment Assignment Cohorts",
+    figsize=(6, 5),
+)
+```
+
+
+We immediately see that we have staggered adoption of treatment in the second case, which implies that a naive application of 2WFE might yield biased estimates under substantial effect heterogeneity.
+
+We can also plot treatment assignment in a disaggregated fashion, which gives us a sense of cohort sizes.
+
+
+```{python}
+pf.panelview(
+    df_multi_cohort,
+    unit="unit",
+    time="year",
+    treat="treat",
+    sort_by_timing=True,
+    ylab="Unit",
+    xlab="Year",
+    title="Treatment Assignment (all units)",
+    figsize=(6, 5),
+)
+```
+
+## Inspecting the Outcome Variable
+
+`pf.panelview()` further allows us to inspect the "outcome" variable over time:
+
+
+```{python}
+#| fig-width: 0.4
+#| fig-height: 0.1
+
+pf.panelview(
+    df_multi_cohort,
+    outcome="dep_var",
+    unit="unit",
+    time="year",
+    treat="treat",
+    collapse_to_cohort=True,
+    title="Outcome Plot",
+    legend=True,
+    figsize=(7, 2.5),
+)
+```
+
+
+We immediately see that the first cohort is switched into treatment in 2000, while the second cohort is switched into treatment by 2010.
+Before each cohort is switched into treatment, the trends are parallel.
+
+We can additionally inspect individual units by dropping the collapse_to_cohort argument. Because we have a large sample, we might want to inspect only a subset
+of units.
+
+
+```{python}
+#| fig-width: 4
+#| fig-height: 1
+
+pf.panelview(
+    df_multi_cohort,
+    outcome="dep_var",
+    unit="unit",
+    time="year",
+    treat="treat",
+    subsamp=100,
+    title = "Outcome Plot",
+    legend=True,
+    figsize=(7, 2.5),
+)
+```
+
+
+## One-shot adoption: Static and Dynamic Specifications
+
+After taking a first look at the data, let's turn to estimation. We return to the `df_one_cohort` data set (without staggered treatment rollout).
+
+
+```{python}
+fit_static_twfe = pf.feols(
+    "Y ~ treat | unit + year",
+    df_one_cohort,
+    vcov={"CRV1": "unit"},
+)
+fit_static_twfe.summary()
+```
+
+Since this is a single-cohort dataset, this estimate is consistent for the ATT under parallel trends. We can estimate heterogeneous effects by time by interacting time with the treated group:
+
+
+```{python}
+fit_dynamic_twfe = pf.feols(
+    "Y ~ i(year, ever_treated,  ref = 14) | unit + year",
+    df_one_cohort,
+    vcov={"CRV1": "unit"},
+)
+```
+
+
+```{python}
+fit_dynamic_twfe.iplot(
+    coord_flip=False,
+    title="Event Study",
+    figsize=[1200, 400],
+    yintercept=0,
+    xintercept=13.5,
+    labels=rename_event_study_coefs(fit_dynamic_twfe._coefnames),
+)
+```
+
+
+Event study plots like this are very informative, as they allow us to visually inspect the parallel trends assumption and also the dynamic effects of the treatment.
+
+Based on a cursory glance, one would conclude that parallel trends does not hold because one of the pre-treatment coefficient has a confidence interval that does not include zero. However, we know that parallel trends is true because the treatment is randomly assigned in the underlying DGP.
+
+## Pointwise vs Simultaneous Inference in Event Studies
+
+This is an example of a false positive in testing for pre-trends produced by _pointwise_ inference (where each element of the coefficient vector is tested separately).
+
+As an alternative, we can use simultaneous confidence bands of the form $[a, b] = ([a_k, b_k])_{k=1}^K$ such that
+
+$$
+P(\beta \in [a, b]) = P(\beta_k \in [a_k, b_k] \forall k) \rightarrow 1 - \alpha
+$$
+
+These bands can be constructed by using a carefully chosen critical value $c$ that [accounts for the covariance between coefficients using the multiplier bootstrap](https://www.annualreviews.org/docserver/fulltext/statistics/10/1/annurev-statistics-040120-022239.pdf?expires=1724543273&id=id&accname=guest&checksum=0D11ADF816FFFA0AE21BD7EDC6DB1801#page=14). In pointwise inference, the critical value is $c = z_{1 - \alpha/2} = 1.96$ for $\alpha = 0.05$; the corresponding critical value for simultaneous inference is typically larger. These are also known as `sup-t` bands in the literature (see lec 3 of the NBER SI methods lectures linked above).
+
+This is implemented in the `confint(joint=True)` method in the `feols` class. If we pass the `joint='both'` argument to `iplot`, we get the simultaneous confidence bands (for all event study coefficients) in addition to the pointwise confidence intervals. Note that simultaneous inference for all event study coefficients may be overly conservative, especially when the number of coefficients is large; one may instead choose to perform joint inference for [all pre-treatment coefficients and all post-treatment coefficients separately](https://gist.github.com/apoorvalal/8a7687d3620577fd5214f1d43fc740b3).
+
+
+```{python}
+fit_dynamic_twfe.iplot(
+    coord_flip=False,
+    title="Event Study",
+    figsize=[1200, 400],
+    yintercept=0,
+    xintercept=13.5,
+    joint="both",
+    labels=rename_event_study_coefs(fit_dynamic_twfe._coefnames),
+)
+```
+
+
+The joint confidence bands are wider than the pointwise confidence intervals, and they include zero for all pre-treatment coefficients. This is consistent with the parallel trends assumption.
+
+## Event Study under Staggered Adoption via `feols()`, `event_study()`, `did2s()`,  `lpdid()`
+
+We now return to the data set with staggered treatment rollout, `df_multi_cohort`.
+
+### Two-Way Fixed Effects
+
+As a baseline model, we can estimate a simple two-way fixed effects DiD regression via `feols()`:
+
+
+```{python}
+fit_twfe = pf.feols(
+    "dep_var ~ i(rel_year, ref=-1.0) | state + year",
+    df_multi_cohort,
+    vcov={"CRV1": "state"},
+)
+```
+
+You can also estimate a TWFE model via the `event_study()` function, which aims to provide a common interface to multiple
+difference-in-differences implementations:
+
+```{python}
+fit_twfe_event = pf.event_study(
+    data=df_multi_cohort,
+    yname="dep_var",
+    idname="unit",
+    tname="year",
+    gname="g",
+    estimator="twfe",
+)
+```
+
+### Fully-Interacted / Saturated Event Study (Sun-Abraham)
+
+In a similar spirit, you can fit a fully-interacted difference-in-differences model by selecting the `estimator = "saturated"`:
+
+```{python}
+fit_saturated = pf.event_study(
+    data=df_multi_cohort,
+    yname="dep_var",
+    idname="unit",
+    tname="year",
+    gname="g",
+    estimator="saturated",
+)
+
+fit_saturated.iplot()
+```
+
+We can obtain treatment effects by period via the `aggregate()` method
+
+```{python}
+fit_saturated.aggregate(weighting = "shares")
+```
+
+and plot the effects
+
+```{python}
+fit_saturated.iplot_aggregate(weighting = "shares")
+```
+
+### When can we get away with using the two-way fixed effects regression?
+
+We will motivate this section by lazily quoting the abstract of [Lal (2025)](https://arxiv.org/abs/2503.05125):
+
+> The use of the two-way fixed effects regression in empirical social science was historically motivated by folk wisdom that it uncovers the Average Treatment effect on the Treated (ATT) as in the canonical two-period two-group case. This belief has come under scrutiny recently due to recent results in applied econometrics showing that it fails to uncover meaningful averages of heterogeneous treatment effects in the presence of effect heterogeneity over time and across adoption cohorts, and several heterogeneity-robust alternatives have been proposed. However, these estimators often have higher variance and are therefore under-powered for many applications, which poses a bias-variance tradeoff that is challenging for researchers to navigate. In this paper, we propose simple tests of linear restrictions that can be used to test for differences in dynamic treatment effects over cohorts, which allows us to test for when the two-way fixed effects regression is likely to yield biased estimates of the ATT.
+
+You can employ the proposed test after running a saturated event study by calling the `test_treatment_heterogeneity()` method:
+
+```{python}
+fit_saturated.test_treatment_heterogeneity()
+```
+
+In this case, we might be willing to rely on the simple TWFE model to produce unbiased estimates. If we're not, two "new" difference-in-differences
+estimators are implemented (beyond the already-presented saturated Sun-Abraham approach) that produce unbiased estimates under staggered assignment and heterogeneous treatment effects: Gardner's 2-Step Estimator and the Local Projections estimator from Dube et al.
+
+### Gardner's 2-Step Estimator
+
+To do the same via Gardners 2-stage estimator, we employ the the `pf.did2s()` function:
+
+```{python}
+fit_did2s = pf.did2s(
+    df_multi_cohort,
+    yname="dep_var",
+    first_stage="~ 0 | unit + year",
+    second_stage="~i(rel_year,ref=-1.0)",
+    treatment="treat",
+    cluster="state",
+)
+```
+
+### Local Projections (Dube et al)
+
+Last, we can estimate the ATT for each time period via local projections by using the `lpdid()` function:
+
+```{python}
+fit_lpdid = pf.lpdid(
+    data=df_multi_cohort,
+    yname="dep_var",
+    gname="g",
+    tname="year",
+    idname="unit",
+    vcov={"CRV1": "state"},
+    pre_window=-20,
+    post_window=20,
+    att=False,
+)
+```
+
+Let's look at some results:
+
+
+```{python}
+figsize = [1200, 400]
+```
+
+
+```{python}
+fit_twfe.iplot(
+    coord_flip=False,
+    title="TWFE-Estimator",
+    figsize=figsize,
+    xintercept=18.5,
+    yintercept=0,
+    labels=rename_event_study_coefs(fit_twfe._coefnames),  # rename coefficients
+).show()
+```
+
+
+```{python}
+fit_lpdid.iplot(
+    coord_flip=False,
+    title="Local-Projections-Estimator",
+    figsize=figsize,
+    yintercept=0,
+    xintercept=18.5,
+).show()
+```
+
+What if we are not interested in the ATT per treatment period, but in a pooled effects?
+
+
+```{python}
+fit_twfe = pf.feols(
+    "dep_var ~ i(treat) | unit + year",
+    df_multi_cohort,
+    vcov={"CRV1": "state"},
+)
+
+fit_did2s = pf.did2s(
+    df_multi_cohort,
+    yname="dep_var",
+    first_stage="~ 0 | unit + year",
+    second_stage="~i(treat)",
+    treatment="treat",
+    cluster="state",
+)
+
+fit_lpdid = pf.lpdid(
+    data=df_multi_cohort,
+    yname="dep_var",
+    gname="g",
+    tname="year",
+    idname="unit",
+    vcov={"CRV1": "state"},
+    pre_window=-20,
+    post_window=20,
+    att=True,
+)
+pd.concat(
+    [
+        fit_twfe.tidy().assign(estimator="TWFE"),
+        fit_did2s.tidy().assign(estimator="DID2s"),
+        fit_lpdid.tidy().assign(estimator="LPDID").drop("N", axis=1),
+    ],
+    axis=0,
+)
+```

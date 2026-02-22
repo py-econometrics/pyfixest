@@ -1,0 +1,150 @@
+This notebook replicates code examples from Nick Huntington-Klein's book on causal inference, [The Effect](https://theeffectbook.net/).
+
+
+```{python}
+from causaldata import Mroz, gapminder, organ_donations, restaurant_inspections
+
+import pyfixest as pf
+
+%load_ext watermark
+%watermark --iversions
+```
+
+
+## Chapter 4: Describing Relationships
+
+
+```{python}
+# Read in data
+dt = Mroz.load_pandas().data
+# Keep just working women
+dt = dt.query("lfp")
+# Create unlogged earnings
+dt.loc[:, "earn"] = dt["lwg"].apply("exp")
+
+# 5. Run multiple linear regression models by succesively adding controls
+fit = pf.feols(fml="lwg ~ csw(inc, wc, k5)", data=dt, vcov="iid")
+pf.etable(fit)
+```
+
+## Chapter 13: Regression
+
+### Example 1
+
+
+```{python}
+res = restaurant_inspections.load_pandas().data
+res.inspection_score = res.inspection_score.astype(float)
+res.NumberofLocations = res.NumberofLocations.astype(float)
+res.dtypes
+
+fit = pf.feols(fml="inspection_score ~ NumberofLocations", data=res)
+pf.etable([fit])
+```
+
+
+### Example 2
+
+
+```{python}
+df = restaurant_inspections.load_pandas().data
+
+fit1 = pf.feols(
+    fml="inspection_score ~ NumberofLocations + I(NumberofLocations^2) + Year", data=df
+)
+fit2 = pf.feols(fml="inspection_score ~ NumberofLocations*Weekend + Year", data=df)
+
+pf.etable([fit1, fit2])
+```
+
+
+
+### Example 3: HC Standard Errors
+
+
+```{python}
+pf.feols(fml="inspection_score ~ Year + Weekend", data=df, vcov="HC3").summary()
+```
+
+
+### Example 4: Clustered Standard Errors
+
+
+```{python}
+pf.feols(
+    fml="inspection_score ~ Year + Weekend", data=df, vcov={"CRV1": "Weekend"}
+).tidy()
+```
+
+### Example 5: Bootstrap Inference
+
+
+```{python}
+fit = pf.feols(fml="inspection_score ~ Year + Weekend", data=df)
+fit.wildboottest(reps=999, param="Year")
+```
+
+
+## Chapter 16: Fixed Effects
+
+### Example 1
+
+tba
+
+### Example 2
+
+
+```{python}
+gm = gapminder.load_pandas().data
+gm["logGDPpercap"] = gm["gdpPercap"].apply("log")
+
+fit = pf.feols(fml="lifeExp ~ C(country) + np.log(gdpPercap)", data=gm)
+fit.tidy().head()
+```
+
+
+### Example 3: TWFE
+
+
+```{python}
+# Set our individual and time (index) for our data
+fit = pf.feols(fml="lifeExp ~ np.log(gdpPercap) | country + year", data=gm)
+fit.summary()
+```
+
+
+## Chapter 18: Difference-in-Differences
+
+### Example 1
+
+
+```{python}
+od = organ_donations.load_pandas().data
+
+# Create Treatment Variable
+od["California"] = od["State"] == "California"
+od["After"] = od["Quarter_Num"] > 3
+od["Treated"] = 1 * (od["California"] & od["After"])
+
+did = pf.feols(fml="Rate ~ Treated | State + Quarter", data=od)
+did.summary()
+```
+
+
+### Example 3: Dynamic Treatment Effect
+
+
+```{python}
+od = organ_donations.load_pandas().data
+
+# Create Treatment Variable
+od["California"] = od["State"] == "California"
+# od["Quarter_Num"] = pd.Categorical(od.Quarter_Num)
+od["California"] = od.California.astype(float)
+
+did2 = pf.feols(
+    fml="Rate ~ i(Quarter_Num, California,ref=3) | State + Quarter_Num", data=od
+)
+
+did2.tidy()
+```

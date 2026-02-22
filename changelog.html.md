@@ -1,0 +1,980 @@
+# Changelog
+
+```{python}
+import pyfixest as pf
+from pyfixest.report.utils import rename_categoricals
+
+df = pf.get_data()
+
+fit1 = pf.feols("Y ~ X1", data = df)
+fit2 = pf.feols("Y ~ X1 + X2", data = df)
+fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
+```
+
+## PyFixest 0.50.0 (In Development)
+
+::: {.callout-tip}
+You can install the latest pre-release to try out the new features:
+
+```{.bash .code-copy}
+pip install pyfixest==0.50.0a1
+pip install --pre pyfixest
+```
+:::
+
+### Reworked Formula Parsing and New `i()` Operator
+
+The formula parsing module has been significantly reworked. The new implementation introduces a cleaner `Formula` class,
+a rewritten `i()` operator that closely follows R's `fixest` syntax, and new multiple estimation operators.
+
+#### New `i()` operator
+
+The `i()` operator now follows the `fixest` naming convention, using `::` to separate variable names from levels. It further
+provides two new arguments: `ref2` and `bin2` that allow to set
+reference levels for interacted variables and to bin categoricals.
+
+**Simple categorical encoding:**
+
+```{python}
+# Coefficient per level, first level dropped when intercept is present
+fit = pf.feols("Y ~ i(f1, ref=1)", data=df)
+fit.coef().head()
+```
+
+**Factor x Continuous interaction:**
+
+```{python}
+# Each level of f1 gets its own slope on X1
+fit = pf.feols("Y ~ i(f1, X1, ref=1)", data=df)
+fit.coef().head()
+```
+
+**Factor x Factor interaction** with `ref2`:
+
+The `ref2` argument controls the reference level of the second variable in a factor-by-factor interaction.
+
+```{python}
+import numpy as np
+df["group"] = np.where(df["f1"] < 15, "A", "B")
+
+# Full interaction: f1 levels x group levels
+# ref drops from f1, ref2 drops from group
+fit = pf.feols("Y ~ i(f1, group, ref=1, ref2='A')", data=df)
+fit.coef().head()
+```
+
+**Binning** with `bin` and `bin2`:
+
+The `bin` parameter merges categorical levels before encoding. This is useful for collapsing sparse categories.
+Values not in the mapping are kept unchanged, matching R `fixest` behavior.
+
+```{python}
+df["size"] = np.where(df["f1"] < 10, "small", np.where(df["f1"] < 20, "medium", "large"))
+
+# Merge 'small' and 'medium' into 'not_large', then use as reference
+fit = pf.feols("Y ~ i(size, bin={'not_large': ['small','medium']}, ref='not_large')", data=df)
+fit.coef()
+```
+
+`bin2` applies binning to the second variable in a factor-by-factor interaction.
+
+#### `mvsw()` and multiple estimation
+
+
+`mvsw()` for **multiverse stepwise** — generates all $2^k$ combinations of the provided variables, including the intercept-only model.
+
+```{python}
+# mvsw: all combinations of X1 and X2
+fits = pf.feols("Y ~ mvsw(X1, X2)", data=df)
+pf.etable(fits)
+```
+
+Multiple estimation operators can be combined:
+
+```{python}
+# mvsw: all combinations of X1 and X2
+fits = pf.feols("Y ~ sw(X1, X2) + csw(f1,f2)", data=df)
+pf.etable(fits)
+```
+
+Last, you can run operations within the operators:
+
+```{python}
+# mvsw: all combinations of X1 and X2
+fits = pf.feols("Y ~ sw(X1, f1 + X2)", data=df)
+pf.etable(fits)
+```
+
+#### Deprecations
+
+- `FixestFormulaParser` is deprecated in favor of `Formula.parse()`. A `FutureWarning` is emitted when the old class is used.
+- `model_matrix_fixest()` is deprecated in favor of `create_model_matrix()`.
+
+
+### Migration to maketables
+
+The table functionality in pyfixest now uses [maketables](https://py-econometrics.github.io/maketables/). `maketables` is a spin-off of
+pyfixest internal functions, but supports more packages in the Python eco-system (e.g. `statsmodels` and `linearmorels`). Due to it's close
+connection to `pyfixest`, the API of `pf.etable()` remains unchanged.
+**Changes:**
+
+- `pf.etable()` now uses `maketables.ETable` internally. The API remains unchanged for backward compatibility.
+- Because the function is not at the core of `pyixest` functionality, we will deprecate `pf.dtable()`.
+  A `FutureWarning` is now emitted. The function has been moved to `maketables` and can be used by calling `maketables.DTable()` directly.
+- The same applies for `pf.make_table()`, which has been an internal utility function to create tables. An equivalent function now lives in
+  `maketables.MTable()`.
+- The `great_tables` dependency has been replaced with `maketables`.
+
+**Migration guide:**
+
+```python
+# dtable migration
+# Before:
+pf.dtable(df, vars=["Y", "X1"])
+# After:
+import maketables
+maketables.DTable(df, vars=["Y", "X1"])
+
+# make_table migration
+# Before:
+pf.make_table(df, type="gt", caption="My Table")
+# After:
+import maketables
+maketables.MTable(df, caption="My Table").make(type="gt")
+```
+
+### Other Changes
+
+- Adds the following statistics to the `Fepois` class: `_loglik`, `_loglik_null`, `_pseudo_r2` for regression without weights.
+- Set the default parameters for the MAP algorithm to a tolerance of `1e-06` and maximum number of iterations of `10_000`.
+- Adds support for weights for poisson regression via `feopis()`.
+
+### GLMs with High-Dimensional Fixed Effects
+
+`feglm()` now supports high-dimensional fixed effects for logit, probit, and gaussian families! Fixed effects are specified after the `|` symbol, just like in `feols()` and `fepois()`.
+
+```{python}
+import numpy as np
+
+data_glm = pf.get_data()
+data_glm["Y"] = np.where(data_glm["Y"] > 0, 1, 0)
+
+# Logit with fixed effects
+fit_logit = pf.feglm("Y ~ X1 + X2 | f1", data=data_glm, family="logit")
+fit_logit.summary()
+```
+
+Fixed effects estimation via demeaning produces identical point estimates as one-hot encoding the fixed effects via `C()`:
+
+```{python}
+# Compare FE demeaning vs one-hot encoding
+fit_logit_onehot = pf.feglm("Y ~ X1 + X2 + C(f1)", data=data_glm, family="logit")
+
+pf.etable([fit_logit, fit_logit_onehot])
+```
+
+Note that standard errors may differ between the two approaches due to different degrees of freedom adjustments.
+
+All three GLM families (gaussian, logit, probit) support fixed effects:
+
+```{python}
+fit_gaussian = pf.feglm("Y ~ X1 + X2 | f1", data=data_glm, family="gaussian")
+fit_probit = pf.feglm("Y ~ X1 + X2 | f1", data=data_glm, family="probit")
+
+pf.etable([fit_gaussian, fit_logit, fit_probit])
+```
+
+## PyFixest 0.40.1
+
+### Breaking Changes for compatibility with `fixest` 0.13
+
+`fixest` 0.13 has recently been released to CRAN, with a range of breaking changes. We are following these in pyfixet 0.40.0.
+
+- The default inference method is now always "iid". Before, both `fixest` and `pyfixest` would default to cluster by the first fixest effect
+  in the presence of fixed effect.
+- The arguments of the `pf.ssc()` functions have been renamed: `adj` becomes `k_adj`, `fixef_k` becomes `k_fixef`, `cluster_df` becomes `G_df`, and `cluster_adj` becomes `G_adj`.
+  Backwards compatibility is ensured.
+- `fixest` no longer applies the `G/(G-1)` small sample correction for heteroskedastic errors. The argument is now only relevant for cluster robust errors.
+- If the `k_adj` arg is set to `True` with heteroskedastic errors, the applied small sample correction now is `N / (N-k)` and no longer `(N-1) / (N-df_k)`,
+  as was previously the case and is still the case for iid and cluster robust errors.
+- The `k_fixef` option `"nested"` has been renamed to `"nonnested"`.
+- The `fixef_rm` argument is changed from default `"none"` to `"singleton"` for all estimation functions. This has no impact on point estimates, but might change inference due to a smaller number of
+  observations in the degree of freedom correction.
+- The multicollinearity default tolerance has been reduced from 1e-10 to 1e-09.
+- The attribute `_dof_k` has been renamed to `_df_k`.
+
+Other related changes:
+- The arguments to adjust the small samples for the `wildboottest` methods have been renamed to `k_adj` and `G_adj`.
+
+### Moved to `pixi.toml` and install from conda-forge
+
+We have been using pixi as our package manager for a while and are moving from a `pyproject.toml` to using a `pixi.toml` for specifying dependencies.
+We also install all package by default from the free and open source conda-forge. Because of some environment resolution challenges around an old version of
+`rpy2`that we need for testing `pyfixest` against `fixest`, we temporarily have dropped support for the dev and docs environments for windows. A fix is
+work in progress.
+
+## New Features
+
+### CuPy and SciPy Backends via LSMR
+
+We add CuPy and SciPy Backend to run the demeaning algorithm on the GPU via the sparse LSMR solver. For problems
+where the standard demeaner struggles to converge, this strategy can lead to significant speedups if paired with a GPU.
+
+![Complex Fixed Effects Benchmark](https://raw.githubusercontent.com/py-econometrics/pyfixest/master/benchmarks/complex_benchmarks.png)
+
+### HAC Standard Errors
+
+We now support HAC standard errors! Thanks for Daman (https://github.com/damandhaliwal) for all his work (and coping with me with the PR, which took forever to get through).
+We now support:
+
+- time series HAC
+- panel HAC
+- panel DK
+
+variance-covariance matrices.
+
+For now, we assume that the time series column is consecutive and each entry has "time delta 1". Relaxation of this requirement are work in progress.
+
+### `cat_template` argument for plotting functions
+
+For easier encoding of categorical variables in relation to the `iplot()` and `coefplot()` functions, we add a new function argument, cat_template:
+
+```{python}
+fit_c = pf.feols(fml = "Y ~ i(X1, f1)", data = df)
+fit_c.iplot(cat_template = "{variable}::{value}")
+```
+
+This is particularly useful for Difference-in-Differences and event studies. You can find an example use case in the DiD [vignette](https://pyfixest.org/difference-in-differences.html#one-shot-adoption-static-and-dynamic-specifications).
+
+Going forward, we will deprecate the `rename_event_study_coefs` function, which is no longer needed (and did not work anyways).
+
+### Updates to Gelbach Decomposition
+
+We have reworked the Gelbach Decomposition method, with some breaking changes: by default, calling `Feols.decompose()` now returns a `GelbachDecomposition` instance - before, we'd return a `pd.DataFrame`. The `param` argument has been renamed to `decomp_var`, but is not yet deprecated.
+
+The class now comes with new `tidy()` and `etable()` methods.
+
+```{python}
+from pyfixest.utils.dgps import gelbach_data
+import numpy as np
+import pyfixest as pf
+
+# Generate test data using gelbach_data
+data = gelbach_data(nobs=500)
+data["w"] = np.random.rand(500)
+fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
+gb = fit.decompose(decomp_var = "x1", x1_vars = ["x21"],reps = 10, nthreads = 1)
+print(type(gb))
+```
+
+It is now also possible to add background variables that are included in both the long and short regressions via the `x1_vars` function argument.
+
+We can inspect results as a `pd.DataFrame`
+
+```{python}
+gb.tidy()
+```
+
+or produce a `GT` table:
+
+```{python}
+gb.etable(
+    stats = "all",
+    caption = "Gelbach Decomposition"
+)
+```
+
+As can be seen, we by default now return normalized (and not just absolute) effects.
+
+We are now also supporting frequency weights for the decomposition (currently without inference).
+
+Additionally, some house keeping and interal refactoring of the `GelbachDecomposition` class.
+
+## PyFixest 0.30.0
+
+### New Features
+
+- We have created a **Rust** backend for all performance critical algorithms, with pretty great performance improvements! You can use the Rust backend by setting `demeaner_options = "rust"`.
+
+We find pretty great performance improvements and want to make the Rust backend the default in PyFixest 0.31.0.
+
+To back up the performance claim, here is a benchmark:
+
+```{python}
+import pyfixest as pf
+import numpy as np
+import pandas as pd
+import time
+
+rng = np.random.default_rng(737)
+
+N = 10_000_000
+benchmark_data = pd.DataFrame({
+  "Y": rng.normal(0, 1, N),
+  "X1": rng.normal(0, 1, N),
+  "X2": rng.normal(0, 1, N),
+  "X3": rng.normal(0, 1, N),
+  "f1": rng.integers(0, 10_000, N),
+  "f2": rng.integers(0, 1_000, N),
+  "f3": rng.integers(0, 10, N),
+})
+
+# burn-in for numba
+fit_nb_warmup = pf.feols(
+  fml = "Y ~ X1 + X2 + X3 | f1 + f2 + f3", data = benchmark_data[:100_000]
+)
+
+# benchmark for numba backend
+tic = time.time()
+fit_nb = pf.feols(
+  fml = "Y ~ X1 + X2 + X3 | f1 + f2 + f3", data = benchmark_data
+)
+toc = time.time()
+print(f"Numba backend took {toc-tic}.")
+
+# benchmark for rust backend
+tic = time.time()
+fit_rust = pf.feols(
+  fml = "Y ~ X1 + X2 + X3 | f1 + f2 + f3", data = benchmark_data,
+  demeaner_backend = "rust"
+)
+toc = time.time()
+print(f"Rust backend took {toc-tic}.")
+```
+
+Results are also matching =)
+
+```{python}
+pf.etable([fit_nb, fit_rust], digits = 8)
+```
+
+- We now support **quantile regression**, including a Frisch-Newton Interior Point Solver with and without preprocessing, iid, heteroskedastic and cluster robust standard errors, fast algorithms for the entire quantile regression process, and some visualisations. In particular the algorithms for the quantile regression process show excellent performance. You can
+learn more about all features and take a look at more systematic benchmarks in the [quantreg vignette](https://pyfixest.org/quantile-regression.html).
+
+```{python}
+#| eval: false
+
+N_qr = 10_000
+rng = np.random.default_rng(929)
+
+df_qr = pd.DataFrame({
+  "X1": rng.normal(0, 1, N_qr),
+  "X2": rng.normal(0, 1, N_qr)
+})
+df_qr["Y"] = -0.5 + -2 * df_qr["X1"] + 1.9 * df_qr["X1"] ** 4 + df_qr["X2"] - 0.4 * df_qr["X2"] **7 + rng.normal(0, 1, N_qr)
+
+fit_qr = pf.quantreg(
+  fml = "Y ~ X1 + X2",
+  data = df_qr,
+  quantile = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
+  method = "pfn",
+  multi_method = "cfm2"
+)
+
+pf.qplot(fit_qr, figsize = [7,3])
+```
+
+- We have switched the **default solver** to `scipy.linalg.solve()`: [link](https://github.com/py-econometrics/pyfixest/pull/904)
+
+- You can now set the **maximum number of iterations** for the demeaning algo via a `fixef_maxiter` argument: [link](https://github.com/py-econometrics/pyfixest/pull/944)
+
+### Bug Fixes
+
+- We fixed a bug in internal renaming of categoricals: [link](https://github.com/py-econometrics/pyfixest/pull/886)
+- We fixed a bug in etable arguments [link](https://github.com/py-econometrics/pyfixest/pull/889)
+- We stopped casting dependent variable to integer to void Information Loss in Poisson Regression: [link](https://github.com/py-econometrics/pyfixest/pull/900)
+
+
+### Documentation
+
+- We have added a guide on how to replicate Stata results with pyfixest: [link](https://github.com/py-econometrics/pyfixest/pull/897)
+- We improved the documentation on how to relabel variable names in the plotting and etable functions: [link](https://github.com/py-econometrics/pyfixest/pull/895)
+
+## Infrastructure
+
+- We have reorganized our tests and rely more on conda environments for making R package test dependencies available: [link](https://github.com/py-econometrics/pyfixest/pull/906)
+
+### Community
+
+- We have added a Code of Conduct.
+- We have opened our discord community. Please join us there to discuss pyfixest and other py-econometrics projects! Link [here](https://discord.com/invite/gBAydeDMVK).
+
+## New Contributors
+* @FuZhiyu made their first contribution in https://github.com/py-econometrics/pyfixest/pull/886
+* @mortizm1988 made their first contribution in https://github.com/py-econometrics/pyfixest/pull/895
+* @jestover made their first contribution in https://github.com/py-econometrics/pyfixest/pull/897
+* @JaapCTJ made their first contribution in https://github.com/py-econometrics/pyfixest/pull/900
+* @shapiromh made their first contribution in https://github.com/py-econometrics/pyfixest/pull/906
+* @schroedk made their first contribution in https://github.com/py-econometrics/pyfixest/pull/905
+* @WiktorTheScriptor made their first contribution in https://github.com/py-econometrics/pyfixest/pull/938
+* @damandhaliwal made their first contribution in https://github.com/py-econometrics/pyfixest/pull/944
+
+**Full Changelog**: https://github.com/py-econometrics/pyfixest/compare/v0.29.0...v0.30.0
+
+## PyFixest 0.29.0
+
+- We add options `fixef_k = "nested"` and `fixef_k = "full"` for computing small sample corrections via `pf.ssc()`. We set the defaults for `pf.feols()` and other estimation functions to `fixef_k = "nested"` to 100% mimic the defaults of `r-fixest`. This is a "breaking change" in the sense that it might (slightly) impact the standard errors of your estimations.
+- We add support for fully saturated event study estimation via the `SaturatedEventStudy` class, which can be called via `pf.event_study()`.
+- We add support for difference-in-differences specification tests following Lal (2025).
+- We add R2-within values to the default `etable()` output.
+- We fix a small bug in the Gelbach `decompose()` method, which would fail if a user selected `only_coef = True`.
+- The `decompose()` method runs fully on sparse matrices, which leads to large performance improvements on big data sets.
+- We fix a small bug in the `predict()` method with `newdata`, see [here](https://github.com/py-econometrics/pyfixest/issues/840) for details.
+- We add a function argument `rename_models` to help rename model names in the `coefplot()` and `iplot()` functions and methods:
+  ```{python}
+  pf.coefplot(
+      models = [fit1, fit2, fit3],
+      rename_models = {
+          fit1._model_name_plot: "Model 1",
+          fit2._model_name_plot: "Model 2",
+          fit3._model_name_plot: "Model 3"
+      },
+  )
+  ```
+- Made `lets-plot` an optional dependency. The package will now fall back to `matplotlib` for plotting if `lets-plot` is not installed. Users can install `lets-plot` with `pip install pyfixest[plots]`.
+- PyFixest now supports R2, adjusted R2, and within-R2 values for WLS (it previously only did for OLS, if at all).
+- We add support for standard error of predictions for OLS models without fixed effects. As a default, the predict model still returns a `np.ndarray`. If the argument `se_fit` is set to
+  `True`, we report the prediction standard errors. If argument `interval = "prediction"`, we return a `pd.DataFrame` with predictions, their standard errors, and confidence intervals.
+
+## PyFixest 0.28.0
+
+### New features and bug fixes
+- Adds a function argument `context`, that allows to pass information / context to the `formulaic.Formulaic.get_model_matrix()` call that creates the model matrix.
+- Fix a bug that caused reindexing of `LPDID._coeftable` when calling `LPDID.iplot()`. As a result, a second call of `LPDID.iplot()` would fail.
+- Bumps the required `formulaic` version to `1.1.0` and fixes errors that arose when a) the ref argument was used for i() syntax, which led to a silent failure under formulaic >= 1.1.0, and fixef() / predict() with fixed effects, which led to a loud error.
+
+### New experimental Features
+- Adds a `pf.feglm()` function that supports GLMs with normal and binomial families (gaussian, logit, probit) without fixed effects. Fixed effects support is work in progress.
+- Adds options to run the demean function via JAX. This might speed up the model fit if GPU is available.
+
+
+## PyFixest 0.27.0
+
+- Adds support for Gelbach's (JoLe 2016) Regression Decomposition method using a `decompose()` method for `Feols`.
+- Adds support for the multiple hypothesis correction by Westfall & Young via the `pf.wyoung()` function.
+- Input data frames to `pf.feols()` and `pf.fepois()` are now converted to `pandas` via [narwhals](https://github.com/narwhals-dev/narwhals).
+  As a result, users can not provide `duckdb` or `ibis` tables as inputs, as well as `pandas` and `polars` data frames. `polars` and `pyarrow`
+  are dropped as a dependencies.
+- Fixes a bug in the `wildboottest` method, which incorrectly used to run a regression on the demeaned dependend variable in case it was
+  applied after a fixed effects regression. My apologies for that!
+- Fixes a bug in the `ritest` method, which would use randomization inference coefficients instead of t-statistics, leading to incorrect results.
+  This has consequences for the rwolf() function, which, in case of running ri-inference, would default to run the randomization-t. My apolgies!
+- Adds a vignette on multiple testing corrections.
+- Adds a vignette on Gelbach's regression decomposition.
+
+## PyFixest 0.22.0 - 0.25.4
+
+See the github changelog for details: [link](https://github.com/py-econometrics/pyfixest/releases).
+
+
+## PyFixest 0.22.0
+
+### Changes
+
+- Fix bug in wildboottest method @s3alfisc (#506)
+- docs: add sanskriti2005 as a contributor for infra @allcontributors (#503)
+- Infra: added the release-drafter for automation of release notes @sanskriti2005 (#502)
+- Fix broken link in contributing.md @s3alfisc (#499)
+- docs: add leostimpfle as a contributor for bug @allcontributors (#495)
+- Update justfile @leostimpfle (#494)
+- docs: add baggiponte as a contributor for doc @allcontributors (#490)
+- docs: improve installation section @baggiponte (#489)
+- Bump tornado from 6.4 to 6.4.1 @dependabot (#487)
+- docs: add leostimpfle as a contributor for code @allcontributors (#478)
+- Feols: speed up the creation of interacted fixed effects via `fe1^fe2` syntax @leostimpfle (#475)
+- rename resampling iterations to 'reps' in all methods @s3alfisc (#474)
+- fix a lot of broken links throught the repo @s3alfisc (#472)
+- Multiple readme fixes required after package was moved to py-econometrics project @s3alfisc (#450)
+
+### Infrastructure
+
+- infrastructure: fix minor release drafter bugs @s3alfisc (#504)
+
+## PyFixest 0.21.0
+
+- Add support for randomization inference via the `ritest()` method:
+
+```{python}
+#| eval: False
+import pyfixest as pf
+data = pf.get_data()
+
+fit = pf.feols("Y ~ X1", data = data)
+fit.ritest(resampvar="X1=0", reps = 1000)
+```
+
+## PyFixest 0.20.0
+
+- This version introduces MyPy type checks to the entire pyfixest codebase. Thanks to @juanitorduz for nudging me to get started with this =). It also fixes a handful of smaller bugs.
+
+## PyFixest 0.19.0
+
+- Fixes multiple smaller and larger performance regressions. The NYC-Taxi example regression now takes approximately 22 seconds to run (... if my laptopt is connected to a power charger)!
+
+```{python}
+#| eval: False
+
+%load_ext autoreload
+%autoreload 2
+
+import duckdb
+import time
+import numpy as np
+import pyfixest as pf
+
+# %%
+nyc = duckdb.sql(
+    '''
+    FROM 'C:/Users/alexa/Documents/nyc-taxi/**/*.parquet'
+    SELECT
+        tip_amount, trip_distance, passenger_count,
+        vendor_id, payment_type, dropoff_at,
+        dayofweek(dropoff_at) AS dofw
+    WHERE year = 2012 AND month <= 3
+    '''
+    ).df()
+
+# convert dowf, vendor_id, payment_type to categorical
+tic = time.time()
+nyc["dofw"] = nyc["dofw"].astype(int)
+nyc["vendor_id"] = nyc["vendor_id"].astype("category")
+nyc["payment_type"] = nyc["payment_type"].astype("category")
+print(f"""
+    I am convering columns of type 'objects' to 'categories' and 'int'data types outside
+    of the regression, hence I am cheating a bit. This saves {np.round(time.time() - tic)} seconds.
+    """
+)
+#    I am convering columns of type 'objects' to 'categories' and 'int'data types outside
+#    of the regression, hence I am cheating a bit. This saves 7.0 seconds.
+
+run = True
+if run:
+
+    # mock regression for JIT compilation
+    fit = pf.feols(
+        fml = "tip_amount ~ trip_distance + passenger_count | vendor_id + payment_type + dofw",
+        data = nyc.iloc[1:10_000],
+        copy_data = False,
+        store_data = False
+        )
+
+    import time
+    tic = time.time()
+    fit = pf.feols(
+        fml = "tip_amount ~ trip_distance + passenger_count | vendor_id + payment_type + dofw",
+        data = nyc,
+        copy_data = False, # saves a few seconds
+        store_data = False # saves a few second
+        )
+    passed = time.time() - tic
+    print(f"Passed time is {np.round(passed)}.")
+    # Passed time is 22.
+```
+
+- Adds three new function arguments to `feols()` and `fepois()`: `copy_data`, `store_data`, and `fixef_tol`.
+- Adds support for frequency weights with the `weights_type` function argument.
+```{python}
+import pyfixest as pf
+
+data = pf.get_data(N = 10000, model = "Fepois")
+df_weighted = data[["Y", "X1", "f1"]].groupby(["Y", "X1", "f1"]).size().reset_index().rename(columns={0: "count"})
+df_weighted["id"] = list(range(df_weighted.shape[0]))
+
+print("Dimension of the aggregated df:", df_weighted.shape)
+print(df_weighted.head())
+
+fit = pf.feols(
+    "Y ~ X1 | f1",
+    data = data
+)
+fit_weighted = pf.feols(
+    "Y ~ X1 | f1",
+    data = df_weighted,
+    weights = "count",
+    weights_type = "fweights"
+)
+pf.etable([fit, fit_weighted], coef_fmt = "b(se) \n (t) \n (p)")
+```
+
+- Bugfix: Wild Cluster Bootstrap Inference with Weights would compute unweighted standard errors. Sorry about that! WLS is not supported for the WCB.
+- Adds support for CRV3 inference with weights.
+
+
+## PyFixest 0.18.0
+
+- Large Refactoring of Interal Processing of Model Formulas, in particular `FixestFormulaParser` and `model_matrix_fixest`. As a results, the code should be cleaner and more robust.
+- Thanks to the refactoring, we can now bump the required `formulaic` version to the stable `1.0.0` release.
+- The `fml` argument of `model_matrix_fixest` is deprecated. Instead, `model_matrix_fixest`
+  now asks for a `FixestFormula`, which is essentially a dictionary with information on model
+  specifications like a first stage formula (if applicable), dependent variables, fixed effects,
+  etc.
+- Additionally, `model_matrix_fixest` now returns a dictionary instead of a tuple.
+- Brings back fixed effects reference setting via `i(var1, var2, ref)` syntax. Deprecates the `i_ref1`, `i_ref2` function arguments. I.e. it is again possible to e.g. run
+
+```{python}
+#| eval: False
+
+import pyfixest as pf
+data = pf.get_data()
+
+fit1 = pf.feols("Y ~ i(f1, X2)", data=data)
+fit1.coef()[0:8]
+```
+Via the `ref` syntax, via can set the reference level:
+```{python, eval=FALSE}
+#| eval: False
+fit2 = pf.feols("Y ~ i(f1, X2, ref = 1)", data=data)
+fit2.coef()[0:8]
+```
+
+## PyFixest 0.17.0
+
+- Restructures the codebase and reorganizes how users can interact with the `pyfixest` API. It is now recommended to use `pyfixest` in the following way:
+
+  ```{python}
+  import numpy as np
+  import pyfixest as pf
+  data = pf.get_data()
+  data["D"] = data["X1"] > 0
+  fit = pf.feols("Y ~ D + f1", data = data)
+  fit.tidy()
+  ```
+
+  The update should not inroduce any breaking changes. Thanks to [@Wenzhi-Ding](https://github.com/Wenzhi-Ding) for the PR!
+
+- Adds support for simultaneous confidence intervals via a multiplier bootstrap. Thanks to [@apoorvalal](https://github.com/apoorvalal) for the contribution!
+
+  ```{python}
+  fit.confint(joint = True)
+  ```
+
+- Adds support for the causal cluster variance estimator by [Abadie et al. (QJE, 2023)](https://academic.oup.com/qje/article/138/1/1/6750017)
+  for OLS via the `.ccv()` method.
+
+  ```{python}
+  fit.ccv(treatment = "D", cluster = "group_id")
+  ```
+
+
+
+## PyFixest 0.16.0
+
+- Adds multiple quality of life improvements for developers, thanks to [NKeleher](https://github.com/NKeleher).
+- Adds more options to customize `etable()` output thanks to [Wenzhi-Ding](https://github.com/Wenzhi-Ding).
+- Implements Romano-Wolf and Bonferroni corrections for multiple testing in the `multcomp` module.
+
+## PyFixest 0.15.
+
+- Adds support for weighted least squares for `feols()`.
+- Reduces testing time drastically by running tests on fewer random data samples. Qualitatively,
+  the set of test remains identical.
+- Some updates for future `pandas` compatibility.
+
+## PyFixest 0.14.0
+
+- Moves the documentation to [quartodoc](https://github.com/machow/quartodoc).
+- Changes all docstrings to `numpy` format.
+- Difference-in-differences estimation functions now need to be imported via the `pyfixest.did.estimation` module:
+
+```{python}
+from pyfixest.did.estimation import did2s, lpdid, event_study
+```
+## PyFixest 0.13.5
+
+- Fixes a bug that lead to incorrect results when the dependent variable and **all covariates** (excluding the fixed effects) where integers.
+
+## PyFixest 0.13.4
+
+- Fixes a bug in `etable()` with IV's that occurred because `feols()` does not report R2 statistics for IVs.
+
+## PyFixest 0.13.2
+
+- Fixes a bug in `etable()` and a warning in `fixest_model_matrix` that arose with higher `pandas` versions. Thanks to @aeturrell for reporting!
+
+## PyFixest 0.13.0
+
+### New Features
+
+- Introduces a new `pyfixest.did` module which contains routines for Difference-in-Differences estimation.
+- Introduces support for basic versions of the local projections DiD estimator following [Dube et al (2023)](https://www.nber.org/papers/w31184)
+- Adds a new vignette for Difference-in-Differences estimation.
+- Reports R2 values in `etable()`.
+
+
+## PyFixest 0.12.0
+
+
+### Enhancements:
+
+- Good performance improvements for singleton fixed effects detection. Thanks to [@styfenschaer](https://github.com/styfenschaer) for the PR! See [#229](https://github.com/py-econometrics/pyfixest/issues/229).
+- Uses the [r2u project](https://github.com/eddelbuettel/r2u) for installing R and R packages on github actions, with great performance improvements.
+- Allows to pass `polars` data frames to `feols()`, `fepois()` and `predict()`. [#232](https://github.com/py-econometrics/pyfixest/issues/232). Thanks to [@vincentarelbundock](https://github.com/py-econometrics/pyfixest/issues/232) for the suggestion!
+
+### Bug Fixes:
+
+- Missing variables in features were not always handled correctly in `predict()` with `newdata` not `None` in the presence of missing data, which would lead to an error. See [#246](https://github.com/py-econometrics/pyfixest/issues/246) for details.
+- Categorical variables were not always handled correctly in `predict()` with `newdata` not `None`, because the number of fixed effects levels in `newdata` might be smaller than in `data`. In consequence, some levels were not found, which lead to an error. See [#245](https://github.com/py-econometrics/pyfixest/issues/245) for details. Thanks to [@jiafengkevinchen](https://github.com/jiafengkevinchen) for the pointer!
+- Multicollinearity checks for over-identified IV was not implemented correctly, which lead to a dimension error. See [#236](https://github.com/py-econometrics/pyfixest/issues/236) for details.  Thanks to [@jiafengkevinchen](https://github.com/jiafengkevinchen) for the pointer!
+- The number of degrees of freedom `k` was computed incorrectly if columns were dropped from the design matrix `X` in the presence of multicollinearity. See [#235](https://github.com/py-econometrics/pyfixest/issues/235) for details.  Thanks to [@jiafengkevinchen](https://github.com/jiafengkevinchen) for the pointer!
+- If all variables were dropped due to multicollinearity, an unclear and imprecise error message was produced. See [#228](https://github.com/py-econometrics/pyfixest/issues/228) for details. Thanks to [@manferdinig](https://github.com/manferdinig) for the pointer!
+- If selection `fixef_rm = 'singleton'`, `feols()` and `fepois()` would fail, which has been fixed. [#192](https://github.com/py-econometrics/pyfixest/issues/192)
+
+### Dependency Requirements
+
+- For now, sets `formulaic` versions to be `0.6.6` or lower as version `1.0.0` seems to have introduced a problem with the `i()` operator, See [#244](https://github.com/py-econometrics/pyfixest/issues/244) for details.
+- Drops dependency on `pyhdfe`.
+
+## PyFixest 0.11.1
+
+- Fixes some bugs around the computation of R-squared values (see [issue #103](https://github.com/py-econometrics/pyfixest/issues/103)).
+- Reports R-squared values again when calling `.summary()`.
+
+## PyFixest 0.11.0
+
+- Significant speedups for CRV1 inference.
+
+## PyFixest 0.10.12
+
+Fixes a small bug with the separation check for poisson regression #138.
+
+## PyFixest 0.10.11
+
+Fixes bugs with i(var1, var2) syntax introduced with PyFixest 0.10.10.
+
+## PyFixest 0.10.10
+
+Fixes a bug with variable interactions via `i(var)` syntax. See [issue #221](https://github.com/py-econometrics/pyfixest/issues/211).
+
+## PyFixest 0.10.9
+
+Makes `etable()` prettier and more informative.
+
+## PyFixest 0.10.8
+
+### Breaking changes
+Reference levels for the `i()` formula syntax can no longer be set within the formula, but need to be added via the `i_ref1` function argument to either `feols()` and `fepois()`.
+
+### New feature
+
+A `dids2()` function is added, which implements the 2-stage difference-in-differences procedure à la Gardner and follows the syntax of @kylebutts [did2s](https://github.com/kylebutts/did2s) R package.
+
+```py
+from pyfixest.did.did import did2s
+from pyfixest.estimation import feols
+from pyfixest.visualize import iplot
+import pandas as pd
+import numpy as np
+
+df_het = pd.read_csv("https://raw.githubusercontent.com/py-econometrics/pyfixest/master/pyfixest/did/data/df_het.csv")
+
+fit = did2s(
+    df_het,
+    yname = "dep_var",
+    first_stage = "~ 0 | state + year",
+    second_stage = "~i(rel_year)",
+    treatment = "treat",
+    cluster = "state",
+    i_ref1 = [-1.0, np.inf],
+)
+
+fit_twfe = feols(
+    "dep_var ~ i(rel_year) | state + year",
+    df_het,
+    i_ref1 = [-1.0, np.inf]
+)
+
+iplot([fit, fit_twfe], coord_flip=False, figsize = (900, 400), title = "TWFE vs DID2S")
+```
+![](figures/event_study.svg)
+
+
+
+## PyFixest 0.10.7
+
+- Adds basic support for event study estimation via two-way fixed effects and Gardner's two-stage "Did2s" approach.
+  This is a beta version and experimental. Further updates (i.e. proper event studies vs "only" ATTs) and a more flexible
+  did2s front end will follow in future releases.
+
+```python
+%load_ext autoreload
+%autoreload 2
+
+from pyfixest.did.did import event_study
+import pyfixest as pf
+import pandas as pd
+df_het = pd.read_csv("pyfixest/did/data/df_het.csv")
+
+fit_twfe = event_study(
+    data = df_het,
+    yname = "dep_var",
+    idname= "state",
+    tname = "year",
+    gname = "g",
+    estimator = "twfe"
+)
+
+fit_did2s = event_study(
+    data = df_het,
+    yname = "dep_var",
+    idname= "state",
+    tname = "year",
+    gname = "g",
+    estimator = "did2s"
+)
+
+pf.etable([fit_twfe, fit_did2s])
+# | Coefficient   | est1             | est2             |
+# |:--------------|:-----------------|:-----------------|
+# | ATT           | 2.135*** (0.044) | 2.152*** (0.048) |
+# Significance levels: * p < 0.05, ** p < 0.01, *** p < 0.001
+```
+
+## PyFixest 0.10.6
+
+- Adds an `etable()` function that outputs markdown, latex or a pd.DataFrame.
+
+## PyFixest 0.10.5
+
+- Fixes a big in IV estimation that would trigger an error. See [here](https://github.com/py-econometrics/pyfixest/issues/197) for details. Thanks to @aeturrell for reporting!
+
+## PyFixest 0.10.4
+
+- Implements a custom function to drop singleton fixed effects.
+- Additional small performance improvements.
+
+## PyFixest 0.10.3
+
+- Allows for white space in the multiway clustering formula.
+- Adds documentation for multiway clustering.
+
+## PyFixest 0.10.2
+
+- Adds support for two-way clustering.
+- Adds support for CRV3 inference for Poisson regression.
+
+## PyFixest 0.10.1
+
+- Adapts the internal fixed effects demeaning criteron to match `PyHDFE's default.
+- Adds Styfen as coauthor.
+
+## PyFixest 0.10
+
+- Multiple performance improvements.
+- Most importantly, implements a custom demeaning algorithm in `numba` - thanks to Styfen Schaer (@styfenschaer),
+  which leads to performance improvements of 5x or more:
+
+```python
+%load_ext autoreload
+%autoreload 2
+
+import numpy as np
+import time
+import pyhdfe
+from pyfixest.demean import demean
+
+np.random.seed(1238)
+N = 10_000_000
+x = np.random.normal(0, 1, 10*N).reshape((N,10))
+f1 = np.random.choice(list(range(1000)), N).reshape((N,1))
+f2 = np.random.choice(list(range(1000)), N).reshape((N,1))
+
+flist = np.concatenate((f1, f2), axis = 1)
+weights = np.ones(N)
+
+algorithm = pyhdfe.create(flist)
+
+start_time = time.time()
+res_pyhdfe = algorithm.residualize(x)
+end_time = time.time()
+print(end_time - start_time)
+# 26.04527711868286
+
+
+start_time = time.time()
+res_pyfixest, success = demean(x, flist, weights, tol = 1e-10)
+# Calculate the execution time
+end_time = time.time()
+print(end_time - start_time)
+#4.334428071975708
+
+np.allclose(res_pyhdfe , res_pyfixest)
+# True
+```
+
+
+
+## PyFixest 0.9.11
+
+- Bump required `formulaic` version to `0.6.5`.
+- Stop copying the data frame in `fixef()`.
+
+## PyFixest 0.9.10
+
+- Fixes a big in the `wildboottest` method (see [#158](https://github.com/py-econometrics/pyfixest/issues/158)).
+- Allows to run a wild bootstrap after fixed effect estimation.
+
+## PyFixest 0.9.9
+
+- Adds support for `wildboottest` for Python `3.11`.
+
+## PyFixest 0.9.8
+
+- Fixes a couple more bugs in the `predict()` and `fixef()` methods.
+- The `predict()` argument `data` is renamed to `newdata`.
+
+## PyFixest 0.9.7
+
+Fixes a bug in `predict()` produced when multicollinear variables are dropped.
+
+## PyFixest 0.9.6
+
+Improved Collinearity handling. See [#145](https://github.com/py-econometrics/pyfixest/issues/145)
+
+## PyFixest 0.9.5
+
+
+- Moves plotting from `matplotlib` to `lets-plot`.
+- Fixes a few minor bugs in plotting and the `fixef()` method.
+
+
+## PyFixest 0.9.1
+
+### Breaking API changes
+
+It is no longer required to initiate an object of type `Fixest` prior to running [Feols](/reference/estimation.models.feols_.Feols.qmd) or `fepois`. Instead,
+you can now simply use `feols()` and `fepois()` as functions, just as in `fixest`. Both function can be found in an
+`estimation` module and need to obtain a `pd.DataFrame` as a function argument:
+
+```py
+from pyfixest.estimation import fixest, fepois
+from pyfixest.utils import get_data
+
+data = get_data()
+fit = feols("Y ~ X1 | f1", data = data, vcov = "iid")
+```
+
+Calling `feols()` will return an instance of class [Feols](/reference/estimation.models.feols_.Feols.qmd), while calling `fepois()` will return an instance of class `Fepois`.
+Multiple estimation syntax will return an instance of class `FixestMulti`.
+
+Post processing works as before via `.summary()`, `.tidy()` and other methods.
+
+### New Features
+
+A summary function allows to compare multiple models:
+
+```py
+from pyfixest.summarize import summary
+fit2 = feols("Y ~ X1 + X2| f1", data = data, vcov = "iid")
+summary([fit, fit2])
+```
+
+Visualization is possible via custom methods (`.iplot()` & `.coefplot()`), but a new module allows to visualize
+  a list of [Feols](/reference/estimation.models.feols_.Feols.qmd) and/or `Fepois` instances:
+
+```py
+from pyfixest.visualize import coefplot, iplot
+coefplot([fit, fit2])
+```
+
+The documentation has been improved (though there is still room for progress), and the code has been cleaned up a
+bit (also lots of room for improvements).
