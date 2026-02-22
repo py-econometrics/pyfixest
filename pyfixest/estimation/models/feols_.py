@@ -13,6 +13,7 @@ from scipy.sparse.linalg import lsqr
 from scipy.stats import chi2, f, t
 
 from pyfixest.errors import VcovTypeNotSupportedError
+from pyfixest.estimation.api.utils import _ALL_SAMPLE, _AllSampleSentinel
 from pyfixest.estimation.formula import model_matrix as model_matrix_fixest
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.backends import BACKENDS
@@ -262,7 +263,7 @@ class Feols(ResultAccessorMixin):
         lean: bool = False,
         context: Union[int, Mapping[str, Any]] = 0,
         sample_split_var: Optional[str] = None,
-        sample_split_value: Optional[Union[str, int, float]] = None,
+        sample_split_value: Optional[Union[str, int, float, _AllSampleSentinel]] = None,
     ) -> None:
         self._sample_split_value = sample_split_value
         self._sample_split_var = sample_split_var
@@ -276,13 +277,16 @@ class Feols(ResultAccessorMixin):
         self._is_iv = False
         self.FixestFormula = FixestFormula
 
-        if sample_split_value == "all":
-            data_split = data.copy()
+        if self._sample_split_var is None:
+            pass
+        elif self._sample_split_value is _ALL_SAMPLE:
+            data = data.loc[data[sample_split_var].notnull()]
         else:
-            data_split = data[data[sample_split_var] == sample_split_value].copy()
-        data_split.reset_index(drop=True, inplace=True)  # set index to 0:N
+            data = data.loc[data[self._sample_split_var] == sample_split_value]
 
-        self._data = data_split.copy() if copy_data else data_split
+        data = data.reset_index(drop=True)
+
+        self._data = data.copy() if copy_data else data
         self._ssc_dict = ssc_dict
         self._drop_singletons = drop_singletons
         self._drop_intercept = drop_intercept

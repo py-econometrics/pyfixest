@@ -5,6 +5,7 @@ from typing import Any, Optional, Union
 
 import pandas as pd
 
+from pyfixest.estimation.api.utils import _ALL_SAMPLE, _AllSampleSentinel
 from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.internals.literals import (
     DemeanerBackendOptions,
@@ -295,11 +296,17 @@ class FixestMulti:
         FixestFormulaDict = self.FixestFormulaDict
         _fixef_keys = list(FixestFormulaDict.keys())
 
-        all_splits = (["all"] if self._run_full else []) + (
-            self._data[self._splitvar].dropna().unique().tolist()
-            if self._run_split
-            else []
-        )
+        all_splits: list[str | int | float | _AllSampleSentinel] = []
+        if self._run_full:
+            all_splits.append(_ALL_SAMPLE)
+        if self._run_split:
+            all_splits.extend(
+                self._data[self._splitvar]
+                .dropna()
+                .drop_duplicates()
+                .sort_values()
+                .tolist()
+            )
 
         for sample_split_value in all_splits:
             for _, fval in enumerate(_fixef_keys):
