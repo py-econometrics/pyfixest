@@ -50,7 +50,7 @@ Other syntax:
 
 ### Multiple Estimation Operators
 
-Operators can appear anywhere in the formula (RHS, fixed effects, IV parts). They can be combined; expansion is recursive and produces all combinations. Note that multiple estimation can be significantly faster than independent model calls due to internal optimisations. 
+Operators can appear anywhere in the formula (RHS, fixed effects, IV parts). They can be combined; expansion is recursive and produces all combinations. Note that multiple estimation can be significantly faster than independent model calls due to internal optimisations.
 
 `sw` (sequential stepwise):
 - `y ~ x1 + sw(x2, x3)` → `y ~ x1 + x2` and `y ~ x1 + x3`
@@ -72,8 +72,8 @@ Combining operators example:
 - `y ~ csw(x1, x2) + sw(z1, z2)` expands to:
   `y ~ x1 + z1`, `y ~ x1 + z2`, `y ~ x1 + x2 + z1`, `y ~ x1 + x2 + z2`
 
-You can run regressions for subsamples by using the `split` and `fsplit` arguments, where both split by the 
-provided variable, but `fsplit` also provides a fit for the full sample. 
+You can run regressions for subsamples by using the `split` and `fsplit` arguments, where both split by the
+provided variable, but `fsplit` also provides a fit for the full sample.
 
 
 ## Inference (vcov)

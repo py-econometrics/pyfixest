@@ -44,9 +44,11 @@ def _format_output(output: dict) -> list[str]:
         if "text/markdown" in data:
             parts.append(_truncate("".join(data["text/markdown"]), MAX_OUTPUT_CHARS))
         elif "text/plain" in data:
-            parts.append(f"```text\n{_truncate(''.join(data['text/plain']), MAX_OUTPUT_CHARS)}\n```")
+            parts.append(
+                f"```text\n{_truncate(''.join(data['text/plain']), MAX_OUTPUT_CHARS)}\n```"
+            )
         else:
-            for mime in data.keys():
+            for mime in data:
                 if mime.startswith("image/"):
                     parts.append(f"[{mime} omitted]")
                     break
@@ -114,6 +116,7 @@ def find_source(html_rel: Path) -> Path | None:
 
 
 def main() -> None:
+    """Generate LLM-friendly markdown alongside built docs."""
     if not SITE_DIR.exists():
         print("generate_llms_md: _site/ not found, skipping.")
         return
