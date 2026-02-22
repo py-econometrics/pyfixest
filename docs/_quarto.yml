@@ -1,6 +1,8 @@
 project:
   type: website
   output-dir: _site
+  post-render:
+    - _scripts/generate_llms_md.py
 
 execute:
   python: "../.pixi/envs/docs/bin/python3"
@@ -38,6 +40,8 @@ website:
         file: acknowledgements.md
       - text: "Sprint 2026"
         file: pyfixest-sprint.md
+      - text: "Skills"
+        file: skills.md
       - text: Learn more
         menu:
         - text: "Regression Tables and Summary Statistics"
