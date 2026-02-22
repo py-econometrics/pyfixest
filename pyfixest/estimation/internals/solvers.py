@@ -2,7 +2,7 @@ import numpy as np
 from scipy.linalg import solve
 from scipy.sparse.linalg import lsqr
 
-from pyfixest.estimation.literals import (
+from pyfixest.estimation.internals.literals import (
     SolverOptions,
 )
 

@@ -28,7 +28,7 @@ except ImportError:
 from scipy.stats import norm
 from tqdm import tqdm
 
-from pyfixest.estimation.demean_ import demean
+from pyfixest.estimation.internals.demean_ import demean
 
 # Only setup lets-plot if it's available
 if _HAS_LETS_PLOT:

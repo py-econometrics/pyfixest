@@ -6,3 +6,6 @@ objects.json
 reference/
 
 **/*.quarto_ipynb
+*.html
+!analytics.html
+*_files/

@@ -6,7 +6,7 @@ from pyfixest.did.did2s import DID2S, _did2s_estimate, _did2s_vcov
 from pyfixest.did.lpdid import LPDID
 from pyfixest.did.saturated_twfe import SaturatedEventStudy
 from pyfixest.did.twfe import TWFE
-from pyfixest.estimation.literals import VcovTypeOptions
+from pyfixest.estimation.internals.literals import VcovTypeOptions
 
 
 def event_study(
@@ -54,7 +54,7 @@ def event_study(
     Returns
     -------
     object
-        A fitted model object of class [Feols](/reference/estimation.feols_.Feols.qmd).
+        A fitted model object of class [Feols](/reference/estimation.models.feols_.Feols.qmd).
 
     Examples
     --------
@@ -212,7 +212,7 @@ def did2s(
     Returns
     -------
     object
-        A fitted model object of class [Feols](/reference/estimation.feols_.Feols.qmd).
+        A fitted model object of class [Feols](/reference/estimation.models.feols_.Feols.qmd).
 
     Examples
     --------
