@@ -748,7 +748,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="examples" class="level2 doc-section doc-section-examples">
 <h2 class="doc-section doc-section-examples anchored" data-anchor-id="examples">Examples</h2>
 <p>The <code>fepois()</code> function can be used to estimate a simple Poisson regression model with fixed effects. The following example regresses <code>Y</code> on <code>X1</code> and <code>X2</code> with fixed effects for <code>f1</code> and <code>f2</code>: fixed effects are specified after the <code>|</code> symbol.</p>
-<div id="07421dd5" class="cell" data-execution_count="1">
+<div id="a9cc5ba1" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> pf.get_data(model <span class="op">=</span> <span class="st">"Fepois"</span>)</span>
@@ -756,7 +756,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>fit.summary()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 
-            <div id="z5Hs2i"></div>
+            <div id="4uxG0k"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -780,9 +780,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("z5Hs2i").appendChild(div);
+                        document.getElementById("4uxG0k").appendChild(div);
                     };
-                    var e = document.getElementById("z5Hs2i");
+                    var e = document.getElementById("4uxG0k");
                     e.appendChild(script);
                 })()
             </script>
@@ -790,7 +790,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <div class="cell-output cell-output-display">
 
-            <div id="Wt4wNL"></div>
+            <div id="8k4Dum"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -814,9 +814,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("Wt4wNL").appendChild(div);
+                        document.getElementById("8k4Dum").appendChild(div);
                     };
-                    var e = document.getElementById("Wt4wNL");
+                    var e = document.getElementById("8k4Dum");
                     e.appendChild(script);
                 })()
             </script>
@@ -831,6 +831,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 Estimation:  Poisson
 Dep. var.: Y, Fixed effects: f1 + f2
+sample: None = all
 Inference:  iid
 Observations:  995
 
