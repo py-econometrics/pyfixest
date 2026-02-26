@@ -1,0 +1,18 @@
+---
+title: "Multiple Estimation"
+description: "Stepwise (sw, csw), multiple dependent variables, split samples — estimate many specifications at once."
+categories: [Workflow]
+format:
+  html:
+    html-table-processing: none
+toc: true
+toc-title: "On this page"
+toc-location: left
+---
+
+::: {.callout-warning}
+## Coming Soon
+This tutorial is under construction. It will cover the `sw`, `sw0`, `csw`, `csw0` operators, multiple dependent variables, split/fsplit, and patterns for systematic specification testing.
+:::
+
+For now, see the [Getting Started](../getting-started.qmd) guide for a quick multiple estimation example, and the [Function Reference](../reference/index.qmd) for detailed API documentation.

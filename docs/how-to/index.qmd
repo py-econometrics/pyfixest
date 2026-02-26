@@ -1,0 +1,26 @@
+---
+title: "Guides"
+subtitle: "Practical recipes and deeper dives for PyFixest practitioners."
+aliases:
+  - /explanation/index.html
+listing:
+  type: grid
+  contents:
+    - marginaleffects.qmd
+    - multiple_testing.qmd
+    - regression_decomposition.qmd
+    - pyfixest_gpu.qmd
+    - compare-fixest-pyfixest.qmd
+    - stata-2-pyfixest.qmd
+    - panel_variance_reduction.qmd
+    - ssc.qmd
+  sort: false
+  categories: true
+  fields: [title, description, categories]
+  grid-columns: 2
+  grid-item-border: true
+page-layout: full
+toc: false
+---
+
+Task-oriented guides that show you how to accomplish specific goals with PyFixest.

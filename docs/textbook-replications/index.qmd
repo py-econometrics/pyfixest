@@ -1,0 +1,20 @@
+---
+title: "Textbook Replications"
+subtitle: "Reproduce textbook examples and classic empirical results with PyFixest."
+listing:
+  type: grid
+  contents:
+    - brave_true.qmd
+    - mixtape.qmd
+    - replicating-the-effect.qmd
+    - resources.qmd
+  sort: false
+  categories: true
+  fields: [title, description, categories]
+  grid-columns: 2
+  grid-item-border: true
+page-layout: full
+toc: false
+---
+
+Each replication follows a published textbook, so you can read along and compare code.

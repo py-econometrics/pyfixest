@@ -5,6 +5,7 @@ project:
     - _scripts/generate_llms_md.py
 
 execute:
+  freeze: auto
   python: "../.pixi/envs/docs/bin/python3"
 
 format:
@@ -28,10 +29,65 @@ website:
     left:
       - text: "PyFixest"
         file: pyfixest.md
-      - text: "Quickstart"
-        file: quickstart.qmd
+      - text: "Getting Started"
+        file: getting-started.qmd
       - text: "Function Reference"
         file: reference/index.qmd
+      - text: "Tutorials"
+        menu:
+        - text: "All Tutorials"
+          file: tutorials/index.qmd
+        - text: "---"
+        - text: "OLS with Fixed Effects"
+          file: tutorials/ols-fixed-effects.qmd
+        - text: "Standard Errors"
+          file: tutorials/standard-errors.qmd
+        - text: "Instrumental Variables"
+          file: tutorials/instrumental-variables.qmd
+        - text: "Poisson & GLMs"
+          file: tutorials/poisson-glm.qmd
+        - text: "Multiple Estimation"
+          file: tutorials/multiple-estimation.qmd
+        - text: "Regression Tables"
+          file: tutorials/regression-tables.qmd
+        - text: "Difference-in-Differences"
+          file: tutorials/difference-in-differences.qmd
+        - text: "Quantile Regression"
+          file: tutorials/quantile-regression.qmd
+      - text: "Guides"
+        menu:
+        - text: "All Guides"
+          file: how-to/index.qmd
+        - text: "---"
+        - text: "Marginal Effects & Hypothesis Testing"
+          file: how-to/marginaleffects.qmd
+        - text: "Multiple Testing Corrections"
+          file: how-to/multiple_testing.qmd
+        - text: "Regression Decomposition"
+          file: how-to/regression_decomposition.qmd
+        - text: "PyFixest on the GPU"
+          file: how-to/pyfixest_gpu.qmd
+        - text: "Compare fixest & PyFixest"
+          file: how-to/compare-fixest-pyfixest.qmd
+        - text: "Compare Stata & PyFixest"
+          file: how-to/stata-2-pyfixest.qmd
+        - text: "Variance Reduction in AB Tests"
+          file: how-to/panel_variance_reduction.qmd
+        - text: "On Small Sample Corrections"
+          file: how-to/ssc.qmd
+      - text: "Textbook Replications"
+        menu:
+        - text: "All Textbook Replications"
+          file: textbook-replications/index.qmd
+        - text: "---"
+        - text: "Causal Inference for the Brave and True"
+          file: textbook-replications/brave_true.qmd
+        - text: "Causal Inference: The Mixtape"
+          file: textbook-replications/mixtape.qmd
+        - text: "The Effect"
+          file: textbook-replications/replicating-the-effect.qmd
+        - text: "Other Resources"
+          file: textbook-replications/resources.qmd
       - text: "Changelog"
         file: changelog.qmd
       - text: "Contributing"
@@ -45,37 +101,37 @@ website:
       - text: Learn more
         menu:
         - text: "Regression Tables and Summary Statistics"
-          file: table-layout.qmd
+          file: tutorials/regression-tables.qmd
         - text: "Hypothesis Testing and Marginal Effects"
-          file: marginaleffects.qmd
+          file: how-to/marginaleffects.qmd
         - text: "Difference-in-Differences Estimation"
-          file: difference-in-differences.qmd
-        - file: multiple_testing.ipynb
+          file: tutorials/difference-in-differences.qmd
+        - file: how-to/multiple_testing.qmd
           text: "Multiple Testing Corrections"
-        - file: regression_decomposition.ipynb
+        - file: how-to/regression_decomposition.qmd
           text: "Regression Decomposition"
-        - file: ssc.qmd
+        - file: how-to/ssc.qmd
           text: "On Small Sample Corrections"
-        - file: quantile-regression.qmd
+        - file: tutorials/quantile-regression.qmd
           text: "Quantile Regression"
         #- text: "Compare fixest & PyFixest"
         #  file: compare-fixest-pyfixest.qmd
         - text: "Compare Stata & PyFixest"
-          file: stata-2-pyfixest.qmd
+          file: how-to/stata-2-pyfixest.qmd
         - text: "PyFixest on the GPU via CuPy"
           file: pyfixest-gpu-cupy.ipynb
         - text: "PyFixest on the GPU via JAX"
-          file: pyfixest_gpu.ipynb
+          file: how-to/pyfixest_gpu.qmd
         - text: "Variance Reduction in AB Tests"
-          file: panel_variance_reduction.ipynb
+          file: how-to/panel_variance_reduction.qmd
         - text: "Other Resources around PyFixest"
-          file: resources.qmd
+          file: textbook-replications/resources.qmd
         - text: "Replicating 'The Effect' with PyFixest"
-          file: replicating-the-effect.qmd
+          file: textbook-replications/replicating-the-effect.qmd
         - text: "Replicating 'The Mixtape' with PyFixest"
           file: mixtape.ipynb
         - text: "Replicating 'Causal Inference for the Brave and True' with PyFixest"
-          file: brave_true.ipynb
+          file: textbook-replications/brave_true.qmd
 
 quartodoc:
   package: pyfixest

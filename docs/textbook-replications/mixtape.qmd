@@ -1,0 +1,128 @@
+---
+title: The Mixtape with PyFixest
+aliases:
+  - /mixtape.html
+jupyter: python3
+---
+
+
+In this notebook, we translate some of the Python code in [Scott Cunningham's mixtape](https://mixtape.scunning.com/) to PyFixest.
+
+
+```{python}
+import numpy as np
+import pandas as pd
+
+import pyfixest as pf
+
+%config InlineBackend.figure_format = "retina"
+```
+
+## Chapter 8: Panel Data
+
+Instead of demeaning by hand and then fitting the model via statsmodels, we just let PyFixest do all the work for us. 
+
+```{python}
+# read the data from github & load into pandas
+url = "https://raw.githubusercontent.com/scunning1975/mixtape/master/sasp_panel.dta"
+sasp = pd.read_stata(url)
+sasp.head()
+```
+
+```{python}
+# some initial data cleaning
+sasp = sasp.dropna()
+# order by id and session
+sasp.sort_values("id", inplace=True)
+
+# create balanced panel
+times = len(sasp.session.unique())
+in_all_times = (
+    sasp.groupby("id")["session"].apply(lambda x: len(x) == times).reset_index()
+)
+in_all_times.rename(columns={"session": "in_all_times"}, inplace=True)
+balanced_sasp = pd.merge(in_all_times, sasp, how="left", on="id")
+balanced_sasp = balanced_sasp[balanced_sasp.in_all_times]
+
+provider_second = np.zeros(balanced_sasp.shape[0])
+provider_second[balanced_sasp.provider_second == "2. Yes"] = 1
+balanced_sasp.provider_second = provider_second
+```
+
+```{python}
+# define formulas
+
+covars = """
+    age + asq + bmi + hispanic + black + other + asian + schooling + cohab +
+            married + divorced + separated + age_cl + unsafe + llength + reg + asq_cl +
+            appearance_cl + provider_second + asian_cl + black_cl + hispanic_cl +
+           othrace_cl + hot + massage_cl
+    """
+
+# we fit on all covariates
+fml_pooled = f"lnw ~ {covars}"
+# we fit on all covariates and add one-hot encoded id fixed effects
+fml_onehot = f"lnw ~  {covars} + C(id)"
+# we fit on all covariates and swipe out the fixed effects (i.e. we apply the within transformation via pyfixest.feols)
+fml_fe = f"lnw ~ {covars} | id"
+```
+
+```{python}
+%%capture
+fit_pooled = pf.feols(fml=fml_pooled, data=balanced_sasp, vcov={"CRV1": "id"})
+fit_fe = pf.feols(fml=fml_fe, data=balanced_sasp, vcov={"CRV1": "id"})
+```
+
+```{python}
+pf.etable(
+    [fit_pooled, fit_fe],
+    model_heads=["POLS", "FE"],
+    keep=["unsafe", "llength", "reg"],
+    labels={
+        "unsafe": "Unprotected sex with client of any kind",
+        "llength": "Ln(Length)",
+        "reg": "Client was a Regular",
+    },
+    digits=6,
+)
+```
+
+Our point estimates match the Stata results that Scott reports in the mixtape exactly. The standard errors differ slightly due to differences in small sample adjustments in Stata and Pyfixest. See [here](https://py-econometrics.github.io/pyfixest/ssc.html) for an overview of how pyfixest handles small sample adjustments (tldr - exactly like r-fixest). 
+
+## Chapter 9: Difference-in-Differences
+
+### Code Example 1
+
+```{python}
+abortion = pd.read_stata(
+    "https://raw.githubusercontent.com/scunning1975/mixtape/master/abortion.dta"
+)
+abortion = abortion[~pd.isnull(abortion.lnr)]
+abortion_bf15 = abortion[abortion.bf15 == 1]
+# pf throws error when weights are 0
+abortion_bf15 = abortion_bf15[abortion_bf15.totpop > 0]
+abortion_bf15["year"] = abortion_bf15["year"].astype(int)
+abortion_bf15.head()
+```
+
+```{python}
+# we use the i() operator pyfixest provides, as it allows us to easily set the
+# reference year, and works smoothly with the iplot() method
+
+fml = """lnr ~ i(year, repeal, ref = 1985) + C(repeal) + C(year) + C(fip)
+        + acc + ir + pi + alcohol + crack + poverty + income + ur
+"""
+
+fit = pf.feols(fml=fml, data=abortion_bf15, weights="totpop", vcov={"CRV1": "fip"})
+
+pf.iplot(
+    fit,
+    coord_flip=False,
+    plot_backend="matplotlib",
+    title="Event Study Estimate",
+    cat_template="{value}",
+)
+```
+
+
+
