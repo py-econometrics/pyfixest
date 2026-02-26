@@ -1,3 +1,5 @@
+// Content negotiation: serve .html.md when Accept includes text/markdown.
+// /llms.txt and /llms-full.txt are plain assets — they fall through to context.next().
 export const onRequest: PagesFunction = async (context) => {
   const accept = context.request.headers.get('Accept') || '';
   if (!accept.includes('text/markdown')) {
