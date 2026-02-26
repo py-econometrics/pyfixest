@@ -76,11 +76,17 @@ provided variable, but `fsplit` also provides a fit for the full sample.
 Pass to `vcov`:
 
 - `"iid"` — IID errors
-- `"hetero"` — HC1 heteroskedasticity-robust (alias: `"HC1"`, `"HC2"`, `"HC3"`)
+- `"hetero"` — HC1 heteroskedasticity-robust (alias: `"HC1"`)
+- `"HC2"` — HC2 robust (not supported with fixed effects or IV)
+- `"HC3"` — HC3 robust (not supported with fixed effects or IV)
 - `{"CRV1": "cluster_var"}` — Cluster-robust variance
 - `{"CRV3": "cluster_var"}` — Leave-one-cluster-out jackknife
-- `"nw"` — Newey-West HAC (requires panel_id and time_id)
-- `"dk"` — Driscoll-Kraay HAC (requires panel_id and time_id)
+- `"NW"` — Newey-West HAC (requires `vcov_kwargs` with `time_id`; optional `panel_id`, `lag`)
+- `"DK"` — Driscoll-Kraay HAC (requires `vcov_kwargs` with `time_id`; optional `panel_id`, `lag`)
+
+Two-way clustering: `{"CRV1": "var1 + var2"}`.
+
+Inference can be adjusted post-estimation: `fit.vcov("hetero").summary()`.
 
 ## Post Processing
 
@@ -95,10 +101,42 @@ Model objects support:
 - `.predict(newdata)` — Predictions
 - `.resid()` — Residuals
 - `.vcov()` — Variance-covariance matrix
+- `.tstat()` — T-statistics
+- `.fixef()` — Extract fixed effect estimates
 - `.wildboottest(param, reps, seed)` — Wild cluster bootstrap inference
 - `.ccv(treatment, pk, qk, ...)` — Causal cluster variance estimator
-- `.ritest(param, reps, ...)` — Randomization inference
+- `.ritest(resampvar, reps, ...)` — Randomization inference
 - `.decompose(param, x1_vars, type, ...)` — Gelbach (2016) decomposition
+- `.wald_test(R, q)` — Linear hypothesis testing
+- `.first_stage()` — First-stage results (IV only)
+- `.IV_Diag()` — IV diagnostic tests (IV only)
+
+For IV models, show first and second stage together: `pf.etable([fit._model_1st_stage, fit])`.
+
+## DiD / Causal Inference
+
+- `pf.did2s(data, yname, first_stage, second_stage, treatment, cluster)` — Two-stage DID (Gardner 2022).
+- `pf.event_study(data, yname, idname, tname, gname, estimator="twfe")` — Event study with multiple estimators.
+- `pf.lpdid(data, yname, idname, tname, gname)` — Local projections DID.
+- `pf.SaturatedEventStudy(data, yname, idname, tname, gname)` — Saturated event study with cohort-specific effects.
+- `pf.panelview(data, unit, time, treat)` — Panel treatment visualization.
+
+## Visualization
+
+- `pf.coefplot(models)` — Plot coefficients with confidence intervals.
+- `pf.iplot(models)` — Plot coefficients from `i()` interactions (event-study style).
+- `pf.qplot(models)` — Plot quantile regression coefficients.
+
+## Multiple Testing
+
+- `pf.bonferroni(models, param)` — Bonferroni-adjusted p-values.
+- `pf.rwolf(models, param, reps, seed)` — Romano-Wolf adjusted p-values.
+- `pf.wyoung(models, param, reps, seed)` — Westfall-Young adjusted p-values.
+
+## Utilities
+
+- `pf.get_data(N, seed)` — Generate example dataset for testing.
+- `pf.ssc(k_adj, k_fixef, G_adj, G_df)` — Configure small sample corrections.
 
 ## etable Basics
 
@@ -108,7 +146,7 @@ For regression tables, use `pf.etable()`.
 - Output formats: `type="gt"` (default), `"md"`, `"tex"`, `"df"`.
 - Keep/drop variables: `keep="X1"` or `drop=["X2"]`.
 - Labels and fixed effects labels: `labels={...}`, `felabels={...}`.
-- Show p-values or CIs: `coef_fmt="b (se) [p]"` shows the coefficient - b; standard error in parentheses, pvalue in paranteres.
+- Show p-values or CIs: `coef_fmt="b (se) [p]"` shows the coefficient (b), standard error in parentheses, p-value in brackets.
 - Title/caption: `caption="Regression Results"`.
 - Rename variables: `labels={"X1": "Age", "X2": "Schooling"}`.
 - Column headers for dependent variables: `model_heads=[...]` and `head_order="hd"`/`"dh"` to control header order (headlines vs depvars).

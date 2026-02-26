@@ -104,10 +104,42 @@ Model objects support:
 - `.predict(newdata)` -- Predictions
 - `.resid()` -- Residuals
 - `.vcov()` -- Variance-covariance matrix
+- `.tstat()` -- t-statistics
+- `.fixef()` -- Extract fixed effect estimates
 - `.wildboottest(param, reps, seed)` -- Wild cluster bootstrap inference
 - `.ccv(treatment, pk, qk, ...)` -- Causal cluster variance estimator
 - `.ritest(resampvar, reps, ...)` -- Randomization inference
 - `.decompose(param, x1_vars, type, ...)` -- Gelbach (2016) decomposition
+- `.wald_test(R, q)` -- Linear hypothesis testing
+- `.first_stage()` -- First-stage results (IV only)
+- `.IV_Diag()` -- IV diagnostic tests (IV only)
+
+For IV models, show first and second stage together: `pf.etable([fit._model_1st_stage, fit])`.
+
+## DiD / Causal Inference
+
+- `pyfixest.did2s(data, yname, first_stage, second_stage, treatment, cluster)` -- Two-stage DID (Gardner 2022).
+- `pyfixest.event_study(data, yname, idname, tname, gname, estimator="twfe")` -- Event study with multiple estimators.
+- `pyfixest.lpdid(data, yname, idname, tname, gname)` -- Local projections DID.
+- `pyfixest.SaturatedEventStudy(data, yname, idname, tname, gname)` -- Saturated event study with cohort-specific effects.
+- `pyfixest.panelview(data, unit, time, treat)` -- Panel treatment visualization.
+
+## Visualization
+
+- `pyfixest.coefplot(models)` -- Plot coefficients with confidence intervals.
+- `pyfixest.iplot(models)` -- Plot coefficients from `i()` interactions (event-study style).
+- `pyfixest.qplot(models)` -- Plot quantile regression coefficients.
+
+## Multiple Testing
+
+- `pyfixest.bonferroni(models, param)` -- Bonferroni-adjusted p-values.
+- `pyfixest.rwolf(models, param, reps, seed)` -- Romano-Wolf adjusted p-values.
+- `pyfixest.wyoung(models, param, reps, seed)` -- Westfall-Young adjusted p-values.
+
+## Utilities
+
+- `pyfixest.get_data(N, seed)` -- Generate example dataset for testing.
+- `pyfixest.ssc(k_adj, k_fixef, G_adj, G_df)` -- Configure small sample corrections.
 
 ## etable Basics
 

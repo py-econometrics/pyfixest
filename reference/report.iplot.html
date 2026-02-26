@@ -712,7 +712,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="examples" class="level2 doc-section doc-section-examples">
 <h2 class="doc-section doc-section-examples anchored" data-anchor-id="examples">Examples</h2>
-<div id="9becc31b" class="cell" data-execution_count="1">
+<div id="e40aeae7" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.report.utils <span class="im">import</span> rename_categoricals</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -745,7 +745,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>pf.iplot([fit1], joint <span class="op">=</span> <span class="st">"both"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 
-            <div id="6qrKZz"></div>
+            <div id="2HreKq"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -769,9 +769,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("6qrKZz").appendChild(div);
+                        document.getElementById("2HreKq").appendChild(div);
                     };
-                    var e = document.getElementById("6qrKZz");
+                    var e = document.getElementById("2HreKq");
                     e.appendChild(script);
                 })()
             </script>
@@ -779,7 +779,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <div class="cell-output cell-output-display">
 
-            <div id="frvg1E"></div>
+            <div id="4Jlpmj"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -803,31 +803,31 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("frvg1E").appendChild(div);
+                        document.getElementById("4Jlpmj").appendChild(div);
                     };
-                    var e = document.getElementById("frvg1E");
+                    var e = document.getElementById("4Jlpmj");
                     e.appendChild(script);
                 })()
             </script>
             
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>/tmp/ipykernel_6708/3932325117.py:9: DeprecationWarning: The function `_relabel_expvar` is deprecated as we have adjusted the naming of variables interacted via the i() operator with pyfixest 0.50. For regression tables, please rely on the `labels` and `cat_template` arguments of `pf.etable()` instead. 
+<pre><code>/tmp/ipykernel_6684/3932325117.py:9: DeprecationWarning: The function `_relabel_expvar` is deprecated as we have adjusted the naming of variables interacted via the i() operator with pyfixest 0.50. For regression tables, please rely on the `labels` and `cat_template` arguments of `pf.etable()` instead. 
   pf.iplot([fit1, fit2, fit3], labels = rename_categoricals(fit1._coefnames))
 /home/runner/work/pyfixest/pyfixest/pyfixest/report/utils.py:20: UserWarning: The label key 'Intercept' is not in the covariate names.
   warnings.warn(f"The label key '{label_key}' is not in the covariate names.")
-/tmp/ipykernel_6708/3932325117.py:12: DeprecationWarning: The function `_relabel_expvar` is deprecated as we have adjusted the naming of variables interacted via the i() operator with pyfixest 0.50. For regression tables, please rely on the `labels` and `cat_template` arguments of `pf.etable()` instead. 
+/tmp/ipykernel_6684/3932325117.py:12: DeprecationWarning: The function `_relabel_expvar` is deprecated as we have adjusted the naming of variables interacted via the i() operator with pyfixest 0.50. For regression tables, please rely on the `labels` and `cat_template` arguments of `pf.etable()` instead. 
   labels = rename_categoricals(fit1._coefnames)
 /home/runner/work/pyfixest/pyfixest/pyfixest/report/utils.py:20: UserWarning: The label key 'Intercept' is not in the covariate names.
   warnings.warn(f"The label key '{label_key}' is not in the covariate names.")
 /home/runner/work/pyfixest/pyfixest/pyfixest/report/utils.py:289: UserWarning: 
                     The following model names specified in rename_models are not found in the models:
-                    {'Y~i(f1)', 'Y~i(f1)+X2|f2', 'Y~i(f1)+X2'}
+                    {'Y~i(f1)+X2|f2', 'Y~i(f1)', 'Y~i(f1)+X2'}
                     
   warnings.warn(</code></pre>
 </div>
 <div class="cell-output cell-output-display" data-execution_count="1">
-   <div id="Dt0IKO"></div>
+   <div id="uBUA2Y"></div>
    <script type="text/javascript" data-lets-plot-script="plot">
    
    (function() {
@@ -852,7 +852,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
        };
    }
    
-   const containerDiv = document.getElementById("Dt0IKO");
+   const containerDiv = document.getElementById("uBUA2Y");
    let fig = null;
    
    function renderPlot() {
@@ -861,8 +861,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 "data":{
 "Coefficient":["f1::1.0","f1::2.0","f1::3.0","f1::4.0","f1::5.0","f1::6.0","f1::7.0","f1::8.0","f1::9.0","f1::10.0","f1::11.0","f1::12.0","f1::13.0","f1::14.0","f1::15.0","f1::16.0","f1::17.0","f1::18.0","f1::19.0","f1::20.0","f1::21.0","f1::22.0","f1::23.0","f1::24.0","f1::25.0","f1::26.0","f1::27.0","f1::28.0","f1::29.0","f1::1.0","f1::2.0","f1::3.0","f1::4.0","f1::5.0","f1::6.0","f1::7.0","f1::8.0","f1::9.0","f1::10.0","f1::11.0","f1::12.0","f1::13.0","f1::14.0","f1::15.0","f1::16.0","f1::17.0","f1::18.0","f1::19.0","f1::20.0","f1::21.0","f1::22.0","f1::23.0","f1::24.0","f1::25.0","f1::26.0","f1::27.0","f1::28.0","f1::29.0"],
 "Estimate":[2.5442879837380556,-1.6346807837677435,-0.4639805415936472,-1.7627122198272636,1.4348086119364796,-0.8992225420858178,0.890191696353664,-0.470811979425131,0.08392895661938211,0.28878174380848437,1.2881639264088722,0.6873080715508435,1.804300973899593,-0.2165668418938769,1.3903698819526813,2.240478065436785,-0.3263697830683047,1.6520823541202092,0.5883570616384419,2.7916074868998466,-1.4464082114876389,-1.0659170994410558,-0.548090534683836,-0.977560174083431,-1.7019175178822936,1.0750127541094736,-0.48200420903080166,1.5173786526283053,0.21151214409505403,2.5442879837380556,-1.6346807837677435,-0.4639805415936472,-1.7627122198272636,1.4348086119364796,-0.8992225420858178,0.890191696353664,-0.470811979425131,0.08392895661938211,0.28878174380848437,1.2881639264088722,0.6873080715508435,1.804300973899593,-0.2165668418938769,1.3903698819526813,2.240478065436785,-0.3263697830683047,1.6520823541202092,0.5883570616384419,2.7916074868998466,-1.4464082114876389,-1.0659170994410558,-0.548090534683836,-0.977560174083431,-1.7019175178822936,1.0750127541094736,-0.48200420903080166,1.5173786526283053,0.21151214409505403],
-"2.5%":[1.6988810797044178,-2.521351025022357,-1.377939306539814,-2.655693360946177,0.4770952921754975,-1.8291701365228197,-0.009423320741524965,-1.3574822206797448,-0.796729891653331,-0.5978884974461296,0.388548909313683,-0.24263952288615853,0.8825710451114392,-1.155219283789314,0.4604222875156794,1.353807824182171,-1.274260142446293,0.759101213001296,-0.3415905327985601,1.9622034224441072,-2.3393893526065526,-1.9301363487581429,-1.5394180012195635,-1.8771751911786199,-2.70609209657718,0.11729943434849133,-1.4119518034678036,0.6675596211308417,-0.7363782152829341,1.2375134326310742,-3.0052374955323238,-1.8767180637197933,-3.1430239067380166,-0.045561831631648175,-2.3366745483034976,-0.5003742009966246,-1.8413686911897114,-1.2773357380964014,-1.081774967956096,-0.10240197094141656,-0.7501439346668364,0.379551296333577,-1.6674742304554637,-0.04708212426499858,0.8699213536722046,-1.7915565386587464,0.2717706672094562,-0.849094944579238,1.5095690757582108,-2.8267198983983923,-2.401770540187754,-2.0804195219459296,-2.3681260714337196,-3.2541047286160723,-0.4053576894586546,-1.9194562152484815,0.20378412423173908,-1.2536746114953876],
-"97.5%":[3.3896948877716935,-0.7480105425131297,0.4499782233525196,-0.8697310787083502,2.3925219316974617,0.03072505235118428,1.789806713448853,0.4158582618294828,0.9645878048920953,1.1754519850630982,2.1877789435040613,1.6172556659878454,2.7260309026877465,0.7220856000015603,2.3203174763896834,3.1271483066913985,0.6215205763096834,2.5450634952391225,1.5183046560754438,3.6210115513555863,-0.5534270703687254,-0.2016978501239689,0.4432369318518916,-0.077945156988242,-0.6977429391874075,2.032726073870456,0.4479433854062004,2.367197684125769,1.1594025034730422,3.8510625348450374,-0.26412407200316323,0.9487569805324988,-0.3824005329165103,2.9151790555046073,0.5382294641318621,2.2807575937039526,0.8997447323394493,1.4451936513351658,1.6593384555730646,2.678729823759161,2.1247600777685234,3.229050651465609,1.23434054666771,2.8278218881703614,3.611034777201365,1.1388169725221369,3.032394041030962,2.025809067856122,4.073645898041482,-0.06609652457688542,0.26993634130564215,0.9842384525782578,0.4130057232668576,-0.14973030714851476,2.555383197677602,0.9554477971868782,2.8309731810248717,1.6766988996854957],
+"2.5%":[1.6988810797044178,-2.521351025022357,-1.377939306539814,-2.655693360946177,0.4770952921754975,-1.8291701365228197,-0.009423320741524965,-1.3574822206797448,-0.796729891653331,-0.5978884974461296,0.388548909313683,-0.24263952288615853,0.8825710451114392,-1.155219283789314,0.4604222875156794,1.353807824182171,-1.274260142446293,0.759101213001296,-0.3415905327985601,1.9622034224441072,-2.3393893526065526,-1.9301363487581429,-1.5394180012195635,-1.8771751911786199,-2.70609209657718,0.11729943434849133,-1.4119518034678036,0.6675596211308417,-0.7363782152829341,1.2435830658145037,-2.9988716105443958,-1.8701562596683532,-3.136612712388347,-0.03868588997787348,-2.329997951801725,-0.4939153784651076,-1.8350028062017834,-1.2710130121483953,-1.075409082968168,-0.09594314840989959,-0.743467338165064,0.3861688937712602,-1.660735137148025,-0.040405527763226035,0.8762872386601326,-1.7847511213477651,0.2781818615591256,-0.8424183480774656,1.5155238159053193,-2.8203087040487227,-2.3955658430077493,-2.0733022461609534,-2.3616672489022026,-3.2468952164678724,-0.39848174780487966,-1.9127796187467092,0.2098854344633878,-1.2468691941844063],
+"97.5%":[3.3896948877716935,-0.7480105425131297,0.4499782233525196,-0.8697310787083502,2.3925219316974617,0.03072505235118428,1.789806713448853,0.4158582618294828,0.9645878048920953,1.1754519850630982,2.1877789435040613,1.6172556659878454,2.7260309026877465,0.7220856000015603,2.3203174763896834,3.1271483066913985,0.6215205763096834,2.5450634952391225,1.5183046560754438,3.6210115513555863,-0.5534270703687254,-0.2016978501239689,0.4432369318518916,-0.077945156988242,-0.6977429391874075,2.032726073870456,0.4479433854062004,2.367197684125769,1.1594025034730422,3.8449929016616076,-0.27048995699109124,0.9421951764810587,-0.38881172726617996,2.908303113850833,0.5315528676300898,2.2742987711724356,0.8933788473515213,1.4388709253871597,1.6529725705851366,2.672271001227644,2.1180834812667513,3.222433054027926,1.2276014533602713,2.8211452916685884,3.604668892213437,1.1320115552111556,3.025982846681293,2.0191324713543493,4.067691157894374,-0.07250771892655505,0.2637316441256379,0.9771211767932816,0.4065469007353406,-0.15693981929671508,2.548507256023827,0.9487712006851059,2.8248718707932228,1.6698934823745144],
 "Model":["Y ~ i(f1)","Y ~ i(f1)","Y ~ i(f1)","Y ~ i(f1)","Y ~ i(f1)","Y ~ i(f1)","Y ~ i(f1)","Y ~ i(f1)","Y ~ i(f1)","Y ~ i(f1)","Y ~ i(f1)","Y ~ i(f1)","Y ~ i(f1)","Y ~ i(f1)","Y ~ i(f1)","Y ~ i(f1)","Y ~ i(f1)","Y ~ i(f1)","Y ~ i(f1)","Y ~ i(f1)","Y ~ i(f1)","Y ~ i(f1)","Y ~ i(f1)","Y ~ i(f1)","Y ~ i(f1)","Y ~ i(f1)","Y ~ i(f1)","Y ~ i(f1)","Y ~ i(f1)","Y ~ i(f1) (joint CIs)","Y ~ i(f1) (joint CIs)","Y ~ i(f1) (joint CIs)","Y ~ i(f1) (joint CIs)","Y ~ i(f1) (joint CIs)","Y ~ i(f1) (joint CIs)","Y ~ i(f1) (joint CIs)","Y ~ i(f1) (joint CIs)","Y ~ i(f1) (joint CIs)","Y ~ i(f1) (joint CIs)","Y ~ i(f1) (joint CIs)","Y ~ i(f1) (joint CIs)","Y ~ i(f1) (joint CIs)","Y ~ i(f1) (joint CIs)","Y ~ i(f1) (joint CIs)","Y ~ i(f1) (joint CIs)","Y ~ i(f1) (joint CIs)","Y ~ i(f1) (joint CIs)","Y ~ i(f1) (joint CIs)","Y ~ i(f1) (joint CIs)","Y ~ i(f1) (joint CIs)","Y ~ i(f1) (joint CIs)","Y ~ i(f1) (joint CIs)","Y ~ i(f1) (joint CIs)","Y ~ i(f1) (joint CIs)","Y ~ i(f1) (joint CIs)","Y ~ i(f1) (joint CIs)","Y ~ i(f1) (joint CIs)","Y ~ i(f1) (joint CIs)"]
 },
 "mapping":{
