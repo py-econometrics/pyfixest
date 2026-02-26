@@ -10,7 +10,7 @@
 - [Regression Tables (etable)](https://pyfixest.org/table-layout.html): [markdown](https://pyfixest.org/table-layout.html.md)
 - [Changelog](https://pyfixest.org/changelog.html): [markdown](https://pyfixest.org/changelog.html.md)
 
-All documentation pages are available as clean markdown by appending `.md` to the HTML URL (e.g., `quickstart.html` → `quickstart.html.md`).
+All documentation pages are available as clean markdown by appending `.md` to the HTML URL (e.g., `quickstart.html` -> `quickstart.html.md`).
 
 ## Core API (4 functions)
 
@@ -21,7 +21,7 @@ All documentation pages are available as clean markdown by appending `.md` to th
 
 ## Formula Syntax
 
-Formulas follow fixest syntax and are split into 1–3 parts by `|`:
+Formulas follow fixest syntax and are split into 1-3 parts by `|`:
 
 - One-part: `"Y ~ X1 + X2"` (no fixed effects, no IV)
 - Two-part: `"Y ~ X1 + X2 | FE1 + FE2"` (fixed effects)
@@ -41,8 +41,8 @@ Other syntax:
   - `i(cat, ref="Base")` sets the omitted reference level explicitly.
   - `i(cat, x)` interacts `cat` with `x`. If `x` is numeric, this yields category-specific slopes. If `x` is categorical, this yields cat-by-x indicators.
   - `i(cat1, cat2, ref2="Base")` interacts two categorical variables; `ref2` sets the omitted level of `cat2`.
-  - Example (cat × numeric): `Y ~ i(industry, exposure)` creates industry-specific slopes on `exposure`.
-  - Example (cat × cat): `Y ~ i(state, year, ref2=2000)` creates state-by-year indicators with 2000 as the base year.
+  - Example (cat x numeric): `Y ~ i(industry, exposure)` creates industry-specific slopes on `exposure`.
+  - Example (cat x cat): `Y ~ i(state, year, ref2=2000)` creates state-by-year indicators with 2000 as the base year.
 - Standard interactions work as well:
   - `X1 * X2` expands to `X1 + X2 + X1:X2`.
   - `X1:X2` is the interaction term only (no main effects).
@@ -50,60 +50,64 @@ Other syntax:
 
 ### Multiple Estimation Operators
 
-Operators can appear anywhere in the formula (RHS, fixed effects, IV parts). They can be combined; expansion is recursive and produces all combinations. Note that multiple estimation can be significantly faster than independent model calls due to internal optimisations.
+Operators can appear anywhere in the formula (RHS, fixed effects, IV parts). They can be combined; expansion is recursive and produces all combinations. Multiple estimation can be significantly faster than independent model calls due to internal caching of demeaned covariates.
 
 `sw` (sequential stepwise):
-- `y ~ x1 + sw(x2, x3)` → `y ~ x1 + x2` and `y ~ x1 + x3`
+- `y ~ x1 + sw(x2, x3)` -> `y ~ x1 + x2` and `y ~ x1 + x3`
 
 `sw0` (sequential stepwise with zero step):
-- `y ~ x1 + sw0(x2, x3)` → `y ~ x1`, `y ~ x1 + x2`, `y ~ x1 + x3`
+- `y ~ x1 + sw0(x2, x3)` -> `y ~ x1`, `y ~ x1 + x2`, `y ~ x1 + x3`
 
 `csw` (cumulative stepwise):
-- `y ~ x1 + csw(x2, x3)` → `y ~ x1 + x2`, `y ~ x1 + x2 + x3`
+- `y ~ x1 + csw(x2, x3)` -> `y ~ x1 + x2`, `y ~ x1 + x2 + x3`
 
 `csw0` (cumulative stepwise with zero step):
-- `y ~ x1 + csw0(x2, x3)` → `y ~ x1`, `y ~ x1 + x2`, `y ~ x1 + x2 + x3`
+- `y ~ x1 + csw0(x2, x3)` -> `y ~ x1`, `y ~ x1 + x2`, `y ~ x1 + x2 + x3`
 
 `mvsw` (multiverse stepwise):
-- `y ~ mvsw(x1, x2, x3)` → all non-empty combinations plus the zero step:
+- `y ~ mvsw(x1, x2, x3)` -> all non-empty combinations plus the zero step:
   `y ~ 1`, `y ~ x1`, `y ~ x2`, `y ~ x3`, `y ~ x1 + x2`, `y ~ x1 + x3`, `y ~ x2 + x3`, `y ~ x1 + x2 + x3`
 
 Combining operators example:
 - `y ~ csw(x1, x2) + sw(z1, z2)` expands to:
   `y ~ x1 + z1`, `y ~ x1 + z2`, `y ~ x1 + x2 + z1`, `y ~ x1 + x2 + z2`
 
-You can run regressions for subsamples by using the `split` and `fsplit` arguments, where both split by the
-provided variable, but `fsplit` also provides a fit for the full sample.
-
+You can run regressions for subsamples by using the `split` and `fsplit` arguments, where both split by the provided variable, but `fsplit` also provides a fit for the full sample.
 
 ## Inference (vcov)
 
 Pass to `vcov`:
 
-- `"iid"` — IID errors
-- `"hetero"` — HC1 heteroskedasticity-robust (alias: `"HC1"`, `"HC2"`, `"HC3"`)
-- `{"CRV1": "cluster_var"}` — Cluster-robust variance
-- `{"CRV3": "cluster_var"}` — Leave-one-cluster-out jackknife
-- `"nw"` — Newey-West HAC (requires panel_id and time_id)
-- `"dk"` — Driscoll-Kraay HAC (requires panel_id and time_id)
+- `"iid"` -- IID errors
+- `"hetero"` -- HC1 heteroskedasticity-robust (alias: `"HC1"`)
+- `"HC2"` -- HC2 robust (not supported with fixed effects or IV)
+- `"HC3"` -- HC3 robust (not supported with fixed effects or IV)
+- `{"CRV1": "cluster_var"}` -- Cluster-robust variance
+- `{"CRV3": "cluster_var"}` -- Leave-one-cluster-out jackknife
+- `"NW"` -- Newey-West HAC (requires `vcov_kwargs` with `time_id` and optionally `panel_id`, `lag`)
+- `"DK"` -- Driscoll-Kraay HAC (requires `vcov_kwargs` with `time_id` and optionally `panel_id`, `lag`)
+
+Two-way clustering: `{"CRV1": "var1 + var2"}`.
+
+Inference can be adjusted post-estimation: `fit.vcov("hetero").summary()`.
 
 ## Post Processing
 
 Model objects support:
 
-- `.summary()` — Print regression summary
-- `.tidy()` — Tidy DataFrame of coefficients, SEs, t-stats, p-values, CIs
-- `.coef()` — Coefficient values
-- `.se()` — Standard errors
-- `.pvalue()` — P-values
-- `.confint()` — Confidence intervals
-- `.predict(newdata)` — Predictions
-- `.resid()` — Residuals
-- `.vcov()` — Variance-covariance matrix
-- `.wildboottest(param, reps, seed)` — Wild cluster bootstrap inference
-- `.ccv(treatment, pk, qk, ...)` — Causal cluster variance estimator
-- `.ritest(param, reps, ...)` — Randomization inference
-- `.decompose(param, x1_vars, type, ...)` — Gelbach (2016) decomposition
+- `.summary()` -- Print regression summary
+- `.tidy()` -- Tidy DataFrame of coefficients, SEs, t-stats, p-values, CIs
+- `.coef()` -- Coefficient values
+- `.se()` -- Standard errors
+- `.pvalue()` -- P-values
+- `.confint()` -- Confidence intervals
+- `.predict(newdata)` -- Predictions
+- `.resid()` -- Residuals
+- `.vcov()` -- Variance-covariance matrix
+- `.wildboottest(param, reps, seed)` -- Wild cluster bootstrap inference
+- `.ccv(treatment, pk, qk, ...)` -- Causal cluster variance estimator
+- `.ritest(resampvar, reps, ...)` -- Randomization inference
+- `.decompose(param, x1_vars, type, ...)` -- Gelbach (2016) decomposition
 
 ## etable Basics
 
@@ -112,8 +116,7 @@ For regression tables, use `pf.etable()`.
 - Build tables: `pf.etable([fit1, fit2, ...])` or `pf.etable(pf.feols("Y~csw(X1,X2)", data))`.
 - Output formats: `type="gt"` (default), `"md"`, `"tex"`, `"df"`.
 - Keep/drop variables: `keep="X1"` or `drop=["X2"]`.
-- Labels and fixed effects labels: `labels={...}`, `felabels={...}`.
-- Show p-values or CIs: `coef_fmt="b (se) [p]"` shows the coefficient - b; standard error in parentheses, pvalue in paranteres.
-- Title/caption: `caption="Regression Results"`.
-- Rename variables: `labels={"X1": "Age", "X2": "Schooling"}`.
-- Column headers for dependent variables: `model_heads=[...]` and `head_order="hd"`/`"dh"` to control header order (headlines vs depvars).
+- Labels: `labels={"X1": "Age"}`, `felabels={"f1": "Industry FE"}`.
+- Coefficient format: `coef_fmt="b (se)\n[p]"` shows coefficient, SE in parentheses, p-value in brackets.
+- Title: `caption="Regression Results"`.
+- Column headers: `model_heads=[...]` and `head_order="hd"` or `"dh"` to control header order.

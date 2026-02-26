@@ -24,6 +24,11 @@ website:
     #    Developed by [Alexander Fischer](https://github.com/py-econometrics) and [Styfen Schär](https://github.com/styfenschaer)
     search: true
     right:
+      - icon: robot
+        href: llms.txt
+        text: llms.txt
+      - text: "Skills.md"
+        file: skills.md
       - icon: github
         href: https://github.com/py-econometrics/pyfixest/
     left:
@@ -41,8 +46,6 @@ website:
         file: acknowledgements.md
       - text: "Sprint 2026"
         file: pyfixest-sprint.md
-      - text: "Skills"
-        file: skills.md
       - text: Learn more
         menu:
         - text: "Regression Tables and Summary Statistics"
