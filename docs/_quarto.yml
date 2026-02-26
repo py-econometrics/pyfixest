@@ -9,7 +9,8 @@ execute:
 
 format:
   html:
-    include-in-header: analytics.html
+    include-in-header:
+      - analytics.html
 
 metadata-files:
   - _sidebar.yml
