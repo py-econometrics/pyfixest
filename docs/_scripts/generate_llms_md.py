@@ -11,6 +11,7 @@ It also copies docs/llms.txt into _site/.
 import json
 import re
 import shutil
+from html import escape as html_escape
 from pathlib import Path
 
 DOCS_DIR = Path(__file__).resolve().parent.parent  # docs/
@@ -152,7 +153,7 @@ def main() -> None:
         if not ALT_LINK_RE.search(html_text):
             link_tag = (
                 f'<link rel="alternate" type="text/markdown" '
-                f'href="{html_file.name}.md">'
+                f'href="{html_escape(html_file.name)}.md">'
             )
             if "</head>" in html_text:
                 html_text = html_text.replace("</head>", f"{link_tag}\n</head>", 1)
