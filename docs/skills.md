@@ -99,4 +99,17 @@ Model objects support:
 - `.ccv(treatment, pk, qk, ...)` — Causal cluster variance estimator
 - `.ritest(param, reps, ...)` — Randomization inference
 - `.decompose(param, x1_vars, type, ...)` — Gelbach (2016) decomposition
+
+## etable Basics
+
+For regression tables, use `pf.etable()`.
+
+- Build tables: `pf.etable([fit1, fit2, ...])` or `pf.etable(pf.feols("Y~csw(X1,X2)", data))`.
+- Output formats: `type="gt"` (default), `"md"`, `"tex"`, `"df"`.
+- Keep/drop variables: `keep="X1"` or `drop=["X2"]`.
+- Labels and fixed effects labels: `labels={...}`, `felabels={...}`.
+- Show p-values or CIs: `coef_fmt="b (se) [p]"` shows the coefficient - b; standard error in parentheses, pvalue in paranteres.
+- Title/caption: `caption="Regression Results"`.
+- Rename variables: `labels={"X1": "Age", "X2": "Schooling"}`.
+- Column headers for dependent variables: `model_heads=[...]` and `head_order="hd"`/`"dh"` to control header order (headlines vs depvars).
 ```

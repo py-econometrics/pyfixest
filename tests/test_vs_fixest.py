@@ -1127,11 +1127,12 @@ def test_split_fit(N, seed, beta_type, error_type, dropna, fml_multi, split, fsp
         **({"fsplit": ro.Formula("~" + fsplit)} if fsplit is not None else {}),
     )
 
-    # TODO: split/fsplit has known sample-handling differences vs R fixest
-    # that cause large coefficient mismatches (not just SE scaling).
-    # This needs a separate fix. See gh#1161.
-    for x in range(0):
-        mod = pyfixest.fetch_model(x)
+    # Both pyfixest and R fixest use split-outer / formula-inner ordering,
+    # so the flat positional index is the same in both. Use 1-based indexing
+    # to match R's [[i]] accessor.
+    py_models = list(pyfixest.all_fitted_models.values())
+
+    for i, mod in enumerate(py_models):
         py_coef = mod.coef().values
         py_se = mod.se().values
 
@@ -1139,7 +1140,9 @@ def test_split_fit(N, seed, beta_type, error_type, dropna, fml_multi, split, fsp
         if len(py_coef) == 0:
             continue
 
-        fixest_object = r_fixest.rx2(x + 1)
+        r_idx = i + 1
+
+        fixest_object = r_fixest.rx2(r_idx)
         fixest_coef = np.atleast_1d(np.array(fixest_object.rx2("coefficients")))
         fixest_se = np.atleast_1d(np.array(fixest_object.rx2("se")))
 
