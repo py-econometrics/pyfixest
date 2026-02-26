@@ -11,10 +11,16 @@ It also copies docs/llms.txt into _site/.
 import json
 import re
 import shutil
+from html import escape as html_escape
 from pathlib import Path
 
 DOCS_DIR = Path(__file__).resolve().parent.parent  # docs/
 SITE_DIR = DOCS_DIR / "_site"
+ALT_LINK_RE = re.compile(
+    r"<link(?=[^>]*\brel=[\"']alternate[\"'])"
+    r"(?=[^>]*\btype=[\"']text/markdown[\"'])[^>]*>",
+    re.IGNORECASE,
+)
 
 
 def strip_yaml_frontmatter(text: str) -> str:
@@ -139,7 +145,38 @@ def main() -> None:
         out_path.write_text(md_content, encoding="utf-8")
         count += 1
 
+        # Inject a deterministic, relative markdown link into the HTML head.
+        try:
+            html_text = html_file.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        if not ALT_LINK_RE.search(html_text):
+            link_tag = (
+                f'<link rel="alternate" type="text/markdown" '
+                f'href="{html_escape(html_file.name)}.md">'
+            )
+            if "</head>" in html_text:
+                html_text = html_text.replace("</head>", f"{link_tag}\n</head>", 1)
+                html_file.write_text(html_text, encoding="utf-8")
+
     print(f"generate_llms_md: wrote {count} .html.md files.")
+
+    # Generate llms-full.txt by concatenating all .html.md files
+    md_files = sorted(SITE_DIR.rglob("*.html.md"))
+    if md_files:
+        parts: list[str] = []
+        for md_file in md_files:
+            page_path = md_file.relative_to(SITE_DIR)
+            # Section header uses the HTML page name (strip trailing .md)
+            html_name = str(page_path)[: -len(".md")]
+            content = md_file.read_text(encoding="utf-8").strip()
+            parts.append(f"# {html_name}\n\n{content}")
+        full_txt = "\n\n---\n\n".join(parts) + "\n"
+        (SITE_DIR / "llms-full.txt").write_text(full_txt, encoding="utf-8")
+        print(
+            f"generate_llms_md: wrote llms-full.txt ({len(md_files)} pages, "
+            f"{len(full_txt)} chars)."
+        )
 
     # Copy llms.txt into _site/
     llms_src = DOCS_DIR / "llms.txt"
