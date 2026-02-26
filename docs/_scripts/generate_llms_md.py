@@ -16,8 +16,8 @@ from pathlib import Path
 DOCS_DIR = Path(__file__).resolve().parent.parent  # docs/
 SITE_DIR = DOCS_DIR / "_site"
 ALT_LINK_RE = re.compile(
-    r"<link(?=[^>]*\\brel=[\"']alternate[\"'])"
-    r"(?=[^>]*\\btype=[\"']text/markdown[\"'])[^>]*>",
+    r"<link(?=[^>]*\brel=[\"']alternate[\"'])"
+    r"(?=[^>]*\btype=[\"']text/markdown[\"'])[^>]*>",
     re.IGNORECASE,
 )
 
