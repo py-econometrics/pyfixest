@@ -87,7 +87,16 @@ def assert_models_match(
         f"Coefficient count mismatch: py={len(py_names)}, r={len(r_names)}"
     )
     if check_names:
-        assert py_names == r_names, f"Name mismatch:\n  py={py_names}\n  r={r_names}"
+
+        def translate(name: str) -> str:
+            if name == "Intercept":
+                return name
+            else:
+                return "::".join(re.findall(r"(\w+)\[(\w+)\]", name)[0])
+
+        assert [translate(n) for n in py_names] == r_names, (
+            f"Name mismatch:\n  py={py_names}\n  r={r_names}"
+        )
     np.testing.assert_allclose(py_values, r_values, rtol=RTOL, atol=ATOL)
 
 
@@ -160,10 +169,22 @@ def df_test() -> pd.DataFrame:
 @pytest.mark.parametrize(
     "formula,excluded_coef",
     [
-        ("dep_var ~ i(rel_year, ref=1.0)", "rel_year::1"),
-        ("dep_var ~ i(rel_year, ref=-2.0)", "rel_year::-2"),
-        ("dep_var ~ i(rel_year, treat, ref=1.0)", "rel_year::1:treat"),
-        ("dep_var ~ i(rel_year, treat, ref=-2.0)", "rel_year::-2:treat"),
+        (
+            "dep_var ~ i(C(rel_year, contr.treatment(1.0), reduce_rank=True))",
+            "rel_year[1.0]",
+        ),
+        (
+            "dep_var ~ i(C(rel_year, contr.treatment(-2.0), reduce_rank=True))",
+            "rel_year[-2.0]",
+        ),
+        (
+            "dep_var ~ i(C(rel_year, contr.treatment(1.0), reduce_rank=True), treat)",
+            "rel_year[1.0]:treat",
+        ),
+        (
+            "dep_var ~ i(C(rel_year, contr.treatment(2.0), reduce_rank=True), treat)",
+            "rel_year[2.0]:treat",
+        ),
     ],
 )
 def test_i_reference_exclusion(df_het, formula, excluded_coef):
@@ -176,23 +197,35 @@ def test_i_reference_exclusion(df_het, formula, excluded_coef):
 
 @pytest.mark.against_r_core
 @pytest.mark.parametrize(
-    "fml",
+    "fml_py, fml_r",
     [
-        "dep_var ~ i(state)",
-        "dep_var ~ i(state, ref = 1)",
-        "dep_var ~ i(state, year)",
-        "dep_var ~ i(state, year, ref = 1)",
-        "dep_var ~ i(state, year) | state",
-        "dep_var ~ i(state, year, ref = 1) | state",
+        ("dep_var ~ i(C(state, reduce_rank=True))", "dep_var ~ i(state)"),
+        (
+            "dep_var ~ i(C(state, contr.treatment(1), reduce_rank=True))",
+            "dep_var ~ i(state, ref = 1)",
+        ),
+        ("dep_var ~ i(C(state, reduce_rank=False), year)", "dep_var ~ i(state, year)"),
+        (
+            "dep_var ~ i(C(state, contr.treatment(1), reduce_rank=True), year)",
+            "dep_var ~ i(state, year, ref = 1)",
+        ),
+        (
+            "dep_var ~ i(C(state, reduce_rank=False), year) | state",
+            "dep_var ~ i(state, year) | state",
+        ),
+        (
+            "dep_var ~ i(C(state, contr.treatment(1), reduce_rank=True), year) | state",
+            "dep_var ~ i(state, year, ref = 1) | state",
+        ),
     ],
 )
-def test_i_vs_fixest(fml):
+def test_i_vs_fixest(fml_py, fml_r):
     """Test i() against R fixest."""
     df = pd.read_csv("pyfixest/did/data/df_het.csv")
     df["X"] = np.random.normal(df.shape[0])
 
-    fit_py = feols(fml, df)
-    fit_r = fixest.feols(ro.Formula(fml), df)
+    fit_py = feols(fml_py, df)
+    fit_r = fixest.feols(ro.Formula(fml_r), df)
     np.testing.assert_allclose(
         fit_py.coef().values, np.array(fit_r.rx2("coefficients"))
     )
@@ -220,29 +253,45 @@ def test_no_intercept_all_levels(df_test, fml):
 
 @pytest.mark.against_r_core
 @pytest.mark.parametrize(
-    "fml",
+    "fml_py, fml_r",
     [
-        "Y ~ 0 + i(f_str, ref='apple')",  # No intercept + explicit ref
-        "Y ~ -1 + i(f_str, ref='banana')",  # Same with different ref
+        (
+            "Y ~ 0 + i(C(f_str, contr.treatment('apple'), reduce_rank=True))",
+            "Y ~ 0 + i(f_str, ref='apple')",
+        ),  # No intercept + explicit ref
+        (
+            "Y ~ -1 + i(C(f_str, contr.treatment('banana'), reduce_rank=True))",
+            "Y ~ -1 + i(f_str, ref='banana')",
+        ),  # Same with different ref
     ],
 )
-def test_no_intercept_with_ref(df_test, fml):
+def test_no_intercept_with_ref(df_test, fml_py, fml_r):
     """Test no intercept with explicit reference level."""
-    py_names, py_values, r_names, r_values = compare_with_r(fml, df_test)
+    py_names, py_values, r_names, r_values = compare_with_r(
+        r_fml=fml_r, df=df_test, py_fml=fml_py
+    )
     assert_models_match(py_names, py_values, r_names, r_values)
 
 
 @pytest.mark.against_r_core
 @pytest.mark.parametrize(
-    "fml",
+    "fml_py, fml_r",
     [
-        "Y ~ 1 + i(f_str)",  # With intercept, drop first level
-        "Y ~ i(f_str)",  # Same (intercept implicit)
+        (
+            "Y ~ 1 + i(C(f_str, reduce_rank=True))",
+            "Y ~ 1 + i(f_str)",
+        ),  # With intercept, drop first level
+        (
+            "Y ~ i(C(f_str, reduce_rank=True))",
+            "Y ~ i(f_str)",
+        ),  # Same (intercept implicit)
     ],
 )
-def test_with_intercept_drop_level(df_test, fml):
+def test_with_intercept_drop_level(df_test, fml_py, fml_r):
     """Test that with intercept, first level is dropped."""
-    py_names, py_values, r_names, r_values = compare_with_r(fml, df_test)
+    py_names, py_values, r_names, r_values = compare_with_r(
+        py_fml=fml_py, r_fml=fml_r, df=df_test
+    )
     assert_models_match(py_names, py_values, r_names, r_values)
 
 
