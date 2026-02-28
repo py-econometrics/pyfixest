@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+from pyfixest.estimation.sensitivity import SensitivityAnalysis
+
 # Make lets-plot an optional dependency
 try:
     from lets_plot import (
@@ -889,3 +891,418 @@ def _get_model_df(
             df_model = df_joint_full
 
     return df_model
+
+
+def ovb_contour_plot(
+    sens: "SensitivityAnalysis",
+    treatment: str,
+    sensitivity_of: str = "estimate",
+    benchmark_covariates: Optional[Union[str, list]] = None,
+    kd: Union[float, list] = 1,
+    ky: Optional[Union[float, list]] = None,
+    r2dz_x: Optional[Union[float, list]] = None,
+    r2yz_dx: Optional[Union[float, list]] = None,
+    reduce: bool = True,
+    estimate_threshold: float = 0,
+    t_threshold: float = 2,
+    lim: Optional[float] = None,
+    lim_y: Optional[float] = None,
+    col_contour: str = "black",
+    col_thr_line: str = "red",
+    label_text: bool = True,
+    label_bump_x: Optional[float] = None,
+    label_bump_y: Optional[float] = None,
+    xlab: Optional[str] = None,
+    ylab: Optional[str] = None,
+    plot_margin_fraction: float = 0.05,
+    round_dig: int = 3,
+    n_levels: Optional[int] = None,
+    figsize: tuple = (6, 6),
+    ax: Optional[plt.Axes] = None,
+):
+    """
+    Create contour plots of omitted variable bias for sensitivity analysis.
+
+    See Cinelli and Hazlett (2020) for details.
+
+    Parameters
+    ----------
+    sens : SensitivityAnalysis
+        A SensitivityAnalysis object.
+    treatment : str
+        Name of the treatment variable.
+    sensitivity_of : str, default "estimate"
+        Either "estimate" or "t-value".
+    benchmark_covariates : str or list, optional
+        Covariate(s) for benchmarking.
+    kd : float or list, default 1
+        Multiplier for treatment-side bounds.
+    ky : float or list, optional
+        Multiplier for outcome-side bounds. Defaults to kd.
+    r2dz_x : float or list, optional
+        Manual partial R2 values for treatment.
+    r2yz_dx : float or list, optional
+        Manual partial R2 values for outcome.
+    reduce : bool, default True
+        Whether confounding reduces (True) or increases (False) the estimate.
+    estimate_threshold : float, default 0
+        Threshold for estimate contours.
+    t_threshold : float, default 2
+        Threshold for t-value contours.
+    lim : float, optional
+        X-axis maximum. Auto-calculated if None.
+    lim_y : float, optional
+        Y-axis maximum. Auto-calculated if None.
+    col_contour : str, default "black"
+        Color for contour lines.
+    col_thr_line : str, default "red"
+        Color for threshold line.
+    label_text : bool, default True
+        Whether to show labels on bounds.
+    label_bump_x : float, optional
+        X offset for labels.
+    label_bump_y : float, optional
+        Y offset for labels.
+    xlab : str, optional
+        X-axis label.
+    ylab : str, optional
+        Y-axis label.
+    plot_margin_fraction : float, default 0.05
+        Margin fraction for plot edges.
+    round_dig : int, default 3
+        Rounding digits for labels.
+    n_levels : int, optional
+        Number of contour levels.
+    figsize : tuple, default (6, 6)
+        Figure size.
+    ax : matplotlib.axes.Axes, optional
+        Existing axes to plot on.
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+    """
+    if sensitivity_of not in ["estimate", "t-value"]:
+        raise ValueError("sensitivity_of must be either 'estimate' or 't-value'.")
+
+    if ky is None:
+        ky = kd
+
+    idx = sens.model._coefnames.index(treatment)
+    estimate = sens.model._beta_hat[idx]
+    se = sens.model._se[idx]
+
+    bound_r2dz_x: Optional[np.ndarray] = None
+    bound_r2yz_dx: Optional[np.ndarray] = None
+    bound_label: Optional[np.ndarray] = None
+    bound_value: Optional[np.ndarray] = None
+
+    if benchmark_covariates is not None:
+        bounds = sens.ovb_bounds(
+            treatment=treatment, benchmark_covariates=benchmark_covariates, kd=kd, ky=ky
+        )
+        bound_r2dz_x = np.asarray(bounds["r2dz_x"].values, dtype=float)
+        bound_r2yz_dx = np.asarray(bounds["r2yz_dx"].values, dtype=float)
+        bound_label = bounds["bound_label"].values
+        bound_value = (
+            bounds["adjusted_estimate"].values
+            if sensitivity_of == "estimate"
+            else bounds["adjusted_t"].values
+        )
+
+    if lim is None:
+        if bound_r2dz_x is None:
+            lim = 0.4
+        else:
+            lim = min(np.max(np.append(bound_r2dz_x * 1.2, 0.4)), 1 - 1e-12)
+
+    if lim_y is None:
+        if bound_r2yz_dx is None:
+            lim_y = 0.4
+        else:
+            lim_y = min(np.max(np.append(bound_r2yz_dx * 1.2, 0.4)), 1 - 1e-12)
+
+    if lim > 1.0:
+        lim = 1 - 1e-12
+        print("Warning: Contour limit larger than 1 was set to 1.")
+    elif lim < 0:
+        lim = 0.4
+        print("Warning: Contour limit less than 0 was set to 0.4.")
+
+    if lim_y > 1.0:
+        lim_y = 1 - 1e-12
+        print("Warning: Contour limit larger than 1 was set to 1.")
+    elif lim_y < 0:
+        lim_y = 0.4
+        print("Warning: Contour limit less than 0 was set to 0.4.")
+
+    if label_bump_x is None:
+        label_bump_x = lim / 30.0
+    if label_bump_y is None:
+        label_bump_y = lim_y / 30.0
+
+    threshold = estimate_threshold if sensitivity_of == "estimate" else t_threshold
+
+    grid_values_x = np.arange(0, lim, lim / 400)
+    grid_values_y = np.arange(0, lim_y, lim_y / 400)
+    R2DZ, R2YZ = np.meshgrid(grid_values_x, grid_values_y)
+
+    if sensitivity_of == "estimate":
+        z_axis = sens.adjusted_estimate(
+            r2dz_x=R2DZ, r2yz_dx=R2YZ, treatment=treatment, reduce=reduce
+        )
+        plot_estimate = estimate
+    else:
+        z_axis = sens.adjusted_t(
+            r2dz_x=R2DZ,
+            r2yz_dx=R2YZ,
+            treatment=treatment,
+            reduce=reduce,
+            h0=estimate_threshold,
+        )
+        plot_estimate = estimate / se  # t-value = estimate / se
+
+    # Handle edge cases (R2DZ >= 1)
+    z_axis = np.where(R2DZ >= 1, np.nan, z_axis)
+
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize)
+    else:
+        fig = ax.get_figure()
+
+    z_min, z_max = np.nanmin(z_axis), np.nanmax(z_axis)
+    if n_levels:
+        n_levels = n_levels - 1
+        delta = (z_max - z_min) / (n_levels + 1)
+        levels = []
+        current = z_min
+        while current < z_max:
+            if not np.isclose(current, threshold, atol=1e-8):
+                levels.append(current)
+            current += delta
+    else:
+        levels = [
+            lvl
+            for lvl in np.linspace(z_min, z_max, 10)
+            if not np.isclose(lvl, threshold, atol=1e-8)
+        ]
+
+    CS = ax.contour(
+        grid_values_x,
+        grid_values_y,
+        z_axis,
+        colors=col_thr_line,
+        linewidths=1.0,
+        linestyles="solid",
+        levels=levels,
+    )
+    ax.clabel(CS, inline=True, fontsize=8, fmt="%1.3g", colors="gray")
+
+    CS_thr = ax.contour(
+        grid_values_x,
+        grid_values_y,
+        z_axis,
+        colors=col_thr_line,
+        linewidths=1.0,
+        linestyles=[(0, (7, 3))],
+        levels=[threshold],
+    )
+    ax.clabel(CS_thr, inline=True, fontsize=8, fmt="%1.3g", colors="gray")
+
+    # Unadjusted point
+    ax.scatter([0], [0], c="k", marker="^")
+    ax.annotate(f"Unadjusted\n({plot_estimate:.3f})", (label_bump_x, label_bump_y))
+
+    # Axis labels
+    if xlab is None:
+        xlab = r"Partial $R^2$ of confounder(s) with the treatment"
+    if ylab is None:
+        ylab = r"Partial $R^2$ of confounder(s) with the outcome"
+    ax.set_xlabel(xlab)
+    ax.set_ylabel(ylab)
+    ax.set_xlim(-(lim / 15.0), lim)
+    ax.set_ylim(-(lim_y / 15.0), lim_y)
+
+    if (
+        bound_r2dz_x is not None
+        and bound_r2yz_dx is not None
+        and bound_label is not None
+        and bound_value is not None
+    ):
+        for i in range(len(bound_r2dz_x)):
+            ax.scatter(
+                bound_r2dz_x[i],
+                bound_r2yz_dx[i],
+                c="red",
+                marker="D",
+                edgecolors="black",
+            )
+            if label_text:
+                value = round(float(bound_value[i]), round_dig)
+                label = f"{bound_label[i]}\n({value})"
+                ax.annotate(
+                    label,
+                    (
+                        bound_r2dz_x[i] + label_bump_x,
+                        bound_r2yz_dx[i] + label_bump_y,
+                    ),
+                )
+
+        # Add margin
+    x0, x1, y0, y1 = ax.axis()
+    ax.axis(
+        (x0, x1 + plot_margin_fraction * lim, y0, y1 + plot_margin_fraction * lim_y)
+    )
+
+    plt.tight_layout()
+    plt.close()
+
+    return fig
+
+
+def ovb_extreme_plot(
+    sens: "SensitivityAnalysis",
+    treatment: str,
+    benchmark_covariates: Optional[Union[str, list]] = None,
+    kd: Union[float, list] = 1,
+    ky: Optional[Union[float, list]] = None,
+    r2yz_dx: Optional[list] = None,
+    reduce: bool = True,
+    threshold: float = 0,
+    lim: Optional[float] = None,
+    lim_y: Optional[float] = None,
+    xlab: Optional[str] = None,
+    ylab: Optional[str] = None,
+    figsize: tuple = (8, 4.8),
+    ax: Optional[plt.Axes] = None,
+):
+    """
+    Extreme scenario plots of omitted variable bias for sensitivity analysis.
+
+    Parameters
+    ----------
+    sens : SensitivityAnalysis
+        A SensitivityAnalysis object.
+    treatment : str
+        Name of the treatment variable.
+    benchmark_covariates : str or list, optional
+        Covariate(s) for benchmarking.
+    kd : float or list, default 1
+        Multiplier for treatment-side bounds.
+    ky : float or list, optional
+        Multiplier for outcome-side bounds.
+    r2dz_x : float or list, optional
+        Manual partial R2 values for treatment axis ticks.
+    r2yz_dx : list, default [1.0, 0.75, 0.5]
+        Scenarios for outcome partial R2.
+    reduce : bool, default True
+        Whether confounding reduces the estimate.
+    threshold : float, default 0
+        Threshold line for problematic effect.
+    lim : float, optional
+        X-axis limit.
+    lim_y : float, optional
+        Y-axis limit.
+    xlab : str, optional
+        X-axis label.
+    ylab : str, optional
+        Y-axis label.
+    figsize : tuple, default (8, 4.8)
+        Figure size.
+    ax : matplotlib.axes.Axes, optional
+        Existing axes.
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+    """
+    if ky is None:
+        ky = kd
+    if r2yz_dx is None:
+        r2yz_dx = [1.0, 0.75, 0.5]
+
+    r2dz_x_bounds = None
+
+    if benchmark_covariates is not None:
+        bounds = sens.ovb_bounds(
+            treatment=treatment, benchmark_covariates=benchmark_covariates, kd=kd, ky=ky
+        )
+        r2dz_x_bounds = bounds["r2dz_x"].values
+
+    if lim is None:
+        if r2dz_x_bounds is None:
+            lim = 0.1
+        else:
+            lim = min(np.max(np.append(r2dz_x_bounds * 1.2, 0.1)), 1 - 1e-12)
+
+    if lim > 1.0:
+        lim = 1 - 1e-12
+    elif lim < 0:
+        lim = 0.4
+
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize)
+    else:
+        fig = ax.get_figure()
+
+    r2d_values = np.arange(0, lim, 0.001)
+    lim_y1, lim_y2 = None, None
+
+    for i, r2yz in enumerate(r2yz_dx):
+        # Use existing method
+        y = sens.adjusted_estimate(
+            r2dz_x=r2d_values, r2yz_dx=r2yz, treatment=treatment, reduce=reduce
+        )
+        y = np.where(r2d_values >= 1, np.nan, y)
+
+        if i == 0:
+            ax.plot(
+                r2d_values,
+                y,
+                label=f"{round(r2yz * 100)}%",
+                linewidth=1.5,
+                linestyle="solid",
+                color="black",
+            )
+            ax.axhline(y=threshold, color="r", linestyle="--")
+            lim_y1 = np.nanmax(y) + np.abs(np.nanmax(y)) / 15
+            lim_y2 = np.nanmin(y) - np.abs(np.nanmin(y)) / 15
+
+            # Add rugs for bounds
+            if r2dz_x_bounds is not None:
+                for rug in r2dz_x_bounds:
+                    ax.axvline(x=rug, ymin=0, ymax=0.022, color="r", linewidth=2.5)
+        else:
+            ax.plot(
+                r2d_values,
+                y,
+                label=f"{round(r2yz * 100)}%",
+                linewidth=np.abs(2.1 - 0.5 * i),
+                linestyle="--",
+                color="black",
+            )
+
+        # Legend and formatting
+    ax.legend(ncol=len(r2yz_dx), frameon=False)
+    ax.get_legend().set_title(r"Partial $R^2$ of confounder(s) with the outcome")
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+    # Labels
+    if xlab is None:
+        xlab = r"Partial $R^2$ of confounder(s) with the treatment"
+    if ylab is None:
+        ylab = "Adjusted effect estimate"
+    ax.set_xlabel(xlab)
+    ax.set_ylabel(ylab)
+    ax.set_xlim(-(lim / 35.0), lim + (lim / 35.0))
+
+    if lim_y is None:
+        ax.set_ylim(lim_y2, lim_y1)
+    else:
+        ax.set_ylim(-(lim_y / 15.0), lim_y)
+
+    plt.tight_layout()
+    plt.close()
+
+    return fig

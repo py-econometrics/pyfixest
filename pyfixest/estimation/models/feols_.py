@@ -54,6 +54,7 @@ from pyfixest.estimation.post_estimation.ritest import (
     _get_ritest_stats_slow,
     _plot_ritest_pvalue,
 )
+from pyfixest.estimation.sensitivity import SensitivityAnalysis
 from pyfixest.utils.dev_utils import (
     DataFrameType,
     _extract_variable_level,
@@ -402,6 +403,7 @@ class Feols(ResultAccessorMixin):
         self.test_treatment_heterogeneity = _not_implemented_did
         self.aggregate = _not_implemented_did
         self.iplot_aggregate = _not_implemented_did
+        self._supports_sensitivity_analysis = True
 
     def prepare_model_matrix(self):
         "Prepare model matrices for estimation."
@@ -2375,6 +2377,14 @@ class Feols(ResultAccessorMixin):
             self._N += X_new.shape[0]
 
         return beta_n_plus_1
+
+    def sensitivity_analysis(self) -> SensitivityAnalysis:
+        """Create a sensitivity analysis object for OLS models."""
+        if not self._supports_sensitivity_analysis:
+            raise ValueError(
+                "Sensitivity Analysis is only supported for OLS methods (Feols)."
+            )
+        return SensitivityAnalysis(self)
 
 
 def _feols_input_checks(Y: np.ndarray, X: np.ndarray, weights: np.ndarray):
