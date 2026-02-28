@@ -7,9 +7,9 @@ from scipy.sparse.linalg import spsolve
 
 from pyfixest.did.did import DID
 from pyfixest.estimation import feols
-from pyfixest.estimation.feols_ import Feols
-from pyfixest.estimation.FormulaParser import FixestFormulaParser
-from pyfixest.estimation.model_matrix_fixest_ import model_matrix_fixest
+from pyfixest.estimation.formula import model_matrix
+from pyfixest.estimation.formula.parse import Formula
+from pyfixest.estimation.models.feols_ import Feols
 
 
 class DID2S(DID):
@@ -304,37 +304,48 @@ def _did2s_vcov(
 
     # some formula parsing to get the correct formula for the first and second stage model matrix
     first_stage_x, first_stage_fe = first_stage.split("|")
-    first_stage_fe_list = [f"C({i})" for i in first_stage_fe.split("+")]
+    first_stage_fe_list = [f"C({i.strip()})" for i in first_stage_fe.split("+")]
     first_stage_fe_fml = "+".join(first_stage_fe_list)
-    first_stage = f"{first_stage_x}+{first_stage_fe_fml}"
-
-    second_stage = f"{second_stage}"
+    first_stage_fml = f"{first_stage_x}+{first_stage_fe_fml}"
 
     # note for future Alex: intercept needs to be dropped! it is not as fixed
     # effects are converted to dummies, hence has_fixed checks are False
 
-    FML1 = FixestFormulaParser(f"{yname} {first_stage}")
-    FML2 = FixestFormulaParser(f"{yname} {second_stage}")
-    FixestFormulaDict1 = FML1.FixestFormulaDict
-    FixestFormulaDict2 = FML2.FixestFormulaDict
-
-    mm_dict_first_stage = model_matrix_fixest(
-        FixestFormula=next(iter(FixestFormulaDict1.values()))[0],
-        data=data,
-        weights=None,
-        drop_singletons=False,
-        drop_intercept=False,
+    # Create Formula objects for the new model_matrix system.
+    # First stage: use `- 1` so that C() dummy encoding keeps all levels,
+    # matching the feols demeaning approach (which implicitly includes all
+    # fixed-effect levels). Removing `- 1` would cause formulaic to drop
+    # reference levels, changing the GMM vcov standard errors.
+    FML1 = Formula(
+        _second_stage=f"{yname} ~ {first_stage_fml.replace('~', '').strip()} - 1",
     )
-    X1 = cast(pd.DataFrame, mm_dict_first_stage.get("X"))
+    # Second stage: do NOT use `- 1`. Formulaic needs the intercept present
+    # for full-rank encoding (dropping a reference level for factors like
+    # i(treat)). The intercept column is then removed by drop_intercept=True
+    # below, matching what feols does in _did2s_estimate.
+    FML2 = Formula(
+        _second_stage=f"{yname} ~ {second_stage.replace('~', '').strip()}",
+    )
 
-    mm_second_stage = model_matrix_fixest(
-        FixestFormula=next(iter(FixestFormulaDict2.values()))[0],
+    mm_first_stage = model_matrix.create_model_matrix(
+        formula=FML1,
         data=data,
         weights=None,
         drop_singletons=False,
+        ensure_full_rank=True,
         drop_intercept=True,
-    )  # reference values not dropped, multicollinearity error
-    X2 = cast(pd.DataFrame, mm_second_stage.get("X"))
+    )
+    X1 = mm_first_stage.independent
+
+    mm_second_stage = model_matrix.create_model_matrix(
+        formula=FML2,
+        data=data,
+        weights=None,
+        drop_singletons=False,
+        ensure_full_rank=True,
+        drop_intercept=True,
+    )
+    X2 = mm_second_stage.independent
 
     X1 = csr_matrix(X1.to_numpy() * weights_array[:, None])
     X2 = csr_matrix(X2.to_numpy() * weights_array[:, None])
@@ -359,10 +370,7 @@ def _did2s_vcov(
     X10 = X10.tocsr()
     X2 = X2.tocsr()  # type: ignore
 
-    for (
-        _,
-        g,
-    ) in enumerate(clustid):
+    for _, g in enumerate(clustid):
         idx_g: np.ndarray = cluster_col.values == g
         X10g = X10[idx_g, :]
         X2g = X2[idx_g, :]

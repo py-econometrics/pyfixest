@@ -8,11 +8,15 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-from pyfixest.estimation.feols_ import Feols, PredictionErrorOptions, PredictionType
-from pyfixest.estimation.FormulaParser import FixestFormula
-from pyfixest.estimation.literals import (
+from pyfixest.estimation.formula.parse import Formula as FixestFormula
+from pyfixest.estimation.internals.literals import (
     DemeanerBackendOptions,
     SolverOptions,
+)
+from pyfixest.estimation.models.feols_ import (
+    Feols,
+    PredictionErrorOptions,
+    PredictionType,
 )
 from pyfixest.utils.dev_utils import DataFrameType
 
@@ -91,7 +95,7 @@ class FeolsCompressed(Feols):
         collin_tol: float,
         fixef_tol: float,
         fixef_maxiter: int,
-        lookup_demeaned_data: dict[str, pd.DataFrame],
+        lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
         solver: SolverOptions = "np.linalg.solve",
         demeaner_backend: DemeanerBackendOptions = "numba",
         store_data: bool = True,
@@ -125,7 +129,7 @@ class FeolsCompressed(Feols):
             sample_split_value,
         )
 
-        if FixestFormula.fml_first_stage is not None:
+        if FixestFormula.first_stage is not None:
             raise NotImplementedError(
                 "Compression is not supported with IV regression."
             )
@@ -234,6 +238,10 @@ class FeolsCompressed(Feols):
         self._Yprime = compressed_dict.Yprime.to_pandas()
         self._Yprimeprime = compressed_dict.Yprimeprime.to_pandas()
         self._data = compressed_dict.df_compressed.to_pandas()
+
+    def demean(self):
+        "Compression 'handles demeaning' via Mundlak transform."
+        pass
 
     def vcov(
         self,

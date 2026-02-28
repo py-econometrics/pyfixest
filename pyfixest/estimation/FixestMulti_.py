@@ -5,23 +5,28 @@ from typing import Any, Optional, Union
 
 import pandas as pd
 
-from pyfixest.estimation.fegaussian_ import Fegaussian
-from pyfixest.estimation.feiv_ import Feiv
-from pyfixest.estimation.felogit_ import Felogit
-from pyfixest.estimation.feols_ import Feols, _check_vcov_input, _deparse_vcov_input
-from pyfixest.estimation.feols_compressed_ import FeolsCompressed
-from pyfixest.estimation.fepois_ import Fepois
-from pyfixest.estimation.feprobit_ import Feprobit
-from pyfixest.estimation.FormulaParser import FixestFormulaParser
-from pyfixest.estimation.literals import (
+from pyfixest.estimation.api.utils import _ALL_SAMPLE, _AllSampleSentinel
+from pyfixest.estimation.formula.parse import Formula
+from pyfixest.estimation.internals.literals import (
     DemeanerBackendOptions,
     QuantregMethodOptions,
     QuantregMultiOptions,
     SolverOptions,
 )
+from pyfixest.estimation.internals.vcov_utils import _get_vcov_type
+from pyfixest.estimation.models.fegaussian_ import Fegaussian
+from pyfixest.estimation.models.feiv_ import Feiv
+from pyfixest.estimation.models.felogit_ import Felogit
+from pyfixest.estimation.models.feols_ import (
+    Feols,
+    _check_vcov_input,
+    _deparse_vcov_input,
+)
+from pyfixest.estimation.models.feols_compressed_ import FeolsCompressed
+from pyfixest.estimation.models.fepois_ import Fepois
+from pyfixest.estimation.models.feprobit_ import Feprobit
 from pyfixest.estimation.quantreg.quantreg_ import Quantreg
 from pyfixest.estimation.quantreg.QuantregMulti import QuantregMulti
-from pyfixest.estimation.vcov_utils import _get_vcov_type
 from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
 from pyfixest.utils.utils import capture_context
 
@@ -214,7 +219,6 @@ class FixestMulti:
         self._ssc_dict: dict[str, Union[str, bool]] = {}
         self._drop_singletons = False
         self._is_multiple_estimation = False
-        self._drop_intercept = False
         self._weights = weights
         self._has_weights = False
         if weights is not None:
@@ -225,16 +229,19 @@ class FixestMulti:
         self._quantile_tol = quantile_tol
         self._quantile_maxiter = quantile_maxiter
 
-        FML = FixestFormulaParser(fml)
-        FML.set_fixest_multi_flag()
+        formula_dictionary = Formula.parse_to_dict(fml)
         self._is_multiple_estimation = (
-            FML._is_multiple_estimation
+            sum(len(v) for v in formula_dictionary.values()) > 1
             or self._run_split
             or (isinstance(quantile, list) and len(quantile) > 1)
         )
-        self.FixestFormulaDict = FML.FixestFormulaDict
+        self.FixestFormulaDict = formula_dictionary
         self._method = estimation
-        self._is_iv = FML.is_iv
+        self._is_iv = any(
+            formula.first_stage is not None
+            for _, formulas in formula_dictionary.items()
+            for formula in formulas
+        )
         # self._fml_dict = fxst_fml.condensed_fml_dict
         # self._fml_dict_iv = fxst_fml.condensed_fml_dict_iv
         self._ssc_dict = ssc if ssc is not None else {}
@@ -250,6 +257,7 @@ class FixestMulti:
         iwls_maxiter: int = 25,
         iwls_tol: float = 1e-08,
         separation_check: Optional[list[str]] = None,
+        accelerate: bool = True,
     ) -> None:
         """
         Estimate multiple regression models.
@@ -288,19 +296,25 @@ class FixestMulti:
         FixestFormulaDict = self.FixestFormulaDict
         _fixef_keys = list(FixestFormulaDict.keys())
 
-        all_splits = (["all"] if self._run_full else []) + (
-            self._data[self._splitvar].dropna().unique().tolist()
-            if self._run_split
-            else []
-        )
+        all_splits: list[str | int | float | _AllSampleSentinel] = []
+        if self._run_full:
+            all_splits.append(_ALL_SAMPLE)
+        if self._run_split:
+            all_splits.extend(
+                self._data[self._splitvar]
+                .dropna()
+                .drop_duplicates()
+                .sort_values()
+                .tolist()
+            )
 
         for sample_split_value in all_splits:
             for _, fval in enumerate(_fixef_keys):
                 fixef_key_models = FixestFormulaDict.get(fval)
 
-                # dictionary to cache demeaned data with index: na_index_str,
+                # dictionary to cache demeaned data keyed by na_index,
                 # only relevant for `.feols()`
-                lookup_demeaned_data: dict[str, pd.DataFrame] = {}
+                lookup_demeaned_data: dict[frozenset[int], pd.DataFrame] = {}
 
                 for FixestFormula in fixef_key_models:  # type: ignore
                     # loop over both dictfe and dictfe_iv (if the latter is not None)
@@ -339,7 +353,13 @@ class FixestMulti:
                         "lookup_demeaned_data": lookup_demeaned_data,
                     }
 
-                    if self._method in {"feols", "fepois"}:
+                    if self._method in {
+                        "feols",
+                        "fepois",
+                        "feglm-logit",
+                        "feglm-probit",
+                        "feglm-gaussian",
+                    }:
                         model_kwargs.update(
                             {
                                 "demeaner_backend": demeaner_backend,
@@ -357,6 +377,17 @@ class FixestMulti:
                                 "separation_check": separation_check,
                                 "tol": iwls_tol,
                                 "maxiter": iwls_maxiter,
+                            }
+                        )
+
+                    if self._method in {
+                        "feglm-logit",
+                        "feglm-probit",
+                        "feglm-gaussian",
+                    }:
+                        model_kwargs.update(
+                            {
+                                "accelerate": accelerate,
                             }
                         )
 
@@ -406,21 +437,13 @@ class FixestMulti:
                     FIT = ModelClass(**model_kwargs)
 
                     FIT.prepare_model_matrix()
-                    if type(FIT) in [Feols, Feiv]:
-                        FIT.demean()
-                    FIT.to_array()
                     if isinstance(FIT, (Felogit, Feprobit, Fegaussian)):
                         FIT._check_dependent_variable()
-                    FIT.drop_multicol_vars()
-                    # NOTE: Fepois handles weights internally in its IWLS algorithm
-                    if type(FIT) in [Feols, Feiv, FeolsCompressed]:
-                        FIT.wls_transform()
-
                     FIT.get_fit()
                     # if X is empty: no inference (empty X only as shorthand for demeaning)
                     if not FIT._X_is_empty:
                         # inference
-                        vcov_type = _get_vcov_type(vcov, fval)
+                        vcov_type = _get_vcov_type(vcov)
                         FIT.vcov(
                             vcov=vcov_type,
                             vcov_kwargs=vcov_kwargs,

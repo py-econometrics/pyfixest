@@ -2,15 +2,15 @@ from collections.abc import Mapping
 from typing import Any, Optional, Union
 
 from pyfixest.estimation.api.utils import _estimation_input_checks
-from pyfixest.estimation.feols_ import Feols
 from pyfixest.estimation.FixestMulti_ import FixestMulti
-from pyfixest.estimation.literals import (
+from pyfixest.estimation.internals.literals import (
     DemeanerBackendOptions,
     FixedRmOptions,
     SolverOptions,
     VcovTypeOptions,
     WeightsTypeOptions,
 )
+from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.utils.dev_utils import DataFrameType
 from pyfixest.utils.utils import capture_context
 from pyfixest.utils.utils import ssc as ssc_func
@@ -184,12 +184,12 @@ def feols(
     Returns
     -------
     object
-        An instance of the [Feols(/reference/Feols.qmd) class or `FixestMulti`
-        class for multiple models specified via `fml`.
+        An instance of the [Feols](/reference/estimation.models.feols_.Feols.qmd) class or
+        [FixestMulti](/reference/estimation.FixestMulti_.FixestMulti.qmd) class for multiple models specified via `fml`.
 
     Examples
     --------
-    As in `fixest`, the [Feols(/reference/Feols.qmd) function can be used to
+    As in `fixest`, the [feols()](/reference/estimation.api.feols.feols.qmd) function can be used to
     estimate a simple linear regression model with fixed effects.
     The following example regresses `Y` on `X1` and `X2` with fixed effects for
     `f1` and `f2`: fixed effects are specified after the `|` symbol.
@@ -205,7 +205,7 @@ def feols(
     fit.summary()
     ```
 
-    Calling `feols()` returns an instance of the [Feols(/reference/Feols.qmd)
+    Calling `feols()` returns an instance of the [Feols](/reference/estimation.models.feols_.Feols.qmd)
     class. The `summary()` method can be used to print the results.
 
     An alternative way to retrieve model results is via the `tidy()` method, which

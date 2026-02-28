@@ -5,8 +5,8 @@ import pandas as pd
 
 from pyfixest.did.did import DID
 from pyfixest.estimation import feols
-from pyfixest.estimation.feols_ import Feols
-from pyfixest.estimation.literals import VcovTypeOptions
+from pyfixest.estimation.internals.literals import VcovTypeOptions
+from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.report.visualize import _HAS_LETS_PLOT, _coefplot
 
 
@@ -284,7 +284,7 @@ def _lpdid_estimate(
 
             fit = cast(Feols, feols(fml=fml, data=data[sample_idx], vcov=vcov))
 
-            fit_tidy = fit.tidy().xs("treat_diff")
+            fit_tidy = cast(pd.Series, fit.tidy().xs("treat_diff"))
             fit_tidy["N"] = int(fit._N)
             fit_tidy.name = h  # type: ignore[union-attr]
             fit_all.append(fit_tidy)
@@ -299,7 +299,7 @@ def _lpdid_estimate(
 
             fit = cast(Feols, feols(fml=fml, data=data[sample_idx], vcov=vcov))
 
-            fit_tidy = fit.tidy().xs("treat_diff")
+            fit_tidy = cast(pd.Series, fit.tidy().xs("treat_diff"))
             fit_tidy["N"] = int(fit._N)
             fit_tidy.name = -h  # type: ignore[union-attr]
             fit_all.append(fit_tidy)

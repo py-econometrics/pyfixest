@@ -1,4 +1,5 @@
 import re
+import warnings
 from itertools import product
 from typing import Optional, Union
 
@@ -41,6 +42,14 @@ class FixestFormulaParser:
             None
 
         """
+        warnings.warn(
+            "FixestFormulaParser is deprecated and will be removed in a future version. "
+            "Use `pyfixest.estimation.formula.parse.parse()` instead. "
+            "See https://pyfixest.org/reference/estimation.formula.parse.parse.html",
+            FutureWarning,
+            stacklevel=2,
+        )
+
         depvars, covars, fevars, endogvars, instruments = _deparse_fml(fml)
 
         # Parse all individual formula components that allow for

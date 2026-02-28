@@ -2,14 +2,15 @@ from collections.abc import Mapping
 from typing import Any, Optional, Union
 
 from pyfixest.estimation.api.utils import _estimation_input_checks
-from pyfixest.estimation.feols_ import Feols
-from pyfixest.estimation.fepois_ import Fepois
 from pyfixest.estimation.FixestMulti_ import FixestMulti
-from pyfixest.estimation.literals import (
+from pyfixest.estimation.internals.literals import (
+    DemeanerBackendOptions,
     FixedRmOptions,
     SolverOptions,
     VcovTypeOptions,
 )
+from pyfixest.estimation.models.feols_ import Feols
+from pyfixest.estimation.models.fepois_ import Fepois
 from pyfixest.utils.dev_utils import DataFrameType
 from pyfixest.utils.utils import capture_context
 from pyfixest.utils.utils import ssc as ssc_func
@@ -30,6 +31,7 @@ def feglm(
     collin_tol: float = 1e-09,
     separation_check: Optional[list[str]] = None,
     solver: SolverOptions = "scipy.linalg.solve",
+    demeaner_backend: DemeanerBackendOptions = "numba",
     drop_intercept: bool = False,
     copy_data: bool = True,
     store_data: bool = True,
@@ -37,10 +39,26 @@ def feglm(
     context: Optional[Union[int, Mapping[str, Any]]] = None,
     split: Optional[str] = None,
     fsplit: Optional[str] = None,
+    accelerate: bool = True,
 ) -> Union[Feols, Fepois, FixestMulti]:
     """
-    Estimate GLM regression models (currently without fixed effects, this is work in progress).
-    This feature is currently experimental, full support will be released with pyfixest 0.29.
+    Estimate GLM regression models with fixed effects.
+
+    Supported families: [logit](/reference/estimation.models.felogit_.Felogit.qmd),
+    [probit](/reference/estimation.models.feprobit_.Feprobit.qmd),
+    [gaussian](/reference/estimation.models.fegaussian_.Fegaussian.qmd).
+
+    References
+    ----------
+    - Bergé, L. (2018). Efficient estimation of maximum likelihood models with
+      multiple fixed-effects: the R package FENmlm.
+      [CREA Discussion Paper](https://ideas.repec.org/p/luc/wpaper/18-13.html).
+    - Correia, S., Guimaraes, P., & Zylkin, T. (2019). ppmlhdfe: Fast Poisson
+      Estimation with High-Dimensional Fixed Effects.
+      [The Stata Journal](https://journals.sagepub.com/doi/pdf/10.1177/1536867X20909691).
+    - Stammann, A. (2018). Fast and Feasible Estimation of Generalized Linear
+      Models with High-Dimensional k-way Fixed Effects.
+      [arXiv:1707.01815](https://arxiv.org/pdf/1707.01815).
 
     Parameters
     ----------
@@ -113,6 +131,19 @@ def feglm(
         "np.linalg.solve", "scipy.linalg.solve", "scipy.sparse.linalg.lsqr" and "jax".
         Defaults to "scipy.linalg.solve".
 
+    demeaner_backend: DemeanerBackendOptions, optional
+        The backend to use for demeaning. Options include:
+        - "numba" (default): CPU-based demeaning using Numba JIT via the Alternating Projections Algorithm.
+        - "rust": CPU-based demeaning implemented in Rust via the Alternating Projections Algorithm.
+        - "jax": CPU or GPU-accelerated using JAX (requires jax/jaxlib) via the Alternating Projections Algorithm.
+        - "cupy" or "cupy64": GPU-accelerated using CuPy with float64 precision via direct application of the Frisch-Waugh-Lovell Theorem on sparse
+          matrices (requires cupy & GPU, defaults to scipy/CPU if no GPU available)
+        - "cupy32": GPU-accelerated using CuPy with float32 precision via direct application of the Frisch-Waugh-Lovell Theorem on sparse
+          matrices (requires cupy & GPU, defaults to scipy/CPU and float64 if no GPU available)
+        - "scipy": Direct application of the Frisch-Waugh-Lovell Theorem on sparse matrice.
+          Forces to use a scipy-sparse backend even when cupy is installed and GPU is available.
+        Defaults to "numba".
+
     drop_intercept : bool, optional
         Whether to drop the intercept from the model, by default False.
 
@@ -154,16 +185,23 @@ def feglm(
     fsplit: Optional[str]
         This argument is the same as split but also includes the full sample as the first estimation.
 
+    accelerate: Optional[bool]
+        Whether to use acceleration tricks developed in the ppmlhdfe paper (warm start and adaptive fixed effects
+        tolerance) for models with fixed effects. Produces numerically identical results faster, so we
+        recommend to always set it to True.
+
+
     Returns
     -------
     object
-        An instance of the `Fepois` class or an instance of class `FixestMulti`
-        for multiple models specified via `fml`.
+        An instance of the [Feglm](/reference/estimation.models.feglm_.Feglm.qmd) class
+        (or one of its subclasses: [Felogit](/reference/estimation.models.felogit_.Felogit.qmd),
+        [Feprobit](/reference/estimation.models.feprobit_.Feprobit.qmd),
+        [Fegaussian](/reference/estimation.models.fegaussian_.Fegaussian.qmd)) or an instance of
+        class [FixestMulti](/reference/estimation.FixestMulti_.FixestMulti.qmd) for multiple models specified via `fml`.
 
     Examples
     --------
-    The `fepois()` function can be used to estimate a simple Poisson regression
-    model with fixed effects.
     The following example regresses `Y` on `X1` and `X2` with fixed effects for
     `f1` and `f2`: fixed effects are specified after the `|` symbol.
 
@@ -201,7 +239,7 @@ def feglm(
 
     We find homogeneous effects by "f1" in the probit model.
 
-    For more examples of other function arguments, please take a look at the documentation of the [feols()](https://py-econometrics.github.io/pyfixest/reference/estimation.api.feols.html#pyfixest.estimation.api.feols)
+    For more examples of other function arguments, please take a look at the documentation of the [feols()](https://pyfixest.org/reference/estimation.api.feols.html#pyfixest.estimation.api.feols)
     function.
 
     """
@@ -283,6 +321,8 @@ def feglm(
         iwls_maxiter=iwls_maxiter,
         collin_tol=collin_tol,
         separation_check=separation_check,
+        demeaner_backend=demeaner_backend,
+        accelerate=accelerate,
     )
 
     if fixest._is_multiple_estimation:

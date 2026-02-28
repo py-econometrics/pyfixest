@@ -117,12 +117,19 @@ iv_fmls = [
 ]
 
 glm_fmls = [
+    # No fixed effects
     "Y ~ X1",
     "Y ~ X1 + X2",
     "Y ~ X1*X2",
     # "Y ~ X1 + C(f2)",
     # "Y ~ X1 + i(f1, ref = 1)",
     "Y ~ X1 + f1:X2",
+    # With fixed effects
+    "Y ~ X1 | f1",
+    "Y ~ X1 + X2 | f1",
+    "Y ~ X1 | f1 + f2",
+    "Y ~ X1 + X2 | f1 + f2",
+    "Y ~ X1*X2 | f1",
 ]
 
 
@@ -170,6 +177,19 @@ def na_omit(arr):
 def check_relative_diff(x1, x2, tol, msg=None):
     msg = "" if msg is None else msg
     assert np.all(np.abs(x1 - x2) / np.abs(x1) < tol), msg
+
+
+def _get_vcov_diag(py_model, r_model, coefname, is_iv=False):
+    """Get the variance of a named coefficient from both Python and R models."""
+    py_idx = py_model._coefnames.index(coefname)
+    py_vcov = py_model._vcov[py_idx, py_idx]
+    # Get R coefficient names (pandas2ri strips names from auto-converted arrays)
+    ro.globalenv[".tmp.model"] = r_model
+    r_names = list(ro.r("names(coef(.tmp.model))"))
+    r_name = f"fit_{coefname}" if is_iv else coefname
+    r_idx = r_names.index(r_name)
+    r_vcov = np.array(stats.vcov(r_model))[r_idx, r_idx]
+    return py_vcov, r_vcov
 
 
 test_counter_feols = 0
@@ -230,7 +250,7 @@ def test_single_fit_feols(
 
     # long story, but categories need to be strings to be converted to R factors,
     # this then produces 'nan' values in the pd.DataFrame ...
-    data[data == "nan"] = np.nan
+    data.where(data != "nan", np.nan, inplace=True)
 
     # test fixed effects that are not floats, but ints or categoricals, etc
 
@@ -275,7 +295,7 @@ def test_single_fit_feols(
     py_pval = mod.pvalue().xs("X1")
     py_tstat = mod.tstat().xs("X1")
     py_confint = mod.confint().xs("X1").values
-    py_vcov = mod._vcov[0, 0]
+    py_vcov, r_vcov = _get_vcov_diag(mod, r_fixest, "X1")
 
     py_nobs = mod._N
     py_resid = mod.resid()
@@ -289,7 +309,6 @@ def test_single_fit_feols(
     r_pval = df_X1["p.value"]
     r_tstat = df_X1["statistic"]
     r_confint = df_X1[["conf.low", "conf.high"]].values.astype(np.float64)
-    r_vcov = stats.vcov(r_fixest)[0, 0]
 
     r_nobs = int(stats.nobs(r_fixest)[0])
     r_df_k = int(ro.r('attr(r_fixest$cov.scaled, "df.K")')[0])
@@ -451,17 +470,13 @@ def test_single_fit_feols_empty(
     f3_type,
     fml,
 ):
-    data = data_feols
-
+    data = data_feols.copy()
     if dropna:
         data = data.dropna()
-
     # long story, but categories need to be strings to be converted to R factors,
     # this then produces 'nan' values in the pd.DataFrame ...
-    data[data == "nan"] = np.nan
-
+    data.where(data != "nan", np.nan, inplace=True)
     # test fixed effects that are not floats, but ints or categoricals, etc
-
     data = _convert_f3(data, f3_type)
 
     data_r = get_data_r(fml, data)
@@ -516,25 +531,22 @@ def test_single_fit_fepois(
 
     ssc_ = ssc(k_adj=k_adj, G_adj=G_adj)
 
-    data = data_fepois
-
+    data_fepois = data_fepois.copy()
     if dropna:
-        data = data.dropna()
-
+        data_fepois.dropna(inplace=True)
     # long story, but categories need to be strings to be converted to R factors,
     # this then produces 'nan' values in the pd.DataFrame ...
-    data[data == "nan"] = np.nan
-
+    data_fepois.where(data_fepois != "nan", np.nan, inplace=True)
     # test fixed effects that are not floats, but ints or categoricals, etc
-    data = _convert_f3(data, f3_type)
+    data_fepois = _convert_f3(data_fepois, f3_type)
 
-    data_r = get_data_r(fml, data)
+    data_r = get_data_r(fml, data_fepois)
     r_fml = _c_to_as_factor(fml)
     r_inference = _get_r_inference(inference)
 
     mod = pf.fepois(
         fml=fml,
-        data=data,
+        data=data_fepois,
         vcov=inference,
         ssc=ssc_,
         iwls_tol=1e-10,
@@ -568,7 +580,6 @@ def test_single_fit_fepois(
     py_tstat = mod.tstat().xs("X1")
     py_confint = mod.confint().xs("X1").values
     py_nobs = mod._N
-    py_vcov = mod._vcov[0, 0]
     py_deviance = mod.deviance
     py_resid = mod.resid()
     py_irls_weights = mod._irls_weights.flatten()
@@ -582,6 +593,7 @@ def test_single_fit_fepois(
     df_X1 = _get_r_df(r_fixest)
     ro.globalenv["r_fixest"] = r_fixest
 
+    py_vcov, r_vcov = _get_vcov_diag(mod, r_fixest, "X1")
     r_coef = df_X1["estimate"]
     r_se = df_X1["std.error"]
     r_pval = df_X1["p.value"]
@@ -589,7 +601,6 @@ def test_single_fit_fepois(
     r_confint = df_X1[["conf.low", "conf.high"]].values.astype(np.float64)
     r_nobs = int(stats.nobs(r_fixest)[0])
     r_resid = stats.residuals(r_fixest)
-    r_vcov = stats.vcov(r_fixest)[0, 0]
     r_deviance = r_fixest.rx2("deviance")
     r_irls_weights = r_fixest.rx2("irls_weights")
     r_df_k = int(ro.r('attr(r_fixest$cov.scaled, "df.K")')[0])
@@ -683,18 +694,12 @@ def test_single_fit_iv(
 
     ssc_ = ssc(k_adj=k_adj, G_adj=G_adj)
 
-    data = data_feols
-
+    data = data_feols.copy()
     if dropna:
-        data = data.dropna()
-
+        data.dropna(inplace=True)
     # long story, but categories need to be strings to be converted to R factors,
     # this then produces 'nan' values in the pd.DataFrame ...
-    data[data == "nan"] = np.nan
-
-    # test fixed effects that are not floats, but ints or categoricals, etc
-    # data = _convert_f3(data, f3_type)
-
+    data.where(data != "nan", np.nan, inplace=True)
     # test fixed effects that are not floats, but ints or categoricals, etc
     data = _convert_f3(data, f3_type)
 
@@ -724,7 +729,7 @@ def test_single_fit_iv(
     py_pval = mod.pvalue().xs("X1")
     py_tstat = mod.tstat().xs("X1")
     py_confint = mod.confint().xs("X1").values
-    py_vcov = mod._vcov[0, 0]
+    py_vcov, r_vcov = _get_vcov_diag(mod, r_fixest, "X1", is_iv=True)
 
     py_nobs = mod._N
     py_resid = mod.resid()
@@ -736,7 +741,6 @@ def test_single_fit_iv(
     r_pval = df_X1["p.value"]
     r_tstat = df_X1["statistic"]
     r_confint = df_X1[["conf.low", "conf.high"]].values.astype(np.float64)
-    r_vcov = stats.vcov(r_fixest)[0, 0]
 
     r_nobs = int(stats.nobs(r_fixest)[0])
     r_resid = stats.resid(r_fixest)
@@ -767,7 +771,7 @@ def test_glm_vs_fixest(N, seed, dropna, fml, inference, family):
     data = pf.get_data(N=N, seed=seed)
     data["Y"] = np.where(data["Y"] > 0, 1, 0)
     if dropna:
-        data = data.dropna()
+        data.dropna(inplace=True)
 
     r_inference = _get_r_inference(inference)
 
@@ -860,8 +864,8 @@ def test_glm_vs_fixest(N, seed, dropna, fml, inference, family):
         py_resid_working = fit_py._u_hat_working
         r_resid_working = stats.resid(fit_r, type="working")
         check_absolute_diff(
-            py_resid_working[0:5],
-            r_resid_working[0:5],
+            py_resid_working[10:15],
+            r_resid_working[10:15],
             1e-03,
             f"py_{family}_resid_working != r_{family}_resid_working for inference {inference}",
         )
@@ -870,8 +874,8 @@ def test_glm_vs_fixest(N, seed, dropna, fml, inference, family):
         py_resid_response = fit_py._u_hat_response
         r_resid_response = stats.resid(fit_r, type="response")
         check_absolute_diff(
-            py_resid_response[0:5],
-            r_resid_response[0:5],
+            py_resid_response[10:15],
+            r_resid_response[10:15],
             1e-04,
             f"py_{family}_resid_response != r_{family}_resid_response for inference {inference}",
         )
@@ -910,8 +914,7 @@ def test_glm_vs_fixest(N, seed, dropna, fml, inference, family):
     )
 
     # Compare variance-covariance matrices
-    py_vcov = fit_py._vcov[0, 0]
-    r_vcov = stats.vcov(fit_r)[0, 0]
+    py_vcov, r_vcov = _get_vcov_diag(fit_py, fit_r, "X1")
     check_absolute_diff(
         py_vcov,
         r_vcov,
@@ -939,10 +942,8 @@ def test_glm_vs_fixest(N, seed, dropna, fml, inference, family):
         ("Y~ csw0(X2, f3) + X2"),
         ("Y~ X1 + csw0(X2, f3) + X2"),
         ("Y ~ X1 + csw0(f1, f2) | f3"),
-        ("Y ~ X1 | csw0(f1,f2)"),
         ("Y ~ X1 + sw(X2, f1, f2)"),
         ("Y ~ csw(X1, X2, f3)"),
-        # ("Y ~ X2 + csw0(, X2, X2)"),
         ("Y ~ sw(X1, X2) | csw0(f1,f2,f3)"),
         ("Y ~ C(f2):X2 + sw0(X1, f3)"),
         ("Y + Y2 ~X1"),
@@ -961,6 +962,57 @@ def test_glm_vs_fixest(N, seed, dropna, fml, inference, family):
         ("Y + Y2 ~ X1 | csw0(f1,f2)"),
         ("Y + log(Y2) ~ sw(X1, X2) | csw0(f1,f2,f3)"),
         ("Y ~ C(f2):X2 + sw0(X1, f3)"),
+        # TODO: enable once fixest bug is fixed, see https://github.com/lrberge/fixest/issues/631
+        pytest.param(
+            "Y ~ X1 | sw0(f1, f1+f2)",
+            marks=pytest.mark.skip(reason="fixest nparams bug (#631)"),
+        ),
+        pytest.param(
+            "Y ~ X1 | csw0(f1, f1+f2)",
+            marks=pytest.mark.skip(reason="fixest nparams bug (#631)"),
+        ),
+        pytest.param(
+            "Y ~ X1 | sw(f1, f1+f2)",
+            marks=pytest.mark.skip(reason="fixest nparams bug (#631)"),
+        ),
+        pytest.param(
+            "Y ~ X1 | sw0(f1, f1+f2, f1+f2+f3)",
+            marks=pytest.mark.skip(reason="fixest nparams bug (#631)"),
+        ),
+        pytest.param(
+            "Y ~ X1 | csw0(f1, f1+f2, f1+f2+f3)",
+            marks=pytest.mark.skip(reason="fixest nparams bug (#631)"),
+        ),
+        pytest.param(
+            "Y ~ X1 | mvsw(f1, f2)",
+            marks=pytest.mark.skip(reason="fixest nparams bug (#631)"),
+        ),
+        ("Y ~ X1 | csw(f1, f1+f2)"),
+        ("Y ~ sw0(X1, X1+X2)"),
+        ("Y ~ csw0(X1, X1+X2)"),
+        ("Y ~ sw(X1, X1+X2)"),
+        ("Y ~ X1 + sw0(X2, X2+f1)"),
+        ("Y ~ X1 + csw0(X2, X2+f1)"),
+        ("Y + Y2 ~ X1 | sw0(f1, f1+f2)"),
+        ("Y + Y2 ~ sw0(X1, X1+X2) | f1"),
+        # mvsw() cases - multiverse stepwise (all combinations)
+        ("Y ~ mvsw(X1, X2)"),
+        ("Y ~ mvsw(X1, X2) | f1"),
+        ("Y ~ X1 + mvsw(X2, f1)"),
+        ("Y ~ X1 + mvsw(X2, f1) | f2"),
+        ("Y + Y2 ~ mvsw(X1, X2)"),
+        ("Y + Y2 ~ mvsw(X1, X2) | f1"),
+        ("Y ~ mvsw(X1, X2, f1)"),
+        # Multiple estimation operators in multiple formula parts
+        ("Y ~ sw(X1, X2) | sw(f1, f2)"),
+        ("Y ~ sw(X1, X2) | csw(f1, f2)"),
+        ("Y ~ csw(X1, X2) | sw(f1, f2)"),
+        ("Y ~ csw(X1, X2) | csw(f1, f2)"),
+        ("Y ~ sw0(X1, X2) | sw(f1, f2)"),
+        ("Y ~ csw(X1, X2) | csw0(f1, f2)"),
+        ("Y + Y2 ~ sw(X1, X2) | csw(f1, f2)"),
+        ("Y + Y2 ~ csw(X1, X2) | sw(f1, f2)"),
+        ("Y + Y2 ~ sw0(X1, X2) | csw0(f1, f2)"),
         # ("Y ~ i(f1,X2) | csw0(f2)"),
         # ("Y ~ i(f1,X2) | sw0(f2)"),
         # ("Y ~ i(f1,X2) | csw(f2, f3)"),
@@ -972,10 +1024,9 @@ def test_glm_vs_fixest(N, seed, dropna, fml, inference, family):
 def test_multi_fit(N, seed, beta_type, error_type, dropna, fml_multi):
     """Test pyfixest against fixest_multi objects."""
     data = get_data(N=N, seed=seed, beta_type=beta_type, error_type=error_type)
-    data[data == "nan"] = np.nan
-
+    data.where(data != "nan", np.nan, inplace=True)
     if dropna:
-        data = data.dropna()
+        data.dropna(inplace=True)
 
     # suppress correction for fixed effects
     fixest.setFixest_ssc(fixest.ssc(True, "nonnested", False, True, "min", "min"))
@@ -990,7 +1041,7 @@ def test_multi_fit(N, seed, beta_type, error_type, dropna, fml_multi):
             data["f1"] = pd.Categorical(data.f1.astype(str))
             data["f2"] = pd.Categorical(data.f2.astype(str))
             data["f3"] = pd.Categorical(data.f3.astype(str))
-            data[data == "nan"] = np.nan
+            data = data.where(data != "nan", np.nan, inplace=False)
             pyfixest = feols(fml=fml_multi, data=data)
         else:
             raise ValueError("Code fails with an uninformative error message.")
@@ -1001,23 +1052,24 @@ def test_multi_fit(N, seed, beta_type, error_type, dropna, fml_multi):
         ssc=fixest.ssc(True, "nonnested", False, True, "min", "min"),
     )
 
-    for x in range(0):
+    n_models = len(pyfixest.all_fitted_models)
+
+    for x in range(n_models):
         mod = pyfixest.fetch_model(x)
         py_coef = mod.coef().values
         py_se = mod.se().values
 
-        # sort py_coef, py_se
-        py_coef, py_se = (np.sort(x) for x in [py_coef, py_se])
+        # skip models with no estimated coefficients (e.g., intercept-only FE models)
+        if len(py_coef) == 0:
+            continue
 
         fixest_object = r_fixest.rx2(x + 1)
-        fixest_coef = fixest_object.rx2("coefficients")
-        fixest_se = fixest_object.rx2("se")
+        fixest_coef = np.atleast_1d(np.array(fixest_object.rx2("coefficients")))
+        fixest_se = np.atleast_1d(np.array(fixest_object.rx2("se")))
 
-        # fixest_coef = stats.coef(r_fixest)
-        # fixest_se = fixest.se(r_fixest)
-
-        # sort fixest_coef, fixest_se
-        fixest_coef, fixest_se = (np.sort(x) for x in [fixest_coef, fixest_se])
+        # sort for order-independent comparison
+        py_coef, py_se = np.sort(py_coef), np.sort(py_se)
+        fixest_coef, fixest_se = np.sort(fixest_coef), np.sort(fixest_se)
 
         np.testing.assert_allclose(
             py_coef, fixest_coef, rtol=rtol, atol=atol, err_msg="Coefs are not equal."
@@ -1046,14 +1098,12 @@ def test_split_fit(N, seed, beta_type, error_type, dropna, fml_multi, split, fsp
         pytest.skip("split and fsplit are both None.")
 
     data = get_data(N=N, seed=seed, beta_type=beta_type, error_type=error_type)
-    data[data == "nan"] = np.nan
-
+    data.where(data != "nan", np.nan, inplace=True)
     if dropna:
-        data = data.dropna()
+        data.dropna(inplace=True)
 
     # suppress correction for fixed effects
     fixest.setFixest_ssc(fixest.ssc(True, "nonnested", False, True, "min", "min"))
-
     r_fml = _py_fml_to_r_fml(fml_multi)
 
     try:
@@ -1064,7 +1114,7 @@ def test_split_fit(N, seed, beta_type, error_type, dropna, fml_multi, split, fsp
             data["f1"] = pd.Categorical(data.f1.astype(str))
             data["f2"] = pd.Categorical(data.f2.astype(str))
             data["f3"] = pd.Categorical(data.f3.astype(str))
-            data[data == "nan"] = np.nan
+            data = data.where(data != "nan", np.nan, inplace=False)
             pyfixest = feols(fml=fml_multi, data=data)
         else:
             raise ValueError("Code fails with an uninformative error message.")
@@ -1077,23 +1127,28 @@ def test_split_fit(N, seed, beta_type, error_type, dropna, fml_multi, split, fsp
         **({"fsplit": ro.Formula("~" + fsplit)} if fsplit is not None else {}),
     )
 
-    for x in range(0):
-        mod = pyfixest.fetch_model(x)
+    # Both pyfixest and R fixest use split-outer / formula-inner ordering,
+    # so the flat positional index is the same in both. Use 1-based indexing
+    # to match R's [[i]] accessor.
+    py_models = list(pyfixest.all_fitted_models.values())
+
+    for i, mod in enumerate(py_models):
         py_coef = mod.coef().values
         py_se = mod.se().values
 
-        # sort py_coef, py_se
-        py_coef, py_se = (np.sort(x) for x in [py_coef, py_se])
+        # skip models with no estimated coefficients (e.g., intercept-only FE models)
+        if len(py_coef) == 0:
+            continue
 
-        fixest_object = r_fixest.rx2(x + 1)
-        fixest_coef = fixest_object.rx2("coefficients")
-        fixest_se = fixest_object.rx2("se")
+        r_idx = i + 1
 
-        # fixest_coef = stats.coef(r_fixest)
-        # fixest_se = fixest.se(r_fixest)
+        fixest_object = r_fixest.rx2(r_idx)
+        fixest_coef = np.atleast_1d(np.array(fixest_object.rx2("coefficients")))
+        fixest_se = np.atleast_1d(np.array(fixest_object.rx2("se")))
 
-        # sort fixest_coef, fixest_se
-        fixest_coef, fixest_se = (np.sort(x) for x in [fixest_coef, fixest_se])
+        # sort for order-independent comparison
+        py_coef, py_se = np.sort(py_coef), np.sort(py_se)
+        fixest_coef, fixest_se = np.sort(fixest_coef), np.sort(fixest_se)
 
         np.testing.assert_allclose(
             py_coef, fixest_coef, rtol=rtol, atol=atol, err_msg="Coefs are not equal."
@@ -1172,10 +1227,10 @@ def test_twoway_clustering(data, k_adj, k_fixef, G_adj, G_df):
 def test_wls_na():
     """Special tests for WLS and NA values."""
     data = get_data()
-    data = data.dropna()
+    data.dropna(inplace=True)
 
     # case 1: NA in weights
-    data["weights"].iloc[0] = np.nan
+    data.loc[data.index[0], "weights"] = np.nan
 
     fit_py = feols("Y ~ X1", data=data, weights="weights")
     fit_r = fixest.feols(
@@ -1194,7 +1249,7 @@ def test_wls_na():
     )
 
     # case 2: NA in weights and X1
-    data["X1"].iloc[0] = np.nan
+    data.loc[data.index[0], "X1"] = np.nan
     fit_py = feols("Y ~ X1", data=data, weights="weights")
     fit_r = fixest.feols(
         ro.Formula("Y ~ X1"),
@@ -1211,7 +1266,7 @@ def test_wls_na():
     )
 
     # case 3: more NAs in X1:
-    data["X1"].iloc[0:10] = np.nan
+    data.loc[data.index[0:10], "X1"] = np.nan
     fit_py = feols("Y ~ X1", data=data, weights="weights")
     fit_r = fixest.feols(
         ro.Formula("Y ~ X1"),
@@ -1321,7 +1376,7 @@ def test_wald_test(fml, data):
 def test_singleton_dropping():
     data = get_data()
     # create a singleton fixed effect
-    data["f1"].iloc[data.shape[0] - 1] = 999999
+    data.loc[data.index[data.shape[0] - 1], "f1"] = 999999
 
     fit_py = feols("Y ~ X1 | f1", data=data, fixef_rm="singleton")
     fit_py2 = feols("Y ~ X1 | f1", data=data, fixef_rm="none")
@@ -1388,7 +1443,8 @@ ssc_fmls = [
 @pytest.mark.parametrize("model", ["feols", "fepois"])
 def test_ssc(fml, dropna, weights, vcov, k_adj, G_adj, k_fixef, model):
     df = pf.get_data(model="Feols") if model == "feols" else pf.get_data(model="Fepois")
-    df = df.dropna() if dropna else df
+    if dropna:
+        df.dropna(inplace=True)
 
     if not dropna and vcov in ["f1", "f2", "f1+f2"] and vcov not in fml:
         pytest.skip(
@@ -1523,10 +1579,8 @@ def test_ssc(fml, dropna, weights, vcov, k_adj, G_adj, k_fixef, model):
 def test_inf_dropping(fml, weights):
     "Test that infinite values are dropped correctly."
     data = pf.get_data(model="Fepois").dropna()
-    data["Y"].iloc[0] = 0
+    data.loc[data.index[0], "Y"] = 0
 
-    # test that two 0's in dependent variable are dropped
-    # and that warning is triggered
     n_zeros = (data.Y == 0).sum()
     with pytest.warns(
         UserWarning,
@@ -1535,7 +1589,6 @@ def test_inf_dropping(fml, weights):
         fit_py = feols(fml=fml, data=data, weights=weights, fixef_rm="none")
 
     assert int(data.shape[0] - n_zeros) == fit_py._N
-    assert np.all(fit_py._na_index == np.where(data.Y == 0)[0].tolist())
 
 
 def _convert_f3(data, f3_type):

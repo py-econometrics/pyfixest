@@ -4,8 +4,9 @@ from typing import Any, Literal, Optional, Union
 import numpy as np
 import pandas as pd
 
-from pyfixest.estimation.feglm_ import Feglm
-from pyfixest.estimation.FormulaParser import FixestFormula
+from pyfixest.estimation.formula.parse import Formula as FixestFormula
+from pyfixest.estimation.internals.literals import DemeanerBackendOptions
+from pyfixest.estimation.models.feglm_ import Feglm
 
 
 class Felogit(Feglm):
@@ -23,7 +24,7 @@ class Felogit(Feglm):
         collin_tol: float,
         fixef_tol: float,
         fixef_maxiter: int,
-        lookup_demeaned_data: dict[str, pd.DataFrame],
+        lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
         tol: float,
         maxiter: int,
         solver: Literal[
@@ -33,6 +34,7 @@ class Felogit(Feglm):
             "scipy.sparse.linalg.lsqr",
             "jax",
         ],
+        demeaner_backend: DemeanerBackendOptions = "numba",
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
@@ -40,6 +42,7 @@ class Felogit(Feglm):
         sample_split_var: Optional[str] = None,
         sample_split_value: Optional[Union[str, int]] = None,
         separation_check: Optional[list[str]] = None,
+        accelerate: bool = True,
     ):
         super().__init__(
             FixestFormula=FixestFormula,
@@ -56,6 +59,7 @@ class Felogit(Feglm):
             tol=tol,
             maxiter=maxiter,
             solver=solver,
+            demeaner_backend=demeaner_backend,
             store_data=store_data,
             copy_data=copy_data,
             lean=lean,
@@ -63,6 +67,7 @@ class Felogit(Feglm):
             sample_split_var=sample_split_var,
             sample_split_value=sample_split_value,
             separation_check=separation_check,
+            accelerate=accelerate,
         )
 
         self._method = "feglm-logit"
@@ -84,13 +89,13 @@ class Felogit(Feglm):
     def _get_b(self, theta: np.ndarray) -> np.ndarray:
         return np.log(1 + np.exp(theta))
 
-    def _get_mu(self, theta: np.ndarray) -> np.ndarray:
-        return np.exp(theta) / (1 + np.exp(theta))
+    def _get_mu(self, eta: np.ndarray) -> np.ndarray:
+        return np.exp(eta) / (1 + np.exp(eta))
 
     def _get_link(self, mu: np.ndarray) -> np.ndarray:
         return np.log(mu / (1 - mu))
 
-    def _update_detadmu(self, mu: np.ndarray) -> np.ndarray:
+    def _get_gprime(self, mu: np.ndarray) -> np.ndarray:
         return 1 / (mu * (1 - mu))
 
     def _get_theta(self, mu: np.ndarray) -> np.ndarray:

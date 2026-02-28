@@ -10,18 +10,20 @@ website:
       - reference/did.estimation.did2s.qmd
       - reference/did.estimation.lpdid.qmd
       - reference/did.estimation.event_study.qmd
-      - reference/estimation.bonferroni.qmd
-      - reference/estimation.rwolf.qmd
+      - reference/estimation.post_estimation.multcomp.bonferroni.qmd
+      - reference/estimation.post_estimation.multcomp.rwolf.qmd
       section: Estimation Functions
     - contents:
-      - reference/estimation.feols_.Feols.qmd
-      - reference/estimation.fepois_.Fepois.qmd
-      - reference/estimation.feiv_.Feiv.qmd
-      - reference/estimation.feglm_.Feglm.qmd
-      - reference/estimation.felogit_.Felogit.qmd
-      - reference/estimation.feprobit_.Feprobit.qmd
-      - reference/estimation.fegaussian_.Fegaussian.qmd
-      - reference/estimation.feols_compressed_.FeolsCompressed.qmd
+      - reference/estimation.models.feols_.Feols.qmd
+      - reference/estimation.models.fepois_.Fepois.qmd
+      - reference/estimation.models.feiv_.Feiv.qmd
+      - reference/estimation.models.feglm_.Feglm.qmd
+      - reference/estimation.models.felogit_.Felogit.qmd
+      - reference/estimation.models.feprobit_.Feprobit.qmd
+      - reference/estimation.models.fegaussian_.Fegaussian.qmd
+      - reference/estimation.models.feols_compressed_.FeolsCompressed.qmd
+      - reference/estimation.FixestMulti_.FixestMulti.qmd
+      - reference/estimation.quantreg.quantreg_.Quantreg.qmd
       section: Estimation Classes
     - contents:
       - reference/did.visualize.panelview.qmd
@@ -33,9 +35,14 @@ website:
       - reference/did.visualize.panelview.qmd
       section: Summarize and Visualize
     - contents:
-      - reference/estimation.demean.qmd
-      - reference/estimation.detect_singletons.qmd
-      - reference/estimation.model_matrix_fixest.qmd
+      - reference/estimation.formula.parse.Formula.qmd
+      - reference/estimation.formula.model_matrix.ModelMatrix.qmd
+      - reference/estimation.formula.factor_interaction.factor_interaction.qmd
+      section: Formula Parsing & Model Matrix
+    - contents:
+      - reference/estimation.internals.demean_.demean.qmd
+      - reference/estimation.internals.detect_singletons_.detect_singletons.qmd
+      - reference/estimation.deprecated.model_matrix_fixest_.model_matrix_fixest.qmd
       section: Misc / Utilities
     id: reference
   - id: dummy-sidebar

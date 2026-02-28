@@ -2,7 +2,7 @@
   "files": [
     "README.md"
   ],
-  "imageSize": 80,
+  "imageSize": 40,
   "commit": false,
   "commitType": "docs",
   "commitConvention": "angular",
@@ -413,7 +413,8 @@
       "avatar_url": "https://avatars.githubusercontent.com/u/20362941?v=4",
       "profile": "http://dpananos.github.io",
       "contributions": [
-        "code"
+        "code",
+        "review"
       ]
     },
     {
@@ -441,6 +442,34 @@
       "profile": "https://github.com/blucap",
       "contributions": [
         "code"
+      ]
+    },
+    {
+      "login": "jonpcohen",
+      "name": "jonpcohen",
+      "avatar_url": "https://avatars.githubusercontent.com/u/48955223?v=4",
+      "profile": "https://github.com/jonpcohen",
+      "contributions": [
+        "doc"
+      ]
+    },
+    {
+      "login": "rhstanton",
+      "name": "rhstanton",
+      "avatar_url": "https://avatars.githubusercontent.com/u/2153614?v=4",
+      "profile": "https://github.com/rhstanton",
+      "contributions": [
+        "userTesting",
+        "bug"
+      ]
+    },
+    {
+      "login": "mdizadi",
+      "name": "mdizadi",
+      "avatar_url": "https://avatars.githubusercontent.com/u/16979129?v=4",
+      "profile": "https://github.com/mdizadi",
+      "contributions": [
+        "doc"
       ]
     }
   ],

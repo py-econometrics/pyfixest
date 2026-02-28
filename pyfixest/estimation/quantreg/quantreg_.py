@@ -9,17 +9,17 @@ import pandas as pd
 from scipy.linalg import cho_factor, solve_triangular
 from scipy.stats import norm
 
-from pyfixest.estimation.feols_ import Feols
-from pyfixest.estimation.FormulaParser import FixestFormula
-from pyfixest.estimation.literals import (
+from pyfixest.estimation.formula.parse import Formula as FixestFormula
+from pyfixest.estimation.internals.literals import (
     QuantregMethodOptions,
     SolverOptions,
 )
+from pyfixest.estimation.internals.vcov_utils import bucket_argsort
+from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.quantreg.frisch_newton_ip import (
     frisch_newton_solver,
 )
 from pyfixest.estimation.quantreg.utils import get_hall_sheather_bandwidth
-from pyfixest.estimation.vcov_utils import bucket_argsort
 
 
 class Quantreg(Feols):
@@ -37,7 +37,7 @@ class Quantreg(Feols):
         collin_tol: float,
         fixef_tol: float,
         fixef_maxiter: int,
-        lookup_demeaned_data: dict[str, pd.DataFrame],
+        lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
         solver: SolverOptions = "np.linalg.solve",
         demeaner_backend: Literal["numba", "jax"] = "numba",
         store_data: bool = True,
@@ -93,9 +93,9 @@ class Quantreg(Feols):
         self._quantile_maxiter = quantile_maxiter
 
         self._model_name = (
-            FixestFormula.fml
+            FixestFormula.formula
             if self._sample_split_var is None
-            else f"{FixestFormula.fml} (Sample: {self._sample_split_var} = {self._sample_split_value})"
+            else f"{FixestFormula.formula} (Sample: {self._sample_split_var} = {self._sample_split_value})"
         )
         # update with quantile name
         self._model_name = f"{self._model_name} (q = {quantile})"
@@ -165,6 +165,9 @@ class Quantreg(Feols):
 
     def get_fit(self) -> None:
         """Fit a quantile regression model using the interior point method."""
+        self.to_array()
+        self.drop_multicol_vars()
+
         res = self._fit(X=self._X, Y=self._Y)
 
         self._beta_hat = res[0]

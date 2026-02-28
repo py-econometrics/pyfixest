@@ -5,10 +5,10 @@ import numpy as np
 import pandas as pd
 from scipy.stats import t
 
-from pyfixest.estimation.feiv_ import Feiv
-from pyfixest.estimation.feols_ import Feols
-from pyfixest.estimation.fepois_ import Fepois
 from pyfixest.estimation.FixestMulti_ import FixestMulti
+from pyfixest.estimation.models.feiv_ import Feiv
+from pyfixest.estimation.models.feols_ import Feols
+from pyfixest.estimation.models.fepois_ import Fepois
 from pyfixest.report.utils import _post_processing_input_checks
 
 ModelInputType = Union[FixestMulti, list[Union[Feols, Fepois, Feiv]]]

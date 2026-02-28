@@ -99,7 +99,7 @@ Or display a formatted regression table:
 pf.etable(fit)
 ```
 
-Alternatively, the `.summarize` module contains a `summary` function, which can be applied on instances of regression model objects or lists of regression model objects. For details on how to customize `etable()`, please take a look at the [dedicated vignette](https://py-econometrics.github.io/pyfixest/table-layout.html).
+Alternatively, the `.summarize` module contains a `summary` function, which can be applied on instances of regression model objects or lists of regression model objects. For details on how to customize `etable()`, please take a look at the [dedicated vignette](https://pyfixest.org/table-layout.html).
 
 ```{python}
 pf.summary(fit)
@@ -404,7 +404,7 @@ fit_qr = pf.quantreg("Y ~ X1 + X2", data = data, quantile = [0.1, 0.5, 0.9])
 pf.qplot(fit_qr)
 ```
 
-For details, take a look at the dedicated [quantreg vignette](https://py-econometrics.github.io/pyfixest/quantile-regression.html).
+For details, take a look at the dedicated [quantreg vignette](https://pyfixest.org/quantile-regression.html).
 
 # Tests of Multiple Hypothesis / Wald Tests
 
@@ -428,36 +428,53 @@ q1 = np.array([2.0, 1.0])
 fit.wald_test(R=R1, q=q1)
 ```
 
-# Other GLMs (without fixed effects)
+# Generalized Linear Models (GLMs) with Fixed Effects
 
-`PyFixest` experimentally supports a range of other GLMs without fixed effects (adding fixed effect support is WIP) via the `pf.feglm()` function. Full support with all bells and whistles (in particular, fixed effects demeaning) is planned for PyFixest 0.29.
+`PyFixest` supports GLMs (logit, probit, gaussian) with high-dimensional fixed effects via `pf.feglm()`. Fixed effects are specified after the `|` symbol, just like in `feols()`.
 
 ```{python}
-data_glm = pf.get_data(N=100, seed = 170)
+data_glm = pf.get_data()
 data_glm["Y"] = np.where(data_glm["Y"] > 0, 1, 0)
 
-fit_gaussian = pf.feglm(fml = "Y~X1", data = data_glm, family = "gaussian")
-fit_logit = pf.feglm(fml = "Y~X1", data = data_glm, family = "logit")
-fit_probit = pf.feglm(fml = "Y~X1", data = data_glm, family = "probit")
+# Logit with fixed effects
+fit_fe = pf.feglm("Y ~ X1 + X2 | f1", data=data_glm, family="logit")
+fit_fe.summary()
+```
 
-pf.etable([
-    fit_gaussian,
-    fit_logit,
-    fit_probit,
-])
+Fixed effects estimation via demeaning produces identical point estimates as one-hot encoding the fixed effects via `C()`:
+
+```{python}
+# Compare FE demeaning vs one-hot encoding
+fit_onehot = pf.feglm("Y ~ X1 + X2 + C(f1)", data=data_glm, family="logit")
+
+# Coefficients are identical
+print("FE demeaning:", fit_fe.coef().values)
+print("One-hot:     ", fit_onehot.coef()[["X1", "X2"]].values)
+```
+
+Note that standard errors differ between the two approaches due to different degrees of freedom adjustments.
+
+You can compare different GLM families using `etable()`:
+
+```{python}
+fit_gaussian = pf.feglm("Y ~ X1 + X2 | f1", data=data_glm, family="gaussian")
+fit_logit = pf.feglm("Y ~ X1 + X2 | f1", data=data_glm, family="logit")
+fit_probit = pf.feglm("Y ~ X1 + X2 | f1", data=data_glm, family="probit")
+
+pf.etable([fit_gaussian, fit_logit, fit_probit])
 ```
 
 You can make predictions on the `response` and `link` scale via the `predict()` method:
 
 ```{python}
-fit_logit.predict(type = "response")[0:5]
-fit_logit.predict(type = "link")[0:5]
+fit_logit.predict(type="response")[0:5]
+fit_logit.predict(type="link")[0:5]
 ```
 
 You can compute the **average marginal effect** via the [marginaleffects package](https://github.com/vincentarelbundock/pymarginaleffects):
 
 ```{python}
-avg_slopes(fit_logit, variables = "X1")
+avg_slopes(fit_logit, variables="X1")
 ```
 
 Please take a look at the [marginaleffects book](https://marginaleffects.com/) to learn about other transformations that the `marginaleffects` package supports.
@@ -476,7 +493,7 @@ Additionally, we support `split` and `fsplit` function arguments.
 > - `fsplit` works just as `split`, but fits the model on the full sample as well.
 
 If multiple regression syntax is used,
-`feols()` and `fepois` returns an instance of a `FixestMulti` object, which essentially consists of a dicionary of `Fepois` or [Feols](/reference/estimation.feols_.Feols.qmd) instances.
+`feols()` and `fepois` returns an instance of a `FixestMulti` object, which essentially consists of a dicionary of `Fepois` or [Feols](/reference/estimation.models.feols_.Feols.qmd) instances.
 
 ```{python}
 multi_fit = pf.feols(fml="Y ~ X1 | csw0(f1, f2)", data=data, vcov="HC1")
@@ -490,7 +507,7 @@ multi_fit.etable()
 You can access an individual model by its name - i.e. a formula - via the `all_fitted_models` attribute.
 
 ```{python}
-multi_fit.all_fitted_models["Y~X1"].tidy()
+multi_fit.all_fitted_models["Y ~ X1"].tidy()
 ```
 
 or equivalently via the `fetch_model` method:
@@ -588,4 +605,4 @@ fit_did2s = pf.event_study(
 pf.etable([fit_twfe, fit_did2s])
 ```
 
-For more details see the vignette on [Difference-in-Differences Estimation](https://py-econometrics.github.io/pyfixest/difference-in-differences.html).
+For more details see the vignette on [Difference-in-Differences Estimation](https://pyfixest.org/difference-in-differences.html).

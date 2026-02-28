@@ -7,14 +7,15 @@ import pyfixest as pf
 from pyfixest.errors import (
     DuplicateKeyError,
     EndogVarsAsCovarsError,
+    FormulaSyntaxError,
     InstrumentsAsCovarsError,
     NanInClusterVarError,
     UnderDeterminedIVError,
     VcovTypeNotSupportedError,
 )
 from pyfixest.estimation import feols, fepois
-from pyfixest.estimation.FormulaParser import FixestFormulaParser
-from pyfixest.estimation.multcomp import rwolf
+from pyfixest.estimation.deprecated.FormulaParser import FixestFormulaParser
+from pyfixest.estimation.post_estimation.multcomp import rwolf
 from pyfixest.report.summarize import etable, summary
 from pyfixest.utils.dgps import gelbach_data
 from pyfixest.utils.utils import get_data, ssc
@@ -49,7 +50,7 @@ def test_cluster_na():
     data = get_data()
     data = data.dropna()
     data["f3"] = data["f3"].astype("int64")
-    data["f3"][5] = np.nan
+    data.loc[5, "f3"] = np.nan
 
     with pytest.raises(NanInClusterVarError):
         feols(fml="Y ~ X1", data=data, vcov={"CRV1": "f3"})
@@ -94,8 +95,10 @@ def test_iv_errors():
     data = get_data()
 
     # under determined
+    with pytest.raises(FormulaSyntaxError):
+        feols(fml="Y ~ X1 | Z1 + Z2 ~ X2", data=data)
     with pytest.raises(UnderDeterminedIVError):
-        feols(fml="Y ~ X1 | Z1 + Z2 ~ 24 ", data=data)
+        feols(fml="Y ~ X1 | Z1 ~ 1", data=data)
     # instrument specified as covariate
     with pytest.raises(InstrumentsAsCovarsError):
         feols(fml="Y ~ X1 | Z1  ~ X1 + X2", data=data)
@@ -117,13 +120,6 @@ def test_iv_errors():
     # wild bootstrap
     with pytest.raises(NotImplementedError):
         feols(fml="Y ~ 1 | Z1 ~ X1 ", data=data).wildboottest(param="Z1", reps=999)
-    # multi estimation error
-    with pytest.raises(NotImplementedError):
-        feols(fml="Y + Y2 ~ 1 | Z1 ~ X1 ", data=data)
-    with pytest.raises(NotImplementedError):
-        feols(fml="Y  ~ 1 | sw(f2, f3) | Z1 ~ X1 ", data=data)
-    with pytest.raises(NotImplementedError):
-        feols(fml="Y  ~ 1 | csw(f2, f3) | Z1 ~ X1 ", data=data)
     # unsupported HC vcov
     with pytest.raises(VcovTypeNotSupportedError):
         feols(fml="Y  ~ 1 | Z1 ~ X1", vcov="HC2", data=data)
@@ -393,15 +389,13 @@ def test_i_error():
     data = get_data()
     data["f2"] = pd.Categorical(data["f2"])
 
-    with pytest.raises(ValueError):
-        feols("Y ~ i(f1, f2)", data)
-
-    data["f2"] = data["f2"].astype("object")
-    with pytest.raises(ValueError):
-        feols("Y ~ i(f1, f2)", data)
-
     with pytest.raises(FactorEvaluationError):
+        # Incorrectly specified reference (a instead of 'a')
         feols("Y ~ i(f1, X1, ref=a)", data)
+
+    with pytest.raises(ValueError):
+        # Reference level not in data
+        feols("Y ~ i(f1, X1, ref='a')", data)
 
 
 def test_plot_error():
@@ -812,12 +806,6 @@ def test_glm_errors():
     ):
         pf.feglm("Y ~ X1", data=data, family="logit")
 
-    data["Y"] = np.where(data["Y"] > 0, 1, 0)
-    with pytest.raises(
-        NotImplementedError, match=r"Fixed effects are not yet supported for GLMs."
-    ):
-        pf.feglm("Y ~ X1 | f1", data=data, family="probit")
-
 
 def test_prediction_errors_glm():
     "Test that the prediction errors not supported for GLM models."
@@ -1043,7 +1031,7 @@ def test_errors_hac():
 
     # Error 7: duplicate time periods in data
     data["time2"] = data["time"]
-    data["time2"][0] = data["time2"][1]
+    data.loc[0, "time2"] = data.loc[1, "time2"]
     with pytest.raises(
         ValueError,
         match=r"There are duplicate time periods in the data. This is not supported for HAC SEs\.",
@@ -1057,7 +1045,7 @@ def test_errors_hac():
 
     # Error 8: duplicate time periods for the same panel id
     data["time3"] = data["time"]
-    data["time3"][0] = data["time3"][1]
+    data.loc[0, "time3"] = data.loc[1, "time3"]
     for vcov in ["NW", "DK"]:
         with pytest.raises(
             ValueError,
