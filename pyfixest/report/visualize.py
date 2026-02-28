@@ -992,17 +992,17 @@ def ovb_contour_plot(
     estimate = sens.model._beta_hat[idx]
     se = sens.model._se[idx]
 
-    r2dz_x = None
-    r2yz_dx = None
-    bound_label = None
-    bound_value = None
+    bound_r2dz_x: Optional[np.ndarray] = None
+    bound_r2yz_dx: Optional[np.ndarray] = None
+    bound_label: Optional[np.ndarray] = None
+    bound_value: Optional[np.ndarray] = None
 
     if benchmark_covariates is not None:
         bounds = sens.ovb_bounds(
             treatment=treatment, benchmark_covariates=benchmark_covariates, kd=kd, ky=ky
         )
-        r2dz_x = bounds["r2dz_x"].values
-        r2yz_dx = bounds["r2yz_dx"].values
+        bound_r2dz_x = np.asarray(bounds["r2dz_x"].values, dtype=float)
+        bound_r2yz_dx = np.asarray(bounds["r2yz_dx"].values, dtype=float)
         bound_label = bounds["bound_label"].values
         bound_value = (
             bounds["adjusted_estimate"].values
@@ -1011,16 +1011,16 @@ def ovb_contour_plot(
         )
 
     if lim is None:
-        if r2dz_x is None:
+        if bound_r2dz_x is None:
             lim = 0.4
         else:
-            lim = min(np.max(np.append(r2dz_x * 1.2, 0.4)), 1 - 1e-12)
+            lim = min(np.max(np.append(bound_r2dz_x * 1.2, 0.4)), 1 - 1e-12)
 
     if lim_y is None:
-        if r2yz_dx is None:
+        if bound_r2yz_dx is None:
             lim_y = 0.4
         else:
-            lim_y = min(np.max(np.append(r2yz_dx * 1.2, 0.4)), 1 - 1e-12)
+            lim_y = min(np.max(np.append(bound_r2yz_dx * 1.2, 0.4)), 1 - 1e-12)
 
     if lim > 1.0:
         lim = 1 - 1e-12
@@ -1123,14 +1123,29 @@ def ovb_contour_plot(
     ax.set_xlim(-(lim / 15.0), lim)
     ax.set_ylim(-(lim_y / 15.0), lim_y)
 
-    if r2dz_x is not None:
-        for i in range(len(r2dz_x)):
-            ax.scatter(r2dz_x[i], r2yz_dx[i], c="red", marker="D", edgecolors="black")
+    if (
+        bound_r2dz_x is not None
+        and bound_r2yz_dx is not None
+        and bound_label is not None
+        and bound_value is not None
+    ):
+        for i in range(len(bound_r2dz_x)):
+            ax.scatter(
+                bound_r2dz_x[i],
+                bound_r2yz_dx[i],
+                c="red",
+                marker="D",
+                edgecolors="black",
+            )
             if label_text:
-                value = round(bound_value[i], round_dig)
+                value = round(float(bound_value[i]), round_dig)
                 label = f"{bound_label[i]}\n({value})"
                 ax.annotate(
-                    label, (r2dz_x[i] + label_bump_x, r2yz_dx[i] + label_bump_y)
+                    label,
+                    (
+                        bound_r2dz_x[i] + label_bump_x,
+                        bound_r2yz_dx[i] + label_bump_y,
+                    ),
                 )
 
         # Add margin
@@ -1151,7 +1166,7 @@ def ovb_extreme_plot(
     benchmark_covariates: Optional[Union[str, list]] = None,
     kd: Union[float, list] = 1,
     ky: Optional[Union[float, list]] = None,
-    r2yz_dx: list = [1.0, 0.75, 0.5],
+    r2yz_dx: Optional[list] = None,
     reduce: bool = True,
     threshold: float = 0,
     lim: Optional[float] = None,
@@ -1203,9 +1218,8 @@ def ovb_extreme_plot(
     """
     if ky is None:
         ky = kd
-
-    idx = sens.model._coefnames.index(treatment)
-    estimate = sens.model._beta_hat[idx]
+    if r2yz_dx is None:
+        r2yz_dx = [1.0, 0.75, 0.5]
 
     r2dz_x_bounds = None
 
@@ -1245,7 +1259,7 @@ def ovb_extreme_plot(
             ax.plot(
                 r2d_values,
                 y,
-                label=f"{int(round(r2yz * 100))}%",
+                label=f"{round(r2yz * 100)}%",
                 linewidth=1.5,
                 linestyle="solid",
                 color="black",
@@ -1262,7 +1276,7 @@ def ovb_extreme_plot(
             ax.plot(
                 r2d_values,
                 y,
-                label=f"{int(round(r2yz * 100))}%",
+                label=f"{round(r2yz * 100)}%",
                 linewidth=np.abs(2.1 - 0.5 * i),
                 linestyle="--",
                 color="black",

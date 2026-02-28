@@ -1,14 +1,17 @@
-import pytest
-import pandas as pd
+import matplotlib
 import numpy as np
+import pandas as pd
+import pytest
+
 from pyfixest.estimation import feols, fepois
 from pyfixest.utils.utils import get_data
 
+matplotlib.use("Agg")  # Use non-interactive backend for testing
+import matplotlib.pyplot as plt
+
 
 def test_partial_measures():
-    """
-    Test Partial R2 and Partial f2 calculations.
-    """
+    """Test Partial R2 and Partial f2 calculations."""
     data = get_data()
     # Create a model: Y ~ X1 + X2
     fit = feols("Y ~ X1 + X2", data=data)
@@ -31,9 +34,7 @@ def test_partial_measures():
 
 
 def test_robustness_value_logic():
-    """
-    Test Robustness Value (RV) bounds and logic.
-    """
+    """Test Robustness Value (RV) bounds and logic."""
     data = get_data()
     fit = feols("Y ~ X1 + X2", data=data)
     sens = fit.sensitivity_analysis()
@@ -49,9 +50,7 @@ def test_robustness_value_logic():
 
 
 def test_sensitivity_stats():
-    """
-    Test the main dictionary summary function.
-    """
+    """Test the main dictionary summary function."""
     data = get_data()
     fit = feols("Y ~ X1 + X2", data=data)
     sens = fit.sensitivity_analysis()
@@ -72,9 +71,7 @@ def test_sensitivity_stats():
 
 
 def test_ovb_bounds_structure():
-    """
-    Test if ovb_bounds returns the correct DataFrame structure.
-    """
+    """Test if ovb_bounds returns the correct DataFrame structure."""
     data = get_data()
     # Model: Y ~ X1 + X2
     # We will treat X1 as treatment, X2 as the benchmark
@@ -109,9 +106,7 @@ def test_ovb_bounds_structure():
 
 
 def test_ovb_bounds_adjustment_logic():
-    """
-    Test if the adjusted estimates move in the expected direction.
-    """
+    """Test if the adjusted estimates move in the expected direction."""
     data = get_data()
     fit = feols("Y ~ X1 + X2", data=data)
     sens = fit.sensitivity_analysis()
@@ -149,9 +144,7 @@ def test_summary_smoke_test(capsys):
 
 
 def test_error_handling():
-    """
-    Ensure proper errors are raised for invalid inputs.
-    """
+    """Ensure proper errors are raised for invalid inputs."""
     # 1. Setup Data with guaranteed correlation
     # We need X1 and X2 to be correlated so that r2dxj_x > 0.
     # If r2dxj_x is 0, no kd value will ever trigger the "Impossible" error.
@@ -178,9 +171,7 @@ def test_error_handling():
 
 
 def test_sensitivity_analysis_feols_supported():
-    """
-    Test that sensitivity analysis works for Feols (OLS) models.
-    """
+    """Test that sensitivity analysis works for Feols (OLS) models."""
     data = get_data()
     fit = feols("Y ~ X1 + X2", data=data)
 
@@ -190,9 +181,7 @@ def test_sensitivity_analysis_feols_supported():
 
 
 def test_sensitivity_analysis_fepois_not_supported():
-    """
-    Test that sensitivity analysis raises error for Poisson models.
-    """
+    """Test that sensitivity analysis raises error for Poisson models."""
     data = get_data()
     data = data.dropna()  # Remove NaN values first
     data["Y_count"] = np.abs(data["Y"]).astype(int) + 1
@@ -204,9 +193,7 @@ def test_sensitivity_analysis_fepois_not_supported():
 
 
 def test_sensitivity_analysis_feiv_not_supported():
-    """
-    Test that sensitivity analysis raises error for IV models.
-    """
+    """Test that sensitivity analysis raises error for IV models."""
     data = get_data()
     data["Z1"] = data["X1"] + np.random.normal(0, 0.1, len(data))  # Instrument
 
@@ -216,21 +203,9 @@ def test_sensitivity_analysis_feiv_not_supported():
         fit.sensitivity_analysis()
 
 
-# =============================================================================
-# Plotting Tests
-# =============================================================================
-
-import matplotlib
-
-matplotlib.use("Agg")  # Use non-interactive backend for testing
-import matplotlib.pyplot as plt
-
-
 @pytest.mark.extended
 def test_contour_plot_basic():
-    """
-    Smoke test for contour plot with default parameters.
-    """
+    """Smoke test for contour plot with default parameters."""
     data = get_data()
     fit = feols("Y ~ X1 + X2", data=data)
     sens = fit.sensitivity_analysis()
@@ -243,9 +218,7 @@ def test_contour_plot_basic():
 
 @pytest.mark.extended
 def test_contour_plot_with_benchmarks():
-    """
-    Test contour plot with benchmark covariates.
-    """
+    """Test contour plot with benchmark covariates."""
     data = get_data()
     fit = feols("Y ~ X1 + X2", data=data)
     sens = fit.sensitivity_analysis()
@@ -260,9 +233,7 @@ def test_contour_plot_with_benchmarks():
 
 @pytest.mark.extended
 def test_contour_plot_t_value():
-    """
-    Test contour plot with t-value sensitivity.
-    """
+    """Test contour plot with t-value sensitivity."""
     data = get_data()
     fit = feols("Y ~ X1 + X2", data=data)
     sens = fit.sensitivity_analysis()
@@ -275,9 +246,7 @@ def test_contour_plot_t_value():
 
 @pytest.mark.extended
 def test_contour_plot_custom_params():
-    """
-    Test contour plot with various custom parameters.
-    """
+    """Test contour plot with various custom parameters."""
     data = get_data()
     fit = feols("Y ~ X1 + X2", data=data)
     sens = fit.sensitivity_analysis()
@@ -301,9 +270,7 @@ def test_contour_plot_custom_params():
 
 @pytest.mark.extended
 def test_extreme_plot_basic():
-    """
-    Smoke test for extreme plot with default parameters.
-    """
+    """Smoke test for extreme plot with default parameters."""
     data = get_data()
     fit = feols("Y ~ X1 + X2", data=data)
     sens = fit.sensitivity_analysis()
@@ -316,9 +283,7 @@ def test_extreme_plot_basic():
 
 @pytest.mark.extended
 def test_extreme_plot_with_benchmarks():
-    """
-    Test extreme plot with benchmark covariates.
-    """
+    """Test extreme plot with benchmark covariates."""
     data = get_data()
     fit = feols("Y ~ X1 + X2", data=data)
     sens = fit.sensitivity_analysis()
@@ -333,9 +298,7 @@ def test_extreme_plot_with_benchmarks():
 
 @pytest.mark.extended
 def test_extreme_plot_custom_params():
-    """
-    Test extreme plot with custom parameters.
-    """
+    """Test extreme plot with custom parameters."""
     data = get_data()
     fit = feols("Y ~ X1 + X2", data=data)
     sens = fit.sensitivity_analysis()
@@ -354,9 +317,7 @@ def test_extreme_plot_custom_params():
 
 @pytest.mark.extended
 def test_plot_invalid_type():
-    """
-    Test that invalid plot_type raises ValueError.
-    """
+    """Test that invalid plot_type raises ValueError."""
     data = get_data()
     fit = feols("Y ~ X1 + X2", data=data)
     sens = fit.sensitivity_analysis()
@@ -367,9 +328,7 @@ def test_plot_invalid_type():
 
 @pytest.mark.extended
 def test_extreme_plot_t_value_not_implemented():
-    """
-    Test that extreme plot with t-value raises NotImplementedError.
-    """
+    """Test that extreme plot with t-value raises NotImplementedError."""
     data = get_data()
     fit = feols("Y ~ X1 + X2", data=data)
     sens = fit.sensitivity_analysis()
@@ -382,9 +341,7 @@ def test_extreme_plot_t_value_not_implemented():
 
 @pytest.mark.extended
 def test_contour_plot_invalid_sensitivity_of():
-    """
-    Test that invalid sensitivity_of raises ValueError in contour plot.
-    """
+    """Test that invalid sensitivity_of raises ValueError in contour plot."""
     data = get_data()
     fit = feols("Y ~ X1 + X2", data=data)
     sens = fit.sensitivity_analysis()

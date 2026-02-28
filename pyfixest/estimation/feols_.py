@@ -2666,8 +2666,11 @@ class Feols:
         return beta_n_plus_1
 
     def sensitivity_analysis(self) -> SensitivityAnalysis:
+        """Create a sensitivity analysis object for OLS models."""
         if not self._supports_sensitivity_analysis:
-            raise ValueError("Sensitivity Analysis is only supported for OLS methods (Feols).")
+            raise ValueError(
+                "Sensitivity Analysis is only supported for OLS methods (Feols)."
+            )
         return SensitivityAnalysis(self)
 
 
