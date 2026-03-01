@@ -81,6 +81,8 @@ website:
           file: how-to/panel_variance_reduction.qmd
         - text: "On Small Sample Corrections"
           file: how-to/ssc.qmd
+        - text: "Benchmarks"
+          file: how-to/benchmarks.qmd
       - text: "Textbook Replications"
         menu:
         - text: "All Textbook Replications"

@@ -14,6 +14,7 @@ listing:
     - stata-2-pyfixest.qmd
     - panel_variance_reduction.qmd
     - ssc.qmd
+    - benchmarks.qmd
   sort: false
   categories: true
   fields: [title, description, categories]
