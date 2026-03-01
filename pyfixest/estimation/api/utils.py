@@ -181,3 +181,13 @@ def _estimation_input_checks(
                 raise ValueError(
                     f"The variable '{vcov_kwargs['panel_id']}' is not in the data."
                 )
+
+
+class _AllSampleSentinel:
+    """Sentinel representing the full sample in fsplit mode."""
+
+    def __repr__(self) -> str:
+        return "all"
+
+
+_ALL_SAMPLE = _AllSampleSentinel()
