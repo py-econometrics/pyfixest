@@ -96,8 +96,8 @@ lets-plot =">=4.0.0"
 
 [feature.docs.tasks]
 docs-build = "quartodoc build --verbose --config docs/_quarto.yml"
-docs-render = "quarto render docs"
-docs-preview = "quarto preview docs"
+docs-render = { cmd = "quarto render docs", env = { PYTHONWARNINGS = "ignore", KMP_WARNINGS = "0" } }
+docs-preview = { cmd = "quarto preview docs", env = { PYTHONWARNINGS = "ignore", KMP_WARNINGS = "0" } }
 
 [feature.jax.dependencies]
 

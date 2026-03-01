@@ -7,6 +7,8 @@ project:
 execute:
   freeze: auto
   python: "../.pixi/envs/docs/bin/python3"
+  warning: false
+  message: false
 
 format:
   html:

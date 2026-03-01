@@ -35,79 +35,36 @@ twins = pf.get_twin_data(N_pairs=500, seed=42)
 twins.head()
 ```
 
-We want to estimate the **causal returns of education on earnings**. In this notebook, we focus on `PyFixest` estimation functionality and syntax. For details on the question at hand, please take a look at the ... vignette. 
-
 `PyFixest`'s core estimation function is called `feols()`. As a bare minimum, you need to pass a `pandas` or `polars` data frame 
 and a Wilkinson formula.  
 
-In the example below, we regress log wages on years of education and experience. 
+We first estimate a naive OLS regression that is likely biased by endogeneity (unobserved ability). Then we estimate a twin fixed-effects model. In both models, we cluster standard errors at the twin-pair level.
 
 ```{python}
-fit = pf.feols("log_wage ~ educ + experience", data=twins)
-fit.summary()
+fit_naive = pf.feols("log_wage ~ educ + experience", data=twins, vcov={"CRV1": "twin_pair_id"})
+fit_fe = pf.feols("log_wage ~ educ + experience | twin_pair_id", data=twins, vcov={"CRV1": "twin_pair_id"})
 ```
 
-We can also obtain the regression results as a `tidy` data frame: 
+We compare both specifications side by side via `etable()`.
 
 ```{python}
-fit.tidy()
-```
-
-And we can visualise the regression results via a plotting method. 
-
-```{python}
-fit.coefplot(keep=["educ", "experience"])
+pf.etable(
+    [fit_naive, fit_fe],
+    labels={"log_wage": "Log Hourly Wage", "educ": "Years of Education", "experience": "Experience"},
+    felabels={"twin_pair_id": "Twin Pair FE"},
+    caption="Returns to Education: Naive OLS vs Twin Fixed Effects",
+)
 ```
 
 ## Other relevant Features
 
-For the examples below, we switch to the general-purpose synthetic data set:
+After the initial regression, we recommend jumping directly to focused tutorials:
 
-```{python}
-data = pf.get_data()
-```
-
-**Multiple estimation** - via specialised syntax, it is possible to fit multiple models at once. 
-For details, see [Multiple Estimation](tutorials/multiple-estimation.qmd).
-
-```{python}
-multi_fit = pf.feols("Y ~ X1 | csw0(f1, f2)", data=data)
-multi_fit.etable()
-```
-
-**Instrumental variables** - `PyFixest` wouldn't be a full regression package with support for instrumental variables estimation. 
-For details, take a look at the [Instrumental Variables](tutorials/instrumental-variables.qmd) vignette. 
-
-```{python}
-pf.feols("Y ~ 1 | f1 | X1 ~ Z1", data=data).summary()
-```
-
-**Poisson regression** for count data:
-
-You can also fit Poisson regressions with fixed effects via the `fepois` function, and GLMs with fixed effects via `feglm`. 
-
-```{python}
-pois_data = pf.get_data(model="Fepois")
-pf.fepois("Y ~ X1 | f1 + f2", data=pois_data).summary()
-```
-
-For details, see [here](tutorials/poisson-glm.qmd). 
-
-**Cluster-robust standard errors** --- adjust inference on-the-fly:
-
-`PyFixest` supports a wide range of standard errors - iid, heteroskedastic, cluster robust, as well as resampling based methods. 
-
-```{python}
-fit.vcov({"CRV1": "twin_pair_id"}).summary()
-```
-
-**Quantile regression**:
-
-Last, `PyFixest` offers support for fast [Quantile Regression](tutorials/quantile-regression.qmd): 
-
-```{python}
-pf.quantreg("Y ~ X1 + X2", data=data, quantile=0.5).summary()
-```
+- [Multiple Estimation](tutorials/multiple-estimation.qmd): `sw`, `csw`, split samples, multi-model workflows.
+- [Standard Errors & Inference](tutorials/standard-errors.qmd): heteroskedastic, clustered, and resampling-based inference.
+- [Instrumental Variables](tutorials/instrumental-variables.qmd): IV estimation and diagnostics.
+- [Poisson & GLMs](tutorials/poisson-glm.qmd): count-data models and generalized linear models.
+- [Quantile Regression](tutorials/quantile-regression.qmd): distributional effects beyond the mean.
 
 ## Where to Go Next
 
