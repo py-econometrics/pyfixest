@@ -1,18 +1,17 @@
 ---
 title: "Tutorials"
-subtitle: "Hands-on guides to PyFixest, grounded in real economic applications."
+subtitle: "Guides on PyFixest - mostly using examples from economics and tech (as this is what we know well). Please suggest other interesting applications of fixed effects / PyFixest from other areas of applied statistics!"
 listing:
   type: grid
   contents:
-    - formula-syntax.qmd
     - ols-fixed-effects.qmd
+    - formula-syntax.qmd
     - standard-errors.qmd
     - instrumental-variables.qmd
     - poisson-glm.qmd
-    - multiple-estimation.qmd
-    - regression-tables.qmd
     - difference-in-differences.qmd
     - quantile-regression.qmd
+    - regression-tables.qmd
   sort: false
   categories: true
   fields: [title, description, categories]
@@ -22,10 +21,9 @@ page-layout: full
 toc: false
 ---
 
-Each tutorial is self-contained — explicit imports, data loading, no hidden state.
-Start with **OLS with Fixed Effects** if you're new, or jump to any topic that fits your problem.
+All tutorials are self-contained. If you're new to `PyFixest` and fixed effects estimation, we recommend that you start with **OLS with Fixed Effects**, else just jump to any topic that fits your problem.
 
 ::: {.callout-tip}
 ## Suggested reading order
-Formula Syntax &rarr; OLS with Fixed Effects &rarr; Standard Errors &rarr; Instrumental Variables &rarr; Poisson & GLMs &rarr; Multiple Estimation &rarr; Regression Tables
+OLS with Fixed Effects &rarr; Formula Syntax &rarr; Standard Errors &rarr; Instrumental Variables &rarr; Poisson & GLMs &rarr; Multiple Estimation &rarr; Regression Tables
 :::

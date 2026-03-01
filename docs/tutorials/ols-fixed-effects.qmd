@@ -1,6 +1,6 @@
 ---
 title: "OLS with Fixed Effects"
-description: "Twin studies and worker-firm panels: controlling for unobserved heterogeneity with fixed effects."
+description: "Twin studies and 'AKM' regressions in worker-firm panels: two cases studies in controlling for unobserved heterogeneity with fixed effects."
 categories: [Core Estimation]
 format:
   html:
@@ -86,7 +86,9 @@ pf.coefplot([fit_naive, fit_fe], keep="educ")
 
 ## Application 2: AKM Worker-Firm Regressions
 
-Wages of workers depend on both *worker characteristics*  and *workplace characteristics*. Higher-skill worker might earn more, but there might also be workplace-premia. A two-way fixed effects model as formulated in Abowd, Kramarz & Margolis (AKM, 1999) separates these effects.
+Wages of workers depend on both *worker characteristics*  and *workplace characteristics*. Higher-skill worker might earn more, but there might also be workplace-premia. A two-way fixed effects model as formulated in Abowd, Kramarz & Margolis (AKM, 1999) separates these unobserved effects.
+
+For some background reading on AKM models and their application, take a look at this slide deck: [AKM Lecture Slides](https://eml.berkeley.edu/~cle/e250a_f14/lecture11.pdf). (And yes, charts this pretty are only ok if you won a Nobel Prize.)
 
 ```{python}
 panel = pf.get_worker_panel(N_workers=500, N_firms=50, N_years=11, seed=42)
@@ -114,6 +116,8 @@ fit_full = pf.feols("log_wage ~ experience + tenure + female | worker_id + firm_
 fit_full.summary()
 ```
 
+Here is an interesting historical fact: the first paper (to our knowledge) that fitted a three-way high-dimensional fixed effects model in an unbalanced panel was published in 2013, only four years before the transformer was invented!. Before that, economists simply did not know how to fit 3-way fixed effects regression models on unbalanced panels efficiently. See Guimarães, Portugal, and Torres, ["The Sources of Wage Variation: A Three-Way High-Dimensional Fixed Effects Regression Model"](https://ideas.repec.org/p/ptu/wpaper/w201309.html), who more or less fit the model above on Portuguese data. 
+
 ### Compare All Specifications
 
 ```{python}
@@ -126,7 +130,6 @@ pf.etable(
 ```
 
 ::: {.callout-tip}
-## Next Steps
-- [Standard Errors & Inference](standard-errors.qmd) --- learn about robust, cluster-robust, and bootstrap inference.
-- [Regression Tables](regression-tables.qmd) --- customize publication-ready output tables.
+## Next Step: Difference-in-Differences
+Another very relevant class of fixed effects models are [Difference-in-Differences vignette](difference-in-differences.qmd) designs and estimators.
 :::
