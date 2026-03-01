@@ -24,22 +24,26 @@ pip install -U pyfixest
 
 ## A First Regression
 
-In a first step, we load an example data set: 
+We want to estimate the **causal returns of education on earnings** via a twin study. In this notebook, we focus on `PyFixest` estimation functionality and syntax. For details on the question at hand, please take a look at the [OLS with Fixed Effects](tutorials/ols-fixed-effects.qmd) vignette.
+
+In a first step, we load a twin-study style data set: 
 
 ```{python}
 import pyfixest as pf
 
-data = pf.get_data()
-data.head()
+twins = pf.get_twin_data(N_pairs=500, seed=42)
+twins.head()
 ```
+
+We want to estimate the **causal returns of education on earnings**. In this notebook, we focus on `PyFixest` estimation functionality and syntax. For details on the question at hand, please take a look at the ... vignette. 
 
 `PyFixest`'s core estimation function is called `feols()`. As a bare minimum, you need to pass a `pandas` or `polars` data frame 
 and a Wilkinson formula.  
 
-In the example below, `Y` denotes the dependent variable, `X1` a covariate, and `f1` and `f2` are fixed effects. 
+In the example below, we regress log wages on years of education and experience. 
 
 ```{python}
-fit = pf.feols("Y ~ X1 | f1 + f2", data=data)
+fit = pf.feols("log_wage ~ educ + experience", data=twins)
 fit.summary()
 ```
 
@@ -52,10 +56,16 @@ fit.tidy()
 And we can visualise the regression results via a plotting method. 
 
 ```{python}
-fit.coefplot()
+fit.coefplot(keep=["educ", "experience"])
 ```
 
 ## Other relevant Features
+
+For the examples below, we switch to the general-purpose synthetic data set:
+
+```{python}
+data = pf.get_data()
+```
 
 **Multiple estimation** - via specialised syntax, it is possible to fit multiple models at once. 
 For details, see [Multiple Estimation](tutorials/multiple-estimation.qmd).
@@ -88,7 +98,7 @@ For details, see [here](tutorials/poisson-glm.qmd).
 `PyFixest` supports a wide range of standard errors - iid, heteroskedastic, cluster robust, as well as resampling based methods. 
 
 ```{python}
-fit.vcov({"CRV1": "group_id"}).summary()
+fit.vcov({"CRV1": "twin_pair_id"}).summary()
 ```
 
 **Quantile regression**:
