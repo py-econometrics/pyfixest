@@ -203,7 +203,25 @@ ate_aipw_logit
 
 This is the basic doubly debiased pattern: estimate treatment propensities with `feglm` (logit/probit), combine with outcome models, and form an orthogonal score.
 
-## 6. Fixed Effects Support (Summary)
+## 6. GLMs with Marginal Effects (Placeholder)
+
+::: {.callout-note}
+## Coming Soon
+This section will add a full workflow for marginal effects after `feglm()` estimation, including:
+
+- average marginal effects (AMEs),
+- subgroup/conditional marginal effects,
+- inference with robust and clustered standard errors,
+- comparison of coefficient-scale vs probability-scale interpretation.
+:::
+
+Planned examples:
+
+- Binary outcome with `family="logit"` and `family="probit"`.
+- Post-estimation marginal effects tables suitable for reporting.
+- Practical guidance on when marginal effects change substantive conclusions relative to raw GLM coefficients.
+
+## 7. Fixed Effects Support (Summary)
 
 Both Poisson and GLM estimators in `pyfixest` support fixed effects using the same formula syntax:
 

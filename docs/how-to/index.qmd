@@ -7,7 +7,7 @@ listing:
   type: grid
   contents:
     - marginaleffects.qmd
-    - multiple_testing.qmd
+    - surrogate-indices-experimental-selection.qmd
     - regression_decomposition.qmd
     - pyfixest_gpu.qmd
     - compare-fixest-pyfixest.qmd

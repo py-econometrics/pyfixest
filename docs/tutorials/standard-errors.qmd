@@ -192,8 +192,6 @@ Suggested workflow:
 ## 10. Multiple Testing
 
 When testing many hypotheses, single-test p-values are not enough.
-For family-wise error control and power-aware corrections, see:
-
-- [How-To: Multiple Hypothesis Testing Corrections](../how-to/multiple_testing.qmd)
-
-This dedicated vignette covers `bonferroni()`, `rwolf()`, and `wyoung()`.
+Multiple-testing corrections and workflow guidance are covered in a dedicated
+resource and should be applied when moving from a single estimand to a family
+of hypotheses.

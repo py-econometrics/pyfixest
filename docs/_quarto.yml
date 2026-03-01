@@ -56,8 +56,6 @@ website:
           file: tutorials/instrumental-variables.qmd
         - text: "Poisson & GLMs"
           file: tutorials/poisson-glm.qmd
-        - text: "Surrogates & Selection"
-          file: tutorials/surrogate-indices-experimental-selection.qmd
         - text: "Multiple Estimation"
           file: tutorials/multiple-estimation.qmd
         - text: "Regression Tables"
@@ -73,8 +71,8 @@ website:
         - text: "---"
         - text: "Marginal Effects & Hypothesis Testing"
           file: how-to/marginaleffects.qmd
-        - text: "Multiple Testing Corrections"
-          file: how-to/multiple_testing.qmd
+        - text: "Surrogates & Selection"
+          file: how-to/surrogate-indices-experimental-selection.qmd
         - text: "Regression Decomposition"
           file: how-to/regression_decomposition.qmd
         - text: "PyFixest on the GPU"
@@ -118,8 +116,8 @@ website:
           file: how-to/marginaleffects.qmd
         - text: "Difference-in-Differences Estimation"
           file: tutorials/difference-in-differences.qmd
-        - file: how-to/multiple_testing.qmd
-          text: "Multiple Testing Corrections"
+        - file: how-to/surrogate-indices-experimental-selection.qmd
+          text: "Surrogates & Selection"
         - file: how-to/regression_decomposition.qmd
           text: "Regression Decomposition"
         - file: how-to/ssc.qmd
