@@ -48,6 +48,8 @@ website:
           file: tutorials/instrumental-variables.qmd
         - text: "Poisson & GLMs"
           file: tutorials/poisson-glm.qmd
+        - text: "Surrogates & Selection"
+          file: tutorials/surrogate-indices-experimental-selection.qmd
         - text: "Multiple Estimation"
           file: tutorials/multiple-estimation.qmd
         - text: "Regression Tables"

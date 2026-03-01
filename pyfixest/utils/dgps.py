@@ -425,6 +425,121 @@ def get_worker_panel(N_workers=500, N_firms=50, N_years=11, seed=42):
     return pd.DataFrame(records)
 
 
+def get_motherhood_event_study_data(
+    n_per_country=280,
+    start_year=2000,
+    end_year=2020,
+    seed=2026,
+):
+    """Generate a fertility-timing panel for motherhood-penalty event studies.
+
+    The DGP encodes:
+    - stronger post-birth penalties in DACH than in Scandinavia
+    - endogenous fertility timing: slower career trajectories lead to earlier births
+    - nontrivial share of never-treated units
+
+    Parameters
+    ----------
+    n_per_country : int
+        Number of units per country.
+    start_year : int
+        First year in the panel.
+    end_year : int
+        Last year in the panel (inclusive).
+    seed : int
+        Random seed for reproducibility.
+
+    Returns
+    -------
+    pd.DataFrame
+        Columns: unit, country, region, year, g, treat, rel_year, log_earnings
+    """
+    rng = np.random.default_rng(seed)
+
+    years = np.arange(start_year, end_year + 1)
+    countries_dach = ["DE", "AT", "CH"]
+    countries_scand = ["DK", "SE", "NO"]
+    all_countries = countries_dach + countries_scand
+
+    country_fe = {
+        "DE": 0.00,
+        "AT": -0.04,
+        "CH": 0.03,
+        "DK": 0.02,
+        "SE": 0.01,
+        "NO": 0.04,
+    }
+
+    records = []
+    unit = 0
+
+    for country in all_countries:
+        region = "DACH" if country in countries_dach else "Scandinavia"
+
+        for _ in range(n_per_country):
+            unit += 1
+
+            ability = rng.normal(0, 0.25)
+            career_slowdown = rng.normal(0, 1)
+            trend_i = 0.020 - 0.010 * career_slowdown
+
+            # Most women eventually have a first birth, but never-treated units remain.
+            has_birth = rng.random() < 0.78
+            if has_birth:
+                base_g = rng.integers(2006, 2015)
+                g = int(np.clip(np.round(base_g - 0.9 * career_slowdown), 2003, 2017))
+            else:
+                g = 0
+
+            for year in years:
+                rel_year = year - g if g > 0 else -999
+                treat = int(g > 0 and year >= g)
+
+                # Event-time dip before birth: fertility occurs as career growth slows.
+                pretrend = 0.0
+                if g > 0 and -4 <= rel_year <= -1:
+                    pretrend = -0.025 * (rel_year + 4)
+
+                # Region-specific motherhood penalties.
+                post = 0.0
+                if g > 0 and rel_year >= 0:
+                    if region == "DACH":
+                        post = -0.22 - 0.06 * min(rel_year, 5)
+                    else:
+                        post = -0.10 - 0.03 * min(rel_year, 5)
+
+                year_fe = 0.010 * (year - years.min()) + 0.005 * np.sin(
+                    (year - years.min()) / 2
+                )
+                eps = rng.normal(0, 0.11)
+
+                log_earnings = (
+                    10
+                    + country_fe[country]
+                    + ability
+                    + trend_i * (year - years.min())
+                    + year_fe
+                    + pretrend
+                    + post
+                    + eps
+                )
+
+                records.append(
+                    {
+                        "unit": unit,
+                        "country": country,
+                        "region": region,
+                        "year": year,
+                        "g": g,
+                        "treat": treat,
+                        "rel_year": rel_year,
+                        "log_earnings": log_earnings,
+                    }
+                )
+
+    return pd.DataFrame(records)
+
+
 def gelbach_data(nobs):
     "Create data for testing of Gelbach Decomposition."
     rng = np.random.default_rng(49392)
