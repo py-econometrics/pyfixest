@@ -60,7 +60,7 @@ pf.etable(
 
 After the initial regression, we recommend jumping directly to focused tutorials:
 
-- [Multiple Estimation](tutorials/multiple-estimation.qmd): `sw`, `csw`, split samples, multi-model workflows.
+- [Formula Syntax](tutorials/formula-syntax.qmd): one-, two-, and three-part formulas, `i()`, and multiple-estimation operators.
 - [Standard Errors & Inference](tutorials/standard-errors.qmd): heteroskedastic, clustered, and resampling-based inference.
 - [Instrumental Variables](tutorials/instrumental-variables.qmd): IV estimation and diagnostics.
 - [Poisson & GLMs](tutorials/poisson-glm.qmd): count-data models and generalized linear models.
@@ -70,6 +70,7 @@ After the initial regression, we recommend jumping directly to focused tutorials
 
 | Tutorial | Description |
 |---|---|
+| [Formula Syntax](tutorials/formula-syntax.qmd) | Full formula language: FE, IV, `C()`, `i()`, and multiple-estimation syntax |
 | [OLS with Fixed Effects](tutorials/ols-fixed-effects.qmd) | Twin studies, worker-firm panels, demeaning intuition |
 | [Standard Errors & Inference](tutorials/standard-errors.qmd) | HC, cluster-robust, wild bootstrap, randomization inference |
 | [Instrumental Variables](tutorials/instrumental-variables.qmd) | IV estimation, diagnostics, first-stage F-statistics |

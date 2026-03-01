@@ -4,6 +4,7 @@ subtitle: "Hands-on guides to PyFixest, grounded in real economic applications."
 listing:
   type: grid
   contents:
+    - formula-syntax.qmd
     - ols-fixed-effects.qmd
     - standard-errors.qmd
     - instrumental-variables.qmd
@@ -27,5 +28,5 @@ Start with **OLS with Fixed Effects** if you're new, or jump to any topic that f
 
 ::: {.callout-tip}
 ## Suggested reading order
-OLS with Fixed Effects &rarr; Standard Errors &rarr; Instrumental Variables &rarr; Poisson & GLMs &rarr; Multiple Estimation &rarr; Regression Tables
+Formula Syntax &rarr; OLS with Fixed Effects &rarr; Standard Errors &rarr; Instrumental Variables &rarr; Poisson & GLMs &rarr; Multiple Estimation &rarr; Regression Tables
 :::

@@ -40,6 +40,8 @@ website:
         - text: "All Tutorials"
           file: tutorials/index.qmd
         - text: "---"
+        - text: "Formula Syntax"
+          file: tutorials/formula-syntax.qmd
         - text: "OLS with Fixed Effects"
           file: tutorials/ols-fixed-effects.qmd
         - text: "Standard Errors"
