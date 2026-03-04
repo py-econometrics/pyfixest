@@ -1,6 +1,6 @@
 ---
 title: "Formula Syntax"
-description: "Complete guide to PyFixest formulas: regular syntax, fixed effects, formulaic features, i() interactions, and multiple-estimation operators."
+description: "In this tutorial, we showcase all of PyFixest formulas syntax; including syntax for fitting models with fixed effects, i() interactions, and multiple-estimation operators."
 categories: [Core Estimation]
 format:
   html:
@@ -9,11 +9,6 @@ toc: true
 toc-title: "On this page"
 toc-location: left
 ---
-
-::: {.callout-note}
-## Prerequisites
-You should have read the [Getting Started](../getting-started.qmd) page and have `pyfixest` installed.
-:::
 
 ## Setup
 
@@ -27,122 +22,106 @@ data = pf.get_data()
 data.head()
 ```
 
-## 1. Regular Formula Syntax
+`PyFixest` specifies different regression models by Wilkinson Formulas via the formulaic package. This syntax should be 
+familiar to you if you have used R's `lm()` or `statsmodels` formula API. 
 
-PyFixest formulas follow fixest-style syntax, with up to three parts separated by `|`.
+## Basic Syntax
 
-### One-part: Outcome and Regressors
-
-```python
-fit_ols = pf.feols("Y ~ X1 + X2", data=data)
-fit_ols.summary()
-```
-
-### Two-part: Add Fixed Effects
+In the simplest case, we regress covariates `X1` and `X2` on `Y`. 
 
 ```python
-fit_fe = pf.feols("Y ~ X1 + X2 | f1 + f2", data=data)
-fit_fe.summary()
+fit1 = pf.feols("Y ~ X1 + X2", data=data)
+fit1.summary()
 ```
 
-### Two-part IV (no fixed effects)
+All transformations that are supported via `formulaic` are also supported via `PyFixest`. To name just a few important ones, 
+you can create categorical variables via the `C()` operator: 
 
 ```python
-fit_iv_2part = pf.feols("Y ~ X2 | X1 ~ Z1", data=data)
-fit_iv_2part.summary()
+fit2 = pf.feols("Y ~ X1 + X2 + C(f1)", data=data)
 ```
 
-### Three-part IV (with fixed effects)
+You can interact variables via the `*` and `:` operators: 
 
 ```python
-fit_iv_3part = pf.feols("Y ~ X2 | f1 + f2 | X1 ~ Z1", data=data)
-fit_iv_3part.summary()
+fit3 = pf.feols("Y ~ X1:X2", data=data)
+fit4 = pf.feols("Y ~ X1*X2", data=data)
+pf.etable([fit3, fit4])
 ```
 
-## 2. Standard formulaic Features
-
-PyFixest supports standard formulaic operators and transformations.
-
-### Categorical expansion via `C()`
+To create logarithms of a function, just use 
 
 ```python
-fit_categorical = pf.feols("Y ~ X1 + C(f1)", data=data)
-fit_categorical.summary()
+fit5 = pf.feols("Y ~ log(X1)", data=data)
 ```
-
-### Interaction operators: `*` and `:`
-
-`X1 * X2` expands to `X1 + X2 + X1:X2`.
+or use any `numpy` transforms, e.g. 
 
 ```python
-fit_inter_star = pf.feols("Y ~ X1 * X2", data=data)
-fit_inter_star.summary()
+fit5 = pf.feols("Y ~ X1  + np.power(X1,2)", data=data)
 ```
 
-`X1:X2` includes only the interaction term.
+Note - for the logarithm, we suggest to not rely on `np.log` but use the internal `log` operator. 
+
+## Fixed Effects Syntax
+
+We can add fixed effects behind the `|` operator: here we add two fixed effects `f1` and `f2`. 
 
 ```python
-fit_inter_colon = pf.feols("Y ~ X1:X2", data=data)
-fit_inter_colon.summary()
+fit6 = pf.feols("Y ~ X1 + X2 | f1 + f2", data=data)
 ```
+We can interact two fixed effects via the `
 
-### Inline transforms via `I()`
+## The `i()` operator for interacting fixed effects
+
+For interacting fixed effects, we include a specialised operator `i()` 
+
+If you simply wrap a variable into `i()`, it will be treated just as the `C()` operator (see above). 
 
 ```python
-fit_transform = pf.feols("Y ~ X1 + I(X1**2) + np.log(X2 + 2)", data=data)
-fit_transform.summary()
+fit_i = pf.feols("Y ~ i(f1)", data=data)
+fit_c = pf.feols("Y ~ C(f1)", data=data)
+pf.etable([fit_i, fit_c])
 ```
 
-## 3. PyFixest-Specific `i()` Syntax
-
-The `i()` operator is the fixest-style way to build indicator expansions and interactions.
-
-### Categorical indicators with reference level
+But overall, `i()` is more powerful than `C()`. Most importantly, you can easily set control the reference 
+level of the categorical variable: 
 
 ```python
-fit_i_basic = pf.feols("Y ~ i(f1, ref=1)", data=data)
-fit_i_basic.summary()
+# set 1 as reference level
+fit_i1 = pf.feols("Y ~ i(f1, ref = 1)", data=data)
 ```
 
-### Factor-by-numeric interactions (varying slopes)
+You can also easily interact variables: 
 
 ```python
-fit_i_num = pf.feols("Y ~ i(f1, X1, ref=1)", data=data)
-fit_i_num.summary()
+# set 1 as reference level
+fit_i2 = pf.feols("Y ~ i(f1, f2)", data=data)
 ```
 
-### Factor-by-factor interactions with `ref2`
+and set reference levels for both via the `ref` and `ref2` levels. 
 
 ```python
-data_i = data.copy()
-data_i["g2"] = np.where(data_i["f2"] < 15, "A", "B")
-
-fit_i_cat = pf.feols("Y ~ i(f1, g2, ref=1, ref2='A')", data=data_i)
-fit_i_cat.summary()
+# set 1 as reference level
+fit_i3 = pf.feols("Y ~ i(f1, f2, ref = 1, ref2 = 2)", data=data)
 ```
+This is in particular useful for difference-in-differences models. 
 
-### Binning categories with `bin` / `bin2`
+Last, you can bin levels of a variable via the `bin` argument. This groups multiple levels into a single category.
 
 ```python
-data_i["size"] = np.where(
-    data_i["f1"] < 10,
-    "small",
-    np.where(data_i["f1"] < 20, "medium", "large"),
-)
-
-fit_i_bin = pf.feols(
-    "Y ~ i(size, bin={'not_large': ['small', 'medium']}, ref='not_large')",
-    data=data_i,
-)
-fit_i_bin.summary()
+fit_bin = pf.feols("Y ~ i(f1, bin={'low': [0, 1, 2, 3, 4], 'high': [25, 26, 27, 28, 29]}, ref='low')", data=data)
+fit_bin.summary()
 ```
 
-## 4. Multiple Estimation Syntax
+## Multiple Estimation Syntax
 
-Multiple-estimation operators expand one formula into many models.
-This is usually faster than writing many independent calls.
+Last, `PyFixest` provides syntactic sugar to fit multiple estimations in one go. This is not only typing efficient but allows for performance optimizations via caching - if you fit many regression models on a fixed set of fixed effects and many overlapping covariates or dependent variables, and performance is poor, we highly recommend you to try out multiple estimations. 
+
+For multiple estimations, we provide 5 custom operators: `sw`, `csw`, `sw0`, `csw0` and `mvsw`. In addition, it is possible to specify multiple dependent variables.
 
 ### Multiple dependent variables
+
+Multiple depvars are expanded to multiple estimations: `"Y1 + Y2 ~ X1"` behaves like `"sw(Y1, Y2) ~ X1"`.
 
 ```python
 fit_multi_dep = pf.feols("Y + Y2 ~ X1 + X2", data=data)
@@ -151,12 +130,16 @@ pf.etable(fit_multi_dep)
 
 ### `sw()`: stepwise alternatives
 
+`y ~ x1 + sw(x2, x3)` expands to `y ~ x1 + x2` and `y ~ x1 + x3`.
+
 ```python
 fit_sw = pf.feols("Y ~ X1 + sw(X2, X3)", data=data)
 pf.etable(fit_sw)
 ```
 
-### `sw0()`: stepwise + zero step
+### `sw0()`: stepwise with zero step
+
+`y ~ x1 + sw0(x2, x3)` expands to `y ~ x1`, `y ~ x1 + x2`, and `y ~ x1 + x3`.
 
 ```python
 fit_sw0 = pf.feols("Y ~ X1 + sw0(X2, X3)", data=data)
@@ -165,12 +148,16 @@ pf.etable(fit_sw0)
 
 ### `csw()`: cumulative stepwise
 
+`y ~ x1 + csw(x2, x3)` expands to `y ~ x1 + x2` and `y ~ x1 + x2 + x3`.
+
 ```python
 fit_csw = pf.feols("Y ~ X1 + csw(X2, X3)", data=data)
 pf.etable(fit_csw)
 ```
 
-### `csw0()`: cumulative stepwise + zero step
+### `csw0()`: cumulative stepwise with zero step
+
+`y ~ x1 + csw0(x2, x3)` expands to `y ~ x1`, `y ~ x1 + x2`, and `y ~ x1 + x2 + x3`.
 
 ```python
 fit_csw0 = pf.feols("Y ~ X1 + csw0(X2, X3)", data=data)
@@ -179,36 +166,28 @@ pf.etable(fit_csw0)
 
 ### `mvsw()`: multiverse stepwise
 
+`y ~ mvsw(x1, x2, x3)` expands to all non-empty combinations plus the zero step: `y ~ 1`, `y ~ x1`, `y ~ x2`, `y ~ x3`, `y ~ x1 + x2`, `y ~ x1 + x3`, `y ~ x2 + x3`, `y ~ x1 + x2 + x3`.
+
 ```python
 fit_mvsw = pf.feols("Y ~ mvsw(X1, X2, X3)", data=data)
 pf.etable(fit_mvsw)
 ```
 
-### Combine operators
+### Combining operators
+
+Multiple estimation operators can be combined. For example, `y ~ csw(x1, x2) + sw(z1, z2)` expands to `y ~ x1 + z1`, `y ~ x1 + z2`, `y ~ x1 + x2 + z1`, `y ~ x1 + x2 + z2`.
 
 ```python
 fit_combo = pf.feols("Y ~ csw(X1, X2) + sw(X3, X1:X3)", data=data)
 pf.etable(fit_combo)
 ```
 
-### Operators in fixed-effects part
+## Regressions on Multiple Samples
 
-```python
-fit_fe_multi = pf.feols("Y ~ X1 + X2 | csw0(f1, f2)", data=data)
-pf.etable(fit_fe_multi)
-```
+Via the `split` and `fsplit` argument, you can easily separate identical models on different samples. 
 
-### Operators in IV formulas
-
-```python
-fit_iv_multi = pf.feols("Y ~ sw(X2, X3) | f1 + f2 | X1 ~ Z1", data=data)
-pf.etable(fit_iv_multi)
-```
-
-## 5. Split and fsplit Workflows
-
-`split` estimates separate models by subgroup.
-`fsplit` does the same and also keeps the full-sample fit.
+- `split` estimates separate models by subgroup.
+- `fsplit` does the same but also keeps the full-sample fit.
 
 ```python
 fit_split = pf.feols("Y ~ X1 + X2 | f1", data=data, split="f2")
@@ -219,13 +198,6 @@ pf.etable(fit_split)
 fit_fsplit = pf.feols("Y ~ X1 + X2 | f1", data=data, fsplit="f2")
 pf.etable(fit_fsplit)
 ```
-
-## 6. Practical Notes
-
-- Use two-part formulas for fixed effects and three-part formulas for IV + fixed effects.
-- Prefer `i()` for event-study-style indicators and fixest-consistent interaction naming.
-- Use `mvsw()` carefully: model count grows exponentially with the number of variables.
-- Keep models interpretable; formula power is useful, but easy to overuse.
 
 ## Where to Go Next
 
