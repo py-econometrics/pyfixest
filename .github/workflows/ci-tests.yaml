@@ -110,6 +110,7 @@ jobs:
           flags: final
 
   build-docs:
+    if: false  # temporarily disabled during docs reorganization
     name: "Build Docs"
     runs-on: ubuntu-latest
     steps:
@@ -153,6 +154,7 @@ jobs:
           path: docs/_site
 
   publish-docs:
+    if: false  # temporarily disabled during docs reorganization
     name: "Publish Docs"
     runs-on: ubuntu-latest
     permissions:
