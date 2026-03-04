@@ -30,6 +30,11 @@ jax = [
 plots = [
     "lets-plot>=4.0.0",
 ]
+benchmarks = [
+    "linearmodels",
+    "statsmodels",
+    "pyarrow"
+]
 
 [build-system]
 requires = ["maturin>=1.8,<2.0"]
