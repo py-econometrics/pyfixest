@@ -364,9 +364,6 @@ class Feols(ResultAccessorMixin):
         self._pvalue = np.array([])
         self._conf_int = np.array([])
 
-        # set in get_Ftest()
-        self._F_stat = None
-
         # set in fixef()
         self._fixef_dict: dict[str, dict[str, float]] = {}
         self._alpha = None
@@ -1214,7 +1211,7 @@ class Feols(ResultAccessorMixin):
             self._dfd = self._N - self._k - k_fe
 
         bread = R @ self._beta_hat - q
-        meat = np.linalg.inv(R @ self._vcov @ R.T)
+        meat = np.linalg.pinv(R @ self._vcov @ R.T)
         W = bread.T @ meat @ bread
         self._wald_statistic = W
 
