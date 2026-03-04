@@ -26,7 +26,7 @@ data_df.head()
 
 We have a classical panel data set with units (nr) and time (year).
 
-We are interested in estimating the effect of marriage status on log wage, using a set of controls (union, hours) and individual (nr) and year fixed effects. 
+We are interested in estimating the effect of marriage status on log wage, using a set of controls (union, hours) and individual (nr) and year fixed effects.
 
 ```{python}
 panel_fit = pf.feols(
@@ -42,4 +42,3 @@ pf.etable(panel_fit)
 ```
 
 We obtain the same results as in the book!
-

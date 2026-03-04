@@ -85,7 +85,7 @@ Expose `Feols`, `Fepois`, `Feglm`, `Feiv` as public classes with a clean API.
 
 **Candidate backlog items:**
 
-- Implement varying slopes syntax parsing and model matrix encoding. 
+- Implement varying slopes syntax parsing and model matrix encoding.
 - Full `narwhals` support: accept Polars DataFrames end-to-end without internal pandas conversion, return native Polars when input is Polars.
 - Move the `^` operator for interacting fixed effects to `formulaic` parsing, if possible.ßßß
 - Decide on adoption of formulaic `i` operator (currently in dev).
@@ -128,7 +128,6 @@ Independent issues good for shorter contributions. Pick any:
 
 | Ticket/Idea | Description | Type | Owner |
 |-------------|-------------|------|-------|
-
 | [#1025](https://github.com/py-econometrics/pyfixest/issues/1025) | Automatic F-statistic in `feols()` | `good-first-issue` | `TBD` |
 | [#859](https://github.com/py-econometrics/pyfixest/issues/859) | Code reorganization in large scripts | `good-first-issue` | `TBD` |
 | [#1119](https://github.com/py-econometrics/pyfixest/issues/1119) | Benchmarking vs. linearmodels & statsmodels (see [here](https://github.com/s3alfisc/fixest_benchmarks))| `good-first-issue` | `TBD` |
@@ -136,15 +135,12 @@ Independent issues good for shorter contributions. Pick any:
 | [#1177](https://github.com/py-econometrics/pyfixest/issues/1177) | Bug: `fixef()` crashes on IV models | `good-first-issue` | `TBD` |
 | [#559](https://github.com/py-econometrics/pyfixest/issues/559) | Show first-stage F-stat / MOP effective F in IV `summary()`/`etable()` | `good-first-issue` | `TBD` |
 | — | GLM residual types: `"deviance"` / `"pearson"` / `"working"` in `resid()` | `good-first-issue` | `TBD` |
-
 | [#1104](https://github.com/py-econometrics/pyfixest/issues/1104) | Migrate type checking from mypy to ty | `swe` | `TBD` |
 | []() | pre-commit to prek | `swe` | `TBD` |
 | [#1114](https://github.com/py-econometrics/pyfixest/issues/1114) | Snapshot tests for visualization functions | `swe` | `TBD` |
 | [#1131](https://github.com/py-econometrics/pyfixest/issues/1131) | Python 3.14 / scipy >1.16 compatibility | `swe` | `TBD` |
 | [#549](https://github.com/py-econometrics/pyfixest/issues/549) | Publish conda package | Issue | `TBD` |
 | []() | Memory Manage Scan | `swe` | `TBD` |
-
-
 | [#1203](https://github.com/py-econometrics/pyfixest/issues/1203) | Gelbach decomposition: analytical standard errors | `metrics` | `TBD` |
 | [#1204](https://github.com/py-econometrics/pyfixest/issues/1204) | Gelbach decomposition: frequency & analytical weights | `metrics` | `TBD` |
 | [#500](https://github.com/py-econometrics/pyfixest/issues/500) | Conley spatial standard errors | `metrics`, `rust` | `TBD` |

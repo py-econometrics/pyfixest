@@ -390,9 +390,7 @@ def get_worker_panel(N_workers=500, N_firms=50, N_years=11, seed=42):
         # ~20% of workers switch firms each year (after year 0)
         if t > 0:
             switchers = rng.random(N_workers) < 0.20
-            firm_assignment[switchers] = rng.integers(
-                0, N_firms, size=switchers.sum()
-            )
+            firm_assignment[switchers] = rng.integers(0, N_firms, size=switchers.sum())
             tenure_counter[switchers] = 1
             tenure_counter[~switchers] += 1
 

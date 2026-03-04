@@ -17,7 +17,7 @@ You should have read the [Getting Started](../getting-started.qmd) page and have
 
 ## What Are Fixed Effects?
 
-A fixed effect model includes group-specific intercepts that absorb unobserved heterogeneity. 
+A fixed effect model includes group-specific intercepts that absorb unobserved heterogeneity.
 
 The canonical panel data model is:
 
@@ -33,11 +33,11 @@ In the following section, we introduce two chanonical use cases of fixed effects
 
 ## Application 1: Twin Studies and the Returns to Education
 
-One of the most foundational question in the economics of education is "wow much does an extra year of education raise wages"? 
-If we were to simply regress years of education on realized wages, we would likely overstates the return to education as there is a selection bias: *ability* drives both education and wages. Or, in other words, kids with high innate (but unobserved) ability end up with more years of education, but also higher wages! The relation between education and wages might be spurios, as both are driven by the same latent factor. 
+One of the most foundational question in the economics of education is "wow much does an extra year of education raise wages"?
+If we were to simply regress years of education on realized wages, we would likely overstates the return to education as there is a selection bias: *ability* drives both education and wages. Or, in other words, kids with high innate (but unobserved) ability end up with more years of education, but also higher wages! The relation between education and wages might be spurios, as both are driven by the same latent factor.
 
- Twin studies aim to correct for this selection effect by comparing twins who share the same genetic endowment. If the latent innate ability is encoded in the genome, then twins with identical gene should have the same latent ability. Under this assumption, any difference in educational attainment between twins is not driven by innate ability. As a result any within‑twin difference in wages can be attributed to differences in schooling rather than unobserved ability. 
- 
+ Twin studies aim to correct for this selection effect by comparing twins who share the same genetic endowment. If the latent innate ability is encoded in the genome, then twins with identical gene should have the same latent ability. Under this assumption, any difference in educational attainment between twins is not driven by innate ability. As a result any within‑twin difference in wages can be attributed to differences in schooling rather than unobserved ability.
+
  In practice, twin fixed‑effects regressions compare each twin to their sibling, netting out shared genes and family background. The estimated coefficient on schooling then captures the causal return to education under the assumption that the only remaining differences between twins are not systematically related to both schooling and wages.
 
 ```{python}
@@ -49,7 +49,7 @@ twins.head()
 
 ### Naive OLS (biased)
 
-In a first step, we estimate the "naive" regression and fit the relation between education and wages. 
+In a first step, we estimate the "naive" regression and fit the relation between education and wages.
 
 Without controlling for ability, the coefficient on `educ` captures both the true return to education and the selection effect:
 
@@ -69,7 +69,7 @@ fit_fe.summary()
 
 ### Compare Side by Side
 
-The FE estimate (~0.08) is smaller than the "naive" OLS estimate. Indeed, part of the correlation between education and wages is that higher ability students obtain more years of education. 
+The FE estimate (~0.08) is smaller than the "naive" OLS estimate. Indeed, part of the correlation between education and wages is that higher ability students obtain more years of education.
 
 ```{python}
 pf.etable(
@@ -116,7 +116,7 @@ fit_full = pf.feols("log_wage ~ experience + tenure + female | worker_id + firm_
 fit_full.summary()
 ```
 
-Here is an interesting historical fact: the first paper (to our knowledge) that fitted a three-way high-dimensional fixed effects model in an unbalanced panel was published in 2013, only four years before the transformer was invented!. Before that, economists simply did not know how to fit 3-way fixed effects regression models on unbalanced panels efficiently. See Guimarães, Portugal, and Torres, ["The Sources of Wage Variation: A Three-Way High-Dimensional Fixed Effects Regression Model"](https://ideas.repec.org/p/ptu/wpaper/w201309.html), who more or less fit the model above on Portuguese data. 
+Here is an interesting historical fact: the first paper (to our knowledge) that fitted a three-way high-dimensional fixed effects model in an unbalanced panel was published in 2013, only four years before the transformer was invented!. Before that, economists simply did not know how to fit 3-way fixed effects regression models on unbalanced panels efficiently. See Guimarães, Portugal, and Torres, ["The Sources of Wage Variation: A Three-Way High-Dimensional Fixed Effects Regression Model"](https://ideas.repec.org/p/ptu/wpaper/w201309.html), who more or less fit the model above on Portuguese data.
 
 ### Compare All Specifications
 

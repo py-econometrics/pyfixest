@@ -110,7 +110,6 @@ jobs:
           flags: final
 
   build-docs:
-    if: false  # temporarily disabled during docs reorganization
     name: "Build Docs"
     runs-on: ubuntu-latest
     steps:
@@ -154,7 +153,6 @@ jobs:
           path: docs/_site
 
   publish-docs:
-    if: false  # temporarily disabled during docs reorganization
     name: "Publish Docs"
     runs-on: ubuntu-latest
     permissions:
@@ -170,8 +168,8 @@ jobs:
           name: docs-html
           path: docs/_site
 
-      - name: Publish docs to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: docs/_site
+      #- name: Publish docs to GitHub Pages
+      #  uses: peaceiris/actions-gh-pages@v3
+      #  with:
+      #    github_token: ${{ secrets.GITHUB_TOKEN }}
+      #    publish_dir: docs/_site

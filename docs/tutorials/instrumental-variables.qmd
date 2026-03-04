@@ -308,4 +308,3 @@ print(f"Effective F-statistic: {fit_iv._eff_F:.1f}")
 - [Regression Tables](regression-tables.qmd) --- customize publication-ready output tables.
 - [`Feiv` API Reference](../reference/estimation.models.feiv_.Feiv.qmd) --- full documentation of the IV estimator class.
 :::
-
