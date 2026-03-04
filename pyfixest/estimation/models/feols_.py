@@ -364,9 +364,6 @@ class Feols(ResultAccessorMixin):
         self._pvalue = np.array([])
         self._conf_int = np.array([])
 
-        # set in get_Ftest()
-        self._F_stat = None
-
         # set in fixef()
         self._fixef_dict: dict[str, dict[str, float]] = {}
         self._alpha = None
