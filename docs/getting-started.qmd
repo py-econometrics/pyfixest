@@ -66,8 +66,8 @@ We compare both specifications side by side via `etable()`.
 pf.etable(
     [fit_naive, fit_fe],
     labels={
-      "log_wage": "Log Hourly Wage", 
-      "educ": "Years of Education", 
+      "log_wage": "Log Hourly Wage",
+      "educ": "Years of Education",
       "experience": "Experience"
     },
     felabels={"twin_pair_id": "Twin Pair FE"},
