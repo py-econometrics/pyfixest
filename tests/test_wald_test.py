@@ -267,3 +267,20 @@ def test_wald_test_multiple_equations(R, q, fml):
 
     np.testing.assert_allclose(wald_stat, r_wald_stat, rtol=1e-03, atol=1e-05)
     np.testing.assert_allclose(p_value, r_p_value, rtol=1e-03, atol=1e-05)
+
+
+def test_f_statistic_auto_computed():
+    """F-statistic should be computed automatically after feols(), not require manual wald_test()."""
+    data = pf.get_data()
+    model = pf.feols("Y ~ X1 + X2", data=data)
+
+    # F-stat attributes should exist without calling wald_test()
+    assert hasattr(model, "_f_statistic")
+    assert hasattr(model, "_p_value")
+
+    # Verify it matches a manual wald_test() call
+    expected_model = pf.feols("Y ~ X1 + X2", data=data)
+    expected_model.wald_test()
+
+    np.testing.assert_allclose(model._f_statistic, expected_model._f_statistic)
+    np.testing.assert_allclose(model._p_value, expected_model._p_value)
