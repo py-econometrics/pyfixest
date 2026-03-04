@@ -1,3 +1,8 @@
+from pyfixest.utils.dgps import (
+    get_motherhood_event_study_data,
+    get_twin_data,
+    get_worker_panel,
+)
 from pyfixest.utils.utils import (
     get_data,
     get_ssc,
@@ -6,6 +11,9 @@ from pyfixest.utils.utils import (
 
 __all__ = [
     "get_data",
+    "get_motherhood_event_study_data",
     "get_ssc",
+    "get_twin_data",
+    "get_worker_panel",
     "ssc",
 ]

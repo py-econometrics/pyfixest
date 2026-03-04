@@ -1,0 +1,12 @@
+{
+  "hash": "e4b07af45fe18fbe2a562ad614ca4aaa",
+  "result": {
+    "engine": "jupyter",
+    "markdown": "---\ntitle: '`PyFixest` on professional-tier GPUs'\naliases:\n  - /pyfixest_gpu.html\njupyter: python3\n---\n\n\n`PyFixest` allows to run the fixed effects demeaning on the GPU via the `demeaner_backend` argument. \nTo do so, you will have to install `jax` and `jaxblib`, for example by typing `pip install pyfixest[jax]`.\n\nWe test two back-ends for the iterative alternating-projections component of the fixed-effects regression on an Nvidia A100 GPU with 40 GB VRAM (a GPU that one typically wouldn't have installed to play graphics-intensive videogames on consumer hardware). `numba` benchmarks are run on a 12-core xeon CPU. \n\nThe JAX backend exhibits major performance improvements **on the GPU** over numba in large problems. \n\n\n![](figures/gpu_benchmarks.png)\n\nOn the **CPU** instead, we find that `numba` outperforms the JAX backend. You can find details in the [benchmark section](https://github.com/py-econometrics/pyfixest/tree/master/benchmarks) of the github repo. \n\n",
+    "supporting": [
+      "pyfixest_gpu_files"
+    ],
+    "filters": [],
+    "includes": {}
+  }
+}
