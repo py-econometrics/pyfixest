@@ -139,9 +139,9 @@ module = [
 ]
 ignore_missing_imports = true
 
-# ---------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------
 # pixi configuration
-# ---------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------
 
 [tool.pixi.workspace]
 channels = ["conda-forge"]
@@ -183,7 +183,7 @@ cmd = "pytest tests/test_hac_vs_fixest.py -v -n 9"
 depends-on = ["setup"]
 env = { OMP_NUM_THREADS = "1", OPENBLAS_NUM_THREADS = "1", MKL_NUM_THREADS = "1", VECLIB_MAXIMUM_THREADS = "1", NUMEXPR_NUM_THREADS = "1" }
 
-# -- r feature ---------------------------------------------------------------
+# -- r feature --------------------------------------------------------------------------
 
 [tool.pixi.feature.r]
 platforms = ["linux-64", "osx-arm64"]
@@ -204,8 +204,10 @@ outputs = [".pixi/.r-extended-installed"]
 
 [tool.pixi.feature.r.tasks.update-test-data]
 cmd = "Rscript tests/r_test_comparisons.R"
+depends-on = ["install-r-extended"]
 inputs = ["tests/r_test_comparisons.R"]
 outputs = ["tests/data/ritest_results.csv"]
+env = { RETICULATE_PYTHON = "$CONDA_PREFIX/bin/python" }
 
 [tool.pixi.feature.r.tasks]
 test-all = { cmd = "pytest -rs -n 9 --cov-report=term tests", depends-on = ["update-test-data"] }
@@ -213,7 +215,7 @@ test-r-core = { cmd = 'pytest -rs tests -n 9 -m "against_r_core" --cov=pyfixest 
 test-r-extended = { cmd = 'pytest -rs tests -n 9 -m "against_r_extended" --cov=pyfixest --cov-report=xml', depends-on = ["install-r-extended", "update-test-data"] }
 test-vs-fixest = { cmd = "pytest -rs tests/test_vs_fixest.py -n 9 --cov=pyfixest --cov-report=xml", depends-on = ["update-test-data"] }
 
-# -- docs feature ------------------------------------------------------------
+# -- docs feature ----------------------------------------------------------------------
 
 [tool.pixi.feature.docs.dependencies]
 jupyterlab = ">=4.0.12"
@@ -233,7 +235,7 @@ docs-build = "quartodoc build --verbose --config docs/_quarto.yml"
 docs-render = { cmd = "quarto render docs", env = { PYTHONWARNINGS = "ignore", KMP_WARNINGS = "0" } }
 docs-preview = { cmd = "quarto preview docs", env = { PYTHONWARNINGS = "ignore", KMP_WARNINGS = "0" } }
 
-# -- lint feature ------------------------------------------------------------
+# -- lint feature ----------------------------------------------------------------------
 
 [tool.pixi.feature.lint.dependencies]
 pre-commit = "==3.6.0"
@@ -241,7 +243,7 @@ pre-commit = "==3.6.0"
 [tool.pixi.feature.lint.tasks]
 pre-commit = "pre-commit run --all-files"
 
-# -- environments ------------------------------------------------------------
+# -- environments ----------------------------------------------------------------------
 
 [tool.pixi.environments]
 r = { features = ["r"] }
