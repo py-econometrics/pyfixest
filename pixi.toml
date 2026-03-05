@@ -120,10 +120,19 @@ pre-commit = "pre-commit run --all-files"
 build-pip = 'python -m build .'
 maturin-develop = "maturin develop --release --strip"
 
+[feature.benchmark.pypi-dependencies]
+"linearmodels" = "*"
+"statsmodels" = "*"
+"pyarrow" = "*"
+
+[feature.benchmark.tasks]
+benchmark = "python benchmarks/benchmarks.py"
+
 [environments]
-dev = ["dev", "build"]
+dev = ["dev", "build", "benchmark"]
 docs = ["docs", "build"]
 lint = ["lint"]
 plots = ["plots"]
 jax = ["jax"]
 build = ["build"]
+benchmark = ["benchmark"]
