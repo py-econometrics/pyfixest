@@ -12,8 +12,18 @@ SolverOptions = Literal[
     "jax",
 ]
 DemeanerBackendOptions = Literal[
-    "numba", "jax", "rust", "cupy", "cupy32", "cupy64", "scipy",
-    "torch", "torch_cpu", "torch_mps", "torch_cuda", "torch_cuda32",
+    "numba",
+    "jax",
+    "rust",
+    "cupy",
+    "cupy32",
+    "cupy64",
+    "scipy",
+    "torch",
+    "torch_cpu",
+    "torch_mps",
+    "torch_cuda",
+    "torch_cuda32",
 ]
 PredictionErrorOptions = Literal["prediction"]
 QuantregMethodOptions = Literal["fn", "pfn"]

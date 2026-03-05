@@ -207,7 +207,11 @@ def _demean_torch_on_device_impl(
 
     # Move to torch — use from_numpy for zero-copy when staying on CPU
     x_c = x_2d if x_2d.flags["C_CONTIGUOUS"] else np.ascontiguousarray(x_2d)
-    w_c = weights_1d if weights_1d.flags["C_CONTIGUOUS"] else np.ascontiguousarray(weights_1d)
+    w_c = (
+        weights_1d
+        if weights_1d.flags["C_CONTIGUOUS"]
+        else np.ascontiguousarray(weights_1d)
+    )
     x_t = torch.from_numpy(x_c).to(dtype=dtype, device=device)
     w_t = torch.from_numpy(w_c).to(dtype=dtype, device=device)
 
@@ -249,7 +253,7 @@ def _demean_torch_on_device_impl(
     success = True
 
     for k in range(K):
-        z, istop, itn, normr, normar, normA, condA, normx = lsmr_torch(
+        z, istop, _itn, _normr, _normar, _normA, _condA, _normx = lsmr_torch(
             A_precond,
             x_w[:, k],
             damp=0.0,
@@ -320,7 +324,7 @@ def _make_demean_variant(
     dtype: torch.dtype,
     doc: str,
 ):
-    """Factory for device-specific demean wrappers."""
+    """Create a device-specific demean wrapper."""
 
     def _demean(
         x: NDArray[np.float64],
@@ -330,8 +334,13 @@ def _make_demean_variant(
         maxiter: int = 100_000,
     ) -> tuple[NDArray[np.float64], bool]:
         return _demean_torch_on_device(
-            x, flist, weights, tol, maxiter,
-            device=torch.device(device_str), dtype=dtype,
+            x,
+            flist,
+            weights,
+            tol,
+            maxiter,
+            device=torch.device(device_str),
+            dtype=dtype,
         )
 
     _demean.__doc__ = doc
@@ -339,10 +348,18 @@ def _make_demean_variant(
     return _demean
 
 
-demean_torch_cpu = _make_demean_variant("cpu", torch.float64, "Torch demeaner on CPU, float64.")
-demean_torch_mps = _make_demean_variant("mps", torch.float32, "Torch demeaner on MPS (Apple GPU), float32.")
-demean_torch_cuda = _make_demean_variant("cuda", torch.float64, "Torch demeaner on CUDA GPU, float64.")
-demean_torch_cuda32 = _make_demean_variant("cuda", torch.float32, "Torch demeaner on CUDA GPU, float32.")
+demean_torch_cpu = _make_demean_variant(
+    "cpu", torch.float64, "Torch demeaner on CPU, float64."
+)
+demean_torch_mps = _make_demean_variant(
+    "mps", torch.float32, "Torch demeaner on MPS (Apple GPU), float32."
+)
+demean_torch_cuda = _make_demean_variant(
+    "cuda", torch.float64, "Torch demeaner on CUDA GPU, float64."
+)
+demean_torch_cuda32 = _make_demean_variant(
+    "cuda", torch.float32, "Torch demeaner on CUDA GPU, float32."
+)
 
 
 class _PreconditionedSparse:

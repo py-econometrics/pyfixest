@@ -17,7 +17,6 @@ from pyfixest.estimation.cupy.demean_cupy_ import demean_scipy  # noqa: E402
 from pyfixest.estimation.torch.demean_torch_ import demean_torch  # noqa: E402
 from pyfixest.estimation.torch.lsmr_torch import lsmr_torch  # noqa: E402
 
-
 # ---------------------------------------------------------------------------
 # Shared fixtures
 # ---------------------------------------------------------------------------
@@ -55,7 +54,7 @@ class TestLSMR:
         b = A_dense @ x_true
 
         A_sparse = A_dense.to_sparse_csr()
-        x_sol, istop, itn, normr, normar, *_ = lsmr_torch(A_sparse, b)
+        x_sol, istop, _itn, normr, _normar, *_ = lsmr_torch(A_sparse, b)
 
         assert istop in (1, 2), f"LSMR did not converge, istop={istop}"
         assert torch.allclose(x_sol, x_true, atol=1e-10), (
@@ -70,7 +69,7 @@ class TestLSMR:
         b = torch.randn(2, dtype=torch.float64)
 
         A_sparse = A_dense.to_sparse_csr()
-        x_sol, istop, itn, normr, normar, *_ = lsmr_torch(A_sparse, b)
+        x_sol, _istop, _itn, _normr, _normar, *_ = lsmr_torch(A_sparse, b)
 
         residual = torch.norm(A_dense @ x_sol - b).item()
         assert residual < 1e-8, f"Residual too large: {residual}"
@@ -100,18 +99,18 @@ class TestLSMR:
         A_dense = A_sparse.to_dense()
         b = A_dense @ x_true
 
-        x_sol, istop, itn, normr, normar, *_ = lsmr_torch(A_sparse, b)
+        x_sol, istop, _itn, _normr, _normar, *_ = lsmr_torch(A_sparse, b)
 
         assert istop in (1, 2, 3), f"LSMR did not converge, istop={istop}"
         residual = torch.norm(A_dense @ x_sol - b).item()
         assert residual < 1e-5, f"Residual too large: {residual}"
 
     def test_zero_rhs(self):
-        """b = 0 should give x = 0."""
+        """B = 0 should give x = 0."""
         A_sparse = torch.eye(3, dtype=torch.float64).to_sparse_csr()
         b = torch.zeros(3, dtype=torch.float64)
 
-        x_sol, istop, itn, normr, normar, *_ = lsmr_torch(A_sparse, b)
+        x_sol, istop, _itn, _normr, _normar, *_ = lsmr_torch(A_sparse, b)
 
         assert torch.allclose(x_sol, torch.zeros(3, dtype=torch.float64), atol=1e-12)
         assert istop == 0
@@ -147,7 +146,7 @@ class TestLSMR:
         A_sparse = torch.eye(3, dtype=torch.float64).to_sparse_csr()
         b = torch.ones(3, dtype=torch.float64)
 
-        x, istop, itn, normr, normar, normA, condA, normx = lsmr_torch(A_sparse, b)
+        _x, _istop, _itn, _normr, _normar, normA, condA, normx = lsmr_torch(A_sparse, b)
 
         assert isinstance(normA, float) and normA > 0
         assert isinstance(condA, float) and condA >= 1.0
@@ -163,6 +162,7 @@ class TestDemeanVsPyhdfe:
     """Compare demean_torch against pyhdfe reference."""
 
     def test_unweighted(self, demean_data):
+        """Verify unweighted demeaning matches pyhdfe."""
         x, flist, _ = demean_data
         N = x.shape[0]
         weights = np.ones(N)
@@ -181,6 +181,7 @@ class TestDemeanVsPyhdfe:
         )
 
     def test_weighted(self, demean_data):
+        """Verify weighted demeaning matches pyhdfe."""
         x, flist, weights = demean_data
         N = x.shape[0]
 
@@ -207,6 +208,7 @@ class TestDemeanVsScipy:
     """Compare demean_torch against demean_scipy (both use LSMR)."""
 
     def test_unweighted_vs_scipy(self, demean_data):
+        """Verify unweighted demeaning matches scipy LSMR."""
         x, flist, _ = demean_data
         N = x.shape[0]
         weights = np.ones(N)
@@ -230,6 +232,7 @@ class TestDemeanVsScipy:
         )
 
     def test_weighted_vs_scipy(self, demean_data):
+        """Verify weighted demeaning matches scipy LSMR."""
         x, flist, weights = demean_data
 
         res_scipy, success_scipy = demean_scipy(x, flist, weights, tol=1e-10)
@@ -306,7 +309,9 @@ class TestDemeanEdgeCases:
         N = 50
         x = np.ones((N, 1))
         # Groups [0, 5, 10] — non-contiguous, max+1=11 but only 3 unique
-        flist = np.array([0, 5, 10] * (N // 3) + [0] * (N % 3), dtype=np.uint64).reshape(N, 1)
+        flist = np.array(
+            [0, 5, 10] * (N // 3) + [0] * (N % 3), dtype=np.uint64
+        ).reshape(N, 1)
         weights = np.ones(N)
 
         with pytest.raises(ValueError, match="non-contiguous group IDs"):
