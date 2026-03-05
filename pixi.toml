@@ -130,7 +130,7 @@ r-jsonlite = "*"
 "pyarrow" = "*"
 
 [feature.benchmark.tasks]
-benchmark = "python benchmarks/benchmark_main.py"
+benchmark = "python benchmarks/modular/benchmark_main.py"
 
 [environments]
 dev = ["dev", "build", "benchmark"]

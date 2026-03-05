@@ -6,7 +6,7 @@ import sys
 
 import pandas as pd
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
@@ -21,8 +21,8 @@ from plotting import plot_benchmarks
 SIZES = [1_000, 10_000, 100_000]
 N_ITERS = 3
 BURN_IN = 1
-DATA_DIR = Path("benchmarks/data")
-OUTPUT_CSV = Path("benchmarks/results/bench.csv")
+DATA_DIR = PROJECT_ROOT / "benchmarks" / "data"
+OUTPUT_CSV = PROJECT_ROOT / "benchmarks" / "results" / "bench.csv"
 DEMEANERS = [
     PyFixestDemeaner("numba"),
     PyFixestDemeaner("rust"),
