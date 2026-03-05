@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 from formulaic.parser import DefaultFormulaParser
 
+from pyfixest.core.detect_singletons import detect_singletons
 from pyfixest.estimation.formula import FORMULAIC_FEATURE_FLAG
 from pyfixest.estimation.formula.factor_interaction import factor_interaction
 from pyfixest.estimation.formula.parse import Formula
@@ -17,7 +18,6 @@ from pyfixest.estimation.formula.utils import (
     _get_weights,
     log,
 )
-from pyfixest.estimation.internals.detect_singletons_ import detect_singletons
 from pyfixest.utils.utils import capture_context
 
 
