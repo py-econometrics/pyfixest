@@ -7,52 +7,25 @@ on:
 
 jobs:
   test:
-    name: Tests Core
-    runs-on: ${{ matrix.os }}
+    name: "Tests Extended (${{ matrix.environment }})"
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        os: ["ubuntu-latest"]
-        python-version: ["3.12"]
-        pytest_opts: ["--workers 4 --tests-per-worker 1"]
-
+        environment: [py312-r]
     steps:
-      - name: Checkout source
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup python
-        uses: actions/setup-python@v5
+      - uses: prefix-dev/setup-pixi@v0.9.4
         with:
-          python-version: ${{ matrix.python-version }}
-          architecture: x64
-
-      - uses: prefix-dev/setup-pixi@v0.8.3
-        with:
-          pixi-version: v0.41.4
+          pixi-version: v0.62.2
           cache: true
-
-      - name: Set numba parallel flags
-        run: echo "NUMBA_NUM_THREADS=1" >> $GITHUB_ENV
-
-      - name: Setup r2u
-        uses: eddelbuettel/github-actions/r2u-setup@master
-
-      - name: Print R version
-        run: Rscript -e 'R.version'
-
-      - name: Install R packages
-        run: |
-          R_LIB_PATH="${{ github.workspace }}/.pixi/envs/dev/lib/R/library"
-          mkdir -p $R_LIB_PATH
-          Rscript -e ".libPaths('$R_LIB_PATH'); install.packages(c('did2s', 'wildrwolf', 'ivDiag'),  lib='/home/runner/work/pyfixest/pyfixest/.pixi/envs/dev/lib/R/library', repos = c('https://cran.rstudio.com', 'https://s3alfisc.r-universe.dev'))"
-          Rscript -e ".libPaths('$R_LIB_PATH'); install.packages('ritest', lib='/home/runner/work/pyfixest/pyfixest/.pixi/envs/dev/lib/R/library', repos = c('https://grantmcdermott.r-universe.dev'))"
-
-      - name: Compile Rust extension (no wheel)
-        run: |
-          pixi r -e dev maturin-develop
+          cache-write: ${{ github.event_name == 'push' && github.ref_name == 'master' }}
+          frozen: true
+          environments: ${{ matrix.environment }}
 
       - name: Run long tests with coverage
-        run: pixi run tests-extended
+        run: pixi run -e ${{ matrix.environment }} test-extended
 
       - name: Upload coverage to Codecov (partial)
         uses: codecov/codecov-action@v4

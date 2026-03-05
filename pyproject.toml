@@ -148,7 +148,7 @@ channels = ["conda-forge"]
 platforms = ["linux-64", "win-64", "osx-arm64"]
 
 [tool.pixi.dependencies]
-python = ">=3.10,<3.14"
+python = ">=3.10,<3.15"
 rust = "*"
 pytest = ">=8.0"
 pytest-cov = ">=4.1.0"
@@ -182,6 +182,23 @@ outputs = [".pixi/.import-hook-installed"]
 cmd = "pytest tests/test_hac_vs_fixest.py -v -n 9"
 depends-on = ["setup"]
 env = { OMP_NUM_THREADS = "1", OPENBLAS_NUM_THREADS = "1", MKL_NUM_THREADS = "1", VECLIB_MAXIMUM_THREADS = "1", NUMEXPR_NUM_THREADS = "1" }
+
+# -- python version features ------------------------------------------------------------
+
+[tool.pixi.feature.py310.dependencies]
+python = "~=3.10.0"
+
+[tool.pixi.feature.py311.dependencies]
+python = "~=3.11.0"
+
+[tool.pixi.feature.py312.dependencies]
+python = "~=3.12.0"
+
+[tool.pixi.feature.py313.dependencies]
+python = "~=3.13.0"
+
+[tool.pixi.feature.py314.dependencies]
+python = "~=3.14.0"
 
 # -- r feature --------------------------------------------------------------------------
 
@@ -246,6 +263,13 @@ pre-commit = "pre-commit run --all-files"
 # -- environments ----------------------------------------------------------------------
 
 [tool.pixi.environments]
-r = { features = ["r"] }
+py310 = ["py310"]
+py311 = ["py311"]
+py312 = ["py312"]
+py313 = ["py313"]
+py314 = ["py314"]
+py310-r = { features = ["py310", "r"], solve-group = "py310" }
+py311-r = { features = ["py311", "r"], solve-group = "py311" }
+py312-r = { features = ["py312", "r"], solve-group = "py312" }
 docs = { features = ["docs"], solve-group = "default" }
 lint = { features = ["lint"], no-default-feature = true }

@@ -8,45 +8,38 @@ on:
     branches:
       - master
 
+concurrency:
+  group: ${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
 jobs:
   test:
-    name: "Tests Core"
-    runs-on: ${{ matrix.os }}
+    name: "Tests Core (${{ matrix.environment }})"
+    runs-on: ubuntu-latest
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
-        os: ["ubuntu-latest"]
-        python-version: ["3.9", "3.14"]
-        pytest_opts: ["--workers 4 --tests-per-worker 1"]
+        environment: [py310, py314]
     steps:
-      - name: Checkout source
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup python
-        uses: actions/setup-python@v5
+      - uses: prefix-dev/setup-pixi@v0.9.4
         with:
-          python-version: ${{ matrix.python-version }}
-          architecture: x64
-
-      - uses: prefix-dev/setup-pixi@v0.8.3
-        with:
-          pixi-version: v0.41.4
+          pixi-version: v0.62.2
           cache: true
-
-      - name: set numba parallel flags
-        run: echo "NUMBA_NUM_THREADS=1" >> $GITHUB_ENV
-
-      - name: Compile Rust extension (no wheel)
-        run: |
-          pixi r -e dev maturin-develop
+          cache-write: ${{ github.event_name == 'push' && github.ref_name == 'master' }}
+          frozen: true
+          environments: ${{ matrix.environment }}
 
       - name: Run 'regular' tests
-        run: |
-          pixi run tests-regular
-          pixi run tests-hac
+        run: pixi run -e ${{ matrix.environment }} test-default
+
+      - name: Run HAC tests
+        run: pixi run -e ${{ matrix.environment }} test-hac
 
       - name: Upload coverage to Codecov (partial)
-        uses: codecov/codecov-action@v4
+        if: matrix.environment == 'py314'
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           partial: true
@@ -55,42 +48,29 @@ jobs:
 
   test_slow:
     name: "Tests vs fixest"
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
-        os: ["ubuntu-latest"]
-        python-version: ["3.9", "3.14"]
-        pytest_opts: ["--workers 4 --tests-per-worker 1"]
+        environment: [py312-r]
     steps:
-      - name: Checkout source
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup python
-        uses: actions/setup-python@v5
+      - uses: prefix-dev/setup-pixi@v0.9.4
         with:
-          python-version: ${{ matrix.python-version }}
-          architecture: x64
-
-      - uses: prefix-dev/setup-pixi@v0.8.3
-        with:
-          pixi-version: v0.41.4
+          pixi-version: v0.62.2
           cache: true
-
-      - name: set numba parallel flags
-        run: echo "NUMBA_NUM_THREADS=1" >> $GITHUB_ENV
-
-      - name: Compile Rust extension (no wheel)
-        run: |
-          pixi r -e dev maturin-develop
+          cache-write: ${{ github.event_name == 'push' && github.ref_name == 'master' }}
+          frozen: true
+          environments: ${{ matrix.environment }}
 
       - name: Run tests against r
         run: |
-          pixi run tests-against-r-core
-          pixi run tests-against-r-extended
+          pixi run -e ${{ matrix.environment }} test-r-core
+          pixi run -e ${{ matrix.environment }} test-r-extended
 
       - name: Upload coverage to Codecov (partial)
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           partial: true
@@ -103,7 +83,7 @@ jobs:
     needs: [test, test_slow]
     steps:
       - name: Final coverage merge
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           partial: false
@@ -113,38 +93,27 @@ jobs:
     name: "Build Docs"
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout source
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup python
-        uses: actions/setup-python@v5
+      - uses: prefix-dev/setup-pixi@v0.9.4
         with:
-          python-version: "3.11"
-
-      - uses: prefix-dev/setup-pixi@v0.8.3
-        with:
-          pixi-version: v0.41.4
+          pixi-version: v0.62.2
           cache: true
+          cache-write: ${{ github.event_name == 'push' && github.ref_name == 'master' }}
+          frozen: true
+          environments: docs
 
       - name: Set up Quarto
         uses: quarto-dev/quarto-actions/setup@v2
 
       - name: install tinytex
-        run: |
-          quarto install tinytex
-
-      - name: Compile Rust extension (no wheel)
-        run: |
-          pixi run -e docs maturin-develop
-
+        run: quarto install tinytex
 
       - name: Compile docstrings with quartodoc
-        run: |
-          pixi run docs-build
+        run: pixi run -e docs docs-build
 
       - name: Render docs
-        run: |
-          pixi run docs-render
+        run: pixi run -e docs docs-render
 
       - name: Save docs artifact
         uses: actions/upload-artifact@v4
@@ -167,9 +136,3 @@ jobs:
         with:
           name: docs-html
           path: docs/_site
-
-      #- name: Publish docs to GitHub Pages
-      #  uses: peaceiris/actions-gh-pages@v3
-      #  with:
-      #    github_token: ${{ secrets.GITHUB_TOKEN }}
-      #    publish_dir: docs/_site
