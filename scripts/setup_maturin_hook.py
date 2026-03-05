@@ -14,7 +14,7 @@ try:
     file_searcher = DefaultProjectFileSearcher(source_excluded_dir_names=excluded_dirs)
 
     maturin_import_hook.install(
-        settings=MaturinSettings(release=True, strip=True, color=True, uv=True),
+        settings=MaturinSettings(release=True, strip=True, color=True),
         file_searcher=file_searcher,
         enable_project_importer=True,
         enable_rs_file_importer=True,
