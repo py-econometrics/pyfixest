@@ -118,7 +118,7 @@ def _run_in_subprocess(
         elif func_name == "pyfixest_feglm_logit":
             elapsed = run_pyfixest_feglm_logit(data, formula, backend)
         else:
-            raise ValueError(f"Unknown function: {func_name}")
+            raise ValueError(f"Unknown function: {func_name}")  # noqa: TRY301
         result_queue.put(("success", elapsed))
     except MemoryError:
         result_queue.put(("oom", None))
@@ -162,6 +162,7 @@ def run_with_timeout(
 
 
 def load_config(config_path: str | Path) -> dict:
+    """Load a JSON benchmark config from the given path."""
     if not Path(config_path).exists():
         return {}
     with open(config_path, encoding="utf-8") as f:
@@ -171,6 +172,7 @@ def load_config(config_path: str | Path) -> dict:
 def get_formulas_from_config(
     config: dict, benchmark_type: str
 ) -> dict[int, str] | None:
+    """Obtain regression formulas from an already loaded config."""
     formulas_cfg = config.get("formulas", {}).get(benchmark_type, {})
     if not formulas_cfg:
         return None
@@ -182,6 +184,7 @@ def get_formulas_from_config(
 
 
 def get_allowed_datasets(config: dict, benchmark_type: str) -> set[str] | None:
+    """Get the allowed datasets from an already loaded config."""
     allowed = config.get("datasets_by_type", {}).get(benchmark_type)
     if not allowed:
         return None
@@ -489,7 +492,7 @@ def run_benchmark(
 
 
 def main():
-
+    """Run the main benchmark loop."""
     HERE = Path(__file__).parent
     # Required for multiprocessing on macOS
     mp.set_start_method("spawn", force=True)

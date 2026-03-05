@@ -186,19 +186,21 @@ def simulate_bipartite(
 
     # Compute transition matrices
     G = np.zeros((n_worker_types, n_firm_types, n_firm_types))
-    for l in range(n_worker_types):
+    for typ_no in range(n_worker_types):
         for k_from in range(n_firm_types):
-            probs = norm.pdf((psi - c_netw * psi[k_from] - c_sort * alpha[l]) / c_sig)
-            G[l, k_from, :] = probs / probs.sum()
+            probs = norm.pdf(
+                (psi - c_netw * psi[k_from] - c_sort * alpha[typ_no]) / c_sig
+            )
+            G[typ_no, k_from, :] = probs / probs.sum()
 
     # Compute stationary distributions
     H = np.zeros((n_worker_types, n_firm_types))
-    for l in range(n_worker_types):
-        eigvals, eigvecs = np.linalg.eig(G[l].T)
+    for typ_no in range(n_worker_types):
+        eigvals, eigvecs = np.linalg.eig(G[typ_no].T)
         stationary_idx = np.argmin(np.abs(eigvals - 1))
         stationary_vec = np.real(eigvecs[:, stationary_idx])
         stationary_vec = np.abs(stationary_vec) / np.abs(stationary_vec).sum()
-        H[l] = stationary_vec
+        H[typ_no] = stationary_vec
 
     # ========================================================================
     # SIMULATE MOBILITY
@@ -210,10 +212,10 @@ def simulate_bipartite(
     spell_counter = 0
 
     for i in range(n_workers):
-        l = worker_types[i]
+        typ_no = worker_types[i]
 
         # Initial firm placement
-        firm_types[i, 0] = rng.choice(n_firm_types, p=H[l])
+        firm_types[i, 0] = rng.choice(n_firm_types, p=H[typ_no])
         spell_ids[i, 0] = spell_counter
         spell_counter += 1
 
@@ -221,7 +223,7 @@ def simulate_bipartite(
         for t in range(1, n_time):
             if rng.random() < p_move:
                 firm_types[i, t] = rng.choice(
-                    n_firm_types, p=G[l, firm_types[i, t - 1]]
+                    n_firm_types, p=G[typ_no, firm_types[i, t - 1]]
                 )
                 spell_ids[i, t] = spell_counter
                 spell_counter += 1
@@ -250,9 +252,7 @@ def simulate_bipartite(
     )
 
     spell_summary = (
-        panel.groupby(["spell", "firm_type"])
-        .size()
-        .reset_index(name="spell_size")
+        panel.groupby(["spell", "firm_type"]).size().reset_index(name="spell_size")
     )
 
     # Assign firm IDs
@@ -279,7 +279,9 @@ def simulate_bipartite(
     n_obs = len(panel)
     panel["worker_fe"] = alpha[panel["worker_type"].values]
     panel["firm_fe"] = psi[panel["firm_type"].values]
-    panel["wage"] = panel["worker_fe"] + panel["firm_fe"] + rng.standard_normal(n_obs) * w_sig
+    panel["wage"] = (
+        panel["worker_fe"] + panel["firm_fe"] + rng.standard_normal(n_obs) * w_sig
+    )
 
     panel["x1"] = rng.standard_normal(n_obs) * x_sig
     panel["y"] = (
