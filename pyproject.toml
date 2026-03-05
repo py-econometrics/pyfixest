@@ -217,6 +217,8 @@ r-sandwich = ">=3.0_2"
 r-broom = ">=1.0.5"
 r-car = ">=3.1_2"
 r-quantreg = ">=5.0"
+r-reticulate = ">=1.0"
+r-collapse = ">=2.0"
 
 [tool.pixi.feature.r.tasks.install-r-extended]
 cmd = "Rscript r_test_requirements.R && touch .pixi/.r-extended-installed"
