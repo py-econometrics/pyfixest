@@ -774,9 +774,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/gflags-2.2.2-h5888daf_1005.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/glog-0.7.1-hbabe93e_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/greenlet-3.3.2-py313h5d5ffb9_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/griffe-2.0.0-pyhcf101f3_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/griffecli-2.0.0-pyhcf101f3_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/griffelib-2.0.0-pyhcf101f3_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/griffe-1.15.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/h11-0.16.0-pyhcf101f3_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/h2-4.3.0-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/hpack-4.1.0-pyhd8ed1ab_0.conda
@@ -1121,9 +1119,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/gflags-2.2.2-hf9b8971_1005.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/glog-0.7.1-heb240a5_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/greenlet-3.3.2-py313h1188861_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/griffe-2.0.0-pyhcf101f3_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/griffecli-2.0.0-pyhcf101f3_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/griffelib-2.0.0-pyhcf101f3_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/griffe-1.15.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/h11-0.16.0-pyhcf101f3_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/h2-4.3.0-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/hpack-4.1.0-pyhd8ed1ab_0.conda
@@ -1454,9 +1450,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/fqdn-1.5.1-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/freetype-2.14.1-h57928b3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/greenlet-3.3.2-py313h927ade5_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/griffe-2.0.0-pyhcf101f3_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/griffecli-2.0.0-pyhcf101f3_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/griffelib-2.0.0-pyhcf101f3_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/griffe-1.15.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/h11-0.16.0-pyhcf101f3_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/h2-4.3.0-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/hpack-4.1.0-pyhd8ed1ab_0.conda
@@ -11446,43 +11440,17 @@ packages:
   - pkg:pypi/greenlet?source=hash-mapping
   size: 237568
   timestamp: 1771658406473
-- conda: https://conda.anaconda.org/conda-forge/noarch/griffe-2.0.0-pyhcf101f3_0.conda
-  sha256: c7c7120acc201584517b9830aa8da600a0bddf7be59b692a442b72bb8424273b
-  md5: 4a58c937b57806b62f0442dc9087dcca
+- conda: https://conda.anaconda.org/conda-forge/noarch/griffe-1.15.0-pyhd8ed1ab_0.conda
+  sha256: 7a42213d6a6dae486c56a835a107fc8704eabf686a2b95adde009e06848426cd
+  md5: 0bc57a76679376b93a489824aa08c294
   depends:
+  - colorama >=0.4
   - python >=3.10
-  - griffelib >=2.0.0,<2.0.1.0a0
-  - griffecli >=2.0.0,<2.0.1.0a0
-  - python
   license: ISC
   purls:
   - pkg:pypi/griffe?source=hash-mapping
-  size: 17184
-  timestamp: 1771834183597
-- conda: https://conda.anaconda.org/conda-forge/noarch/griffecli-2.0.0-pyhcf101f3_0.conda
-  sha256: a5dec02625f9fffffe456ad65b83e0cb58579036e32d74ef6e16ab199ead623e
-  md5: 1f00605b0fb7a5262a98300bbae6014c
-  depends:
-  - python >=3.10
-  - colorama >=0.4
-  - griffelib >=2.0.0,<2.0.1.0a0
-  - python
-  license: ISC
-  purls:
-  - pkg:pypi/griffecli?source=hash-mapping
-  size: 19658
-  timestamp: 1771834183597
-- conda: https://conda.anaconda.org/conda-forge/noarch/griffelib-2.0.0-pyhcf101f3_0.conda
-  sha256: c512737c8eb60f9e47a34fb476fe8541238f88c3fb04d3cbc7ee799e7f5821b3
-  md5: 1f060d75bf6d887a9a62b7750857768d
-  depends:
-  - python >=3.10
-  - python
-  license: ISC
-  purls:
-  - pkg:pypi/griffelib?source=hash-mapping
-  size: 117162
-  timestamp: 1771834183594
+  size: 114576
+  timestamp: 1762806629967
 - conda: https://conda.anaconda.org/conda-forge/linux-64/gsl-2.7-he838d99_0.tar.bz2
   sha256: 132a918b676dd1f533d7c6f95e567abf7081a6ea3251c3280de35ef600e0da87
   md5: fec079ba39c9cca093bf4c00001825de
@@ -20512,7 +20480,7 @@ packages:
 - pypi: ./
   name: pyfixest
   version: 0.50.0a1
-  sha256: 4b02931f40985446c014c998a432ce473a32d87bf8cd141f20c3de899725a875
+  sha256: 1a2e3e3705aeaaa5e93579ffe924a074d11f5d71d6e2e2e4de6c332d6cea930b
   requires_dist:
   - scipy>=1.6
   - formulaic>=1.1.0
