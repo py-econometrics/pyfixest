@@ -165,7 +165,7 @@ The `r` environment has its own solve-group (separate from default) because it
 is restricted to non-Windows platforms. This means package versions in `r` may
 differ slightly from default, but this has no practical impact on testing.
 
-### Rust extension
+### Rust extension and automatic rebuilds
 
 pyfixest includes a Rust extension (`pyfixest.core._core_impl`) built via
 [maturin](https://www.maturin.rs/). The build system is declared in
@@ -174,20 +174,41 @@ pyfixest includes a Rust extension (`pyfixest.core._core_impl`) built via
 **Initial build:** The editable install (`pyfixest = { path = ".", editable = true }`)
 triggers maturin automatically during `pixi install`. No manual build step is needed.
 
-**Rebuilds after `.rs` changes:** The editable install does not detect Rust
-source changes. After modifying `.rs` files, rebuild manually:
+**Rebuilds after `.rs` changes:** We use
+[maturin-import-hook](https://github.com/PyO3/maturin-import-hook) to
+automatically rebuild the Rust extension whenever you `import pyfixest` and
+the `.rs` source files have changed. The hook is installed via the `setup`
+task, which runs automatically as a dependency of all test tasks (cached after
+first run). You never need to manually rebuild.
 
-```{.bash .code-copy}
-pixi run maturin-develop
-```
+How this works under the hood:
+
+1. The `setup` task runs `scripts/setup_maturin_hook.py`, which writes a
+   custom `sitecustomize.py` into the environment that activates the hook on
+   every Python startup. The custom configuration excludes `.pixi/` from file
+   scanning to avoid issues with broken symlinks across pixi environments.
+2. The task creates a sentinel file (`.pixi/.import-hook-installed`) and
+   declares it as an `output`, so pixi caches the result and skips re-running
+   on subsequent invocations.
+3. When Python starts and you `import pyfixest`, the hook checks whether any
+   `.rs` files are newer than the compiled extension. If so, it runs
+   `maturin develop --release --strip --uv` automatically.
 
 You do not need a global Rust installation -- Rust is installed via conda.
 
+::: {.callout-note}
+If you run `pixi install` again (e.g. after a lock file update), the
+environment is recreated and the sentinel file is removed. The next test run
+will re-run `setup` automatically.
+:::
+
 ### Task dependencies and caching
 
-Several R test tasks use pixi's `depends-on`, `inputs`, and `outputs` to
-avoid redundant work:
+Several tasks use pixi's `depends-on`, `inputs`, and `outputs` to avoid
+redundant work:
 
+- **`setup`** (maturin import hook): runs once, cached via sentinel file.
+  All test tasks in the default environment depend on it.
 - **`update-test-data`**: runs `Rscript tests/r_test_comparisons.R` to
   generate `tests/data/ritest_results.csv`. Cached via `inputs`/`outputs` --
   only re-runs if the R script changes or the CSV is missing. The R test tasks
@@ -206,7 +227,7 @@ pixi run -e r --skip-deps test-r-core
 
 | Task | Environment | Description |
 |---|---|---|
-| `maturin-develop` | default | Rebuild Rust extension after `.rs` changes |
+| `setup` | default | Install the maturin import hook (auto-runs before tests) |
 | `test-default` | default | Quick tests (no R, extended, plots, or HAC) |
 | `test-extended` | default | Tests marked `extended` |
 | `test-hac` | default | HAC SE tests (with pinned thread counts) |
