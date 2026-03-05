@@ -21,7 +21,7 @@ def sample_df():
 
 def standardize_dataframe(df):
     "Standardize dataframe column types before comparison."
-    return df.applymap(lambda x: f"{x:.2f}" if isinstance(x, (int, float)) else str(x))
+    return df.map(lambda x: f"{x:.2f}" if isinstance(x, (int, float)) else str(x))
 
 
 def test_minimal_input(sample_df):

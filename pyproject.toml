@@ -163,7 +163,7 @@ doubleml = ">=0.10.1"
 pytest-sugar = ">=1.1.1"
 
 [tool.pixi.pypi-dependencies]
-pyfixest = { path = ".", editable = true, extras = ["jax"] }
+pyfixest = { path = ".", editable = true, extras = ["jax", "plots"] }
 wildboottest = ">=0.3.2"
 maturin-import-hook = ">=0.2.0"
 maturin = ">=1.8"
