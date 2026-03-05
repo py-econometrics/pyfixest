@@ -139,7 +139,7 @@ def _get_fixed_effects_prediction_component(
                 fdict.update({x: 0 for x in omitted_cat})
             fixef_dicts[f"C({f})"] = fdict
 
-        _fixef_mat = _apply_fixef_numpy(df_fe.values, fixef_dicts)
+        _fixef_mat = _apply_fixef_numpy(df_fe.values.astype(str), fixef_dicts)
         fe_hat += np.sum(_fixef_mat, axis=1)
 
     return fe_hat
@@ -148,9 +148,7 @@ def _get_fixed_effects_prediction_component(
 def _apply_fixef_numpy(df_fe_values, fixef_dicts):
     fixef_mat = np.zeros_like(df_fe_values, dtype=float)
     for i, (_, subdict) in enumerate(fixef_dicts.items()):
-        unique_levels, inverse = np.unique(
-            df_fe_values[:, i].astype(str), return_inverse=True
-        )
+        unique_levels, inverse = np.unique(df_fe_values[:, i], return_inverse=True)
         mapping = np.array([subdict.get(level, np.nan) for level in unique_levels])
         fixef_mat[:, i] = mapping[inverse]
 
