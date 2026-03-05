@@ -186,6 +186,20 @@ def _demean_torch_on_device(
     if weights is None:
         weights = np.ones(x.shape[0], dtype=np.float64)
 
+    return _demean_torch_on_device_impl(x, flist, weights, tol, maxiter, device, dtype)
+
+
+@torch.no_grad()
+def _demean_torch_on_device_impl(
+    x: NDArray[np.float64],
+    flist: NDArray[np.uint64],
+    weights: NDArray[np.float64],
+    tol: float,
+    maxiter: int,
+    device: torch.device,
+    dtype: torch.dtype,
+) -> tuple[NDArray[np.float64], bool]:
+    """Inner implementation wrapped in torch.no_grad() to skip autograd overhead."""
     # Track original shape to restore on output
     was_1d = x.ndim == 1
     x_2d = x[:, None] if was_1d else x
@@ -301,60 +315,34 @@ def demean_torch(
     return _demean_torch_on_device(x, flist, weights, tol, maxiter, device, dtype)
 
 
-def demean_torch_cpu(
-    x: NDArray[np.float64],
-    flist: NDArray[np.uint64] | None = None,
-    weights: NDArray[np.float64] | None = None,
-    tol: float = 1e-8,
-    maxiter: int = 100_000,
-) -> tuple[NDArray[np.float64], bool]:
-    """Torch demeaner on CPU, float64."""
-    return _demean_torch_on_device(
-        x, flist, weights, tol, maxiter,
-        device=torch.device("cpu"), dtype=torch.float64,
-    )
+def _make_demean_variant(
+    device_str: str,
+    dtype: torch.dtype,
+    doc: str,
+):
+    """Factory for device-specific demean wrappers."""
+
+    def _demean(
+        x: NDArray[np.float64],
+        flist: NDArray[np.uint64] | None = None,
+        weights: NDArray[np.float64] | None = None,
+        tol: float = 1e-8,
+        maxiter: int = 100_000,
+    ) -> tuple[NDArray[np.float64], bool]:
+        return _demean_torch_on_device(
+            x, flist, weights, tol, maxiter,
+            device=torch.device(device_str), dtype=dtype,
+        )
+
+    _demean.__doc__ = doc
+    _demean.__qualname__ = f"demean_torch_{device_str}"
+    return _demean
 
 
-def demean_torch_mps(
-    x: NDArray[np.float64],
-    flist: NDArray[np.uint64] | None = None,
-    weights: NDArray[np.float64] | None = None,
-    tol: float = 1e-8,
-    maxiter: int = 100_000,
-) -> tuple[NDArray[np.float64], bool]:
-    """Torch demeaner on MPS (Apple GPU), float32."""
-    return _demean_torch_on_device(
-        x, flist, weights, tol, maxiter,
-        device=torch.device("mps"), dtype=torch.float32,
-    )
-
-
-def demean_torch_cuda(
-    x: NDArray[np.float64],
-    flist: NDArray[np.uint64] | None = None,
-    weights: NDArray[np.float64] | None = None,
-    tol: float = 1e-8,
-    maxiter: int = 100_000,
-) -> tuple[NDArray[np.float64], bool]:
-    """Torch demeaner on CUDA GPU, float64."""
-    return _demean_torch_on_device(
-        x, flist, weights, tol, maxiter,
-        device=torch.device("cuda"), dtype=torch.float64,
-    )
-
-
-def demean_torch_cuda32(
-    x: NDArray[np.float64],
-    flist: NDArray[np.uint64] | None = None,
-    weights: NDArray[np.float64] | None = None,
-    tol: float = 1e-8,
-    maxiter: int = 100_000,
-) -> tuple[NDArray[np.float64], bool]:
-    """Torch demeaner on CUDA GPU, float32."""
-    return _demean_torch_on_device(
-        x, flist, weights, tol, maxiter,
-        device=torch.device("cuda"), dtype=torch.float32,
-    )
+demean_torch_cpu = _make_demean_variant("cpu", torch.float64, "Torch demeaner on CPU, float64.")
+demean_torch_mps = _make_demean_variant("mps", torch.float32, "Torch demeaner on MPS (Apple GPU), float32.")
+demean_torch_cuda = _make_demean_variant("cuda", torch.float64, "Torch demeaner on CUDA GPU, float64.")
+demean_torch_cuda32 = _make_demean_variant("cuda", torch.float32, "Torch demeaner on CUDA GPU, float32.")
 
 
 class _PreconditionedSparse:

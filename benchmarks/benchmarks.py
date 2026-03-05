@@ -37,6 +37,32 @@ except ImportError:
     HAS_MPS = False
     HAS_CUDA = False
 
+# Backends that accept a backend= argument when called through pyfixest runners
+_PYFIXEST_BACKENDS = {"scipy", "numba", "rust", "jax", "torch_cpu", "torch_mps", "torch_cuda", "torch_cuda32"}
+
+# =============================================================================
+# Helpers
+# =============================================================================
+
+
+def _append_optional_backends(estimators, label_prefix, runner_func, func_name):
+    """Append JAX + torch backend estimators based on runtime availability."""
+    optional = []
+    if HAS_JAX:
+        optional.append(("jax", "jax"))
+    if HAS_TORCH:
+        optional.append(("torch_cpu", "torch_cpu"))
+    if HAS_MPS:
+        optional.append(("torch_mps", "torch_mps"))
+    if HAS_CUDA:
+        optional.append(("torch_cuda", "torch_cuda"))
+        optional.append(("torch_cuda32", "torch_cuda32"))
+    for suffix, backend in optional:
+        estimators.append(
+            (f"{label_prefix} ({suffix})", backend, runner_func, False, func_name)
+        )
+
+
 # =============================================================================
 # Estimator functions (run in main process for JIT caching)
 # =============================================================================
@@ -242,15 +268,7 @@ def get_estimators(
                 "pyfixest_feols",
             ),
         ]
-        if HAS_JAX:
-            estimators.append(("pyfixest.feols (jax)", "jax", run_pyfixest_feols, False, "pyfixest_feols"))
-        if HAS_TORCH:
-            estimators.append(("pyfixest.feols (torch_cpu)", "torch_cpu", run_pyfixest_feols, False, "pyfixest_feols"))
-        if HAS_MPS:
-            estimators.append(("pyfixest.feols (torch_mps)", "torch_mps", run_pyfixest_feols, False, "pyfixest_feols"))
-        if HAS_CUDA:
-            estimators.append(("pyfixest.feols (torch_cuda)", "torch_cuda", run_pyfixest_feols, False, "pyfixest_feols"))
-            estimators.append(("pyfixest.feols (torch_cuda32)", "torch_cuda32", run_pyfixest_feols, False, "pyfixest_feols"))
+        _append_optional_backends(estimators, "pyfixest.feols", run_pyfixest_feols, "pyfixest_feols")
         estimators += [
             (
                 "linearmodels.AbsorbingLS",
@@ -295,15 +313,7 @@ def get_estimators(
                 "pyfixest_fepois",
             ),
         ]
-        if HAS_JAX:
-            estimators.append(("pyfixest.fepois (jax)", "jax", run_pyfixest_fepois, False, "pyfixest_fepois"))
-        if HAS_TORCH:
-            estimators.append(("pyfixest.fepois (torch_cpu)", "torch_cpu", run_pyfixest_fepois, False, "pyfixest_fepois"))
-        if HAS_MPS:
-            estimators.append(("pyfixest.fepois (torch_mps)", "torch_mps", run_pyfixest_fepois, False, "pyfixest_fepois"))
-        if HAS_CUDA:
-            estimators.append(("pyfixest.fepois (torch_cuda)", "torch_cuda", run_pyfixest_fepois, False, "pyfixest_fepois"))
-            estimators.append(("pyfixest.fepois (torch_cuda32)", "torch_cuda32", run_pyfixest_fepois, False, "pyfixest_fepois"))
+        _append_optional_backends(estimators, "pyfixest.fepois", run_pyfixest_fepois, "pyfixest_fepois")
         formulas = {
             2: "negbin_y ~ x1 | indiv_id + year",
             3: "negbin_y ~ x1 | indiv_id + year + firm_id",
@@ -332,15 +342,7 @@ def get_estimators(
                 "pyfixest_feglm_logit",
             ),
         ]
-        if HAS_JAX:
-            estimators.append(("pyfixest.feglm_logit (jax)", "jax", run_pyfixest_feglm_logit, False, "pyfixest_feglm_logit"))
-        if HAS_TORCH:
-            estimators.append(("pyfixest.feglm_logit (torch_cpu)", "torch_cpu", run_pyfixest_feglm_logit, False, "pyfixest_feglm_logit"))
-        if HAS_MPS:
-            estimators.append(("pyfixest.feglm_logit (torch_mps)", "torch_mps", run_pyfixest_feglm_logit, False, "pyfixest_feglm_logit"))
-        if HAS_CUDA:
-            estimators.append(("pyfixest.feglm_logit (torch_cuda)", "torch_cuda", run_pyfixest_feglm_logit, False, "pyfixest_feglm_logit"))
-            estimators.append(("pyfixest.feglm_logit (torch_cuda32)", "torch_cuda32", run_pyfixest_feglm_logit, False, "pyfixest_feglm_logit"))
+        _append_optional_backends(estimators, "pyfixest.feglm_logit", run_pyfixest_feglm_logit, "pyfixest_feglm_logit")
         formulas = {
             2: "binary_y ~ x1 | indiv_id + year",
             3: "binary_y ~ x1 | indiv_id + year + firm_id",
@@ -470,7 +472,7 @@ def run_benchmark(
                                 print(f"{elapsed:.3f}s")
                         else:
                             # Run in main process
-                            if backend_or_func in ("scipy", "numba", "rust", "jax", "torch_cpu", "torch_mps", "torch_cuda", "torch_cuda32"):
+                            if backend_or_func in _PYFIXEST_BACKENDS:
                                 elapsed = func(data, formula, backend_or_func)
                             else:
                                 elapsed = func(data, formula)

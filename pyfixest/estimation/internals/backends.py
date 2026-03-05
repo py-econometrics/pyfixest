@@ -113,34 +113,19 @@ BACKENDS = {
         "crv1_meat": crv1_meat_loop_cupy,
         "nonnested": count_fixef_fully_nested_all_cupy,
     },
-    "torch": {
-        "demean": demean_torch,
-        "collinear": find_collinear_variables_torch,
-        "crv1_meat": crv1_meat_loop_torch,
-        "nonnested": count_fixef_fully_nested_all_torch,
-    },
-    "torch_cpu": {
-        "demean": demean_torch_cpu,
-        "collinear": find_collinear_variables_torch,
-        "crv1_meat": crv1_meat_loop_torch,
-        "nonnested": count_fixef_fully_nested_all_torch,
-    },
-    "torch_mps": {
-        "demean": demean_torch_mps,
-        "collinear": find_collinear_variables_torch,
-        "crv1_meat": crv1_meat_loop_torch,
-        "nonnested": count_fixef_fully_nested_all_torch,
-    },
-    "torch_cuda": {
-        "demean": demean_torch_cuda,
-        "collinear": find_collinear_variables_torch,
-        "crv1_meat": crv1_meat_loop_torch,
-        "nonnested": count_fixef_fully_nested_all_torch,
-    },
-    "torch_cuda32": {
-        "demean": demean_torch_cuda32,
-        "collinear": find_collinear_variables_torch,
-        "crv1_meat": crv1_meat_loop_torch,
-        "nonnested": count_fixef_fully_nested_all_torch,
+    **{
+        name: {
+            "demean": demean_fn,
+            "collinear": find_collinear_variables_torch,
+            "crv1_meat": crv1_meat_loop_torch,
+            "nonnested": count_fixef_fully_nested_all_torch,
+        }
+        for name, demean_fn in [
+            ("torch", demean_torch),
+            ("torch_cpu", demean_torch_cpu),
+            ("torch_mps", demean_torch_mps),
+            ("torch_cuda", demean_torch_cuda),
+            ("torch_cuda32", demean_torch_cuda32),
+        ]
     },
 }
