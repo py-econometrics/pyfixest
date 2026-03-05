@@ -166,39 +166,20 @@ def _scale_coo_rows(D: torch.Tensor, scale: torch.Tensor) -> torch.Tensor:
     ).coalesce()
 
 
-def demean_torch(
+def _demean_torch_on_device(
     x: NDArray[np.float64],
-    flist: NDArray[np.uint64] | None = None,
-    weights: NDArray[np.float64] | None = None,
-    tol: float = 1e-8,
-    maxiter: int = 100_000,
-    dtype: torch.dtype = torch.float64,
+    flist: NDArray[np.uint64] | None,
+    weights: NDArray[np.float64] | None,
+    tol: float,
+    maxiter: int,
+    device: torch.device,
+    dtype: torch.dtype,
 ) -> tuple[NDArray[np.float64], bool]:
     """
-    Demean x by projecting out fixed effects via FWL + LSMR.
+    Core demeaning implementation for a specific device and dtype.
 
-    Parameters
-    ----------
-    x : np.ndarray, shape (N,) or (N, K)
-        Variables to demean.
-    flist : np.ndarray, shape (N, n_factors), dtype uint64
-        Integer-encoded fixed effects.
-    weights : np.ndarray, shape (N,)
-        Observation weights (1.0 for equal weighting).
-    tol : float
-        Convergence tolerance for LSMR (used as both atol and btol).
-    maxiter : int
-        Maximum LSMR iterations per column.
-    dtype : torch.dtype
-        Tensor dtype. Use ``torch.float32`` to enable MPS (Apple GPU)
-        acceleration. Default ``torch.float64`` for full precision.
-
-    Returns
-    -------
-    x_demeaned : np.ndarray
-        Residuals after projecting out fixed effects. Same shape as input x.
-    success : bool
-        True if LSMR converged for all columns.
+    This is the shared workhorse called by all public wrappers.
+    See `demean_torch` for full parameter documentation.
     """
     if flist is None:
         raise ValueError("flist cannot be None")
@@ -209,8 +190,6 @@ def demean_torch(
     was_1d = x.ndim == 1
     x_2d = x[:, None] if was_1d else x
     weights_1d = weights.ravel()
-
-    device = _get_device(dtype)
 
     # Move to torch — use from_numpy for zero-copy when staying on CPU
     x_c = x_2d if x_2d.flags["C_CONTIGUOUS"] else np.ascontiguousarray(x_2d)
@@ -277,6 +256,105 @@ def demean_torch(
         result = result[:, 0]
 
     return result, success
+
+
+def demean_torch(
+    x: NDArray[np.float64],
+    flist: NDArray[np.uint64] | None = None,
+    weights: NDArray[np.float64] | None = None,
+    tol: float = 1e-8,
+    maxiter: int = 100_000,
+    dtype: torch.dtype = torch.float64,
+) -> tuple[NDArray[np.float64], bool]:
+    """
+    Demean x by projecting out fixed effects via FWL + LSMR.
+
+    Auto-detects the best available device (CUDA > MPS > CPU).
+    For explicit device control, use the device-specific variants:
+    `demean_torch_cpu`, `demean_torch_mps`, `demean_torch_cuda`,
+    `demean_torch_cuda32`.
+
+    Parameters
+    ----------
+    x : np.ndarray, shape (N,) or (N, K)
+        Variables to demean.
+    flist : np.ndarray, shape (N, n_factors), dtype uint64
+        Integer-encoded fixed effects.
+    weights : np.ndarray, shape (N,)
+        Observation weights (1.0 for equal weighting).
+    tol : float
+        Convergence tolerance for LSMR (used as both atol and btol).
+    maxiter : int
+        Maximum LSMR iterations per column.
+    dtype : torch.dtype
+        Tensor dtype. Use ``torch.float32`` to enable MPS (Apple GPU)
+        acceleration. Default ``torch.float64`` for full precision.
+
+    Returns
+    -------
+    x_demeaned : np.ndarray
+        Residuals after projecting out fixed effects. Same shape as input x.
+    success : bool
+        True if LSMR converged for all columns.
+    """
+    device = _get_device(dtype)
+    return _demean_torch_on_device(x, flist, weights, tol, maxiter, device, dtype)
+
+
+def demean_torch_cpu(
+    x: NDArray[np.float64],
+    flist: NDArray[np.uint64] | None = None,
+    weights: NDArray[np.float64] | None = None,
+    tol: float = 1e-8,
+    maxiter: int = 100_000,
+) -> tuple[NDArray[np.float64], bool]:
+    """Torch demeaner on CPU, float64."""
+    return _demean_torch_on_device(
+        x, flist, weights, tol, maxiter,
+        device=torch.device("cpu"), dtype=torch.float64,
+    )
+
+
+def demean_torch_mps(
+    x: NDArray[np.float64],
+    flist: NDArray[np.uint64] | None = None,
+    weights: NDArray[np.float64] | None = None,
+    tol: float = 1e-8,
+    maxiter: int = 100_000,
+) -> tuple[NDArray[np.float64], bool]:
+    """Torch demeaner on MPS (Apple GPU), float32."""
+    return _demean_torch_on_device(
+        x, flist, weights, tol, maxiter,
+        device=torch.device("mps"), dtype=torch.float32,
+    )
+
+
+def demean_torch_cuda(
+    x: NDArray[np.float64],
+    flist: NDArray[np.uint64] | None = None,
+    weights: NDArray[np.float64] | None = None,
+    tol: float = 1e-8,
+    maxiter: int = 100_000,
+) -> tuple[NDArray[np.float64], bool]:
+    """Torch demeaner on CUDA GPU, float64."""
+    return _demean_torch_on_device(
+        x, flist, weights, tol, maxiter,
+        device=torch.device("cuda"), dtype=torch.float64,
+    )
+
+
+def demean_torch_cuda32(
+    x: NDArray[np.float64],
+    flist: NDArray[np.uint64] | None = None,
+    weights: NDArray[np.float64] | None = None,
+    tol: float = 1e-8,
+    maxiter: int = 100_000,
+) -> tuple[NDArray[np.float64], bool]:
+    """Torch demeaner on CUDA GPU, float32."""
+    return _demean_torch_on_device(
+        x, flist, weights, tol, maxiter,
+        device=torch.device("cuda"), dtype=torch.float32,
+    )
 
 
 class _PreconditionedSparse:

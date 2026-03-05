@@ -17,6 +17,26 @@ from typing import Optional
 
 import pandas as pd
 
+# Optional JAX availability detection
+try:
+    import jax  # noqa: F401
+
+    HAS_JAX = True
+except ImportError:
+    HAS_JAX = False
+
+# Optional torch availability detection
+try:
+    import torch
+
+    HAS_TORCH = True
+    HAS_MPS = hasattr(torch.backends, "mps") and torch.backends.mps.is_available()
+    HAS_CUDA = torch.cuda.is_available()
+except ImportError:
+    HAS_TORCH = False
+    HAS_MPS = False
+    HAS_CUDA = False
+
 # =============================================================================
 # Estimator functions (run in main process for JIT caching)
 # =============================================================================
@@ -221,6 +241,17 @@ def get_estimators(
                 False,
                 "pyfixest_feols",
             ),
+        ]
+        if HAS_JAX:
+            estimators.append(("pyfixest.feols (jax)", "jax", run_pyfixest_feols, False, "pyfixest_feols"))
+        if HAS_TORCH:
+            estimators.append(("pyfixest.feols (torch_cpu)", "torch_cpu", run_pyfixest_feols, False, "pyfixest_feols"))
+        if HAS_MPS:
+            estimators.append(("pyfixest.feols (torch_mps)", "torch_mps", run_pyfixest_feols, False, "pyfixest_feols"))
+        if HAS_CUDA:
+            estimators.append(("pyfixest.feols (torch_cuda)", "torch_cuda", run_pyfixest_feols, False, "pyfixest_feols"))
+            estimators.append(("pyfixest.feols (torch_cuda32)", "torch_cuda32", run_pyfixest_feols, False, "pyfixest_feols"))
+        estimators += [
             (
                 "linearmodels.AbsorbingLS",
                 "absorbingls",
@@ -264,6 +295,15 @@ def get_estimators(
                 "pyfixest_fepois",
             ),
         ]
+        if HAS_JAX:
+            estimators.append(("pyfixest.fepois (jax)", "jax", run_pyfixest_fepois, False, "pyfixest_fepois"))
+        if HAS_TORCH:
+            estimators.append(("pyfixest.fepois (torch_cpu)", "torch_cpu", run_pyfixest_fepois, False, "pyfixest_fepois"))
+        if HAS_MPS:
+            estimators.append(("pyfixest.fepois (torch_mps)", "torch_mps", run_pyfixest_fepois, False, "pyfixest_fepois"))
+        if HAS_CUDA:
+            estimators.append(("pyfixest.fepois (torch_cuda)", "torch_cuda", run_pyfixest_fepois, False, "pyfixest_fepois"))
+            estimators.append(("pyfixest.fepois (torch_cuda32)", "torch_cuda32", run_pyfixest_fepois, False, "pyfixest_fepois"))
         formulas = {
             2: "negbin_y ~ x1 | indiv_id + year",
             3: "negbin_y ~ x1 | indiv_id + year + firm_id",
@@ -292,6 +332,15 @@ def get_estimators(
                 "pyfixest_feglm_logit",
             ),
         ]
+        if HAS_JAX:
+            estimators.append(("pyfixest.feglm_logit (jax)", "jax", run_pyfixest_feglm_logit, False, "pyfixest_feglm_logit"))
+        if HAS_TORCH:
+            estimators.append(("pyfixest.feglm_logit (torch_cpu)", "torch_cpu", run_pyfixest_feglm_logit, False, "pyfixest_feglm_logit"))
+        if HAS_MPS:
+            estimators.append(("pyfixest.feglm_logit (torch_mps)", "torch_mps", run_pyfixest_feglm_logit, False, "pyfixest_feglm_logit"))
+        if HAS_CUDA:
+            estimators.append(("pyfixest.feglm_logit (torch_cuda)", "torch_cuda", run_pyfixest_feglm_logit, False, "pyfixest_feglm_logit"))
+            estimators.append(("pyfixest.feglm_logit (torch_cuda32)", "torch_cuda32", run_pyfixest_feglm_logit, False, "pyfixest_feglm_logit"))
         formulas = {
             2: "binary_y ~ x1 | indiv_id + year",
             3: "binary_y ~ x1 | indiv_id + year + firm_id",
@@ -421,7 +470,7 @@ def run_benchmark(
                                 print(f"{elapsed:.3f}s")
                         else:
                             # Run in main process
-                            if backend_or_func in ("scipy", "numba", "rust"):
+                            if backend_or_func in ("scipy", "numba", "rust", "jax", "torch_cpu", "torch_mps", "torch_cuda", "torch_cuda32"):
                                 elapsed = func(data, formula, backend_or_func)
                             else:
                                 elapsed = func(data, formula)
