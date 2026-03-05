@@ -253,7 +253,7 @@ griffe = "<2"
 
 [tool.pixi.feature.docs.pypi-dependencies]
 causaldata = ">=0.1.4"
-marginaleffects = ">=0.0.10"
+marginaleffects = "==0.2.2"
 lets-plot = ">=4.0.0"
 
 [tool.pixi.feature.docs.tasks]
