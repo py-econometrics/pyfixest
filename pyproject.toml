@@ -7,33 +7,32 @@ authors = [
     { name = "Styfen Schär" },
 ]
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = { text = "MIT" }
 dependencies = [
-    "scipy>=1.6,<1.16",
-    "formulaic>=1.1.0",
-    "pandas>=1.1.0",
-    "numba>=0.58.0",
-    "seaborn>=0.13.2",
-    "tabulate>=0.9.0",
-    "tqdm>=4.0.0",
-    "maketables>=0.1.0",
-    "numpy>=1.25.2",
-    "narwhals>=1.13.3",
-    "joblib>=1.4.2,<2",
+  "scipy>=1.6",
+  "formulaic>=1.1.0",
+  "pandas>=1.1.0",
+  "numba>=0.58.0",
+  "seaborn>=0.13.2",
+  "tabulate>=0.9.0",
+  "tqdm>=4.0.0",
+  "maketables>=0.1.0",
+  "numpy>=1.25.2",
+  "narwhals>=1.13.3",
+  "joblib>=1.4.2",
 ]
 
 [project.optional-dependencies]
 jax = [
-    "jax>=0.4.15",
-    "jaxlib>=0.4.15",
+  "jax>=0.4.15",
 ]
 plots = [
-    "lets-plot>=4.0.0",
+  "lets-plot>=4.0.0",
 ]
 
 [build-system]
-requires = ["maturin>=1.8,<2.0"]
+requires = ["maturin>=1.8"]
 build-backend = "maturin"
 
 [tool.maturin]
@@ -68,8 +67,7 @@ filterwarnings = [
 line-length = 88
 fix = true
 
-# Assume Python 3.9
-target-version = "py39"
+target-version = "py310"
 
 [tool.ruff.lint]
 # docs: https://docs.astral.sh/ruff/rules/
@@ -142,3 +140,111 @@ module = [
   "tqdm.*",
 ]
 ignore_missing_imports = true
+
+# ---------------------------------------------------------------------------
+# pixi configuration
+# ---------------------------------------------------------------------------
+
+[tool.pixi.workspace]
+channels = ["conda-forge"]
+platforms = ["linux-64", "win-64", "osx-arm64"]
+
+[tool.pixi.dependencies]
+python = ">=3.10,<3.14"
+rust = "*"
+pytest = ">=7.2.0"
+pytest-cov = ">=4.1.0"
+pytest-xdist = ">=3.5.0"
+pytest-benchmark = ">=5.1.0"
+pyhdfe = ">=0.2.0"
+ipykernel = ">=6.29.5"
+duckdb = ">=1.1.3"
+polars = ">=1.0.0"
+pyarrow = ">=14.0"
+doubleml = ">=0.10.1"
+pytest-sugar = ">=1.1.1"
+
+[tool.pixi.pypi-dependencies]
+pyfixest = { path = ".", editable = true, extras = ["jax"] }
+wildboottest = ">=0.3.2"
+maturin-import-hook = ">=0.2.0"
+maturin = ">=1.8"
+
+[tool.pixi.tasks]
+test-default = { cmd = 'pytest tests -n 9 -m "not (extended or against_r_core or against_r_extended or plots or hac)" --cov=pyfixest --cov-report=xml', depends-on = ["setup"] }
+test-extended = { cmd = 'pytest tests -n 9 -m "extended" --cov=pyfixest --cov-report=xml', depends-on = ["setup"] }
+render-notebooks = "python scripts/run_notebooks.py"
+
+[tool.pixi.tasks.setup]
+cmd = 'python -m maturin_import_hook site install --force --args="--release --strip --uv" && touch .pixi/.import-hook-installed'
+outputs = [".pixi/.import-hook-installed"]
+
+[tool.pixi.tasks.test-hac]
+cmd = "pytest tests/test_hac_vs_fixest.py -v -n 9"
+depends-on = ["setup"]
+env = { OMP_NUM_THREADS = "1", OPENBLAS_NUM_THREADS = "1", MKL_NUM_THREADS = "1", VECLIB_MAXIMUM_THREADS = "1", NUMEXPR_NUM_THREADS = "1" }
+
+# -- r feature ---------------------------------------------------------------
+
+[tool.pixi.feature.r]
+platforms = ["linux-64", "osx-arm64"]
+
+[tool.pixi.feature.r.dependencies]
+rpy2 = "==3.5.11"
+r-base = "*"
+r-fixest = ">=0.13.2"
+r-stringmagic = ">=1.2.0"
+r-sandwich = ">=3.0_2"
+r-broom = ">=1.0.5"
+r-car = ">=3.1_2"
+r-quantreg = ">=5.0"
+
+[tool.pixi.feature.r.tasks.install-r-extended]
+cmd = "Rscript r_test_requirements.R && touch .pixi/.r-extended-installed"
+outputs = [".pixi/.r-extended-installed"]
+
+[tool.pixi.feature.r.tasks.update-test-data]
+cmd = "Rscript tests/r_test_comparisons.R"
+inputs = ["tests/r_test_comparisons.R"]
+outputs = ["tests/data/ritest_results.csv"]
+
+[tool.pixi.feature.r.tasks]
+test-all = { cmd = "pytest -rs -n 9 --cov-report=term tests", depends-on = ["update-test-data"] }
+test-r-core = { cmd = 'pytest -rs tests -n 9 -m "against_r_core" --cov=pyfixest --cov-report=xml', depends-on = ["update-test-data"] }
+test-r-extended = { cmd = 'pytest -rs tests -n 9 -m "against_r_extended" --cov=pyfixest --cov-report=xml', depends-on = ["install-r-extended", "update-test-data"] }
+test-vs-fixest = { cmd = "pytest -rs tests/test_vs_fixest.py -n 9 --cov=pyfixest --cov-report=xml", depends-on = ["update-test-data"] }
+
+# -- docs feature ------------------------------------------------------------
+
+[tool.pixi.feature.docs.dependencies]
+jupyterlab = ">=4.0.12"
+jupytext = "==1.16.1"
+watermark = "==2.4.3"
+pylatex = ">=1.4.2"
+quartodoc = ">=0.11.0"
+quarto = ">=1.8.25"
+
+[tool.pixi.feature.docs.pypi-dependencies]
+causaldata = ">=0.1.4"
+marginaleffects = ">=0.0.10"
+lets-plot = ">=4.0.0"
+
+[tool.pixi.feature.docs.tasks]
+docs-build = "quartodoc build --verbose --config docs/_quarto.yml"
+docs-render = { cmd = "quarto render docs", env = { PYTHONWARNINGS = "ignore", KMP_WARNINGS = "0" } }
+docs-preview = { cmd = "quarto preview docs", env = { PYTHONWARNINGS = "ignore", KMP_WARNINGS = "0" } }
+
+# -- lint feature ------------------------------------------------------------
+
+[tool.pixi.feature.lint.dependencies]
+pre-commit = "==3.6.0"
+
+[tool.pixi.feature.lint.tasks]
+pre-commit = "pre-commit run --all-files"
+
+# -- environments ------------------------------------------------------------
+
+[tool.pixi.environments]
+r = { features = ["r"] }
+docs = { features = ["docs"], solve-group = "default" }
+lint = { features = ["lint"], no-default-feature = true }
