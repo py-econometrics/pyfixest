@@ -56,8 +56,6 @@ website:
           file: tutorials/instrumental-variables.qmd
         - text: "Poisson & GLMs"
           file: tutorials/poisson-glm.qmd
-        - text: "Multiple Estimation"
-          file: tutorials/multiple-estimation.qmd
         - text: "Regression Tables"
           file: tutorials/regression-tables.qmd
         - text: "Difference-in-Differences"
@@ -205,5 +203,5 @@ quartodoc:
         PyFixest internals and utilities
       contents:
         - estimation.internals.demean_.demean
-        - estimation.internals.detect_singletons_.detect_singletons
+        - core.detect_singletons.detect_singletons
         - estimation.deprecated.model_matrix_fixest_.model_matrix_fixest

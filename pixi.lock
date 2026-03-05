@@ -20512,20 +20512,24 @@ packages:
 - pypi: ./
   name: pyfixest
   version: 0.50.0a1
-  sha256: ac46df9f7c9453552c9a2b5b26a6910cba5507e5b90a855abf9effc3068a8666
+  sha256: 4b02931f40985446c014c998a432ce473a32d87bf8cd141f20c3de899725a875
   requires_dist:
-  - scipy>=1.9
+  - scipy>=1.6
   - formulaic>=1.1.0
-  - pandas>=2.0
+  - pandas>=1.1.0
   - numba>=0.58.0
-  - seaborn>=0.13.0
-  - tqdm>=4.50.0
+  - seaborn>=0.13.2
+  - tabulate>=0.9.0
+  - tqdm>=4.0.0
   - maketables>=0.1.0
-  - numpy>=1.24.0
+  - numpy>=1.25.2
   - narwhals>=1.13.3
-  - joblib>=1.0.0
+  - joblib>=1.4.2
   - jax>=0.4.15 ; extra == 'jax'
   - lets-plot>=4.0.0 ; extra == 'plots'
+  - linearmodels ; extra == 'benchmarks'
+  - statsmodels ; extra == 'benchmarks'
+  - pyarrow ; extra == 'benchmarks'
   requires_python: '>=3.10'
 - conda: https://conda.anaconda.org/conda-forge/noarch/pygments-2.19.2-pyhd8ed1ab_0.conda
   sha256: 5577623b9f6685ece2697c6eb7511b4c9ac5fb607c9babc2646c811b428fd46a

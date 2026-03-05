@@ -1,4 +1,3 @@
-import gc
 import re
 import warnings
 from collections.abc import Mapping
@@ -363,9 +362,6 @@ class Feols(ResultAccessorMixin):
         self._tstat = np.array([])
         self._pvalue = np.array([])
         self._conf_int = np.array([])
-
-        # set in get_Ftest()
-        self._F_stat = None
 
         # set in fixef()
         self._fixef_dict: dict[str, dict[str, float]] = {}
@@ -1114,7 +1110,6 @@ class Feols(ResultAccessorMixin):
         for attr in attributes:
             if hasattr(self, attr):
                 delattr(self, attr)
-        gc.collect()
 
     def wald_test(self, R=None, q=None, distribution="F"):
         """
@@ -1214,7 +1209,7 @@ class Feols(ResultAccessorMixin):
             self._dfd = self._N - self._k - k_fe
 
         bread = R @ self._beta_hat - q
-        meat = np.linalg.inv(R @ self._vcov @ R.T)
+        meat = np.linalg.pinv(R @ self._vcov @ R.T)
         W = bread.T @ meat @ bread
         self._wald_statistic = W
 

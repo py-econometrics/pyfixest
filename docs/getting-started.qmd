@@ -20,7 +20,7 @@ You can install `pyfixest` from [PyPi](https://pypi.org/project/pyfixest/) via
 pip install -U pyfixest
 ```
 
-## A First Regression
+## A First Regression: The Causal Returns to Education via Twin Studies
 
 We want to estimate the **causal returns of education on earnings** via a twin study. In this notebook, we focus on `PyFixest` estimation functionality and syntax. For details on the question at hand, please take a look at the [OLS with Fixed Effects](tutorials/ols-fixed-effects.qmd) vignette.
 
@@ -35,16 +35,17 @@ twins.head()
 
 `pf.get_twin_data()` returns a simulated twin-pair dataset where each row is one individual twin and `twin_pair_id` identifies a pair of twins. We have these other relevant variables:
 
-  - `educ`: years of education completed.
-  - `earnings` (or log_wage in transformed specs): labor-market outcome used as the dependent variable.
-  - `experience`: a proxy for labor-market experience.
-  - `twin_pair_id`: pair fixed-effect unit for within-twin comparisons.
+  - `educ`: years of education completed
+  - `earnings` (or log_wage in transformed specs): labor-market outcome used as the dependent variable
+  - `experience`: a proxy for labor-market experience
+  - `twin_pair_id`: twin-pair identifier
   - `ability`: an unobserved confounder that leads to both higher earnings and more years of schooling
 
 `PyFixest`'s core estimation function is called `feols()`. As a bare minimum, you need to pass a `pandas` or `polars` data frame and a Wilkinson formula.
 
 We first estimate a naive OLS regression in which we regress earnings on years of education and experience. The resulting coefficient on `educ` will not reflect a causal effect of education on earnings, but will be biased because higher-ability students likely select into more schooling and would also have higher earnings later in life even in the absence of additional education.
-that is likely biased by endogeneity (unobserved ability). TThen we estimate a twin fixed-effects model, which aims to control for ability by comparing outcomes within twin pairs and netting out unobserved family and genetic factors shared by both siblings. As twins share the same genetic endowment, twin studies hypothesize that controlling for twin fixed effects can remove much of the ability-related confounding that biases cross-sectional OLS estimates. In both models, we cluster standard errors at the twin-pair level.
+
+We will now estimate a twin fixed-effects model, which aims to control for ability by comparing outcomes within twin pairs. As twins share the same genetic endowment, twin studies hypothesize that controlling for twin fixed effects can remove much of the ability-related confounding that biases cross-sectional OLS estimates. In both models, we cluster standard errors at the twin-pair level.
 
 ```{python}
 fit_naive = pf.feols(
@@ -64,7 +65,11 @@ We compare both specifications side by side via `etable()`.
 ```{python}
 pf.etable(
     [fit_naive, fit_fe],
-    labels={"log_wage": "Log Hourly Wage", "educ": "Years of Education", "experience": "Experience"},
+    labels={
+      "log_wage": "Log Hourly Wage",
+      "educ": "Years of Education",
+      "experience": "Experience"
+    },
     felabels={"twin_pair_id": "Twin Pair FE"},
     caption="Returns to Education: Naive OLS vs Twin Fixed Effects",
 )
@@ -72,8 +77,7 @@ pf.etable(
 
 We see that the estimated return to education is smaller once we include twin fixed effects, consistent with an upward bias in naive OLS of education on earnings from unobserved ability differences across individuals.
 
-Now, what if we had the unobserved confounder at hand? In this case, we could simply control for it. We're lucky because we are working with synthetic data:
-
+Now, what if we had the unobserved confounder at hand? In this case, we could simply control for it in our regression model. In real life, we likely wouldn't be so lucky to have it, but alas, here we have access to it as we are working with synthetic data:
 ```{python}
 fit_latent = pf.feols(
   "log_wage ~ educ + experience + ability",
@@ -89,7 +93,7 @@ pf.coefplot(
 )
 ```
 
-We see that the fixed effect design gives us estimates that are much closer to the model in which we correctly control for the unoberserved confounder.
+We see that the fixed effect design gives us estimates that are much closer to the model in which we correctly control for the unoberserved confounder. By controlling for twin fixed effects, we have managed to control for an unobserved confounder, ability.
 
 ## Where to Go Next
 
