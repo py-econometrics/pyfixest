@@ -120,13 +120,17 @@ pre-commit = "pre-commit run --all-files"
 build-pip = 'python -m build .'
 maturin-develop = "maturin develop --release --strip"
 
+[feature.benchmark.dependencies]
+r-base = "*"
+r-fixest = ">=0.13.2,<0.14"
+r-arrow = "*"
+r-jsonlite = "*"
+
 [feature.benchmark.pypi-dependencies]
-"linearmodels" = "*"
-"statsmodels" = "*"
 "pyarrow" = "*"
 
 [feature.benchmark.tasks]
-benchmark = "python benchmarks/benchmarks.py"
+benchmark = "python benchmarks/benchmark_main.py"
 
 [environments]
 dev = ["dev", "build", "benchmark"]
@@ -135,4 +139,4 @@ lint = ["lint"]
 plots = ["plots"]
 jax = ["jax"]
 build = ["build"]
-benchmark = ["benchmark"]
+benchmark = ["benchmark", "build"]
