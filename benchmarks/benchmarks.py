@@ -37,7 +37,16 @@ except ImportError:
     HAS_CUDA = False
 
 # Backends that accept a backend= argument when called through pyfixest runners
-_PYFIXEST_BACKENDS = {"scipy", "numba", "rust", "jax", "torch_cpu", "torch_mps", "torch_cuda", "torch_cuda32"}
+_PYFIXEST_BACKENDS = {
+    "scipy",
+    "numba",
+    "rust",
+    "jax",
+    "torch_cpu",
+    "torch_mps",
+    "torch_cuda",
+    "torch_cuda32",
+}
 
 # =============================================================================
 # Helpers
@@ -267,7 +276,9 @@ def get_estimators(
                 "pyfixest_feols",
             ),
         ]
-        _append_optional_backends(estimators, "pyfixest.feols", run_pyfixest_feols, "pyfixest_feols")
+        _append_optional_backends(
+            estimators, "pyfixest.feols", run_pyfixest_feols, "pyfixest_feols"
+        )
         estimators += [
             (
                 "linearmodels.AbsorbingLS",
@@ -312,7 +323,9 @@ def get_estimators(
                 "pyfixest_fepois",
             ),
         ]
-        _append_optional_backends(estimators, "pyfixest.fepois", run_pyfixest_fepois, "pyfixest_fepois")
+        _append_optional_backends(
+            estimators, "pyfixest.fepois", run_pyfixest_fepois, "pyfixest_fepois"
+        )
         formulas = {
             2: "negbin_y ~ x1 | indiv_id + year",
             3: "negbin_y ~ x1 | indiv_id + year + firm_id",
@@ -341,7 +354,12 @@ def get_estimators(
                 "pyfixest_feglm_logit",
             ),
         ]
-        _append_optional_backends(estimators, "pyfixest.feglm_logit", run_pyfixest_feglm_logit, "pyfixest_feglm_logit")
+        _append_optional_backends(
+            estimators,
+            "pyfixest.feglm_logit",
+            run_pyfixest_feglm_logit,
+            "pyfixest_feglm_logit",
+        )
         formulas = {
             2: "binary_y ~ x1 | indiv_id + year",
             3: "binary_y ~ x1 | indiv_id + year + firm_id",

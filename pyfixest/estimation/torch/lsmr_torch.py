@@ -49,7 +49,7 @@ def _sym_ortho(a: float, b: float) -> tuple[float, float, float]:
 
 
 def _matvec(A, v: torch.Tensor) -> torch.Tensor:
-    """A @ v — works for both torch.Tensor (dense/sparse) and duck-typed wrappers."""
+    """Compute A @ v for both torch.Tensor (dense/sparse) and duck-typed wrappers."""
     if isinstance(A, torch.Tensor):
         return A @ v
     return A.mv(v)
@@ -251,10 +251,7 @@ def lsmr_torch(
         normx = torch.linalg.norm(x).item()
 
         test1 = normr / normb
-        if (normA * normr) != 0:
-            test2 = normar / (normA * normr)
-        else:
-            test2 = float("inf")
+        test2 = normar / (normA * normr) if normA * normr != 0 else float("inf")
         test3 = 1.0 / condA
         t1 = test1 / (1.0 + normA * normx / normb)
         rtol = btol + atol * normA * normx / normb
