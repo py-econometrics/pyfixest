@@ -76,7 +76,9 @@ def test_event_study(data):
         r_df = pd.DataFrame(r_df)
 
     np.testing.assert_allclose(fit_did2s.coef(), r_df[1], atol=1e-05, rtol=1e-05)
-    np.testing.assert_allclose(fit_did2s.se(), float(r_df[2]), atol=1e-05, rtol=1e-05)
+    np.testing.assert_allclose(
+        fit_did2s.se(), r_df[2].squeeze(), atol=1e-05, rtol=1e-05
+    )
 
 
 @pytest.mark.against_r_core
@@ -119,7 +121,7 @@ def test_did2s(data, weights):
     )
 
     np.testing.assert_allclose(
-        fit_did2s_py1.se(), float(fit_did2s_r1.iloc[:, 3]), atol=1e-05, rtol=1e-05
+        fit_did2s_py1.se(), fit_did2s_r1.iloc[:, 3].squeeze(), atol=1e-05, rtol=1e-05
     )
 
     # Model 2

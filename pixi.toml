@@ -2,7 +2,7 @@
 authors = [
     "Alexander Fischer <alexander-fischer1801@t-online.de>",
     "Styfen Schär"
-    ]
+]
 description = "Fast high dimensional fixed effect estimation following syntax of the fixest R package."
 channels = ["conda-forge"]
 name = "pyfixest"
@@ -13,16 +13,16 @@ version = "0.50.0a1"
 
 
 [dependencies]
-scipy=">=1.6,<1.16"
-formulaic=">=1.1.0"
-pandas=">=1.1.0"
-numba=">=0.58.0"
-seaborn=">=0.13.2"
-tabulate=">=0.9.0"
-tqdm=">=4.0.0"
-numpy=">=1.25.2"
-narwhals=">=1.13.3"
-joblib=">=1.4.2,<2"
+scipy = ">=1.6"
+formulaic = ">=1.1.0"
+pandas = ">=1.1.0"
+numba = ">=0.58.0"
+seaborn = ">=0.13.2"
+tabulate = ">=0.9.0"
+tqdm = ">=4.0.0"
+numpy = ">=1.25.2"
+narwhals = ">=1.13.3"
+joblib = ">=1.4.2"
 
 [pypi-dependencies]
 maketables = ">=0.1.0"
@@ -45,10 +45,9 @@ duckdb = ">=1.1.3"
 polars = ">=1.0.0"
 pyarrow = ">=14.0"
 rpy2 = "==3.5.11"
-pixi-pycharm = ">=0.0.8,<0.0.9"
 r-base = "*"
 r-fixest = ">=0.13.2,<0.14"
-r-stringmagic=">=1.2.0"
+r-stringmagic = ">=1.2.0"
 r-sandwich = ">=3.0_2,<4"
 r-broom = ">=1.0.5,<2"
 r-car = ">=3.1_2,<4"
@@ -58,13 +57,12 @@ pytest-sugar = ">=1.1.1,<2"
 
 [feature.dev.pypi-dependencies]
 wildboottest = ">=0.3.2, <0.4"
-jax = ">=0.4.38, <0.8"
-jaxlib = ">=0.4.38, <0.8"
+jax = ">=0.4.38"
 
 [feature.dev.tasks]
 "tests" = "pytest -rs -n 9 --cov-report=term tests"
 "tests-against-r-core" = 'pytest -rs tests -n 9 -m "against_r_core" --cov=pyfixest --cov-report=xml'
-"tests-against-r-extended"  = 'pytest -rs tests -n 9 -m "against_r_extended" --cov=pyfixest --cov-report=xml'
+"tests-against-r-extended" = 'pytest -rs tests -n 9 -m "against_r_extended" --cov=pyfixest --cov-report=xml'
 "tests-regular" = 'pytest tests -n 9 -m "not (extended or against_r_core or against_r_extended or plots or hac)" --cov=pyfixest --cov-report=xml'
 "tests-extended" = 'pytest tests -n 9 -m "extended" --cov=pyfixest --cov-report=xml'
 "tests-fixest" = "pytest -rs tests/test_vs_fixest.py -n 9 --cov=pyfixest --cov-report=xml"
@@ -80,19 +78,19 @@ jupytext = "==1.16.1"
 watermark = "==2.4.3"
 pylatex = ">=1.4.2,<2"
 pyarrow = ">=14.0"
-quartodoc =">=0.11.0,<0.12"
+quartodoc = ">=0.11.0,<0.12"
 rpy2 = "==3.5.11"
 r-base = "*"
 r-fixest = ">=0.13.2,<0.14"
-r-stringmagic=">=1.2.0"
+r-stringmagic = ">=1.2.0"
 r-broom = ">=1.0.5,<2"
 quarto = ">=1.8.25,<2"
 
 [feature.docs.pypi-dependencies]
 wildboottest = ">=0.3.2"
 causaldata = ">=0.1.4,<0.2"
-marginaleffects= ">=0.0.10"
-lets-plot =">=4.0.0"
+marginaleffects = ">=0.0.10"
+lets-plot = ">=4.0.0"
 
 [feature.docs.tasks]
 docs-build = "quartodoc build --verbose --config docs/_quarto.yml"
@@ -102,8 +100,7 @@ docs-preview = { cmd = "quarto preview docs", env = { PYTHONWARNINGS = "ignore",
 [feature.jax.dependencies]
 
 [feature.jax.pypi-dependencies]
-jax = ">=0.4.15"
-jaxlib= ">=0.4.15"
+jax = ">=0.4.29"
 
 [feature.plots.pypi-dependencies]
 lets-plot = ">=4.0.0"

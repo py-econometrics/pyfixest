@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
 dependencies = [
-    "scipy>=1.6,<1.16",
+    "scipy>=1.6",
     "formulaic>=1.1.0",
     "pandas>=1.1.0",
     "numba>=0.58.0",
@@ -20,13 +20,12 @@ dependencies = [
     "maketables>=0.1.0",
     "numpy>=1.25.2",
     "narwhals>=1.13.3",
-    "joblib>=1.4.2,<2",
+    "joblib>=1.4.2",
 ]
 
 [project.optional-dependencies]
 jax = [
     "jax>=0.4.15",
-    "jaxlib>=0.4.15",
 ]
 plots = [
     "lets-plot>=4.0.0",
@@ -43,25 +42,25 @@ python-source = "."
 
 [tool.pytest.ini_options]
 addopts = [
-  "-v",
-  "--strict-markers",
-  "--strict-config",
-  "--cov=pyfixest",
-  "--cov-report=term-missing",
-  "--color=yes",
+    "-v",
+    "--strict-markers",
+    "--strict-config",
+    "--cov=pyfixest",
+    "--cov-report=term-missing",
+    "--color=yes",
 ]
 
 markers = [
-  "against_r_core: mark test to be part of the test suite that depends on conda available R modules",
-  "against_r_extended: mark test to be part of the test suite that depends on other R modules",
-  "extended: mark test to be part of the extended test suite",
-  "plots: marks all tests for plotting functionality, tests only triggered when using tag in github issue",
-  "hac: marks all tests for HAC SEs"
+    "against_r_core: mark test to be part of the test suite that depends on conda available R modules",
+    "against_r_extended: mark test to be part of the test suite that depends on other R modules",
+    "extended: mark test to be part of the extended test suite",
+    "plots: marks all tests for plotting functionality, tests only triggered when using tag in github issue",
+    "hac: marks all tests for HAC SEs"
 ]
 
 filterwarnings = [
-  "ignore::FutureWarning:rpy2",
-  "ignore::DeprecationWarning:rpy2",
+    "ignore::FutureWarning:rpy2",
+    "ignore::DeprecationWarning:rpy2",
 ]
 
 [tool.ruff]
@@ -74,37 +73,37 @@ target-version = "py39"
 [tool.ruff.lint]
 # docs: https://docs.astral.sh/ruff/rules/
 select = [
-  "B",   # bugbear
-  "F",   # Pyflakes
-  "E",   # pycodestyle errors
-  "W",   # pycodestyle warnings
-  "I",   # isort
-  "D",   # flake8-docstrings
-  "UP",  # pyupgrade
-  "SIM", # flake8-simplify
-  "RUF", # ruff,
-  "TRY", # tryceratops
+    "B", # bugbear
+    "F", # Pyflakes
+    "E", # pycodestyle errors
+    "W", # pycodestyle warnings
+    "I", # isort
+    "D", # flake8-docstrings
+    "UP", # pyupgrade
+    "SIM", # flake8-simplify
+    "RUF", # ruff,
+    "TRY", # tryceratops
 ]
 
 ignore = [
-  # do not enable if formatting
-  # docs: https://docs.astral.sh/ruff/formatter/#conflicting-lint-rules
-  "B028",   # No explicit `stacklevel` keyword argument found
-  "B904",   # Better exception handling
-  "W191",   # tab indentation
-  "E111",   # indentation
-  "E114",   # indentation
-  "E117",   # over indented
-  "D206",   # indent with spaces
-  "D300",   # triple single quotes
-  "E501",   # line length regulated by formatter
-  "D105",   # missing docstring in magic method
-  "D100",   # missing docstring in public module
-  "D104",   # missing docstring in public package
-  "SIM110", # Use all instead of `for` loop
-  "TRY003", # Avoid specifying long messages outside the exception class
-  "D205",   # 1 blank line required between summary line and description
-  "W505",   # Doc line too long
+    # do not enable if formatting
+    # docs: https://docs.astral.sh/ruff/formatter/#conflicting-lint-rules
+    "B028", # No explicit `stacklevel` keyword argument found
+    "B904", # Better exception handling
+    "W191", # tab indentation
+    "E111", # indentation
+    "E114", # indentation
+    "E117", # over indented
+    "D206", # indent with spaces
+    "D300", # triple single quotes
+    "E501", # line length regulated by formatter
+    "D105", # missing docstring in magic method
+    "D100", # missing docstring in public module
+    "D104", # missing docstring in public package
+    "SIM110", # Use all instead of `for` loop
+    "TRY003", # Avoid specifying long messages outside the exception class
+    "D205", # 1 blank line required between summary line and description
+    "W505", # Doc line too long
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -129,16 +128,16 @@ docstring-code-line-length = 88
 
 [[tool.mypy.overrides]]
 module = [
-  "pandas.*",
-  "numpy.*",
-  "scipy.*",
-  "numba.*",
-  "lets_plot.*",
-  "formulaic.*",
-  "wildboottest.*",
-  "tabulate.*",
-  "joblib.*",
-  "narwhals.*",
-  "tqdm.*",
+    "pandas.*",
+    "numpy.*",
+    "scipy.*",
+    "numba.*",
+    "lets_plot.*",
+    "formulaic.*",
+    "wildboottest.*",
+    "tabulate.*",
+    "joblib.*",
+    "narwhals.*",
+    "tqdm.*",
 ]
 ignore_missing_imports = true

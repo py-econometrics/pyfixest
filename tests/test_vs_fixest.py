@@ -606,9 +606,9 @@ def test_single_fit_fepois(
     r_df_k = int(ro.r('attr(r_fixest$cov.scaled, "df.K")')[0])
     r_df_t = int(ro.r('attr(r_fixest$cov.scaled, "df.t")')[0])
     r_n_coefs = int(df_X1["n_coef"])
-    r_loglik = float(ro.r("r_fixest$loglik"))
-    r_loglik_null = float(ro.r("r_fixest$ll_null"))
-    r_pseudo_r2 = float(ro.r('fixest::r2(r_fixest)["pr2"]'))
+    r_loglik = float(ro.r("r_fixest$loglik").squeeze())
+    r_loglik_null = float(ro.r("r_fixest$ll_null").squeeze())
+    r_pseudo_r2 = float(ro.r('fixest::r2(r_fixest)["pr2"]').squeeze())
 
     if inference == "iid" and k_adj and G_adj:
         check_absolute_diff(py_nobs, r_nobs, 1e-08, "py_nobs != r_nobs")
