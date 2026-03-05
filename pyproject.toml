@@ -186,11 +186,6 @@ cmd = "python scripts/setup_maturin_hook.py && touch .pixi/.import-hook-installe
 inputs = ["scripts/setup_maturin_hook.py"]
 outputs = [".pixi/.import-hook-installed"]
 
-[tool.pixi.tasks.test-hac]
-cmd = "pytest tests/test_hac_vs_fixest.py -v -n 9"
-depends-on = ["setup"]
-env = { OMP_NUM_THREADS = "1", OPENBLAS_NUM_THREADS = "1", MKL_NUM_THREADS = "1", VECLIB_MAXIMUM_THREADS = "1", NUMEXPR_NUM_THREADS = "1" }
-
 # -- python version features ------------------------------------------------------------
 
 [tool.pixi.feature.py310.dependencies]
@@ -233,6 +228,11 @@ depends-on = ["install-r-extended"]
 inputs = ["tests/r_test_comparisons.R"]
 outputs = ["tests/data/ritest_results.csv"]
 env = { RETICULATE_PYTHON = "$CONDA_PREFIX/bin/python" }
+
+[tool.pixi.feature.r.tasks.test-hac]
+cmd = "pytest tests/test_hac_vs_fixest.py -v -n 9"
+depends-on = ["setup"]
+env = { OMP_NUM_THREADS = "1", OPENBLAS_NUM_THREADS = "1", MKL_NUM_THREADS = "1", VECLIB_MAXIMUM_THREADS = "1", NUMEXPR_NUM_THREADS = "1" }
 
 [tool.pixi.feature.r.tasks]
 test-all = { cmd = "pytest -rs -n 9 --cov-report=term tests", depends-on = ["update-test-data"] }

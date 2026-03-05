@@ -34,9 +34,6 @@ jobs:
       - name: Run 'regular' tests
         run: pixi run -e ${{ matrix.environment }} test-default
 
-      - name: Run HAC tests
-        run: pixi run -e ${{ matrix.environment }} test-hac
-
       - name: Upload coverage to Codecov (partial)
         if: matrix.environment == 'py314'
         uses: codecov/codecov-action@v5
@@ -68,6 +65,7 @@ jobs:
         run: |
           pixi run -e ${{ matrix.environment }} test-r-core
           pixi run -e ${{ matrix.environment }} test-r-extended
+          pixi run -e ${{ matrix.environment }} test-hac
 
       - name: Upload coverage to Codecov (partial)
         uses: codecov/codecov-action@v5
