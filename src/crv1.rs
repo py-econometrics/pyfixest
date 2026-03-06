@@ -98,12 +98,6 @@ pub fn _crv1_meat_loop_rs(
     Ok(meat.into_pyarray(py).to_owned().into())
 }
 
-/// Subgradient of the quantile regression check function.
-/// Returns q when the residual is above eps (1e-7), and -(1-q) otherwise.
-fn check_subgradient(q: f64, residual: f64) -> f64 {
-    let eps: f64 = 1e-7;
-    q - if residual <= eps { 1.0 } else { 0.0 }
-}
 
 /// Compute the matrices for the CRV1 sandwich estimator
 /// in quantile regression, following Parente & Santos Silva (2016).
@@ -121,6 +115,7 @@ fn crv1_vcov_loop(
     let k = x.ncols();
     let mut a = Array2::<f64>::zeros((k, k));
     let mut b = Array2::<f64>::zeros((k, k));
+    let eps: f64 = 1e-7;
 
     let (g_indices, g_locs) = bucket_argsort_rs(cluster_col);
 
@@ -133,14 +128,13 @@ fn crv1_vcov_loop(
         let ug: Vec<f64> = g_index.iter().map(|&i| u_hat[i]).collect();
         let ng = g_index.len();
 
-        // Meat: clustered outer product of scores
         for i in 0..ng {
             let xi = xg.row(i);
-            let psi_i = check_subgradient(q, ug[i]);
+            let psi_i = q - if ug[i] <= eps { 1.0 } else { 0.0 };
 
             for j in 0..ng {
                 let xj = xg.row(j);
-                let psi_j = check_subgradient(q, ug[j]);
+                let psi_j = q - if ug[j] <= eps { 1.0 } else { 0.0 };
                 let scale = psi_i * psi_j;
                 for ai in 0..k {
                     for bi in 0..k {
@@ -150,7 +144,6 @@ fn crv1_vcov_loop(
             }
         }
 
-        // Bread: accumulate outer products for observations near the quantile
         for i in 0..ng {
             let xi = xg.row(i);
             let mask_i = if ug[i].abs() < delta { 1.0 } else { 0.0 };
