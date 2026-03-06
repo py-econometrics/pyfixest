@@ -24,8 +24,8 @@ You should have read the [Getting Started](../getting-started.qmd) page and have
 
 Estimation of a linear model via Ordinary Least Squares (OLS) yields biased and inconsistent estimates when a regressor is correlated with the error term — a problem known as endogeneity, which arises, for example, in the presence of unobserved confounders. **Instrumental Variable (IV)** estimation addresses this by finding a variable $Z$ that satisfies three conditions:
 
-1. **Relevance**: $Z$ has a causal effect on $X$. 
-2. **Exclusion Ristriction**: $Z$ causal effect on $Y$ is fully mediated by $X$. 
+1. **Relevance**: $Z$ has a causal effect on $X$.
+2. **Exclusion Ristriction**: $Z$ causal effect on $Y$ is fully mediated by $X$.
 3. **Instrumental Unconfoundedness**: $Z$ has no unobserved common causes with $Y$.
 
 ```{dot}
@@ -50,9 +50,9 @@ digraph IV {
 
 `pyfixest` estimates the IV using two-stage least squares (2SLS) estimator where it first projects $X$ onto $Z$ (and all other exogenous variables) to obtain $\hat{X}$, then uses $\hat{X}$ to estimate the Average Treatment Effect (ATE) of $X$ on $Y$. The intuition is that by using $\hat{X}$ the dashed path from the unobserved varialbe is blocked or removed.
 
-When panel data are available, selection bias may also stem from time-invariant  unobserved heterogeneity — unit-specific characteristics (e.g., ability, culture, geography) that are fixed over time but correlated with both treatment and outcome.`pyfixest` addresses this simultaneously by applying a within-transformation (demeaning) to absorb unit fixed effects before running 2SLS, following the FE-IV approach described in @wooldridge2010 [Ch. 11]. Crucially, after demeaning, the 
-instrument must retain within-unit variation over time — time-invariant instruments are eliminated along with the fixed effects and cannot be used for identification. When both fixed effects and an instrument are specified, `pyfixest` therefore isolates 
-the clean variation in treatment that is both within-unit and driven by the instrument, blocking confounding from time-invariant unobservables and time-varying endogenous confounders simultaneously. 
+When panel data are available, selection bias may also stem from time-invariant  unobserved heterogeneity — unit-specific characteristics (e.g., ability, culture, geography) that are fixed over time but correlated with both treatment and outcome.`pyfixest` addresses this simultaneously by applying a within-transformation (demeaning) to absorb unit fixed effects before running 2SLS, following the FE-IV approach described in @wooldridge2010 [Ch. 11]. Crucially, after demeaning, the
+instrument must retain within-unit variation over time — time-invariant instruments are eliminated along with the fixed effects and cannot be used for identification. When both fixed effects and an instrument are specified, `pyfixest` therefore isolates
+the clean variation in treatment that is both within-unit and driven by the instrument, blocking confounding from time-invariant unobservables and time-varying endogenous confounders simultaneously.
 
 
 In `pyfixest`, the IV syntax is:
@@ -72,7 +72,7 @@ import pyfixest as pf
 
 **Does having children reduce women's earnings?**
 
-A naive regression of earnings on fertility is biased: women with stronger career ambitions may both earn more and have fewer children. Since career ambition is positively correlated with earnings but negatively correlated with fertility, OLS overstates the motherhood penalty. This is a classic case of OVB: career ambition is unobserved, yet it drives both fertility decisions and earnings outcomes. @lundborg2017 exploit the quasi-random success of IVF treatment as an instrument for fertility among women who sought treatment. 
+A naive regression of earnings on fertility is biased: women with stronger career ambitions may both earn more and have fewer children. Since career ambition is positively correlated with earnings but negatively correlated with fertility, OLS overstates the motherhood penalty. This is a classic case of OVB: career ambition is unobserved, yet it drives both fertility decisions and earnings outcomes. @lundborg2017 exploit the quasi-random success of IVF treatment as an instrument for fertility among women who sought treatment.
 
 The relevance assumption holds because IVF treatment success creates exogenous variation in the likelihood of having children. The exclusion restriction is supported by the fact that observed working histories of successfully and unsuccessfully treated women are virtually identical before they seek IVF treatment — meaning IVF success is essentially random with respect to labor market potential.
 

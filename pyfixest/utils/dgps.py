@@ -37,10 +37,10 @@ def get_ivf_data(N=2000, seed=1234):
         Columns: ``earnings``, ``num_children``, ``ivf_success``.
     """
     # --- DGP parameters ---
-    true_effect = -0.15          # causal effect of num_children on earnings
+    true_effect = -0.15  # causal effect of num_children on earnings
     ambition_on_children = -0.4  # confounder → endogenous var (creates OVB)
-    ambition_on_earnings = 0.6   # confounder → outcome (creates OVB)
-    ivf_on_children = 0.8        # first-stage strength (instrument → endogenous)
+    ambition_on_earnings = 0.6  # confounder → outcome (creates OVB)
+    ivf_on_children = 0.8  # first-stage strength (instrument → endogenous)
 
     rng = np.random.default_rng(seed)
     career_ambition = rng.normal(0, 1, N)
@@ -102,10 +102,10 @@ def get_bartik_data(N=300, seed=1234):
         Columns: ``wages``, ``immigration``, ``log_population``, ``bartik_instrument``.
     """
     # --- DGP parameters ---
-    true_effect = -0.3           # causal effect of immigration on wages
-    demand_on_immig = 0.9        # confounder → endogenous var
-    demand_on_wages = 0.5        # confounder → outcome (creates positive OVB)
-    bartik_on_immig = 0.7        # first-stage strength
+    true_effect = -0.3  # causal effect of immigration on wages
+    demand_on_immig = 0.9  # confounder → endogenous var
+    demand_on_wages = 0.5  # confounder → outcome (creates positive OVB)
+    bartik_on_immig = 0.7  # first-stage strength
 
     rng = np.random.default_rng(seed)
     local_demand = rng.normal(0, 1, N)
@@ -169,9 +169,9 @@ def get_encouragement_data(N=4000, seed=1234):
         Columns: ``revenue``, ``assigned_treatment``, ``adopted_feature``, ``user_type``.
     """
     # --- DGP parameters ---
-    true_late = 2.0              # LATE: causal effect of adoption on revenue for compliers
-    p_adopt_encouraged = 0.70    # P(adopt | Z=1): compliers + always-takers
-    p_adopt_control = 0.15       # P(adopt | Z=0): always-takers only
+    true_late = 2.0  # LATE: causal effect of adoption on revenue for compliers
+    p_adopt_encouraged = 0.70  # P(adopt | Z=1): compliers + always-takers
+    p_adopt_control = 0.15  # P(adopt | Z=0): always-takers only
     # first_stage = p_adopt_encouraged - p_adopt_control = 0.55
     # ITT         = true_late * first_stage              = 1.10
     # LATE        = ITT / first_stage                    = 2.0
