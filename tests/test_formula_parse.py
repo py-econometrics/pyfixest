@@ -318,7 +318,7 @@ class TestFormulaParse:
         result = Formula.parse("Y ~ X1 + X2")
         assert len(result) == 1
         f = result[0]
-        assert f.second_stage == "Y ~ X1 + X2"
+        assert f.second_stage == "Y ~ 1 + X1 + X2"
         assert not f.is_fixed_effects
         assert not f.is_instrumental_variable
 
@@ -342,8 +342,8 @@ class TestFormulaParse:
         """Y + Y2 ~ X1 is preprocessed to sw(Y, Y2) ~ X1."""
         result = Formula.parse("Y + Y2 ~ X1")
         assert len(result) == 2
-        assert result[0].second_stage == "Y ~ X1"
-        assert result[1].second_stage == "Y2 ~ X1"
+        assert result[0].second_stage == "Y ~ 1 + X1"
+        assert result[1].second_stage == "Y2 ~ 1 + X1"
 
     def test_parse_to_dict_groups_by_fe(self):
         """Test parsing of formulas into dictionary."""
@@ -447,7 +447,7 @@ class TestValidation:
 
     def test_no_tilde(self):
         """Check minimum number of tildes."""
-        with pytest.raises(formulaic.errors.FormulaSyntaxError):
+        with pytest.raises(FormulaSyntaxError):
             Formula.parse("Y X1")
 
     def test_too_many_parts(self):
@@ -582,7 +582,7 @@ class TestEdgeCases:
         f = result[0]
         assert "Z1" in f.second_stage
         assert str(f.fixed_effects) == "f1"
-        assert f.first_stage == "Z1 ~ W1 + X1"
+        assert str(f.first_stage) == "Z1 ~ 1 + W1 + X1"
 
     def test_explicit_no_fe_syntax(self):
         """Y ~ X1 | 0 and Y ~ X1 should produce equivalent formulas."""

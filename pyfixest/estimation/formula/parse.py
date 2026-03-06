@@ -166,17 +166,23 @@ class Formula:
     @property
     def exogenous(self) -> formulaic.formula.Formula:
         """Exogenous aka covariates aka independent variables."""
+        exogenous = self._right_hand_side
         if self.is_instrumental_variable:
+            # remove endogenous variables from exogenous
             # formulaic deterministically renames endogenous variables in the second stage
             # https://github.com/matthewwardrop/formulaic/blob/1f04a0b6d1d55ec4e43bf9f81898f6738c1f839a/formulaic/parser/parser.py#L360
             endogenous = {f"{c}_hat" for c in self.endogenous.required_variables}
-            exogenous = (
-                term for term in self._right_hand_side.root if term not in endogenous
+            exogenous = formulaic.formula.SimpleFormula(
+                term for term in exogenous.root if term not in endogenous
             )
-        else:
-            exogenous = self._right_hand_side
 
-        return formulaic.formula.SimpleFormula(exogenous)
+        if self.is_fixed_effects and exogenous.required_variables:
+            # drop intercept for fixed effects regressions
+            # unless for specifications without required_variables,
+            # e.g., `Y ~ 1 | f1`; this can be used to demean dependenent variabels
+            exogenous = (term for term in exogenous if term != "1")
+
+        return exogenous
 
     @property
     def endogenous(self) -> formulaic.formula.Formula:
@@ -202,7 +208,7 @@ class Formula:
         if not self.is_fixed_effects:
             raise AttributeError("Not a fixed effects specification")
         return formulaic.formula.SimpleFormula(
-            [term for term in self._formula.rhs[1] if term != "1"]
+            term for term in self._formula.rhs[1] if term != "1"
         )
 
     @property
@@ -212,20 +218,19 @@ class Formula:
     @property
     def second_stage(self) -> str:
         """The second stage formula."""
-        right_hand_side = [t for t in self.exogenous]
+        right_hand_side = (t for t in self.exogenous)
         if self.is_instrumental_variable:
-            right_hand_side += [term for term in self.endogenous]
-        if not right_hand_side:
-            right_hand_side = ["1"]
-        formula = f"{self.dependent} ~ {formulaic.formula.Formula(right_hand_side)}"
-        return formula
+            right_hand_side = itertools.chain(
+                right_hand_side, (term for term in self.endogenous)
+            )
+        return f"{self.dependent} ~ {formulaic.formula.SimpleFormula(right_hand_side)}"
 
     @property
     def first_stage(self) -> str:
         """The first stage formula of an instrumental variable specification."""
         if not self.is_instrumental_variable:
             raise TypeError("Not an instrumental variable specification.")
-        return f"{self.endogenous} ~ {self.instruments} + {self.exogenous}"
+        return f"{self.endogenous} ~ {formulaic.formula.SimpleFormula(term for term in itertools.chain(self.instruments, self.exogenous))}"
 
     @classmethod
     def parse(cls, formula: str) -> list["Formula"]:
@@ -288,6 +293,8 @@ def _preprocess_fixest_multiple_dependents(formula: str) -> str:
     """Convert multiple dependent variables to multiple estimation syntax.
     Y + Y2 ~ X1 + X2 will be converted to sw(Y, Y2) ~ X1 + X2.
     """
+    if "~" not in formula:
+        raise FormulaSyntaxError()
     dependent, rest = re.split(r"\s*~\s*", formula, maxsplit=1)
     if "+" in dependent:
         # Multiple dependent variables
