@@ -755,7 +755,10 @@ def _lsmr_compiled(
     if itn == 0:
         return x, istop, 0, normb.item(), normar_init, alpha.item(), 1.0, 0.0
 
-    normx_val = torch.linalg.norm(x).item()
+    # normx_val was already computed inside the convergence block (line 725);
+    # only recompute if the loop exhausted maxiter without converging.
+    if istop == 0 or istop == 7:
+        normx_val = torch.linalg.norm(x).item()
     return (
         x,
         istop,

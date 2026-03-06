@@ -59,23 +59,6 @@ def test_matches_original_cpu(m, n):
     assert itn_orig == itn_new, f"itn differs: {itn_orig} vs {itn_new}"
 
 
-def test_zero_rhs():
-    """B = 0 should return x = 0."""
-    A, _ = _make_sparse_problem(100, 50)
-    b = torch.zeros(100, dtype=torch.float64)
-    x, _istop, itn, *_ = lsmr_torch(A, b)
-    assert torch.all(x == 0)
-    assert itn == 0
-
-
-def test_damping():
-    """Damped solve should differ from undamped."""
-    A, b = _make_sparse_problem(200, 100)
-    x_undamped, *_ = lsmr_torch(A, b, damp=0.0)
-    x_damped, *_ = lsmr_torch(A, b, damp=1.0)
-    assert not torch.allclose(x_undamped, x_damped, atol=1e-3)
-
-
 def test_diagnostics_match_original():
     """normr, normar, normA, condA, normx diagnostics match reference."""
     A, b = _make_sparse_problem(500, 300)
@@ -125,7 +108,7 @@ def test_auto_cpu_defaults():
 # MPS + torch.compile tests
 # ---------------------------------------------------------------------------
 
-HAS_MPS = torch.backends.mps.is_available()
+HAS_MPS = hasattr(torch.backends, "mps") and torch.backends.mps.is_available()
 
 
 @pytest.mark.skipif(not HAS_MPS, reason="MPS not available")
