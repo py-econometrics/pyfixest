@@ -1,5 +1,4 @@
 import math
-from typing import Optional, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -40,18 +39,14 @@ from pyfixest.report.utils import (
 )
 from pyfixest.utils.dev_utils import _select_order_coefs
 
-ModelInputType = Union[
-    FixestMulti, Feols, Fepois, Feiv, list[Union[Feols, Fepois, Feiv]]
-]
+ModelInputType = FixestMulti | Feols | Fepois | Feiv | list[Feols | Fepois | Feiv]
 
 # Only setup lets-plot if it's available
 if _HAS_LETS_PLOT:
     LetsPlot.setup_html()
 
 
-def set_figsize(
-    figsize: Optional[tuple[int, int]], plot_backend: str
-) -> tuple[int, int]:
+def set_figsize(figsize: tuple[int, int] | None, plot_backend: str) -> tuple[int, int]:
     """
     Set the figure size based on the plot backend.
 
@@ -86,22 +81,22 @@ def set_figsize(
 def iplot(
     models: ModelInputType,
     alpha: float = 0.05,
-    figsize: Optional[tuple[int, int]] = None,
-    yintercept: Union[int, str, None] = None,
-    xintercept: Union[int, str, None] = None,
+    figsize: tuple[int, int] | None = None,
+    yintercept: int | str | None = None,
+    xintercept: int | str | None = None,
     rotate_xticks: int = 0,
-    title: Optional[str] = None,
+    title: str | None = None,
     coord_flip: bool = True,
-    keep: Optional[Union[list, str]] = None,
-    drop: Optional[Union[list, str]] = None,
+    keep: list | str | None = None,
+    drop: list | str | None = None,
     exact_match: bool = False,
     plot_backend: str = "lets_plot" if _HAS_LETS_PLOT else "matplotlib",
-    labels: Optional[dict] = None,
-    cat_template: Optional[str] = None,
-    rename_models: Optional[dict[str, str]] = None,
-    ax: Optional[plt.Axes] = None,
-    joint: Optional[Union[str, bool]] = None,
-    seed: Optional[int] = None,
+    labels: dict | None = None,
+    cat_template: str | None = None,
+    rename_models: dict[str, str] | None = None,
+    ax: plt.Axes | None = None,
+    joint: str | bool | None = None,
+    seed: int | None = None,
 ):
     r"""
     Plot model coefficients for variables interacted via "i()" syntax, with
@@ -276,21 +271,21 @@ def iplot(
 def coefplot(
     models: ModelInputType,
     alpha: float = 0.05,
-    figsize: Optional[tuple[int, int]] = None,
+    figsize: tuple[int, int] | None = None,
     yintercept: float = 0,
-    xintercept: Union[float, None] = None,
+    xintercept: float | None = None,
     rotate_xticks: int = 0,
-    title: Optional[str] = None,
+    title: str | None = None,
     coord_flip: bool = True,
-    keep: Optional[Union[list, str]] = None,
-    drop: Optional[Union[list, str]] = None,
+    keep: list | str | None = None,
+    drop: list | str | None = None,
     exact_match: bool = False,
     plot_backend: str = "lets_plot" if _HAS_LETS_PLOT else "matplotlib",
-    labels: Optional[dict] = None,
-    joint: Optional[Union[str, bool]] = None,
-    seed: Optional[int] = None,
-    ax: Optional[plt.Axes] = None,
-    rename_models: Optional[dict[str, str]] = None,
+    labels: dict | None = None,
+    joint: str | bool | None = None,
+    seed: int | None = None,
+    ax: plt.Axes | None = None,
+    rename_models: dict[str, str] | None = None,
 ):
     r"""
     Plot model coefficients with confidence intervals.
@@ -439,10 +434,10 @@ def coefplot(
 
 def qplot(
     models: ModelInputType,
-    rename_models: Optional[dict] = None,
-    figsize: Optional[tuple] = None,
-    ncol: Optional[int] = None,
-    nrow: Optional[int] = None,
+    rename_models: dict | None = None,
+    figsize: tuple | None = None,
+    ncol: int | None = None,
+    nrow: int | None = None,
 ):
     """
     Plot regression quantiles.
@@ -518,13 +513,13 @@ def _coefplot_lets_plot(
     df: pd.DataFrame,
     figsize: tuple[int, int],
     alpha: float,
-    yintercept: Optional[int] = None,
-    xintercept: Optional[int] = None,
+    yintercept: int | None = None,
+    xintercept: int | None = None,
     rotate_xticks: float = 0,
-    title: Optional[str] = None,
-    flip_coord: Optional[bool] = True,
-    labels: Optional[dict] = None,
-    cat_template: Optional[str] = None,
+    title: str | None = None,
+    flip_coord: bool | None = True,
+    labels: dict | None = None,
+    cat_template: str | None = None,
     ax=None,  # for compatibility with matplotlib backend
 ):
     """
@@ -611,14 +606,14 @@ def _coefplot_matplotlib(
     df: pd.DataFrame,
     figsize: tuple[int, int],
     alpha: float,
-    yintercept: Optional[int] = None,
-    xintercept: Optional[int] = None,
+    yintercept: int | None = None,
+    xintercept: int | None = None,
     rotate_xticks: float = 0,
-    title: Optional[str] = None,
-    flip_coord: Optional[bool] = True,
-    labels: Optional[dict] = None,
-    cat_template: Optional[str] = None,
-    ax: Optional[plt.Axes] = None,
+    title: str | None = None,
+    flip_coord: bool | None = True,
+    labels: dict | None = None,
+    cat_template: str | None = None,
+    ax: plt.Axes | None = None,
     dodge: float = 0.5,
     **fig_kwargs,
 ) -> plt.Figure:
@@ -689,7 +684,7 @@ def _coefplot_matplotlib(
     is_multi_model = len(models) > 1
 
     colors = plt.cm.jet(np.linspace(0, 1, len(models)))
-    color_dict = dict(zip(models, colors))
+    color_dict = dict(zip(models, colors, strict=False))
 
     # Calculate the positions for dodging
     unique_coefficients = df["Coefficient"].unique()
@@ -763,8 +758,8 @@ def _coefplot_matplotlib(
 
 def _qplot(
     data: pd.DataFrame,
-    nrow: Optional[int] = None,
-    ncol: Optional[int] = None,
+    nrow: int | None = None,
+    ncol: int | None = None,
     figsize: tuple[int, int] = (10, 6),
 ):
     """
@@ -832,11 +827,11 @@ def _qplot(
 
 
 def _get_model_df(
-    fxst: Union[Feols, Fepois, Feiv],
+    fxst: Feols | Fepois | Feiv,
     alpha: float,
-    joint: Optional[Union[str, bool]],
-    seed: Optional[int] = None,
-    rename_models: Optional[dict[str, str]] = None,
+    joint: str | bool | None,
+    seed: int | None = None,
+    rename_models: dict[str, str] | None = None,
 ) -> pd.DataFrame:
     """
     Get a tidy model frame as input to the _coefplot function.

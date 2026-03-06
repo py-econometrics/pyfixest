@@ -1,5 +1,3 @@
-from typing import Optional, Union
-
 import numba as nb
 import numpy as np
 import pandas as pd
@@ -49,7 +47,7 @@ def _check_cluster_df(cluster_df: pd.DataFrame, data: pd.DataFrame):
 
 
 def _count_G_for_ssc_correction(
-    cluster_df: pd.DataFrame, ssc_dict: dict[str, Union[str, bool]]
+    cluster_df: pd.DataFrame, ssc_dict: dict[str, str | bool]
 ):
     G = []
     for col in cluster_df.columns:
@@ -62,8 +60,8 @@ def _count_G_for_ssc_correction(
 
 
 def _get_vcov_type(
-    vcov: Union[str, dict[str, str], None],
-) -> Union[str, dict[str, str]]:
+    vcov: str | dict[str, str] | None,
+) -> str | dict[str, str]:
     """
     Pass the specified vcov type.
 
@@ -196,7 +194,7 @@ def _nw_meat_panel(
     panel_arr: np.ndarray,
     starts: np.ndarray,
     counts: np.ndarray,
-    lag: Optional[int] = None,
+    lag: int | None = None,
 ):
     """
     Compute the panel Newey-West (HAC) covariance estimator.
@@ -236,7 +234,7 @@ def _nw_meat_panel(
 
     # start: first entry per panel i = 1, ..., N
     # counts: number of counts for panel i
-    for start, count in zip(starts, counts):
+    for start, count in zip(starts, counts, strict=True):
         end = start + count
 
         score_i = np.ascontiguousarray(scores[start:end, :])
@@ -260,7 +258,7 @@ def _dk_meat_panel(
     scores: np.ndarray,
     time_arr: np.ndarray,
     idx: np.ndarray,
-    lag: Optional[int] = None,
+    lag: int | None = None,
 ):
     """Compute Driscoll-Kraay HAC meat matrix.
 

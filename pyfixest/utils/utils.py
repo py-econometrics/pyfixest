@@ -1,6 +1,6 @@
 import warnings
 from collections.abc import Mapping
-from typing import Any, Optional, Union
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -17,7 +17,7 @@ def ssc(
     G_df: str = "min",
     *args: Any,
     **kwargs: Any,
-) -> dict[str, Union[str, bool]]:
+) -> dict[str, str | bool]:
     """
     Set the small sample correction factor applied in `get_ssc()`.
 
@@ -134,7 +134,7 @@ def ssc(
 
 def get_ssc(
     *,
-    ssc_dict: dict[str, Union[str, str | bool]],
+    ssc_dict: dict[str, str | (str | bool)],
     N: int,
     k: int,
     k_fe: int,
@@ -354,7 +354,7 @@ def get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Feols"):
 
 
 def simultaneous_crit_val(
-    C: np.ndarray, S: int, alpha: float = 0.05, seed: Optional[int] = None
+    C: np.ndarray, S: int, alpha: float = 0.05, seed: int | None = None
 ) -> float:
     """
     Simultaneous Critical Values.
@@ -391,7 +391,7 @@ def simultaneous_crit_val(
     return np.quantile(tmaxs, 1 - alpha)
 
 
-def capture_context(context: Union[int, Mapping[str, Any]]) -> Mapping[str, Any]:
+def capture_context(context: int | Mapping[str, Any]) -> Mapping[str, Any]:
     """
     Explicitly capture the context to be used by subsequent formula
     materialisations.

@@ -1,7 +1,7 @@
 import warnings
 from collections.abc import Mapping
 from importlib import import_module
-from typing import Any, Literal, Optional, Union
+from typing import Any, Literal
 
 import numpy as np
 import pandas as pd
@@ -138,11 +138,11 @@ class Feiv(Feols):
         self,
         FixestFormula: FixestFormula,
         data: pd.DataFrame,
-        ssc_dict: dict[str, Union[str, bool]],
+        ssc_dict: dict[str, str | bool],
         drop_singletons: bool,
         drop_intercept: bool,
-        weights: Optional[str],
-        weights_type: Optional[str],
+        weights: str | None,
+        weights_type: str | None,
         collin_tol: float,
         fixef_tol: float,
         fixef_maxiter: int,
@@ -158,9 +158,9 @@ class Feiv(Feols):
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
-        context: Union[int, Mapping[str, Any]] = 0,
-        sample_split_var: Optional[str] = None,
-        sample_split_value: Optional[Union[str, int]] = None,
+        context: int | Mapping[str, Any] = 0,
+        sample_split_var: str | None = None,
+        sample_split_value: str | int | None = None,
     ) -> None:
         super().__init__(
             FixestFormula=FixestFormula,
@@ -283,7 +283,7 @@ class Feiv(Feols):
             fml_first_stage += f" | {self._fixef}"
 
         # Type hint to reflect that vcov_detail can be either a dict or a str
-        vcov_detail: Union[dict[str, str], str]
+        vcov_detail: dict[str, str] | str
 
         if self._is_clustered:
             a = self._clustervar[0]
@@ -322,7 +322,7 @@ class Feiv(Feols):
 
         self.IV_weakness_test(["f_stat"])
 
-    def IV_Diag(self, statistics: Optional[list[str]] = None):
+    def IV_Diag(self, statistics: list[str] | None = None):
         """Implement IV diagnostic tests.
 
         Notes
@@ -424,7 +424,7 @@ class Feiv(Feols):
 
         self.IV_weakness_test(iv_diag_stat)
 
-    def IV_weakness_test(self, iv_diag_statistics: Optional[list[str]] = None) -> None:
+    def IV_weakness_test(self, iv_diag_statistics: list[str] | None = None) -> None:
         """Implement IV weakness test (F-test).
 
         This method covers hetero-robust and clustered-robust F statistics.

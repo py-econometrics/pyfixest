@@ -1,5 +1,5 @@
 from collections.abc import Mapping
-from typing import Any, Optional, Union
+from typing import Any
 
 from pyfixest.estimation.api.utils import _estimation_input_checks
 from pyfixest.estimation.FixestMulti_ import FixestMulti
@@ -19,10 +19,10 @@ from pyfixest.utils.utils import ssc as ssc_func
 def feols(
     fml: str,
     data: DataFrameType,  # type: ignore
-    vcov: Optional[Union[VcovTypeOptions, dict[str, str]]] = None,
-    vcov_kwargs: Optional[dict[str, Union[str, int]]] = None,
-    weights: Union[None, str] = None,
-    ssc: Optional[dict[str, Union[str, bool]]] = None,
+    vcov: VcovTypeOptions | dict[str, str] | None = None,
+    vcov_kwargs: dict[str, str | int] | None = None,
+    weights: None | str = None,
+    ssc: dict[str, str | bool] | None = None,
     fixef_rm: FixedRmOptions = "singleton",
     fixef_tol=1e-06,
     fixef_maxiter: int = 10_000,
@@ -36,11 +36,11 @@ def feols(
     demeaner_backend: DemeanerBackendOptions = "numba",
     use_compression: bool = False,
     reps: int = 100,
-    context: Optional[Union[int, Mapping[str, Any]]] = None,
-    seed: Optional[int] = None,
-    split: Optional[str] = None,
-    fsplit: Optional[str] = None,
-) -> Union[Feols, FixestMulti]:
+    context: int | Mapping[str, Any] | None = None,
+    seed: int | None = None,
+    split: str | None = None,
+    fsplit: str | None = None,
+) -> Feols | FixestMulti:
     """
     Estimate a linear regression model with fixed effects using fixest formula syntax.
 
