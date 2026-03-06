@@ -17,7 +17,7 @@ import numpy as np
 import torch
 from numpy.typing import NDArray
 
-from pyfixest.estimation.torch.lsmr_torch import lsmr_torch
+from pyfixest.estimation.torch.lsmr_torch_compiled import lsmr_torch
 
 
 def _get_device(dtype: torch.dtype = torch.float64) -> torch.device:
