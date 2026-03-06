@@ -415,8 +415,10 @@ class _PreconditionedSparse:
         """Return cached transpose view."""
         if self._T is None:
             self._T = _PreconditionedSparse(
-                self._D, self._M_inv,
-                _transposed=not self._transposed, _D_t=self._D_t,
+                self._D,
+                self._M_inv,
+                _transposed=not self._transposed,
+                _D_t=self._D_t,
             )
             self._T._T = self  # cross-link so .t().t() returns self
         return self._T

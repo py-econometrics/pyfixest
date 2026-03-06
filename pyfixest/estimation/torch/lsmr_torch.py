@@ -304,10 +304,21 @@ def lsmr_torch(
 
     if use_compile:
         return _lsmr_compiled(
-            A, b, damp=damp, atol=atol, btol=btol,
-            conlim=conlim, maxiter=maxiter, use_compile=True,
+            A,
+            b,
+            damp=damp,
+            atol=atol,
+            btol=btol,
+            conlim=conlim,
+            maxiter=maxiter,
+            use_compile=True,
         )
     return _lsmr_scalar(
-        A, b, damp=damp, atol=atol, btol=btol,
-        conlim=conlim, maxiter=maxiter,
+        A,
+        b,
+        damp=damp,
+        atol=atol,
+        btol=btol,
+        conlim=conlim,
+        maxiter=maxiter,
     )

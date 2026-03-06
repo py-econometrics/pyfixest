@@ -74,7 +74,7 @@ def test_check_every_correctness(check_every):
 
 
 def test_zero_rhs():
-    """b = 0 should return x = 0."""
+    """B = 0 should return x = 0."""
     A, _ = _make_sparse_problem(100, 50)
     b = torch.zeros(100, dtype=torch.float64)
     x, istop, itn, *_ = lsmr_torch_fused(A, b)
@@ -97,8 +97,6 @@ def test_damping():
 
 def test_sym_ortho_matches_scipy():
     """Branchless _sym_ortho_t should match SciPy's convention."""
-    import math
-
     from pyfixest.estimation.torch.lsmr_torch import _sym_ortho
     from pyfixest.estimation.torch.lsmr_torch_fused import _sym_ortho_t
 
