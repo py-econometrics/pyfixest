@@ -177,7 +177,7 @@ def test_timing_mps(m, n):
     vals = rng.standard_normal(nnz).astype(np.float32)
 
     A = torch.zeros(m, n, dtype=torch.float32)
-    for r, c, v in zip(rows, cols, vals):
+    for r, c, v in zip(rows, cols, vals, strict=True):
         A[r, c] += v
     A = A.to("mps")
     b = torch.tensor(rng.standard_normal(m).astype(np.float32), device="mps")
