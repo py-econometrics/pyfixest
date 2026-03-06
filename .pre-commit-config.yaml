@@ -6,11 +6,6 @@ repos:
     hooks:
       - id: check-hooks-apply
       - id: check-useless-excludes
-  - repo: https://github.com/tox-dev/pyproject-fmt
-    rev: v2.16.2
-    hooks:
-      - id: pyproject-fmt
-        args: [--table-format=long, --keep-full-version, --column-width=88]
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:

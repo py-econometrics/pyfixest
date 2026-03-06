@@ -1,156 +1,158 @@
 [build-system]
+requires = ["maturin>=1.8"]
 build-backend = "maturin"
-requires = [ "maturin>=1.8" ]
 
 [project]
 name = "pyfixest"
 version = "0.50.0a1"
-description = """\
-  Fast high dimensional fixed effect estimation following syntax of the fixest R \
-  package.\
-  """
+description = "Fast high dimensional fixed effect estimation following syntax of the fixest R package."
+authors = [
+    { name = "Alexander Fischer", email = "alexander-fischer1801@t-online.de" },
+    { name = "Styfen Schär" },
+]
 readme = "README.md"
-license = { text = "MIT" }
 requires-python = ">=3.10"
-classifiers = [
-  "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.10",
-  "Programming Language :: Python :: 3.11",
-  "Programming Language :: Python :: 3.12",
-  "Programming Language :: Python :: 3.13",
-  "Programming Language :: Python :: 3.14",
-]
+license = { text = "MIT" }
 dependencies = [
-  "formulaic>=1.1.0",
-  "joblib>=1.4.2",
-  "maketables>=0.1.0",
-  "narwhals>=1.13.3",
-  "numba>=0.58.0",
-  "numpy>=1.25.2",
-  "pandas>=1.1.0",
-  "scipy>=1.6",
-  "seaborn>=0.13.2",
-  "tabulate>=0.9.0",
-  "tqdm>=4.0.0",
+    "formulaic>=1.1.0",
+    "joblib>=1.4.2",
+    "maketables>=0.1.0",
+    "narwhals>=1.13.3",
+    "numba>=0.58.0",
+    "numpy>=1.25.2",
+    "pandas>=1.1.0",
+    "scipy>=1.6",
+    "seaborn>=0.13.2",
+    "tabulate>=0.9.0",
+    "tqdm>=4.0.0",
 ]
-[[project.authors]]
-name = "Alexander Fischer"
-email = "alexander-fischer1801@t-online.de"
-[[project.authors]]
-name = "Styfen Schär"
+
 [project.optional-dependencies]
 jax = [
-  "jax>=0.4.15",
+    "jax>=0.4.15",
 ]
 plots = [
-  "lets-plot>=4.0.0",
+    "lets-plot>=4.0.0",
 ]
-benchmarks = [ "linearmodels", "pyarrow", "statsmodels" ]
+benchmarks = [
+    "linearmodels",
+    "pyarrow",
+    "statsmodels",
+]
 
 [tool.maturin]
 module-name = "pyfixest.core._core_impl"
-features = [ "pyo3/extension-module" ]
+features = ["pyo3/extension-module"]
 python-source = "."
-
-[tool.ruff]
-target-version = "py310"
-line-length = 88
-fix = true
-[tool.ruff.format]
-docstring-code-format = true
-docstring-code-line-length = 88
-[tool.ruff.lint]
-# docs: https://docs.astral.sh/ruff/rules/
-select = [
-  "B",   # bugbear
-  "F",   # Pyflakes
-  "E",   # pycodestyle errors
-  "W",   # pycodestyle warnings
-  "I",   # isort
-  "D",   # flake8-docstrings
-  "UP",  # pyupgrade
-  "SIM", # flake8-simplify
-  "RUF", # ruff,
-  "TRY", # tryceratops
-]
-ignore = [
-  # do not enable if formatting
-  # docs: https://docs.astral.sh/ruff/formatter/#conflicting-lint-rules
-  "B028",   # No explicit `stacklevel` keyword argument found
-  "B904",   # Better exception handling
-  "W191",   # tab indentation
-  "E111",   # indentation
-  "E114",   # indentation
-  "E117",   # over indented
-  "D206",   # indent with spaces
-  "D300",   # triple single quotes
-  "E501",   # line length regulated by formatter
-  "D105",   # missing docstring in magic method
-  "D100",   # missing docstring in public module
-  "D104",   # missing docstring in public package
-  "SIM110", # Use all instead of `for` loop
-  "TRY003", # Avoid specifying long messages outside the exception class
-  "D205",   # 1 blank line required between summary line and description
-  "W505",   # Doc line too long
-]
-[tool.ruff.lint.per-file-ignores]
-"tests/**/*.py" = [ "D100", "D103" ]
-"pyfixest/multcomp.py" = [ "D103" ]
-"pyfixest/summarize.py" = [ "D103" ]
-"pyfixest/visualize.py" = [ "D103" ]
-"scripts/*.py" = [ "D103" ]
-"benchmarks/gpu_big_benchmarks.py" = [ "E402", "F821", "RUF059", "B018", "TRY300" ]
-[tool.ruff.lint.pycodestyle]
-max-doc-length = 88
-[tool.ruff.lint.pydocstyle]
-convention = "numpy"
 
 [tool.pytest.ini_options]
 addopts = [
-  "-v",
-  "--strict-markers",
-  "--strict-config",
-  "--cov=pyfixest",
-  "--cov-report=term-missing",
-  "--color=yes",
-]
-markers = [
-  """\
-  against_r_core: mark test to be part of the test suite that depends on conda \
-  available R modules\
-  """,
-  """\
-  against_r_extended: mark test to be part of the test suite that depends on other R \
-  modules\
-  """,
-  "extended: mark test to be part of the extended test suite",
-  """\
-  plots: marks all tests for plotting functionality, tests only triggered when using \
-  tag in github issue\
-  """,
-  "hac: marks all tests for HAC SEs"
-]
-filterwarnings = [
-  "ignore::FutureWarning:rpy2",
-  "ignore::DeprecationWarning:rpy2",
+    "-v",
+    "--strict-markers",
+    "--strict-config",
+    "--cov=pyfixest",
+    "--cov-report=term-missing",
+    "--color=yes",
 ]
 
+markers = [
+    "against_r_core: mark test to be part of the test suite that depends on conda available R modules",
+    "against_r_extended: mark test to be part of the test suite that depends on other R modules",
+    "extended: mark test to be part of the extended test suite",
+    "plots: marks all tests for plotting functionality, tests only triggered when using tag in github issue",
+    "hac: marks all tests for HAC SEs"
+]
+
+filterwarnings = [
+    "ignore::FutureWarning:rpy2",
+    "ignore::DeprecationWarning:rpy2",
+]
+
+[tool.ruff]
+line-length = 88
+fix = true
+
+target-version = "py310"
+
+[tool.ruff.lint]
+# docs: https://docs.astral.sh/ruff/rules/
+select = [
+    "B", # bugbear
+    "F", # Pyflakes
+    "E", # pycodestyle errors
+    "W", # pycodestyle warnings
+    "I", # isort
+    "D", # flake8-docstrings
+    "UP", # pyupgrade
+    "SIM", # flake8-simplify
+    "RUF", # ruff,
+    "TRY", # tryceratops
+]
+
+ignore = [
+    # do not enable if formatting
+    # docs: https://docs.astral.sh/ruff/formatter/#conflicting-lint-rules
+    "B028", # No explicit `stacklevel` keyword argument found
+    "B904", # Better exception handling
+    "W191", # tab indentation
+    "E111", # indentation
+    "E114", # indentation
+    "E117", # over indented
+    "D206", # indent with spaces
+    "D300", # triple single quotes
+    "E501", # line length regulated by formatter
+    "D105", # missing docstring in magic method
+    "D100", # missing docstring in public module
+    "D104", # missing docstring in public package
+    "SIM110", # Use all instead of `for` loop
+    "TRY003", # Avoid specifying long messages outside the exception class
+    "D205", # 1 blank line required between summary line and description
+    "W505", # Doc line too long
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["D100", "D103"]
+"pyfixest/multcomp.py" = ["D103"]
+"pyfixest/summarize.py" = ["D103"]
+"pyfixest/visualize.py" = ["D103"]
+"scripts/*.py" = ["D103"]
+"benchmarks/gpu_big_benchmarks.py" = ["E402", "F821", "RUF059", "B018", "TRY300"]
+
+[tool.ruff.lint.pycodestyle]
+max-doc-length = 88
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.ruff.format]
+docstring-code-format = true
+docstring-code-line-length = 88
+
 [tool.mypy]
+
 [[tool.mypy.overrides]]
 module = [
-  "pandas.*",
-  "numpy.*",
-  "scipy.*",
-  "numba.*",
-  "lets_plot.*",
-  "formulaic.*",
-  "wildboottest.*",
-  "tabulate.*",
-  "joblib.*",
-  "narwhals.*",
-  "tqdm.*",
+    "pandas.*",
+    "numpy.*",
+    "scipy.*",
+    "numba.*",
+    "lets_plot.*",
+    "formulaic.*",
+    "wildboottest.*",
+    "tabulate.*",
+    "joblib.*",
+    "narwhals.*",
+    "tqdm.*",
 ]
 ignore_missing_imports = true
+
+# --------------------------------------------------------------------------------------
+# pixi configuration
+# --------------------------------------------------------------------------------------
+
+[tool.pixi.workspace]
+channels = ["conda-forge"]
+platforms = ["linux-64", "win-64", "osx-arm64"]
 
 [tool.pixi.dependencies]
 python = ">=3.10,<3.15"
@@ -168,58 +170,44 @@ pyarrow = ">=14.0"
 doubleml = ">=0.10.1"
 pytest-sugar = ">=1.1.1"
 
-# -- environments ----------------------------------------------------------------------
-[tool.pixi.environments]
-py310 = [ "py310" ]
-py311 = [ "py311" ]
-py312 = [ "py312" ]
-py313 = [ "py313" ]
-py314 = [ "py314" ]
-py310-r = { features = [ "py310", "r" ], solve-group = "py310" }
-py311-r = { features = [ "py311", "r" ], solve-group = "py311" }
-py312-r = { features = [ "py312", "r" ], solve-group = "py312" }
-docs = { features = [ "docs" ], solve-group = "default" }
-lint = { features = [ "lint" ], no-default-feature = true }
+[tool.pixi.pypi-dependencies]
+pyfixest = { path = ".", editable = true, extras = ["jax", "plots"] }
+wildboottest = ">=0.3.2"
+maturin-import-hook = ">=0.2.0"
+maturin = ">=1.8"
 
-# -- docs feature ----------------------------------------------------------------------
-[tool.pixi.feature.docs.dependencies]
-jupyterlab = ">=4.0.12"
-jupytext = "==1.16.1"
-watermark = "==2.4.3"
-pylatex = ">=1.4.2"
-quartodoc = ">=0.11.0"
-quarto = ">=1.8.25"
-griffe = "<2"
-[tool.pixi.feature.docs.pypi-dependencies]
-causaldata = ">=0.1.4"
-marginaleffects = "==0.2.2"
-lets-plot = ">=4.0.0"
-[tool.pixi.feature.docs.tasks]
-docs-build = { cmd = "quartodoc build --verbose --config docs/_quarto.yml", description = "Build API docs with quartodoc" }
-docs-render = { cmd = "quarto render docs", env = { PYTHONWARNINGS = "ignore", KMP_WARNINGS = "0" }, description = "Render docs with Quarto" }
-docs-preview = { cmd = "quarto preview docs", env = { PYTHONWARNINGS = "ignore", KMP_WARNINGS = "0" }, description = "Preview docs locally" }
+[tool.pixi.tasks]
+test-py = { cmd = 'pytest tests -n auto -m "not (extended or against_r_core or against_r_extended or plots or hac)" --cov=pyfixest --cov-report=xml', depends-on = ["_setup"], description = "Quick Python tests (no R, extended, plots, or HAC)" }
+test-py-extended = { cmd = 'pytest tests -n auto -m "extended" --cov=pyfixest --cov-report=xml', depends-on = ["_setup"], description = "Extended Python tests" }
+render-notebooks = { cmd = "python scripts/run_notebooks.py", description = "Run all notebooks" }
 
-# -- lint feature ----------------------------------------------------------------------
-[tool.pixi.feature.lint.dependencies]
-prek = ">=0.3.4"
-[tool.pixi.feature.lint.tasks]
-lint = { cmd = "prek run --all-files", description = "Run all pre-commit hooks via prek" }
+[tool.pixi.tasks._setup]
+cmd = "python scripts/setup_maturin_hook.py && touch .pixi/.import-hook-installed"
+inputs = ["scripts/setup_maturin_hook.py"]
+outputs = [".pixi/.import-hook-installed"]
 
 # -- python version features ------------------------------------------------------------
+
 [tool.pixi.feature.py310.dependencies]
 python = "~=3.10.0"
+
 [tool.pixi.feature.py311.dependencies]
 python = "~=3.11.0"
+
 [tool.pixi.feature.py312.dependencies]
 python = "~=3.12.0"
+
 [tool.pixi.feature.py313.dependencies]
 python = "~=3.13.0"
+
 [tool.pixi.feature.py314.dependencies]
 python = "~=3.14.0"
 
 # -- r feature --------------------------------------------------------------------------
+
 [tool.pixi.feature.r]
-platforms = [ "linux-64", "osx-arm64" ]
+platforms = ["linux-64", "osx-arm64"]
+
 [tool.pixi.feature.r.dependencies]
 rpy2 = "==3.5.11"
 r-base = "*"
@@ -230,51 +218,65 @@ r-broom = ">=1.0.5"
 r-car = ">=3.1_2"
 r-quantreg = ">=5.0"
 r-reticulate = ">=1.0"
-[tool.pixi.feature.r.tasks]
-test-all = { cmd = "pytest -rs -n auto --cov-report=term tests", depends-on = [
-  "_setup"
-], description = "Run all tests (Python + R)" }
-test-r-core = { cmd = 'pytest -rs -n auto tests -m "against_r_core" --cov=pyfixest --cov-report=xml', depends-on = [
-  "_setup"
-], description = "Tests against R fixest (conda-forge packages)" }
-test-r-extended = { cmd = 'pytest -rs -n auto tests -m "against_r_extended" --cov=pyfixest --cov-report=xml', depends-on = [
-  "_setup"
-], description = "Tests against R (requires manual Rscript r_test_requirements.R)" }
-test-r-fixest = { cmd = "pytest -rs -n auto tests/test_vs_fixest.py --cov=pyfixest --cov-report=xml", depends-on = [
-  "_setup"
-], description = "Run test_vs_fixest.py" }
+
 [tool.pixi.feature.r.tasks._update-test-data]
 cmd = "Rscript tests/r_test_comparisons.R"
 depends-on = []
-inputs = [ "tests/r_test_comparisons.R" ]
-outputs = [ "tests/data/ritest_results.csv" ]
+inputs = ["tests/r_test_comparisons.R"]
+outputs = ["tests/data/ritest_results.csv"]
 env = { RETICULATE_PYTHON = "$CONDA_PREFIX/bin/python" }
+
 [tool.pixi.feature.r.tasks.test-r-hac]
 cmd = "pytest tests/test_hac_vs_fixest.py -v -n auto"
-depends-on = [ "_setup" ]
+depends-on = ["_setup"]
 description = "HAC standard error tests vs R"
 env = { OMP_NUM_THREADS = "1", OPENBLAS_NUM_THREADS = "1", MKL_NUM_THREADS = "1", VECLIB_MAXIMUM_THREADS = "1", NUMEXPR_NUM_THREADS = "1" }
-[tool.pixi.pypi-dependencies]
-pyfixest = { path = ".", editable = true, extras = [ "jax", "plots" ] }
-wildboottest = ">=0.3.2"
-maturin-import-hook = ">=0.2.0"
-maturin = ">=1.8"
-[tool.pixi.tasks]
-test-py = { cmd = 'pytest tests -n auto -m "not (extended or against_r_core or against_r_extended or plots or hac)" --cov=pyfixest --cov-report=xml', depends-on = [
-  "_setup"
-], description = "Quick Python tests (no R, extended, plots, or HAC)" }
-test-py-extended = { cmd = 'pytest tests -n auto -m "extended" --cov=pyfixest --cov-report=xml', depends-on = [
-  "_setup"
-], description = "Extended Python tests" }
-render-notebooks = { cmd = "python scripts/run_notebooks.py", description = "Run all notebooks" }
-[tool.pixi.tasks._setup]
-cmd = "python scripts/setup_maturin_hook.py && touch .pixi/.import-hook-installed"
-inputs = [ "scripts/setup_maturin_hook.py" ]
-outputs = [ ".pixi/.import-hook-installed" ]
 
-# --------------------------------------------------------------------------------------
-# pixi configuration
-# --------------------------------------------------------------------------------------
-[tool.pixi.workspace]
-channels = [ "conda-forge" ]
-platforms = [ "linux-64", "win-64", "osx-arm64" ]
+[tool.pixi.feature.r.tasks]
+test-all = { cmd = "pytest -rs -n auto --cov-report=term tests", depends-on = ["_setup"], description = "Run all tests (Python + R)" }
+test-r-core = { cmd = 'pytest -rs -n auto tests -m "against_r_core" --cov=pyfixest --cov-report=xml', depends-on = ["_setup"], description = "Tests against R fixest (conda-forge packages)" }
+test-r-extended = { cmd = 'pytest -rs -n auto tests -m "against_r_extended" --cov=pyfixest --cov-report=xml', depends-on = ["_setup"], description = "Tests against R (requires manual Rscript r_test_requirements.R)" }
+test-r-fixest = { cmd = "pytest -rs -n auto tests/test_vs_fixest.py --cov=pyfixest --cov-report=xml", depends-on = ["_setup"], description = "Run test_vs_fixest.py" }
+
+# -- docs feature ----------------------------------------------------------------------
+
+[tool.pixi.feature.docs.dependencies]
+jupyterlab = ">=4.0.12"
+jupytext = "==1.16.1"
+watermark = "==2.4.3"
+pylatex = ">=1.4.2"
+quartodoc = ">=0.11.0"
+quarto = ">=1.8.25"
+griffe = "<2"
+
+[tool.pixi.feature.docs.pypi-dependencies]
+causaldata = ">=0.1.4"
+marginaleffects = "==0.2.2"
+lets-plot = ">=4.0.0"
+
+[tool.pixi.feature.docs.tasks]
+docs-build = { cmd = "quartodoc build --verbose --config docs/_quarto.yml", description = "Build API docs with quartodoc" }
+docs-render = { cmd = "quarto render docs", env = { PYTHONWARNINGS = "ignore", KMP_WARNINGS = "0" }, description = "Render docs with Quarto" }
+docs-preview = { cmd = "quarto preview docs", env = { PYTHONWARNINGS = "ignore", KMP_WARNINGS = "0" }, description = "Preview docs locally" }
+
+# -- lint feature ----------------------------------------------------------------------
+
+[tool.pixi.feature.lint.dependencies]
+prek = ">=0.3.4"
+
+[tool.pixi.feature.lint.tasks]
+lint = { cmd = "prek run --all-files", description = "Run all pre-commit hooks via prek" }
+
+# -- environments ----------------------------------------------------------------------
+
+[tool.pixi.environments]
+py310 = ["py310"]
+py311 = ["py311"]
+py312 = ["py312"]
+py313 = ["py313"]
+py314 = ["py314"]
+py310-r = { features = ["py310", "r"], solve-group = "py310" }
+py311-r = { features = ["py311", "r"], solve-group = "py311" }
+py312-r = { features = ["py312", "r"], solve-group = "py312" }
+docs = { features = ["docs"], solve-group = "default" }
+lint = { features = ["lint"], no-default-feature = true }
