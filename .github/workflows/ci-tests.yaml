@@ -34,6 +34,8 @@ jobs:
 
       - name: Run tests
         run: pixi run -e ${{ matrix.environment }} test-py
+        env:
+          PYTEST_XDIST_AUTO_NUM_WORKERS: 4
 
       - name: Upload coverage to Codecov (partial)
         if: matrix.environment == 'py314' && matrix.os == 'ubuntu-latest'
@@ -64,6 +66,8 @@ jobs:
 
       - name: Run ${{ matrix.test-task }}
         run: pixi run -e py312-r ${{ matrix.test-task }}
+        env:
+          PYTEST_XDIST_AUTO_NUM_WORKERS: 4
 
       - name: Upload coverage to Codecov (partial)
         uses: codecov/codecov-action@v5
