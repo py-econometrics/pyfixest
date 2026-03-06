@@ -1304,7 +1304,7 @@ dependencies = [
 [[package]]
 name = "schwarz-precond"
 version = "0.1.0"
-source = "git+ssh://git@github.com/py-econometrics/within.git?rev=ac5a859e82dda01ff863c46cc78f675d55c22a3c#ac5a859e82dda01ff863c46cc78f675d55c22a3c"
+source = "git+https://github.com/py-econometrics/within.git?rev=ac5a859e82dda01ff863c46cc78f675d55c22a3c#ac5a859e82dda01ff863c46cc78f675d55c22a3c"
 dependencies = [
  "faer",
  "rand 0.9.2",
@@ -1848,7 +1848,7 @@ dependencies = [
 [[package]]
 name = "within"
 version = "0.1.0"
-source = "git+ssh://git@github.com/py-econometrics/within.git?rev=ac5a859e82dda01ff863c46cc78f675d55c22a3c#ac5a859e82dda01ff863c46cc78f675d55c22a3c"
+source = "git+https://github.com/py-econometrics/within.git?rev=ac5a859e82dda01ff863c46cc78f675d55c22a3c#ac5a859e82dda01ff863c46cc78f675d55c22a3c"
 dependencies = [
  "approx-chol",
  "faer",

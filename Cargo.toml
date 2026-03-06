@@ -14,7 +14,7 @@ ndarray = { version = "0.16.1", features = ["rayon"] }
 rayon   = "1.11.0"
 numpy = "0.26.0"
 thiserror = "2.0.16"
-within = { git = "ssh://git@github.com/py-econometrics/within.git", rev = "ac5a859e82dda01ff863c46cc78f675d55c22a3c", default-features = false }
+within = { git = "https://github.com/py-econometrics/within.git", rev = "ac5a859e82dda01ff863c46cc78f675d55c22a3c", default-features = false }
 
 [profile.release]
 opt-level = 3        # Maximize performance
