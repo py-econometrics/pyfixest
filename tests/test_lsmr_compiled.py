@@ -14,8 +14,8 @@ import pytest
 import torch
 
 # Reference: original scalar-state LSMR (for correctness comparison)
-from pyfixest.estimation.torch.lsmr_torch import _lsmr_scalar as lsmr_torch_original
-from pyfixest.estimation.torch.lsmr_torch_compiled import lsmr_torch
+from pyfixest.estimation.torch.lsmr_torch import _lsmr_eager as lsmr_torch_original
+from pyfixest.estimation.torch.lsmr_torch import lsmr_torch
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -136,7 +136,7 @@ def test_correctness_mps():
 
     x_ref, *_ = lsmr_torch_original(A_cpu, b_cpu)
 
-    # MPS f32 (auto: use_compile=True)
+    # MPS f32 (auto: use_compile=False; pass use_compile=True to force)
     A_mps = A_cpu.to(torch.float32).to_dense().to("mps")
     b_mps = b_cpu.to(torch.float32).to("mps")
 
