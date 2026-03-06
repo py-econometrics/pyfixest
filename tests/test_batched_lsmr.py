@@ -372,3 +372,168 @@ class TestDemeanBatched:
         res_torch, success = demean_torch(x, flist, weights, tol=1e-10)
         assert success
         np.testing.assert_allclose(res_torch, res_pyhdfe, rtol=1e-5, atol=1e-7)
+
+
+# ---------------------------------------------------------------------------
+# Compiled batched LSMR tests
+# ---------------------------------------------------------------------------
+
+HAS_MPS = hasattr(torch.backends, "mps") and torch.backends.mps.is_available()
+
+
+class TestCompiledBatchedLSMR:
+    """Tests for the compiled batched LSMR path (_lsmr_compiled_batched)."""
+
+    def test_compiled_batched_matches_eager_batched(self):
+        """Packed-state batched matches vectorized eager batched on CPU f64, K=5.
+
+        Uses use_compile=False to avoid Inductor C++ backend issues on macOS.
+        This still validates the _lsmr_compiled_batched logic (packed state,
+        _scalar_step on (STATE_SIZE, K) tensors, vector updates with clamp guards).
+        Actual torch.compile fusion is tested in the MPS tests below.
+        """
+        from pyfixest.estimation.torch.lsmr_torch import (
+            _lsmr_batched,
+            _lsmr_compiled_batched,
+        )
+
+        m, n, K = 200, 100, 5
+        A = _make_sparse_problem(m, n)
+        B = _make_rhs(m, K, seed=123)
+
+        X_eager, istop_eager, itn_eager, *_ = _lsmr_batched(A, B)
+        X_comp, istop_comp, itn_comp, *_ = _lsmr_compiled_batched(
+            A, B, use_compile=False
+        )
+
+        assert torch.allclose(X_eager, X_comp, atol=1e-6, rtol=1e-6), (
+            f"max diff = {torch.max(torch.abs(X_eager - X_comp)).item():.2e}"
+        )
+        assert itn_eager == itn_comp, f"itn: {itn_eager} vs {itn_comp}"
+
+    @pytest.mark.parametrize("K", [2, 10, 20])
+    def test_compiled_matches_sequential_various_K(self, K):
+        """Packed-state batched matches K sequential lsmr_torch calls."""
+        from pyfixest.estimation.torch.lsmr_torch import _lsmr_compiled_batched
+
+        m, n = 300, 150
+        A = _make_sparse_problem(m, n, seed=77)
+        B = _make_rhs(m, K, seed=88)
+
+        X_comp, *_ = _lsmr_compiled_batched(A, B, use_compile=False)
+
+        for k in range(K):
+            x_seq, *_ = lsmr_torch(A, B[:, k])
+            assert torch.allclose(X_comp[:, k], x_seq, atol=1e-6, rtol=1e-6), (
+                f"K={K}, col {k}: max diff = "
+                f"{torch.max(torch.abs(X_comp[:, k] - x_seq)).item():.2e}"
+            )
+
+    def test_compiled_single_column(self):
+        """Packed-state K=1 matches single-RHS lsmr_torch."""
+        from pyfixest.estimation.torch.lsmr_torch import _lsmr_compiled_batched
+
+        m, n = 200, 100
+        A = _make_sparse_problem(m, n)
+        b = _make_rhs(m, 1, seed=42)
+
+        X_comp, *_ = _lsmr_compiled_batched(A, b, use_compile=False)
+        x_single, *_ = lsmr_torch(A, b[:, 0])
+
+        assert torch.allclose(X_comp[:, 0], x_single, atol=1e-6), (
+            f"max diff = {torch.max(torch.abs(X_comp[:, 0] - x_single)).item():.2e}"
+        )
+
+    def test_compiled_zero_rhs_column(self):
+        """Zero RHS column handled correctly in packed-state path."""
+        from pyfixest.estimation.torch.lsmr_torch import _lsmr_compiled_batched
+
+        m, n = 100, 50
+        A = _make_sparse_problem(m, n)
+        B = _make_rhs(m, 3, seed=42)
+        B[:, 1] = 0.0  # Zero out middle column
+
+        X, istop, *_ = _lsmr_compiled_batched(A, B, use_compile=False)
+
+        assert torch.allclose(
+            X[:, 1], torch.zeros(n, dtype=torch.float64), atol=1e-12
+        ), f"Zero-RHS column has non-zero solution: ||x|| = {torch.norm(X[:, 1]).item()}"
+
+        # Non-zero columns should still solve correctly
+        for k in [0, 2]:
+            x_seq, *_ = lsmr_torch(A, B[:, k])
+            assert torch.allclose(X[:, k], x_seq, atol=1e-6, rtol=1e-6)
+
+    def test_compiled_damp(self):
+        """Damped packed-state batched matches damped sequential."""
+        from pyfixest.estimation.torch.lsmr_torch import _lsmr_compiled_batched
+
+        m, n, K = 200, 100, 3
+        A = _make_sparse_problem(m, n)
+        B = _make_rhs(m, K, seed=55)
+        damp = 5.0
+
+        X_comp, *_ = _lsmr_compiled_batched(A, B, damp=damp, use_compile=False)
+
+        for k in range(K):
+            x_seq, *_ = lsmr_torch(A, B[:, k], damp=damp)
+            assert torch.allclose(X_comp[:, k], x_seq, atol=1e-6, rtol=1e-6), (
+                f"Damped col {k}: max diff = "
+                f"{torch.max(torch.abs(X_comp[:, k] - x_seq)).item():.2e}"
+            )
+
+    def test_compiled_all_zero_rhs(self):
+        """All-zero B returns all-zero X in packed-state path."""
+        from pyfixest.estimation.torch.lsmr_torch import _lsmr_compiled_batched
+
+        m, n, K = 100, 50, 3
+        A = _make_sparse_problem(m, n)
+        B = torch.zeros(m, K, dtype=torch.float64)
+
+        X, istop, itn, *_ = _lsmr_compiled_batched(A, B, use_compile=False)
+
+        assert torch.allclose(X, torch.zeros(n, K, dtype=torch.float64), atol=1e-12)
+        assert itn == 0
+
+    # --- MPS-specific tests ---
+
+    @pytest.mark.skipif(not HAS_MPS, reason="MPS not available")
+    def test_compiled_mps_correctness(self):
+        """Compiled batched on MPS f32 vs CPU f64 reference."""
+        m, n, K = 300, 150, 5
+        A_cpu = _make_sparse_problem(m, n, density=0.1, seed=42)
+        B_cpu = _make_rhs(m, K, seed=123)
+
+        # CPU f64 reference (eager)
+        X_ref, *_ = lsmr_torch_batched(A_cpu, B_cpu, use_compile=False)
+
+        # MPS f32 compiled
+        A_mps = A_cpu.to(torch.float32).to_dense().to("mps")
+        B_mps = B_cpu.to(torch.float32).to("mps")
+
+        X_mps, *_ = lsmr_torch_batched(A_mps, B_mps, use_compile=True)
+
+        max_diff = torch.max(
+            torch.abs(X_ref.float() - X_mps.cpu())
+        ).item()
+        assert max_diff < 0.1, (
+            f"MPS f32 compiled vs CPU f64 too different: {max_diff:.2e}"
+        )
+
+    @pytest.mark.skipif(not HAS_MPS, reason="MPS not available")
+    def test_compiled_vs_uncompiled_mps(self):
+        """Compiled and uncompiled give same results on MPS."""
+        m, n, K = 300, 150, 5
+        A_cpu = _make_sparse_problem(m, n, density=0.1, seed=42)
+        B_cpu = _make_rhs(m, K, seed=123)
+
+        A_mps = A_cpu.to(torch.float32).to_dense().to("mps")
+        B_mps = B_cpu.to(torch.float32).to("mps")
+
+        X_comp, *_ = lsmr_torch_batched(A_mps, B_mps, use_compile=True)
+        X_nocomp, *_ = lsmr_torch_batched(A_mps, B_mps, use_compile=False)
+
+        max_diff = torch.max(torch.abs(X_comp - X_nocomp)).item()
+        assert max_diff < 1e-4, (
+            f"Compiled vs uncompiled differ on MPS: {max_diff:.2e}"
+        )

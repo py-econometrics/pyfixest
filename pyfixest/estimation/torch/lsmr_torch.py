@@ -1,18 +1,27 @@
 """
 Pure PyTorch LSMR iterative solver with optional torch.compile kernel fusion.
 
-Two implementations live in this file:
+Four implementations live in this file:
 
-1. ``_lsmr_eager`` — eager-mode PyTorch, Python-float Givens rotations.
-   Best for CPU and MPS (Metal command-buffer batching already amortizes
-   kernel-launch overhead).
+0. ``_lsmr_batched`` — eager batched LSMR for K right-hand sides via SpMM.
+   Uses vectorized (K,) Givens rotations with ``_sym_ortho_vec``.
 
-2. ``_lsmr_compiled`` — packs all scalar state into a 1-D tensor and runs
+1. ``_lsmr_eager`` — eager single-RHS LSMR, Python-float Givens rotations.
+   Best for CPU.
+
+2. ``_lsmr_compiled`` — packs scalar state into a 1-D tensor and runs
    the Givens / norm / convergence work through a ``torch.compile``-d
    kernel.  On CUDA this fuses ~60 per-iteration kernel launches into one.
 
-The public entry point ``lsmr_torch()`` dispatches automatically:
-CUDA → compiled, CPU/MPS → scalar.  Pass ``use_compile=True`` to override.
+3. ``_lsmr_compiled_batched`` — compiled batched LSMR for K RHS via SpMM.
+   Packs scalar state into a (_STATE_SIZE, K) tensor — the same compiled
+   ``_scalar_step`` serves both single-RHS and batched paths since all ops
+   are shape-agnostic.  Fuses scalar work into one kernel per iteration.
+
+Public entry points:
+- ``lsmr_torch()`` dispatches: CUDA → compiled, CPU/MPS → eager.
+- ``lsmr_torch_batched()`` dispatches: CUDA → compiled batched,
+  CPU/MPS → eager batched.  Pass ``use_compile=True/False`` to override.
 
 Reference:
     D. C.-L. Fong and M. A. Saunders,
@@ -181,6 +190,121 @@ def _sym_ortho_vec(
     return c, s, r
 
 
+# ---------------------------------------------------------------------------
+# Shared batched helpers
+# ---------------------------------------------------------------------------
+
+
+def _safe_normalize_cols(
+    M: torch.Tensor, norms: torch.Tensor
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """
+    Divide each column of (m, K) matrix ``M`` by its (K,) ``norms``,
+    zeroing columns where ``norms == 0``.
+
+    Returns ``(M_normalized, norms)`` so the caller has the norms for later use.
+    """
+    nonzero = norms > 0
+    safe = torch.where(nonzero, norms, torch.ones_like(norms))
+    M = M / safe.unsqueeze(0)
+    M[:, ~nonzero] = 0.0
+    return M, norms
+
+
+def _make_initial_state(
+    alpha: torch.Tensor,
+    beta: torch.Tensor,
+    normb: torch.Tensor,
+    damp: float,
+    dtype: torch.dtype,
+    device: torch.device,
+    *,
+    K: int | None = None,
+) -> torch.Tensor:
+    """
+    Pack the 20-element LSMR scalar state into a tensor.
+
+    For single-RHS: ``K=None`` → shape ``(_STATE_SIZE,)``.
+    For batched:     ``K=int`` → shape ``(_STATE_SIZE, K)``.
+    """
+    shape = (_STATE_SIZE,) if K is None else (_STATE_SIZE, K)
+    state = torch.zeros(shape, device=device, dtype=dtype)
+    state[_I_ALPHABAR] = alpha
+    state[_I_DAMP] = damp
+    state[_I_BETA] = beta
+    state[_I_ALPHA] = alpha
+    state[_I_SBAR] = 0.0
+    state[_I_CBAR] = 1.0
+    state[_I_ZETABAR] = alpha * beta
+    state[_I_RHO] = 1.0
+    state[_I_RHOBAR] = 1.0
+    state[_I_RHODOLD] = 1.0
+    state[_I_TAUTILDEOLD] = 0.0
+    state[_I_THETATILDE] = 0.0
+    state[_I_BETADD] = beta
+    state[_I_BETAD] = 0.0
+    state[_I_D] = 0.0
+    state[_I_NORMA2] = alpha * alpha
+    state[_I_MAXRBAR] = 0.0
+    state[_I_MINRBAR] = 1e100 if dtype == torch.float64 else 1e10
+    state[_I_NORMB] = normb
+    state[_I_ZETA] = 0.0
+    return state
+
+
+def _check_convergence_batched(
+    istop: torch.Tensor,
+    test1: torch.Tensor,
+    rtol: torch.Tensor,
+    test2: torch.Tensor,
+    test3: torch.Tensor,
+    t1: torch.Tensor,
+    atol: float,
+    ctol: float,
+    K: int,
+    device: torch.device,
+) -> torch.Tensor:
+    """
+    Per-column convergence check for batched LSMR.
+
+    Sets istop per column using an only-set-once latch: once a column's
+    istop becomes non-zero, it is never overwritten.  Returns updated istop.
+    """
+    not_yet = istop == 0
+    new_stop = torch.zeros(K, device=device, dtype=torch.long)
+    new_stop = torch.where(test1 <= rtol, torch.ones_like(new_stop), new_stop)
+    new_stop = torch.where(
+        (test2 <= atol) & (new_stop == 0),
+        2 * torch.ones_like(new_stop), new_stop,
+    )
+    new_stop = torch.where(
+        (test3 <= ctol) & (new_stop == 0),
+        3 * torch.ones_like(new_stop), new_stop,
+    )
+    new_stop = torch.where(
+        (1.0 + t1 <= 1.0) & (new_stop == 0),
+        4 * torch.ones_like(new_stop), new_stop,
+    )
+    new_stop = torch.where(
+        (1.0 + test2 <= 1.0) & (new_stop == 0),
+        5 * torch.ones_like(new_stop), new_stop,
+    )
+    new_stop = torch.where(
+        (1.0 + test3 <= 1.0) & (new_stop == 0),
+        6 * torch.ones_like(new_stop), new_stop,
+    )
+    return torch.where(not_yet, new_stop, istop)
+
+
+def _mark_maxiter_batched(istop: torch.Tensor, itn: int, maxiter: int) -> torch.Tensor:
+    """Set istop=7 for columns that did not converge before maxiter."""
+    return torch.where(
+        (istop == 0) & (itn >= maxiter),
+        7 * torch.ones_like(istop),
+        istop,
+    )
+
+
 # ===========================================================================
 # Implementation 0: batched LSMR — K right-hand sides via SpMM
 # ===========================================================================
@@ -247,19 +371,12 @@ def _lsmr_batched(
     X = torch.zeros(n, K, device=device, dtype=dtype)
     beta = normb.clone()                                # (K,)
 
-    # Normalize columns where beta > 0
-    nonzero = beta > 0
-    safe_beta = torch.where(nonzero, beta, torch.ones_like(beta))
-    U = U / safe_beta.unsqueeze(0)
-    U[:, ~nonzero] = 0.0
+    U, beta = _safe_normalize_cols(U, beta)
 
     V = _rmatvec_batched(At, U)                         # (n, K)  — SpMM
     alpha = torch.linalg.norm(V, dim=0)                 # (K,)
 
-    nonzero_a = alpha > 0
-    safe_alpha = torch.where(nonzero_a, alpha, torch.ones_like(alpha))
-    V = V / safe_alpha.unsqueeze(0)
-    V[:, ~nonzero_a] = 0.0
+    V, alpha = _safe_normalize_cols(V, alpha)
 
     # --- Scalar state as (K,) tensors ---
     itn = 0
@@ -315,19 +432,11 @@ def _lsmr_batched(
         # Bidiagonalization step: SpMM replaces SpMV
         U = _matvec_batched(A, V) - alpha.unsqueeze(0) * U     # (m, K)
         beta = torch.linalg.norm(U, dim=0)                     # (K,)
-
-        nonzero_b = beta > 0
-        safe_b = torch.where(nonzero_b, beta, torch.ones_like(beta))
-        U = U / safe_b.unsqueeze(0)
-        U[:, ~nonzero_b] = 0.0
+        U, beta = _safe_normalize_cols(U, beta)
 
         V = _rmatvec_batched(At, U) - beta.unsqueeze(0) * V    # (n, K)
         alpha = torch.linalg.norm(V, dim=0)                    # (K,)
-
-        nonzero_a = alpha > 0
-        safe_a = torch.where(nonzero_a, alpha, torch.ones_like(alpha))
-        V = V / safe_a.unsqueeze(0)
-        V[:, ~nonzero_a] = 0.0
+        V, alpha = _safe_normalize_cols(V, alpha)
 
         # Givens rotation 1: (alphabar, damp)
         chat, shat, alphahat = _sym_ortho_vec(alphabar, damp_vec)
@@ -402,42 +511,13 @@ def _lsmr_batched(
         t1 = test1 / (1.0 + normA * normx / safe_normb)
         rtol = btol + atol * normA * normx / safe_normb
 
-        # Determine stopping reason per column (only set if not already set)
-        not_yet = istop == 0
-        if not_yet.any():
-            new_stop = torch.zeros(K, device=device, dtype=torch.long)
-            new_stop = torch.where(test1 <= rtol, torch.ones_like(new_stop), new_stop)
-            new_stop = torch.where(
-                (test2 <= atol) & (new_stop == 0),
-                2 * torch.ones_like(new_stop), new_stop,
-            )
-            new_stop = torch.where(
-                (test3 <= ctol) & (new_stop == 0),
-                3 * torch.ones_like(new_stop), new_stop,
-            )
-            new_stop = torch.where(
-                (1.0 + t1 <= 1.0) & (new_stop == 0),
-                4 * torch.ones_like(new_stop), new_stop,
-            )
-            new_stop = torch.where(
-                (1.0 + test2 <= 1.0) & (new_stop == 0),
-                5 * torch.ones_like(new_stop), new_stop,
-            )
-            new_stop = torch.where(
-                (1.0 + test3 <= 1.0) & (new_stop == 0),
-                6 * torch.ones_like(new_stop), new_stop,
-            )
-            istop = torch.where(not_yet, new_stop, istop)
-
+        istop = _check_convergence_batched(
+            istop, test1, rtol, test2, test3, t1, atol, ctol, K, device,
+        )
         if (istop > 0).all():
             break
 
-    # Mark columns that hit maxiter
-    istop = torch.where(
-        (istop == 0) & (itn >= maxiter),
-        7 * torch.ones_like(istop),
-        istop,
-    )
+    istop = _mark_maxiter_batched(istop, itn, maxiter)
 
     return X, istop, itn, normr, normar, normA, condA, normx
 
@@ -968,28 +1048,7 @@ def _lsmr_compiled(
     alpha = torch.linalg.norm(v)
     v = v * torch.where(alpha > 0, 1.0 / torch.clamp(alpha, min=1e-30), alpha * 0.0)
 
-    # --- Pack initial scalar state ---
-    state = torch.zeros(_STATE_SIZE, device=device, dtype=dtype)
-    state[_I_ALPHABAR] = alpha
-    state[_I_DAMP] = damp
-    state[_I_BETA] = beta
-    state[_I_ALPHA] = alpha
-    state[_I_SBAR] = 0.0
-    state[_I_CBAR] = 1.0
-    state[_I_ZETABAR] = alpha * beta
-    state[_I_RHO] = 1.0
-    state[_I_RHOBAR] = 1.0
-    state[_I_RHODOLD] = 1.0
-    state[_I_TAUTILDEOLD] = 0.0
-    state[_I_THETATILDE] = 0.0
-    state[_I_BETADD] = beta
-    state[_I_BETAD] = 0.0
-    state[_I_D] = 0.0
-    state[_I_NORMA2] = alpha * alpha
-    state[_I_MAXRBAR] = 0.0
-    state[_I_MINRBAR] = 1e100 if dtype == torch.float64 else 1e10
-    state[_I_NORMB] = normb
-    state[_I_ZETA] = 0.0  # initial zeta (no previous iteration)
+    state = _make_initial_state(alpha, beta, normb, damp, dtype, device)
 
     ctol = 1.0 / conlim if conlim > 0 else 0.0
     consts = torch.tensor([atol, btol, ctol], device=device, dtype=dtype)
@@ -1125,6 +1184,177 @@ def _lsmr_compiled(
 
 
 # ===========================================================================
+# Implementation 3: compiled batched LSMR — K RHS via SpMM + torch.compile
+# ===========================================================================
+
+
+def _lsmr_compiled_batched(
+    A,
+    B: torch.Tensor,
+    damp: float = 0.0,
+    atol: float = 1e-8,
+    btol: float = 1e-8,
+    conlim: float = 1e8,
+    maxiter: int | None = None,
+    use_compile: bool = True,
+) -> tuple[
+    torch.Tensor, torch.Tensor, int, torch.Tensor, torch.Tensor,
+    torch.Tensor, torch.Tensor, torch.Tensor,
+]:
+    """
+    Compiled batched LSMR: solve min ||B - A X||_F for K RHS simultaneously.
+
+    Mirrors ``_lsmr_compiled`` but with (m, K) vectors and SpMM.  The scalar
+    state is packed into a (_STATE_SIZE, K) tensor — each of the 20 scalar
+    quantities becomes a (K,) vector.  ``_scalar_step`` is shape-agnostic:
+    its indexing and element-wise ops broadcast over the K dimension without
+    any code changes.
+
+    Called by ``lsmr_torch_batched``; ``use_compile`` is already resolved.
+    """
+    m, n = A.shape
+    K = B.shape[1]
+    device = B.device
+    dtype = B.dtype
+
+    if maxiter is None:
+        maxiter = min(m, n)
+
+    # Get compiled or uncompiled step function
+    step_fn = _get_compiled_step(device.type) if use_compile else _scalar_step
+
+    At = _precompute_transpose(A)
+
+    # --- Initialize Golub-Kahan bidiagonalization ---
+    U = B.clone()                                           # (m, K)
+    normb = torch.linalg.norm(U, dim=0)                     # (K,)
+
+    X = torch.zeros(n, K, device=device, dtype=dtype)
+    beta = normb.clone()                                    # (K,)
+
+    U, beta = _safe_normalize_cols(U, beta)
+
+    V = _rmatvec_batched(At, U)                             # (n, K)  — SpMM
+    alpha = torch.linalg.norm(V, dim=0)                     # (K,)
+    V, alpha = _safe_normalize_cols(V, alpha)
+
+    state = _make_initial_state(alpha, beta, normb, damp, dtype, device, K=K)
+
+    ctol = 1.0 / conlim if conlim > 0 else 0.0
+    # consts (3,) — _scalar_step indexes as consts[0]/consts[2] which broadcast
+    # against (K,) state elements automatically.
+    consts = torch.tensor([atol, btol, ctol], device=device, dtype=dtype)
+
+    # Early exit check
+    normar_init = alpha * beta  # (K,)
+    if (normar_init == 0).all():
+        return (X, torch.zeros(K, device=device, dtype=torch.long), 0,
+                beta, torch.zeros(K, device=device, dtype=dtype),
+                alpha, torch.ones(K, device=device, dtype=dtype),
+                torch.zeros(K, device=device, dtype=dtype))
+    if (normb == 0).all():
+        X.zero_()
+        return (X, torch.zeros(K, device=device, dtype=torch.long), 0,
+                beta, torch.zeros(K, device=device, dtype=dtype),
+                alpha, torch.ones(K, device=device, dtype=dtype),
+                torch.zeros(K, device=device, dtype=dtype))
+
+    H = V.clone()                                           # (n, K)
+    Hbar = torch.zeros(n, K, device=device, dtype=dtype)
+
+    # Convergence tracking: per-column istop, only-set-once latch
+    istop = torch.zeros(K, device=device, dtype=torch.long)
+
+    # --- Main iteration loop ---
+    itn = 0
+    _eps = 1e-30
+    normx_t = torch.zeros(K, device=device, dtype=dtype)
+
+    while itn < maxiter:
+        itn += 1
+
+        # Phase 1: SpMM bidiagonalization (not compilable)
+        U = _matvec_batched(A, V) - state[_I_ALPHA].unsqueeze(0) * U   # (m, K)
+        beta_new = torch.linalg.norm(U, dim=0)                          # (K,)
+        U, beta_new = _safe_normalize_cols(U, beta_new)
+
+        V = _rmatvec_batched(At, U) - beta_new.unsqueeze(0) * V        # (n, K)
+        alpha_new = torch.linalg.norm(V, dim=0)                         # (K,)
+        V, alpha_new = _safe_normalize_cols(V, alpha_new)
+
+        # Update beta/alpha in state for the scalar step
+        state[_I_BETA] = beta_new
+        state[_I_ALPHA] = alpha_new
+
+        # Phase 2: Compiled scalar step — (_STATE_SIZE, K) → (_OUTPUT_SIZE, K)
+        out = step_fn(state, consts)
+
+        # Phase 3: Vector updates using scalar results from compiled step
+        thetanew = out[_O_THETANEW]          # (K,)
+        thetabar = out[_O_THETABAR]          # (K,)
+        zeta = out[_O_ZETA]                  # (K,)
+        rho_new = out[_I_RHO]               # (K,)
+        rhobar_new = out[_I_RHOBAR]         # (K,)
+        rhoold = out[_O_RHOOLD]             # (K,)
+        rhobarold = out[_O_RHOBAROLD]       # (K,)
+
+        # Safe divisions: some columns may have zero RHS → zero denominators
+        hbar_coeff = -(thetabar * rho_new) / torch.clamp(rhoold * rhobarold, min=_eps)
+        Hbar = H + Hbar * hbar_coeff.unsqueeze(0)
+        x_coeff = zeta / torch.clamp(rho_new * rhobar_new, min=_eps)
+        X = X + x_coeff.unsqueeze(0) * Hbar
+        h_coeff = -(thetanew / torch.clamp(rho_new, min=_eps))
+        H = V + H * h_coeff.unsqueeze(0)
+
+        # Propagate state for next iteration
+        state = out[:_STATE_SIZE]
+
+        # Phase 4: Per-column convergence — single .item() sync per iteration.
+        # No not_yet.any() guard: the torch.where inside _check_convergence_batched
+        # already protects converged columns, and the guard would add a second
+        # host-device sync that costs more than the fused tensor ops it skips.
+        normx_t = torch.linalg.norm(X, dim=0)    # (K,)
+        normr_t = out[_O_NORMR]                   # (K,)
+        normA_t = out[_O_NORMA]                   # (K,)
+        normb_t = out[_I_NORMB]                   # (K,)
+
+        safe_normb = torch.clamp(normb_t, min=_eps)
+        test1_t = normr_t / safe_normb
+        safe_normA_normr = torch.clamp(normA_t * normr_t, min=_eps)
+        test2_t = out[_O_NORMAR] / safe_normA_normr
+        test3_t = 1.0 / out[_O_CONDA]
+        t1_t = test1_t / (1.0 + normA_t * normx_t / safe_normb)
+        rtol_t = btol + atol * normA_t * normx_t / safe_normb
+
+        istop = _check_convergence_batched(
+            istop, test1_t, rtol_t, test2_t, test3_t, t1_t, atol, ctol, K, device,
+        )
+
+        # Single .item() sync: check if all columns have converged
+        if (istop > 0).all().item():
+            break
+
+    istop = _mark_maxiter_batched(istop, itn, maxiter)
+
+    # Handle case where loop never ran
+    if itn == 0:
+        return (X, istop, 0, normb, normar_init, alpha,
+                torch.ones(K, device=device, dtype=dtype),
+                torch.zeros(K, device=device, dtype=dtype))
+
+    return (
+        X,
+        istop,
+        itn,
+        out[_O_NORMR],
+        out[_O_NORMAR],
+        out[_O_NORMA],
+        out[_O_CONDA],
+        normx_t,  # reuse from last iteration, avoids redundant norm
+    )
+
+
+# ===========================================================================
 # Public API — dispatcher
 # ===========================================================================
 
@@ -1182,6 +1412,7 @@ def lsmr_torch_batched(
     btol: float = 1e-8,
     conlim: float = 1e8,
     maxiter: int | None = None,
+    use_compile: bool | None = None,
 ) -> tuple[
     torch.Tensor, torch.Tensor, int, torch.Tensor, torch.Tensor,
     torch.Tensor, torch.Tensor, torch.Tensor,
@@ -1197,6 +1428,10 @@ def lsmr_torch_batched(
 
     All K columns run in lock-step — converged columns continue doing
     harmless arithmetic until all columns converge or maxiter is reached.
+
+    When ``use_compile=True`` (auto-detected for CUDA/MPS), scalar Givens
+    rotations are fused into a single compiled kernel via ``torch.compile``,
+    further reducing per-iteration kernel launches.
 
     Parameters
     ----------
@@ -1214,6 +1449,10 @@ def lsmr_torch_batched(
         Condition number limit.
     maxiter : int or None
         Maximum iterations. Defaults to min(m, n).
+    use_compile : bool or None
+        Whether to use ``torch.compile`` for scalar step fusion.
+        ``None`` (default) auto-detects: compiled for CUDA, eager for
+        CPU/MPS.  Pass ``True`` to force compilation on MPS.
 
     Returns
     -------
@@ -1234,6 +1473,15 @@ def lsmr_torch_batched(
     normx : torch.Tensor, shape (K,)
         Per-column ``||x_k||``.
     """
+    device = B.device
+    if use_compile is None:
+        use_compile = device.type == "cuda"
+
+    if use_compile:
+        return _lsmr_compiled_batched(
+            A, B, damp=damp, atol=atol, btol=btol, conlim=conlim,
+            maxiter=maxiter, use_compile=True,
+        )
     return _lsmr_batched(
         A, B, damp=damp, atol=atol, btol=btol, conlim=conlim, maxiter=maxiter,
     )
