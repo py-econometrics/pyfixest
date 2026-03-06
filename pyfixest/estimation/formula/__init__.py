@@ -1,7 +1,19 @@
-from typing import Final
+from typing import Callable, Final
 
 from formulaic.parser import DefaultFormulaParser
 
-FORMULAIC_FEATURE_FLAG: Final[DefaultFormulaParser.FeatureFlags] = (
-    DefaultFormulaParser.FeatureFlags.DEFAULT
+from pyfixest.estimation.formula.transforms.factor_interaction import factor_interaction
+from pyfixest.estimation.formula.transforms.fixed_effects_encoding import (
+    fixed_effect_interactions,
 )
+from pyfixest.estimation.formula.transforms.misc import log
+
+FORMULAIC_FEATURE_FLAG: Final[DefaultFormulaParser.FeatureFlags] = (
+    DefaultFormulaParser.FeatureFlags.ALL
+)
+
+FORMULAIC_TRANSFORMS: Final[dict[str, Callable]] = {
+    "i": factor_interaction,  # fixest::i()-style syntax
+    "__fixed_effect__": fixed_effect_interactions,
+    "log": log,  # custom log settings infinite to nan
+}

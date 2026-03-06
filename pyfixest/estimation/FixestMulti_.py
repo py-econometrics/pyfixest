@@ -238,7 +238,7 @@ class FixestMulti:
         self.FixestFormulaDict = formula_dictionary
         self._method = estimation
         self._is_iv = any(
-            formula.first_stage is not None
+            formula.is_instrumental_variable
             for _, formulas in formula_dictionary.items()
             for formula in formulas
         )

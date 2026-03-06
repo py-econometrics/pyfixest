@@ -319,7 +319,7 @@ class Feols(ResultAccessorMixin):
         # not really optimal code change later
         self._fml = FixestFormula.formula
         self._has_fixef = False
-        self._fixef = FixestFormula.fixed_effects
+        self._fixef = FixestFormula.is_fixed_effects
         # self._coefnames = None
         self._icovars = None
 
@@ -436,7 +436,11 @@ class Feols(ResultAccessorMixin):
         self._depvar = self._Y.columns[0]
 
         self._has_fixef = self._fe is not None
-        self._fixef = self.FixestFormula.fixed_effects
+        self._fixef = (
+            str(self.FixestFormula.fixed_effects)
+            if self.FixestFormula.is_fixed_effects
+            else None
+        )
 
         self._k_fe = self._fe.nunique(axis=0) if self._has_fixef else None
         self._n_fe = len(self._k_fe) if self._has_fixef else 0
