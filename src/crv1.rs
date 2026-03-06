@@ -98,6 +98,18 @@ pub fn _crv1_meat_loop_rs(
     Ok(meat.into_pyarray(py).to_owned().into())
 }
 
+/// Subgradient of the quantile regression check function.
+/// Returns q when the residual is positive, and -(1-q) when it is zero or negative.
+fn check_subgradient(q: f64, residual: f64) -> f64 {
+    let eps: f64 = 1e-7;
+    q - if residual <= eps { 1.0 } else { 0.0 }
+}
+
+/// Compute the matrices for the CRV1 sandwich estimator
+/// in quantile regression, following Parente & Santos Silva (2016).
+///
+/// The full variance-covariance matrix is V = B^{-1} A B^{-1}, computed on
+/// the Python side.
 fn crv1_vcov_loop(
     x: &ArrayView2<f64>,
     clustid: &ArrayView1<usize>,
@@ -111,34 +123,40 @@ fn crv1_vcov_loop(
     let mut b = Array2::<f64>::zeros((k, k));
 
     let (g_indices, g_locs) = bucket_argsort_rs(cluster_col);
-    let eps: f64 = 1e-7;
 
     for &g in clustid.iter() {
         let start = g_locs[g];
-        let end = g_locs[g+1];
+        let end = g_locs[g + 1];
         let g_index = &g_indices[start..end];
 
         let xg = x.select(Axis(0), g_index);
         let ug: Vec<f64> = g_index.iter().map(|&i| u_hat[i]).collect();
         let ng = g_index.len();
+
+        // Meat: clustered outer product of scores
         for i in 0..ng {
-            let xgi = xg.row(i);
-            let psi_i = q - if ug[i] <= eps { 1.0 } else { 0.0 };
+            let xi = xg.row(i);
+            let psi_i = check_subgradient(q, ug[i]);
 
             for j in 0..ng {
-                let xgj = xg.row(j);
-                let psi_j = q - if ug[j] <= eps { 1.0 } else { 0.0 };
+                let xj = xg.row(j);
+                let psi_j = check_subgradient(q, ug[j]);
+                let scale = psi_i * psi_j;
                 for ai in 0..k {
                     for bi in 0..k {
-                        a[[ai, bi]] += xgi[ai] * xgj[bi] * psi_i * psi_j;
+                        a[[ai, bi]] += xi[ai] * xj[bi] * scale;
                     }
                 }
             }
+        }
 
-            let mask_i = if ug[i].abs() < delta {1.0} else {0.0};
+        // Bread: accumulate outer products for observations near the quantile
+        for i in 0..ng {
+            let xi = xg.row(i);
+            let mask_i = if ug[i].abs() < delta { 1.0 } else { 0.0 };
             for ai in 0..k {
                 for bi in 0..k {
-                    b[[ai, bi]] += xgi[ai] * xgi[bi] * mask_i;
+                    b[[ai, bi]] += xi[ai] * xi[bi] * mask_i;
                 }
             }
         }
