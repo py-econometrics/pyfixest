@@ -1,7 +1,7 @@
 import re
 import warnings
 from collections.abc import Mapping
-from typing import Any, Optional, Union
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -16,9 +16,9 @@ def model_matrix_fixest(
     FixestFormula: FixestFormula,
     data: pd.DataFrame,
     drop_singletons: bool = False,
-    weights: Optional[str] = None,
+    weights: str | None = None,
     drop_intercept=False,
-    context: Union[int, Mapping[str, Any]] = 0,
+    context: int | Mapping[str, Any] = 0,
 ) -> dict:
     """
     Create model matrices for fixed effects estimation.
@@ -274,18 +274,18 @@ def _drop_rows(
     idx: np.ndarray,
     X_is_empty: bool,
     Y: pd.DataFrame,
-    fe: Optional[pd.DataFrame],
+    fe: pd.DataFrame | None,
     X: pd.DataFrame,
-    Z: Optional[pd.DataFrame],
-    endogvar: Optional[pd.DataFrame],
-    weights_df: Optional[pd.DataFrame],
+    Z: pd.DataFrame | None,
+    endogvar: pd.DataFrame | None,
+    weights_df: pd.DataFrame | None,
 ) -> tuple[
     pd.DataFrame,
     pd.DataFrame,
-    Optional[pd.DataFrame],
-    Optional[pd.DataFrame],
-    Optional[pd.DataFrame],
-    Optional[pd.DataFrame],
+    pd.DataFrame | None,
+    pd.DataFrame | None,
+    pd.DataFrame | None,
+    pd.DataFrame | None,
 ]:
     """
     Drop rows from dataframes.
@@ -343,7 +343,7 @@ def _get_na_index(N: int, Y_index: pd.Index) -> np.ndarray:
 
 
 def _get_columns_to_drop_and_check_ivars(
-    _list_of_ivars_dict: Union[list[dict], None], X: pd.DataFrame, data: pd.DataFrame
+    _list_of_ivars_dict: list[dict] | None, X: pd.DataFrame, data: pd.DataFrame
 ) -> list[str]:
     columns_to_drop = []
     if _list_of_ivars_dict:
@@ -452,9 +452,7 @@ def _get_ivars_dict(fml: str, pattern: str) -> list[dict]:
     return res
 
 
-def _get_icovars(
-    _list_of_ivars_dict: Union[None, list], X: pd.DataFrame
-) -> Optional[list[str]]:
+def _get_icovars(_list_of_ivars_dict: None | list, X: pd.DataFrame) -> list[str] | None:
     """
     Get interacted variables.
 
@@ -529,7 +527,7 @@ def _is_numeric(column: pd.Series) -> bool:
         return False
 
 
-def _check_weights(weights: Union[str, None], data: pd.DataFrame) -> None:
+def _check_weights(weights: str | None, data: pd.DataFrame) -> None:
     """
     Check if valid weights are in data.
 
@@ -561,7 +559,7 @@ def _check_weights(weights: Union[str, None], data: pd.DataFrame) -> None:
             )
 
 
-def _is_finite_positive(x: Union[pd.DataFrame, pd.Series, np.ndarray]) -> bool:
+def _is_finite_positive(x: pd.DataFrame | pd.Series | np.ndarray) -> bool:
     """Check if a column is finite and positive."""
     if isinstance(x, (pd.DataFrame, pd.Series)):
         x = x.to_numpy()

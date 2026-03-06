@@ -1,5 +1,5 @@
 from collections.abc import Hashable
-from typing import TYPE_CHECKING, Any, Final, Optional
+from typing import TYPE_CHECKING, Any, Final
 
 import numpy as np
 import pandas as pd
@@ -15,10 +15,10 @@ def factor_interaction(
     data: Any,
     var2: Any = None,
     *,
-    ref: Optional[Hashable] = None,
-    ref2: Optional[Hashable] = None,
-    bin: Optional[dict] = None,
-    bin2: Optional[dict] = None,
+    ref: Hashable | None = None,
+    ref2: Hashable | None = None,
+    bin: dict | None = None,
+    bin2: dict | None = None,
 ) -> FactorValues:
     """
     Fixest-style i() operator for categorical encoding with interactions.
@@ -88,11 +88,11 @@ def _get_series_name(data: Any, default: str = "var") -> str:
 def _encode_i(
     values: Any,
     factor_name: str,
-    var2_name: Optional[str],
-    ref: Optional[Hashable],
-    ref2: Optional[Hashable],
-    bin: Optional[dict],
-    bin2: Optional[dict],
+    var2_name: str | None,
+    ref: Hashable | None,
+    ref2: Hashable | None,
+    bin: dict | None,
+    bin2: dict | None,
     reduced_rank: bool,
     drop_rows: list[int],
     encoder_state: dict[str, Any],
@@ -199,8 +199,8 @@ def _encode_i(
 
 def _encode_factor(
     data: pd.Series,
-    ref: Optional[Hashable],
-    bins: Optional[dict],
+    ref: Hashable | None,
+    bins: dict | None,
     reduced_rank: bool,
     encoder_state: dict[str, Any],
     model_spec: "ModelSpec",
