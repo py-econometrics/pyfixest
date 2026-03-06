@@ -288,9 +288,11 @@ def demean_cupy(
     fe_df = pd.DataFrame(flist, columns=[f"f{i + 1}" for i in range(n_fe)], copy=False)
     fe_sparse_matrix = create_fe_sparse_matrix(fe_df)
 
-    return CupyFWLDemeaner(dtype=dtype).demean(
-        x, flist, weights, tol, maxiter, fe_sparse_matrix=fe_sparse_matrix
-    )
+    return CupyFWLDemeaner(
+        dtype=dtype,
+        solver_atol=tol,
+        solver_btol=tol,
+    ).demean(x, flist, weights, tol, maxiter, fe_sparse_matrix=fe_sparse_matrix)
 
 
 def demean_cupy32(
@@ -344,5 +346,9 @@ def demean_scipy(
 
     # Force CPU usage (use_gpu=False) and disable warnings
     return CupyFWLDemeaner(
-        use_gpu=False, warn_on_cpu_fallback=False, dtype=np.float64
+        use_gpu=False,
+        warn_on_cpu_fallback=False,
+        dtype=np.float64,
+        solver_atol=tol,
+        solver_btol=tol,
     ).demean(x, flist, weights, tol, maxiter, fe_sparse_matrix=fe_sparse_matrix)
