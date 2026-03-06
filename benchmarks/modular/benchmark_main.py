@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import sys
 from dataclasses import asdict
 from pathlib import Path
-import sys
 
 import pandas as pd
 
@@ -74,6 +74,37 @@ def _serialize_result(result) -> dict:
     return d
 
 
+def _generate_all_datasets(dgps, sizes, n_iters, burn_in):
+    """Generate datasets for all DGP/size combinations."""
+    all_datasets = []
+    for dgp in dgps:
+        for n in sizes:
+            print(f"[data] generating {dgp.dgp_name} n={n:,}")
+            all_datasets.extend(dgp.generate(n=n, n_iters=n_iters, burn_in=burn_in))
+    print(f"[data] {len(all_datasets)} datasets ready")
+    return all_datasets
+
+
+def _run_all_benchmarks(benchmarkers, datasets, specs):
+    """Run all benchmarkers across all datasets and specs."""
+    all_results = []
+    for benchmarker in benchmarkers:
+        for spec in specs:
+            results = benchmarker.run(datasets, spec)
+            all_results.extend(results)
+    return all_results
+
+
+def _export_and_plot(results, output_csv):
+    """Export results to CSV and generate plots."""
+    results_df = pd.DataFrame([_serialize_result(r) for r in results])
+    results_df = results_df[results_df["iter_type"] != "burnin"].copy()
+    results_df.to_csv(output_csv, index=False)
+
+    plot_df = results_df[results_df["success"] & results_df["time"].notna()].copy()
+    plot_benchmarks(plot_df, output_csv.with_suffix(".png"))
+
+
 def main() -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     OUTPUT_CSV.parent.mkdir(parents=True, exist_ok=True)
@@ -83,27 +114,10 @@ def main() -> None:
         BipartiteDGP(DATA_DIR, n_time=10, firm_size=5, p_move=0.05, c_sort=3.0),
     ]
 
-    all_datasets = []
-    for dgp in dgps:
-        for n in SIZES:
-            print(f"[data] generating {dgp.dgp_name} n={n:,}")
-            all_datasets.extend(dgp.generate(n=n, n_iters=N_ITERS, burn_in=BURN_IN))
-
-    print(f"[data] {len(all_datasets)} datasets ready")
-
+    datasets = _generate_all_datasets(dgps, SIZES, N_ITERS, BURN_IN)
     benchmarkers = _make_benchmarkers()
-    all_results = []
-    for benchmarker in benchmarkers:
-        for spec in FEOLS_SPECS:
-            results = benchmarker.run(all_datasets, spec)
-            all_results.extend(results)
-
-    results_df = pd.DataFrame([_serialize_result(r) for r in all_results])
-    results_df = results_df[results_df["iter_type"] != "burnin"].copy()
-    results_df.to_csv(OUTPUT_CSV, index=False)
-
-    plot_df = results_df[results_df["success"] & results_df["time"].notna()].copy()
-    plot_benchmarks(plot_df, OUTPUT_CSV.with_suffix(".png"))
+    results = _run_all_benchmarks(benchmarkers, datasets, FEOLS_SPECS)
+    _export_and_plot(results, OUTPUT_CSV)
 
 
 if __name__ == "__main__":

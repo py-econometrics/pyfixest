@@ -19,8 +19,7 @@ class BenchmarkDataset:
 
 class DataGeneratorProtocol(Protocol):
     @property
-    def dgp_name(self) -> str:
-        ...
+    def dgp_name(self) -> str: ...
 
     def generate(
         self, n: int, n_iters: int = 3, burn_in: int = 1
@@ -40,7 +39,7 @@ class FeolsSpec:
 
     @property
     def formula(self) -> str:
-        """fixest-style: y ~ x1 | indiv_id + year"""
+        """Build fixest-style formula: y ~ x1 | indiv_id + year."""
         rhs = " + ".join(self.covariates) if self.covariates else "1"
         if self.fe_cols:
             return f"{self.depvar} ~ {rhs} | {' + '.join(self.fe_cols)}"
@@ -70,8 +69,7 @@ class FeolsResult:
 
 class FeolsBenchmarkerProtocol(Protocol):
     @property
-    def name(self) -> str:
-        ...
+    def name(self) -> str: ...
 
     def run(
         self, datasets: list[BenchmarkDataset], spec: FeolsSpec

@@ -18,11 +18,12 @@ manifest <- config$manifest
 formula_str <- config$formula
 fe_cols <- unlist(config$fe_cols, use.names = FALSE)
 n_fe <- length(fe_cols)
-vcov_type <- config$vcov
+vcov_type <- config$vcov_type
 
-# Parse vcov: either a string like "iid"/"hetero" or a named list like {"CRV1": "col"}
-if (is.list(vcov_type)) {
-  vcov_arg <- vcov_type
+# Parse normalized vcov_type: "iid", "hetero", or "cluster:<colname>"
+if (startsWith(vcov_type, "cluster:")) {
+  cluster_col <- sub("^cluster:", "", vcov_type)
+  vcov_arg <- as.formula(paste0("~", cluster_col))
 } else {
   vcov_arg <- vcov_type
 }

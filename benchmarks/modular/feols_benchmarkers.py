@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import json
+import statistics
 import subprocess
 import tempfile
 import time
+from collections.abc import Sequence
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Sequence
+from typing import Callable
 
 import numpy as np
 import pandas as pd
@@ -24,7 +27,7 @@ _SUBSTEP_SEP = "-" * len(_SUBSTEP_HDR)
 
 def _fmt_time(t: float) -> str:
     if t < 1:
-        return f"{t*1000:.1f}ms"
+        return f"{t * 1000:.1f}ms"
     return f"{t:.3f}s"
 
 
@@ -46,7 +49,7 @@ def _print_row(results: list[FeolsResult]) -> None:
     r0 = results[0]
     times = [r.time for r in results if r.success and r.time is not None]
     if times:
-        mn, md, mx = min(times), sorted(times)[len(times) // 2], max(times)
+        mn, md, mx = min(times), statistics.median(times), max(times)
         status = "ok"
         row = f"{r0.dgp:<16} {r0.n_obs:>12,} {r0.n_fe:>4} {_fmt_time(mn):>10} {_fmt_time(md):>10} {_fmt_time(mx):>10}  {status}"
     else:
@@ -63,7 +66,7 @@ def _print_substep_row(results: list[FeolsResult]) -> None:
         steps = {}
         for key in ("model_matrix", "demean", "solve", "vcov"):
             vals = [r.substeps[key] for r in substep_results if key in r.substeps]
-            steps[key] = sorted(vals)[len(vals) // 2] if vals else 0.0
+            steps[key] = statistics.median(vals) if vals else 0.0
         status = "ok"
         row = (
             f"{r0.dgp:<16} {r0.n_obs:>12,} {r0.n_fe:>4} "
@@ -82,30 +85,49 @@ def _group_key(r: FeolsResult) -> tuple[str, int, int]:
     return (r.dgp, r.n_obs, r.n_fe)
 
 
+@dataclass(frozen=True)
+class RunOutcome:
+    """Outcome of a single benchmark run."""
+
+    elapsed: float | None
+    success: bool
+    error: str | None = None
+    substeps: dict[str, float] | None = None
+    n_obs_override: int | None = None
+
+
 def _result_from_dataset(
     dataset: BenchmarkDataset,
     spec: FeolsSpec,
     *,
     backend: str,
-    elapsed: float | None,
-    success: bool,
-    error: str | None = None,
-    substeps: dict[str, float] | None = None,
-    n_obs_override: int | None = None,
+    outcome: RunOutcome,
 ) -> FeolsResult:
     return FeolsResult(
         dataset_id=dataset.dataset_id,
         iter_type=dataset.iter_type,
         iter_num=dataset.iter_num,
         dgp=dataset.dgp,
-        n_obs=n_obs_override if n_obs_override is not None else dataset.n_obs,
+        n_obs=outcome.n_obs_override
+        if outcome.n_obs_override is not None
+        else dataset.n_obs,
         n_fe=spec.n_fe,
         backend=backend,
-        time=elapsed,
-        success=success,
-        error=error,
-        substeps=substeps,
+        time=outcome.elapsed,
+        success=outcome.success,
+        error=outcome.error,
+        substeps=outcome.substeps,
     )
+
+
+def _normalize_vcov(vcov: str | dict[str, str]) -> str:
+    """Normalize vcov spec to a simple string for subprocess backends.
+
+    Returns "iid", "hetero", or "cluster:<colname>".
+    """
+    if isinstance(vcov, dict) and "CRV1" in vcov:
+        return f"cluster:{vcov['CRV1']}"
+    return vcov
 
 
 class PyFeolsBenchmarker:
@@ -207,19 +229,18 @@ class PyFeolsBenchmarker:
                 elif isinstance(spec.vcov, dict) and "CRV1" in spec.vcov:
                     cluster_col_name = spec.vcov["CRV1"]
                     cluster_col = df[cluster_col_name].to_numpy()
-                    # Ensure cluster_col aligns with model matrix rows
                     if mm.na_index:
                         keep_mask = np.ones(len(df), dtype=bool)
                         for idx in mm.na_index:
                             keep_mask[idx] = False
                         cluster_col = cluster_col[keep_mask]
                     scores = Xd * u_hat[:, None]
-                    unique_clusters = np.unique(cluster_col)
-                    meat = np.zeros((k, k))
-                    for g in unique_clusters:
-                        mask = cluster_col == g
-                        score_g = scores[mask].sum(axis=0)
-                        meat += np.outer(score_g, score_g)
+                    # O(n) vectorized cluster aggregation
+                    cluster_ids, _ = pd.factorize(cluster_col)
+                    n_clusters = cluster_ids.max() + 1
+                    cluster_scores = np.zeros((n_clusters, k))
+                    np.add.at(cluster_scores, cluster_ids, scores)
+                    meat = cluster_scores.T @ cluster_scores
                     _vcov = bread @ meat @ bread
                 else:
                     # Fallback: iid
@@ -239,20 +260,24 @@ class PyFeolsBenchmarker:
                     dataset,
                     spec,
                     backend=self.name,
-                    elapsed=total,
-                    success=bool(converged),
-                    substeps=substeps,
-                    n_obs_override=n_obs_for_result,
+                    outcome=RunOutcome(
+                        elapsed=total,
+                        success=bool(converged),
+                        substeps=substeps,
+                        n_obs_override=n_obs_for_result,
+                    ),
                 )
             except Exception as exc:
                 result = _result_from_dataset(
                     dataset,
                     spec,
                     backend=self.name,
-                    elapsed=None,
-                    success=False,
-                    error=str(exc),
-                    n_obs_override=n_obs_for_result,
+                    outcome=RunOutcome(
+                        elapsed=None,
+                        success=False,
+                        error=str(exc),
+                        n_obs_override=n_obs_for_result,
+                    ),
                 )
 
             results.append(result)
@@ -294,6 +319,7 @@ class PyFeolsBenchmarker:
 # Subprocess-based benchmarkers (R / Julia)
 # ---------------------------------------------------------------------------
 
+
 def _parse_subprocess_output(
     *,
     datasets: list[BenchmarkDataset],
@@ -333,9 +359,11 @@ def _parse_subprocess_output(
                     dataset,
                     spec,
                     backend=backend,
-                    elapsed=None,
-                    success=False,
-                    error=missing_error,
+                    outcome=RunOutcome(
+                        elapsed=None,
+                        success=False,
+                        error=missing_error,
+                    ),
                 )
             )
             continue
@@ -356,10 +384,12 @@ def _parse_subprocess_output(
                 dataset,
                 spec,
                 backend=backend,
-                elapsed=elapsed,
-                success=bool(entry.get("success", elapsed is not None)),
-                error=entry.get("error"),
-                n_obs_override=n_obs_override,
+                outcome=RunOutcome(
+                    elapsed=elapsed,
+                    success=bool(entry.get("success", elapsed is not None)),
+                    error=entry.get("error"),
+                    n_obs_override=n_obs_override,
+                ),
             )
         )
 
@@ -410,6 +440,7 @@ class SubprocessFeolsBenchmarker:
                         "covariates": spec.covariates,
                         "fe_cols": spec.fe_cols,
                         "vcov": spec.vcov,
+                        "vcov_type": _normalize_vcov(spec.vcov),
                     }
                 ),
                 encoding="utf-8",
@@ -424,8 +455,7 @@ class SubprocessFeolsBenchmarker:
             try:
                 proc = subprocess.run(
                     command,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
+                    capture_output=True,
                     text=True,
                     check=False,
                 )
@@ -435,9 +465,11 @@ class SubprocessFeolsBenchmarker:
                         dataset,
                         spec,
                         backend=self.name,
-                        elapsed=None,
-                        success=False,
-                        error=str(exc),
+                        outcome=RunOutcome(
+                            elapsed=None,
+                            success=False,
+                            error=str(exc),
+                        ),
                     )
                     for dataset in datasets
                 ]

@@ -6,6 +6,7 @@ using Parquet2
 using FixedEffectModels
 using StatsModels
 using Printf
+using Statistics
 
 # ── table formatting ──
 function fmt_time(t::Float64)
@@ -31,7 +32,7 @@ function print_row(dgp::String, n_obs::Int, n_fe::Int, times::Vector{Float64})
             dgp, format_number(n_obs), n_fe, "—", "—", "—", "FAIL"))
     else
         mn = fmt_time(minimum(times))
-        md = fmt_time(times[div(length(times) + 1, 2)])
+        md = fmt_time(median(times))
         mx = fmt_time(maximum(times))
         println(stderr, @sprintf("  %-16s %12s %4d %10s %10s %10s  %s",
             dgp, format_number(n_obs), n_fe, mn, md, mx, "ok"))
@@ -50,25 +51,17 @@ function format_number(n::Int)
     return result
 end
 
-# ── build vcov spec ──
-function build_vcov(vcov_config)
-    if vcov_config isa String
-        if vcov_config == "iid"
-            return Vcov.simple()
-        elseif vcov_config == "hetero"
-            return Vcov.robust()
-        else
-            error("Unknown vcov type: $vcov_config")
-        end
-    elseif vcov_config isa Dict || vcov_config isa JSON3.Object
-        if haskey(vcov_config, :CRV1) || haskey(vcov_config, "CRV1")
-            cluster_col = haskey(vcov_config, :CRV1) ? vcov_config[:CRV1] : vcov_config["CRV1"]
-            return Vcov.cluster(Symbol(cluster_col))
-        else
-            error("Unknown vcov dict: $vcov_config")
-        end
+# ── parse normalized vcov_type: "iid", "hetero", or "cluster:<colname>" ──
+function parse_vcov(vcov_type::String)
+    if startswith(vcov_type, "cluster:")
+        cluster_col = replace(vcov_type, "cluster:" => "")
+        return Vcov.cluster(Symbol(cluster_col))
+    elseif vcov_type == "iid"
+        return Vcov.simple()
+    elseif vcov_type == "hetero"
+        return Vcov.robust()
     else
-        error("Unknown vcov config type: $(typeof(vcov_config))")
+        error("Unknown vcov_type: $vcov_type")
     end
 end
 
@@ -83,8 +76,8 @@ function main()
     formula_str = String(config[:formula])
     fe_cols = String.(config[:fe_cols])
     n_fe = length(fe_cols)
-    vcov_config = config[:vcov]
-    vcov_spec = build_vcov(vcov_config)
+    vcov_type = String(config[:vcov_type])
+    vcov_spec = parse_vcov(vcov_type)
 
     # Build the reg formula: y ~ x1 + fe(indiv_id) + fe(year)
     # Parse from the fixest-style formula
@@ -111,7 +104,7 @@ function main()
 
         # flush previous group when key changes
         if prev_dgp !== nothing && (cur_dgp != prev_dgp || cur_nobs != prev_nobs)
-            print_row(prev_dgp, prev_nobs, n_fe, sort(group_times))
+            print_row(prev_dgp, prev_nobs, n_fe, group_times)
             group_times = Float64[]
         end
         prev_dgp = cur_dgp
@@ -157,7 +150,7 @@ function main()
 
     # flush last group
     if prev_dgp !== nothing
-        print_row(prev_dgp, prev_nobs, n_fe, sort(group_times))
+        print_row(prev_dgp, prev_nobs, n_fe, group_times)
     end
 end
 
