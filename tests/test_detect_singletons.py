@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from pyfixest.estimation.internals.detect_singletons_ import detect_singletons
+from pyfixest.core.detect_singletons import detect_singletons
 from pyfixest.estimation.jax.detect_singletons_jax import detect_singletons_jax
 
 input1 = np.array([[0, 2, 1], [0, 2, 1], [0, 1, 3], [0, 1, 2], [0, 1, 2]])
@@ -21,7 +21,7 @@ solution3 = np.array([False, False, False, False, False])
 @pytest.mark.parametrize(
     argnames="detection_function",
     argvalues=[detect_singletons, detect_singletons_jax],
-    ids=["numba", "jax"],
+    ids=["rust", "jax"],
 )
 def test_correctness(input, solution, detection_function):
     assert np.array_equal(detection_function(input), solution)
@@ -30,7 +30,7 @@ def test_correctness(input, solution, detection_function):
 @pytest.mark.parametrize(
     argnames="detection_function",
     argvalues=[detect_singletons, detect_singletons_jax],
-    ids=["numba", "jax"],
+    ids=["rust", "jax"],
 )
 def test_single_column(detection_function):
     """Test with a single fixed effect column."""
@@ -43,7 +43,7 @@ def test_single_column(detection_function):
 @pytest.mark.parametrize(
     argnames="detection_function",
     argvalues=[detect_singletons, detect_singletons_jax],
-    ids=["numba", "jax"],
+    ids=["rust", "jax"],
 )
 def test_all_singletons(detection_function):
     """Test when all observations are singletons."""
@@ -56,7 +56,7 @@ def test_all_singletons(detection_function):
 @pytest.mark.parametrize(
     argnames="detection_function",
     argvalues=[detect_singletons, detect_singletons_jax],
-    ids=["numba", "jax"],
+    ids=["rust", "jax"],
 )
 def test_no_singletons(detection_function):
     """Test when there are no singletons."""
@@ -69,7 +69,7 @@ def test_no_singletons(detection_function):
 @pytest.mark.parametrize(
     argnames="detection_function",
     argvalues=[detect_singletons, detect_singletons_jax],
-    ids=["numba", "jax"],
+    ids=["rust", "jax"],
 )
 def test_large_input(detection_function):
     """Test with a larger input to check performance and correctness."""

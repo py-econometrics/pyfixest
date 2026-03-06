@@ -1,4 +1,3 @@
-import gc
 import re
 import warnings
 from collections.abc import Mapping
@@ -1115,7 +1114,6 @@ class Feols(ResultAccessorMixin):
         for attr in attributes:
             if hasattr(self, attr):
                 delattr(self, attr)
-        gc.collect()
 
     def wald_test(self, R=None, q=None, distribution="F"):
         """
