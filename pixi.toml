@@ -125,12 +125,14 @@ r-base = "*"
 r-fixest = ">=0.13.2,<0.14"
 r-arrow = "*"
 r-jsonlite = "*"
+juliaup = "*"
 
 [feature.benchmark.pypi-dependencies]
 "pyarrow" = "*"
 
 [feature.benchmark.tasks]
-benchmark = "python benchmarks/modular/benchmark_main.py"
+julia-setup = """julia -e 'using Pkg; Pkg.add([Pkg.PackageSpec(name="FixedEffectModels", url="https://github.com/FixedEffects/FixedEffectModels.jl"), Pkg.PackageSpec("JSON3"), Pkg.PackageSpec("DataFrames"), Pkg.PackageSpec("Parquet2"), Pkg.PackageSpec("StatsModels")])'"""
+benchmark = { cmd = "python benchmarks/modular/benchmark_main.py", depends-on = ["julia-setup", "maturin-develop"] }
 
 [environments]
 dev = ["dev", "build", "benchmark"]
