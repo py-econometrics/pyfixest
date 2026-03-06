@@ -2,6 +2,197 @@ import numpy as np
 import pandas as pd
 
 
+def get_ivf_data(N=2000, seed=1234):
+    """
+    Synthetic data for the motherhood penalty IV application (IVF instrument).
+
+    DGP
+    ---
+    Unobserved confounder: career_ambition ~ N(0, 1)
+
+    First stage (num_children on ivf_success):
+        num_children = 1.2 - 0.4*career_ambition + 0.8*ivf_success + N(0, 0.5)
+        → ivf_success is relevant (first-stage coefficient ≈ 0.8, F >> 10)
+
+    Outcome (structural equation):
+        earnings = 10 + 0.6*career_ambition + TRUE_EFFECT*num_children + N(0, 1)
+        TRUE_EFFECT = -0.15
+
+    OVB formula for naive OLS (earnings ~ num_children):
+        bias ≈ γ_ambition * Cov(num_children, ambition) / Var(num_children)
+             ≈ 0.6 * (-0.4) / 0.57 ≈ -0.42
+        β_OLS ≈ -0.15 + (-0.42) ≈ -0.57   (overstates the penalty)
+        β_IV  ≈ -0.15                        (recovers the true effect)
+
+    Parameters
+    ----------
+    N : int, optional
+        Number of observations. Default is 2000.
+    seed : int, optional
+        Random seed. Default is 1234.
+
+    Returns
+    -------
+    pandas.DataFrame
+        Columns: ``earnings``, ``num_children``, ``ivf_success``.
+    """
+    # --- DGP parameters ---
+    true_effect = -0.15          # causal effect of num_children on earnings
+    ambition_on_children = -0.4  # confounder → endogenous var (creates OVB)
+    ambition_on_earnings = 0.6   # confounder → outcome (creates OVB)
+    ivf_on_children = 0.8        # first-stage strength (instrument → endogenous)
+
+    rng = np.random.default_rng(seed)
+    career_ambition = rng.normal(0, 1, N)
+    ivf_success = rng.binomial(1, 0.45, N)
+    num_children = np.clip(
+        1.2
+        + ambition_on_children * career_ambition
+        + ivf_on_children * ivf_success
+        + rng.normal(0, 0.5, N),
+        0,
+        None,
+    )
+    earnings = (
+        10
+        + ambition_on_earnings * career_ambition
+        + true_effect * num_children
+        + rng.normal(0, 1, N)
+    )
+    return pd.DataFrame(
+        {
+            "earnings": earnings,
+            "num_children": num_children,
+            "ivf_success": ivf_success,
+        }
+    )
+
+
+def get_bartik_data(N=300, seed=1234):
+    """
+    Synthetic data for a Bartik (shift-share) IV application on immigration and wages.
+
+    DGP
+    ---
+    Unobserved confounder: local_demand ~ N(0, 1)
+
+    First stage (immigration on bartik_instrument, conditional on log_population):
+        immigration = 0.5 + 0.7*bartik_instrument + 0.9*local_demand + N(0, 0.5)
+        → bartik_instrument is relevant; bartik ⊥ local_demand (exogenous)
+
+    Outcome (structural equation):
+        wages = 8 + 0.5*local_demand + TRUE_EFFECT*immigration + 0.2*log_population + N(0, 1)
+        TRUE_EFFECT = -0.3
+
+    OVB for naive OLS (wages ~ immigration + log_population):
+        Partial bias from local_demand ≈ 0.5 * 0.9/Var(immigration|log_pop) > 0
+        β_OLS on immigration ≈ -0.3 + positive_bias → attenuated (less negative or positive)
+        β_IV  on immigration ≈ -0.3  (recovers the true effect)
+
+    Parameters
+    ----------
+    N : int, optional
+        Number of observations (regions). Default is 300.
+    seed : int, optional
+        Random seed. Default is 1234.
+
+    Returns
+    -------
+    pandas.DataFrame
+        Columns: ``wages``, ``immigration``, ``log_population``, ``bartik_instrument``.
+    """
+    # --- DGP parameters ---
+    true_effect = -0.3           # causal effect of immigration on wages
+    demand_on_immig = 0.9        # confounder → endogenous var
+    demand_on_wages = 0.5        # confounder → outcome (creates positive OVB)
+    bartik_on_immig = 0.7        # first-stage strength
+
+    rng = np.random.default_rng(seed)
+    local_demand = rng.normal(0, 1, N)
+    bartik_instrument = rng.normal(0, 1, N)
+    log_population = 2 + 0.1 * local_demand + rng.normal(0, 0.3, N)
+    immigration = (
+        0.5
+        + bartik_on_immig * bartik_instrument
+        + demand_on_immig * local_demand
+        + rng.normal(0, 0.5, N)
+    )
+    wages = (
+        8
+        + demand_on_wages * local_demand
+        + true_effect * immigration
+        + 0.2 * log_population
+        + rng.normal(0, 1, N)
+    )
+    return pd.DataFrame(
+        {
+            "wages": wages,
+            "immigration": immigration,
+            "log_population": log_population,
+            "bartik_instrument": bartik_instrument,
+        }
+    )
+
+
+def get_encouragement_data(N=4000, seed=1234):
+    """
+    Synthetic data for an A/B encouragement design IV application.
+
+    DGP
+    ---
+    Instrument: assigned_treatment ~ Bernoulli(0.5)  [randomized, exogenous]
+    Fixed effect: user_type ∈ {0, 1, 2}
+
+    First stage (compliance):
+        P(adopt | encouraged)     = 0.70  (compliers + always-takers)
+        P(adopt | not encouraged) = 0.15  (always-takers only)
+        First-stage coefficient   = 0.70 - 0.15 = 0.55
+
+    Outcome (structural equation):
+        revenue = 5 + user_type_FE + TRUE_LATE*adopted_feature + N(0, 1)
+        TRUE_LATE = 2.0  (effect on compliers)
+
+    Wald identity (exact by construction):
+        ITT  = E[Y|Z=1] - E[Y|Z=0] = 2.0 * 0.55 = 1.10
+        LATE = ITT / first_stage   = 1.10 / 0.55 = 2.0  ✓
+
+    Parameters
+    ----------
+    N : int, optional
+        Number of observations (users). Default is 4000.
+    seed : int, optional
+        Random seed. Default is 1234.
+
+    Returns
+    -------
+    pandas.DataFrame
+        Columns: ``revenue``, ``assigned_treatment``, ``adopted_feature``, ``user_type``.
+    """
+    # --- DGP parameters ---
+    true_late = 2.0              # LATE: causal effect of adoption on revenue for compliers
+    p_adopt_encouraged = 0.70    # P(adopt | Z=1): compliers + always-takers
+    p_adopt_control = 0.15       # P(adopt | Z=0): always-takers only
+    # first_stage = p_adopt_encouraged - p_adopt_control = 0.55
+    # ITT         = true_late * first_stage              = 1.10
+    # LATE        = ITT / first_stage                    = 2.0
+
+    rng = np.random.default_rng(seed)
+    user_type = rng.choice([0, 1, 2], size=N)
+    user_type_effect = np.array([0.0, 1.0, -0.5])[user_type]
+    assigned_treatment = rng.binomial(1, 0.5, N)
+    p_adopt = np.where(assigned_treatment == 1, p_adopt_encouraged, p_adopt_control)
+    adopted_feature = rng.binomial(1, p_adopt, N)
+    revenue = 5 + user_type_effect + true_late * adopted_feature + rng.normal(0, 1, N)
+    return pd.DataFrame(
+        {
+            "revenue": revenue,
+            "assigned_treatment": assigned_treatment,
+            "adopted_feature": adopted_feature,
+            "user_type": pd.Categorical(user_type),
+        }
+    )
+
+
 def get_blw():
     """DGP for effect heterogeneity in panel data from Baker, Larcker, and Wang (2022)."""
     n = np.arange(1, 31)
