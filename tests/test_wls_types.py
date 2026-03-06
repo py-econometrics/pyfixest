@@ -6,7 +6,6 @@ import pyfixest as pf
 
 def _assert_fit_equal(fit1, fit2, vcov_types, rtol=1e-5):
     "Assert that two regression fits have identical coefficients, vcov, and SEs."
-
     assert fit1._N == fit2._N, "Number of observations is not the same."
 
     np.testing.assert_allclose(

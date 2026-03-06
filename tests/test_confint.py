@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from pyfixest.estimation.estimation import feols
+from pyfixest.estimation import feols
 from pyfixest.utils.utils import get_data
 
 

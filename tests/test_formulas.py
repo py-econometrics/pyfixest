@@ -1,4 +1,4 @@
-from pyfixest.estimation.FormulaParser import (
+from pyfixest.estimation.deprecated.FormulaParser import (
     _dict_to_list_of_formulas,
     _find_multiple_estimation_syntax,
     _input_formula_to_dict,

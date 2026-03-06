@@ -8,7 +8,7 @@ from rpy2.robjects import pandas2ri
 from rpy2.robjects.packages import importr
 
 import pyfixest as pf
-from pyfixest.estimation.estimation import feols
+from pyfixest.estimation import feols
 from pyfixest.utils.utils import ssc
 
 pandas2ri.activate()
@@ -22,14 +22,8 @@ car = importr("car")
 
 
 @pytest.mark.against_r_core
-@pytest.mark.parametrize(
-    "R",
-    [
-        np.eye(3),
-    ],
-)
-def test_F_test_single_equation_no_clustering(R):
-    # Test R * \beta = 0 with single equation.
+def test_F_test_single_equation_no_clustering_with_auto_computed_wald_test():
+    # Test Identity_2 * \beta = 0 with single equation.
     # Generate correlated data for dep_var and treat
     np.random.seed(50)
     n = 3000
@@ -49,15 +43,14 @@ def test_F_test_single_equation_no_clustering(R):
     fml = "dep_var ~ treat + X1"
     fit = feols(fml, data, vcov=None, ssc=ssc(k_adj=False))
 
-    # Wald test
-    fit.wald_test(R=R, distribution="F")
+    # Wald test (is called with R = Identity_2 and distribution = "F" by default)
     f_stat = fit._f_statistic
     p_stat = fit._p_value
 
     # Compare with R
 
     r_fit = stats.lm(fml, data=data)
-    r_wald = car.linearHypothesis(r_fit, base.matrix(R, 3, 3), test="F")
+    r_wald = car.linearHypothesis(r_fit, base.matrix(np.identity(2), 3, 3), test="F")
 
     r_fstat = r_wald.rx2("F")[1]
     r_pvalue = r_wald.rx2("Pr(>F)")[1]

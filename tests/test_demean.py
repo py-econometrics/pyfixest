@@ -5,7 +5,11 @@ import pytest
 
 from pyfixest.core import demean as demean_rs
 from pyfixest.estimation.cupy.demean_cupy_ import demean_cupy32, demean_cupy64
-from pyfixest.estimation.demean_ import _set_demeaner_backend, demean, demean_model
+from pyfixest.estimation.internals.demean_ import (
+    _set_demeaner_backend,
+    demean,
+    demean_model,
+)
 from pyfixest.estimation.jax.demean_jax_ import demean_jax
 
 
@@ -85,7 +89,7 @@ def test_demean_model_no_fixed_effects(benchmark, demean_func):
         fe=None,
         weights=weights,
         lookup_demeaned_data=lookup_dict,
-        na_index_str="test",
+        na_index=frozenset(),
         fixef_tol=1e-6,
         fixef_maxiter=10_000,
         demean_func=demean_func,
@@ -123,7 +127,7 @@ def test_demean_model_with_fixed_effects(benchmark, demean_func):
         fe=fe,
         weights=weights,
         lookup_demeaned_data=lookup_dict,
-        na_index_str="test",
+        na_index=frozenset(),
         fixef_tol=1e-6,
         fixef_maxiter=10_000,
         demean_func=demean_func,
@@ -138,8 +142,8 @@ def test_demean_model_with_fixed_effects(benchmark, demean_func):
     assert Xd.columns.equals(X.columns)
 
     # Verify results are cached in lookup_dict
-    assert "test" in lookup_dict
-    cached_data = lookup_dict["test"][1]
+    assert frozenset() in lookup_dict
+    cached_data = lookup_dict[frozenset()][1]
     assert np.allclose(cached_data[Y.columns].values, Yd.values)
     assert np.allclose(cached_data[X.columns].values, Xd.values)
 
@@ -168,20 +172,20 @@ def test_demean_model_with_weights(benchmark, demean_func):
         fe=fe,
         weights=weights,
         lookup_demeaned_data=lookup_dict,
-        na_index_str="test",
+        na_index=frozenset(),
         fixef_tol=1e-6,
         fixef_maxiter=10_000,
         demean_func=demean_func,
     )
 
-    # Run without weights for comparison
+    # Run without weights for comparison (fresh lookup dict to avoid cache hit)
     Yd_unweighted, Xd_unweighted = demean_model(
         Y=Y,
         X=X,
         fe=fe,
         weights=np.ones(N),
         lookup_demeaned_data={},
-        na_index_str="test2",
+        na_index=frozenset(),
         fixef_tol=1e-6,
         fixef_maxiter=10_000,
         demean_func=demean_func,
@@ -215,7 +219,7 @@ def test_demean_model_caching(benchmark, demean_func):
         fe=fe,
         weights=weights,
         lookup_demeaned_data=lookup_dict,
-        na_index_str="test",
+        na_index=frozenset(),
         fixef_tol=1e-6,
         fixef_maxiter=10_000,
         demean_func=demean_func,
@@ -229,7 +233,7 @@ def test_demean_model_caching(benchmark, demean_func):
         fe=fe,
         weights=weights,
         lookup_demeaned_data=lookup_dict,
-        na_index_str="test",
+        na_index=frozenset(),
         fixef_tol=1e-6,
         fixef_maxiter=10_000,
         demean_func=demean_func,
@@ -249,7 +253,7 @@ def test_demean_model_caching(benchmark, demean_func):
         fe=fe,
         weights=weights,
         lookup_demeaned_data=lookup_dict,
-        na_index_str="test",
+        na_index=frozenset(),
         fixef_tol=1e-6,
         fixef_maxiter=10_000,
         demean_func=demean_func,
@@ -288,7 +292,7 @@ def test_demean_model_maxiter_convergence_failure(demean_func):
             fe=fe,
             weights=weights,
             lookup_demeaned_data=lookup_dict,
-            na_index_str="test",
+            na_index=frozenset(),
             fixef_tol=1e-6,
             fixef_maxiter=1,  # Very small limit
             demean_func=demean_func,
@@ -318,7 +322,7 @@ def test_demean_model_custom_maxiter_success(demean_func):
         fe=fe,
         weights=weights,
         lookup_demeaned_data=lookup_dict,
-        na_index_str="test",
+        na_index=frozenset(),
         fixef_tol=1e-6,
         fixef_maxiter=5000,  # Custom limit
         demean_func=demean_func,

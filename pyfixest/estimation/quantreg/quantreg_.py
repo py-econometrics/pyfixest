@@ -1,7 +1,7 @@
 import warnings
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from functools import partial
-from typing import Any, Callable, Literal, Optional, Union, cast
+from typing import Any, Literal, cast
 
 import numba as nb
 import numpy as np
@@ -9,17 +9,17 @@ import pandas as pd
 from scipy.linalg import cho_factor, solve_triangular
 from scipy.stats import norm
 
-from pyfixest.estimation.feols_ import Feols
-from pyfixest.estimation.FormulaParser import FixestFormula
-from pyfixest.estimation.literals import (
+from pyfixest.estimation.formula.parse import Formula as FixestFormula
+from pyfixest.estimation.internals.literals import (
     QuantregMethodOptions,
     SolverOptions,
 )
+from pyfixest.estimation.internals.vcov_utils import bucket_argsort
+from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.quantreg.frisch_newton_ip import (
     frisch_newton_solver,
 )
 from pyfixest.estimation.quantreg.utils import get_hall_sheather_bandwidth
-from pyfixest.estimation.vcov_utils import bucket_argsort
 
 
 class Quantreg(Feols):
@@ -29,28 +29,28 @@ class Quantreg(Feols):
         self,
         FixestFormula: FixestFormula,
         data: pd.DataFrame,
-        ssc_dict: dict[str, Union[str, bool]],
+        ssc_dict: dict[str, str | bool],
         drop_singletons: bool,
         drop_intercept: bool,
-        weights: Optional[str],
-        weights_type: Optional[str],
+        weights: str | None,
+        weights_type: str | None,
         collin_tol: float,
         fixef_tol: float,
         fixef_maxiter: int,
-        lookup_demeaned_data: dict[str, pd.DataFrame],
+        lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
         solver: SolverOptions = "np.linalg.solve",
         demeaner_backend: Literal["numba", "jax"] = "numba",
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
-        context: Union[int, Mapping[str, Any]] = 0,
-        sample_split_var: Optional[str] = None,
-        sample_split_value: Optional[Union[str, int]] = None,
+        context: int | Mapping[str, Any] = 0,
+        sample_split_var: str | None = None,
+        sample_split_value: str | int | None = None,
         quantile: float = 0.5,
         method: QuantregMethodOptions = "fn",
         quantile_tol: float = 1e-06,
-        quantile_maxiter: Optional[int] = None,
-        seed: Optional[int] = None,
+        quantile_maxiter: int | None = None,
+        seed: int | None = None,
     ) -> None:
         super().__init__(
             FixestFormula=FixestFormula,
@@ -93,9 +93,9 @@ class Quantreg(Feols):
         self._quantile_maxiter = quantile_maxiter
 
         self._model_name = (
-            FixestFormula.fml
+            FixestFormula.formula
             if self._sample_split_var is None
-            else f"{FixestFormula.fml} (Sample: {self._sample_split_var} = {self._sample_split_value})"
+            else f"{FixestFormula.formula} (Sample: {self._sample_split_var} = {self._sample_split_value})"
         )
         # update with quantile name
         self._model_name = f"{self._model_name} (q = {quantile})"
@@ -165,6 +165,9 @@ class Quantreg(Feols):
 
     def get_fit(self) -> None:
         """Fit a quantile regression model using the interior point method."""
+        self.to_array()
+        self.drop_multicol_vars()
+
         res = self._fit(X=self._X, Y=self._Y)
 
         self._beta_hat = res[0]
@@ -188,9 +191,9 @@ class Quantreg(Feols):
         X: np.ndarray,
         Y: np.ndarray,
         q: float,
-        tol: Optional[float] = None,
-        maxiter: Optional[int] = None,
-        beta_init: Optional[np.ndarray] = None,
+        tol: float | None = None,
+        maxiter: int | None = None,
+        beta_init: np.ndarray | None = None,
     ) -> tuple[
         np.ndarray,
         bool,
@@ -245,12 +248,12 @@ class Quantreg(Feols):
         X: np.ndarray,
         Y: np.ndarray,
         q: float,
-        m: Optional[float] = None,
-        tol: Optional[float] = None,
-        maxiter: Optional[int] = None,
-        beta_init: Optional[np.ndarray] = None,
-        rng: Optional[np.random.Generator] = None,
-        eta: Optional[float] = None,
+        m: float | None = None,
+        tol: float | None = None,
+        maxiter: int | None = None,
+        beta_init: np.ndarray | None = None,
+        rng: np.random.Generator | None = None,
+        eta: float | None = None,
     ) -> tuple[
         np.ndarray,
         bool,

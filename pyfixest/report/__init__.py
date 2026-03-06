@@ -1,7 +1,6 @@
 from pyfixest.report.summarize import (
     dtable,
     etable,
-    make_table,
     summary,
 )
 from pyfixest.report.visualize import (
@@ -15,7 +14,6 @@ __all__ = [
     "dtable",
     "etable",
     "iplot",
-    "make_table",
     "qplot",
     "summary",
 ]

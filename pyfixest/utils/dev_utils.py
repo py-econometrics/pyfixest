@@ -1,5 +1,4 @@
 import re
-from typing import Optional, Union
 
 import narwhals.stable.v1 as nw
 import numpy as np
@@ -13,7 +12,7 @@ def _narwhals_to_pandas(data: IntoDataFrame) -> pd.DataFrame:  # type: ignore
     return nw.from_native(data, eager_or_interchange_only=True).to_pandas()
 
 
-def _create_rng(seed: Optional[int] = None) -> np.random.Generator:
+def _create_rng(seed: int | None = None) -> np.random.Generator:
     """
     Create a random number generator.
 
@@ -34,9 +33,9 @@ def _create_rng(seed: Optional[int] = None) -> np.random.Generator:
 
 def _select_order_coefs(
     coefs: list,
-    keep: Optional[Union[list, str]] = None,
-    drop: Optional[Union[list, str]] = None,
-    exact_match: Optional[bool] = False,
+    keep: list | str | None = None,
+    drop: list | str | None = None,
+    exact_match: bool | None = False,
 ):
     r"""
     Select and order the coefficients based on the pattern.
@@ -115,7 +114,7 @@ def docstring_from(func, custom_doc=""):
     return decorator
 
 
-def _check_series_or_dataframe(x: Union[pd.Series, pd.DataFrame]):
+def _check_series_or_dataframe(x: pd.Series | pd.DataFrame):
     if not isinstance(x, (pd.Series, pd.DataFrame)):
         raise TypeError("Input must be a pandas Series or DataFrame")
     else:

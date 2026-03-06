@@ -1,5 +1,3 @@
-from typing import Optional
-
 import numpy as np
 from scipy.linalg import lapack, solve_triangular
 
@@ -78,7 +76,7 @@ def frisch_newton_solver(
     chol: np.ndarray,
     P: np.ndarray,
     backoff: float = 0.9995,
-    beta_init: Optional[np.ndarray] = None,
+    beta_init: np.ndarray | None = None,
 ) -> tuple[
     np.ndarray, bool, int, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray
 ]:

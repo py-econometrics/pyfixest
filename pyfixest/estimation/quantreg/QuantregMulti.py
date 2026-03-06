@@ -1,14 +1,14 @@
 import gc
 import inspect
 from collections.abc import Mapping
-from typing import Any, Literal, Optional, Union
+from typing import Any, Literal
 
 import numpy as np
 import pandas as pd
 from scipy.stats import norm
 
-from pyfixest.estimation.FormulaParser import FixestFormula
-from pyfixest.estimation.literals import (
+from pyfixest.estimation.formula.parse import Formula as FixestFormula
+from pyfixest.estimation.internals.literals import (
     QuantregMethodOptions,
     QuantregMultiOptions,
     SolverOptions,
@@ -26,28 +26,28 @@ class QuantregMulti:
         FixestFormula: FixestFormula,
         data: pd.DataFrame,
         quantile: list[float],
-        ssc_dict: dict[str, Union[str, bool]],
+        ssc_dict: dict[str, str | bool],
         drop_singletons: bool,
         drop_intercept: bool,
-        weights: Optional[str],
-        weights_type: Optional[str],
+        weights: str | None,
+        weights_type: str | None,
         collin_tol: float,
         fixef_tol: float,
         fixef_maxiter: int,
-        lookup_demeaned_data: dict[str, pd.DataFrame],
+        lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
         solver: SolverOptions = "np.linalg.solve",
         demeaner_backend: Literal["numba", "jax"] = "numba",
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
-        context: Union[int, Mapping[str, Any]] = 0,
-        sample_split_var: Optional[str] = None,
-        sample_split_value: Optional[Union[str, int]] = None,
+        context: int | Mapping[str, Any] = 0,
+        sample_split_var: str | None = None,
+        sample_split_value: str | int | None = None,
         method: QuantregMethodOptions = "fn",
         multi_method: QuantregMultiOptions = "cfm1",
         quantile_tol: float = 1e-06,
-        quantile_maxiter: Optional[int] = None,
-        seed: Optional[int] = None,
+        quantile_maxiter: int | None = None,
+        seed: int | None = None,
     ):
         frame = inspect.currentframe()
         if frame is None:
@@ -187,9 +187,9 @@ class QuantregMulti:
 
     def vcov(
         self,
-        vcov: Union[str, dict[str, str]],
-        vcov_kwargs: Optional[dict[str, Union[str, int]]] = None,
-        data: Optional[DataFrameType] = None,
+        vcov: str | dict[str, str],
+        vcov_kwargs: dict[str, str | int] | None = None,
+        data: DataFrameType | None = None,
     ):
         "Compute variance-covariance matrices for all models in the quantile regression process."
         [

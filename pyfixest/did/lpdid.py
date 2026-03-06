@@ -1,12 +1,12 @@
-from typing import Optional, Union, cast
+from typing import cast
 
 import numpy as np
 import pandas as pd
 
 from pyfixest.did.did import DID
-from pyfixest.estimation.estimation import feols
-from pyfixest.estimation.feols_ import Feols
-from pyfixest.estimation.literals import VcovTypeOptions
+from pyfixest.estimation import feols
+from pyfixest.estimation.internals.literals import VcovTypeOptions
+from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.report.visualize import _HAS_LETS_PLOT, _coefplot
 
 
@@ -52,10 +52,10 @@ class LPDID(DID):
         xfml: str,
         att: bool,
         cluster: str,
-        vcov: Optional[Union[VcovTypeOptions, dict[str, str]]] = None,
-        pre_window: Optional[int] = None,
-        post_window: Optional[int] = None,
-        never_treated: Optional[int] = 0,
+        vcov: VcovTypeOptions | dict[str, str] | None = None,
+        pre_window: int | None = None,
+        post_window: int | None = None,
+        never_treated: int | None = 0,
     ):
         # if att:
         #    raise NotImplementedError("ATT is not yet supported.")
@@ -135,9 +135,9 @@ class LPDID(DID):
     def iplot(
         self,
         alpha: float = 0.05,
-        figsize: Optional[tuple[int, int]] = None,
-        yintercept: Optional[int] = None,
-        xintercept: Optional[int] = None,
+        figsize: tuple[int, int] | None = None,
+        yintercept: int | None = None,
+        xintercept: int | None = None,
         rotate_xticks: int = 0,
         title: str = "LPDID Event Study Estimate",
         coord_flip: bool = False,
@@ -202,8 +202,8 @@ def _lpdid_estimate(
     pre_window: int,
     post_window: int,
     att: bool = True,
-    vcov: Optional[Union[VcovTypeOptions, dict[str, str]]] = None,
-    xfml: Optional[str] = None,
+    vcov: VcovTypeOptions | dict[str, str] | None = None,
+    xfml: str | None = None,
 ) -> pd.DataFrame:
     """
     Estimate a  Difference-in-Differences / Event Study Model via Linear Projections.
@@ -284,9 +284,9 @@ def _lpdid_estimate(
 
             fit = cast(Feols, feols(fml=fml, data=data[sample_idx], vcov=vcov))
 
-            fit_tidy = fit.tidy().xs("treat_diff")
+            fit_tidy = cast(pd.Series, fit.tidy().xs("treat_diff"))
             fit_tidy["N"] = int(fit._N)
-            fit_tidy.name = h
+            fit_tidy.name = h  # type: ignore[union-attr]
             fit_all.append(fit_tidy)
 
         for h in range(pre_window + 1):
@@ -299,9 +299,9 @@ def _lpdid_estimate(
 
             fit = cast(Feols, feols(fml=fml, data=data[sample_idx], vcov=vcov))
 
-            fit_tidy = fit.tidy().xs("treat_diff")
+            fit_tidy = cast(pd.Series, fit.tidy().xs("treat_diff"))
             fit_tidy["N"] = int(fit._N)
-            fit_tidy.name = -h
+            fit_tidy.name = -h  # type: ignore[union-attr]
             fit_all.append(fit_tidy)
 
         res = pd.DataFrame(fit_all).sort_index()

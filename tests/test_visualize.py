@@ -10,7 +10,7 @@ from pyfixest.did.visualize import (
     _prepare_panelview_df_for_outcome_plot,
     panelview,
 )
-from pyfixest.estimation.estimation import feols, fepois
+from pyfixest.estimation import feols, fepois
 from pyfixest.report.visualize import _HAS_LETS_PLOT, coefplot, iplot
 from pyfixest.utils.utils import get_data
 

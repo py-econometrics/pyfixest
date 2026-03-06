@@ -1,12 +1,10 @@
-from typing import Optional, Union
-
 import pandas as pd
 
 from pyfixest.did.did2s import DID2S, _did2s_estimate, _did2s_vcov
 from pyfixest.did.lpdid import LPDID
 from pyfixest.did.saturated_twfe import SaturatedEventStudy
 from pyfixest.did.twfe import TWFE
-from pyfixest.estimation.literals import VcovTypeOptions
+from pyfixest.estimation.internals.literals import VcovTypeOptions
 
 
 def event_study(
@@ -15,10 +13,10 @@ def event_study(
     idname: str,
     tname: str,
     gname: str,
-    xfml: Optional[str] = None,
-    cluster: Optional[str] = None,
-    estimator: Optional[str] = "twfe",
-    att: Optional[bool] = True,
+    xfml: str | None = None,
+    cluster: str | None = None,
+    estimator: str | None = "twfe",
+    att: bool | None = True,
 ):
     """
     Estimate Event Study Model.
@@ -54,7 +52,7 @@ def event_study(
     Returns
     -------
     object
-        A fitted model object of class [Feols](/reference/estimation.feols_.Feols.qmd).
+        A fitted model object of class [Feols](/reference/estimation.models.feols_.Feols.qmd).
 
     Examples
     --------
@@ -189,7 +187,7 @@ def did2s(
     second_stage: str,
     treatment: str,
     cluster: str,
-    weights: Optional[str] = None,
+    weights: str | None = None,
 ):
     """
     Estimate a Difference-in-Differences model using Gardner's two-step DID2S estimator.
@@ -212,7 +210,7 @@ def did2s(
     Returns
     -------
     object
-        A fitted model object of class [Feols](/reference/estimation.feols_.Feols.qmd).
+        A fitted model object of class [Feols](/reference/estimation.models.feols_.Feols.qmd).
 
     Examples
     --------
@@ -318,9 +316,9 @@ def lpdid(
     idname: str,
     tname: str,
     gname: str,
-    vcov: Optional[Union[VcovTypeOptions, dict[str, str]]] = None,
-    pre_window: Optional[int] = None,
-    post_window: Optional[int] = None,
+    vcov: VcovTypeOptions | dict[str, str] | None = None,
+    pre_window: int | None = None,
+    post_window: int | None = None,
     never_treated: int = 0,
     att: bool = True,
     xfml=None,

@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from pyfixest.estimation.solvers import solve_ols
+from pyfixest.estimation.internals.solvers import solve_ols
 
 
 def test_solve_ols_simple_2x2():

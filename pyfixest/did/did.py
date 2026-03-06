@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -43,8 +42,8 @@ class DID(ABC):
         idname: str,
         tname: str,
         gname: str,
-        cluster: Optional[str] = None,
-        xfml: Optional[str] = None,
+        cluster: str | None = None,
+        xfml: str | None = None,
         att: bool = True,
     ):
         # do some checks here
