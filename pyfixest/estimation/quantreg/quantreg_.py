@@ -9,6 +9,7 @@ import pandas as pd
 from scipy.linalg import cho_factor, solve_triangular
 from scipy.stats import norm
 
+from pyfixest.core.crv1 import crv1_vcov_loop
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.literals import (
     QuantregMethodOptions,
@@ -470,9 +471,11 @@ class Quantreg(Feols):
         h_G = get_hall_sheather_bandwidth(q=q, N=N)
         delta = kappa * (norm.ppf(q + h_G) - norm.ppf(q - h_G))
 
-        vcov = _crv1_vcov_loop(
-            X=X, clustid=clustid, cluster_col=cluster_col, q=q, u_hat=u_hat, delta=delta
+        A, B = crv1_vcov_loop(
+            X, clustid.astype(np.uintp), cluster_col.astype(np.uintp), q, u_hat, delta
         )
+        B_inv = np.linalg.inv(B)
+        vcov = B_inv @ A @ B_inv
 
         return vcov
 

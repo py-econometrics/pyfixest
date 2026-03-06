@@ -97,3 +97,78 @@ pub fn _crv1_meat_loop_rs(
     );
     Ok(meat.into_pyarray(py).to_owned().into())
 }
+
+fn crv1_vcov_loop(
+    x: &ArrayView2<f64>,
+    clustid: &ArrayView1<usize>,
+    cluster_col: &ArrayView1<usize>,
+    q: f64,
+    u_hat: &ArrayView1<f64>,
+    delta: f64,
+) -> (Array2<f64>, Array2<f64>) {
+    let k = x.ncols();
+    let mut a = Array2::<f64>::zeros((k, k));
+    let mut b = Array2::<f64>::zeros((k, k));
+
+    let (g_indices, g_locs) = bucket_argsort_rs(cluster_col);
+    let eps: f64 = 1e-7;
+
+    for &g in clustid.iter() {
+        let start = g_locs[g];
+        let end = g_locs[g+1];
+        let g_index = &g_indices[start..end];
+
+        let xg = x.select(Axis(0), g_index);
+        let ug: Vec<f64> = g_index.iter().map(|&i| u_hat[i]).collect();
+        let ng = g_index.len();
+        for i in 0..ng {
+            let xgi = xg.row(i);
+            let psi_i = q - if ug[i] <= eps { 1.0 } else { 0.0 };
+
+            for j in 0..ng {
+                let xgj = xg.row(j);
+                let psi_j = q - if ug[j] <= eps { 1.0 } else { 0.0 };
+                for ai in 0..k {
+                    for bi in 0..k {
+                        a[[ai, bi]] += xgi[ai] * xgj[bi] * psi_i * psi_j;
+                    }
+                }
+            }
+
+            let mask_i = if ug[i].abs() < delta {1.0} else {0.0};
+            for ai in 0..k {
+                for bi in 0..k {
+                    b[[ai, bi]] += xgi[ai] * xgi[bi] * mask_i;
+                }
+            }
+        }
+    }
+
+    b /= 2.0 * delta;
+    (a, b)
+}
+
+
+#[pyfunction]
+pub fn _crv1_vcov_loop_rs(
+    py: Python,
+    x: PyReadonlyArray2<f64>,
+    clustid: PyReadonlyArray1<usize>,
+    cluster_col: PyReadonlyArray1<usize>,
+    q: f64,
+    u_hat: PyReadonlyArray1<f64>,
+    delta: f64,
+) -> PyResult<(Py<PyArray2<f64>>, Py<PyArray2<f64>>)> {
+    let (a, b) = crv1_vcov_loop(
+        &x.as_array(),
+        &clustid.as_array(),
+        &cluster_col.as_array(),
+        q,
+        &u_hat.as_array(),
+        delta,
+    );
+    Ok((
+        a.into_pyarray(py).to_owned().into(),
+        b.into_pyarray(py).to_owned().into(),
+    ))
+}
