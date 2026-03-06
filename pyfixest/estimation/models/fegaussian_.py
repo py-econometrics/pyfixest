@@ -1,5 +1,5 @@
 from collections.abc import Mapping
-from typing import Any, Literal, Optional, Union
+from typing import Any, Literal
 
 import numpy as np
 import pandas as pd
@@ -16,11 +16,11 @@ class Fegaussian(Feglm):
         self,
         FixestFormula: FixestFormula,
         data: pd.DataFrame,
-        ssc_dict: dict[str, Union[str, bool]],
+        ssc_dict: dict[str, str | bool],
         drop_singletons: bool,
         drop_intercept: bool,
-        weights: Optional[str],
-        weights_type: Optional[str],
+        weights: str | None,
+        weights_type: str | None,
         collin_tol: float,
         fixef_tol: float,
         fixef_maxiter: int,
@@ -37,10 +37,10 @@ class Fegaussian(Feglm):
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
-        sample_split_var: Optional[str] = None,
-        sample_split_value: Optional[Union[str, int]] = None,
-        separation_check: Optional[list[str]] = None,
-        context: Union[int, Mapping[str, Any]] = 0,
+        sample_split_var: str | None = None,
+        sample_split_value: str | int | None = None,
+        separation_check: list[str] | None = None,
+        context: int | Mapping[str, Any] = 0,
         demeaner_backend: DemeanerBackendOptions = "numba",
         accelerate: bool = True,
     ):

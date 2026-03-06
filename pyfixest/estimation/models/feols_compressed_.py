@@ -1,7 +1,7 @@
 import logging
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Optional, Union
+from typing import Any
 
 import narwhals as nw
 import numpy as np
@@ -87,11 +87,11 @@ class FeolsCompressed(Feols):
         self,
         FixestFormula: FixestFormula,
         data: pd.DataFrame,
-        ssc_dict: dict[str, Union[str, bool]],
+        ssc_dict: dict[str, str | bool],
         drop_singletons: bool,
         drop_intercept: bool,
-        weights: Optional[str],
-        weights_type: Optional[str],
+        weights: str | None,
+        weights_type: str | None,
         collin_tol: float,
         fixef_tol: float,
         fixef_maxiter: int,
@@ -101,11 +101,11 @@ class FeolsCompressed(Feols):
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
-        context: Union[int, Mapping[str, Any]] = 0,
-        sample_split_var: Optional[str] = None,
-        sample_split_value: Optional[Union[str, int]] = None,
-        reps: Optional[int] = None,
-        seed: Optional[int] = None,
+        context: int | Mapping[str, Any] = 0,
+        sample_split_var: str | None = None,
+        sample_split_value: str | int | None = None,
+        reps: int | None = None,
+        seed: int | None = None,
     ) -> None:
         super().__init__(
             FixestFormula,
@@ -245,9 +245,9 @@ class FeolsCompressed(Feols):
 
     def vcov(
         self,
-        vcov: Union[str, dict[str, str]],
-        vcov_kwargs: Optional[dict[str, Any]] = None,
-        data: Optional[DataFrameType] = None,
+        vcov: str | dict[str, str],
+        vcov_kwargs: dict[str, Any] | None = None,
+        data: DataFrameType | None = None,
     ):
         "Compute the variance-covariance matrix for the compressed regression."
         if self._use_mundlak and vcov in ["iid", "hetero", "HC1", "HC2", "HC3"]:
@@ -362,14 +362,14 @@ class FeolsCompressed(Feols):
 
     def predict(
         self,
-        newdata: Optional[DataFrameType] = None,
+        newdata: DataFrameType | None = None,
         atol: float = 1e-6,
         btol: float = 1e-6,
         type: PredictionType = "link",
-        se_fit: Optional[bool] = False,
-        interval: Optional[PredictionErrorOptions] = None,
+        se_fit: bool | None = False,
+        interval: PredictionErrorOptions | None = None,
         alpha: float = 0.05,
-    ) -> Union[np.ndarray, pd.DataFrame]:
+    ) -> np.ndarray | pd.DataFrame:
         """
         Compute predicted values.
 
@@ -408,17 +408,17 @@ class FeolsCompressed(Feols):
 class _RegressionCompressionData:
     Y: nw.DataFrame
     X: nw.DataFrame
-    fe: Optional[nw.DataFrame]
+    fe: nw.DataFrame | None
     compression_count: nw.DataFrame
-    Yprime: Optional[nw.DataFrame]
-    Yprimeprime: Optional[nw.DataFrame]
+    Yprime: nw.DataFrame | None
+    Yprimeprime: nw.DataFrame | None
     df_compressed: nw.DataFrame
 
 
 def _regression_compression(
     depvars: list[str],
     covars: list[str],
-    fevars: Optional[list[str]],
+    fevars: list[str] | None,
     data_long: nw.DataFrame,
     short: bool = False,
 ) -> _RegressionCompressionData:
@@ -462,7 +462,7 @@ def _regression_compression(
 
 def _mundlak_transform(
     covars: list[str], fevars: list[str], data_long: nw.DataFrame
-) -> Union[nw.DataFrame, list[str]]:
+) -> nw.DataFrame | list[str]:
     "Compute the Mundlak transformation of the data."
     covars_updated = covars.copy()
     # Factorize and prepare group-wise mean calculations in one go

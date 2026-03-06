@@ -1,7 +1,6 @@
 import functools
 import warnings
 from importlib import import_module
-from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -233,11 +232,11 @@ class ResultAccessorMixin:
     def confint(
         self,
         alpha: float = 0.05,
-        keep: Optional[Union[list, str]] = None,
-        drop: Optional[Union[list, str]] = None,
-        exact_match: Optional[bool] = False,
+        keep: list | str | None = None,
+        drop: list | str | None = None,
+        exact_match: bool | None = False,
         joint: bool = False,
-        seed: Optional[int] = None,
+        seed: int | None = None,
         reps: int = 10_000,
     ) -> pd.DataFrame:
         r"""

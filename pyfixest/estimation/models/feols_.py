@@ -1,8 +1,8 @@
 import re
 import warnings
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from importlib import import_module
-from typing import Any, Callable, Literal, Optional, Union, cast
+from typing import Any, Literal, cast
 
 import numpy as np
 import pandas as pd
@@ -246,11 +246,11 @@ class Feols(ResultAccessorMixin):
         self,
         FixestFormula: FixestFormula,
         data: pd.DataFrame,
-        ssc_dict: dict[str, Union[str, bool]],
+        ssc_dict: dict[str, str | bool],
         drop_singletons: bool,
         drop_intercept: bool,
-        weights: Optional[str],
-        weights_type: Optional[str],
+        weights: str | None,
+        weights_type: str | None,
         collin_tol: float,
         fixef_tol: float,
         fixef_maxiter: int,
@@ -260,9 +260,9 @@ class Feols(ResultAccessorMixin):
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
-        context: Union[int, Mapping[str, Any]] = 0,
-        sample_split_var: Optional[str] = None,
-        sample_split_value: Optional[Union[str, int, float, _AllSampleSentinel]] = None,
+        context: int | Mapping[str, Any] = 0,
+        sample_split_var: str | None = None,
+        sample_split_value: str | int | float | _AllSampleSentinel | None = None,
     ) -> None:
         self._sample_split_value = sample_split_value
         self._sample_split_var = sample_split_var
@@ -379,12 +379,12 @@ class Feols(ResultAccessorMixin):
         self.deviance = None
 
         # special for did
-        self._res_cohort_eventtime_dict: Optional[dict[str, Any]] = None
-        self._yname: Optional[str] = None
-        self._gname: Optional[str] = None
-        self._tname: Optional[str] = None
-        self._idname: Optional[str] = None
-        self._att: Optional[bool] = None
+        self._res_cohort_eventtime_dict: dict[str, Any] | None = None
+        self._yname: str | None = None
+        self._gname: str | None = None
+        self._tname: str | None = None
+        self._idname: str | None = None
+        self._att: bool | None = None
 
         # set functions inherited from other modules
         self._bind_report_methods()
@@ -581,9 +581,9 @@ class Feols(ResultAccessorMixin):
 
     def vcov(
         self,
-        vcov: Union[str, dict[str, str]],
-        vcov_kwargs: Optional[dict[str, Union[str, int]]] = None,
-        data: Optional[DataFrameType] = None,
+        vcov: str | dict[str, str],
+        vcov_kwargs: dict[str, str | int] | None = None,
+        data: DataFrameType | None = None,
     ) -> "Feols":
         """
         Compute covariance matrices for an estimated regression model.
@@ -1032,7 +1032,7 @@ class Feols(ResultAccessorMixin):
         depvar: str,
         Y: pd.Series,
         _data: pd.DataFrame,
-        _ssc_dict: dict[str, Union[str, bool]],
+        _ssc_dict: dict[str, str | bool],
         _k_fe: int,
         fval: str,
         store_data: bool,
@@ -1245,15 +1245,15 @@ class Feols(ResultAccessorMixin):
     def wildboottest(
         self,
         reps: int,
-        cluster: Optional[str] = None,
-        param: Optional[str] = None,
-        weights_type: Optional[str] = "rademacher",
-        impose_null: Optional[bool] = True,
-        bootstrap_type: Optional[str] = "11",
-        seed: Optional[int] = None,
-        k_adj: Optional[bool] = True,
-        G_adj: Optional[bool] = True,
-        parallel: Optional[bool] = False,
+        cluster: str | None = None,
+        param: str | None = None,
+        weights_type: str | None = "rademacher",
+        impose_null: bool | None = True,
+        bootstrap_type: str | None = "11",
+        seed: int | None = None,
+        k_adj: bool | None = True,
+        G_adj: bool | None = True,
+        parallel: bool | None = False,
         return_bootstrapped_t_stats=False,
     ):
         """
@@ -1467,8 +1467,8 @@ class Feols(ResultAccessorMixin):
     def ccv(
         self,
         treatment,
-        cluster: Optional[str] = None,
-        seed: Optional[int] = None,
+        cluster: str | None = None,
+        seed: int | None = None,
         n_splits: int = 8,
         pk: float = 1,
         qk: float = 1,
@@ -1618,7 +1618,7 @@ class Feols(ResultAccessorMixin):
         z_se = z * se
         conf_int = np.array([tau_full - z_se, tau_full + z_se])
 
-        res_ccv_dict: dict[str, Union[float, np.ndarray]] = {
+        res_ccv_dict: dict[str, float | np.ndarray] = {
             "Estimate": tau_full,
             "Std. Error": se,
             "t value": tstat,
@@ -1653,7 +1653,7 @@ class Feols(ResultAccessorMixin):
 
     def _model_matrix_one_hot(
         self, output="numpy"
-    ) -> tuple[np.ndarray, Union[np.ndarray, spmatrix], list[str]]:
+    ) -> tuple[np.ndarray, np.ndarray | spmatrix, list[str]]:
         """
         Transform a model matrix with fixed effects into a one-hot encoded matrix.
 
@@ -1695,16 +1695,16 @@ class Feols(ResultAccessorMixin):
 
     def decompose(
         self,
-        param: Optional[str] = None,
-        x1_vars: Optional[Union[list[str], str]] = None,
-        decomp_var: Optional[str] = None,
+        param: str | None = None,
+        x1_vars: list[str] | str | None = None,
+        decomp_var: str | None = None,
         type: decomposition_type = "gelbach",
-        cluster: Optional[str] = None,
-        combine_covariates: Optional[dict[str, list[str]]] = None,
+        cluster: str | None = None,
+        combine_covariates: dict[str, list[str]] | None = None,
         reps: int = 1000,
-        seed: Optional[int] = None,
-        nthreads: Optional[int] = None,
-        agg_first: Optional[bool] = None,
+        seed: int | None = None,
+        nthreads: int | None = None,
+        agg_first: bool | None = None,
         only_coef: bool = False,
         digits=4,
     ) -> GelbachDecomposition:
@@ -1836,7 +1836,7 @@ class Feols(ResultAccessorMixin):
         if agg_first is None:
             agg_first = combine_covariates is not None
 
-        cluster_df: Optional[pd.Series] = None
+        cluster_df: pd.Series | None = None
         if cluster is not None:
             cluster_df = self._data[cluster]
         elif self._is_clustered:
@@ -1977,14 +1977,14 @@ class Feols(ResultAccessorMixin):
 
     def predict(
         self,
-        newdata: Optional[DataFrameType] = None,
+        newdata: DataFrameType | None = None,
         atol: float = 1e-6,
         btol: float = 1e-6,
         type: PredictionType = "link",
-        se_fit: Optional[bool] = False,
-        interval: Optional[PredictionErrorOptions] = None,
+        se_fit: bool | None = False,
+        interval: PredictionErrorOptions | None = None,
         alpha: float = 0.05,
-    ) -> Union[np.ndarray, pd.DataFrame]:
+    ) -> np.ndarray | pd.DataFrame:
         """
         Predict values of the model on new data.
 
@@ -2093,10 +2093,10 @@ class Feols(ResultAccessorMixin):
     def ritest(
         self,
         resampvar: str,
-        cluster: Optional[str] = None,
+        cluster: str | None = None,
         reps: int = 100,
         type: str = "randomization-c",
-        rng: Optional[np.random.Generator] = None,
+        rng: np.random.Generator | None = None,
         choose_algorithm: str = "auto",
         store_ritest_statistics: bool = False,
         level: float = 0.95,
@@ -2222,7 +2222,7 @@ class Feols(ResultAccessorMixin):
             )
 
         if choose_algorithm == "slow" or self._method == "fepois":
-            vcov_input: Union[str, dict[str, str]]
+            vcov_input: str | dict[str, str]
             if cluster is not None:
                 vcov_input = {"CRV1": cluster}
             else:
@@ -2487,8 +2487,8 @@ def _drop_multicollinear_variables(
 
 
 def _check_vcov_input(
-    vcov: Union[str, dict[str, str]],
-    vcov_kwargs: Optional[dict[str, Any]],
+    vcov: str | dict[str, str],
+    vcov_kwargs: dict[str, Any] | None,
     data: pd.DataFrame,
 ):
     """
@@ -2547,7 +2547,7 @@ def _check_vcov_input(
             raise ValueError("Missing required 'time_id' for NW/DK vcov")
 
 
-def _deparse_vcov_input(vcov: Union[str, dict[str, str]], has_fixef: bool, is_iv: bool):
+def _deparse_vcov_input(vcov: str | dict[str, str], has_fixef: bool, is_iv: bool):
     """
     Deparse the vcov argument passed to the Feols class.
 

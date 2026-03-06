@@ -1,4 +1,5 @@
-from typing import Any, Callable, Optional
+from collections.abc import Callable
+from typing import Any
 
 import numba as nb
 import numpy as np
@@ -10,8 +11,8 @@ from pyfixest.estimation.internals.literals import DemeanerBackendOptions
 def demean_model(
     Y: pd.DataFrame,
     X: pd.DataFrame,
-    fe: Optional[pd.DataFrame],
-    weights: Optional[np.ndarray],
+    fe: pd.DataFrame | None,
+    weights: np.ndarray | None,
     lookup_demeaned_data: dict[frozenset[int], Any],
     na_index: frozenset[int],
     fixef_tol: float,

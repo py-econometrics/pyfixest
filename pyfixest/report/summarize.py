@@ -1,5 +1,5 @@
 import warnings
-from typing import Optional, Union
+from typing import Union
 
 import maketables
 import numpy as np
@@ -11,9 +11,7 @@ from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.models.fepois_ import Fepois
 from pyfixest.report.utils import _post_processing_input_checks
 
-ModelInputType = Union[
-    FixestMulti, Feols, Fepois, Feiv, list[Union[Feols, Fepois, Feiv]]
-]
+ModelInputType = Union[FixestMulti, Feols, Fepois, Feiv, list[Feols | Fepois | Feiv]]
 
 _METHOD_DISPLAY_NAMES: dict[str, str] = {
     "fepois": "Poisson",
@@ -39,25 +37,25 @@ def _get_estimation_method_name(fxst: Feols) -> str:
 def etable(
     models: ModelInputType,
     type: str = "gt",
-    signif_code: Optional[list] = None,
+    signif_code: list | None = None,
     coef_fmt: str = "b \n (se)",
-    custom_stats: Optional[dict] = None,
-    custom_model_stats: Optional[dict] = None,
-    keep: Optional[Union[list, str]] = None,
-    drop: Optional[Union[list, str]] = None,
-    exact_match: Optional[bool] = False,
-    labels: Optional[dict] = None,
-    cat_template: Optional[str] = None,
-    show_fe: Optional[bool] = True,
-    felabels: Optional[dict] = None,
+    custom_stats: dict | None = None,
+    custom_model_stats: dict | None = None,
+    keep: list | str | None = None,
+    drop: list | str | None = None,
+    exact_match: bool | None = False,
+    labels: dict | None = None,
+    cat_template: str | None = None,
+    show_fe: bool | None = True,
+    felabels: dict | None = None,
     fe_present: str = "x",
     fe_absent: str = "-",
     notes: str = "",
-    model_heads: Optional[list] = None,
-    head_order: Optional[str] = "dh",
-    file_name: Optional[str] = None,
+    model_heads: list | None = None,
+    head_order: str | None = "dh",
+    file_name: str | None = None,
     **kwargs,
-) -> Union[pd.DataFrame, str, None]:
+) -> pd.DataFrame | str | None:
     r"""
     Generate a table summarizing the results of multiple regression models.
 
@@ -348,9 +346,9 @@ def summary(models: ModelInputType, digits: int = 3) -> None:
 def dtable(
     df: pd.DataFrame,
     vars: list,
-    stats: Optional[list] = None,
-    bycol: Optional[list[str]] = None,
-    byrow: Optional[str] = None,
+    stats: list | None = None,
+    bycol: list[str] | None = None,
+    byrow: str | None = None,
     type: str = "gt",
     labels: dict | None = None,
     stats_labels: dict | None = None,

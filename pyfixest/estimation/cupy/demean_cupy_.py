@@ -35,10 +35,10 @@ class CupyFWLDemeaner:
 
     def __init__(
         self,
-        use_gpu: Optional[bool] = None,
+        use_gpu: bool | None = None,
         solver_atol: float = 1e-8,
         solver_btol: float = 1e-8,
-        solver_maxiter: Optional[int] = None,
+        solver_maxiter: int | None = None,
         warn_on_cpu_fallback: bool = True,
         dtype: type = np.float64,
         use_preconditioner: bool = True,
@@ -264,8 +264,8 @@ def create_fe_sparse_matrix(fe: pd.DataFrame) -> sp_sparse.csr_matrix:
 
 def demean_cupy(
     x: NDArray[np.float64],
-    flist: Optional[NDArray[np.uint64]] = None,
-    weights: Optional[NDArray[np.float64]] = None,
+    flist: NDArray[np.uint64] | None = None,
+    weights: NDArray[np.float64] | None = None,
     tol: float = 1e-8,
     maxiter: int = 100_000,
     dtype: type = np.float64,
@@ -295,8 +295,8 @@ def demean_cupy(
 
 def demean_cupy32(
     x: NDArray[np.float64],
-    flist: Optional[NDArray[np.uint64]] = None,
-    weights: Optional[NDArray[np.float64]] = None,
+    flist: NDArray[np.uint64] | None = None,
+    weights: NDArray[np.float64] | None = None,
     tol: float = 1e-8,
     maxiter: int = 100_000,
 ) -> tuple[NDArray[np.float64], bool]:
@@ -311,8 +311,8 @@ def demean_cupy32(
 
 def demean_cupy64(
     x: NDArray[np.float64],
-    flist: Optional[NDArray[np.uint64]] = None,
-    weights: Optional[NDArray[np.float64]] = None,
+    flist: NDArray[np.uint64] | None = None,
+    weights: NDArray[np.float64] | None = None,
     tol: float = 1e-8,
     maxiter: int = 100_000,
 ) -> tuple[NDArray[np.float64], bool]:
@@ -326,8 +326,8 @@ def demean_cupy64(
 
 def demean_scipy(
     x: NDArray[np.float64],
-    flist: Optional[NDArray[np.uint64]] = None,
-    weights: Optional[NDArray[np.float64]] = None,
+    flist: NDArray[np.uint64] | None = None,
+    weights: NDArray[np.float64] | None = None,
     tol: float = 1e-8,
     maxiter: int = 100_000,
 ) -> tuple[NDArray[np.float64], bool]:

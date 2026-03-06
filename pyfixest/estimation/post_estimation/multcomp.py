@@ -11,7 +11,7 @@ from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.models.fepois_ import Fepois
 from pyfixest.report.utils import _post_processing_input_checks
 
-ModelInputType = Union[FixestMulti, list[Union[Feols, Fepois, Feiv]]]
+ModelInputType = Union[FixestMulti, list[Feols | Fepois | Feiv]]
 
 
 def bonferroni(models: ModelInputType, param: str) -> pd.DataFrame:

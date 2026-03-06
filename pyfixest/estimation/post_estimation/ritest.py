@@ -1,5 +1,4 @@
 from importlib import import_module
-from typing import Optional, Union
 
 import matplotlib.pyplot as plt
 import numba as nb
@@ -43,8 +42,8 @@ def _get_ritest_stats_slow(
     reps: int,
     model: str,
     rng: np.random.Generator,
-    vcov: Union[str, dict[str, str]],
-    clustervar_arr: Optional[np.ndarray] = None,
+    vcov: str | dict[str, str],
+    clustervar_arr: np.ndarray | None = None,
 ) -> np.ndarray:
     """
     Compute tests statistics using randomization inference (slow).
@@ -118,8 +117,8 @@ def _get_ritest_stats_fast(
     reps: int,
     rng: np.random.Generator,
     weights: np.ndarray,
-    clustervar_arr: Optional[np.ndarray] = None,
-    fval_df: Optional[pd.DataFrame] = None,
+    clustervar_arr: np.ndarray | None = None,
+    fval_df: pd.DataFrame | None = None,
 ) -> np.ndarray:
     """
     Compute tests statistics using randomization inference (fast).
@@ -202,7 +201,7 @@ def _run_ri(
     weights: np.ndarray,
     Y_demean: np.ndarray,
     X_demean2: np.ndarray,
-    clustervar_arr: Optional[np.ndarray] = None,
+    clustervar_arr: np.ndarray | None = None,
 ) -> np.ndarray:
     """
     Run the randomization inference.
@@ -258,7 +257,7 @@ def _resample(
     resampvar_arr: np.ndarray,
     rng: np.random.Generator,
     iterations: int = 1,
-    clustervar_arr: Optional[np.ndarray] = None,
+    clustervar_arr: np.ndarray | None = None,
 ) -> np.ndarray:
     """
     Random resampling of the treatment variable.
