@@ -101,9 +101,6 @@ pub fn _crv1_meat_loop_rs(
 
 /// Compute the matrices for the CRV1 sandwich estimator
 /// in quantile regression, following Parente & Santos Silva (2016).
-///
-/// The full variance-covariance matrix is V = B^{-1} A B^{-1}, computed on
-/// the Python side.
 fn crv1_vcov_loop(
     x: &ArrayView2<f64>,
     clustid: &ArrayView1<usize>,
