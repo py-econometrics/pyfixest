@@ -4,6 +4,7 @@ from formulaic.utils.stateful_transforms import stateful_transform
 
 @stateful_transform
 def fixed_effect_interactions(*args, _state=None, _metadata=None, _spec=None):
+    """Encode fixed effect interactions for model matrix construction."""
     data = pd.concat(args, axis=1)
     if "__id__" not in _state:
         print(_state)

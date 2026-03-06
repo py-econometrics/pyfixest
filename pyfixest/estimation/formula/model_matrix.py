@@ -11,9 +11,7 @@ from formulaic.parser import DefaultFormulaParser
 from pyfixest.core.detect_singletons import detect_singletons
 from pyfixest.estimation.formula import FORMULAIC_FEATURE_FLAG, FORMULAIC_TRANSFORMS
 from pyfixest.estimation.formula.parse import Formula
-from pyfixest.estimation.formula.utils import (
-    _get_weights
-)
+from pyfixest.estimation.formula.utils import _get_weights
 from pyfixest.utils.utils import capture_context
 
 

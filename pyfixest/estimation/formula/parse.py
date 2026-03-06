@@ -180,7 +180,9 @@ class Formula:
             # drop intercept for fixed effects regressions
             # unless for specifications without required_variables,
             # e.g., `Y ~ 1 | f1`; this can be used to demean dependenent variabels
-            exogenous = (term for term in exogenous if term != "1")
+            exogenous = formulaic.formula.SimpleFormula(
+                term for term in exogenous if term != "1"
+            )
 
         return exogenous
 
@@ -213,6 +215,7 @@ class Formula:
 
     @property
     def wrap_fixed_effects(self) -> set[str]:
+        """Wrapped fixed effects for proper encoding."""
         return {f"__fixed_effect__{term.factors}" for term in self.fixed_effects}
 
     @property
