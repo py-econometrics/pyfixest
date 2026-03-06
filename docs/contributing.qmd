@@ -22,42 +22,6 @@ We're hosting a [PyFixest Sprint](pyfixest-sprint.md) with [AppliedAI](https://w
 
 For a comprehensive overview of the codebase architecture and internals, check out the [DeepWiki](https://deepwiki.com/py-econometrics/pyfixest). While not perfect and correct in all regards, we think it is a pretty good starting point to learn about the codebase!
 
-## Quick Start with GitHub Codespaces
-
-If you are new to open source / Python development, the fastest way to start contributing might be with **GitHub Codespaces**.
-You start by forking the repository. You can then launch a codespace by clicking
-
-[![Open in Codespaces](https://img.shields.io/badge/Open%20in-Codespaces-blue?logo=github)](https://github.com/py-econometrics/pyfixest/codespaces)
-
-This will launch a github codespace (there is a free tier for 60h a month, thank you github!).
-
-```{.bash .code-copy}
-# install dependencies and compile the Rust extension
-pixi install
-```
-
-Now, create a new Python script `debug.py` at the root of the repository and
-paste the following:
-
-```{python}
-import pyfixest as pf
-
-data = pf.get_data()
-fit = pf.feols("Y ~ X1", data=data)
-```
-
-You can now run the script by typing
-
-```{.bash .code-copy}
-pixi run python3 debug.py
-```
-
-or run unit tests
-
-```{.bash .code-copy}
-pixi run test-py
-```
-
 ## Reporting bugs
 
 We use [GitHub issues](https://github.com/py-econometrics/pyfixest/issues) to track bugs. You can report a bug by opening a new issue or contribute to an existing issue if
@@ -129,8 +93,27 @@ Pixi will prompt you to pick a Python version for the R environment — any opti
 
 ### Linting
 
+We use [prek](https://prek.j178.dev/) (a fast, Rust-based re-implementation of
+pre-commit) to run linting and formatting hooks.
+
+**Install prek globally** (recommended for contributors):
+
 ```{.bash .code-copy}
-pixi run pre-commit
+pixi global install prek
+```
+
+**Set up git hooks** (run once after cloning):
+
+```{.bash .code-copy}
+prek install
+```
+
+This installs prek as a git hook so checks run automatically on each commit.
+
+**Run all hooks manually:**
+
+```{.bash .code-copy}
+pixi run lint
 ```
 
 ### Building the documentation
