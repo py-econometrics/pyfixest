@@ -2,33 +2,7 @@ import re
 import warnings
 from enum import Enum
 
-import numpy as np
 import pandas as pd
-
-
-def log(array: np.ndarray) -> np.ndarray:
-    """
-    Compute the natural logarithm of an array, replacing non-finite values with NaN.
-
-    Parameters
-    ----------
-    array : np.ndarray
-        Input array for which to compute the logarithm.
-
-    Returns
-    -------
-    np.ndarray
-        Array with natural logarithm values, where non-finite results (such as
-        -inf from log(0) or NaN from log(negative)) are replaced with NaN.
-    """
-    result = np.full_like(array, np.nan, dtype="float64")
-    valid = (array > 0.0) & np.isfinite(array)
-    if not valid.all():
-        warnings.warn(
-            f"{np.sum(~valid)} rows with infinite values detected. These rows are dropped from the model.",
-        )
-    np.log(array, out=result, where=valid)
-    return result
 
 
 def _str_split_by_sep(string: str, separator: str = "+") -> list[str]:
@@ -79,34 +53,6 @@ def _get_position_of_first_parenthesis_pair(string: str) -> tuple[int, int]:
     return position_open, position
 
 
-def _encode_fixed_effects(fixed_effects: str, data: pd.DataFrame) -> str:
-    fes = set(re.split(r"\s*\+\s*", fixed_effects))
-    for fixed_effect in fes:
-        if "^" not in fixed_effect:
-            continue
-        # Encode interacted fixed effects
-        vars = fixed_effect.split("^")
-        data[fixed_effect.replace("^", "_")] = (
-            data[vars[0]]
-            .astype(pd.StringDtype())
-            .str.cat(
-                data[vars[1:]].astype(pd.StringDtype()),
-                sep="^",
-                na_rep=None,  # a row containing a missing value in any of the columns (before concatenation) will have a missing value in the result
-            )
-        )
-    encoded_fixed_effects = (f"__fixed_effect__({fe.replace('^', '_')})" for fe in fes)
-    fixed_effects_formula = f"{' + '.join(encoded_fixed_effects)} - 1"
-    return fixed_effects_formula
-
-
-def _factorize(series: pd.Series) -> np.ndarray:
-    factorized, _ = pd.factorize(series, use_na_sentinel=True)
-    # use_sentinel=True replaces np.nan with -1, so we revert to np.nan
-    factorized = np.where(factorized == -1, np.nan, factorized)
-    return factorized
-
-
 def _get_weights(data: pd.DataFrame, weights: str) -> pd.Series:
     w = data[weights]
     try:
@@ -120,7 +66,7 @@ def _get_weights(data: pd.DataFrame, weights: str) -> pd.Series:
     return w
 
 
-class _MultipleEstimationType(str, Enum):
+class _MultipleEstimationType(Enum):
     # See https://lrberge.github.io/fixest/reference/stepwise.html
     sw = "sequential stepwise"
     csw = "cumulative stepwise"
