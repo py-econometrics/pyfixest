@@ -6,13 +6,9 @@ on:
       - master
 
 jobs:
-  test:
-    name: "Tests Extended (${{ matrix.environment }})"
+  test-extended:
+    name: "Tests Python Extended"
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        environment: [py312-r]
     steps:
       - uses: actions/checkout@v4
 
@@ -20,17 +16,16 @@ jobs:
         with:
           pixi-version: v0.62.2
           cache: true
-          cache-write: ${{ github.event_name == 'push' && github.ref_name == 'master' }}
+          cache-write: true
           frozen: true
-          environments: ${{ matrix.environment }}
+          environments: py312
 
-      - name: Run long tests with coverage
-        run: pixi run -e ${{ matrix.environment }} test-extended
+      - name: Run extended tests
+        run: pixi run -e py312 test-py-extended
 
-      - name: Upload coverage to Codecov (partial)
-        uses: codecov/codecov-action@v4
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage.xml
           flags: tests-extended
-          partial: true

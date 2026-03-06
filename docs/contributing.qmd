@@ -55,7 +55,7 @@ pixi run python3 debug.py
 or run unit tests
 
 ```{.bash .code-copy}
-pixi run test-default
+pixi run test-py
 ```
 
 ## Reporting bugs
@@ -88,82 +88,63 @@ cd pyfixest
 
 `PyFixest` uses [pixi](https://pixi.sh/latest/) for package management. All configuration lives in `pyproject.toml` under `[tool.pixi.*]` sections.
 
-To install `pixi`, follow the [installation instructions](https://pixi.sh/latest/#installation). Then:
+To install `pixi`, follow the [installation instructions](https://pixi.sh/latest/#installation). Environments are installed automatically when you run a task (e.g. `pixi run test-py`). You do not need a global Rust installation -- Rust is installed via conda.
+
+To see all available tasks and their descriptions, run:
 
 ```{.bash .code-copy}
-pixi install
-```
-
-This installs the default environment with all Python dependencies and builds the Rust extension via the editable install. You do not need a global Rust installation -- Rust is installed via conda.
-
-After installation, you can activate the environment:
-
-```{.bash .code-copy}
-pixi shell
+pixi task list
 ```
 
 ### Running tests
 
 ```{.bash .code-copy}
 # quick test suite (no R, no extended, no plots, no HAC)
-pixi run test-default
+pixi run test-py
 
 # extended test suite
-pixi run test-extended
-
-# HAC standard error tests (runs with pinned thread counts)
-pixi run test-hac
+pixi run test-py-extended
 ```
 
-To run tests that compare against R's `fixest`, use the `r` environment:
+To run tests that compare against R's `fixest`:
 
 ```{.bash .code-copy}
 # tests against R's fixest (core R packages from conda-forge)
-pixi run -e r test-r-core
+pixi run test-r-core
 
 # tests against R's fixest (extra R packages from CRAN)
-pixi run -e r test-r-extended
+pixi run test-r-extended
 
 # run test_vs_fixest.py specifically
-pixi run -e r test-vs-fixest
+pixi run test-r-fixest
+
+# HAC standard error tests (runs with pinned thread counts)
+pixi run test-r-hac
 
 # run everything (all markers, all tests)
-pixi run -e r test-all
+pixi run test-all
 ```
+
+Pixi will prompt you to pick a Python version for the R environment — any option works.
 
 ### Linting
 
 ```{.bash .code-copy}
-pixi run -e lint pre-commit
+pixi run pre-commit
 ```
 
 ### Building the documentation
 
 ```{.bash .code-copy}
-pixi run -e docs docs-build
-pixi run -e docs docs-render
-pixi run -e docs docs-preview
+pixi run docs-build
+pixi run docs-render
+pixi run docs-preview
 ```
 
 ## Developer guide
 
 This section explains the packaging setup, pixi environments, and automation
 so you understand how the pieces fit together.
-
-### Environments
-
-All pixi configuration lives in `pyproject.toml`. There are four environments:
-
-| Environment | Command | What it contains |
-|---|---|---|
-| **default** | `pixi install` | Python, Rust, test tooling, pyfixest (editable install). Works on all platforms including Windows. |
-| **r** | `pixi install -e r` | Everything in default + R, rpy2, and R packages (fixest, sandwich, broom, etc.). Linux and macOS only -- R dependencies cannot be resolved on Windows via conda-forge. |
-| **docs** | `pixi install -e docs` | Everything in default + quartodoc, quarto, jupyterlab, etc. |
-| **lint** | `pixi install -e lint` | Only pre-commit. Does not include pyfixest or Rust (`no-default-feature = true`). |
-
-The `r` environment has its own solve-group (separate from default) because it
-is restricted to non-Windows platforms. This means package versions in `r` may
-differ slightly from default, but this has no practical impact on testing.
 
 ### Rust extension and automatic rebuilds
 
@@ -172,7 +153,7 @@ pyfixest includes a Rust extension (`pyfixest.core._core_impl`) built via
 `pyproject.toml` under `[build-system]`.
 
 **Initial build:** The editable install (`pyfixest = { path = ".", editable = true }`)
-triggers maturin automatically during `pixi install`. No manual build step is needed.
+triggers maturin automatically. No manual build step is needed.
 
 **Rebuilds after `.rs` changes:** We use
 [maturin-import-hook](https://github.com/PyO3/maturin-import-hook) to
@@ -181,97 +162,24 @@ the `.rs` source files have changed. The hook is installed via the `setup`
 task, which runs automatically as a dependency of all test tasks (cached after
 first run). You never need to manually rebuild.
 
-How this works under the hood:
-
-1. The `setup` task runs `scripts/setup_maturin_hook.py`, which writes a
-   custom `sitecustomize.py` into the environment that activates the hook on
-   every Python startup. The custom configuration excludes `.pixi/` from file
-   scanning to avoid issues with broken symlinks across pixi environments.
-2. The task creates a sentinel file (`.pixi/.import-hook-installed`) and
-   declares it as an `output`, so pixi caches the result and skips re-running
-   on subsequent invocations.
-3. When Python starts and you `import pyfixest`, the hook checks whether any
-   `.rs` files are newer than the compiled extension. If so, it runs
-   `maturin develop --release --strip --uv` automatically.
-
-You do not need a global Rust installation -- Rust is installed via conda.
-
-::: {.callout-note}
-If you run `pixi install` again (e.g. after a lock file update), the
-environment is recreated and the sentinel file is removed. The next test run
-will re-run `setup` automatically.
-:::
-
 ### Task dependencies and caching
 
 Several tasks use pixi's `depends-on`, `inputs`, and `outputs` to avoid
 redundant work:
 
-- **`setup`** (maturin import hook): runs once, cached via sentinel file.
-  All test tasks in the default environment depend on it.
-- **`update-test-data`**: runs `Rscript tests/r_test_comparisons.R` to
+- **`_setup`** (maturin import hook): runs once, cached via sentinel file.
+  All test tasks depend on it.
+- **`_update-test-data`**: runs `Rscript tests/r_test_comparisons.R` to
   generate `tests/data/ritest_results.csv`. Cached via `inputs`/`outputs` --
-  only re-runs if the R script changes or the CSV is missing. The R test tasks
-  (`test-r-core`, `test-r-extended`, `test-vs-fixest`, `test-all`) depend on it.
-- **`install-r-extended`**: installs extra R packages from CRAN that are not
-  available on conda-forge. Cached via sentinel file. Only `test-r-extended`
-  depends on it (the other R tests only need conda-forge R packages).
+  only re-runs if the R script changes or the CSV is missing.
+
+Note: `test-r-extended` requires extra R packages not available on conda-forge.
+Install them manually before running: `Rscript r_test_requirements.R`.
+
+These tasks are prefixed with `_` so they are hidden from `pixi task list`.
 
 You can skip dependency tasks with `--skip-deps` if needed:
 
 ```{.bash .code-copy}
-pixi run -e r --skip-deps test-r-core
+pixi run --skip-deps test-r-core
 ```
-
-### All available tasks
-
-| Task | Environment | Description |
-|---|---|---|
-| `setup` | default | Install the maturin import hook (auto-runs before tests) |
-| `test-default` | default | Quick tests (no R, extended, plots, or HAC) |
-| `test-extended` | default | Tests marked `extended` |
-| `test-hac` | default | HAC SE tests (with pinned thread counts) |
-| `test-all` | r | All tests including R comparisons |
-| `test-r-core` | r | Tests against R's fixest (conda-forge R packages) |
-| `test-r-extended` | r | Tests against R (extra CRAN packages) |
-| `test-vs-fixest` | r | Runs `test_vs_fixest.py` specifically |
-| `update-test-data` | r | Regenerate R test comparison data |
-| `install-r-extended` | r | Install extra R packages from CRAN |
-| `render-notebooks` | default | Run all notebooks via `scripts/run_notebooks.py` |
-| `docs-build` | docs | Build API docs with quartodoc |
-| `docs-render` | docs | Render docs with quarto |
-| `docs-preview` | docs | Preview docs locally |
-| `pre-commit` | lint | Run all pre-commit hooks |
-
-### Why rpy2 is pinned
-
-`rpy2` is pinned to `==3.5.11` because newer versions broke pandas
-DataFrame conversion with R. This pin also prevents the `r` environment from
-resolving on Windows (rpy2 3.5.11 on Windows only supports Python 3.8 on
-conda-forge). Unpinning requires testing the full R test suite against a
-newer rpy2 version.
-
-## Installing Python, R and Quarto
-
-#### Installing Python
-
-The minimal Python version to develop `pyfixest` is `3.10`. You can install it on Mac/Linux via [Homebrew](https://brew.sh/):
-
-```{.bash .code-copy}
-brew install python@3.11 # specify the version of python you prefer
-```
-
-On Windows via [Winget](https://winget.run/pkg/Python/Python.3.11):
-```{.bash .code-copy}
-winget install -e --id Python.Python.3.11
-```
-
-### Installing R
-
-R and R dependencies available through conda-forge are installed automatically when you use the `r` environment (`pixi install -e r`). You do not need a global R installation.
-
-Some extra R dependencies (installed via `pixi run -e r install-r-extended`) may require additional development tools like `gcc` and `cmake`.
-
-### Installing Quarto
-
-Quarto is installed automatically in the `docs` environment via conda. You do not need a global Quarto installation to build the documentation.

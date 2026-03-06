@@ -13,8 +13,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
-    name: "Tests Core (${{ matrix.environment }})"
+  test-python:
+    name: "Tests Python (${{ matrix.environment }})"
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -31,8 +31,8 @@ jobs:
           frozen: true
           environments: ${{ matrix.environment }}
 
-      - name: Run 'regular' tests
-        run: pixi run -e ${{ matrix.environment }} test-default
+      - name: Run tests
+        run: pixi run -e ${{ matrix.environment }} test-py
 
       - name: Upload coverage to Codecov (partial)
         if: matrix.environment == 'py314'
@@ -43,13 +43,13 @@ jobs:
           flags: core-tests
           files: coverage.xml
 
-  test_slow:
-    name: "Tests vs fixest"
+  test-r:
+    name: "Tests vs R (${{ matrix.test-task }})"
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        environment: [py312-r]
+        test-task: [test-r-core, test-r-extended, test-r-fixest, test-r-hac]
     steps:
       - uses: actions/checkout@v4
 
@@ -59,26 +59,23 @@ jobs:
           cache: true
           cache-write: ${{ github.event_name == 'push' && github.ref_name == 'master' }}
           frozen: true
-          environments: ${{ matrix.environment }}
+          environments: py312-r
 
-      - name: Run tests against r
-        run: |
-          pixi run -e ${{ matrix.environment }} test-r-core
-          pixi run -e ${{ matrix.environment }} test-r-extended
-          pixi run -e ${{ matrix.environment }} test-hac
+      - name: Run ${{ matrix.test-task }}
+        run: pixi run -e py312-r ${{ matrix.test-task }}
 
       - name: Upload coverage to Codecov (partial)
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           partial: true
-          flags: tests-vs-r
+          flags: ${{ matrix.test-task }}
           files: coverage.xml
 
   merge_coverage:
     name: "Merge Coverage"
     runs-on: ubuntu-latest
-    needs: [test, test_slow]
+    needs: [test-python, test-r]
     steps:
       - name: Final coverage merge
         uses: codecov/codecov-action@v5
@@ -128,7 +125,7 @@ jobs:
       contents: write
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}
-    needs: ["build-docs", "test"]
+    needs: ["build-docs", "test-python"]
     if: github.ref == 'refs/heads/master'
     steps:
       - name: Download docs artifact
