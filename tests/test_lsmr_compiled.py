@@ -14,7 +14,7 @@ import pytest
 import torch
 
 # Reference: original scalar-state LSMR (for correctness comparison)
-from pyfixest.estimation.torch.lsmr_torch import lsmr_torch as lsmr_torch_original
+from pyfixest.estimation.torch.lsmr_torch import _lsmr_scalar as lsmr_torch_original
 from pyfixest.estimation.torch.lsmr_torch_compiled import lsmr_torch
 
 # ---------------------------------------------------------------------------

@@ -325,11 +325,12 @@ def lsmr_torch(
     CSR (or dense) tensor and *b* is a dense vector.  All vector operations
     stay on the tensor's device (CPU / CUDA / MPS).
 
-    On GPU (MPS or CUDA) the scalar Givens rotations, norm estimation, and
-    convergence check are fused into a **single GPU kernel** via
-    ``torch.compile`` + Inductor, eliminating ~60 per-iteration kernel
-    launches.  On CPU the scalar step runs without compilation (no kernel-
-    launch overhead to eliminate).
+    On CUDA the scalar Givens rotations, norm estimation, and convergence
+    check are fused into a **single GPU kernel** via ``torch.compile`` +
+    Inductor, eliminating ~60 per-iteration kernel launches.  On CPU and
+    MPS the scalar step runs without compilation (MPS's Metal command
+    buffer batching already amortizes kernel launch overhead, so
+    compilation adds dispatch cost without measurable benefit).
 
     The while loop itself cannot be compiled because sparse CSR matvec is
     not supported in ``torch.compile``.  The single remaining CPU-GPU sync
@@ -353,7 +354,7 @@ def lsmr_torch(
         Maximum iterations.  Defaults to ``min(m, n)``.
     use_compile : bool or None
         Whether to ``torch.compile`` the scalar step.  ``None`` (default)
-        auto-selects: **True** on GPU, **False** on CPU.
+        auto-selects: **True** on CUDA, **False** on CPU and MPS.
 
     Returns
     -------
@@ -375,7 +376,7 @@ def lsmr_torch(
 
     # Auto-detect compilation
     if use_compile is None:
-        use_compile = device.type in ("cuda", "mps")
+        use_compile = device.type == "cuda"
 
     # Get compiled or uncompiled step function
     step_fn = _get_compiled_step(device.type) if use_compile else _scalar_step

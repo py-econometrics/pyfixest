@@ -17,7 +17,7 @@ import numpy as np
 import torch
 from numpy.typing import NDArray
 
-from pyfixest.estimation.torch.lsmr_torch_compiled import lsmr_torch
+from pyfixest.estimation.torch.lsmr_torch import lsmr_torch
 
 
 def _get_device(dtype: torch.dtype = torch.float64) -> torch.device:
@@ -372,10 +372,18 @@ class _PreconditionedSparse:
 
     The transpose view is cached and returned by `.t()`, so LSMR's
     repeated `A.t().mv(u)` calls don't allocate a new object each time.
+
+    D^T is pre-computed once in a GPU-friendly sparse layout to avoid
+    per-iteration reconversion (COO coalesce on MPS, CSR radixSort on CUDA).
     """
 
     def __init__(
-        self, D: torch.Tensor, M_inv: torch.Tensor, *, _transposed: bool = False
+        self,
+        D: torch.Tensor,
+        M_inv: torch.Tensor,
+        *,
+        _transposed: bool = False,
+        _D_t: torch.Tensor | None = None,
     ):
         m, n = D.shape
         self.shape = (n, m) if _transposed else (m, n)
@@ -383,11 +391,23 @@ class _PreconditionedSparse:
         self._M_inv = M_inv
         self._transposed = _transposed
         self._T: _PreconditionedSparse | None = None
+        self._D_t = _D_t if _D_t is not None else self._materialize_transpose(D)
+
+    @staticmethod
+    def _materialize_transpose(D: torch.Tensor) -> torch.Tensor:
+        """Pre-compute D^T in a GPU-friendly sparse layout."""
+        D_t = D.t()
+        layout = D_t.layout
+        if layout == torch.sparse_coo:
+            return D_t.coalesce()
+        if layout in (torch.sparse_csr, torch.sparse_csc):
+            return D_t.to_sparse_csr()
+        return D_t
 
     def mv(self, v: torch.Tensor) -> torch.Tensor:
         if self._transposed:
-            # Compute M_inv * (D^T @ u)
-            return self._M_inv * (self._D.t() @ v)
+            # Compute M_inv * (D^T @ u) — uses pre-computed transpose
+            return self._M_inv * (self._D_t @ v)
         # Compute D @ (M_inv * v)
         return self._D @ (self._M_inv * v)
 
@@ -395,7 +415,8 @@ class _PreconditionedSparse:
         """Return cached transpose view."""
         if self._T is None:
             self._T = _PreconditionedSparse(
-                self._D, self._M_inv, _transposed=not self._transposed
+                self._D, self._M_inv,
+                _transposed=not self._transposed, _D_t=self._D_t,
             )
             self._T._T = self  # cross-link so .t().t() returns self
         return self._T
