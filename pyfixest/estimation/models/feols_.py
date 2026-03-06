@@ -330,6 +330,7 @@ class Feols(ResultAccessorMixin):
         self._demean_func = impl["demean"]
         self._find_collinear_variables_func = impl["collinear"]
         self._crv1_meat_func = impl["crv1_meat"]
+        self._crv1_vcov_func = impl["crv1_vcov"]
         self._count_nested_fixef_func = impl["nonnested"]
 
         # set in get_fit()

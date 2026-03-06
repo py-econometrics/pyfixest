@@ -99,7 +99,7 @@ pub fn _crv1_meat_loop_rs(
 }
 
 /// Subgradient of the quantile regression check function.
-/// Returns q when the residual is positive, and -(1-q) when it is zero or negative.
+/// Returns q when the residual is above eps (1e-7), and -(1-q) otherwise.
 fn check_subgradient(q: f64, residual: f64) -> f64 {
     let eps: f64 = 1e-7;
     q - if residual <= eps { 1.0 } else { 0.0 }

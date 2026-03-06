@@ -2,7 +2,9 @@ import numpy as np
 import pytest
 
 from pyfixest.core.crv1 import crv1_vcov_loop as crv1_vcov_loop_rs
-from pyfixest.estimation.quantreg.quantreg_ import _crv1_vcov_loop as crv1_vcov_loop_nb
+from pyfixest.estimation.internals.vcov_utils import (
+    _crv1_vcov_loop as crv1_vcov_loop_nb,
+)
 
 
 def _run_rust(X, clustid, cluster_col, q, u_hat, delta):
@@ -12,7 +14,9 @@ def _run_rust(X, clustid, cluster_col, q, u_hat, delta):
 
 
 def _run_numba(X, clustid, cluster_col, q, u_hat, delta):
-    return crv1_vcov_loop_nb(X, clustid, cluster_col, q, u_hat, delta)
+    A, B = crv1_vcov_loop_nb(X, clustid, cluster_col, q, u_hat, delta)
+    B_inv = np.linalg.inv(B)
+    return B_inv @ A @ B_inv
 
 
 @pytest.fixture
