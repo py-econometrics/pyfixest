@@ -1,5 +1,5 @@
 from collections.abc import Mapping
-from typing import Any, Optional, Union
+from typing import Any
 
 from pyfixest.estimation.api.utils import _estimation_input_checks
 from pyfixest.estimation.FixestMulti_ import FixestMulti
@@ -14,7 +14,7 @@ from pyfixest.utils.utils import capture_context
 from pyfixest.utils.utils import ssc as ssc_func
 
 
-def _quantreg_input_checks(quantile: float, tol: float, maxiter: Optional[int]):
+def _quantreg_input_checks(quantile: float, tol: float, maxiter: int | None):
     "Run custom input checks for quantreg."
     if isinstance(quantile, list):
         if not all(isinstance(q, float) for q in quantile):
@@ -40,23 +40,23 @@ def _quantreg_input_checks(quantile: float, tol: float, maxiter: Optional[int]):
 def quantreg(
     fml: str,
     data: DataFrameType,  # type: ignore
-    vcov: Optional[Union[VcovTypeOptions, dict[str, str]]] = "nid",
+    vcov: VcovTypeOptions | dict[str, str] | None = "nid",
     quantile: float = 0.5,
     method: QuantregMethodOptions = "fn",
     multi_method: QuantregMultiOptions = "cfm1",
     tol: float = 1e-06,
-    maxiter: Optional[int] = None,
-    ssc: Optional[dict[str, Union[str, bool]]] = None,
+    maxiter: int | None = None,
+    ssc: dict[str, str | bool] | None = None,
     collin_tol: float = 1e-09,
-    separation_check: Optional[list[str]] = None,
+    separation_check: list[str] | None = None,
     drop_intercept: bool = False,
     copy_data: bool = True,
     store_data: bool = True,
     lean: bool = False,
-    context: Optional[Union[int, Mapping[str, Any]]] = None,
-    split: Optional[str] = None,
-    fsplit: Optional[str] = None,
-    seed: Optional[int] = None,
+    context: int | Mapping[str, Any] | None = None,
+    split: str | None = None,
+    fsplit: str | None = None,
+    seed: int | None = None,
 ):
     """
     Fit a quantile regression model using the interior point algorithm from Portnoy and Koenker (1997).

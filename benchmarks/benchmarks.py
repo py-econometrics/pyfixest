@@ -13,7 +13,6 @@ import sys
 import time
 from collections import defaultdict
 from pathlib import Path
-from typing import Optional
 
 import pandas as pd
 
@@ -102,7 +101,7 @@ def _run_in_subprocess(
     data_path: str,
     formula: str,
     result_queue: mp.Queue,
-    backend: Optional[str] = None,
+    backend: str | None = None,
 ):
     """Worker function that runs in subprocess."""
     try:
@@ -131,7 +130,7 @@ def run_with_timeout(
     data_path: str,
     formula: str,
     timeout: int,
-    backend: Optional[str] = None,
+    backend: str | None = None,
 ) -> tuple[str, float | None]:
     """Run a function in subprocess with timeout. Returns (status, elapsed_time)."""
     result_queue = mp.Queue()

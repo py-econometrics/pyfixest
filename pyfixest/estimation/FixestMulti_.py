@@ -1,7 +1,7 @@
 import functools
 from collections.abc import Mapping
 from importlib import import_module
-from typing import Any, Optional, Union
+from typing import Any
 
 import pandas as pd
 
@@ -44,12 +44,12 @@ class FixestMulti:
         fixef_maxiter: int,
         weights_type: str,
         use_compression: bool,
-        reps: Optional[int],
-        seed: Optional[int],
-        split: Optional[str],
-        fsplit: Optional[str],
-        separation_check: Optional[list[str]] = None,
-        context: Union[int, Mapping[str, Any]] = 0,
+        reps: int | None,
+        seed: int | None,
+        split: str | None,
+        fsplit: str | None,
+        separation_check: list[str] | None = None,
+        context: int | Mapping[str, Any] = 0,
         quantreg_method: QuantregMethodOptions = "fn",
         quantreg_multi_method: QuantregMultiOptions = "cfm1",
     ) -> None:
@@ -117,7 +117,7 @@ class FixestMulti:
         self._run_split = split is not None or fsplit is not None
         self._run_full = not (split and not fsplit)
 
-        self._splitvar: Optional[str] = None
+        self._splitvar: str | None = None
         if self._run_split:
             if split:
                 self._splitvar = split
@@ -135,7 +135,7 @@ class FixestMulti:
         # reindex: else, potential errors when pd.DataFrame.dropna()
         # -> drops indices, but formulaic model_matrix starts from 0:N...
         self._data.reset_index(drop=True, inplace=True)
-        self.all_fitted_models: dict[str, Union[Feols, Fepois, Feiv]] = {}
+        self.all_fitted_models: dict[str, Feols | Fepois | Feiv] = {}
 
         # set functions inherited from other modules
         _module = import_module("pyfixest.report")
@@ -156,15 +156,15 @@ class FixestMulti:
         self,
         estimation: str,
         fml: str,
-        vcov: Union[None, str, dict[str, str]] = None,
-        vcov_kwargs: Optional[dict[str, Any]] = None,
-        weights: Union[None, str] = None,
-        ssc: Optional[dict[str, Union[str, bool]]] = None,
+        vcov: None | str | dict[str, str] = None,
+        vcov_kwargs: dict[str, Any] | None = None,
+        weights: None | str = None,
+        ssc: dict[str, str | bool] | None = None,
         fixef_rm: str = "none",
         drop_intercept: bool = False,
-        quantile: Optional[float] = None,
+        quantile: float | None = None,
         quantile_tol: float = 1e-06,
-        quantile_maxiter: Optional[int] = None,
+        quantile_maxiter: int | None = None,
     ) -> None:
         """
         Prepare model for estimation.
@@ -216,7 +216,7 @@ class FixestMulti:
         self._is_iv = False
         self._fml_dict = None
         self._fml_dict_iv = None
-        self._ssc_dict: dict[str, Union[str, bool]] = {}
+        self._ssc_dict: dict[str, str | bool] = {}
         self._drop_singletons = False
         self._is_multiple_estimation = False
         self._weights = weights
@@ -249,14 +249,14 @@ class FixestMulti:
 
     def _estimate_all_models(
         self,
-        vcov: Union[str, dict[str, str], None],
+        vcov: str | dict[str, str] | None,
         solver: SolverOptions,
-        vcov_kwargs: Optional[dict[str, Any]] = None,
+        vcov_kwargs: dict[str, Any] | None = None,
         demeaner_backend: DemeanerBackendOptions = "numba",
         collin_tol: float = 1e-6,
         iwls_maxiter: int = 25,
         iwls_tol: float = 1e-08,
-        separation_check: Optional[list[str]] = None,
+        separation_check: list[str] | None = None,
         accelerate: bool = True,
     ) -> None:
         """
@@ -320,17 +320,17 @@ class FixestMulti:
                     # loop over both dictfe and dictfe_iv (if the latter is not None)
                     # get Y, X, Z, fe, NA indices for model
 
-                    FIT: Union[
-                        Feols,
-                        Feiv,
-                        Fepois,
-                        Fegaussian,
-                        Felogit,
-                        Feprobit,
-                        FeolsCompressed,
-                        Quantreg,
-                        QuantregMulti,
-                    ]
+                    FIT: (
+                        Feols
+                        | Feiv
+                        | Fepois
+                        | Fegaussian
+                        | Felogit
+                        | Feprobit
+                        | FeolsCompressed
+                        | Quantreg
+                        | QuantregMulti
+                    )
 
                     model_kwargs = {
                         "FixestFormula": FixestFormula,
@@ -468,7 +468,7 @@ class FixestMulti:
                     else:
                         self.all_fitted_models[FIT._model_name] = FIT
 
-    def to_list(self) -> list[Union[Feols, Fepois, Feiv]]:
+    def to_list(self) -> list[Feols | Fepois | Feiv]:
         """
         Return a list of all fitted models.
 
@@ -484,8 +484,8 @@ class FixestMulti:
 
     def vcov(
         self,
-        vcov: Union[str, dict[str, str]],
-        vcov_kwargs: Optional[dict[str, Union[str, int]]] = None,
+        vcov: str | dict[str, str],
+        vcov_kwargs: dict[str, str | int] | None = None,
     ):
         """
         Update regression inference "on the fly".
@@ -622,12 +622,12 @@ class FixestMulti:
     def wildboottest(
         self,
         reps: int,
-        cluster: Optional[str] = None,
-        param: Optional[str] = None,
+        cluster: str | None = None,
+        param: str | None = None,
         weights_type: str = "rademacher",
         impose_null: bool = True,
         bootstrap_type: str = "11",
-        seed: Optional[int] = None,
+        seed: int | None = None,
         k_adj: bool = True,
         G_adj: bool = True,
     ) -> pd.DataFrame:
@@ -703,8 +703,8 @@ class FixestMulti:
         return res_df
 
     def fetch_model(
-        self, i: Union[int, str], print_fml: Optional[bool] = True
-    ) -> Union[Feols, Fepois]:
+        self, i: int | str, print_fml: bool | None = True
+    ) -> Feols | Fepois:
         """
         Fetch a model of class Feols from the Fixest class.
 

@@ -1,5 +1,3 @@
-from typing import Optional, Union
-
 import pandas as pd
 
 from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
@@ -8,10 +6,10 @@ from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
 def _estimation_input_checks(
     fml: str,
     data: DataFrameType,
-    vcov: Optional[Union[str, dict[str, str]]],
-    vcov_kwargs: Optional[dict[str, Union[str, int]]],
-    weights: Union[None, str],
-    ssc: dict[str, Union[str, bool]],
+    vcov: str | dict[str, str] | None,
+    vcov_kwargs: dict[str, str | int] | None,
+    weights: None | str,
+    ssc: dict[str, str | bool],
     fixef_rm: str,
     collin_tol: float,
     copy_data: bool,
@@ -21,11 +19,11 @@ def _estimation_input_checks(
     fixef_maxiter: int,
     weights_type: str,
     use_compression: bool,
-    reps: Optional[int],
-    seed: Optional[int],
-    split: Optional[str],
-    fsplit: Optional[str],
-    separation_check: Optional[list[str]] = None,
+    reps: int | None,
+    seed: int | None,
+    split: str | None,
+    fsplit: str | None,
+    separation_check: list[str] | None = None,
 ):
     if not isinstance(fml, str):
         raise TypeError("fml must be a string")

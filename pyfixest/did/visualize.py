@@ -1,5 +1,3 @@
-from typing import Optional
-
 import matplotlib.pyplot as plt
 import pandas as pd
 
@@ -9,20 +7,20 @@ def panelview(
     unit: str,
     time: str,
     treat: str,
-    outcome: Optional[str] = None,
-    collapse_to_cohort: Optional[bool] = False,
-    subsamp: Optional[int] = None,
-    units_to_plot: Optional[list] = None,
-    sort_by_timing: Optional[bool] = False,
-    xlab: Optional[str] = None,
-    ylab: Optional[str] = None,
-    figsize: Optional[tuple] = (11, 3),  # Default plot size
-    noticks: Optional[bool] = False,
-    title: Optional[str] = None,
-    legend: Optional[bool] = False,
-    ax: Optional[plt.Axes] = None,
-    xlim: Optional[tuple] = None,
-    ylim: Optional[tuple] = None,
+    outcome: str | None = None,
+    collapse_to_cohort: bool | None = False,
+    subsamp: int | None = None,
+    units_to_plot: list | None = None,
+    sort_by_timing: bool | None = False,
+    xlab: str | None = None,
+    ylab: str | None = None,
+    figsize: tuple | None = (11, 3),  # Default plot size
+    noticks: bool | None = False,
+    title: str | None = None,
+    legend: bool | None = False,
+    ax: plt.Axes | None = None,
+    xlim: tuple | None = None,
+    ylim: tuple | None = None,
 ) -> None:
     """
     Generate a panel view of the treatment variable over time for each unit.
@@ -175,9 +173,9 @@ def _prepare_panelview_df_for_outcome_plot(
     time: str,
     treat: str,
     outcome: str,
-    subsamp: Optional[int] = None,
-    collapse_to_cohort: Optional[bool] = None,
-    units_to_plot: Optional[list[str]] = None,
+    subsamp: int | None = None,
+    collapse_to_cohort: bool | None = None,
+    units_to_plot: list[str] | None = None,
 ) -> pd.DataFrame:
     if units_to_plot:
         data = data[data[unit].isin(units_to_plot)]
@@ -227,15 +225,15 @@ def _plot_panelview_output_plot(
     time: str,
     treat: str,
     outcome: str,
-    collapse_to_cohort: Optional[bool] = None,
-    ax: Optional[plt.Axes] = None,
-    xlab: Optional[str] = None,
-    ylab: Optional[str] = None,
-    title: Optional[str] = None,
-    legend: Optional[bool] = None,
-    xlim: Optional[tuple[float, float]] = None,
-    ylim: Optional[tuple[float, float]] = None,
-    figsize: Optional[tuple] = (11, 3),
+    collapse_to_cohort: bool | None = None,
+    ax: plt.Axes | None = None,
+    xlab: str | None = None,
+    ylab: str | None = None,
+    title: str | None = None,
+    legend: bool | None = None,
+    xlim: tuple[float, float] | None = None,
+    ylim: tuple[float, float] | None = None,
+    figsize: tuple | None = (11, 3),
 ) -> plt.Axes:
     if not ax:
         _, ax = plt.subplots(figsize=figsize)
@@ -309,9 +307,9 @@ def _prepare_df_for_panelview(
     unit: str,
     time: str,
     treat: str,
-    subsamp: Optional[int] = None,
-    collapse_to_cohort: Optional[bool] = None,
-    sort_by_timing: Optional[bool] = None,
+    subsamp: int | None = None,
+    collapse_to_cohort: bool | None = None,
+    sort_by_timing: bool | None = None,
 ) -> pd.DataFrame:
     treatment_quilt = data.pivot(index=unit, columns=time, values=treat)
     treatment_quilt = treatment_quilt.sample(subsamp) if subsamp else treatment_quilt
@@ -327,13 +325,13 @@ def _prepare_df_for_panelview(
 
 def _plot_panelview(
     treatment_quilt: pd.DataFrame,
-    ax: Optional[plt.Axes] = None,
-    xlab: Optional[str] = None,
-    ylab: Optional[str] = None,
-    figsize: Optional[tuple] = (11, 3),
-    legend: Optional[bool] = False,
-    noticks: Optional[bool] = False,
-    title: Optional[str] = None,
+    ax: plt.Axes | None = None,
+    xlab: str | None = None,
+    ylab: str | None = None,
+    figsize: tuple | None = (11, 3),
+    legend: bool | None = False,
+    noticks: bool | None = False,
+    title: str | None = None,
 ) -> plt.Axes:
     if not ax:
         f, ax = plt.subplots(figsize=figsize)

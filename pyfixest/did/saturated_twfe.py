@@ -1,6 +1,5 @@
 import re
 import warnings
-from typing import Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -48,8 +47,8 @@ class SaturatedEventStudy(DID):
         tname: str,
         gname: str,
         att: bool = True,
-        cluster: Optional[str] = None,
-        xfml: Optional[str] = None,
+        cluster: str | None = None,
+        xfml: str | None = None,
         display_warning: bool = True,
     ):
         super().__init__(
@@ -150,9 +149,7 @@ class SaturatedEventStudy(DID):
             model=self.mod if isinstance(self, SaturatedEventStudy) else self,
         )
 
-    def aggregate(
-        self, agg="period", weighting: Optional[str] = "shares"
-    ) -> pd.DataFrame:
+    def aggregate(self, agg="period", weighting: str | None = "shares") -> pd.DataFrame:
         """
         Aggregate the fully interacted event study estimates by relative time, cohort, and time.
 
@@ -231,7 +228,7 @@ class SaturatedEventStudy(DID):
 
         return df_agg
 
-    def iplot_aggregate(self, agg="period", weighting: Optional[str] = "shares"):
+    def iplot_aggregate(self, agg="period", weighting: str | None = "shares"):
         """
         Plot the aggregated estimates.
 
@@ -316,7 +313,7 @@ def _saturated_event_study(
     outcome: str,
     time_id: str,
     unit_id: str,
-    cluster: Optional[str] = None,
+    cluster: str | None = None,
 ):
     ff = f"{outcome} ~ i(rel_time, first_treated_period, ref = -1, ref2=0) | {unit_id} + {time_id}"
     m = feols(fml=ff, data=df, vcov={"CRV1": cluster})  # type: ignore
