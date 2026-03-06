@@ -14,12 +14,13 @@ concurrency:
 
 jobs:
   test-python:
-    name: "Tests Python (${{ matrix.environment }})"
-    runs-on: ubuntu-latest
+    name: "Tests Python (${{ matrix.environment }}, ${{ matrix.os }})"
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         environment: [py310, py314]
+        os: [ubuntu-latest, macos-latest]
     steps:
       - uses: actions/checkout@v4
 
@@ -35,7 +36,7 @@ jobs:
         run: pixi run -e ${{ matrix.environment }} test-py
 
       - name: Upload coverage to Codecov (partial)
-        if: matrix.environment == 'py314'
+        if: matrix.environment == 'py314' && matrix.os == 'ubuntu-latest'
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}

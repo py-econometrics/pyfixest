@@ -1,4 +1,28 @@
-"""Install the maturin import hook with .pixi excluded from source scanning."""
+"""Install the maturin import hook for automatic Rust extension rebuilds.
+
+pyfixest includes a Rust extension (pyfixest.core._core_impl) built with maturin.
+During development, we use maturin-import-hook to automatically rebuild the
+extension whenever `import pyfixest` detects that .rs source files have changed.
+This avoids having to manually run `maturin develop` after every Rust change.
+
+How it works:
+  This script writes a sitecustomize.py into the environment's site-packages.
+  Python executes sitecustomize.py on startup (before any user code), so the
+  hook is active in every Python session without any manual setup.
+
+  The hook is configured to:
+  - Build in release mode with symbols stripped (for performance)
+  - Exclude .pixi/ from source file scanning (it contains nested Python
+    environments that would confuse the file searcher)
+
+This script is run by the `_setup` pixi task, which all test tasks depend on.
+It is cached via a sentinel file so it only runs once per environment.
+
+See Also
+--------
+  - maturin-import-hook docs: https://github.com/PyO3/maturin-import-hook
+  - Python sitecustomize: https://docs.python.org/3/library/site.html
+"""
 
 import site
 from pathlib import Path

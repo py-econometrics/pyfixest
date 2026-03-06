@@ -233,10 +233,10 @@ description = "HAC standard error tests vs R"
 env = { OMP_NUM_THREADS = "1", OPENBLAS_NUM_THREADS = "1", MKL_NUM_THREADS = "1", VECLIB_MAXIMUM_THREADS = "1", NUMEXPR_NUM_THREADS = "1" }
 
 [tool.pixi.feature.r.tasks]
-test-all = { cmd = "pytest -rs -n auto --cov-report=term tests", depends-on = ["_setup"], description = "Run all tests (Python + R)" }
-test-r-core = { cmd = 'pytest -rs tests -n auto -m "against_r_core" --cov=pyfixest --cov-report=xml', depends-on = ["_setup"], description = "Tests against R fixest (conda-forge packages)" }
-test-r-extended = { cmd = 'pytest -rs tests -n auto -m "against_r_extended" --cov=pyfixest --cov-report=xml', depends-on = ["_setup"], description = "Tests against R (requires manual Rscript r_test_requirements.R)" }
-test-r-fixest = { cmd = "pytest -rs tests/test_vs_fixest.py -n auto --cov=pyfixest --cov-report=xml", depends-on = ["_setup"], description = "Run test_vs_fixest.py" }
+test-all = { cmd = "pytest -rs --cov-report=term tests", depends-on = ["_setup"], description = "Run all tests (Python + R)" }
+test-r-core = { cmd = 'pytest -rs tests -m "against_r_core" --cov=pyfixest --cov-report=xml', depends-on = ["_setup"], description = "Tests against R fixest (conda-forge packages)" }
+test-r-extended = { cmd = 'pytest -rs tests -m "against_r_extended" --cov=pyfixest --cov-report=xml', depends-on = ["_setup"], description = "Tests against R (requires manual Rscript r_test_requirements.R)" }
+test-r-fixest = { cmd = "pytest -rs tests/test_vs_fixest.py --cov=pyfixest --cov-report=xml", depends-on = ["_setup"], description = "Run test_vs_fixest.py" }
 
 # -- docs feature ----------------------------------------------------------------------
 
