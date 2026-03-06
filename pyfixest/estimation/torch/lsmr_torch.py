@@ -17,6 +17,8 @@ import math
 
 import torch
 
+from pyfixest.estimation.torch.lsmr_torch_compiled import lsmr_torch as _lsmr_compiled
+
 
 def _sym_ortho(a: float, b: float) -> tuple[float, float, float]:
     """
@@ -62,7 +64,7 @@ def _rmatvec(A, u: torch.Tensor) -> torch.Tensor:
     return A.t().mv(u)
 
 
-def lsmr_torch(
+def _lsmr_scalar(
     A,
     b: torch.Tensor,
     damp: float = 0.0,
@@ -275,3 +277,37 @@ def lsmr_torch(
             break
 
     return x, istop, itn, normr, normar, normA, condA, normx
+
+
+def lsmr_torch(
+    A,
+    b: torch.Tensor,
+    damp: float = 0.0,
+    atol: float = 1e-8,
+    btol: float = 1e-8,
+    conlim: float = 1e8,
+    maxiter: int | None = None,
+    use_compile: bool | None = None,
+) -> tuple[torch.Tensor, int, int, float, float, float, float, float]:
+    """
+    LSMR solver — unified entry point.
+
+    Auto-selects implementation based on device:
+    - CUDA: compiled (torch.compile fuses scalar step into 1 kernel)
+    - CPU/MPS: scalar (Python-float math, no compilation overhead)
+
+    Pass use_compile=True to force compilation on any device.
+    """
+    device = b.device
+    if use_compile is None:
+        use_compile = device.type == "cuda"
+
+    if use_compile:
+        return _lsmr_compiled(
+            A, b, damp=damp, atol=atol, btol=btol,
+            conlim=conlim, maxiter=maxiter, use_compile=True,
+        )
+    return _lsmr_scalar(
+        A, b, damp=damp, atol=atol, btol=btol,
+        conlim=conlim, maxiter=maxiter,
+    )
