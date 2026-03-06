@@ -73,12 +73,13 @@ def plot_benchmarks(results_df: pd.DataFrame, output_path: Path) -> None:
                 )
 
             ax.set_title(f"{dgp} | n_fe={n_fe}")
+            ax.set_xscale("log")
             ax.set_xticks(x)
             ax.set_xticklabels([f"{n:,}" for n in n_obs_vals], rotation=30, ha="right")
             ax.set_xlabel("n_obs")
             ax.set_ylabel("Time (s)")
             ax.set_yscale("log")
-            ax.grid(axis="y", alpha=0.2)
+            ax.grid(axis="both", alpha=0.2)
 
     handles, labels = axes[0][0].get_legend_handles_labels()
     if handles:

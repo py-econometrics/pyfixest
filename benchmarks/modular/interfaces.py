@@ -7,7 +7,7 @@ from typing import Protocol
 
 @dataclass(frozen=True)
 class BenchmarkDataset:
-    """High-level dataset descriptor shared across all demeaning backends."""
+    """High-level dataset descriptor shared across benchmark backends."""
 
     dataset_id: str
     data_path: Path
@@ -15,30 +15,6 @@ class BenchmarkDataset:
     n_obs: int
     iter_type: str
     iter_num: int
-
-
-@dataclass(frozen=True)
-class BenchmarkSpec:
-    """Specification for a single demeaning benchmark run."""
-
-    demean_cols: list[str]
-    fe_cols: list[str]
-
-
-@dataclass(frozen=True)
-class DemeanResult:
-    """Result row emitted by each backend for one dataset/spec pair."""
-
-    dataset_id: str
-    iter_type: str
-    iter_num: int
-    dgp: str
-    n_obs: int
-    n_fe: int
-    backend: str
-    time: float | None
-    success: bool
-    error: str | None = None
 
 
 class DataGeneratorProtocol(Protocol):
@@ -53,13 +29,52 @@ class DataGeneratorProtocol(Protocol):
         ...
 
 
-class DemeanerProtocol(Protocol):
+@dataclass(frozen=True)
+class FeolsSpec:
+    """Specification for a full feols pipeline benchmark."""
+
+    depvar: str
+    covariates: list[str]
+    fe_cols: list[str]
+    vcov: str | dict[str, str]
+
+    @property
+    def formula(self) -> str:
+        """fixest-style: y ~ x1 | indiv_id + year"""
+        rhs = " + ".join(self.covariates) if self.covariates else "1"
+        if self.fe_cols:
+            return f"{self.depvar} ~ {rhs} | {' + '.join(self.fe_cols)}"
+        return f"{self.depvar} ~ {rhs}"
+
+    @property
+    def n_fe(self) -> int:
+        return len(self.fe_cols)
+
+
+@dataclass(frozen=True)
+class FeolsResult:
+    """Result row for a full feols pipeline benchmark."""
+
+    dataset_id: str
+    iter_type: str
+    iter_num: int
+    dgp: str
+    n_obs: int
+    n_fe: int
+    backend: str
+    time: float | None
+    success: bool
+    error: str | None = None
+    substeps: dict[str, float] | None = None
+
+
+class FeolsBenchmarkerProtocol(Protocol):
     @property
     def name(self) -> str:
         ...
 
     def run(
-        self, datasets: list[BenchmarkDataset], spec: BenchmarkSpec
-    ) -> list[DemeanResult]:
-        """Benchmark one backend on a list of datasets for a fixed spec."""
+        self, datasets: list[BenchmarkDataset], spec: FeolsSpec
+    ) -> list[FeolsResult]:
+        """Benchmark one feols backend on a list of datasets for a fixed spec."""
         ...
