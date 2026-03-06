@@ -43,15 +43,6 @@ repos:
       - id: ruff-format
         types_or: [jupyter, pyi, python]
 
-  - repo: https://github.com/kynan/nbstripout
-    rev: 0.9.1
-    hooks:
-      - id: nbstripout
-        args:
-          - --extra-keys
-          - metadata.kernelspec metadata.language_info.version metadata.vscode
-        files: ^docs/.*\.ipynb$
-
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.19.1
     hooks:
