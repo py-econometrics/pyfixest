@@ -129,8 +129,27 @@ Pixi will prompt you to pick a Python version for the R environment — any opti
 
 ### Linting
 
+We use [prek](https://prek.j178.dev/) (a fast, Rust-based re-implementation of
+pre-commit) to run linting and formatting hooks.
+
+**Install prek globally** (recommended for contributors):
+
 ```{.bash .code-copy}
-pixi run pre-commit
+pixi global install prek
+```
+
+**Set up git hooks** (run once after cloning):
+
+```{.bash .code-copy}
+prek install
+```
+
+This installs prek as a git hook so checks run automatically on each commit.
+
+**Run all hooks manually:**
+
+```{.bash .code-copy}
+pixi run lint
 ```
 
 ### Building the documentation

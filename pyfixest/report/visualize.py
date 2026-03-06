@@ -1,5 +1,4 @@
 import math
-from typing import Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -40,7 +39,7 @@ from pyfixest.report.utils import (
 )
 from pyfixest.utils.dev_utils import _select_order_coefs
 
-ModelInputType = Union[FixestMulti, Feols, Fepois, Feiv, list[Feols | Fepois | Feiv]]
+ModelInputType = FixestMulti | Feols | Fepois | Feiv | list[Feols | Fepois | Feiv]
 
 # Only setup lets-plot if it's available
 if _HAS_LETS_PLOT:
@@ -685,7 +684,7 @@ def _coefplot_matplotlib(
     is_multi_model = len(models) > 1
 
     colors = plt.cm.jet(np.linspace(0, 1, len(models)))
-    color_dict = dict(zip(models, colors))
+    color_dict = dict(zip(models, colors, strict=False))
 
     # Calculate the positions for dodging
     unique_coefficients = df["Coefficient"].unique()

@@ -2,14 +2,13 @@ import re
 import warnings
 from collections import Counter
 from collections.abc import ValuesView
-from typing import Union
 
 from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.models.feiv_ import Feiv
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.models.fepois_ import Fepois
 
-ModelInputType = Union[FixestMulti, Feols, Fepois, Feiv, list[Feols | Fepois | Feiv]]
+ModelInputType = FixestMulti | Feols | Fepois | Feiv | list[Feols | Fepois | Feiv]
 
 
 def _check_label_keys_in_covars(label_keys: list[str], covariate_names: list[str]):
