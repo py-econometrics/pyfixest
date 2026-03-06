@@ -1,5 +1,9 @@
 import importlib as _importlib
+import sys
 from importlib.metadata import PackageNotFoundError, version
+
+if sys.version_info < (3, 10):
+    raise ImportError("pyfixest requires Python >=3.10. Please upgrade Python to use this package.")
 
 # Version handling (keep eager - it's cheap)
 try:
