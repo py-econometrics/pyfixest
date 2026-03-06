@@ -204,9 +204,11 @@ def _prepare_panelview_df_for_outcome_plot(
         )
 
         data_agg[treat] = data_agg.apply(
-            lambda row: row[time] >= row["treatment_start"]
-            if pd.notna(row["treatment_start"])
-            else False,
+            lambda row: (
+                row[time] >= row["treatment_start"]
+                if pd.notna(row["treatment_start"])
+                else False
+            ),
             axis=1,
         )
 
