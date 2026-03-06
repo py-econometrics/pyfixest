@@ -36,6 +36,14 @@ except ImportError:
     HAS_MPS = False
     HAS_CUDA = False
 
+# Optional CuPy availability detection
+try:
+    import cupy
+
+    HAS_CUPY = cupy.cuda.runtime.getDeviceCount() > 0
+except (ImportError, Exception):
+    HAS_CUPY = False
+
 # Backends that accept a backend= argument when called through pyfixest runners
 _PYFIXEST_BACKENDS = {
     "scipy",
@@ -46,6 +54,9 @@ _PYFIXEST_BACKENDS = {
     "torch_mps",
     "torch_cuda",
     "torch_cuda32",
+    "cupy",
+    "cupy32",
+    "cupy64",
 }
 
 # =============================================================================
@@ -65,6 +76,9 @@ def _append_optional_backends(estimators, label_prefix, runner_func, func_name):
     if HAS_CUDA:
         optional.append(("torch_cuda", "torch_cuda"))
         optional.append(("torch_cuda32", "torch_cuda32"))
+    if HAS_CUPY:
+        optional.append(("cupy64", "cupy64"))
+        optional.append(("cupy32", "cupy32"))
     for suffix, backend in optional:
         estimators.append(
             (f"{label_prefix} ({suffix})", backend, runner_func, False, func_name)
@@ -379,6 +393,7 @@ def parse_dataset_name(name: str) -> tuple[str, int]:
         "500k": 500_000,
         "1m": 1_000_000,
         "2m": 2_000_000,
+        "3m": 3_000_000,
         "5m": 5_000_000,
     }
     parts = name.rsplit("_", 1)
@@ -402,11 +417,17 @@ def run_benchmark(
     timeout_estimators: set[str] | None = None,
     formulas_override: dict[int, str] | None = None,
     allowed_datasets: set[str] | None = None,
+    pyfixest_only: bool = False,
+    backend_filter: set[str] | None = None,
 ) -> None:
     """Run benchmarks on all datasets in data_dir."""
     if timeout_estimators is None:
         timeout_estimators = set()
     estimators, formulas = get_estimators(benchmark_type, timeout_estimators)
+    if pyfixest_only:
+        estimators = [e for e in estimators if e[1] in _PYFIXEST_BACKENDS]
+    if backend_filter:
+        estimators = [e for e in estimators if e[1] in backend_filter]
     if formulas_override:
         formulas = formulas_override
 
@@ -596,6 +617,17 @@ def main():
         default=None,
         help="Filter datasets by name (e.g., 'simple' to exclude 'difficult')",
     )
+    parser.add_argument(
+        "--pyfixest-only",
+        action="store_true",
+        help="Skip non-pyfixest estimators (linearmodels, statsmodels)",
+    )
+    parser.add_argument(
+        "--backends",
+        type=str,
+        default=None,
+        help="Comma-separated list of backends to run (e.g., 'torch_cuda,torch_cuda32,cupy64,cupy32')",
+    )
     args = parser.parse_args()
 
     config = load_config("bench.json")
@@ -606,6 +638,10 @@ def main():
     formulas_override = get_formulas_from_config(config, args.type)
     allowed_datasets = get_allowed_datasets(config, args.type)
 
+    backend_filter = None
+    if args.backends:
+        backend_filter = set(b.strip() for b in args.backends.split(","))
+
     run_benchmark(
         args.data_dir,
         args.output,
@@ -615,6 +651,8 @@ def main():
         timeout_estimators,
         formulas_override,
         allowed_datasets,
+        pyfixest_only=args.pyfixest_only,
+        backend_filter=backend_filter,
     )
 
 

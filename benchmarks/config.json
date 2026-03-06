@@ -43,7 +43,13 @@
     { "name": "simple_500k", "n": 500000, "type": "simple" },
     { "name": "difficult_500k", "n": 500000, "type": "difficult" },
     { "name": "simple_1m", "n": 1000000, "type": "simple" },
-    { "name": "difficult_1m", "n": 1000000, "type": "difficult" }
+    { "name": "difficult_1m", "n": 1000000, "type": "difficult" },
+    { "name": "simple_2m", "n": 2000000, "type": "simple" },
+    { "name": "difficult_2m", "n": 2000000, "type": "difficult" },
+    { "name": "simple_3m", "n": 3000000, "type": "simple" },
+    { "name": "difficult_3m", "n": 3000000, "type": "difficult" },
+    { "name": "simple_5m", "n": 5000000, "type": "simple" },
+    { "name": "difficult_5m", "n": 5000000, "type": "difficult" }
   ],
   "datasets_by_type": {
     "ols": [
@@ -56,7 +62,13 @@
       "simple_500k",
       "difficult_500k",
       "simple_1m",
-      "difficult_1m"
+      "difficult_1m",
+      "simple_2m",
+      "difficult_2m",
+      "simple_3m",
+      "difficult_3m",
+      "simple_5m",
+      "difficult_5m"
     ],
     "poisson": [
       "simple_1k",
@@ -68,7 +80,13 @@
       "simple_500k",
       "difficult_500k",
       "simple_1m",
-      "difficult_1m"
+      "difficult_1m",
+      "simple_2m",
+      "difficult_2m",
+      "simple_3m",
+      "difficult_3m",
+      "simple_5m",
+      "difficult_5m"
     ],
     "logit": [
       "simple_1k",
@@ -80,7 +98,13 @@
       "simple_500k",
       "difficult_500k",
       "simple_1m",
-      "difficult_1m"
+      "difficult_1m",
+      "simple_2m",
+      "difficult_2m",
+      "simple_3m",
+      "difficult_3m",
+      "simple_5m",
+      "difficult_5m"
     ]
   }
 }
