@@ -89,6 +89,359 @@ def _sym_ortho(a: float, b: float) -> tuple[float, float, float]:
     return c, s, r
 
 
+# ---------------------------------------------------------------------------
+# Batched matvec helpers (SpMM: sparse @ dense matrix)
+# ---------------------------------------------------------------------------
+
+
+def _matvec_batched(A, V: torch.Tensor) -> torch.Tensor:
+    """A @ V where V is (n, K). SpMM for sparse A, mm() for wrappers."""
+    if isinstance(A, torch.Tensor):
+        return A @ V
+    return A.mm(V)
+
+
+def _rmatvec_batched(At, U: torch.Tensor) -> torch.Tensor:
+    """A^T @ U where U is (m, K). SpMM."""
+    if isinstance(At, torch.Tensor):
+        return At @ U
+    return At.mm(U)
+
+
+# ---------------------------------------------------------------------------
+# Vectorized Givens rotation for (K,) tensors
+# ---------------------------------------------------------------------------
+
+
+def _sym_ortho_vec(
+    a: torch.Tensor, b: torch.Tensor
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    """
+    Stable Givens rotation (SymOrtho) vectorized over K columns.
+
+    Given (K,) tensors a and b, compute c, s, r such that for each k:
+        [ c_k  s_k ] [ a_k ] = [ r_k ]
+        [-s_k  c_k ] [ b_k ]   [ 0   ]
+
+    Uses torch.where for branchless execution on GPU. Division guards
+    use ones_like (not clamp) to preserve sign in dead lanes.
+    """
+    abs_a = torch.abs(a)
+    abs_b = torch.abs(b)
+    zero = torch.zeros_like(a)
+    one = torch.ones_like(a)
+
+    # Safe divisors: replace zeros with ones to prevent NaN in dead lanes.
+    # The result of the dead-lane computation is discarded by torch.where.
+    safe_a = torch.where(a != 0, a, one)
+    safe_b = torch.where(b != 0, b, one)
+
+    # Case 1: b == 0
+    c_b0 = torch.where(a == 0, zero, torch.sign(a))
+    s_b0 = zero
+    r_b0 = abs_a
+
+    # Case 2: a == 0
+    c_a0 = zero
+    s_a0 = torch.sign(b)
+    r_a0 = abs_b
+
+    # Case 3: |b| > |a| (neither zero)
+    tau_3 = a / safe_b
+    s_3 = torch.sign(b) / torch.sqrt(one + tau_3 * tau_3)
+    safe_s_3 = torch.where(s_3 != 0, s_3, one)
+    c_3 = s_3 * tau_3
+    r_3 = b / safe_s_3
+
+    # Case 4: |a| >= |b| (neither zero)
+    tau_4 = b / safe_a
+    c_4 = torch.sign(a) / torch.sqrt(one + tau_4 * tau_4)
+    safe_c_4 = torch.where(c_4 != 0, c_4, one)
+    s_4 = c_4 * tau_4
+    r_4 = a / safe_c_4
+
+    # Select: b==0 → case1, a==0 → case2, |b|>|a| → case3, else → case4
+    is_b0 = b == 0
+    is_a0 = a == 0
+    is_b_gt_a = abs_b > abs_a
+
+    # Build from innermost to outermost condition
+    c = torch.where(is_b_gt_a, c_3, c_4)
+    s = torch.where(is_b_gt_a, s_3, s_4)
+    r = torch.where(is_b_gt_a, r_3, r_4)
+
+    c = torch.where(is_a0, c_a0, c)
+    s = torch.where(is_a0, s_a0, s)
+    r = torch.where(is_a0, r_a0, r)
+
+    c = torch.where(is_b0, c_b0, c)
+    s = torch.where(is_b0, s_b0, s)
+    r = torch.where(is_b0, r_b0, r)
+
+    return c, s, r
+
+
+# ===========================================================================
+# Implementation 0: batched LSMR — K right-hand sides via SpMM
+# ===========================================================================
+
+
+def _lsmr_batched(
+    A,
+    B: torch.Tensor,
+    damp: float = 0.0,
+    atol: float = 1e-8,
+    btol: float = 1e-8,
+    conlim: float = 1e8,
+    maxiter: int | None = None,
+) -> tuple[
+    torch.Tensor, torch.Tensor, int, torch.Tensor, torch.Tensor,
+    torch.Tensor, torch.Tensor, torch.Tensor,
+]:
+    """
+    Batched LSMR: solve min ||B - A X||_F for K RHS simultaneously.
+
+    Replaces K sequential SpMV with SpMM for GPU throughput.
+    All K columns run in lock-step; converged columns do harmless work.
+
+    Parameters
+    ----------
+    A : sparse tensor or LinearOperator-like
+        Matrix of shape (m, n).
+    B : torch.Tensor
+        Dense matrix of shape (m, K).
+    damp : float
+        Damping factor.
+    atol, btol : float
+        Stopping tolerances (same for all columns).
+    conlim : float
+        Condition number limit.
+    maxiter : int or None
+        Maximum iterations. Defaults to min(m, n).
+
+    Returns
+    -------
+    X : (n, K) solution matrix
+    istop : (K,) int tensor — per-column stopping reason
+    itn : int — iterations used
+    normr : (K,) — per-column ||b - Ax||
+    normar : (K,) — per-column ||A^T(b - Ax)||
+    normA : (K,) — per-column estimate of ||A||_F
+    condA : (K,) — per-column estimate of cond(A)
+    normx : (K,) — per-column ||x||
+    """
+    m, n = A.shape
+    K = B.shape[1]
+    device = B.device
+    dtype = B.dtype
+
+    if maxiter is None:
+        maxiter = min(m, n)
+
+    At = _precompute_transpose(A)
+
+    # --- Initialize Golub-Kahan bidiagonalization ---
+    U = B.clone()                                       # (m, K)
+    normb = torch.linalg.norm(U, dim=0)                 # (K,)
+
+    X = torch.zeros(n, K, device=device, dtype=dtype)
+    beta = normb.clone()                                # (K,)
+
+    # Normalize columns where beta > 0
+    nonzero = beta > 0
+    safe_beta = torch.where(nonzero, beta, torch.ones_like(beta))
+    U = U / safe_beta.unsqueeze(0)
+    U[:, ~nonzero] = 0.0
+
+    V = _rmatvec_batched(At, U)                         # (n, K)  — SpMM
+    alpha = torch.linalg.norm(V, dim=0)                 # (K,)
+
+    nonzero_a = alpha > 0
+    safe_alpha = torch.where(nonzero_a, alpha, torch.ones_like(alpha))
+    V = V / safe_alpha.unsqueeze(0)
+    V[:, ~nonzero_a] = 0.0
+
+    # --- Scalar state as (K,) tensors ---
+    itn = 0
+    zetabar = alpha * beta
+    alphabar = alpha.clone()
+    rho = torch.ones(K, device=device, dtype=dtype)
+    rhobar = torch.ones(K, device=device, dtype=dtype)
+    cbar = torch.ones(K, device=device, dtype=dtype)
+    sbar = torch.zeros(K, device=device, dtype=dtype)
+
+    H = V.clone()                                       # (n, K)
+    Hbar = torch.zeros(n, K, device=device, dtype=dtype)
+
+    # ||r|| estimation state
+    betadd = beta.clone()
+    betad = torch.zeros(K, device=device, dtype=dtype)
+    rhodold = torch.ones(K, device=device, dtype=dtype)
+    tautildeold = torch.zeros(K, device=device, dtype=dtype)
+    thetatilde = torch.zeros(K, device=device, dtype=dtype)
+    zeta = torch.zeros(K, device=device, dtype=dtype)
+    d = torch.zeros(K, device=device, dtype=dtype)
+
+    # ||A|| and cond(A) estimation
+    normA2 = alpha * alpha
+    maxrbar = torch.zeros(K, device=device, dtype=dtype)
+    minrbar_init = 1e100 if dtype == torch.float64 else 1e10
+    minrbar = torch.full((K,), minrbar_init, device=device, dtype=dtype)
+
+    # Convergence tracking
+    istop = torch.zeros(K, device=device, dtype=torch.long)
+    ctol = 1.0 / conlim if conlim > 0 else 0.0
+    normr = beta.clone()
+    normar = alpha * beta
+
+    damp_vec = torch.full((K,), damp, device=device, dtype=dtype)
+
+    # Early exit: if all normar == 0 or all normb == 0
+    if (normar == 0).all():
+        return (X, istop, itn, normr, normar,
+                torch.sqrt(normA2), torch.ones(K, device=device, dtype=dtype),
+                torch.zeros(K, device=device, dtype=dtype))
+
+    if (normb == 0).all():
+        X.zero_()
+        return (X, istop, itn, normr, normar,
+                torch.sqrt(normA2), torch.ones(K, device=device, dtype=dtype),
+                torch.zeros(K, device=device, dtype=dtype))
+
+    # --- Main iteration loop ---
+    while itn < maxiter:
+        itn += 1
+
+        # Bidiagonalization step: SpMM replaces SpMV
+        U = _matvec_batched(A, V) - alpha.unsqueeze(0) * U     # (m, K)
+        beta = torch.linalg.norm(U, dim=0)                     # (K,)
+
+        nonzero_b = beta > 0
+        safe_b = torch.where(nonzero_b, beta, torch.ones_like(beta))
+        U = U / safe_b.unsqueeze(0)
+        U[:, ~nonzero_b] = 0.0
+
+        V = _rmatvec_batched(At, U) - beta.unsqueeze(0) * V    # (n, K)
+        alpha = torch.linalg.norm(V, dim=0)                    # (K,)
+
+        nonzero_a = alpha > 0
+        safe_a = torch.where(nonzero_a, alpha, torch.ones_like(alpha))
+        V = V / safe_a.unsqueeze(0)
+        V[:, ~nonzero_a] = 0.0
+
+        # Givens rotation 1: (alphabar, damp)
+        chat, shat, alphahat = _sym_ortho_vec(alphabar, damp_vec)
+
+        # Givens rotation 2: (alphahat, beta)
+        rhoold = rho
+        c, s, rho = _sym_ortho_vec(alphahat, beta)
+        thetanew = s * alpha
+        alphabar = c * alpha
+
+        # Givens rotation 3: rhobar update
+        rhobarold = rhobar
+        zetaold = zeta
+        thetabar = sbar * rho
+        rhotemp = cbar * rho
+        cbar, sbar, rhobar = _sym_ortho_vec(rhotemp, thetanew)
+        zeta = cbar * zetabar
+        zetabar = -sbar * zetabar
+
+        # Vector updates: broadcast (K,) scalars over (n, K) matrices
+        # Guard divisions: when a column has zero RHS, rho/rhobar can be 0.
+        # Using clamp ensures 0/0 → 0 instead of NaN (numerator is also 0).
+        _eps = 1e-30
+        hbar_coeff = -(thetabar * rho) / torch.clamp(rhoold * rhobarold, min=_eps)
+        Hbar = H + Hbar * hbar_coeff.unsqueeze(0)
+        x_coeff = zeta / torch.clamp(rho * rhobar, min=_eps)
+        X = X + x_coeff.unsqueeze(0) * Hbar
+        h_coeff = -(thetanew / torch.clamp(rho, min=_eps))
+        H = V + H * h_coeff.unsqueeze(0)
+
+        # ||r|| estimation
+        betaacute = chat * betadd
+        betacheck = -shat * betadd
+        betahat = c * betaacute
+        betadd = -s * betaacute
+
+        thetatildeold = thetatilde
+        ctildeold, stildeold, rhotildeold = _sym_ortho_vec(rhodold, thetabar)
+        thetatilde = stildeold * rhobar
+        rhodold = ctildeold * rhobar
+        betad = -stildeold * betad + ctildeold * betahat
+
+        safe_rhotildeold = torch.clamp(rhotildeold, min=1e-30)
+        tautildeold = (zetaold - thetatildeold * tautildeold) / safe_rhotildeold
+        safe_rhodold = torch.clamp(rhodold, min=1e-30)
+        taud = (zeta - thetatilde * tautildeold) / safe_rhodold
+        d = d + betacheck * betacheck
+        normr = torch.sqrt(d + (betad - taud) ** 2 + betadd * betadd)
+
+        # ||A|| estimation
+        normA2 = normA2 + beta * beta
+        normA = torch.sqrt(normA2)
+        normA2 = normA2 + alpha * alpha
+
+        # cond(A) estimation
+        maxrbar = torch.maximum(maxrbar, rhobarold)
+        if itn > 1:
+            minrbar = torch.minimum(minrbar, rhobarold)
+        condA = torch.maximum(maxrbar, rhotemp) / torch.clamp(
+            torch.minimum(minrbar, rhotemp), min=1e-30
+        )
+
+        # Per-column convergence check
+        normar = torch.abs(zetabar)
+        normx = torch.linalg.norm(X, dim=0)        # (K,)
+
+        safe_normb = torch.clamp(normb, min=1e-30)
+        test1 = normr / safe_normb
+        safe_normA_normr = torch.clamp(normA * normr, min=1e-30)
+        test2 = normar / safe_normA_normr
+        test3 = 1.0 / condA
+        t1 = test1 / (1.0 + normA * normx / safe_normb)
+        rtol = btol + atol * normA * normx / safe_normb
+
+        # Determine stopping reason per column (only set if not already set)
+        not_yet = istop == 0
+        if not_yet.any():
+            new_stop = torch.zeros(K, device=device, dtype=torch.long)
+            new_stop = torch.where(test1 <= rtol, torch.ones_like(new_stop), new_stop)
+            new_stop = torch.where(
+                (test2 <= atol) & (new_stop == 0),
+                2 * torch.ones_like(new_stop), new_stop,
+            )
+            new_stop = torch.where(
+                (test3 <= ctol) & (new_stop == 0),
+                3 * torch.ones_like(new_stop), new_stop,
+            )
+            new_stop = torch.where(
+                (1.0 + t1 <= 1.0) & (new_stop == 0),
+                4 * torch.ones_like(new_stop), new_stop,
+            )
+            new_stop = torch.where(
+                (1.0 + test2 <= 1.0) & (new_stop == 0),
+                5 * torch.ones_like(new_stop), new_stop,
+            )
+            new_stop = torch.where(
+                (1.0 + test3 <= 1.0) & (new_stop == 0),
+                6 * torch.ones_like(new_stop), new_stop,
+            )
+            istop = torch.where(not_yet, new_stop, istop)
+
+        if (istop > 0).all():
+            break
+
+    # Mark columns that hit maxiter
+    istop = torch.where(
+        (istop == 0) & (itn >= maxiter),
+        7 * torch.ones_like(istop),
+        istop,
+    )
+
+    return X, istop, itn, normr, normar, normA, condA, normx
+
+
 # ===========================================================================
 # Implementation 1: scalar-state LSMR (CPU / MPS)
 # ===========================================================================
@@ -818,4 +1171,69 @@ def lsmr_torch(
         btol=btol,
         conlim=conlim,
         maxiter=maxiter,
+    )
+
+
+def lsmr_torch_batched(
+    A,
+    B: torch.Tensor,
+    damp: float = 0.0,
+    atol: float = 1e-8,
+    btol: float = 1e-8,
+    conlim: float = 1e8,
+    maxiter: int | None = None,
+) -> tuple[
+    torch.Tensor, torch.Tensor, int, torch.Tensor, torch.Tensor,
+    torch.Tensor, torch.Tensor, torch.Tensor,
+]:
+    """
+    Batched LSMR solver — solve K right-hand sides simultaneously via SpMM.
+
+    Solves ``min ||B - A X||_F`` where B has K columns. Instead of K
+    sequential sparse matrix-vector products (SpMV), each iteration uses
+    a single sparse matrix-matrix product (SpMM), which loads the sparse
+    matrix once and streams through K dense columns. For K >= 2 on GPU,
+    this is significantly faster than K sequential ``lsmr_torch`` calls.
+
+    All K columns run in lock-step — converged columns continue doing
+    harmless arithmetic until all columns converge or maxiter is reached.
+
+    Parameters
+    ----------
+    A : sparse tensor or LinearOperator-like
+        Matrix of shape (m, n). Must support ``A @ V`` for dense V of
+        shape (n, K). For ``_PreconditionedSparse``, this requires an
+        ``mm()`` method.
+    B : torch.Tensor
+        Dense RHS matrix of shape (m, K).
+    damp : float
+        Damping factor for regularized least-squares.
+    atol, btol : float
+        Stopping tolerances (applied identically to all columns).
+    conlim : float
+        Condition number limit.
+    maxiter : int or None
+        Maximum iterations. Defaults to min(m, n).
+
+    Returns
+    -------
+    X : torch.Tensor, shape (n, K)
+        Solution matrix.
+    istop : torch.Tensor, shape (K,), dtype long
+        Per-column stopping reason (0-7, same codes as ``lsmr_torch``).
+    itn : int
+        Number of iterations used (max across all columns).
+    normr : torch.Tensor, shape (K,)
+        Per-column ``||b_k - A x_k||``.
+    normar : torch.Tensor, shape (K,)
+        Per-column ``||A^T(b_k - A x_k)||``.
+    normA : torch.Tensor, shape (K,)
+        Per-column estimate of Frobenius norm of A.
+    condA : torch.Tensor, shape (K,)
+        Per-column estimate of condition number of A.
+    normx : torch.Tensor, shape (K,)
+        Per-column ``||x_k||``.
+    """
+    return _lsmr_batched(
+        A, B, damp=damp, atol=atol, btol=btol, conlim=conlim, maxiter=maxiter,
     )

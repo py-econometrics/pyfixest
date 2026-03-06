@@ -17,7 +17,7 @@ import numpy as np
 import torch
 from numpy.typing import NDArray
 
-from pyfixest.estimation.torch.lsmr_torch import lsmr_torch
+from pyfixest.estimation.torch.lsmr_torch import lsmr_torch, lsmr_torch_batched
 
 
 def _get_device(dtype: torch.dtype = torch.float64) -> torch.device:
@@ -248,23 +248,38 @@ def _demean_torch_on_device_impl(
     # Build preconditioned operator once (not per column)
     A_precond = _PreconditionedSparse(D_weighted, M_inv)
 
-    # Solve for each column
+    # Solve for each column — batched SpMM for K >= threshold, sequential otherwise.
+    # Batched SpMM amortizes sparse-matrix load across K columns. Benchmarked
+    # breakeven: ~K=5 on MPS (Metal), may differ on CUDA (cuSPARSE is faster).
+    _BATCHED_K_THRESHOLD = 5
     theta = torch.zeros(D_cols, K, dtype=dtype, device=device)
-    success = True
 
-    for k in range(K):
-        z, istop, _itn, _normr, _normar, _normA, _condA, _normx = lsmr_torch(
+    if K >= _BATCHED_K_THRESHOLD:
+        # Batched: single call, K columns solved simultaneously via SpMM
+        Z, istop_vec, _itn, *_ = lsmr_torch_batched(
             A_precond,
-            x_w[:, k],
+            x_w,
             damp=0.0,
             atol=tol,
             btol=tol,
             maxiter=maxiter,
         )
-
-        # Recover theta from preconditioned solution: theta = M_inv * z
-        theta[:, k] = M_inv * z
-        success = success and (istop in (1, 2, 3))
+        theta = M_inv.unsqueeze(1) * Z
+        success = ((istop_vec >= 1) & (istop_vec <= 3)).all().item()
+    else:
+        # Sequential: K < threshold, per-column single-RHS path is faster
+        success = True
+        for k in range(K):
+            z, istop, _itn, _normr, _normar, _normA, _condA, _normx = lsmr_torch(
+                A_precond,
+                x_w[:, k],
+                damp=0.0,
+                atol=tol,
+                btol=tol,
+                maxiter=maxiter,
+            )
+            theta[:, k] = M_inv * z
+            success = success and (istop in (1, 2, 3))
 
     # Compute residuals: x_demeaned = x - D_unweighted @ theta
     x_demeaned = x_t - D_unweighted @ theta
@@ -410,6 +425,15 @@ class _PreconditionedSparse:
             return self._M_inv * (self._D_t @ v)
         # Compute D @ (M_inv * v)
         return self._D @ (self._M_inv * v)
+
+    def mm(self, V: torch.Tensor) -> torch.Tensor:
+        """Batched matvec: A_precond @ V where V is (n, K) or (m, K).
+
+        Same logic as mv() but broadcasts M_inv over K columns via unsqueeze.
+        """
+        if self._transposed:
+            return self._M_inv.unsqueeze(1) * (self._D_t @ V)
+        return self._D @ (self._M_inv.unsqueeze(1) * V)
 
     def t(self) -> _PreconditionedSparse:
         """Return cached transpose view."""
