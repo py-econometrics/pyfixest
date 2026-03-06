@@ -7,7 +7,7 @@ authors = [
     { name = "Styfen Schär" },
 ]
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = { text = "MIT" }
 dependencies = [
     "scipy>=1.6",
@@ -28,7 +28,7 @@ jax = [
     "jax>=0.4.15",
 ]
 plots = [
-    "lets-plot>=4.0.0",
+  "lets-plot>=4.0.0",
 ]
 benchmarks = [
     "linearmodels",
@@ -37,7 +37,7 @@ benchmarks = [
 ]
 
 [build-system]
-requires = ["maturin>=1.8,<2.0"]
+requires = ["maturin>=1.8"]
 build-backend = "maturin"
 
 [tool.maturin]
@@ -72,8 +72,7 @@ filterwarnings = [
 line-length = 88
 fix = true
 
-# Assume Python 3.9
-target-version = "py39"
+target-version = "py310"
 
 [tool.ruff.lint]
 # docs: https://docs.astral.sh/ruff/rules/
@@ -146,3 +145,138 @@ module = [
     "tqdm.*",
 ]
 ignore_missing_imports = true
+
+# --------------------------------------------------------------------------------------
+# pixi configuration
+# --------------------------------------------------------------------------------------
+
+[tool.pixi.workspace]
+channels = ["conda-forge"]
+platforms = ["linux-64", "win-64", "osx-arm64"]
+
+[tool.pixi.dependencies]
+python = ">=3.10,<3.15"
+rust = "*"
+pip = "*"
+pytest = ">=8.0"
+pytest-cov = ">=4.1.0"
+pytest-xdist = ">=3.5.0"
+pytest-benchmark = ">=5.1.0"
+pyhdfe = ">=0.2.0"
+ipykernel = ">=6.29.5"
+duckdb = ">=1.0.0"
+polars = ">=1.0.0"
+pyarrow = ">=14.0"
+doubleml = ">=0.10.1"
+pytest-sugar = ">=1.1.1"
+
+[tool.pixi.pypi-dependencies]
+pyfixest = { path = ".", editable = true, extras = ["jax", "plots"] }
+wildboottest = ">=0.3.2"
+maturin-import-hook = ">=0.2.0"
+maturin = ">=1.8"
+
+[tool.pixi.tasks]
+test-py = { cmd = 'pytest tests -n auto -m "not (extended or against_r_core or against_r_extended or plots or hac)" --cov=pyfixest --cov-report=xml', depends-on = ["_setup"], description = "Quick Python tests (no R, extended, plots, or HAC)" }
+test-py-extended = { cmd = 'pytest tests -n auto -m "extended" --cov=pyfixest --cov-report=xml', depends-on = ["_setup"], description = "Extended Python tests" }
+render-notebooks = { cmd = "python scripts/run_notebooks.py", description = "Run all notebooks" }
+
+[tool.pixi.tasks._setup]
+cmd = "python scripts/setup_maturin_hook.py && touch .pixi/.import-hook-installed"
+inputs = ["scripts/setup_maturin_hook.py"]
+outputs = [".pixi/.import-hook-installed"]
+
+# -- python version features ------------------------------------------------------------
+
+[tool.pixi.feature.py310.dependencies]
+python = "~=3.10.0"
+
+[tool.pixi.feature.py311.dependencies]
+python = "~=3.11.0"
+
+[tool.pixi.feature.py312.dependencies]
+python = "~=3.12.0"
+
+[tool.pixi.feature.py313.dependencies]
+python = "~=3.13.0"
+
+[tool.pixi.feature.py314.dependencies]
+python = "~=3.14.0"
+
+# -- r feature --------------------------------------------------------------------------
+
+[tool.pixi.feature.r]
+platforms = ["linux-64", "osx-arm64"]
+
+[tool.pixi.feature.r.dependencies]
+rpy2 = "==3.5.11"
+r-base = "*"
+r-fixest = ">=0.13.2"
+r-stringmagic = ">=1.2.0"
+r-sandwich = ">=3.0_2"
+r-broom = ">=1.0.5"
+r-car = ">=3.1_2"
+r-quantreg = ">=5.0"
+r-reticulate = ">=1.0"
+
+[tool.pixi.feature.r.tasks._update-test-data]
+cmd = "Rscript tests/r_test_comparisons.R"
+depends-on = []
+inputs = ["tests/r_test_comparisons.R"]
+outputs = ["tests/data/ritest_results.csv"]
+env = { RETICULATE_PYTHON = "$CONDA_PREFIX/bin/python" }
+
+[tool.pixi.feature.r.tasks.test-r-hac]
+cmd = "pytest tests/test_hac_vs_fixest.py -v -n auto"
+depends-on = ["_setup"]
+description = "HAC standard error tests vs R"
+env = { OMP_NUM_THREADS = "1", OPENBLAS_NUM_THREADS = "1", MKL_NUM_THREADS = "1", VECLIB_MAXIMUM_THREADS = "1", NUMEXPR_NUM_THREADS = "1" }
+
+[tool.pixi.feature.r.tasks]
+test-all = { cmd = "pytest -rs -n auto --cov-report=term tests", depends-on = ["_setup"], description = "Run all tests (Python + R)" }
+test-r-core = { cmd = 'pytest -rs -n auto tests -m "against_r_core" --cov=pyfixest --cov-report=xml', depends-on = ["_setup"], description = "Tests against R fixest (conda-forge packages)" }
+test-r-extended = { cmd = 'pytest -rs -n auto tests -m "against_r_extended" --cov=pyfixest --cov-report=xml', depends-on = ["_setup"], description = "Tests against R (requires manual Rscript r_test_requirements.R)" }
+test-r-fixest = { cmd = "pytest -rs -n auto tests/test_vs_fixest.py --cov=pyfixest --cov-report=xml", depends-on = ["_setup"], description = "Run test_vs_fixest.py" }
+
+# -- docs feature ----------------------------------------------------------------------
+
+[tool.pixi.feature.docs.dependencies]
+jupyterlab = ">=4.0.12"
+jupytext = "==1.16.1"
+watermark = "==2.4.3"
+pylatex = ">=1.4.2"
+quartodoc = ">=0.11.0"
+quarto = ">=1.8.25"
+griffe = "<2"
+
+[tool.pixi.feature.docs.pypi-dependencies]
+causaldata = ">=0.1.4"
+marginaleffects = "==0.2.2"
+lets-plot = ">=4.0.0"
+
+[tool.pixi.feature.docs.tasks]
+docs-build = { cmd = "quartodoc build --verbose --config docs/_quarto.yml", description = "Build API docs with quartodoc" }
+docs-render = { cmd = "quarto render docs", env = { PYTHONWARNINGS = "ignore", KMP_WARNINGS = "0" }, description = "Render docs with Quarto" }
+docs-preview = { cmd = "quarto preview docs", env = { PYTHONWARNINGS = "ignore", KMP_WARNINGS = "0" }, description = "Preview docs locally" }
+
+# -- lint feature ----------------------------------------------------------------------
+
+[tool.pixi.feature.lint.dependencies]
+pre-commit = "==3.6.0"
+
+[tool.pixi.feature.lint.tasks]
+pre-commit = { cmd = "pre-commit run --all-files", description = "Run all pre-commit hooks" }
+
+# -- environments ----------------------------------------------------------------------
+
+[tool.pixi.environments]
+py310 = ["py310"]
+py311 = ["py311"]
+py312 = ["py312"]
+py313 = ["py313"]
+py314 = ["py314"]
+py310-r = { features = ["py310", "r"], solve-group = "py310" }
+py311-r = { features = ["py311", "r"], solve-group = "py311" }
+py312-r = { features = ["py312", "r"], solve-group = "py312" }
+docs = { features = ["docs"], solve-group = "default" }
+lint = { features = ["lint"], no-default-feature = true }

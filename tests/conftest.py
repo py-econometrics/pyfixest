@@ -3,6 +3,24 @@
 import os
 import sys
 
+# Skip test files that require rpy2 when it is not installed (e.g. non-R pixi env).
+_rpy2_test_files = [
+    "test_did.py",
+    "test_hac_vs_fixest.py",
+    "test_i.py",
+    "test_iv.py",
+    "test_multcomp.py",
+    "test_poisson.py",
+    "test_predict_resid_fixef.py",
+    "test_quantreg.py",
+    "test_vs_fixest.py",
+    "test_wald_test.py",
+]
+try:
+    import rpy2  # noqa: F401
+except ImportError:
+    collect_ignore = [*_rpy2_test_files]
+
 # Force single-threaded BLAS for deterministic HAC standard errors.
 #
 # Multi-threaded BLAS libraries (OpenBLAS, MKL, Accelerate) can produce
