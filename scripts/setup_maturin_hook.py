@@ -31,8 +31,15 @@ SITECUSTOMIZE_CONTENT = """\
 # <maturin_import_hook>
 try:
     import maturin_import_hook
+    import os
+    import sys
     from maturin_import_hook.project_importer import DefaultProjectFileSearcher
     from maturin_import_hook.settings import MaturinSettings
+
+    # maturin needs CONDA_PREFIX (or VIRTUAL_ENV) to locate the environment.
+    # When launched directly from PyCharm (not via pixi run), neither is set.
+    if not os.environ.get("CONDA_PREFIX") and not os.environ.get("VIRTUAL_ENV"):
+        os.environ["CONDA_PREFIX"] = sys.prefix
 
     excluded_dirs = DefaultProjectFileSearcher.DEFAULT_SOURCE_EXCLUDED_DIR_NAMES | {".pixi"}
     file_searcher = DefaultProjectFileSearcher(source_excluded_dir_names=excluded_dirs)
