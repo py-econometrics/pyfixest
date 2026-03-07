@@ -3,7 +3,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from dgps import BipartiteDGP, DifficultDGP
+from dgps import BaseDGP, BipartiteDGP
 from feols_benchmarkers import (
     FixestFeolsBenchmarker,
     JuliaFeolsBenchmarker,
@@ -27,7 +27,7 @@ DATA_DIR = PROJECT_ROOT / "benchmarks" / "data"
 OUTPUT_CSV = PROJECT_ROOT / "benchmarks" / "results" / "feols_bench.csv"
 
 DGPS = [
-    DifficultDGP(DATA_DIR),
+    BaseDGP(DATA_DIR, "difficult"),
     BipartiteDGP(DATA_DIR, name="bipartite-low-mobility", n_time=20, p_move=0.05),
     BipartiteDGP(DATA_DIR, name="bipartite-high-mobility", n_time=20, p_move=0.15),
 ]

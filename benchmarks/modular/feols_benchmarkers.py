@@ -8,7 +8,6 @@ import tempfile
 import time
 import warnings
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
@@ -126,39 +125,39 @@ def _flush_groups(
         print_fn(group_buf)
 
 
-@dataclass(frozen=True)
-class RunOutcome:
-    """Outcome of a single benchmark run."""
-
-    elapsed: float | None
-    success: bool
-    error: str | None = None
-    substeps: dict[str, float] | None = None
-    n_obs_override: int | None = None
-
-
 def _result_from_dataset(
     dataset: BenchmarkDataset,
     spec: FeolsSpec,
     *,
     backend: str,
-    outcome: RunOutcome,
+    elapsed: float | None,
+    success: bool,
+    error: str | None = None,
+    substeps: dict[str, float] | None = None,
+    n_obs_override: int | None = None,
 ) -> FeolsResult:
     return FeolsResult(
         dataset_id=dataset.dataset_id,
         iter_type=dataset.iter_type,
         iter_num=dataset.iter_num,
         dgp=dataset.dgp,
-        n_obs=outcome.n_obs_override
-        if outcome.n_obs_override is not None
-        else dataset.n_obs,
+        n_obs=n_obs_override if n_obs_override is not None else dataset.n_obs,
         n_fe=spec.n_fe,
         backend=backend,
-        time=outcome.elapsed,
-        success=outcome.success,
-        error=outcome.error,
-        substeps=outcome.substeps,
+        time=elapsed,
+        success=success,
+        error=error,
+        substeps=substeps,
     )
+
+
+def _safe_cast(val, type_fn):
+    if val is None:
+        return None
+    try:
+        return type_fn(val)
+    except (TypeError, ValueError):
+        return None
 
 
 def _normalize_vcov(vcov: str | dict[str, str]) -> str:
@@ -238,10 +237,7 @@ class PyFeolsBenchmarker:
         k = Xd.shape[1]
         bread = np.linalg.inv(tXX)
 
-        if spec.vcov == "iid":
-            sigma2 = np.sum(u_hat**2) / (N - k)
-            _vcov = sigma2 * bread
-        elif spec.vcov == "hetero":
+        if spec.vcov == "hetero":
             scores = Xd * u_hat[:, None]
             meat = scores.T @ scores
             _vcov = bread @ meat @ bread
@@ -252,20 +248,17 @@ class PyFeolsBenchmarker:
                 keep_mask = np.ones(len(df), dtype=bool)
                 keep_mask[np.asarray(mm.na_index)] = False
                 cluster_col = cluster_col[keep_mask]
-            # A2: cluster alignment assertion
             assert len(cluster_col) == Xd.shape[0], (
                 f"cluster_col length {len(cluster_col)} != Xd rows {Xd.shape[0]}"
             )
             scores = Xd * u_hat[:, None]
-            # O(n) vectorized cluster aggregation
             cluster_ids, _ = pd.factorize(cluster_col)
             n_clusters = cluster_ids.max() + 1
             cluster_scores = np.zeros((n_clusters, k))
             np.add.at(cluster_scores, cluster_ids, scores)
             meat = cluster_scores.T @ cluster_scores
             _vcov = bread @ meat @ bread
-        else:
-            # Fallback: iid
+        else:  # iid
             sigma2 = np.sum(u_hat**2) / (N - k)
             _vcov = sigma2 * bread
         t_vcov = time.perf_counter() - t0
@@ -314,24 +307,20 @@ class PyFeolsBenchmarker:
                     dataset,
                     spec,
                     backend=self.name,
-                    outcome=RunOutcome(
-                        elapsed=total,
-                        success=bool(converged),
-                        substeps=substeps,
-                        n_obs_override=n_obs_for_result,
-                    ),
+                    elapsed=total,
+                    success=bool(converged),
+                    substeps=substeps,
+                    n_obs_override=n_obs_for_result,
                 )
             except Exception as exc:
                 result = _result_from_dataset(
                     dataset,
                     spec,
                     backend=self.name,
-                    outcome=RunOutcome(
-                        elapsed=None,
-                        success=False,
-                        error=str(exc),
-                        n_obs_override=n_obs_for_result,
-                    ),
+                    elapsed=None,
+                    success=False,
+                    error=str(exc),
+                    n_obs_override=n_obs_for_result,
                 )
 
             results.append(result)
@@ -407,37 +396,25 @@ def _parse_subprocess_output(
                     dataset,
                     spec,
                     backend=backend,
-                    outcome=RunOutcome(
-                        elapsed=None,
-                        success=False,
-                        error=missing_error,
-                    ),
+                    elapsed=None,
+                    success=False,
+                    error=missing_error,
                 )
             )
             continue
 
-        elapsed_raw = entry.get("time")
-        try:
-            elapsed = None if elapsed_raw is None else float(elapsed_raw)
-        except (TypeError, ValueError):
-            elapsed = None
-        n_obs_raw = entry.get("n_obs")
-        try:
-            n_obs_override = None if n_obs_raw is None else int(n_obs_raw)
-        except (TypeError, ValueError):
-            n_obs_override = None
+        elapsed = _safe_cast(entry.get("time"), float)
+        n_obs_override = _safe_cast(entry.get("n_obs"), int)
 
         results.append(
             _result_from_dataset(
                 dataset,
                 spec,
                 backend=backend,
-                outcome=RunOutcome(
-                    elapsed=elapsed,
-                    success=bool(entry.get("success", elapsed is not None)),
-                    error=entry.get("error"),
-                    n_obs_override=n_obs_override,
-                ),
+                elapsed=elapsed,
+                success=bool(entry.get("success", elapsed is not None)),
+                error=entry.get("error"),
+                n_obs_override=n_obs_override,
             )
         )
 
@@ -523,11 +500,9 @@ class SubprocessFeolsBenchmarker:
                         dataset,
                         spec,
                         backend=self.name,
-                        outcome=RunOutcome(
-                            elapsed=None,
-                            success=False,
-                            error=str(exc),
-                        ),
+                        elapsed=None,
+                        success=False,
+                        error=str(exc),
                     )
                     for dataset in datasets
                 ]
@@ -546,39 +521,22 @@ class SubprocessFeolsBenchmarker:
         )
 
 
-class FixestFeolsBenchmarker:
+_SCRIPT_DIR = Path(__file__).parent
+
+
+class FixestFeolsBenchmarker(SubprocessFeolsBenchmarker):
     def __init__(self, script_path: Path | None = None):
-        resolved_script = script_path or Path(__file__).with_name("feols_r.R")
-        self._delegate = SubprocessFeolsBenchmarker(
+        super().__init__(
             name="r.fixest",
             command_prefix=["Rscript"],
-            script_path=resolved_script,
+            script_path=(script_path or _SCRIPT_DIR / "feols_r.R"),
         )
 
-    @property
-    def name(self) -> str:
-        return self._delegate.name
 
-    def run(
-        self, datasets: list[BenchmarkDataset], spec: FeolsSpec
-    ) -> list[FeolsResult]:
-        return self._delegate.run(datasets, spec)
-
-
-class JuliaFeolsBenchmarker:
+class JuliaFeolsBenchmarker(SubprocessFeolsBenchmarker):
     def __init__(self, script_path: Path | None = None):
-        resolved_script = script_path or Path(__file__).with_name("feols_julia.jl")
-        self._delegate = SubprocessFeolsBenchmarker(
+        super().__init__(
             name="julia.FixedEffectModels",
             command_prefix=["julia"],
-            script_path=resolved_script,
+            script_path=(script_path or _SCRIPT_DIR / "feols_julia.jl"),
         )
-
-    @property
-    def name(self) -> str:
-        return self._delegate.name
-
-    def run(
-        self, datasets: list[BenchmarkDataset], spec: FeolsSpec
-    ) -> list[FeolsResult]:
-        return self._delegate.run(datasets, spec)

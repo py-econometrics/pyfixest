@@ -99,41 +99,19 @@ def _generate_datasets(
     return datasets
 
 
-class SimpleDGP:
-    def __init__(self, data_dir: Path):
+class BaseDGP:
+    def __init__(self, data_dir: Path, dgp_type: str = "simple"):
         self._data_dir = data_dir
+        self._dgp_type = dgp_type
 
     @property
     def dgp_name(self) -> str:
-        return "simple"
+        return self._dgp_type
 
     def generate(
         self, n: int, n_iters: int = 3, burn_in: int = 1
     ) -> list[BenchmarkDataset]:
-        dgp_type = "simple"
-        return _generate_datasets(
-            dgp_name=self.dgp_name,
-            n=n,
-            n_iters=n_iters,
-            burn_in=burn_in,
-            data_dir=self._data_dir,
-            make_params=lambda seed: {"dgp_type": dgp_type, "n": n, "seed": seed},
-            generate=lambda seed: base_dgp(n=n, type_=dgp_type, seed=seed),
-        )
-
-
-class DifficultDGP:
-    def __init__(self, data_dir: Path):
-        self._data_dir = data_dir
-
-    @property
-    def dgp_name(self) -> str:
-        return "difficult"
-
-    def generate(
-        self, n: int, n_iters: int = 3, burn_in: int = 1
-    ) -> list[BenchmarkDataset]:
-        dgp_type = "difficult"
+        dgp_type = self._dgp_type
         return _generate_datasets(
             dgp_name=self.dgp_name,
             n=n,

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -74,12 +75,19 @@ def _add_legend(fig: plt.Figure, axes: np.ndarray, ncol: int) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Line plots (scaling behaviour)
+# Shared grid scaffolding
 # ---------------------------------------------------------------------------
 
+CellPlotFn = Callable[
+    [plt.Axes, pd.DataFrame, list[int], list[str], dict[str, dict]], None
+]
 
-def _plot_lines(
-    summary: pd.DataFrame, styles: dict[str, dict], output_path: Path
+
+def _plot_grid(
+    summary: pd.DataFrame,
+    styles: dict[str, dict],
+    output_path: Path,
+    plot_cell: CellPlotFn,
 ) -> None:
     dgps = sorted(summary["dgp"].unique())
     n_fes = sorted(summary["n_fe"].unique())
@@ -92,8 +100,6 @@ def _plot_lines(
         figsize=(5 * len(n_fes), 3.8 * len(dgps)),
         squeeze=False,
     )
-
-    x = np.array(n_obs_vals)
 
     for row_idx, dgp in enumerate(dgps):
         for col_idx, n_fe in enumerate(n_fes):
@@ -104,39 +110,7 @@ def _plot_lines(
                 ax.set_axis_off()
                 continue
 
-            for backend in backends:
-                style = styles[backend]
-                backend_df = (
-                    subset[subset["backend"] == backend]
-                    .set_index("n_obs")
-                    .reindex(n_obs_vals)
-                )
-
-                medians = backend_df["median"].to_numpy(dtype=float)
-                mins = backend_df["min"].to_numpy(dtype=float)
-                maxs = backend_df["max"].to_numpy(dtype=float)
-
-                valid = ~np.isnan(medians)
-                if not np.any(valid):
-                    continue
-
-                ax.plot(
-                    x[valid],
-                    medians[valid],
-                    marker=style["marker"],
-                    color=style["color"],
-                    label=style["label"],
-                    linewidth=1.8,
-                    markersize=5,
-                    zorder=3,
-                )
-                ax.fill_between(
-                    x[valid],
-                    mins[valid],
-                    maxs[valid],
-                    color=style["color"],
-                    alpha=0.12,
-                )
+            plot_cell(ax, subset, n_obs_vals, backends, styles)
 
             ax.set_title(
                 f"{_dgp_label(dgp)}  |  {n_fe} FE",
@@ -144,14 +118,12 @@ def _plot_lines(
                 fontweight="semibold",
                 pad=8,
             )
-            ax.set_xscale("log")
-            ax.set_yscale("log")
-            ax.set_xticks(x)
             ax.set_xticklabels(
                 [f"{n:,}" for n in n_obs_vals], rotation=30, ha="right", fontsize=9
             )
             ax.set_xlabel("Observations", fontsize=10)
             ax.set_ylabel("Time (s)", fontsize=10)
+            ax.set_yscale("log")
             _apply_common_style(ax)
 
     _add_legend(fig, axes, ncol=max(1, len(backends)))
@@ -161,86 +133,83 @@ def _plot_lines(
 
 
 # ---------------------------------------------------------------------------
-# Bar charts (comparison at each n_obs)
+# Per-cell plot functions
 # ---------------------------------------------------------------------------
 
 
-def _plot_bars(
-    summary: pd.DataFrame, styles: dict[str, dict], output_path: Path
-) -> None:
-    dgps = sorted(summary["dgp"].unique())
-    n_fes = sorted(summary["n_fe"].unique())
-    n_obs_vals = sorted(summary["n_obs"].unique())
-    backends = sorted(summary["backend"].unique())
-
-    fig, axes = plt.subplots(
-        len(dgps),
-        len(n_fes),
-        figsize=(5 * len(n_fes), 3.8 * len(dgps)),
-        squeeze=False,
+def _backend_stats(
+    subset: pd.DataFrame, backend: str, n_obs_vals: list[int]
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    backend_df = (
+        subset[subset["backend"] == backend].set_index("n_obs").reindex(n_obs_vals)
+    )
+    return (
+        backend_df["median"].to_numpy(dtype=float),
+        backend_df["min"].to_numpy(dtype=float),
+        backend_df["max"].to_numpy(dtype=float),
     )
 
+
+def _line_cell(
+    ax: plt.Axes,
+    subset: pd.DataFrame,
+    n_obs_vals: list[int],
+    backends: list[str],
+    styles: dict[str, dict],
+) -> None:
+    x = np.array(n_obs_vals)
+    for backend in backends:
+        style = styles[backend]
+        medians, mins, maxs = _backend_stats(subset, backend, n_obs_vals)
+        valid = ~np.isnan(medians)
+        if not np.any(valid):
+            continue
+        ax.plot(
+            x[valid],
+            medians[valid],
+            marker=style["marker"],
+            color=style["color"],
+            label=style["label"],
+            linewidth=1.8,
+            markersize=5,
+            zorder=3,
+        )
+        ax.fill_between(
+            x[valid], mins[valid], maxs[valid], color=style["color"], alpha=0.12
+        )
+    ax.set_xscale("log")
+    ax.set_xticks(x)
+
+
+def _bar_cell(
+    ax: plt.Axes,
+    subset: pd.DataFrame,
+    n_obs_vals: list[int],
+    backends: list[str],
+    styles: dict[str, dict],
+) -> None:
     n_backends = len(backends)
     bar_width = 0.7 / max(n_backends, 1)
+    x_pos = np.arange(len(n_obs_vals))
 
-    for row_idx, dgp in enumerate(dgps):
-        for col_idx, n_fe in enumerate(n_fes):
-            ax = axes[row_idx][col_idx]
-            subset = summary[(summary["dgp"] == dgp) & (summary["n_fe"] == n_fe)]
-
-            if subset.empty:
-                ax.set_axis_off()
-                continue
-
-            x_pos = np.arange(len(n_obs_vals))
-
-            for bi, backend in enumerate(backends):
-                style = styles[backend]
-                backend_df = (
-                    subset[subset["backend"] == backend]
-                    .set_index("n_obs")
-                    .reindex(n_obs_vals)
-                )
-
-                medians = backend_df["median"].to_numpy(dtype=float)
-                mins = backend_df["min"].to_numpy(dtype=float)
-                maxs = backend_df["max"].to_numpy(dtype=float)
-
-                offset = (bi - (n_backends - 1) / 2) * bar_width
-                yerr_lo = np.where(np.isnan(medians), 0, medians - mins)
-                yerr_hi = np.where(np.isnan(medians), 0, maxs - medians)
-
-                ax.bar(
-                    x_pos + offset,
-                    np.nan_to_num(medians),
-                    width=bar_width * 0.9,
-                    color=style["color"],
-                    label=style["label"],
-                    yerr=[yerr_lo, yerr_hi],
-                    capsize=2,
-                    error_kw={"linewidth": 0.8, "alpha": 0.6},
-                    zorder=3,
-                )
-
-            ax.set_title(
-                f"{_dgp_label(dgp)}  |  {n_fe} FE",
-                fontsize=11,
-                fontweight="semibold",
-                pad=8,
-            )
-            ax.set_xticks(x_pos)
-            ax.set_xticklabels(
-                [f"{n:,}" for n in n_obs_vals], rotation=30, ha="right", fontsize=9
-            )
-            ax.set_xlabel("Observations", fontsize=10)
-            ax.set_ylabel("Time (s)", fontsize=10)
-            ax.set_yscale("log")
-            _apply_common_style(ax)
-
-    _add_legend(fig, axes, ncol=max(1, len(backends)))
-    fig.tight_layout(rect=(0, 0, 1, 0.94))
-    fig.savefig(output_path, dpi=200, bbox_inches="tight")
-    plt.close(fig)
+    for bi, backend in enumerate(backends):
+        style = styles[backend]
+        medians, mins, maxs = _backend_stats(subset, backend, n_obs_vals)
+        offset = (bi - (n_backends - 1) / 2) * bar_width
+        yerr_lo = np.where(np.isnan(medians), 0, medians - mins)
+        yerr_hi = np.where(np.isnan(medians), 0, maxs - medians)
+        ax.bar(
+            x_pos + offset,
+            np.nan_to_num(medians),
+            width=bar_width * 0.9,
+            color=style["color"],
+            label=style["label"],
+            yerr=[yerr_lo, yerr_hi],
+            capsize=2,
+            error_kw={"linewidth": 0.8, "alpha": 0.6},
+            zorder=3,
+        )
+    ax.set_xticks(x_pos)
 
 
 # ---------------------------------------------------------------------------
@@ -257,5 +226,10 @@ def plot_benchmarks(results_df: pd.DataFrame, output_path: Path) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     styles = _build_styles(sorted(summary["backend"].unique()))
-    _plot_lines(summary, styles, output_path)
-    _plot_bars(summary, styles, output_path.with_name(output_path.stem + "_bars.png"))
+    _plot_grid(summary, styles, output_path, _line_cell)
+    _plot_grid(
+        summary,
+        styles,
+        output_path.with_name(output_path.stem + "_bars.png"),
+        _bar_cell,
+    )
