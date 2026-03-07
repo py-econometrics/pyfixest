@@ -1,6 +1,11 @@
 project:
   type: website
   output-dir: _site
+  render:
+    - "*.qmd"
+    - "*.ipynb"
+    - "*.md"
+    - "!quarto_example/"
   post-render:
     - _scripts/generate_llms_md.py
 
