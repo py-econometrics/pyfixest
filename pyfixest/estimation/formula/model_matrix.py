@@ -343,9 +343,7 @@ def _get_formulaic_formula(
     formula_kwargs: dict[str, str] = {_ModelMatrixKey.main: formula.second_stage}
     if formula.is_fixed_effects:
         formula_kwargs.update(
-            {
-                _ModelMatrixKey.fixed_effects: f"{' + '.join(formula.wrap_fixed_effects)} - 1"
-            }
+            {_ModelMatrixKey.fixed_effects: f"{formula.fixed_effects_wrapped} - 1"}
         )
     if formula.is_instrumental_variable:
         formula_kwargs.update(
@@ -358,7 +356,13 @@ def _get_formulaic_formula(
         formula_kwargs,
         _parser=DefaultFormulaParser(
             feature_flags=FORMULAIC_FEATURE_FLAG,
-            include_intercept=False,  # intercepts already resolved by Formula class
+            # When FEs are present, include_intercept=True so that spans_intercept=True
+            # terms (like i()) receive reduced_rank=True from formulaic, causing them to
+            # drop the first level (matching R/fixest). The intercept column is removed
+            # afterwards in ModelMatrix._process(). Without this, i() would receive
+            # reduced_rank=False and generate all levels; the post-hoc collinearity check
+            # would then drop the last level instead of the first, mismatching R.
+            include_intercept=formula.is_fixed_effects,
         ),
     )
     return formula_formulaic

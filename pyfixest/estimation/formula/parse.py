@@ -1,15 +1,12 @@
-import functools
 import itertools
-import re
-import warnings
 from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Final
 
 import formulaic
 import formulaic.formula
-from formulaic.parser import DefaultFormulaParser, DefaultOperatorResolver
-from formulaic.parser.types import Operator, OrderedSet
+from formulaic.parser import DefaultFormulaParser
+from formulaic.parser.types import FormulaParser
 
 from pyfixest.errors import (
     EndogVarsAsCovarsError,
@@ -17,40 +14,17 @@ from pyfixest.errors import (
     InstrumentsAsCovarsError,
     UnderDeterminedIVError,
 )
-from pyfixest.estimation.deprecated import FormulaParser
 from pyfixest.estimation.formula import FORMULAIC_FEATURE_FLAG
+from pyfixest.estimation.formula.transforms.fixed_effects_encoding import (
+    _FixedEffectsOperatorResolver,
+)
 from pyfixest.estimation.formula.utils import (
     _MULTIPLE_ESTIMATION_PATTERN,
     _get_position_of_first_parenthesis_pair,
     _MultipleEstimationType,
+    _preprocess,
     _str_split_by_sep,
 )
-
-
-class _FixedEffectsOperatorResolver(DefaultOperatorResolver):
-    def __init__(self):
-        super().__init__()
-
-    @property
-    def operators(self) -> list[Operator]:
-        operators = [
-            operator for operator in super().operators if operator.symbol != "^"
-        ]
-
-        operators.append(
-            Operator(
-                symbol="^",
-                arity=2,
-                precedence=500,
-                associativity="left",
-                to_terms=lambda *term_sets: OrderedSet(
-                    functools.reduce(lambda x, y: x * y, term)
-                    for term in itertools.product(*term_sets)
-                ),
-            )
-        )
-        return operators
-
 
 _PARSER: Final[FormulaParser] = DefaultFormulaParser(
     feature_flags=FORMULAIC_FEATURE_FLAG,
@@ -71,7 +45,7 @@ class Formula:
                 f"Formula must specify a left-hand and right-hand side separated by '~':\n"
                 f"{self._formula}"
             )
-        elif (
+        if (
             isinstance(self._formula.rhs, tuple)
             and len(self._formula.rhs) > self._max_parts
         ):
@@ -79,6 +53,10 @@ class Formula:
                 f"Formula can have at most {self._max_parts} parts separated by '|'. "
                 f"Received {len(self._right_hand_side)}:\n"
                 f"{self._formula}"
+            )
+        if len(self.dependent.required_variables) > 1:
+            raise FormulaSyntaxError(
+                f"Formula must have exactly one variable on the left hand side. Received {self.dependent.required_variables}"
             )
         if self.is_instrumental_variable:
             self._validate_instrumental_variable_specification()
@@ -173,7 +151,7 @@ class Formula:
             # https://github.com/matthewwardrop/formulaic/blob/1f04a0b6d1d55ec4e43bf9f81898f6738c1f839a/formulaic/parser/parser.py#L360
             endogenous = {f"{c}_hat" for c in self.endogenous.required_variables}
             exogenous = formulaic.formula.SimpleFormula(
-                term for term in exogenous.root if term not in endogenous
+                [term for term in exogenous.root if term not in endogenous]
             )
 
         if self.is_fixed_effects and exogenous.required_variables:
@@ -181,7 +159,7 @@ class Formula:
             # unless for specifications without required_variables,
             # e.g., `Y ~ 1 | f1`; this can be used to demean dependenent variabels
             exogenous = formulaic.formula.SimpleFormula(
-                term for term in exogenous if term != "1"
+                [term for term in exogenous if term != "1"]
             )
 
         return exogenous
@@ -210,22 +188,22 @@ class Formula:
         if not self.is_fixed_effects:
             raise AttributeError("Not a fixed effects specification")
         return formulaic.formula.SimpleFormula(
-            term for term in self._formula.rhs[1] if term != "1"
+            [term for term in self._formula.rhs[1] if term != "1"]
         )
 
     @property
-    def wrap_fixed_effects(self) -> set[str]:
+    def fixed_effects_wrapped(self) -> formulaic.formula.Formula:
         """Wrapped fixed effects for proper encoding."""
-        return {f"__fixed_effect__{term.factors}" for term in self.fixed_effects}
+        return formulaic.formula.Formula(
+            " + ".join(f"__fixed_effect__{term.factors}" for term in self.fixed_effects)
+        )
 
     @property
     def second_stage(self) -> str:
         """The second stage formula."""
-        right_hand_side = (t for t in self.exogenous)
+        right_hand_side = list(self.exogenous)
         if self.is_instrumental_variable:
-            right_hand_side = itertools.chain(
-                right_hand_side, (term for term in self.endogenous)
-            )
+            right_hand_side += list(self.endogenous)
         return f"{self.dependent} ~ {formulaic.formula.SimpleFormula(right_hand_side)}"
 
     @property
@@ -233,7 +211,7 @@ class Formula:
         """The first stage formula of an instrumental variable specification."""
         if not self.is_instrumental_variable:
             raise TypeError("Not an instrumental variable specification.")
-        return f"{self.endogenous} ~ {formulaic.formula.SimpleFormula(term for term in itertools.chain(self.instruments, self.exogenous))}"
+        return f"{self.endogenous} ~ {formulaic.formula.SimpleFormula([term for term in itertools.chain(self.instruments, self.exogenous)])}"
 
     @classmethod
     def parse(cls, formula: str) -> list["Formula"]:
@@ -260,56 +238,6 @@ class Formula:
             )
             result.setdefault(fixed_effects, []).append(parsed_formula)
         return result
-
-
-def _preprocess(formula: str) -> str:
-    formula = _preprocess_fixest_instrumental_variable(formula)
-    formula = _preprocess_fixest_multiple_dependents(formula)
-    return formula
-
-
-def _preprocess_fixest_instrumental_variable(formula: str) -> str:
-    """Convert fixest-style instrumental variable syntax to formulaic.
-    Y ~ X1 | X2 ~ Z2 will be converted to Y ~ X1 + [X2 ~ Z2].
-    """
-    parts = re.split(r"\s*\|\s*", formula)
-    main = parts.pop(0)
-    instrumental_variables = [part for part in parts if "~" in part]
-    if len(instrumental_variables) > 1:
-        raise FormulaSyntaxError()
-    elif instrumental_variables:
-        parts = [part for part in parts if part not in instrumental_variables]
-        formula_old = formula
-        formula = f"{main} + {' + '.join(f'[{iv}]' for iv in instrumental_variables)}"
-        if parts:
-            formula = f"{formula} | {' | '.join(parts)}"
-        warnings.warn(
-            "The fixest-style syntax for instrumental variable regressions is deprecated and will throw an error in a future version."
-            f"Instead of `{formula_old}` use `{formula}`",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-    return formula
-
-
-def _preprocess_fixest_multiple_dependents(formula: str) -> str:
-    """Convert multiple dependent variables to multiple estimation syntax.
-    Y + Y2 ~ X1 + X2 will be converted to sw(Y, Y2) ~ X1 + X2.
-    """
-    if "~" not in formula:
-        raise FormulaSyntaxError()
-    dependent, rest = re.split(r"\s*~\s*", formula, maxsplit=1)
-    if "+" in dependent:
-        # Multiple dependent variables
-        formula_old = formula
-        formula = f"{_MultipleEstimationType.sw.name}({', '.join(_str_split_by_sep(dependent, separator='+'))}) ~ {rest}"
-        warnings.warn(
-            "Specifiying multiple dependent variables with `+` is deprecated and will throw an error in a future version."
-            f"Instead of `{formula_old}` use `{formula}`",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-    return formula
 
 
 def _expand_first_multiple_estimation(formula: str) -> list[str] | None:
