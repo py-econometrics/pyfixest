@@ -22,7 +22,7 @@ jobs:
         environment: [py310, py314]
         os: [ubuntu-latest, macos-latest]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: prefix-dev/setup-pixi@v0.9.4
         with:
@@ -54,7 +54,7 @@ jobs:
       matrix:
         test-task: [test-r-core, test-r-extended, test-r-fixest, test-r-hac]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: prefix-dev/setup-pixi@v0.9.4
         with:
@@ -93,7 +93,7 @@ jobs:
     name: "Build Docs"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: prefix-dev/setup-pixi@v0.9.4
         with:
@@ -107,7 +107,7 @@ jobs:
         run: pixi run -e docs docs-render
 
       - name: Save docs artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: docs-html
           path: docs/_site
@@ -123,7 +123,7 @@ jobs:
     if: github.ref == 'refs/heads/master'
     steps:
       - name: Download docs artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: docs-html
           path: docs/_site
