@@ -318,7 +318,9 @@ class Feols(ResultAccessorMixin):
         # not really optimal code change later
         self._fml = FixestFormula.formula
         self._has_fixef = False
-        self._fixef = FixestFormula.is_fixed_effects
+        self._fixef = (
+            FixestFormula.fixed_effects if FixestFormula.is_fixed_effects else None
+        )
         # self._coefnames = None
         self._icovars = None
 
