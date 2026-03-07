@@ -1,4 +1,7 @@
 from pyfixest.utils.dgps import (
+    get_bartik_data,
+    get_encouragement_data,
+    get_ivf_data,
     get_motherhood_event_study_data,
     get_twin_data,
     get_worker_panel,
@@ -10,7 +13,10 @@ from pyfixest.utils.utils import (
 )
 
 __all__ = [
+    "get_bartik_data",
     "get_data",
+    "get_encouragement_data",
+    "get_ivf_data",
     "get_motherhood_event_study_data",
     "get_ssc",
     "get_twin_data",
