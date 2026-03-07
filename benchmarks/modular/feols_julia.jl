@@ -17,8 +17,11 @@ function fmt_time(t::Float64)
     end
 end
 
+DGP_W = Ref(16)
+
 function print_header(name::String)
-    hdr = @sprintf("  %-16s %12s %4s %10s %10s %10s  %s", "dgp", "n_obs", "n_fe", "min", "median", "max", "status")
+    w = DGP_W[]
+    hdr = "  " * rpad("dgp", w) * @sprintf(" %12s %4s %10s %10s %10s  %s", "n_obs", "n_fe", "min", "median", "max", "status")
     sep = "  " * "-"^(length(hdr) - 2)
     println(stderr, "\n  ", name)
     println(stderr, sep)
@@ -28,15 +31,16 @@ function print_header(name::String)
 end
 
 function print_row(dgp::String, n_obs::Int, n_fe::Int, times::Vector{Float64})
+    w = DGP_W[]
     if isempty(times)
-        println(stderr, @sprintf("  %-16s %12s %4d %10s %10s %10s  %s",
-            dgp, format_number(n_obs), n_fe, "—", "—", "—", "FAIL"))
+        println(stderr, "  ", rpad(dgp, w),
+            @sprintf(" %12s %4d %10s %10s %10s  %s", format_number(n_obs), n_fe, "—", "—", "—", "FAIL"))
     else
         mn = fmt_time(minimum(times))
         md = fmt_time(median(times))
         mx = fmt_time(maximum(times))
-        println(stderr, @sprintf("  %-16s %12s %4d %10s %10s %10s  %s",
-            dgp, format_number(n_obs), n_fe, mn, md, mx, "ok"))
+        println(stderr, "  ", rpad(dgp, w),
+            @sprintf(" %12s %4d %10s %10s %10s  %s", format_number(n_obs), n_fe, mn, md, mx, "ok"))
     end
     flush(stderr)
 end
@@ -80,6 +84,8 @@ function main()
     n_fe = length(fe_cols)
     vcov_type = String(config[:vcov_type])
     vcov_spec = parse_vcov(vcov_type)
+
+    DGP_W[] = max(16, maximum(length(String(entry[:dgp])) for entry in manifest))
 
     # Build the reg formula: y ~ x1 + fe(indiv_id) + fe(year)
     # Parse from the fixest-style formula

@@ -35,8 +35,11 @@ fmt_time <- function(t) {
   if (t < 1) sprintf("%.1fms", t * 1000) else sprintf("%.3fs", t)
 }
 
+dgp_w <- max(16, max(nchar(sapply(manifest, function(e) e$dgp))))
+
 print_header <- function() {
-  hdr <- sprintf("  %-16s %12s %4s %10s %10s %10s  %s", "dgp", "n_obs", "n_fe", "min", "median", "max", "status")
+  fmt <- sprintf("  %%-%ds %%12s %%4s %%10s %%10s %%10s  %%s", dgp_w)
+  hdr <- sprintf(fmt, "dgp", "n_obs", "n_fe", "min", "median", "max", "status")
   sep <- paste0("  ", paste(rep("-", nchar(hdr) - 2), collapse = ""))
   message(sep)
   message(hdr)
@@ -44,6 +47,7 @@ print_header <- function() {
 }
 
 print_row <- function(dgp, n_obs, n_fe, times) {
+  fmt <- sprintf("  %%-%ds %%12s %%4d %%10s %%10s %%10s  %%s", dgp_w)
   times <- times[!is.na(times)]
   if (length(times) > 0) {
     mn <- fmt_time(min(times))
@@ -54,8 +58,7 @@ print_row <- function(dgp, n_obs, n_fe, times) {
     mn <- "\u2014"; md <- "\u2014"; mx <- "\u2014"
     status <- "FAIL"
   }
-  message(sprintf("  %-16s %12s %4d %10s %10s %10s  %s",
-                  dgp, format(n_obs, big.mark = ","), n_fe, mn, md, mx, status))
+  message(sprintf(fmt, dgp, format(n_obs, big.mark = ","), n_fe, mn, md, mx, status))
 }
 
 # ── main loop ──

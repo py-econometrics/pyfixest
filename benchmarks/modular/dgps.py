@@ -148,11 +148,13 @@ class BipartiteDGP:
     def __init__(
         self,
         data_dir: Path,
+        name: str = "bipartite",
         n_time: int = 5,
         firm_size: int = 10,
         p_move: float = 0.5,
         c_sort: float = 1.0,
     ):
+        self._name = name
         self._data_dir = data_dir
         self._n_time = n_time
         self._firm_size = firm_size
@@ -161,7 +163,7 @@ class BipartiteDGP:
 
     @property
     def dgp_name(self) -> str:
-        return "bipartite"
+        return self._name
 
     def generate(
         self, n: int, n_iters: int = 3, burn_in: int = 1

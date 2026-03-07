@@ -20,13 +20,9 @@ try:
 except ImportError:
     from interfaces import BenchmarkDataset, FeolsResult, FeolsSpec
 
-_TABLE_HDR = f"{'dgp':<16} {'n_obs':>12} {'n_fe':>4} {'min':>10} {'median':>10} {'max':>10}  status"
-_TABLE_SEP = "-" * len(_TABLE_HDR)
-
 SUBSTEP_KEYS = ("model_matrix", "demean", "solve", "vcov")
 
-_SUBSTEP_HDR = f"{'dgp':<16} {'n_obs':>12} {'n_fe':>4} {'matrix':>10} {'demean':>10} {'solve':>10} {'vcov':>10}  status"
-_SUBSTEP_SEP = "-" * len(_SUBSTEP_HDR)
+_MIN_DGP_WIDTH = 16
 
 
 def _fmt_time(t: float) -> str:
@@ -35,21 +31,44 @@ def _fmt_time(t: float) -> str:
     return f"{t:.3f}s"
 
 
-def _print_header(name: str) -> None:
-    print(f"\n  {name}", flush=True)
-    print(f"  {_TABLE_SEP}", flush=True)
-    print(f"  {_TABLE_HDR}", flush=True)
-    print(f"  {_TABLE_SEP}", flush=True)
+def _dgp_width(datasets: list[BenchmarkDataset]) -> int:
+    return max(
+        _MIN_DGP_WIDTH, max((len(d.dgp) for d in datasets), default=_MIN_DGP_WIDTH)
+    )
 
 
-def _print_substep_header(name: str) -> None:
-    print(f"\n  {name} [substeps]", flush=True)
-    print(f"  {_SUBSTEP_SEP}", flush=True)
-    print(f"  {_SUBSTEP_HDR}", flush=True)
-    print(f"  {_SUBSTEP_SEP}", flush=True)
+class _TablePrinter:
+    """Formats benchmark tables with dynamic DGP column width."""
 
+    def __init__(self, dgp_w: int):
+        self._w = dgp_w
+        self._hdr = f"{'dgp':<{dgp_w}} {'n_obs':>12} {'n_fe':>4} {'min':>10} {'median':>10} {'max':>10}  status"
+        self._sep = "-" * len(self._hdr)
+        self._sub_hdr = f"{'dgp':<{dgp_w}} {'n_obs':>12} {'n_fe':>4} {'matrix':>10} {'demean':>10} {'solve':>10} {'vcov':>10}  status"
+        self._sub_sep = "-" * len(self._sub_hdr)
 
-# --- A3: Deduplicated print functions ---
+    def print_header(self, name: str) -> None:
+        print(f"\n  {name}", flush=True)
+        print(f"  {self._sep}", flush=True)
+        print(f"  {self._hdr}", flush=True)
+        print(f"  {self._sep}", flush=True)
+
+    def print_substep_header(self, name: str) -> None:
+        print(f"\n  {name} [substeps]", flush=True)
+        print(f"  {self._sub_sep}", flush=True)
+        print(f"  {self._sub_hdr}", flush=True)
+        print(f"  {self._sub_sep}", flush=True)
+
+    def _row_prefix(self, r: FeolsResult) -> str:
+        return f"{r.dgp:<{self._w}} {r.n_obs:>12,} {r.n_fe:>4}"
+
+    def print_row(self, results: list[FeolsResult]) -> None:
+        columns, status = _time_columns(results)
+        print(f"  {self._row_prefix(results[0])} {columns}  {status}", flush=True)
+
+    def print_substep_row(self, results: list[FeolsResult]) -> None:
+        columns, status = _substep_columns(results)
+        print(f"  {self._row_prefix(results[0])} {columns}  {status}", flush=True)
 
 
 def _time_columns(results: list[FeolsResult]) -> tuple[str, str]:
@@ -80,24 +99,6 @@ def _substep_columns(results: list[FeolsResult]) -> tuple[str, str]:
         return columns, "ok"
     columns = f"{'—':>10} {'—':>10} {'—':>10} {'—':>10}"
     return columns, "FAIL"
-
-
-def _print_formatted_row(
-    results: list[FeolsResult],
-    compute_columns: Callable[[list[FeolsResult]], tuple[str, str]],
-) -> None:
-    r0 = results[0]
-    prefix = f"{r0.dgp:<16} {r0.n_obs:>12,} {r0.n_fe:>4}"
-    columns, status = compute_columns(results)
-    print(f"  {prefix} {columns}  {status}", flush=True)
-
-
-def _print_row(results: list[FeolsResult]) -> None:
-    _print_formatted_row(results, _time_columns)
-
-
-def _print_substep_row(results: list[FeolsResult]) -> None:
-    _print_formatted_row(results, _substep_columns)
 
 
 def _group_key(r: FeolsResult) -> tuple[str, int, int]:
@@ -287,7 +288,8 @@ class PyFeolsBenchmarker:
             if cluster_col not in all_cols:
                 all_cols.append(cluster_col)
 
-        _print_header(self.name)
+        tbl = _TablePrinter(_dgp_width(datasets))
+        tbl.print_header(self.name)
 
         # Track groups for incremental printing
         group_buf: list[FeolsResult] = []
@@ -339,18 +341,18 @@ class PyFeolsBenchmarker:
             if result.iter_type != "burnin":
                 key = _group_key(result)
                 if prev_key is not None and key != prev_key and group_buf:
-                    _print_row(group_buf)
+                    tbl.print_row(group_buf)
                     group_buf = []
                 group_buf.append(result)
                 prev_key = key
 
         if group_buf:
-            _print_row(group_buf)
+            tbl.print_row(group_buf)
 
         # Print substep breakdown
         if any(r.substeps for r in results if r.iter_type != "burnin"):
-            _print_substep_header(self.name)
-            _flush_groups(results, _print_substep_row)
+            tbl.print_substep_header(self.name)
+            _flush_groups(results, tbl.print_substep_row)
 
         return results
 
