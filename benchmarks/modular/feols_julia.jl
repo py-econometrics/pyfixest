@@ -24,6 +24,7 @@ function print_header(name::String)
     println(stderr, sep)
     println(stderr, hdr)
     println(stderr, sep)
+    flush(stderr)
 end
 
 function print_row(dgp::String, n_obs::Int, n_fe::Int, times::Vector{Float64})
@@ -37,6 +38,7 @@ function print_row(dgp::String, n_obs::Int, n_fe::Int, times::Vector{Float64})
         println(stderr, @sprintf("  %-16s %12s %4d %10s %10s %10s  %s",
             dgp, format_number(n_obs), n_fe, mn, md, mx, "ok"))
     end
+    flush(stderr)
 end
 
 function format_number(n::Int)
@@ -85,14 +87,9 @@ function main()
     covariates = String.(config[:covariates])
 
     lhs_term = term(Symbol(depvar))
-    rhs_terms = Term[]
-    for c in covariates
-        push!(rhs_terms, term(Symbol(c)))
-    end
-    for col in fe_cols
-        push!(rhs_terms, fe(term(Symbol(col))))
-    end
-    formula = lhs_term ~ foldl(+, rhs_terms)
+    rhs_expr = foldl(+, [term(Symbol(c)) for c in covariates])
+    fe_expr = foldl(+, [fe(Symbol(col)) for col in fe_cols])
+    formula = lhs_term ~ rhs_expr + fe_expr
 
     print_header("julia.FixedEffectModels (feols)")
 

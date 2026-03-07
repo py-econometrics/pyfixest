@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import statistics
 import subprocess
+import sys
 import tempfile
 import time
 import warnings
@@ -288,6 +289,10 @@ class PyFeolsBenchmarker:
 
         _print_header(self.name)
 
+        # Track groups for incremental printing
+        group_buf: list[FeolsResult] = []
+        prev_key: tuple | None = None
+
         for dataset in datasets:
             n_obs_for_result = dataset.n_obs
             try:
@@ -330,7 +335,17 @@ class PyFeolsBenchmarker:
 
             results.append(result)
 
-        _flush_groups(results, _print_row)
+            # Print group as soon as it's complete (skip burnin for display)
+            if result.iter_type != "burnin":
+                key = _group_key(result)
+                if prev_key is not None and key != prev_key and group_buf:
+                    _print_row(group_buf)
+                    group_buf = []
+                group_buf.append(result)
+                prev_key = key
+
+        if group_buf:
+            _print_row(group_buf)
 
         # Print substep breakdown
         if any(r.substeps for r in results if r.iter_type != "burnin"):
@@ -485,12 +500,22 @@ class SubprocessFeolsBenchmarker:
             ]
 
             try:
-                proc = subprocess.run(
+                proc = subprocess.Popen(
                     command,
-                    capture_output=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
                     text=True,
-                    check=False,
                 )
+                stdout_lines: list[str] = []
+                # Stream stderr line-by-line for real-time console output
+                # while collecting stdout for JSON parsing.
+                assert proc.stderr is not None
+                assert proc.stdout is not None
+                for line in proc.stderr:
+                    sys.stderr.write(line)
+                    sys.stderr.flush()
+                stdout_lines = proc.stdout.readlines()
+                proc.wait()
             except Exception as exc:
                 return [
                     _result_from_dataset(
@@ -506,11 +531,17 @@ class SubprocessFeolsBenchmarker:
                     for dataset in datasets
                 ]
 
+        completed = subprocess.CompletedProcess(
+            args=command,
+            returncode=proc.returncode,
+            stdout="".join(stdout_lines),
+            stderr=None,
+        )
         return _parse_subprocess_output(
             datasets=datasets,
             spec=spec,
             backend=self.name,
-            completed_process=proc,
+            completed_process=completed,
         )
 
 
