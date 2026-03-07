@@ -56,12 +56,23 @@ class Formula:
             )
         if len(self.dependent.required_variables) > 1:
             raise FormulaSyntaxError(
-                f"Formula must have exactly one variable on the left hand side. Received {self.dependent.required_variables}"
+                f"Formula must have exactly one variable on the left hand side. "
+                f"Received: {self.dependent.required_variables}"
             )
         if self.is_instrumental_variable:
             self._validate_instrumental_variable_specification()
 
     def _validate_instrumental_variable_specification(self) -> None:
+        if (
+            isinstance(self._right_hand_side.deps, tuple)
+            and len(self._right_hand_side.deps) > 1
+        ):
+            raise FormulaSyntaxError(
+                "Multiple instrumental variable specifications are not supported. "
+                "Use a single `[endogenous ~ instruments]` block. "
+                f"Received {len(self._right_hand_side.deps)} multistage blocks:\n "
+                f"{self._formula}"
+            )
         if len(self.endogenous.required_variables) > 1:
             raise FormulaSyntaxError(
                 "Multiple endogenous variables are currently not supported. "
