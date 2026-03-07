@@ -1,6 +1,6 @@
 import re
 import warnings
-from enum import StrEnum
+from enum import Enum
 
 import numpy as np
 import pandas as pd
@@ -120,7 +120,7 @@ def _get_weights(data: pd.DataFrame, weights: str) -> pd.Series:
     return w
 
 
-class _MultipleEstimationType(StrEnum):
+class _MultipleEstimationType(str, Enum):
     # See https://lrberge.github.io/fixest/reference/stepwise.html
     sw = "sequential stepwise"
     csw = "cumulative stepwise"

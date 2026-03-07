@@ -1,4 +1,4 @@
-from typing import Optional, cast
+from typing import cast
 
 import numpy as np
 import pandas as pd
@@ -58,9 +58,9 @@ class DID2S(DID):
         tname: str,
         gname: str,
         cluster: str,
-        weights: Optional[str] = None,
+        weights: str | None = None,
         att: bool = True,
-        xfml: Optional[str] = None,
+        xfml: str | None = None,
     ):
         super().__init__(
             data=data,
@@ -128,8 +128,8 @@ class DID2S(DID):
         self,
         alpha: float = 0.05,
         figsize: tuple[int, int] = (500, 300),
-        yintercept: Optional[int] = None,
-        xintercept: Optional[int] = None,
+        yintercept: int | None = None,
+        xintercept: int | None = None,
         rotate_xticks: int = 0,
         title: str = "DID2S Event Study Estimate",
         coord_flip: bool = False,
@@ -158,7 +158,7 @@ def _did2s_estimate(
     _first_stage: str,
     _second_stage: str,
     treatment: str,
-    weights: Optional[str] = None,
+    weights: str | None = None,
 ):
     """
     Estimate the two-step DID2S model.
@@ -257,7 +257,7 @@ def _did2s_vcov(
     first_u: np.ndarray,
     second_u: np.ndarray,
     cluster: str,
-    weights: Optional[str] = None,
+    weights: str | None = None,
 ):
     """
     Variance-Covariance matrix for DID2S.

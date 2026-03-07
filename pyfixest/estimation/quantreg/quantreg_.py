@@ -1,7 +1,7 @@
 import warnings
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from functools import partial
-from typing import Any, Callable, Literal, Optional, Union, cast
+from typing import Any, Literal, cast
 
 import numba as nb
 import numpy as np
@@ -29,11 +29,11 @@ class Quantreg(Feols):
         self,
         FixestFormula: FixestFormula,
         data: pd.DataFrame,
-        ssc_dict: dict[str, Union[str, bool]],
+        ssc_dict: dict[str, str | bool],
         drop_singletons: bool,
         drop_intercept: bool,
-        weights: Optional[str],
-        weights_type: Optional[str],
+        weights: str | None,
+        weights_type: str | None,
         collin_tol: float,
         fixef_tol: float,
         fixef_maxiter: int,
@@ -43,14 +43,14 @@ class Quantreg(Feols):
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
-        context: Union[int, Mapping[str, Any]] = 0,
-        sample_split_var: Optional[str] = None,
-        sample_split_value: Optional[Union[str, int]] = None,
+        context: int | Mapping[str, Any] = 0,
+        sample_split_var: str | None = None,
+        sample_split_value: str | int | None = None,
         quantile: float = 0.5,
         method: QuantregMethodOptions = "fn",
         quantile_tol: float = 1e-06,
-        quantile_maxiter: Optional[int] = None,
-        seed: Optional[int] = None,
+        quantile_maxiter: int | None = None,
+        seed: int | None = None,
     ) -> None:
         super().__init__(
             FixestFormula=FixestFormula,
@@ -191,9 +191,9 @@ class Quantreg(Feols):
         X: np.ndarray,
         Y: np.ndarray,
         q: float,
-        tol: Optional[float] = None,
-        maxiter: Optional[int] = None,
-        beta_init: Optional[np.ndarray] = None,
+        tol: float | None = None,
+        maxiter: int | None = None,
+        beta_init: np.ndarray | None = None,
     ) -> tuple[
         np.ndarray,
         bool,
@@ -248,12 +248,12 @@ class Quantreg(Feols):
         X: np.ndarray,
         Y: np.ndarray,
         q: float,
-        m: Optional[float] = None,
-        tol: Optional[float] = None,
-        maxiter: Optional[int] = None,
-        beta_init: Optional[np.ndarray] = None,
-        rng: Optional[np.random.Generator] = None,
-        eta: Optional[float] = None,
+        m: float | None = None,
+        tol: float | None = None,
+        maxiter: int | None = None,
+        beta_init: np.ndarray | None = None,
+        rng: np.random.Generator | None = None,
+        eta: float | None = None,
     ) -> tuple[
         np.ndarray,
         bool,

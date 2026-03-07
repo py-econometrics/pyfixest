@@ -2,7 +2,7 @@ import re
 import warnings
 from collections.abc import Mapping
 from importlib import import_module
-from typing import Any, Optional, Protocol, Union
+from typing import Any, Protocol
 
 import numpy as np
 import pandas as pd
@@ -86,11 +86,11 @@ class Fepois(Feols):
         self,
         FixestFormula: FixestFormula,
         data: pd.DataFrame,
-        ssc_dict: dict[str, Union[str, bool]],
+        ssc_dict: dict[str, str | bool],
         drop_singletons: bool,
         drop_intercept: bool,
-        weights: Optional[str],
-        weights_type: Optional[str],
+        weights: str | None,
+        weights_type: str | None,
         collin_tol: float,
         fixef_tol: float,
         fixef_maxiter: int,
@@ -99,13 +99,13 @@ class Fepois(Feols):
         maxiter: int,
         solver: SolverOptions = "np.linalg.solve",
         demeaner_backend: DemeanerBackendOptions = "numba",
-        context: Union[int, Mapping[str, Any]] = 0,
+        context: int | Mapping[str, Any] = 0,
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
-        sample_split_var: Optional[str] = None,
-        sample_split_value: Optional[Union[str, int]] = None,
-        separation_check: Optional[list[str]] = None,
+        sample_split_var: str | None = None,
+        sample_split_value: str | int | None = None,
+        separation_check: list[str] | None = None,
     ):
         super().__init__(
             FixestFormula=FixestFormula,
@@ -209,7 +209,7 @@ class Fepois(Feols):
                 self._fe = self._fe.reshape((self._N, 1))
 
     def _compute_deviance(
-        self, Y: np.ndarray, mu: np.ndarray, weights: Optional[np.ndarray] = None
+        self, Y: np.ndarray, mu: np.ndarray, weights: np.ndarray | None = None
     ):
         """
         Deviance is defined as twice the difference in log likelihood between the
@@ -442,14 +442,14 @@ class Fepois(Feols):
 
     def predict(
         self,
-        newdata: Optional[DataFrameType] = None,
+        newdata: DataFrameType | None = None,
         atol: float = 1e-6,
         btol: float = 1e-6,
         type: PredictionType = "link",
-        se_fit: Optional[bool] = False,
-        interval: Optional[PredictionErrorOptions] = None,
+        se_fit: bool | None = False,
+        interval: PredictionErrorOptions | None = None,
         alpha: float = 0.05,
-    ) -> Union[np.ndarray, pd.DataFrame]:
+    ) -> np.ndarray | pd.DataFrame:
         """
         Return predicted values from regression model.
 
@@ -514,7 +514,7 @@ def _check_for_separation(
     Y: pd.DataFrame,
     X: pd.DataFrame,
     fe: pd.DataFrame,
-    methods: Optional[list[str]] = None,
+    methods: list[str] | None = None,
 ) -> list[int]:
     """
     Check for separation.

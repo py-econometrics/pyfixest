@@ -231,7 +231,7 @@ def get_panel_dgp_stagg(
     treatment_effect = np.zeros((num_units, num_periods))
     # iterate over treatment cohorts
     for cohort_idx, (treatment_start, num_treated_cohort) in enumerate(
-        zip(treatment_start_cohorts, num_treated)
+        zip(treatment_start_cohorts, num_treated, strict=True)
     ):
         base_treatment_effect = base_treatment_effects[cohort_idx]
         cohort_treatment_effect = np.zeros((num_units, num_periods - treatment_start))
