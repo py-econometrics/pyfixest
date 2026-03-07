@@ -47,6 +47,29 @@ find_collinear_variables_cupy = find_collinear_variables_nb
 crv1_meat_loop_cupy = crv1_meat_loop_nb
 count_fixef_fully_nested_all_cupy = count_fixef_fully_nested_all_nb
 
+# Try to import Torch functions, fall back to numba if not available
+try:
+    from pyfixest.estimation.torch.demean_torch_ import (
+        demean_torch,
+        demean_torch_cpu,
+        demean_torch_cuda,
+        demean_torch_cuda32,
+        demean_torch_mps,
+    )
+
+    TORCH_AVAILABLE = True
+except ImportError:
+    demean_torch = demean_nb
+    demean_torch_cpu = demean_nb
+    demean_torch_mps = demean_nb
+    demean_torch_cuda = demean_nb
+    demean_torch_cuda32 = demean_nb
+    TORCH_AVAILABLE = False
+
+find_collinear_variables_torch = find_collinear_variables_nb
+crv1_meat_loop_torch = crv1_meat_loop_nb
+count_fixef_fully_nested_all_torch = count_fixef_fully_nested_all_nb
+
 BACKENDS = {
     "numba": {
         "demean": demean_nb,
@@ -89,5 +112,20 @@ BACKENDS = {
         "collinear": find_collinear_variables_cupy,
         "crv1_meat": crv1_meat_loop_cupy,
         "nonnested": count_fixef_fully_nested_all_cupy,
+    },
+    **{
+        name: {
+            "demean": demean_fn,
+            "collinear": find_collinear_variables_torch,
+            "crv1_meat": crv1_meat_loop_torch,
+            "nonnested": count_fixef_fully_nested_all_torch,
+        }
+        for name, demean_fn in [
+            ("torch", demean_torch),
+            ("torch_cpu", demean_torch_cpu),
+            ("torch_mps", demean_torch_mps),
+            ("torch_cuda", demean_torch_cuda),
+            ("torch_cuda32", demean_torch_cuda32),
+        ]
     },
 }
