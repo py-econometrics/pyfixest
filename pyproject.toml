@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "pyfixest"
-version = "0.50.0a1"
+dynamic = ["version"]
 description = "Fast high dimensional fixed effect estimation following syntax of the fixest R package."
 authors = [
     { name = "Alexander Fischer", email = "alexander-fischer1801@t-online.de" },
@@ -13,6 +13,28 @@ authors = [
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: MacOS :: MacOS X",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Rust",
+    "Topic :: Scientific/Engineering :: Mathematics",
+]
+
+urls.Homepage = "https://pyfixest.com"
+urls.Repository = "https://github.com/py-econometrics/pyfixest"
+urls.Documentation = "https://pyfixest.com"
+urls.Tracker = "https://github.com/py-econometrics/pyfixest/issues"
+
 dependencies = [
     "formulaic>=1.1.0",
     "joblib>=1.4.2",
@@ -44,6 +66,15 @@ benchmarks = [
 module-name = "pyfixest.core._core_impl"
 features = ["pyo3/extension-module"]
 python-source = "."
+exclude = [
+    "tests/**",
+    "docs/**",
+    "benchmarks/**",
+    "figures/**",
+    "joss_paper/**",
+    "scripts/**",
+    ".github/**",
+]
 
 [tool.pytest.ini_options]
 addopts = [
@@ -111,7 +142,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**/*.py" = ["D100", "D103"]
+"tests/**/*.py" = ["D100", "D102", "D103"]
 "pyfixest/multcomp.py" = ["D103"]
 "pyfixest/summarize.py" = ["D103"]
 "pyfixest/visualize.py" = ["D103"]
