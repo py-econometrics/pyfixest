@@ -20394,8 +20394,8 @@ packages:
   timestamp: 1762989056610
 - pypi: ./
   name: pyfixest
-  version: 0.50.0a1
-  sha256: 5b834268a6f595b19a36496205f354e8a8e78b478b0cdede881790f16a0ec0d8
+  version: 0.50.0
+  sha256: e18f0271dc524ef0eb47b7c12ab56b81aa21027fdfae6914d9579edf3315a913
   requires_dist:
   - formulaic>=1.1.0
   - joblib>=1.4.2
@@ -20408,11 +20408,11 @@ packages:
   - seaborn>=0.13.2
   - tabulate>=0.9.0
   - tqdm>=4.0.0
-  - jax>=0.4.15 ; extra == 'jax'
-  - lets-plot>=4.0.0 ; extra == 'plots'
   - linearmodels ; extra == 'benchmarks'
   - pyarrow ; extra == 'benchmarks'
   - statsmodels ; extra == 'benchmarks'
+  - jax>=0.4.15 ; extra == 'jax'
+  - lets-plot>=4.0.0 ; extra == 'plots'
   requires_python: '>=3.10'
   editable: true
 - conda: https://conda.anaconda.org/conda-forge/noarch/pygments-2.19.2-pyhd8ed1ab_0.conda
