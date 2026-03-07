@@ -7,10 +7,9 @@ import sys
 import tempfile
 import time
 import warnings
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
 
 import numpy as np
 import pandas as pd
@@ -309,7 +308,7 @@ class PyFeolsBenchmarker:
 
                 total = t_mm + t_demean + t_solve + t_vcov
                 step_times = (t_mm, t_demean, t_solve, t_vcov)
-                substeps = dict(zip(SUBSTEP_KEYS, step_times))
+                substeps = dict(zip(SUBSTEP_KEYS, step_times, strict=True))
 
                 result = _result_from_dataset(
                     dataset,
