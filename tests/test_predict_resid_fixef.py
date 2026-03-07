@@ -349,14 +349,14 @@ def test_context_capture_with_out_of_sample_predict():
 
     spline_split = _lspline(data["X2"], [0, 1])
     data["X2_0"] = spline_split[:, 0]
-    data["0_X2_1"] = spline_split[:, 1]
-    data["1_X2"] = spline_split[:, 2]
+    data["X2_0_1"] = spline_split[:, 1]
+    data["X2_1"] = spline_split[:, 2]
 
     # Split data to training and testing
     data_train = data.iloc[:1000]
     data_test = data.iloc[1000:]
 
-    explicit_fit = pf.feols("Y ~ X2_0 + 0_X2_1 + 1_X2 | f1 + f2", data=data_train)
+    explicit_fit = pf.feols("Y ~ X2_0 + X2_0_1 + X2_1 | f1 + f2", data=data_train)
     context_captured_fit = pf.feols(
         "Y ~ _lspline(X2,[0,1]) | f1 + f2", data=data_train, context=0
     )
