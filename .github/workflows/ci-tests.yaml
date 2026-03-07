@@ -103,18 +103,7 @@ jobs:
           frozen: true
           environments: docs
 
-      - name: Set up Quarto
-        uses: quarto-dev/quarto-actions/setup@v2
-
-      - name: install tinytex
-        run: quarto install tinytex
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Compile docstrings with quartodoc
-        run: pixi run -e docs docs-build
-
-      - name: Render docs
+      - name: Build and render docs
         run: pixi run -e docs docs-render
 
       - name: Save docs artifact
