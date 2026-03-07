@@ -939,8 +939,9 @@ def test_glm_vs_fixest(N, seed, dropna, fml, inference, family):
         ("Y~ I(X1**2) + csw(f1,f2)"),
         ("Y~ X1 + csw(f1, f2) | f3"),
         ("Y~ X1 + csw0(X2, f3)"),
-        ("Y~ csw0(X2, f3) + X2"),
-        ("Y~ X1 + csw0(X2, f3) + X2"),
+        # fixest doesn't recognise duplicates: `Y ~ X2 + X2`. TODO: Cover that this is correctly identified in tests/test_formula_parse
+        # ("Y~ csw0(X2, f3) + X2"),
+        # ("Y~ X1 + csw0(X2, f3) + X2"),
         ("Y ~ X1 + csw0(f1, f2) | f3"),
         ("Y ~ X1 + sw(X2, f1, f2)"),
         ("Y ~ csw(X1, X2, f3)"),
