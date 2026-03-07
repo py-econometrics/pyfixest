@@ -19,6 +19,10 @@ from numpy.typing import NDArray
 
 from pyfixest.estimation.torch.lsmr_torch import lsmr_torch, lsmr_torch_batched
 
+# Minimum K (number of RHS columns) for batched SpMM to beat sequential SpMV.
+# Benchmarked breakeven: ~K=5 on MPS (Metal) and CUDA (cuSPARSE).
+_BATCHED_K_THRESHOLD = 5
+
 
 def _get_device(dtype: torch.dtype = torch.float64) -> torch.device:
     """Auto-detect best available device: CUDA > MPS > CPU.
@@ -249,9 +253,6 @@ def _demean_torch_on_device_impl(
     A_precond = _PreconditionedSparse(D_weighted, M_inv)
 
     # Solve for each column — batched SpMM for K >= threshold, sequential otherwise.
-    # Batched SpMM amortizes sparse-matrix load across K columns. Benchmarked
-    # breakeven: ~K=5 on MPS (Metal), may differ on CUDA (cuSPARSE is faster).
-    _BATCHED_K_THRESHOLD = 5
     theta = torch.zeros(D_cols, K, dtype=dtype, device=device)
 
     if K >= _BATCHED_K_THRESHOLD:

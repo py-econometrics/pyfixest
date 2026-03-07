@@ -1,7 +1,7 @@
 """
 Pure PyTorch LSMR iterative solver with optional torch.compile kernel fusion.
 
-Four implementations live in this file:
+Four implementations:
 
 0. ``_lsmr_batched`` — eager batched LSMR for K right-hand sides via SpMM.
    Uses vectorized (K,) Givens rotations with ``_sym_ortho_vec``.
@@ -18,6 +18,9 @@ Four implementations live in this file:
    ``_scalar_step`` serves both single-RHS and batched paths since all ops
    are shape-agnostic.  Fuses scalar work into one kernel per iteration.
 
+The compiled scalar step kernel, packed-state layout (31 index constants),
+and compilation cache live in ``_lsmr_compiled_core.py``.
+
 Public entry points:
 - ``lsmr_torch()`` dispatches: CUDA → compiled, CPU/MPS → eager.
 - ``lsmr_torch_batched()`` dispatches: CUDA → compiled batched,
@@ -32,9 +35,32 @@ Reference:
 from __future__ import annotations
 
 import math
-import threading
 
 import torch
+
+from pyfixest.estimation.torch._lsmr_compiled_core import (
+    _DIV_GUARD,
+    _I_ALPHA,
+    _I_BETA,
+    _I_NORMB,
+    _I_RHO,
+    _I_RHOBAR,
+    _O_CONDA,
+    _O_CONVERGED,
+    _O_NORMA,
+    _O_NORMAR,
+    _O_NORMR,
+    _O_NORMX_EST,
+    _O_RHOBAROLD,
+    _O_RHOOLD,
+    _O_THETABAR,
+    _O_THETANEW,
+    _O_ZETA,
+    _STATE_SIZE,
+    _get_compiled_step,
+    _make_initial_state,
+    _scalar_step,
+)
 
 # ---------------------------------------------------------------------------
 # Sparse matvec helpers
@@ -206,50 +232,11 @@ def _safe_normalize_cols(
     """
     nonzero = norms > 0
     safe = torch.where(nonzero, norms, torch.ones_like(norms))
-    M = M / safe.unsqueeze(0)
-    M[:, ~nonzero] = 0.0
+    # Multiply by mask instead of boolean indexing (M[:, ~nonzero] = 0.0)
+    # to avoid a GPU→CPU sync from aten::_local_scalar_dense in the indexing path.
+    mask = nonzero.unsqueeze(0).to(M.dtype)
+    M = (M / safe.unsqueeze(0)) * mask
     return M, norms
-
-
-def _make_initial_state(
-    alpha: torch.Tensor,
-    beta: torch.Tensor,
-    normb: torch.Tensor,
-    damp: float,
-    dtype: torch.dtype,
-    device: torch.device,
-    *,
-    K: int | None = None,
-) -> torch.Tensor:
-    """
-    Pack the 20-element LSMR scalar state into a tensor.
-
-    For single-RHS: ``K=None`` → shape ``(_STATE_SIZE,)``.
-    For batched:     ``K=int`` → shape ``(_STATE_SIZE, K)``.
-    """
-    shape = (_STATE_SIZE,) if K is None else (_STATE_SIZE, K)
-    state = torch.zeros(shape, device=device, dtype=dtype)
-    state[_I_ALPHABAR] = alpha
-    state[_I_DAMP] = damp
-    state[_I_BETA] = beta
-    state[_I_ALPHA] = alpha
-    state[_I_SBAR] = 0.0
-    state[_I_CBAR] = 1.0
-    state[_I_ZETABAR] = alpha * beta
-    state[_I_RHO] = 1.0
-    state[_I_RHOBAR] = 1.0
-    state[_I_RHODOLD] = 1.0
-    state[_I_TAUTILDEOLD] = 0.0
-    state[_I_THETATILDE] = 0.0
-    state[_I_BETADD] = beta
-    state[_I_BETAD] = 0.0
-    state[_I_D] = 0.0
-    state[_I_NORMA2] = alpha * alpha
-    state[_I_MAXRBAR] = 0.0
-    state[_I_MINRBAR] = 1e100 if dtype == torch.float64 else 1e10
-    state[_I_NORMB] = normb
-    state[_I_ZETA] = 0.0
-    return state
 
 
 def _check_convergence_batched(
@@ -459,12 +446,11 @@ def _lsmr_batched(
         # Vector updates: broadcast (K,) scalars over (n, K) matrices
         # Guard divisions: when a column has zero RHS, rho/rhobar can be 0.
         # Using clamp ensures 0/0 → 0 instead of NaN (numerator is also 0).
-        _eps = 1e-30
-        hbar_coeff = -(thetabar * rho) / torch.clamp(rhoold * rhobarold, min=_eps)
+        hbar_coeff = -(thetabar * rho) / torch.clamp(rhoold * rhobarold, min=_DIV_GUARD)
         Hbar = H + Hbar * hbar_coeff.unsqueeze(0)
-        x_coeff = zeta / torch.clamp(rho * rhobar, min=_eps)
+        x_coeff = zeta / torch.clamp(rho * rhobar, min=_DIV_GUARD)
         X = X + x_coeff.unsqueeze(0) * Hbar
-        h_coeff = -(thetanew / torch.clamp(rho, min=_eps))
+        h_coeff = -(thetanew / torch.clamp(rho, min=_DIV_GUARD))
         H = V + H * h_coeff.unsqueeze(0)
 
         # ||r|| estimation
@@ -479,9 +465,9 @@ def _lsmr_batched(
         rhodold = ctildeold * rhobar
         betad = -stildeold * betad + ctildeold * betahat
 
-        safe_rhotildeold = torch.clamp(rhotildeold, min=1e-30)
+        safe_rhotildeold = torch.clamp(rhotildeold, min=_DIV_GUARD)
         tautildeold = (zetaold - thetatildeold * tautildeold) / safe_rhotildeold
-        safe_rhodold = torch.clamp(rhodold, min=1e-30)
+        safe_rhodold = torch.clamp(rhodold, min=_DIV_GUARD)
         taud = (zeta - thetatilde * tautildeold) / safe_rhodold
         d = d + betacheck * betacheck
         normr = torch.sqrt(d + (betad - taud) ** 2 + betadd * betadd)
@@ -496,16 +482,16 @@ def _lsmr_batched(
         if itn > 1:
             minrbar = torch.minimum(minrbar, rhobarold)
         condA = torch.maximum(maxrbar, rhotemp) / torch.clamp(
-            torch.minimum(minrbar, rhotemp), min=1e-30
+            torch.minimum(minrbar, rhotemp), min=_DIV_GUARD
         )
 
         # Per-column convergence check
         normar = torch.abs(zetabar)
         normx = torch.linalg.norm(X, dim=0)        # (K,)
 
-        safe_normb = torch.clamp(normb, min=1e-30)
+        safe_normb = torch.clamp(normb, min=_DIV_GUARD)
         test1 = normr / safe_normb
-        safe_normA_normr = torch.clamp(normA * normr, min=1e-30)
+        safe_normA_normr = torch.clamp(normA * normr, min=_DIV_GUARD)
         test2 = normar / safe_normA_normr
         test3 = 1.0 / condA
         t1 = test1 / (1.0 + normA * normx / safe_normb)
@@ -748,260 +734,6 @@ def _lsmr_eager(
 # Implementation 2: compiled-state LSMR (CUDA)
 # ===========================================================================
 
-# ---------------------------------------------------------------------------
-# Packed scalar state layout
-# ---------------------------------------------------------------------------
-# All scalar state is packed into a single 1-D tensor to minimize Metal buffer
-# slots (hardware limit: 31 per kernel).
-#
-# Input state (20 elements):
-_I_ALPHABAR = 0
-_I_DAMP = 1
-_I_BETA = 2
-_I_ALPHA = 3
-_I_SBAR = 4
-_I_CBAR = 5
-_I_ZETABAR = 6
-_I_RHO = 7
-_I_RHOBAR = 8
-_I_RHODOLD = 9
-_I_TAUTILDEOLD = 10
-_I_THETATILDE = 11
-_I_BETADD = 12
-_I_BETAD = 13
-_I_D = 14
-_I_NORMA2 = 15
-_I_MAXRBAR = 16
-_I_MINRBAR = 17
-_I_NORMB = 18
-_I_ZETA = 19  # previous iteration's zeta (for normr estimation)
-
-# Constants (3 elements): atol, btol, ctol
-
-# Output adds extra slots for vector update coefficients:
-_O_THETANEW = 20
-_O_THETABAR = 21
-_O_ZETA = 22
-_O_RHOOLD = 23
-_O_RHOBAROLD = 24
-_O_CONVERGED = 25
-_O_NORMR = 26
-_O_NORMAR = 27
-_O_NORMA = 28
-_O_CONDA = 29
-_O_NORMX_EST = 30  # placeholder, actual normx computed from vector
-
-_STATE_SIZE = 20
-
-
-# ---------------------------------------------------------------------------
-# Overflow-safe hypot (replaces torch.hypot for Metal compatibility)
-# ---------------------------------------------------------------------------
-
-
-def _safe_hypot(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
-    """
-    Overflow-safe hypot: ``sqrt(a** + b**)`` without intermediate overflow.
-
-    Uses max/min scaling: ``hypot(a,b) = max(|a|,|b|) * sqrt(1 + (min/max)**)``.
-    Since ``min/max <= 1``, the argument to sqrt never exceeds 2.
-    Compiles to ~6 Metal/CUDA ops that fuse into the surrounding kernel.
-    """
-    abs_a = torch.abs(a)
-    abs_b = torch.abs(b)
-    big = torch.maximum(abs_a, abs_b)
-    small = torch.minimum(abs_a, abs_b)
-    safe_big = torch.where(big == 0, torch.ones_like(big), big)
-    ratio = small / safe_big
-    return torch.where(
-        big == 0,
-        torch.zeros_like(big),
-        big * torch.sqrt(1.0 + ratio * ratio),
-    )
-
-
-# ---------------------------------------------------------------------------
-# Compiled scalar step (single Metal/CUDA kernel after fusion)
-# ---------------------------------------------------------------------------
-
-
-def _scalar_step(state: torch.Tensor, consts: torch.Tensor) -> torch.Tensor:
-    """
-    All scalar work for one LSMR iteration: 4 Givens rotations, norm/cond
-    estimation, and convergence check.
-
-    Packed I/O keeps Metal buffer count to 3 (state_in, consts, state_out).
-    Uses overflow-safe hypot (no torch.hypot — unsupported in Metal codegen).
-    """
-    # Unpack
-    alphabar = state[_I_ALPHABAR]
-    damp = state[_I_DAMP]
-    beta = state[_I_BETA]
-    alpha = state[_I_ALPHA]
-    sbar = state[_I_SBAR]
-    cbar = state[_I_CBAR]
-    zetabar = state[_I_ZETABAR]
-    rho = state[_I_RHO]
-    rhobar = state[_I_RHOBAR]
-    rhodold = state[_I_RHODOLD]
-    tautildeold = state[_I_TAUTILDEOLD]
-    thetatilde = state[_I_THETATILDE]
-    betadd = state[_I_BETADD]
-    betad = state[_I_BETAD]
-    d = state[_I_D]
-    normA2 = state[_I_NORMA2]
-    maxrbar = state[_I_MAXRBAR]
-    minrbar = state[_I_MINRBAR]
-    normb = state[_I_NORMB]
-    zetaold = state[_I_ZETA]  # zeta from previous iteration (for normr estimation)
-
-    atol_t = consts[0]
-    ctol = consts[2]
-
-    _ZERO = state[_I_ALPHABAR] * 0.0  # device-local zero
-    _ONE = _ZERO + 1.0
-
-    # --- Givens 1: (alphabar, damp) ---
-    r1 = _safe_hypot(alphabar, damp)
-    safe_r1 = torch.where(r1 == _ZERO, _ONE, r1)
-    chat = torch.where(r1 == _ZERO, _ZERO, alphabar / safe_r1)
-    shat = torch.where(r1 == _ZERO, _ZERO, damp / safe_r1)
-
-    # --- Givens 2: (alphahat=r1, beta) ---
-    rhoold = rho
-    r2 = _safe_hypot(r1, beta)
-    safe_r2 = torch.where(r2 == _ZERO, _ONE, r2)
-    c = torch.where(r2 == _ZERO, _ZERO, r1 / safe_r2)
-    s = torch.where(r2 == _ZERO, _ZERO, beta / safe_r2)
-    rho_new = r2
-    thetanew = s * alpha
-    alphabar_new = c * alpha
-
-    # --- Givens 3: rhobar ---
-    rhobarold = rhobar
-    thetabar = sbar * rho_new
-    rhotemp = cbar * rho_new
-    r3 = _safe_hypot(rhotemp, thetanew)
-    safe_r3 = torch.where(r3 == _ZERO, _ONE, r3)
-    cbar_new = torch.where(r3 == _ZERO, _ZERO, rhotemp / safe_r3)
-    sbar_new = torch.where(r3 == _ZERO, _ZERO, thetanew / safe_r3)
-    rhobar_new = r3
-    zeta = cbar_new * zetabar
-    zetabar_new = -sbar_new * zetabar
-
-    # --- ||r|| estimation ---
-    betaacute = chat * betadd
-    betacheck = -shat * betadd
-    betahat = c * betaacute
-    betadd_new = -s * betaacute
-
-    # Givens 4: rhotilde
-    r4 = _safe_hypot(rhodold, thetabar)
-    safe_r4 = torch.where(r4 == _ZERO, _ONE, r4)
-    ctildeold = torch.where(r4 == _ZERO, _ZERO, rhodold / safe_r4)
-    stildeold = torch.where(r4 == _ZERO, _ZERO, thetabar / safe_r4)
-
-    thetatilde_new = stildeold * rhobar_new
-    rhodold_new = ctildeold * rhobar_new
-    betad_new = -stildeold * betad + ctildeold * betahat
-
-    tautildeold_new = (zetaold - thetatilde * tautildeold) / torch.clamp(r4, min=1e-30)
-    taud = (zeta - thetatilde_new * tautildeold_new) / torch.clamp(
-        rhodold_new, min=1e-30
-    )
-    d_new = d + betacheck * betacheck
-    normr = torch.sqrt(d_new + (betad_new - taud) ** 2 + betadd_new * betadd_new)
-
-    # --- ||A|| estimation ---
-    normA2_new = normA2 + beta * beta
-    normA = torch.sqrt(normA2_new)
-    normA2_final = normA2_new + alpha * alpha
-
-    # --- cond(A) estimation ---
-    maxrbar_new = torch.maximum(maxrbar, rhobarold)
-    # Match SciPy: only update minrbar from iteration 2 onward.
-    # maxrbar == 0 on the first call (initial state), so use it as guard.
-    minrbar_new = torch.where(maxrbar > 0, torch.minimum(minrbar, rhobarold), minrbar)
-    condA = torch.maximum(maxrbar_new, rhotemp) / torch.clamp(
-        torch.minimum(minrbar_new, rhotemp), min=1e-30
-    )
-
-    # --- Convergence check ---
-    normar = torch.abs(zetabar_new)
-    test2 = normar / torch.clamp(normA * normr, min=1e-30)
-    test3 = _ONE / condA
-
-    converged_flag = torch.where(
-        (test2 <= atol_t)
-        | (test3 <= ctol)
-        | (_ONE + test2 <= _ONE)
-        | (_ONE + test3 <= _ONE),
-        _ONE,
-        _ZERO,
-    )
-
-    # --- Pack output ---
-    return torch.stack(
-        [
-            alphabar_new,  # 0  _I_ALPHABAR
-            damp,  # 1  _I_DAMP (pass through)
-            beta,  # 2  _I_BETA (pass through, updated by caller)
-            alpha,  # 3  _I_ALPHA (pass through, updated by caller)
-            sbar_new,  # 4  _I_SBAR
-            cbar_new,  # 5  _I_CBAR
-            zetabar_new,  # 6  _I_ZETABAR
-            rho_new,  # 7  _I_RHO
-            rhobar_new,  # 8  _I_RHOBAR
-            rhodold_new,  # 9  _I_RHODOLD
-            tautildeold_new,  # 10 _I_TAUTILDEOLD
-            thetatilde_new,  # 11 _I_THETATILDE
-            betadd_new,  # 12 _I_BETADD
-            betad_new,  # 13 _I_BETAD
-            d_new,  # 14 _I_D
-            normA2_final,  # 15 _I_NORMA2
-            maxrbar_new,  # 16 _I_MAXRBAR
-            minrbar_new,  # 17 _I_MINRBAR
-            normb,  # 18 _I_NORMB (pass through)
-            zeta,  # 19 _I_ZETA (saved for next iteration's zetaold)
-            thetanew,  # 20 _O_THETANEW (for vector update)
-            thetabar,  # 21 _O_THETABAR (for vector update)
-            zeta,  # 22 _O_ZETA (for vector update — same as slot 19)
-            rhoold,  # 23 _O_RHOOLD (for vector update)
-            rhobarold,  # 24 _O_RHOBAROLD (for vector update)
-            converged_flag,  # 25 _O_CONVERGED
-            normr,  # 26 _O_NORMR
-            normar,  # 27 _O_NORMAR
-            normA,  # 28 _O_NORMA
-            condA,  # 29 _O_CONDA
-            _ZERO,  # 30 _O_NORMX_EST (placeholder)
-        ]
-    )
-
-
-# ---------------------------------------------------------------------------
-# Module-level compilation cache
-# ---------------------------------------------------------------------------
-_compiled_step_cache: dict[str, object] = {}
-_cache_lock = threading.Lock()
-
-
-def _get_compiled_step(device_type: str):
-    """Get or create compiled scalar step for the given device type."""
-    if device_type in _compiled_step_cache:
-        return _compiled_step_cache[device_type]
-    with _cache_lock:
-        # Double-check after acquiring lock
-        if device_type not in _compiled_step_cache:
-            try:
-                _compiled_step_cache[device_type] = torch.compile(
-                    _scalar_step, backend="inductor", fullgraph=True
-                )
-            except Exception:
-                # Fallback: no compilation available
-                _compiled_step_cache[device_type] = _scalar_step
-    return _compiled_step_cache[device_type]
-
-
 def _lsmr_compiled(
     A,
     b: torch.Tensor,
@@ -1042,11 +774,11 @@ def _lsmr_compiled(
     beta = normb.clone()
 
     # Safe normalize
-    u = u * torch.where(beta > 0, 1.0 / torch.clamp(beta, min=1e-30), beta * 0.0)
+    u = u * torch.where(beta > 0, 1.0 / torch.clamp(beta, min=_DIV_GUARD), beta * 0.0)
 
     v = _rmatvec(At, u)
     alpha = torch.linalg.norm(v)
-    v = v * torch.where(alpha > 0, 1.0 / torch.clamp(alpha, min=1e-30), alpha * 0.0)
+    v = v * torch.where(alpha > 0, 1.0 / torch.clamp(alpha, min=_DIV_GUARD), alpha * 0.0)
 
     state = _make_initial_state(alpha, beta, normb, damp, dtype, device)
 
@@ -1077,7 +809,7 @@ def _lsmr_compiled(
         beta_new = torch.linalg.norm(u)
         u = u * torch.where(
             beta_new > 0,
-            1.0 / torch.clamp(beta_new, min=1e-30),
+            1.0 / torch.clamp(beta_new, min=_DIV_GUARD),
             beta_new * 0.0,
         )
 
@@ -1085,7 +817,7 @@ def _lsmr_compiled(
         alpha_new = torch.linalg.norm(v)
         v = v * torch.where(
             alpha_new > 0,
-            1.0 / torch.clamp(alpha_new, min=1e-30),
+            1.0 / torch.clamp(alpha_new, min=_DIV_GUARD),
             alpha_new * 0.0,
         )
 
@@ -1123,9 +855,9 @@ def _lsmr_compiled(
         normA_t = out[_O_NORMA]
         normb_t = out[_I_NORMB]
 
-        test1_t = normr_t / torch.clamp(normb_t, min=1e-30)
-        t1_t = test1_t / (1.0 + normA_t * normx_t / torch.clamp(normb_t, min=1e-30))
-        rtol_t = btol + atol * normA_t * normx_t / torch.clamp(normb_t, min=1e-30)
+        test1_t = normr_t / torch.clamp(normb_t, min=_DIV_GUARD)
+        t1_t = test1_t / (1.0 + normA_t * normx_t / torch.clamp(normb_t, min=_DIV_GUARD))
+        rtol_t = btol + atol * normA_t * normx_t / torch.clamp(normb_t, min=_DIV_GUARD)
 
         converged_btol = (test1_t <= rtol_t) | (1.0 + t1_t <= 1.0)
         converged_any = (out[_O_CONVERGED] > 0.5) | converged_btol
@@ -1139,11 +871,11 @@ def _lsmr_compiled(
             normar_val = out[_O_NORMAR].item()
             condA_val = out[_O_CONDA].item()
 
-            test1 = normr_val / max(normb_val, 1e-30)
-            test2 = normar_val / max(normA_val * normr_val, 1e-30)
+            test1 = normr_val / max(normb_val, _DIV_GUARD)
+            test2 = normar_val / max(normA_val * normr_val, _DIV_GUARD)
             test3 = 1.0 / condA_val
-            t1 = test1 / (1.0 + normA_val * normx_val / max(normb_val, 1e-30))
-            _rtol = btol + atol * normA_val * normx_val / max(normb_val, 1e-30)
+            t1 = test1 / (1.0 + normA_val * normx_val / max(normb_val, _DIV_GUARD))
+            _rtol = btol + atol * normA_val * normx_val / max(normb_val, _DIV_GUARD)
 
             # Priority order matches SciPy LSMR (lowest istop wins)
             if 1.0 + test3 <= 1.0:
@@ -1267,7 +999,6 @@ def _lsmr_compiled_batched(
 
     # --- Main iteration loop ---
     itn = 0
-    _eps = 1e-30
     normx_t = torch.zeros(K, device=device, dtype=dtype)
 
     while itn < maxiter:
@@ -1299,11 +1030,11 @@ def _lsmr_compiled_batched(
         rhobarold = out[_O_RHOBAROLD]       # (K,)
 
         # Safe divisions: some columns may have zero RHS → zero denominators
-        hbar_coeff = -(thetabar * rho_new) / torch.clamp(rhoold * rhobarold, min=_eps)
+        hbar_coeff = -(thetabar * rho_new) / torch.clamp(rhoold * rhobarold, min=_DIV_GUARD)
         Hbar = H + Hbar * hbar_coeff.unsqueeze(0)
-        x_coeff = zeta / torch.clamp(rho_new * rhobar_new, min=_eps)
+        x_coeff = zeta / torch.clamp(rho_new * rhobar_new, min=_DIV_GUARD)
         X = X + x_coeff.unsqueeze(0) * Hbar
-        h_coeff = -(thetanew / torch.clamp(rho_new, min=_eps))
+        h_coeff = -(thetanew / torch.clamp(rho_new, min=_DIV_GUARD))
         H = V + H * h_coeff.unsqueeze(0)
 
         # Propagate state for next iteration
@@ -1318,9 +1049,9 @@ def _lsmr_compiled_batched(
         normA_t = out[_O_NORMA]                   # (K,)
         normb_t = out[_I_NORMB]                   # (K,)
 
-        safe_normb = torch.clamp(normb_t, min=_eps)
+        safe_normb = torch.clamp(normb_t, min=_DIV_GUARD)
         test1_t = normr_t / safe_normb
-        safe_normA_normr = torch.clamp(normA_t * normr_t, min=_eps)
+        safe_normA_normr = torch.clamp(normA_t * normr_t, min=_DIV_GUARD)
         test2_t = out[_O_NORMAR] / safe_normA_normr
         test3_t = 1.0 / out[_O_CONDA]
         t1_t = test1_t / (1.0 + normA_t * normx_t / safe_normb)
@@ -1359,6 +1090,7 @@ def _lsmr_compiled_batched(
 # ===========================================================================
 
 
+@torch.no_grad()
 def lsmr_torch(
     A,
     b: torch.Tensor,
@@ -1404,6 +1136,7 @@ def lsmr_torch(
     )
 
 
+@torch.no_grad()
 def lsmr_torch_batched(
     A,
     B: torch.Tensor,
