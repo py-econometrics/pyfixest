@@ -234,7 +234,7 @@ def _nw_meat_panel(
 
     # start: first entry per panel i = 1, ..., N
     # counts: number of counts for panel i
-    for start, count in zip(starts, counts, strict=True):
+    for start, count in zip(starts, counts):  # noqa
         end = start + count
 
         score_i = np.ascontiguousarray(scores[start:end, :])
