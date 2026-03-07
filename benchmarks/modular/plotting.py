@@ -81,7 +81,15 @@ def plot_benchmarks(results_df: pd.DataFrame, output_path: Path) -> None:
             ax.set_yscale("log")
             ax.grid(axis="both", alpha=0.2)
 
-    handles, labels = axes[0][0].get_legend_handles_labels()
+    handles, labels = [], []
+    for row in axes:
+        for ax in row:
+            h, lab = ax.get_legend_handles_labels()
+            if h:
+                handles, labels = h, lab
+                break
+        if handles:
+            break
     if handles:
         fig.legend(handles, labels, loc="upper center", ncol=max(1, len(backends)))
 

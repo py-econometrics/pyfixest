@@ -23,7 +23,7 @@ vcov_type <- config$vcov_type
 # Parse normalized vcov_type: "iid", "hetero", or "cluster:<colname>"
 if (startsWith(vcov_type, "cluster:")) {
   cluster_col <- sub("^cluster:", "", vcov_type)
-  vcov_arg <- as.formula(paste0("~", cluster_col))
+  vcov_arg <- as.formula(paste0("~`", cluster_col, "`"))
 } else {
   vcov_arg <- vcov_type
 }

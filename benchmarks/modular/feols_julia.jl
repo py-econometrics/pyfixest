@@ -84,13 +84,15 @@ function main()
     depvar = String(config[:depvar])
     covariates = String.(config[:covariates])
 
-    lhs = depvar
-    rhs_parts = copy(covariates)
-    for col in fe_cols
-        push!(rhs_parts, "fe($col)")
+    lhs_term = term(Symbol(depvar))
+    rhs_terms = Term[]
+    for c in covariates
+        push!(rhs_terms, term(Symbol(c)))
     end
-    rhs = join(rhs_parts, " + ")
-    formula = eval(Meta.parse("@formula($lhs ~ $rhs)"))
+    for col in fe_cols
+        push!(rhs_terms, fe(term(Symbol(col))))
+    end
+    formula = lhs_term ~ foldl(+, rhs_terms)
 
     print_header("julia.FixedEffectModels (feols)")
 

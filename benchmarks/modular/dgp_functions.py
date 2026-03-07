@@ -113,86 +113,63 @@ class BipartiteConfig:
     y2_sig: float = 1.0
 
 
-def simulate_bipartite(config: BipartiteConfig, *, seed: int | None = None):
-    """Simulate a bipartite labor market network.
-
-    Parameters
-    ----------
-    config : BipartiteConfig
-        Simulation configuration.
-    seed : int or None
-        Random seed for reproducibility.
-
-    Returns
-    -------
-    pd.DataFrame
-        Columns: indiv_id, firm_id, wage, y, y2, x1, year, worker_type,
-        firm_type, worker_fe, firm_fe.
-    """
-    rng = np.random.default_rng(seed)
-
-    # Unpack config
-    n_workers = config.n_workers
-    n_time = config.n_time
-    firm_size = config.firm_size
-    n_firm_types = config.n_firm_types
-    n_worker_types = config.n_worker_types
-    p_move = config.p_move
-    c_sort = config.c_sort
-    c_netw = config.c_netw
-    c_sig = config.c_sig
-    alpha_sig = config.alpha_sig
-    psi_sig = config.psi_sig
-    w_sig = config.w_sig
-    x_sig = config.x_sig
-    y1_beta = config.y1_beta
-    y1_sig = config.y1_sig
-    y2_beta = config.y2_beta
-    y2_sig = config.y2_sig
-
-    # Parameter validation
-    if n_workers < 1:
+def _validate_config(config: BipartiteConfig):
+    """Validate bipartite simulation parameters."""
+    if config.n_workers < 1:
         raise ValueError("n_workers must be positive")
-    if n_time < 1:
+    if config.n_time < 1:
         raise ValueError("n_time must be positive")
-    if firm_size <= 0:
+    if config.firm_size <= 0:
         raise ValueError("firm_size must be positive")
-    if n_firm_types < 1:
+    if config.n_firm_types < 1:
         raise ValueError("n_firm_types must be positive")
-    if n_worker_types < 1:
+    if config.n_worker_types < 1:
         raise ValueError("n_worker_types must be positive")
-    if not 0 <= p_move <= 1:
+    if not 0 <= config.p_move <= 1:
         raise ValueError("p_move must be in [0, 1]")
     for name, val in [
-        ("alpha_sig", alpha_sig),
-        ("psi_sig", psi_sig),
-        ("w_sig", w_sig),
-        ("c_sig", c_sig),
-        ("x_sig", x_sig),
-        ("y1_sig", y1_sig),
-        ("y2_sig", y2_sig),
+        ("alpha_sig", config.alpha_sig),
+        ("psi_sig", config.psi_sig),
+        ("w_sig", config.w_sig),
+        ("c_sig", config.c_sig),
+        ("x_sig", config.x_sig),
+        ("y1_sig", config.y1_sig),
+        ("y2_sig", config.y2_sig),
     ]:
         if val < 0:
             raise ValueError(f"{name} must be non-negative")
 
-    # ========================================================================
-    # GENERATE FIXED EFFECTS
-    # ========================================================================
-    psi = norm.ppf(np.arange(1, n_firm_types + 1) / (n_firm_types + 1)) * psi_sig
-    alpha = (
-        norm.ppf(np.arange(1, n_worker_types + 1) / (n_worker_types + 1)) * alpha_sig
-    )
 
-    # Compute transition matrices
-    G = np.zeros((n_worker_types, n_firm_types, n_firm_types))
-    for typ_no in range(n_worker_types):
-        for k_from in range(n_firm_types):
+def _generate_fixed_effects(config: BipartiteConfig):
+    """Generate firm (psi) and worker (alpha) fixed effects from quantiles."""
+    psi = (
+        norm.ppf(np.arange(1, config.n_firm_types + 1) / (config.n_firm_types + 1))
+        * config.psi_sig
+    )
+    alpha = (
+        norm.ppf(np.arange(1, config.n_worker_types + 1) / (config.n_worker_types + 1))
+        * config.alpha_sig
+    )
+    return psi, alpha
+
+
+def _compute_transition_matrices(config: BipartiteConfig, psi, alpha):
+    """Compute worker-type-specific firm-to-firm transition matrices."""
+    G = np.zeros((config.n_worker_types, config.n_firm_types, config.n_firm_types))
+    for typ_no in range(config.n_worker_types):
+        for k_from in range(config.n_firm_types):
             probs = norm.pdf(
-                (psi - c_netw * psi[k_from] - c_sort * alpha[typ_no]) / c_sig
+                (psi - config.c_netw * psi[k_from] - config.c_sort * alpha[typ_no])
+                / config.c_sig
             )
             G[typ_no, k_from, :] = probs / probs.sum()
+    return G
 
-    # Compute stationary distributions
+
+def _compute_stationary_distributions(G):
+    """Compute stationary distribution for each worker type's transition matrix."""
+    n_worker_types = G.shape[0]
+    n_firm_types = G.shape[1]
     H = np.zeros((n_worker_types, n_firm_types))
     for typ_no in range(n_worker_types):
         eigvals, eigvecs = np.linalg.eig(G[typ_no].T)
@@ -200,69 +177,100 @@ def simulate_bipartite(config: BipartiteConfig, *, seed: int | None = None):
         stationary_vec = np.real(eigvecs[:, stationary_idx])
         stationary_vec = np.abs(stationary_vec) / np.abs(stationary_vec).sum()
         H[typ_no] = stationary_vec
+    return H
 
-    # ========================================================================
-    # SIMULATE MOBILITY
-    # ========================================================================
-    worker_types = rng.integers(0, n_worker_types, size=n_workers)
 
+def _simulate_mobility(rng, config: BipartiteConfig, H, G, worker_types):
+    """Simulate worker mobility across firms over time (vectorized over workers)."""
+    n_workers, n_time = config.n_workers, config.n_time
     firm_types = np.zeros((n_workers, n_time), dtype=int)
-    spell_ids = np.zeros((n_workers, n_time), dtype=int)
-    spell_counter = 0
 
-    for i in range(n_workers):
-        typ_no = worker_types[i]
+    # Vectorized initial assignment by worker type
+    for typ_no in range(config.n_worker_types):
+        mask = worker_types == typ_no
+        firm_types[mask, 0] = rng.choice(
+            config.n_firm_types, size=mask.sum(), p=H[typ_no]
+        )
 
-        firm_types[i, 0] = rng.choice(n_firm_types, p=H[typ_no])
-        spell_ids[i, 0] = spell_counter
-        spell_counter += 1
+    # Pre-generate all move decisions at once
+    move_decisions = rng.random((n_workers, n_time - 1)) < config.p_move
 
-        for t in range(1, n_time):
-            if rng.random() < p_move:
-                firm_types[i, t] = rng.choice(
-                    n_firm_types, p=G[typ_no, firm_types[i, t - 1]]
+    # Vectorized time evolution
+    for t in range(1, n_time):
+        movers = move_decisions[:, t - 1]
+        firm_types[~movers, t] = firm_types[~movers, t - 1]  # stayers
+        for typ_no in range(config.n_worker_types):
+            for k_from in range(config.n_firm_types):
+                mask = (
+                    movers & (worker_types == typ_no) & (firm_types[:, t - 1] == k_from)
                 )
-                spell_ids[i, t] = spell_counter
-                spell_counter += 1
-            else:
-                firm_types[i, t] = firm_types[i, t - 1]
-                spell_ids[i, t] = spell_ids[i, t - 1]
+                n = mask.sum()
+                if n > 0:
+                    firm_types[mask, t] = rng.choice(
+                        config.n_firm_types, size=n, p=G[typ_no, k_from]
+                    )
 
-    # ========================================================================
-    # ASSIGN FIRM IDS (numpy-based, avoids intermediate DataFrame)
-    # ========================================================================
-    indiv_id = np.repeat(np.arange(n_workers), n_time)
-    time = np.tile(np.arange(n_time), n_workers)
-    worker_type = np.repeat(worker_types, n_time)
+    # Vectorized spell IDs via cumulative sum
+    new_spell = np.ones((n_workers, n_time), dtype=bool)
+    new_spell[:, 1:] = move_decisions
+    spell_ids = np.cumsum(new_spell.ravel()).reshape(n_workers, n_time) - 1
+    spell_counter = int(spell_ids.max()) + 1
+
+    return firm_types, spell_ids, spell_counter
+
+
+def _assign_firm_ids(
+    rng, config: BipartiteConfig, firm_types, spell_ids, spell_counter
+):
+    """Assign unique firm IDs per spell using vectorized numpy operations."""
     firm_type_flat = firm_types.ravel()
     spell_flat = spell_ids.ravel()
-
     spell_to_firm_type = np.empty(spell_counter, dtype=int)
     spell_to_firm_type[spell_flat] = firm_type_flat
     spell_sizes = np.bincount(spell_flat, minlength=spell_counter)
 
     firm_id_per_spell = np.zeros(spell_counter, dtype=int)
+    global_offset = 0
     for k_type in np.unique(spell_to_firm_type):
         k_mask = spell_to_firm_type == k_type
         total_obs = spell_sizes[k_mask].sum()
-        n_firms = max(1, round(total_obs / (firm_size * n_time)))
+        n_firms = max(1, round(total_obs / (config.firm_size * config.n_time)))
         assigned = rng.integers(0, n_firms, size=k_mask.sum())
-        unique_assigned = np.unique(assigned)
-        mapping = {v: idx for idx, v in enumerate(unique_assigned)}
-        firm_id_per_spell[k_mask] = np.array([mapping[a] for a in assigned])
+        _, remapped = np.unique(assigned, return_inverse=True)
+        firm_id_per_spell[k_mask] = remapped + global_offset
+        global_offset += len(np.unique(assigned))
 
-    firm_id = firm_id_per_spell[spell_flat]
+    return firm_id_per_spell[spell_flat]
 
-    # ========================================================================
-    # GENERATE OUTCOMES
-    # ========================================================================
+
+def _build_dataframe(
+    rng, config: BipartiteConfig, worker_types, firm_types, firm_id, psi, alpha
+):
+    """Build the final DataFrame with outcomes."""
+    n_workers, n_time = config.n_workers, config.n_time
     n_obs = n_workers * n_time
+
+    indiv_id = np.repeat(np.arange(n_workers), n_time)
+    time = np.tile(np.arange(n_time), n_workers)
+    worker_type = np.repeat(worker_types, n_time)
+    firm_type_flat = firm_types.ravel()
+
     worker_fe = alpha[worker_type]
     firm_fe = psi[firm_type_flat]
-    wage = worker_fe + firm_fe + rng.standard_normal(n_obs) * w_sig
-    x1 = rng.standard_normal(n_obs) * x_sig
-    y = worker_fe + firm_fe + y1_beta * x1 + rng.standard_normal(n_obs) * y1_sig
-    y2 = worker_fe + firm_fe + y2_beta * x1 + rng.standard_normal(n_obs) * y2_sig
+    wage = worker_fe + firm_fe + rng.standard_normal(n_obs) * config.w_sig
+    x1 = rng.standard_normal(n_obs) * config.x_sig
+    y = (
+        worker_fe
+        + firm_fe
+        + config.y1_beta * x1
+        + rng.standard_normal(n_obs) * config.y1_sig
+    )
+    y2 = (
+        worker_fe
+        + firm_fe
+        + config.y2_beta * x1
+        + rng.standard_normal(n_obs) * config.y2_sig
+    )
 
     # Already sorted by (indiv_id, year) due to repeat/tile construction
     return pd.DataFrame(
@@ -280,3 +288,32 @@ def simulate_bipartite(config: BipartiteConfig, *, seed: int | None = None):
             "firm_fe": firm_fe,
         }
     )
+
+
+def simulate_bipartite(config: BipartiteConfig, *, seed: int | None = None):
+    """Simulate a bipartite labor market network.
+
+    Parameters
+    ----------
+    config : BipartiteConfig
+        Simulation configuration.
+    seed : int or None
+        Random seed for reproducibility.
+
+    Returns
+    -------
+    pd.DataFrame
+        Columns: indiv_id, firm_id, wage, y, y2, x1, year, worker_type,
+        firm_type, worker_fe, firm_fe.
+    """
+    rng = np.random.default_rng(seed)
+    _validate_config(config)
+    psi, alpha = _generate_fixed_effects(config)
+    G = _compute_transition_matrices(config, psi, alpha)
+    H = _compute_stationary_distributions(G)
+    worker_types = rng.integers(0, config.n_worker_types, size=config.n_workers)
+    firm_types, spell_ids, spell_counter = _simulate_mobility(
+        rng, config, H, G, worker_types
+    )
+    firm_id = _assign_firm_ids(rng, config, firm_types, spell_ids, spell_counter)
+    return _build_dataframe(rng, config, worker_types, firm_types, firm_id, psi, alpha)
