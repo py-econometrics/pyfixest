@@ -12,7 +12,7 @@ SolverOptions = Literal[
     "jax",
 ]
 DemeanerBackendOptions = Literal[
-    "numba", "jax", "rust", "cupy", "cupy32", "cupy64", "scipy"
+    "numba", "jax", "rust", "rust-cg", "cupy", "cupy32", "cupy64", "scipy"
 ]
 PredictionErrorOptions = Literal["prediction"]
 QuantregMethodOptions = Literal["fn", "pfn"]

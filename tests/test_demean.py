@@ -4,6 +4,7 @@ import pyhdfe
 import pytest
 
 from pyfixest.core import demean as demean_rs
+from pyfixest.core.demean import demean_within
 from pyfixest.estimation.cupy.demean_cupy_ import demean_cupy32, demean_cupy64
 from pyfixest.estimation.internals.demean_ import (
     _set_demeaner_backend,
@@ -381,8 +382,8 @@ def test_feols_integration_maxiter():
 
 @pytest.mark.parametrize(
     argnames="demean_func",
-    argvalues=[demean_rs, demean_cupy32, demean_cupy64],
-    ids=["demean_rs", "demean_cupy32", "demean_cupy64"],
+    argvalues=[demean_rs, demean_within, demean_cupy32, demean_cupy64],
+    ids=["demean_rs", "demean_within", "demean_cupy32", "demean_cupy64"],
 )
 def test_demean_complex_fixed_effects(benchmark, demean_func):
     """Benchmark demean functions with complex multi-level fixed effects."""
