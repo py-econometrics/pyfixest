@@ -142,12 +142,13 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**/*.py" = ["D100", "D102", "D103"]
+"tests/**/*.py" = ["D100", "D101", "D102", "D103"]
 "pyfixest/multcomp.py" = ["D103"]
 "pyfixest/summarize.py" = ["D103"]
 "pyfixest/visualize.py" = ["D103"]
 "scripts/*.py" = ["D103"]
 "benchmarks/gpu_big_benchmarks.py" = ["E402", "F821", "RUF059", "B018", "TRY300"]
+"benchmarks/modular/*.py" = ["D101", "D102", "D103"]
 
 [tool.ruff.lint.pycodestyle]
 max-doc-length = 88
@@ -302,6 +303,20 @@ prek = ">=0.3.4"
 [tool.pixi.feature.lint.tasks]
 lint = { cmd = "prek run --all-files", description = "Run all pre-commit hooks via prek" }
 
+# -- benchmark feature -----------------------------------------------------------------
+
+[tool.pixi.feature.benchmark]
+platforms = ["linux-64", "osx-arm64"]
+
+[tool.pixi.feature.benchmark.dependencies]
+r-arrow = "*"
+r-jsonlite = "*"
+juliaup = "*"
+
+[tool.pixi.feature.benchmark.tasks]
+_julia-setup = { cmd = """julia -e 'using Pkg; Pkg.add([Pkg.PackageSpec(name="FixedEffectModels", url="https://github.com/FixedEffects/FixedEffectModels.jl"), Pkg.PackageSpec("JSON3"), Pkg.PackageSpec("DataFrames"), Pkg.PackageSpec("Parquet2"), Pkg.PackageSpec("StatsModels")])'""" }
+benchmark = { cmd = "python benchmarks/modular/benchmark_main.py", depends-on = ["_setup", "_julia-setup"], description = "Run benchmarks (Python, R, Julia)" }
+
 # -- environments ----------------------------------------------------------------------
 
 [tool.pixi.environments]
@@ -315,3 +330,4 @@ py311-r = { features = ["py311", "r"], solve-group = "py311" }
 py312-r = { features = ["py312", "r"], solve-group = "py312" }
 docs = { features = ["docs"], solve-group = "default" }
 lint = { features = ["lint"], no-default-feature = true }
+benchmark = { features = ["benchmark", "r"] }
