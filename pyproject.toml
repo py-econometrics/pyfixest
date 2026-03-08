@@ -260,7 +260,7 @@ outputs = ["tests/data/ritest_results.csv"]
 env = { RETICULATE_PYTHON = "$CONDA_PREFIX/bin/python" }
 
 [tool.pixi.feature.r.tasks.test-r-hac]
-cmd = "pytest tests/test_hac_vs_fixest.py -v -n auto"
+cmd = "pytest tests -v -n auto -m hac"
 depends-on = ["_setup"]
 description = "HAC standard error tests vs R"
 env = { OMP_NUM_THREADS = "1", OPENBLAS_NUM_THREADS = "1", MKL_NUM_THREADS = "1", VECLIB_MAXIMUM_THREADS = "1", NUMEXPR_NUM_THREADS = "1" }
