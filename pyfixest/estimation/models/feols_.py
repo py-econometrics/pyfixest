@@ -2059,7 +2059,6 @@ class Feols(ResultAccessorMixin):
             # prediction errors; will throw error later;
             # divide by sqrt(weights) as self._X is "weighted"
             X = self._X
-            X_index = np.arange(self._N)
             y_hat = (
                 self._Y_hat_link
                 if type == "link" or self._method == "feols"
@@ -2068,21 +2067,27 @@ class Feols(ResultAccessorMixin):
             n_observations = self._N
         else:
             newdata = _narwhals_to_pandas(newdata).reset_index(drop=True)
+            n_observations = newdata.shape[0]
             context = FORMULAIC_TRANSFORMS | {**self._context}
-            X = self._model_spec[_ModelMatrixKey.main].rhs.get_model_matrix(
-                newdata, context=context, na_action="ignore"
+            # Use na_action="drop" on each sub-spec separately because dependent variable
+            # may not be available in newdata, then intersect indices so a NaN in *any* variable
+            # (covariate or FE) marks the whole row as NaN in the output.
+            X_mm = self._model_spec[_ModelMatrixKey.main].rhs.get_model_matrix(
+                newdata, context=context, na_action="drop"
             )
-            y_hat = X[self._coefnames].to_numpy() @ self._beta_hat
+            valid_idx = X_mm.index.to_numpy()
             if self._has_fixef:
-                fixed_effects = self._model_spec[
+                fe_mm = self._model_spec[
                     _ModelMatrixKey.fixed_effects
-                ].get_model_matrix(newdata, context=context, na_action="ignore")
+                ].get_model_matrix(newdata, context=context, na_action="drop")
+                valid_idx = np.intersect1d(valid_idx, fe_mm.index.to_numpy())
+
                 if self._sumFE is None:
                     self.fixef(atol, btol)
                 fe_hat = (
                     pd.concat(
                         [
-                            fixed_effects[column].map(
+                            fe_mm.loc[valid_idx, column].map(
                                 {
                                     float(level): coefficient
                                     for level, coefficient in self._fixef_dict[
@@ -2090,15 +2095,25 @@ class Feols(ResultAccessorMixin):
                                     ].items()
                                 }
                             )
-                            for column in fixed_effects.columns
+                            for column in fe_mm.columns
                         ],
                         axis=1,
                     )
-                    .sum(axis=1, min_count=1)
+                    .sum(axis=1, skipna=False)
                     .to_numpy()
                 )
-                y_hat += fe_hat
-            n_observations = y_hat.shape[0]
+                # fixed effects estimates are nan if singletons or unseen levels
+                valid_idx = valid_idx[~np.isnan(fe_hat)]
+                fe_hat = fe_hat[~np.isnan(fe_hat)]
+
+            X_coef = X_mm.loc[valid_idx, self._coefnames].to_numpy()
+            y_hat = np.full(n_observations, np.nan)
+            y_hat[valid_idx] = X_coef @ self._beta_hat
+            if self._has_fixef:
+                y_hat[valid_idx] += fe_hat
+            # Pad X to full size; NaN rows yield NaN SE/CI via einsum propagation.
+            X = np.full((n_observations, X_coef.shape[1]), np.nan)
+            X[valid_idx] = X_coef
             if type == "response" and self._method == "fepois":
                 y_hat = np.exp(y_hat)
 
@@ -2108,7 +2123,6 @@ class Feols(ResultAccessorMixin):
                 nobs=n_observations,
                 yhat=y_hat,
                 X=X,
-                X_index=X_index,
                 alpha=alpha,
             )
             if interval == "prediction":

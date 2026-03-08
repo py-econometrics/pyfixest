@@ -366,15 +366,6 @@ def test_single_fit_feols(
                     f"py_predict_all != r_predict_all for {col}",
                 )
 
-            # currently, bug when using predict with newdata and i() or C() or "^" syntax
-            blocked_transforms = ["i(", "^", "poly("]
-            blocked_transform_found = any(bt in fml for bt in blocked_transforms)
-
-            if blocked_transform_found:
-                with pytest.raises(NotImplementedError):
-                    py_predict_newsample = mod.predict(
-                        newdata=data.iloc[0:100], atol=1e-08, btol=1e-08
-                    )
             else:
                 py_predict_newsample = mod.predict(
                     newdata=data.iloc[0:100], atol=1e-12, btol=1e-12
