@@ -206,7 +206,8 @@ class Formula:
     def fixed_effects_wrapped(self) -> formulaic.formula.Formula:
         """Wrapped fixed effects for proper encoding."""
         return formulaic.formula.Formula(
-            " + ".join(f"__fixed_effect__{term.factors}" for term in self.fixed_effects)
+            [f"__fixed_effect__{term.factors}" for term in self.fixed_effects],
+            _parser=DefaultFormulaParser(include_intercept=False),
         )
 
     @property
