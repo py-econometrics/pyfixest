@@ -4,16 +4,19 @@ from collections.abc import Callable, Mapping
 from importlib import import_module
 from typing import Any, Literal, cast
 
+import formulaic
 import numpy as np
 import pandas as pd
-from formulaic import Formula
+from formulaic.parser import DefaultFormulaParser
 from scipy.sparse import csc_matrix, diags, spmatrix
 from scipy.sparse.linalg import lsqr
 from scipy.stats import chi2, f, t
 
 from pyfixest.errors import VcovTypeNotSupportedError
 from pyfixest.estimation.api.utils import _ALL_SAMPLE, _AllSampleSentinel
+from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
 from pyfixest.estimation.formula import model_matrix as model_matrix_fixest
+from pyfixest.estimation.formula.model_matrix import _ModelMatrixKey
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.backends import BACKENDS
 from pyfixest.estimation.internals.demean_ import demean_model
@@ -43,8 +46,6 @@ from pyfixest.estimation.post_estimation.decomposition import (
 )
 from pyfixest.estimation.post_estimation.prediction import (
     _compute_prediction_error,
-    _get_fixed_effects_prediction_component,
-    get_design_matrix_and_yhat,
 )
 from pyfixest.estimation.post_estimation.ritest import (
     _decode_resampvar,
@@ -1681,7 +1682,9 @@ class Feols(ResultAccessorMixin):
             # if output = "numpy", type of Y, X is not np.ndarray but a formulaic object
             # which cannot be pickled by joblib
 
-            Y, X = Formula(fml_dummies).get_model_matrix(self._data, output=output)
+            Y, X = formulaic.Formula(fml_dummies).get_model_matrix(
+                self._data, output=output
+            )
             xnames = X.model_spec.column_names
             Y = Y.toarray().flatten() if output == "sparse" else Y.flatten()
             X = csc_matrix(X) if output == "sparse" else X
@@ -1913,13 +1916,6 @@ class Feols(ResultAccessorMixin):
         """
         weights_sqrt = np.sqrt(self._weights).flatten()
 
-        blocked_transforms = ["i(", "^", "poly("]
-        for bt in blocked_transforms:
-            if bt in self._fml:
-                raise NotImplementedError(
-                    f"The fixef() method is currently not supported for models with '{bt}' transformations."
-                )
-
         if not self._has_fixef:
             raise ValueError("The regression model does not have fixed effects.")
 
@@ -1928,15 +1924,10 @@ class Feols(ResultAccessorMixin):
                 "The fixef() method is currently not supported for IV models."
             )
 
-        depvars, rhs = self._fml.split("~")
-        covars, fixef_vars = rhs.split("|")
-
-        fixef_vars_list = fixef_vars.split("+")
-        fixef_vars_C = [f"C({x})" for x in fixef_vars_list]
-        fixef_fml = "+".join(fixef_vars_C)
-
-        Y, X = Formula(f"{depvars} ~ {covars}").get_model_matrix(
-            self._data, output="pandas", context=self._context
+        Y, X = self._model_spec["second_stage"].get_model_matrix(
+            self._data,
+            output="pandas",
+            context=FORMULAIC_TRANSFORMS | {**self._context},
         )
         Y = Y.to_numpy().flatten().astype(np.float64)
         if self._X_is_empty:
@@ -1949,8 +1940,20 @@ class Feols(ResultAccessorMixin):
                 # equation (5.2) in Stammann (2018) http://arxiv.org/abs/1707.01815
                 Y = self._Y_hat_link
             uhat = (Y - X @ self._beta_hat).flatten()
-        D2 = Formula("-1+" + fixef_fml).get_model_matrix(self._data, output="sparse")
-        cols = D2.model_spec.column_names
+        # one-hot encoding of fixed effects (treatment coding: reference level dropped)
+        D2 = formulaic.Formula(
+            [f"C({fe})" for fe in self.FixestFormula.fixed_effects_wrapped],
+            _parser=DefaultFormulaParser(include_intercept=False),
+        ).get_model_matrix(
+            self._data,
+            output="sparse",
+            ensure_full_rank=False,
+            context=FORMULAIC_TRANSFORMS,
+            transform_state=self._model_spec[
+                _ModelMatrixKey.fixed_effects
+            ].transform_state,
+        )
+        one_hot_encoded_fixed_effects = D2.model_spec.column_names
 
         if self._has_weights:
             uhat *= weights_sqrt
@@ -1960,7 +1963,7 @@ class Feols(ResultAccessorMixin):
         alpha = lsqr(D2, uhat, atol=atol, btol=btol)[0]
 
         res: dict[str, dict[str, float]] = {}
-        for i, col in enumerate(cols):
+        for i, col in enumerate(one_hot_encoded_fixed_effects):
             variable, level = _extract_variable_level(col)
             # check if res already has a key variable
             if variable not in res:
@@ -2064,15 +2067,38 @@ class Feols(ResultAccessorMixin):
             )
             n_observations = self._N
         else:
-            y_hat, X, X_index = get_design_matrix_and_yhat(
-                model=self,
-                newdata=newdata,
-                context=self._context,
+            newdata = _narwhals_to_pandas(newdata).reset_index(drop=True)
+            context = FORMULAIC_TRANSFORMS | {**self._context}
+            X = self._model_spec[_ModelMatrixKey.main].rhs.get_model_matrix(
+                newdata, context=context, na_action="ignore"
             )
-            y_hat += _get_fixed_effects_prediction_component(
-                model=self, newdata=newdata, atol=atol, btol=btol
-            )
-            n_observations = newdata.shape[0]
+            y_hat = X[self._coefnames].to_numpy() @ self._beta_hat
+            if self._has_fixef:
+                fixed_effects = self._model_spec[
+                    _ModelMatrixKey.fixed_effects
+                ].get_model_matrix(newdata, context=context, na_action="ignore")
+                if self._sumFE is None:
+                    self.fixef(atol, btol)
+                fe_hat = (
+                    pd.concat(
+                        [
+                            fixed_effects[column].map(
+                                {
+                                    float(level): coefficient
+                                    for level, coefficient in self._fixef_dict[
+                                        column
+                                    ].items()
+                                }
+                            )
+                            for column in fixed_effects.columns
+                        ],
+                        axis=1,
+                    )
+                    .sum(axis=1, min_count=1)
+                    .to_numpy()
+                )
+                y_hat += fe_hat
+            n_observations = y_hat.shape[0]
             if type == "response" and self._method == "fepois":
                 y_hat = np.exp(y_hat)
 

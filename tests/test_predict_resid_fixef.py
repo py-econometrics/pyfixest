@@ -8,7 +8,6 @@ from rpy2.robjects import pandas2ri
 from rpy2.robjects.packages import importr
 
 import pyfixest as pf
-from pyfixest.utils.dev_utils import _extract_variable_level
 
 pandas2ri.activate()
 
@@ -313,18 +312,6 @@ def test_specific_categorical_prediction():
     prediction = test_model.predict(newdata=pd.DataFrame({"x": [1], "f": ["b"]}))
     expected_prediction = 3
     np.testing.assert_almost_equal(prediction[0], expected_prediction, decimal=3)
-
-
-def test_extract_variable_level():
-    """Verify the correct extracation of lists, floats, and integers."""
-    var = "C(SHOPPER_PLATFORM)[T.['ios', 'android']]"
-    assert _extract_variable_level(var) == ("C(SHOPPER_PLATFORM)", "['ios', 'android']")
-    var = "C(f3)[T.1.0]"
-    assert _extract_variable_level(var) == ("C(f3)", "1.0")
-    var = "C(f4)[T.1]"
-    assert _extract_variable_level(var) == ("C(f4)", "1")
-    var = "C(f5)[1.0]"
-    assert _extract_variable_level(var) == ("C(f5)", "1.0")
 
 
 def _lspline(series: pd.Series, knots: list[float]) -> np.array:

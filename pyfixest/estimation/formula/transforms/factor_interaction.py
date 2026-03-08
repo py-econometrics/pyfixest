@@ -140,7 +140,7 @@ def _encode_i(
         )
     elif ref2 is None and bin2 is None and _is_numeric(var2):
         # (ii) interaction with continuous variable
-        result = dummies.multiply(var2, axis=0)
+        result = dummies.multiply(var2.to_numpy(), axis=0)
         result.rename(
             columns={
                 level: f"{factor_name}::{level}:{var2_name}"
@@ -226,9 +226,12 @@ def _encode_factor(
     )
     dummies = encoded.__wrapped__
     if "levels" not in contrasts_state:
-        encoder_state[f"__contrasts_{data.name}__"].update(
-            {"levels": dummies.columns.tolist()}
-        )
+        # Store the full category list (including the reference level dropped by
+        # reduced_rank) so that during prediction encode_contrasts can correctly
+        # identify and drop the same reference level rather than dropping the
+        # first level of the already-reduced set.
+        levels = contrasts_state.get("categories", dummies.columns.tolist())
+        encoder_state[f"__contrasts_{data.name}__"].update({"levels": levels})
     return dummies
 
 
