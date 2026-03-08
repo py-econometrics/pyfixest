@@ -4,6 +4,7 @@ Tests the Rust-backed implementations via their Python wrappers in vcov_utils.
 """
 
 import numpy as np
+import pytest
 
 from pyfixest.estimation.internals.vcov_utils import (
     _dk_meat_panel,
@@ -17,6 +18,7 @@ from pyfixest.estimation.internals.vcov_utils import (
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.hac
 class TestNwMeatTime:
     def test_lag_zero_equals_xtx(self):
         """With lag=0, meat = S'S (Bartlett weight[0]=0.5 → 0.5*(S'S + S'S))."""
@@ -72,6 +74,7 @@ class TestNwMeatTime:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.hac
 class TestNwMeatPanel:
     @staticmethod
     def _make_balanced_panel(n_units, n_periods, k, rng):
@@ -230,6 +233,7 @@ class TestNwMeatPanel:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.hac
 class TestDkMeatPanel:
     def test_single_obs_per_time(self):
         """When there's one obs per time period, DK should match time-series NW."""
