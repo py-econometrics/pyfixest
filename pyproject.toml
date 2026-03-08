@@ -78,7 +78,7 @@ exclude = [
 
 [tool.pytest.ini_options]
 addopts = [
-    "-v",
+    #    "-v",  # disabled to take advantage of pytest-sugar
     "--strict-markers",
     "--strict-config",
     "--cov=pyfixest",
