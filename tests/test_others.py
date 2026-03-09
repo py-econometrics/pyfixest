@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import polars as pl
+import pytest
 
 from pyfixest.estimation import feols, fepois
 from pyfixest.report.utils import (
@@ -211,6 +212,69 @@ def test_rename_event_study_coefs():
 def _foo():
     "Simulate a callable for testing context capture behavior."
     ...
+
+
+@pytest.mark.parametrize(
+    "fml",
+    [
+        "Y ~ i(f1) | f2",
+        "Y ~ i(f1, ref=1.0) | f2",
+        "Y ~ i(f1, X1) | f2",
+        "Y ~ i(f1, X1) + X2 | f2",
+    ],
+)
+def test_predict_newdata_i_transform(fml):
+    """Test predict(newdata=...) works for models using the i() transform."""
+    data = get_data(N=500, seed=42).dropna()
+    newdata = data.iloc[:100]
+
+    fit = feols(fml, data=data)
+    pred_full = fit.predict()
+    pred_new = fit.predict(newdata=newdata)
+
+    assert pred_full.shape[0] == fit._N
+    assert pred_new.shape[0] == len(newdata)
+
+
+@pytest.mark.parametrize(
+    "fml",
+    [
+        "Y ~ poly(X1, 2)",
+        "Y ~ poly(X1, 2) | f1",
+        "Y ~ poly(X1, 2) + X2 | f1 + f2",
+    ],
+)
+def test_predict_newdata_poly_transform(fml):
+    """Test predict(newdata=...) works for models using poly()."""
+    data = get_data(N=500, seed=42).dropna()
+    newdata = data.iloc[:100]
+
+    fit = feols(fml, data=data)
+    pred_full = fit.predict()
+    pred_new = fit.predict(newdata=newdata)
+
+    assert pred_full.shape[0] == fit._N
+    assert pred_new.shape[0] == len(newdata)
+
+
+@pytest.mark.parametrize(
+    "fml",
+    [
+        "Y ~ X1 | f1^f2",
+        "Y ~ X1 + X2 | f1^f2",
+    ],
+)
+def test_predict_newdata_fe_interaction(fml):
+    """Test predict(newdata=...) works for models with fixed-effect interactions (^)."""
+    data = get_data(N=500, seed=42).dropna()
+    newdata = data.iloc[:100]
+
+    fit = feols(fml, data=data)
+    pred_full = fit.predict()
+    pred_new = fit.predict(newdata=newdata)
+
+    assert pred_full.shape[0] == fit._N
+    assert pred_new.shape[0] == len(newdata)
 
 
 def test_context_capture():
