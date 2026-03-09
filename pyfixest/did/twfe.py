@@ -1,4 +1,4 @@
-from typing import Optional, cast
+from typing import cast
 
 import pandas as pd
 
@@ -47,9 +47,9 @@ class TWFE(DID):
         idname: str,
         tname: str,
         gname: str,
-        xfml: Optional[str] = None,
+        xfml: str | None = None,
         att: bool = True,
-        cluster: Optional[str] = "idname",
+        cluster: str | None = "idname",
     ) -> None:
         super().__init__(
             data=data,
@@ -95,8 +95,8 @@ class TWFE(DID):
         self,
         alpha: float = 0.05,
         figsize: tuple[int, int] = (500, 300),
-        yintercept: Optional[int] = None,
-        xintercept: Optional[int] = None,
+        yintercept: int | None = None,
+        xintercept: int | None = None,
         rotate_xticks: int = 0,
         title: str = "TWFE Event Study Estimate",
         coord_flip: bool = False,

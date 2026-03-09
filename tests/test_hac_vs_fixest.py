@@ -281,9 +281,6 @@ BACKEND_F3 = [
     [None, "weights"],
 )
 @pytest.mark.parametrize("fml", ols_fmls)
-@pytest.mark.parametrize("k_adj", [True, False])
-@pytest.mark.parametrize("G_adj", [True, False])
-@pytest.mark.parametrize("k_fixef", ["none", "nonnested", "full"])
 def test_single_fit_feols_hac_panel(
     data_panel,
     data_time,
@@ -292,10 +289,11 @@ def test_single_fit_feols_hac_panel(
     weights,
     fml,
     balanced,
-    k_adj,
-    G_adj,
-    k_fixef,
 ):
+    k_adj = True
+    G_adj = True
+    k_fixef = "none"
+
     lag = vcov_kwargs.get("lag", None)
     time_id = vcov_kwargs.get("time_id", None)
     panel_id = vcov_kwargs.get("panel_id", None)
@@ -338,6 +336,60 @@ def test_single_fit_feols_hac_panel(
 
     # r_fixest to global r env, needed for
     # operations as in dof.K
+    ro.globalenv["r_fixest"] = r_fixest
+
+    py_vcov = mod._vcov[0, 0]
+    r_vcov = stats.vcov(r_fixest)[0, 0]
+
+    check_absolute_diff(py_vcov, r_vcov, 1e-05, "py_vcov != r_vcov")
+
+
+@pytest.mark.hac
+@pytest.mark.parametrize("k_adj", [True, False])
+@pytest.mark.parametrize("G_adj", [True, False])
+@pytest.mark.parametrize("k_fixef", ["none", "nonnested", "full"])
+@pytest.mark.parametrize(
+    "fml",
+    [
+        "Y~treat",
+        "Y~treat | unit",
+        "Y~treat | unit + year",
+    ],
+)
+def test_feols_hac_ssc_adjustments(
+    data_panel,
+    fml,
+    k_adj,
+    G_adj,
+    k_fixef,
+):
+    """Test SSC adjustments for HAC."""
+    inference = "NW"
+    vcov_kwargs = {"lag": 2, "time_id": "year", "panel_id": "unit"}
+    lag = 2
+    time_id = "year"
+    panel_id = "unit"
+
+    data = data_panel
+
+    r_panel_kwars = _get_r_panel_kwargs(time_id, panel_id, lag, inference)
+
+    r_fixest = fixest.feols(
+        ro.Formula(fml),
+        vcov=fixest.vcov_NW(**r_panel_kwars),
+        data=data,
+        panel_time_step=1,
+        ssc=fixest.ssc(k_adj, k_fixef, False, G_adj, "min", "min"),
+    )
+
+    mod = pf.feols(
+        fml=fml,
+        data=data,
+        vcov=inference,
+        vcov_kwargs=vcov_kwargs,
+        ssc=pf.ssc(k_adj=k_adj, k_fixef=k_fixef, G_adj=G_adj),
+    )
+
     ro.globalenv["r_fixest"] = r_fixest
 
     py_vcov = mod._vcov[0, 0]

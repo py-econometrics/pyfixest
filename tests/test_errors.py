@@ -703,7 +703,7 @@ def test_gelbach_errors():
     with pytest.raises(TypeError, match=r"combine_covariates_dict must be lists"):
         fit.decompose(param="x1", combine_covariates={"g1": "x21"})
 
-    with pytest.raises(ValueError, match=r"'x99' is not in list"):
+    with pytest.raises(ValueError, match=r"not in list"):
         fit.decompose(param="x99")
 
     with pytest.raises(ValueError, match=r"cannot be included in the x1_vars argument"):

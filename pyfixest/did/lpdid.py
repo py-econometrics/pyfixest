@@ -1,4 +1,4 @@
-from typing import Optional, Union, cast
+from typing import cast
 
 import numpy as np
 import pandas as pd
@@ -52,10 +52,10 @@ class LPDID(DID):
         xfml: str,
         att: bool,
         cluster: str,
-        vcov: Optional[Union[VcovTypeOptions, dict[str, str]]] = None,
-        pre_window: Optional[int] = None,
-        post_window: Optional[int] = None,
-        never_treated: Optional[int] = 0,
+        vcov: VcovTypeOptions | dict[str, str] | None = None,
+        pre_window: int | None = None,
+        post_window: int | None = None,
+        never_treated: int | None = 0,
     ):
         # if att:
         #    raise NotImplementedError("ATT is not yet supported.")
@@ -135,9 +135,9 @@ class LPDID(DID):
     def iplot(
         self,
         alpha: float = 0.05,
-        figsize: Optional[tuple[int, int]] = None,
-        yintercept: Optional[int] = None,
-        xintercept: Optional[int] = None,
+        figsize: tuple[int, int] | None = None,
+        yintercept: int | None = None,
+        xintercept: int | None = None,
         rotate_xticks: int = 0,
         title: str = "LPDID Event Study Estimate",
         coord_flip: bool = False,
@@ -202,8 +202,8 @@ def _lpdid_estimate(
     pre_window: int,
     post_window: int,
     att: bool = True,
-    vcov: Optional[Union[VcovTypeOptions, dict[str, str]]] = None,
-    xfml: Optional[str] = None,
+    vcov: VcovTypeOptions | dict[str, str] | None = None,
+    xfml: str | None = None,
 ) -> pd.DataFrame:
     """
     Estimate a  Difference-in-Differences / Event Study Model via Linear Projections.

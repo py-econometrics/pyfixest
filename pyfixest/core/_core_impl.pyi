@@ -32,3 +32,19 @@ def _count_fixef_fully_nested_all_rs(
     fe_data: NDArray[np.uint64],
 ) -> tuple[np.ndarray, int]: ...
 def _detect_singletons_rs(ids: NDArray[np.uint32]) -> NDArray[np.bool_]: ...
+def _nw_meat_panel_rs(
+    scores: NDArray[np.float64],
+    starts: NDArray[np.uint64],
+    counts: NDArray[np.uint64],
+    lag: int,
+) -> NDArray[np.float64]: ...
+def _nw_meat_time_rs(
+    scores: NDArray[np.float64],
+    time_arr: NDArray[np.float64],
+    lag: int,
+) -> NDArray[np.float64]: ...
+def _dk_meat_panel_rs(
+    scores: NDArray[np.float64],
+    idx: NDArray[np.uint64],
+    lag: int,
+) -> NDArray[np.float64]: ...
