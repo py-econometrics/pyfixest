@@ -299,14 +299,14 @@ pf.coefplot([fit_ols_b, fit_iv_b], keep="immigration")
 
 **Estimating the effect of feature adoption on revenue when users don't comply with treatment assignment.**
 
-A tech company runs an A/B test: half of users are *encouraged* (shown a banner) to try a 
-new feature. But not everyone who sees the banner actually adopts the feature, and some 
+A tech company runs an A/B test: half of users are *encouraged* (shown a banner) to try a
+new feature. But not everyone who sees the banner actually adopts the feature, and some
 control users discover it on their own. The simple intent-to-treat (ITT) comparison ---
-contrasting encouraged and non-encouraged groups --- estimates the effect of encouragement, 
+contrasting encouraged and non-encouraged groups --- estimates the effect of encouragement,
 not of adoption itself, and these two quantities differ whenever compliance is imperfect.
 
-To recover the effect of actual adoption, we partition users into four compliance types: 
-*compliers* who adopt if and only if encouraged, *always-takers* who adopt regardless, 
+To recover the effect of actual adoption, we partition users into four compliance types:
+*compliers* who adopt if and only if encouraged, *always-takers* who adopt regardless,
 *never-takers* who never adopt, and *defiers* who do the opposite of their assignment. We
 then invoke **monotonicity**: no user is a defier, meaning encouragement can only weakly
 increase the probability of adoption.
