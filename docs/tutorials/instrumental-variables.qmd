@@ -8,6 +8,11 @@ format:
 toc: true
 toc-title: "On this page"
 toc-location: left
+execute:
+  freeze: false
+bibliography: references.bib
+nocite: |
+  @wooldridge2010, @neal2020, @lundborg2017, @borusyak2022, @oleapflueger2013, @stockyogo2005
 ---
 
 ::: {.callout-note}
@@ -15,22 +20,97 @@ toc-location: left
 You should have read the [Getting Started](../getting-started.qmd) page and have `pyfixest` installed.
 :::
 
+```{=html}
+<style>
+.column-margin figure {
+  margin-top: -1.8em;
+}
+.column-margin figcaption {
+  font-size: 0.72em;
+  margin-top: 0.15em;
+  line-height: 1.3;
+}
+.margin-note {
+  font-size: 0.75em;
+  line-height: 1.4;
+  color: #444;
+}
+.appendix-math .math.display {
+  font-size: 0.85em;
+}
+</style>
+```
+
 ## Introduction
 
-Ordinary Least Squares (OLS) delivers biased estimates when a regressor is correlated with the error term --- due to omitted variables, simultaneity, or measurement error. **Instrumental Variables (IV)** estimation solves this by finding a variable $Z$ that:
+Estimation of a linear model via Ordinary Least Squares (OLS) yields biased and inconsistent estimates when a regressor is correlated with the error term — a problem known as endogeneity, which arises, for example, in the presence of unobserved confounders. **Instrumental Variable (IV)** estimation addresses this by finding a variable $Z$ that satisfies three conditions:
 
-1. **Relevance**: $Z$ is correlated with the endogenous regressor $X$.
-2. **Exclusion**: $Z$ affects the outcome $Y$ *only through* $X$.
+```{dot}
+//| column: margin
+//| fig-cap: "**Figure 1.** IV setup. Z is the instrument, T the endogenous treatment, Y the outcome, and U an unobserved confounder. Dashed elements are unobserved. U creates a backdoor path T ← U → Y, biasing OLS."
+//| fig-width: 2
+//| fig-height: 2
+digraph IV {
+    layout=neato;
+    node [shape=circle, fontname="serif", fixedsize=true, width=0.3, fontsize=11];
+    edge [arrowsize=0.5];
 
-The two-stage least squares (2SLS) estimator first regresses $X$ on $Z$ (and controls), then uses the predicted $\hat{X}$ in the outcome equation. In `pyfixest`, the IV syntax is:
+    Z [label="Z", pos="-0.25,1.2!"];
+    U [label="U", style=dashed, pos="1.0,1.2!"];
+    T [label="T", pos="0,0!"];
+    Y [label="Y", pos="2,0!"];
+
+    Z -> T;
+    T -> Y;
+    U -> T [style=dashed];
+    U -> Y [style=dashed];
+}
+```
+
+1. **Relevance**: $Z$ has a causal effect on $T$.
+2. **Exclusion Restriction**: $Z$'s causal effect on $Y$ is fully mediated by $T$.
+3. **Instrumental Unconfoundedness**: $Z$ has no unobserved common causes with $Y$.
+
+In Figure 1, the path from $Z$ to $T$ shows relevance, no path from $Z$ to $Y$ encodes the exclusion restriction, and no path from the unobservable to the instrument shows the instrumental unconfoundedness.
+
+```{dot}
+//| column: margin
+//| fig-cap: "**Figure 2.** After 2SLS first stage. T is replaced by T̂ (fitted values from projecting T onto Z). The backdoor path U → T̂ is eliminated — only the exogenous variation in T driven by Z remains."
+//| fig-width: 2
+//| fig-height: 2
+digraph IV2 {
+    layout=neato;
+    node [shape=circle, fontname="serif", fixedsize=true, width=0.3, fontsize=11];
+    edge [arrowsize=0.5];
+
+    Z  [label="Z",  pos="-0.25,1.2!"];
+    U  [label="U",  style=dashed, pos="1.0,1.2!"];
+    Th [label="T̂", pos="0,0!"];
+    Y  [label="Y",  pos="2,0!"];
+
+    Z  -> Th;
+    Th -> Y;
+    U  -> Y [style=dashed];
+}
+```
+
+`pyfixest` estimates the IV using two-stage least squares (2SLS) estimator where it first projects $T$ onto $Z$ (and all other exogenous variables) to obtain $\hat{T}$, then uses $\hat{T}$ to estimate the causal effect of $T$ on $Y$. Because $\hat{T}$ is not a function of $U$, we can think of the dashed path from the unobserved variable as blocked or removed.
+
+In `pyfixest`, the IV syntax is:
 
 ```
 Y ~ exogenous_controls | fixed_effects | endogenous ~ instrument
 ```
 
-This tutorial walks through three applications --- each highlighting a different reason researchers reach for IV.
+::: {.callout-note}
+## Fixed Effects with IV
 
-```python
+When panel data are available, endogeneity may also stem from time-invariant unobserved heterogeneity — unit-specific characteristics (e.g., ability, culture, geography) that are fixed over time but correlated with both treatment and outcome. `pyfixest` addresses this simultaneously by applying a within-transformation (demeaning) to absorb unit fixed effects before running 2SLS, following the FE-IV approach described in @wooldridge2010 [Ch. 11]. Crucially, after demeaning, the instrument must retain within-unit variation over time — time-invariant instruments are eliminated along with the fixed effects and cannot be used for identification. When both fixed effects and an instrument are specified, `pyfixest` therefore isolates the clean variation in treatment that is both within-unit and driven by the instrument, blocking confounding from time-invariant unobservables and time-varying endogenous confounders simultaneously.
+:::
+
+This tutorial walks through three applications, all addressing endogeneity from **selection bias — a form of Omitted Variable Bias (OVB) where unobserved confounders drive both selection into treatment and the outcome.** Applications 1 and 2 operate in observational settings — exploiting quasi-random variation from individual-level selection and regional-level sorting respectively — while Application 3 arises in an experimental setting where encouragement is randomly assigned but treatment take-up remains subject to self-selection.
+
+```{python}
 import pyfixest as pf
 ```
 
@@ -39,22 +119,26 @@ import pyfixest as pf
 
 **Does having children reduce women's earnings?**
 
-A naive regression of earnings on fertility is biased: women with stronger career ambitions may both earn more *and* have fewer children. Since career ambition is positively correlated with earnings but negatively correlated with fertility, OLS *overstates* the motherhood penalty. Lundborg, Plug & Rasmussen (2017) exploit the quasi-random success of IVF treatment as an instrument for fertility among women who sought treatment.
+A naive regression of earnings on fertility is biased: women with stronger career ambitions may both earn more and have fewer children. Since career ambition is positively correlated with earnings but negatively correlated with fertility, OLS overstates the motherhood penalty. This is a classic case of OVB: career ambition is unobserved, yet it drives both fertility decisions and earnings outcomes. @lundborg2017 exploit the quasi-random success of IVF treatment as an instrument for fertility among women who sought treatment.
+
+The relevance assumption holds because IVF treatment success creates exogenous variation in the likelihood of having children. The exclusion restriction is supported by the fact that observed working histories of successfully and unsuccessfully treated women are virtually identical before they seek IVF treatment — meaning IVF success is essentially random with respect to labor market potential.
+
+Instrumental unconfoundedness is plausible in this setting, as IVF success is largely determined by biological factors outside a woman's control, making it difficult to conceive of an unobserved variable that jointly drives both the success of treatment and labor market outcomes.
 
 ### Synthetic Data
 
-```python
+```{python}
 ivf_df = pf.get_ivf_data()
 ivf_df.head()
 ```
 
-
+The dataset has $N = 2{,}000$ observations. The **true causal effect** of `num_children` on `earnings` is $\beta = -0.15$ — this is what IV should recover (full DGP in the [Appendix](#appendix-dgp-design-notes)).
 
 ### Naive OLS
 
 Without accounting for endogeneity, OLS overstates the penalty because career ambition is an omitted variable that increases earnings while reducing fertility:
 
-```python
+```{python}
 fit_ols = pf.feols("earnings ~ num_children", data=ivf_df)
 fit_ols.summary()
 ```
@@ -65,9 +149,23 @@ fit_ols.summary()
 
 ### IV Estimation
 
-Using `ivf_success` as an instrument for `num_children`:
+A natural instrument is `ivf_success`, used as an instrument for `num_children`:
 
-```python
+::: {.column-margin}
+::: {.margin-note}
+**2SLS = IV = Wald estimator**
+
+With a single instrument $Z$, the 2SLS estimator is numerically identical to the IV estimator:
+
+$$\hat{\beta}_{IV} = \frac{\widehat{\text{Cov}}(Y,\, Z)}{\widehat{\text{Cov}}(T,\, Z)}$$
+
+With a binary instrument, this simplifies to the **Wald estimator**:
+
+$$\hat{\beta}_{\text{Wald}} = \frac{\bar{Y}_{Z=1} - \bar{Y}_{Z=0}}{\bar{T}_{Z=1} - \bar{T}_{Z=0}}$$
+:::
+:::
+
+```{python}
 fit_iv = pf.feols("earnings ~ 1 | num_children ~ ivf_success", data=ivf_df)
 fit_iv.summary()
 ```
@@ -78,10 +176,14 @@ The IV estimate is closer to the true effect of -0.15 --- less negative than the
 
 ### Compare OLS and IV
 
-```python
+The table below places OLS and IV side by side.
+
+```{python}
 pf.etable(
     [fit_ols, fit_iv],
     labels={"earnings": "Earnings", "num_children": "Number of Children"},
+    model_heads=["OLS", "IV"],
+
     caption="Motherhood Penalty: OLS vs IV",
 )
 ```
@@ -90,41 +192,187 @@ pf.etable(
 
 ### First-Stage Diagnostics
 
-A strong first stage is essential for IV to work. We check the first-stage F-statistic and run `IV_Diag()`:
+The only IV diagnostic currently available in pyfixest is the IV weakness (relevance) test, which provides two statistics: `f_stat` and `effective_f`. A strong first stage is essential for IV to work. We check the first-stage F-statistic (iid errors) and effective F-statistic (a robust version, @oleapflueger2013) and run `IV_Diag()`:
 
-```python
+```{python}
+# first_stage() must be called before IV_Diag() — it fits the first-stage OLS
+# regression and stores the model in fit_iv._model_1st_stage, which IV_Diag() requires.
 fit_iv.first_stage()
+fit_iv._model_1st_stage.summary()
 ```
 
-
-```python
+```{python}
 fit_iv.IV_Diag()
+print(f"First-stage F-statistic : {fit_iv._f_stat_1st_stage:.2f}")
+print(f"Effective F-statistic   : {fit_iv._eff_F:.2f}")
 ```
 
+Both F-statistics are well above 10, confirming that IVF success is a strong predictor of fertility. For publication-quality work, refer to the critical value tables in @oleapflueger2013 for effective F-statistic (indexed by number of instruments and tolerable bias level $\tau$) — `pyfixest` reports the statistic only and does not compute these critical values.
 
-The first-stage F-statistic should be well above 10, confirming that IVF success is a strong predictor of fertility.
 
+## Application 2: Shift-Share (Bartik) Instruments
 
-## Application 2: A/B Encouragement Design
+**Does immigration affect local wages?**
 
-**Estimating the effect of feature adoption on revenue when users don't comply with treatment assignment.**
+A long-standing question in labor economics is how immigration affects local wages. The challenge is that regions that attract immigrants may also have booming labor markets, biasing OLS upward. The **shift-share** (Bartik) instrument, formalized by @borusyak2022, which is the weighted average of external shocks using local exposure shares as weights, constructs predicted local immigration from:
 
-A tech company runs an A/B test: half of users are *encouraged* (shown a banner) to try a new feature. But not everyone who sees the banner actually adopts the feature, and some control users discover it on their own. The simple intent-to-treat (ITT) comparison underestimates the effect on users who actually adopt. Random assignment serves as an instrument for actual adoption, and the IV estimate recovers the **Local Average Treatment Effect (LATE)** on compliers.
+$$
+B_r = \sum_{k=1}^{K} s_{rk} \cdot g_k
+$$
+
+where $s_{rk}$ is region $r$'s historical share of immigrants from origin $k$, and $g_k$ is the national inflow from origin $k$. The key identification assumption in @borusyak2022 is that the *shocks* $g_k$ are as-good-as-randomly assigned across origin countries — uncorrelated with unobserved local labor demand in destination regions. The historical shares $s_{rk}$ can themselves be endogenous (regions that historically attracted many immigrants may differ in other ways); what matters is that the national inflows that drive the instrument are exogenous.
+
+::: {.callout-note}
+## Key Insight from @borusyak2022
+
+The shift-share IV coefficient estimated at the *region* level is numerically identical to an IV estimated at the *shock* (origin-country) level — where regional outcomes and treatment are first averaged up using exposure weights, and shocks instrument for aggregated treatment. Identification therefore lives at the shock level. This means validity should be justified, tested, and visualized using shock-level regressions — not location-level ones — even though the 2SLS is run at the region level. Hence, all IV assumptions — relevance, exclusion restriction, and instrumental unconfoundedness — should be verified at the shock level, not the location level. In practice this means running shock-level regressions to inspect the first stage, test balance, and visualise identifying variation.
+:::
 
 ### Synthetic Data
 
-```python
+```{python}
+bartik_df = pf.get_bartik_data()
+bartik_df.head()
+```
+
+The dataset has $N = 300$ regions. The **true causal effect** of `immigration` on `wages` is $\beta = -0.3$ — this is what IV should recover (full DGP in the [Appendix](#appendix-dgp-design-notes)).
+
+### OLS vs IV
+
+As in the first application, we can compare the naive OLS and IV estimates.
+
+```{python}
+# OLS: biased because local demand drives both immigration and wages
+fit_ols_b = pf.feols("wages ~ immigration + log_population", data=bartik_df)
+
+# IV: using the Bartik instrument
+fit_iv_b = pf.feols(
+    "wages ~ log_population | immigration ~ bartik_instrument",
+    data=bartik_df,
+)
+```
+
+```{python}
+pf.etable(
+    [fit_ols_b, fit_iv_b],
+    labels={
+        "wages": "Wages",
+        "immigration": "Immigration",
+        "log_population": "Log Population",
+    },
+    model_heads=["OLS", "IV"],
+    caption="Effect of Immigration on Wages: OLS vs Bartik IV",
+)
+```
+
+OLS attenuates the negative wage effect (or may even show a positive coefficient) because local demand is a positive confounder. The IV estimate is closer to the true effect of -0.3.
+
+### Diagnostics
+
+@borusyak2022 recommend running shock-level regressions to inspect the first stage, since identification lives at the shock level. Because the synthetic data used here does not expose the underlying shares and shocks needed to construct those aggregates, the diagnostics below are run at the region level instead.
+
+```{python}
+# first_stage() must be called before IV_Diag()
+fit_iv_b.first_stage()
+fit_iv_b._model_1st_stage.summary()
+```
+
+```{python}
+fit_iv_b.IV_Diag()
+print(f"First-stage F-statistic : {fit_iv_b._f_stat_1st_stage:.2f}")
+print(f"Effective F-statistic   : {fit_iv_b._eff_F:.2f}")
+```
+
+The region-level first stage F-statistic and effective F-statistic both confirm the relevance of the Bartik instrument as a predictor of regional immigration, i.e., the values are well beyond 10. For precise critical values for effective F-statistic accounting for the number of instruments and acceptable bias, refer to the lookup tables in @oleapflueger2013 — `pyfixest` does not compute these automatically.
+
+We can also visualize the OLS and IV coefficient estimates together with their confidence intervals.
+
+```{python}
+pf.coefplot([fit_ols_b, fit_iv_b], keep="immigration")
+```
+
+
+
+
+
+## Application 3: A/B Encouragement Design
+
+**Estimating the effect of feature adoption on revenue when users don't comply with treatment assignment.**
+
+A tech company runs an A/B test: half of users are *encouraged* (shown a banner) to try a
+new feature. But not everyone who sees the banner actually adopts the feature, and some
+control users discover it on their own. The simple intent-to-treat (ITT) comparison ---
+contrasting encouraged and non-encouraged groups --- estimates the effect of encouragement,
+not of adoption itself, and these two quantities differ whenever compliance is imperfect.
+
+To recover the effect of actual adoption, we partition users into four compliance types:
+*compliers* who adopt if and only if encouraged, *always-takers* who adopt regardless,
+*never-takers* who never adopt, and *defiers* who do the opposite of their assignment. We
+then invoke **monotonicity**: no user is a defier, meaning encouragement can only weakly
+increase the probability of adoption.
+
+::: {.column-margin}
+::: {.margin-note}
+**No linearity assumed**
+
+The three IV assumptions (relevance, exclusion restriction, instrumental unconfoundedness) still apply — and are credible here given random assignment. What LATE additionally requires, beyond those, is only **monotonicity** — that no unit is a defier. Crucially, no linearity or homogeneity of the treatment effect is assumed. The resulting estimand is the average effect for compliers, without any restriction on the shape of the treatment-response function.
+:::
+:::
+
+Always-takers always take the treatment and never-takers never do, regardless of encouragement — the instrument simply has no effect on them. By the exclusion restriction, it cannot affect their outcomes either. The outcome difference between encouraged and non-encouraged groups therefore reflects only complier variation, scaled down by the share of compliers in the population. Dividing by the first stage — which under monotonicity equals that complier share — recovers the LATE.
+
+::: {.column-margin}
+::: {.margin-note style="margin-top: 5em;"}
+**LATE = CACE (Complier Average Causal Effect)**
+
+$$\text{LATE} = \text{CACE} = E[Y(1) - Y(0) \mid \text{Complier}]$$
+
+where $Y(1)$ and $Y(0)$ are **potential outcomes** — the outcome a unit would realize under treatment and under control, respectively.
+:::
+:::
+
+This is the identification argument behind the **Local Average Treatment Effect (LATE)**.
+The Wald estimand --- the ratio of the reduced-form effect of $Z$ on $Y$ to the first-stage
+effect of $Z$ on $T$,
+
+$$
+\beta_{Wald} = \frac{E[Y \mid Z=1] - E[Y \mid Z=0]}{E[T \mid Z=1] - E[T \mid Z=0]}
+$$
+
+::: {.column-margin}
+::: {.margin-note}
+**Why Wald = LATE**
+
+By the exclusion restriction, always-takers and never-takers have the same $Y$ regardless of $Z$, so they cancel in the numerator. Only compliers remain:
+
+$$E[Y|Z=1] - E[Y|Z=0]$$
+$$= P(\text{Complier}) \cdot E[Y(1)-Y(0) \mid \text{Complier}]$$
+
+Under monotonicity, the denominator equals the complier share:
+
+$$E[T|Z=1] - E[T|Z=0] = P(\text{Complier})$$
+
+Dividing $P(\text{Complier})$ cancels and we recover LATE.
+:::
+:::
+
+equals **LATE**, also known as the
+**Complier Average Causal Effect (CACE)**, under monotonicity. Since random assignment to encouragement serves as an instrument for actual adoption — where $T \in \{0,1\}$ denotes whether a user adopts the feature — the 2SLS estimator consistently estimates this Wald estimand, and therefore LATE.
+
+### Synthetic Data
+
+```{python}
 ab_df = pf.get_encouragement_data()
 ab_df.head()
 ```
 
-
+The dataset has $N = 4{,}000$ users. The **true LATE** of `adopted_feature` on `revenue` is $2.0$ — this is what IV should recover (full DGP in the [Appendix](#appendix-dgp-design-notes)).
 
 ### Three Estimands
 
 We estimate the **reduced form** (ITT), the **first stage**, and the **IV/LATE**:
 
-```python
+```{python}
 # Intent-to-treat (reduced form)
 fit_itt = pf.feols("revenue ~ assigned_treatment | user_type", data=ab_df)
 
@@ -136,11 +384,11 @@ fit_late = pf.feols("revenue ~ 1 | user_type | adopted_feature ~ assigned_treatm
 ```
 
 
-The Wald estimator says: $\text{LATE} = \frac{\text{ITT}}{\text{First Stage}} = \frac{\text{Cov}(Y, Z)}{\text{Cov}(D, Z)}$.
+The Wald estimator is: $\hat{\beta}_{\text{Wald}} = \frac{\widehat{\text{ITT}}}{\widehat{\text{First Stage}}} = \frac{\widehat{\text{Cov}}(Y,\, Z)}{\widehat{\text{Cov}}(D,\, Z)}$.
 
-Let's verify:
+We can verify this numerically using `pyfixest`:
 
-```python
+```{python}
 itt_coef = fit_itt.coef()["assigned_treatment"]
 fs_coef = fit_fs.coef()["assigned_treatment"]
 late_coef = fit_late.coef()["adopted_feature"]
@@ -155,7 +403,9 @@ print(f"IV/LATE coefficient:     {late_coef:.4f}")
 
 ### Compare All Three
 
-```python
+The table below places the ITT, first stage, and IV estimates side by side.
+
+```{python}
 pf.etable(
     [fit_itt, fit_fs, fit_late],
     labels={
@@ -170,86 +420,23 @@ pf.etable(
 
 
 
-```python
+The coefficient plot compares the ITT effect of encouragement on revenue with the IV (LATE) estimate of actual feature adoption. Because not all encouraged users adopt, the LATE is larger than the ITT — scaled up by the complier share.
+
+```{python}
 pf.coefplot([fit_itt, fit_late], keep="assigned_treatment|adopted_feature")
 ```
 
-
-
 ### IV Diagnostics
 
-```python
+Since the instrument (`assigned_treatment`) is fully randomized, the first stage is expected to be very strong and both statistics should comfortably exceed 10.
+
+```{python}
+# first_stage() must be called before IV_Diag()
+fit_late.first_stage()
 fit_late.IV_Diag()
+print(f"First-stage F-statistic : {fit_late._f_stat_1st_stage:.2f}")
+print(f"Effective F-statistic   : {fit_late._eff_F:.2f}")
 ```
-
-
-## Application 3: Shift-Share (Bartik) Instruments
-
-**Does immigration affect local wages?**
-
-A long-standing question in labor economics. The challenge: regions that attract immigrants may also have booming labor markets, biasing OLS upward. The **shift-share** (Bartik) instrument, formalized by Borusyak, Hull & Jaravel (2022), constructs predicted local immigration from:
-
-$$
-B_r = \sum_{k=1}^{K} s_{rk} \cdot g_k
-$$
-
-where $s_{rk}$ is region $r$'s historical share of immigrants from origin $k$, and $g_k$ is the national inflow from origin $k$. Because the instrument is constructed from *national* shocks interacted with *historical* shares, it is plausibly exogenous to current local labor demand.
-
-### Synthetic Data
-
-```python
-bartik_df = pf.get_bartik_data()
-bartik_df.head()
-```
-
-
-
-### OLS vs IV
-
-```python
-# OLS: biased because local demand drives both immigration and wages
-fit_ols_b = pf.feols("wages ~ immigration + log_population", data=bartik_df)
-
-# IV: using the Bartik instrument
-fit_iv_b = pf.feols(
-    "wages ~ log_population | immigration ~ bartik_instrument",
-    data=bartik_df,
-)
-```
-
-
-```python
-pf.etable(
-    [fit_ols_b, fit_iv_b],
-    labels={
-        "wages": "Wages",
-        "immigration": "Immigration",
-        "log_population": "Log Population",
-    },
-    caption="Effect of Immigration on Wages: OLS vs Bartik IV",
-)
-```
-
-
-
-OLS attenuates the negative wage effect (or may even show a positive coefficient) because local demand is a positive confounder. The IV estimate is closer to the true effect of -0.3.
-
-### Diagnostics
-
-```python
-fit_iv_b.first_stage()
-```
-
-
-```python
-fit_iv_b.IV_Diag()
-```
-
-
-```python
-pf.coefplot([fit_ols_b, fit_iv_b], keep="immigration")
-```
-
 
 
 ## IV Diagnostics in PyFixest
@@ -258,12 +445,14 @@ Weak instruments --- instruments that are only loosely correlated with the endog
 
 ### The First-Stage F-Statistic
 
-The `.first_stage()` method re-estimates the first-stage regression and computes the **first-stage F-statistic**, which tests $H_0\colon \pi = 0$ (all instrument coefficients are jointly zero). The classic rule of thumb is $F > 10$ (Stock & Yogo, 2005).
+The `.first_stage()` method re-estimates the first-stage regression and computes the **first-stage F-statistic**, which tests $H_0\colon \pi = 0$ (all instrument coefficients are jointly zero). The classic rule of thumb is $F > 10$ for iid errors (@stockyogo2005).
 
-The F-statistic adapts to your variance-covariance specification: if you fit the IV model with heteroskedasticity-robust or cluster-robust standard errors, the first-stage F-statistic is computed accordingly.
 
-```python
+```{python}
 # Re-use the motherhood penalty IV model
+# Note: IV_Diag() switches vcov to hetero internally for the effective F computation.
+# Reset to iid here to get the iid-based first-stage F-statistic.
+fit_iv.vcov("iid")
 fit_iv.first_stage()
 
 # The F-stat is stored as an attribute after calling first_stage()
@@ -275,7 +464,7 @@ print(f"First-stage p-value:     {fit_iv._p_value_1st_stage:.4f}")
 
 ### The Effective F-Statistic
 
-The standard F-statistic can be misleading when there are multiple endogenous regressors or when errors are non-homoskedastic. The **effective F-statistic** (Olea & Pflueger, 2013) is a more robust measure of instrument strength that remains valid under heteroskedasticity:
+The standard F-statistic can be misleading when there are multiple endogenous regressors or when errors are non-homoskedastic. The **effective F-statistic** (@oleapflueger2013) is a more robust measure of instrument strength that remains valid under heteroskedasticity:
 
 $$
 F_{\text{eff}} = \frac{\hat{\pi}' Q_{ZZ} \hat{\pi}}{\text{tr}(\hat{\Sigma} \, Q_{ZZ})}
@@ -283,9 +472,11 @@ $$
 
 where $\hat{\pi}$ are the first-stage coefficients on the excluded instruments, $Q_{ZZ} = Z'Z$, and $\hat{\Sigma}$ is the robust variance-covariance matrix of $\hat{\pi}$.
 
+@oleapflueger2013 provide tabulated critical values for $F_{\text{eff}}$ indexed by the effective degrees of freedom $K_{\text{eff}}$ and the maximum tolerable relative bias $\tau \in \{5\%,\, 10\%,\, 20\%,\, 30\%\}$. Under conditional homoscedasticity and no serial correlation, $K_{\text{eff}}$ reduces to the number of excluded instruments $L$, and with $L = 1$ and $\tau = 10\%$ the critical value is approximately 23.1 — above the conventional rule of thumb of 10. For publication-quality work, $F_{\text{eff}}$ should be compared against the tabulated Montiel Olea-Pflueger critical values for the relevant $K_{\text{eff}}$ and $\tau$. **`pyfixest` reports $F_{\text{eff}}$ only — critical values must be looked up manually.**
+
 The `.IV_Diag()` method computes both the standard F-statistic and the effective F-statistic in one call:
 
-```python
+```{python}
 fit_iv.IV_Diag()
 
 print(f"Standard F-statistic:  {fit_iv._f_stat_1st_stage:.1f}")
@@ -308,3 +499,159 @@ print(f"Effective F-statistic: {fit_iv._eff_F:.1f}")
 - [Regression Tables](regression-tables.qmd) --- customize publication-ready output tables.
 - [`Feiv` API Reference](../reference/estimation.models.feiv_.Feiv.qmd) --- full documentation of the IV estimator class.
 :::
+
+## Appendix: DGP Design Notes
+
+This appendix documents the design rationale, parameter choices, and verification checks for the three synthetic datasets used in this tutorial. All DGPs live in `pyfixest/utils/dgps.py`.
+
+### General Principle {.unlisted}
+
+Every DGP encodes a **true causal effect** as a named constant and introduces an **unobserved confounder** $U$ that creates OVB. The bias follows the formula:
+
+::: {.appendix-math}
+$$
+\text{plim}(\hat{\beta}_{\text{OLS}}) = \beta_{\text{true}} + \underbrace{\frac{\text{Cov}(T,\, U)}{\text{Var}(T)} \cdot \gamma_U}_{\text{OVB}}
+$$
+:::
+
+where $\gamma_U$ is the effect of $U$ on $Y$. IV recovers $\beta_{\text{true}}$ because the instrument $Z$ is uncorrelated with $U$ (instrumental unconfoundedness), so $\text{Cov}(Z, U) = 0$.
+
+---
+
+### App 1 — `get_ivf_data(N=2000, seed=1234)` {.unlisted}
+
+**Story:** Motherhood penalty. Career ambition is the unobserved confounder.
+
+**Instrument:** IVF treatment success — quasi-random conditional on seeking treatment.
+
+#### Structural equations
+
+| Variable | Equation |
+|---|---|
+| `career_ambition` ($U$) | $\sim \mathcal{N}(0,\,1)$ — unobserved |
+| `ivf_success` ($Z$) | $\sim \text{Bernoulli}(0.45)$ — instrument, $\perp U$ |
+| `num_children` ($T$) | $= 1.2 - 0.4\cdot U + 0.8\cdot Z + \mathcal{N}(0,\,0.5)$ |
+| `earnings` ($Y$) | $= 10 + 0.6\cdot U - 0.15\cdot T + \mathcal{N}(0,\,1)$ |
+
+#### Named parameters
+
+| Parameter | Value | Role |
+|---|---|---|
+| `true_effect` | $-0.15$ | Structural coefficient: children $\to$ earnings |
+| `ambition_on_children` | $-0.4$ | Confounder $\to$ $T$ (negative: ambition reduces fertility) |
+| `ambition_on_earnings` | $0.6$ | Confounder $\to$ $Y$ (positive: ambition raises earnings) |
+| `ivf_on_children` | $0.8$ | Instrument $\to$ $T$ (first-stage strength) |
+
+#### OVB derivation
+
+::: {.appendix-math}
+$$
+\text{Cov}(\text{num\_children},\, U) \approx -0.4 \cdot \text{Var}(U) = -0.4
+$$
+$$
+\text{Var}(\text{num\_children}) \approx (-0.4)^2 + (0.8)^2 \cdot 0.45 \cdot 0.55 + 0.25 \approx 0.57
+$$
+$$
+\text{OVB} = 0.6 \cdot \frac{-0.4}{0.57} \approx -0.42
+\qquad \Rightarrow \qquad
+\hat\beta_{\text{OLS}} \approx -0.15 + (-0.42) \approx -0.57
+$$
+:::
+
+OLS overstates the penalty roughly 4×. IV recovers $\approx -0.15$.
+
+#### Verification checks
+- First-stage coefficient on `ivf_success` $\approx 0.8$; $F \gg 10$.
+- OLS coefficient on `num_children` $\approx -0.57$ (more negative than true).
+- IV coefficient on `num_children` $\approx -0.15$.
+
+---
+
+### App 2 — `get_bartik_data(N=300, seed=1234)` {.unlisted}
+
+**Story:** Immigration and local wages. Local demand shock is the unobserved confounder.
+
+**Instrument:** Bartik shift-share — national inflow shocks interacted with historical settlement shares.
+
+#### Structural equations
+
+| Variable | Equation |
+|---|---|
+| `local_demand` ($U$) | $\sim \mathcal{N}(0,\,1)$ — unobserved |
+| `bartik_instrument` ($Z$) | $\sim \mathcal{N}(0,\,1)$ — instrument, $\perp U$ |
+| `log_population` | $= 2 + 0.1\cdot U + \mathcal{N}(0,\,0.3)$ — control |
+| `immigration` ($T$) | $= 0.5 + 0.7\cdot Z + 0.9\cdot U + \mathcal{N}(0,\,0.5)$ |
+| `wages` ($Y$) | $= 8 + 0.5\cdot U - 0.3\cdot T + 0.2\cdot\texttt{log\_pop} + \mathcal{N}(0,\,1)$ |
+
+#### Named parameters
+
+| Parameter | Value | Role |
+|---|---|---|
+| `true_effect` | $-0.3$ | Structural coefficient: immigration $\to$ wages |
+| `demand_on_immig` | $0.9$ | Confounder $\to$ $T$ (positive: booming regions attract immigrants) |
+| `demand_on_wages` | $0.5$ | Confounder $\to$ $Y$ (positive: booming regions pay more) |
+| `bartik_on_immig` | $0.7$ | Instrument $\to$ $T$ (first-stage strength) |
+
+#### OVB derivation
+
+Both `demand_on_immig` and `demand_on_wages` are positive, so $\text{Cov}(\text{immigration},\, U \mid \text{log\_pop}) > 0$ and $\gamma_U = 0.5 > 0$, giving a **positive OVB**:
+
+::: {.appendix-math}
+$$
+\text{OVB} = 0.5 \cdot \frac{0.9}{\text{Var}(\text{immigration} \mid \text{log\_pop})} > 0
+\qquad \Rightarrow \qquad
+\hat\beta_{\text{OLS}} \approx -0.3 + \text{positive} > -0.3
+$$
+:::
+
+OLS attenuates (or reverses) the negative wage effect. IV recovers $\approx -0.3$.
+
+#### Verification checks
+- First-stage coefficient on `bartik_instrument` $\approx 0.7$; $F \gg 10$ even at $N = 300$.
+- OLS coefficient on `immigration` less negative than $-0.3$ (or positive).
+- IV coefficient on `immigration` $\approx -0.3$.
+
+---
+
+### App 3 — `get_encouragement_data(N=4000, seed=1234)` {.unlisted}
+
+**Story:** A/B encouragement design with imperfect compliance. Unobserved confounders drive self-selection into adoption, making T endogenous despite randomized encouragement.
+
+**Instrument:** `assigned_treatment` — fully randomized.
+
+**Fixed effect:** `user_type` $\in \{0, 1, 2\}$ — absorbed in all three models.
+
+#### Structural equations
+
+| Variable | Equation |
+|---|---|
+| `user_type` | $\sim \text{Uniform}\{0,\,1,\,2\}$ — fixed effect, $\mu = \{0{\to}0,\;1{\to}1,\;2{\to}{-0.5}\}$ |
+| `assigned_treatment` ($Z$) | $\sim \text{Bernoulli}(0.5)$ — randomized instrument |
+| `adopted_feature` ($D$) | $\sim \text{Bernoulli}(p)$, $p = 0.70$ if $Z=1$, else $0.15$ |
+| `revenue` ($Y$) | $= 5 + \mu_{\texttt{user\_type}} + 2.0\cdot D + \mathcal{N}(0,\,1)$ |
+
+#### Named parameters
+
+| Parameter | Value | Role |
+|---|---|---|
+| `true_late` | $2.0$ | LATE: revenue effect of adoption for compliers |
+| `p_adopt_encouraged` | $0.70$ | $\Pr(\text{adopt} \mid Z=1)$ |
+| `p_adopt_control` | $0.15$ | $\Pr(\text{adopt} \mid Z=0)$ |
+
+#### Wald identity (exact by construction)
+
+::: {.appendix-math}
+$$
+\text{First Stage} = 0.70 - 0.15 = 0.55
+\qquad
+\text{ITT} = 2.0 \times 0.55 = 1.10
+\qquad
+\text{LATE} = \frac{1.10}{0.55} = 2.0 \checkmark
+$$
+:::
+
+#### Verification checks
+- `fit_fs.coef()["assigned_treatment"]` $\approx 0.55$.
+- `fit_itt.coef()["assigned_treatment"]` $\approx 1.10$.
+- `fit_late.coef()["adopted_feature"]` $\approx 2.0$.
+- Wald ratio `ITT / FS` $\approx 2.0$ (holds exactly in population; negligible sampling noise at $N=4000$).
