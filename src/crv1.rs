@@ -1,4 +1,4 @@
-use ndarray::{Array2, ArrayView1, ArrayView2, Axis};
+use ndarray::{Array1, Array2, ArrayView1, ArrayView2, Axis};
 use numpy::{IntoPyArray, PyArray2, PyReadonlyArray1, PyReadonlyArray2};
 use pyo3::prelude::*;
 
@@ -96,4 +96,79 @@ pub fn _crv1_meat_loop_rs(
         &cluster_col.as_array(),
     );
     Ok(meat.into_pyarray(py).to_owned().into())
+}
+
+
+fn crv1_vcov_loop(
+    x: &ArrayView2<f64>,
+    clustid: &ArrayView1<usize>,
+    cluster_col: &ArrayView1<usize>,
+    q: f64,
+    u_hat: &ArrayView1<f64>,
+    delta: f64,
+) -> (Array2<f64>, Array2<f64>) {
+    let k = x.ncols();
+    let mut a = Array2::<f64>::zeros((k, k));
+    let mut b = Array2::<f64>::zeros((k, k));
+    let eps: f64 = 1e-7;
+
+    let (g_indices, g_locs) = bucket_argsort_rs(cluster_col);
+
+    let mut psi_sum_g = Array1::<f64>::zeros(k);
+    for &g in clustid.iter() {
+        psi_sum_g.fill(0.0);
+        let (start, end) = (g_locs[g], g_locs[g + 1]);
+        let g_index = &g_indices[start..end];
+        let ng = g_index.len();
+        for i in 0..ng {
+            let row_idx = g_index[i];
+            let xi = x.row(row_idx);
+            let ui = u_hat[row_idx];
+            let psi_i: f64 = q - if ui <= eps { 1.0 } else { 0.0 };
+            psi_sum_g.scaled_add(psi_i, &xi);
+
+            let mask_i = if ui.abs() < delta { 1.0 } else { 0.0 };
+            for row in 0..k {
+                for col in 0..k {
+                    b[[row, col]] += xi[row] * xi[col] * mask_i;
+                }
+            }
+        }
+
+        for row in 0..k {
+            for col in 0..k {
+                a[[row, col]] += psi_sum_g[row] * psi_sum_g[col];
+            }
+        }
+    }
+
+    b /= 2.0 * delta;
+    (a, b)
+}
+
+
+/// Compute the matrices for the CRV1 sandwich estimator
+/// in quantile regression, following Parente & Santos Silva (2016).
+#[pyfunction]
+pub fn _crv1_vcov_loop_rs(
+    py: Python,
+    x: PyReadonlyArray2<f64>,
+    clustid: PyReadonlyArray1<usize>,
+    cluster_col: PyReadonlyArray1<usize>,
+    q: f64,
+    u_hat: PyReadonlyArray1<f64>,
+    delta: f64,
+) -> PyResult<(Py<PyArray2<f64>>, Py<PyArray2<f64>>)> {
+    let (a, b) = crv1_vcov_loop(
+        &x.as_array(),
+        &clustid.as_array(),
+        &cluster_col.as_array(),
+        q,
+        &u_hat.as_array(),
+        delta,
+    );
+    Ok((
+        a.into_pyarray(py).to_owned().into(),
+        b.into_pyarray(py).to_owned().into(),
+    ))
 }
