@@ -1,4 +1,4 @@
-use ndarray::{Array2, ArrayView1, ArrayView2, Axis};
+use ndarray::{Array1, Array2, ArrayView1, ArrayView2, Axis};
 use numpy::{IntoPyArray, PyArray2, PyReadonlyArray1, PyReadonlyArray2};
 use pyo3::prelude::*;
 
@@ -99,8 +99,6 @@ pub fn _crv1_meat_loop_rs(
 }
 
 
-/// Compute the matrices for the CRV1 sandwich estimator
-/// in quantile regression, following Parente & Santos Silva (2016).
 fn crv1_vcov_loop(
     x: &ArrayView2<f64>,
     clustid: &ArrayView1<usize>,
@@ -125,24 +123,14 @@ fn crv1_vcov_loop(
         let ug: Vec<f64> = g_index.iter().map(|&i| u_hat[i]).collect();
         let ng = g_index.len();
 
+        let mut score_g = Array1::<f64>::zeros(k);
         for i in 0..ng {
+            let psi_i: f64 = q - if ug[i] <= eps { 1.0 } else { 0.0 };
             let xi = xg.row(i);
-            let psi_i = q - if ug[i] <= eps { 1.0 } else { 0.0 };
-
-            for j in 0..ng {
-                let xj = xg.row(j);
-                let psi_j = q - if ug[j] <= eps { 1.0 } else { 0.0 };
-                let scale = psi_i * psi_j;
-                for ai in 0..k {
-                    for bi in 0..k {
-                        a[[ai, bi]] += xi[ai] * xj[bi] * scale;
-                    }
-                }
+            for j in 0..k {
+               score_g[j] += xi[j] * psi_i;
             }
-        }
 
-        for i in 0..ng {
-            let xi = xg.row(i);
             let mask_i = if ug[i].abs() < delta { 1.0 } else { 0.0 };
             for ai in 0..k {
                 for bi in 0..k {
@@ -150,6 +138,13 @@ fn crv1_vcov_loop(
                 }
             }
         }
+
+        for ai in 0..k {
+            for bi in 0..k {
+                a[[ai, bi]] += score_g[ai] * score_g[bi];
+            }
+        }
+
     }
 
     b /= 2.0 * delta;
@@ -157,6 +152,8 @@ fn crv1_vcov_loop(
 }
 
 
+/// Compute the matrices for the CRV1 sandwich estimator
+/// in quantile regression, following Parente & Santos Silva (2016).
 #[pyfunction]
 pub fn _crv1_vcov_loop_rs(
     py: Python,
