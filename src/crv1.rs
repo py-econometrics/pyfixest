@@ -114,37 +114,32 @@ fn crv1_vcov_loop(
 
     let (g_indices, g_locs) = bucket_argsort_rs(cluster_col);
 
+    let mut psi_sum_g = Array1::<f64>::zeros(k);
     for &g in clustid.iter() {
-        let start = g_locs[g];
-        let end = g_locs[g + 1];
+        psi_sum_g.fill(0.0);
+        let (start, end) = (g_locs[g], g_locs[g + 1]);
         let g_index = &g_indices[start..end];
-
-        let xg = x.select(Axis(0), g_index);
-        let ug: Vec<f64> = g_index.iter().map(|&i| u_hat[i]).collect();
         let ng = g_index.len();
-
-        let mut score_g = Array1::<f64>::zeros(k);
         for i in 0..ng {
-            let psi_i: f64 = q - if ug[i] <= eps { 1.0 } else { 0.0 };
-            let xi = xg.row(i);
-            for j in 0..k {
-               score_g[j] += xi[j] * psi_i;
-            }
+            let row_idx = g_index[i];
+            let xi = x.row(row_idx);
+            let ui = u_hat[row_idx];
+            let psi_i: f64 = q - if ui <= eps { 1.0 } else { 0.0 };
+            psi_sum_g.scaled_add(psi_i, &xi);
 
-            let mask_i = if ug[i].abs() < delta { 1.0 } else { 0.0 };
-            for ai in 0..k {
-                for bi in 0..k {
-                    b[[ai, bi]] += xi[ai] * xi[bi] * mask_i;
+            let mask_i = if ui.abs() < delta { 1.0 } else { 0.0 };
+            for row in 0..k {
+                for col in 0..k {
+                    b[[row, col]] += xi[row] * xi[col] * mask_i;
                 }
             }
         }
 
-        for ai in 0..k {
-            for bi in 0..k {
-                a[[ai, bi]] += score_g[ai] * score_g[bi];
+        for row in 0..k {
+            for col in 0..k {
+                a[[row, col]] += psi_sum_g[row] * psi_sum_g[col];
             }
         }
-
     }
 
     b /= 2.0 * delta;
