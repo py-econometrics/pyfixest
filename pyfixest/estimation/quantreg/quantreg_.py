@@ -81,12 +81,7 @@ class Quantreg(Feols):
             FutureWarning,
         )
 
-        try:
-            impl = BACKENDS[demeaner_backend]
-        except KeyError:
-            raise ValueError(f"Unknown backend {demeaner_backend!r}")
-
-        self._crv1_vcov_func = impl["crv1_vcov"]
+        self._crv1_vcov_func = BACKENDS[demeaner_backend]["crv1_vcov"]
 
         self._supports_wildboottest = False
         self._support_crv3_inference = False
