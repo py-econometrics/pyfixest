@@ -7,6 +7,7 @@ from dgps import BaseDGP, BipartiteDGP
 from feols_benchmarkers import (
     FixestFeolsBenchmarker,
     JuliaFeolsBenchmarker,
+    PyFeolsBenchmarkerFullApi, 
     PyFeolsBenchmarker,
 )
 from interfaces import FeolsSpec
@@ -20,16 +21,17 @@ if str(PROJECT_ROOT) not in sys.path:
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
-SIZES = [1_000, 10_000, 100_000]
+SIZES = [1_000, 10_000, 100_000, 1_000_000]
 N_ITERS = 3
 BURN_IN = 1
 DATA_DIR = PROJECT_ROOT / "benchmarks" / "data"
 OUTPUT_CSV = PROJECT_ROOT / "benchmarks" / "results" / "feols_bench.csv"
 
 DGPS = [
+    BaseDGP(DATA_DIR, "simple"),
     BaseDGP(DATA_DIR, "difficult"),
-    BipartiteDGP(DATA_DIR, name="bipartite-low-mobility", n_time=20, p_move=0.05),
-    BipartiteDGP(DATA_DIR, name="bipartite-high-mobility", n_time=20, p_move=0.15),
+    #BipartiteDGP(DATA_DIR, name="bipartite-low-mobility", n_time=20, p_move=0.05),
+    #BipartiteDGP(DATA_DIR, name="bipartite-high-mobility", n_time=20, p_move=0.15),
 ]
 
 SPECS = [
@@ -48,9 +50,11 @@ SPECS = [
 ]
 
 BENCHMARKERS = [
-    PyFeolsBenchmarker("rust-ap", demean_rust),
-    FixestFeolsBenchmarker(),
-    JuliaFeolsBenchmarker(),
+    #PyFeolsBenchmarker("rust-ap", demean_rust),
+    PyFeolsBenchmarkerFullApi("pyfixest (rust-cg)", "rust-cg"),
+    PyFeolsBenchmarkerFullApi("pyfixest (rust-map)", "rust"),
+    FixestFeolsBenchmarker("fixest-map"),
+    JuliaFeolsBenchmarker("FEM.jl (lsmr)"),
 ]
 
 # ---------------------------------------------------------------------------
