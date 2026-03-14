@@ -1,7 +1,7 @@
 import numpy as np
 from numpy.typing import NDArray
 
-from ._core_impl import _demean_rs
+from ._core_impl import _demean_rs, _demean_within_rs
 
 
 def demean(
@@ -71,6 +71,48 @@ def demean(
     ```
     """
     return _demean_rs(
+        x.astype(np.float64, copy=False),
+        flist.astype(np.uint64, copy=False),
+        weights.astype(np.float64, copy=False),
+        tol,
+        maxiter,
+    )
+
+
+def demean_within(
+    x: NDArray[np.float64],
+    flist: NDArray[np.uint64],
+    weights: NDArray[np.float64],
+    tol: float = 1e-06,
+    maxiter: int = 1_000,
+) -> tuple[NDArray, bool]:
+    """
+    Demean an array using preconditioned conjugate gradient via the `within` crate.
+
+    Uses one-level Schwarz preconditioning with approximate Cholesky local
+    solvers. Converges faster than alternating projections on weakly-connected
+    or block-diagonal fixed-effect structures.
+
+    Parameters
+    ----------
+    x : numpy.ndarray
+        Input array of shape (n_samples, n_features).
+    flist : numpy.ndarray
+        Array of shape (n_samples, n_factors) specifying the fixed effects
+        (integer-encoded).
+    weights : numpy.ndarray
+        Array of shape (n_samples,) specifying the weights.
+    tol : float, optional
+        Convergence tolerance. Defaults to 1e-06.
+    maxiter : int, optional
+        Maximum number of CG iterations. Defaults to 1_000.
+
+    Returns
+    -------
+    tuple[numpy.ndarray, bool]
+        Demeaned array and convergence flag.
+    """
+    return _demean_within_rs(
         x.astype(np.float64, copy=False),
         flist.astype(np.uint64, copy=False),
         weights.astype(np.float64, copy=False),
