@@ -83,48 +83,47 @@ CellPlotFn = Callable[
 ]
 
 
-def _plot_grid(
-    summary: pd.DataFrame,
+def _plot_dgp_figure(
+    dgp_summary: pd.DataFrame,
     styles: dict[str, dict],
     output_path: Path,
     plot_cell: CellPlotFn,
 ) -> None:
-    dgps = sorted(summary["dgp"].unique())
-    n_fes = sorted(summary["n_fe"].unique())
-    n_obs_vals = sorted(summary["n_obs"].unique())
-    backends = sorted(summary["backend"].unique())
+    dgp = dgp_summary["dgp"].iloc[0]
+    n_fes = sorted(dgp_summary["n_fe"].unique())
+    n_obs_vals = sorted(dgp_summary["n_obs"].unique())
+    backends = sorted(dgp_summary["backend"].unique())
 
     fig, axes = plt.subplots(
-        len(dgps),
+        1,
         len(n_fes),
-        figsize=(5 * len(n_fes), 3.8 * len(dgps)),
+        figsize=(5 * len(n_fes), 4.2),
         squeeze=False,
     )
 
-    for row_idx, dgp in enumerate(dgps):
-        for col_idx, n_fe in enumerate(n_fes):
-            ax = axes[row_idx][col_idx]
-            subset = summary[(summary["dgp"] == dgp) & (summary["n_fe"] == n_fe)]
+    for col_idx, n_fe in enumerate(n_fes):
+        ax = axes[0][col_idx]
+        subset = dgp_summary[dgp_summary["n_fe"] == n_fe]
 
-            if subset.empty:
-                ax.set_axis_off()
-                continue
+        if subset.empty:
+            ax.set_axis_off()
+            continue
 
-            plot_cell(ax, subset, n_obs_vals, backends, styles)
+        plot_cell(ax, subset, n_obs_vals, backends, styles)
 
-            ax.set_title(
-                f"{_dgp_label(dgp)}  |  {n_fe} FE",
-                fontsize=11,
-                fontweight="semibold",
-                pad=8,
-            )
-            ax.set_xticklabels(
-                [f"{n:,}" for n in n_obs_vals], rotation=30, ha="right", fontsize=9
-            )
-            ax.set_xlabel("Observations", fontsize=10)
-            ax.set_ylabel("Time (s)", fontsize=10)
-            ax.set_yscale("log")
-            _apply_common_style(ax)
+        ax.set_title(
+            f"{_dgp_label(dgp)}  |  {n_fe} FE",
+            fontsize=11,
+            fontweight="semibold",
+            pad=8,
+        )
+        ax.set_xticklabels(
+            [f"{n:,}" for n in n_obs_vals], rotation=30, ha="right", fontsize=9
+        )
+        ax.set_xlabel("Observations", fontsize=10)
+        ax.set_ylabel("Time (s)", fontsize=10)
+        ax.set_yscale("log")
+        _apply_common_style(ax)
 
     _add_legend(fig, axes, ncol=max(1, len(backends)))
     fig.tight_layout(rect=(0, 0, 1, 0.94))
@@ -217,19 +216,32 @@ def _bar_cell(
 # ---------------------------------------------------------------------------
 
 
+def _dgp_output_path(output_path: Path, dgp: str, *, suffix: str = "") -> Path:
+    stem = f"{output_path.stem}_{dgp}{suffix}"
+    return output_path.with_name(stem + output_path.suffix)
+
+
 def plot_benchmarks(results_df: pd.DataFrame, output_path: Path) -> None:
-    """Create publication-ready benchmark plots (line + bar)."""
+    """Create publication-ready benchmark plots, one figure per benchmark DGP."""
     if results_df.empty:
         return
 
     summary = _aggregate(results_df)
     output_path.parent.mkdir(parents=True, exist_ok=True)
+    dgps = sorted(summary["dgp"].unique())
 
     styles = _build_styles(sorted(summary["backend"].unique()))
-    _plot_grid(summary, styles, output_path, _line_cell)
-    _plot_grid(
-        summary,
-        styles,
-        output_path.with_name(output_path.stem + "_bars.png"),
-        _bar_cell,
-    )
+    for dgp in dgps:
+        dgp_summary = summary[summary["dgp"] == dgp].copy()
+        _plot_dgp_figure(
+            dgp_summary,
+            styles,
+            _dgp_output_path(output_path, dgp),
+            _line_cell,
+        )
+        _plot_dgp_figure(
+            dgp_summary,
+            styles,
+            _dgp_output_path(output_path, dgp, suffix="_bars"),
+            _bar_cell,
+        )
