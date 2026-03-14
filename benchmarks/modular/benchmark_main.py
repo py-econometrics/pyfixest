@@ -3,11 +3,11 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from dgps import BaseDGP, BipartiteDGP
+from dgps import BaseDGP, get_bipartite_scenarios
 from feols_benchmarkers import (
     FixestFeolsBenchmarker,
     JuliaFeolsBenchmarker,
-    PyFeolsBenchmarkerFullApi, 
+    PyFeolsBenchmarkerFullApi,
     PyFeolsBenchmarker,
 )
 from interfaces import FeolsSpec
@@ -26,12 +26,18 @@ N_ITERS = 3
 BURN_IN = 1
 DATA_DIR = PROJECT_ROOT / "benchmarks" / "data"
 OUTPUT_CSV = PROJECT_ROOT / "benchmarks" / "results" / "feols_bench.csv"
+AKM_SCENARIOS = [
+    "akm_low_mobility",
+    "akm_high_mobility",
+    "akm_pareto_firms",
+    "akm_high_sorting",
+    "akm_two_industry_bridge",
+]
 
 DGPS = [
     BaseDGP(DATA_DIR, "simple"),
     BaseDGP(DATA_DIR, "difficult"),
-    #BipartiteDGP(DATA_DIR, name="bipartite-low-mobility", n_time=20, p_move=0.05),
-    #BipartiteDGP(DATA_DIR, name="bipartite-high-mobility", n_time=20, p_move=0.15),
+    *get_bipartite_scenarios(DATA_DIR, AKM_SCENARIOS),
 ]
 
 SPECS = [

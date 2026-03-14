@@ -1,4 +1,18 @@
+from pathlib import Path
+
 from benchmarks.modular.dgp_functions import BipartiteConfig, simulate_bipartite
+from benchmarks.modular.dgps import get_bipartite_scenarios
+
+
+def test_get_bipartite_scenarios():
+    scenarios = get_bipartite_scenarios(
+        Path("unused"), ["akm_low_mobility", "akm_two_industry_bridge"]
+    )
+
+    assert [scenario.dgp_name for scenario in scenarios] == [
+        "akm_low_mobility",
+        "akm_two_industry_bridge",
+    ]
 
 
 def test_pareto_firm_sizes_create_more_concentrated_firm_ids():

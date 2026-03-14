@@ -99,6 +99,39 @@ def _generate_datasets(
     return datasets
 
 
+_BIPARTITE_BASELINE = {
+    "n_time": 20,
+    "firm_size": 10,
+    "n_firm_types": 6,
+    "n_worker_types": 6,
+    "p_move": 0.10,
+    "c_sort": 0.0,
+    "firm_size_dist": "lognormal",
+    "firm_size_lognorm_sigma": 1.0,
+}
+
+_BIPARTITE_SCENARIOS = {
+    "akm_baseline": {**_BIPARTITE_BASELINE},
+    "akm_low_mobility": {**_BIPARTITE_BASELINE, "p_move": 0.02},
+    "akm_high_mobility": {**_BIPARTITE_BASELINE, "p_move": 0.50},
+    "akm_pareto_firms": {
+        **_BIPARTITE_BASELINE,
+        "firm_size_dist": "pareto",
+        "firm_size_pareto_shape": 1.5,
+    },
+    "akm_high_sorting": {**_BIPARTITE_BASELINE, "c_sort": 3.0},
+    "akm_two_industry_bridge": {
+        **_BIPARTITE_BASELINE,
+        "n_time": 10,
+        "n_firm_types": 8,
+        "n_worker_types": 8,
+        "p_move": 0.15,
+        "n_clusters": 2,
+        "cross_cluster_scale": 0.02,
+    },
+}
+
+
 class BaseDGP:
     def __init__(self, data_dir: Path, dgp_type: str = "simple"):
         self._data_dir = data_dir
@@ -185,3 +218,17 @@ class BipartiteDGP:
             make_params=lambda seed: {**asdict(config), "seed": seed},
             generate=lambda seed: simulate_bipartite(config, seed=seed),
         )
+
+
+def get_bipartite_scenarios(
+    data_dir: Path, names: list[str] | None = None
+) -> list[BipartiteDGP]:
+    scenario_names = names or list(_BIPARTITE_SCENARIOS)
+    unknown = sorted(set(scenario_names) - set(_BIPARTITE_SCENARIOS))
+    if unknown:
+        raise ValueError(f"Unknown bipartite scenario(s): {', '.join(unknown)}")
+
+    return [
+        BipartiteDGP(data_dir=data_dir, name=name, **_BIPARTITE_SCENARIOS[name])
+        for name in scenario_names
+    ]
