@@ -103,6 +103,11 @@ class BipartiteConfig:
     c_sort: float = 1.0
     c_netw: float = 1.0
     c_sig: float = 1.0
+    n_clusters: int = 1
+    cross_cluster_scale: float = 1.0
+    firm_size_dist: str = "equal"
+    firm_size_lognorm_sigma: float = 1.0
+    firm_size_pareto_shape: float = 1.5
     alpha_sig: float = 1.0
     psi_sig: float = 1.0
     w_sig: float = 1.0
@@ -125,8 +130,20 @@ def _validate_config(config: BipartiteConfig):
         raise ValueError("n_firm_types must be positive")
     if config.n_worker_types < 1:
         raise ValueError("n_worker_types must be positive")
+    if config.n_clusters < 1:
+        raise ValueError("n_clusters must be positive")
+    if config.n_clusters > min(config.n_firm_types, config.n_worker_types):
+        raise ValueError("n_clusters must not exceed the number of types")
     if not 0 <= config.p_move <= 1:
         raise ValueError("p_move must be in [0, 1]")
+    if config.cross_cluster_scale <= 0:
+        raise ValueError("cross_cluster_scale must be positive")
+    if config.firm_size_dist not in {"equal", "lognormal", "pareto"}:
+        raise ValueError("firm_size_dist must be one of: equal, lognormal, pareto")
+    if config.firm_size_lognorm_sigma <= 0:
+        raise ValueError("firm_size_lognorm_sigma must be positive")
+    if config.firm_size_pareto_shape <= 0:
+        raise ValueError("firm_size_pareto_shape must be positive")
     for name, val in [
         ("alpha_sig", config.alpha_sig),
         ("psi_sig", config.psi_sig),
@@ -138,6 +155,11 @@ def _validate_config(config: BipartiteConfig):
     ]:
         if val < 0:
             raise ValueError(f"{name} must be non-negative")
+
+
+def _cluster_codes(n_types: int, n_clusters: int) -> np.ndarray:
+    """Assign contiguous type indices to a small number of coarse clusters."""
+    return np.minimum((np.arange(n_types) * n_clusters) // n_types, n_clusters - 1)
 
 
 def _generate_fixed_effects(config: BipartiteConfig):
@@ -156,12 +178,17 @@ def _generate_fixed_effects(config: BipartiteConfig):
 def _compute_transition_matrices(config: BipartiteConfig, psi, alpha):
     """Compute worker-type-specific firm-to-firm transition matrices."""
     G = np.zeros((config.n_worker_types, config.n_firm_types, config.n_firm_types))
+    firm_clusters = _cluster_codes(config.n_firm_types, config.n_clusters)
     for typ_no in range(config.n_worker_types):
         for k_from in range(config.n_firm_types):
             probs = norm.pdf(
                 (psi - config.c_netw * psi[k_from] - config.c_sort * alpha[typ_no])
                 / config.c_sig
             )
+            if config.n_clusters > 1 and config.cross_cluster_scale != 1.0:
+                cross_cluster = firm_clusters != firm_clusters[k_from]
+                probs = probs.copy()
+                probs[cross_cluster] *= config.cross_cluster_scale
             G[typ_no, k_from, :] = probs / probs.sum()
     return G
 
@@ -219,6 +246,19 @@ def _simulate_mobility(rng, config: BipartiteConfig, H, G, worker_types):
     return firm_types, spell_ids, spell_counter
 
 
+def _firm_assignment_weights(rng, config: BipartiteConfig, n_firms: int) -> np.ndarray:
+    """Build spell-to-firm assignment weights for one firm type."""
+    if config.firm_size_dist == "equal" or n_firms == 1:
+        weights = np.ones(n_firms)
+    elif config.firm_size_dist == "lognormal":
+        weights = rng.lognormal(
+            mean=0.0, sigma=config.firm_size_lognorm_sigma, size=n_firms
+        )
+    else:
+        weights = rng.pareto(config.firm_size_pareto_shape, size=n_firms) + 1.0
+    return weights / weights.sum()
+
+
 def _assign_firm_ids(
     rng, config: BipartiteConfig, firm_types, spell_ids, spell_counter
 ):
@@ -235,7 +275,8 @@ def _assign_firm_ids(
         k_mask = spell_to_firm_type == k_type
         total_obs = spell_sizes[k_mask].sum()
         n_firms = max(1, round(total_obs / (config.firm_size * config.n_time)))
-        assigned = rng.integers(0, n_firms, size=k_mask.sum())
+        weights = _firm_assignment_weights(rng, config, n_firms)
+        assigned = rng.choice(n_firms, size=k_mask.sum(), p=weights)
         _, remapped = np.unique(assigned, return_inverse=True)
         firm_id_per_spell[k_mask] = remapped + global_offset
         global_offset += len(np.unique(assigned))
@@ -249,6 +290,8 @@ def _build_dataframe(
     """Build the final DataFrame with outcomes."""
     n_workers, n_time = config.n_workers, config.n_time
     n_obs = n_workers * n_time
+    worker_clusters = _cluster_codes(config.n_worker_types, config.n_clusters)
+    firm_clusters = _cluster_codes(config.n_firm_types, config.n_clusters)
 
     indiv_id = np.repeat(np.arange(n_workers), n_time)
     time = np.tile(np.arange(n_time), n_workers)
@@ -284,6 +327,8 @@ def _build_dataframe(
             "year": time,
             "worker_type": worker_type,
             "firm_type": firm_type_flat,
+            "worker_cluster": worker_clusters[worker_type],
+            "firm_cluster": firm_clusters[firm_type_flat],
             "worker_fe": worker_fe,
             "firm_fe": firm_fe,
         }

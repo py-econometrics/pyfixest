@@ -130,15 +130,29 @@ class BipartiteDGP:
         name: str = "bipartite",
         n_time: int = 5,
         firm_size: int = 10,
+        n_firm_types: int = 5,
+        n_worker_types: int = 5,
         p_move: float = 0.5,
         c_sort: float = 1.0,
+        n_clusters: int = 1,
+        cross_cluster_scale: float = 1.0,
+        firm_size_dist: str = "equal",
+        firm_size_lognorm_sigma: float = 1.0,
+        firm_size_pareto_shape: float = 1.5,
     ):
         self._name = name
         self._data_dir = data_dir
         self._n_time = n_time
         self._firm_size = firm_size
+        self._n_firm_types = n_firm_types
+        self._n_worker_types = n_worker_types
         self._p_move = p_move
         self._c_sort = c_sort
+        self._n_clusters = n_clusters
+        self._cross_cluster_scale = cross_cluster_scale
+        self._firm_size_dist = firm_size_dist
+        self._firm_size_lognorm_sigma = firm_size_lognorm_sigma
+        self._firm_size_pareto_shape = firm_size_pareto_shape
 
     @property
     def dgp_name(self) -> str:
@@ -152,8 +166,15 @@ class BipartiteDGP:
             n_workers=n_workers,
             n_time=self._n_time,
             firm_size=self._firm_size,
+            n_firm_types=self._n_firm_types,
+            n_worker_types=self._n_worker_types,
             p_move=self._p_move,
             c_sort=self._c_sort,
+            n_clusters=self._n_clusters,
+            cross_cluster_scale=self._cross_cluster_scale,
+            firm_size_dist=self._firm_size_dist,
+            firm_size_lognorm_sigma=self._firm_size_lognorm_sigma,
+            firm_size_pareto_shape=self._firm_size_pareto_shape,
         )
         return _generate_datasets(
             dgp_name=self.dgp_name,
