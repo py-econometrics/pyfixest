@@ -90,6 +90,10 @@ website:
           file: how-to/ssc.qmd
         - text: "Benchmarks"
           file: how-to/benchmarks.qmd
+      - text: "Explanation"
+        menu:
+        - text: "When Are Fixed Effects Hard?"
+          file: explanation/hard-fixed-effects.md
       - text: "Textbook Replications"
         menu:
         - text: "All Textbook Replications"
