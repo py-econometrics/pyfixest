@@ -30,6 +30,7 @@ SCALE_N_OBS = {
 }
 DATA_DIR = PROJECT_ROOT / "benchmarks" / "data"
 OUTPUT_CSV = PROJECT_ROOT / "benchmarks" / "results" / "feols_akm_sweep.csv"
+FIGURE_DIR = PROJECT_ROOT / "docs" / "explanation" / "figures" / "akm-benchmarks"
 
 DGPS = get_akm_sweep_scenarios(DATA_DIR)
 
@@ -49,10 +50,10 @@ SPECS = [
 ]
 
 BENCHMARKERS = [
-    PyFeolsBenchmarkerFullApi("pyfixest (rust-map)", "rust", fixef_maxiter=10000),
-    PyFeolsBenchmarkerFullApi("pyfixest (rust-cg)", "rust-cg", fixef_maxiter=10000),
     FixestFeolsBenchmarker("fixest-map"),
     JuliaFeolsBenchmarker("FEM.jl (lsmr)"),
+    PyFeolsBenchmarkerFullApi("pyfixest (rust-cg)", "rust-cg", fixef_maxiter=10000),
+    PyFeolsBenchmarkerFullApi("pyfixest (rust-map)", "rust", fixef_maxiter=10000),
 ]
 
 
@@ -77,4 +78,4 @@ if __name__ == "__main__":
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     datasets = generate_akm_datasets()
     results = run_benchmarks(BENCHMARKERS, datasets, SPECS)
-    export_and_plot(results, OUTPUT_CSV)
+    export_and_plot(results, OUTPUT_CSV, figure_dir=FIGURE_DIR)
