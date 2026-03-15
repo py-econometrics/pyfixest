@@ -3,23 +3,26 @@ from __future__ import annotations
 import hashlib
 import json
 from collections.abc import Callable
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
 import pyarrow.parquet as pq
 
 try:
-    from .dgp_functions import BipartiteConfig, base_dgp, simulate_bipartite
+    from .akm_dgp import AKMConfig, simulate_akm_panel
+    from .dgp_functions import base_dgp
     from .interfaces import BenchmarkDataset
 except ImportError:
-    from dgp_functions import BipartiteConfig, base_dgp, simulate_bipartite
+    from akm_dgp import AKMConfig, simulate_akm_panel
+    from dgp_functions import base_dgp
     from interfaces import BenchmarkDataset
 
 
 def _seed_for(dgp_name: str, n: int, iteration: int) -> int:
     """Build deterministic seeds so benchmark runs are reproducible."""
-    dgp_offset = {"simple": 0, "difficult": 1, "bipartite": 2}.get(
+
+    dgp_offset = {"simple": 0, "difficult": 1, "akm_baseline": 2}.get(
         dgp_name, hash(dgp_name) % 97
     )
     return n * 100 + iteration * 17 + dgp_offset
@@ -27,12 +30,12 @@ def _seed_for(dgp_name: str, n: int, iteration: int) -> int:
 
 def _param_hash(params: dict) -> str:
     """Stable SHA-256 hex digest of sorted, canonical JSON of params."""
+
     canonical = json.dumps(params, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(canonical.encode()).hexdigest()[:16]
 
 
 def _is_cached(data_path: Path, expected_hash: str) -> bool:
-    """Check if parquet and its hash sidecar exist and match."""
     hash_path = data_path.with_suffix(".hash")
     if data_path.exists() and hash_path.exists():
         return hash_path.read_text().strip() == expected_hash
@@ -54,6 +57,7 @@ def _generate_datasets(
     generate: Callable[[int], Any],
 ) -> list[BenchmarkDataset]:
     """Generate parquet-backed datasets for one DGP/size combination."""
+
     data_dir.mkdir(parents=True, exist_ok=True)
     datasets: list[BenchmarkDataset] = []
     total = burn_in + n_iters
@@ -98,38 +102,155 @@ def _generate_datasets(
 
     return datasets
 
+@dataclass(frozen=True)
+class AKMSweepScenario:
+    name: str
+    overrides: dict[str, Any]
 
-_BIPARTITE_BASELINE = {
-    "n_time": 20,
-    "firm_size": 10,
-    "n_firm_types": 6,
-    "n_worker_types": 6,
-    "p_move": 0.10,
-    "c_sort": 0.0,
-    "firm_size_dist": "lognormal",
-    "firm_size_lognorm_sigma": 1.0,
+
+_AKM_DEFAULTS: dict[str, Any] = {
+    "n_time": 10,
+    "n_firms": 10_000,
+    "n_industries": 5,
+    "var_alpha": 1.0,
+    "var_psi": 0.5,
+    "var_phi": 0.1,
+    "var_epsilon": 1.0,
+    "gamma": 1.0,
+    "rho_size": 0.6,
+    "rho": 1.0,
+    "delta": 0.2,
+    "lambda_": 0.8,
+    "beta_x1": 0.5,
+    "n_match_bins": 64,
+    "entry_exit_share": 0.0,
+    "entry_exit_n_periods": 2,
 }
 
-_BIPARTITE_SCENARIOS = {
-    "akm_baseline": {**_BIPARTITE_BASELINE},
-    "akm_low_mobility": {**_BIPARTITE_BASELINE, "p_move": 0.02},
-    "akm_high_mobility": {**_BIPARTITE_BASELINE, "p_move": 0.50},
-    "akm_pareto_firms": {
-        **_BIPARTITE_BASELINE,
-        "firm_size_dist": "pareto",
-        "firm_size_pareto_shape": 1.5,
-    },
-    "akm_high_sorting": {**_BIPARTITE_BASELINE, "c_sort": 3.0},
-    "akm_two_industry_bridge": {
-        **_BIPARTITE_BASELINE,
-        "n_time": 10,
-        "n_firm_types": 8,
-        "n_worker_types": 8,
-        "p_move": 0.15,
-        "n_clusters": 2,
-        "cross_cluster_scale": 0.02,
-    },
-}
+
+def _scenario(name: str, **overrides: Any) -> AKMSweepScenario:
+    return AKMSweepScenario(name=name, overrides=overrides)
+
+
+def _expected_obs_per_worker(params: dict[str, Any]) -> float:
+    n_time = int(params["n_time"])
+    short_share = float(params.get("entry_exit_share", 0.0))
+    short_periods = int(params.get("entry_exit_n_periods", n_time))
+    return (1 - short_share) * n_time + short_share * short_periods
+
+
+def _actual_obs_count(n_workers: int, params: dict[str, Any]) -> int:
+    n_time = int(params["n_time"])
+    short_share = float(params.get("entry_exit_share", 0.0))
+    short_periods = int(params.get("entry_exit_n_periods", n_time))
+    n_short_workers = int(round(short_share * n_workers))
+    return (n_workers - n_short_workers) * n_time + n_short_workers * short_periods
+
+
+def _infer_worker_count(target_n_obs: int, params: dict[str, Any]) -> int:
+    expected_obs_per_worker = max(_expected_obs_per_worker(params), 1.0)
+    floor_workers = max(1, int(target_n_obs / expected_obs_per_worker))
+    candidates = {floor_workers, floor_workers + 1}
+    return min(
+        candidates,
+        key=lambda n_workers: (
+            abs(_actual_obs_count(n_workers, params) - target_n_obs),
+            n_workers,
+        ),
+    )
+
+
+def _akm_sweep_scenarios() -> list[AKMSweepScenario]:
+    return [
+        # ── Act 1: Reference points ──
+        _scenario("akm_baseline"),
+        _scenario("akm_easy", n_firms=100, delta=0.5, rho=0.0, n_time=20),
+        # ── Act 2: Scale ──
+        _scenario("akm_scale_1"),
+        _scenario("akm_scale_2"),
+        _scenario("akm_scale_3"),
+        _scenario("akm_scale_4"),
+        # ── Act 3: Single-axis sweeps (one knob, rest at defaults) ──
+        # sorting (n_match_bins=2048 for near-continuous matching, delta=0.05
+        # so fewer moves create fewer bridges between quality bands,
+        # n_firms=50_000 so high rho creates many fine-grained quality bands)
+        _scenario("akm_sorting_1", rho=0.0, n_match_bins=2048, delta=0.05, n_firms=50_000),
+        _scenario("akm_sorting_2", rho=5.0, n_match_bins=2048, delta=0.05, n_firms=50_000),
+        _scenario("akm_sorting_3", rho=20.0, n_match_bins=2048, delta=0.05, n_firms=50_000),
+        _scenario("akm_sorting_4", rho=50.0, n_match_bins=2048, delta=0.05, n_firms=50_000),
+        _scenario("akm_sorting_5", rho=100.0, n_match_bins=2048, delta=0.05, n_firms=50_000),
+        # mobility
+        _scenario("akm_mobility_1", delta=0.5),
+        _scenario("akm_mobility_2", delta=0.05),
+        _scenario("akm_mobility_3", delta=0.01),
+        _scenario("akm_mobility_4", delta=0.005),
+        _scenario("akm_mobility_5", delta=0.001),
+        # firm size (n_firms=5000 so extreme skew creates genuinely tiny firms)
+        _scenario("akm_size_1", gamma=100.0, n_firms=5_000),
+        _scenario("akm_size_2", gamma=2.0, n_firms=5_000),
+        _scenario("akm_size_3", gamma=0.5, n_firms=5_000),
+        _scenario("akm_size_4", gamma=0.2, n_firms=5_000),
+        # fragmentation (delta=0.05 so total movers are few, n_time=4 so
+        # cross-industry bridges have few periods to accumulate)
+        _scenario("akm_fragmentation_1", n_industries=1, lambda_=1.0, delta=0.05, n_time=4),
+        _scenario("akm_fragmentation_2", n_industries=5, lambda_=0.5, delta=0.05, n_time=4),
+        _scenario("akm_fragmentation_3", n_industries=5, lambda_=0.95, delta=0.05, n_time=4),
+        _scenario("akm_fragmentation_4", n_industries=20, lambda_=0.95, delta=0.05, n_time=4),
+        _scenario("akm_fragmentation_5", n_industries=50, lambda_=0.99, delta=0.05, n_time=4),
+        # saturation (n_time=10, isolate FE-ratio effect)
+        _scenario("akm_saturation_1", n_firms=1_000),
+        _scenario("akm_saturation_2", n_firms=10_000),
+        _scenario("akm_saturation_3", n_firms=50_000),
+        _scenario("akm_saturation_4", n_firms=90_000),
+        # short panels
+        _scenario("akm_short_panel_1", n_time=2),
+        _scenario("akm_short_panel_2", n_time=2, delta=0.1),
+        _scenario("akm_short_panel_3", n_time=2, delta=0.05),
+        _scenario("akm_short_panel_4", n_time=2, delta=0.02),
+        # unbalanced panels (delta=0.05 so short-tenure workers are mostly
+        # stayers contributing zero edges, straining the graph)
+        _scenario("akm_unbalanced_1", entry_exit_share=0.10, entry_exit_n_periods=2, delta=0.05),
+        _scenario("akm_unbalanced_2", entry_exit_share=0.25, entry_exit_n_periods=2, delta=0.05),
+        _scenario("akm_unbalanced_3", entry_exit_share=0.50, entry_exit_n_periods=2, delta=0.05),
+        _scenario("akm_unbalanced_4", entry_exit_share=0.75, entry_exit_n_periods=2, delta=0.05),
+        # ── Act 4: Combinations ──
+        # sorting x mobility (2x2 factorial)
+        _scenario("akm_interaction_1", rho=0.0, delta=0.5),
+        _scenario("akm_interaction_2", rho=20.0, delta=0.5),
+        _scenario("akm_interaction_3", rho=0.0, delta=0.02),
+        _scenario("akm_interaction_4", rho=20.0, delta=0.02),
+        # fragmentation x low mobility (near-nested FE)
+        _scenario("akm_nested_1", n_industries=100, lambda_=0.99, delta=0.01),
+        _scenario("akm_nested_2", n_industries=50, lambda_=0.995, delta=0.005),
+        # saturation x short panel
+        _scenario(
+            "akm_saturation_short_1",
+            n_workers=500_000,
+            n_firms=50_000,
+            n_time=2,
+        ),
+        _scenario(
+            "akm_saturation_short_2",
+            n_workers=450_000,
+            n_firms=400_000,
+            n_time=2,
+        ),
+        # all levers combined
+        _scenario(
+            "akm_pathological_1",
+            rho=50.0,
+            delta=0.005,
+            n_time=2,
+        ),
+        _scenario(
+            "akm_pathological_2",
+            rho=50.0,
+            delta=0.005,
+            n_industries=20,
+            lambda_=0.95,
+            n_time=2,
+        ),
+    ]
 
 
 class BaseDGP:
@@ -156,59 +277,30 @@ class BaseDGP:
         )
 
 
-class BipartiteDGP:
+class AKMSweepDGP:
     def __init__(
         self,
         data_dir: Path,
-        name: str = "bipartite",
-        n_time: int = 5,
-        firm_size: int = 10,
-        n_firm_types: int = 5,
-        n_worker_types: int = 5,
-        p_move: float = 0.5,
-        c_sort: float = 1.0,
-        n_clusters: int = 1,
-        cross_cluster_scale: float = 1.0,
-        firm_size_dist: str = "equal",
-        firm_size_lognorm_sigma: float = 1.0,
-        firm_size_pareto_shape: float = 1.5,
+        name: str,
+        **overrides: Any,
     ):
-        self._name = name
         self._data_dir = data_dir
-        self._n_time = n_time
-        self._firm_size = firm_size
-        self._n_firm_types = n_firm_types
-        self._n_worker_types = n_worker_types
-        self._p_move = p_move
-        self._c_sort = c_sort
-        self._n_clusters = n_clusters
-        self._cross_cluster_scale = cross_cluster_scale
-        self._firm_size_dist = firm_size_dist
-        self._firm_size_lognorm_sigma = firm_size_lognorm_sigma
-        self._firm_size_pareto_shape = firm_size_pareto_shape
+        self._name = name
+        self._overrides = overrides
 
     @property
     def dgp_name(self) -> str:
         return self._name
 
+    def _build_config(self, n: int = 1_000_000) -> AKMConfig:
+        params = {**_AKM_DEFAULTS, **self._overrides}
+        n_workers = int(params.pop("n_workers", _infer_worker_count(n, params)))
+        return AKMConfig(n_workers=n_workers, **params)
+
     def generate(
         self, n: int, n_iters: int = 3, burn_in: int = 1
     ) -> list[BenchmarkDataset]:
-        n_workers = max(1, n // self._n_time)
-        config = BipartiteConfig(
-            n_workers=n_workers,
-            n_time=self._n_time,
-            firm_size=self._firm_size,
-            n_firm_types=self._n_firm_types,
-            n_worker_types=self._n_worker_types,
-            p_move=self._p_move,
-            c_sort=self._c_sort,
-            n_clusters=self._n_clusters,
-            cross_cluster_scale=self._cross_cluster_scale,
-            firm_size_dist=self._firm_size_dist,
-            firm_size_lognorm_sigma=self._firm_size_lognorm_sigma,
-            firm_size_pareto_shape=self._firm_size_pareto_shape,
-        )
+        config = self._build_config(n=n)
         return _generate_datasets(
             dgp_name=self.dgp_name,
             n=n,
@@ -216,19 +308,25 @@ class BipartiteDGP:
             burn_in=burn_in,
             data_dir=self._data_dir,
             make_params=lambda seed: {**asdict(config), "seed": seed},
-            generate=lambda seed: simulate_bipartite(config, seed=seed),
+            generate=lambda seed: simulate_akm_panel(config, seed=seed),
         )
 
 
-def get_bipartite_scenarios(
+def get_akm_sweep_scenarios(
     data_dir: Path, names: list[str] | None = None
-) -> list[BipartiteDGP]:
-    scenario_names = names or list(_BIPARTITE_SCENARIOS)
-    unknown = sorted(set(scenario_names) - set(_BIPARTITE_SCENARIOS))
+) -> list[AKMSweepDGP]:
+    scenario_defs = _akm_sweep_scenarios()
+    scenario_map = {scenario.name: scenario for scenario in scenario_defs}
+    scenario_names = names or [scenario.name for scenario in scenario_defs]
+    unknown = sorted(set(scenario_names) - set(scenario_map))
     if unknown:
-        raise ValueError(f"Unknown bipartite scenario(s): {', '.join(unknown)}")
+        raise ValueError(f"Unknown AKM sweep scenario(s): {', '.join(unknown)}")
 
     return [
-        BipartiteDGP(data_dir=data_dir, name=name, **_BIPARTITE_SCENARIOS[name])
+        AKMSweepDGP(
+            data_dir=data_dir,
+            name=scenario_map[name].name,
+            **scenario_map[name].overrides,
+        )
         for name in scenario_names
     ]
