@@ -270,7 +270,9 @@ def simulate_akm_panel(
 
     if isinstance(config.delta, tuple):
         worker_deltas = np.array(config.delta)[worker_industries]  # (n_workers,)
-        move_draws = rng.random((config.n_workers, config.n_time - 1)) < worker_deltas[:, None]
+        move_draws = (
+            rng.random((config.n_workers, config.n_time - 1)) < worker_deltas[:, None]
+        )
     else:
         move_draws = rng.random((config.n_workers, config.n_time - 1)) < config.delta
     for t in range(1, config.n_time):

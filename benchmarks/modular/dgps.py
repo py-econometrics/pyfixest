@@ -291,18 +291,32 @@ def _akm_sweep_scenarios() -> list[AKMSweepScenario]:
         ),
         # ── Act 5: Progressive freezing ──
         # 10 markets, turn off mobility market-by-market
-        _scenario("akm_freeze_1", n_industries=10, lambda_=0.9,
-                  delta=(0.2,) * 10),
-        _scenario("akm_freeze_2", n_industries=10, lambda_=0.9,
-                  delta=(0.2,) * 8 + (0.005,) * 2),
-        _scenario("akm_freeze_3", n_industries=10, lambda_=0.9,
-                  delta=(0.2,) * 6 + (0.005,) * 4),
-        _scenario("akm_freeze_4", n_industries=10, lambda_=0.9,
-                  delta=(0.2,) * 4 + (0.005,) * 6),
-        _scenario("akm_freeze_5", n_industries=10, lambda_=0.9,
-                  delta=(0.2,) * 2 + (0.005,) * 8),
-        _scenario("akm_freeze_6", n_industries=10, lambda_=0.9,
-                  delta=(0.005,) * 10),
+        _scenario("akm_freeze_1", n_industries=10, lambda_=0.9, delta=(0.2,) * 10),
+        _scenario(
+            "akm_freeze_2",
+            n_industries=10,
+            lambda_=0.9,
+            delta=(0.2,) * 8 + (0.005,) * 2,
+        ),
+        _scenario(
+            "akm_freeze_3",
+            n_industries=10,
+            lambda_=0.9,
+            delta=(0.2,) * 6 + (0.005,) * 4,
+        ),
+        _scenario(
+            "akm_freeze_4",
+            n_industries=10,
+            lambda_=0.9,
+            delta=(0.2,) * 4 + (0.005,) * 6,
+        ),
+        _scenario(
+            "akm_freeze_5",
+            n_industries=10,
+            lambda_=0.9,
+            delta=(0.2,) * 2 + (0.005,) * 8,
+        ),
+        _scenario("akm_freeze_6", n_industries=10, lambda_=0.9, delta=(0.005,) * 10),
     ]
 
 
