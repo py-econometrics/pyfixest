@@ -31,10 +31,11 @@ _AKM_SWEEP_XLABELS = {
     "saturation": "FE Saturation",
     "unbalanced": "Short-Panel Share",
     "interaction": "Sorting x Mobility",
+    "freeze": "Frozen Markets (of 10)",
 }
 _AKM_SWEEP_BASELINE_POINTS = {
     "sorting": (1.5, "rho=1.00"),
-    "mobility": (1.5, "delta=0.20"),
+    "mobility": (2.5, "delta=0.20"),
     "size": (2.5, "gamma=1.00"),
     "varratio": (3.5, "2.00"),
     "unbalanced": (0.5, "0%"),
@@ -52,9 +53,12 @@ _AKM_SWEEP_TICK_LABELS = {
         3: "rho=20.00",
     },
     "mobility": {
-        1: "delta=0.50",
-        2: "delta=0.05",
-        3: "delta=0.01",
+        1: "delta=1.00",
+        2: "delta=0.50",
+        3: "delta=0.05",
+        4: "delta=0.01",
+        5: "delta=0.005",
+        6: "delta=0.001",
     },
     "size": {
         1: "gamma=100.00",
@@ -95,6 +99,14 @@ _AKM_SWEEP_TICK_LABELS = {
         3: "rho=0.00, delta=0.02",
         4: "rho=5.00, delta=0.02",
         5: "rho=20.00, delta=0.02",
+    },
+    "freeze": {
+        1: "0/10",
+        2: "2/10",
+        3: "4/10",
+        4: "6/10",
+        5: "8/10",
+        6: "10/10",
     },
 }
 
@@ -398,7 +410,12 @@ def _plot_sweep_figure(
     plt.close(fig)
 
 
-def _plot_akm_sweep_benchmarks(summary: pd.DataFrame, output_path: Path) -> bool:
+def _plot_akm_sweep_benchmarks(
+    summary: pd.DataFrame,
+    output_path: Path,
+    *,
+    figure_dir: Path | None = None,
+) -> bool:
     if "akm_sweep" not in output_path.stem:
         return False
 
@@ -406,13 +423,20 @@ def _plot_akm_sweep_benchmarks(summary: pd.DataFrame, output_path: Path) -> bool
     if sweep_summary.empty:
         return False
 
+    if figure_dir is not None:
+        figure_dir.mkdir(parents=True, exist_ok=True)
+
     styles = _build_styles(sorted(sweep_summary["backend"].unique()))
     for family in sorted(sweep_summary["family"].unique()):
         family_summary = sweep_summary[sweep_summary["family"] == family].copy()
+        if figure_dir is not None:
+            fig_path = figure_dir / f"bench_{family}.png"
+        else:
+            fig_path = _dgp_output_path(output_path, f"akm_sweep_{family}")
         _plot_sweep_figure(
             family_summary,
             styles,
-            _dgp_output_path(output_path, f"akm_sweep_{family}"),
+            fig_path,
             y_label="Time (s)",
             y_scale="log",
         )
@@ -420,7 +444,12 @@ def _plot_akm_sweep_benchmarks(summary: pd.DataFrame, output_path: Path) -> bool
     return True
 
 
-def plot_benchmarks(results_df: pd.DataFrame, output_path: Path) -> None:
+def plot_benchmarks(
+    results_df: pd.DataFrame,
+    output_path: Path,
+    *,
+    figure_dir: Path | None = None,
+) -> None:
     """Create publication-ready benchmark plots, one figure per benchmark DGP."""
     if results_df.empty:
         return
@@ -428,7 +457,7 @@ def plot_benchmarks(results_df: pd.DataFrame, output_path: Path) -> None:
     summary = _aggregate(results_df)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    if _plot_akm_sweep_benchmarks(summary, output_path):
+    if _plot_akm_sweep_benchmarks(summary, output_path, figure_dir=figure_dir):
         return
 
     dgps = sorted(summary["dgp"].unique())
