@@ -1,6 +1,6 @@
 # "When Are Fixed Effects Estimations Hard?"
 
-If you have ever fitted a fixed regression model, then you might have noticed that fixed effects regressions with the same number of observations and fixed effects levels can take orders of magnitudes to run. The runtime of a fixed effects problem is not only determined by the sheer size of the data, but of its properties. Problems that are known to be particularly "hard" arise for example in matched employer-employee data, patient-doctor panels, or tradev networks.
+If you have ever fitted a fixed regression model, then you might have noticed that fixed effects regressions with the same number of observations and fixed effects levels can take orders of magnitudes to run. The runtime of a fixed effects problem is not only determined by the sheer size of the data, but of its properties. Problems that are known to be particularly "hard" are ubiqitous in economics, and arise for example in matched employer-employee data, patient-doctor panels, or trade networks.
 
 In this guide, we explain *why* and *what to do about it*. The key insight is that
 fixed-effects estimation is a **graph problem**: the structure of who-works-where
@@ -11,7 +11,7 @@ problem is.
 
 Consider the Abowd-Kramarz-Margolis (AKM) wage model:
 
-$$Y_{it} = \alpha_i + \psi_{J(i,t)} + \phi_t + X'_{it}\beta + \varepsilon_{it}$$
+$$y_{it} = \alpha_i + \psi_{J(i,t)} + \phi_t + x'_{it}\beta + \varepsilon_{it}$$
 
 Workers and firms form a **bipartite graph**: workers are one set of nodes, firms
 are the other, and each employment spell is an edge. Movers - workers who change
@@ -25,7 +25,7 @@ worker and firm effects are not separately identified.
 This bipartite structure appears throughout applied economics. In AKM
 wage decompositions, workers and firms are the two sides of the graph,
 and job changers are the movers that connect them. The same pattern
-arises in Chetty-style mover designs, where families / students move across schools or neighborhoods. In health economics, we have problems of similar structure with doctor-patneint fixed effects. In trade and industrial organisation,
+arises in Chetty-style mover designs, where families / students move across schools or neighborhoods. In health economics, we have problems of similar structure with doctor-patient fixed effects. In trade and industrial organisation,
 products sold across multiple markets or brands stocked in different
 stores play the role of movers.
 
@@ -34,7 +34,7 @@ linear algebra problem.
 
 ## From FWL to Demeaning
 
-Before we dive into algorithmic strategies, we first want to (re-) introduce the the **Frisch-Waugh-Lovell (FWL) theorem**: in a
+Before we dive into algorithmic strategies, we first want to (re-) introduce the **Frisch-Waugh-Lovell (FWL) theorem**: in a
 regression of $y$ on covariates $X$ and a set of dummy variables $D$
 (the fixed effects), the coefficient $\hat{\beta}$ on $X$ is identical
 whether we estimate the full model or first project both $y$ and $X$
@@ -82,13 +82,14 @@ The FWL projection - removing fixed effects from the data - amounts to
 solving a linear system. Specifically, we must solve the **normal
 equations**:
 
-$$G \, \hat{\mu} = D^\top W \, y$$
+$$G \, \hat{\mu} = D^\top y$$
 
-where $D$ is the $n \times m$ dummy matrix that encodes all FE levels,
-$W$ is a diagonal weight matrix, and $G = D^\top W D$ is the
-**Gramian** - a symmetric positive semi-definite matrix of dimension
-$m \times m$, where $m$ is the total number of FE levels across all
-factors.
+where $D$ is the $n \times m$ dummy matrix that encodes all FE levels
+and $G = D^\top D$ is the **Gramian** — a symmetric positive
+semi-definite matrix of dimension $m \times m$, where $m$ is the total
+number of FE levels across all factors. (For weighted least squares,
+replace $D^\top D$ with $D^\top \Omega D$ where $\Omega$ is a diagonal
+weight matrix; the block structure is identical.)
 
 The Gramian has a natural **block structure**. Consider a small example
 (adapted from the
@@ -98,7 +99,7 @@ a worker-firm panel with $n = 6$ observations and $Q = 3$ factors
 mobility is what connects the two firms in the estimation graph.
 Workers W2 (at F1) and W3 (at F2) stay at their firms.
 
-| Obs | Worker ($f_1$) | Firm ($f_2$) | Year ($f_3$) | $y$ |
+| Obs | Worker | Firm | Year | $y$ |
 |-----|----------------|--------------|--------------|------|
 | 1 | W1 | F1 | Y1 | 3.2 |
 | 2 | W1 | F2 | Y2 | 4.1 |
@@ -114,9 +115,9 @@ $\binom{3}{2} = 3$ **cross-tabulation blocks**:
 
 $$
 G = \begin{pmatrix}
-{\color{royalblue}D_W} & {\color{gray}C_{WF}} & {\color{gray}C_{WY}} \\
-{\color{gray}C_{WF}^\top} & {\color{crimson}D_F} & {\color{gray}C_{FY}} \\
-{\color{gray}C_{WY}^\top} & {\color{gray}C_{FY}^\top} & {\color{forestgreen}D_Y}
+{\color{royalblue}G_{WW}} & {\color{gray}G_{WF}} & {\color{gray}G_{WY}} \\
+{\color{gray}G_{WF}^\top} & {\color{crimson}G_{FF}} & {\color{gray}G_{FY}} \\
+{\color{gray}G_{WY}^\top} & {\color{gray}G_{FY}^\top} & {\color{forestgreen}G_{YY}}
 \end{pmatrix}
 = \left(\begin{array}{ccc|cc|cc}
 {\color{royalblue}2} & {\color{royalblue}0} & {\color{royalblue}0} & {\color{gray}1} & {\color{gray}1} & {\color{gray}1} & {\color{gray}1} \\
@@ -131,39 +132,43 @@ G = \begin{pmatrix}
 \end{array}\right)
 $$
 
-The **diagonal blocks** ${\color{royalblue}D_W}$,
-${\color{crimson}D_F}$, ${\color{forestgreen}D_Y}$ are each diagonal
-matrices whose entries are the group counts (how many observations belong
-to each worker, firm, or year). Inverting these blocks is instant because
-it amounts to dividing by group sizes, i.e., computing group means.
+The **diagonal blocks** ${\color{royalblue}G_{WW}}$,
+${\color{crimson}G_{FF}}$, ${\color{forestgreen}G_{YY}}$ are each
+diagonal matrices whose entries are the group counts (how many
+observations belong to each worker, firm, or year). Inverting these
+blocks is instant because it amounts to dividing by group sizes, i.e.,
+computing group means.
 
-The **cross-tabulation blocks** ${\color{gray}C_{WF}}$,
-${\color{gray}C_{WY}}$, ${\color{gray}C_{FY}}$ encode the
-bipartite graph structure. For example, $C_{WF}$ is the worker-firm
-cross-tabulation: entry $(i, j)$ counts how many times worker $i$ is
-observed at firm $j$. This is where the mover information lives. Worker
-W1's row in $C_{WF}$ is $(1, 1)$ - one spell at each firm - while W2's
-row is $(2, 0)$, a pure stayer. In a labour market with little mobility, the off diagonal matrices will be sparse as most workers stay within a single firm.
+The **cross-tabulation blocks** ${\color{gray}G_{WF}}$,
+${\color{gray}G_{WY}}$, ${\color{gray}G_{FY}}$ encode the
+bipartite graph structure. For example, $G_{WF} = D_W^\top D_F$ is the
+worker-firm cross-tabulation: entry $(i, j)$ counts how many times
+worker $i$ is observed at firm $j$. This is where the mover information
+lives. Worker W1's row in $G_{WF}$ is $(1, 1)$ — one spell at each
+firm — while W2's row is $(2, 0)$, a pure stayer. In a labour market
+with little mobility, the off-diagonal blocks will be sparse as most
+workers stay within a single firm.
 
 ## How MAP Works (and Why It Ignores the Graph)
 
-Recall that we need to solve $G \hat{\mu} = D^\top W y$ for the FE
+Recall that we need to solve $G \hat{\mu} = D^\top y$ for the FE
 coefficients $\hat{\mu}$, or equivalently, find the residual
 $r = y - D \hat{\mu}$ that has all fixed effects projected out. MAP
 approaches this iteratively: it sweeps through each factor and subtracts
 group means from the current residual. In terms of the Gramian, this is
-**block Gauss-Seidel** - each sweep solves one diagonal block of $G$ at
-a time:
+**block Gauss-Seidel** — each sweep solves one diagonal block of $G$ at
+a time. Writing $D_W, D_F, D_Y$ for the $n \times m_q$ dummy
+sub-matrices (column blocks of $D$), the steps are:
 
 1. Start with $r = y$
-2. Subtract worker means from $r$: $r \leftarrow r - D_W {\color{royalblue}D_W^{-1}} D_W^\top r$ (computationally cheap - the inverse of a diagonal matrix is just dividing by group sizes)
-3. Subtract firm means from $r$: $r \leftarrow r - D_F {\color{crimson}D_F^{-1}} D_F^\top r$ (cheap)
-4. Subtract year means from $r$: $r \leftarrow r - D_Y {\color{forestgreen}D_Y^{-1}} D_Y^\top r$ (cheap)
+2. Subtract worker means from $r$: $r \leftarrow r - D_W {\color{royalblue}G_{WW}^{-1}} D_W^\top r$ (cheap — $G_{WW}$ is diagonal, so its inverse just divides by group sizes)
+3. Subtract firm means from $r$: $r \leftarrow r - D_F {\color{crimson}G_{FF}^{-1}} D_F^\top r$ (cheap)
+4. Subtract year means from $r$: $r \leftarrow r - D_Y {\color{forestgreen}G_{YY}^{-1}} D_Y^\top r$ (cheap)
 5. Repeat steps 2-4 until convergence
 
 Each of these steps is individually cheap - we are just averaging within groups. But the
 algorithm **never directly touches the cross-tabulation blocks**
-$C_{WF}$, $C_{FY}$, $C_{WY}$. It can only extract information about the
+$G_{WF}$, $G_{FY}$, $G_{WY}$. It can only extract information about the
 relationship between workers and firms *indirectly*, through the
 residuals that get passed from one sweep to the next.
 
@@ -186,10 +191,17 @@ information that exists through the few movers that bridge different
 firms.
 
 Formally, the convergence rate per sweep is governed by
-$\cos^2(\theta_F)$, where $\theta_F$ is the **Friedrichs angle** between
+$\cos^2(\theta)$, where $\theta$ is the **Friedrichs angle** between
 the column spaces of the FE design matrices. Dense graphs produce
-large $\theta_F$ (fast convergence); sparse graphs produce small
-$\theta_F$ (slow convergence, or no convergence within budget).
+large $\theta$ (fast convergence); sparse graphs produce small
+$\theta$ (slow convergence, or no convergence within budget).
+
+Note that MAP implementations never actually form the dummy matrix $D$.
+Each projection $D_q G_{qq}^{-1} D_q^\top r$ is just "compute the mean
+of $r$ within each group, then subtract it" — an operation that only
+requires the integer group labels, not a sparse one-hot matrix. This is
+one of MAP's practical advantages: it needs no sparse matrix assembly
+and has minimal memory overhead.
 
 ## How CG-Schwarz Works (and Why It Uses the Graph)
 
@@ -203,7 +215,7 @@ propagate information across the graph in a single matrix-vector
 multiply. Its convergence rate depends on the **condition number** of
 the preconditioned system, not the Friedrichs angle. This makes it much
 more robust to sparse graphs.
-∂
+
 ## When Does Each Solver Win?
 
 The first-order intuition is simple:
@@ -224,26 +236,61 @@ The first-order intuition is simple:
 The intuition above is deliberately simplified. In practice, fixed-point accelerations
 such as Irons-Tuck (used in R's `fixest`) can significantly speed up
 MAP convergence, narrowing the gap on moderately sparse graphs. This is
-why the benchmarks below compare four backends: PyFixest's `rust-map`
-(MAP without acceleration), R's `fixest` (MAP with Irons-Tuck
-acceleration), PyFixest's `rust-cg` (CG-Schwarz via `within`), and
-Julia's `FixedEffectModels.jl` (LSMR). All benchmarks time the full
-estimation function call (e.g., `fixest::feols()` or `pf.feols()`),
-though most of the runtime is spent in the demeaning step.
+why the benchmarks below compare four backends: `pyfixest (rust-map)`
+(MAP without acceleration), `fixest-map` (R's `fixest` with Irons-Tuck
+acceleration), `pyfixest (rust-cg)` (CG-Schwarz via `within`), and
+`FEM.jl` (Julia's `FixedEffectModels.jl` via LSMR). All benchmarks time
+the full estimation function call (e.g., `fixest::feols()` or
+`pf.feols()`); each panel shows 2-way and 3-way FE specifications. The
+data come from a calibrated AKM data-generating process. The benchmark
+scripts and DGP documentation live in
+[`benchmarks/modular/`](https://github.com/py-econometrics/pyfixest/tree/master/benchmarks/modular).
+To reproduce the results, run `python benchmarks/modular/benchmark_akm_sweep.py`.
 
+
+## The Easy Case: Well-Connected Graphs
+
+Before looking at difficult problems, it is worth confirming the baseline: when
+the bipartite graph is dense, **all solvers are fast**. The "easy" scenario uses
+100 firms, a separation rate of $\delta = 0.5$ (workers switch firms every
+other period on average), no sorting ($\rho = 0$), and a 20-period panel — a
+deliberately well-connected graph with ~1M observations.
+
+| Backend | 2-way FE | 3-way FE |
+|---------|----------|----------|
+| `pyfixest (rust-map)` | 0.23 s | 0.29 s |
+| `pyfixest (rust-cg)` | 0.26 s | 0.41 s |
+
+On this easy problem, both solvers finish in well under a second at 1M
+observations. MAP converges in very few sweeps because each sweep
+already removes most of the variation, and CG-Schwarz's overhead from
+building the Gramian does not pay off. This is the regime where the
+choice of solver simply does not matter.
+
+## Scaling with Dataset Size
+
+The next question is how runtimes grow with the number of observations,
+holding the graph structure fixed at the (benign) defaults ($\delta = 0.2$,
+$\rho = 1.0$, $T = 10$). The scale sweep increases $N$ from 10K to 10M.
+
+![](figures/akm-benchmarks/bench_scale.png)
+
+*Benchmark: scale sweep. Runtime as a function of dataset size on a well-connected graph with default parameters.*
+
+On a well-connected graph, all solvers scale roughly linearly. At 1M
+observations, `fixest` and `rust-cg` finish in under half a second,
+while `rust-map` (MAP without acceleration) takes about 2 seconds.
+The absolute differences remain moderate because the graph structure is
+benign — MAP converges quickly even without acceleration. The gap
+between solvers only blows up when the graph becomes sparse, as shown
+in the sections below.
 
 
 ## Complex Fixed Effects Structures
 
-The benchmarks below use a calibrated AKM data-generating process with ~100K
-observations, varying one structural parameter at a time. Four backends are
-compared: `pyfixest (rust-map)` (MAP), `pyfixest (rust-cg)` (CG-Schwarz),
-`fixest-map` (R's fixest via MAP), and `FEM.jl` (Julia's FixedEffectModels.jl
-via LSMR). Each panel shows 2-way and 3-way FE specifications. The benchmark
-scripts and DGP documentation live in
-[`benchmarks/modular/`](https://github.com/py-econometrics/pyfixest/tree/master/benchmarks/modular)
-in the PyFixest repository. To reproduce the results, run
-`python benchmarks/modular/benchmark_akm_sweep.py`.
+The single-axis sweeps below hold the dataset at ~1M observations and vary
+one structural parameter at a time from the defaults, isolating the effect of
+each graph property on solver performance.
 
 
 ### (a) Low mobility: the dominant factor
@@ -330,13 +377,13 @@ propagate information across the graph.
 
 ### (d) High FE saturation
 
-The ratio $(N_w + N_f) / N$ measures how many fixed-effect parameters
+The ratio $(m_W + m_F) / n$ measures how many fixed-effect parameters
 there are relative to the number of observations. When this ratio is
 low (e.g., 0.10), there are many observations per FE level and the
-normal equations are well-conditioned. As the number of firms $N_f$
+normal equations are well-conditioned. As the number of firms $m_F$
 increases while holding everything else fixed, the ratio grows and the
 system becomes increasingly ill-conditioned. In the extreme, when
-$(N_w + N_f) / N$ approaches 1, there are nearly as many parameters as
+$(m_W + m_F) / n$ approaches 1, there are nearly as many parameters as
 observations and the problem becomes poorly identified.
 
 High saturation means that each firm has very few workers, so the
