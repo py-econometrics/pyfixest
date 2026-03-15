@@ -71,9 +71,10 @@ def _validate_config(config: AKMConfig) -> None:
             raise ValueError(f"{name} must be non-negative")
 
 
-def _balanced_groups(n_items: int, n_groups: int, rng: np.random.Generator) -> np.ndarray:
+def _balanced_groups(
+    n_items: int, n_groups: int, rng: np.random.Generator
+) -> np.ndarray:
     """Assign groups nearly uniformly while guaranteeing support for every group."""
-
     groups = np.arange(n_items) % n_groups
     return rng.permutation(groups)
 
@@ -85,7 +86,6 @@ def _couple_by_rank(
     correlation: float,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Assign sorted draws to correlated latent ranks via a Gaussian copula."""
-
     z1 = rng.standard_normal(len(left))
     z2 = correlation * z1 + np.sqrt(max(0.0, 1 - correlation**2)) * rng.standard_normal(
         len(right)
@@ -108,7 +108,6 @@ def _firm_size_weights(config: AKMConfig, rng: np.random.Generator) -> np.ndarra
 
 def _alpha_bins(alpha: np.ndarray, n_bins: int) -> tuple[np.ndarray, np.ndarray]:
     """Bucket workers by alpha rank for fast approximate sampling."""
-
     n_bins = min(n_bins, len(alpha))
     order = np.argsort(alpha, kind="mergesort")
     bin_ids = np.empty(len(alpha), dtype=np.int16)
@@ -146,9 +145,11 @@ def _build_assignment_cdfs(
     )
     for industry in range(config.n_industries):
         for bin_id, alpha_center in enumerate(alpha_centers):
-            scores = np.exp(
-                -0.5 * config.rho * ((alpha_center - psi) ** 2) / tau2
-            ) * firm_weights * industry_weights[industry]
+            scores = (
+                np.exp(-0.5 * config.rho * ((alpha_center - psi) ** 2) / tau2)
+                * firm_weights
+                * industry_weights[industry]
+            )
             probs = scores / scores.sum()
             cdf = np.cumsum(probs, dtype=np.float64)
             cdf[-1] = 1.0
@@ -215,9 +216,8 @@ def _panel_observation_mask(
         size=n_short,
     )
     periods = np.arange(config.n_time)
-    short_mask = (
-        (periods[None, :] >= starts[:, None])
-        & (periods[None, :] < starts[:, None] + config.entry_exit_n_periods)
+    short_mask = (periods[None, :] >= starts[:, None]) & (
+        periods[None, :] < starts[:, None] + config.entry_exit_n_periods
     )
     mask[short_workers] = short_mask
     return mask
@@ -230,7 +230,6 @@ def simulate_akm_panel(
     include_latent: bool = False,
 ) -> pd.DataFrame:
     """Simulate an AKM-style worker-firm panel for benchmark timing."""
-
     _validate_config(config)
     rng = np.random.default_rng(seed)
 
@@ -299,7 +298,9 @@ def simulate_akm_panel(
         "y": y[observed_mask],
     }
     if include_latent:
-        data["worker_industry"] = np.repeat(worker_industries, config.n_time)[observed_mask]
+        data["worker_industry"] = np.repeat(worker_industries, config.n_time)[
+            observed_mask
+        ]
         data["firm_industry"] = firm_industries[firm_paths.ravel()][observed_mask]
         data["worker_fe"] = worker_fe[observed_mask]
         data["firm_fe"] = firm_fe[observed_mask]
@@ -310,10 +311,12 @@ def simulate_akm_panel(
 
 def summarize_akm_panel(df: pd.DataFrame) -> dict[str, float]:
     """Compute graph and mobility diagnostics from a simulated AKM panel."""
-
     obs_per_worker = df.groupby("indiv_id").size()
     mover_worker_ids = (
-        df.groupby("indiv_id")["firm_id"].nunique().loc[lambda s: s > 1].index.to_numpy()
+        df.groupby("indiv_id")["firm_id"]
+        .nunique()
+        .loc[lambda s: s > 1]
+        .index.to_numpy()
     )
     mover_obs = df[df["indiv_id"].isin(mover_worker_ids)]
     edges = mover_obs[["indiv_id", "firm_id"]].drop_duplicates()
@@ -350,10 +353,9 @@ def summarize_akm_panel(df: pd.DataFrame) -> dict[str, float]:
 
     worker_component = pd.Series(labels[:n_workers], index=worker_levels)
     firm_component = pd.Series(labels[n_workers:], index=firm_levels)
-    in_largest = (
-        df["indiv_id"].map(worker_component).eq(largest_component)
-        & df["firm_id"].map(firm_component).eq(largest_component)
-    )
+    in_largest = df["indiv_id"].map(worker_component).eq(largest_component) & df[
+        "firm_id"
+    ].map(firm_component).eq(largest_component)
 
     diagnostics["connected_components"] = float(n_components)
     diagnostics["largest_connected_set_share"] = float(in_largest.mean())

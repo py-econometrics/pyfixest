@@ -16,7 +16,6 @@ def base_dgp(
     This DGP is kept for the main benchmark suite only. AKM benchmarks use the
     standalone generator in ``akm_dgp.py``.
     """
-
     rng = np.random.default_rng(seed)
 
     nb_indiv = round(n / nb_year)

@@ -278,7 +278,10 @@ def _parse_akm_sweep_dgp(dgp: str) -> tuple[str, int, str] | None:
     except ValueError:
         return None
 
-    if family not in _AKM_SWEEP_TICK_LABELS or order not in _AKM_SWEEP_TICK_LABELS[family]:
+    if (
+        family not in _AKM_SWEEP_TICK_LABELS
+        or order not in _AKM_SWEEP_TICK_LABELS[family]
+    ):
         return None
 
     return family, order, _AKM_SWEEP_TICK_LABELS[family][order]

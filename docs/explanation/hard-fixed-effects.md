@@ -27,7 +27,7 @@ wage decompositions, workers and firms are the two sides of the graph,
 and job changers are the movers that connect them. The same pattern
 arises in Chetty-style mover designs, where families / students move across schools or neighborhoods. In health economics, we have problems of similar structure with doctor-patneint fixed effects. In trade and industrial organisation,
 products sold across multiple markets or brands stocked in different
-stores play the role of movers. 
+stores play the role of movers.
 
 In all these settings, estimation requires solving the same underlying
 linear algebra problem.
@@ -63,7 +63,7 @@ Several algorithms have been proposed for this multi-factor demeaning
 problem:
 
 - **MAP (Method of Alternating Projections).** Introduced by
-  Guimarães & Portugal (2010) as the "Zig-Zag" and Gaure (2013), this is the workhorse algorithm in most FE packages (`reghdfe`, `lfe`, `fixest`). It sweeps through each factor in turn, demeaning the residual by the current factor's group means. Usually, this approach is implemented with accelerations. For example, R's `fixest` uses MAP with Irons-Tuck acceleration and other convergence tricks. In PyFixest, the `"rust"` backend implements MAP without acceleration. One key advantage of the MAP algorithm is that the fixed effects do not have to be encoded as a (sparse) one-hot encoded design matrix. 
+  Guimarães & Portugal (2010) as the "Zig-Zag" and Gaure (2013), this is the workhorse algorithm in most FE packages (`reghdfe`, `lfe`, `fixest`). It sweeps through each factor in turn, demeaning the residual by the current factor's group means. Usually, this approach is implemented with accelerations. For example, R's `fixest` uses MAP with Irons-Tuck acceleration and other convergence tricks. In PyFixest, the `"rust"` backend implements MAP without acceleration. One key advantage of the MAP algorithm is that the fixed effects do not have to be encoded as a (sparse) one-hot encoded design matrix.
 
 - **LSMR.** Julia's `FixedEffectModels.jl` uses LSMR, a Krylov-subspace
   method that works on the rectangular design matrix directly rather than
@@ -143,7 +143,7 @@ bipartite graph structure. For example, $C_{WF}$ is the worker-firm
 cross-tabulation: entry $(i, j)$ counts how many times worker $i$ is
 observed at firm $j$. This is where the mover information lives. Worker
 W1's row in $C_{WF}$ is $(1, 1)$ - one spell at each firm - while W2's
-row is $(2, 0)$, a pure stayer. In a labour market with little mobility, the off diagonal matrices will be sparse as most workers stay within a single firm. 
+row is $(2, 0)$, a pure stayer. In a labour market with little mobility, the off diagonal matrices will be sparse as most workers stay within a single firm.
 
 ## How MAP Works (and Why It Ignores the Graph)
 

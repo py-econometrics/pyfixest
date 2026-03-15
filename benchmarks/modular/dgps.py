@@ -21,7 +21,6 @@ except ImportError:
 
 def _seed_for(dgp_name: str, n: int, iteration: int) -> int:
     """Build deterministic seeds so benchmark runs are reproducible."""
-
     dgp_offset = {"simple": 0, "difficult": 1, "akm_baseline": 2}.get(
         dgp_name, hash(dgp_name) % 97
     )
@@ -30,7 +29,6 @@ def _seed_for(dgp_name: str, n: int, iteration: int) -> int:
 
 def _param_hash(params: dict) -> str:
     """Stable SHA-256 hex digest of sorted, canonical JSON of params."""
-
     canonical = json.dumps(params, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(canonical.encode()).hexdigest()[:16]
 
@@ -57,7 +55,6 @@ def _generate_datasets(
     generate: Callable[[int], Any],
 ) -> list[BenchmarkDataset]:
     """Generate parquet-backed datasets for one DGP/size combination."""
-
     data_dir.mkdir(parents=True, exist_ok=True)
     datasets: list[BenchmarkDataset] = []
     total = burn_in + n_iters
@@ -101,6 +98,7 @@ def _generate_datasets(
         )
 
     return datasets
+
 
 @dataclass(frozen=True)
 class AKMSweepScenario:
@@ -174,11 +172,21 @@ def _akm_sweep_scenarios() -> list[AKMSweepScenario]:
         # sorting (n_match_bins=2048 for near-continuous matching, delta=0.05
         # so fewer moves create fewer bridges between quality bands,
         # n_firms=50_000 so high rho creates many fine-grained quality bands)
-        _scenario("akm_sorting_1", rho=0.0, n_match_bins=2048, delta=0.05, n_firms=50_000),
-        _scenario("akm_sorting_2", rho=5.0, n_match_bins=2048, delta=0.05, n_firms=50_000),
-        _scenario("akm_sorting_3", rho=20.0, n_match_bins=2048, delta=0.05, n_firms=50_000),
-        _scenario("akm_sorting_4", rho=50.0, n_match_bins=2048, delta=0.05, n_firms=50_000),
-        _scenario("akm_sorting_5", rho=100.0, n_match_bins=2048, delta=0.05, n_firms=50_000),
+        _scenario(
+            "akm_sorting_1", rho=0.0, n_match_bins=2048, delta=0.05, n_firms=50_000
+        ),
+        _scenario(
+            "akm_sorting_2", rho=5.0, n_match_bins=2048, delta=0.05, n_firms=50_000
+        ),
+        _scenario(
+            "akm_sorting_3", rho=20.0, n_match_bins=2048, delta=0.05, n_firms=50_000
+        ),
+        _scenario(
+            "akm_sorting_4", rho=50.0, n_match_bins=2048, delta=0.05, n_firms=50_000
+        ),
+        _scenario(
+            "akm_sorting_5", rho=100.0, n_match_bins=2048, delta=0.05, n_firms=50_000
+        ),
         # mobility
         _scenario("akm_mobility_1", delta=0.5),
         _scenario("akm_mobility_2", delta=0.05),
@@ -192,11 +200,21 @@ def _akm_sweep_scenarios() -> list[AKMSweepScenario]:
         _scenario("akm_size_4", gamma=0.2, n_firms=5_000),
         # fragmentation (delta=0.05 so total movers are few, n_time=4 so
         # cross-industry bridges have few periods to accumulate)
-        _scenario("akm_fragmentation_1", n_industries=1, lambda_=1.0, delta=0.05, n_time=4),
-        _scenario("akm_fragmentation_2", n_industries=5, lambda_=0.5, delta=0.05, n_time=4),
-        _scenario("akm_fragmentation_3", n_industries=5, lambda_=0.95, delta=0.05, n_time=4),
-        _scenario("akm_fragmentation_4", n_industries=20, lambda_=0.95, delta=0.05, n_time=4),
-        _scenario("akm_fragmentation_5", n_industries=50, lambda_=0.99, delta=0.05, n_time=4),
+        _scenario(
+            "akm_fragmentation_1", n_industries=1, lambda_=1.0, delta=0.05, n_time=4
+        ),
+        _scenario(
+            "akm_fragmentation_2", n_industries=5, lambda_=0.5, delta=0.05, n_time=4
+        ),
+        _scenario(
+            "akm_fragmentation_3", n_industries=5, lambda_=0.95, delta=0.05, n_time=4
+        ),
+        _scenario(
+            "akm_fragmentation_4", n_industries=20, lambda_=0.95, delta=0.05, n_time=4
+        ),
+        _scenario(
+            "akm_fragmentation_5", n_industries=50, lambda_=0.99, delta=0.05, n_time=4
+        ),
         # saturation (n_time=10, isolate FE-ratio effect)
         _scenario("akm_saturation_1", n_firms=1_000),
         _scenario("akm_saturation_2", n_firms=10_000),
@@ -209,10 +227,30 @@ def _akm_sweep_scenarios() -> list[AKMSweepScenario]:
         _scenario("akm_short_panel_4", n_time=2, delta=0.02),
         # unbalanced panels (delta=0.05 so short-tenure workers are mostly
         # stayers contributing zero edges, straining the graph)
-        _scenario("akm_unbalanced_1", entry_exit_share=0.10, entry_exit_n_periods=2, delta=0.05),
-        _scenario("akm_unbalanced_2", entry_exit_share=0.25, entry_exit_n_periods=2, delta=0.05),
-        _scenario("akm_unbalanced_3", entry_exit_share=0.50, entry_exit_n_periods=2, delta=0.05),
-        _scenario("akm_unbalanced_4", entry_exit_share=0.75, entry_exit_n_periods=2, delta=0.05),
+        _scenario(
+            "akm_unbalanced_1",
+            entry_exit_share=0.10,
+            entry_exit_n_periods=2,
+            delta=0.05,
+        ),
+        _scenario(
+            "akm_unbalanced_2",
+            entry_exit_share=0.25,
+            entry_exit_n_periods=2,
+            delta=0.05,
+        ),
+        _scenario(
+            "akm_unbalanced_3",
+            entry_exit_share=0.50,
+            entry_exit_n_periods=2,
+            delta=0.05,
+        ),
+        _scenario(
+            "akm_unbalanced_4",
+            entry_exit_share=0.75,
+            entry_exit_n_periods=2,
+            delta=0.05,
+        ),
         # ── Act 4: Combinations ──
         # sorting x mobility (2x2 factorial)
         _scenario("akm_interaction_1", rho=0.0, delta=0.5),

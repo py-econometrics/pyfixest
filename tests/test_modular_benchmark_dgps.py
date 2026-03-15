@@ -1,6 +1,10 @@
 from pathlib import Path
 
-from benchmarks.modular.akm_dgp import AKMConfig, simulate_akm_panel, summarize_akm_panel
+from benchmarks.modular.akm_dgp import (
+    AKMConfig,
+    simulate_akm_panel,
+    summarize_akm_panel,
+)
 from benchmarks.modular.dgps import get_akm_sweep_scenarios
 
 
@@ -126,7 +130,6 @@ def test_higher_lambda_reduces_cross_industry_histories():
     assert strong_cross < weak_cross
 
 
-
 def test_unbalanced_panels_have_fewer_rows_and_keep_at_least_two_periods():
     config = AKMConfig(
         n_workers=300,
@@ -171,5 +174,10 @@ def test_higher_entry_exit_share_reduces_average_observed_periods():
     mild_summary = summarize_akm_panel(mild_unbalance_df)
     heavy_summary = summarize_akm_panel(heavy_unbalance_df)
 
-    assert heavy_summary["mean_observed_periods"] < mild_summary["mean_observed_periods"]
-    assert heavy_summary["two_period_worker_share"] > mild_summary["two_period_worker_share"]
+    assert (
+        heavy_summary["mean_observed_periods"] < mild_summary["mean_observed_periods"]
+    )
+    assert (
+        heavy_summary["two_period_worker_share"]
+        > mild_summary["two_period_worker_share"]
+    )
