@@ -23,7 +23,7 @@ class AKMConfig:
     gamma: float = 1.0
     rho_size: float = 0.6
     rho: float = 1.0
-    delta: float = 0.2
+    delta: float | tuple[float, ...] = 0.2
     lambda_: float = 0.8
     beta_x1: float = 0.5
     n_match_bins: int = 64
@@ -54,8 +54,16 @@ def _validate_config(config: AKMConfig) -> None:
         raise ValueError("rho_size must be in [0, 1]")
     if config.rho < 0:
         raise ValueError("rho must be non-negative")
-    if not 0 < config.delta < 1:
-        raise ValueError("delta must be in (0, 1)")
+    if isinstance(config.delta, tuple):
+        if len(config.delta) != config.n_industries:
+            raise ValueError(
+                f"delta tuple length {len(config.delta)} != n_industries {config.n_industries}"
+            )
+        if not all(0 < d <= 1 for d in config.delta):
+            raise ValueError("all delta values must be in (0, 1]")
+    else:
+        if not 0 < config.delta <= 1:
+            raise ValueError("delta must be in (0, 1]")
     if config.n_industries == 1:
         if config.lambda_ != 1:
             raise ValueError("lambda_ must equal 1 when n_industries == 1")
@@ -260,7 +268,11 @@ def simulate_akm_panel(
     for (industry, bin_id), idx in worker_groups.items():
         firm_paths[idx, 0] = _sample_firms(rng, cdfs[industry, bin_id], len(idx))
 
-    move_draws = rng.random((config.n_workers, config.n_time - 1)) < config.delta
+    if isinstance(config.delta, tuple):
+        worker_deltas = np.array(config.delta)[worker_industries]  # (n_workers,)
+        move_draws = rng.random((config.n_workers, config.n_time - 1)) < worker_deltas[:, None]
+    else:
+        move_draws = rng.random((config.n_workers, config.n_time - 1)) < config.delta
     for t in range(1, config.n_time):
         firm_paths[:, t] = firm_paths[:, t - 1]
         movers = move_draws[:, t - 1]
