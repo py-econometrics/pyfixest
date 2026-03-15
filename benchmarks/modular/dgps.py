@@ -24,7 +24,7 @@ def _seed_for(dgp_name: str, n: int, iteration: int) -> int:
     dgp_offset = {"simple": 0, "difficult": 1, "akm_baseline": 2}.get(
         dgp_name, hash(dgp_name) % 97
     )
-    return n * 100 + iteration * 17 + dgp_offset
+    return n * 100 + iteration * 17 + dgp_offset + 42
 
 
 def _param_hash(params: dict) -> str:
@@ -188,11 +188,12 @@ def _akm_sweep_scenarios() -> list[AKMSweepScenario]:
             "akm_sorting_5", rho=100.0, n_match_bins=2048, delta=0.05, n_firms=50_000
         ),
         # mobility
-        _scenario("akm_mobility_1", delta=0.5),
-        _scenario("akm_mobility_2", delta=0.05),
-        _scenario("akm_mobility_3", delta=0.01),
-        _scenario("akm_mobility_4", delta=0.005),
-        _scenario("akm_mobility_5", delta=0.001),
+        _scenario("akm_mobility_1", delta=1.0),
+        _scenario("akm_mobility_2", delta=0.5),
+        _scenario("akm_mobility_3", delta=0.05),
+        _scenario("akm_mobility_4", delta=0.01),
+        _scenario("akm_mobility_5", delta=0.005),
+        _scenario("akm_mobility_6", delta=0.001),
         # firm size (n_firms=5000 so extreme skew creates genuinely tiny firms)
         _scenario("akm_size_1", gamma=100.0, n_firms=5_000),
         _scenario("akm_size_2", gamma=2.0, n_firms=5_000),
@@ -288,6 +289,20 @@ def _akm_sweep_scenarios() -> list[AKMSweepScenario]:
             lambda_=0.95,
             n_time=2,
         ),
+        # ── Act 5: Progressive freezing ──
+        # 10 markets, turn off mobility market-by-market
+        _scenario("akm_freeze_1", n_industries=10, lambda_=0.9,
+                  delta=(0.2,) * 10),
+        _scenario("akm_freeze_2", n_industries=10, lambda_=0.9,
+                  delta=(0.2,) * 8 + (0.005,) * 2),
+        _scenario("akm_freeze_3", n_industries=10, lambda_=0.9,
+                  delta=(0.2,) * 6 + (0.005,) * 4),
+        _scenario("akm_freeze_4", n_industries=10, lambda_=0.9,
+                  delta=(0.2,) * 4 + (0.005,) * 6),
+        _scenario("akm_freeze_5", n_industries=10, lambda_=0.9,
+                  delta=(0.2,) * 2 + (0.005,) * 8),
+        _scenario("akm_freeze_6", n_industries=10, lambda_=0.9,
+                  delta=(0.005,) * 10),
     ]
 
 
