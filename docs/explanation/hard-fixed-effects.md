@@ -107,17 +107,15 @@ G = \begin{pmatrix}
 {\color{gray}G_{WF}^\top} & {\color{#DC143C}G_{FF}} & {\color{gray}G_{FY}} \\
 {\color{gray}G_{WY}^\top} & {\color{gray}G_{FY}^\top} & {\color{#228B22}G_{YY}}
 \end{pmatrix}
-= \left(\begin{array}{ccc|cc|cc}
+= \begin{pmatrix}
 {\color{#4169E1}2} & {\color{#4169E1}0} & {\color{#4169E1}0} & {\color{gray}1} & {\color{gray}1} & {\color{gray}1} & {\color{gray}1} \\
 {\color{#4169E1}0} & {\color{#4169E1}2} & {\color{#4169E1}0} & {\color{gray}2} & {\color{gray}0} & {\color{gray}1} & {\color{gray}1} \\
 {\color{#4169E1}0} & {\color{#4169E1}0} & {\color{#4169E1}2} & {\color{gray}0} & {\color{gray}2} & {\color{gray}1} & {\color{gray}1} \\
-\hline
 {\color{gray}1} & {\color{gray}2} & {\color{gray}0} & {\color{#DC143C}3} & {\color{#DC143C}0} & {\color{gray}2} & {\color{gray}1} \\
 {\color{gray}1} & {\color{gray}0} & {\color{gray}2} & {\color{#DC143C}0} & {\color{#DC143C}3} & {\color{gray}1} & {\color{gray}2} \\
-\hline
 {\color{gray}1} & {\color{gray}1} & {\color{gray}1} & {\color{gray}2} & {\color{gray}1} & {\color{#228B22}3} & {\color{#228B22}0} \\
 {\color{gray}1} & {\color{gray}1} & {\color{gray}1} & {\color{gray}1} & {\color{gray}2} & {\color{#228B22}0} & {\color{#228B22}3}
-\end{array}\right)
+\end{pmatrix}
 $$
 
 The **diagonal blocks** ${\color{#4169E1}G_{WW}}$,
