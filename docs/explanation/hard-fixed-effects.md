@@ -404,3 +404,14 @@ graphs (high mobility, low sorting, cross-cutting factors), MAP with
 acceleration (e.g., `fixest`) is fast and hard to beat. For sparse
 graphs — low mobility, strong sorting, nested structures, or any
 combination thereof — vanilla MAP as in `rust-map` reveals poor convergence properties. The CG-Schwarz algorithm (`rust-cg` via the `within` crate), LSMR and accelerated MAP offer more performant and robust alternatives.
+
+We conclude by showing two benchmarks from the `fixest` readme that are designed to be simple and very challenging for the MAP algorithm. On the "simple" problem, all MAP and `FixedEffectModels.jl`'s LSMR have no problem to converge because the problem is **dense**. The CG-Schwarz algorithm instead struggles. On the other hand, it does **much better** on the "difficult" and sparse problem, for which vanilla MAP takes ages. CG-Schwarz is around 200x faster than vanilla MAP, and 10x faster than the accelerated fixest MAP and the LSMR.
+
+![](figures/base-benchmarks/bench_simple.png)
+
+*Benchmark: "simple" DGP from the `fixest` readme. A well-connected graph where all solvers perform well, except CG-Schwarz which pays overhead for building the Gramian.*
+
+![](figures/base-benchmarks/bench_difficult.png)
+
+*Benchmark: "difficult" DGP from the `fixest` readme. A sparse graph where vanilla MAP degrades dramatically, while CG-Schwarz remains fast.*
+

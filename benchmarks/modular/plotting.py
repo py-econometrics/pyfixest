@@ -460,12 +460,19 @@ def plot_benchmarks(
 
     dgps = sorted(summary["dgp"].unique())
 
+    if figure_dir is not None:
+        figure_dir.mkdir(parents=True, exist_ok=True)
+
     styles = _build_styles(sorted(summary["backend"].unique()))
     for dgp in dgps:
         dgp_summary = summary[summary["dgp"] == dgp].copy()
+        if figure_dir is not None:
+            fig_path = figure_dir / f"bench_{dgp}.png"
+        else:
+            fig_path = _dgp_output_path(output_path, dgp)
         _plot_dgp_figure(
             dgp_summary,
             styles,
-            _dgp_output_path(output_path, dgp),
+            fig_path,
             _line_cell,
         )
