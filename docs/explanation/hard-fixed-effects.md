@@ -104,32 +104,32 @@ $\binom{3}{2} = 3$ **cross-tabulation blocks**:
 
 $$
 G = \begin{pmatrix}
-G_{WW} & G_{WF} & G_{WY} \\
-G_{WF}^\top & G_{FF} & G_{FY} \\
-G_{WY}^\top & G_{FY}^\top & G_{YY}
+{\color{blue}G_{WW}} & {\color{gray}G_{WF}} & {\color{gray}G_{WY}} \\
+{\color{gray}G_{WF}^\top} & {\color{red}G_{FF}} & {\color{gray}G_{FY}} \\
+{\color{gray}G_{WY}^\top} & {\color{gray}G_{FY}^\top} & {\color{green}G_{YY}}
 \end{pmatrix}
 = \left(\begin{array}{ccc|cc|cc}
-2 & 0 & 0 & 1 & 1 & 1 & 1 \\
-0 & 2 & 0 & 2 & 0 & 1 & 1 \\
-0 & 0 & 2 & 0 & 2 & 1 & 1 \\
+{\color{blue}2} & {\color{blue}0} & {\color{blue}0} & {\color{gray}1} & {\color{gray}1} & {\color{gray}1} & {\color{gray}1} \\
+{\color{blue}0} & {\color{blue}2} & {\color{blue}0} & {\color{gray}2} & {\color{gray}0} & {\color{gray}1} & {\color{gray}1} \\
+{\color{blue}0} & {\color{blue}0} & {\color{blue}2} & {\color{gray}0} & {\color{gray}2} & {\color{gray}1} & {\color{gray}1} \\
 \hline
-1 & 2 & 0 & 3 & 0 & 2 & 1 \\
-1 & 0 & 2 & 0 & 3 & 1 & 2 \\
+{\color{gray}1} & {\color{gray}2} & {\color{gray}0} & {\color{red}3} & {\color{red}0} & {\color{gray}2} & {\color{gray}1} \\
+{\color{gray}1} & {\color{gray}0} & {\color{gray}2} & {\color{red}0} & {\color{red}3} & {\color{gray}1} & {\color{gray}2} \\
 \hline
-1 & 1 & 1 & 2 & 1 & 3 & 0 \\
-1 & 1 & 1 & 1 & 2 & 0 & 3
+{\color{gray}1} & {\color{gray}1} & {\color{gray}1} & {\color{gray}2} & {\color{gray}1} & {\color{green}3} & {\color{green}0} \\
+{\color{gray}1} & {\color{gray}1} & {\color{gray}1} & {\color{gray}1} & {\color{gray}2} & {\color{green}0} & {\color{green}3}
 \end{array}\right)
 $$
 
-The **diagonal blocks** $G_{WW}$,
-$G_{FF}$, $G_{YY}$ are each
+The **diagonal blocks** ${\color{blue}G_{WW}}$,
+${\color{red}G_{FF}}$, ${\color{green}G_{YY}}$ are each
 diagonal matrices whose entries are the group counts (how many
 observations belong to each worker, firm, or year). We note that inverting these
 blocks is computationally cheap because it amounts to dividing by group sizes, i.e.,
 computing group means.
 
-The **cross-tabulation blocks** $G_{WF}$,
-$G_{WY}$, $G_{FY}$ encode the
+The **cross-tabulation blocks** ${\color{gray}G_{WF}}$,
+${\color{gray}G_{WY}}$, ${\color{gray}G_{FY}}$ encode the
 bipartite graph structure. For example, $G_{WF} = D_W^\top D_F$ is the
 worker-firm cross-tabulation: entry $(i, j)$ counts how many times
 worker $i$ is observed at firm $j$. This is where the mover information
@@ -147,14 +147,14 @@ a time. Writing $D_W, D_F, D_Y$ for the $n \times m_q$ dummy
 sub-matrices (column blocks of $D$), the steps are:
 
 1. Start with $r = y$
-2. Subtract worker means from $r$: $r \leftarrow r - D_W G_{WW}^{-1} D_W^\top r$
-3. Subtract firm means from $r$: $r \leftarrow r - D_F G_{FF}^{-1} D_F^\top r$
-4. Subtract year means from $r$: $r \leftarrow r - D_Y G_{YY}^{-1} D_Y^\top r$
+2. Subtract worker means from $r$: $r \leftarrow r - D_W {\color{blue}G_{WW}^{-1}} D_W^\top r$
+3. Subtract firm means from $r$: $r \leftarrow r - D_F {\color{red}G_{FF}^{-1}} D_F^\top r$
+4. Subtract year means from $r$: $r \leftarrow r - D_Y {\color{green}G_{YY}^{-1}} D_Y^\top r$
 5. Repeat steps 2-4 until convergence
 
-Each of these steps is individually cheap because $G_{WW}$, $G_{FF}$, $G_{YY}$. are diagonal matrices.
+Each of these steps is individually cheap because ${\color{blue}G_{WW}}$, ${\color{red}G_{FF}}$, ${\color{green}G_{YY}}$ are diagonal matrices.
 
-We also note that the MAP algorithm **never directly touches the cross-tabulation blocks** $G_{WF}$, $G_{FY}$, $G_{WY}$. It can only extract information about the
+We also note that the MAP algorithm **never directly touches the cross-tabulation blocks** ${\color{gray}G_{WF}}$, ${\color{gray}G_{FY}}$, ${\color{gray}G_{WY}}$. It can only extract information about the
 relationship between workers and firms *indirectly*, through the
 residuals that get passed from one sweep to the next.
 
