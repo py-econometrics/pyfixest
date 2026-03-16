@@ -414,4 +414,3 @@ We conclude by showing two benchmarks from the `fixest` readme that are designed
 ![](figures/base-benchmarks/bench_difficult.png)
 
 *Benchmark: "difficult" DGP from the `fixest` readme. A sparse graph where vanilla MAP degrades dramatically, while CG-Schwarz remains fast.*
-

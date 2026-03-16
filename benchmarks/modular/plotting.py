@@ -127,8 +127,11 @@ def _apply_common_style(ax: plt.Axes) -> None:
 def _ensure_min_yticks(ax: plt.Axes, min_ticks: int = 2) -> None:
     """Widen y-limits if fewer than *min_ticks* major ticks are visible."""
     ax.figure.canvas.draw()
-    ticks = [t for t in ax.yaxis.get_major_locator().tick_values(*ax.get_ylim())
-             if ax.get_ylim()[0] <= t <= ax.get_ylim()[1]]
+    ticks = [
+        t
+        for t in ax.yaxis.get_major_locator().tick_values(*ax.get_ylim())
+        if ax.get_ylim()[0] <= t <= ax.get_ylim()[1]
+    ]
     if len(ticks) >= min_ticks:
         return
     ylo, yhi = ax.get_ylim()
