@@ -103,25 +103,25 @@ $\binom{3}{2} = 3$ **cross-tabulation blocks**:
 
 $$
 G = \begin{pmatrix}
-{\color{royalblue}G_{WW}} & {\color{gray}G_{WF}} & {\color{gray}G_{WY}} \\
-{\color{gray}G_{WF}^\top} & {\color{crimson}G_{FF}} & {\color{gray}G_{FY}} \\
-{\color{gray}G_{WY}^\top} & {\color{gray}G_{FY}^\top} & {\color{forestgreen}G_{YY}}
+{\color{#4169E1}G_{WW}} & {\color{gray}G_{WF}} & {\color{gray}G_{WY}} \\
+{\color{gray}G_{WF}^\top} & {\color{#DC143C}G_{FF}} & {\color{gray}G_{FY}} \\
+{\color{gray}G_{WY}^\top} & {\color{gray}G_{FY}^\top} & {\color{#228B22}G_{YY}}
 \end{pmatrix}
 = \left(\begin{array}{ccc|cc|cc}
-{\color{royalblue}2} & {\color{royalblue}0} & {\color{royalblue}0} & {\color{gray}1} & {\color{gray}1} & {\color{gray}1} & {\color{gray}1} \\
-{\color{royalblue}0} & {\color{royalblue}2} & {\color{royalblue}0} & {\color{gray}2} & {\color{gray}0} & {\color{gray}1} & {\color{gray}1} \\
-{\color{royalblue}0} & {\color{royalblue}0} & {\color{royalblue}2} & {\color{gray}0} & {\color{gray}2} & {\color{gray}1} & {\color{gray}1} \\
+{\color{#4169E1}2} & {\color{#4169E1}0} & {\color{#4169E1}0} & {\color{gray}1} & {\color{gray}1} & {\color{gray}1} & {\color{gray}1} \\
+{\color{#4169E1}0} & {\color{#4169E1}2} & {\color{#4169E1}0} & {\color{gray}2} & {\color{gray}0} & {\color{gray}1} & {\color{gray}1} \\
+{\color{#4169E1}0} & {\color{#4169E1}0} & {\color{#4169E1}2} & {\color{gray}0} & {\color{gray}2} & {\color{gray}1} & {\color{gray}1} \\
 \hline
-{\color{gray}1} & {\color{gray}2} & {\color{gray}0} & {\color{crimson}3} & {\color{crimson}0} & {\color{gray}2} & {\color{gray}1} \\
-{\color{gray}1} & {\color{gray}0} & {\color{gray}2} & {\color{crimson}0} & {\color{crimson}3} & {\color{gray}1} & {\color{gray}2} \\
+{\color{gray}1} & {\color{gray}2} & {\color{gray}0} & {\color{#DC143C}3} & {\color{#DC143C}0} & {\color{gray}2} & {\color{gray}1} \\
+{\color{gray}1} & {\color{gray}0} & {\color{gray}2} & {\color{#DC143C}0} & {\color{#DC143C}3} & {\color{gray}1} & {\color{gray}2} \\
 \hline
-{\color{gray}1} & {\color{gray}1} & {\color{gray}1} & {\color{gray}2} & {\color{gray}1} & {\color{forestgreen}3} & {\color{forestgreen}0} \\
-{\color{gray}1} & {\color{gray}1} & {\color{gray}1} & {\color{gray}1} & {\color{gray}2} & {\color{forestgreen}0} & {\color{forestgreen}3}
+{\color{gray}1} & {\color{gray}1} & {\color{gray}1} & {\color{gray}2} & {\color{gray}1} & {\color{#228B22}3} & {\color{#228B22}0} \\
+{\color{gray}1} & {\color{gray}1} & {\color{gray}1} & {\color{gray}1} & {\color{gray}2} & {\color{#228B22}0} & {\color{#228B22}3}
 \end{array}\right)
 $$
 
-The **diagonal blocks** ${\color{royalblue}G_{WW}}$,
-${\color{crimson}G_{FF}}$, ${\color{forestgreen}G_{YY}}$ are each
+The **diagonal blocks** ${\color{#4169E1}G_{WW}}$,
+${\color{#DC143C}G_{FF}}$, ${\color{#228B22}G_{YY}}$ are each
 diagonal matrices whose entries are the group counts (how many
 observations belong to each worker, firm, or year). We note that inverting these
 blocks is computationally cheap because it amounts to dividing by group sizes, i.e.,
@@ -146,9 +146,9 @@ a time. Writing $D_W, D_F, D_Y$ for the $n \times m_q$ dummy
 sub-matrices (column blocks of $D$), the steps are:
 
 1. Start with $r = y$
-2. Subtract worker means from $r$: $r \leftarrow r - D_W {\color{royalblue}G_{WW}^{-1}} D_W^\top r$
-3. Subtract firm means from $r$: $r \leftarrow r - D_F {\color{crimson}G_{FF}^{-1}} D_F^\top r$
-4. Subtract year means from $r$: $r \leftarrow r - D_Y {\color{forestgreen}G_{YY}^{-1}} D_Y^\top r$
+2. Subtract worker means from $r$: $r \leftarrow r - D_W {\color{#4169E1}G_{WW}^{-1}} D_W^\top r$
+3. Subtract firm means from $r$: $r \leftarrow r - D_F {\color{#DC143C}G_{FF}^{-1}} D_F^\top r$
+4. Subtract year means from $r$: $r \leftarrow r - D_Y {\color{#228B22}G_{YY}^{-1}} D_Y^\top r$
 5. Repeat steps 2-4 until convergence
 
 Each of these steps is individually cheap because $G_{WW}$, $G_{FF}$, $G_{YY}$. are diagonal matrices.
