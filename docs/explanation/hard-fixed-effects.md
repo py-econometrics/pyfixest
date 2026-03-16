@@ -104,18 +104,18 @@ $\binom{3}{2} = 3$ **cross-tabulation blocks**:
 
 $$
 G = \begin{pmatrix}
-{\color{blue}\mathbf{G_{WW}}} & {\color{gray}G_{WF}} & {\color{gray}G_{WY}} \\
-{\color{gray}G_{WF}^\top} & {\color{red}\mathbf{G_{FF}}} & {\color{gray}G_{FY}} \\
-{\color{gray}G_{WY}^\top} & {\color{gray}G_{FY}^\top} & {\color{green}\mathbf{G_{YY}}}
+\mathbf{G_{WW}} & G_{WF} & G_{WY} \\
+G_{WF}^\top & \mathbf{G_{FF}} & G_{FY} \\
+G_{WY}^\top & G_{FY}^\top & \mathbf{G_{YY}}
 \end{pmatrix}
 = \begin{pmatrix}
-{\color{blue}\mathbf{2}} & {\color{blue}\mathbf{0}} & {\color{blue}\mathbf{0}} & {\color{gray}1} & {\color{gray}1} & {\color{gray}1} & {\color{gray}1} \\
-{\color{blue}\mathbf{0}} & {\color{blue}\mathbf{2}} & {\color{blue}\mathbf{0}} & {\color{gray}2} & {\color{gray}0} & {\color{gray}1} & {\color{gray}1} \\
-{\color{blue}\mathbf{0}} & {\color{blue}\mathbf{0}} & {\color{blue}\mathbf{2}} & {\color{gray}0} & {\color{gray}2} & {\color{gray}1} & {\color{gray}1} \\
-{\color{gray}1} & {\color{gray}2} & {\color{gray}0} & {\color{red}\mathbf{3}} & {\color{red}\mathbf{0}} & {\color{gray}2} & {\color{gray}1} \\
-{\color{gray}1} & {\color{gray}0} & {\color{gray}2} & {\color{red}\mathbf{0}} & {\color{red}\mathbf{3}} & {\color{gray}1} & {\color{gray}2} \\
-{\color{gray}1} & {\color{gray}1} & {\color{gray}1} & {\color{gray}2} & {\color{gray}1} & {\color{green}\mathbf{3}} & {\color{green}\mathbf{0}} \\
-{\color{gray}1} & {\color{gray}1} & {\color{gray}1} & {\color{gray}1} & {\color{gray}2} & {\color{green}\mathbf{0}} & {\color{green}\mathbf{3}}
+\mathbf{2} & \mathbf{0} & \mathbf{0} & 1 & 1 & 1 & 1 \\
+\mathbf{0} & \mathbf{2} & \mathbf{0} & 2 & 0 & 1 & 1 \\
+\mathbf{0} & \mathbf{0} & \mathbf{2} & 0 & 2 & 1 & 1 \\
+1 & 2 & 0 & \mathbf{3} & \mathbf{0} & 2 & 1 \\
+1 & 0 & 2 & \mathbf{0} & \mathbf{3} & 1 & 2 \\
+1 & 1 & 1 & 2 & 1 & \mathbf{3} & \mathbf{0} \\
+1 & 1 & 1 & 1 & 2 & \mathbf{0} & \mathbf{3}
 \end{pmatrix}
 $$
 
