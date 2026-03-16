@@ -35,17 +35,17 @@ In all these settings, estimation requires solving the same underlying linear al
 Before we dive into algorithmic strategies for solving fixed effect problems, we first want to (re-) introduce the **Frisch-Waugh-Lovell (FWL) theorem**: in a
 regression of $y$ on covariates $X$ and a set of dummy variables $D$
 (the fixed effects), the coefficient $\hat{\beta}$ on $X$ is identical
-when we either estimate the full model, or first regress $y$ and each column of $X$ on $D$, collect the resulting regression residuals, and fit a final regression of the residuals of $Y$ on the residuals of $X$.  
+when we either estimate the full model, or first regress $y$ and each column of $X$ on $D$, collect the resulting regression residuals, and fit a final regression of the residuals of $Y$ on the residuals of $X$.
 
 Fitting the two initial regression and forming a residual is often referred to as a **demeaning** step.
 
-In short, we need to fit a linear system of equations 
+In short, we need to fit a linear system of equations
 
 $$
    \hat{\alpha} = \arg\min_{\alpha} \| D\alpha - \mu \|_2^2
 $$
 
-where $\mu$ is either $Y$ or a column of $X$ and $\alpha$ are the fixed effect coefficients. 
+where $\mu$ is either $Y$ or a column of $X$ and $\alpha$ are the fixed effect coefficients.
 
 For a single factor (e.g., only worker FEs), this demeaning step is trivial: $D$ is a single one-hot encoded matrix and the least-squares solution is simply the vector of group means. Subtracting these means from $\mu$ gives the residual — this is the classical "within transformation" from panel econometrics, and it can be computed in a single pass over the data.
 
@@ -58,7 +58,7 @@ Several algorithms have been proposed for this multi-factor demeaning
 problem:
 
 - **Method of Alternating Projections (MAP).** Introduced by
-  Guimarães & Portugal (2010) as the "Zig-Zag" and Gaure (2013), this is the workhorse algorithm in most FE packages (`reghdfe`, `lfe`, `fixest`). It sequentially sweeps through each factor, demeaning the target variable by the current factor's group means. Usually, this approach is implemented with accelerations. For example, R's `fixest` uses MAP with Irons-Tuck acceleration and other optimization strategies. In PyFixest, the `"rust"` backend implements MAP without acceleration. 
+  Guimarães & Portugal (2010) as the "Zig-Zag" and Gaure (2013), this is the workhorse algorithm in most FE packages (`reghdfe`, `lfe`, `fixest`). It sequentially sweeps through each factor, demeaning the target variable by the current factor's group means. Usually, this approach is implemented with accelerations. For example, R's `fixest` uses MAP with Irons-Tuck acceleration and other optimization strategies. In PyFixest, the `"rust"` backend implements MAP without acceleration.
 
 - **LSMR.** Julia's `FixedEffectModels.jl` uses LSMR. A discussion is tba.
 
@@ -227,7 +227,7 @@ In this initial scenario, we hold the graph structure fixed at the defaults and 
 
 *Benchmark: scale sweep. Runtime as a function of dataset size on a well-connected graph with default parameters.*
 
-On this easy problem, the standard worker + firm + year specification is solved routinely well by all algorithms because each sweep already removes most of the variation. The `rust-map` backend will not look this good in any other of the benchmarks to follow. 
+On this easy problem, the standard worker + firm + year specification is solved routinely well by all algorithms because each sweep already removes most of the variation. The `rust-map` backend will not look this good in any other of the benchmarks to follow.
 
 ## Complex Fixed Effects Structures
 
@@ -399,10 +399,10 @@ fewer observations, and the cross-tabulation blocks become sparse. This is the s
 ## Conclusion
 
 Graph connectivity is the fundamental driver of fixed-effects solver
-performance. 
+performance.
 
 The practical recommendation is straightforward: for well-connected
 graphs (high mobility, low sorting, cross-cutting factors), MAP with
 acceleration (e.g., `fixest`) is fast and hard to beat. For sparse
 graphs — low mobility, strong sorting, nested structures, or any
-combination thereof — vanilla MAP as in `rust-map` reveals poor convergence properties. The CG-Schwarz algorithm (`rust-cg` via the `within` crate), LSMR and accelerated MAP offer more performant and robust alternatives. 
+combination thereof — vanilla MAP as in `rust-map` reveals poor convergence properties. The CG-Schwarz algorithm (`rust-cg` via the `within` crate), LSMR and accelerated MAP offer more performant and robust alternatives.
