@@ -104,32 +104,32 @@ $\binom{3}{2} = 3$ **cross-tabulation blocks**:
 
 $$
 G = \begin{pmatrix}
-{\color{blue}G_{WW}} & {\color{gray}G_{WF}} & {\color{gray}G_{WY}} \\
-{\color{gray}G_{WF}^\top} & {\color{red}G_{FF}} & {\color{gray}G_{FY}} \\
-{\color{gray}G_{WY}^\top} & {\color{gray}G_{FY}^\top} & {\color{green}G_{YY}}
+G_{WW} & G_{WF} & G_{WY} \\
+G_{WF}^\top & G_{FF} & G_{FY} \\
+G_{WY}^\top & G_{FY}^\top & G_{YY}
 \end{pmatrix}
 = \left(\begin{array}{ccc|cc|cc}
-{\color{blue}2} & {\color{blue}0} & {\color{blue}0} & {\color{gray}1} & {\color{gray}1} & {\color{gray}1} & {\color{gray}1} \\
-{\color{blue}0} & {\color{blue}2} & {\color{blue}0} & {\color{gray}2} & {\color{gray}0} & {\color{gray}1} & {\color{gray}1} \\
-{\color{blue}0} & {\color{blue}0} & {\color{blue}2} & {\color{gray}0} & {\color{gray}2} & {\color{gray}1} & {\color{gray}1} \\
+2 & 0 & 0 & 1 & 1 & 1 & 1 \\
+0 & 2 & 0 & 2 & 0 & 1 & 1 \\
+0 & 0 & 2 & 0 & 2 & 1 & 1 \\
 \hline
-{\color{gray}1} & {\color{gray}2} & {\color{gray}0} & {\color{red}3} & {\color{red}0} & {\color{gray}2} & {\color{gray}1} \\
-{\color{gray}1} & {\color{gray}0} & {\color{gray}2} & {\color{red}0} & {\color{red}3} & {\color{gray}1} & {\color{gray}2} \\
+1 & 2 & 0 & 3 & 0 & 2 & 1 \\
+1 & 0 & 2 & 0 & 3 & 1 & 2 \\
 \hline
-{\color{gray}1} & {\color{gray}1} & {\color{gray}1} & {\color{gray}2} & {\color{gray}1} & {\color{green}3} & {\color{green}0} \\
-{\color{gray}1} & {\color{gray}1} & {\color{gray}1} & {\color{gray}1} & {\color{gray}2} & {\color{green}0} & {\color{green}3}
+1 & 1 & 1 & 2 & 1 & 3 & 0 \\
+1 & 1 & 1 & 1 & 2 & 0 & 3
 \end{array}\right)
 $$
 
-The **diagonal blocks** ${\color{blue}G_{WW}}$,
-${\color{red}G_{FF}}$, ${\color{green}G_{YY}}$ are each
+The **diagonal blocks** $G_{WW}$,
+$G_{FF}$, $G_{YY}$ are each
 diagonal matrices whose entries are the group counts (how many
 observations belong to each worker, firm, or year). We note that inverting these
 blocks is computationally cheap because it amounts to dividing by group sizes, i.e.,
 computing group means.
 
-The **cross-tabulation blocks** ${\color{gray}G_{WF}}$,
-${\color{gray}G_{WY}}$, ${\color{gray}G_{FY}}$ encode the
+The **cross-tabulation blocks** $G_{WF}$,
+$G_{WY}$, $G_{FY}$ encode the
 bipartite graph structure. For example, $G_{WF} = D_W^\top D_F$ is the
 worker-firm cross-tabulation: entry $(i, j)$ counts how many times
 worker $i$ is observed at firm $j$. This is where the mover information
