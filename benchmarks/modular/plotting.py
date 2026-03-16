@@ -187,6 +187,7 @@ def _plot_dgp_figure(
         1,
         len(n_fes),
         figsize=(5 * len(n_fes), 4.2),
+        sharey=True,
         squeeze=False,
     )
 
@@ -210,7 +211,8 @@ def _plot_dgp_figure(
             [f"{n:,}" for n in n_obs_vals], rotation=30, ha="right", fontsize=9
         )
         ax.set_xlabel("Observations", fontsize=10)
-        ax.set_ylabel(y_label, fontsize=10)
+        if col_idx == 0:
+            ax.set_ylabel(y_label, fontsize=10)
         ax.set_yscale(y_scale)
         _apply_common_style(ax)
 
