@@ -125,6 +125,15 @@ _AKM_DEFAULTS: dict[str, Any] = {
     "entry_exit_n_periods": 2,
 }
 
+_AKM_OCCUPATION_DEFAULTS: dict[str, Any] = {
+    **_AKM_DEFAULTS,
+    "n_occupations": 200,
+    "var_occ": 0.3,
+    "occ_menu_size": 5,
+    "occ_lambda": 0.5,
+    "occ_delta": 0.3,
+}
+
 
 def _scenario(name: str, **overrides: Any) -> AKMSweepScenario:
     return AKMSweepScenario(name=name, overrides=overrides)
@@ -194,101 +203,12 @@ def _akm_sweep_scenarios() -> list[AKMSweepScenario]:
         _scenario("akm_mobility_4", delta=0.01),
         _scenario("akm_mobility_5", delta=0.005),
         _scenario("akm_mobility_6", delta=0.001),
-        # firm size (n_firms=5000 so extreme skew creates genuinely tiny firms)
-        _scenario("akm_size_1", gamma=100.0, n_firms=5_000),
-        _scenario("akm_size_2", gamma=2.0, n_firms=5_000),
-        _scenario("akm_size_3", gamma=0.5, n_firms=5_000),
-        _scenario("akm_size_4", gamma=0.2, n_firms=5_000),
-        # fragmentation (delta=0.05 so total movers are few, n_time=4 so
-        # cross-industry bridges have few periods to accumulate)
-        _scenario(
-            "akm_fragmentation_1", n_industries=1, lambda_=1.0, delta=0.05, n_time=4
-        ),
-        _scenario(
-            "akm_fragmentation_2", n_industries=5, lambda_=0.5, delta=0.05, n_time=4
-        ),
-        _scenario(
-            "akm_fragmentation_3", n_industries=5, lambda_=0.95, delta=0.05, n_time=4
-        ),
-        _scenario(
-            "akm_fragmentation_4", n_industries=20, lambda_=0.95, delta=0.05, n_time=4
-        ),
-        _scenario(
-            "akm_fragmentation_5", n_industries=50, lambda_=0.99, delta=0.05, n_time=4
-        ),
-        # saturation (n_time=10, isolate FE-ratio effect)
-        _scenario("akm_saturation_1", n_firms=1_000),
-        _scenario("akm_saturation_2", n_firms=10_000),
-        _scenario("akm_saturation_3", n_firms=50_000),
-        _scenario("akm_saturation_4", n_firms=90_000),
-        # short panels
-        _scenario("akm_short_panel_1", n_time=2),
-        _scenario("akm_short_panel_2", n_time=2, delta=0.1),
-        _scenario("akm_short_panel_3", n_time=2, delta=0.05),
-        _scenario("akm_short_panel_4", n_time=2, delta=0.02),
-        # unbalanced panels (delta=0.05 so short-tenure workers are mostly
-        # stayers contributing zero edges, straining the graph)
-        _scenario(
-            "akm_unbalanced_1",
-            entry_exit_share=0.10,
-            entry_exit_n_periods=2,
-            delta=0.05,
-        ),
-        _scenario(
-            "akm_unbalanced_2",
-            entry_exit_share=0.25,
-            entry_exit_n_periods=2,
-            delta=0.05,
-        ),
-        _scenario(
-            "akm_unbalanced_3",
-            entry_exit_share=0.50,
-            entry_exit_n_periods=2,
-            delta=0.05,
-        ),
-        _scenario(
-            "akm_unbalanced_4",
-            entry_exit_share=0.75,
-            entry_exit_n_periods=2,
-            delta=0.05,
-        ),
         # ── Act 4: Combinations ──
         # sorting x mobility (2x2 factorial)
         _scenario("akm_interaction_1", rho=0.0, delta=0.5),
         _scenario("akm_interaction_2", rho=20.0, delta=0.5),
         _scenario("akm_interaction_3", rho=0.0, delta=0.02),
         _scenario("akm_interaction_4", rho=20.0, delta=0.02),
-        # fragmentation x low mobility (near-nested FE)
-        _scenario("akm_nested_1", n_industries=100, lambda_=0.99, delta=0.01),
-        _scenario("akm_nested_2", n_industries=50, lambda_=0.995, delta=0.005),
-        # saturation x short panel
-        _scenario(
-            "akm_saturation_short_1",
-            n_workers=500_000,
-            n_firms=50_000,
-            n_time=2,
-        ),
-        _scenario(
-            "akm_saturation_short_2",
-            n_workers=450_000,
-            n_firms=400_000,
-            n_time=2,
-        ),
-        # all levers combined
-        _scenario(
-            "akm_pathological_1",
-            rho=50.0,
-            delta=0.005,
-            n_time=2,
-        ),
-        _scenario(
-            "akm_pathological_2",
-            rho=50.0,
-            delta=0.005,
-            n_industries=20,
-            lambda_=0.95,
-            n_time=2,
-        ),
         # ── Act 5: Progressive freezing ──
         # 10 markets, turn off mobility market-by-market
         _scenario("akm_freeze_1", n_industries=10, lambda_=0.9, delta=(0.2,) * 10),
@@ -317,6 +237,22 @@ def _akm_sweep_scenarios() -> list[AKMSweepScenario]:
             delta=(0.2,) * 2 + (0.005,) * 8,
         ),
         _scenario("akm_freeze_6", n_industries=10, lambda_=0.9, delta=(0.005,) * 10),
+    ]
+
+
+def _akm_occupation_scenarios() -> list[AKMSweepScenario]:
+    return [
+        _scenario("akm_baseline"),
+        _scenario("akm_occlambda_1", occ_lambda=0.01),
+        _scenario("akm_occlambda_2", occ_lambda=0.2),
+        _scenario("akm_occlambda_3", occ_lambda=0.5),
+        _scenario("akm_occlambda_4", occ_lambda=0.9),
+        _scenario("akm_occlambda_5", occ_lambda=1.0),
+        _scenario("akm_occsize_1", n_occupations=10),
+        _scenario("akm_occsize_2", n_occupations=50),
+        _scenario("akm_occsize_3", n_occupations=200),
+        _scenario("akm_occsize_4", n_occupations=1_000),
+        _scenario("akm_occsize_5", n_occupations=5_000),
     ]
 
 
@@ -349,10 +285,12 @@ class AKMSweepDGP:
         self,
         data_dir: Path,
         name: str,
+        defaults: dict[str, Any] | None = None,
         **overrides: Any,
     ):
         self._data_dir = data_dir
         self._name = name
+        self._defaults = dict(defaults or _AKM_DEFAULTS)
         self._overrides = overrides
 
     @property
@@ -360,7 +298,7 @@ class AKMSweepDGP:
         return self._name
 
     def _build_config(self, n: int = 1_000_000) -> AKMConfig:
-        params = {**_AKM_DEFAULTS, **self._overrides}
+        params = {**self._defaults, **self._overrides}
         n_workers = int(params.pop("n_workers", _infer_worker_count(n, params)))
         return AKMConfig(n_workers=n_workers, **params)
 
@@ -379,10 +317,12 @@ class AKMSweepDGP:
         )
 
 
-def get_akm_sweep_scenarios(
-    data_dir: Path, names: list[str] | None = None
+def _get_akm_scenarios(
+    data_dir: Path,
+    scenario_defs: list[AKMSweepScenario],
+    defaults: dict[str, Any],
+    names: list[str] | None = None,
 ) -> list[AKMSweepDGP]:
-    scenario_defs = _akm_sweep_scenarios()
     scenario_map = {scenario.name: scenario for scenario in scenario_defs}
     scenario_names = names or [scenario.name for scenario in scenario_defs]
     unknown = sorted(set(scenario_names) - set(scenario_map))
@@ -393,7 +333,30 @@ def get_akm_sweep_scenarios(
         AKMSweepDGP(
             data_dir=data_dir,
             name=scenario_map[name].name,
+            defaults=defaults,
             **scenario_map[name].overrides,
         )
         for name in scenario_names
     ]
+
+
+def get_akm_sweep_scenarios(
+    data_dir: Path, names: list[str] | None = None
+) -> list[AKMSweepDGP]:
+    return _get_akm_scenarios(
+        data_dir,
+        _akm_sweep_scenarios(),
+        _AKM_DEFAULTS,
+        names=names,
+    )
+
+
+def get_akm_occupation_scenarios(
+    data_dir: Path, names: list[str] | None = None
+) -> list[AKMSweepDGP]:
+    return _get_akm_scenarios(
+        data_dir,
+        _akm_occupation_scenarios(),
+        _AKM_OCCUPATION_DEFAULTS,
+        names=names,
+    )

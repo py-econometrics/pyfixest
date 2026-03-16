@@ -25,20 +25,16 @@ _AKM_SWEEP_XLABELS = {
     "scale": "Observations",
     "sorting": "Sorting",
     "mobility": "Mobility",
-    "size": "Firm Size Shape",
-    "fragmentation": "Industry Fragmentation",
-    "varratio": "Var(alpha) / Var(psi)",
-    "saturation": "FE Saturation",
-    "unbalanced": "Short-Panel Share",
     "interaction": "Sorting x Mobility",
     "freeze": "Frozen Markets (of 10)",
+    "occlambda": "Occupation-Firm Nesting",
+    "occsize": "Occupation Dimensionality",
 }
 _AKM_SWEEP_BASELINE_POINTS = {
     "sorting": (1.5, "rho=1.00"),
     "mobility": (2.5, "delta=0.20"),
-    "size": (2.5, "gamma=1.00"),
-    "varratio": (3.5, "2.00"),
-    "unbalanced": (0.5, "0%"),
+    "occlambda": (2.5, "occ_lambda=0.50"),
+    "occsize": (2.5, "n_occ=200"),
 }
 _AKM_SWEEP_TICK_LABELS = {
     "scale": {
@@ -60,45 +56,11 @@ _AKM_SWEEP_TICK_LABELS = {
         5: "delta=0.005",
         6: "delta=0.001",
     },
-    "size": {
-        1: "gamma=100.00",
-        2: "gamma=2.00",
-        3: "gamma=0.50",
-    },
-    "fragmentation": {
-        1: "S=1",
-        2: "S=5, lambda=0.50",
-        3: "S=5, lambda=0.95",
-        4: "S=20, lambda=0.95",
-        5: "S=50, lambda=0.99",
-    },
-    "varratio": {
-        1: "0.10",
-        2: "0.50",
-        3: "1.00",
-        4: "5.00",
-        5: "10.00",
-    },
-    "saturation": {
-        1: "100k/1k/T10",
-        2: "100k/10k/T10",
-        3: "100k/50k/T10",
-        4: "100k/90k/T10",
-        5: "500k/50k/T2",
-        6: "450k/400k/T2",
-    },
-    "unbalanced": {
-        1: "10%",
-        2: "25%",
-        3: "50%",
-        4: "75%",
-    },
     "interaction": {
         1: "rho=0.00, delta=0.50",
-        2: "rho=5.00, delta=0.50",
+        2: "rho=20.00, delta=0.50",
         3: "rho=0.00, delta=0.02",
-        4: "rho=5.00, delta=0.02",
-        5: "rho=20.00, delta=0.02",
+        4: "rho=20.00, delta=0.02",
     },
     "freeze": {
         1: "0/10",
@@ -107,6 +69,20 @@ _AKM_SWEEP_TICK_LABELS = {
         4: "6/10",
         5: "8/10",
         6: "10/10",
+    },
+    "occlambda": {
+        1: "occ_lambda=0.01",
+        2: "occ_lambda=0.20",
+        3: "occ_lambda=0.50",
+        4: "occ_lambda=0.90",
+        5: "occ_lambda=1.00",
+    },
+    "occsize": {
+        1: "n_occ=10",
+        2: "n_occ=50",
+        3: "n_occ=200",
+        4: "n_occ=1000",
+        5: "n_occ=5000",
     },
 }
 
@@ -281,14 +257,15 @@ def _parse_akm_sweep_dgp(dgp: str) -> tuple[str, int, str] | None:
         return None
 
     parts = dgp.split("_")
-    if len(parts) != 3 or parts[0] != "akm":
+    if len(parts) < 3 or parts[0] != "akm":
         return None
 
-    family = parts[1]
     try:
-        order = int(parts[2])
+        order = int(parts[-1])
     except ValueError:
         return None
+
+    family = "_".join(parts[1:-1])
 
     if (
         family not in _AKM_SWEEP_TICK_LABELS
@@ -416,9 +393,6 @@ def _plot_akm_sweep_benchmarks(
     *,
     figure_dir: Path | None = None,
 ) -> bool:
-    if "akm_sweep" not in output_path.stem:
-        return False
-
     sweep_summary = _akm_sweep_plot_rows(summary)
     if sweep_summary.empty:
         return False

@@ -48,20 +48,12 @@ def test_plot_benchmarks_writes_akm_sweep_family_figures(tmp_path: Path):
                 "akm_sorting_1",
                 "akm_mobility_1",
                 "akm_mobility_1",
-                "akm_size_1",
-                "akm_size_1",
-                "akm_fragmentation_2",
-                "akm_fragmentation_2",
-                "akm_varratio_1",
-                "akm_varratio_1",
-                "akm_saturation_1",
-                "akm_saturation_1",
-                "akm_unbalanced_1",
-                "akm_unbalanced_1",
                 "akm_interaction_1",
                 "akm_interaction_1",
+                "akm_freeze_1",
+                "akm_freeze_1",
             ],
-            "n_fe": [2, 3] * 10,
+            "n_fe": [2, 3] * 6,
             "n_obs": [
                 1_000_000,
                 1_000_000,
@@ -75,16 +67,8 @@ def test_plot_benchmarks_writes_akm_sweep_family_figures(tmp_path: Path):
                 1_000_000,
                 1_000_000,
                 1_000_000,
-                1_000_000,
-                1_000_000,
-                1_000_000,
-                1_000_000,
-                1_000_000,
-                1_000_000,
-                1_000_000,
-                1_000_000,
             ],
-            "backend": ["fixest"] * 20,
+            "backend": ["fixest"] * 12,
             "time": [
                 1.0,
                 1.5,
@@ -94,18 +78,10 @@ def test_plot_benchmarks_writes_akm_sweep_family_figures(tmp_path: Path):
                 1.8,
                 0.9,
                 1.3,
-                1.1,
-                1.7,
-                1.4,
-                2.0,
-                1.25,
-                1.85,
-                1.6,
-                2.1,
-                1.45,
-                2.05,
                 1.3,
                 1.9,
+                1.1,
+                1.7,
             ],
         }
     )
@@ -117,12 +93,34 @@ def test_plot_benchmarks_writes_akm_sweep_family_figures(tmp_path: Path):
         tmp_path / "feols_akm_sweep_akm_sweep_scale.png",
         tmp_path / "feols_akm_sweep_akm_sweep_sorting.png",
         tmp_path / "feols_akm_sweep_akm_sweep_mobility.png",
-        tmp_path / "feols_akm_sweep_akm_sweep_size.png",
-        tmp_path / "feols_akm_sweep_akm_sweep_fragmentation.png",
-        tmp_path / "feols_akm_sweep_akm_sweep_varratio.png",
-        tmp_path / "feols_akm_sweep_akm_sweep_saturation.png",
-        tmp_path / "feols_akm_sweep_akm_sweep_unbalanced.png",
         tmp_path / "feols_akm_sweep_akm_sweep_interaction.png",
+        tmp_path / "feols_akm_sweep_akm_sweep_freeze.png",
+    ]
+
+    assert all(path.exists() for path in expected_paths)
+
+
+def test_plot_benchmarks_writes_occupation_family_figures(tmp_path: Path):
+    results_df = pd.DataFrame(
+        {
+            "dgp": [
+                "akm_baseline",
+                "akm_occlambda_2",
+                "akm_occsize_3",
+            ],
+            "n_fe": [4, 4, 4],
+            "n_obs": [1_000_000] * 3,
+            "backend": ["fixest"] * 3,
+            "time": [1.3, 1.8, 1.6],
+        }
+    )
+
+    output_path = tmp_path / "feols_akm_occupation.png"
+    plot_benchmarks(results_df, output_path)
+
+    expected_paths = [
+        tmp_path / "feols_akm_occupation_akm_sweep_occlambda.png",
+        tmp_path / "feols_akm_occupation_akm_sweep_occsize.png",
     ]
 
     assert all(path.exists() for path in expected_paths)

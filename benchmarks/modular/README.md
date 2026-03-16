@@ -11,9 +11,10 @@ $J(i,t) \in \{1, \ldots, N_f\}$ maps worker $i$ at time $t$ to a firm, $\alpha_i
 worker fixed effect, $\psi_j$ is a firm fixed effect, and $\phi_t$ is a time fixed
 effect.
 
-The panel carries three ID columns (`indiv_id`, `firm_id`, `year`), so two-way
-($\alpha_i + \psi_j$) and three-way ($\alpha_i + \psi_j + \phi_t$) specifications
-are both available from the same data. Both specs are timed in each benchmark run.
+The standard AKM panel carries three ID columns (`indiv_id`, `firm_id`, `year`)
+and the standard sweep benchmarks the three-way specification
+($\alpha_i + \psi_j + \phi_t$). Occupation-enabled scenarios add a fourth ID
+column, `occ_id`, for the occupation extension benchmark.
 
 Implementation: `akm_dgp.py` → `simulate_akm_panel(config: AKMConfig, ...)`.
 
@@ -67,12 +68,32 @@ At $t=1$, each worker draws a firm from $\pi_{ij}$. For $t > 1$, the worker
 separates with probability $\delta$ (`delta`) and draws a new firm (excluding
 the current one). Expected tenure: $1/\delta$ periods. Code: `_sample_firms`.
 
-### 2.5 Outcome
+### 2.5 Occupations (optional extension)
+
+When occupation is enabled, each firm draws a sparse menu of occupations from an
+industry-level occupation pool and one primary occupation inside that menu.
+Workers draw their initial occupation from their firm's menu, with `occ_lambda`
+controlling how concentrated that draw is on the firm's primary occupation.
+
+On a firm move, occupation evolves conditionally on the destination firm:
+
+- If the worker's old occupation is in the destination firm's menu, they keep it
+  with probability `occ_delta`.
+- Otherwise, they are forced to redraw from the destination firm's occupation menu.
+
+This creates two separate hardness levers for the occupation benchmark:
+
+- High `occ_lambda` makes occupation FE close to firm FE.
+- High `occ_delta` makes occupation FE persistent across firm moves.
+
+### 2.6 Outcome
 
 $$Y_{it} = \alpha_i + \psi_{J(i,t)} + \phi_t + \beta \cdot x_{1,it} + \varepsilon_{it}$$
 
 with $\phi_t \sim N(0, \sigma^2_\phi)$ (`var_phi`), $x_1 \sim N(0,1)$,
 $\varepsilon_{it} \sim N(0, \sigma^2_\varepsilon)$ (`var_epsilon`), $\beta$ = `beta_x1`.
+When occupation is enabled, the occupation extension benchmark adds an
+occupation term $\kappa_{O(i,t)}$ with variance `var_occ`.
 
 ---
 
@@ -95,8 +116,14 @@ $\varepsilon_{it} \sim N(0, \sigma^2_\varepsilon)$ (`var_epsilon`), $\beta$ = `b
 | $\lambda$ | `lambda_` | 0.8 | Within-industry match probability |
 | $\beta$ | `beta_x1` | 0.5 | Covariate coefficient |
 | $B$ | `n_match_bins` | 64 | Alpha discretization bins |
+| $N_o$ | `n_occupations` | 0 | Number of occupations (0 disables occupation) |
+| $\sigma^2_\kappa$ | `var_occ` | 0.3 | Occupation effect variance |
+| $K_o$ | `occ_menu_size` | 5 | Occupations available per firm |
+| $\lambda_o$ | `occ_lambda` | 0.5 | Primary-occupation mass within firm |
+| $\delta_o$ | `occ_delta` | 0.3 | Keep old occupation on compatible moves |
 
-Defaults in `dgps.py` → `_AKM_DEFAULTS`.
+Defaults in `dgps.py` → `_AKM_DEFAULTS` for the standard sweep and
+`_AKM_OCCUPATION_DEFAULTS` for the occupation extension.
 
 ---
 
@@ -111,7 +138,9 @@ Defaults in `dgps.py` → `_AKM_DEFAULTS`.
 | Sorting strength | $\rho$ | High sorting → near-collinearity of $\alpha$ and $\psi$ |
 
 Diagnostics computed by `summarize_akm_panel`: mover share, singleton count,
-connected components, largest connected set share, cross-industry share.
+connected components, largest connected set share, cross-industry share, and,
+when occupation is enabled, within-firm occupation concentration, realized
+occupation change share, compatible move share, and forced occupation change share.
 
 ---
 
@@ -128,8 +157,14 @@ Systematic sweep over AKM parameters. Each scenario varies one or two
 parameters from defaults, targeting $N = 10^6$ obs (except scale scenarios).
 Compares MAP (alternating projections), CG-Schwarz, fixest, and Julia LSMR.
 
-Both 2-way (`indiv_id + firm_id`) and 3-way (`indiv_id + year + firm_id`)
-specs are timed on the same data.
+The standard sweep benchmarks the three-way AKM specification
+`indiv_id + firm_id + year`.
+
+### `benchmark_akm_occupation.py`
+
+Occupation extension benchmark. Uses occupation-enabled AKM scenarios and
+times the occupation-extended specification
+`indiv_id + firm_id + year + occ_id`.
 
 ---
 
@@ -181,55 +216,7 @@ Each group varies one knob from defaults ($N = 10^6$), isolating its effect.
 | `akm_mobility_4` | 0.005 | 4.4% |
 | `akm_mobility_5` | 0.001 | 0.9% |
 
-**Firm size** (vary $\gamma$; `n_firms=5000` so extreme skew creates genuinely tiny firms)
-
-| Scenario | $\gamma$ | Distribution |
-|---|---|---|
-| `akm_size_1` | 100 | Near-uniform |
-| `akm_size_2` | 2 | Mild skew |
-| `akm_size_3` | 0.5 | Extreme concentration |
-| `akm_size_4` | 0.2 | Very extreme Pareto tail |
-
-**Fragmentation** (vary $S$, $\lambda$; `delta=0.05` so total movers are few, `n_time=4` so cross-industry bridges have few periods to accumulate)
-
-| Scenario | $S$ | $\lambda$ | Structure |
-|---|---|---|---|
-| `akm_fragmentation_1` | 1 | 1.0 | No industry structure |
-| `akm_fragmentation_2` | 5 | 0.5 | Mild segmentation |
-| `akm_fragmentation_3` | 5 | 0.95 | Strong segmentation |
-| `akm_fragmentation_4` | 20 | 0.95 | Many silos |
-| `akm_fragmentation_5` | 50 | 0.99 | Near-disconnected |
-
-**Saturation** (vary $N_f$, holding $T=10$)
-
-| Scenario | $N_f$ | $(N_w+N_f)/N$ |
-|---|---|---|
-| `akm_saturation_1` | 1K | 0.10 |
-| `akm_saturation_2` | 10K | 0.11 |
-| `akm_saturation_3` | 50K | 0.15 |
-| `akm_saturation_4` | 90K | 0.19 |
-
-**Short panels** (vary $\delta$ at $T=2$)
-
-| Scenario | $\delta$ | Purpose |
-|---|---|---|
-| `akm_short_panel_1` | 0.2 (default) | Isolate panel-length effect |
-| `akm_short_panel_2` | 0.1 | Moderate mobility |
-| `akm_short_panel_3` | 0.05 | Convergence boundary |
-| `akm_short_panel_4` | 0.02 | Low mobility |
-
-**Unbalanced panels** (vary `entry_exit_share`; `delta=0.05` so short-tenure workers are mostly stayers contributing zero edges)
-
-| Scenario | `entry_exit_share` | `entry_exit_n_periods` | Effect |
-|---|---|---|---|
-| `akm_unbalanced_1` | 0.10 | 2 | 10% short-tenure workers |
-| `akm_unbalanced_2` | 0.25 | 2 | 25% short-tenure workers |
-| `akm_unbalanced_3` | 0.50 | 2 | 50% short-tenure workers |
-| `akm_unbalanced_4` | 0.75 | 2 | 75% short-tenure workers |
-
 ### Act 4: Combinations
-
-Now combine the single-axis levers to test for super-additive effects.
 
 **Sorting x mobility** (2x2 factorial)
 
@@ -242,23 +229,22 @@ Now combine the single-axis levers to test for super-additive effects.
 
 Runtime of `_4` minus `_2` minus `_3` plus `_1` measures the interaction effect.
 
-**Fragmentation x low mobility** (near-nested FE)
+### Act 5: Progressive freezing
 
-| Scenario | $S$ | $\lambda$ | $\delta$ |
-|---|---|---|---|
-| `akm_nested_1` | 100 | 0.99 | 0.01 |
-| `akm_nested_2` | 50 | 0.995 | 0.005 |
+These scenarios progressively switch off mobility market-by-market:
 
-**Saturation x short panel**
+| Scenario | Frozen markets (of 10) |
+|---|---|
+| `akm_freeze_1` | 0 |
+| `akm_freeze_2` | 2 |
+| `akm_freeze_3` | 4 |
+| `akm_freeze_4` | 6 |
+| `akm_freeze_5` | 8 |
+| `akm_freeze_6` | 10 |
 
-| Scenario | $N_w$ | $N_f$ | $T$ | $(N_w+N_f)/N$ |
-|---|---|---|---|---|
-| `akm_saturation_short_1` | 500K | 50K | 2 | 0.55 |
-| `akm_saturation_short_2` | 450K | 400K | 2 | 0.94 |
+### Act 6: Occupation extension
 
-**All levers combined**
+Scenario definitions: `dgps.py` → `_akm_occupation_scenarios`.
 
-| Scenario | $\rho$ | $\delta$ | $T$ | $S$ | $\lambda$ |
-|---|---|---|---|---|---|
-| `akm_pathological_1` | 50 | 0.005 | 2 | — | — |
-| `akm_pathological_2` | 50 | 0.005 | 2 | 20 | 0.95 |
+- `akm_occlambda_*`: vary only within-firm occupation concentration
+- `akm_occsize_*`: vary only occupation dimensionality

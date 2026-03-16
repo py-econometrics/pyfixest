@@ -1,15 +1,15 @@
 # "When Are Fixed Effects Estimations Hard?"
 
-If you have ever fitted a fixed regression model, then you might have noticed that fixed effects regressions with the same number of observations and fixed effects levels can take orders of magnitudes to run. The runtime of a fixed effects problem is not only determined by the sheer size of the data, but of its properties. Problems that are known to be particularly "hard" are ubiqitous in economics, and arise for example in matched employer-employee data, patient-doctor panels, or trade networks.
+If you have ever fitted a fixed regression model, then you might have noticed that fixed effects regressions with the same number of observations and fixed effects levels can take orders of magnitudes to run. The runtime of a fixed effects problem is not only determined by the sheer size of the data, but of properties of the fixed effects. Problems that are known to be particularly "hard" are ubiqitous in economics, and arise for example in matched employer-employee data, patient-doctor panels, or trade networks.
 
-In this guide, we explain *why* and *what to do about it*. The key insight is that
-fixed-effects estimation is a **graph problem**: the structure of who-works-where
-(or who-sees-which-doctor, which-brand-in-which-store) determines how hard the
-problem is.
+In this guide, we explain *why* some fixed effects problems are harder to estimate than others, and benchmark different strategies to fit fixed effects regressions in a range of scenarios. 
+
+The key insight is that
+fixed-effects estimation is a **graph problem**: the structure of who-works-where (or who-sees-which-doctor which-brand-in-which-store) determines how hard the problem is. After reading this guide, you should have a good idea if you can speed up your own fixed effects problem by choosing a different solver. 
 
 ## Fixed Effects as a Network
 
-Consider the Abowd-Kramarz-Margolis (AKM) wage model:
+As our workhorse example throughout, we will consider the Abowd-Kramarz-Margolis (AKM) wage model with worker fixed effects $\alpha_i$, firm fixed effects $\psi_{J(i,t)}$ and time fixed effects $\phi_t$.
 
 $$y_{it} = \alpha_i + \psi_{J(i,t)} + \phi_t + x'_{it}\beta + \varepsilon_{it}$$
 
@@ -22,15 +22,15 @@ worker and firm effects are not separately identified.
 
 *A dense graph (left) has many movers connecting all firms, making worker and firm effects easy to separate. A sparse graph (right) has a single mover bridging two clusters - demeaning must propagate information through that thin bridge, which is slow.*
 
-This bipartite structure appears throughout applied economics. In AKM
+This bipartite structure is ubiqituous in applied economics. In AKM
 wage decompositions, workers and firms are the two sides of the graph,
 and job changers are the movers that connect them. The same pattern
-arises in Chetty-style mover designs, where families / students move across schools or neighborhoods. In health economics, we have problems of similar structure with doctor-patient fixed effects. In trade and industrial organisation,
+arises in mover designs, where families / students move across schools or neighborhoods. In health economics, we have problems of similar structure with doctor-patient fixed effects. And in trade and industrial organisation,
 products sold across multiple markets or brands stocked in different
 stores play the role of movers.
 
 In all these settings, estimation requires solving the same underlying
-linear algebra problem.
+linear algebra problem, which we introduce in the following section.
 
 ## From FWL to Demeaning
 
@@ -38,37 +38,28 @@ Before we dive into algorithmic strategies, we first want to (re-) introduce the
 regression of $y$ on covariates $X$ and a set of dummy variables $D$
 (the fixed effects), the coefficient $\hat{\beta}$ on $X$ is identical
 whether we estimate the full model or first project both $y$ and $X$
-onto the orthogonal complement of $D$'s column space and then regress.
+onto the orthogonal complement of $D$'s column space in two separate regressions and then regress the two resulting residuals on each other.
 
-In other words, we can "partial out" the fixed effects by **demeaning**:
-replace each variable with its residual after removing all FE group
-means. Once demeaned, standard OLS on the residuals recovers $\hat{\beta}$
-exactly.
+Fitting the two initial regression and forming a residual is often referred to as a **demeaning** step. 
 
-For a single factor (e.g., only worker FEs), demeaning is trivial -
-subtract worker means from every variable and you are done. For two-way
-FEs in balanced panels, closed-form solutions exist (e.g., the Mundlak
+For a single factor (e.g., only worker FEs), this demeaning step is trivial -
+we can simply subtract the average wage of each worker from $y$ and $X$ and we are done. 
+
+For two-way FEs in balanced panels, closed-form solutions exist (e.g., the Mundlak
 approach), but as soon as panels are unbalanced - which is the norm in
 matched employer-employee data and most real-world applications -
-these methods break down and we need iterative solvers. The problem
-becomes interesting with **two or more crossed factors** (e.g., worker
-*and* firm FEs) in unbalanced panels, because subtracting worker means
-does not remove firm effects, and vice versa. This is where the graph
-structure of the data determines how quickly iterative algorithms
-converge.
+these methods break down and we need specialised algorithms/solvers. 
+
 
 ## Algorithms for the FWL Demeaning Step
 
 Several algorithms have been proposed for this multi-factor demeaning
 problem:
 
-- **MAP (Method of Alternating Projections).** Introduced by
-  Guimarães & Portugal (2010) as the "Zig-Zag" and Gaure (2013), this is the workhorse algorithm in most FE packages (`reghdfe`, `lfe`, `fixest`). It sweeps through each factor in turn, demeaning the residual by the current factor's group means. Usually, this approach is implemented with accelerations. For example, R's `fixest` uses MAP with Irons-Tuck acceleration and other convergence tricks. In PyFixest, the `"rust"` backend implements MAP without acceleration. One key advantage of the MAP algorithm is that the fixed effects do not have to be encoded as a (sparse) one-hot encoded design matrix.
+- **Method of Alternating Projections (MAP).** Introduced by
+  Guimarães & Portugal (2010) as the "Zig-Zag" and Gaure (2013), this is the workhorse algorithm in most FE packages (`reghdfe`, `lfe`, `fixest`). It sequentially sweeps through each factor, demeaning the target variable by the current factor's group means. Usually, this approach is implemented with accelerations. For example, R's `fixest` uses MAP with Irons-Tuck acceleration and other convergence tricks. In PyFixest, the `"rust"` backend implements MAP without acceleration. One key advantage of the MAP algorithm is that the fixed effects do not have to be encoded as a (sparse) one-hot encoded design matrix.
 
-- **LSMR.** Julia's `FixedEffectModels.jl` uses LSMR, a Krylov-subspace
-  method that works on the rectangular design matrix directly rather than
-  the normal equations. It tends to be robust and fast, but requires
-  forming the sparse FE design.
+- **LSMR.** Julia's `FixedEffectModels.jl` uses LSMR. tba.
 
 - **CG-Schwarz (Conjugate Gradients with Additive Schwarz Preconditioner).**
   The [`within`](https://github.com/py-econometrics/within) crate, used by
@@ -85,15 +76,12 @@ equations**:
 $$G \, \hat{\mu} = D^\top y$$
 
 where $D$ is the $n \times m$ dummy matrix that encodes all FE levels
-and $G = D^\top D$ is the **Gramian** — a symmetric positive
+and $G = D^\top D$ is the **Gramian** - a symmetric positive
 semi-definite matrix of dimension $m \times m$, where $m$ is the total
-number of FE levels across all factors. (For weighted least squares,
-replace $D^\top D$ with $D^\top \Omega D$ where $\Omega$ is a diagonal
-weight matrix; the block structure is identical.)
+number of FE levels across all factors. 
 
-The Gramian has a natural **block structure**. Consider a small example
-(adapted from the
-[`within` documentation](https://github.com/py-econometrics/within)):
+The Gramian has a natural **block structure**. To illustrate this, we will consider a small example (adapted from the
+[`within` documentation](https://github.com/py-econometrics/within)) of
 a worker-firm panel with $n = 6$ observations and $Q = 3$ factors
 (worker, firm, year). Worker W1 moves from Firm F1 to F2 - this
 mobility is what connects the two firms in the estimation graph.
@@ -135,8 +123,8 @@ $$
 The **diagonal blocks** ${\color{royalblue}G_{WW}}$,
 ${\color{crimson}G_{FF}}$, ${\color{forestgreen}G_{YY}}$ are each
 diagonal matrices whose entries are the group counts (how many
-observations belong to each worker, firm, or year). Inverting these
-blocks is instant because it amounts to dividing by group sizes, i.e.,
+observations belong to each worker, firm, or year). We note that inverting these
+blocks is computationally cheap because it amounts to dividing by group sizes, i.e.,
 computing group means.
 
 The **cross-tabulation blocks** ${\color{gray}G_{WF}}$,
@@ -144,39 +132,34 @@ ${\color{gray}G_{WY}}$, ${\color{gray}G_{FY}}$ encode the
 bipartite graph structure. For example, $G_{WF} = D_W^\top D_F$ is the
 worker-firm cross-tabulation: entry $(i, j)$ counts how many times
 worker $i$ is observed at firm $j$. This is where the mover information
-lives. Worker W1's row in $G_{WF}$ is $(1, 1)$ — one spell at each
-firm — while W2's row is $(2, 0)$, a pure stayer. In a labour market
-with little mobility, the off-diagonal blocks will be sparse as most
+lives. Worker W1's row in $G_{WF}$ is $(1, 1)$ while W2's row is $(2, 0)$. In other words, W1 works in both firms, while W2 workins in F2 in both period. In a labour market with little mobility, the off-diagonal blocks will be sparse as most
 workers stay within a single firm.
 
-## How MAP Works (and Why It Ignores the Graph)
+## The Method of Alternating Projections
 
 Recall that we need to solve $G \hat{\mu} = D^\top y$ for the FE
 coefficients $\hat{\mu}$, or equivalently, find the residual
-$r = y - D \hat{\mu}$ that has all fixed effects projected out. MAP
-approaches this iteratively: it sweeps through each factor and subtracts
+$r = y - D \hat{\mu}$ that has all fixed effects projected out. The method of alternating projections (MAP) approaches this iteratively: it sweeps through each factor and subtracts
 group means from the current residual. In terms of the Gramian, this is
-**block Gauss-Seidel** — each sweep solves one diagonal block of $G$ at
+**block Gauss-Seidel** - each sweep solves one diagonal block of $G$ at
 a time. Writing $D_W, D_F, D_Y$ for the $n \times m_q$ dummy
 sub-matrices (column blocks of $D$), the steps are:
 
 1. Start with $r = y$
-2. Subtract worker means from $r$: $r \leftarrow r - D_W {\color{royalblue}G_{WW}^{-1}} D_W^\top r$ (cheap — $G_{WW}$ is diagonal, so its inverse just divides by group sizes)
-3. Subtract firm means from $r$: $r \leftarrow r - D_F {\color{crimson}G_{FF}^{-1}} D_F^\top r$ (cheap)
-4. Subtract year means from $r$: $r \leftarrow r - D_Y {\color{forestgreen}G_{YY}^{-1}} D_Y^\top r$ (cheap)
+2. Subtract worker means from $r$: $r \leftarrow r - D_W {\color{royalblue}G_{WW}^{-1}} D_W^\top r$ 
+3. Subtract firm means from $r$: $r \leftarrow r - D_F {\color{crimson}G_{FF}^{-1}} D_F^\top r$ 
+4. Subtract year means from $r$: $r \leftarrow r - D_Y {\color{forestgreen}G_{YY}^{-1}} D_Y^\top r$ 
 5. Repeat steps 2-4 until convergence
 
-Each of these steps is individually cheap - we are just averaging within groups. But the
-algorithm **never directly touches the cross-tabulation blocks**
-$G_{WF}$, $G_{FY}$, $G_{WY}$. It can only extract information about the
+Each of these steps is individually cheap because $G_{WW}$, $G_{FF}$, $G_{YY}$. are diagonal matrices. 
+
+We also note that the MAP algorithm **never directly touches the cross-tabulation blocks** $G_{WF}$, $G_{FY}$, $G_{WY}$. It can only extract information about the
 relationship between workers and firms *indirectly*, through the
 residuals that get passed from one sweep to the next.
 
-When the graph is dense (many movers), each sweep makes good progress.
-If workers move frequently between firms, high-ability workers are
-observed at both good and bad firms, producing different outcomes in
-each. The algorithm can easily tease apart the worker contribution from
-the firm contribution, because the same worker provides a direct
+When the graph structure of workers and firms is dense (many movers), each sweep of the MAP algorithm makes good progress. If workers move frequently between firms, high-ability workers are observed at both good and bad firms, producing different outcomes in
+each. The algorithm can easily discriminate the worker effect from
+the firm effect, because the same worker provides a direct
 comparison across firms. Subtracting worker means already removes most
 of the worker effect, and what remains is a clean signal about firms.
 
@@ -189,19 +172,6 @@ mean is contaminated by the firm effect they are stuck in. The algorithm
 must iterate many times, slowly propagating the little cross-factor
 information that exists through the few movers that bridge different
 firms.
-
-Formally, the convergence rate per sweep is governed by
-$\cos^2(\theta)$, where $\theta$ is the **Friedrichs angle** between
-the column spaces of the FE design matrices. Dense graphs produce
-large $\theta$ (fast convergence); sparse graphs produce small
-$\theta$ (slow convergence, or no convergence within budget).
-
-Note that MAP implementations never actually form the dummy matrix $D$.
-Each projection $D_q G_{qq}^{-1} D_q^\top r$ is just "compute the mean
-of $r$ within each group, then subtract it" — an operation that only
-requires the integer group labels, not a sparse one-hot matrix. This is
-one of MAP's practical advantages: it needs no sparse matrix assembly
-and has minimal memory overhead.
 
 ## How CG-Schwarz Works (and Why It Uses the Graph)
 
@@ -218,14 +188,11 @@ more robust to sparse graphs.
 
 ## When Does Each Solver Win?
 
-The first-order intuition is simple:
-
+Here is some first-order intuition: 
 - **MAP wins on dense graphs.** When the graph is well-connected with
-  many movers and no fragmentation, MAP converges in a handful of sweeps.
+  many movers and no fragmentation, the vanilla MAP algorithm converges in a handful of iterations.
   Each sweep is extremely cheap because it only computes group means, so
-  the total cost is low. CG has overhead from forming the Gramian and
-  computing full matrix-vector products, which does not pay off in this
-  regime.
+  the total cost is low. The CG algorithm in stead has overhead from forming the preconditioner, which might not amortize for dense graphs. 
 
 - **CG-Schwarz wins on sparse graphs.** When the graph has few movers,
   MAP's convergence stalls because it cannot propagate information across
@@ -236,42 +203,54 @@ The first-order intuition is simple:
 The intuition above is deliberately simplified. In practice, fixed-point accelerations
 such as Irons-Tuck (used in R's `fixest`) can significantly speed up
 MAP convergence, narrowing the gap on moderately sparse graphs. This is
-why the benchmarks below compare four backends: `pyfixest (rust-map)`
-(MAP without acceleration), `fixest-map` (R's `fixest` with Irons-Tuck
-acceleration), `pyfixest (rust-cg)` (CG-Schwarz via `within`), and
-`FEM.jl` (Julia's `FixedEffectModels.jl` via LSMR). All benchmarks time
-the full estimation function call (e.g., `fixest::feols()` or
-`pf.feols()`); each panel shows 2-way and 3-way FE specifications. The
-data come from a calibrated AKM data-generating process. The benchmark
-scripts and DGP documentation live in
-[`benchmarks/modular/`](https://github.com/py-econometrics/pyfixest/tree/master/benchmarks/modular).
-To reproduce the results, run `python benchmarks/modular/benchmark_akm_sweep.py`.
+why the benchmarks below compare four backends: 
+- `pyfixest (rust-map)` (vanilla MAP without acceleration),
+-  `fixest-map` (R's `fixest` with Irons-Tuck
+acceleration, non-vanilla MAP)
+- `pyfixest (rust-cg)` (CG-Schwarz via `within`)
+- `FEM.jl` (Julia's `FixedEffectModels.jl` via LSMR). 
 
+All benchmarks time the full estimation function call (e.g., `fixest::feols()` or
+`pf.feols()`). We want to stress that no benchmark is perfect - the different packages all run different pre-processing routines, e.g. for dropping singletons or multicollinear variables. In addition, they use slightly different convergence criteria. 
 
-## The Easy Case: Well-Connected Graphs
+The benchmark scripts and DGP documentation live in
+[`benchmarks/modular/`](https://github.com/py-econometrics/pyfixest/tree/master/benchmarks/modular). You should be able to reproduce all results by running `pixi r benchmark`, `pixi r benchmark-akm` and `pixi run benchmark-akm-occupation`. 
 
-Before looking at difficult problems, it is worth confirming the baseline: when
-the bipartite graph is dense, **all solvers are fast**. The "easy" scenario uses
-100 firms, a separation rate of $\delta = 0.5$ (workers switch firms every
-other period on average), no sorting ($\rho = 0$), and a 20-period panel — a
-deliberately well-connected graph with ~1M observations.
+## Well-Connected Graphs
 
-| Backend | 2-way FE | 3-way FE |
-|---------|----------|----------|
-| `pyfixest (rust-map)` | 0.23 s | 0.29 s |
-| `pyfixest (rust-cg)` | 0.26 s | 0.41 s |
+Before looking at problems with sparse connections, it is worth confirming the
+baseline: when the bipartite graph is dense, the MAP algorithm converges really quickly. 
 
-On this easy problem, both solvers finish in well under a second at 1M
-observations. MAP converges in very few sweeps because each sweep
-already removes most of the variation, and CG-Schwarz's overhead from
-building the Gramian does not pay off. This is the regime where the
-choice of solver simply does not matter.
+In this initial scenario, we simulate 100 firms, a separation rate of $\delta = 0.5$ (workers switch firms every other period on average), no sorting of workers to firms ($\rho = 0$), and a 20-period panel, which produces a deliberately well-connected graph with ~1M observations.
+
+On this easy problem, the standard worker + firm + year specification is
+solved in well under a second by all backends. MAP converges in very few
+sweeps because each sweep already removes most of the variation, and
+CG-Schwarz's overhead from building the Gramian does not pay off.
+
+## Benchmark Parametrization
+
+We now introduce our baseline benchmark parametrization. All subsequent
+sweeps start from these defaults and vary one parameter at a time.
+
+| Parameter | Symbol | Default | Meaning |
+|:----------|:------:|--------:|:--------|
+| Panel length | $T$ | 10 | Number of time periods each worker is observed |
+| Number of firms | $m_F$ | 10,000 | Total firms in the economy |
+| Separation rate | $\delta$ | 0.20 | Per-period probability that a worker switches firms |
+| Sorting | $\rho$ | 1.0 | Correlation between worker ability and firm quality in the matching process ($\rho = 0$: random, high $\rho$: strong assortative matching) |
+| Within-industry match prob. | $\lambda$ | 0.80 | Probability that a mover's next firm is in the same industry ($\lambda = 1$: no cross-industry moves) |
+| Number of industries | $S$ | 5 | Number of industry clusters |
+| Firm size shape | $\gamma$ | 1.0 | Pareto shape parameter for the firm size distribution (high $\gamma$: equal sizes, low $\gamma$: extreme dispersion) |
+
+With these defaults, the economy has ~1M worker-year observations,
+a 20% per-period mover probability, moderate sorting, and a
+well-connected graph, which forms a relatively "easy" baseline.
 
 ## Scaling with Dataset Size
 
-The next question is how runtimes grow with the number of observations,
-holding the graph structure fixed at the (benign) defaults ($\delta = 0.2$,
-$\rho = 1.0$, $T = 10$). The scale sweep increases $N$ from 10K to 10M.
+The first question is how runtimes grow with the number of observations.
+We hold the graph structure fixed at the defaults and increase the number of workers $N$ from 10K to 10M.
 
 ![](figures/akm-benchmarks/bench_scale.png)
 
@@ -281,25 +260,23 @@ On a well-connected graph, all solvers scale roughly linearly. At 1M
 observations, `fixest` and `rust-cg` finish in under half a second,
 while `rust-map` (MAP without acceleration) takes about 2 seconds.
 The absolute differences remain moderate because the graph structure is
-benign — MAP converges quickly even without acceleration. The gap
-between solvers only blows up when the graph becomes sparse, as shown
-in the sections below.
-
+benign - MAP converges quickly even without acceleration. The gap
+between vanilla MAP and other solvers only blows up when the graph becomes sparse, as shown in the sections below.
 
 ## Complex Fixed Effects Structures
 
-The single-axis sweeps below hold the dataset at ~1M observations and vary
+All benchmarks below hold the estimation dataset at ~1M observations and vary
 one structural parameter at a time from the defaults, isolating the effect of
 each graph property on solver performance.
 
 
-### (a) Low mobility: the dominant factor
+### (a) Low worker mobility $\delta$
 
 The separation rate $\delta$ controls how likely a worker is to change
 firms in each period. With $\delta = 0.5$, a worker has a 50% chance of
 switching firms every period, so after a 10-period panel nearly everyone
 has moved at least once. With $\delta = 0.01$, workers separate only 1%
-of the time, so the expected tenure at a firm is 100 periods - far
+of the time, so the expected tenure at a firm is 100 periods, which is far
 longer than the panel itself. In a 10-period panel with $\delta = 0.01$,
 only about 9% of workers are ever observed at more than one firm.
 
@@ -315,11 +292,30 @@ collinear.
 
 *Benchmark: mobility sweep. MAP-based solvers (rust-map, fixest) degrade sharply as mobility decreases, while CG-Schwarz (rust-cg) remains stable.*
 
-**Rule of thumb:** If fewer than 10% of units are movers, expect MAP to
-struggle. Consider switching to CG.
+### (b) Progressive freezing
 
+The uniform mobility sweep above turns one global knob. But real labour
+markets are not uniformly sparse — some sectors are fluid while others
+are ossified. The progressive-freezing benchmark captures this by
+simulating 10 industry markets and progressively switching off
+mobility in 2-market increments. Active markets keep the baseline
+separation rate ($\delta = 0.2$), while frozen markets drop to
+$\delta = 0.005$.
 
-### (b) Strong assortative matching (sorting)
+![](figures/akm-benchmarks/bench_freeze.png)
+
+*Benchmark: progressive freezing. As more of the 10 industry markets
+are frozen (delta drops from 0.2 to 0.005), MAP runtimes rise
+progressively. CG-Schwarz remains stable throughout.*
+
+Even a few frozen markets degrade MAP noticeably, because the frozen
+industries contribute stayers that dilute the cross-factor information
+available per sweep. The effect is cumulative: each additional pair of
+frozen markets adds another near-disconnected block to the Gramian,
+and MAP must propagate information through increasingly thin bridges
+between the remaining active industries.
+
+### (c) Strong assortative matching $\rho$
 
 The sorting parameter $\rho$ controls how strongly worker ability
 $\alpha_i$ and firm quality $\psi_j$ are correlated in the matching
@@ -342,130 +338,20 @@ nearly collinear.
 
 *Benchmark: sorting sweep. Increasing sorting ($\rho$) inflates MAP runtime, with wide variance indicating unstable convergence.*
 
-**Rule of thumb:** If worker and firm effects are highly correlated
-(strong positive assortative matching), MAP convergence degrades. CG is
-more robust because it directly uses the cross-tabulation structure.
 
+### (d) Multiple sources of difficulty
 
-### (c) Fragmented markets
-
-Two parameters control market fragmentation: the number of industries
-$S$ and the within-industry match probability $\lambda$. When $\lambda$
-is close to 1, workers almost never leave their home industry, so each
-industry forms a nearly self-contained subgraph. The parameter $S$
-determines how many such subgraphs exist. With $S = 1$, there is no
-industry structure at all. With $S = 50$ and $\lambda = 0.99$, the
-economy consists of 50 almost disconnected silos, linked only by the
-rare cross-industry mover.
-
-Fragmentation matters because it determines the topology of the bridges
-in the bipartite graph. Even if the overall mover share is reasonable,
-those movers may all be moving *within* their industry. Cross-industry
-movers are the thin bridges that connect different parts of the graph,
-and when those bridges are few, MAP struggles to propagate information
-from one industry cluster to another.
-
-![](figures/akm-benchmarks/bench_fragmentation.png)
-
-*Benchmark: fragmentation sweep. Fragmentation alone has a moderate effect, but extreme segmentation (S=50, lambda=0.99) can cause MAP to blow up.*
-
-**Rule of thumb:** Fragmentation alone has a moderate effect on runtime.
-But combined with low mobility, it becomes devastating because the
-bridges between industry clusters become so thin that MAP cannot
-propagate information across the graph.
-
-
-### (d) High FE saturation
-
-The ratio $(m_W + m_F) / n$ measures how many fixed-effect parameters
-there are relative to the number of observations. When this ratio is
-low (e.g., 0.10), there are many observations per FE level and the
-normal equations are well-conditioned. As the number of firms $m_F$
-increases while holding everything else fixed, the ratio grows and the
-system becomes increasingly ill-conditioned. In the extreme, when
-$(m_W + m_F) / n$ approaches 1, there are nearly as many parameters as
-observations and the problem becomes poorly identified.
-
-High saturation means that each firm has very few workers, so the
-diagonal blocks of the Gramian have small entries and the group means
-are noisy estimates. This slows convergence for all solvers, but MAP
-is more sensitive because it relies exclusively on these noisy group
-means.
-
-![](figures/akm-benchmarks/bench_saturation.png)
-
-*Benchmark: saturation sweep. Runtime increases steadily as the FE-to-observation ratio grows.*
-
-**Rule of thumb:** Saturation has a moderate standalone effect on
-runtime. It becomes severe when combined with short panels, where $T=2$
-means each worker contributes at most 2 observations.
-
-
-### (e) Short panels
-
-The panel length $T$ determines how many periods each worker is
-observed. With $T = 10$, a worker with separation rate $\delta = 0.2$
-has about $1 - (1 - 0.2)^9 \approx 87\%$ probability of moving at
-least once. With $T = 2$, the same worker has only a 20% chance of
-moving. Short panels drastically reduce the effective mover share even
-when the per-period separation rate is held constant. As a result, the off-diagonal matrices of the Gramian are more sparse for short panels.
-
-Short panels also reduce the number of observations per FE level,
-pushing the saturation ratio higher. With $T = 2$, every worker
-contributes exactly 2 observations, so the system is much less
-overdetermined than with $T = 10$.
-
-The figure below shows the effect directly. All scenarios use $T = 2$,
-with the separation rate $\delta$ varying along the x-axis. Even at the
-default $\delta = 0.20$, the short panel already makes the problem
-harder than the same $\delta$ in a 10-period panel. As $\delta$ drops
-further, MAP runtimes increase sharply.
-
-![](figures/akm-benchmarks/bench_short_panel.png)
-
-*Benchmark: short panel sweep. All scenarios have T=2. As mobility decreases, MAP-based solvers slow down substantially.*
-
-Short panels interact strongly with all the other factors above. In
-practice, many matched employer-employee datasets have short panels
-($T = 2$ or $T = 3$), which is one reason these problems are
-particularly challenging.
-
-
-### (f) Firm size dispersion
-
-The parameter $\gamma$ controls the shape of the firm size distribution.
-With high $\gamma$ (e.g., 100), firms are roughly equal in size. With
-low $\gamma$ (e.g., 0.5), the distribution follows an extreme Pareto-like
-shape where a few large firms employ most of the workforce while many
-small firms have only one or two employees.
-
-One might expect extreme size dispersion to hurt solver performance
-because small firms contribute very few observations, making their
-diagonal block entries in the Gramian very sparse. However, the
-benchmark results show that the effect is modest. The main reason is
-that singletons - firms with only one worker-period observation - get
-dropped before estimation, which removes the worst-conditioned FE
-levels. Our DGP does not yet perfectly replicate the extreme singleton
-patterns found in real-world administrative data, so the true effect
-of firm size dispersion may be larger in practice.
-
-![](figures/akm-benchmarks/bench_size.png)
-
-*Benchmark: firm size sweep. Varying the Pareto shape parameter $\gamma$ has a modest effect on runtime.*
-
-## The Interaction Effect
-
-The single-axis sweeps above vary one parameter at a time from the
-baseline. In practice, real datasets often combine multiple sources of
-difficulty simultaneously. The sorting $\times$ mobility factorial
+The single-axis benchmarks above vary one parameter at a time from the
+baseline. In practice, real datasets often combine multiple "sources of
+difficulty" simultaneously. The sorting $\times$ mobility factorial
 benchmark tests this by crossing two levels of sorting ($\rho \in
-\{0, 5\}$) with two levels of mobility ($\delta \in \{0.5, 0.02\}$).
+\{0, 20\}$) with two levels of mobility ($\delta \in \{0.5, 0.02\}$).
 
 ![](figures/akm-benchmarks/bench_interaction.png)
 
 *Benchmark: sorting x mobility interaction. The combination of high sorting and low mobility produces super-additive slowdowns - far worse than either factor alone.*
 
-The combination of $\rho = 5$ and $\delta = 0.02$ produces runtimes far
+The combination of $\rho = 20$ and $\delta = 0.02$ produces runtimes far
 exceeding what either factor alone would predict. Sorting thins out the
 bridges between quality bands by making movers switch only between
 similar firms, while low mobility means there are few movers to begin
@@ -477,37 +363,122 @@ sufficient.** Every other axis matters only insofar as it reduces the
 effective connectivity of the bipartite graph.
 
 
+## Adding a Third Nesting Structure: Occupation Fixed Effects
+
+The benchmarks above all involve the standard worker + firm + year
+specification - essentially a bipartite graph between workers and firms
+(year is low-dimensional and trivially absorbed). But many empirical
+applications add a third high-dimensional factor. In AKM wage
+regressions, occupation is the natural candidate: researchers want to
+separate how much of a worker's wage comes from *who they are*
+(worker FE), *where they work* (firm FE), and *what they do*
+(occupation FE).
+
+Adding occupation turns the bipartite graph into a **tripartite**
+structure. The new factor can be "easy" or "hard" depending on how it
+relates to the existing factors. If occupation cross-cuts firms and
+workers - different occupations appear at each firm, and workers switch
+occupations when they move - then the occupation dimension adds
+independent variation and is cheap to absorb. But if occupation is
+*nested* within one of the existing factors, the new fixed effects
+become nearly collinear with an existing set, and the problem gets
+harder for the same reasons we saw above: the effective graph loses
+edges.
+
+There are two ways occupation can nest:
+
+- **Firm nesting:** Each firm concentrates on a single occupation
+  (think a law firm where everyone is a lawyer). Then knowing the firm
+  almost perfectly predicts the occupation, and the occupation FE
+  column is nearly a copy of the firm FE column.
+- **Worker nesting:** Workers carry their occupation across job changes
+  (a nurse remains a nurse regardless of which hospital they join).
+  Then the occupation FE column is nearly a copy of the worker FE
+  column.
+
+In either case, the solver must separate two nearly identical columns -
+exactly the collinearity problem that makes MAP slow.
+
+### The occupation DGP
+
+The occupation extension keeps the standard worker + firm + year AKM
+panel and adds `occ_id` as a fourth fixed effect. Each firm draws a
+sparse menu of occupations from an industry-level pool, with one
+primary occupation. Workers draw their initial occupation from that
+menu. On a firm move, workers keep their old occupation only if the
+destination firm supports it; otherwise they switch.
+
+![](figures/akm-benchmarks/tripartite_occ_graph.png)
+
+*Tripartite view of the occupation extension. In the cross-cutting case (left), occupation links connect workers and firms in multiple directions - the graph stays well mixed. High `occ_delta` (centre) makes workers carry the same occupation across firm moves. High `occ_lambda` (right) makes each firm concentrate on one primary occupation.*
+
+Three parameters control the occupation structure:
+
+| Parameter | Symbol | Default | Meaning |
+|:----------|:------:|--------:|:--------|
+| Firm–occ concentration | `occ_lambda` | 0.50 | Share of a firm's workers in the primary occupation ($\approx 1$: occupation is a deterministic function of firm) |
+| Occupation persistence | `occ_delta` | 0.30 | Probability a mover keeps the same occupation at the new firm ($= 1$: occupation travels with the worker) |
+| Number of occupations | `n_occupations` | 200 | Total occupation levels in the economy |
+
+Each firm also has a menu size of 5 occupations. These defaults give a
+moderately cross-cutting baseline on top of the standard three-way AKM
+panel (~1M observations).
+
+We also swept `occ_delta` (occupation persistence) but found no measurable effect on runtimes — persistence reshuffles labels without thinning the graph.
+
+### (a) Firm–occupation nesting (`occ_lambda`)
+
+The parameter `occ_lambda` controls how concentrated each firm's
+occupation menu is. At `occ_lambda = 0.01`, a firm's workers are
+spread roughly evenly across the menu occupations. At
+`occ_lambda = 1.0`, virtually all workers at a given firm hold the
+firm's primary occupation, so occupation becomes an almost
+deterministic function of firm identity.
+
+![](figures/akm-occupation-benchmarks/bench_occlambda.png)
+
+*Benchmark: firm–occupation concentration sweep. This family varies only `occ_lambda`, making occupations progressively more nested within firms.*
+
+### (b) Occupation dimensionality (`n_occupations`)
+
+Increasing the number of occupation levels adds more columns to the
+design matrix without changing the underlying worker–firm graph.
+The sweep varies `n_occupations` from 10 to 5,000 while holding all
+other parameters at their defaults.
+
+![](figures/akm-occupation-benchmarks/bench_occsize.png)
+
+*Benchmark: occupation dimensionality sweep. This family varies only the number of occupation levels from 10 to 5,000.*
+
+
 ## Conclusion
 
-Fixed-effects estimation is fast when the bipartite graph connecting
-units to groups is well-connected. It becomes slow - or fails entirely -
-when that graph is sparse. The single most important predictor is the
-mover share, but sorting, market fragmentation, short panels, and high
-FE saturation all contribute by thinning out the edges that carry
-cross-factor information.
+Graph connectivity is the fundamental driver of fixed-effects solver
+performance. Among the individual axes we tested, **mobility** ($\delta$)
+has the largest effect: reducing the separation rate from 0.5 to 0.001
+can increase MAP runtimes by orders of magnitude while leaving CG-Schwarz
+largely unaffected. **Sorting** ($\rho$) operates through a distinct
+mechanism — movers still exist but are wasted within quality bands — and
+the two interact **super-additively**: the combination of high sorting
+and low mobility is far worse than either alone.
 
-MAP, the standard demeaning algorithm, works only with the diagonal
-blocks of the Gramian and must extract cross-factor information
-indirectly. This makes it efficient on dense graphs but vulnerable to
-sparse ones. CG-Schwarz, by contrast, works with the full Gramian
-including the cross-tabulation blocks, which allows it to propagate
-information across the graph directly. The trade-off is higher per-iteration
-cost, which only pays off when the graph is sparse enough that MAP
-would need many iterations.
+The **progressive-freezing** benchmark confirms that the effect is local:
+even a few frozen industry markets degrade MAP performance, and each
+additional frozen pair compounds the slowdown. This mirrors real labour
+markets where some sectors are fluid and others ossified.
 
-In PyFixest, switching between the two is a one-argument change:
+When a fourth high-dimensional factor is added (occupations), the main
+hardness channel is **firm–occupation nesting** (`occ_lambda`): as
+occupation becomes a near-deterministic function of firm identity, the
+new FE column is almost collinear with the existing firm FE, recreating
+the sparse-graph problem in a higher-dimensional space. Occupation
+**dimensionality** (`n_occupations`) adds cost through sheer scale, while
+occupation **persistence** (`occ_delta`) has negligible impact on
+runtimes.
 
-```python
-import pyfixest as pf
-
-# Default MAP backend:
-pf.feols("y ~ x | worker_id + firm_id", data=df)
-
-# CG-Schwarz backend:
-pf.feols("y ~ x | worker_id + firm_id", data=df, demeaner_backend="rust-cg")
-```
-
-If your mover share is low, if your data has strong assortative
-matching, or if MAP does not converge within the default iteration
-budget, switch to `demeaner_backend="rust-cg"`. For well-connected
-panels with high mobility, the default MAP backend will be faster.
+The practical recommendation is straightforward: for well-connected
+graphs (high mobility, low sorting, cross-cutting factors), MAP with
+acceleration (e.g., `fixest`) is fast and hard to beat. For sparse
+graphs — low mobility, strong sorting, nested structures, or any
+combination thereof — CG-Schwarz (`rust-cg` via the `within` crate)
+is the more robust choice.

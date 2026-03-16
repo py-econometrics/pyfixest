@@ -1,3 +1,4 @@
+from dataclasses import asdict
 from pathlib import Path
 
 from benchmarks.modular.akm_dgp import (
@@ -5,7 +6,10 @@ from benchmarks.modular.akm_dgp import (
     simulate_akm_panel,
     summarize_akm_panel,
 )
-from benchmarks.modular.dgps import get_akm_sweep_scenarios
+from benchmarks.modular.dgps import (
+    get_akm_occupation_scenarios,
+    get_akm_sweep_scenarios,
+)
 
 
 def test_get_akm_sweep_scenarios():
@@ -13,22 +17,41 @@ def test_get_akm_sweep_scenarios():
         "akm_baseline",
         "akm_scale_2",
         "akm_sorting_2",
-        "akm_unbalanced_3",
-        "akm_saturation_short_2",
+        "akm_mobility_3",
+        "akm_freeze_4",
     ]
     scenarios = get_akm_sweep_scenarios(Path("unused"), names)
 
     assert [scenario.dgp_name for scenario in scenarios] == names
 
 
-def test_saturation_scenario_builds_explicit_worker_count():
-    scenario = get_akm_sweep_scenarios(Path("unused"), ["akm_saturation_short_1"])[0]
+def test_get_akm_occupation_scenarios():
+    names = [
+        "akm_baseline",
+        "akm_occlambda_4",
+        "akm_occsize_5",
+    ]
+    scenarios = get_akm_occupation_scenarios(Path("unused"), names)
 
-    config = scenario._build_config()
+    assert [scenario.dgp_name for scenario in scenarios] == names
 
-    assert config.n_workers == 500_000
-    assert config.n_firms == 50_000
-    assert config.n_time == 2
+
+def test_non_pathological_occupation_scenarios_vary_one_parameter():
+    baseline = get_akm_occupation_scenarios(Path("unused"), ["akm_baseline"])[0]
+    baseline_config = asdict(baseline._build_config())
+
+    expectations = {
+        "akm_occlambda_4": {"occ_lambda"},
+        "akm_occsize_5": {"n_occupations"},
+    }
+    scenarios = get_akm_occupation_scenarios(Path("unused"), list(expectations))
+
+    for scenario in scenarios:
+        config = asdict(scenario._build_config())
+        changed = {
+            key for key, value in config.items() if value != baseline_config[key]
+        }
+        assert changed == expectations[scenario.dgp_name]
 
 
 def test_simulate_akm_panel_returns_required_columns():
@@ -38,6 +61,22 @@ def test_simulate_akm_panel_returns_required_columns():
     )
 
     assert list(df.columns) == ["indiv_id", "firm_id", "year", "x1", "y"]
+    assert len(df) == 200
+
+
+def test_simulate_akm_panel_with_occupation_returns_occ_column():
+    df = simulate_akm_panel(
+        AKMConfig(
+            n_workers=50,
+            n_firms=10,
+            n_time=4,
+            n_occupations=12,
+            occ_menu_size=3,
+        ),
+        seed=7,
+    )
+
+    assert list(df.columns) == ["indiv_id", "firm_id", "year", "x1", "y", "occ_id"]
     assert len(df) == 200
 
 
@@ -181,3 +220,92 @@ def test_higher_entry_exit_share_reduces_average_observed_periods():
         heavy_summary["two_period_worker_share"]
         > mild_summary["two_period_worker_share"]
     )
+
+
+def test_incompatible_moves_force_occupation_change():
+    df = simulate_akm_panel(
+        AKMConfig(
+            n_workers=400,
+            n_firms=20,
+            n_time=6,
+            n_industries=1,
+            lambda_=1.0,
+            delta=1.0,
+            n_occupations=2,
+            occ_menu_size=1,
+            occ_lambda=1.0,
+            occ_delta=1.0,
+        ),
+        seed=41,
+        include_latent=True,
+    )
+
+    forced = df["occ_forced_change"] & df["firm_changed"]
+
+    assert forced.any()
+    assert df.loc[forced, "occ_changed"].all()
+
+
+def test_higher_occ_delta_increases_occupation_persistence_on_compatible_moves():
+    common = {
+        "n_workers": 500,
+        "n_firms": 60,
+        "n_time": 8,
+        "n_industries": 3,
+        "delta": 0.5,
+        "rho": 1.0,
+        "lambda_": 0.8,
+        "n_occupations": 30,
+        "occ_menu_size": 8,
+        "occ_lambda": 0.5,
+    }
+    low_delta_df = simulate_akm_panel(
+        AKMConfig(**common, occ_delta=0.1),
+        seed=47,
+        include_latent=True,
+    )
+    high_delta_df = simulate_akm_panel(
+        AKMConfig(**common, occ_delta=0.9),
+        seed=47,
+        include_latent=True,
+    )
+
+    low_mask = low_delta_df["firm_changed"] & low_delta_df["occ_move_compatible"]
+    high_mask = high_delta_df["firm_changed"] & high_delta_df["occ_move_compatible"]
+
+    low_change_share = low_delta_df.loc[low_mask, "occ_changed"].mean()
+    high_change_share = high_delta_df.loc[high_mask, "occ_changed"].mean()
+
+    assert high_change_share < low_change_share
+
+
+def test_higher_occ_lambda_increases_within_firm_occ_concentration():
+    common = {
+        "n_workers": 500,
+        "n_firms": 60,
+        "n_time": 8,
+        "n_industries": 3,
+        "delta": 0.2,
+        "rho": 1.0,
+        "lambda_": 0.8,
+        "n_occupations": 50,
+        "occ_menu_size": 5,
+        "occ_delta": 0.3,
+    }
+    low_lambda_df = simulate_akm_panel(
+        AKMConfig(**common, occ_lambda=0.1),
+        seed=53,
+    )
+    high_lambda_df = simulate_akm_panel(
+        AKMConfig(**common, occ_lambda=0.9),
+        seed=53,
+    )
+
+    low_concentration = summarize_akm_panel(low_lambda_df)[
+        "within_firm_occ_concentration"
+    ]
+    high_concentration = summarize_akm_panel(high_lambda_df)[
+        "within_firm_occ_concentration"
+    ]
+
+    assert high_concentration > low_concentration
