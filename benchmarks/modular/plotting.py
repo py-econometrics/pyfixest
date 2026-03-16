@@ -73,16 +73,14 @@ _AKM_SWEEP_TICK_LABELS = {
     "occlambda": {
         1: "occ_lambda=0.01",
         2: "occ_lambda=0.20",
-        3: "occ_lambda=0.50",
-        4: "occ_lambda=0.90",
-        5: "occ_lambda=1.00",
+        3: "occ_lambda=0.90",
+        4: "occ_lambda=1.00",
     },
     "occsize": {
         1: "n_occ=10",
         2: "n_occ=50",
-        3: "n_occ=200",
-        4: "n_occ=1000",
-        5: "n_occ=5000",
+        3: "n_occ=1000",
+        4: "n_occ=5000",
     },
 }
 

@@ -245,14 +245,12 @@ def _akm_occupation_scenarios() -> list[AKMSweepScenario]:
         _scenario("akm_baseline"),
         _scenario("akm_occlambda_1", occ_lambda=0.01),
         _scenario("akm_occlambda_2", occ_lambda=0.2),
-        _scenario("akm_occlambda_3", occ_lambda=0.5),
-        _scenario("akm_occlambda_4", occ_lambda=0.9),
-        _scenario("akm_occlambda_5", occ_lambda=1.0),
+        _scenario("akm_occlambda_3", occ_lambda=0.9),
+        _scenario("akm_occlambda_4", occ_lambda=1.0),
         _scenario("akm_occsize_1", n_occupations=10),
         _scenario("akm_occsize_2", n_occupations=50),
-        _scenario("akm_occsize_3", n_occupations=200),
-        _scenario("akm_occsize_4", n_occupations=1_000),
-        _scenario("akm_occsize_5", n_occupations=5_000),
+        _scenario("akm_occsize_3", n_occupations=1_000),
+        _scenario("akm_occsize_4", n_occupations=5_000),
     ]
 
 

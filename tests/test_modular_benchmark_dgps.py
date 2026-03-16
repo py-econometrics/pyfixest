@@ -28,8 +28,8 @@ def test_get_akm_sweep_scenarios():
 def test_get_akm_occupation_scenarios():
     names = [
         "akm_baseline",
-        "akm_occlambda_4",
-        "akm_occsize_5",
+        "akm_occlambda_3",
+        "akm_occsize_4",
     ]
     scenarios = get_akm_occupation_scenarios(Path("unused"), names)
 
@@ -41,8 +41,8 @@ def test_non_pathological_occupation_scenarios_vary_one_parameter():
     baseline_config = asdict(baseline._build_config())
 
     expectations = {
-        "akm_occlambda_4": {"occ_lambda"},
-        "akm_occsize_5": {"n_occupations"},
+        "akm_occlambda_3": {"occ_lambda"},
+        "akm_occsize_4": {"n_occupations"},
     }
     scenarios = get_akm_occupation_scenarios(Path("unused"), list(expectations))
 
