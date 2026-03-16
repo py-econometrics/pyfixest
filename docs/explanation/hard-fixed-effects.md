@@ -108,15 +108,17 @@ G = \begin{pmatrix}
 G_{WF}^\top & \mathbf{G_{FF}} & G_{FY} \\
 G_{WY}^\top & G_{FY}^\top & \mathbf{G_{YY}}
 \end{pmatrix}
-= \begin{pmatrix}
+= \left(\begin{array}{ccc|cc|cc}
 \mathbf{2} & \mathbf{0} & \mathbf{0} & 1 & 1 & 1 & 1 \\
 \mathbf{0} & \mathbf{2} & \mathbf{0} & 2 & 0 & 1 & 1 \\
 \mathbf{0} & \mathbf{0} & \mathbf{2} & 0 & 2 & 1 & 1 \\
+\hline
 1 & 2 & 0 & \mathbf{3} & \mathbf{0} & 2 & 1 \\
 1 & 0 & 2 & \mathbf{0} & \mathbf{3} & 1 & 2 \\
+\hline
 1 & 1 & 1 & 2 & 1 & \mathbf{3} & \mathbf{0} \\
 1 & 1 & 1 & 1 & 2 & \mathbf{0} & \mathbf{3}
-\end{pmatrix}
+\end{array}\right)
 $$
 
 The **diagonal blocks** $G_{WW}$,
