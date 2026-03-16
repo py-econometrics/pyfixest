@@ -441,10 +441,17 @@ deterministic function of firm identity.
 
 ### (b) Occupation dimensionality (`n_occupations`)
 
-Increasing the number of occupation levels adds more columns to the
-design matrix without changing the underlying worker–firm graph.
-The sweep varies `n_occupations` from 10 to 5,000 while holding all
-other parameters at their defaults.
+Increasing the number of occupation levels makes the problem harder
+through two channels. First, the Gramian grows: each new occupation
+adds a row and column that every iteration must touch, so the per-iteration
+cost rises with $N_o$. Second, the occupation sub-graph thins out.
+With 10 occupations, each level is observed at many firms and held by
+many workers, so the occupation cross-tabulation blocks are dense and
+well-conditioned. With 5,000 occupations, each level appears in far
+fewer observations, and the cross-tabulation blocks become sparse —
+the same graph-thinning mechanism that makes low mobility hard, but
+now in the occupation dimension. The sweep varies `n_occupations` from
+10 to 5,000 while holding all other parameters at their defaults.
 
 ![](figures/akm-occupation-benchmarks/bench_occsize.png)
 
