@@ -513,7 +513,9 @@ def simulate_akm_panel(
         data["year_fe"] = year_fe[observed_mask]
         if config.n_occupations > 0:
             data["occ_fe"] = occ_fe[observed_mask]
-            data["firm_primary_occ"] = firm_primary_occ[firm_paths.ravel()][observed_mask]
+            data["firm_primary_occ"] = firm_primary_occ[firm_paths.ravel()][
+                observed_mask
+            ]
             data["occupation_industry"] = occupation_industries[occ_paths.ravel()][
                 observed_mask
             ]

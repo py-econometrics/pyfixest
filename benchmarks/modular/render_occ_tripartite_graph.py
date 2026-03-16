@@ -63,26 +63,43 @@ ALL_POS = {**WPOS, **FPOS, **OPOS}
 
 # ── Drawing helpers ──────────────────────────────────────────────────────────
 def _circle(ax, x, y, label, color):
-    c = plt.Circle(
-        (x, y), CIRCLE_R, fc=color, ec="white", lw=2.0, zorder=3
-    )
+    c = plt.Circle((x, y), CIRCLE_R, fc=color, ec="white", lw=2.0, zorder=3)
     ax.add_patch(c)
     ax.text(
-        x, y, label, ha="center", va="center",
-        fontsize=11, fontweight="bold", color="white", zorder=4,
+        x,
+        y,
+        label,
+        ha="center",
+        va="center",
+        fontsize=11,
+        fontweight="bold",
+        color="white",
+        zorder=4,
     )
 
 
 def _box(ax, x, y, label, color):
     b = mpatches.FancyBboxPatch(
-        (x - BOX_W / 2, y - BOX_H / 2), BOX_W, BOX_H,
+        (x - BOX_W / 2, y - BOX_H / 2),
+        BOX_W,
+        BOX_H,
         boxstyle=f"round,pad=0,rounding_size={ROUNDING}",
-        fc=color, ec="white", lw=2.0, zorder=3,
+        fc=color,
+        ec="white",
+        lw=2.0,
+        zorder=3,
     )
     ax.add_patch(b)
     ax.text(
-        x, y, label, ha="center", va="center",
-        fontsize=11, fontweight="bold", color="white", zorder=4,
+        x,
+        y,
+        label,
+        ha="center",
+        va="center",
+        fontsize=11,
+        fontweight="bold",
+        color="white",
+        zorder=4,
     )
 
 
@@ -96,9 +113,13 @@ def _draw_edges(ax, edges, color, default_lw=1.8, default_alpha=0.55):
         x0, y0 = ALL_POS[s]
         x1, y1 = ALL_POS[e]
         ax.plot(
-            [x0, x1], [y0, y1],
-            color=color, lw=lw, alpha=alpha,
-            solid_capstyle="round", zorder=1,
+            [x0, x1],
+            [y0, y1],
+            color=color,
+            lw=lw,
+            alpha=alpha,
+            solid_capstyle="round",
+            zorder=1,
         )
 
 
@@ -125,18 +146,39 @@ def _draw_panel(ax, title, subtitle, wf_edges, wo_edges, fo_edges):
 
     # Column labels at bottom
     ly = 0.08
-    ax.text(X_W, ly, "Workers", ha="center", fontsize=11,
-            fontweight="bold", color=WORKER_CLR)
-    ax.text(X_F, ly, "Firms", ha="center", fontsize=11,
-            fontweight="bold", color=FIRM_CLR)
-    ax.text(X_O, ly, "Occupations", ha="center", fontsize=11,
-            fontweight="bold", color=OCC_CLR)
+    ax.text(
+        X_W,
+        ly,
+        "Workers",
+        ha="center",
+        fontsize=11,
+        fontweight="bold",
+        color=WORKER_CLR,
+    )
+    ax.text(
+        X_F, ly, "Firms", ha="center", fontsize=11, fontweight="bold", color=FIRM_CLR
+    )
+    ax.text(
+        X_O,
+        ly,
+        "Occupations",
+        ha="center",
+        fontsize=11,
+        fontweight="bold",
+        color=OCC_CLR,
+    )
 
     # Subtitle (wrapped)
     wrapped = "\n".join(textwrap.wrap(subtitle, width=46))
     ax.text(
-        0.50, 0.00, wrapped, ha="center", va="top",
-        fontsize=9, color="#555555", linespacing=1.35,
+        0.50,
+        0.00,
+        wrapped,
+        ha="center",
+        va="top",
+        fontsize=9,
+        color="#555555",
+        linespacing=1.35,
         transform=ax.transAxes,
     )
 
@@ -144,22 +186,28 @@ def _draw_panel(ax, title, subtitle, wf_edges, wo_edges, fo_edges):
 # ── Edge definitions ─────────────────────────────────────────────────────────
 # Shared worker–firm connections across all three panels
 BASELINE_WF = [
-    ("w1", "F1"), ("w1", "F2"),
+    ("w1", "F1"),
+    ("w1", "F2"),
     ("w2", "F1"),
     ("w3", "F2"),
-    ("w4", "F2"), ("w4", "F3"),
+    ("w4", "F2"),
+    ("w4", "F3"),
     ("w5", "F3"),
-    ("w6", "F1"), ("w6", "F3"),
+    ("w6", "F1"),
+    ("w6", "F3"),
 ]
 
 # Panel 1 – Cross-cutting occupations
 CROSS_WO = [
-    ("w1", "O1"), ("w1", "O2"),
+    ("w1", "O1"),
+    ("w1", "O2"),
     ("w2", "O1"),
     ("w3", "O3"),
-    ("w4", "O2"), ("w4", "O3"),
+    ("w4", "O2"),
+    ("w4", "O3"),
     ("w5", "O2"),
-    ("w6", "O1"), ("w6", "O3"),
+    ("w6", "O1"),
+    ("w6", "O3"),
 ]
 CROSS_FO = [
     ("F1", "O1", 2.8, 0.70),
@@ -191,12 +239,15 @@ WNEST_FO = [
 
 # Panel 3 – Firm nesting (high occ_lambda)
 FNEST_WO = [
-    ("w1", "O1"), ("w1", "O2"),
+    ("w1", "O1"),
+    ("w1", "O2"),
     ("w2", "O1"),
     ("w3", "O2"),
-    ("w4", "O2"), ("w4", "O3"),
+    ("w4", "O2"),
+    ("w4", "O3"),
     ("w5", "O3"),
-    ("w6", "O1"), ("w6", "O3"),
+    ("w6", "O1"),
+    ("w6", "O3"),
 ]
 FNEST_FO = [
     ("F1", "O1", 3.6, 0.85),
@@ -218,21 +269,27 @@ def main() -> None:
         "Cross-Cutting Occupations",
         "Workers switch occupations freely across "
         "firms, so the graph stays well connected.",
-        BASELINE_WF, CROSS_WO, CROSS_FO,
+        BASELINE_WF,
+        CROSS_WO,
+        CROSS_FO,
     )
     _draw_panel(
         axes[1],
         "Worker Nesting  (high occ_delta)",
         "Each worker keeps the same occupation across "
         "firms; worker and occupation effects align.",
-        BASELINE_WF, WNEST_WO, WNEST_FO,
+        BASELINE_WF,
+        WNEST_WO,
+        WNEST_FO,
     )
     _draw_panel(
         axes[2],
         "Firm Nesting  (high occ_lambda)",
         "Each firm concentrates on one occupation, so "
         "firm and occupation effects nearly coincide.",
-        BASELINE_WF, FNEST_WO, FNEST_FO,
+        BASELINE_WF,
+        FNEST_WO,
+        FNEST_FO,
     )
 
     # ── Legend ────────────────────────────────────────────────────────────

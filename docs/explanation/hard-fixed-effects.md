@@ -2,10 +2,10 @@
 
 If you have ever fitted a fixed regression model, then you might have noticed that fixed effects regressions with the same number of observations and fixed effects levels can take orders of magnitudes to run. The runtime of a fixed effects problem is not only determined by the sheer size of the data, but of properties of the fixed effects. Problems that are known to be particularly "hard" are ubiqitous in economics, and arise for example in matched employer-employee data, patient-doctor panels, or trade networks.
 
-In this guide, we explain *why* some fixed effects problems are harder to estimate than others, and benchmark different strategies to fit fixed effects regressions in a range of scenarios. 
+In this guide, we explain *why* some fixed effects problems are harder to estimate than others, and benchmark different strategies to fit fixed effects regressions in a range of scenarios.
 
 The key insight is that
-fixed-effects estimation is a **graph problem**: the structure of who-works-where (or who-sees-which-doctor which-brand-in-which-store) determines how hard the problem is. After reading this guide, you should have a good idea if you can speed up your own fixed effects problem by choosing a different solver. 
+fixed-effects estimation is a **graph problem**: the structure of who-works-where (or who-sees-which-doctor which-brand-in-which-store) determines how hard the problem is. After reading this guide, you should have a good idea if you can speed up your own fixed effects problem by choosing a different solver.
 
 ## Fixed Effects as a Network
 
@@ -40,15 +40,15 @@ regression of $y$ on covariates $X$ and a set of dummy variables $D$
 whether we estimate the full model or first project both $y$ and $X$
 onto the orthogonal complement of $D$'s column space in two separate regressions and then regress the two resulting residuals on each other.
 
-Fitting the two initial regression and forming a residual is often referred to as a **demeaning** step. 
+Fitting the two initial regression and forming a residual is often referred to as a **demeaning** step.
 
 For a single factor (e.g., only worker FEs), this demeaning step is trivial -
-we can simply subtract the average wage of each worker from $y$ and $X$ and we are done. 
+we can simply subtract the average wage of each worker from $y$ and $X$ and we are done.
 
 For two-way FEs in balanced panels, closed-form solutions exist (e.g., the Mundlak
 approach), but as soon as panels are unbalanced - which is the norm in
 matched employer-employee data and most real-world applications -
-these methods break down and we need specialised algorithms/solvers. 
+these methods break down and we need specialised algorithms/solvers.
 
 
 ## Algorithms for the FWL Demeaning Step
@@ -78,7 +78,7 @@ $$G \, \hat{\mu} = D^\top y$$
 where $D$ is the $n \times m$ dummy matrix that encodes all FE levels
 and $G = D^\top D$ is the **Gramian** - a symmetric positive
 semi-definite matrix of dimension $m \times m$, where $m$ is the total
-number of FE levels across all factors. 
+number of FE levels across all factors.
 
 The Gramian has a natural **block structure**. To illustrate this, we will consider a small example (adapted from the
 [`within` documentation](https://github.com/py-econometrics/within)) of
@@ -146,12 +146,12 @@ a time. Writing $D_W, D_F, D_Y$ for the $n \times m_q$ dummy
 sub-matrices (column blocks of $D$), the steps are:
 
 1. Start with $r = y$
-2. Subtract worker means from $r$: $r \leftarrow r - D_W {\color{royalblue}G_{WW}^{-1}} D_W^\top r$ 
-3. Subtract firm means from $r$: $r \leftarrow r - D_F {\color{crimson}G_{FF}^{-1}} D_F^\top r$ 
-4. Subtract year means from $r$: $r \leftarrow r - D_Y {\color{forestgreen}G_{YY}^{-1}} D_Y^\top r$ 
+2. Subtract worker means from $r$: $r \leftarrow r - D_W {\color{royalblue}G_{WW}^{-1}} D_W^\top r$
+3. Subtract firm means from $r$: $r \leftarrow r - D_F {\color{crimson}G_{FF}^{-1}} D_F^\top r$
+4. Subtract year means from $r$: $r \leftarrow r - D_Y {\color{forestgreen}G_{YY}^{-1}} D_Y^\top r$
 5. Repeat steps 2-4 until convergence
 
-Each of these steps is individually cheap because $G_{WW}$, $G_{FF}$, $G_{YY}$. are diagonal matrices. 
+Each of these steps is individually cheap because $G_{WW}$, $G_{FF}$, $G_{YY}$. are diagonal matrices.
 
 We also note that the MAP algorithm **never directly touches the cross-tabulation blocks** $G_{WF}$, $G_{FY}$, $G_{WY}$. It can only extract information about the
 relationship between workers and firms *indirectly*, through the
@@ -188,11 +188,11 @@ more robust to sparse graphs.
 
 ## When Does Each Solver Win?
 
-Here is some first-order intuition: 
+Here is some first-order intuition:
 - **MAP wins on dense graphs.** When the graph is well-connected with
   many movers and no fragmentation, the vanilla MAP algorithm converges in a handful of iterations.
   Each sweep is extremely cheap because it only computes group means, so
-  the total cost is low. The CG algorithm in stead has overhead from forming the preconditioner, which might not amortize for dense graphs. 
+  the total cost is low. The CG algorithm in stead has overhead from forming the preconditioner, which might not amortize for dense graphs.
 
 - **CG-Schwarz wins on sparse graphs.** When the graph has few movers,
   MAP's convergence stalls because it cannot propagate information across
@@ -203,23 +203,23 @@ Here is some first-order intuition:
 The intuition above is deliberately simplified. In practice, fixed-point accelerations
 such as Irons-Tuck (used in R's `fixest`) can significantly speed up
 MAP convergence, narrowing the gap on moderately sparse graphs. This is
-why the benchmarks below compare four backends: 
+why the benchmarks below compare four backends:
 - `pyfixest (rust-map)` (vanilla MAP without acceleration),
 -  `fixest-map` (R's `fixest` with Irons-Tuck
 acceleration, non-vanilla MAP)
 - `pyfixest (rust-cg)` (CG-Schwarz via `within`)
-- `FEM.jl` (Julia's `FixedEffectModels.jl` via LSMR). 
+- `FEM.jl` (Julia's `FixedEffectModels.jl` via LSMR).
 
 All benchmarks time the full estimation function call (e.g., `fixest::feols()` or
-`pf.feols()`). We want to stress that no benchmark is perfect - the different packages all run different pre-processing routines, e.g. for dropping singletons or multicollinear variables. In addition, they use slightly different convergence criteria. 
+`pf.feols()`). We want to stress that no benchmark is perfect - the different packages all run different pre-processing routines, e.g. for dropping singletons or multicollinear variables. In addition, they use slightly different convergence criteria.
 
 The benchmark scripts and DGP documentation live in
-[`benchmarks/modular/`](https://github.com/py-econometrics/pyfixest/tree/master/benchmarks/modular). You should be able to reproduce all results by running `pixi r benchmark`, `pixi r benchmark-akm` and `pixi run benchmark-akm-occupation`. 
+[`benchmarks/modular/`](https://github.com/py-econometrics/pyfixest/tree/master/benchmarks/modular). You should be able to reproduce all results by running `pixi r benchmark`, `pixi r benchmark-akm` and `pixi run benchmark-akm-occupation`.
 
 ## Well-Connected Graphs
 
 Before looking at problems with sparse connections, it is worth confirming the
-baseline: when the bipartite graph is dense, the MAP algorithm converges really quickly. 
+baseline: when the bipartite graph is dense, the MAP algorithm converges really quickly.
 
 In this initial scenario, we simulate 100 firms, a separation rate of $\delta = 0.5$ (workers switch firms every other period on average), no sorting of workers to firms ($\rho = 0$), and a 20-period panel, which produces a deliberately well-connected graph with ~1M observations.
 

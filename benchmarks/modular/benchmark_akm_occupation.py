@@ -21,7 +21,9 @@ BURN_IN = 1
 DEFAULT_N_OBS = 1_000_000
 DATA_DIR = PROJECT_ROOT / "benchmarks" / "data" / "akm_occupation"
 OUTPUT_CSV = PROJECT_ROOT / "benchmarks" / "results" / "feols_akm_occupation.csv"
-FIGURE_DIR = PROJECT_ROOT / "docs" / "explanation" / "figures" / "akm-occupation-benchmarks"
+FIGURE_DIR = (
+    PROJECT_ROOT / "docs" / "explanation" / "figures" / "akm-occupation-benchmarks"
+)
 
 DGPS = get_akm_occupation_scenarios(DATA_DIR)
 

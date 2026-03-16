@@ -58,25 +58,49 @@ ALL_POS = {**WPOS, **FPOS}
 # ── Drawing helpers ──────────────────────────────────────────────────────────
 def _circle(ax, x, y, label, color):
     c = plt.Circle(
-        (x, y), CIRCLE_R, fc=color, ec="white", lw=2.0, zorder=3,
+        (x, y),
+        CIRCLE_R,
+        fc=color,
+        ec="white",
+        lw=2.0,
+        zorder=3,
     )
     ax.add_patch(c)
     ax.text(
-        x, y, label, ha="center", va="center",
-        fontsize=11, fontweight="bold", color="white", zorder=4,
+        x,
+        y,
+        label,
+        ha="center",
+        va="center",
+        fontsize=11,
+        fontweight="bold",
+        color="white",
+        zorder=4,
     )
 
 
 def _box(ax, x, y, label, color):
     b = mpatches.FancyBboxPatch(
-        (x - BOX_W / 2, y - BOX_H / 2), BOX_W, BOX_H,
+        (x - BOX_W / 2, y - BOX_H / 2),
+        BOX_W,
+        BOX_H,
         boxstyle=f"round,pad=0,rounding_size={ROUNDING}",
-        fc=color, ec="white", lw=2.0, zorder=3,
+        fc=color,
+        ec="white",
+        lw=2.0,
+        zorder=3,
     )
     ax.add_patch(b)
     ax.text(
-        x, y, label, ha="center", va="center",
-        fontsize=11, fontweight="bold", color="white", zorder=4,
+        x,
+        y,
+        label,
+        ha="center",
+        va="center",
+        fontsize=11,
+        fontweight="bold",
+        color="white",
+        zorder=4,
     )
 
 
@@ -85,9 +109,13 @@ def _draw_edges(ax, edges, color, lw=1.8, alpha=0.55):
         x0, y0 = ALL_POS[s]
         x1, y1 = ALL_POS[e]
         ax.plot(
-            [x0, x1], [y0, y1],
-            color=color, lw=lw, alpha=alpha,
-            solid_capstyle="round", zorder=1,
+            [x0, x1],
+            [y0, y1],
+            color=color,
+            lw=lw,
+            alpha=alpha,
+            solid_capstyle="round",
+            zorder=1,
         )
 
 
@@ -111,10 +139,18 @@ def _draw_panel(ax, title, stayer_edges, mover_edges):
 
     # Column labels at bottom
     ly = 0.08
-    ax.text(X_W, ly, "Workers", ha="center", fontsize=12,
-            fontweight="bold", color=WORKER_CLR)
-    ax.text(X_F, ly, "Firms", ha="center", fontsize=12,
-            fontweight="bold", color=FIRM_CLR)
+    ax.text(
+        X_W,
+        ly,
+        "Workers",
+        ha="center",
+        fontsize=12,
+        fontweight="bold",
+        color=WORKER_CLR,
+    )
+    ax.text(
+        X_F, ly, "Firms", ha="center", fontsize=12, fontweight="bold", color=FIRM_CLR
+    )
 
 
 # ── Edge definitions ─────────────────────────────────────────────────────────
@@ -160,10 +196,12 @@ def main() -> None:
 
     # Legend
     legend_items = [
-        Line2D([0], [0], color=MOVER_CLR, lw=2.4, alpha=0.70,
-               label="Mover (job change)"),
-        Line2D([0], [0], color=STAYER_CLR, lw=2.0, alpha=0.50,
-               label="Stayer (same firm)"),
+        Line2D(
+            [0], [0], color=MOVER_CLR, lw=2.4, alpha=0.70, label="Mover (job change)"
+        ),
+        Line2D(
+            [0], [0], color=STAYER_CLR, lw=2.0, alpha=0.50, label="Stayer (same firm)"
+        ),
     ]
     fig.legend(
         handles=legend_items,
