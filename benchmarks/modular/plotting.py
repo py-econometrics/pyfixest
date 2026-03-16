@@ -4,6 +4,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+import matplotlib.ticker as mticker
 import numpy as np
 import pandas as pd
 
@@ -21,6 +22,11 @@ _PALETTE = [
     "#E5AE38",
 ]
 _MARKERS = ["o", "s", "D", "^", "v", "P", "X", "*"]
+_FE_LABELS = {
+    2: "Worker + Year",
+    3: "Worker + Firm + Year",
+    4: "Worker + Firm + Year + Occupation",
+}
 _AKM_SWEEP_XLABELS = {
     "scale": "Observations",
     "sorting": "Sorting",
@@ -113,6 +119,24 @@ def _apply_common_style(ax: plt.Axes) -> None:
     ax.spines["right"].set_visible(False)
     ax.tick_params(labelsize=9)
     ax.grid(axis="y", alpha=0.3, linewidth=0.5)
+    ax.yaxis.set_major_locator(mticker.LogLocator(base=10, subs=(1.0,), numticks=20))
+    ax.yaxis.set_major_formatter(mticker.LogFormatterMathtext(base=10))
+    ax.yaxis.set_minor_locator(mticker.NullLocator())
+
+
+def _ensure_min_yticks(ax: plt.Axes, min_ticks: int = 2) -> None:
+    """Widen y-limits if fewer than *min_ticks* major ticks are visible."""
+    ax.figure.canvas.draw()
+    ticks = [t for t in ax.yaxis.get_major_locator().tick_values(*ax.get_ylim())
+             if ax.get_ylim()[0] <= t <= ax.get_ylim()[1]]
+    if len(ticks) >= min_ticks:
+        return
+    ylo, yhi = ax.get_ylim()
+    log_lo, log_hi = np.log10(ylo), np.log10(yhi)
+    # expand to cover at least two powers of 10
+    mid = (log_lo + log_hi) / 2
+    half_span = max((log_hi - log_lo) / 2, 0.6)
+    ax.set_ylim(10 ** (mid - half_span), 10 ** (mid + half_span))
 
 
 def _add_legend(fig: plt.Figure, axes: np.ndarray, ncol: int) -> None:
@@ -177,7 +201,7 @@ def _plot_dgp_figure(
         plot_cell(ax, subset, n_obs_vals, backends, styles)
 
         ax.set_title(
-            f"{_dgp_label(dgp)}  |  {n_fe} FE",
+            f"{_dgp_label(dgp)}  |  {_FE_LABELS.get(n_fe, f'{n_fe} FE')}",
             fontsize=11,
             fontweight="semibold",
             pad=8,
@@ -190,6 +214,10 @@ def _plot_dgp_figure(
         ax.set_yscale(y_scale)
         _apply_common_style(ax)
 
+    for row in axes:
+        for ax in row:
+            if ax.axison:
+                _ensure_min_yticks(ax)
     _add_legend(fig, axes, ncol=max(1, len(backends)))
     fig.tight_layout(rect=(0, 0, 1, 0.94))
     fig.savefig(output_path, dpi=200, bbox_inches="tight")
@@ -237,9 +265,6 @@ def _line_cell(
             linewidth=1.8,
             markersize=5,
             zorder=3,
-        )
-        ax.fill_between(
-            x[valid], mins[valid], maxs[valid], color=style["color"], alpha=0.12
         )
     ax.set_xscale("log")
     ax.set_xticks(x)
@@ -362,12 +387,9 @@ def _plot_sweep_figure(
                 markersize=5,
                 zorder=3,
             )
-            ax.fill_between(
-                x[valid], mins[valid], maxs[valid], color=style["color"], alpha=0.12
-            )
 
         ax.set_title(
-            f"AKM Sweep: {_dgp_label(family)}  |  {n_fe} FE",
+            f"AKM Sweep: {_dgp_label(family)}  |  {_FE_LABELS.get(n_fe, f'{n_fe} FE')}",
             fontsize=11,
             fontweight="semibold",
             pad=8,
@@ -379,6 +401,10 @@ def _plot_sweep_figure(
         ax.tick_params(axis="x", rotation=30)
         _apply_common_style(ax)
 
+    for row in axes:
+        for ax in row:
+            if ax.axison:
+                _ensure_min_yticks(ax)
     _add_legend(fig, axes, ncol=max(1, len(backends)))
     fig.tight_layout(rect=(0, 0, 1, 0.94))
     fig.savefig(output_path, dpi=200, bbox_inches="tight")
