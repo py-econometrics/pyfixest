@@ -104,21 +104,19 @@ $\binom{3}{2} = 3$ **cross-tabulation blocks**:
 
 $$
 G = \begin{pmatrix}
-G_{WW} & G_{WF} & G_{WY} \\
-G_{WF}^\top & G_{FF} & G_{FY} \\
-G_{WY}^\top & G_{FY}^\top & G_{YY}
+\mathbf{G_{WW}} & G_{WF} & G_{WY} \\
+G_{WF}^\top & \mathbf{G_{FF}} & G_{FY} \\
+G_{WY}^\top & G_{FY}^\top & \mathbf{G_{YY}}
 \end{pmatrix}
-= \left(\begin{array}{ccc|cc|cc}
-2 & 0 & 0 & 1 & 1 & 1 & 1 \\
-0 & 2 & 0 & 2 & 0 & 1 & 1 \\
-0 & 0 & 2 & 0 & 2 & 1 & 1 \\
-\hline
-1 & 2 & 0 & 3 & 0 & 2 & 1 \\
-1 & 0 & 2 & 0 & 3 & 1 & 2 \\
-\hline
-1 & 1 & 1 & 2 & 1 & 3 & 0 \\
-1 & 1 & 1 & 1 & 2 & 0 & 3
-\end{array}\right)
+= \begin{pmatrix}
+\mathbf{2} & \mathbf{0} & \mathbf{0} & 1 & 1 & 1 & 1 \\
+\mathbf{0} & \mathbf{2} & \mathbf{0} & 2 & 0 & 1 & 1 \\
+\mathbf{0} & \mathbf{0} & \mathbf{2} & 0 & 2 & 1 & 1 \\
+1 & 2 & 0 & \mathbf{3} & \mathbf{0} & 2 & 1 \\
+1 & 0 & 2 & \mathbf{0} & \mathbf{3} & 1 & 2 \\
+1 & 1 & 1 & 2 & 1 & \mathbf{3} & \mathbf{0} \\
+1 & 1 & 1 & 1 & 2 & \mathbf{0} & \mathbf{3}
+\end{pmatrix}
 $$
 
 The **diagonal blocks** $G_{WW}$,
@@ -147,14 +145,14 @@ a time. Writing $D_W, D_F, D_Y$ for the $n \times m_q$ dummy
 sub-matrices (column blocks of $D$), the steps are:
 
 1. Start with $r = y$
-2. Subtract worker means from $r$: $r \leftarrow r - D_W {\color{blue}G_{WW}^{-1}} D_W^\top r$
-3. Subtract firm means from $r$: $r \leftarrow r - D_F {\color{red}G_{FF}^{-1}} D_F^\top r$
-4. Subtract year means from $r$: $r \leftarrow r - D_Y {\color{green}G_{YY}^{-1}} D_Y^\top r$
+2. Subtract worker means from $r$: $r \leftarrow r - D_W G_{WW}^{-1} D_W^\top r$
+3. Subtract firm means from $r$: $r \leftarrow r - D_F G_{FF}^{-1} D_F^\top r$
+4. Subtract year means from $r$: $r \leftarrow r - D_Y G_{YY}^{-1} D_Y^\top r$
 5. Repeat steps 2-4 until convergence
 
-Each of these steps is individually cheap because ${\color{blue}G_{WW}}$, ${\color{red}G_{FF}}$, ${\color{green}G_{YY}}$ are diagonal matrices.
+Each of these steps is individually cheap because $G_{WW}$, $G_{FF}$, $G_{YY}$ are diagonal matrices.
 
-We also note that the MAP algorithm **never directly touches the cross-tabulation blocks** ${\color{gray}G_{WF}}$, ${\color{gray}G_{FY}}$, ${\color{gray}G_{WY}}$. It can only extract information about the
+We also note that the MAP algorithm **never directly touches the cross-tabulation blocks** $G_{WF}$, $G_{FY}$, $G_{WY}$. It can only extract information about the
 relationship between workers and firms *indirectly*, through the
 residuals that get passed from one sweep to the next.
 
