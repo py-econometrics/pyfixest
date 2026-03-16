@@ -74,7 +74,7 @@ The FWL projection - removing fixed effects from the data - amounts to
 solving a linear system. Specifically, we must solve the **normal
 equations**:
 
-$$G \, \hat{\mu} = D^\top y$$
+$$G \, \hat{\alpha} = D^\top \mu$$
 
 where $D$ is the $n \times m$ dummy matrix that encodes all FE levels
 and $G = D^\top D$ is the **Gramian** - a symmetric positive
@@ -136,9 +136,9 @@ workers stay within a single firm.
 
 ## The Method of Alternating Projections
 
-Recall that we need to solve $G \hat{\mu} = D^\top y$ for the FE
-coefficients $\hat{\mu}$, or equivalently, find the residual
-$r = y - D \hat{\mu}$ that has all fixed effects projected out. The method of alternating projections (MAP) approaches this iteratively: it sweeps through each factor and subtracts
+Recall that we need to solve $G \hat{\alpha} = D^\top \mu$ for the FE
+coefficients $\hat{\alpha}$, or equivalently, find the residual
+$r = \mu - D \hat{\alpha}$ that has all fixed effects projected out. The method of alternating projections (MAP) approaches this iteratively: it sweeps through each factor and subtracts
 group means from the current residual. In terms of the Gramian, this is
 **block Gauss-Seidel** - each sweep solves one diagonal block of $G$ at
 a time. Writing $D_W, D_F, D_Y$ for the $n \times m_q$ dummy
