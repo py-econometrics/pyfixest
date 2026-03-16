@@ -317,6 +317,7 @@ juliaup = "*"
 _julia-setup = { cmd = """julia -e 'using Pkg; Pkg.add([Pkg.PackageSpec(name="FixedEffectModels", url="https://github.com/FixedEffects/FixedEffectModels.jl"), Pkg.PackageSpec("JSON3"), Pkg.PackageSpec("DataFrames"), Pkg.PackageSpec("Parquet2"), Pkg.PackageSpec("StatsModels")])'""" }
 benchmark = { cmd = "python benchmarks/modular/benchmark_main.py", depends-on = ["_setup", "_julia-setup"], description = "Run benchmarks (Python, R, Julia)" }
 benchmark-akm = { cmd = "python benchmarks/modular/benchmark_akm_sweep.py", depends-on = ["_setup", "_julia-setup"], description = "Run fixed-size AKM parameter sweep benchmarks (Python, R, Julia)" }
+benchmark-akm-occupation = { cmd = "python benchmarks/modular/benchmark_akm_occupation.py", depends-on = ["_setup", "_julia-setup"], description = "Run occupation-extended AKM benchmarks (Python, R, Julia)" }
 
 # -- environments ----------------------------------------------------------------------
 

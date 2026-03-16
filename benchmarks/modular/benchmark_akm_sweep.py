@@ -38,13 +38,7 @@ SPECS = [
     FeolsSpec(
         depvar="y",
         covariates=["x1"],
-        fe_cols=["indiv_id", "firm_id"],
-        vcov="iid",
-    ),
-    FeolsSpec(
-        depvar="y",
-        covariates=["x1"],
-        fe_cols=["indiv_id", "year", "firm_id"],
+        fe_cols=["indiv_id", "firm_id", "year"],
         vcov="iid",
     ),
 ]
