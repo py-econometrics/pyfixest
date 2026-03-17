@@ -49,6 +49,7 @@ BENCHMARKERS = [
     PyFeolsBenchmarkerFullApi("pyfixest (rust-cg)", "rust-cg", fixef_maxiter=10000),
     PyFeolsBenchmarkerFullApi("pyfixest (rust-map)", "rust", fixef_maxiter=10000),
 ]
+FIGURE_BACKENDS = ["pyfixest (rust-cg)", "pyfixest (rust-map)"]
 
 
 def _n_obs_for_akm_scenario(dgp_name: str) -> int:
@@ -72,4 +73,6 @@ if __name__ == "__main__":
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     datasets = generate_akm_datasets()
     results = run_benchmarks(BENCHMARKERS, datasets, SPECS)
-    export_and_plot(results, OUTPUT_CSV, figure_dir=FIGURE_DIR)
+    export_and_plot(
+        results, OUTPUT_CSV, figure_dir=FIGURE_DIR, figure_backends=FIGURE_BACKENDS
+    )

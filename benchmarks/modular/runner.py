@@ -56,6 +56,7 @@ def export_and_plot(
     output_csv: Path,
     *,
     figure_dir: Path | None = None,
+    figure_backends: list[str] | None = None,
 ) -> None:
     output_csv.parent.mkdir(parents=True, exist_ok=True)
     results_df = pd.DataFrame([_serialize_result(r) for r in results])
@@ -63,4 +64,9 @@ def export_and_plot(
     results_df.to_csv(output_csv, index=False)
 
     plot_df = results_df[results_df["success"] & results_df["time"].notna()].copy()
-    plot_benchmarks(plot_df, output_csv.with_suffix(".png"), figure_dir=figure_dir)
+    plot_benchmarks(
+        plot_df,
+        output_csv.with_suffix(".png"),
+        figure_dir=figure_dir,
+        figure_backends=figure_backends,
+    )

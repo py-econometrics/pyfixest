@@ -18,7 +18,9 @@ are the other, and each employment spell is an edge. Movers - workers who change
 firms - are the workers whose edges connect different parts of the graph. Without movers,
 worker and firm effects are not separately identified.
 
-![](figures/akm-benchmarks/bipartite_graph.png)
+<p align="center">
+  <img src="figures/akm-benchmarks/bipartite_graph.png" width="85%">
+</p>
 
 *A dense graph (left) has many movers connecting all firms, making worker and firm effects easy to separate. A sparse graph (right) has a single mover bridging two clusters - demeaning must propagate information through that thin bridge, which is slow.*
 
@@ -57,10 +59,9 @@ With two or more factors, $D = [D_W \; D_F \; \ldots]$ is a concatenation of mul
 Several algorithms have been proposed for this multi-factor demeaning
 problem:
 
-- **Method of Alternating Projections (MAP).** Introduced by
-  Guimarães & Portugal (2010) as the "Zig-Zag" and Gaure (2013), this is the workhorse algorithm in most FE packages (`reghdfe`, `lfe`, `fixest`). It sequentially sweeps through each factor, demeaning the target variable by the current factor's group means. Usually, this approach is implemented with accelerations. For example, R's `fixest` uses MAP with Irons-Tuck acceleration and other optimization strategies. In PyFixest, the `"rust"` backend implements MAP without acceleration.
+- **Method of Alternating Projections (MAP).** Introduced by Guimarães & Portugal (2010) as the "Zig-Zag" and Gaure (2013), this is the workhorse algorithm in most FE packages (`reghdfe`, `lfe`, `fixest`). It sequentially sweeps through each factor, demeaning the target variable by the current factor's group means. Usually, this approach is implemented with accelerations. For example, R's `fixest` uses MAP with Irons-Tuck acceleration and other optimization strategies. In PyFixest, the `"rust"` backend implements MAP without acceleration.
 
-- **LSMR.** Julia's `FixedEffectModels.jl` uses LSMR. A discussion is tba.
+- **LSMR.** This is an iterative least-squares solver that can also be applied to the normal equations here. A discussion is tba.
 
 - **CG-Schwarz (Conjugate Gradients with Additive Schwarz Preconditioner).**
   The [`within`](https://github.com/py-econometrics/within) crate, used by
@@ -175,7 +176,7 @@ Here is some first-order intuition:
 - **MAP wins on dense graphs.** When the graph is well-connected with
   many movers and no fragmentation, the vanilla MAP algorithm converges in a handful of iterations.
   Each sweep is extremely cheap because it only computes group means, so
-  the total cost is low. The CG algorithm in stead has overhead from forming the preconditioner, which might not amortize for dense graphs.
+  the total cost is low. The CG algorithm instead has overhead from forming the preconditioner, which might not amortize for dense graphs.
 
 - **CG-Schwarz wins on sparse graphs.** When the graph has few movers,
   MAP's convergence stalls because it cannot propagate information across
@@ -183,18 +184,12 @@ Here is some first-order intuition:
   not suffer from this bottleneck. The overhead of building $G$ is repaid by needing fewer iterations.
 
 The intuition above is deliberately simplified. In practice, fixed-point accelerations
-such as Irons-Tuck (used in R's `fixest`) can significantly speed up
-MAP convergence, narrowing the gap on moderately sparse graphs. This is
-why the benchmarks below compare three software packages with four different strategies for demeaning:
+can significantly speed up MAP convergence, narrowing the gap on moderately sparse graphs. The figures below therefore focus on the two PyFixest backends:
 
-- `pyfixest (rust-map)` implements the vanilla MAP without acceleration,
--  `fixest-map` of the `fixest` package implements MAP with Irons-Tuck
-acceleration and other tricks and is therefore **not vanilla MAP**
-- `pyfixest (rust-cg)` implements the CG-Schwarz stragey via `within`'s solver
-- `FEM.jl` in `FixedEffectModels.jl` solves the demeaning step via the LSMR algorithm.
+- `pyfixest (rust-map)` implements MAP without acceleration,
+- `pyfixest (rust-cg)` implements the CG-Schwarz strategy via `within`'s solver.
 
-All benchmarks time the full estimation function call (e.g., `fixest::feols()` or
-`pf.feols()`). We want to stress that no benchmark is perfect - the different packages all run different pre-processing routines, e.g. for dropping singletons or multicollinear variables. In addition, they use slightly different convergence criteria.
+All benchmarks time the full PyFixest estimation call.
 
 The benchmark scripts and DGP documentation live in
 [`benchmarks/modular/`](https://github.com/py-econometrics/pyfixest/tree/master/benchmarks/modular). You should be able to reproduce all results by running `pixi r benchmark`, `pixi r benchmark-akm` and `pixi run benchmark-akm-occupation` - if not, please send us a message!
@@ -222,7 +217,9 @@ baseline: when the bipartite graph is dense, the MAP algorithm converges really 
 
 In this initial scenario, we hold the graph structure fixed at the defaults and increase the number of workers $N$ from 10K to 10M.
 
-![](figures/akm-benchmarks/bench_scale.png)
+<p align="center">
+  <img src="figures/akm-benchmarks/bench_scale.png" width="85%">
+</p>
 
 *Benchmark: scale sweep. Runtime as a function of dataset size on a well-connected graph with default parameters.*
 
@@ -253,7 +250,9 @@ is low, most workers sit at a single firm, and the graph thins out to
 a near-nested structure where worker and firm effects are almost
 collinear.
 
-![](figures/akm-benchmarks/bench_mobility.png)
+<p align="center">
+  <img src="figures/akm-benchmarks/bench_mobility.png" width="85%">
+</p>
 
 *Benchmark: mobility sweep. The rust-map solver degrades sharply as mobility decreases, while CG-Schwarz (rust-cg) remains stable.*
 
@@ -266,7 +265,9 @@ mobility one industry at a time. Active industries keep the baseline
 separation rate ($\delta = 0.1$), while frozen industries drop to
 $\delta = 0.005$.
 
-![](figures/akm-benchmarks/bench_freeze.png)
+<p align="center">
+  <img src="figures/akm-benchmarks/bench_freeze.png" width="85%">
+</p>
 
 *Benchmark: progressive freezing. As more of the 5 industry markets
 are frozen (delta drops from 0.1 to 0.005), MAP runtimes rise
@@ -291,7 +292,9 @@ subgraph. The cross-tabulation blocks become sparse because there are
 few edges between quality bands - great workers never work in poor firms and vice versa -  making worker and firm effect columns
 nearly collinear.
 
-![](figures/akm-benchmarks/bench_sorting.png)
+<p align="center">
+  <img src="figures/akm-benchmarks/bench_sorting.png" width="85%">
+</p>
 
 *Benchmark: sorting sweep. Increasing sorting ($\rho$) inflates MAP runtime, with wide variance indicating unstable convergence.*
 
@@ -304,7 +307,9 @@ difficulty" simultaneously. The sorting $\times$ mobility factorial
 benchmark tests this by crossing two levels of sorting ($\rho \in
 \{0, 20\}$) with two levels of mobility ($\delta \in \{0.5, 0.02\}$).
 
-![](figures/akm-benchmarks/bench_interaction.png)
+<p align="center">
+  <img src="figures/akm-benchmarks/bench_interaction.png" width="85%">
+</p>
 
 *Benchmark: sorting x mobility interaction. The combination of high sorting and low mobility produces super-additive slowdowns - far worse than either factor alone.*
 
@@ -390,7 +395,9 @@ occupation becomes much closer to a deterministic function of firm
 identity. Compatible movers can still carry an old non-primary
 occupation because `occ_delta` is held fixed above zero.
 
-![](figures/akm-occupation-benchmarks/bench_occlambda.png)
+<p align="center">
+  <img src="figures/akm-occupation-benchmarks/bench_occlambda.png" width="85%">
+</p>
 
 *Benchmark: firm–occupation concentration sweep. This family varies only `occ_lambda`, making occupations progressively more nested within firms.*
 
@@ -402,7 +409,9 @@ many workers, so the occupation cross-tabulation blocks are dense and
 well-conditioned. With 5,000 occupations, each level appears in far
 fewer observations, and the cross-tabulation blocks become sparse. This is the same graph-thinning mechanism that makes low mobility hard, just in the occupation dimension. The sweep varies `n_occupations` from 10 to 5,000 while holding all other parameters at their defaults.
 
-![](figures/akm-occupation-benchmarks/bench_occsize.png)
+<p align="center">
+  <img src="figures/akm-occupation-benchmarks/bench_occsize.png" width="85%">
+</p>
 
 *Benchmark: occupation dimensionality sweep. This family varies only the number of occupation levels from 10 to 5,000.*
 
@@ -413,17 +422,21 @@ Graph connectivity is the fundamental driver of fixed-effects solver
 performance.
 
 The practical recommendation is straightforward: for well-connected
-graphs (high mobility, low sorting, cross-cutting factors), MAP with
-acceleration (e.g., `fixest`) is fast and hard to beat. For sparse
+graphs (high mobility, low sorting, cross-cutting factors), (accelerated)
+MAP is often hard to beat. For sparse
 graphs — low mobility, strong sorting, nested structures, or any
-combination thereof — vanilla MAP as in `rust-map` reveals poor convergence properties. The CG-Schwarz algorithm (`rust-cg` via the `within` crate), LSMR and accelerated MAP offer more performant and robust alternatives.
+combination thereof — vanilla MAP as in `rust-map` reveals poor convergence properties. Within PyFixest, the CG-Schwarz backend (`rust-cg` via the `within` crate) is the more robust choice on these hard graphs.
 
-We conclude by showing two benchmarks from the `fixest` readme that are designed to be simple and very challenging for the MAP algorithm. On the "simple" problem, the graph is dense and all solvers perform well; here, CG-Schwarz tends to lose because its setup overhead does not amortize. On the "difficult" sparse problem, vanilla MAP degrades sharply, while CG-Schwarz performs much better. In the checked-in benchmark results, it is substantially faster than vanilla MAP and materially faster than accelerated MAP and LSMR on the hard three-way specification.
+We conclude by showing two benchmarks from the `fixest` package that are designed to be simple and very challenging for the MAP algorithm. On the "simple" problem, the graph is dense and both PyFixest backends perform well; here, CG-Schwarz tends to lose because its setup overhead does not amortize. On the "difficult" sparse problem, vanilla MAP degrades sharply, while CG-Schwarz performs much better. In the checked-in results, `rust-cg` is substantially faster than `rust-map` on the hard three-way specification.
 
-![](figures/base-benchmarks/bench_simple.png)
+<p align="center">
+  <img src="figures/base-benchmarks/bench_simple.png" width="85%">
+</p>
 
-*Benchmark: "simple" DGP from the `fixest` readme. A well-connected graph where all solvers perform well, except CG-Schwarz whose preconditioner setup cost does not amortize.*
+*Benchmark: "simple" DGP. A well-connected graph where both PyFixest solvers perform well, except CG-Schwarz whose preconditioner setup cost does not amortize.*
 
-![](figures/base-benchmarks/bench_difficult.png)
+<p align="center">
+  <img src="figures/base-benchmarks/bench_difficult.png" width="85%">
+</p>
 
-*Benchmark: "difficult" DGP from the `fixest` readme. A sparse graph where vanilla MAP degrades dramatically, while CG-Schwarz remains fast.*
+*Benchmark: "difficult" DGP. A sparse graph where vanilla MAP degrades dramatically, while CG-Schwarz remains fast.*

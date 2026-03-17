@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pandas as pd
 
+import benchmarks.modular.plotting as plotting
 from benchmarks.modular.plotting import plot_benchmarks
 
 
@@ -124,3 +125,32 @@ def test_plot_benchmarks_writes_occupation_family_figures(tmp_path: Path):
     ]
 
     assert all(path.exists() for path in expected_paths)
+
+
+def test_plot_benchmarks_filters_to_requested_backends(
+    tmp_path: Path, monkeypatch
+) -> None:
+    results_df = pd.DataFrame(
+        {
+            "dgp": ["simple", "simple", "simple", "simple"],
+            "n_fe": [2, 2, 3, 3],
+            "n_obs": [1_000, 10_000, 1_000, 10_000],
+            "backend": ["pyfixest", "fixest", "pyfixest", "fixest"],
+            "time": [0.1, 0.2, 0.3, 0.4],
+        }
+    )
+    captured_backends: list[list[str]] = []
+
+    def fake_plot_dgp_figure(*args, **kwargs) -> None:
+        dgp_summary = args[0]
+        captured_backends.append(sorted(dgp_summary["backend"].unique().tolist()))
+
+    monkeypatch.setattr(plotting, "_plot_dgp_figure", fake_plot_dgp_figure)
+
+    plotting.plot_benchmarks(
+        results_df,
+        tmp_path / "feols_bench.png",
+        figure_backends=["pyfixest"],
+    )
+
+    assert captured_backends == [["pyfixest"]]

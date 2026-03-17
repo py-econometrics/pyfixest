@@ -51,6 +51,7 @@ BENCHMARKERS = [
     FixestFeolsBenchmarker("fixest-map"),
     JuliaFeolsBenchmarker("FEM.jl (lsmr)"),
 ]
+FIGURE_BACKENDS = ["pyfixest (rust-cg)", "pyfixest (rust-map)"]
 
 # ---------------------------------------------------------------------------
 # Run
@@ -59,4 +60,6 @@ if __name__ == "__main__":
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     datasets = generate_datasets(DGPS, SIZES, N_ITERS, BURN_IN)
     results = run_benchmarks(BENCHMARKERS, datasets, SPECS)
-    export_and_plot(results, OUTPUT_CSV, figure_dir=FIGURE_DIR)
+    export_and_plot(
+        results, OUTPUT_CSV, figure_dir=FIGURE_DIR, figure_backends=FIGURE_BACKENDS
+    )

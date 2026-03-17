@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -102,6 +102,19 @@ def _build_styles(backends: list[str]) -> dict[str, dict]:
         }
         for i, name in enumerate(backends)
     }
+
+
+def _filter_backends(
+    results_df: pd.DataFrame, figure_backends: Iterable[str] | None
+) -> pd.DataFrame:
+    if figure_backends is None:
+        return results_df
+
+    selected = list(dict.fromkeys(figure_backends))
+    if not selected:
+        return results_df.iloc[0:0].copy()
+
+    return results_df[results_df["backend"].isin(selected)].copy()
 
 
 def _aggregate(results_df: pd.DataFrame) -> pd.DataFrame:
@@ -452,8 +465,10 @@ def plot_benchmarks(
     output_path: Path,
     *,
     figure_dir: Path | None = None,
+    figure_backends: Iterable[str] | None = None,
 ) -> None:
     """Create publication-ready benchmark plots, one figure per benchmark DGP."""
+    results_df = _filter_backends(results_df, figure_backends)
     if results_df.empty:
         return
 
