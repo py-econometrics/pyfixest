@@ -108,7 +108,7 @@ class AKMSweepScenario:
 
 _AKM_DEFAULTS: dict[str, Any] = {
     "n_time": 10,
-    "n_firms": 10_000,
+    "n_firms": 50_000,
     "n_industries": 5,
     "var_alpha": 1.0,
     "var_psi": 0.5,
@@ -117,10 +117,10 @@ _AKM_DEFAULTS: dict[str, Any] = {
     "gamma": 1.0,
     "rho_size": 0.6,
     "rho": 1.0,
-    "delta": 0.2,
+    "delta": 0.1,
     "lambda_": 0.8,
     "beta_x1": 0.5,
-    "n_match_bins": 64,
+    "n_match_bins": 2048,
     "entry_exit_share": 0.0,
     "entry_exit_n_periods": 2,
 }
@@ -150,7 +150,7 @@ def _actual_obs_count(n_workers: int, params: dict[str, Any]) -> int:
     n_time = int(params["n_time"])
     short_share = float(params.get("entry_exit_share", 0.0))
     short_periods = int(params.get("entry_exit_n_periods", n_time))
-    n_short_workers = int(round(short_share * n_workers))
+    n_short_workers = round(short_share * n_workers)
     return (n_workers - n_short_workers) * n_time + n_short_workers * short_periods
 
 
@@ -171,31 +171,18 @@ def _akm_sweep_scenarios() -> list[AKMSweepScenario]:
     return [
         # ── Act 1: Reference points ──
         _scenario("akm_baseline"),
-        _scenario("akm_easy", n_firms=100, delta=0.5, rho=0.0, n_time=20),
         # ── Act 2: Scale ──
         _scenario("akm_scale_1"),
         _scenario("akm_scale_2"),
         _scenario("akm_scale_3"),
         _scenario("akm_scale_4"),
         # ── Act 3: Single-axis sweeps (one knob, rest at defaults) ──
-        # sorting (n_match_bins=2048 for near-continuous matching, delta=0.05
-        # so fewer moves create fewer bridges between quality bands,
-        # n_firms=50_000 so high rho creates many fine-grained quality bands)
-        _scenario(
-            "akm_sorting_1", rho=0.0, n_match_bins=2048, delta=0.05, n_firms=50_000
-        ),
-        _scenario(
-            "akm_sorting_2", rho=5.0, n_match_bins=2048, delta=0.05, n_firms=50_000
-        ),
-        _scenario(
-            "akm_sorting_3", rho=20.0, n_match_bins=2048, delta=0.05, n_firms=50_000
-        ),
-        _scenario(
-            "akm_sorting_4", rho=50.0, n_match_bins=2048, delta=0.05, n_firms=50_000
-        ),
-        _scenario(
-            "akm_sorting_5", rho=100.0, n_match_bins=2048, delta=0.05, n_firms=50_000
-        ),
+        # sorting
+        _scenario("akm_sorting_1", rho=0.0),
+        _scenario("akm_sorting_2", rho=5.0),
+        _scenario("akm_sorting_3", rho=20.0),
+        _scenario("akm_sorting_4", rho=50.0),
+        _scenario("akm_sorting_5", rho=100.0),
         # mobility
         _scenario("akm_mobility_1", delta=1.0),
         _scenario("akm_mobility_2", delta=0.5),
@@ -210,33 +197,13 @@ def _akm_sweep_scenarios() -> list[AKMSweepScenario]:
         _scenario("akm_interaction_3", rho=0.0, delta=0.02),
         _scenario("akm_interaction_4", rho=20.0, delta=0.02),
         # ── Act 5: Progressive freezing ──
-        # 10 markets, turn off mobility market-by-market
-        _scenario("akm_freeze_1", n_industries=10, lambda_=0.9, delta=(0.2,) * 10),
-        _scenario(
-            "akm_freeze_2",
-            n_industries=10,
-            lambda_=0.9,
-            delta=(0.2,) * 8 + (0.005,) * 2,
-        ),
-        _scenario(
-            "akm_freeze_3",
-            n_industries=10,
-            lambda_=0.9,
-            delta=(0.2,) * 6 + (0.005,) * 4,
-        ),
-        _scenario(
-            "akm_freeze_4",
-            n_industries=10,
-            lambda_=0.9,
-            delta=(0.2,) * 4 + (0.005,) * 6,
-        ),
-        _scenario(
-            "akm_freeze_5",
-            n_industries=10,
-            lambda_=0.9,
-            delta=(0.2,) * 2 + (0.005,) * 8,
-        ),
-        _scenario("akm_freeze_6", n_industries=10, lambda_=0.9, delta=(0.005,) * 10),
+        # freeze mobility industry-by-industry while keeping the baseline market structure
+        _scenario("akm_freeze_1", delta=(0.1,) * 5),
+        _scenario("akm_freeze_2", delta=(0.1,) * 4 + (0.005,)),
+        _scenario("akm_freeze_3", delta=(0.1,) * 3 + (0.005,) * 2),
+        _scenario("akm_freeze_4", delta=(0.1,) * 2 + (0.005,) * 3),
+        _scenario("akm_freeze_5", delta=(0.1,) + (0.005,) * 4),
+        _scenario("akm_freeze_6", delta=(0.005,) * 5),
     ]
 
 

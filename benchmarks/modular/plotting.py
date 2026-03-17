@@ -32,13 +32,13 @@ _AKM_SWEEP_XLABELS = {
     "sorting": "Sorting",
     "mobility": "Mobility",
     "interaction": "Sorting x Mobility",
-    "freeze": "Frozen Markets (of 10)",
+    "freeze": "Frozen Markets (of 5)",
     "occlambda": "Occupation-Firm Nesting",
     "occsize": "Occupation Dimensionality",
 }
 _AKM_SWEEP_BASELINE_POINTS = {
     "sorting": (1.5, "rho=1.00"),
-    "mobility": (2.5, "delta=0.20"),
+    "mobility": (2.5, "delta=0.10"),
     "occlambda": (2.5, "occ_lambda=0.50"),
     "occsize": (2.5, "n_occ=200"),
 }
@@ -53,6 +53,8 @@ _AKM_SWEEP_TICK_LABELS = {
         1: "rho=0.00",
         2: "rho=5.00",
         3: "rho=20.00",
+        4: "rho=50.00",
+        5: "rho=100.00",
     },
     "mobility": {
         1: "delta=1.00",
@@ -69,12 +71,12 @@ _AKM_SWEEP_TICK_LABELS = {
         4: "rho=20.00, delta=0.02",
     },
     "freeze": {
-        1: "0/10",
-        2: "2/10",
-        3: "4/10",
-        4: "6/10",
-        5: "8/10",
-        6: "10/10",
+        1: "0/5",
+        2: "1/5",
+        3: "2/5",
+        4: "3/5",
+        5: "4/5",
+        6: "5/5",
     },
     "occlambda": {
         1: "occ_lambda=0.01",
@@ -257,7 +259,7 @@ def _line_cell(
     x = np.array(n_obs_vals)
     for backend in backends:
         style = styles[backend]
-        medians, mins, maxs = _backend_stats(subset, backend, n_obs_vals)
+        medians, _, _ = _backend_stats(subset, backend, n_obs_vals)
         valid = ~np.isnan(medians)
         if not np.any(valid):
             continue
@@ -376,8 +378,6 @@ def _plot_sweep_figure(
                 .reindex(x_orders)
             )
             medians = backend_df["median"].to_numpy(dtype=float)
-            mins = backend_df["min"].to_numpy(dtype=float)
-            maxs = backend_df["max"].to_numpy(dtype=float)
             x = np.arange(len(x_orders), dtype=float)
             valid = ~np.isnan(medians)
             if not np.any(valid):

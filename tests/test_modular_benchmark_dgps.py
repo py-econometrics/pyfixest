@@ -54,6 +54,38 @@ def test_non_pathological_occupation_scenarios_vary_one_parameter():
         assert changed == expectations[scenario.dgp_name]
 
 
+def test_single_axis_akm_sweep_scenarios_vary_one_parameter():
+    baseline = get_akm_sweep_scenarios(Path("unused"), ["akm_baseline"])[0]
+    baseline_config = asdict(baseline._build_config())
+
+    expectations = {
+        "akm_scale_1": set(),
+        "akm_scale_4": set(),
+        "akm_sorting_3": {"rho"},
+        "akm_mobility_4": {"delta"},
+        "akm_freeze_5": {"delta"},
+    }
+    scenarios = get_akm_sweep_scenarios(Path("unused"), list(expectations))
+
+    for scenario in scenarios:
+        config = asdict(scenario._build_config())
+        changed = {
+            key for key, value in config.items() if value != baseline_config[key]
+        }
+        assert changed == expectations[scenario.dgp_name]
+
+
+def test_interaction_akm_sweep_scenario_changes_both_target_parameters():
+    baseline = get_akm_sweep_scenarios(Path("unused"), ["akm_baseline"])[0]
+    baseline_config = asdict(baseline._build_config())
+    scenario = get_akm_sweep_scenarios(Path("unused"), ["akm_interaction_4"])[0]
+
+    config = asdict(scenario._build_config())
+    changed = {key for key, value in config.items() if value != baseline_config[key]}
+
+    assert changed == {"rho", "delta"}
+
+
 def test_simulate_akm_panel_returns_required_columns():
     df = simulate_akm_panel(
         AKMConfig(n_workers=50, n_firms=10, n_time=4),

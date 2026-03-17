@@ -15,7 +15,7 @@ $$y_{it} = \alpha_i + \psi_{J(i,t)} + \phi_t + x'_{it}\beta + \varepsilon_{it}$$
 
 Workers and firms form a **bipartite graph**: workers are one set of nodes, firms
 are the other, and each employment spell is an edge. Movers - workers who change
-firms - are the edges that connect different parts of the graph. Without movers,
+firms - are the workers whose edges connect different parts of the graph. Without movers,
 worker and firm effects are not separately identified.
 
 ![](figures/akm-benchmarks/bipartite_graph.png)
@@ -45,11 +45,11 @@ $$
    \hat{\alpha} = \arg\min_{\alpha} \| D\alpha - \mu \|_2^2
 $$
 
-where $\mu$ is either $Y$ or a column of $X$ and $\alpha$ are the fixed effect coefficients.
+where $\mu$ is either $Y$ or a column of $X$ and $\alpha$ are the fixed effect coefficients. The residualized variable is uniquely defined, but the FE coefficients themselves are only pinned down up to normalizations (and, in disconnected graphs, up to connected components).
 
 For a single factor (e.g., only worker FEs), this demeaning step is trivial: $D$ is a single one-hot encoded matrix and the least-squares solution is simply the vector of group means. Subtracting these means from $\mu$ gives the residual — this is the classical "within transformation" from panel econometrics, and it can be computed in a single pass over the data.
 
-With two or more factors, $D = [D_W \; D_F \; \ldots]$ is a concatenation of multiple dummy matrices. Subtracting worker means still leaves firm effects in the residual, and vice versa, so a single pass no longer suffices. For balanced panels, closed-form solutions exist (e.g., the Mundlak approach), but as soon as panels are unbalanced — which is the norm in matched employer-employee data and most real-world applications — these break down and we need specialised algorithms/solvers.
+With two or more factors, $D = [D_W \; D_F \; \ldots]$ is a concatenation of multiple dummy matrices. Subtracting worker means still leaves firm effects in the residual, and vice versa, so a single pass no longer suffices. For some special balanced designs - most notably certain two-way unit-time panels - closed-form demeaning formulas exist. But once we move to more general multi-way or unbalanced settings — which is the norm in matched employer-employee data and most real-world applications — we need specialised algorithms/solvers.
 
 
 ## Algorithms for the FWL Demeaning Step
@@ -79,7 +79,7 @@ $$G \, \hat{\alpha} = D^\top \mu$$
 where $D$ is the $n \times m$ dummy matrix that encodes all FE levels
 and $G = D^\top D$ is the **Gramian** - a symmetric positive
 semi-definite matrix of dimension $m \times m$, where $m$ is the total
-number of FE levels across all factors.
+number of FE levels across all factors. Again, $\hat{\alpha}$ should be read as one normalized solution to this system; the projection residual itself is the uniquely identified object.
 
 The Gramian has a natural **block structure**. To illustrate this, we will consider a small example (adapted from the
 [`within` documentation](https://github.com/py-econometrics/within)) of
@@ -131,7 +131,7 @@ $G_{WY}$, $G_{FY}$ encode the
 bipartite graph structure. For example, $G_{WF} = D_W^\top D_F$ is the
 worker-firm cross-tabulation: entry $(i, j)$ counts how many times
 worker $i$ is observed at firm $j$. This is where the mover information
-lives. Worker W1's row in $G_{WF}$ is $(1, 1)$ while W2's row is $(2, 0)$. In other words, W1 works in both firms, while W2 workins in F2 in both period. In a labour market with little mobility, the off-diagonal blocks will be sparse as most
+lives. Worker W1's row in $G_{WF}$ is $(1, 1)$ while W2's row is $(2, 0)$. In other words, W1 works in both firms, while W2 works in F1 in both periods. In a labour market with little mobility, the off-diagonal blocks will be sparse as most
 workers stay within a single firm.
 
 ## The Method of Alternating Projections
@@ -202,16 +202,17 @@ The benchmark scripts and DGP documentation live in
 ## Benchmark Parametrization
 
 We now introduce our baseline benchmark parametrization. All subsequent
-sweeps start from these defaults and vary one parameter at a time.
+single-axis sweeps start from these defaults and vary one parameter at a time; the interaction benchmark below deliberately varies two.
 
 | Parameter | Symbol | Default | Meaning |
 |:----------|:------:|--------:|:--------|
 | Panel length | $T$ | 10 | Number of time periods each worker is observed |
-| Number of firms | $m_F$ | 10,000 | Total firms in the economy |
-| Separation rate | $\delta$ | 0.20 | Per-period probability that a worker switches firms |
+| Number of firms | $m_F$ | 50,000 | Total firms in the economy |
+| Separation rate | $\delta$ | 0.10 | Per-period probability that a worker switches firms |
 | Sorting | $\rho$ | 1.0 | Correlation between worker ability and firm quality in the matching process ($\rho = 0$: random, high $\rho$: strong assortative matching) |
 | Within-industry match prob. | $\lambda$ | 0.80 | Probability that a mover's next firm is in the same industry ($\lambda = 1$: no cross-industry moves) |
 | Number of industries | $S$ | 5 | Number of industry clusters |
+| Match bins | `n_match_bins` | 2,048 | Number of worker ability bins used in the benchmark matching routine |
 | Firm size shape | $\gamma$ | 1.0 | Pareto shape parameter for the firm size distribution (high $\gamma$: equal sizes, low $\gamma$: extreme dispersion) |
 
 ## Well-Connected Graphs
@@ -259,16 +260,16 @@ collinear.
 ### (b) Progressive freezing
 
 The uniform mobility sweep above turns one global knob for the entire labour market. But real labour
-markets are not uniformly sparse — some sectors are highly dynamic,  while in others, workers more or less retire at their first employer. The progressive-freezing benchmark captures this by
-simulating 10 industry markets and progressively switching off
-mobility in 2-market increments. Active markets keep the baseline
-separation rate ($\delta = 0.2$), while frozen markets drop to
+markets are not uniformly sparse — some sectors are highly dynamic, while in others, workers more or less retire at their first employer. The progressive-freezing benchmark captures this by
+keeping the baseline 5-industry market structure and progressively switching off
+mobility one industry at a time. Active industries keep the baseline
+separation rate ($\delta = 0.1$), while frozen industries drop to
 $\delta = 0.005$.
 
 ![](figures/akm-benchmarks/bench_freeze.png)
 
-*Benchmark: progressive freezing. As more of the 10 industry markets
-are frozen (delta drops from 0.2 to 0.005), MAP runtimes rise
+*Benchmark: progressive freezing. As more of the 5 industry markets
+are frozen (delta drops from 0.1 to 0.005), MAP runtimes rise
 progressively. CG-Schwarz remains stable throughout.*
 
 ### (c) Strong assortative matching $\rho$
@@ -348,21 +349,29 @@ There are two ways occupation can nest:
 In either case, the solver must separate two nearly identical columns -
 exactly the type of problem that makes vanilla MAP slow.
 
+In the benchmark family below, we focus primarily on **firm nesting** and
+on the overall number of occupation levels. Worker-level occupation
+persistence is part of the DGP, but it is held fixed rather than swept as
+its own benchmark dimension.
+
 ### The occupation DGP
 
 For the occupation benchmarks, we set up a new data generating process that keeps the standard worker + firm + year AKM
 panel and adds `occ_id` as a fourth fixed effect. Each firm draws a
 sparse menu of occupations from an industry-level pool, with one
 primary occupation. Workers draw their initial occupation from that
-menu. On a firm move, workers keep their old occupation only if the
-destination firm supports it; otherwise they switch.
+menu. On a firm move, workers keep their old occupation with probability
+`occ_delta` if the destination firm supports it; otherwise they redraw
+from the destination firm's occupation menu.
 
-Two parameters control the occupation structure:
+Three parameters matter for the occupation DGP. The benchmark family
+below varies the first two and holds the third fixed:
 
 | Parameter | Symbol | Default | Meaning |
 |:----------|:------:|--------:|:--------|
-| Firm–occ concentration | `occ_lambda` | 0.50 | Share of a firm's workers in the primary occupation ($\approx 1$: occupation is a deterministic function of firm) |
+| Firm–occ concentration | `occ_lambda` | 0.50 | Probability that a fresh draw from a firm's occupation menu selects the primary occupation (higher values imply stronger firm–occupation concentration) |
 | Number of occupations | `n_occupations` | 200 | Total occupation levels in the economy |
+| Occupation persistence | `occ_delta` | 0.30 | Probability that a worker keeps the same occupation on a compatible firm move |
 
 Each firm also has a menu size of 5 occupations. These defaults give a
 moderately cross-cutting baseline on top of the standard three-way AKM
@@ -370,12 +379,16 @@ panel (~1M observations).
 
 ### (a) Firm–occupation nesting (`occ_lambda`)
 
-The parameter `occ_lambda` controls how concentrated each firm's
-occupation menu is. At `occ_lambda = 0.01`, a firm's workers are
-spread roughly evenly across the menu occupations. At
-`occ_lambda = 1.0`, all workers at a given firm hold the
-firm's primary occupation, so occupation becomes an almost
-deterministic function of firm identity.
+The parameter `occ_lambda` controls how strongly realized occupations
+at a firm concentrate on that firm's primary occupation. It does **not**
+change the menu itself; instead, it changes how occupation draws are
+made from a fixed menu. At `occ_lambda = 0.01`, fresh draws from a
+firm's menu rarely select the primary occupation, so workers are spread
+across the non-primary occupations in the menu. At `occ_lambda = 1.0`,
+every fresh draw from a firm's menu selects the primary occupation, so
+occupation becomes much closer to a deterministic function of firm
+identity. Compatible movers can still carry an old non-primary
+occupation because `occ_delta` is held fixed above zero.
 
 ![](figures/akm-occupation-benchmarks/bench_occlambda.png)
 
@@ -405,11 +418,11 @@ acceleration (e.g., `fixest`) is fast and hard to beat. For sparse
 graphs — low mobility, strong sorting, nested structures, or any
 combination thereof — vanilla MAP as in `rust-map` reveals poor convergence properties. The CG-Schwarz algorithm (`rust-cg` via the `within` crate), LSMR and accelerated MAP offer more performant and robust alternatives.
 
-We conclude by showing two benchmarks from the `fixest` readme that are designed to be simple and very challenging for the MAP algorithm. On the "simple" problem, all MAP and `FixedEffectModels.jl`'s LSMR have no problem to converge because the problem is **dense**. The CG-Schwarz algorithm instead struggles. On the other hand, it does **much better** on the "difficult" and sparse problem, for which vanilla MAP takes ages. CG-Schwarz is around 200x faster than vanilla MAP, and 10x faster than the accelerated fixest MAP and the LSMR.
+We conclude by showing two benchmarks from the `fixest` readme that are designed to be simple and very challenging for the MAP algorithm. On the "simple" problem, the graph is dense and all solvers perform well; here, CG-Schwarz tends to lose because its setup overhead does not amortize. On the "difficult" sparse problem, vanilla MAP degrades sharply, while CG-Schwarz performs much better. In the checked-in benchmark results, it is substantially faster than vanilla MAP and materially faster than accelerated MAP and LSMR on the hard three-way specification.
 
 ![](figures/base-benchmarks/bench_simple.png)
 
-*Benchmark: "simple" DGP from the `fixest` readme. A well-connected graph where all solvers perform well, except CG-Schwarz which pays overhead for building the Gramian.*
+*Benchmark: "simple" DGP from the `fixest` readme. A well-connected graph where all solvers perform well, except CG-Schwarz whose preconditioner setup cost does not amortize.*
 
 ![](figures/base-benchmarks/bench_difficult.png)
 
