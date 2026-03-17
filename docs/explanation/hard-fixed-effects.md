@@ -170,6 +170,8 @@ the cross-tabulation blocks, and solves the normal equations using
 
 Because CG multiplies by the full Gramian $G$ — including the cross-tabulation blocks — it moves information between workers and firms in a single step, rather than waiting for it to trickle through residuals across many sweeps. This makes its convergence much less sensitive to the sparsity of the graph.
 
+You can find a detailed exposition of the algorithm [here](https://github.com/py-econometrics/within/tree/main/docs).
+
 ## When Does Each Solver Win?
 
 Here is some first-order intuition:
