@@ -8,12 +8,9 @@ from feols_benchmarkers import (
     FixestFeolsBenchmarker,
     JuliaFeolsBenchmarker,
     PyFeolsBenchmarkerFullApi,
-    PyFeolsBenchmarker,
 )
 from interfaces import FeolsSpec
 from runner import export_and_plot, generate_datasets, run_benchmarks
-
-from pyfixest.core.demean import demean as demean_rust
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
@@ -56,7 +53,7 @@ SPECS = [
 ]
 
 BENCHMARKERS = [
-    #PyFeolsBenchmarker("rust-ap", demean_rust),
+    # PyFeolsBenchmarker("rust-ap", demean_rust),
     PyFeolsBenchmarkerFullApi("pyfixest (rust-cg)", "rust-cg"),
     PyFeolsBenchmarkerFullApi("pyfixest (rust-map)", "rust"),
     FixestFeolsBenchmarker("fixest-map"),
