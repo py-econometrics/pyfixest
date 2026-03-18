@@ -48,8 +48,8 @@ fn demean_within_impl(
     let categories = to_u32_fortran(flist);
 
     // Extract columns and build slice references for solve_batch
-    let columns = extract_columns(x);
-    let ys: Vec<&[f64]> = columns.iter().map(|c| c.as_slice()).collect();
+    let x_columns = extract_columns(x);
+    let x_slices: Vec<&[f64]> = x_columns.iter().map(|c| c.as_slice()).collect();
 
     let weights_vec: Vec<f64> = weights.iter().cloned().collect();
 
@@ -58,17 +58,21 @@ fn demean_within_impl(
         maxiter,
         ..within::SolverParams::default()
     };
+    let preconditioner = within::Preconditioner::Additive(
+        within::LocalSolverConfig::solver_default(),
+        within::ReductionStrategy::Auto,
+    );
 
     let result = within::solve_batch(
         categories.view(),
-        &ys,
+        &x_slices,
         Some(&weights_vec),
         &params,
-        None,
+        Some(&preconditioner),
     )?;
 
     // Assemble demeaned columns back into Array2
-    let demeaned_cols: Vec<Vec<f64>> = (0..columns.len())
+    let demeaned_cols: Vec<Vec<f64>> = (0..x_columns.len())
         .map(|k| result.demeaned(k).to_vec())
         .collect();
     let out = assemble_columns(&demeaned_cols, n_obs);
