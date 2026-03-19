@@ -81,7 +81,7 @@ def demean(
 
 def demean_within(
     x: NDArray[np.float64],
-    flist: NDArray[np.uint64],
+    flist: NDArray[np.uint32],
     weights: NDArray[np.float64],
     tol: float = 1e-06,
     maxiter: int = 1_000,
@@ -114,8 +114,8 @@ def demean_within(
     """
     return _demean_within_rs(
         x.astype(np.float64, copy=False),
-        flist.astype(np.uint64, copy=False),
-        weights.astype(np.float64, copy=False),
+        np.asfortranarray(flist, dtype=np.uint32),
+        weights.astype(np.float64, copy=False).reshape(-1),
         tol,
         maxiter,
     )
