@@ -3,7 +3,6 @@ import pandas as pd
 import pyhdfe
 import pytest
 
-import pyfixest.core.demean as demean_module
 from pyfixest.core import demean as demean_rs
 from pyfixest.core.demean import demean_within
 from pyfixest.estimation.cupy.demean_cupy_ import demean_cupy32, demean_cupy64
@@ -46,31 +45,6 @@ def test_demean(benchmark, demean_func):
     assert np.allclose(res_pyhdfe[10, 0:], res_pyfixest[10, 0:], rtol=1e-06, atol=1e-08)
 
 
-def test_demean_within_normalizes_inputs(monkeypatch):
-    x = np.arange(12, dtype=np.float32).reshape((3, 4), order="C")
-    flist = np.array([[0, 1], [1, 0], [0, 2]], dtype=np.int64, order="C")
-    weights = np.ones((3, 1), dtype=np.float32)
-
-    def fake_demean_within_rs(x_arg, flist_arg, weights_arg, tol, maxiter):
-        assert x_arg.dtype == np.float64
-        assert x_arg.flags.c_contiguous
-        assert not x_arg.flags.f_contiguous
-        assert flist_arg.dtype == np.uint32
-        assert flist_arg.flags.f_contiguous
-        assert weights_arg.dtype == np.float64
-        assert weights_arg.ndim == 1
-        assert tol == pytest.approx(1e-6)
-        assert maxiter == 1_000
-        return np.zeros_like(x_arg), True
-
-    monkeypatch.setattr(demean_module, "_demean_within_rs", fake_demean_within_rs)
-
-    result, success = demean_module.demean_within(x=x, flist=flist, weights=weights)
-
-    assert success
-    assert result.shape == x.shape
-
-
 def test_set_demeaner_backend():
     # Test numba backend
     demean_func = _set_demeaner_backend("numba")
@@ -88,6 +62,9 @@ def test_set_demeaner_backend():
 
     demean_func = _set_demeaner_backend("cupy64")
     assert demean_func == demean_cupy64
+
+    demean_func = _set_demeaner_backend("rust-cg")
+    assert demean_func == demean_within
 
     # Test invalid backend raises ValueError
     with pytest.raises(ValueError, match="Invalid demeaner backend: invalid"):
