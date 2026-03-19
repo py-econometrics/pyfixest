@@ -93,6 +93,9 @@ def demean_within(
     solvers. Converges faster than alternating projections on weakly-connected
     or block-diagonal fixed-effect structures.
 
+    For single fixed effects, falls back to alternating projections (``_demean_rs``)
+    because the CG/Schwarz preconditioner is designed for multi-way FE problems.
+
     Parameters
     ----------
     x : numpy.ndarray
@@ -112,6 +115,15 @@ def demean_within(
     tuple[numpy.ndarray, bool]
         Demeaned array and convergence flag.
     """
+    flist_2d = np.atleast_2d(flist) if flist.ndim == 1 else flist
+    if flist_2d.shape[1] == 1:
+        return _demean_rs(
+            x.astype(np.float64, copy=False),
+            flist.astype(np.uint64, copy=False),
+            weights.astype(np.float64, copy=False),
+            tol,
+            maxiter,
+        )
     return _demean_within_rs(
         x.astype(np.float64, copy=False),
         np.asfortranarray(flist, dtype=np.uint32),
