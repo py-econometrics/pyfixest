@@ -81,7 +81,7 @@ def demean(
 
 def demean_within(
     x: NDArray[np.float64],
-    flist: NDArray[np.uint64],
+    flist: NDArray[np.uint32],
     weights: NDArray[np.float64],
     tol: float = 1e-06,
     maxiter: int = 1_000,
@@ -92,6 +92,9 @@ def demean_within(
     Uses one-level Schwarz preconditioning with approximate Cholesky local
     solvers. Converges faster than alternating projections on weakly-connected
     or block-diagonal fixed-effect structures.
+
+    For single fixed effects, falls back to alternating projections (``_demean_rs``)
+    because the CG/Schwarz preconditioner is designed for multi-way FE problems.
 
     Parameters
     ----------
@@ -112,10 +115,18 @@ def demean_within(
     tuple[numpy.ndarray, bool]
         Demeaned array and convergence flag.
     """
+    if flist.ndim == 1 or flist.shape[1] == 1:
+        return _demean_rs(
+            x.astype(np.float64, copy=False),
+            flist.astype(np.uint64, copy=False),
+            weights.astype(np.float64, copy=False),
+            tol,
+            maxiter,
+        )
     return _demean_within_rs(
         x.astype(np.float64, copy=False),
-        flist.astype(np.uint64, copy=False),
-        weights.astype(np.float64, copy=False),
+        np.asfortranarray(flist, dtype=np.uint32),
+        weights.astype(np.float64, copy=False).reshape(-1),
         tol,
         maxiter,
     )
