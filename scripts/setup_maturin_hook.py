@@ -41,6 +41,12 @@ try:
     if not os.environ.get("CONDA_PREFIX") and not os.environ.get("VIRTUAL_ENV"):
         os.environ["CONDA_PREFIX"] = sys.prefix
 
+    # Ensure the environment's bin directory is on PATH so that maturin can be found.
+    # PyCharm (via pixi-pycharm shim) may not include it.
+    env_bin = os.path.join(sys.prefix, "bin")
+    if env_bin not in os.environ.get("PATH", "").split(os.pathsep):
+        os.environ["PATH"] = env_bin + os.pathsep + os.environ.get("PATH", "")
+
     excluded_dirs = DefaultProjectFileSearcher.DEFAULT_SOURCE_EXCLUDED_DIR_NAMES | {".pixi"}
     file_searcher = DefaultProjectFileSearcher(source_excluded_dir_names=excluded_dirs)
 

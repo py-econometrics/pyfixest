@@ -471,7 +471,28 @@
       "contributions": [
         "doc"
       ]
-    }
+    },
+    {
+        "login": "timmens",
+        "name": "Tim Mensinger",
+        "avatar_url":
+  "https://avatars.githubusercontent.com/u/39708667?v=4",
+        "profile": "https://tmensinger.com",
+        "contributions": [
+          "infra"
+        ]
+      },
+      {
+        "login": "nicholasjng",
+        "name": "Nicholas Junge",
+        "avatar_url":
+  "https://avatars.githubusercontent.com/u/54248170?v=4",
+        "profile": "https://nicholasjunge.com",
+        "contributions": [
+          "code",
+          "infra"
+        ]
+      }
   ],
   "contributorsPerLine": 8,
   "skipCi": true,
