@@ -345,6 +345,94 @@ class PyFeolsBenchmarker:
         return results
 
 
+class PyFeolsBenchmarkerFullApi:
+    """Benchmark pf.feols() end-to-end using one configured demeaner backend."""
+
+    def __init__(self, name: str, demeaner_backend: str, **feols_kwargs):
+        self._name = name
+        self._demeaner_backend = demeaner_backend
+        self._feols_kwargs = feols_kwargs
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    def run(
+        self, datasets: list[BenchmarkDataset], spec: FeolsSpec
+    ) -> list[FeolsResult]:
+        import pyfixest as pf
+
+        results: list[FeolsResult] = []
+
+        all_cols = [spec.depvar, *spec.covariates, *spec.fe_cols]
+        if isinstance(spec.vcov, dict) and "CRV1" in spec.vcov:
+            cluster_col = spec.vcov["CRV1"]
+            if cluster_col not in all_cols:
+                all_cols.append(cluster_col)
+
+        tbl = _TablePrinter(_dgp_width(datasets))
+        tbl.print_header(self.name)
+
+        group_buf: list[FeolsResult] = []
+        prev_key: tuple | None = None
+
+        for dataset in datasets:
+            n_obs_for_result = dataset.n_obs
+            try:
+                df = pd.read_parquet(dataset.data_path, columns=all_cols)
+                n_obs_for_result = len(df)
+
+                t0 = time.perf_counter()
+                with warnings.catch_warnings():
+                    warnings.filterwarnings(
+                        "ignore",
+                        message=r"\d+ singleton fixed effect\(s\) dropped from the model\.",
+                        category=UserWarning,
+                    )
+                    pf.feols(
+                        fml=spec.formula,
+                        data=df,
+                        vcov=spec.vcov,
+                        demeaner_backend=self._demeaner_backend,
+                        **self._feols_kwargs,
+                    )
+                elapsed = time.perf_counter() - t0
+
+                result = _result_from_dataset(
+                    dataset,
+                    spec,
+                    backend=self.name,
+                    elapsed=elapsed,
+                    success=True,
+                    n_obs_override=n_obs_for_result,
+                )
+            except Exception as exc:
+                result = _result_from_dataset(
+                    dataset,
+                    spec,
+                    backend=self.name,
+                    elapsed=None,
+                    success=False,
+                    error=str(exc),
+                    n_obs_override=n_obs_for_result,
+                )
+
+            results.append(result)
+
+            if result.iter_type != "burnin":
+                key = _group_key(result)
+                if prev_key is not None and key != prev_key and group_buf:
+                    tbl.print_row(group_buf)
+                    group_buf = []
+                group_buf.append(result)
+                prev_key = key
+
+        if group_buf:
+            tbl.print_row(group_buf)
+
+        return results
+
+
 # ---------------------------------------------------------------------------
 # Subprocess-based benchmarkers (R / Julia)
 # ---------------------------------------------------------------------------
@@ -525,18 +613,32 @@ _SCRIPT_DIR = Path(__file__).parent
 
 
 class FixestFeolsBenchmarker(SubprocessFeolsBenchmarker):
-    def __init__(self, script_path: Path | None = None):
+    def __init__(self, name: str | Path | None = None, script_path: Path | None = None):
+        if isinstance(name, Path):
+            if script_path is not None:
+                raise TypeError(
+                    "script_path must not be provided twice for FixestFeolsBenchmarker."
+                )
+            script_path = name
+            name = None
         super().__init__(
-            name="r.fixest",
+            name=name or "r.fixest",
             command_prefix=["Rscript"],
             script_path=(script_path or _SCRIPT_DIR / "feols_r.R"),
         )
 
 
 class JuliaFeolsBenchmarker(SubprocessFeolsBenchmarker):
-    def __init__(self, script_path: Path | None = None):
+    def __init__(self, name: str | Path | None = None, script_path: Path | None = None):
+        if isinstance(name, Path):
+            if script_path is not None:
+                raise TypeError(
+                    "script_path must not be provided twice for JuliaFeolsBenchmarker."
+                )
+            script_path = name
+            name = None
         super().__init__(
-            name="julia.FixedEffectModels",
+            name=name or "julia.FixedEffectModels",
             command_prefix=["julia"],
             script_path=(script_path or _SCRIPT_DIR / "feols_julia.jl"),
         )
