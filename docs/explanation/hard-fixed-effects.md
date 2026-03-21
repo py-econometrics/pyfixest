@@ -1,4 +1,4 @@
-# "When Are Fixed Effects Estimations Hard?"
+# "When Are Fixed Effects Estimations Difficult?"
 
 If you have ever fitted a fixed effects regression, you might have noticed that models with the same number of observations and fixed effects levels can take orders of magnitude longer to run. The runtime of a fixed effects problem is not only determined by the sheer size of the data, but also by the structure of the fixed effects. Problems that are known to be particularly "hard" are ubiquitous in economics and arise, for example, in matched employer-employee data, patient-doctor panels, or trade networks.
 
@@ -67,7 +67,7 @@ problem:
   The [`within`](https://github.com/py-econometrics/within) crate, used by
   PyFixest's `"rust-cg"` backend, takes a different approach: it
   explicitly builds and exploits the block structure of the normal
-  equations. We explain this structure below.
+  equations for form a high-quality preconditioner for the linear problem. We explain this structure below.
 
 ## The Normal Equations and Their Block Structure
 
@@ -184,6 +184,8 @@ Here is some first-order intuition:
   MAP's convergence stalls because it cannot propagate information across
   thin bridges. CG uses the cross-tabulation blocks directly, so it does
   not suffer from this bottleneck. The overhead of building $G$ is repaid by needing fewer iterations.
+
+An important "failing" case for the CGS algorithm is when the problem has a pair of fixed effects that is "dense" and where both fixed effects have high cardinality - for example, worker and firm fixed effects where each worker works in each firm once or large $N$ and large $T$ panels. One example with benchmark for a dgp that is difficult for CGS is provided at the very end.
 
 The intuition above is deliberately simplified. In practice, fixed-point accelerations
 can significantly speed up MAP convergence, narrowing the gap on moderately sparse graphs. The figures below therefore focus on the two PyFixest backends:
