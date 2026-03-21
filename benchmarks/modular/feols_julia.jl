@@ -127,7 +127,7 @@ function main()
         try
             df = DataFrame(Parquet2.Dataset(data_path))
             start_time = time()
-            reg(df, formula, vcov_spec, nthreads=Sys.CPU_THREADS)
+            reg(df, formula, vcov_spec, nthreads=Sys.CPU_THREADS, progress_bar = false)
             elapsed = time() - start_time
         catch e
             success = false

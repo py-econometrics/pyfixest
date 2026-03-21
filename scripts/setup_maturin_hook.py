@@ -53,6 +53,7 @@ try:
     maturin_import_hook.install(
         settings=MaturinSettings(release=True, strip=True, color=True),
         file_searcher=file_searcher,
+        lock_timeout_seconds=180,
         enable_project_importer=True,
         enable_rs_file_importer=True,
     )
