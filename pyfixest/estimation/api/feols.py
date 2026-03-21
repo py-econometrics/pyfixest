@@ -138,6 +138,7 @@ def feols(
     demeaner_backend: DemeanerBackendOptions, optional
         The backend to use for demeaning. Options include:
         - "numba" (default): CPU-based demeaning using Numba JIT via the Alternating Projections Algorithm.
+        - "rust-cg": Implements the conjugate-gradient-schwarz algorithm from the `within` rust package.
         - "rust": CPU-based demeaning implemented in Rust via the Alternating Projections Algorithm.
         - "jax": CPU or GPU-accelerated using JAX (requires jax/jaxlib) via the Alternating Projections Algorithm.
         - "cupy" or "cupy64": GPU-accelerated using CuPy with float64 precision via direct application of the Frisch-Waugh-Lovell Theorem on sparse
