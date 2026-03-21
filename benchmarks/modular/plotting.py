@@ -120,7 +120,7 @@ def _filter_backends(
 def _aggregate(results_df: pd.DataFrame) -> pd.DataFrame:
     return (
         results_df.groupby(["dgp", "n_fe", "n_obs", "backend"], as_index=False)["time"]
-        .agg(median="median", min="min", max="max")
+        .agg(median="median")
         .sort_values(["dgp", "n_fe", "n_obs", "backend"])
     )
 
@@ -249,17 +249,13 @@ def _plot_dgp_figure(
 # ---------------------------------------------------------------------------
 
 
-def _backend_stats(
+def _backend_medians(
     subset: pd.DataFrame, backend: str, n_obs_vals: list[int]
-) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+) -> np.ndarray:
     backend_df = (
         subset[subset["backend"] == backend].set_index("n_obs").reindex(n_obs_vals)
     )
-    return (
-        backend_df["median"].to_numpy(dtype=float),
-        backend_df["min"].to_numpy(dtype=float),
-        backend_df["max"].to_numpy(dtype=float),
-    )
+    return backend_df["median"].to_numpy(dtype=float)
 
 
 def _line_cell(
@@ -272,7 +268,7 @@ def _line_cell(
     x = np.array(n_obs_vals)
     for backend in backends:
         style = styles[backend]
-        medians, _, _ = _backend_stats(subset, backend, n_obs_vals)
+        medians = _backend_medians(subset, backend, n_obs_vals)
         valid = ~np.isnan(medians)
         if not np.any(valid):
             continue
@@ -290,8 +286,8 @@ def _line_cell(
     ax.set_xticks(x)
 
 
-def _dgp_output_path(output_path: Path, dgp: str, *, suffix: str = "") -> Path:
-    stem = f"{output_path.stem}_{dgp}{suffix}"
+def _dgp_output_path(output_path: Path, dgp: str) -> Path:
+    stem = f"{output_path.stem}_{dgp}"
     return output_path.with_name(stem + output_path.suffix)
 
 
