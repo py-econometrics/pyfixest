@@ -1,6 +1,6 @@
 # "When Are Fixed Effects Estimations Hard?"
 
-If you have ever fitted a fixed regression model, then you might have noticed that fixed effects regressions with the same number of observations and fixed effects levels can take orders of magnitudes to run. The runtime of a fixed effects problem is not only determined by the sheer size of the data, but of properties of the fixed effects. Problems that are known to be particularly "hard" are ubiqitous in economics, and arise for example in matched employer-employee data, patient-doctor panels, or trade networks.
+If you have ever fitted a fixed effects regression, you might have noticed that models with the same number of observations and fixed effects levels can take orders of magnitude longer to run. The runtime of a fixed effects problem is not only determined by the sheer size of the data, but also by the structure of the fixed effects. Problems that are known to be particularly "hard" are ubiquitous in economics and arise, for example, in matched employer-employee data, patient-doctor panels, or trade networks.
 
 In this guide, we explain *why* some fixed effects problems are harder to estimate than others, and benchmark different strategies to fit fixed effects regressions in a range of scenarios.
 
@@ -24,11 +24,11 @@ worker and firm effects are not separately identified.
 
 *A dense graph (left) has many movers connecting all firms, making worker and firm effects easy to separate. A sparse graph (right) has a single mover bridging two clusters - demeaning must propagate information through that thin bridge, which is slow.*
 
-This bipartite structure is ubiqituous in applied economics. In AKM
+This bipartite structure is ubiquitous in applied economics. In AKM
 wage decompositions, workers and firms are the two sides of the graph,
 and job changers are the movers that connect them. The same pattern
 arises in mover designs, where families / students move across schools or neighborhoods. In health economics, we have problems of similar structure with doctor-patient fixed effects. And in trade and industrial organisation,
-products are sold across multiple markets, and brands might be stocked in different.
+products are sold across multiple markets, and brands might be stocked in different stores.
 
 In all these settings, estimation requires solving the same underlying linear algebra problem, which we introduce in the following section.
 
