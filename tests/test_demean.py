@@ -63,6 +63,9 @@ def test_set_demeaner_backend():
     demean_func = _set_demeaner_backend("cupy64")
     assert demean_func == demean_cupy64
 
+    demean_func = _set_demeaner_backend("rust-cg")
+    assert demean_func == demean_within
+
     # Test invalid backend raises ValueError
     with pytest.raises(ValueError, match="Invalid demeaner backend: invalid"):
         _set_demeaner_backend("invalid")
