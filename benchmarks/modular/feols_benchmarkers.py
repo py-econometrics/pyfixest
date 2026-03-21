@@ -7,18 +7,15 @@ import sys
 import tempfile
 import time
 import warnings
-from collections.abc import Callable, Sequence
+from collections.abc import Sequence
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 
 try:
     from .interfaces import BenchmarkDataset, FeolsResult, FeolsSpec
 except ImportError:
     from interfaces import BenchmarkDataset, FeolsResult, FeolsSpec
-
-SUBSTEP_KEYS = ("model_matrix", "demean", "solve", "vcov")
 
 _MIN_DGP_WIDTH = 16
 
@@ -42,8 +39,6 @@ class _TablePrinter:
         self._w = dgp_w
         self._hdr = f"{'dgp':<{dgp_w}} {'n_obs':>12} {'n_fe':>4} {'min':>10} {'median':>10} {'max':>10}  status"
         self._sep = "-" * len(self._hdr)
-        self._sub_hdr = f"{'dgp':<{dgp_w}} {'n_obs':>12} {'n_fe':>4} {'matrix':>10} {'demean':>10} {'solve':>10} {'vcov':>10}  status"
-        self._sub_sep = "-" * len(self._sub_hdr)
 
     def print_header(self, name: str) -> None:
         print(f"\n  {name}", flush=True)
@@ -51,21 +46,11 @@ class _TablePrinter:
         print(f"  {self._hdr}", flush=True)
         print(f"  {self._sep}", flush=True)
 
-    def print_substep_header(self, name: str) -> None:
-        print(f"\n  {name} [substeps]", flush=True)
-        print(f"  {self._sub_sep}", flush=True)
-        print(f"  {self._sub_hdr}", flush=True)
-        print(f"  {self._sub_sep}", flush=True)
-
     def _row_prefix(self, r: FeolsResult) -> str:
         return f"{r.dgp:<{self._w}} {r.n_obs:>12,} {r.n_fe:>4}"
 
     def print_row(self, results: list[FeolsResult]) -> None:
         columns, status = _time_columns(results)
-        print(f"  {self._row_prefix(results[0])} {columns}  {status}", flush=True)
-
-    def print_substep_row(self, results: list[FeolsResult]) -> None:
-        columns, status = _substep_columns(results)
         print(f"  {self._row_prefix(results[0])} {columns}  {status}", flush=True)
 
 
@@ -81,48 +66,8 @@ def _time_columns(results: list[FeolsResult]) -> tuple[str, str]:
     return columns, status
 
 
-def _substep_columns(results: list[FeolsResult]) -> tuple[str, str]:
-    substep_results = [r for r in results if r.success and r.substeps is not None]
-    if substep_results:
-        steps = {}
-        for key in SUBSTEP_KEYS:
-            vals = [r.substeps[key] for r in substep_results if key in r.substeps]
-            steps[key] = statistics.median(vals) if vals else 0.0
-        columns = (
-            f"{_fmt_time(steps['model_matrix']):>10} "
-            f"{_fmt_time(steps['demean']):>10} "
-            f"{_fmt_time(steps['solve']):>10} "
-            f"{_fmt_time(steps['vcov']):>10}"
-        )
-        return columns, "ok"
-    columns = f"{'—':>10} {'—':>10} {'—':>10} {'—':>10}"
-    return columns, "FAIL"
-
-
 def _group_key(r: FeolsResult) -> tuple[str, int, int]:
     return (r.dgp, r.n_obs, r.n_fe)
-
-
-def _flush_groups(
-    results: list[FeolsResult],
-    print_fn: Callable[[list[FeolsResult]], None],
-    *,
-    skip_burnin: bool = True,
-) -> None:
-    group_buf: list[FeolsResult] = []
-    prev_key: tuple | None = None
-    for r in results:
-        if skip_burnin and r.iter_type == "burnin":
-            continue
-        key = _group_key(r)
-        if prev_key is not None and key != prev_key:
-            if group_buf:
-                print_fn(group_buf)
-            group_buf = []
-        group_buf.append(r)
-        prev_key = key
-    if group_buf:
-        print_fn(group_buf)
 
 
 def _result_from_dataset(
@@ -168,181 +113,6 @@ def _normalize_vcov(vcov: str | dict[str, str]) -> str:
     if isinstance(vcov, dict) and "CRV1" in vcov:
         return f"cluster:{vcov['CRV1']}"
     return vcov
-
-
-class PyFeolsBenchmarker:
-    """Benchmark the full feols pipeline with a pluggable demean function."""
-
-    def __init__(self, name: str, demean_func: Callable, **demean_kwargs):
-        self._name = name
-        self._demean_func = demean_func
-        self._demean_kwargs = demean_kwargs
-
-    @property
-    def name(self) -> str:
-        return self._name
-
-    def _build_model_matrix(self, formula, df):
-        from pyfixest.estimation.formula.model_matrix import create_model_matrix
-
-        t0 = time.perf_counter()
-        mm = create_model_matrix(formula, df)
-        Y = mm.dependent
-        X = mm.independent
-        fe = mm.fixed_effects
-        t_mm = time.perf_counter() - t0
-        return mm, Y, X, fe, t_mm
-
-    def _demean(self, Y, X, fe):
-        t0 = time.perf_counter()
-        YX = np.concatenate(
-            [Y.to_numpy(dtype=np.float64), X.to_numpy(dtype=np.float64)],
-            axis=1,
-        )
-        weights = np.ones(YX.shape[0], dtype=np.float64)
-        if fe is None or fe.shape[1] == 0:
-            YX_d = YX
-            converged = True
-        else:
-            fe_arr = fe.to_numpy().astype(np.uint64)
-            YX_d, converged = self._demean_func(
-                x=YX, flist=fe_arr, weights=weights, **self._demean_kwargs
-            )
-        t_demean = time.perf_counter() - t0
-        return YX_d, converged, t_demean
-
-    def _solve_ols(self, YX_d, n_y):
-        from pyfixest.core.collinear import find_collinear_variables
-
-        t0 = time.perf_counter()
-        Yd = YX_d[:, :n_y]
-        Xd = YX_d[:, n_y:]
-
-        # Drop collinear variables
-        tXX = Xd.T @ Xd
-        id_excl, n_excl, _ = find_collinear_variables(tXX)
-        if n_excl > 0:
-            Xd = np.delete(Xd, id_excl[:n_excl], axis=1)
-            tXX = Xd.T @ Xd
-
-        tXy = Xd.T @ Yd
-        beta_hat = np.linalg.solve(tXX, tXy).flatten()
-        u_hat = Yd.flatten() - (Xd @ beta_hat).flatten()
-        t_solve = time.perf_counter() - t0
-        return Xd, beta_hat, u_hat, tXX, t_solve
-
-    def _compute_vcov(self, spec, df, mm, Xd, u_hat, tXX):
-        t0 = time.perf_counter()
-        N = Xd.shape[0]
-        k = Xd.shape[1]
-        bread = np.linalg.inv(tXX)
-
-        if spec.vcov == "hetero":
-            scores = Xd * u_hat[:, None]
-            meat = scores.T @ scores
-            _vcov = bread @ meat @ bread
-        elif isinstance(spec.vcov, dict) and "CRV1" in spec.vcov:
-            cluster_col_name = spec.vcov["CRV1"]
-            cluster_col = df[cluster_col_name].to_numpy()
-            if mm.na_index:
-                keep_mask = np.ones(len(df), dtype=bool)
-                keep_mask[np.asarray(mm.na_index)] = False
-                cluster_col = cluster_col[keep_mask]
-            assert len(cluster_col) == Xd.shape[0], (
-                f"cluster_col length {len(cluster_col)} != Xd rows {Xd.shape[0]}"
-            )
-            scores = Xd * u_hat[:, None]
-            cluster_ids, _ = pd.factorize(cluster_col)
-            n_clusters = cluster_ids.max() + 1
-            cluster_scores = np.zeros((n_clusters, k))
-            np.add.at(cluster_scores, cluster_ids, scores)
-            meat = cluster_scores.T @ cluster_scores
-            _vcov = bread @ meat @ bread
-        else:  # iid
-            sigma2 = np.sum(u_hat**2) / (N - k)
-            _vcov = sigma2 * bread
-        t_vcov = time.perf_counter() - t0
-        return _vcov, t_vcov
-
-    def run(
-        self, datasets: list[BenchmarkDataset], spec: FeolsSpec
-    ) -> list[FeolsResult]:
-        from pyfixest.estimation.formula.parse import Formula
-
-        parsed_formulas = Formula.parse(spec.formula)
-        formula = parsed_formulas[0]
-
-        results: list[FeolsResult] = []
-
-        all_cols = [spec.depvar, *spec.covariates, *spec.fe_cols]
-        if isinstance(spec.vcov, dict) and "CRV1" in spec.vcov:
-            cluster_col = spec.vcov["CRV1"]
-            if cluster_col not in all_cols:
-                all_cols.append(cluster_col)
-
-        tbl = _TablePrinter(_dgp_width(datasets))
-        tbl.print_header(self.name)
-
-        # Track groups for incremental printing
-        group_buf: list[FeolsResult] = []
-        prev_key: tuple | None = None
-
-        for dataset in datasets:
-            n_obs_for_result = dataset.n_obs
-            try:
-                df = pd.read_parquet(dataset.data_path, columns=all_cols)
-                n_obs_for_result = len(df)
-
-                mm, Y, X, fe, t_mm = self._build_model_matrix(formula, df)
-                YX_d, converged, t_demean = self._demean(Y, X, fe)
-                n_y = Y.shape[1]
-                Xd, _beta_hat, u_hat, tXX, t_solve = self._solve_ols(YX_d, n_y)
-                _vcov, t_vcov = self._compute_vcov(spec, df, mm, Xd, u_hat, tXX)
-
-                total = t_mm + t_demean + t_solve + t_vcov
-                step_times = (t_mm, t_demean, t_solve, t_vcov)
-                substeps = dict(zip(SUBSTEP_KEYS, step_times, strict=True))
-
-                result = _result_from_dataset(
-                    dataset,
-                    spec,
-                    backend=self.name,
-                    elapsed=total,
-                    success=bool(converged),
-                    substeps=substeps,
-                    n_obs_override=n_obs_for_result,
-                )
-            except Exception as exc:
-                result = _result_from_dataset(
-                    dataset,
-                    spec,
-                    backend=self.name,
-                    elapsed=None,
-                    success=False,
-                    error=str(exc),
-                    n_obs_override=n_obs_for_result,
-                )
-
-            results.append(result)
-
-            # Print group as soon as it's complete (skip burnin for display)
-            if result.iter_type != "burnin":
-                key = _group_key(result)
-                if prev_key is not None and key != prev_key and group_buf:
-                    tbl.print_row(group_buf)
-                    group_buf = []
-                group_buf.append(result)
-                prev_key = key
-
-        if group_buf:
-            tbl.print_row(group_buf)
-
-        # Print substep breakdown
-        if any(r.substeps for r in results if r.iter_type != "burnin"):
-            tbl.print_substep_header(self.name)
-            _flush_groups(results, tbl.print_substep_row)
-
-        return results
 
 
 class PyFeolsBenchmarkerFullApi:
