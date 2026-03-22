@@ -88,7 +88,7 @@ pf.coefplot([fit_naive, fit_fe], keep="educ")
 
 Wages of workers depend on both *worker characteristics*  and *workplace characteristics*. Higher-skill worker might earn more, but there might also be workplace-premia. A two-way fixed effects model as formulated in Abowd, Kramarz & Margolis (AKM, 1999) separates these unobserved effects.
 
-For some background reading on AKM models and their application, take a look at this slide deck: [AKM Lecture Slides](https://eml.berkeley.edu/~cle/e250a_f14/lecture11.pdf). (And yes, charts this pretty are only ok if you won a Nobel Prize.)
+For some background reading on AKM models and their application, take a look at this slide deck: [AKM Lecture Slides](https://eml.berkeley.edu/~cle/e250a_f14/lecture11.pdf).
 
 ```{python}
 panel = pf.get_worker_panel(N_workers=500, N_firms=50, N_years=11, seed=42)
@@ -131,5 +131,5 @@ pf.etable(
 
 ::: {.callout-tip}
 ## Next Step: Difference-in-Differences
-Another very relevant class of fixed effects models are [Difference-in-Differences vignette](difference-in-differences.qmd) designs and estimators.
+Another very relevant class of fixed effects models are used in [Difference-in-Differences designs](difference-in-differences.qmd).
 :::

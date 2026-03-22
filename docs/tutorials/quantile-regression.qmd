@@ -2,7 +2,7 @@
 title: "Quantile Regression"
 aliases:
   - /quantile-regression.html
-description: "Interior-point quantile regression — model the full conditional distribution, not just the mean."
+description: "Quantile regression for modeling the full conditional distribution, not just the mean."
 categories: [Specialized Methods]
 format:
   html:
@@ -154,7 +154,7 @@ Tba.
 We fit a quantile regression process on $q = 0.1, 0.2, ..., 0.9$ quantiles and vary sample size and number of covariates. We test pyfixest's implementation of the quantile regression process against a "naive" for loop implementation via `statsmodels`. We can see that both `multi_method = "cmf1"` and `multi_method = "cmf2"` outperform
 the for-loop strategy for large problems. Note that the plot is in log-scale!
 
-![](figures/quantreg_benchmarks.png)
+![](../figures/quantreg_benchmarks.png)
 
 # Literature
 
