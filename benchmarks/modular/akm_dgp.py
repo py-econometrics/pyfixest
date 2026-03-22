@@ -1,3 +1,7 @@
+# The following code is adapted from bipartitepandas
+# by Thibaut Lamadon (https://github.com/tlamadon/bipartitepandas)
+# Licensed under the MIT License
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -234,7 +238,7 @@ def _panel_observation_mask(
     if config.entry_exit_share == 0 or config.entry_exit_n_periods == config.n_time:
         return mask
 
-    n_short = int(round(config.entry_exit_share * config.n_workers))
+    n_short = round(config.entry_exit_share * config.n_workers)
     if n_short == 0:
         return mask
 
