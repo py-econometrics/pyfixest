@@ -1,6 +1,6 @@
 ---
 title: "Formula Syntax"
-description: "In this tutorial, we showcase all of PyFixest formulas syntax; including syntax for fitting models with fixed effects, `i()` interactions, and multiple-estimation operators."
+description: "In this tutorial, we showcase all of PyFixest formulas syntax; including syntax for fitting models with fixed effects, interactions, and multiple-estimation operators."
 categories: [Core Estimation]
 format:
   html:
@@ -19,8 +19,7 @@ data = pf.get_data()
 data.head()
 ```
 
-`PyFixest` specifies different regression models by Wilkinson Formulas via the formulaic package. This syntax should be
-familiar to you if you have used R's `lm()` or `statsmodels` formula API. Many ideas have been developed in the fixest package (multiple estimation syntax, the i-operator, sample splitting). By default, all formula options are available to all models available via the `pf.feols()`, `pf.feglm()`, and `pf.fepois()` APIs.
+`PyFixest` specifies different regression models by Wilkinson Formulas via the `formulaic` package. Wilkinson formulas should be familiar to you if you have used R's `lm()` or `statsmodels` formula API. Many additional ideas implemented in `PyFixest`  have been developed in the `fixest` package (most notably multiple estimation syntax, the i-operator, sample splitting). By default, all formula options presented here are supported by all models available via the `pf.feols()`, `pf.feglm()`, and `pf.fepois()` APIs.
 
 ## Basic Syntax
 
@@ -51,6 +50,7 @@ To create logarithms of a function, just use
 ```{python}
 fit5 = pf.feols("Y ~ log(X1)", data=data)
 ```
+
 or use any `numpy` transforms, e.g.
 
 ```{python}
@@ -66,11 +66,14 @@ We can add fixed effects behind the `|` operator: here we add two fixed effects 
 ```{python}
 fit6 = pf.feols("Y ~ X1 + X2 | f1 + f2", data=data)
 ```
+
 We can interact two fixed effects via the `^` operator.
 
 ```{python}
 fit7 = pf.feols("Y ~ X1 + X2 | f1^f2", data=data)
 ```
+
+For details on fixed effects regression, take a look at the [OLS with Fixed Effects](ols-fixed-effects.qmd) vignette.
 
 ## Instrumental Variables (IV) Syntax
 
@@ -87,8 +90,8 @@ fit_iv = pf.feols("Y ~ X2 | f1 + f2 | X1 ~ Z1", data=data)
 fit_iv.summary()
 ```
 
-For first-stage output, diagnostics, and applied examples, see
-[Instrumental Variables](instrumental-variables.qmd).
+For details on IV estimation, take a look at the
+[Instrumental Variables](instrumental-variables.qmd) vignette.
 
 ## The `i()` operator for interacting fixed effects
 
@@ -101,7 +104,7 @@ fit_i = pf.feols("Y ~ i(f1)", data=data)
 fit_c = pf.feols("Y ~ C(f1)", data=data)
 ```
 
-But overall, `i()` is more powerful than `C()`. Most importantly, you can easily set control the reference
+But overall, `i()` is more powerful than `C()`. Most importantly, you can easily set the reference
 level of the categorical variable:
 
 ```{python}
@@ -122,6 +125,7 @@ and set reference levels for both via the `ref` and `ref2` levels.
 # set 1 as reference level
 fit_i3 = pf.feols("Y ~ i(f1, f2, ref = 1, ref2 = 2)", data=data)
 ```
+
 This is in particular useful for difference-in-differences models.
 
 Last, you can bin levels of a variable via the `bin` argument. This groups multiple levels into a single category.
@@ -136,7 +140,7 @@ fit_bin.summary()
 
 ## Multiple Estimation Syntax
 
-Last, `PyFixest` provides syntactic sugar to fit multiple estimations in one go. This is not only typing efficient but allows for performance optimizations via caching - if you fit many regression models on a fixed set of fixed effects and many overlapping covariates or dependent variables, and performance is poor, we highly recommend you to try out multiple estimations.
+Last, `PyFixest` provides syntactic sugar to fit multiple estimations in one go. This is not only economizes on lines-of-code, but allows for performance optimizations via caching - if you fit many regression models on a fixed set of fixed effects and many overlapping covariates or dependent variables, and performance is poor, we highly recommend you to try out multiple estimations.
 
 For multiple estimations, we provide 5 custom operators: `sw`, `csw`, `sw0`, `csw0` and `mvsw`. In addition, it is possible to specify multiple dependent variables.
 
