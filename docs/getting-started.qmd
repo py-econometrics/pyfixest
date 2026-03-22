@@ -124,14 +124,6 @@ Now that we’ve fit our first regression, we can jump right into one of the nex
       <td style="border: 1px solid #d0d7de; padding: 8px;">Here we showcase different options to conduct inference with <code>PyFixest</code>, via iid, heteroskedastic, cluster robust errors, and more.</td>
     </tr>
     <tr>
-      <td style="border: 1px solid #d0d7de; padding: 8px;"><a href="tutorials/instrumental-variables.qmd">Instrumental Variables</a></td>
-      <td style="border: 1px solid #d0d7de; padding: 8px;">We illustrate IV estimation with <code>PyFixest</code> using examples from the literature on the motherhood penalty and encouragement designs in tech companies.</td>
-    </tr>
-    <tr>
-      <td style="border: 1px solid #d0d7de; padding: 8px;"><a href="tutorials/poisson-glm.qmd">Poisson &amp; GLMs</a></td>
-      <td style="border: 1px solid #d0d7de; padding: 8px;">This vignette explains how to fit generalized linear models with <code>PyFixest</code>, how to compute marginal effects via the <code>marginaleffects</code> integration, and more.</td>
-    </tr>
-    <tr>
       <td style="border: 1px solid #d0d7de; padding: 8px;"><a href="tutorials/regression-tables.qmd">Regression Tables</a></td>
       <td style="border: 1px solid #d0d7de; padding: 8px;">We show how to produce publication-ready tables via the <code>pf.etable()</code> function and <code>maketables</code>.</td>
     </tr>
