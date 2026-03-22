@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.8.25">
+<meta name="generator" content="quarto-1.8.27">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -72,7 +72,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="../site_libs/quarto-html/anchor.min.js"></script>
 <link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-7b89279ff1a6dce999919e0e67d4d9ec.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-ed96de9b727972fe78a7b5d16c58bf87.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
 <link href="../site_libs/bootstrap/bootstrap-381776df98abee29e77bfaddc64fade2.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
@@ -118,10 +118,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <header id="quarto-header" class="headroom fixed-top">
     <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
       <div class="navbar-container container-fluid">
-      <div class="navbar-brand-container mx-auto">
-    <a href="../index.html" class="navbar-brand navbar-brand-logo">
-    </a>
-  </div>
             <div id="quarto-search" class="" title="Search"></div>
           <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
   <span class="navbar-toggler-icon"></span>
@@ -133,13 +129,128 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span class="menu-text">PyFixest</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="../quickstart.html"> 
-<span class="menu-text">Quickstart</span></a>
+    <a class="nav-link" href="../getting-started.html"> 
+<span class="menu-text">Getting Started</span></a>
   </li>  
   <li class="nav-item">
     <a class="nav-link active" href="../reference/index.html" aria-current="page"> 
 <span class="menu-text">Function Reference</span></a>
   </li>  
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-tutorials" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Tutorials</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-tutorials">    
+        <li>
+    <a class="dropdown-item" href="../tutorials/index.html">
+ <span class="dropdown-text">All Tutorials</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li>
+    <a class="dropdown-item" href="../tutorials/ols-fixed-effects.html">
+ <span class="dropdown-text">OLS with Fixed Effects</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../tutorials/formula-syntax.html">
+ <span class="dropdown-text">Formula Syntax</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../tutorials/regression-tables.html">
+ <span class="dropdown-text">Regression Tables</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../tutorials/difference-in-differences.html">
+ <span class="dropdown-text">Difference-in-Differences</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../tutorials/quantile-regression.html">
+ <span class="dropdown-text">Quantile Regression</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-guides" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Guides</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-guides">    
+        <li>
+    <a class="dropdown-item" href="../how-to/index.html">
+ <span class="dropdown-text">All Guides</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li>
+    <a class="dropdown-item" href="../how-to/marginaleffects.html">
+ <span class="dropdown-text">Marginal Effects &amp; Hypothesis Testing</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../how-to/regression_decomposition.html">
+ <span class="dropdown-text">Regression Decomposition</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../how-to/pyfixest_gpu.html">
+ <span class="dropdown-text">PyFixest on the GPU via JAX</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../pyfixest-gpu-cupy.html">
+ <span class="dropdown-text">PyFixest on the GPU via CuPy</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../how-to/stata-2-pyfixest.html">
+ <span class="dropdown-text">Compare Stata &amp; PyFixest</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../how-to/panel_variance_reduction.html">
+ <span class="dropdown-text">Variance Reduction in AB Tests</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-explanation" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Explanation</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-explanation">    
+        <li>
+    <a class="dropdown-item" href="../explanation/difficult-fixed-effects.html">
+ <span class="dropdown-text">When Are Fixed Effects Problems Difficult?</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../explanation/ssc.html">
+ <span class="dropdown-text">On Small Sample Corrections</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../explanation/compare-fixest-pyfixest.html">
+ <span class="dropdown-text">Does PyFixest Match fixest?</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-textbook-replications" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Textbook Replications</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-textbook-replications">    
+        <li>
+    <a class="dropdown-item" href="../textbook-replications/index.html">
+ <span class="dropdown-text">All Textbook Replications</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li>
+    <a class="dropdown-item" href="../textbook-replications/brave_true.html">
+ <span class="dropdown-text">Causal Inference for the Brave and True</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../textbook-replications/mixtape.html">
+ <span class="dropdown-text">Causal Inference: The Mixtape</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../textbook-replications/replicating-the-effect.html">
+ <span class="dropdown-text">The Effect</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../textbook-replications/resources.html">
+ <span class="dropdown-text">Other Resources</span></a>
+  </li>  
+    </ul>
+  </li>
   <li class="nav-item">
     <a class="nav-link" href="../changelog.html"> 
 <span class="menu-text">Changelog</span></a>
@@ -156,73 +267,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <a class="nav-link" href="../pyfixest-sprint.html"> 
 <span class="menu-text">Sprint 2026</span></a>
   </li>  
-  <li class="nav-item dropdown ">
-    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-learn-more" role="link" data-bs-toggle="dropdown" aria-expanded="false">
- <span class="menu-text">Learn more</span>
-    </a>
-    <ul class="dropdown-menu" aria-labelledby="nav-menu-learn-more">    
-        <li>
-    <a class="dropdown-item" href="../table-layout.html">
- <span class="dropdown-text">Regression Tables and Summary Statistics</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../marginaleffects.html">
- <span class="dropdown-text">Hypothesis Testing and Marginal Effects</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../difference-in-differences.html">
- <span class="dropdown-text">Difference-in-Differences Estimation</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../multiple_testing.html">
- <span class="dropdown-text">Multiple Testing Corrections</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../regression_decomposition.html">
- <span class="dropdown-text">Regression Decomposition</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../ssc.html">
- <span class="dropdown-text">On Small Sample Corrections</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../quantile-regression.html">
- <span class="dropdown-text">Quantile Regression</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../stata-2-pyfixest.html">
- <span class="dropdown-text">Compare Stata &amp; PyFixest</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../pyfixest-gpu-cupy.html">
- <span class="dropdown-text">PyFixest on the GPU via CuPy</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../pyfixest_gpu.html">
- <span class="dropdown-text">PyFixest on the GPU via JAX</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../panel_variance_reduction.html">
- <span class="dropdown-text">Variance Reduction in AB Tests</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../resources.html">
- <span class="dropdown-text">Other Resources around PyFixest</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../replicating-the-effect.html">
- <span class="dropdown-text">Replicating ‘The Effect’ with PyFixest</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../mixtape.html">
- <span class="dropdown-text">Replicating ‘The Mixtape’ with PyFixest</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../brave_true.html">
- <span class="dropdown-text">Replicating ‘Causal Inference for the Brave and True’ with PyFixest</span></a>
-  </li>  
-    </ul>
-  </li>
 </ul>
             <ul class="navbar-nav navbar-nav-scroll ms-auto">
   <li class="nav-item">
@@ -260,10 +304,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
 <!-- sidebar -->
   <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
-    <div class="pt-lg-2 mt-2 text-left sidebar-header">
-      <a href="../index.html" class="sidebar-logo-link">
-      </a>
-      </div>
     <div class="sidebar-menu-container"> 
     <ul class="list-unstyled mt-1">
         <li class="sidebar-item">
@@ -507,8 +547,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.internals.detect_singletons_.detect_singletons.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.internals.detect_singletons_.detect_singletons</span></a>
+  <a href="../reference/core.detect_singletons.detect_singletons.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">core.detect_singletons.detect_singletons</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -615,55 +655,55 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tr>
 <tr class="odd">
 <td>custom_stats</td>
-<td>Optional[dict]</td>
+<td>dict | None</td>
 <td>A dictionary of custom statistics that can be used in the coef_fmt string to be displayed in the coefficuent cells analogously to “b”, “se” etc. The keys are the names of the custom statistics, and the values are lists of lists, where each inner list contains the custom statistic values for all coefficients each model. Note that “b”, “se”, “t”, or “p” are reserved and cannot be used as keys.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="even">
 <td>custom_model_stats</td>
-<td>Optional[dict]</td>
+<td>dict | None</td>
 <td>A dictionary of custom model statistics or model information displayed in a new line in the bottom panel of the table. The keys are the names of the statistics (i.e.&nbsp;entry in the first column) and the values are a lists of the same length as the number of models. Default is None.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="odd">
 <td>keep</td>
-<td>Optional[Union[list, str]]</td>
+<td>list | str | None</td>
 <td>The pattern for retaining coefficient names. You can pass a string (one pattern) or a list (multiple patterns). Default is keeping all coefficients. You should use regular expressions to select coefficients. “age”, # would keep all coefficients containing age r”^tr”, # would keep all coefficients starting with tr r”\d$“, # would keep all coefficients ending with number Output will be in the order of the patterns.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="even">
 <td>drop</td>
-<td>Optional[Union[list, str]]</td>
+<td>list | str | None</td>
 <td>The pattern for excluding coefficient names. You can pass a string (one pattern) or a list (multiple patterns). Syntax is the same as for <code>keep</code>. Default is keeping all coefficients. Parameter <code>keep</code> and <code>drop</code> can be used simultaneously.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="odd">
 <td>exact_match</td>
-<td>Optional[bool]</td>
+<td>bool | None</td>
 <td>Whether to use exact match for <code>keep</code> and <code>drop</code>. Default is False. If True, the pattern will be matched exactly to the coefficient name instead of using regular expressions.</td>
 <td><code>False</code></td>
 </tr>
 <tr class="even">
 <td>labels</td>
-<td>Optional[dict]</td>
+<td>dict | None</td>
 <td>A dictionary to relabel the variables. The keys in this dictionary are the original variable names, which correspond to the names stored in the <code>_coefnames</code> attribute of the model. The values in the dictionary are the new names you want to assign to these variables. Note that interaction terms will also be relabeled using the labels of the individual variables. The command is applied after the <code>keep</code> and <code>drop</code> commands.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="odd">
 <td>cat_template</td>
-<td>Optional[str]</td>
+<td>str | None</td>
 <td>Template to relabel categorical variables. None by default, which applies no relabeling. Other options include combinations of “{variable}” and “{value}”, e.g.&nbsp;“{variable}::{value}” to mimic fixest encoding. But “{variable}–{value}” or “{variable}{value}” or just “{value}” are also possible.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="even">
 <td>show_fe</td>
-<td>Optional[bool]</td>
+<td>bool | None</td>
 <td>Whether to show the rows with fixed effects markers. Default is True.</td>
 <td><code>True</code></td>
 </tr>
 <tr class="odd">
 <td>felabels</td>
-<td>Optional[dict]</td>
+<td>dict | None</td>
 <td>A dictionary to relabel the fixed effects. Only needed if you want to relabel the FE lines with a different label than the one specied for the respective variable in the labels dictionary. The command is applied after the <code>keep</code> and <code>drop</code> commands.</td>
 <td><code>None</code></td>
 </tr>
@@ -711,19 +751,19 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tr>
 <tr class="odd">
 <td>model_heads</td>
-<td>Optional[list]</td>
+<td>list | None</td>
 <td>Add custom headlines to models when output as df or latex. Length of list must correspond to number of models. Default is None.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="even">
 <td>head_order</td>
-<td>Optional[str]</td>
+<td>str | None</td>
 <td>String to determine the display of the table header when output as df or latex. Allowed values are “dh”, “hd”, “d”, “h”, or ““. When head_order is”dh”, the dependent variable is displayed first, followed by the custom model_heads (provided the user has specified them). With “hd” it is the other way around. When head_order is “d”, only the dependent variable and model numbers are displayed and with “” only the model numbers. Default is “dh”.</td>
 <td><code>'dh'</code></td>
 </tr>
 <tr class="odd">
 <td>file_name</td>
-<td>Optional[str]</td>
+<td>str | None</td>
 <td>The name/path of the file to save the LaTeX table to. Default is None.</td>
 <td><code>None</code></td>
 </tr>
@@ -757,7 +797,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="examples" class="level2 doc-section doc-section-examples">
 <h2 class="doc-section doc-section-examples anchored" data-anchor-id="examples">Examples</h2>
 <p>For more examples, take a look at the <a href="https://pyfixest.org/table-layout.html">regression tables and summary statistics vignette</a>.</p>
-<div id="c83376b5" class="cell" data-execution_count="1">
+<div id="a0309b4c" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co"># load data</span></span>
@@ -768,122 +808,122 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>pf.etable([fit1, fit2])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 
-            <div id="JE7inT"></div>
-            <script type="text/javascript" data-lets-plot-script="library">
-                if(!window.letsPlotCallQueue) {
+        <div id="ye6KEB"></div>
+        <script type="text/javascript" data-lets-plot-script="library">
+            if(!window.letsPlotCallQueue) {
+                window.letsPlotCallQueue = [];
+            };
+            window.letsPlotCall = function(f) {
+                window.letsPlotCallQueue.push(f);
+            };
+            (function() {
+                var script = document.createElement("script");
+                script.type = "text/javascript";
+                script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.9.0/js-package/distr/lets-plot.min.js";
+                script.onload = function() {
+                    window.letsPlotCall = function(f) {f();};
+                    window.letsPlotCallQueue.forEach(function(f) {f();});
                     window.letsPlotCallQueue = [];
-                }; 
-                window.letsPlotCall = function(f) {
-                    window.letsPlotCallQueue.push(f);
+                    
                 };
-                (function() {
-                    var script = document.createElement("script");
-                    script.type = "text/javascript";
-                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.7.3/js-package/distr/lets-plot.min.js";
-                    script.onload = function() {
-                        window.letsPlotCall = function(f) {f();};
-                        window.letsPlotCallQueue.forEach(function(f) {f();});
-                        window.letsPlotCallQueue = [];
-                        
-                    };
-                    script.onerror = function(event) {
-                        window.letsPlotCall = function(f) {};    // noop
-                        window.letsPlotCallQueue = [];
-                        var div = document.createElement("div");
-                        div.style.color = 'darkred';
-                        div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("JE7inT").appendChild(div);
-                    };
-                    var e = document.getElementById("JE7inT");
-                    e.appendChild(script);
-                })()
-            </script>
-            
+                script.onerror = function(event) {
+                    window.letsPlotCall = function(f) {};    // noop
+                    window.letsPlotCallQueue = [];
+                    var div = document.createElement("div");
+                    div.style.color = 'darkred';
+                    div.textContent = 'Error loading Lets-Plot JS';
+                    document.getElementById("ye6KEB").appendChild(div);
+                };
+                var e = document.getElementById("ye6KEB");
+                e.appendChild(script);
+            })()
+        </script>
+        
 </div>
 <div class="cell-output cell-output-display">
 
-            <div id="5AVcdM"></div>
-            <script type="text/javascript" data-lets-plot-script="library">
-                if(!window.letsPlotCallQueue) {
+        <div id="kBcBxp"></div>
+        <script type="text/javascript" data-lets-plot-script="library">
+            if(!window.letsPlotCallQueue) {
+                window.letsPlotCallQueue = [];
+            };
+            window.letsPlotCall = function(f) {
+                window.letsPlotCallQueue.push(f);
+            };
+            (function() {
+                var script = document.createElement("script");
+                script.type = "text/javascript";
+                script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.9.0/js-package/distr/lets-plot.min.js";
+                script.onload = function() {
+                    window.letsPlotCall = function(f) {f();};
+                    window.letsPlotCallQueue.forEach(function(f) {f();});
                     window.letsPlotCallQueue = [];
-                }; 
-                window.letsPlotCall = function(f) {
-                    window.letsPlotCallQueue.push(f);
+                    
                 };
-                (function() {
-                    var script = document.createElement("script");
-                    script.type = "text/javascript";
-                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.7.3/js-package/distr/lets-plot.min.js";
-                    script.onload = function() {
-                        window.letsPlotCall = function(f) {f();};
-                        window.letsPlotCallQueue.forEach(function(f) {f();});
-                        window.letsPlotCallQueue = [];
-                        
-                    };
-                    script.onerror = function(event) {
-                        window.letsPlotCall = function(f) {};    // noop
-                        window.letsPlotCallQueue = [];
-                        var div = document.createElement("div");
-                        div.style.color = 'darkred';
-                        div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("5AVcdM").appendChild(div);
-                    };
-                    var e = document.getElementById("5AVcdM");
-                    e.appendChild(script);
-                })()
-            </script>
-            
+                script.onerror = function(event) {
+                    window.letsPlotCall = function(f) {};    // noop
+                    window.letsPlotCallQueue = [];
+                    var div = document.createElement("div");
+                    div.style.color = 'darkred';
+                    div.textContent = 'Error loading Lets-Plot JS';
+                    document.getElementById("kBcBxp").appendChild(div);
+                };
+                var e = document.getElementById("kBcBxp");
+                e.appendChild(script);
+            })()
+        </script>
+        
 </div>
 <div class="cell-output cell-output-display" data-execution_count="1">
-<div id="mbcojbrpeb" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<div id="nrkfyzrcxc" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
 <style>
-#mbcojbrpeb table {
+#nrkfyzrcxc table {
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
           -webkit-font-smoothing: antialiased;
           -moz-osx-font-smoothing: grayscale;
         }
 
-#mbcojbrpeb thead, tbody, tfoot, tr, td, th { border-style: none; }
+#nrkfyzrcxc thead, tbody, tfoot, tr, td, th { border-style: none; }
  tr { background-color: transparent; }
-#mbcojbrpeb p { margin: 0; padding: 0; }
- #mbcojbrpeb .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: solid; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
- #mbcojbrpeb .gt_caption { padding-top: 4px; padding-bottom: 4px; }
- #mbcojbrpeb .gt_title { color: #333333; font-size: 16px; font-weight: initial; padding-top: 6px; padding-bottom: 6px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
- #mbcojbrpeb .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 5px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
- #mbcojbrpeb .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
- #mbcojbrpeb .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
- #mbcojbrpeb .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
- #mbcojbrpeb .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 2px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
- #mbcojbrpeb .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
- #mbcojbrpeb .gt_column_spanner_outer:first-child { padding-left: 0; }
- #mbcojbrpeb .gt_column_spanner_outer:last-child { padding-right: 0; }
- #mbcojbrpeb .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: bottom; padding-top: 2px; padding-bottom: 2px; overflow-x: hidden; display: inline-block; width: 100%; }
- #mbcojbrpeb .gt_spanner_row { border-bottom-style: hidden; }
- #mbcojbrpeb .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
- #mbcojbrpeb .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: middle; }
- #mbcojbrpeb .gt_from_md> :first-child { margin-top: 0; }
- #mbcojbrpeb .gt_from_md> :last-child { margin-bottom: 0; }
- #mbcojbrpeb .gt_row { padding-top: 2px; padding-bottom: 2px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
- #mbcojbrpeb .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
- #mbcojbrpeb .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
- #mbcojbrpeb .gt_row_group_first td { border-top-width: 0.25px; }
- #mbcojbrpeb .gt_row_group_first th { border-top-width: 0.25px; }
- #mbcojbrpeb .gt_striped { color: #333333; background-color: #F4F4F4; }
- #mbcojbrpeb .gt_table_body { border-top-style: solid; border-top-width: 0px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
- #mbcojbrpeb .gt_grand_summary_row { color: #333333; background-color: #FFFFFF; text-transform: inherit; padding-top: 8px; padding-bottom: 8px; padding-left: 5px; padding-right: 5px; }
- #mbcojbrpeb .gt_first_grand_summary_row_bottom { border-top-style: double; border-top-width: 6px; border-top-color: #D3D3D3; }
- #mbcojbrpeb .gt_last_grand_summary_row_top { border-bottom-style: double; border-bottom-width: 6px; border-bottom-color: #D3D3D3; }
- #mbcojbrpeb .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
- #mbcojbrpeb .gt_sourcenote { font-size: 10px; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
- #mbcojbrpeb .gt_left { text-align: left; }
- #mbcojbrpeb .gt_center { text-align: center; }
- #mbcojbrpeb .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
- #mbcojbrpeb .gt_font_normal { font-weight: normal; }
- #mbcojbrpeb .gt_font_bold { font-weight: bold; }
- #mbcojbrpeb .gt_font_italic { font-style: italic; }
- #mbcojbrpeb .gt_super { font-size: 65%; }
- #mbcojbrpeb .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
- #mbcojbrpeb .gt_asterisk { font-size: 100%; vertical-align: 0; }
+#nrkfyzrcxc p { margin: 0; padding: 0; }
+ #nrkfyzrcxc .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: solid; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
+ #nrkfyzrcxc .gt_caption { padding-top: 4px; padding-bottom: 4px; }
+ #nrkfyzrcxc .gt_title { color: #333333; font-size: 16px; font-weight: initial; padding-top: 6px; padding-bottom: 6px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
+ #nrkfyzrcxc .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 5px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
+ #nrkfyzrcxc .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #nrkfyzrcxc .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
+ #nrkfyzrcxc .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #nrkfyzrcxc .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 2px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
+ #nrkfyzrcxc .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
+ #nrkfyzrcxc .gt_column_spanner_outer:first-child { padding-left: 0; }
+ #nrkfyzrcxc .gt_column_spanner_outer:last-child { padding-right: 0; }
+ #nrkfyzrcxc .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: bottom; padding-top: 2px; padding-bottom: 2px; overflow-x: hidden; display: inline-block; width: 100%; }
+ #nrkfyzrcxc .gt_spanner_row { border-bottom-style: hidden; }
+ #nrkfyzrcxc .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
+ #nrkfyzrcxc .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: middle; }
+ #nrkfyzrcxc .gt_from_md> :first-child { margin-top: 0; }
+ #nrkfyzrcxc .gt_from_md> :last-child { margin-bottom: 0; }
+ #nrkfyzrcxc .gt_row { padding-top: 2px; padding-bottom: 2px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
+ #nrkfyzrcxc .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
+ #nrkfyzrcxc .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
+ #nrkfyzrcxc .gt_row_group_first td { border-top-width: 0.25px; }
+ #nrkfyzrcxc .gt_row_group_first th { border-top-width: 0.25px; }
+ #nrkfyzrcxc .gt_striped { color: #333333; background-color: #F4F4F4; }
+ #nrkfyzrcxc .gt_table_body { border-top-style: solid; border-top-width: 0px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
+ #nrkfyzrcxc .gt_grand_summary_row { color: #333333; background-color: #FFFFFF; text-transform: inherit; padding-top: 8px; padding-bottom: 8px; padding-left: 5px; padding-right: 5px; }
+ #nrkfyzrcxc .gt_first_grand_summary_row_bottom { border-top-style: double; border-top-width: 6px; border-top-color: #D3D3D3; }
+ #nrkfyzrcxc .gt_last_grand_summary_row_top { border-bottom-style: double; border-bottom-width: 6px; border-bottom-color: #D3D3D3; }
+ #nrkfyzrcxc .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
+ #nrkfyzrcxc .gt_sourcenote { font-size: 10px; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
+ #nrkfyzrcxc .gt_left { text-align: left; }
+ #nrkfyzrcxc .gt_center { text-align: center; }
+ #nrkfyzrcxc .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
+ #nrkfyzrcxc .gt_font_normal { font-weight: normal; }
+ #nrkfyzrcxc .gt_font_bold { font-weight: bold; }
+ #nrkfyzrcxc .gt_font_italic { font-style: italic; }
+ #nrkfyzrcxc .gt_super { font-size: 65%; }
+ #nrkfyzrcxc .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
+ #nrkfyzrcxc .gt_asterisk { font-size: 100%; vertical-align: 0; }
  
 </style>
 
@@ -909,16 +949,16 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tr>
 <tr class="even">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">X1</th>
-<td class="gt_row gt_center">-0.95***<br>
+<td class="gt_row gt_center">-0.95<br>
 (0.066)</td>
-<td class="gt_row gt_center">-0.924***<br>
+<td class="gt_row gt_center">-0.924<br>
 (0.056)</td>
 </tr>
 <tr class="odd">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">X2</th>
-<td class="gt_row gt_center">-0.174***<br>
+<td class="gt_row gt_center">-0.174<br>
 (0.018)</td>
-<td class="gt_row gt_center">-0.174***<br>
+<td class="gt_row gt_center">-0.174<br>
 (0.015)</td>
 </tr>
 <tr class="gt_group_heading_row even">
@@ -954,7 +994,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tr>
 </tbody><tfoot class="gt_sourcenotes">
 <tr class="odd">
-<td colspan="3" class="gt_sourcenote">Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001. Format of coefficient cell: Coefficient (Std. Error)</td>
+<td colspan="3" class="gt_sourcenote">Format of coefficient cell: Coefficient (Std. Error)</td>
 </tr>
 </tfoot>
 

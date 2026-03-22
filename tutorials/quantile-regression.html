@@ -1,0 +1,1179 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.27">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="description" content="Quantile regression for modeling the full conditional distribution, not just the mean.">
+
+<title>Quantile Regression</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" integrity="sha384-ZvpUoO/+PpLXR1lu4jmpXWu80pZlYUAfxl5NsBMWOEPSjUn/6Z/hRTt8+pR6L4N2" crossorigin="anonymous"></script><script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-ed96de9b727972fe78a7b5d16c58bf87.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-381776df98abee29e77bfaddc64fade2.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<!-- Cloudflare Web Analytics --><script defer="" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon="{&quot;token&quot;: &quot;bfa3a9287252444c8aa02b664fea7f09&quot;}"></script><!-- End Cloudflare Web Analytics -->
+<script src="https://cdn.jsdelivr.net/npm/requirejs@2.3.6/require.min.js" integrity="sha384-c9c+LnTbwQ3aujuU7ULEPVvgLs+Fn6fJUvIGTsuu1ZcCf11fiEubah0ttpca4ntM sha384-6V1/AdqZRWk1KAlWbKBlGhN7VG4iE/yAZcO6NZPMF8od0vukrvr0tg4qY6NSrItx" crossorigin="anonymous"></script>
+
+<script type="application/javascript">define('jquery', [],function() {return window.jQuery;})</script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="alternate" type="text/markdown" href="quantile-regression.html.md">
+</head>
+
+<body class="floating nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../pyfixest.html"> 
+<span class="menu-text">PyFixest</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../getting-started.html"> 
+<span class="menu-text">Getting Started</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../reference/index.html"> 
+<span class="menu-text">Function Reference</span></a>
+  </li>  
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-tutorials" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Tutorials</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-tutorials">    
+        <li>
+    <a class="dropdown-item" href="../tutorials/index.html">
+ <span class="dropdown-text">All Tutorials</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li>
+    <a class="dropdown-item" href="../tutorials/ols-fixed-effects.html">
+ <span class="dropdown-text">OLS with Fixed Effects</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../tutorials/formula-syntax.html">
+ <span class="dropdown-text">Formula Syntax</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../tutorials/regression-tables.html">
+ <span class="dropdown-text">Regression Tables</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../tutorials/difference-in-differences.html">
+ <span class="dropdown-text">Difference-in-Differences</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../tutorials/quantile-regression.html">
+ <span class="dropdown-text">Quantile Regression</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-guides" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Guides</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-guides">    
+        <li>
+    <a class="dropdown-item" href="../how-to/index.html">
+ <span class="dropdown-text">All Guides</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li>
+    <a class="dropdown-item" href="../how-to/marginaleffects.html">
+ <span class="dropdown-text">Marginal Effects &amp; Hypothesis Testing</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../how-to/regression_decomposition.html">
+ <span class="dropdown-text">Regression Decomposition</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../how-to/pyfixest_gpu.html">
+ <span class="dropdown-text">PyFixest on the GPU via JAX</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../pyfixest-gpu-cupy.html">
+ <span class="dropdown-text">PyFixest on the GPU via CuPy</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../how-to/stata-2-pyfixest.html">
+ <span class="dropdown-text">Compare Stata &amp; PyFixest</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../how-to/panel_variance_reduction.html">
+ <span class="dropdown-text">Variance Reduction in AB Tests</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-explanation" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Explanation</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-explanation">    
+        <li>
+    <a class="dropdown-item" href="../explanation/difficult-fixed-effects.html">
+ <span class="dropdown-text">When Are Fixed Effects Problems Difficult?</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../explanation/ssc.html">
+ <span class="dropdown-text">On Small Sample Corrections</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../explanation/compare-fixest-pyfixest.html">
+ <span class="dropdown-text">Does PyFixest Match fixest?</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-textbook-replications" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Textbook Replications</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-textbook-replications">    
+        <li>
+    <a class="dropdown-item" href="../textbook-replications/index.html">
+ <span class="dropdown-text">All Textbook Replications</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li>
+    <a class="dropdown-item" href="../textbook-replications/brave_true.html">
+ <span class="dropdown-text">Causal Inference for the Brave and True</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../textbook-replications/mixtape.html">
+ <span class="dropdown-text">Causal Inference: The Mixtape</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../textbook-replications/replicating-the-effect.html">
+ <span class="dropdown-text">The Effect</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../textbook-replications/resources.html">
+ <span class="dropdown-text">Other Resources</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" href="../changelog.html"> 
+<span class="menu-text">Changelog</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../contributing.html"> 
+<span class="menu-text">Contributing</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../acknowledgements.html"> 
+<span class="menu-text">Acknowledgements</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../pyfixest-sprint.html"> 
+<span class="menu-text">Sprint 2026</span></a>
+  </li>  
+</ul>
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../llms.txt"> <i class="bi bi-robot" role="img">
+</i> 
+<span class="menu-text">llms.txt</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../skills.html"> 
+<span class="menu-text">Skills.md</span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/py-econometrics/pyfixest/"> <i class="bi bi-github" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#basic-example" id="toc-basic-example" class="nav-link active" data-scroll-target="#basic-example">Basic Example</a></li>
+  <li><a href="#solvers" id="toc-solvers" class="nav-link" data-scroll-target="#solvers">Solvers</a></li>
+  <li><a href="#quantile-regression-process" id="toc-quantile-regression-process" class="nav-link" data-scroll-target="#quantile-regression-process">Quantile Regression Process</a></li>
+  <li><a href="#inference" id="toc-inference" class="nav-link" data-scroll-target="#inference">Inference</a></li>
+  <li><a href="#performance" id="toc-performance" class="nav-link" data-scroll-target="#performance">Performance</a>
+  <ul class="collapse">
+  <li><a href="#different-solvers" id="toc-different-solvers" class="nav-link" data-scroll-target="#different-solvers">Different Solvers</a></li>
+  <li><a href="#quantile-regression-process-1" id="toc-quantile-regression-process-1" class="nav-link" data-scroll-target="#quantile-regression-process-1">Quantile Regression Process</a></li>
+  </ul></li>
+  <li><a href="#literature" id="toc-literature" class="nav-link" data-scroll-target="#literature">Literature</a></li>
+  </ul>
+</nav>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Quantile Regression</h1>
+  <div class="quarto-categories">
+    <div class="quarto-category">Specialized Methods</div>
+  </div>
+  </div>
+
+<div>
+  <div class="description">
+    Quantile regression for modeling the full conditional distribution, not just the mean.
+  </div>
+</div>
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>PyFixest now experimentally supports quantile regression!</p>
+<div id="9277906b" class="cell" data-execution_count="1">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>load_ext autoreload</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> pf.get_data()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<section id="basic-example" class="level2">
+<h2 class="anchored" data-anchor-id="basic-example">Basic Example</h2>
+<p>Just as in <code>statsmodels</code>, the function that runs a quantile regression is <code>quantreg()</code>.</p>
+<p>Below, we loop over 10 different quantiles.</p>
+<div id="79cb0135" class="cell" data-execution_count="2">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="op">%%</span>capture</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>fits <span class="op">=</span> pf.quantreg(</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  fml <span class="op">=</span> <span class="st">"Y~X1 + X2"</span>,</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  data <span class="op">=</span> data,</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  quantile<span class="op">=</span>[<span class="fl">0.1</span>, <span class="fl">0.2</span>, <span class="fl">0.3</span>, <span class="fl">0.4</span>, <span class="fl">0.5</span>, <span class="fl">0.6</span>, <span class="fl">0.7</span>, <span class="fl">0.8</span>, <span class="fl">0.9</span>]</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>We can inspect the quantile regression results using the dedicated <code>qplot()</code> function.</p>
+<div id="4354b929" class="cell" data-execution_count="3">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>pf.qplot(fits, nrow <span class="op">=</span> <span class="dv">2</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="3">
+<pre><code>(&lt;Figure size 960x576 with 4 Axes&gt;,
+ array([&lt;Axes: title={'center': 'Intercept'}, xlabel='Quantile', ylabel='Coefficient (95 % CI)'&gt;,
+        &lt;Axes: title={'center': 'X1'}, xlabel='Quantile', ylabel='Coefficient (95 % CI)'&gt;,
+        &lt;Axes: title={'center': 'X2'}, xlabel='Quantile', ylabel='Coefficient (95 % CI)'&gt;,
+        &lt;Axes: &gt;], dtype=object))</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="quantile-regression_files/figure-html/cell-4-output-2.png" width="949" height="564" class="figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>We observe some heterogeneity in the intercept, but all other variants are homogeneous across users.</p>
+</section>
+<section id="solvers" class="level2">
+<h2 class="anchored" data-anchor-id="solvers">Solvers</h2>
+<p>By default, <code>pf.quantreg</code> uses an interior-point solver as in <a href="http://www.econ.uiuc.edu/~roger/research/sparse/fn3.pdf">Koenker and Ng (2004)</a> (<code>methd = "fn"</code>). This is different to e.g.&nbsp;<code>statsmodels</code>, which implements an iterated weighted least squares solver.</p>
+<p>For big data sets with many observations, it is often sensible to use an interior-point solver with pre-processing (as in <a href="https://experts.illinois.edu/en/publications/the-gaussian-hare-and-the-laplacian-tortoise-computability-of-squ">Portnoy and Koenker (1997)</a>, see <a href="https://arxiv.org/abs/1909.05782">Chernozhukov et al (2019)</a> for details), which can speed up the estimation time significantly. Because the pre-processing step requires taking a random sample, the method assumes that observations are independent. Additionally, for the purpose of reproducibility, it is advisable to set a seed.</p>
+<p>You can access the “preprocessing frisch-newton” algorithm by setting the <code>method</code> argument to <code>"pfn"</code>:</p>
+<div id="41554df2" class="cell" data-execution_count="4">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="op">%%</span>capture</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>fit_fn <span class="op">=</span> pf.quantreg(</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  fml <span class="op">=</span> <span class="st">"Y ~ X1"</span>,</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  method <span class="op">=</span> <span class="st">"fn"</span>,     <span class="co"># standard frisch newton interior point solver</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  data <span class="op">=</span> data,</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>fit_pfn <span class="op">=</span> pf.quantreg(</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>  fml <span class="op">=</span> <span class="st">"Y ~ X1"</span>,</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  method <span class="op">=</span> <span class="st">"pfn"</span>,   <span class="co"># standard frisch newton interior point solver with pre-processing</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>  seed <span class="op">=</span> <span class="dv">92</span>,         <span class="co"># set a seed for reproducibility</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>  data <span class="op">=</span> data,</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>pf.etable([fit_fn, fit_pfn])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="quantile-regression-process" class="level2">
+<h2 class="anchored" data-anchor-id="quantile-regression-process">Quantile Regression Process</h2>
+<p>Instead of running multiple independent quantile regression via a for-loop, the literature on quantile regression has developed multiple algorithms to speed up the “quantile regression process”. Two such algorithms are described in detail in Chernozhukov, Fernandez-Val and Melly (2019) and are implemented in PyFixest. They can be accessed via the <code>multi_method</code> argument, and both can significantly speed up estimation time of the full quantile regression process.</p>
+<div id="5cb107b7" class="cell" data-execution_count="5">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>fml <span class="op">=</span> <span class="st">"Y~X1"</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>method <span class="op">=</span> <span class="st">"pfn"</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>seed <span class="op">=</span> <span class="dv">929</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>quantiles <span class="op">=</span> [<span class="fl">0.1</span>, <span class="fl">0.5</span>, <span class="fl">0.9</span>]</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>fit_multi1 <span class="op">=</span> pf.quantreg(</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>  fml <span class="op">=</span> fml,</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>  data <span class="op">=</span> data,</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>  method <span class="op">=</span> method,</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>  multi_method <span class="op">=</span> <span class="st">"cfm1"</span>,  <span class="co"># this is algorithm 2 in CFM, the 1rst algorithm for the full qr process</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>  seed <span class="op">=</span> seed,</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>  quantile <span class="op">=</span> quantiles,</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>fit_multi2 <span class="op">=</span> pf.quantreg(</span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>  fml <span class="op">=</span> fml,</span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>  data <span class="op">=</span> data,</span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>  method <span class="op">=</span> method,</span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>  multi_method <span class="op">=</span> <span class="st">"cfm2"</span>,  <span class="co"># this is algorithm 3 in CFM, the 2nd algorithm for the full qr process</span></span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>  seed <span class="op">=</span> seed,</span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a>  quantile <span class="op">=</span> quantiles</span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a>pf.etable(fit_multi1.to_list() <span class="op">+</span>  fit_multi2.to_list())</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="5">
+<div id="sjsflmzqqk" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<style>
+#sjsflmzqqk table {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
+        }
+
+#sjsflmzqqk thead, tbody, tfoot, tr, td, th { border-style: none; }
+ tr { background-color: transparent; }
+#sjsflmzqqk p { margin: 0; padding: 0; }
+ #sjsflmzqqk .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: solid; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
+ #sjsflmzqqk .gt_caption { padding-top: 4px; padding-bottom: 4px; }
+ #sjsflmzqqk .gt_title { color: #333333; font-size: 16px; font-weight: initial; padding-top: 6px; padding-bottom: 6px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
+ #sjsflmzqqk .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 5px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
+ #sjsflmzqqk .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #sjsflmzqqk .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
+ #sjsflmzqqk .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #sjsflmzqqk .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 2px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
+ #sjsflmzqqk .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
+ #sjsflmzqqk .gt_column_spanner_outer:first-child { padding-left: 0; }
+ #sjsflmzqqk .gt_column_spanner_outer:last-child { padding-right: 0; }
+ #sjsflmzqqk .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: bottom; padding-top: 2px; padding-bottom: 2px; overflow-x: hidden; display: inline-block; width: 100%; }
+ #sjsflmzqqk .gt_spanner_row { border-bottom-style: hidden; }
+ #sjsflmzqqk .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
+ #sjsflmzqqk .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: middle; }
+ #sjsflmzqqk .gt_from_md> :first-child { margin-top: 0; }
+ #sjsflmzqqk .gt_from_md> :last-child { margin-bottom: 0; }
+ #sjsflmzqqk .gt_row { padding-top: 2px; padding-bottom: 2px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
+ #sjsflmzqqk .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
+ #sjsflmzqqk .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
+ #sjsflmzqqk .gt_row_group_first td { border-top-width: 0.25px; }
+ #sjsflmzqqk .gt_row_group_first th { border-top-width: 0.25px; }
+ #sjsflmzqqk .gt_striped { color: #333333; background-color: #F4F4F4; }
+ #sjsflmzqqk .gt_table_body { border-top-style: solid; border-top-width: 0px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
+ #sjsflmzqqk .gt_grand_summary_row { color: #333333; background-color: #FFFFFF; text-transform: inherit; padding-top: 8px; padding-bottom: 8px; padding-left: 5px; padding-right: 5px; }
+ #sjsflmzqqk .gt_first_grand_summary_row_bottom { border-top-style: double; border-top-width: 6px; border-top-color: #D3D3D3; }
+ #sjsflmzqqk .gt_last_grand_summary_row_top { border-bottom-style: double; border-bottom-width: 6px; border-bottom-color: #D3D3D3; }
+ #sjsflmzqqk .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
+ #sjsflmzqqk .gt_sourcenote { font-size: 10px; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
+ #sjsflmzqqk .gt_left { text-align: left; }
+ #sjsflmzqqk .gt_center { text-align: center; }
+ #sjsflmzqqk .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
+ #sjsflmzqqk .gt_font_normal { font-weight: normal; }
+ #sjsflmzqqk .gt_font_bold { font-weight: bold; }
+ #sjsflmzqqk .gt_font_italic { font-style: italic; }
+ #sjsflmzqqk .gt_super { font-size: 65%; }
+ #sjsflmzqqk .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
+ #sjsflmzqqk .gt_asterisk { font-size: 100%; vertical-align: 0; }
+ 
+</style>
+<table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
+<thead>
+
+<tr class="gt_col_headings gt_spanner_row">
+  <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="2" colspan="1" scope="col" id=""></th>
+  <th class="gt_center gt_columns_top_border gt_column_spanner_outer" rowspan="1" colspan="6" scope="colgroup" id="Y">
+    <span class="gt_column_spanner">Y</span>
+  </th>
+</tr>
+<tr class="gt_col_headings">
+  <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1" scope="col" id="0">(1)</th>
+  <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1" scope="col" id="1">(2)</th>
+  <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1" scope="col" id="2">(3)</th>
+  <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1" scope="col" id="3">(4)</th>
+  <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1" scope="col" id="4">(5)</th>
+  <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1" scope="col" id="5">(6)</th>
+</tr>
+</thead>
+<tbody class="gt_table_body">
+  <tr class="gt_group_heading_row">
+    <th class="gt_group_heading" colspan="7">coef</th>
+  </tr>
+  <tr>
+    <th class="gt_row gt_left gt_stub">X1</th>
+    <td class="gt_row gt_center">-0.96 <br> (0.161)</td>
+    <td class="gt_row gt_center">-1.091 <br> (0.107)</td>
+    <td class="gt_row gt_center">-0.796 <br> (0.121)</td>
+    <td class="gt_row gt_center">-1.091 <br> (0.161)</td>
+    <td class="gt_row gt_center">-1.091 <br> (0.107)</td>
+    <td class="gt_row gt_center">-1.091 <br> (0.121)</td>
+  </tr>
+  <tr>
+    <th class="gt_row gt_left gt_stub">Intercept</th>
+    <td class="gt_row gt_center">-1.935 <br> (0.231)</td>
+    <td class="gt_row gt_center">1.024 <br> (0.145)</td>
+    <td class="gt_row gt_center">3.505 <br> (0.157)</td>
+    <td class="gt_row gt_center">-1.354 <br> (0.231)</td>
+    <td class="gt_row gt_center">1.024 <br> (0.145)</td>
+    <td class="gt_row gt_center">3.403 <br> (0.157)</td>
+  </tr>
+  <tr class="gt_group_heading_row">
+    <th class="gt_group_heading" colspan="7">stats</th>
+  </tr>
+  <tr>
+    <th class="gt_row gt_left gt_stub">Observations</th>
+    <td class="gt_row gt_center">998</td>
+    <td class="gt_row gt_center">998</td>
+    <td class="gt_row gt_center">998</td>
+    <td class="gt_row gt_center">998</td>
+    <td class="gt_row gt_center">998</td>
+    <td class="gt_row gt_center">998</td>
+  </tr>
+  <tr>
+    <th class="gt_row gt_left gt_stub">R<sup>2</sup></th>
+    <td class="gt_row gt_center">-</td>
+    <td class="gt_row gt_center">-</td>
+    <td class="gt_row gt_center">-</td>
+    <td class="gt_row gt_center">-</td>
+    <td class="gt_row gt_center">-</td>
+    <td class="gt_row gt_center">-</td>
+  </tr>
+</tbody>
+  <tfoot class="gt_sourcenotes">
+  
+  <tr>
+    <td class="gt_sourcenote" colspan="7">Format of coefficient cell: Coefficient   (Std. Error)</td>
+  </tr>
+
+</tfoot>
+
+</table>
+
+</div>
+        
+</div>
+</div>
+<p>Note that the first method <code>cfm1</code> is exactly identical to running separate regressions per quantile, while the second method <code>cfm2</code> is only <strong>asymptotically</strong> identical.</p>
+<p>You can combine different estimation <code>method</code>’s with different <code>multi_methods</code>:</p>
+<div id="ab8d23ca" class="cell" data-execution_count="6">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>fit_multi2a <span class="op">=</span> pf.quantreg(</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  fml <span class="op">=</span> <span class="st">"Y~X1"</span>,</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  data <span class="op">=</span> data,</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  method <span class="op">=</span> <span class="st">"fn"</span>,</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  multi_method <span class="op">=</span> <span class="st">"cfm1"</span>,</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>  seed <span class="op">=</span> <span class="dv">233</span>,</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>  quantile <span class="op">=</span> [<span class="fl">0.25</span>, <span class="fl">0.75</span>]</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>fit_multi2b <span class="op">=</span> pf.quantreg(</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>  fml <span class="op">=</span> <span class="st">"Y~X1"</span>,</span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>  data <span class="op">=</span> data,</span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>  method <span class="op">=</span> <span class="st">"pfn"</span>,</span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>  multi_method <span class="op">=</span> <span class="st">"cfm1"</span>,</span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>  seed <span class="op">=</span> <span class="dv">233</span>,</span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>  quantile <span class="op">=</span> [<span class="fl">0.25</span>, <span class="fl">0.75</span>]</span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a>pf.etable(fit_multi2a.to_list() <span class="op">+</span>  fit_multi2b.to_list())</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="6">
+<div id="hgduggmrkt" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<style>
+#hgduggmrkt table {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
+        }
+
+#hgduggmrkt thead, tbody, tfoot, tr, td, th { border-style: none; }
+ tr { background-color: transparent; }
+#hgduggmrkt p { margin: 0; padding: 0; }
+ #hgduggmrkt .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: solid; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
+ #hgduggmrkt .gt_caption { padding-top: 4px; padding-bottom: 4px; }
+ #hgduggmrkt .gt_title { color: #333333; font-size: 16px; font-weight: initial; padding-top: 6px; padding-bottom: 6px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
+ #hgduggmrkt .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 5px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
+ #hgduggmrkt .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #hgduggmrkt .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
+ #hgduggmrkt .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #hgduggmrkt .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 2px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
+ #hgduggmrkt .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
+ #hgduggmrkt .gt_column_spanner_outer:first-child { padding-left: 0; }
+ #hgduggmrkt .gt_column_spanner_outer:last-child { padding-right: 0; }
+ #hgduggmrkt .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: bottom; padding-top: 2px; padding-bottom: 2px; overflow-x: hidden; display: inline-block; width: 100%; }
+ #hgduggmrkt .gt_spanner_row { border-bottom-style: hidden; }
+ #hgduggmrkt .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
+ #hgduggmrkt .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: middle; }
+ #hgduggmrkt .gt_from_md> :first-child { margin-top: 0; }
+ #hgduggmrkt .gt_from_md> :last-child { margin-bottom: 0; }
+ #hgduggmrkt .gt_row { padding-top: 2px; padding-bottom: 2px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
+ #hgduggmrkt .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
+ #hgduggmrkt .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
+ #hgduggmrkt .gt_row_group_first td { border-top-width: 0.25px; }
+ #hgduggmrkt .gt_row_group_first th { border-top-width: 0.25px; }
+ #hgduggmrkt .gt_striped { color: #333333; background-color: #F4F4F4; }
+ #hgduggmrkt .gt_table_body { border-top-style: solid; border-top-width: 0px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
+ #hgduggmrkt .gt_grand_summary_row { color: #333333; background-color: #FFFFFF; text-transform: inherit; padding-top: 8px; padding-bottom: 8px; padding-left: 5px; padding-right: 5px; }
+ #hgduggmrkt .gt_first_grand_summary_row_bottom { border-top-style: double; border-top-width: 6px; border-top-color: #D3D3D3; }
+ #hgduggmrkt .gt_last_grand_summary_row_top { border-bottom-style: double; border-bottom-width: 6px; border-bottom-color: #D3D3D3; }
+ #hgduggmrkt .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
+ #hgduggmrkt .gt_sourcenote { font-size: 10px; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
+ #hgduggmrkt .gt_left { text-align: left; }
+ #hgduggmrkt .gt_center { text-align: center; }
+ #hgduggmrkt .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
+ #hgduggmrkt .gt_font_normal { font-weight: normal; }
+ #hgduggmrkt .gt_font_bold { font-weight: bold; }
+ #hgduggmrkt .gt_font_italic { font-style: italic; }
+ #hgduggmrkt .gt_super { font-size: 65%; }
+ #hgduggmrkt .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
+ #hgduggmrkt .gt_asterisk { font-size: 100%; vertical-align: 0; }
+ 
+</style>
+<table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
+<thead>
+
+<tr class="gt_col_headings gt_spanner_row">
+  <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="2" colspan="1" scope="col" id=""></th>
+  <th class="gt_center gt_columns_top_border gt_column_spanner_outer" rowspan="1" colspan="4" scope="colgroup" id="Y">
+    <span class="gt_column_spanner">Y</span>
+  </th>
+</tr>
+<tr class="gt_col_headings">
+  <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1" scope="col" id="0">(1)</th>
+  <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1" scope="col" id="1">(2)</th>
+  <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1" scope="col" id="2">(3)</th>
+  <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1" scope="col" id="3">(4)</th>
+</tr>
+</thead>
+<tbody class="gt_table_body">
+  <tr class="gt_group_heading_row">
+    <th class="gt_group_heading" colspan="5">coef</th>
+  </tr>
+  <tr>
+    <th class="gt_row gt_left gt_stub">X1</th>
+    <td class="gt_row gt_center">-0.851 <br> (0.109)</td>
+    <td class="gt_row gt_center">-1.017 <br> (0.126)</td>
+    <td class="gt_row gt_center">-0.851 <br> (0.109)</td>
+    <td class="gt_row gt_center">-1.017 <br> (0.126)</td>
+  </tr>
+  <tr>
+    <th class="gt_row gt_left gt_stub">Intercept</th>
+    <td class="gt_row gt_center">-0.782 <br> (0.132)</td>
+    <td class="gt_row gt_center">2.495 <br> (0.169)</td>
+    <td class="gt_row gt_center">-0.782 <br> (0.132)</td>
+    <td class="gt_row gt_center">2.495 <br> (0.169)</td>
+  </tr>
+  <tr class="gt_group_heading_row">
+    <th class="gt_group_heading" colspan="5">stats</th>
+  </tr>
+  <tr>
+    <th class="gt_row gt_left gt_stub">Observations</th>
+    <td class="gt_row gt_center">998</td>
+    <td class="gt_row gt_center">998</td>
+    <td class="gt_row gt_center">998</td>
+    <td class="gt_row gt_center">998</td>
+  </tr>
+  <tr>
+    <th class="gt_row gt_left gt_stub">R<sup>2</sup></th>
+    <td class="gt_row gt_center">-</td>
+    <td class="gt_row gt_center">-</td>
+    <td class="gt_row gt_center">-</td>
+    <td class="gt_row gt_center">-</td>
+  </tr>
+</tbody>
+  <tfoot class="gt_sourcenotes">
+  
+  <tr>
+    <td class="gt_sourcenote" colspan="5">Format of coefficient cell: Coefficient   (Std. Error)</td>
+  </tr>
+
+</tfoot>
+
+</table>
+
+</div>
+        
+</div>
+</div>
+</section>
+<section id="inference" class="level2">
+<h2 class="anchored" data-anchor-id="inference">Inference</h2>
+<p>By default, the <code>"iid", "hetero"</code> and cluster robust variance estimators implement (sandwich) estimators as in <a href="https://econpapers.repec.org/paper/attwimass/8818.htm">Powell (1991)</a>, using a uniform kernel to estimate the “sparsity”.</p>
+<p>The cluster robust estimator follows Parente &amp; Santos Silva. See this <a href="https://www.stata.com/meeting/uk15/abstracts/materials/uk15_santossilva.pdf">slide set</a> or the <a href="https://repository.essex.ac.uk/8976/1/dp728.pdf">Journal of Econometrics paper</a> for details.</p>
+<p>Additionally, <code>pf.quantreg</code> supports the <code>"nid"</code> (“non-iid”) estimator from <a href="https://www.tandfonline.com/doi/abs/10.1080/01621459.1992.10475175">Hendricks and Koenker (1991)</a>, which uses a linear approximation of the conditional quantile function.</p>
+<div id="0a49176d" class="cell" data-execution_count="7">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>fit_nid <span class="op">=</span> pf.quantreg(<span class="st">"Y ~ X1 + X2 + f1"</span>, data <span class="op">=</span> data, quantile <span class="op">=</span> <span class="fl">0.5</span>, vcov <span class="op">=</span> <span class="st">"nid"</span>)</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>fit_crv <span class="op">=</span> pf.quantreg(<span class="st">"Y ~ X1 + X2 + f1"</span>, data <span class="op">=</span> data, quantile <span class="op">=</span> <span class="fl">0.5</span>, vcov <span class="op">=</span> {<span class="st">"CRV1"</span>: <span class="st">"f1"</span>})</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="performance" class="level2">
+<h2 class="anchored" data-anchor-id="performance">Performance</h2>
+<p>Here we benchmark the performance of the solvers accessible via the <code>method</code> and <code>multi_method</code> arguments.</p>
+<section id="different-solvers" class="level3">
+<h3 class="anchored" data-anchor-id="different-solvers">Different Solvers</h3>
+<p>Tba.</p>
+</section>
+<section id="quantile-regression-process-1" class="level3">
+<h3 class="anchored" data-anchor-id="quantile-regression-process-1">Quantile Regression Process</h3>
+<p>We fit a quantile regression process on <span class="math inline">\(q = 0.1, 0.2, ..., 0.9\)</span> quantiles and vary sample size and number of covariates. We test pyfixest’s implementation of the quantile regression process against a “naive” for loop implementation via <code>statsmodels</code>. We can see that both <code>multi_method = "cmf1"</code> and <code>multi_method = "cmf2"</code> outperform the for-loop strategy for large problems. Note that the plot is in log-scale!</p>
+<p><img src="../figures/quantreg_benchmarks.png" class="img-fluid"></p>
+</section>
+</section>
+<section id="literature" class="level1">
+<h1>Literature</h1>
+<ul>
+<li>Victor Chernozhukov, Iván Fernández-Val, Blaise Melly (2019): Fast Algorithms for the Quantile Regression Process - <a href="https://arxiv.org/abs/1909.05782">link</a></li>
+<li>Hendricks &amp; Koenker (1991): Hierarchical spline models for conditional quantiles and the demand for electricity - <a href="https://www.tandfonline.com/doi/abs/10.1080/01621459.1992.10475175">link</a></li>
+<li>Koenker and Ng (2004): A Frisch-Newton Algorithm for Sparse Quantile Regression - <a href="http://www.econ.uiuc.edu/~roger/research/sparse/fn3.pdf">link</a></li>
+<li>Parente &amp; Santos Silva (2015): Quantile Regression with Clustered Data - <a href="https://econpapers.repec.org/article/bpjjecome/v_3a5_3ay_3a2016_3ai_3a1_3ap_3a1-15_3an_3a5.htm">link</a></li>
+<li>Portnoy &amp; Koenker (1997): The gaussian hare and the laplacian tortoise: Computability of squared-error versus absolute-error estimators - <a href="https://experts.illinois.edu/en/publications/the-gaussian-hare-and-the-laplacian-tortoise-computability-of-squ">link</a></li>
+<li>Powell (1991): Estimation of monotonic regression models under quantile restrictions - <a href="https://econpapers.repec.org/paper/attwimass/8818.htm">link</a></li>
+</ul>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

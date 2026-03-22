@@ -1,0 +1,2628 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.27">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="description" content="TWFE, Gardner’s two-stage DID2S, local projections, and event study designs with heterogeneous treatment effects.">
+
+<title>Difference-in-Differences Estimation</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" integrity="sha384-ZvpUoO/+PpLXR1lu4jmpXWu80pZlYUAfxl5NsBMWOEPSjUn/6Z/hRTt8+pR6L4N2" crossorigin="anonymous"></script><script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-ed96de9b727972fe78a7b5d16c58bf87.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-381776df98abee29e77bfaddc64fade2.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<!-- Cloudflare Web Analytics --><script defer="" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon="{&quot;token&quot;: &quot;bfa3a9287252444c8aa02b664fea7f09&quot;}"></script><!-- End Cloudflare Web Analytics -->
+<script src="https://cdn.jsdelivr.net/npm/requirejs@2.3.6/require.min.js" integrity="sha384-c9c+LnTbwQ3aujuU7ULEPVvgLs+Fn6fJUvIGTsuu1ZcCf11fiEubah0ttpca4ntM sha384-6V1/AdqZRWk1KAlWbKBlGhN7VG4iE/yAZcO6NZPMF8od0vukrvr0tg4qY6NSrItx" crossorigin="anonymous"></script>
+
+<script type="application/javascript">define('jquery', [],function() {return window.jQuery;})</script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="alternate" type="text/markdown" href="difference-in-differences.html.md">
+</head>
+
+<body class="floating nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../pyfixest.html"> 
+<span class="menu-text">PyFixest</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../getting-started.html"> 
+<span class="menu-text">Getting Started</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../reference/index.html"> 
+<span class="menu-text">Function Reference</span></a>
+  </li>  
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-tutorials" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Tutorials</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-tutorials">    
+        <li>
+    <a class="dropdown-item" href="../tutorials/index.html">
+ <span class="dropdown-text">All Tutorials</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li>
+    <a class="dropdown-item" href="../tutorials/ols-fixed-effects.html">
+ <span class="dropdown-text">OLS with Fixed Effects</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../tutorials/formula-syntax.html">
+ <span class="dropdown-text">Formula Syntax</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../tutorials/regression-tables.html">
+ <span class="dropdown-text">Regression Tables</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../tutorials/difference-in-differences.html">
+ <span class="dropdown-text">Difference-in-Differences</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../tutorials/quantile-regression.html">
+ <span class="dropdown-text">Quantile Regression</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-guides" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Guides</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-guides">    
+        <li>
+    <a class="dropdown-item" href="../how-to/index.html">
+ <span class="dropdown-text">All Guides</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li>
+    <a class="dropdown-item" href="../how-to/marginaleffects.html">
+ <span class="dropdown-text">Marginal Effects &amp; Hypothesis Testing</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../how-to/regression_decomposition.html">
+ <span class="dropdown-text">Regression Decomposition</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../how-to/pyfixest_gpu.html">
+ <span class="dropdown-text">PyFixest on the GPU via JAX</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../pyfixest-gpu-cupy.html">
+ <span class="dropdown-text">PyFixest on the GPU via CuPy</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../how-to/stata-2-pyfixest.html">
+ <span class="dropdown-text">Compare Stata &amp; PyFixest</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../how-to/panel_variance_reduction.html">
+ <span class="dropdown-text">Variance Reduction in AB Tests</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-explanation" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Explanation</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-explanation">    
+        <li>
+    <a class="dropdown-item" href="../explanation/difficult-fixed-effects.html">
+ <span class="dropdown-text">When Are Fixed Effects Problems Difficult?</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../explanation/ssc.html">
+ <span class="dropdown-text">On Small Sample Corrections</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../explanation/compare-fixest-pyfixest.html">
+ <span class="dropdown-text">Does PyFixest Match fixest?</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-textbook-replications" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Textbook Replications</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-textbook-replications">    
+        <li>
+    <a class="dropdown-item" href="../textbook-replications/index.html">
+ <span class="dropdown-text">All Textbook Replications</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li>
+    <a class="dropdown-item" href="../textbook-replications/brave_true.html">
+ <span class="dropdown-text">Causal Inference for the Brave and True</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../textbook-replications/mixtape.html">
+ <span class="dropdown-text">Causal Inference: The Mixtape</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../textbook-replications/replicating-the-effect.html">
+ <span class="dropdown-text">The Effect</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../textbook-replications/resources.html">
+ <span class="dropdown-text">Other Resources</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" href="../changelog.html"> 
+<span class="menu-text">Changelog</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../contributing.html"> 
+<span class="menu-text">Contributing</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../acknowledgements.html"> 
+<span class="menu-text">Acknowledgements</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../pyfixest-sprint.html"> 
+<span class="menu-text">Sprint 2026</span></a>
+  </li>  
+</ul>
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../llms.txt"> <i class="bi bi-robot" role="img">
+</i> 
+<span class="menu-text">llms.txt</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../skills.html"> 
+<span class="menu-text">Skills.md</span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/py-econometrics/pyfixest/"> <i class="bi bi-github" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#setup" id="toc-setup" class="nav-link active" data-scroll-target="#setup">Setup</a></li>
+  <li><a href="#examining-treatment-timing" id="toc-examining-treatment-timing" class="nav-link" data-scroll-target="#examining-treatment-timing">Examining Treatment Timing</a></li>
+  <li><a href="#inspecting-the-outcome-variable" id="toc-inspecting-the-outcome-variable" class="nav-link" data-scroll-target="#inspecting-the-outcome-variable">Inspecting the Outcome Variable</a></li>
+  <li><a href="#one-shot-adoption-static-and-dynamic-specifications" id="toc-one-shot-adoption-static-and-dynamic-specifications" class="nav-link" data-scroll-target="#one-shot-adoption-static-and-dynamic-specifications">One-shot adoption: Static and Dynamic Specifications</a></li>
+  <li><a href="#pointwise-vs-simultaneous-inference-in-event-studies" id="toc-pointwise-vs-simultaneous-inference-in-event-studies" class="nav-link" data-scroll-target="#pointwise-vs-simultaneous-inference-in-event-studies">Pointwise vs Simultaneous Inference in Event Studies</a></li>
+  <li><a href="#event-study-under-staggered-adoption-via-feols-event_study-did2s-lpdid" id="toc-event-study-under-staggered-adoption-via-feols-event_study-did2s-lpdid" class="nav-link" data-scroll-target="#event-study-under-staggered-adoption-via-feols-event_study-did2s-lpdid">Event Study under Staggered Adoption via <code>feols()</code>, <code>event_study()</code>, <code>did2s()</code>, <code>lpdid()</code></a>
+  <ul class="collapse">
+  <li><a href="#two-way-fixed-effects" id="toc-two-way-fixed-effects" class="nav-link" data-scroll-target="#two-way-fixed-effects">Two-Way Fixed Effects</a></li>
+  <li><a href="#fully-interacted-saturated-event-study-sun-abraham" id="toc-fully-interacted-saturated-event-study-sun-abraham" class="nav-link" data-scroll-target="#fully-interacted-saturated-event-study-sun-abraham">Fully-Interacted / Saturated Event Study (Sun-Abraham)</a></li>
+  <li><a href="#when-can-we-get-away-with-using-the-two-way-fixed-effects-regression" id="toc-when-can-we-get-away-with-using-the-two-way-fixed-effects-regression" class="nav-link" data-scroll-target="#when-can-we-get-away-with-using-the-two-way-fixed-effects-regression">When can we get away with using the two-way fixed effects regression?</a></li>
+  <li><a href="#gardners-2-step-estimator" id="toc-gardners-2-step-estimator" class="nav-link" data-scroll-target="#gardners-2-step-estimator">Gardner’s 2-Step Estimator</a></li>
+  <li><a href="#local-projections-dube-et-al" id="toc-local-projections-dube-et-al" class="nav-link" data-scroll-target="#local-projections-dube-et-al">Local Projections (Dube et al)</a></li>
+  </ul></li>
+  </ul>
+</nav>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Difference-in-Differences Estimation</h1>
+  <div class="quarto-categories">
+    <div class="quarto-category">Causal Inference</div>
+  </div>
+  </div>
+
+<div>
+  <div class="description">
+    TWFE, Gardner’s two-stage DID2S, local projections, and event study designs with heterogeneous treatment effects.
+  </div>
+</div>
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p><code>PyFixest</code> supports event study designs via the canonical two-way fixed effects design, the 2-Step imputation estimator, and local projections.</p>
+<p>See also <a href="https://www.nber.org/conferences/si-2023-methods-lectures-linear-panel-event-studies">NBER SI methods lectures on Linear Panel Event Studies</a>.</p>
+<section id="setup" class="level2">
+<h2 class="anchored" data-anchor-id="setup">Setup</h2>
+<div id="55857734" class="cell" data-execution_count="1">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> importlib <span class="im">import</span> resources</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.report.utils <span class="im">import</span> rename_event_study_coefs</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.utils.dgps <span class="im">import</span> get_sharkfin</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>load_ext watermark</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>watermark <span class="op">--</span>iversions</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>load_ext autoreload</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>autoreload <span class="dv">2</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+
+            <div id="JRvQ3u"></div>
+            <script type="text/javascript" data-lets-plot-script="library">
+                if(!window.letsPlotCallQueue) {
+                    window.letsPlotCallQueue = [];
+                }; 
+                window.letsPlotCall = function(f) {
+                    window.letsPlotCallQueue.push(f);
+                };
+                (function() {
+                    var script = document.createElement("script");
+                    script.type = "text/javascript";
+                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.7.3/js-package/distr/lets-plot.min.js";
+                    script.onload = function() {
+                        window.letsPlotCall = function(f) {f();};
+                        window.letsPlotCallQueue.forEach(function(f) {f();});
+                        window.letsPlotCallQueue = [];
+                        
+                    };
+                    script.onerror = function(event) {
+                        window.letsPlotCall = function(f) {};    // noop
+                        window.letsPlotCallQueue = [];
+                        var div = document.createElement("div");
+                        div.style.color = 'darkred';
+                        div.textContent = 'Error loading Lets-Plot JS';
+                        document.getElementById("JRvQ3u").appendChild(div);
+                    };
+                    var e = document.getElementById("JRvQ3u");
+                    e.appendChild(script);
+                })()
+            </script>
+            
+</div>
+<div class="cell-output cell-output-display">
+
+            <div id="oVWWmt"></div>
+            <script type="text/javascript" data-lets-plot-script="library">
+                if(!window.letsPlotCallQueue) {
+                    window.letsPlotCallQueue = [];
+                }; 
+                window.letsPlotCall = function(f) {
+                    window.letsPlotCallQueue.push(f);
+                };
+                (function() {
+                    var script = document.createElement("script");
+                    script.type = "text/javascript";
+                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.7.3/js-package/distr/lets-plot.min.js";
+                    script.onload = function() {
+                        window.letsPlotCall = function(f) {f();};
+                        window.letsPlotCallQueue.forEach(function(f) {f();});
+                        window.letsPlotCallQueue = [];
+                        
+                    };
+                    script.onerror = function(event) {
+                        window.letsPlotCall = function(f) {};    // noop
+                        window.letsPlotCallQueue = [];
+                        var div = document.createElement("div");
+                        div.style.color = 'darkred';
+                        div.textContent = 'Error loading Lets-Plot JS';
+                        document.getElementById("oVWWmt").appendChild(div);
+                    };
+                    var e = document.getElementById("oVWWmt");
+                    e.appendChild(script);
+                })()
+            </script>
+            
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>pandas  : 2.3.3
+pyfixest: 0.40.1
+</code></pre>
+</div>
+</div>
+<div id="2781ff0a" class="cell" data-execution_count="2">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># one-shot adoption data - parallel trends is true</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>df_one_cohort <span class="op">=</span> get_sharkfin()</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>df_one_cohort.head()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="2">
+<div>
+
+<table class="dataframe table table-sm table-striped small">
+  <thead>
+    <tr>
+      <th></th>
+      <th>unit</th>
+      <th>year</th>
+      <th>treat</th>
+      <th>Y</th>
+      <th>ever_treated</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>1.629307</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>0</td>
+      <td>1</td>
+      <td>0</td>
+      <td>0.825902</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>0</td>
+      <td>2</td>
+      <td>0</td>
+      <td>0.208988</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>0</td>
+      <td>3</td>
+      <td>0</td>
+      <td>-0.244739</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>0</td>
+      <td>4</td>
+      <td>0</td>
+      <td>0.804665</td>
+      <td>0</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+</div>
+</div>
+<div id="45e80c67" class="cell" data-execution_count="3">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># multi-cohort adoption data</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>df_multi_cohort <span class="op">=</span> pd.read_csv(</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    resources.files(<span class="st">"pyfixest.did.data"</span>).joinpath(<span class="st">"df_het.csv"</span>)</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>df_multi_cohort.head()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="3">
+<div>
+
+<table class="dataframe table table-sm table-striped small">
+  <thead>
+    <tr>
+      <th></th>
+      <th>unit</th>
+      <th>state</th>
+      <th>group</th>
+      <th>unit_fe</th>
+      <th>g</th>
+      <th>year</th>
+      <th>year_fe</th>
+      <th>treat</th>
+      <th>rel_year</th>
+      <th>rel_year_binned</th>
+      <th>error</th>
+      <th>te</th>
+      <th>te_dynamic</th>
+      <th>dep_var</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>1</td>
+      <td>33</td>
+      <td>Group 2</td>
+      <td>7.043016</td>
+      <td>2010</td>
+      <td>1990</td>
+      <td>0.066159</td>
+      <td>False</td>
+      <td>-20.0</td>
+      <td>-6</td>
+      <td>-0.086466</td>
+      <td>0</td>
+      <td>0.0</td>
+      <td>7.022709</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>1</td>
+      <td>33</td>
+      <td>Group 2</td>
+      <td>7.043016</td>
+      <td>2010</td>
+      <td>1991</td>
+      <td>-0.030980</td>
+      <td>False</td>
+      <td>-19.0</td>
+      <td>-6</td>
+      <td>0.766593</td>
+      <td>0</td>
+      <td>0.0</td>
+      <td>7.778628</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>1</td>
+      <td>33</td>
+      <td>Group 2</td>
+      <td>7.043016</td>
+      <td>2010</td>
+      <td>1992</td>
+      <td>-0.119607</td>
+      <td>False</td>
+      <td>-18.0</td>
+      <td>-6</td>
+      <td>1.512968</td>
+      <td>0</td>
+      <td>0.0</td>
+      <td>8.436377</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>1</td>
+      <td>33</td>
+      <td>Group 2</td>
+      <td>7.043016</td>
+      <td>2010</td>
+      <td>1993</td>
+      <td>0.126321</td>
+      <td>False</td>
+      <td>-17.0</td>
+      <td>-6</td>
+      <td>0.021870</td>
+      <td>0</td>
+      <td>0.0</td>
+      <td>7.191207</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>1</td>
+      <td>33</td>
+      <td>Group 2</td>
+      <td>7.043016</td>
+      <td>2010</td>
+      <td>1994</td>
+      <td>-0.106921</td>
+      <td>False</td>
+      <td>-16.0</td>
+      <td>-6</td>
+      <td>-0.017603</td>
+      <td>0</td>
+      <td>0.0</td>
+      <td>6.918492</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+</div>
+</div>
+</section>
+<section id="examining-treatment-timing" class="level2">
+<h2 class="anchored" data-anchor-id="examining-treatment-timing">Examining Treatment Timing</h2>
+<p>Before any DiD estimation, we need to examine the treatment timing, since it is crucial to our choice of estimator.</p>
+<div id="f2bf8ad7" class="cell" data-execution_count="4">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>pf.panelview(</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    df_one_cohort,</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    unit<span class="op">=</span><span class="st">"unit"</span>,</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    time<span class="op">=</span><span class="st">"year"</span>,</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    treat<span class="op">=</span><span class="st">"treat"</span>,</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    collapse_to_cohort<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    sort_by_timing<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    ylab<span class="op">=</span><span class="st">"Cohort"</span>,</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    xlab<span class="op">=</span><span class="st">"Year"</span>,</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>    title<span class="op">=</span><span class="st">"Treatment Assignment Cohorts"</span>,</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>    figsize<span class="op">=</span>(<span class="dv">6</span>, <span class="dv">5</span>),</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="difference-in-differences_files/figure-html/cell-5-output-1.png" width="502" height="454" class="figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+<div id="091870ad" class="cell" data-execution_count="5">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>pf.panelview(</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    df_multi_cohort,</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    unit<span class="op">=</span><span class="st">"unit"</span>,</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    time<span class="op">=</span><span class="st">"year"</span>,</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    treat<span class="op">=</span><span class="st">"treat"</span>,</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>    collapse_to_cohort<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>    sort_by_timing<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>    ylab<span class="op">=</span><span class="st">"Cohort"</span>,</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>    xlab<span class="op">=</span><span class="st">"Year"</span>,</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>    title<span class="op">=</span><span class="st">"Treatment Assignment Cohorts"</span>,</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>    figsize<span class="op">=</span>(<span class="dv">6</span>, <span class="dv">5</span>),</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="difference-in-differences_files/figure-html/cell-6-output-1.png" width="503" height="454" class="figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>We immediately see that we have staggered adoption of treatment in the second case, which implies that a naive application of 2WFE might yield biased estimates under substantial effect heterogeneity.</p>
+<p>We can also plot treatment assignment in a disaggregated fashion, which gives us a sense of cohort sizes.</p>
+<div id="de96cb06" class="cell" data-execution_count="6">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>pf.panelview(</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    df_multi_cohort,</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    unit<span class="op">=</span><span class="st">"unit"</span>,</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    time<span class="op">=</span><span class="st">"year"</span>,</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    treat<span class="op">=</span><span class="st">"treat"</span>,</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>    sort_by_timing<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>    ylab<span class="op">=</span><span class="st">"Unit"</span>,</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>    xlab<span class="op">=</span><span class="st">"Year"</span>,</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>    title<span class="op">=</span><span class="st">"Treatment Assignment (all units)"</span>,</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>    figsize<span class="op">=</span>(<span class="dv">6</span>, <span class="dv">5</span>),</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="difference-in-differences_files/figure-html/cell-7-output-1.png" width="529" height="454" class="figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="inspecting-the-outcome-variable" class="level2">
+<h2 class="anchored" data-anchor-id="inspecting-the-outcome-variable">Inspecting the Outcome Variable</h2>
+<p><code>pf.panelview()</code> further allows us to inspect the “outcome” variable over time:</p>
+<div id="f4705774" class="cell" data-fig-height="0.1" data-fig-width="0.4" data-execution_count="7">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>pf.panelview(</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    df_multi_cohort,</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    outcome<span class="op">=</span><span class="st">"dep_var"</span>,</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    unit<span class="op">=</span><span class="st">"unit"</span>,</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>    time<span class="op">=</span><span class="st">"year"</span>,</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    treat<span class="op">=</span><span class="st">"treat"</span>,</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>    collapse_to_cohort<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>    title<span class="op">=</span><span class="st">"Outcome Plot"</span>,</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>    legend<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>    figsize<span class="op">=</span>(<span class="dv">7</span>, <span class="fl">2.5</span>),</span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="difference-in-differences_files/figure-html/cell-8-output-1.png" width="576" height="282" class="figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>We immediately see that the first cohort is switched into treatment in 2000, while the second cohort is switched into treatment by 2010. Before each cohort is switched into treatment, the trends are parallel.</p>
+<p>We can additionally inspect individual units by dropping the collapse_to_cohort argument. Because we have a large sample, we might want to inspect only a subset of units.</p>
+<div id="53b72e7d" class="cell" data-fig-height="1" data-fig-width="4" data-execution_count="8">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>pf.panelview(</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>    df_multi_cohort,</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    outcome<span class="op">=</span><span class="st">"dep_var"</span>,</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>    unit<span class="op">=</span><span class="st">"unit"</span>,</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>    time<span class="op">=</span><span class="st">"year"</span>,</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>    treat<span class="op">=</span><span class="st">"treat"</span>,</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>    subsamp<span class="op">=</span><span class="dv">100</span>,</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>    title <span class="op">=</span> <span class="st">"Outcome Plot"</span>,</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>    legend<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>    figsize<span class="op">=</span>(<span class="dv">7</span>, <span class="fl">2.5</span>),</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="difference-in-differences_files/figure-html/cell-9-output-1.png" width="587" height="282" class="figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="one-shot-adoption-static-and-dynamic-specifications" class="level2">
+<h2 class="anchored" data-anchor-id="one-shot-adoption-static-and-dynamic-specifications">One-shot adoption: Static and Dynamic Specifications</h2>
+<p>After taking a first look at the data, let’s turn to estimation. We return to the <code>df_one_cohort</code> data set (without staggered treatment rollout).</p>
+<div id="495f6a4f" class="cell" data-execution_count="9">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>fit_static_twfe <span class="op">=</span> pf.feols(</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Y ~ treat | unit + year"</span>,</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    df_one_cohort,</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span>{<span class="st">"CRV1"</span>: <span class="st">"unit"</span>},</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>fit_static_twfe.summary()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>###
+
+Estimation:  OLS
+Dep. var.: Y, Fixed effects: unit + year
+Inference:  CRV1
+Observations:  30000
+
+| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5% |   97.5% |
+|:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
+| treat         |      0.206 |        0.052 |     3.927 |      0.000 |  0.103 |   0.308 |
+---
+RMSE: 0.701 R2: 0.905 R2 Within: 0.003 </code></pre>
+</div>
+</div>
+<p>Since this is a single-cohort dataset, this estimate is consistent for the ATT under parallel trends. We can estimate heterogeneous effects by time by interacting time with the treated group:</p>
+<div id="0e003fa1" class="cell" data-execution_count="10">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>fit_dynamic_twfe <span class="op">=</span> pf.feols(</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Y ~ i(year, ever_treated,  ref = 14) | unit + year"</span>,</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>    df_one_cohort,</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span>{<span class="st">"CRV1"</span>: <span class="st">"unit"</span>},</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="14e3f1fb" class="cell" data-execution_count="11">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>fit_dynamic_twfe.iplot(</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>    coord_flip<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>    title<span class="op">=</span><span class="st">"Event Study"</span>,</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>    figsize<span class="op">=</span>[<span class="dv">1200</span>, <span class="dv">400</span>],</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>    yintercept<span class="op">=</span><span class="dv">0</span>,</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>    xintercept<span class="op">=</span><span class="fl">13.5</span>,</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>    labels<span class="op">=</span>rename_event_study_coefs(fit_dynamic_twfe._coefnames),</span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="11">
+   <div id="ycuAFv"></div>
+   <script type="text/javascript" data-lets-plot-script="plot">
+   
+   (function() {
+   // ----------
+   
+   const forceImmediateRender = false;
+   const responsive = false;
+   
+   let sizing = {
+       width_mode: "MIN",
+       height_mode: "SCALED",
+       width: null, 
+       height: null 
+   };
+   
+   const preferredWidth = document.body.dataset.letsPlotPreferredWidth;
+   if (preferredWidth !== undefined) {
+       sizing = {
+           width_mode: 'FIXED',
+           height_mode: 'SCALED',
+           width: parseFloat(preferredWidth)
+       };
+   }
+   
+   const containerDiv = document.getElementById("ycuAFv");
+   let fig = null;
+   
+   function renderPlot() {
+       if (fig === null) {
+           const plotSpec = {
+"data":{
+"Coefficient":["year::0:ever_treated","year::1:ever_treated","year::2:ever_treated","year::3:ever_treated","year::4:ever_treated","year::5:ever_treated","year::6:ever_treated","year::7:ever_treated","year::8:ever_treated","year::9:ever_treated","year::10:ever_treated","year::11:ever_treated","year::12:ever_treated","year::13:ever_treated","year::15:ever_treated","year::16:ever_treated","year::17:ever_treated","year::18:ever_treated","year::19:ever_treated","year::20:ever_treated","year::21:ever_treated","year::22:ever_treated","year::23:ever_treated","year::24:ever_treated","year::25:ever_treated","year::26:ever_treated","year::27:ever_treated","year::28:ever_treated","year::29:ever_treated"],
+"Estimate":[-0.11793283974656142,-0.05873668086088776,-0.08000343580727418,-0.08379134398914258,-0.008748851140692224,0.005462239132209692,-0.03792992222408285,-0.047858895285599085,-0.04635988251882213,-0.13226806862443194,-0.18717489395203615,-0.08522349395857057,-0.043167595587726725,-0.02873607027764111,0.1373587547946926,0.3202363651170568,0.35905884723796727,0.46798125389692313,0.4382015784858732,0.41808368984607586,0.4400262834863111,0.44998930169725637,-0.08217326994918135,-0.11627011066492493,-0.13906483994322646,-0.16796427436573594,-0.1467561186906023,-0.12969798817452496,-0.11725958933841533],
+"2.5%":[-0.2646937839901558,-0.21544636873280976,-0.23981586709260283,-0.24592148277448506,-0.16741793715498826,-0.15657366276689025,-0.20237330351720398,-0.21300958471636788,-0.20669148807204774,-0.28417210141476024,-0.3238043269330341,-0.2099485227362348,-0.15409717460661623,-0.11056264387154215,0.057008975252615834,0.21463716944760447,0.2391081162035139,0.33982502387038716,0.3030291624102585,0.27828503291377715,0.2930538712475217,0.29968376424169435,-0.23793906288420313,-0.27354535803545277,-0.29912440202624146,-0.335869887028804,-0.3129969653284205,-0.2982050869771893,-0.28783945099742764],
+"97.5%":[0.028828104497032978,0.09797300701103423,0.07980899547805448,0.07833879479619989,0.14992023487360384,0.16749814103130964,0.1265134590690383,0.11729179414516971,0.11397172303440349,0.01963596416589633,-0.05054546097103818,0.03950153481909366,0.0677619834311628,0.05309050331625993,0.21770853433676934,0.4258355607865091,0.47900957827242063,0.5961374839234591,0.573373994561488,0.5578823467783746,0.5869986957251005,0.6002948391528184,0.07359252298584044,0.04100513670560291,0.020994722139788535,-5.866170266788373E-5,0.019484727947215896,0.038809110628139326,0.053320272320596954],
+"Model":["Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year"]
+},
+"mapping":{
+"x":"Coefficient",
+"y":"Estimate",
+"color":"Model"
+},
+"data_meta":{
+"series_annotations":[{
+"type":"int",
+"column":"level_0"
+},{
+"type":"int",
+"column":"index"
+},{
+"type":"str",
+"column":"Coefficient"
+},{
+"type":"float",
+"column":"Estimate"
+},{
+"type":"float",
+"column":"Std. Error"
+},{
+"type":"float",
+"column":"t value"
+},{
+"type":"float",
+"column":"Pr(>|t|)"
+},{
+"type":"float",
+"column":"2.5%"
+},{
+"type":"float",
+"column":"97.5%"
+},{
+"type":"str",
+"column":"Model"
+}]
+},
+"guides":{
+"y":{
+"title":"Estimate and 95.0% Confidence Interval"
+}
+},
+"ggsize":{
+"width":1200.0,
+"height":400.0
+},
+"theme":{
+"axis_text_x":{
+"angle":0.0,
+"blank":false
+}
+},
+"ggtitle":{
+"text":"Event Study"
+},
+"kind":"plot",
+"scales":[],
+"layers":[{
+"geom":"point",
+"mapping":{
+},
+"position":{
+"name":"dodge",
+"width":0.5
+},
+"data_meta":{
+},
+"data":{
+}
+},{
+"geom":"errorbar",
+"mapping":{
+"ymin":"2.5%",
+"ymax":"97.5%"
+},
+"position":{
+"name":"dodge",
+"width":0.5
+},
+"data_meta":{
+},
+"width":0.05,
+"data":{
+}
+},{
+"geom":"hline",
+"mapping":{
+},
+"data_meta":{
+},
+"yintercept":0.0,
+"linetype":"dashed",
+"color":"black",
+"data":{
+}
+},{
+"geom":"vline",
+"mapping":{
+},
+"data_meta":{
+},
+"xintercept":13.5,
+"linetype":"dashed",
+"color":"black",
+"data":{
+}
+}],
+"metainfo_list":[],
+"spec_id":"1"
+};
+           window.letsPlotCall(function() { fig = LetsPlot.buildPlotFromProcessedSpecs(plotSpec, containerDiv, sizing); });
+       } else {
+           fig.updateView({});
+       }
+   }
+   
+   const renderImmediately = 
+       forceImmediateRender || (
+           sizing.width_mode === 'FIXED' && 
+           (sizing.height_mode === 'FIXED' || sizing.height_mode === 'SCALED')
+       );
+   
+   if (renderImmediately) {
+       renderPlot();
+   }
+   
+   if (!renderImmediately || responsive) {
+       // Set up observer for initial sizing or continuous monitoring
+       var observer = new ResizeObserver(function(entries) {
+           for (let entry of entries) {
+               if (entry.contentBoxSize && 
+                   entry.contentBoxSize[0].inlineSize > 0) {
+                   if (!responsive && observer) {
+                       observer.disconnect();
+                       observer = null;
+                   }
+                   renderPlot();
+                   if (!responsive) {
+                       break;
+                   }
+               }
+           }
+       });
+       
+       observer.observe(containerDiv);
+   }
+   
+   // ----------
+   })();
+   
+   </script>
+</div>
+</div>
+<p>Event study plots like this are very informative, as they allow us to visually inspect the parallel trends assumption and also the dynamic effects of the treatment.</p>
+<p>Based on a cursory glance, one would conclude that parallel trends does not hold because one of the pre-treatment coefficient has a confidence interval that does not include zero. However, we know that parallel trends is true because the treatment is randomly assigned in the underlying DGP.</p>
+</section>
+<section id="pointwise-vs-simultaneous-inference-in-event-studies" class="level2">
+<h2 class="anchored" data-anchor-id="pointwise-vs-simultaneous-inference-in-event-studies">Pointwise vs Simultaneous Inference in Event Studies</h2>
+<p>This is an example of a false positive in testing for pre-trends produced by <em>pointwise</em> inference (where each element of the coefficient vector is tested separately).</p>
+<p>As an alternative, we can use simultaneous confidence bands of the form <span class="math inline">\([a, b] = ([a_k, b_k])_{k=1}^K\)</span> such that</p>
+<p><span class="math display">\[
+P(\beta \in [a, b]) = P(\beta_k \in [a_k, b_k] \forall k) \rightarrow 1 - \alpha
+\]</span></p>
+<p>These bands can be constructed by using a carefully chosen critical value <span class="math inline">\(c\)</span> that <a href="https://www.annualreviews.org/docserver/fulltext/statistics/10/1/annurev-statistics-040120-022239.pdf?expires=1724543273&amp;id=id&amp;accname=guest&amp;checksum=0D11ADF816FFFA0AE21BD7EDC6DB1801#page=14">accounts for the covariance between coefficients using the multiplier bootstrap</a>. In pointwise inference, the critical value is <span class="math inline">\(c = z_{1 - \alpha/2} = 1.96\)</span> for <span class="math inline">\(\alpha = 0.05\)</span>; the corresponding critical value for simultaneous inference is typically larger. These are also known as <code>sup-t</code> bands in the literature (see lec 3 of the NBER SI methods lectures linked above).</p>
+<p>This is implemented in the <code>confint(joint=True)</code> method in the <code>feols</code> class. If we pass the <code>joint='both'</code> argument to <code>iplot</code>, we get the simultaneous confidence bands (for all event study coefficients) in addition to the pointwise confidence intervals. Note that simultaneous inference for all event study coefficients may be overly conservative, especially when the number of coefficients is large; one may instead choose to perform joint inference for <a href="https://gist.github.com/apoorvalal/8a7687d3620577fd5214f1d43fc740b3">all pre-treatment coefficients and all post-treatment coefficients separately</a>.</p>
+<div id="1afb02f1" class="cell" data-execution_count="12">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>fit_dynamic_twfe.iplot(</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>    coord_flip<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>    title<span class="op">=</span><span class="st">"Event Study"</span>,</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>    figsize<span class="op">=</span>[<span class="dv">1200</span>, <span class="dv">400</span>],</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>    yintercept<span class="op">=</span><span class="dv">0</span>,</span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>    xintercept<span class="op">=</span><span class="fl">13.5</span>,</span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>    joint<span class="op">=</span><span class="st">"both"</span>,</span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>    labels<span class="op">=</span>rename_event_study_coefs(fit_dynamic_twfe._coefnames),</span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="12">
+   <div id="spu3iR"></div>
+   <script type="text/javascript" data-lets-plot-script="plot">
+   
+   (function() {
+   // ----------
+   
+   const forceImmediateRender = false;
+   const responsive = false;
+   
+   let sizing = {
+       width_mode: "MIN",
+       height_mode: "SCALED",
+       width: null, 
+       height: null 
+   };
+   
+   const preferredWidth = document.body.dataset.letsPlotPreferredWidth;
+   if (preferredWidth !== undefined) {
+       sizing = {
+           width_mode: 'FIXED',
+           height_mode: 'SCALED',
+           width: parseFloat(preferredWidth)
+       };
+   }
+   
+   const containerDiv = document.getElementById("spu3iR");
+   let fig = null;
+   
+   function renderPlot() {
+       if (fig === null) {
+           const plotSpec = {
+"data":{
+"Coefficient":["year::0:ever_treated","year::1:ever_treated","year::2:ever_treated","year::3:ever_treated","year::4:ever_treated","year::5:ever_treated","year::6:ever_treated","year::7:ever_treated","year::8:ever_treated","year::9:ever_treated","year::10:ever_treated","year::11:ever_treated","year::12:ever_treated","year::13:ever_treated","year::15:ever_treated","year::16:ever_treated","year::17:ever_treated","year::18:ever_treated","year::19:ever_treated","year::20:ever_treated","year::21:ever_treated","year::22:ever_treated","year::23:ever_treated","year::24:ever_treated","year::25:ever_treated","year::26:ever_treated","year::27:ever_treated","year::28:ever_treated","year::29:ever_treated","year::0:ever_treated","year::1:ever_treated","year::2:ever_treated","year::3:ever_treated","year::4:ever_treated","year::5:ever_treated","year::6:ever_treated","year::7:ever_treated","year::8:ever_treated","year::9:ever_treated","year::10:ever_treated","year::11:ever_treated","year::12:ever_treated","year::13:ever_treated","year::15:ever_treated","year::16:ever_treated","year::17:ever_treated","year::18:ever_treated","year::19:ever_treated","year::20:ever_treated","year::21:ever_treated","year::22:ever_treated","year::23:ever_treated","year::24:ever_treated","year::25:ever_treated","year::26:ever_treated","year::27:ever_treated","year::28:ever_treated","year::29:ever_treated"],
+"Estimate":[-0.11793283974656142,-0.05873668086088776,-0.08000343580727418,-0.08379134398914258,-0.008748851140692224,0.005462239132209692,-0.03792992222408285,-0.047858895285599085,-0.04635988251882213,-0.13226806862443194,-0.18717489395203615,-0.08522349395857057,-0.043167595587726725,-0.02873607027764111,0.1373587547946926,0.3202363651170568,0.35905884723796727,0.46798125389692313,0.4382015784858732,0.41808368984607586,0.4400262834863111,0.44998930169725637,-0.08217326994918135,-0.11627011066492493,-0.13906483994322646,-0.16796427436573594,-0.1467561186906023,-0.12969798817452496,-0.11725958933841533,-0.11793283974656142,-0.05873668086088776,-0.08000343580727418,-0.08379134398914258,-0.008748851140692224,0.005462239132209692,-0.03792992222408285,-0.047858895285599085,-0.04635988251882213,-0.13226806862443194,-0.18717489395203615,-0.08522349395857057,-0.043167595587726725,-0.02873607027764111,0.1373587547946926,0.3202363651170568,0.35905884723796727,0.46798125389692313,0.4382015784858732,0.41808368984607586,0.4400262834863111,0.44998930169725637,-0.08217326994918135,-0.11627011066492493,-0.13906483994322646,-0.16796427436573594,-0.1467561186906023,-0.12969798817452496,-0.11725958933841533],
+"2.5%":[-0.2646937839901558,-0.21544636873280976,-0.23981586709260283,-0.24592148277448506,-0.16741793715498826,-0.15657366276689025,-0.20237330351720398,-0.21300958471636788,-0.20669148807204774,-0.28417210141476024,-0.3238043269330341,-0.2099485227362348,-0.15409717460661623,-0.11056264387154215,0.057008975252615834,0.21463716944760447,0.2391081162035139,0.33982502387038716,0.3030291624102585,0.27828503291377715,0.2930538712475217,0.29968376424169435,-0.23793906288420313,-0.27354535803545277,-0.29912440202624146,-0.335869887028804,-0.3129969653284205,-0.2982050869771893,-0.28783945099742764,-0.338540190677748,-0.29429873236483706,-0.3202294529771482,-0.3275012806339604,-0.2472562205276551,-0.23810604300131347,-0.2851170666800976,-0.2961092474999363,-0.2873663093576493,-0.36060638058034633,-0.3925528126109618,-0.27270701237874767,-0.20991414177136553,-0.15173571251464024,0.01657899214025553,0.16150231678308602,0.1787519328054172,0.27534004027434267,0.2350138109016439,0.2079418736529148,0.2191010591967379,0.22405380762382524,-0.3163164823835121,-0.35268229694706366,-0.379662337896984,-0.4203557577197554,-0.3966451677311641,-0.38299361032761015,-0.3736709363541624],
+"97.5%":[0.028828104497032978,0.09797300701103423,0.07980899547805448,0.07833879479619989,0.14992023487360384,0.16749814103130964,0.1265134590690383,0.11729179414516971,0.11397172303440349,0.01963596416589633,-0.05054546097103818,0.03950153481909366,0.0677619834311628,0.05309050331625993,0.21770853433676934,0.4258355607865091,0.47900957827242063,0.5961374839234591,0.573373994561488,0.5578823467783746,0.5869986957251005,0.6002948391528184,0.07359252298584044,0.04100513670560291,0.020994722139788535,-5.866170266788373E-5,0.019484727947215896,0.038809110628139326,0.053320272320596954,0.10267451118462513,0.1768253706430615,0.1602225813625999,0.1599185926556752,0.2297585182462707,0.24903052126573286,0.20925722223193194,0.20039145692873814,0.19464654432000505,0.09607024333148248,0.018203024706889503,0.10226002446160654,0.12357895059591206,0.09426357195935803,0.25813851744912963,0.47897041345102753,0.5393657616705173,0.6606224675195036,0.6413893460701026,0.6282255060392369,0.6609515077758843,0.6759247957706875,0.1519699424851494,0.1201420756172138,0.1015326580105311,0.08442720898828357,0.10313293034995955,0.12359763397856025,0.13915175767733168],
+"Model":["Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)","Y ~ i(year, ever_treated,  ref = 14) | unit + year (joint CIs)"]
+},
+"mapping":{
+"x":"Coefficient",
+"y":"Estimate",
+"color":"Model"
+},
+"data_meta":{
+"series_annotations":[{
+"type":"int",
+"column":"level_0"
+},{
+"type":"int",
+"column":"index"
+},{
+"type":"str",
+"column":"Coefficient"
+},{
+"type":"float",
+"column":"Estimate"
+},{
+"type":"float",
+"column":"Std. Error"
+},{
+"type":"float",
+"column":"t value"
+},{
+"type":"float",
+"column":"Pr(>|t|)"
+},{
+"type":"float",
+"column":"2.5%"
+},{
+"type":"float",
+"column":"97.5%"
+},{
+"type":"str",
+"column":"Model"
+}]
+},
+"guides":{
+"y":{
+"title":"Estimate and 95.0% Confidence Interval"
+}
+},
+"ggsize":{
+"width":1200.0,
+"height":400.0
+},
+"theme":{
+"axis_text_x":{
+"angle":0.0,
+"blank":false
+}
+},
+"ggtitle":{
+"text":"Event Study"
+},
+"kind":"plot",
+"scales":[],
+"layers":[{
+"geom":"point",
+"mapping":{
+},
+"position":{
+"name":"dodge",
+"width":0.5
+},
+"data_meta":{
+},
+"data":{
+}
+},{
+"geom":"errorbar",
+"mapping":{
+"ymin":"2.5%",
+"ymax":"97.5%"
+},
+"position":{
+"name":"dodge",
+"width":0.5
+},
+"data_meta":{
+},
+"width":0.05,
+"data":{
+}
+},{
+"geom":"hline",
+"mapping":{
+},
+"data_meta":{
+},
+"yintercept":0.0,
+"linetype":"dashed",
+"color":"black",
+"data":{
+}
+},{
+"geom":"vline",
+"mapping":{
+},
+"data_meta":{
+},
+"xintercept":13.5,
+"linetype":"dashed",
+"color":"black",
+"data":{
+}
+}],
+"metainfo_list":[],
+"spec_id":"2"
+};
+           window.letsPlotCall(function() { fig = LetsPlot.buildPlotFromProcessedSpecs(plotSpec, containerDiv, sizing); });
+       } else {
+           fig.updateView({});
+       }
+   }
+   
+   const renderImmediately = 
+       forceImmediateRender || (
+           sizing.width_mode === 'FIXED' && 
+           (sizing.height_mode === 'FIXED' || sizing.height_mode === 'SCALED')
+       );
+   
+   if (renderImmediately) {
+       renderPlot();
+   }
+   
+   if (!renderImmediately || responsive) {
+       // Set up observer for initial sizing or continuous monitoring
+       var observer = new ResizeObserver(function(entries) {
+           for (let entry of entries) {
+               if (entry.contentBoxSize && 
+                   entry.contentBoxSize[0].inlineSize > 0) {
+                   if (!responsive && observer) {
+                       observer.disconnect();
+                       observer = null;
+                   }
+                   renderPlot();
+                   if (!responsive) {
+                       break;
+                   }
+               }
+           }
+       });
+       
+       observer.observe(containerDiv);
+   }
+   
+   // ----------
+   })();
+   
+   </script>
+</div>
+</div>
+<p>The joint confidence bands are wider than the pointwise confidence intervals, and they include zero for all pre-treatment coefficients. This is consistent with the parallel trends assumption.</p>
+</section>
+<section id="event-study-under-staggered-adoption-via-feols-event_study-did2s-lpdid" class="level2">
+<h2 class="anchored" data-anchor-id="event-study-under-staggered-adoption-via-feols-event_study-did2s-lpdid">Event Study under Staggered Adoption via <code>feols()</code>, <code>event_study()</code>, <code>did2s()</code>, <code>lpdid()</code></h2>
+<p>We now return to the data set with staggered treatment rollout, <code>df_multi_cohort</code>.</p>
+<section id="two-way-fixed-effects" class="level3">
+<h3 class="anchored" data-anchor-id="two-way-fixed-effects">Two-Way Fixed Effects</h3>
+<p>As a baseline model, we can estimate a simple two-way fixed effects DiD regression via <code>feols()</code>:</p>
+<div id="a8ee131a" class="cell" data-execution_count="13">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>fit_twfe <span class="op">=</span> pf.feols(</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">"dep_var ~ i(rel_year, ref=-1.0) | state + year"</span>,</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>    df_multi_cohort,</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span>{<span class="st">"CRV1"</span>: <span class="st">"state"</span>},</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>You can also estimate a TWFE model via the <code>event_study()</code> function, which aims to provide a common interface to multiple difference-in-differences implementations:</p>
+<div id="ba59c404" class="cell" data-execution_count="14">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>fit_twfe_event <span class="op">=</span> pf.event_study(</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>    data<span class="op">=</span>df_multi_cohort,</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>    yname<span class="op">=</span><span class="st">"dep_var"</span>,</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>    idname<span class="op">=</span><span class="st">"unit"</span>,</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>    tname<span class="op">=</span><span class="st">"year"</span>,</span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>    gname<span class="op">=</span><span class="st">"g"</span>,</span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>    estimator<span class="op">=</span><span class="st">"twfe"</span>,</span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="fully-interacted-saturated-event-study-sun-abraham" class="level3">
+<h3 class="anchored" data-anchor-id="fully-interacted-saturated-event-study-sun-abraham">Fully-Interacted / Saturated Event Study (Sun-Abraham)</h3>
+<p>In a similar spirit, you can fit a fully-interacted difference-in-differences model by selecting the <code>estimator = "saturated"</code>:</p>
+<div id="e1e2ddb7" class="cell" data-execution_count="15">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>fit_saturated <span class="op">=</span> pf.event_study(</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>    data<span class="op">=</span>df_multi_cohort,</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>    yname<span class="op">=</span><span class="st">"dep_var"</span>,</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>    idname<span class="op">=</span><span class="st">"unit"</span>,</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>    tname<span class="op">=</span><span class="st">"year"</span>,</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>    gname<span class="op">=</span><span class="st">"g"</span>,</span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>    estimator<span class="op">=</span><span class="st">"saturated"</span>,</span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>fit_saturated.iplot()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="difference-in-differences_files/figure-html/cell-16-output-1.png" width="949" height="564" class="figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>We can obtain treatment effects by period via the <code>aggregate()</code> method</p>
+<div id="47d19859" class="cell" data-execution_count="16">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>fit_saturated.aggregate(weighting <span class="op">=</span> <span class="st">"shares"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="16">
+<div>
+
+<table class="dataframe table table-sm table-striped small">
+  <thead>
+    <tr>
+      <th></th>
+      <th>Estimate</th>
+      <th>Std. Error</th>
+      <th>t value</th>
+      <th>Pr(&gt;|t|)</th>
+      <th>2.5%</th>
+      <th>97.5%</th>
+    </tr>
+    <tr>
+      <th>period</th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>-20.0</th>
+      <td>-0.073055</td>
+      <td>0.083868</td>
+      <td>-0.871071</td>
+      <td>0.383715</td>
+      <td>-0.237434</td>
+      <td>0.091324</td>
+    </tr>
+    <tr>
+      <th>-19.0</th>
+      <td>-0.005748</td>
+      <td>0.087254</td>
+      <td>-0.065871</td>
+      <td>0.94748</td>
+      <td>-0.176763</td>
+      <td>0.165268</td>
+    </tr>
+    <tr>
+      <th>-18.0</th>
+      <td>0.019863</td>
+      <td>0.084817</td>
+      <td>0.234181</td>
+      <td>0.814844</td>
+      <td>-0.146376</td>
+      <td>0.186101</td>
+    </tr>
+    <tr>
+      <th>-17.0</th>
+      <td>0.075561</td>
+      <td>0.08836</td>
+      <td>0.85515</td>
+      <td>0.392468</td>
+      <td>-0.097622</td>
+      <td>0.248744</td>
+    </tr>
+    <tr>
+      <th>-16.0</th>
+      <td>-0.051278</td>
+      <td>0.088165</td>
+      <td>-0.581611</td>
+      <td>0.560829</td>
+      <td>-0.224077</td>
+      <td>0.121522</td>
+    </tr>
+    <tr>
+      <th>-15.0</th>
+      <td>0.047891</td>
+      <td>0.085371</td>
+      <td>0.560977</td>
+      <td>0.574813</td>
+      <td>-0.119433</td>
+      <td>0.215215</td>
+    </tr>
+    <tr>
+      <th>-14.0</th>
+      <td>0.030061</td>
+      <td>0.085232</td>
+      <td>0.352697</td>
+      <td>0.724316</td>
+      <td>-0.13699</td>
+      <td>0.197112</td>
+    </tr>
+    <tr>
+      <th>-13.0</th>
+      <td>0.03987</td>
+      <td>0.082118</td>
+      <td>0.485517</td>
+      <td>0.62731</td>
+      <td>-0.121079</td>
+      <td>0.200818</td>
+    </tr>
+    <tr>
+      <th>-12.0</th>
+      <td>0.048458</td>
+      <td>0.087172</td>
+      <td>0.555888</td>
+      <td>0.578287</td>
+      <td>-0.122396</td>
+      <td>0.219312</td>
+    </tr>
+    <tr>
+      <th>-11.0</th>
+      <td>-0.01282</td>
+      <td>0.091618</td>
+      <td>-0.13993</td>
+      <td>0.888715</td>
+      <td>-0.192388</td>
+      <td>0.166748</td>
+    </tr>
+    <tr>
+      <th>-10.0</th>
+      <td>0.001529</td>
+      <td>0.06211</td>
+      <td>0.02461</td>
+      <td>0.980366</td>
+      <td>-0.120205</td>
+      <td>0.123262</td>
+    </tr>
+    <tr>
+      <th>-9.0</th>
+      <td>0.017902</td>
+      <td>0.062642</td>
+      <td>0.285777</td>
+      <td>0.775049</td>
+      <td>-0.104874</td>
+      <td>0.140677</td>
+    </tr>
+    <tr>
+      <th>-8.0</th>
+      <td>0.02942</td>
+      <td>0.062148</td>
+      <td>0.473384</td>
+      <td>0.635939</td>
+      <td>-0.092389</td>
+      <td>0.151229</td>
+    </tr>
+    <tr>
+      <th>-7.0</th>
+      <td>0.06927</td>
+      <td>0.06336</td>
+      <td>1.093268</td>
+      <td>0.274276</td>
+      <td>-0.054914</td>
+      <td>0.193453</td>
+    </tr>
+    <tr>
+      <th>-6.0</th>
+      <td>-0.000168</td>
+      <td>0.06252</td>
+      <td>-0.002687</td>
+      <td>0.997856</td>
+      <td>-0.122705</td>
+      <td>0.122369</td>
+    </tr>
+    <tr>
+      <th>-5.0</th>
+      <td>-0.042447</td>
+      <td>0.060507</td>
+      <td>-0.701529</td>
+      <td>0.482973</td>
+      <td>-0.161039</td>
+      <td>0.076144</td>
+    </tr>
+    <tr>
+      <th>-4.0</th>
+      <td>0.025822</td>
+      <td>0.061739</td>
+      <td>0.418243</td>
+      <td>0.67577</td>
+      <td>-0.095185</td>
+      <td>0.146828</td>
+    </tr>
+    <tr>
+      <th>-3.0</th>
+      <td>0.062146</td>
+      <td>0.061508</td>
+      <td>1.010385</td>
+      <td>0.312311</td>
+      <td>-0.058406</td>
+      <td>0.182699</td>
+    </tr>
+    <tr>
+      <th>-2.0</th>
+      <td>0.031255</td>
+      <td>0.06339</td>
+      <td>0.493059</td>
+      <td>0.621971</td>
+      <td>-0.092988</td>
+      <td>0.155498</td>
+    </tr>
+    <tr>
+      <th>0.0</th>
+      <td>1.38732</td>
+      <td>0.061787</td>
+      <td>22.453107</td>
+      <td>0.0</td>
+      <td>1.266219</td>
+      <td>1.508421</td>
+    </tr>
+    <tr>
+      <th>1.0</th>
+      <td>1.628963</td>
+      <td>0.063322</td>
+      <td>25.724928</td>
+      <td>0.0</td>
+      <td>1.504854</td>
+      <td>1.753073</td>
+    </tr>
+    <tr>
+      <th>2.0</th>
+      <td>1.686253</td>
+      <td>0.062372</td>
+      <td>27.035432</td>
+      <td>0.0</td>
+      <td>1.564007</td>
+      <td>1.8085</td>
+    </tr>
+    <tr>
+      <th>3.0</th>
+      <td>1.796582</td>
+      <td>0.063137</td>
+      <td>28.455425</td>
+      <td>0.0</td>
+      <td>1.672837</td>
+      <td>1.920328</td>
+    </tr>
+    <tr>
+      <th>4.0</th>
+      <td>1.934649</td>
+      <td>0.063037</td>
+      <td>30.690833</td>
+      <td>0.0</td>
+      <td>1.8111</td>
+      <td>2.058199</td>
+    </tr>
+    <tr>
+      <th>5.0</th>
+      <td>2.065588</td>
+      <td>0.061803</td>
+      <td>33.422231</td>
+      <td>0.0</td>
+      <td>1.944456</td>
+      <td>2.186719</td>
+    </tr>
+    <tr>
+      <th>6.0</th>
+      <td>2.166252</td>
+      <td>0.064074</td>
+      <td>33.808421</td>
+      <td>0.0</td>
+      <td>2.040668</td>
+      <td>2.291835</td>
+    </tr>
+    <tr>
+      <th>7.0</th>
+      <td>2.263413</td>
+      <td>0.06352</td>
+      <td>35.632879</td>
+      <td>0.0</td>
+      <td>2.138916</td>
+      <td>2.387911</td>
+    </tr>
+    <tr>
+      <th>8.0</th>
+      <td>2.358293</td>
+      <td>0.06232</td>
+      <td>37.841747</td>
+      <td>0.0</td>
+      <td>2.236149</td>
+      <td>2.480438</td>
+    </tr>
+    <tr>
+      <th>9.0</th>
+      <td>2.354538</td>
+      <td>0.056481</td>
+      <td>41.687038</td>
+      <td>0.0</td>
+      <td>2.243837</td>
+      <td>2.465239</td>
+    </tr>
+    <tr>
+      <th>10.0</th>
+      <td>2.515993</td>
+      <td>0.060297</td>
+      <td>41.72651</td>
+      <td>0.0</td>
+      <td>2.397813</td>
+      <td>2.634174</td>
+    </tr>
+    <tr>
+      <th>11.0</th>
+      <td>2.552978</td>
+      <td>0.092825</td>
+      <td>27.503048</td>
+      <td>0.0</td>
+      <td>2.371044</td>
+      <td>2.734912</td>
+    </tr>
+    <tr>
+      <th>12.0</th>
+      <td>2.603939</td>
+      <td>0.090658</td>
+      <td>28.722574</td>
+      <td>0.0</td>
+      <td>2.426252</td>
+      <td>2.781625</td>
+    </tr>
+    <tr>
+      <th>13.0</th>
+      <td>2.578044</td>
+      <td>0.093739</td>
+      <td>27.502403</td>
+      <td>0.0</td>
+      <td>2.394319</td>
+      <td>2.761769</td>
+    </tr>
+    <tr>
+      <th>14.0</th>
+      <td>2.722969</td>
+      <td>0.092043</td>
+      <td>29.583642</td>
+      <td>0.0</td>
+      <td>2.542568</td>
+      <td>2.90337</td>
+    </tr>
+    <tr>
+      <th>15.0</th>
+      <td>2.909275</td>
+      <td>0.092438</td>
+      <td>31.472726</td>
+      <td>0.0</td>
+      <td>2.7281</td>
+      <td>3.09045</td>
+    </tr>
+    <tr>
+      <th>16.0</th>
+      <td>2.859325</td>
+      <td>0.092643</td>
+      <td>30.864025</td>
+      <td>0.0</td>
+      <td>2.677749</td>
+      <td>3.040901</td>
+    </tr>
+    <tr>
+      <th>17.0</th>
+      <td>2.907943</td>
+      <td>0.093763</td>
+      <td>31.013703</td>
+      <td>0.0</td>
+      <td>2.724171</td>
+      <td>3.091716</td>
+    </tr>
+    <tr>
+      <th>18.0</th>
+      <td>2.873678</td>
+      <td>0.093009</td>
+      <td>30.896721</td>
+      <td>0.0</td>
+      <td>2.691384</td>
+      <td>3.055973</td>
+    </tr>
+    <tr>
+      <th>19.0</th>
+      <td>2.882807</td>
+      <td>0.09253</td>
+      <td>31.155532</td>
+      <td>0.0</td>
+      <td>2.701453</td>
+      <td>3.064162</td>
+    </tr>
+    <tr>
+      <th>20.0</th>
+      <td>2.911501</td>
+      <td>0.091093</td>
+      <td>31.961938</td>
+      <td>0.0</td>
+      <td>2.732962</td>
+      <td>3.09004</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+</div>
+</div>
+<p>and plot the effects</p>
+<div id="5a672890" class="cell" data-execution_count="17">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>fit_saturated.iplot_aggregate(weighting <span class="op">=</span> <span class="st">"shares"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="difference-in-differences_files/figure-html/cell-18-output-1.png" width="949" height="564" class="figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="when-can-we-get-away-with-using-the-two-way-fixed-effects-regression" class="level3">
+<h3 class="anchored" data-anchor-id="when-can-we-get-away-with-using-the-two-way-fixed-effects-regression">When can we get away with using the two-way fixed effects regression?</h3>
+<p>We will motivate this section by lazily quoting the abstract of <a href="https://arxiv.org/abs/2503.05125">Lal (2025)</a>:</p>
+<blockquote class="blockquote">
+<p>The use of the two-way fixed effects regression in empirical social science was historically motivated by folk wisdom that it uncovers the Average Treatment effect on the Treated (ATT) as in the canonical two-period two-group case. This belief has come under scrutiny recently due to recent results in applied econometrics showing that it fails to uncover meaningful averages of heterogeneous treatment effects in the presence of effect heterogeneity over time and across adoption cohorts, and several heterogeneity-robust alternatives have been proposed. However, these estimators often have higher variance and are therefore under-powered for many applications, which poses a bias-variance tradeoff that is challenging for researchers to navigate. In this paper, we propose simple tests of linear restrictions that can be used to test for differences in dynamic treatment effects over cohorts, which allows us to test for when the two-way fixed effects regression is likely to yield biased estimates of the ATT.</p>
+</blockquote>
+<p>You can employ the proposed test after running a saturated event study by calling the <code>test_treatment_heterogeneity()</code> method:</p>
+<div id="aaa6fd1d" class="cell" data-execution_count="18">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>fit_saturated.test_treatment_heterogeneity()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="18">
+<pre><code>statistic    3256.497337
+pvalue          0.000000
+dtype: float64</code></pre>
+</div>
+</div>
+<p>In this case, we might be willing to rely on the simple TWFE model to produce unbiased estimates. If we’re not, two “new” difference-in-differences estimators are implemented (beyond the already-presented saturated Sun-Abraham approach) that produce unbiased estimates under staggered assignment and heterogeneous treatment effects: Gardner’s 2-Step Estimator and the Local Projections estimator from Dube et al.</p>
+</section>
+<section id="gardners-2-step-estimator" class="level3">
+<h3 class="anchored" data-anchor-id="gardners-2-step-estimator">Gardner’s 2-Step Estimator</h3>
+<p>To do the same via Gardners 2-stage estimator, we employ the the <code>pf.did2s()</code> function:</p>
+<div id="58b5fee2" class="cell" data-execution_count="19">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb22"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>fit_did2s <span class="op">=</span> pf.did2s(</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>    df_multi_cohort,</span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>    yname<span class="op">=</span><span class="st">"dep_var"</span>,</span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>    first_stage<span class="op">=</span><span class="st">"~ 0 | unit + year"</span>,</span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>    second_stage<span class="op">=</span><span class="st">"~i(rel_year,ref=-1.0)"</span>,</span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>    treatment<span class="op">=</span><span class="st">"treat"</span>,</span>
+<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a>    cluster<span class="op">=</span><span class="st">"state"</span>,</span>
+<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="local-projections-dube-et-al" class="level3">
+<h3 class="anchored" data-anchor-id="local-projections-dube-et-al">Local Projections (Dube et al)</h3>
+<p>Last, we can estimate the ATT for each time period via local projections by using the <code>lpdid()</code> function:</p>
+<div id="c96d4ce5" class="cell" data-execution_count="20">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>fit_lpdid <span class="op">=</span> pf.lpdid(</span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>    data<span class="op">=</span>df_multi_cohort,</span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>    yname<span class="op">=</span><span class="st">"dep_var"</span>,</span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>    gname<span class="op">=</span><span class="st">"g"</span>,</span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>    tname<span class="op">=</span><span class="st">"year"</span>,</span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>    idname<span class="op">=</span><span class="st">"unit"</span>,</span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span>{<span class="st">"CRV1"</span>: <span class="st">"state"</span>},</span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a>    pre_window<span class="op">=-</span><span class="dv">20</span>,</span>
+<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a>    post_window<span class="op">=</span><span class="dv">20</span>,</span>
+<span id="cb23-10"><a href="#cb23-10" aria-hidden="true" tabindex="-1"></a>    att<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb23-11"><a href="#cb23-11" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Let’s look at some results:</p>
+<div id="a1a23481" class="cell" data-execution_count="21">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb24"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>figsize <span class="op">=</span> [<span class="dv">1200</span>, <span class="dv">400</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="1865d97a" class="cell" data-execution_count="22">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb25"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>fit_twfe.iplot(</span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>    coord_flip<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>    title<span class="op">=</span><span class="st">"TWFE-Estimator"</span>,</span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>    figsize<span class="op">=</span>figsize,</span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a>    xintercept<span class="op">=</span><span class="fl">18.5</span>,</span>
+<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a>    yintercept<span class="op">=</span><span class="dv">0</span>,</span>
+<span id="cb25-7"><a href="#cb25-7" aria-hidden="true" tabindex="-1"></a>    labels<span class="op">=</span>rename_event_study_coefs(fit_twfe._coefnames),  <span class="co"># rename coefficients</span></span>
+<span id="cb25-8"><a href="#cb25-8" aria-hidden="true" tabindex="-1"></a>).show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+   <div id="0sRv6C"></div>
+   <script type="text/javascript" data-lets-plot-script="plot">
+   
+   (function() {
+   // ----------
+   
+   const forceImmediateRender = false;
+   const responsive = false;
+   
+   let sizing = {
+       width_mode: "MIN",
+       height_mode: "SCALED",
+       width: null, 
+       height: null 
+   };
+   
+   const preferredWidth = document.body.dataset.letsPlotPreferredWidth;
+   if (preferredWidth !== undefined) {
+       sizing = {
+           width_mode: 'FIXED',
+           height_mode: 'SCALED',
+           width: parseFloat(preferredWidth)
+       };
+   }
+   
+   const containerDiv = document.getElementById("0sRv6C");
+   let fig = null;
+   
+   function renderPlot() {
+       if (fig === null) {
+           const plotSpec = {
+"data":{
+"Coefficient":["rel_year::-inf","rel_year::-20.0","rel_year::-19.0","rel_year::-18.0","rel_year::-17.0","rel_year::-16.0","rel_year::-15.0","rel_year::-14.0","rel_year::-13.0","rel_year::-12.0","rel_year::-11.0","rel_year::-10.0","rel_year::-9.0","rel_year::-8.0","rel_year::-7.0","rel_year::-6.0","rel_year::-5.0","rel_year::-4.0","rel_year::-3.0","rel_year::-2.0","rel_year::0.0","rel_year::1.0","rel_year::2.0","rel_year::3.0","rel_year::4.0","rel_year::5.0","rel_year::6.0","rel_year::7.0","rel_year::8.0","rel_year::9.0","rel_year::10.0","rel_year::11.0","rel_year::12.0","rel_year::13.0","rel_year::14.0","rel_year::15.0","rel_year::16.0","rel_year::17.0","rel_year::18.0","rel_year::19.0","rel_year::20.0"],
+"Estimate":[0.1280530624356816,-0.09944466441186448,6.235199753501709E-4,0.0041247661866553684,0.02189908545943477,-0.036933408828411306,0.06957783836537086,0.03773442317027258,0.06177914337444653,0.08991270466787236,9.822487465295502E-4,-0.11303282051986834,-0.06922462711950585,-0.061289513093680255,-0.0020224309371402924,-0.05580979472639471,-0.06500868193870427,-0.00984995980723369,0.04633807990092391,0.015947312893723933,1.4064044908225413,1.6605518884803565,1.7287900538934713,1.8548389960026528,1.9586760781129011,2.0821612836358008,2.1910619949212764,2.2790728423713893,2.364593439335071,2.372162693677217,2.649271188090771,2.7535908715364057,2.813935474227433,2.756069650642718,2.8634270216427087,2.9866523455331992,2.9630322165964853,2.9725964211140496,2.9350513290125866,2.918706513680961,2.979701202491552],
+"2.5%":[-0.030807746498103084,-0.26475239089988456,-0.16774636908212087,-0.17740998253548135,-0.15147558902858788,-0.23303994198673786,-0.09489875317322578,-0.13752593665097146,-0.10689188479563178,-0.08187083528886142,-0.15907464527284126,-0.24439448942406938,-0.18465024083969267,-0.18342347916192348,-0.1327365037530943,-0.18666932874007547,-0.19614293346991066,-0.11728679973915693,-0.08103372597214172,-0.11646532546430118,1.2938224522235822,1.5289656538600842,1.6138766603497952,1.7368465942004028,1.8147261521226423,1.9529592610149542,2.0524404216411454,2.127291831867131,2.246027280469074,2.257721255734429,2.5356035511883035,2.6007745601483148,2.6534428144558433,2.5975022579559433,2.6643497148185857,2.797853336994778,2.790181663157508,2.7856582935921783,2.7446002811505545,2.7483541440935637,2.802096879471444],
+"97.5%":[0.2869138713694663,0.06586306207615561,0.16899340903282123,0.18565951490879207,0.19527375994745744,0.15917312432991523,0.23405442990396752,0.21299478299151664,0.23045017154452485,0.26169624462460617,0.16103914276590037,0.018328848384332727,0.04620098660068098,0.06084445297456296,0.12869164187881368,0.07504973928728603,0.06612556959250213,0.09758688012468955,0.17370988577398955,0.14835995125174906,1.5189865294215004,1.7921381231006288,1.8437034474371474,1.9728313978049028,2.10262600410316,2.211363306256647,2.3296835682014074,2.430853852875648,2.4831595982010684,2.486604131620005,2.7629388249932387,2.9064071829244966,2.974428133999023,2.914637043329493,3.0625043284668316,3.1754513540716207,3.1358827700354626,3.159534548635921,3.1255023768746186,3.0890588832683585,3.15730552551166],
+"Model":["dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year","dep_var ~ i(rel_year, ref=-1.0) | state + year"]
+},
+"mapping":{
+"x":"Coefficient",
+"y":"Estimate",
+"color":"Model"
+},
+"data_meta":{
+"series_annotations":[{
+"type":"int",
+"column":"level_0"
+},{
+"type":"int",
+"column":"index"
+},{
+"type":"str",
+"column":"Coefficient"
+},{
+"type":"float",
+"column":"Estimate"
+},{
+"type":"float",
+"column":"Std. Error"
+},{
+"type":"float",
+"column":"t value"
+},{
+"type":"float",
+"column":"Pr(>|t|)"
+},{
+"type":"float",
+"column":"2.5%"
+},{
+"type":"float",
+"column":"97.5%"
+},{
+"type":"str",
+"column":"Model"
+}]
+},
+"guides":{
+"y":{
+"title":"Estimate and 95.0% Confidence Interval"
+}
+},
+"ggsize":{
+"width":1200.0,
+"height":400.0
+},
+"theme":{
+"axis_text_x":{
+"angle":0.0,
+"blank":false
+}
+},
+"ggtitle":{
+"text":"TWFE-Estimator"
+},
+"kind":"plot",
+"scales":[],
+"layers":[{
+"geom":"point",
+"mapping":{
+},
+"position":{
+"name":"dodge",
+"width":0.5
+},
+"data_meta":{
+},
+"data":{
+}
+},{
+"geom":"errorbar",
+"mapping":{
+"ymin":"2.5%",
+"ymax":"97.5%"
+},
+"position":{
+"name":"dodge",
+"width":0.5
+},
+"data_meta":{
+},
+"width":0.05,
+"data":{
+}
+},{
+"geom":"hline",
+"mapping":{
+},
+"data_meta":{
+},
+"yintercept":0.0,
+"linetype":"dashed",
+"color":"black",
+"data":{
+}
+},{
+"geom":"vline",
+"mapping":{
+},
+"data_meta":{
+},
+"xintercept":18.5,
+"linetype":"dashed",
+"color":"black",
+"data":{
+}
+}],
+"metainfo_list":[],
+"spec_id":"3"
+};
+           window.letsPlotCall(function() { fig = LetsPlot.buildPlotFromProcessedSpecs(plotSpec, containerDiv, sizing); });
+       } else {
+           fig.updateView({});
+       }
+   }
+   
+   const renderImmediately = 
+       forceImmediateRender || (
+           sizing.width_mode === 'FIXED' && 
+           (sizing.height_mode === 'FIXED' || sizing.height_mode === 'SCALED')
+       );
+   
+   if (renderImmediately) {
+       renderPlot();
+   }
+   
+   if (!renderImmediately || responsive) {
+       // Set up observer for initial sizing or continuous monitoring
+       var observer = new ResizeObserver(function(entries) {
+           for (let entry of entries) {
+               if (entry.contentBoxSize && 
+                   entry.contentBoxSize[0].inlineSize > 0) {
+                   if (!responsive && observer) {
+                       observer.disconnect();
+                       observer = null;
+                   }
+                   renderPlot();
+                   if (!responsive) {
+                       break;
+                   }
+               }
+           }
+       });
+       
+       observer.observe(containerDiv);
+   }
+   
+   // ----------
+   })();
+   
+   </script>
+</div>
+</div>
+<div id="450db4ff" class="cell" data-execution_count="23">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb26"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>fit_lpdid.iplot(</span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>    coord_flip<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>    title<span class="op">=</span><span class="st">"Local-Projections-Estimator"</span>,</span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>    figsize<span class="op">=</span>figsize,</span>
+<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>    yintercept<span class="op">=</span><span class="dv">0</span>,</span>
+<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a>    xintercept<span class="op">=</span><span class="fl">18.5</span>,</span>
+<span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a>).show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+   <div id="6t5fan"></div>
+   <script type="text/javascript" data-lets-plot-script="plot">
+   
+   (function() {
+   // ----------
+   
+   const forceImmediateRender = false;
+   const responsive = false;
+   
+   let sizing = {
+       width_mode: "MIN",
+       height_mode: "SCALED",
+       width: null, 
+       height: null 
+   };
+   
+   const preferredWidth = document.body.dataset.letsPlotPreferredWidth;
+   if (preferredWidth !== undefined) {
+       sizing = {
+           width_mode: 'FIXED',
+           height_mode: 'SCALED',
+           width: parseFloat(preferredWidth)
+       };
+   }
+   
+   const containerDiv = document.getElementById("6t5fan");
+   let fig = null;
+   
+   function renderPlot() {
+       if (fig === null) {
+           const plotSpec = {
+"data":{
+"Coefficient":["time_to_treatment::-20","time_to_treatment::-19","time_to_treatment::-18","time_to_treatment::-17","time_to_treatment::-16","time_to_treatment::-15","time_to_treatment::-14","time_to_treatment::-13","time_to_treatment::-12","time_to_treatment::-11","time_to_treatment::-10","time_to_treatment::-9","time_to_treatment::-8","time_to_treatment::-7","time_to_treatment::-6","time_to_treatment::-5","time_to_treatment::-4","time_to_treatment::-3","time_to_treatment::-2","time_to_treatment::0","time_to_treatment::1","time_to_treatment::2","time_to_treatment::3","time_to_treatment::4","time_to_treatment::5","time_to_treatment::6","time_to_treatment::7","time_to_treatment::8","time_to_treatment::9","time_to_treatment::10","time_to_treatment::11","time_to_treatment::12","time_to_treatment::13","time_to_treatment::14","time_to_treatment::15","time_to_treatment::16","time_to_treatment::17","time_to_treatment::18","time_to_treatment::19","time_to_treatment::20"],
+"Estimate":[-0.07305529455102057,-0.0057475394007537135,0.019862595898581595,0.0755613194783191,-0.05127756268425213,0.04789121634978956,0.030061024401231356,0.03986968384484262,0.048457897289846806,-0.012820133350277539,0.013685361040923886,0.005199898128597284,0.0164162774648373,0.05641673885681884,0.0016957198969680817,-0.06496834258802511,0.010741616233677911,0.04275993550129887,0.003229015933287153,1.452023474827307,1.6676220565025497,1.7336997045580052,1.8436118199851643,1.9620937493794017,2.0880835635857604,2.1819660437275696,2.254678404642132,2.3484735871275646,2.3603848643067784,2.516113933361753,2.552977994310091,2.603938509344384,2.5780442879020358,2.7229688455567262,2.9092747255962252,2.8593251547084924,2.907943168261159,2.8736781792414066,2.8828072503191615,2.911501018068635],
+"2.5%":[-0.2272172766523859,-0.1670700586084853,-0.17114762452140675,-0.09839081142269912,-0.22467756818724258,-0.1150076442883886,-0.13013451064997683,-0.13448828156159562,-0.11740856214252182,-0.17782121326670994,-0.11574797121541744,-0.11008024082082965,-0.10776451441715584,-0.06865967673907453,-0.12155178659801848,-0.18968244634962642,-0.09892973087903473,-0.07749915399392934,-0.1186507251302543,1.3363431157797139,1.5248748576801467,1.625286020209566,1.729437327544061,1.8189029384537494,1.9622427442587915,2.0418839300437477,2.1170793502306986,2.2273398370559057,2.2206593574383984,2.3975249304388946,2.3711839927988128,2.4122317211617528,2.40189162038278,2.5167480629209837,2.7210109316903197,2.6739497917518142,2.7277574304593997,2.658860445512023,2.671979873230292,2.7125289161146497],
+"97.5%":[0.08110668755034477,0.1555749798069779,0.2108728163185699,0.2495134503793373,0.12212244281873832,0.2107900769879677,0.19025655945243952,0.21422764925128088,0.21432435672221545,0.15218094656615486,0.1431186932972652,0.12048003707802421,0.14059706934683044,0.1814931544527122,0.12494322639195464,0.05974576117357619,0.12041296334639054,0.1630190249965271,0.1251087569968286,1.5677038338749003,1.8103692553249526,1.8421133889064443,1.9577863124262675,2.105284560305054,2.2139243829127295,2.3220481574113916,2.3922774590535654,2.4696073371992235,2.5001103711751584,2.6347029362846115,2.734771995821369,2.795645297527015,2.7541969554212917,2.9291896281924688,3.0975385195021308,3.0447005176651705,3.0881289060629187,3.08849591297079,3.093634627408031,3.11047312002262],
+"Model":["lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid"]
+},
+"mapping":{
+"x":"Coefficient",
+"y":"Estimate",
+"color":"Model"
+},
+"data_meta":{
+"series_annotations":[{
+"type":"int",
+"column":"index"
+},{
+"type":"str",
+"column":"Coefficient"
+},{
+"type":"float",
+"column":"Estimate"
+},{
+"type":"float",
+"column":"Std. Error"
+},{
+"type":"float",
+"column":"t value"
+},{
+"type":"float",
+"column":"Pr(>|t|)"
+},{
+"type":"float",
+"column":"2.5%"
+},{
+"type":"float",
+"column":"97.5%"
+},{
+"type":"float",
+"column":"N"
+},{
+"type":"str",
+"column":"Model"
+}]
+},
+"guides":{
+"y":{
+"title":"Estimate and 95.0% Confidence Interval"
+}
+},
+"ggsize":{
+"width":1200.0,
+"height":400.0
+},
+"theme":{
+"axis_text_x":{
+"angle":0.0,
+"blank":false
+}
+},
+"ggtitle":{
+"text":"Local-Projections-Estimator"
+},
+"kind":"plot",
+"scales":[],
+"layers":[{
+"geom":"point",
+"mapping":{
+},
+"position":{
+"name":"dodge",
+"width":0.5
+},
+"data_meta":{
+},
+"data":{
+}
+},{
+"geom":"errorbar",
+"mapping":{
+"ymin":"2.5%",
+"ymax":"97.5%"
+},
+"position":{
+"name":"dodge",
+"width":0.5
+},
+"data_meta":{
+},
+"width":0.05,
+"data":{
+}
+},{
+"geom":"hline",
+"mapping":{
+},
+"data_meta":{
+},
+"yintercept":0.0,
+"linetype":"dashed",
+"color":"black",
+"data":{
+}
+},{
+"geom":"vline",
+"mapping":{
+},
+"data_meta":{
+},
+"xintercept":18.5,
+"linetype":"dashed",
+"color":"black",
+"data":{
+}
+}],
+"metainfo_list":[],
+"spec_id":"4"
+};
+           window.letsPlotCall(function() { fig = LetsPlot.buildPlotFromProcessedSpecs(plotSpec, containerDiv, sizing); });
+       } else {
+           fig.updateView({});
+       }
+   }
+   
+   const renderImmediately = 
+       forceImmediateRender || (
+           sizing.width_mode === 'FIXED' && 
+           (sizing.height_mode === 'FIXED' || sizing.height_mode === 'SCALED')
+       );
+   
+   if (renderImmediately) {
+       renderPlot();
+   }
+   
+   if (!renderImmediately || responsive) {
+       // Set up observer for initial sizing or continuous monitoring
+       var observer = new ResizeObserver(function(entries) {
+           for (let entry of entries) {
+               if (entry.contentBoxSize && 
+                   entry.contentBoxSize[0].inlineSize > 0) {
+                   if (!responsive && observer) {
+                       observer.disconnect();
+                       observer = null;
+                   }
+                   renderPlot();
+                   if (!responsive) {
+                       break;
+                   }
+               }
+           }
+       });
+       
+       observer.observe(containerDiv);
+   }
+   
+   // ----------
+   })();
+   
+   </script>
+</div>
+</div>
+<p>What if we are not interested in the ATT per treatment period, but in a pooled effects?</p>
+<div id="4e4f8d63" class="cell" data-execution_count="24">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb27"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>fit_twfe <span class="op">=</span> pf.feols(</span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">"dep_var ~ i(treat) | unit + year"</span>,</span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>    df_multi_cohort,</span>
+<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span>{<span class="st">"CRV1"</span>: <span class="st">"state"</span>},</span>
+<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb27-6"><a href="#cb27-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-7"><a href="#cb27-7" aria-hidden="true" tabindex="-1"></a>fit_did2s <span class="op">=</span> pf.did2s(</span>
+<span id="cb27-8"><a href="#cb27-8" aria-hidden="true" tabindex="-1"></a>    df_multi_cohort,</span>
+<span id="cb27-9"><a href="#cb27-9" aria-hidden="true" tabindex="-1"></a>    yname<span class="op">=</span><span class="st">"dep_var"</span>,</span>
+<span id="cb27-10"><a href="#cb27-10" aria-hidden="true" tabindex="-1"></a>    first_stage<span class="op">=</span><span class="st">"~ 0 | unit + year"</span>,</span>
+<span id="cb27-11"><a href="#cb27-11" aria-hidden="true" tabindex="-1"></a>    second_stage<span class="op">=</span><span class="st">"~i(treat)"</span>,</span>
+<span id="cb27-12"><a href="#cb27-12" aria-hidden="true" tabindex="-1"></a>    treatment<span class="op">=</span><span class="st">"treat"</span>,</span>
+<span id="cb27-13"><a href="#cb27-13" aria-hidden="true" tabindex="-1"></a>    cluster<span class="op">=</span><span class="st">"state"</span>,</span>
+<span id="cb27-14"><a href="#cb27-14" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb27-15"><a href="#cb27-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-16"><a href="#cb27-16" aria-hidden="true" tabindex="-1"></a>fit_lpdid <span class="op">=</span> pf.lpdid(</span>
+<span id="cb27-17"><a href="#cb27-17" aria-hidden="true" tabindex="-1"></a>    data<span class="op">=</span>df_multi_cohort,</span>
+<span id="cb27-18"><a href="#cb27-18" aria-hidden="true" tabindex="-1"></a>    yname<span class="op">=</span><span class="st">"dep_var"</span>,</span>
+<span id="cb27-19"><a href="#cb27-19" aria-hidden="true" tabindex="-1"></a>    gname<span class="op">=</span><span class="st">"g"</span>,</span>
+<span id="cb27-20"><a href="#cb27-20" aria-hidden="true" tabindex="-1"></a>    tname<span class="op">=</span><span class="st">"year"</span>,</span>
+<span id="cb27-21"><a href="#cb27-21" aria-hidden="true" tabindex="-1"></a>    idname<span class="op">=</span><span class="st">"unit"</span>,</span>
+<span id="cb27-22"><a href="#cb27-22" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span>{<span class="st">"CRV1"</span>: <span class="st">"state"</span>},</span>
+<span id="cb27-23"><a href="#cb27-23" aria-hidden="true" tabindex="-1"></a>    pre_window<span class="op">=-</span><span class="dv">20</span>,</span>
+<span id="cb27-24"><a href="#cb27-24" aria-hidden="true" tabindex="-1"></a>    post_window<span class="op">=</span><span class="dv">20</span>,</span>
+<span id="cb27-25"><a href="#cb27-25" aria-hidden="true" tabindex="-1"></a>    att<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb27-26"><a href="#cb27-26" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb27-27"><a href="#cb27-27" aria-hidden="true" tabindex="-1"></a>pd.concat(</span>
+<span id="cb27-28"><a href="#cb27-28" aria-hidden="true" tabindex="-1"></a>    [</span>
+<span id="cb27-29"><a href="#cb27-29" aria-hidden="true" tabindex="-1"></a>        fit_twfe.tidy().assign(estimator<span class="op">=</span><span class="st">"TWFE"</span>),</span>
+<span id="cb27-30"><a href="#cb27-30" aria-hidden="true" tabindex="-1"></a>        fit_did2s.tidy().assign(estimator<span class="op">=</span><span class="st">"DID2s"</span>),</span>
+<span id="cb27-31"><a href="#cb27-31" aria-hidden="true" tabindex="-1"></a>        fit_lpdid.tidy().assign(estimator<span class="op">=</span><span class="st">"LPDID"</span>).drop(<span class="st">"N"</span>, axis<span class="op">=</span><span class="dv">1</span>),</span>
+<span id="cb27-32"><a href="#cb27-32" aria-hidden="true" tabindex="-1"></a>    ],</span>
+<span id="cb27-33"><a href="#cb27-33" aria-hidden="true" tabindex="-1"></a>    axis<span class="op">=</span><span class="dv">0</span>,</span>
+<span id="cb27-34"><a href="#cb27-34" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="24">
+<div>
+
+<table class="dataframe table table-sm table-striped small">
+  <thead>
+    <tr>
+      <th></th>
+      <th>Estimate</th>
+      <th>Std. Error</th>
+      <th>t value</th>
+      <th>Pr(&gt;|t|)</th>
+      <th>2.5%</th>
+      <th>97.5%</th>
+      <th>estimator</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>treat::True</th>
+      <td>1.982540</td>
+      <td>0.019338</td>
+      <td>102.521988</td>
+      <td>0.0</td>
+      <td>1.943426</td>
+      <td>2.021655</td>
+      <td>TWFE</td>
+    </tr>
+    <tr>
+      <th>treat::True</th>
+      <td>2.230482</td>
+      <td>0.024709</td>
+      <td>90.271446</td>
+      <td>0.0</td>
+      <td>2.182052</td>
+      <td>2.278911</td>
+      <td>DID2s</td>
+    </tr>
+    <tr>
+      <th>treat_diff</th>
+      <td>2.506746</td>
+      <td>0.071420</td>
+      <td>35.098900</td>
+      <td>0.0</td>
+      <td>2.362287</td>
+      <td>2.651206</td>
+      <td>LPDID</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+</div>
+</div>
+
+
+</section>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

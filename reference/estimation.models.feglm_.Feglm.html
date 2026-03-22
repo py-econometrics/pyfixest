@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.8.25">
+<meta name="generator" content="quarto-1.8.27">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -72,7 +72,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="../site_libs/quarto-html/anchor.min.js"></script>
 <link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-7b89279ff1a6dce999919e0e67d4d9ec.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-ed96de9b727972fe78a7b5d16c58bf87.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
 <link href="../site_libs/bootstrap/bootstrap-381776df98abee29e77bfaddc64fade2.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
@@ -115,10 +115,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <header id="quarto-header" class="headroom fixed-top">
     <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
       <div class="navbar-container container-fluid">
-      <div class="navbar-brand-container mx-auto">
-    <a href="../index.html" class="navbar-brand navbar-brand-logo">
-    </a>
-  </div>
             <div id="quarto-search" class="" title="Search"></div>
           <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
   <span class="navbar-toggler-icon"></span>
@@ -130,13 +126,128 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span class="menu-text">PyFixest</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="../quickstart.html"> 
-<span class="menu-text">Quickstart</span></a>
+    <a class="nav-link" href="../getting-started.html"> 
+<span class="menu-text">Getting Started</span></a>
   </li>  
   <li class="nav-item">
     <a class="nav-link active" href="../reference/index.html" aria-current="page"> 
 <span class="menu-text">Function Reference</span></a>
   </li>  
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-tutorials" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Tutorials</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-tutorials">    
+        <li>
+    <a class="dropdown-item" href="../tutorials/index.html">
+ <span class="dropdown-text">All Tutorials</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li>
+    <a class="dropdown-item" href="../tutorials/ols-fixed-effects.html">
+ <span class="dropdown-text">OLS with Fixed Effects</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../tutorials/formula-syntax.html">
+ <span class="dropdown-text">Formula Syntax</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../tutorials/regression-tables.html">
+ <span class="dropdown-text">Regression Tables</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../tutorials/difference-in-differences.html">
+ <span class="dropdown-text">Difference-in-Differences</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../tutorials/quantile-regression.html">
+ <span class="dropdown-text">Quantile Regression</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-guides" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Guides</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-guides">    
+        <li>
+    <a class="dropdown-item" href="../how-to/index.html">
+ <span class="dropdown-text">All Guides</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li>
+    <a class="dropdown-item" href="../how-to/marginaleffects.html">
+ <span class="dropdown-text">Marginal Effects &amp; Hypothesis Testing</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../how-to/regression_decomposition.html">
+ <span class="dropdown-text">Regression Decomposition</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../how-to/pyfixest_gpu.html">
+ <span class="dropdown-text">PyFixest on the GPU via JAX</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../pyfixest-gpu-cupy.html">
+ <span class="dropdown-text">PyFixest on the GPU via CuPy</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../how-to/stata-2-pyfixest.html">
+ <span class="dropdown-text">Compare Stata &amp; PyFixest</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../how-to/panel_variance_reduction.html">
+ <span class="dropdown-text">Variance Reduction in AB Tests</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-explanation" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Explanation</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-explanation">    
+        <li>
+    <a class="dropdown-item" href="../explanation/difficult-fixed-effects.html">
+ <span class="dropdown-text">When Are Fixed Effects Problems Difficult?</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../explanation/ssc.html">
+ <span class="dropdown-text">On Small Sample Corrections</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../explanation/compare-fixest-pyfixest.html">
+ <span class="dropdown-text">Does PyFixest Match fixest?</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-textbook-replications" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Textbook Replications</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-textbook-replications">    
+        <li>
+    <a class="dropdown-item" href="../textbook-replications/index.html">
+ <span class="dropdown-text">All Textbook Replications</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li>
+    <a class="dropdown-item" href="../textbook-replications/brave_true.html">
+ <span class="dropdown-text">Causal Inference for the Brave and True</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../textbook-replications/mixtape.html">
+ <span class="dropdown-text">Causal Inference: The Mixtape</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../textbook-replications/replicating-the-effect.html">
+ <span class="dropdown-text">The Effect</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../textbook-replications/resources.html">
+ <span class="dropdown-text">Other Resources</span></a>
+  </li>  
+    </ul>
+  </li>
   <li class="nav-item">
     <a class="nav-link" href="../changelog.html"> 
 <span class="menu-text">Changelog</span></a>
@@ -153,73 +264,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <a class="nav-link" href="../pyfixest-sprint.html"> 
 <span class="menu-text">Sprint 2026</span></a>
   </li>  
-  <li class="nav-item dropdown ">
-    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-learn-more" role="link" data-bs-toggle="dropdown" aria-expanded="false">
- <span class="menu-text">Learn more</span>
-    </a>
-    <ul class="dropdown-menu" aria-labelledby="nav-menu-learn-more">    
-        <li>
-    <a class="dropdown-item" href="../table-layout.html">
- <span class="dropdown-text">Regression Tables and Summary Statistics</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../marginaleffects.html">
- <span class="dropdown-text">Hypothesis Testing and Marginal Effects</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../difference-in-differences.html">
- <span class="dropdown-text">Difference-in-Differences Estimation</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../multiple_testing.html">
- <span class="dropdown-text">Multiple Testing Corrections</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../regression_decomposition.html">
- <span class="dropdown-text">Regression Decomposition</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../ssc.html">
- <span class="dropdown-text">On Small Sample Corrections</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../quantile-regression.html">
- <span class="dropdown-text">Quantile Regression</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../stata-2-pyfixest.html">
- <span class="dropdown-text">Compare Stata &amp; PyFixest</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../pyfixest-gpu-cupy.html">
- <span class="dropdown-text">PyFixest on the GPU via CuPy</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../pyfixest_gpu.html">
- <span class="dropdown-text">PyFixest on the GPU via JAX</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../panel_variance_reduction.html">
- <span class="dropdown-text">Variance Reduction in AB Tests</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../resources.html">
- <span class="dropdown-text">Other Resources around PyFixest</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../replicating-the-effect.html">
- <span class="dropdown-text">Replicating ‘The Effect’ with PyFixest</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../mixtape.html">
- <span class="dropdown-text">Replicating ‘The Mixtape’ with PyFixest</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../brave_true.html">
- <span class="dropdown-text">Replicating ‘Causal Inference for the Brave and True’ with PyFixest</span></a>
-  </li>  
-    </ul>
-  </li>
 </ul>
             <ul class="navbar-nav navbar-nav-scroll ms-auto">
   <li class="nav-item">
@@ -257,10 +301,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
 <!-- sidebar -->
   <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
-    <div class="pt-lg-2 mt-2 text-left sidebar-header">
-      <a href="../index.html" class="sidebar-logo-link">
-      </a>
-      </div>
     <div class="sidebar-menu-container"> 
     <ul class="list-unstyled mt-1">
         <li class="sidebar-item">
@@ -504,8 +544,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.internals.detect_singletons_.detect_singletons.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.internals.detect_singletons_.detect_singletons</span></a>
+  <a href="../reference/core.detect_singletons.detect_singletons.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">core.detect_singletons.detect_singletons</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -612,8 +652,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <table class="caption-top table">
 <colgroup>
 <col style="width: 2%">
-<col style="width: 9%">
-<col style="width: 84%">
+<col style="width: 8%">
+<col style="width: 85%">
 <col style="width: 3%">
 </colgroup>
 <thead>
@@ -663,13 +703,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tr>
 <tr class="odd">
 <td>se_fit</td>
-<td>Optional[bool]</td>
+<td>bool | None</td>
 <td>If True, the standard error of the prediction is computed. Only feasible for models without fixed effects. GLMs are not supported. Defaults to False.</td>
 <td><code>False</code></td>
 </tr>
 <tr class="even">
 <td>interval</td>
-<td>Optional[PredictionErrorOptions]</td>
+<td>PredictionErrorOptions | None</td>
 <td>The type of interval to compute. Can be either ‘prediction’ or None.</td>
 <td><code>None</code></td>
 </tr>

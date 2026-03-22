@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.8.25">
+<meta name="generator" content="quarto-1.8.27">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -72,7 +72,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="site_libs/quarto-html/anchor.min.js"></script>
 <link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="site_libs/quarto-html/quarto-syntax-highlighting-7b89279ff1a6dce999919e0e67d4d9ec.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-ed96de9b727972fe78a7b5d16c58bf87.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
 <link href="site_libs/bootstrap/bootstrap-381776df98abee29e77bfaddc64fade2.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
@@ -115,10 +115,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <header id="quarto-header" class="headroom fixed-top">
     <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
       <div class="navbar-container container-fluid">
-      <div class="navbar-brand-container mx-auto">
-    <a href="./index.html" class="navbar-brand navbar-brand-logo">
-    </a>
-  </div>
             <div id="quarto-search" class="" title="Search"></div>
           <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
   <span class="navbar-toggler-icon"></span>
@@ -130,13 +126,128 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span class="menu-text">PyFixest</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./quickstart.html"> 
-<span class="menu-text">Quickstart</span></a>
+    <a class="nav-link" href="./getting-started.html"> 
+<span class="menu-text">Getting Started</span></a>
   </li>  
   <li class="nav-item">
     <a class="nav-link" href="./reference/index.html"> 
 <span class="menu-text">Function Reference</span></a>
   </li>  
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-tutorials" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Tutorials</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-tutorials">    
+        <li>
+    <a class="dropdown-item" href="./tutorials/index.html">
+ <span class="dropdown-text">All Tutorials</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li>
+    <a class="dropdown-item" href="./tutorials/ols-fixed-effects.html">
+ <span class="dropdown-text">OLS with Fixed Effects</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./tutorials/formula-syntax.html">
+ <span class="dropdown-text">Formula Syntax</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./tutorials/regression-tables.html">
+ <span class="dropdown-text">Regression Tables</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./tutorials/difference-in-differences.html">
+ <span class="dropdown-text">Difference-in-Differences</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./tutorials/quantile-regression.html">
+ <span class="dropdown-text">Quantile Regression</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-guides" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Guides</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-guides">    
+        <li>
+    <a class="dropdown-item" href="./how-to/index.html">
+ <span class="dropdown-text">All Guides</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li>
+    <a class="dropdown-item" href="./how-to/marginaleffects.html">
+ <span class="dropdown-text">Marginal Effects &amp; Hypothesis Testing</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./how-to/regression_decomposition.html">
+ <span class="dropdown-text">Regression Decomposition</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./how-to/pyfixest_gpu.html">
+ <span class="dropdown-text">PyFixest on the GPU via JAX</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./pyfixest-gpu-cupy.html">
+ <span class="dropdown-text">PyFixest on the GPU via CuPy</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./how-to/stata-2-pyfixest.html">
+ <span class="dropdown-text">Compare Stata &amp; PyFixest</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./how-to/panel_variance_reduction.html">
+ <span class="dropdown-text">Variance Reduction in AB Tests</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-explanation" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Explanation</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-explanation">    
+        <li>
+    <a class="dropdown-item" href="./explanation/difficult-fixed-effects.html">
+ <span class="dropdown-text">When Are Fixed Effects Problems Difficult?</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./explanation/ssc.html">
+ <span class="dropdown-text">On Small Sample Corrections</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./explanation/compare-fixest-pyfixest.html">
+ <span class="dropdown-text">Does PyFixest Match fixest?</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-textbook-replications" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Textbook Replications</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-textbook-replications">    
+        <li>
+    <a class="dropdown-item" href="./textbook-replications/index.html">
+ <span class="dropdown-text">All Textbook Replications</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li>
+    <a class="dropdown-item" href="./textbook-replications/brave_true.html">
+ <span class="dropdown-text">Causal Inference for the Brave and True</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./textbook-replications/mixtape.html">
+ <span class="dropdown-text">Causal Inference: The Mixtape</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./textbook-replications/replicating-the-effect.html">
+ <span class="dropdown-text">The Effect</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./textbook-replications/resources.html">
+ <span class="dropdown-text">Other Resources</span></a>
+  </li>  
+    </ul>
+  </li>
   <li class="nav-item">
     <a class="nav-link" href="./changelog.html"> 
 <span class="menu-text">Changelog</span></a>
@@ -153,73 +264,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <a class="nav-link" href="./pyfixest-sprint.html"> 
 <span class="menu-text">Sprint 2026</span></a>
   </li>  
-  <li class="nav-item dropdown ">
-    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-learn-more" role="link" data-bs-toggle="dropdown" aria-expanded="false">
- <span class="menu-text">Learn more</span>
-    </a>
-    <ul class="dropdown-menu" aria-labelledby="nav-menu-learn-more">    
-        <li>
-    <a class="dropdown-item" href="./table-layout.html">
- <span class="dropdown-text">Regression Tables and Summary Statistics</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="./marginaleffects.html">
- <span class="dropdown-text">Hypothesis Testing and Marginal Effects</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="./difference-in-differences.html">
- <span class="dropdown-text">Difference-in-Differences Estimation</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="./multiple_testing.html">
- <span class="dropdown-text">Multiple Testing Corrections</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="./regression_decomposition.html">
- <span class="dropdown-text">Regression Decomposition</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="./ssc.html">
- <span class="dropdown-text">On Small Sample Corrections</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="./quantile-regression.html">
- <span class="dropdown-text">Quantile Regression</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="./stata-2-pyfixest.html">
- <span class="dropdown-text">Compare Stata &amp; PyFixest</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="./pyfixest-gpu-cupy.html">
- <span class="dropdown-text">PyFixest on the GPU via CuPy</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="./pyfixest_gpu.html">
- <span class="dropdown-text">PyFixest on the GPU via JAX</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="./panel_variance_reduction.html">
- <span class="dropdown-text">Variance Reduction in AB Tests</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="./resources.html">
- <span class="dropdown-text">Other Resources around PyFixest</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="./replicating-the-effect.html">
- <span class="dropdown-text">Replicating ‘The Effect’ with PyFixest</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="./mixtape.html">
- <span class="dropdown-text">Replicating ‘The Mixtape’ with PyFixest</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="./brave_true.html">
- <span class="dropdown-text">Replicating ‘Causal Inference for the Brave and True’ with PyFixest</span></a>
-  </li>  
-    </ul>
-  </li>
 </ul>
             <ul class="navbar-nav navbar-nav-scroll ms-auto">
   <li class="nav-item">
@@ -260,7 +304,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p><a href="https://opensource.org/license/mit"><img src="https://img.shields.io/badge/License-MIT-green.svg" class="img-fluid" alt="License"></a> <img src="https://img.shields.io/badge/Python-3.9–3.14-blue" class="img-fluid" alt="Python Versions"> <a href="https://pypi.org/project/pyfixest/"><img src="https://img.shields.io/pypi/v/pyfixest.svg" class="img-fluid" alt="PyPI -Version"></a> <a href="https://discord.gg/gBAydeDMVK"><img src="https://img.shields.io/discord/1259933360726216754.svg?label=&amp;logo=discord&amp;logoColor=ffffff&amp;color=7389D8&amp;labelColor=6A7EC2&amp;style=flat-square" class="img-fluid" alt="Project Chat"></a> <a href="https://codecov.io/gh/py-econometrics/pyfixest"><img src="https://codecov.io/gh/py-econometrics/pyfixest/branch/master/graph/badge.svg" class="img-fluid" alt="image"></a> <a href="https://github.com/py-econometrics/pyfixest/issues?q=is%3Aissue+is%3Aopen+label%3Abug"><img src="https://img.shields.io/github/issues/py-econometrics/pyfixest/bug?color=red&amp;label=Bugs.png" class="img-fluid" alt="Known Bugs"></a> <a href="https://github.com/py-econometrics/pyfixest/issues"><img src="https://img.shields.io/github/issues/py-econometrics/pyfixest.png" class="img-fluid" alt="File an Issue"></a> <a href="https://github.com/astral-sh/ruff"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json" class="img-fluid" alt="Ruff"></a> <a href="https://pixi.sh"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/prefix-dev/pixi/main/assets/badge/v0.json&amp;style=flat-square" class="img-fluid" alt="Pixi Badge"></a> <a href="https://github.com/py-econometrics/pyfixest?tab=readme-ov-file#support-pyfixest"><img src="https://img.shields.io/static/v1?label=GiveDirectly&amp;message=Donate&amp;color=blue&amp;style=flat-square.png" class="img-fluid" alt="Donate | GiveDirectly"></a> <a href="https://pypi.org/project/pyfixest"><img src="https://img.shields.io/pypi/v/pyfixest.png" class="img-fluid" alt="PyPI"></a> <a href="https://github.com/py-econometrics/pyfixest?tab=readme-ov-file#how-to-cite"><img src="https://img.shields.io/badge/Cite%20as-PyFixest-blue.png" class="img-fluid" alt="Citation"></a> <a href="https://pyfixest.org/pyfixest.html"><img src="https://img.shields.io/badge/Cite%20as-PyFixest-green.png" class="img-fluid" alt="Documentation"></a> <a href="https://pyfixest.org/reference/"><img src="https://img.shields.io/badge/Cite%20as-PyFixest-yellow.png" class="img-fluid" alt="Function Reference"></a> <a href="https://deepwiki.com/py-econometrics/pyfixest"><img src="https://img.shields.io/badge/DeepWiki-pyfixest-blue.png" class="img-fluid" alt="DeepWiki"></a></p>
 <p><code>PyFixest</code> is a Python package for fast high-dimensional fixed effects regression.</p>
 <p>The package aims to mimic the syntax and functionality of <a href="https://sites.google.com/site/laurentrberge/">Laurent Bergé’s</a> formidable <a href="https://github.com/lrberge/fixest">fixest</a> package as closely as Python allows: if you know <code>fixest</code> well, the goal is that you won’t have to read the docs to get started! In particular, this means that all of <code>fixest's</code> defaults are mirrored by <code>PyFixest</code>.</p>
-<p>For a quick introduction, you can take a look at the <a href="https://pyfixest.org/quickstart.html">quickstart</a> or the regression chapter of <a href="https://aeturrell.github.io/coding-for-economists/econmt-regression.html#imports">Coding for Economists</a>. You can find documentation of all user facing functions in the <a href="https://pyfixest.org/reference/">Function Reference</a> section of the <a href="https://pyfixest.org/pyfixest.html">documentation</a>.</p>
+<p>For a quick introduction, you can take a look at the <a href="./getting-started.html">Getting Started</a> guide and <a href="./tutorials/index.html">Tutorials</a>, or the regression chapter of <a href="https://aeturrell.github.io/coding-for-economists/econmt-regression.html#imports">Coding for Economists</a>. You can find documentation of all user facing functions in the <a href="./reference/index.html">Function Reference</a> section of the documentation.</p>
 <p>For questions on <code>PyFixest</code>, head on over to our <a href="https://github.com/py-econometrics/pyfixest/discussions">github discussions</a>, or (more informally) join our <a href="https://discord.gg/gBAydeDMVK">Discord server</a>.</p>
 <section id="support-pyfixest" class="level2">
 <h2 class="anchored" data-anchor-id="support-pyfixest">Support PyFixest</h2>

@@ -7,7 +7,7 @@ User facing estimation functions
 
 | | |
 | --- | --- |
-| [estimation.api.feols.feols](estimation.api.feols.feols.qmd#pyfixest.estimation.api.feols.feols) | Estimate a linear regression models with fixed effects using fixest formula syntax. |
+| [estimation.api.feols.feols](estimation.api.feols.feols.qmd#pyfixest.estimation.api.feols.feols) | Estimate a linear regression model with fixed effects using fixest formula syntax. |
 | [estimation.api.fepois.fepois](estimation.api.fepois.fepois.qmd#pyfixest.estimation.api.fepois.fepois) | Estimate Poisson regression model with fixed effects using the `ppmlhdfe` algorithm. |
 | [estimation.api.feglm.feglm](estimation.api.feglm.feglm.qmd#pyfixest.estimation.api.feglm.feglm) | Estimate GLM regression models with fixed effects. |
 | [estimation.api.quantreg.quantreg](estimation.api.quantreg.quantreg.qmd#pyfixest.estimation.api.quantreg.quantreg) | Fit a quantile regression model using the interior point algorithm from Portnoy and Koenker (1997). |
@@ -69,5 +69,5 @@ PyFixest internals and utilities
 | | |
 | --- | --- |
 | [estimation.internals.demean_.demean](estimation.internals.demean_.demean.qmd#pyfixest.estimation.internals.demean_.demean) | Demean an array. |
-| [estimation.internals.detect_singletons_.detect_singletons](estimation.internals.detect_singletons_.detect_singletons.qmd#pyfixest.estimation.internals.detect_singletons_.detect_singletons) | Detect singleton fixed effects in a dataset. |
+| [core.detect_singletons.detect_singletons](core.detect_singletons.detect_singletons.qmd#pyfixest.core.detect_singletons.detect_singletons) | Detect singleton fixed effects in a dataset. |
 | [estimation.deprecated.model_matrix_fixest_.model_matrix_fixest](estimation.deprecated.model_matrix_fixest_.model_matrix_fixest.qmd#pyfixest.estimation.deprecated.model_matrix_fixest_.model_matrix_fixest) | Create model matrices for fixed effects estimation. |

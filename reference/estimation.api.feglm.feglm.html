@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.8.25">
+<meta name="generator" content="quarto-1.8.27">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -72,7 +72,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="../site_libs/quarto-html/anchor.min.js"></script>
 <link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-7b89279ff1a6dce999919e0e67d4d9ec.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-ed96de9b727972fe78a7b5d16c58bf87.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
 <link href="../site_libs/bootstrap/bootstrap-381776df98abee29e77bfaddc64fade2.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
@@ -118,10 +118,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <header id="quarto-header" class="headroom fixed-top">
     <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
       <div class="navbar-container container-fluid">
-      <div class="navbar-brand-container mx-auto">
-    <a href="../index.html" class="navbar-brand navbar-brand-logo">
-    </a>
-  </div>
             <div id="quarto-search" class="" title="Search"></div>
           <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
   <span class="navbar-toggler-icon"></span>
@@ -133,13 +129,128 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span class="menu-text">PyFixest</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="../quickstart.html"> 
-<span class="menu-text">Quickstart</span></a>
+    <a class="nav-link" href="../getting-started.html"> 
+<span class="menu-text">Getting Started</span></a>
   </li>  
   <li class="nav-item">
     <a class="nav-link active" href="../reference/index.html" aria-current="page"> 
 <span class="menu-text">Function Reference</span></a>
   </li>  
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-tutorials" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Tutorials</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-tutorials">    
+        <li>
+    <a class="dropdown-item" href="../tutorials/index.html">
+ <span class="dropdown-text">All Tutorials</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li>
+    <a class="dropdown-item" href="../tutorials/ols-fixed-effects.html">
+ <span class="dropdown-text">OLS with Fixed Effects</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../tutorials/formula-syntax.html">
+ <span class="dropdown-text">Formula Syntax</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../tutorials/regression-tables.html">
+ <span class="dropdown-text">Regression Tables</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../tutorials/difference-in-differences.html">
+ <span class="dropdown-text">Difference-in-Differences</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../tutorials/quantile-regression.html">
+ <span class="dropdown-text">Quantile Regression</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-guides" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Guides</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-guides">    
+        <li>
+    <a class="dropdown-item" href="../how-to/index.html">
+ <span class="dropdown-text">All Guides</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li>
+    <a class="dropdown-item" href="../how-to/marginaleffects.html">
+ <span class="dropdown-text">Marginal Effects &amp; Hypothesis Testing</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../how-to/regression_decomposition.html">
+ <span class="dropdown-text">Regression Decomposition</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../how-to/pyfixest_gpu.html">
+ <span class="dropdown-text">PyFixest on the GPU via JAX</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../pyfixest-gpu-cupy.html">
+ <span class="dropdown-text">PyFixest on the GPU via CuPy</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../how-to/stata-2-pyfixest.html">
+ <span class="dropdown-text">Compare Stata &amp; PyFixest</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../how-to/panel_variance_reduction.html">
+ <span class="dropdown-text">Variance Reduction in AB Tests</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-explanation" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Explanation</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-explanation">    
+        <li>
+    <a class="dropdown-item" href="../explanation/difficult-fixed-effects.html">
+ <span class="dropdown-text">When Are Fixed Effects Problems Difficult?</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../explanation/ssc.html">
+ <span class="dropdown-text">On Small Sample Corrections</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../explanation/compare-fixest-pyfixest.html">
+ <span class="dropdown-text">Does PyFixest Match fixest?</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-textbook-replications" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Textbook Replications</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-textbook-replications">    
+        <li>
+    <a class="dropdown-item" href="../textbook-replications/index.html">
+ <span class="dropdown-text">All Textbook Replications</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li>
+    <a class="dropdown-item" href="../textbook-replications/brave_true.html">
+ <span class="dropdown-text">Causal Inference for the Brave and True</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../textbook-replications/mixtape.html">
+ <span class="dropdown-text">Causal Inference: The Mixtape</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../textbook-replications/replicating-the-effect.html">
+ <span class="dropdown-text">The Effect</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../textbook-replications/resources.html">
+ <span class="dropdown-text">Other Resources</span></a>
+  </li>  
+    </ul>
+  </li>
   <li class="nav-item">
     <a class="nav-link" href="../changelog.html"> 
 <span class="menu-text">Changelog</span></a>
@@ -156,73 +267,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <a class="nav-link" href="../pyfixest-sprint.html"> 
 <span class="menu-text">Sprint 2026</span></a>
   </li>  
-  <li class="nav-item dropdown ">
-    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-learn-more" role="link" data-bs-toggle="dropdown" aria-expanded="false">
- <span class="menu-text">Learn more</span>
-    </a>
-    <ul class="dropdown-menu" aria-labelledby="nav-menu-learn-more">    
-        <li>
-    <a class="dropdown-item" href="../table-layout.html">
- <span class="dropdown-text">Regression Tables and Summary Statistics</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../marginaleffects.html">
- <span class="dropdown-text">Hypothesis Testing and Marginal Effects</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../difference-in-differences.html">
- <span class="dropdown-text">Difference-in-Differences Estimation</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../multiple_testing.html">
- <span class="dropdown-text">Multiple Testing Corrections</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../regression_decomposition.html">
- <span class="dropdown-text">Regression Decomposition</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../ssc.html">
- <span class="dropdown-text">On Small Sample Corrections</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../quantile-regression.html">
- <span class="dropdown-text">Quantile Regression</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../stata-2-pyfixest.html">
- <span class="dropdown-text">Compare Stata &amp; PyFixest</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../pyfixest-gpu-cupy.html">
- <span class="dropdown-text">PyFixest on the GPU via CuPy</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../pyfixest_gpu.html">
- <span class="dropdown-text">PyFixest on the GPU via JAX</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../panel_variance_reduction.html">
- <span class="dropdown-text">Variance Reduction in AB Tests</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../resources.html">
- <span class="dropdown-text">Other Resources around PyFixest</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../replicating-the-effect.html">
- <span class="dropdown-text">Replicating ‘The Effect’ with PyFixest</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../mixtape.html">
- <span class="dropdown-text">Replicating ‘The Mixtape’ with PyFixest</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../brave_true.html">
- <span class="dropdown-text">Replicating ‘Causal Inference for the Brave and True’ with PyFixest</span></a>
-  </li>  
-    </ul>
-  </li>
 </ul>
             <ul class="navbar-nav navbar-nav-scroll ms-auto">
   <li class="nav-item">
@@ -260,10 +304,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
 <!-- sidebar -->
   <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
-    <div class="pt-lg-2 mt-2 text-left sidebar-header">
-      <a href="../index.html" class="sidebar-logo-link">
-      </a>
-      </div>
     <div class="sidebar-menu-container"> 
     <ul class="list-unstyled mt-1">
         <li class="sidebar-item">
@@ -507,8 +547,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.internals.detect_singletons_.detect_singletons.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.internals.detect_singletons_.detect_singletons</span></a>
+  <a href="../reference/core.detect_singletons.detect_singletons.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">core.detect_singletons.detect_singletons</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -585,12 +625,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="parameters" class="level2 doc-section doc-section-parameters">
 <h2 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters">Parameters</h2>
 <table class="caption-top table">
-<colgroup>
-<col style="width: 1%">
-<col style="width: 4%">
-<col style="width: 91%">
-<col style="width: 2%">
-</colgroup>
 <thead>
 <tr class="header">
 <th>Name</th>
@@ -674,7 +708,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tr>
 <tr class="odd">
 <td>separation_check</td>
-<td>Optional[list[str]]</td>
+<td>list[str] | None</td>
 <td>Methods to identify and drop separated observations. Either “fe” or “ir”. Executes “fe” by default (when None).</td>
 <td><code>None</code></td>
 </tr>
@@ -687,7 +721,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tr class="odd">
 <td>demeaner_backend</td>
 <td>DemeanerBackendOptions</td>
-<td>The backend to use for demeaning. Options include: - “numba” (default): CPU-based demeaning using Numba JIT via the Alternating Projections Algorithm. - “rust”: CPU-based demeaning implemented in Rust via the Alternating Projections Algorithm. - “jax”: CPU or GPU-accelerated using JAX (requires jax/jaxlib) via the Alternating Projections Algorithm. - “cupy” or “cupy64”: GPU-accelerated using CuPy with float64 precision via direct application of the Frisch-Waugh-Lovell Theorem on sparse matrices (requires cupy &amp; GPU, defaults to scipy/CPU if no GPU available) - “cupy32”: GPU-accelerated using CuPy with float32 precision via direct application of the Frisch-Waugh-Lovell Theorem on sparse matrices (requires cupy &amp; GPU, defaults to scipy/CPU and float64 if no GPU available) - “scipy”: Direct application of the Frisch-Waugh-Lovell Theorem on sparse matrice. Forces to use a scipy-sparse backend even when cupy is installed and GPU is available. Defaults to “numba”.</td>
+<td>The backend to use for demeaning. Options include: - “numba” (default): CPU-based demeaning using Numba JIT via the Alternating Projections Algorithm. - “rust-cg”: Implements the conjugate-gradient-schwarz algorithm from the <a href="https://github.com/py-econometrics/within"><code>within</code></a> rust package. Particularly effective for sparse fixed effects structures. See the <a href="https://pyfixest.org/explanation/difficult-fixed-effects.html">difficult fixed effects vignette</a> for benchmarks. - “rust”: CPU-based demeaning implemented in Rust via the Alternating Projections Algorithm. - “jax”: CPU or GPU-accelerated using JAX (requires jax/jaxlib) via the Alternating Projections Algorithm. - “cupy” or “cupy64”: GPU-accelerated using CuPy with float64 precision via direct application of the Frisch-Waugh-Lovell Theorem on sparse matrices (requires cupy &amp; GPU, defaults to scipy/CPU if no GPU available) - “cupy32”: GPU-accelerated using CuPy with float32 precision via direct application of the Frisch-Waugh-Lovell Theorem on sparse matrices (requires cupy &amp; GPU, defaults to scipy/CPU and float64 if no GPU available) - “scipy”: Direct application of the Frisch-Waugh-Lovell Theorem on sparse matrice. Forces to use a scipy-sparse backend even when cupy is installed and GPU is available. Defaults to “numba”.</td>
 <td><code>'numba'</code></td>
 </tr>
 <tr class="even">
@@ -722,13 +756,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tr>
 <tr class="odd">
 <td>split</td>
-<td>Optional[str]</td>
+<td>str | None</td>
 <td>A character string, i.e.&nbsp;‘split = var’. If provided, the sample is split according to the variable and one estimation is performed for each value of that variable. If you also want to include the estimation for the full sample, use the argument fsplit instead.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="even">
 <td>fsplit</td>
-<td>Optional[str]</td>
+<td>str | None</td>
 <td>This argument is the same as split but also includes the full sample as the first estimation.</td>
 <td><code>None</code></td>
 </tr>
@@ -763,7 +797,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="examples" class="level2 doc-section doc-section-examples">
 <h2 class="doc-section doc-section-examples anchored" data-anchor-id="examples">Examples</h2>
 <p>The following example regresses <code>Y</code> on <code>X1</code> and <code>X2</code> with fixed effects for <code>f1</code> and <code>f2</code>: fixed effects are specified after the <code>|</code> symbol.</p>
-<div id="2755709f" class="cell" data-execution_count="1">
+<div id="4d988c3b" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -778,122 +812,122 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>pf.etable([fit_probit, fit_logit, fit_gaussian])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 
-            <div id="BOirxX"></div>
-            <script type="text/javascript" data-lets-plot-script="library">
-                if(!window.letsPlotCallQueue) {
+        <div id="rYtPxt"></div>
+        <script type="text/javascript" data-lets-plot-script="library">
+            if(!window.letsPlotCallQueue) {
+                window.letsPlotCallQueue = [];
+            };
+            window.letsPlotCall = function(f) {
+                window.letsPlotCallQueue.push(f);
+            };
+            (function() {
+                var script = document.createElement("script");
+                script.type = "text/javascript";
+                script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.9.0/js-package/distr/lets-plot.min.js";
+                script.onload = function() {
+                    window.letsPlotCall = function(f) {f();};
+                    window.letsPlotCallQueue.forEach(function(f) {f();});
                     window.letsPlotCallQueue = [];
-                }; 
-                window.letsPlotCall = function(f) {
-                    window.letsPlotCallQueue.push(f);
+                    
                 };
-                (function() {
-                    var script = document.createElement("script");
-                    script.type = "text/javascript";
-                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.7.3/js-package/distr/lets-plot.min.js";
-                    script.onload = function() {
-                        window.letsPlotCall = function(f) {f();};
-                        window.letsPlotCallQueue.forEach(function(f) {f();});
-                        window.letsPlotCallQueue = [];
-                        
-                    };
-                    script.onerror = function(event) {
-                        window.letsPlotCall = function(f) {};    // noop
-                        window.letsPlotCallQueue = [];
-                        var div = document.createElement("div");
-                        div.style.color = 'darkred';
-                        div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("BOirxX").appendChild(div);
-                    };
-                    var e = document.getElementById("BOirxX");
-                    e.appendChild(script);
-                })()
-            </script>
-            
+                script.onerror = function(event) {
+                    window.letsPlotCall = function(f) {};    // noop
+                    window.letsPlotCallQueue = [];
+                    var div = document.createElement("div");
+                    div.style.color = 'darkred';
+                    div.textContent = 'Error loading Lets-Plot JS';
+                    document.getElementById("rYtPxt").appendChild(div);
+                };
+                var e = document.getElementById("rYtPxt");
+                e.appendChild(script);
+            })()
+        </script>
+        
 </div>
 <div class="cell-output cell-output-display">
 
-            <div id="X6GavT"></div>
-            <script type="text/javascript" data-lets-plot-script="library">
-                if(!window.letsPlotCallQueue) {
+        <div id="6QW2j4"></div>
+        <script type="text/javascript" data-lets-plot-script="library">
+            if(!window.letsPlotCallQueue) {
+                window.letsPlotCallQueue = [];
+            };
+            window.letsPlotCall = function(f) {
+                window.letsPlotCallQueue.push(f);
+            };
+            (function() {
+                var script = document.createElement("script");
+                script.type = "text/javascript";
+                script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.9.0/js-package/distr/lets-plot.min.js";
+                script.onload = function() {
+                    window.letsPlotCall = function(f) {f();};
+                    window.letsPlotCallQueue.forEach(function(f) {f();});
                     window.letsPlotCallQueue = [];
-                }; 
-                window.letsPlotCall = function(f) {
-                    window.letsPlotCallQueue.push(f);
+                    
                 };
-                (function() {
-                    var script = document.createElement("script");
-                    script.type = "text/javascript";
-                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.7.3/js-package/distr/lets-plot.min.js";
-                    script.onload = function() {
-                        window.letsPlotCall = function(f) {f();};
-                        window.letsPlotCallQueue.forEach(function(f) {f();});
-                        window.letsPlotCallQueue = [];
-                        
-                    };
-                    script.onerror = function(event) {
-                        window.letsPlotCall = function(f) {};    // noop
-                        window.letsPlotCallQueue = [];
-                        var div = document.createElement("div");
-                        div.style.color = 'darkred';
-                        div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("X6GavT").appendChild(div);
-                    };
-                    var e = document.getElementById("X6GavT");
-                    e.appendChild(script);
-                })()
-            </script>
-            
+                script.onerror = function(event) {
+                    window.letsPlotCall = function(f) {};    // noop
+                    window.letsPlotCallQueue = [];
+                    var div = document.createElement("div");
+                    div.style.color = 'darkred';
+                    div.textContent = 'Error loading Lets-Plot JS';
+                    document.getElementById("6QW2j4").appendChild(div);
+                };
+                var e = document.getElementById("6QW2j4");
+                e.appendChild(script);
+            })()
+        </script>
+        
 </div>
 <div class="cell-output cell-output-display" data-execution_count="1">
-<div id="ahdgdrkilc" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<div id="vovlnxyzmn" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
 <style>
-#ahdgdrkilc table {
+#vovlnxyzmn table {
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
           -webkit-font-smoothing: antialiased;
           -moz-osx-font-smoothing: grayscale;
         }
 
-#ahdgdrkilc thead, tbody, tfoot, tr, td, th { border-style: none; }
+#vovlnxyzmn thead, tbody, tfoot, tr, td, th { border-style: none; }
  tr { background-color: transparent; }
-#ahdgdrkilc p { margin: 0; padding: 0; }
- #ahdgdrkilc .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: solid; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
- #ahdgdrkilc .gt_caption { padding-top: 4px; padding-bottom: 4px; }
- #ahdgdrkilc .gt_title { color: #333333; font-size: 16px; font-weight: initial; padding-top: 6px; padding-bottom: 6px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
- #ahdgdrkilc .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 5px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
- #ahdgdrkilc .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
- #ahdgdrkilc .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
- #ahdgdrkilc .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
- #ahdgdrkilc .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 2px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
- #ahdgdrkilc .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
- #ahdgdrkilc .gt_column_spanner_outer:first-child { padding-left: 0; }
- #ahdgdrkilc .gt_column_spanner_outer:last-child { padding-right: 0; }
- #ahdgdrkilc .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: bottom; padding-top: 2px; padding-bottom: 2px; overflow-x: hidden; display: inline-block; width: 100%; }
- #ahdgdrkilc .gt_spanner_row { border-bottom-style: hidden; }
- #ahdgdrkilc .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
- #ahdgdrkilc .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: middle; }
- #ahdgdrkilc .gt_from_md> :first-child { margin-top: 0; }
- #ahdgdrkilc .gt_from_md> :last-child { margin-bottom: 0; }
- #ahdgdrkilc .gt_row { padding-top: 2px; padding-bottom: 2px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
- #ahdgdrkilc .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
- #ahdgdrkilc .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
- #ahdgdrkilc .gt_row_group_first td { border-top-width: 0.25px; }
- #ahdgdrkilc .gt_row_group_first th { border-top-width: 0.25px; }
- #ahdgdrkilc .gt_striped { color: #333333; background-color: #F4F4F4; }
- #ahdgdrkilc .gt_table_body { border-top-style: solid; border-top-width: 0px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
- #ahdgdrkilc .gt_grand_summary_row { color: #333333; background-color: #FFFFFF; text-transform: inherit; padding-top: 8px; padding-bottom: 8px; padding-left: 5px; padding-right: 5px; }
- #ahdgdrkilc .gt_first_grand_summary_row_bottom { border-top-style: double; border-top-width: 6px; border-top-color: #D3D3D3; }
- #ahdgdrkilc .gt_last_grand_summary_row_top { border-bottom-style: double; border-bottom-width: 6px; border-bottom-color: #D3D3D3; }
- #ahdgdrkilc .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
- #ahdgdrkilc .gt_sourcenote { font-size: 10px; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
- #ahdgdrkilc .gt_left { text-align: left; }
- #ahdgdrkilc .gt_center { text-align: center; }
- #ahdgdrkilc .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
- #ahdgdrkilc .gt_font_normal { font-weight: normal; }
- #ahdgdrkilc .gt_font_bold { font-weight: bold; }
- #ahdgdrkilc .gt_font_italic { font-style: italic; }
- #ahdgdrkilc .gt_super { font-size: 65%; }
- #ahdgdrkilc .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
- #ahdgdrkilc .gt_asterisk { font-size: 100%; vertical-align: 0; }
+#vovlnxyzmn p { margin: 0; padding: 0; }
+ #vovlnxyzmn .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: solid; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
+ #vovlnxyzmn .gt_caption { padding-top: 4px; padding-bottom: 4px; }
+ #vovlnxyzmn .gt_title { color: #333333; font-size: 16px; font-weight: initial; padding-top: 6px; padding-bottom: 6px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
+ #vovlnxyzmn .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 5px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
+ #vovlnxyzmn .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #vovlnxyzmn .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
+ #vovlnxyzmn .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #vovlnxyzmn .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 2px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
+ #vovlnxyzmn .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
+ #vovlnxyzmn .gt_column_spanner_outer:first-child { padding-left: 0; }
+ #vovlnxyzmn .gt_column_spanner_outer:last-child { padding-right: 0; }
+ #vovlnxyzmn .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: bottom; padding-top: 2px; padding-bottom: 2px; overflow-x: hidden; display: inline-block; width: 100%; }
+ #vovlnxyzmn .gt_spanner_row { border-bottom-style: hidden; }
+ #vovlnxyzmn .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
+ #vovlnxyzmn .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: middle; }
+ #vovlnxyzmn .gt_from_md> :first-child { margin-top: 0; }
+ #vovlnxyzmn .gt_from_md> :last-child { margin-bottom: 0; }
+ #vovlnxyzmn .gt_row { padding-top: 2px; padding-bottom: 2px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
+ #vovlnxyzmn .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
+ #vovlnxyzmn .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
+ #vovlnxyzmn .gt_row_group_first td { border-top-width: 0.25px; }
+ #vovlnxyzmn .gt_row_group_first th { border-top-width: 0.25px; }
+ #vovlnxyzmn .gt_striped { color: #333333; background-color: #F4F4F4; }
+ #vovlnxyzmn .gt_table_body { border-top-style: solid; border-top-width: 0px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
+ #vovlnxyzmn .gt_grand_summary_row { color: #333333; background-color: #FFFFFF; text-transform: inherit; padding-top: 8px; padding-bottom: 8px; padding-left: 5px; padding-right: 5px; }
+ #vovlnxyzmn .gt_first_grand_summary_row_bottom { border-top-style: double; border-top-width: 6px; border-top-color: #D3D3D3; }
+ #vovlnxyzmn .gt_last_grand_summary_row_top { border-bottom-style: double; border-bottom-width: 6px; border-bottom-color: #D3D3D3; }
+ #vovlnxyzmn .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
+ #vovlnxyzmn .gt_sourcenote { font-size: 10px; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
+ #vovlnxyzmn .gt_left { text-align: left; }
+ #vovlnxyzmn .gt_center { text-align: center; }
+ #vovlnxyzmn .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
+ #vovlnxyzmn .gt_font_normal { font-weight: normal; }
+ #vovlnxyzmn .gt_font_bold { font-weight: bold; }
+ #vovlnxyzmn .gt_font_italic { font-style: italic; }
+ #vovlnxyzmn .gt_super { font-size: 65%; }
+ #vovlnxyzmn .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
+ #vovlnxyzmn .gt_asterisk { font-size: 100%; vertical-align: 0; }
  
 </style>
 
@@ -921,11 +955,11 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tr>
 <tr class="even">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">X1</th>
-<td class="gt_row gt_center">-0.466***<br>
+<td class="gt_row gt_center">-0.466<br>
 (0.073)</td>
-<td class="gt_row gt_center">-0.752***<br>
+<td class="gt_row gt_center">-0.752<br>
 (0.119)</td>
-<td class="gt_row gt_center">-0.179**<br>
+<td class="gt_row gt_center">-0.179<br>
 (0.056)</td>
 </tr>
 <tr class="odd">
@@ -948,11 +982,11 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tr>
 <tr class="odd">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">Intercept</th>
-<td class="gt_row gt_center">0.449***<br>
+<td class="gt_row gt_center">0.449<br>
 (0.096)</td>
-<td class="gt_row gt_center">0.724***<br>
+<td class="gt_row gt_center">0.724<br>
 (0.156)</td>
-<td class="gt_row gt_center">0.673***<br>
+<td class="gt_row gt_center">0.673<br>
 (0.074)</td>
 </tr>
 <tr class="gt_group_heading_row even">
@@ -972,7 +1006,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tr>
 </tbody><tfoot class="gt_sourcenotes">
 <tr class="odd">
-<td colspan="4" class="gt_sourcenote">Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001. Format of coefficient cell: Coefficient (Std. Error)</td>
+<td colspan="4" class="gt_sourcenote">Format of coefficient cell: Coefficient (Std. Error)</td>
 </tr>
 </tfoot>
 
@@ -983,7 +1017,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 <p><code>PyFixest</code> integrates with the <a href="https://marginaleffects.com/bonus/python.html">marginaleffects</a> package. For example, to compute average marginal effects for the probit model above, you can use the following code:</p>
-<div id="16911c74" class="cell" data-execution_count="2">
+<div id="1e3a2993" class="cell" data-execution_count="2">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># we load polars as marginaleffects outputs pl.DataFrame's</span></span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> polars <span class="im">as</span> pl</span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> marginaleffects <span class="im">import</span> avg_slopes</span>
@@ -1063,7 +1097,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 <p>We can also compute marginal effects by group (group average marginal effects):</p>
-<div id="624be556" class="cell" data-execution_count="3">
+<div id="0eb345b4" class="cell" data-execution_count="3">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>avg_slopes(fit_probit, variables  <span class="op">=</span> <span class="st">"X1"</span>, by <span class="op">=</span> <span class="st">"f1"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="3">
 <div><style>

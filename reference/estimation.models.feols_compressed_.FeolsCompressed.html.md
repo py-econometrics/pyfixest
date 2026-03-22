@@ -89,15 +89,15 @@ Compute predicted values.
 
 #### Parameters {.doc-section .doc-section-parameters}
 
-| Name     | Type                               | Description                                                                                                                                           | Default   |
-|----------|------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|-----------|
-| newdata  | Optional\[DataFrameType\]          | The new data. If None, makes a prediction based on the uncompressed data set.                                                                         | `None`    |
-| atol     | float                              | The absolute tolerance.                                                                                                                               | `1e-06`   |
-| btol     | float                              | The relative tolerance.                                                                                                                               | `1e-06`   |
-| type     | str                                | The type of prediction.                                                                                                                               | `'link'`  |
-| se_fit   | Optional\[bool\]                   | If True, the standard error of the prediction is computed. Only feasible for models without fixed effects. GLMs are not supported. Defaults to False. | `False`   |
-| interval | Optional\[PredictionErrorOptions\] | The type of interval to compute. Can be either 'prediction' or None.                                                                                  | `None`    |
-| alpha    | float                              | The alpha level for the confidence interval. Defaults to 0.05. Only used if interval = "prediction" is not None.                                      | `0.05`    |
+| Name     | Type                           | Description                                                                                                                                           | Default   |
+|----------|--------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|-----------|
+| newdata  | Optional\[DataFrameType\]      | The new data. If None, makes a prediction based on the uncompressed data set.                                                                         | `None`    |
+| atol     | float                          | The absolute tolerance.                                                                                                                               | `1e-06`   |
+| btol     | float                          | The relative tolerance.                                                                                                                               | `1e-06`   |
+| type     | str                            | The type of prediction.                                                                                                                               | `'link'`  |
+| se_fit   | bool \| None                   | If True, the standard error of the prediction is computed. Only feasible for models without fixed effects. GLMs are not supported. Defaults to False. | `False`   |
+| interval | PredictionErrorOptions \| None | The type of interval to compute. Can be either 'prediction' or None.                                                                                  | `None`    |
+| alpha    | float                          | The alpha level for the confidence interval. Defaults to 0.05. Only used if interval = "prediction" is not None.                                      | `0.05`    |
 
 #### Returns {.doc-section .doc-section-returns}
 

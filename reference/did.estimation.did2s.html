@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.8.25">
+<meta name="generator" content="quarto-1.8.27">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -72,7 +72,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="../site_libs/quarto-html/anchor.min.js"></script>
 <link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-7b89279ff1a6dce999919e0e67d4d9ec.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-ed96de9b727972fe78a7b5d16c58bf87.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
 <link href="../site_libs/bootstrap/bootstrap-381776df98abee29e77bfaddc64fade2.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
@@ -118,10 +118,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <header id="quarto-header" class="headroom fixed-top">
     <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
       <div class="navbar-container container-fluid">
-      <div class="navbar-brand-container mx-auto">
-    <a href="../index.html" class="navbar-brand navbar-brand-logo">
-    </a>
-  </div>
             <div id="quarto-search" class="" title="Search"></div>
           <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
   <span class="navbar-toggler-icon"></span>
@@ -133,13 +129,128 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span class="menu-text">PyFixest</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="../quickstart.html"> 
-<span class="menu-text">Quickstart</span></a>
+    <a class="nav-link" href="../getting-started.html"> 
+<span class="menu-text">Getting Started</span></a>
   </li>  
   <li class="nav-item">
     <a class="nav-link active" href="../reference/index.html" aria-current="page"> 
 <span class="menu-text">Function Reference</span></a>
   </li>  
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-tutorials" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Tutorials</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-tutorials">    
+        <li>
+    <a class="dropdown-item" href="../tutorials/index.html">
+ <span class="dropdown-text">All Tutorials</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li>
+    <a class="dropdown-item" href="../tutorials/ols-fixed-effects.html">
+ <span class="dropdown-text">OLS with Fixed Effects</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../tutorials/formula-syntax.html">
+ <span class="dropdown-text">Formula Syntax</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../tutorials/regression-tables.html">
+ <span class="dropdown-text">Regression Tables</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../tutorials/difference-in-differences.html">
+ <span class="dropdown-text">Difference-in-Differences</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../tutorials/quantile-regression.html">
+ <span class="dropdown-text">Quantile Regression</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-guides" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Guides</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-guides">    
+        <li>
+    <a class="dropdown-item" href="../how-to/index.html">
+ <span class="dropdown-text">All Guides</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li>
+    <a class="dropdown-item" href="../how-to/marginaleffects.html">
+ <span class="dropdown-text">Marginal Effects &amp; Hypothesis Testing</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../how-to/regression_decomposition.html">
+ <span class="dropdown-text">Regression Decomposition</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../how-to/pyfixest_gpu.html">
+ <span class="dropdown-text">PyFixest on the GPU via JAX</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../pyfixest-gpu-cupy.html">
+ <span class="dropdown-text">PyFixest on the GPU via CuPy</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../how-to/stata-2-pyfixest.html">
+ <span class="dropdown-text">Compare Stata &amp; PyFixest</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../how-to/panel_variance_reduction.html">
+ <span class="dropdown-text">Variance Reduction in AB Tests</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-explanation" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Explanation</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-explanation">    
+        <li>
+    <a class="dropdown-item" href="../explanation/difficult-fixed-effects.html">
+ <span class="dropdown-text">When Are Fixed Effects Problems Difficult?</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../explanation/ssc.html">
+ <span class="dropdown-text">On Small Sample Corrections</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../explanation/compare-fixest-pyfixest.html">
+ <span class="dropdown-text">Does PyFixest Match fixest?</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-textbook-replications" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Textbook Replications</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-textbook-replications">    
+        <li>
+    <a class="dropdown-item" href="../textbook-replications/index.html">
+ <span class="dropdown-text">All Textbook Replications</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li>
+    <a class="dropdown-item" href="../textbook-replications/brave_true.html">
+ <span class="dropdown-text">Causal Inference for the Brave and True</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../textbook-replications/mixtape.html">
+ <span class="dropdown-text">Causal Inference: The Mixtape</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../textbook-replications/replicating-the-effect.html">
+ <span class="dropdown-text">The Effect</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../textbook-replications/resources.html">
+ <span class="dropdown-text">Other Resources</span></a>
+  </li>  
+    </ul>
+  </li>
   <li class="nav-item">
     <a class="nav-link" href="../changelog.html"> 
 <span class="menu-text">Changelog</span></a>
@@ -156,73 +267,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <a class="nav-link" href="../pyfixest-sprint.html"> 
 <span class="menu-text">Sprint 2026</span></a>
   </li>  
-  <li class="nav-item dropdown ">
-    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-learn-more" role="link" data-bs-toggle="dropdown" aria-expanded="false">
- <span class="menu-text">Learn more</span>
-    </a>
-    <ul class="dropdown-menu" aria-labelledby="nav-menu-learn-more">    
-        <li>
-    <a class="dropdown-item" href="../table-layout.html">
- <span class="dropdown-text">Regression Tables and Summary Statistics</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../marginaleffects.html">
- <span class="dropdown-text">Hypothesis Testing and Marginal Effects</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../difference-in-differences.html">
- <span class="dropdown-text">Difference-in-Differences Estimation</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../multiple_testing.html">
- <span class="dropdown-text">Multiple Testing Corrections</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../regression_decomposition.html">
- <span class="dropdown-text">Regression Decomposition</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../ssc.html">
- <span class="dropdown-text">On Small Sample Corrections</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../quantile-regression.html">
- <span class="dropdown-text">Quantile Regression</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../stata-2-pyfixest.html">
- <span class="dropdown-text">Compare Stata &amp; PyFixest</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../pyfixest-gpu-cupy.html">
- <span class="dropdown-text">PyFixest on the GPU via CuPy</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../pyfixest_gpu.html">
- <span class="dropdown-text">PyFixest on the GPU via JAX</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../panel_variance_reduction.html">
- <span class="dropdown-text">Variance Reduction in AB Tests</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../resources.html">
- <span class="dropdown-text">Other Resources around PyFixest</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../replicating-the-effect.html">
- <span class="dropdown-text">Replicating ‘The Effect’ with PyFixest</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../mixtape.html">
- <span class="dropdown-text">Replicating ‘The Mixtape’ with PyFixest</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../brave_true.html">
- <span class="dropdown-text">Replicating ‘Causal Inference for the Brave and True’ with PyFixest</span></a>
-  </li>  
-    </ul>
-  </li>
 </ul>
             <ul class="navbar-nav navbar-nav-scroll ms-auto">
   <li class="nav-item">
@@ -260,10 +304,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
 <!-- sidebar -->
   <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
-    <div class="pt-lg-2 mt-2 text-left sidebar-header">
-      <a href="../index.html" class="sidebar-logo-link">
-      </a>
-      </div>
     <div class="sidebar-menu-container"> 
     <ul class="list-unstyled mt-1">
         <li class="sidebar-item">
@@ -507,8 +547,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.internals.detect_singletons_.detect_singletons.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.internals.detect_singletons_.detect_singletons</span></a>
+  <a href="../reference/core.detect_singletons.detect_singletons.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">core.detect_singletons.detect_singletons</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -635,7 +675,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="examples" class="level2 doc-section doc-section-examples">
 <h2 class="doc-section doc-section-examples anchored" data-anchor-id="examples">Examples</h2>
-<div id="b43c43cb" class="cell" data-execution_count="1">
+<div id="4554f3be" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
@@ -760,7 +800,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 <p>In a first step, we estimate a classical event study model:</p>
-<div id="0774ba6a" class="cell" data-execution_count="2">
+<div id="07eccf1c" class="cell" data-execution_count="2">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># estimate the model</span></span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.did2s(</span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    df_het,</span>
@@ -774,71 +814,71 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>fit.tidy().head()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 
-            <div id="9JWK5H"></div>
-            <script type="text/javascript" data-lets-plot-script="library">
-                if(!window.letsPlotCallQueue) {
+        <div id="cdWN4d"></div>
+        <script type="text/javascript" data-lets-plot-script="library">
+            if(!window.letsPlotCallQueue) {
+                window.letsPlotCallQueue = [];
+            };
+            window.letsPlotCall = function(f) {
+                window.letsPlotCallQueue.push(f);
+            };
+            (function() {
+                var script = document.createElement("script");
+                script.type = "text/javascript";
+                script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.9.0/js-package/distr/lets-plot.min.js";
+                script.onload = function() {
+                    window.letsPlotCall = function(f) {f();};
+                    window.letsPlotCallQueue.forEach(function(f) {f();});
                     window.letsPlotCallQueue = [];
-                }; 
-                window.letsPlotCall = function(f) {
-                    window.letsPlotCallQueue.push(f);
+                    
                 };
-                (function() {
-                    var script = document.createElement("script");
-                    script.type = "text/javascript";
-                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.7.3/js-package/distr/lets-plot.min.js";
-                    script.onload = function() {
-                        window.letsPlotCall = function(f) {f();};
-                        window.letsPlotCallQueue.forEach(function(f) {f();});
-                        window.letsPlotCallQueue = [];
-                        
-                    };
-                    script.onerror = function(event) {
-                        window.letsPlotCall = function(f) {};    // noop
-                        window.letsPlotCallQueue = [];
-                        var div = document.createElement("div");
-                        div.style.color = 'darkred';
-                        div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("9JWK5H").appendChild(div);
-                    };
-                    var e = document.getElementById("9JWK5H");
-                    e.appendChild(script);
-                })()
-            </script>
-            
+                script.onerror = function(event) {
+                    window.letsPlotCall = function(f) {};    // noop
+                    window.letsPlotCallQueue = [];
+                    var div = document.createElement("div");
+                    div.style.color = 'darkred';
+                    div.textContent = 'Error loading Lets-Plot JS';
+                    document.getElementById("cdWN4d").appendChild(div);
+                };
+                var e = document.getElementById("cdWN4d");
+                e.appendChild(script);
+            })()
+        </script>
+        
 </div>
 <div class="cell-output cell-output-display">
 
-            <div id="IOt4hG"></div>
-            <script type="text/javascript" data-lets-plot-script="library">
-                if(!window.letsPlotCallQueue) {
+        <div id="ENwThE"></div>
+        <script type="text/javascript" data-lets-plot-script="library">
+            if(!window.letsPlotCallQueue) {
+                window.letsPlotCallQueue = [];
+            };
+            window.letsPlotCall = function(f) {
+                window.letsPlotCallQueue.push(f);
+            };
+            (function() {
+                var script = document.createElement("script");
+                script.type = "text/javascript";
+                script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.9.0/js-package/distr/lets-plot.min.js";
+                script.onload = function() {
+                    window.letsPlotCall = function(f) {f();};
+                    window.letsPlotCallQueue.forEach(function(f) {f();});
                     window.letsPlotCallQueue = [];
-                }; 
-                window.letsPlotCall = function(f) {
-                    window.letsPlotCallQueue.push(f);
+                    
                 };
-                (function() {
-                    var script = document.createElement("script");
-                    script.type = "text/javascript";
-                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.7.3/js-package/distr/lets-plot.min.js";
-                    script.onload = function() {
-                        window.letsPlotCall = function(f) {f();};
-                        window.letsPlotCallQueue.forEach(function(f) {f();});
-                        window.letsPlotCallQueue = [];
-                        
-                    };
-                    script.onerror = function(event) {
-                        window.letsPlotCall = function(f) {};    // noop
-                        window.letsPlotCallQueue = [];
-                        var div = document.createElement("div");
-                        div.style.color = 'darkred';
-                        div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("IOt4hG").appendChild(div);
-                    };
-                    var e = document.getElementById("IOt4hG");
-                    e.appendChild(script);
-                })()
-            </script>
-            
+                script.onerror = function(event) {
+                    window.letsPlotCall = function(f) {};    // noop
+                    window.letsPlotCallQueue = [];
+                    var div = document.createElement("div");
+                    div.style.color = 'darkred';
+                    div.textContent = 'Error loading Lets-Plot JS';
+                    document.getElementById("ENwThE").appendChild(div);
+                };
+                var e = document.getElementById("ENwThE");
+                e.appendChild(script);
+            })()
+        </script>
+        
 </div>
 <div class="cell-output cell-output-display" data-execution_count="2">
 <div>
@@ -918,10 +958,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 <p>We can also inspect the model visually:</p>
-<div id="be64cc80" class="cell" data-execution_count="3">
+<div id="94d03002" class="cell" data-execution_count="3">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>fit.iplot(figsize<span class="op">=</span> [<span class="dv">1200</span>, <span class="dv">400</span>], coord_flip<span class="op">=</span><span class="va">False</span>).show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
-   <div id="kB1xK8"></div>
+   <div id="5Xk9H8"></div>
    <script type="text/javascript" data-lets-plot-script="plot">
    
    (function() {
@@ -946,7 +986,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
        };
    }
    
-   const containerDiv = document.getElementById("kB1xK8");
+   const containerDiv = document.getElementById("5Xk9H8");
    let fig = null;
    
    function renderPlot() {
@@ -955,8 +995,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 "data":{
 "Coefficient":["rel_year::-inf","rel_year::-20.0","rel_year::-19.0","rel_year::-18.0","rel_year::-17.0","rel_year::-16.0","rel_year::-15.0","rel_year::-14.0","rel_year::-13.0","rel_year::-12.0","rel_year::-11.0","rel_year::-10.0","rel_year::-9.0","rel_year::-8.0","rel_year::-7.0","rel_year::-6.0","rel_year::-5.0","rel_year::-4.0","rel_year::-3.0","rel_year::-2.0","rel_year::0.0","rel_year::1.0","rel_year::2.0","rel_year::3.0","rel_year::4.0","rel_year::5.0","rel_year::6.0","rel_year::7.0","rel_year::8.0","rel_year::9.0","rel_year::10.0","rel_year::11.0","rel_year::12.0","rel_year::13.0","rel_year::14.0","rel_year::15.0","rel_year::16.0","rel_year::17.0","rel_year::18.0","rel_year::19.0","rel_year::20.0"],
 "Estimate":[-3.5519295362103184E-8,-0.058225832515336515,-0.006032211992613522,-0.006152375190415713,-0.01253326957718738,-0.034697606166936165,0.03782821313278836,2.1315091505167194E-4,-0.0011267317909735856,0.026530166495163127,-0.026841638677276715,0.0073783568011497516,0.002339696605279026,0.008999954415031965,0.032752258118435275,2.589201081122685E-4,-0.039326170506938,0.005630355477915762,0.024642835056253226,0.0011693818689868186,1.3730782812938138,1.602102042551693,1.6657197436428295,1.7874633310303913,1.914912712719568,2.059203279901451,2.1474988919626194,2.234015572816033,2.3275664409679955,2.3463790818843244,2.5013383737135344,2.5534424556739195,2.604402978845574,2.5785087568521,2.7234333114983915,2.9097391899350957,2.8597896200546185,2.9084076338706337,2.874142643269005,2.8832717144918742,2.9119654874923606],
-"2.5%":[-4.697386855663596E-8,-0.12841200984568718,-0.06550048554815804,-0.07493714526067123,-0.06120767317837001,-0.0931171216177083,-0.025495406145009225,-0.07125403852365762,-0.05398936829792462,-0.03741495496330306,-0.10584305328200813,-0.038256530236291865,-0.04116803499459886,-0.036431282695439784,-0.015537018325737804,-0.03908675419446419,-0.08535197167718031,-0.033307107126167274,-0.01710963058901853,-0.0480160964046532,1.2955885713790525,1.5030994709753323,1.5769578777071644,1.6884147080470073,1.839404783632977,1.9763795402814173,2.053168810360179,2.146700564221281,2.2449840433386328,2.2635820659109505,2.4173363979110043,2.429880988937957,2.4658013346368377,2.434809644650486,2.598272866126778,2.7733306601292953,2.7292250078164244,2.793965545081513,2.719372651182861,2.740249353175563,2.7768018634590472],
-"97.5%":[-2.406472216757041E-8,0.011960344815014137,0.05343606156293101,0.0626323948798398,0.03614113402399525,0.023721909283835975,0.10115183241058595,0.07168034035376096,0.05173590471597745,0.09047528795362932,0.052159775927454695,0.05301324383859137,0.04584742820515691,0.054431191525503714,0.08104153456260835,0.03960459441068873,0.006699630663304305,0.04456781808199879,0.06639530070152498,0.050354860142626835,1.4505679912085752,1.7011046141280537,1.7544816095784945,1.8865119540137754,1.990420641806159,2.142027019521485,2.24182897356506,2.3213305814107854,2.410148838597358,2.4291760978576984,2.5853403495160645,2.677003922409882,2.74300462305431,2.722207869053714,2.848593756870005,3.046147719740896,2.9903542322928125,3.0228497226597546,3.0289126353551494,3.0262940758081855,3.047129111525674],
+"2.5%":[-4.6973868556635965E-8,-0.12841200984568718,-0.06550048554815804,-0.07493714526067125,-0.06120767317837001,-0.09311712161770831,-0.02549540614500924,-0.07125403852365764,-0.05398936829792462,-0.037414954963303076,-0.10584305328200813,-0.038256530236291865,-0.04116803499459886,-0.03643128269543979,-0.015537018325737811,-0.039086754194464196,-0.08535197167718031,-0.03330710712616728,-0.017109630589018536,-0.04801609640465321,1.2955885713790525,1.5030994709753323,1.5769578777071644,1.6884147080470073,1.839404783632977,1.9763795402814173,2.053168810360179,2.146700564221281,2.2449840433386328,2.2635820659109505,2.4173363979110043,2.429880988937957,2.4658013346368377,2.434809644650486,2.598272866126778,2.7733306601292953,2.729225007816424,2.793965545081513,2.719372651182861,2.740249353175563,2.7768018634590472],
+"97.5%":[-2.4064722167570405E-8,0.011960344815014151,0.05343606156293101,0.06263239487983982,0.03614113402399525,0.023721909283835982,0.10115183241058597,0.07168034035376097,0.05173590471597745,0.09047528795362933,0.05215977592745471,0.05301324383859137,0.04584742820515691,0.05443119152550372,0.08104153456260836,0.03960459441068874,0.006699630663304312,0.0445678180819988,0.066395300701525,0.05035486014262684,1.4505679912085752,1.7011046141280537,1.7544816095784945,1.8865119540137754,1.990420641806159,2.142027019521485,2.24182897356506,2.3213305814107854,2.410148838597358,2.4291760978576984,2.5853403495160645,2.677003922409882,2.74300462305431,2.722207869053714,2.848593756870005,3.046147719740896,2.990354232292813,3.0228497226597546,3.0289126353551494,3.0262940758081855,3.047129111525674],
 "Model":["dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)"]
 },
 "mapping":{
@@ -1089,7 +1129,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 <p>To estimate a pooled effect, we need to slightly update the second stage formula:</p>
-<div id="9630a765" class="cell" data-execution_count="4">
+<div id="44e41c79" class="cell" data-execution_count="4">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.did2s(</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    df_het,</span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    yname<span class="op">=</span><span class="st">"dep_var"</span>,</span>

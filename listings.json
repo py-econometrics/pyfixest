@@ -1,0 +1,34 @@
+[
+  {
+    "listing": "/tutorials/index.html",
+    "items": [
+      "/tutorials/ols-fixed-effects.html",
+      "/tutorials/formula-syntax.html",
+      "/tutorials/standard-errors.html",
+      "/tutorials/instrumental-variables.html",
+      "/tutorials/poisson-glm.html",
+      "/tutorials/difference-in-differences.html",
+      "/tutorials/quantile-regression.html",
+      "/tutorials/regression-tables.html"
+    ]
+  },
+  {
+    "listing": "/textbook-replications/index.html",
+    "items": [
+      "/textbook-replications/brave_true.html",
+      "/textbook-replications/mixtape.html",
+      "/textbook-replications/replicating-the-effect.html",
+      "/textbook-replications/resources.html"
+    ]
+  },
+  {
+    "listing": "/how-to/index.html",
+    "items": [
+      "/how-to/marginaleffects.html",
+      "/how-to/regression_decomposition.html",
+      "/how-to/pyfixest_gpu.html",
+      "/how-to/stata-2-pyfixest.html",
+      "/how-to/panel_variance_reduction.html"
+    ]
+  }
+]

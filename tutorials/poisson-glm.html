@@ -1,0 +1,1225 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.27">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="description" content="Poisson for nonnegative outcomes, DiD with counts, and logit/probit for propensity-score based AB testing.">
+
+<title>Poisson &amp; GLMs</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" integrity="sha384-ZvpUoO/+PpLXR1lu4jmpXWu80pZlYUAfxl5NsBMWOEPSjUn/6Z/hRTt8+pR6L4N2" crossorigin="anonymous"></script><script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-ed96de9b727972fe78a7b5d16c58bf87.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-381776df98abee29e77bfaddc64fade2.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<!-- Cloudflare Web Analytics --><script defer="" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon="{&quot;token&quot;: &quot;bfa3a9287252444c8aa02b664fea7f09&quot;}"></script><!-- End Cloudflare Web Analytics -->
+<script src="https://cdn.jsdelivr.net/npm/requirejs@2.3.6/require.min.js" integrity="sha384-c9c+LnTbwQ3aujuU7ULEPVvgLs+Fn6fJUvIGTsuu1ZcCf11fiEubah0ttpca4ntM sha384-6V1/AdqZRWk1KAlWbKBlGhN7VG4iE/yAZcO6NZPMF8od0vukrvr0tg4qY6NSrItx" crossorigin="anonymous"></script>
+
+<script type="application/javascript">define('jquery', [],function() {return window.jQuery;})</script>
+
+
+<link rel="alternate" type="text/markdown" href="poisson-glm.html.md">
+</head>
+
+<body class="floating nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../pyfixest.html"> 
+<span class="menu-text">PyFixest</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../getting-started.html"> 
+<span class="menu-text">Getting Started</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../reference/index.html"> 
+<span class="menu-text">Function Reference</span></a>
+  </li>  
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-tutorials" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Tutorials</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-tutorials">    
+        <li>
+    <a class="dropdown-item" href="../tutorials/index.html">
+ <span class="dropdown-text">All Tutorials</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li>
+    <a class="dropdown-item" href="../tutorials/ols-fixed-effects.html">
+ <span class="dropdown-text">OLS with Fixed Effects</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../tutorials/formula-syntax.html">
+ <span class="dropdown-text">Formula Syntax</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../tutorials/regression-tables.html">
+ <span class="dropdown-text">Regression Tables</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../tutorials/difference-in-differences.html">
+ <span class="dropdown-text">Difference-in-Differences</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../tutorials/quantile-regression.html">
+ <span class="dropdown-text">Quantile Regression</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-guides" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Guides</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-guides">    
+        <li>
+    <a class="dropdown-item" href="../how-to/index.html">
+ <span class="dropdown-text">All Guides</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li>
+    <a class="dropdown-item" href="../how-to/marginaleffects.html">
+ <span class="dropdown-text">Marginal Effects &amp; Hypothesis Testing</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../how-to/regression_decomposition.html">
+ <span class="dropdown-text">Regression Decomposition</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../how-to/pyfixest_gpu.html">
+ <span class="dropdown-text">PyFixest on the GPU via JAX</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../pyfixest-gpu-cupy.html">
+ <span class="dropdown-text">PyFixest on the GPU via CuPy</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../how-to/stata-2-pyfixest.html">
+ <span class="dropdown-text">Compare Stata &amp; PyFixest</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../how-to/panel_variance_reduction.html">
+ <span class="dropdown-text">Variance Reduction in AB Tests</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-explanation" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Explanation</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-explanation">    
+        <li>
+    <a class="dropdown-item" href="../explanation/difficult-fixed-effects.html">
+ <span class="dropdown-text">When Are Fixed Effects Problems Difficult?</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../explanation/ssc.html">
+ <span class="dropdown-text">On Small Sample Corrections</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../explanation/compare-fixest-pyfixest.html">
+ <span class="dropdown-text">Does PyFixest Match fixest?</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-textbook-replications" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Textbook Replications</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-textbook-replications">    
+        <li>
+    <a class="dropdown-item" href="../textbook-replications/index.html">
+ <span class="dropdown-text">All Textbook Replications</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li>
+    <a class="dropdown-item" href="../textbook-replications/brave_true.html">
+ <span class="dropdown-text">Causal Inference for the Brave and True</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../textbook-replications/mixtape.html">
+ <span class="dropdown-text">Causal Inference: The Mixtape</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../textbook-replications/replicating-the-effect.html">
+ <span class="dropdown-text">The Effect</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../textbook-replications/resources.html">
+ <span class="dropdown-text">Other Resources</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" href="../changelog.html"> 
+<span class="menu-text">Changelog</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../contributing.html"> 
+<span class="menu-text">Contributing</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../acknowledgements.html"> 
+<span class="menu-text">Acknowledgements</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../pyfixest-sprint.html"> 
+<span class="menu-text">Sprint 2026</span></a>
+  </li>  
+</ul>
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../llms.txt"> <i class="bi bi-robot" role="img">
+</i> 
+<span class="menu-text">llms.txt</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../skills.html"> 
+<span class="menu-text">Skills.md</span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/py-econometrics/pyfixest/"> <i class="bi bi-github" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#why-poisson-and-why-wooldridge-likes-it" id="toc-why-poisson-and-why-wooldridge-likes-it" class="nav-link active" data-scroll-target="#why-poisson-and-why-wooldridge-likes-it">1. Why Poisson? (and Why Wooldridge Likes It)</a></li>
+  <li><a href="#a-standard-gravity-style-trade-example-boring-but-useful" id="toc-a-standard-gravity-style-trade-example-boring-but-useful" class="nav-link" data-scroll-target="#a-standard-gravity-style-trade-example-boring-but-useful">2. A Standard Gravity-Style Trade Example (Boring but Useful)</a></li>
+  <li><a href="#handling-zeros-the-log-of-zeros" id="toc-handling-zeros-the-log-of-zeros" class="nav-link" data-scroll-target="#handling-zeros-the-log-of-zeros">3. Handling Zeros: “The Log of Zeros”</a></li>
+  <li><a href="#poisson-for-a-simple-did" id="toc-poisson-for-a-simple-did" class="nav-link" data-scroll-target="#poisson-for-a-simple-did">4. Poisson for a Simple DiD</a></li>
+  <li><a href="#logitprobit-for-doubly-debiased-ab-testing-with-propensity-scores" id="toc-logitprobit-for-doubly-debiased-ab-testing-with-propensity-scores" class="nav-link" data-scroll-target="#logitprobit-for-doubly-debiased-ab-testing-with-propensity-scores">5. Logit/Probit for Doubly Debiased AB Testing with Propensity Scores</a>
+  <ul class="collapse">
+  <li><a href="#simulate-an-ab-setting" id="toc-simulate-an-ab-setting" class="nav-link" data-scroll-target="#simulate-an-ab-setting">Simulate an AB setting</a></li>
+  <li><a href="#propensity-via-logitprobit-with-fixed-effects" id="toc-propensity-via-logitprobit-with-fixed-effects" class="nav-link" data-scroll-target="#propensity-via-logitprobit-with-fixed-effects">Propensity via logit/probit (with fixed effects)</a></li>
+  <li><a href="#outcome-regressions-and-a-simple-aipw-score" id="toc-outcome-regressions-and-a-simple-aipw-score" class="nav-link" data-scroll-target="#outcome-regressions-and-a-simple-aipw-score">Outcome regressions and a simple AIPW score</a></li>
+  </ul></li>
+  <li><a href="#glms-with-marginal-effects-placeholder" id="toc-glms-with-marginal-effects-placeholder" class="nav-link" data-scroll-target="#glms-with-marginal-effects-placeholder">6. GLMs with Marginal Effects (Placeholder)</a></li>
+  <li><a href="#fixed-effects-support-summary" id="toc-fixed-effects-support-summary" class="nav-link" data-scroll-target="#fixed-effects-support-summary">7. Fixed Effects Support (Summary)</a></li>
+  <li><a href="#where-to-go-next" id="toc-where-to-go-next" class="nav-link" data-scroll-target="#where-to-go-next">Where to Go Next</a></li>
+  </ul>
+</nav>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Poisson &amp; GLMs</h1>
+  <div class="quarto-categories">
+    <div class="quarto-category">Core Estimation</div>
+  </div>
+  </div>
+
+<div>
+  <div class="description">
+    Poisson for nonnegative outcomes, DiD with counts, and logit/probit for propensity-score based AB testing.
+  </div>
+</div>
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>Scope
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>This vignette is practical by design. We focus on how to use <code>pyfixest</code> and when these models are useful in applied work.</p>
+</div>
+</div>
+<section id="why-poisson-and-why-wooldridge-likes-it" class="level2">
+<h2 class="anchored" data-anchor-id="why-poisson-and-why-wooldridge-likes-it">1. Why Poisson? (and Why Wooldridge Likes It)</h2>
+<p>A common motivation for Poisson pseudo-maximum-likelihood (PPML) is that it works well for <strong>nonnegative outcomes</strong> and remains valid under fairly general forms of heteroskedasticity when the conditional mean is correctly specified.</p>
+<p>In practice, that makes Poisson attractive for many applied settings where:</p>
+<ul>
+<li>outcomes are counts or nonnegative flows,</li>
+<li>zeros are common,</li>
+<li>log-linear OLS can be fragile.</li>
+</ul>
+<p><code>pyfixest</code> provides PPML with high-dimensional fixed effects via <code>pf.fepois()</code>.</p>
+</section>
+<section id="a-standard-gravity-style-trade-example-boring-but-useful" class="level2">
+<h2 class="anchored" data-anchor-id="a-standard-gravity-style-trade-example-boring-but-useful">2. A Standard Gravity-Style Trade Example (Boring but Useful)</h2>
+<p>Below is a simple gravity-style trade panel (exporter-importer-year). This is a synthetic dataset, but the specification mirrors common trade applications.</p>
+<div id="6513e1b1" class="cell" data-execution_count="1">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="5cb91c06" class="cell" data-execution_count="2">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> make_trade_data(seed<span class="op">=</span><span class="dv">123</span>, n_exporters<span class="op">=</span><span class="dv">15</span>, n_importers<span class="op">=</span><span class="dv">15</span>, years<span class="op">=</span><span class="bu">range</span>(<span class="dv">2010</span>, <span class="dv">2016</span>)):</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    rng <span class="op">=</span> np.random.default_rng(seed)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    exporters <span class="op">=</span> [<span class="ss">f"E</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">"</span> <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(n_exporters)]</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    importers <span class="op">=</span> [<span class="ss">f"I</span><span class="sc">{</span>j<span class="sc">}</span><span class="ss">"</span> <span class="cf">for</span> j <span class="kw">in</span> <span class="bu">range</span>(n_importers)]</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    rows <span class="op">=</span> []</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> y <span class="kw">in</span> years:</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> e <span class="kw">in</span> exporters:</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>            <span class="cf">for</span> i <span class="kw">in</span> importers:</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>                dist <span class="op">=</span> rng.uniform(<span class="dv">200</span>, <span class="dv">9000</span>)</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>                fta <span class="op">=</span> rng.binomial(<span class="dv">1</span>, <span class="fl">0.15</span>)</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>                exporter_fe <span class="op">=</span> <span class="bu">hash</span>(e) <span class="op">%</span> <span class="dv">7</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>                importer_fe <span class="op">=</span> <span class="bu">hash</span>(i) <span class="op">%</span> <span class="dv">6</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>                year_fe <span class="op">=</span> y <span class="op">-</span> <span class="bu">min</span>(years)</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>                <span class="co"># mean function for PPML</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>                eta <span class="op">=</span> <span class="fl">2.5</span> <span class="op">-</span> <span class="fl">0.35</span> <span class="op">*</span> np.log(dist) <span class="op">+</span> <span class="fl">0.25</span> <span class="op">*</span> fta <span class="op">+</span> <span class="fl">0.08</span> <span class="op">*</span> exporter_fe <span class="op">+</span> <span class="fl">0.06</span> <span class="op">*</span> importer_fe <span class="op">+</span> <span class="fl">0.05</span> <span class="op">*</span> year_fe</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>                mu <span class="op">=</span> np.exp(eta)</span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>                trade <span class="op">=</span> rng.poisson(mu)</span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>                rows.append((y, e, i, dist, fta, trade))</span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> pd.DataFrame(rows, columns<span class="op">=</span>[<span class="st">"year"</span>, <span class="st">"exporter"</span>, <span class="st">"importer"</span>, <span class="st">"distance"</span>, <span class="st">"fta"</span>, <span class="st">"trade"</span>])</span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>trade <span class="op">=</span> make_trade_data()</span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>trade.head()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="2">
+<div>
+
+<table class="dataframe table table-sm table-striped small">
+  <thead>
+    <tr>
+      <th></th>
+      <th>year</th>
+      <th>exporter</th>
+      <th>importer</th>
+      <th>distance</th>
+      <th>fta</th>
+      <th>trade</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>2010</td>
+      <td>E0</td>
+      <td>I0</td>
+      <td>6204.696397</td>
+      <td>0</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>2010</td>
+      <td>E0</td>
+      <td>I1</td>
+      <td>1822.471934</td>
+      <td>0</td>
+      <td>2</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>2010</td>
+      <td>E0</td>
+      <td>I2</td>
+      <td>7413.840142</td>
+      <td>1</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>2010</td>
+      <td>E0</td>
+      <td>I3</td>
+      <td>7453.326046</td>
+      <td>0</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>2010</td>
+      <td>E0</td>
+      <td>I4</td>
+      <td>8361.183875</td>
+      <td>0</td>
+      <td>1</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+</div>
+</div>
+<div id="180b4325" class="cell" data-execution_count="3">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>fit_trade <span class="op">=</span> pf.fepois(</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">"trade ~ np.log(distance) + fta | exporter + importer + year"</span>,</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    data<span class="op">=</span>trade,</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span>{<span class="st">"CRV1"</span>: <span class="st">"exporter"</span>},</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>fit_trade.summary()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+
+            <div id="o9lLGv"></div>
+            <script type="text/javascript" data-lets-plot-script="library">
+                if(!window.letsPlotCallQueue) {
+                    window.letsPlotCallQueue = [];
+                }; 
+                window.letsPlotCall = function(f) {
+                    window.letsPlotCallQueue.push(f);
+                };
+                (function() {
+                    var script = document.createElement("script");
+                    script.type = "text/javascript";
+                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.7.3/js-package/distr/lets-plot.min.js";
+                    script.onload = function() {
+                        window.letsPlotCall = function(f) {f();};
+                        window.letsPlotCallQueue.forEach(function(f) {f();});
+                        window.letsPlotCallQueue = [];
+                        
+                    };
+                    script.onerror = function(event) {
+                        window.letsPlotCall = function(f) {};    // noop
+                        window.letsPlotCallQueue = [];
+                        var div = document.createElement("div");
+                        div.style.color = 'darkred';
+                        div.textContent = 'Error loading Lets-Plot JS';
+                        document.getElementById("o9lLGv").appendChild(div);
+                    };
+                    var e = document.getElementById("o9lLGv");
+                    e.appendChild(script);
+                })()
+            </script>
+            
+</div>
+<div class="cell-output cell-output-display">
+
+            <div id="BVFkyo"></div>
+            <script type="text/javascript" data-lets-plot-script="library">
+                if(!window.letsPlotCallQueue) {
+                    window.letsPlotCallQueue = [];
+                }; 
+                window.letsPlotCall = function(f) {
+                    window.letsPlotCallQueue.push(f);
+                };
+                (function() {
+                    var script = document.createElement("script");
+                    script.type = "text/javascript";
+                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.7.3/js-package/distr/lets-plot.min.js";
+                    script.onload = function() {
+                        window.letsPlotCall = function(f) {f();};
+                        window.letsPlotCallQueue.forEach(function(f) {f();});
+                        window.letsPlotCallQueue = [];
+                        
+                    };
+                    script.onerror = function(event) {
+                        window.letsPlotCall = function(f) {};    // noop
+                        window.letsPlotCallQueue = [];
+                        var div = document.createElement("div");
+                        div.style.color = 'darkred';
+                        div.textContent = 'Error loading Lets-Plot JS';
+                        document.getElementById("BVFkyo").appendChild(div);
+                    };
+                    var e = document.getElementById("BVFkyo");
+                    e.appendChild(script);
+                })()
+            </script>
+            
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>###
+
+Estimation:  Poisson
+Dep. var.: trade, Fixed effects: exporter + importer + year
+sample: None = all
+Inference:  CRV1
+Observations:  1350
+
+| Coefficient      |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5% |   97.5% |
+|:-----------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
+| np.log(distance) |     -0.368 |        0.022 |   -16.829 |      0.000 | -0.411 |  -0.325 |
+| fta              |      0.254 |        0.040 |     6.338 |      0.000 |  0.175 |   0.332 |
+---
+Deviance: 1504.676 </code></pre>
+</div>
+</div>
+<p>This is the basic PPML gravity workflow in <code>pyfixest</code>.</p>
+</section>
+<section id="handling-zeros-the-log-of-zeros" class="level2">
+<h2 class="anchored" data-anchor-id="handling-zeros-the-log-of-zeros">3. Handling Zeros: “The Log of Zeros”</h2>
+<p>One reason PPML is popular is straightforward handling of zero outcomes without ad-hoc transformations like <code>log(y + 1)</code>.</p>
+<p>This is central in modern work on nonnegative outcomes, including recent discussion in:</p>
+<ul>
+<li>Bellégo, Benatia, and Pape (2024), <em>Dealing with Logs and Zeros in Regression Models</em> (<a href="https://academic.oup.com/qje/article-abstract/139/2/891/7473710">QJE</a>).</li>
+</ul>
+<p>Quick contrast:</p>
+<div id="f5e5af3d" class="cell" data-execution_count="4">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>share_zeros <span class="op">=</span> (trade[<span class="st">"trade"</span>] <span class="op">==</span> <span class="dv">0</span>).mean()</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>share_zeros</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="4">
+<pre><code>np.float64(0.32296296296296295)</code></pre>
+</div>
+</div>
+<p>With PPML, zero observations are naturally part of the likelihood through the mean function.</p>
+</section>
+<section id="poisson-for-a-simple-did" class="level2">
+<h2 class="anchored" data-anchor-id="poisson-for-a-simple-did">4. Poisson for a Simple DiD</h2>
+<p>Poisson DiD is useful when the outcome is a count or nonnegative rate and treatment is staggered or panel-based.</p>
+<div id="f8335e5a" class="cell" data-execution_count="5">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> make_count_did(seed<span class="op">=</span><span class="dv">42</span>, n_states<span class="op">=</span><span class="dv">30</span>, years<span class="op">=</span><span class="bu">range</span>(<span class="dv">2010</span>, <span class="dv">2018</span>)):</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    rng <span class="op">=</span> np.random.default_rng(seed)</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    states <span class="op">=</span> [<span class="ss">f"S</span><span class="sc">{</span>s<span class="sc">}</span><span class="ss">"</span> <span class="cf">for</span> s <span class="kw">in</span> <span class="bu">range</span>(n_states)]</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    rows <span class="op">=</span> []</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>    treated_states <span class="op">=</span> <span class="bu">set</span>(states[: n_states <span class="op">//</span> <span class="dv">2</span>])</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>    post_start <span class="op">=</span> <span class="dv">2014</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> y <span class="kw">in</span> years:</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> s <span class="kw">in</span> states:</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>            treated <span class="op">=</span> <span class="bu">int</span>(s <span class="kw">in</span> treated_states)</span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>            post <span class="op">=</span> <span class="bu">int</span>(y <span class="op">&gt;=</span> post_start)</span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>            did <span class="op">=</span> treated <span class="op">*</span> post</span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>            <span class="co"># latent state/year effects + treatment effect in post</span></span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>            state_fe <span class="op">=</span> (<span class="bu">hash</span>(s) <span class="op">%</span> <span class="dv">9</span>) <span class="op">/</span> <span class="dv">10</span></span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>            year_fe <span class="op">=</span> (y <span class="op">-</span> <span class="bu">min</span>(years)) <span class="op">/</span> <span class="dv">10</span></span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a>            eta <span class="op">=</span> <span class="fl">1.2</span> <span class="op">+</span> state_fe <span class="op">+</span> year_fe <span class="op">+</span> <span class="fl">0.20</span> <span class="op">*</span> did</span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a>            mu <span class="op">=</span> np.exp(eta)</span>
+<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a>            y_count <span class="op">=</span> rng.poisson(mu)</span>
+<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a>            rows.append((s, y, treated, post, did, y_count))</span>
+<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> pd.DataFrame(rows, columns<span class="op">=</span>[<span class="st">"state"</span>, <span class="st">"year"</span>, <span class="st">"treated"</span>, <span class="st">"post"</span>, <span class="st">"did"</span>, <span class="st">"y_count"</span>])</span>
+<span id="cb7-25"><a href="#cb7-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-26"><a href="#cb7-26" aria-hidden="true" tabindex="-1"></a>did_df <span class="op">=</span> make_count_did()</span>
+<span id="cb7-27"><a href="#cb7-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-28"><a href="#cb7-28" aria-hidden="true" tabindex="-1"></a>fit_did_pois <span class="op">=</span> pf.fepois(</span>
+<span id="cb7-29"><a href="#cb7-29" aria-hidden="true" tabindex="-1"></a>    <span class="st">"y_count ~ did | state + year"</span>,</span>
+<span id="cb7-30"><a href="#cb7-30" aria-hidden="true" tabindex="-1"></a>    data<span class="op">=</span>did_df,</span>
+<span id="cb7-31"><a href="#cb7-31" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span>{<span class="st">"CRV1"</span>: <span class="st">"state"</span>},</span>
+<span id="cb7-32"><a href="#cb7-32" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb7-33"><a href="#cb7-33" aria-hidden="true" tabindex="-1"></a>fit_did_pois.summary()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>###
+
+Estimation:  Poisson
+Dep. var.: y_count, Fixed effects: state + year
+sample: None = all
+Inference:  CRV1
+Observations:  240
+
+| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5% |   97.5% |
+|:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
+| did           |      0.172 |        0.088 |     1.955 |      0.051 | -0.000 |   0.345 |
+---
+Deviance: 244.495 </code></pre>
+</div>
+</div>
+<p>If your outcome is nonnegative and has many zeros, this can be a practical alternative to log-linear OLS DiD.</p>
+</section>
+<section id="logitprobit-for-doubly-debiased-ab-testing-with-propensity-scores" class="level2">
+<h2 class="anchored" data-anchor-id="logitprobit-for-doubly-debiased-ab-testing-with-propensity-scores">5. Logit/Probit for Doubly Debiased AB Testing with Propensity Scores</h2>
+<p>For observational AB tests (or experiments with imperfect randomization), a common strategy is to combine:</p>
+<ul>
+<li>a <strong>propensity score model</strong> <code>P(T=1|X)</code>, and</li>
+<li>an <strong>outcome model</strong> <code>E[Y|T,X]</code>.</li>
+</ul>
+<p>This yields doubly robust / doubly debiased estimators (AIPW-style scores).</p>
+<section id="simulate-an-ab-setting" class="level3">
+<h3 class="anchored" data-anchor-id="simulate-an-ab-setting">Simulate an AB setting</h3>
+<div id="47fd290c" class="cell" data-execution_count="6">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> make_ab_data(seed<span class="op">=</span><span class="dv">1</span>, n<span class="op">=</span><span class="dv">5000</span>):</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>    rng <span class="op">=</span> np.random.default_rng(seed)</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>    segment <span class="op">=</span> rng.integers(<span class="dv">0</span>, <span class="dv">20</span>, size<span class="op">=</span>n)</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>    x1 <span class="op">=</span> rng.normal(size<span class="op">=</span>n)</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>    x2 <span class="op">=</span> rng.normal(size<span class="op">=</span>n)</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>    <span class="co"># non-random treatment assignment</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>    p <span class="op">=</span> <span class="dv">1</span> <span class="op">/</span> (<span class="dv">1</span> <span class="op">+</span> np.exp(<span class="op">-</span>(<span class="op">-</span><span class="fl">0.2</span> <span class="op">+</span> <span class="fl">0.7</span> <span class="op">*</span> x1 <span class="op">-</span> <span class="fl">0.4</span> <span class="op">*</span> x2 <span class="op">+</span> <span class="fl">0.15</span> <span class="op">*</span> (segment <span class="op">%</span> <span class="dv">4</span>))))</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>    t <span class="op">=</span> rng.binomial(<span class="dv">1</span>, p)</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>    <span class="co"># outcome with true effect tau</span></span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>    tau <span class="op">=</span> <span class="fl">0.25</span></span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>    y <span class="op">=</span> tau <span class="op">*</span> t <span class="op">+</span> <span class="fl">0.6</span> <span class="op">*</span> x1 <span class="op">+</span> <span class="fl">0.3</span> <span class="op">*</span> x2 <span class="op">+</span> <span class="fl">0.2</span> <span class="op">*</span> (segment <span class="op">%</span> <span class="dv">5</span>) <span class="op">+</span> rng.normal(scale<span class="op">=</span><span class="fl">1.0</span>, size<span class="op">=</span>n)</span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> pd.DataFrame({<span class="st">"y"</span>: y, <span class="st">"t"</span>: t, <span class="st">"x1"</span>: x1, <span class="st">"x2"</span>: x2, <span class="st">"segment"</span>: segment})</span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>ab <span class="op">=</span> make_ab_data()</span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a>ab.head()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="6">
+<div>
+
+<table class="dataframe table table-sm table-striped small">
+  <thead>
+    <tr>
+      <th></th>
+      <th>y</th>
+      <th>t</th>
+      <th>x1</th>
+      <th>x2</th>
+      <th>segment</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>1.403683</td>
+      <td>1</td>
+      <td>0.247452</td>
+      <td>0.620339</td>
+      <td>9</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>-0.698392</td>
+      <td>1</td>
+      <td>0.710294</td>
+      <td>1.163892</td>
+      <td>10</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>0.504507</td>
+      <td>0</td>
+      <td>-0.650713</td>
+      <td>-0.347768</td>
+      <td>15</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>1.283318</td>
+      <td>0</td>
+      <td>-0.229100</td>
+      <td>0.122556</td>
+      <td>19</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>-0.181560</td>
+      <td>0</td>
+      <td>-0.781772</td>
+      <td>0.866387</td>
+      <td>0</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+</div>
+</div>
+</section>
+<section id="propensity-via-logitprobit-with-fixed-effects" class="level3">
+<h3 class="anchored" data-anchor-id="propensity-via-logitprobit-with-fixed-effects">Propensity via logit/probit (with fixed effects)</h3>
+<div id="e094f744" class="cell" data-execution_count="7">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># both support fixed effects via the | syntax</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>ps_logit <span class="op">=</span> pf.feglm(<span class="st">"t ~ x1 + x2 | segment"</span>, data<span class="op">=</span>ab, family<span class="op">=</span><span class="st">"logit"</span>)</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>ps_probit <span class="op">=</span> pf.feglm(<span class="st">"t ~ x1 + x2 | segment"</span>, data<span class="op">=</span>ab, family<span class="op">=</span><span class="st">"probit"</span>)</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>ab[<span class="st">"ehat_logit"</span>] <span class="op">=</span> np.clip(ps_logit.predict(<span class="bu">type</span><span class="op">=</span><span class="st">"response"</span>), <span class="fl">0.01</span>, <span class="fl">0.99</span>)</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>ab[<span class="st">"ehat_probit"</span>] <span class="op">=</span> np.clip(ps_probit.predict(<span class="bu">type</span><span class="op">=</span><span class="st">"response"</span>), <span class="fl">0.01</span>, <span class="fl">0.99</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="outcome-regressions-and-a-simple-aipw-score" class="level3">
+<h3 class="anchored" data-anchor-id="outcome-regressions-and-a-simple-aipw-score">Outcome regressions and a simple AIPW score</h3>
+<div id="7aad04db" class="cell" data-execution_count="8">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>mu1 <span class="op">=</span> pf.feols(<span class="st">"y ~ x1 + x2 | segment"</span>, data<span class="op">=</span>ab.loc[ab[<span class="st">"t"</span>] <span class="op">==</span> <span class="dv">1</span>]).predict(newdata<span class="op">=</span>ab)</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>mu0 <span class="op">=</span> pf.feols(<span class="st">"y ~ x1 + x2 | segment"</span>, data<span class="op">=</span>ab.loc[ab[<span class="st">"t"</span>] <span class="op">==</span> <span class="dv">0</span>]).predict(newdata<span class="op">=</span>ab)</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>ab[<span class="st">"mu1"</span>] <span class="op">=</span> mu1</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>ab[<span class="st">"mu0"</span>] <span class="op">=</span> mu0</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a><span class="co"># AIPW score for ATE using logit propensity</span></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>ab[<span class="st">"score_aipw_logit"</span>] <span class="op">=</span> (</span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>    ab[<span class="st">"mu1"</span>] <span class="op">-</span> ab[<span class="st">"mu0"</span>]</span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">+</span> ab[<span class="st">"t"</span>] <span class="op">*</span> (ab[<span class="st">"y"</span>] <span class="op">-</span> ab[<span class="st">"mu1"</span>]) <span class="op">/</span> ab[<span class="st">"ehat_logit"</span>]</span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">-</span> (<span class="dv">1</span> <span class="op">-</span> ab[<span class="st">"t"</span>]) <span class="op">*</span> (ab[<span class="st">"y"</span>] <span class="op">-</span> ab[<span class="st">"mu0"</span>]) <span class="op">/</span> (<span class="dv">1</span> <span class="op">-</span> ab[<span class="st">"ehat_logit"</span>])</span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a>ate_aipw_logit <span class="op">=</span> ab[<span class="st">"score_aipw_logit"</span>].mean()</span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a>ate_aipw_logit</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="8">
+<pre><code>np.float64(0.2504501667772698)</code></pre>
+</div>
+</div>
+<p>This is the basic doubly debiased pattern: estimate treatment propensities with <code>feglm</code> (logit/probit), combine with outcome models, and form an orthogonal score.</p>
+</section>
+</section>
+<section id="glms-with-marginal-effects-placeholder" class="level2">
+<h2 class="anchored" data-anchor-id="glms-with-marginal-effects-placeholder">6. GLMs with Marginal Effects (Placeholder)</h2>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>Coming Soon
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>This section will add a full workflow for marginal effects after <code>feglm()</code> estimation, including:</p>
+<ul>
+<li>average marginal effects (AMEs),</li>
+<li>subgroup/conditional marginal effects,</li>
+<li>inference with robust and clustered standard errors,</li>
+<li>comparison of coefficient-scale vs probability-scale interpretation.</li>
+</ul>
+</div>
+</div>
+<p>Planned examples:</p>
+<ul>
+<li>Binary outcome with <code>family="logit"</code> and <code>family="probit"</code>.</li>
+<li>Post-estimation marginal effects tables suitable for reporting.</li>
+<li>Practical guidance on when marginal effects change substantive conclusions relative to raw GLM coefficients.</li>
+</ul>
+</section>
+<section id="fixed-effects-support-summary" class="level2">
+<h2 class="anchored" data-anchor-id="fixed-effects-support-summary">7. Fixed Effects Support (Summary)</h2>
+<p>Both Poisson and GLM estimators in <code>pyfixest</code> support fixed effects using the same formula syntax:</p>
+<ul>
+<li>Poisson: <code>pf.fepois("y ~ x | fe1 + fe2", ...)</code></li>
+<li>GLM families (<code>logit</code>, <code>probit</code>, <code>gaussian</code>): <code>pf.feglm("y ~ x | fe1 + fe2", family="logit", ...)</code></li>
+</ul>
+<p>That shared syntax makes it easy to move between linear, Poisson, and binary-response workflows while keeping your FE structure aligned.</p>
+</section>
+<section id="where-to-go-next" class="level2">
+<h2 class="anchored" data-anchor-id="where-to-go-next">Where to Go Next</h2>
+<ul>
+<li><a href="../tutorials/difference-in-differences.html">Difference-in-Differences</a>: richer DiD estimators and event studies.</li>
+<li><a href="../tutorials/standard-errors.html">Standard Errors &amp; Inference</a>: clustered inference, randomization inference, and wild bootstrap.</li>
+<li><a href="../how-to/panel_variance_reduction.html">How-To: Variance Reduction in AB Tests</a>: AB testing workflows with controls and panel structure.</li>
+</ul>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

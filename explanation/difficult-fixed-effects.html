@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.27">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>difficult-fixed-effects</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-ed96de9b727972fe78a7b5d16c58bf87.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-381776df98abee29e77bfaddc64fade2.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<!-- Cloudflare Web Analytics --><script defer="" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon="{&quot;token&quot;: &quot;bfa3a9287252444c8aa02b664fea7f09&quot;}"></script><!-- End Cloudflare Web Analytics -->
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="alternate" type="text/markdown" href="difficult-fixed-effects.html.md">
+</head>
+
+<body class="nav-fixed fullcontent quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../pyfixest.html"> 
+<span class="menu-text">PyFixest</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../getting-started.html"> 
+<span class="menu-text">Getting Started</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../reference/index.html"> 
+<span class="menu-text">Function Reference</span></a>
+  </li>  
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-tutorials" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Tutorials</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-tutorials">    
+        <li>
+    <a class="dropdown-item" href="../tutorials/index.html">
+ <span class="dropdown-text">All Tutorials</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li>
+    <a class="dropdown-item" href="../tutorials/ols-fixed-effects.html">
+ <span class="dropdown-text">OLS with Fixed Effects</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../tutorials/formula-syntax.html">
+ <span class="dropdown-text">Formula Syntax</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../tutorials/regression-tables.html">
+ <span class="dropdown-text">Regression Tables</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../tutorials/difference-in-differences.html">
+ <span class="dropdown-text">Difference-in-Differences</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../tutorials/quantile-regression.html">
+ <span class="dropdown-text">Quantile Regression</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-guides" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Guides</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-guides">    
+        <li>
+    <a class="dropdown-item" href="../how-to/index.html">
+ <span class="dropdown-text">All Guides</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li>
+    <a class="dropdown-item" href="../how-to/marginaleffects.html">
+ <span class="dropdown-text">Marginal Effects &amp; Hypothesis Testing</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../how-to/regression_decomposition.html">
+ <span class="dropdown-text">Regression Decomposition</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../how-to/pyfixest_gpu.html">
+ <span class="dropdown-text">PyFixest on the GPU via JAX</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../pyfixest-gpu-cupy.html">
+ <span class="dropdown-text">PyFixest on the GPU via CuPy</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../how-to/stata-2-pyfixest.html">
+ <span class="dropdown-text">Compare Stata &amp; PyFixest</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../how-to/panel_variance_reduction.html">
+ <span class="dropdown-text">Variance Reduction in AB Tests</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-explanation" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Explanation</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-explanation">    
+        <li>
+    <a class="dropdown-item" href="../explanation/difficult-fixed-effects.html">
+ <span class="dropdown-text">When Are Fixed Effects Problems Difficult?</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../explanation/ssc.html">
+ <span class="dropdown-text">On Small Sample Corrections</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../explanation/compare-fixest-pyfixest.html">
+ <span class="dropdown-text">Does PyFixest Match fixest?</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-textbook-replications" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Textbook Replications</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-textbook-replications">    
+        <li>
+    <a class="dropdown-item" href="../textbook-replications/index.html">
+ <span class="dropdown-text">All Textbook Replications</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li>
+    <a class="dropdown-item" href="../textbook-replications/brave_true.html">
+ <span class="dropdown-text">Causal Inference for the Brave and True</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../textbook-replications/mixtape.html">
+ <span class="dropdown-text">Causal Inference: The Mixtape</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../textbook-replications/replicating-the-effect.html">
+ <span class="dropdown-text">The Effect</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../textbook-replications/resources.html">
+ <span class="dropdown-text">Other Resources</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" href="../changelog.html"> 
+<span class="menu-text">Changelog</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../contributing.html"> 
+<span class="menu-text">Contributing</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../acknowledgements.html"> 
+<span class="menu-text">Acknowledgements</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../pyfixest-sprint.html"> 
+<span class="menu-text">Sprint 2026</span></a>
+  </li>  
+</ul>
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../llms.txt"> <i class="bi bi-robot" role="img">
+</i> 
+<span class="menu-text">llms.txt</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../skills.html"> 
+<span class="menu-text">Skills.md</span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/py-econometrics/pyfixest/"> <i class="bi bi-github" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    
+<!-- main -->
+<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"></header>
+
+
+
+
+<section id="when-are-fixed-effects-estimations-difficult" class="level1">
+<h1>“When Are Fixed Effects Estimations Difficult?”</h1>
+<p>If you have ever fitted a fixed effects regression, you might have noticed that models with the same number of observations and fixed effects levels can take orders of magnitude longer to run. This happens because the runtime of a fixed effects problem is not only determined by the sheer size of the data, but also by the structure of the fixed effects. Problems that are known to be particularly “hard” are ubiquitous in economics and arise, for example, in matched employer-employee data, patient-doctor panels, or trade networks.</p>
+<p>In this guide, we explain <em>why</em> some fixed effects problems are harder to estimate than others, and benchmark different strategies to fit fixed effects regressions in a range of scenarios.</p>
+<p>The key insight is that fixed-effects estimation is a <strong>graph problem</strong>: the structure of who-works-where (or who-sees-which-doctor which-brand-in-which-store) determines how hard the problem is. After reading this guide, you should (hopefully) have a good idea if your fixed effects structure at hand is “difficult” and if you can speed up your own fixed effects problem by choosing a different solver.</p>
+<section id="fixed-effects-as-a-network" class="level2">
+<h2 class="anchored" data-anchor-id="fixed-effects-as-a-network">Fixed Effects as a Network</h2>
+<p>As our workhorse example throughout this entire vignette, we will consider the Abowd-Kramarz-Margolis (AKM) wage model with worker fixed effects <span class="math inline">\(\alpha_i\)</span>, firm fixed effects <span class="math inline">\(\psi_{J(i,t)}\)</span> and time fixed effects <span class="math inline">\(\phi_t\)</span>.</p>
+<p><span class="math display">\[y_{it} = \alpha_i + \psi_{J(i,t)} + \phi_t + x'_{it}\beta + \varepsilon_{it}\]</span></p>
+<p>Workers and firms form a <strong>bipartite graph</strong>: workers are one set of nodes, firms are the other, and each employment spell is an edge. Movers - workers who change firms - are the workers whose edges connect different parts of the graph. Without movers, worker and firm effects are not separately identified.</p>
+<p align="center">
+<img src="figures/akm-benchmarks/bipartite_graph.png" width="85%">
+</p>
+<p><em>A dense graph (left) has many movers connecting all firms, making worker and firm effects easy to separate. A sparse graph (right) has a single mover bridging two clusters - demeaning must propagate information through that thin bridge, which is slow.</em></p>
+<p>This bipartite structure is ubiquitous in applied economics. In AKM wage decompositions, workers and firms are the two sides of the graph, and job changers are the movers that connect them. The same pattern arises in mover designs, where families / students move across schools or neighborhoods. In health economics, we have problems of similar structure with doctor-patient fixed effects. And in trade and industrial organisation, products or brands might be sold across multiple markets and in different stores.</p>
+<p>In all these settings, estimation requires solving the same underlying linear algebra problem, which we introduce in the following section.</p>
+</section>
+<section id="from-fwl-to-demeaning" class="level2">
+<h2 class="anchored" data-anchor-id="from-fwl-to-demeaning">From FWL to Demeaning</h2>
+<p>Before we dive into algorithmic strategies for solving fixed effect problems, we first want to (re-) introduce the <strong>Frisch-Waugh-Lovell (FWL) theorem</strong>: in a regression of <span class="math inline">\(y\)</span> on covariates <span class="math inline">\(X\)</span> and a set of dummy variables <span class="math inline">\(D\)</span> (the fixed effects), the coefficient <span class="math inline">\(\hat{\beta}\)</span> on <span class="math inline">\(X\)</span> is identical when we either estimate the full model, or first regress <span class="math inline">\(y\)</span> and each column of <span class="math inline">\(X\)</span> on <span class="math inline">\(D\)</span>, collect the resulting regression residuals, and fit a final regression of the residuals of <span class="math inline">\(Y\)</span> on the residuals of <span class="math inline">\(X\)</span>.</p>
+<p>Fitting the two initial regression and forming a residual is often referred to as a <strong>demeaning</strong> step.</p>
+<p>In short, we need to fit / solve a linear system of equations</p>
+<p><span class="math display">\[
+   \hat{\alpha} = \arg\min_{\alpha} \| D\alpha - \mu \|_2^2
+\]</span></p>
+<p>where <span class="math inline">\(\mu\)</span> is either <span class="math inline">\(Y\)</span> or a column of <span class="math inline">\(X\)</span> and <span class="math inline">\(\alpha\)</span> are the fixed effect coefficients.</p>
+<p>For a single fixed effect (e.g., only worker FEs), this demeaning step is trivial: <span class="math inline">\(D\)</span> is a single one-hot encoded matrix and the least-squares solution is simply the vector of group means. Subtracting these means from <span class="math inline">\(\mu\)</span> gives the residual - this is the classical “within transformation” from panel econometrics, and it can be computed in a single pass over the data. In other words, we have a “closed form solution” and no iteration is needed.</p>
+<p>With two or more fixed effects, <span class="math inline">\(D = [D_W \; D_F \; \ldots]\)</span> is a concatenation of multiple dummy matrices and the within transformation for a single fixed effect no longer suffices. To see why, consider worker and firm fixed effects. Subtracting worker means removes variation <em>between</em> workers, but if a worker is employed at more than one firm, her worker mean is a mixture of outcomes at different firms. The residual after demeaning by worker therefore still carries information about firm effects - it is “contaminated” by firm variation. The same logic applies in reverse: demeaning by firm leaves traces of worker effects whenever a firm employs more than one worker.</p>
+<p>Special data structures form an exception. Suppose we have a fully balanced panel, where every worker is observed at every firm exactly once. Then each worker mean is computed over the same set of firms, and each firm mean is computed over the same set of workers. As a result, demeaning by worker removes the worker-specific component while subtracting the same average firm effect for everyone. It therefore does not leave behind a worker-specific mixture of firm effects. A second demeaning step by firm then removes the remaining firm-specific component exactly. In this special case, a simple two-step procedure (double demeaning) is sufficient. This is also the idea behind the Mundlak (1978) transform used in <a href="https://github.com/py-econometrics/duckreg">duckreg</a>.</p>
+<p>In practice, however, panels are almost never balanced. Workers are observed only at a subset of firms, so different worker means contain different mixtures of firm effects, and different firm means contain different mixtures of worker effects. Removing one set of means therefore does not cleanly isolate the other. This is why, in unbalanced settings, no simple closed-form demeaning formula is available and specialised iterative algorithms are needed.</p>
+</section>
+<section id="algorithms-for-demeaning" class="level2">
+<h2 class="anchored" data-anchor-id="algorithms-for-demeaning">Algorithms for Demeaning</h2>
+<p>Several algorithms have been proposed for this multi-fixed effect demeaning problem:</p>
+<ul>
+<li><p><strong>Method of Alternating Projections (MAP).</strong> Introduced by Guimarães &amp; Portugal (2010) as the “Zig-Zag” and Gaure (2013), this is the workhorse algorithm in most FE packages (<code>reghdfe</code>, <code>lfe</code>, <code>fixest</code>). It sequentially sweeps through each fixed effect and demeans the target variable by the current fixed effects’s group means. Usually, this approach is implemented with accelerations. For example, R’s <code>fixest</code> uses MAP with Irons-Tuck acceleration and other optimization strategies. In PyFixest, the <code>"rust"</code> backend implements MAP without acceleration and is therefore quite a lot slower than <code>fixest</code>’s algorithm in cases where the accelerations pay off.</p></li>
+<li><p><strong>LSMR.</strong> The solver powering <code>FixedEffectsModels.jl</code>. It can be accessed in <code>pyfixest</code> via the <code>scipy</code> and <code>cupy</code> demeaner backends.</p></li>
+<li><p><strong>CG-Schwarz (Conjugate Gradients with Additive Schwarz Preconditioner).</strong> The <a href="https://github.com/py-econometrics/within"><code>within</code></a> crate, used by PyFixest’s <code>"rust-cg"</code> backend, takes a different approach: it explicitly builds and exploits the block structure of the normal equations to form a high-quality preconditioner for the linear problem. We explain this structure below.</p></li>
+</ul>
+</section>
+<section id="the-normal-equations-and-their-block-structure" class="level2">
+<h2 class="anchored" data-anchor-id="the-normal-equations-and-their-block-structure">The Normal Equations and Their Block Structure</h2>
+<p>Removing the fixed effects in the first two steps of the FWL procedure reduces to solving a linear system. In particular, the fixed-effect coefficients satisfy the <strong>normal equations</strong></p>
+<p><span class="math display">\[G \, \hat{\alpha} = D^\top \mu\]</span></p>
+<p>where <span class="math inline">\(D\)</span> is the <span class="math inline">\(n \times m\)</span> dummy matrix that encodes all FE levels and <span class="math inline">\(G = D^\top D\)</span> is the <strong>Gramian</strong> - a symmetric positive semi-definite matrix of dimension <span class="math inline">\(m \times m\)</span>, where <span class="math inline">\(m\)</span> is the total number of FE levels across all fixed effects.</p>
+<p>For fixed effects problems, the Gramian <span class="math inline">\(G\)</span> has a natural <strong>block structure</strong>. To illustrate this, we will consider a small example (adapted from the <a href="https://github.com/py-econometrics/within"><code>within</code> documentation</a>) of a worker-firm panel with <span class="math inline">\(n = 6\)</span> observations and <span class="math inline">\(Q = 3\)</span> fixed effects (worker, firm, year). Worker W1 moves from Firm F1 to F2 - this mobility is what connects the two firms in the estimation graph. Workers W2 (at F1) and W3 (at F2) stay at their firms.</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Obs</th>
+<th>Worker</th>
+<th>Firm</th>
+<th>Year</th>
+<th><span class="math inline">\(y\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td>W1</td>
+<td>F1</td>
+<td>Y1</td>
+<td>3.2</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>W1</td>
+<td>F2</td>
+<td>Y2</td>
+<td>4.1</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td>W2</td>
+<td>F1</td>
+<td>Y1</td>
+<td>2.8</td>
+</tr>
+<tr class="even">
+<td>4</td>
+<td>W2</td>
+<td>F1</td>
+<td>Y2</td>
+<td>3.9</td>
+</tr>
+<tr class="odd">
+<td>5</td>
+<td>W3</td>
+<td>F2</td>
+<td>Y1</td>
+<td>5.0</td>
+</tr>
+<tr class="even">
+<td>6</td>
+<td>W3</td>
+<td>F2</td>
+<td>Y2</td>
+<td>4.5</td>
+</tr>
+</tbody>
+</table>
+<p>Fixed Effect 1 (workers) has <span class="math inline">\(m_1 = 3\)</span> levels, fixed effect 2 (firms) has <span class="math inline">\(m_2 = 2\)</span> levels, fixed effect 3 (years) has <span class="math inline">\(m_3 = 2\)</span> levels, giving <span class="math inline">\(m = 7\)</span> total FE levels. The Gramian has <span class="math inline">\(Q = 3\)</span> <strong>diagonal blocks</strong> and <span class="math inline">\(\binom{3}{2} = 3\)</span> <strong>cross-tabulation blocks</strong>:</p>
+<p><span class="math display">\[
+G = \begin{pmatrix}
+\mathbf{G_{WW}} &amp; G_{WF} &amp; G_{WY} \\
+G_{WF}^\top &amp; \mathbf{G_{FF}} &amp; G_{FY} \\
+G_{WY}^\top &amp; G_{FY}^\top &amp; \mathbf{G_{YY}}
+\end{pmatrix}
+= \begin{pmatrix}
+\mathbf{2} &amp; \mathbf{0} &amp; \mathbf{0} &amp; 1 &amp; 1 &amp; 1 &amp; 1 \\
+\mathbf{0} &amp; \mathbf{2} &amp; \mathbf{0} &amp; 2 &amp; 0 &amp; 1 &amp; 1 \\
+\mathbf{0} &amp; \mathbf{0} &amp; \mathbf{2} &amp; 0 &amp; 2 &amp; 1 &amp; 1 \\
+1 &amp; 2 &amp; 0 &amp; \mathbf{3} &amp; \mathbf{0} &amp; 2 &amp; 1 \\
+1 &amp; 0 &amp; 2 &amp; \mathbf{0} &amp; \mathbf{3} &amp; 1 &amp; 2 \\
+1 &amp; 1 &amp; 1 &amp; 2 &amp; 1 &amp; \mathbf{3} &amp; \mathbf{0} \\
+1 &amp; 1 &amp; 1 &amp; 1 &amp; 2 &amp; \mathbf{0} &amp; \mathbf{3}
+\end{pmatrix}
+\]</span></p>
+<p>The <strong>diagonal blocks</strong> <span class="math inline">\(G_{WW}\)</span>, <span class="math inline">\(G_{FF}\)</span>, <span class="math inline">\(G_{YY}\)</span> are each diagonal matrices whose entries are the group counts (how many observations belong to each worker, firm, or year). We note that inverting these blocks is computationally cheap because it amounts to dividing by group sizes, i.e., computing group means.</p>
+<p>The <strong>cross-tabulation blocks</strong> <span class="math inline">\(G_{WF}\)</span>, <span class="math inline">\(G_{WY}\)</span>, <span class="math inline">\(G_{FY}\)</span> encode the bipartite graph structure. For example, <span class="math inline">\(G_{WF} = D_W^\top D_F\)</span> is the worker-firm cross-tabulation: entry <span class="math inline">\((i, j)\)</span> counts how many times worker <span class="math inline">\(i\)</span> is observed at firm <span class="math inline">\(j\)</span>. This is where the mover information lives. Worker W1’s row in <span class="math inline">\(G_{WF}\)</span> is <span class="math inline">\((1, 1)\)</span> while W2’s row is <span class="math inline">\((2, 0)\)</span>. In other words, W1 works in both firms, while W2 works in F1 in both periods. In a labour market with little mobility, the off-diagonal blocks will be sparse as most workers stay within a single firm.</p>
+</section>
+<section id="the-method-of-alternating-projections" class="level2">
+<h2 class="anchored" data-anchor-id="the-method-of-alternating-projections">The Method of Alternating Projections</h2>
+<p>Recall that we need to solve <span class="math inline">\(G \hat{\alpha} = D^\top \mu\)</span> for the FE coefficients <span class="math inline">\(\hat{\alpha}\)</span>, or equivalently, find the residual <span class="math inline">\(r = \mu - D \hat{\alpha}\)</span> that has all fixed effects projected out. The method of alternating projections (MAP) approaches this iteratively: it sweeps through each fixed effect and subtracts group means from the current residual. In terms of the Gramian, this is <strong>block Gauss-Seidel</strong> - each sweep solves one diagonal block of <span class="math inline">\(G\)</span> at a time. Writing <span class="math inline">\(D_W, D_F, D_Y\)</span> for the <span class="math inline">\(n \times m_q\)</span> dummy sub-matrices (column blocks of <span class="math inline">\(D\)</span>), the steps are:</p>
+<ol type="1">
+<li>Start with <span class="math inline">\(r = y\)</span></li>
+<li>Subtract worker means from <span class="math inline">\(r\)</span>: <span class="math inline">\(r \leftarrow r - D_W G_{WW}^{-1} D_W^\top r\)</span></li>
+<li>Subtract firm means from <span class="math inline">\(r\)</span>: <span class="math inline">\(r \leftarrow r - D_F G_{FF}^{-1} D_F^\top r\)</span></li>
+<li>Subtract year means from <span class="math inline">\(r\)</span>: <span class="math inline">\(r \leftarrow r - D_Y G_{YY}^{-1} D_Y^\top r\)</span></li>
+<li>Repeat steps 2-4 until convergence</li>
+</ol>
+<p>Each of these steps is individually cheap because <span class="math inline">\(G_{WW}\)</span>, <span class="math inline">\(G_{FF}\)</span>, <span class="math inline">\(G_{YY}\)</span> are diagonal matrices and therefore not difficult to invert.</p>
+<p>We also note that the MAP algorithm <strong>never directly touches the cross-tabulation blocks</strong> <span class="math inline">\(G_{WF}\)</span>, <span class="math inline">\(G_{FY}\)</span>, <span class="math inline">\(G_{WY}\)</span>. It can only extract information about the relationship between workers and firms <em>indirectly</em>, through the residuals that get passed from one sweep to the next.</p>
+<p>Why does convergence depend on the graph? The alternating demeaning algorithm works by passing information back and forth between worker and firm effects. In the worker-mean step, each worker mean is computed over the firms at which that worker is observed. If many workers move across firms, each worker mean averages over several firm effects, so no single firm dominates that average. Subtracting worker means then removes mainly the worker-specific component while leaving a residual that still contains useful information about firms. The subsequent firm-mean step can exploit that information, and the algorithm makes substantial progress from one iteration to the next.</p>
+<p>In the case of balanced panels, this transmission is perfect: every worker is observed at every firm, so each worker mean averages over the same set of firms, and each firm mean averages over the same set of workers. A single pass by worker and then by firm is therefore enough.</p>
+<p>If a worker never changes firms, demeaning by worker uses only data from that one firm. The resulting residual therefore gives the next firm-demeaning step almost no information about how that firm differs from other firms. Symmetrically, demeaning by firm may give the next worker-demeaning step almost no information about workers connected to other firms. Hence each iteration changes the estimates only a little, which is why convergence is slow.</p>
+</section>
+<section id="how-the-cgs-algorithm-in-within-works" class="level2">
+<h2 class="anchored" data-anchor-id="how-the-cgs-algorithm-in-within-works">How the <code>CGS</code> algorithm in <code>within</code> works</h2>
+<p>The <a href="https://github.com/py-econometrics/within"><code>within</code></a> crate takes a different route. Rather than repeatedly demeaning by one fixed effect at a time, it treats residualization as the sparse linear-algebra problem introduced above. For each target vector <span class="math inline">\(\mu\)</span> - the dependent variable <span class="math inline">\(y\)</span> or one of the covariates to be partialled out - it solves</p>
+<p><span class="math display">\[
+G \, \hat{\alpha} = D^\top \mu.
+\]</span></p>
+<p>This is especially appealing in the FWL setting because the matrix <span class="math inline">\(G\)</span> is the same for <span class="math inline">\(y\)</span> and for every column of <span class="math inline">\(X\)</span>; only the right-hand side changes. The key computational question is therefore not whether we can write down the system, but how to solve it quickly.</p>
+<p>This sparse linear system can be solved with different solvers, e.g.&nbsp;the <strong>conjugate gradient (CG)</strong> method.</p>
+<p>The main idea behind <code>within</code> is to build a good <strong>preconditioner</strong> <span class="math inline">\(M\)</span> for this large sparse system. The matrix <span class="math inline">\(M\)</span> is chosen so that it is cheap to invert and so that the preconditioned system <span class="math inline">\(M^{-1} G x = M^{-1} b\)</span> is much better conditioned than the original one. A good preconditioner therefore reduces the number of iterations needed by CG.</p>
+<p>For a three-way fixed effects model with worker, firm, and year effects, <code>within</code> decomposes the problem into the three pairwise interactions: worker-firm, worker-year, and firm-year. This turns the original large tripartite problem into three bipartite subproblems. As we have explained above, each subproblem has a highly structured Gramian: the diagonal blocks are simple count matrices (for example, worker counts and firm counts in the worker-firm case), while the off-diagonal blocks record the cross-tabulation between the two sets of fixed effects. In the worker-firm block, for instance, entry <span class="math inline">\((i,j)\)</span> counts how often worker <span class="math inline">\(i\)</span> is observed at firm <span class="math inline">\(j\)</span>.</p>
+<p>This special bipartite structure allows <code>within</code> to use fast approximate solvers for the pairwise graph problems. These local solves are then assembled into a <strong>Schwarz preconditioner</strong> for the full system. Finally, <code>within</code> applies a standard Krylov method - by default, CG - to the original normal equations, but now with this preconditioner.</p>
+<p>Compared with MAP, the important difference is that CG-Schwarz uses the block structure of the full Gramian <span class="math inline">\(G\)</span> directly, rather than waiting for information to trickle indirectly through many demeaning sweeps. This is why it is much less sensitive to sparse mobility patterns, as we will show in the benchmarks below.</p>
+<p>You can find a detailed exposition of the algorithm <a href="https://github.com/py-econometrics/within/tree/main/docs">here</a>.</p>
+</section>
+<section id="when-do-map-and-cgs-look-good-bad" class="level2">
+<h2 class="anchored" data-anchor-id="when-do-map-and-cgs-look-good-bad">When do MAP and CGS look good / bad?</h2>
+<p>Here is some first-order intuition:</p>
+<p><strong>MAP</strong> looks good on <strong>dense graphs</strong>. When the graph is well-connected with many movers and no fragmentation, the vanilla MAP algorithm converges in a handful of iterations. Each sweep is extremely cheap because it only computes group means / only has to invert diagonal matrices, so the total cost per MAP iteration is low. The CG algorithm instead has overhead from forming the preconditioner, which might not amortize for dense graphs.</p>
+<p><strong>CG-Schwarz</strong> looks good on sparse graphs. When the graph has few movers, MAP’s convergence stalls because it cannot propagate information across thin bridges. CG uses the cross-tabulation blocks directly, so it does not suffer from this bottleneck. The overhead of building <span class="math inline">\(G\)</span> is repaid by needing fewer iterations.</p>
+<p>An important “failing” case for the CGS algorithm is when the problem has a pair of fixed effects that is “dense” and where both fixed effects have high cardinality - for example, worker and firm fixed effects where each worker works in each firm once or large <span class="math inline">\(N\)</span> and large <span class="math inline">\(T\)</span> panels. One example with benchmark for a dgp that is difficult for CGS is provided at the very end.</p>
+<p>The intuition above is deliberately simplified. In practice, fixed-point accelerations can significantly speed up MAP convergence, narrowing the gap on moderately sparse graphs.</p>
+<p>The following benchmarks test two PyFixest backends:</p>
+<ul>
+<li><code>pyfixest (rust-map)</code> implements MAP without acceleration,</li>
+<li><code>pyfixest (rust-cg)</code> implements the CG-Schwarz strategy via <code>within</code>’s solver.</li>
+</ul>
+<p>All benchmarks time the full PyFixest estimation call.</p>
+<p>The benchmark scripts and DGP documentation live in <a href="https://github.com/py-econometrics/pyfixest/tree/master/benchmarks/modular"><code>benchmarks/modular/</code></a>. You should be able to reproduce all results by running <code>pixi r benchmark</code>, <code>pixi r benchmark-akm</code> and <code>pixi run benchmark-akm-occupation</code> - if not, please send us a message!</p>
+</section>
+<section id="benchmark-parametrization" class="level2">
+<h2 class="anchored" data-anchor-id="benchmark-parametrization">Benchmark Parametrization</h2>
+<p>We now introduce our baseline benchmark parametrization. All subsequent benchmarks start from these defaults and vary one parameter at a time.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 29%">
+<col style="width: 21%">
+<col style="width: 24%">
+<col style="width: 24%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Parameter</th>
+<th style="text-align: center;">Symbol</th>
+<th style="text-align: right;">Default</th>
+<th style="text-align: left;">Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Panel length</td>
+<td style="text-align: center;"><span class="math inline">\(T\)</span></td>
+<td style="text-align: right;">10</td>
+<td style="text-align: left;">Number of time periods each worker is observed</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Number of firms</td>
+<td style="text-align: center;"><span class="math inline">\(m_F\)</span></td>
+<td style="text-align: right;">50,000</td>
+<td style="text-align: left;">Total firms in the economy</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Separation rate</td>
+<td style="text-align: center;"><span class="math inline">\(\delta\)</span></td>
+<td style="text-align: right;">0.10</td>
+<td style="text-align: left;">Per-period probability that a worker switches firms</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Sorting</td>
+<td style="text-align: center;"><span class="math inline">\(\rho\)</span></td>
+<td style="text-align: right;">1.0</td>
+<td style="text-align: left;">Correlation between worker ability and firm quality in the matching process (<span class="math inline">\(\rho = 0\)</span>: random, high <span class="math inline">\(\rho\)</span>: strong assortative matching)</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Within-industry match prob.</td>
+<td style="text-align: center;"><span class="math inline">\(\lambda\)</span></td>
+<td style="text-align: right;">0.80</td>
+<td style="text-align: left;">Probability that a mover’s next firm is in the same industry (<span class="math inline">\(\lambda = 1\)</span>: no cross-industry moves)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Number of industries</td>
+<td style="text-align: center;"><span class="math inline">\(S\)</span></td>
+<td style="text-align: right;">5</td>
+<td style="text-align: left;">Number of industry clusters</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Match bins</td>
+<td style="text-align: center;"><code>n_match_bins</code></td>
+<td style="text-align: right;">2,048</td>
+<td style="text-align: left;">Number of worker ability bins used in the benchmark matching routine</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Firm size shape</td>
+<td style="text-align: center;"><span class="math inline">\(\gamma\)</span></td>
+<td style="text-align: right;">1.0</td>
+<td style="text-align: left;">Pareto shape parameter for the firm size distribution (high <span class="math inline">\(\gamma\)</span>: equal sizes, low <span class="math inline">\(\gamma\)</span>: extreme dispersion)</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="well-connected-graphs" class="level2">
+<h2 class="anchored" data-anchor-id="well-connected-graphs">Well-Connected Graphs</h2>
+<p>Before looking at problems with sparse(r) connections, it is worth confirming the baseline: when the bipartite graph is dense, the MAP algorithm converges really quickly.</p>
+<p>In this initial scenario, we hold the graph structure fixed at the defaults and - to spice up the benchmarks a bit - increase the number of workers <span class="math inline">\(N\)</span> from 10K to 10M.</p>
+<p align="center">
+<img src="figures/akm-benchmarks/bench_scale.png" width="85%">
+</p>
+<p><em>Benchmark: scale sweep. Runtime as a function of dataset size on a well-connected graph with default parameters.</em></p>
+<p>On this easy problem, the standard worker + firm + year specification is solved routinely well by both algorithms because each sweep already removes most of the variation. The <code>rust-map</code> backend will not look this good in any other of the benchmarks to follow, which all reduce the level of connectivity between workers and firms.</p>
+</section>
+<section id="complex-fixed-effects-structures" class="level2">
+<h2 class="anchored" data-anchor-id="complex-fixed-effects-structures">Complex Fixed Effects Structures</h2>
+<p>All benchmarks below hold the estimation dataset at ~1M observations and vary one structural parameter at a time from the defaults, isolating the effect of each graph property on solver performance.</p>
+<section id="a-low-worker-mobility-delta" class="level3">
+<h3 class="anchored" data-anchor-id="a-low-worker-mobility-delta">(a) Low worker mobility <span class="math inline">\(\delta\)</span></h3>
+<p>The separation rate <span class="math inline">\(\delta\)</span> controls how likely a worker is to change firms in each period. With <span class="math inline">\(\delta = 0.5\)</span>, a worker has a 50% chance of switching firms every period, so after a 10-period panel nearly everyone has moved at least once. With <span class="math inline">\(\delta = 0.01\)</span>, workers separate only 1% of the time, so the expected tenure at a firm is 100 periods, which is far longer than the panel itself. In a 10-period panel with <span class="math inline">\(\delta = 0.01\)</span>, only about 9% of workers are ever observed at more than one firm.</p>
+<p>This matters because movers are the only source of information that lets the algorithm distinguish worker effects from firm effects. When <span class="math inline">\(\delta\)</span> is high, the bipartite graph is dense with edges and every firm is connected to many others through shared workers. When <span class="math inline">\(\delta\)</span> is low, most workers sit at a single firm, and the graph thins out to a near-nested structure where worker and firm effects are almost collinear.</p>
+<p align="center">
+<img src="figures/akm-benchmarks/bench_mobility.png" width="85%">
+</p>
+<p><em>Benchmark: mobility sweep. The rust-map solver degrades sharply as mobility decreases, while CG-Schwarz (rust-cg) remains stable.</em></p>
+</section>
+<section id="b-progressive-freezing" class="level3">
+<h3 class="anchored" data-anchor-id="b-progressive-freezing">(b) Progressive freezing</h3>
+<p>The uniform mobility sweep above turns a single “global knob” for the entire labour market. But real labour markets are not uniformly sparse - some sectors are highly dynamic, while in others, workers more or less retire at their first employer. The progressive-freezing benchmark captures this by keeping the baseline 5-industry market structure and progressively switching off mobility one industry at a time. Active industries keep the baseline separation rate (<span class="math inline">\(\delta = 0.1\)</span>), while frozen industries drop to <span class="math inline">\(\delta = 0.005\)</span>.</p>
+<p align="center">
+<img src="figures/akm-benchmarks/bench_freeze.png" width="85%">
+</p>
+<p><em>Benchmark: progressive freezing. As more industries switch from the baseline mobility rate (<span class="math inline">\(\delta = 0.1\)</span>) to the frozen regime (<span class="math inline">\(\delta = 0.005\)</span>), MAP runtimes rise progressively, while CG-Schwarz remains stable throughout.</em></p>
+</section>
+<section id="c-strong-assortative-matching-rho" class="level3">
+<h3 class="anchored" data-anchor-id="c-strong-assortative-matching-rho">(c) Strong assortative matching <span class="math inline">\(\rho\)</span></h3>
+<p>The sorting parameter <span class="math inline">\(\rho\)</span> controls how strongly worker ability <span class="math inline">\(\alpha_i\)</span> and firm quality <span class="math inline">\(\psi_j\)</span> are correlated in the matching process. When <span class="math inline">\(\rho = 0\)</span>, workers are randomly assigned to firms regardless of type. When <span class="math inline">\(\rho\)</span> is large, high-ability workers systematically sort into high-quality firms and low-ability workers end up at low-quality firms.</p>
+<p>Strong sorting changes the structure of the bipartite graph even if the total number of movers stays the same. With random matching, movers create edges that cross the entire graph, connecting firms of all quality levels. With strong sorting, movers tend to switch between firms of similar quality, so the graph develops a near-block-diagonal structure where each “quality band” becomes an almost self-contained subgraph. The cross-tabulation blocks become sparse because there are few edges between quality bands - great workers never work in poor firms and vice versa - making worker and firm effect columns nearly collinear.</p>
+<p align="center">
+<img src="figures/akm-benchmarks/bench_sorting.png" width="85%">
+</p>
+<p><em>Benchmark: sorting sweep. Increasing sorting (<span class="math inline">\(\rho\)</span>) increases MAP runtime while CGS runtime remains stable.</em></p>
+</section>
+<section id="d-99-problems" class="level3">
+<h3 class="anchored" data-anchor-id="d-99-problems">(d) 99 Problems</h3>
+<p>The benchmarks above vary one parameter at a time from the baseline. In practice, real datasets often combine multiple “sources of difficulty” simultaneously. The sorting <span class="math inline">\(\times\)</span> mobility factorial benchmark tests this by crossing two levels of sorting (<span class="math inline">\(\rho \in
+\{0, 20\}\)</span>) with two levels of mobility (<span class="math inline">\(\delta \in \{0.5, 0.02\}\)</span>).</p>
+<p align="center">
+<img src="figures/akm-benchmarks/bench_interaction.png" width="85%">
+</p>
+<p><em>Benchmark: sorting x mobility interaction.</em></p>
+<p>The combination of <span class="math inline">\(\rho = 20\)</span> and <span class="math inline">\(\delta = 0.02\)</span> produces runtimes far exceeding what either factor alone would predict. Sorting thins out the bridges between quality bands by making movers switch only between similar firms, while low mobility means there are few movers to begin with. Together, they produce an extremely sparse graph where MAP has almost no cross-fixed-effect information to work with.</p>
+</section>
+</section>
+<section id="adding-a-third-nesting-structure-occupation-fixed-effects" class="level2">
+<h2 class="anchored" data-anchor-id="adding-a-third-nesting-structure-occupation-fixed-effects">Adding a Third Nesting Structure: Occupation Fixed Effects</h2>
+<p>The benchmarks above all involve the standard worker + firm + year specification - which essentially forms a bipartite graph between workers and firms (as year is low-dimensional and trivially absorbed). But many empirical applications add a third high-dimensional fixed effect. In AKM wage regressions, occupation is a natural candidate: labour economists often want to separate how much of a worker’s wage comes from <em>who they are</em> (worker FE), <em>where they work</em> (firm FE), and <em>what they do</em> (occupation FE).</p>
+<p>Adding occupation turns the bipartite graph into a <strong>tripartite</strong> structure. The new fixed effect can be “easy” or “hard” depending on how it relates to the existing fixed effects. If occupation cross-cuts firms and workers - different occupations appear at each firm, and workers switch occupations when they move - then the occupation dimension adds independent variation and is cheap to absorb. But if occupation is <em>nested</em> within one of the existing fixed effects, the new fixed effects become nearly collinear with an existing set, and the problem gets harder for the same reasons we saw above: the graph loses edges and becomes more sparse.</p>
+<p>There are two ways occupation can nest:</p>
+<ul>
+<li><strong>Firm nesting:</strong> Each firm concentrates on a single occupation (think a law firm where everyone is a lawyer). Then knowing the firm almost perfectly predicts the occupation, and the occupation FE column is nearly a copy of the firm FE column.</li>
+<li><strong>Worker nesting:</strong> Workers carry their occupation across job changes (a nurse remains a nurse regardless of which hospital they join). Then the occupation FE column is nearly a copy of the worker FE column.</li>
+</ul>
+<p>In either case, the solver must separate two nearly identical columns - exactly the type of problem that makes vanilla MAP slow.</p>
+<p>In the benchmark family below, we focus primarily on <strong>firm nesting</strong> and on the overall number of occupation levels. Worker-level occupation persistence is part of the DGP, but it is held fixed rather than swept as its own benchmark dimension.</p>
+<section id="the-occupation-dgp" class="level3">
+<h3 class="anchored" data-anchor-id="the-occupation-dgp">The occupation DGP</h3>
+<p>For the occupation benchmarks, we set up a new data generating process that keeps the standard worker + firm + year AKM panel and adds <code>occ_id</code> as a fourth fixed effect. Each firm draws a sparse menu of occupations from an industry-level pool, with one primary occupation. Workers draw their initial occupation from that menu. On a firm move, workers keep their old occupation with probability <code>occ_delta</code> if the destination firm supports it; otherwise they redraw from the destination firm’s occupation menu.</p>
+<p>Three parameters matter for the occupation DGP. The benchmark family below varies the first two and holds the third fixed:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 29%">
+<col style="width: 21%">
+<col style="width: 24%">
+<col style="width: 24%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Parameter</th>
+<th style="text-align: center;">Symbol</th>
+<th style="text-align: right;">Default</th>
+<th style="text-align: left;">Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Firm–occ concentration</td>
+<td style="text-align: center;"><code>occ_lambda</code></td>
+<td style="text-align: right;">0.50</td>
+<td style="text-align: left;">Probability that a fresh draw from a firm’s occupation menu selects the primary occupation (higher values imply stronger firm–occupation concentration)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Number of occupations</td>
+<td style="text-align: center;"><code>n_occupations</code></td>
+<td style="text-align: right;">200</td>
+<td style="text-align: left;">Total occupation levels in the economy</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Occupation persistence</td>
+<td style="text-align: center;"><code>occ_delta</code></td>
+<td style="text-align: right;">0.30</td>
+<td style="text-align: left;">Probability that a worker keeps the same occupation on a compatible firm move</td>
+</tr>
+</tbody>
+</table>
+<p>Each firm also has a menu size of 5 occupations. These defaults give a moderately cross-cutting baseline on top of the standard three-way AKM panel (~1M observations).</p>
+</section>
+<section id="a-firmoccupation-nesting-occ_lambda" class="level3">
+<h3 class="anchored" data-anchor-id="a-firmoccupation-nesting-occ_lambda">(a) Firm–occupation nesting (<code>occ_lambda</code>)</h3>
+<p>The parameter <code>occ_lambda</code> controls how strongly realized occupations at a firm concentrate on that firm’s primary occupation. At <code>occ_lambda = 0.01</code>, fresh draws from a firm’s menu rarely select the primary occupation, so workers are spread across the non-primary occupations in the menu. At <code>occ_lambda = 1.0</code>, every fresh draw from a firm’s menu selects the primary occupation, so occupation becomes much closer to a deterministic function of firm identity. Compatible movers can still carry an old non-primary occupation because <code>occ_delta</code> is held fixed above zero.</p>
+<p align="center">
+<img src="figures/akm-occupation-benchmarks/bench_occlambda.png" width="85%">
+</p>
+<p><em>Benchmark: firm–occupation concentration benchmarks. This family varies only <code>occ_lambda</code>, making occupations progressively more nested within firms.</em></p>
+</section>
+<section id="b-occupation-dimensionality-n_occupations" class="level3">
+<h3 class="anchored" data-anchor-id="b-occupation-dimensionality-n_occupations">(b) Occupation dimensionality (<code>n_occupations</code>)</h3>
+<p>Increasing the number of occupation levels makes the problem harder as the occupation sub-graph thins out. With 10 occupations, each level is observed at many firms and held by many workers, so the occupation cross-tabulation blocks are dense and well-conditioned. With 5,000 occupations, each level appears in far fewer observations, and the cross-tabulation blocks become sparse. This is the same graph-thinning mechanism that makes low mobility hard, just in the occupation dimension. The bencmark varies <code>n_occupations</code> from 10 to 5,000 while holding all other parameters at their defaults.</p>
+<p align="center">
+<img src="figures/akm-occupation-benchmarks/bench_occsize.png" width="85%">
+</p>
+<p><em>Benchmark: occupation dimensionality benchmark. This family varies only the number of occupation levels from 10 to 5,000.</em></p>
+</section>
+</section>
+<section id="conclusion" class="level2">
+<h2 class="anchored" data-anchor-id="conclusion">Conclusion</h2>
+<p>Graph connectivity is the fundamental driver of fixed-effects solver performance.</p>
+<p>The practical recommendation is straightforward: for well-connected graphs (high mobility, low sorting, cross-cutting factors), (accelerated) MAP is often hard to beat. For sparse graphs - low mobility, strong sorting, nested structures, or any combination thereof - vanilla MAP as in <code>rust-map</code> reveals poor convergence properties. Within PyFixest, the CG-Schwarz backend (<code>rust-cg</code> via the <code>within</code> crate) is the more robust choice on these sparse graphs.</p>
+<p>We conclude by showing two benchmarks from the <code>fixest</code> package that are designed to be simple and very challenging for the MAP algorithm. On the “simple” problem, the graph is dense and both PyFixest backends perform well; here, CG-Schwarz tends to lose because its setup overhead does not amortize. On the “difficult” sparse problem, vanilla MAP degrades sharply, while CG-Schwarz performs much better. In the checked-in results, <code>rust-cg</code> is substantially faster than <code>rust-map</code> on the hard three-way specification.</p>
+<p align="center">
+<img src="figures/base-benchmarks/bench_simple.png" width="85%">
+</p>
+<p><em>Benchmark: “simple” DGP. A well-connected graph where both PyFixest solvers perform well, except CG-Schwarz whose preconditioner setup cost does not amortize.</em></p>
+<p align="center">
+<img src="figures/base-benchmarks/bench_difficult.png" width="85%">
+</p>
+<p><em>Benchmark: “difficult” DGP. A sparse graph where vanilla MAP degrades dramatically, while CG-Schwarz remains fast.</em></p>
+
+
+</section>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

@@ -23,17 +23,17 @@ are in development.
 
 ## Parameters {.doc-section .doc-section-parameters}
 
-| Name      | Type            | Description                                                                                                                                                          | Default    |
-|-----------|-----------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------|
-| data      | DataFrame       | The DataFrame containing all variables.                                                                                                                              | _required_ |
-| yname     | str             | The name of the dependent variable.                                                                                                                                  | _required_ |
-| idname    | str             | The name of the id variable.                                                                                                                                         | _required_ |
-| tname     | str             | Variable name for calendar period.                                                                                                                                   | _required_ |
-| gname     | str             | Unit-specific time of initial treatment.                                                                                                                             | _required_ |
-| cluster   | Optional\[str\] | The name of the cluster variable. If None, defaults to idname.                                                                                                       | `None`     |
-| xfml      | str             | The formula for the covariates.                                                                                                                                      | `None`     |
-| estimator | str             | The estimator to use. Options are "did2s", "twfe", and "saturated".                                                                                                  | `'twfe'`   |
-| att       | bool            | If True, estimates the average treatment effect on the treated (ATT). If False, estimates the canonical event study design with all leads and lags. Default is True. | `True`     |
+| Name      | Type        | Description                                                                                                                                                          | Default    |
+|-----------|-------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------|
+| data      | DataFrame   | The DataFrame containing all variables.                                                                                                                              | _required_ |
+| yname     | str         | The name of the dependent variable.                                                                                                                                  | _required_ |
+| idname    | str         | The name of the id variable.                                                                                                                                         | _required_ |
+| tname     | str         | Variable name for calendar period.                                                                                                                                   | _required_ |
+| gname     | str         | Unit-specific time of initial treatment.                                                                                                                             | _required_ |
+| cluster   | str \| None | The name of the cluster variable. If None, defaults to idname.                                                                                                       | `None`     |
+| xfml      | str         | The formula for the covariates.                                                                                                                                      | `None`     |
+| estimator | str         | The estimator to use. Options are "did2s", "twfe", and "saturated".                                                                                                  | `'twfe'`   |
+| att       | bool        | If True, estimates the average treatment effect on the treated (ATT). If False, estimates the canonical event study design with all leads and lags. Default is True. | `True`     |
 
 ## Returns {.doc-section .doc-section-returns}
 
