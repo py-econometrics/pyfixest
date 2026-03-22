@@ -1,3 +1,7 @@
+# The following code is adapted from the fixest_benchmarks repository
+# by Kyle Butts (https://github.com/kylebutts/fixest_benchmarks?tab=License-1-ov-file)
+# Licensed under the MIT License
+
 from __future__ import annotations
 
 import numpy as np

@@ -21,7 +21,7 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 You can install the latest pre-release to try out the new features:
 
 ```{.bash .code-copy}
-pip install pyfixest==0.50.0a1
+pip install pyfixest==0.50.0a2
 pip install --pre pyfixest
 ```
 :::
