@@ -215,9 +215,8 @@ test-py-extended = { cmd = 'pytest tests -n auto -m "extended" --cov=pyfixest --
 render-notebooks = { cmd = "python scripts/run_notebooks.py", description = "Run all notebooks" }
 
 [tool.pixi.tasks._setup]
-cmd = "python scripts/setup_maturin_hook.py && touch .pixi/.import-hook-installed"
+cmd = "python scripts/setup_maturin_hook.py"
 inputs = ["scripts/setup_maturin_hook.py"]
-outputs = [".pixi/.import-hook-installed"]
 
 # -- python version features ------------------------------------------------------------
 
@@ -291,7 +290,7 @@ lets-plot = ">=4.0.0"
 # docs-build: Generate API reference .qmd files from docstrings via quartodoc.
 # docs-render: Build the full static site (runs docs-build first, then quarto render).
 # docs-preview: Start a local dev server with live reload (does NOT run docs-build first).
-docs-build = { cmd = "quartodoc build --verbose --config docs/_quarto.yml", description = "Build API docs with quartodoc" }
+docs-build = { cmd = "quartodoc build --verbose --config docs/_quarto.yml", depends-on = ["_setup"], description = "Build API docs with quartodoc" }
 docs-render = { cmd = "quarto render docs", depends-on = ["docs-build"], env = { PYTHONWARNINGS = "ignore", KMP_WARNINGS = "0" }, description = "Render docs with Quarto" }
 docs-preview = { cmd = "quarto preview docs", depends-on = ["docs-build"], env = { PYTHONWARNINGS = "ignore", KMP_WARNINGS = "0" }, description = "Preview docs locally" }
 
