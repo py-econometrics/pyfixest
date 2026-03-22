@@ -92,8 +92,8 @@ website:
           file: how-to/benchmarks.qmd
       - text: "Explanation"
         menu:
-        - text: "When Are Fixed Effects Difficult?"
-          file: explanation/hard-fixed-effects.md
+        - text: "When Are Fixed Effects Problems Difficult? And What Can We Do About It?"
+          file: explanation/difficult-fixed-effects.md
       - text: "Textbook Replications"
         menu:
         - text: "All Textbook Replications"
