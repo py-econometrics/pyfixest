@@ -1116,7 +1116,7 @@ dependencies = [
 
 [[package]]
 name = "pyfixest_core"
-version = "0.50.0-a2"
+version = "0.50.0"
 dependencies = [
  "ndarray",
  "numpy",
