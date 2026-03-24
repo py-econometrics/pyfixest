@@ -249,7 +249,7 @@ def model_matrix_fixest(
                 endogvar=endogvar,
                 weights_df=weights_df,
             )
-            if offset is not None:
+            if offset_df is not None:
                 offset_df = offset_df[keep_idx]
 
     na_index = _get_na_index(data.shape[0], Y.index)

@@ -165,7 +165,7 @@ class FixestMulti:
         quantile: float | None = None,
         quantile_tol: float = 1e-06,
         quantile_maxiter: int | None = None,
-        offset: Optional[Union[None, str]] = None,
+        offset: str | None = None,
     ) -> None:
         """
         Prepare model for estimation.
