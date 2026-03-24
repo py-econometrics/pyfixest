@@ -157,20 +157,6 @@ class Fepois(Feols):
         "Prepare model inputs for estimation."
         super().prepare_model_matrix()
 
-        # Extract offset from data or default to zeros
-        if self._offset_name is not None:
-            if self._offset_name not in self._data.columns:
-                raise ValueError(
-                    f"Offset variable '{self._offset_name}' not found in data."
-                )
-            self._offset = (
-                self._data.loc[self._Y.index, self._offset_name]
-                .to_numpy()
-                .reshape((-1, 1))
-            )
-        else:
-            self._offset = np.zeros((self._N, 1))
-
         # check that self._Y is a pandas Series or DataFrame
         self._Y = _check_series_or_dataframe(self._Y)
 
@@ -201,7 +187,6 @@ class Fepois(Feols):
             self._data.drop(na_separation, axis=0, inplace=True)
             if self._weights_df is not None:
                 self._weights_df.drop(na_separation, axis=0, inplace=True)
-            self._offset = np.delete(self._offset, na_separation, axis=0)
             self._N = self._Y.shape[0]
             self._N_rows = self._N
             # Re-set weights after dropping rows (handles both weighted and unweighted)
@@ -212,6 +197,16 @@ class Fepois(Feols):
             # possible to have dropped fixed effects level due to separation
             self._k_fe = self._fe.nunique(axis=0) if self._has_fixef else None
             self._n_fe = np.sum(self._k_fe > 1) if self._has_fixef else 0
+
+        # Extract offset after all drops (singleton + separation) so indices are aligned
+        if self._offset_name is not None:
+            if self._offset_name not in self._data.columns:
+                raise ValueError(
+                    f"Offset variable '{self._offset_name}' not found in data."
+                )
+            self._offset = self._data[self._offset_name].to_numpy().reshape((-1, 1))
+        else:
+            self._offset = np.zeros((self._N, 1))
 
     def to_array(self):
         "Turn estimation DataFrames to np arrays."
