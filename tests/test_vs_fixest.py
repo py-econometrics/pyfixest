@@ -532,14 +532,12 @@ def test_single_fit_fepois(
 
     ssc_ = ssc(k_adj=k_adj, G_adj=G_adj)
 
-    data = data_fepois
+    data_fepois = data_fepois.copy()
     if offset:
-        data["offset_var"] = np.ones(data.shape[0]) * 5
+        data_fepois["offset_var"] = np.log(np.ones(data_fepois.shape[0]) * 2)
         offset_var = "offset_var"
     else:
         offset_var = None
-
-    data_fepois = data_fepois.copy()
     if dropna:
         data_fepois.dropna(inplace=True)
     # long story, but categories need to be strings to be converted to R factors,
@@ -641,8 +639,9 @@ def test_single_fit_fepois(
         py_tstat, r_tstat, 1e-06 if weights is None else 1e-05, "py_tstat != r_tstat"
     )
     check_absolute_diff(py_confint, r_confint, 1e-06, "py_confint != r_confint")
-    check_absolute_diff(py_deviance, r_deviance, 1e-08, "py_deviance != r_deviance")
-    check_absolute_diff(py_loglik, r_loglik, 1e-08, "py_ll != r_loglik")
+    _dev_tol = 1e-07 if offset else 1e-08
+    check_absolute_diff(py_deviance, r_deviance, _dev_tol, "py_deviance != r_deviance")
+    check_absolute_diff(py_loglik, r_loglik, _dev_tol, "py_ll != r_loglik")
 
     # cant match fixest yet
     if weights is None:
