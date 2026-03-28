@@ -1,0 +1,237 @@
+---
+title: "Choosing and Reusing Fixed-Effects Solvers"
+description: "How to configure fixed-effects demeaners, reuse within solvers and preconditioners, and persist reusable preconditioners across sessions."
+categories: [Fixed Effects, Performance]
+---
+
+```{python}
+import pickle
+import tempfile
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+
+import pyfixest as pf
+```
+
+`PyFixest` now accepts object-based demeaner configurations. This makes it easier to choose a backend, tune solver settings, and pass reusable solver objects between regressions.
+
+If you are deciding whether a fixed-effects problem is likely to be easy or hard for alternating-projections methods, see [When Are Fixed Effects Problems Difficult?](../explanation/difficult-fixed-effects.md).
+
+## Choosing a Demeaner
+
+The main fixed-effects options are:
+
+| Demeaner | Main idea | Typical use |
+|---|---|---|
+| `pf.NumbaDemeaner(...)` | CPU alternating projections | good default on CPU |
+| `pf.WithinDemeaner(...)` | Krylov solver with Schwarz preconditioning via `within` | hard FE problems and reuse workflows |
+| `pf.ScipyDemeaner(...)` | SciPy sparse iterative solver | CPU sparse linear algebra workflows |
+| `pf.CupyDemeaner(...)` / `pf.JaxDemeaner(...)` | GPU-based demeaning | large GPU workloads |
+
+The `within` backend is the only one that currently exposes reusable `solver` and `preconditioner` objects.
+
+## Solver vs Preconditioner
+
+The two reusable objects serve different purposes:
+
+| Object | Stores | Reuse rule | Main benefit | Main risk |
+|---|---|---|---|---|
+| `solver` | the full demeaning problem | reuse only on the same sample, with the same weights, fixed-effects encoding, and solver settings | skips the expensive setup entirely | exact-match only |
+| `preconditioner` | only the acceleration object | can be reused more loosely and may remain useful even when slightly stale | avoids rebuilding the preconditioner from scratch | stale reuse may need more iterations |
+
+In other words, a `solver` is tied to one specific demeaning problem. A `preconditioner` is only an accelerator for the current problem. That is why a stale preconditioner can still be useful on non-identical, but related problems, while a stale solver should not be reused.
+
+The expensive part of the `within` backend is the initial setup. Before the iterative solve even starts, `within` has to build a high-quality preconditioner for the fixed-effects problem. That setup cost is exactly what solver and preconditioner reuse are designed to avoid.
+
+## Example Data
+
+```{python}
+panel = pf.get_worker_panel(N_workers=300, N_firms=40, N_years=8, seed=42)
+
+rng = np.random.default_rng(123)
+panel["log_bonus"] = (
+    0.4 * panel["worker_fe"]
+    - 0.2 * panel["firm_fe"]
+    + 0.01 * panel["experience"]
+    + 0.02 * panel["tenure"]
+    + rng.normal(0, 0.2, size=len(panel))
+)
+
+fml_y1 = "log_wage ~ experience + tenure | worker_id + firm_id"
+fml_y2 = "log_bonus ~ experience + tenure | worker_id + firm_id"
+panel.head()
+```
+
+## Pass Demeaners as Dataclasses
+
+Instead of string shorthands, you can pass a configured demeaner directly.
+
+```{python}
+fit_numba = pf.feols(
+    fml_y1,
+    data=panel,
+    demeaner=pf.NumbaDemeaner(fixef_maxiter=10_000),
+)
+
+fit_within = pf.feols(
+    fml_y1,
+    data=panel,
+    demeaner=pf.WithinDemeaner(
+        krylov_method="gmres",
+        gmres_restart=20,
+        preconditioner_type="multiplicative",
+    ),
+)
+
+pd.concat(
+    {
+        "numba": fit_numba.coef(),
+        "within": fit_within.coef(),
+    },
+    axis=1,
+)
+```
+
+## Reuse a Solver Within the Same Session
+
+For in-process reuse, prefer a `solver`. This is the fast path: the expensive setup is done once, and later solves borrow the stored solver directly.
+
+Why is the first run expensive? Because `within` has to build the preconditioner for the current worker-firm problem. Once that has been done, repeated solves on the exact same problem are much cheaper.
+
+You can reuse a solver exposed by a fitted model:
+
+```{python}
+fit1 = pf.feols(
+    fml_y1,
+    data=panel,
+    demeaner=pf.WithinDemeaner(),
+)
+
+fit2 = pf.feols(
+    fml_y2,
+    data=panel,
+    demeaner=pf.WithinDemeaner(solver=fit1.solver_),
+)
+
+fit2.coef()
+```
+
+You can also build a reusable solver explicitly:
+
+```{python}
+solver = pf.get_solver(
+    fml_y1,
+    data=panel,
+    demeaner=pf.WithinDemeaner(preconditioner_type="additive"),
+)
+
+fit3 = pf.feols(
+    fml_y2,
+    data=panel,
+    demeaner=pf.WithinDemeaner(solver=solver),
+)
+
+fit3.coef()
+```
+
+Use a solver when the sample, weights, and fixed-effects encoding are the same. Solver reuse is intentionally strict.
+
+More concretely, solver reuse is appropriate only when:
+
+- the same rows are used
+- the same observation weights are used
+- the same fixed-effects structure and encoding are used
+- the same solver configuration is used
+
+This strictness is what makes the solver path fast: `PyFixest` can borrow the stored solver directly instead of rebuilding anything. No fresh solver object needs to be constructed, and no new preconditioner needs to be built.
+
+## Reuse a Preconditioner Across Regressions
+
+If you want a more portable object, extract a `preconditioner` from a solver and pass that into a later regression:
+
+```{python}
+preconditioner_from_fit = fit1.solver_.to_preconditioner()
+
+fit4 = pf.feols(
+    fml_y2,
+    data=panel,
+    demeaner=pf.WithinDemeaner(preconditioner=preconditioner_from_fit),
+)
+
+fit4.coef()
+```
+
+Compared with a solver, a preconditioner is a lower-level object. It only affects convergence speed, not the target problem itself.
+
+This is the key tradeoff:
+
+- a solver must match the current problem exactly
+- a preconditioner can be stale and still be useful
+
+In the preconditioner case, `PyFixest` builds a fresh solver for the current regression and uses the stored preconditioner only to accelerate convergence. So preconditioner reuse still has some setup cost, but it avoids the most expensive part: building a new preconditioner from scratch.
+
+If the sample or weights changed a bit, the preconditioner may still help, but it will usually be less effective and the Krylov solver may need more iterations.
+
+So if you expect to rerun the exact same demeaning problem, use a `solver`. If you expect slightly different samples or want something portable across sessions, use a `preconditioner`.
+
+## Build a Preconditioner Explicitly
+
+You can also construct a reusable preconditioner directly:
+
+```{python}
+preconditioner = pf.get_preconditioner(
+    fml_y1,
+    data=panel,
+    demeaner=pf.WithinDemeaner(preconditioner_type="additive"),
+)
+
+fit5 = pf.feols(
+    fml_y2,
+    data=panel,
+    demeaner=pf.WithinDemeaner(preconditioner=preconditioner),
+)
+
+fit5.coef()
+```
+
+This is the preferred API when you want a reusable object for persistence or for advanced reuse workflows.
+
+## Persist a Preconditioner Across Sessions
+
+Preconditioners are pickleable, so you can save them and reload them in a later session:
+
+```{python}
+with tempfile.TemporaryDirectory() as tmpdir:
+    path = Path(tmpdir) / "within_preconditioner.pkl"
+
+    with path.open("wb") as file:
+        pickle.dump(preconditioner, file)
+
+    with path.open("rb") as file:
+        restored_preconditioner = pickle.load(file)
+
+    print(path)
+
+fit6 = pf.feols(
+    fml_y2,
+    data=panel,
+    demeaner=pf.WithinDemeaner(preconditioner=restored_preconditioner),
+)
+
+fit6.coef()
+```
+
+In practice, replace the temporary file with a durable path.
+
+## Which Reuse Object Should I Use?
+
+- Use `solver` for repeated estimation in the same Python session.
+- Use `preconditioner` when you want a portable, pickleable object.
+- Use `solver` only for exact-match reuse.
+- Use `preconditioner` when reuse may be slightly stale, for example after small sample changes.
+- Use `fit.solver_.to_preconditioner()` when you want to turn a fitted model's solver into a persistence artifact.
+- Use `pf.get_preconditioner()` when you want to build the persistence artifact explicitly.
+
+Reusable solvers are not supported for `feglm()` and `fepois()`, because those estimators update observation weights across iterations. Reusable preconditioners can still be used there.

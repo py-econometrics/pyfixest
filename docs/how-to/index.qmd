@@ -6,6 +6,7 @@ aliases:
 listing:
   type: grid
   contents:
+    - fixed-effects-solvers.qmd
     - marginaleffects.qmd
     - regression_decomposition.qmd
     - pyfixest_gpu.qmd
