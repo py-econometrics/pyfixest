@@ -9,8 +9,8 @@ import pandas as pd
 from tqdm import tqdm
 
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
+from pyfixest.estimation.internals.demeaner_options import ResolvedDemeaner
 from pyfixest.estimation.internals.literals import (
-    DemeanerBackendOptions,
     SolverOptions,
 )
 from pyfixest.estimation.models.feols_ import (
@@ -64,6 +64,10 @@ class FeolsCompressed(Feols):
         The lookup table for demeaned data.
     solver : SolverOptions
         The solver to use.
+    demeaner : Optional[ResolvedDemeaner]
+        Resolved typed demeaner configuration. If provided, it determines the
+        backend and the fixed-effects iteration controls used by the model. Not
+        relevant for the "compression" estimator.
     store_data : bool
         Whether to store the data.
     copy_data : bool
@@ -97,7 +101,7 @@ class FeolsCompressed(Feols):
         fixef_maxiter: int,
         lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
         solver: SolverOptions = "np.linalg.solve",
-        demeaner_backend: DemeanerBackendOptions = "numba",
+        demeaner: ResolvedDemeaner | None = None,
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
@@ -120,7 +124,7 @@ class FeolsCompressed(Feols):
             fixef_maxiter,
             lookup_demeaned_data,
             solver,
-            demeaner_backend,
+            demeaner,
             store_data,
             copy_data,
             lean,

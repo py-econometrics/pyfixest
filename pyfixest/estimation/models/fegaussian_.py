@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
-from pyfixest.estimation.internals.literals import DemeanerBackendOptions
+from pyfixest.estimation.internals.demeaner_options import ResolvedDemeaner
 from pyfixest.estimation.models.feglm_ import Feglm
 
 
@@ -34,6 +34,7 @@ class Fegaussian(Feglm):
             "scipy.sparse.linalg.lsqr",
             "jax",
         ],
+        demeaner: ResolvedDemeaner | None = None,
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
@@ -41,7 +42,6 @@ class Fegaussian(Feglm):
         sample_split_value: str | int | None = None,
         separation_check: list[str] | None = None,
         context: int | Mapping[str, Any] = 0,
-        demeaner_backend: DemeanerBackendOptions = "numba",
         accelerate: bool = True,
     ):
         super().__init__(
@@ -59,6 +59,7 @@ class Fegaussian(Feglm):
             tol=tol,
             maxiter=maxiter,
             solver=solver,
+            demeaner=demeaner,
             store_data=store_data,
             copy_data=copy_data,
             lean=lean,
@@ -66,7 +67,6 @@ class Fegaussian(Feglm):
             sample_split_value=sample_split_value,
             separation_check=separation_check,
             context=context,
-            demeaner_backend=demeaner_backend,
             accelerate=accelerate,
         )
 

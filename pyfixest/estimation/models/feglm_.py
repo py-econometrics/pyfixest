@@ -10,7 +10,10 @@ from pyfixest.errors import (
 )
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.backends import BACKENDS
-from pyfixest.estimation.internals.literals import DemeanerBackendOptions
+from pyfixest.estimation.internals.demeaner_options import (
+    ResolvedDemeaner,
+    get_demeaner_backend,
+)
 from pyfixest.estimation.internals.solvers import solve_ols
 from pyfixest.estimation.models.feols_ import (
     Feols,
@@ -47,7 +50,7 @@ class Feglm(Feols, ABC):
             "scipy.sparse.linalg.lsqr",
             "jax",
         ],
-        demeaner_backend: DemeanerBackendOptions = "numba",
+        demeaner: ResolvedDemeaner | None = None,
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
@@ -76,6 +79,7 @@ class Feglm(Feols, ABC):
             sample_split_var=sample_split_var,
             sample_split_value=sample_split_value,
             context=context,
+            demeaner=demeaner,
         )
 
         _glm_input_checks(
@@ -90,11 +94,11 @@ class Feglm(Feols, ABC):
         self.separation_check = separation_check
         self._accelerate = accelerate
 
-        self._demeaner_backend = demeaner_backend
+        backend_key = get_demeaner_backend(self._demeaner)
         try:
-            impl = BACKENDS[demeaner_backend]
+            impl = BACKENDS[backend_key]
         except KeyError:
-            raise ValueError(f"Unknown demeaner backend {demeaner_backend!r}")
+            raise ValueError(f"Unknown demeaner backend {backend_key!r}")
         self._demean_func = impl["demean"]
 
         self._support_crv3_inference = True

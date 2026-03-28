@@ -1,8 +1,10 @@
 from collections.abc import Mapping
 from typing import Any
 
+from pyfixest.demeaners import BaseDemeaner
 from pyfixest.estimation.api.utils import _estimation_input_checks
 from pyfixest.estimation.FixestMulti_ import FixestMulti
+from pyfixest.estimation.internals.demeaner_options import resolve_demeaner
 from pyfixest.estimation.internals.literals import (
     DemeanerBackendOptions,
     FixedRmOptions,
@@ -34,6 +36,7 @@ def fepois(
     separation_check: list[str] | None = None,
     solver: SolverOptions = "scipy.linalg.solve",
     demeaner_backend: DemeanerBackendOptions = "numba",
+    demeaner: BaseDemeaner | None = None,
     drop_intercept: bool = False,
     copy_data: bool = True,
     store_data: bool = True,
@@ -137,7 +140,14 @@ def fepois(
           matrices (requires cupy & GPU, defaults to scipy/CPU and float64 if no GPU available)
         - "scipy": Direct application of the Frisch-Waugh-Lovell Theorem on sparse matrice.
           Forces to use a scipy-sparse backend even when cupy is installed and GPU is available.
-        Defaults to "numba".
+        Defaults to "numba". This argument is treated as a shorthand and is only
+        used when `demeaner` is not provided.
+
+    demeaner : BaseDemeaner | None, optional
+        Typed demeaner configuration. If provided, it takes precedence over
+        `demeaner_backend`, `fixef_tol`, and `fixef_maxiter`. Backend-specific
+        settings and fixed-effects iteration controls are taken entirely from
+        this object.
 
     drop_intercept : bool, optional
         Whether to drop the intercept from the model, by default False.
@@ -208,6 +218,14 @@ def fepois(
     if ssc is None:
         ssc = ssc_func()
     context = {} if context is None else capture_context(context)
+    resolved_demeaner = resolve_demeaner(
+        demeaner=demeaner,
+        demeaner_backend=demeaner_backend,
+        fixef_tol=fixef_tol,
+        fixef_maxiter=fixef_maxiter,
+    )
+    resolved_fixef_tol = resolved_demeaner.fixef_tol
+    resolved_fixef_maxiter = resolved_demeaner.fixef_maxiter
 
     _estimation_input_checks(
         fml=fml,
@@ -221,8 +239,8 @@ def fepois(
         copy_data=copy_data,
         store_data=store_data,
         lean=lean,
-        fixef_tol=fixef_tol,
-        fixef_maxiter=fixef_maxiter,
+        fixef_tol=resolved_fixef_tol,
+        fixef_maxiter=resolved_fixef_maxiter,
         weights_type=weights_type,
         use_compression=False,
         reps=None,
@@ -237,8 +255,8 @@ def fepois(
         copy_data=copy_data,
         store_data=store_data,
         lean=lean,
-        fixef_tol=fixef_tol,
-        fixef_maxiter=fixef_maxiter,
+        fixef_tol=resolved_fixef_tol,
+        fixef_maxiter=resolved_fixef_maxiter,
         weights_type=weights_type,
         use_compression=False,
         reps=None,
@@ -271,7 +289,7 @@ def fepois(
         iwls_maxiter=iwls_maxiter,
         collin_tol=collin_tol,
         separation_check=separation_check,
-        demeaner_backend=demeaner_backend,
+        demeaner=resolved_demeaner,
     )
 
     if fixest._is_multiple_estimation:

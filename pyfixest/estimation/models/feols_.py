@@ -11,14 +11,18 @@ from scipy.sparse import csc_matrix, diags, spmatrix
 from scipy.sparse.linalg import lsqr
 from scipy.stats import chi2, f, t
 
+from pyfixest.demeaners import MapDemeaner
 from pyfixest.errors import VcovTypeNotSupportedError
 from pyfixest.estimation.api.utils import _ALL_SAMPLE, _AllSampleSentinel
 from pyfixest.estimation.formula import model_matrix as model_matrix_fixest
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.backends import BACKENDS
 from pyfixest.estimation.internals.demean_ import demean_model
+from pyfixest.estimation.internals.demeaner_options import (
+    ResolvedDemeaner,
+    get_demeaner_backend,
+)
 from pyfixest.estimation.internals.literals import (
-    DemeanerBackendOptions,
     PredictionErrorOptions,
     PredictionType,
     SolverOptions,
@@ -98,6 +102,9 @@ class Feols(ResultAccessorMixin):
         The solver to use for the regression. Can be "np.linalg.lstsq",
         "np.linalg.solve", "scipy.linalg.solve", "scipy.sparse.linalg.lsqr" and "jax".
         Defaults to "scipy.linalg.solve".
+    demeaner : Optional[ResolvedDemeaner]
+        Resolved typed demeaner configuration. If provided, it determines the
+        backend and the fixed-effects iteration controls used by the model.
     context : int or Mapping[str, Any]
         A dictionary containing additional context variables to be used by
         formulaic during the creation of the model matrix. This can include
@@ -214,7 +221,6 @@ class Feols(ResultAccessorMixin):
     _solver: Literal["np.linalg.lstsq", "np.linalg.solve", "scipy.linalg.solve",
         "scipy.sparse.linalg.lsqr", "jax"],
         default is "scipy.linalg.solve". Solver to use for the estimation.
-    _demeaner_backend: DemeanerBackendOptions
     _data: pd.DataFrame
         The data frame used in the estimation. None if arguments `lean = True` or
         `store_data = False`.
@@ -256,7 +262,7 @@ class Feols(ResultAccessorMixin):
         fixef_maxiter: int,
         lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
         solver: SolverOptions = "np.linalg.solve",
-        demeaner_backend: DemeanerBackendOptions = "numba",
+        demeaner: ResolvedDemeaner | None = None,
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
@@ -296,7 +302,12 @@ class Feols(ResultAccessorMixin):
         self._fixef_tol = fixef_tol
         self._fixef_maxiter = fixef_maxiter
         self._solver = solver
-        self._demeaner_backend = demeaner_backend
+        if demeaner is None:
+            demeaner = MapDemeaner(
+                fixef_tol=fixef_tol,
+                fixef_maxiter=fixef_maxiter,
+            )
+        self._demeaner = demeaner
         self._lookup_demeaned_data = lookup_demeaned_data
         self._store_data = store_data
         self._copy_data = copy_data
@@ -322,10 +333,11 @@ class Feols(ResultAccessorMixin):
         # self._coefnames = None
         self._icovars = None
 
+        backend_key = get_demeaner_backend(demeaner)
         try:
-            impl = BACKENDS[demeaner_backend]
+            impl = BACKENDS[backend_key]
         except KeyError:
-            raise ValueError(f"Unknown backend {demeaner_backend!r}")
+            raise ValueError(f"Unknown backend {backend_key!r}")
 
         self._demean_func = impl["demean"]
         self._find_collinear_variables_func = impl["collinear"]

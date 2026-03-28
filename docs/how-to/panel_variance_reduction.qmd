@@ -229,6 +229,9 @@ fit_panel = pf.feols(
 )
 ```
 
+This uses the legacy backend shorthand. The typed equivalent is
+`demeaner=pf.MapDemeaner(backend="rust")`.
+
 We can compare all results:
 
 ```{python}

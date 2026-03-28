@@ -12,8 +12,8 @@ from pyfixest.errors import (
     NonConvergenceError,
 )
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
+from pyfixest.estimation.internals.demeaner_options import ResolvedDemeaner
 from pyfixest.estimation.internals.literals import (
-    DemeanerBackendOptions,
     SolverOptions,
 )
 from pyfixest.estimation.internals.solvers import solve_ols
@@ -64,8 +64,9 @@ class Fepois(Feols):
         The solver to use for the regression. Can be "np.linalg.lstsq",
         "np.linalg.solve", "scipy.linalg.solve", "scipy.sparse.linalg.lsqr" and "jax".
         Defaults to "scipy.linalg.solve".
-    demeaner_backend: DemeanerBackendOptions.
-        The backend used for demeaning.
+    demeaner : Optional[ResolvedDemeaner]
+        Resolved typed demeaner configuration. If provided, it determines the
+        backend and the fixed-effects iteration controls used by the model.
     fixef_tol: float, default = 1e-06.
         Tolerance level for the convergence of the demeaning algorithm.
     context : int or Mapping[str, Any]
@@ -98,7 +99,7 @@ class Fepois(Feols):
         tol: float,
         maxiter: int,
         solver: SolverOptions = "np.linalg.solve",
-        demeaner_backend: DemeanerBackendOptions = "numba",
+        demeaner: ResolvedDemeaner | None = None,
         context: int | Mapping[str, Any] = 0,
         store_data: bool = True,
         copy_data: bool = True,
@@ -126,7 +127,7 @@ class Fepois(Feols):
             sample_split_var=sample_split_var,
             sample_split_value=sample_split_value,
             context=context,
-            demeaner_backend=demeaner_backend,
+            demeaner=demeaner,
         )
 
         # input checks

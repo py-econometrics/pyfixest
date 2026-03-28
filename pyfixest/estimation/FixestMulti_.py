@@ -7,8 +7,8 @@ import pandas as pd
 
 from pyfixest.estimation.api.utils import _ALL_SAMPLE, _AllSampleSentinel
 from pyfixest.estimation.formula.parse import Formula
+from pyfixest.estimation.internals.demeaner_options import ResolvedDemeaner
 from pyfixest.estimation.internals.literals import (
-    DemeanerBackendOptions,
     QuantregMethodOptions,
     QuantregMultiOptions,
     SolverOptions,
@@ -252,7 +252,7 @@ class FixestMulti:
         vcov: str | dict[str, str] | None,
         solver: SolverOptions,
         vcov_kwargs: dict[str, Any] | None = None,
-        demeaner_backend: DemeanerBackendOptions = "numba",
+        demeaner: ResolvedDemeaner | None = None,
         collin_tol: float = 1e-6,
         iwls_maxiter: int = 25,
         iwls_tol: float = 1e-08,
@@ -274,9 +274,9 @@ class FixestMulti:
              Additional keyword arguments for the variance-covariance matrix. Defaults to None.
         solver: SolverOptions
             Solver to use for the estimation.
-        demeaner_backend: DemeanerBackendOptions, optional
-            The backend to use for demeaning. Can be either "numba" or "jax".
-            Defaults to "numba".
+        demeaner: Optional[ResolvedDemeaner]
+            The demeaning strategy to use for the estimation. Not relevant for the "compression" estimator
+            and quantile regression.
         collin_tol : float, optional
             The tolerance level for the multicollinearity check. Default is 1e-6.
         iwls_maxiter : int, optional
@@ -362,7 +362,7 @@ class FixestMulti:
                     }:
                         model_kwargs.update(
                             {
-                                "demeaner_backend": demeaner_backend,
+                                "demeaner": demeaner,
                             }
                         )
 

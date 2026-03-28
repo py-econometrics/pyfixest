@@ -1,26 +1,22 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from numbers import Real
-from typing import ClassVar, Literal, Self
+from typing import ClassVar, Literal
 
 
-def _validate_positive_float(value: float | None, name: str) -> float | None:
-    if value is None:
-        return None
+def _validate_positive_float(value: float, name: str) -> float:
     if not isinstance(value, Real):
-        raise TypeError(f"`{name}` must be a real number or None.")
+        raise TypeError(f"`{name}` must be a real number.")
     value = float(value)
     if value <= 0:
         raise ValueError(f"`{name}` must be strictly positive.")
     return value
 
 
-def _validate_positive_int(value: int | None, name: str) -> int | None:
-    if value is None:
-        return None
+def _validate_positive_int(value: int, name: str) -> int:
     if not isinstance(value, int):
-        raise TypeError(f"`{name}` must be an int or None.")
+        raise TypeError(f"`{name}` must be an int.")
     if value <= 0:
         raise ValueError(f"`{name}` must be strictly positive.")
     return value
@@ -30,8 +26,8 @@ def _validate_positive_int(value: int | None, name: str) -> int | None:
 class BaseDemeaner:
     """Base configuration shared by all fixed-effects demeaners."""
 
-    fixef_tol: float | None = None
-    fixef_maxiter: int | None = None
+    fixef_tol: float = 1e-06
+    fixef_maxiter: int = 10_000
     kind: ClassVar[str]
 
     def __post_init__(self) -> None:
@@ -44,16 +40,6 @@ class BaseDemeaner:
             self,
             "fixef_maxiter",
             _validate_positive_int(self.fixef_maxiter, "fixef_maxiter"),
-        )
-
-    def resolved(self, fixef_tol: float, fixef_maxiter: int) -> Self:
-        """Fill in unspecified fixed-effects controls from top-level defaults."""
-        return replace(
-            self,
-            fixef_tol=fixef_tol if self.fixef_tol is None else self.fixef_tol,
-            fixef_maxiter=(
-                fixef_maxiter if self.fixef_maxiter is None else self.fixef_maxiter
-            ),
         )
 
 
@@ -93,7 +79,6 @@ class WithinDemeaner(BaseDemeaner):
         object.__setattr__(self, "krylov_method", krylov_method)
 
         gmres_restart = _validate_positive_int(self.gmres_restart, "gmres_restart")
-        assert gmres_restart is not None
         object.__setattr__(self, "gmres_restart", gmres_restart)
 
         if not isinstance(self.preconditioner_type, str):
@@ -133,21 +118,24 @@ class LsmrDemeaner(BaseDemeaner):
         if self.use_gpu is not None and not isinstance(self.use_gpu, bool):
             raise TypeError("`use_gpu` must be a bool or None.")
 
-        object.__setattr__(
-            self,
-            "solver_atol",
-            _validate_positive_float(self.solver_atol, "solver_atol"),
-        )
-        object.__setattr__(
-            self,
-            "solver_btol",
-            _validate_positive_float(self.solver_btol, "solver_btol"),
-        )
-        object.__setattr__(
-            self,
-            "solver_maxiter",
-            _validate_positive_int(self.solver_maxiter, "solver_maxiter"),
-        )
+        if self.solver_atol is not None:
+            object.__setattr__(
+                self,
+                "solver_atol",
+                _validate_positive_float(self.solver_atol, "solver_atol"),
+            )
+        if self.solver_btol is not None:
+            object.__setattr__(
+                self,
+                "solver_btol",
+                _validate_positive_float(self.solver_btol, "solver_btol"),
+            )
+        if self.solver_maxiter is not None:
+            object.__setattr__(
+                self,
+                "solver_maxiter",
+                _validate_positive_int(self.solver_maxiter, "solver_maxiter"),
+            )
 
         if not isinstance(self.warn_on_cpu_fallback, bool):
             raise TypeError("`warn_on_cpu_fallback` must be a bool.")

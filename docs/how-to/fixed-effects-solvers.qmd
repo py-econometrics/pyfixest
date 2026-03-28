@@ -67,6 +67,9 @@ panel.head()
 ## Pass Demeaners as Dataclasses
 
 Instead of string shorthands, you can pass a configured demeaner directly.
+When a typed `demeaner=` is provided, it is authoritative: its backend,
+`fixef_tol`, and `fixef_maxiter` take precedence over the top-level
+`demeaner_backend`, `fixef_tol`, and `fixef_maxiter` arguments.
 
 ```{python}
 fit_numba = pf.feols(

@@ -37,31 +37,25 @@ def resolve_demeaner(
     fixef_tol: float,
     fixef_maxiter: int,
 ) -> ResolvedDemeaner:
-    """Resolve user input into a fully specified demeaner object."""
+    """Resolve user input into a fully specified demeaner object.
+
+    If a typed ``demeaner`` is supplied, it takes precedence over the legacy
+    ``demeaner_backend`` shorthand. The backend argument is only used when no
+    typed demeaner configuration is provided.
+    """
     backend = normalize_demeaner_backend(demeaner_backend)
 
     if demeaner is not None:
         if not isinstance(demeaner, _DEMEANER_TYPES):
             raise TypeError("`demeaner` must be a supported pyfixest demeaner.")
-        if backend != "numba":
-            raise ValueError(
-                "When `demeaner` is provided, `demeaner_backend` must be left at "
-                "its default value `'numba'`."
-            )
-        return cast(
-            ResolvedDemeaner,
-            demeaner.resolved(fixef_tol=fixef_tol, fixef_maxiter=fixef_maxiter),
-        )
+        return cast(ResolvedDemeaner, demeaner)
 
     shorthand = _from_backend_shorthand(
         demeaner_backend=backend,
         fixef_tol=fixef_tol,
         fixef_maxiter=fixef_maxiter,
     )
-    return cast(
-        ResolvedDemeaner,
-        shorthand.resolved(fixef_tol=fixef_tol, fixef_maxiter=fixef_maxiter),
-    )
+    return cast(ResolvedDemeaner, shorthand)
 
 
 def get_demeaner_backend(demeaner: ResolvedDemeaner) -> DemeanerBackendOptions:

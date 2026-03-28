@@ -10,6 +10,7 @@ from scipy.linalg import cho_factor, solve_triangular
 from scipy.stats import norm
 
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
+from pyfixest.estimation.internals.demeaner_options import resolve_demeaner
 from pyfixest.estimation.internals.literals import (
     QuantregMethodOptions,
     SolverOptions,
@@ -52,6 +53,12 @@ class Quantreg(Feols):
         quantile_maxiter: int | None = None,
         seed: int | None = None,
     ) -> None:
+        demeaner = resolve_demeaner(
+            demeaner=None,
+            demeaner_backend=demeaner_backend,
+            fixef_tol=fixef_tol,
+            fixef_maxiter=fixef_maxiter,
+        )
         super().__init__(
             FixestFormula=FixestFormula,
             data=data,
@@ -71,7 +78,7 @@ class Quantreg(Feols):
             sample_split_var=sample_split_var,
             sample_split_value=sample_split_value,
             context=context,
-            demeaner_backend=demeaner_backend,
+            demeaner=demeaner,
         )
 
         warnings.warn(
