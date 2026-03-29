@@ -1120,6 +1120,7 @@ version = "0.50.0"
 dependencies = [
  "ndarray",
  "numpy",
+ "postcard",
  "pyo3",
  "rayon",
  "thiserror 2.0.17",

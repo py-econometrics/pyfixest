@@ -1,3 +1,4 @@
+import pickle
 import re
 
 import numpy as np
@@ -509,6 +510,65 @@ def test_prepare_within_preconditioner_builds_once_and_refreshes_on_request(
     assert len(build_calls) == 2
     assert effective_demeaner.preconditioner is refreshed_preconditioner
     assert refreshed_preconditioner is not preconditioner
+
+
+def test_within_preconditioner_roundtrips_via_pickle():
+    rng = np.random.default_rng(777)
+    n = 250
+    x = rng.normal(size=(n, 3))
+    flist = np.column_stack([rng.integers(0, 30, n), rng.integers(0, 20, n)]).astype(
+        np.uint32
+    )
+    weights = rng.uniform(0.5, 1.5, n)
+
+    preconditioner = build_within_preconditioner(flist, weights)
+    restored_from_pickle = pickle.loads(pickle.dumps(preconditioner))
+
+    x_demeaned_original, success_original = demean_within(
+        x,
+        flist,
+        weights,
+        preconditioner=preconditioner,
+    )
+    x_demeaned_pickle, success_pickle = demean_within(
+        x,
+        flist,
+        weights,
+        preconditioner=restored_from_pickle,
+    )
+
+    assert success_original and success_pickle
+    np.testing.assert_allclose(x_demeaned_pickle, x_demeaned_original, rtol=1e-10)
+    assert (
+        restored_from_pickle.factor_cardinalities == preconditioner.factor_cardinalities
+    )
+
+
+def test_restored_within_preconditioner_still_validates_structure():
+    rng = np.random.default_rng(991)
+    n = 200
+    x = rng.normal(size=(n, 2))
+    flist = np.column_stack([rng.integers(0, 20, n), rng.integers(0, 15, n)]).astype(
+        np.uint32
+    )
+    weights = rng.uniform(0.5, 1.5, n)
+    preconditioner = build_within_preconditioner(flist, weights)
+    restored = pickle.loads(pickle.dumps(preconditioner))
+
+    incompatible_flist = np.column_stack(
+        [rng.integers(0, 25, n), rng.integers(0, 15, n)]
+    ).astype(np.uint32)
+
+    with pytest.raises(
+        ValueError,
+        match="fixed-effect cardinalities do not match",
+    ):
+        demean_within(
+            x,
+            incompatible_flist,
+            weights,
+            preconditioner=restored,
+        )
 
 
 @pytest.mark.parametrize(

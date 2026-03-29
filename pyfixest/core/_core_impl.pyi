@@ -32,6 +32,12 @@ def _build_within_preconditioner_rs(
     weights: NDArray[np.float64],
     preconditioner_type: str = "additive",
 ) -> _WithinPreconditionerHandle: ...
+def _serialize_within_preconditioner_rs(
+    preconditioner_handle: _WithinPreconditionerHandle,
+) -> bytes: ...
+def _deserialize_within_preconditioner_rs(
+    data: bytes,
+) -> _WithinPreconditionerHandle: ...
 def _count_fixef_fully_nested_all_rs(
     all_fixef_array: NDArray,
     cluster_colnames: NDArray,

@@ -2,6 +2,7 @@ use ndarray::{Array2, ArrayView1, ArrayView2, ShapeBuilder};
 use numpy::{PyArray2, PyReadonlyArray1, PyReadonlyArray2};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
+use pyo3::types::PyBytes;
 
 #[pyclass(module = "pyfixest.core._core_impl", name = "_WithinPreconditionerHandle")]
 #[derive(Clone)]
@@ -173,6 +174,28 @@ pub fn _build_within_preconditioner_rs(
     let handle =
         py.detach(|| build_preconditioner_impl(&flist_arr, &weights_arr, preconditioner_type))?;
     Py::new(py, handle)
+}
+
+#[pyfunction]
+pub fn _serialize_within_preconditioner_rs(
+    py: Python<'_>,
+    preconditioner_handle: Py<WithinPreconditionerHandle>,
+) -> PyResult<Py<PyBytes>> {
+    let handle = preconditioner_handle.bind(py).borrow();
+    let bytes = postcard::to_stdvec(&handle.inner)
+        .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+    Ok(PyBytes::new(py, &bytes).unbind())
+}
+
+#[pyfunction]
+pub fn _deserialize_within_preconditioner_rs(
+    py: Python<'_>,
+    data: &[u8],
+) -> PyResult<Py<WithinPreconditionerHandle>> {
+    let inner: within::FePreconditioner = postcard::from_bytes(data).map_err(|e| {
+        PyValueError::new_err(format!("failed to deserialize preconditioner: {}", e))
+    })?;
+    Py::new(py, WithinPreconditionerHandle::from_inner(inner))
 }
 
 #[pyfunction]

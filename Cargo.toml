@@ -15,6 +15,7 @@ rayon   = "1.11.0"
 numpy = "0.26.0"
 thiserror = "2.0.16"
 within = "0.1.0"
+postcard = { version = "1", features = ["use-std"] }
 
 [profile.release]
 opt-level = 3        # Maximize performance

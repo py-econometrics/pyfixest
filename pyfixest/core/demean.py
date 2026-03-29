@@ -11,6 +11,8 @@ from ._core_impl import (
     _build_within_preconditioner_rs,
     _demean_rs,
     _demean_within_rs,
+    _deserialize_within_preconditioner_rs,
+    _serialize_within_preconditioner_rs,
 )
 
 
@@ -58,6 +60,60 @@ class WithinPreconditioner:
     factor_cardinalities: tuple[int, ...]
     preconditioner_type: str
     _preconditioner_handle: Any = field(repr=False)
+
+    def _to_pickle_bytes(self) -> bytes:
+        return _serialize_within_preconditioner_rs(self._preconditioner_handle)
+
+    @classmethod
+    def _from_pickle(
+        cls,
+        data: bytes,
+        n_obs: int,
+        n_factors: int,
+        factor_cardinalities: tuple[int, ...],
+        preconditioner_type: str,
+    ) -> WithinPreconditioner:
+        if not isinstance(data, (bytes, bytearray, memoryview)):
+            raise TypeError("`data` must be bytes-like.")
+        if not isinstance(n_obs, int) or n_obs <= 0:
+            raise ValueError("`n_obs` must be a positive int.")
+        if not isinstance(n_factors, int) or n_factors <= 0:
+            raise ValueError("`n_factors` must be a positive int.")
+        factor_cardinalities = tuple(int(card) for card in factor_cardinalities)
+        if len(factor_cardinalities) != n_factors:
+            raise ValueError(
+                "`factor_cardinalities` must have one entry per fixed-effect dimension."
+            )
+        if any(card <= 0 for card in factor_cardinalities):
+            raise ValueError("`factor_cardinalities` entries must be positive.")
+        if not isinstance(preconditioner_type, str):
+            raise TypeError("`preconditioner_type` must be a string.")
+        preconditioner_type = preconditioner_type.lower()
+        if preconditioner_type not in {"additive", "multiplicative"}:
+            raise ValueError(
+                "`preconditioner_type` must be either 'additive' or 'multiplicative'."
+            )
+
+        handle = _deserialize_within_preconditioner_rs(bytes(data))
+        return cls(
+            n_obs=n_obs,
+            n_factors=n_factors,
+            factor_cardinalities=factor_cardinalities,
+            preconditioner_type=preconditioner_type,
+            _preconditioner_handle=handle,
+        )
+
+    def __reduce__(self) -> tuple[Any, tuple[Any, ...]]:
+        return (
+            type(self)._from_pickle,
+            (
+                self._to_pickle_bytes(),
+                self.n_obs,
+                self.n_factors,
+                self.factor_cardinalities,
+                self.preconditioner_type,
+            ),
+        )
 
 
 def build_within_preconditioner(

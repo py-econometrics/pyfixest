@@ -1,12 +1,13 @@
 ---
 title: "Choosing and Reusing Fixed-Effects Solvers"
-description: "How to configure fixed-effects demeaners and reuse within preconditioners in the current Python session."
+description: "How to configure fixed-effects demeaners, reuse within preconditioners, and persist them across sessions."
 categories: [Fixed Effects, Performance]
 ---
 
 ```{python}
 import numpy as np
 import pandas as pd
+import pickle
 
 import pyfixest as pf
 ```
@@ -122,6 +123,33 @@ fit2.coef()
 
 In simpler cases, such as no fixed effects, a single fixed effect, or a
 non-`within` demeaner, `fit.preconditioner_` is `None`.
+
+## Persist a Preconditioner Across Sessions
+
+It is possible to persist a preconditioner across Python sessions, which can be useful if you have a costly preconditioner setup and want to reuse it later without recomputing.
+
+The easiest path is via standard `pickle`:
+
+```{python}
+fit1 = pf.feols(
+    fml_y1,
+    data=panel,
+    demeaner=pf.WithinDemeaner(),
+)
+
+payload = pickle.dumps(fit1.preconditioner_)
+restored_preconditioner = pickle.loads(payload)
+
+fit2 = pf.feols(
+    fml_y2,
+    data=panel,
+    demeaner=pf.WithinDemeaner(preconditioner=restored_preconditioner),
+)
+
+fit2.coef()
+```
+
+Please make sure to only load persisted preconditioners from trusted sources. Like any Python pickle-based workflow, untrusted payloads are unsafe to deserialize.
 
 ## Using stale Preconditioners
 

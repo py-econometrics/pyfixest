@@ -19,6 +19,12 @@ fn _core_impl(m: &Bound<'_, PyModule>) -> PyResult<()> {
         demean_within::_build_within_preconditioner_rs
     ))?;
     m.add_wrapped(wrap_pyfunction!(
+        demean_within::_serialize_within_preconditioner_rs
+    ))?;
+    m.add_wrapped(wrap_pyfunction!(
+        demean_within::_deserialize_within_preconditioner_rs
+    ))?;
+    m.add_wrapped(wrap_pyfunction!(
         nested_fixed_effects::_count_fixef_fully_nested_all_rs
     ))?;
     m.add_wrapped(wrap_pyfunction!(detect_singletons::_detect_singletons_rs))?;

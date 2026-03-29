@@ -1,3 +1,5 @@
+import pickle
+
 import duckdb
 import numpy as np
 import pandas as pd
@@ -108,6 +110,25 @@ def test_feols_exposes_and_reuses_within_preconditioner():
             krylov_method="gmres",
             preconditioner=fit1.preconditioner_,
         ),
+    )
+
+    np.testing.assert_allclose(fit1.coef(), fit2.coef(), rtol=1e-10)
+
+
+def test_feols_reuses_pickled_within_preconditioner():
+    data = pf.get_data()
+    fit1 = pf.feols(
+        "Y ~ X1 | f1 + f2",
+        data=data,
+        demeaner=pf.WithinDemeaner(),
+    )
+
+    restored_preconditioner = pickle.loads(pickle.dumps(fit1.preconditioner_))
+
+    fit2 = pf.feols(
+        "Y ~ X1 | f1 + f2",
+        data=data,
+        demeaner=pf.WithinDemeaner(preconditioner=restored_preconditioner),
     )
 
     np.testing.assert_allclose(fit1.coef(), fit2.coef(), rtol=1e-10)
