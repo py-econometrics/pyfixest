@@ -1,10 +1,12 @@
+import re
+
 import numpy as np
 import pandas as pd
 import pyhdfe
 import pytest
 
 from pyfixest.core import demean as demean_rs
-from pyfixest.core.demean import demean_within
+from pyfixest.core.demean import build_within_preconditioner, demean_within
 from pyfixest.demeaners import LsmrDemeaner, MapDemeaner
 from pyfixest.estimation.cupy.demean_cupy_ import demean_cupy32, demean_cupy64
 from pyfixest.estimation.internals.demean_ import (
@@ -394,6 +396,48 @@ def test_feols_integration_maxiter():
     # Should work with default
     model = pf.feols("y ~ x | fe", data=data)
     assert model is not None
+
+
+def test_demean_within_multiplicative_preconditioner_build_and_reuse():
+    rng = np.random.default_rng(123)
+    n = 400
+
+    x = rng.normal(size=(n, 3))
+    flist = np.column_stack([rng.integers(0, 40, n), rng.integers(0, 25, n)]).astype(
+        np.uint32
+    )
+    weights = rng.uniform(0.5, 1.5, n)
+
+    preconditioner = build_within_preconditioner(
+        flist,
+        weights,
+        preconditioner_type="multiplicative",
+    )
+
+    x_demeaned, success = demean_within(
+        x,
+        flist,
+        weights,
+        krylov_method="gmres",
+        preconditioner_type="multiplicative",
+        preconditioner=preconditioner,
+    )
+
+    assert success
+    assert x_demeaned.shape == x.shape
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape("Multiplicative Schwarz requires `krylov_method='gmres'`."),
+    ):
+        demean_within(
+            x,
+            flist,
+            weights,
+            krylov_method="cg",
+            preconditioner_type="multiplicative",
+            preconditioner=preconditioner,
+        )
 
 
 @pytest.mark.parametrize(

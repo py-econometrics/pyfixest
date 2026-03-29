@@ -2,7 +2,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from numbers import Real
-from typing import ClassVar, Literal
+from typing import TYPE_CHECKING, ClassVar, Literal
+
+if TYPE_CHECKING:
+    from pyfixest.core.demean import WithinPreconditioner
 
 
 def _validate_positive_float(value: float, name: str) -> float:
@@ -67,6 +70,7 @@ class WithinDemeaner(BaseDemeaner):
     krylov_method: str = "cg"
     gmres_restart: int = 30
     preconditioner_type: str = "additive"
+    preconditioner: WithinPreconditioner | None = None
     kind: ClassVar[str] = "within"
 
     def __post_init__(self) -> None:
@@ -88,9 +92,24 @@ class WithinDemeaner(BaseDemeaner):
             raise ValueError(
                 "`preconditioner_type` must be either 'additive' or 'multiplicative'."
             )
-        if preconditioner_type == "multiplicative" and krylov_method != "gmres":
-            raise ValueError("Multiplicative Schwarz requires `krylov_method='gmres'`.")
         object.__setattr__(self, "preconditioner_type", preconditioner_type)
+
+        if self.preconditioner is not None:
+            from pyfixest.core.demean import WithinPreconditioner
+
+            if not isinstance(self.preconditioner, WithinPreconditioner):
+                raise TypeError("`preconditioner` must be a WithinPreconditioner.")
+            object.__setattr__(
+                self,
+                "preconditioner_type",
+                self.preconditioner.preconditioner_type,
+            )
+
+        if (
+            self.preconditioner_type == "multiplicative"
+            and self.krylov_method != "gmres"
+        ):
+            raise ValueError("Multiplicative Schwarz requires `krylov_method='gmres'`.")
 
 
 @dataclass(frozen=True, slots=True)

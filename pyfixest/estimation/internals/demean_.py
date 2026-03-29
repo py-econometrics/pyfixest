@@ -178,6 +178,7 @@ def dispatch_demean(
             krylov_method=demeaner.krylov_method,
             gmres_restart=demeaner.gmres_restart,
             preconditioner_type=demeaner.preconditioner_type,
+            preconditioner=demeaner.preconditioner,
         )
 
     if isinstance(demeaner, LsmrDemeaner):
