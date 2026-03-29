@@ -8,12 +8,15 @@ import numpy as np
 import pandas as pd
 from scipy.special import gammaln
 
+from pyfixest.core.demean import WithinPreconditioner
 from pyfixest.errors import (
     NonConvergenceError,
 )
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.demean_ import (
     DemeanedDataCacheEntry,
+    _override_demeaner_tol,
+    _prepare_within_preconditioner,
     dispatch_demean,
 )
 from pyfixest.estimation.internals.demeaner_options import ResolvedDemeaner
@@ -155,6 +158,7 @@ class Fepois(Feols):
         self._Y_hat_response = np.array([])
         self.deviance = None
         self._Xbeta = np.array([])
+        self._iwls_preconditioner: WithinPreconditioner | None = None
 
     def prepare_model_matrix(self):
         "Prepare model inputs for estimation."
@@ -273,11 +277,15 @@ class Fepois(Feols):
             algorithm).
         """
         self.to_array()
+        self._iwls_preconditioner = None
+        inner_tol = self._fixef_tol
+        tightening_refresh_done = False
 
         stop_iterating = False
         crit = 1
 
         for i in range(self.maxiter):
+            refresh_preconditioner = False
             if stop_iterating:
                 self.convergence = True
                 break
@@ -301,26 +309,44 @@ class Fepois(Feols):
                 Z = eta + self._Y / mu - 1  # eq (8)
                 reg_Z = Z.copy()  # eq (9)
 
-            # tighten HDFE tolerance - currently not possible with PyHDFE
-            # if crit < 10 * inner_tol:
-            #    inner_tol = inner_tol / 10
+            if crit < 10 * inner_tol:
+                inner_tol = inner_tol / 10
+                if not tightening_refresh_done:
+                    refresh_preconditioner = True
+                    tightening_refresh_done = True
 
             # Step 1: weighted demeaning
             ZX = np.concatenate([reg_Z, self._X], axis=1)
 
             combined_weights = self._weights * mu
+            iwls_weights = combined_weights.flatten()
 
             if self._fe is None:
                 ZX_resid = ZX
             else:
+                effective_demeaner, self._iwls_preconditioner = (
+                    _prepare_within_preconditioner(
+                        flist=self._fe,
+                        weights=iwls_weights,
+                        demeaner=self._demeaner,
+                        preconditioner=self._iwls_preconditioner,
+                        refresh_preconditioner=refresh_preconditioner,
+                    )
+                )
+                effective_demeaner = _override_demeaner_tol(
+                    effective_demeaner,
+                    tol=inner_tol,
+                )
                 ZX_resid, success = dispatch_demean(
                     x=ZX,
                     flist=self._fe,
-                    weights=combined_weights.flatten(),
-                    demeaner=self._demeaner,
+                    weights=iwls_weights,
+                    demeaner=effective_demeaner,
                 )
                 if success is False:
-                    raise ValueError("Demeaning failed after 100_000 iterations.")
+                    raise ValueError(
+                        f"Demeaning failed after {self._fixef_maxiter} iterations."
+                    )
 
             Z_resid = ZX_resid[:, 0].reshape((self._N, 1))  # z_resid
             X_resid = ZX_resid[:, 1:]  # x_resid

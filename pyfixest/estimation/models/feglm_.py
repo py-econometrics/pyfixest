@@ -5,12 +5,15 @@ from typing import Any, Literal
 import numpy as np
 import pandas as pd
 
+from pyfixest.core.demean import WithinPreconditioner
 from pyfixest.errors import (
     NonConvergenceError,
 )
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.demean_ import (
     DemeanedDataCacheEntry,
+    _override_demeaner_tol,
+    _prepare_within_preconditioner,
     dispatch_demean,
 )
 from pyfixest.estimation.internals.demeaner_options import ResolvedDemeaner
@@ -105,6 +108,8 @@ class Feglm(Feols, ABC):
         self._Xbeta = np.empty(0)
 
         self._method = "feglm"
+        self._iwls_preconditioner: WithinPreconditioner | None = None
+        self._iwls_tightening_refresh_done = False
 
     def prepare_model_matrix(self):
         "Prepare model inputs for estimation."
@@ -175,8 +180,11 @@ class Feglm(Feols, ABC):
         X_tilde_prev = None
         accelerate = self._accelerate and self._fe is not None
         inner_tol = self._fixef_tol
+        self._iwls_preconditioner = None
+        self._iwls_tightening_refresh_done = False
 
         for r in range(self.maxiter):
+            refresh_preconditioner = False
             if r > 0:
                 rel_deviance_change = self._get_relative_deviance_change(
                     deviance, deviance_old
@@ -195,6 +203,9 @@ class Feglm(Feols, ABC):
                 # Adaptive tolerance as in ppmlhdfe
                 if accelerate and rel_deviance_change < 10 * inner_tol:
                     inner_tol = inner_tol / 10
+                    if not self._iwls_tightening_refresh_done:
+                        refresh_preconditioner = True
+                        self._iwls_tightening_refresh_done = True
 
             gprime = self._get_gprime(mu=mu)
             W = self._update_W(mu=mu)
@@ -214,6 +225,7 @@ class Feglm(Feols, ABC):
                 X=X_input,
                 flist=self._fe,
                 weights=W.flatten(),
+                refresh_preconditioner=refresh_preconditioner,
                 tol=inner_tol,
                 maxiter=self._fixef_maxiter,
             )
@@ -404,23 +416,34 @@ class Feglm(Feols, ABC):
         X: np.ndarray,
         flist: np.ndarray,
         weights: np.ndarray,
+        refresh_preconditioner: bool,
         tol: float,
         maxiter: int,
     ) -> tuple[np.ndarray, np.ndarray]:
         "Residualize v and X by flist using weights."
         if flist is None:
             return v, X
-        else:
-            vX_tilde, success = dispatch_demean(
-                x=np.c_[v, X],
-                flist=flist,
-                weights=weights,
-                demeaner=self._demeaner,
-            )
-            if success is False:
-                raise ValueError(f"Demeaning failed after {maxiter} iterations.")
-            else:
-                return vX_tilde[:, 0], vX_tilde[:, 1:]
+
+        iwls_weights = weights.flatten()
+        effective_demeaner, self._iwls_preconditioner = _prepare_within_preconditioner(
+            flist=flist,
+            weights=iwls_weights,
+            demeaner=self._demeaner,
+            preconditioner=self._iwls_preconditioner,
+            refresh_preconditioner=refresh_preconditioner,
+        )
+        effective_demeaner = _override_demeaner_tol(effective_demeaner, tol=tol)
+
+        vX_tilde, success = dispatch_demean(
+            x=np.c_[v, X],
+            flist=flist,
+            weights=iwls_weights,
+            demeaner=effective_demeaner,
+        )
+
+        if success is False:
+            raise ValueError(f"Demeaning failed after {maxiter} iterations.")
+        return vX_tilde[:, 0], vX_tilde[:, 1:]
 
     def _check_convergence(
         self,

@@ -6,10 +6,15 @@ import pyhdfe
 import pytest
 
 from pyfixest.core import demean as demean_rs
-from pyfixest.core.demean import build_within_preconditioner, demean_within
-from pyfixest.demeaners import LsmrDemeaner, MapDemeaner
+from pyfixest.core.demean import (
+    WithinPreconditioner,
+    build_within_preconditioner,
+    demean_within,
+)
+from pyfixest.demeaners import LsmrDemeaner, MapDemeaner, WithinDemeaner
 from pyfixest.estimation.cupy.demean_cupy_ import demean_cupy32, demean_cupy64
 from pyfixest.estimation.internals.demean_ import (
+    _prepare_within_preconditioner,
     _set_demeaner_backend,
     demean,
     demean_model,
@@ -438,6 +443,72 @@ def test_demean_within_multiplicative_preconditioner_build_and_reuse():
             preconditioner_type="multiplicative",
             preconditioner=preconditioner,
         )
+
+
+def test_prepare_within_preconditioner_builds_once_and_refreshes_on_request(
+    monkeypatch,
+):
+    rng = np.random.default_rng(321)
+    n = 200
+    flist = np.column_stack([rng.integers(0, 30, n), rng.integers(0, 20, n)]).astype(
+        np.uint32
+    )
+    demeaner = WithinDemeaner(krylov_method="gmres")
+
+    build_calls: list[np.ndarray] = []
+
+    def fake_build(
+        flist: np.ndarray,
+        weights: np.ndarray,
+        preconditioner_type: str,
+    ) -> WithinPreconditioner:
+        build_calls.append(weights.copy())
+        return WithinPreconditioner(
+            n_obs=flist.shape[0],
+            n_factors=flist.shape[1],
+            factor_cardinalities=tuple((flist.max(axis=0) + 1).tolist()),
+            preconditioner_type=preconditioner_type,
+            _preconditioner_handle=object(),
+        )
+
+    monkeypatch.setattr(
+        "pyfixest.estimation.internals.demean_.build_within_preconditioner",
+        fake_build,
+    )
+
+    weights0 = np.ones(n)
+    effective_demeaner, preconditioner = _prepare_within_preconditioner(
+        flist=flist,
+        weights=weights0,
+        demeaner=demeaner,
+        preconditioner=None,
+    )
+
+    assert len(build_calls) == 1
+    assert effective_demeaner.preconditioner is preconditioner
+
+    effective_demeaner, reused_preconditioner = _prepare_within_preconditioner(
+        flist=flist,
+        weights=weights0 * 1.01,
+        demeaner=demeaner,
+        preconditioner=preconditioner,
+    )
+
+    assert len(build_calls) == 1
+    assert effective_demeaner.preconditioner is reused_preconditioner
+    assert reused_preconditioner is preconditioner
+
+    effective_demeaner, refreshed_preconditioner = _prepare_within_preconditioner(
+        flist=flist,
+        weights=weights0 * 1.01,
+        demeaner=demeaner,
+        preconditioner=preconditioner,
+        refresh_preconditioner=True,
+    )
+
+    assert len(build_calls) == 2
+    assert effective_demeaner.preconditioner is refreshed_preconditioner
+    assert refreshed_preconditioner is not preconditioner
 
 
 @pytest.mark.parametrize(

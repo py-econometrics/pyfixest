@@ -107,11 +107,11 @@ def demean_model(
                 if var_diff.ndim == 1:
                     var_diff = var_diff.reshape(len(var_diff), 1)
 
-                effective_demeaner, _ = _prepare_within_cache_preconditioner(
+                effective_demeaner, _ = _prepare_within_preconditioner(
                     flist=fe_array,
                     weights=weights_array,
                     demeaner=demeaner,
-                    cache_preconditioner=cache_entry.preconditioner,
+                    preconditioner=cache_entry.preconditioner,
                 )
                 YX_demean_new, success = dispatch_demean(
                     x=var_diff,
@@ -141,7 +141,7 @@ def demean_model(
                 YX_demeaned = YX_demeaned_old[yx_names]
 
         else:
-            effective_demeaner, preconditioner = _prepare_within_cache_preconditioner(
+            effective_demeaner, preconditioner = _prepare_within_preconditioner(
                 flist=fe_array,
                 weights=weights_array,
                 demeaner=demeaner,
@@ -183,37 +183,48 @@ def demean_model(
     return Yd, Xd
 
 
-def _prepare_within_cache_preconditioner(
+def _prepare_within_preconditioner(
     flist: np.ndarray,
     weights: np.ndarray,
     demeaner: ResolvedDemeaner,
-    cache_preconditioner: WithinPreconditioner | None = None,
+    preconditioner: WithinPreconditioner | None = None,
+    *,
+    refresh_preconditioner: bool = False,
 ) -> tuple[ResolvedDemeaner, WithinPreconditioner | None]:
     """
-    Prepare the effective demeaner and reusable within cache preconditioner.
+    Prepare the effective demeaner and reusable within preconditioner.
 
     Only `WithinDemeaner` participates in preconditioner reuse. Other demeaners
-    are returned unchanged with no cache preconditioner.
+    are returned unchanged with no reusable preconditioner.
     """
     if not isinstance(demeaner, WithinDemeaner):
         return demeaner, None
-    if demeaner.preconditioner is not None:
-        return demeaner, demeaner.preconditioner
-    if cache_preconditioner is not None:
-        return (
-            replace(demeaner, preconditioner=cache_preconditioner),
-            cache_preconditioner,
-        )
     flist_uint32 = flist.astype(np.uint32, copy=False)
     if flist_uint32.ndim == 1 or flist_uint32.shape[1] <= 1:
         return demeaner, None
 
-    preconditioner = build_within_preconditioner(
+    if demeaner.preconditioner is not None and not refresh_preconditioner:
+        return demeaner, demeaner.preconditioner
+    if preconditioner is not None and not refresh_preconditioner:
+        return replace(demeaner, preconditioner=preconditioner), preconditioner
+
+    built_preconditioner = build_within_preconditioner(
         flist=flist_uint32,
         weights=weights,
         preconditioner_type=demeaner.preconditioner_type,
     )
-    return replace(demeaner, preconditioner=preconditioner), preconditioner
+    return replace(demeaner, preconditioner=built_preconditioner), built_preconditioner
+
+
+def _override_demeaner_tol(
+    demeaner: ResolvedDemeaner,
+    *,
+    tol: float | None = None,
+) -> ResolvedDemeaner:
+    """Override FE tolerance on a typed demeaner when needed. Used for IWLS acceleration."""
+    if tol is None or tol == demeaner.fixef_tol:
+        return demeaner
+    return replace(demeaner, fixef_tol=tol)
 
 
 def dispatch_demean(
