@@ -278,6 +278,31 @@ def demean_cupy(
     dtype : type, default=np.float64
         Data type for GPU computations (np.float32 or np.float64).
     """
+    return demean_cupy_configured(
+        x=x,
+        flist=flist,
+        weights=weights,
+        solver_atol=tol,
+        solver_btol=tol,
+        solver_maxiter=maxiter,
+        dtype=dtype,
+    )
+
+
+def demean_cupy_configured(
+    x: NDArray[np.float64],
+    flist: NDArray[np.uint64] | None = None,
+    weights: NDArray[np.float64] | None = None,
+    *,
+    use_gpu: bool | None = None,
+    solver_atol: float = 1e-8,
+    solver_btol: float = 1e-8,
+    solver_maxiter: int = 100_000,
+    warn_on_cpu_fallback: bool = True,
+    dtype: type = np.float64,
+    use_preconditioner: bool = True,
+) -> tuple[NDArray[np.float64], bool]:
+    """Demean arrays with the configurable CuPy/Scipy sparse FWL backend."""
     if weights is None:
         weights = np.ones(x.shape[0] if x.ndim > 1 else len(x))
 
@@ -288,9 +313,15 @@ def demean_cupy(
     fe_df = pd.DataFrame(flist, columns=[f"f{i + 1}" for i in range(n_fe)], copy=False)
     fe_sparse_matrix = create_fe_sparse_matrix(fe_df)
 
-    return CupyFWLDemeaner(dtype=dtype).demean(
-        x, flist, weights, tol, maxiter, fe_sparse_matrix=fe_sparse_matrix
-    )
+    return CupyFWLDemeaner(
+        use_gpu=use_gpu,
+        solver_atol=solver_atol,
+        solver_btol=solver_btol,
+        solver_maxiter=solver_maxiter,
+        warn_on_cpu_fallback=warn_on_cpu_fallback,
+        dtype=dtype,
+        use_preconditioner=use_preconditioner,
+    ).demean(x, flist, weights, fe_sparse_matrix=fe_sparse_matrix)
 
 
 def demean_cupy32(
@@ -332,6 +363,27 @@ def demean_scipy(
     maxiter: int = 100_000,
 ) -> tuple[NDArray[np.float64], bool]:
     "Scipy demeaner using float64 precision (CPU-only, no GPU)."
+    return demean_scipy_configured(
+        x=x,
+        flist=flist,
+        weights=weights,
+        solver_atol=tol,
+        solver_btol=tol,
+        solver_maxiter=maxiter,
+    )
+
+
+def demean_scipy_configured(
+    x: NDArray[np.float64],
+    flist: NDArray[np.uint64] | None = None,
+    weights: NDArray[np.float64] | None = None,
+    *,
+    solver_atol: float = 1e-8,
+    solver_btol: float = 1e-8,
+    solver_maxiter: int = 100_000,
+    use_preconditioner: bool = True,
+) -> tuple[NDArray[np.float64], bool]:
+    """Demean arrays with the CPU-only sparse FWL backend."""
     if weights is None:
         weights = np.ones(x.shape[0] if x.ndim > 1 else len(x))
 
@@ -342,7 +394,12 @@ def demean_scipy(
     fe_df = pd.DataFrame(flist, columns=[f"f{i + 1}" for i in range(n_fe)], copy=False)
     fe_sparse_matrix = create_fe_sparse_matrix(fe_df)
 
-    # Force CPU usage (use_gpu=False) and disable warnings
     return CupyFWLDemeaner(
-        use_gpu=False, warn_on_cpu_fallback=False, dtype=np.float64
-    ).demean(x, flist, weights, tol, maxiter, fe_sparse_matrix=fe_sparse_matrix)
+        use_gpu=False,
+        solver_atol=solver_atol,
+        solver_btol=solver_btol,
+        solver_maxiter=solver_maxiter,
+        warn_on_cpu_fallback=False,
+        dtype=np.float64,
+        use_preconditioner=use_preconditioner,
+    ).demean(x, flist, weights, fe_sparse_matrix=fe_sparse_matrix)

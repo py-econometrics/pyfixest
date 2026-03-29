@@ -218,6 +218,7 @@ class Feiv(Feols):
                 self._fixef_tol,
                 self._fixef_maxiter,
                 self._demean_func,
+                self._demeaner,
             )
         else:
             self._endogvard = self._endogvar

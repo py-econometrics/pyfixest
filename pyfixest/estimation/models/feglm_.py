@@ -10,6 +10,7 @@ from pyfixest.errors import (
 )
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.backends import BACKENDS
+from pyfixest.estimation.internals.demean_ import dispatch_demean
 from pyfixest.estimation.internals.demeaner_options import (
     ResolvedDemeaner,
     get_demeaner_backend,
@@ -412,19 +413,21 @@ class Feglm(Feols, ABC):
         X: np.ndarray,
         flist: np.ndarray,
         weights: np.ndarray,
-        tol: np.ndarray,
+        tol: float,
         maxiter: int,
     ) -> tuple[np.ndarray, np.ndarray]:
         "Residualize v and X by flist using weights."
         if flist is None:
             return v, X
         else:
-            vX_tilde, success = self._demean_func(
+            vX_tilde, success = dispatch_demean(
                 x=np.c_[v, X],
-                flist=flist.astype(np.uintp),
+                flist=flist,
                 weights=weights,
-                tol=tol,
-                maxiter=maxiter,
+                fixef_tol=tol,
+                fixef_maxiter=maxiter,
+                demean_func=self._demean_func,
+                demeaner=self._demeaner,
             )
             if success is False:
                 raise ValueError(f"Demeaning failed after {maxiter} iterations.")

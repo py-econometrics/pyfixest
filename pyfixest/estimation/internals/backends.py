@@ -66,6 +66,12 @@ BACKENDS = {
         "crv1_meat": crv1_meat_loop,
         "nonnested": count_fixef_fully_nested_all,
     },
+    "within": {
+        "demean": demean_within,
+        "collinear": find_collinear_variables,
+        "crv1_meat": crv1_meat_loop,
+        "nonnested": count_fixef_fully_nested_all,
+    },
     "jax": {
         "demean": demean_jax_fn,
         "collinear": find_collinear_variables_jax,

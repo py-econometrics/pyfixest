@@ -512,7 +512,7 @@ class Feols(ResultAccessorMixin):
                 self._fixef_tol,
                 self._fixef_maxiter,
                 self._demean_func,
-                # self._demeaner_backend,
+                self._demeaner,
             )
         else:
             self._Yd, self._Xd = self._Y, self._X
