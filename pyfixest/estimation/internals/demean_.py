@@ -1,15 +1,28 @@
 from collections.abc import Callable
+from dataclasses import dataclass, replace
 from importlib import import_module
-from typing import Any, cast
+from typing import cast
 
 import numba as nb
 import numpy as np
 import pandas as pd
 
-from pyfixest.core.demean import demean_within
+from pyfixest.core.demean import (
+    WithinPreconditioner,
+    build_within_preconditioner,
+    demean_within,
+)
 from pyfixest.demeaners import LsmrDemeaner, MapDemeaner, WithinDemeaner
 from pyfixest.estimation.internals.demeaner_options import ResolvedDemeaner
 from pyfixest.estimation.internals.literals import DemeanerBackendOptions
+
+
+@dataclass(slots=True)
+class DemeanedDataCacheEntry:
+    """Cached demeaned data and any reusable within preconditioner."""
+
+    demeaned: pd.DataFrame
+    preconditioner: WithinPreconditioner | None = None
 
 
 def demean_model(
@@ -17,7 +30,7 @@ def demean_model(
     X: pd.DataFrame,
     fe: pd.DataFrame | None,
     weights: np.ndarray | None,
-    lookup_demeaned_data: dict[frozenset[int], Any],
+    lookup_demeaned_data: dict[frozenset[int], DemeanedDataCacheEntry],
     na_index: frozenset[int],
     demeaner: ResolvedDemeaner,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -80,15 +93,8 @@ def demean_model(
         fe_array = fe.to_numpy()
         # check if looked dict has data for na_index
         if lookup_demeaned_data.get(na_index) is not None:
-            # get data out of lookup table: list of [algo, data]
-            value = lookup_demeaned_data.get(na_index)
-            if value is not None:
-                try:
-                    _, YX_demeaned_old = value
-                except ValueError:
-                    print("Error: Expected the value to be iterable with two elements.")
-            else:
-                pass
+            cache_entry = lookup_demeaned_data[na_index]
+            YX_demeaned_old = cache_entry.demeaned
 
             # get not yet demeaned covariates
             var_diff_names = list(set(yx_names) - set(YX_demeaned_old.columns))
@@ -101,11 +107,17 @@ def demean_model(
                 if var_diff.ndim == 1:
                     var_diff = var_diff.reshape(len(var_diff), 1)
 
+                effective_demeaner, _ = _prepare_within_cache_preconditioner(
+                    flist=fe_array,
+                    weights=weights_array,
+                    demeaner=demeaner,
+                    cache_preconditioner=cache_entry.preconditioner,
+                )
                 YX_demean_new, success = dispatch_demean(
                     x=var_diff,
                     flist=fe_array,
                     weights=weights_array,
-                    demeaner=demeaner,
+                    demeaner=effective_demeaner,
                 )
                 if success is False:
                     raise ValueError(
@@ -129,11 +141,16 @@ def demean_model(
                 YX_demeaned = YX_demeaned_old[yx_names]
 
         else:
+            effective_demeaner, preconditioner = _prepare_within_cache_preconditioner(
+                flist=fe_array,
+                weights=weights_array,
+                demeaner=demeaner,
+            )
             YX_demeaned_array, success = dispatch_demean(
                 x=YX_array,
                 flist=fe_array,
                 weights=weights_array,
-                demeaner=demeaner,
+                demeaner=effective_demeaner,
             )
             if success is False:
                 raise ValueError(
@@ -142,8 +159,15 @@ def demean_model(
 
             YX_demeaned = pd.DataFrame(YX_demeaned_array)
             YX_demeaned.columns = yx_names
+            lookup_demeaned_data[na_index] = DemeanedDataCacheEntry(
+                demeaned=YX_demeaned,
+                preconditioner=preconditioner,
+            )
 
-        lookup_demeaned_data[na_index] = [None, YX_demeaned]
+        if na_index not in lookup_demeaned_data:
+            lookup_demeaned_data[na_index] = DemeanedDataCacheEntry(
+                demeaned=YX_demeaned
+            )
 
     else:
         # nothing to demean here
@@ -157,6 +181,39 @@ def demean_model(
     Xd = YX_demeaned[X.columns]
 
     return Yd, Xd
+
+
+def _prepare_within_cache_preconditioner(
+    flist: np.ndarray,
+    weights: np.ndarray,
+    demeaner: ResolvedDemeaner,
+    cache_preconditioner: WithinPreconditioner | None = None,
+) -> tuple[ResolvedDemeaner, WithinPreconditioner | None]:
+    """
+    Prepare the effective demeaner and reusable within cache preconditioner.
+
+    Only `WithinDemeaner` participates in preconditioner reuse. Other demeaners
+    are returned unchanged with no cache preconditioner.
+    """
+    if not isinstance(demeaner, WithinDemeaner):
+        return demeaner, None
+    if demeaner.preconditioner is not None:
+        return demeaner, demeaner.preconditioner
+    if cache_preconditioner is not None:
+        return (
+            replace(demeaner, preconditioner=cache_preconditioner),
+            cache_preconditioner,
+        )
+    flist_uint32 = flist.astype(np.uint32, copy=False)
+    if flist_uint32.ndim == 1 or flist_uint32.shape[1] <= 1:
+        return demeaner, None
+
+    preconditioner = build_within_preconditioner(
+        flist=flist_uint32,
+        weights=weights,
+        preconditioner_type=demeaner.preconditioner_type,
+    )
+    return replace(demeaner, preconditioner=preconditioner), preconditioner
 
 
 def dispatch_demean(

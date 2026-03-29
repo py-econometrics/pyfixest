@@ -7,6 +7,7 @@ import pandas as pd
 
 from pyfixest.estimation.api.utils import _ALL_SAMPLE, _AllSampleSentinel
 from pyfixest.estimation.formula.parse import Formula
+from pyfixest.estimation.internals.demean_ import DemeanedDataCacheEntry
 from pyfixest.estimation.internals.demeaner_options import ResolvedDemeaner
 from pyfixest.estimation.internals.literals import (
     QuantregMethodOptions,
@@ -314,7 +315,7 @@ class FixestMulti:
 
                 # dictionary to cache demeaned data keyed by na_index,
                 # only relevant for `.feols()`
-                lookup_demeaned_data: dict[frozenset[int], pd.DataFrame] = {}
+                lookup_demeaned_data: dict[frozenset[int], DemeanedDataCacheEntry] = {}
 
                 for FixestFormula in fixef_key_models:  # type: ignore
                     # loop over both dictfe and dictfe_iv (if the latter is not None)

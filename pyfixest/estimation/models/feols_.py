@@ -13,13 +13,14 @@ from scipy.stats import chi2, f, t
 
 from pyfixest.core.collinear import find_collinear_variables
 from pyfixest.core.crv1 import crv1_meat_loop
+from pyfixest.core.demean import WithinPreconditioner
 from pyfixest.core.nested_fixed_effects import count_fixef_fully_nested_all
 from pyfixest.demeaners import MapDemeaner
 from pyfixest.errors import VcovTypeNotSupportedError
 from pyfixest.estimation.api.utils import _ALL_SAMPLE, _AllSampleSentinel
 from pyfixest.estimation.formula import model_matrix as model_matrix_fixest
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
-from pyfixest.estimation.internals.demean_ import demean_model
+from pyfixest.estimation.internals.demean_ import DemeanedDataCacheEntry, demean_model
 from pyfixest.estimation.internals.demeaner_options import ResolvedDemeaner
 from pyfixest.estimation.internals.literals import (
     PredictionErrorOptions,
@@ -259,7 +260,7 @@ class Feols(ResultAccessorMixin):
         collin_tol: float,
         fixef_tol: float,
         fixef_maxiter: int,
-        lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
+        lookup_demeaned_data: dict[frozenset[int], DemeanedDataCacheEntry],
         solver: SolverOptions = "np.linalg.solve",
         demeaner: ResolvedDemeaner | None = None,
         store_data: bool = True,
@@ -308,6 +309,7 @@ class Feols(ResultAccessorMixin):
             )
         self._demeaner = demeaner
         self._lookup_demeaned_data = lookup_demeaned_data
+        self.preconditioner_: WithinPreconditioner | None = None
         self._store_data = store_data
         self._copy_data = copy_data
         self._lean = lean
@@ -503,8 +505,13 @@ class Feols(ResultAccessorMixin):
                 self._na_index,
                 self._demeaner,
             )
+            cache_entry = self._lookup_demeaned_data.get(self._na_index)
+            self.preconditioner_ = (
+                cache_entry.preconditioner if cache_entry is not None else None
+            )
         else:
             self._Yd, self._Xd = self._Y, self._X
+            self.preconditioner_ = None
 
     def to_array(self):
         "Convert estimation data frames to np arrays."

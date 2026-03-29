@@ -156,7 +156,7 @@ def test_demean_model_with_fixed_effects(benchmark, demeaner):
 
     # Verify results are cached in lookup_dict
     assert frozenset() in lookup_dict
-    cached_data = lookup_dict[frozenset()][1]
+    cached_data = lookup_dict[frozenset()].demeaned
     assert np.allclose(cached_data[Y.columns].values, Yd.values)
     assert np.allclose(cached_data[X.columns].values, Xd.values)
 

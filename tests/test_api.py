@@ -92,6 +92,26 @@ def test_fepois_args():
     np.testing.assert_allclose(fit4.coef(), fit5.coef(), rtol=1e-12)
 
 
+def test_feols_exposes_and_reuses_within_preconditioner():
+    data = pf.get_data()
+    demeaner = pf.WithinDemeaner(krylov_method="gmres")
+
+    fit1 = pf.feols("Y ~ X1 | f1 + f2", data=data, demeaner=demeaner)
+
+    assert fit1.preconditioner_ is not None
+
+    fit2 = pf.feols(
+        "Y ~ X1 | f1 + f2",
+        data=data,
+        demeaner=pf.WithinDemeaner(
+            krylov_method="gmres",
+            preconditioner=fit1.preconditioner_,
+        ),
+    )
+
+    np.testing.assert_allclose(fit1.coef(), fit2.coef(), rtol=1e-10)
+
+
 def test_lean():
     data = pf.get_data()
     fit = pf.feols("Y ~ X1 + X2 | f1", data=data, lean=True)

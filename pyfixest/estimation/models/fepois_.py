@@ -12,7 +12,10 @@ from pyfixest.errors import (
     NonConvergenceError,
 )
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
-from pyfixest.estimation.internals.demean_ import dispatch_demean
+from pyfixest.estimation.internals.demean_ import (
+    DemeanedDataCacheEntry,
+    dispatch_demean,
+)
 from pyfixest.estimation.internals.demeaner_options import ResolvedDemeaner
 from pyfixest.estimation.internals.literals import (
     SolverOptions,
@@ -96,7 +99,7 @@ class Fepois(Feols):
         collin_tol: float,
         fixef_tol: float,
         fixef_maxiter: int,
-        lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
+        lookup_demeaned_data: dict[frozenset[int], DemeanedDataCacheEntry],
         tol: float,
         maxiter: int,
         solver: SolverOptions = "np.linalg.solve",

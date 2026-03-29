@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
+from pyfixest.estimation.internals.demean_ import DemeanedDataCacheEntry
 from pyfixest.estimation.internals.demeaner_options import ResolvedDemeaner
 from pyfixest.estimation.models.feglm_ import Feglm
 
@@ -24,7 +25,7 @@ class Felogit(Feglm):
         collin_tol: float,
         fixef_tol: float,
         fixef_maxiter: int,
-        lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
+        lookup_demeaned_data: dict[frozenset[int], DemeanedDataCacheEntry],
         tol: float,
         maxiter: int,
         solver: Literal[

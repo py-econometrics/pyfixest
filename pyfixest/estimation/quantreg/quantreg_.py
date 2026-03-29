@@ -10,6 +10,7 @@ from scipy.linalg import cho_factor, solve_triangular
 from scipy.stats import norm
 
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
+from pyfixest.estimation.internals.demean_ import DemeanedDataCacheEntry
 from pyfixest.estimation.internals.demeaner_options import resolve_demeaner
 from pyfixest.estimation.internals.literals import (
     QuantregMethodOptions,
@@ -38,7 +39,7 @@ class Quantreg(Feols):
         collin_tol: float,
         fixef_tol: float,
         fixef_maxiter: int,
-        lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
+        lookup_demeaned_data: dict[frozenset[int], DemeanedDataCacheEntry],
         solver: SolverOptions = "np.linalg.solve",
         demeaner_backend: Literal["numba", "jax"] = "numba",
         store_data: bool = True,
