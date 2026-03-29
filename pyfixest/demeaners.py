@@ -99,9 +99,9 @@ class LsmrDemeaner(BaseDemeaner):
 
     precision: str = "float64"
     use_gpu: bool | None = None
-    solver_atol: float | None = None
-    solver_btol: float | None = None
-    solver_maxiter: int | None = None
+    solver_atol: float = 1e-8
+    solver_btol: float = 1e-8
+    solver_maxiter: int = 100_000
     warn_on_cpu_fallback: bool = True
     use_preconditioner: bool = True
     kind: ClassVar[str] = "lsmr"
@@ -118,24 +118,21 @@ class LsmrDemeaner(BaseDemeaner):
         if self.use_gpu is not None and not isinstance(self.use_gpu, bool):
             raise TypeError("`use_gpu` must be a bool or None.")
 
-        if self.solver_atol is not None:
-            object.__setattr__(
-                self,
-                "solver_atol",
-                _validate_positive_float(self.solver_atol, "solver_atol"),
-            )
-        if self.solver_btol is not None:
-            object.__setattr__(
-                self,
-                "solver_btol",
-                _validate_positive_float(self.solver_btol, "solver_btol"),
-            )
-        if self.solver_maxiter is not None:
-            object.__setattr__(
-                self,
-                "solver_maxiter",
-                _validate_positive_int(self.solver_maxiter, "solver_maxiter"),
-            )
+        object.__setattr__(
+            self,
+            "solver_atol",
+            _validate_positive_float(self.solver_atol, "solver_atol"),
+        )
+        object.__setattr__(
+            self,
+            "solver_btol",
+            _validate_positive_float(self.solver_btol, "solver_btol"),
+        )
+        object.__setattr__(
+            self,
+            "solver_maxiter",
+            _validate_positive_int(self.solver_maxiter, "solver_maxiter"),
+        )
 
         if not isinstance(self.warn_on_cpu_fallback, bool):
             raise TypeError("`warn_on_cpu_fallback` must be a bool.")

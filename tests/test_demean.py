@@ -5,6 +5,7 @@ import pytest
 
 from pyfixest.core import demean as demean_rs
 from pyfixest.core.demean import demean_within
+from pyfixest.demeaners import LsmrDemeaner, MapDemeaner
 from pyfixest.estimation.cupy.demean_cupy_ import demean_cupy32, demean_cupy64
 from pyfixest.estimation.internals.demean_ import (
     _set_demeaner_backend,
@@ -72,11 +73,16 @@ def test_set_demeaner_backend():
 
 
 @pytest.mark.parametrize(
-    argnames="demean_func",
-    argvalues=[demean, demean_jax, demean_rs, demean_cupy32, demean_cupy64],
-    ids=["demean_numba", "demean_jax", "demean_rs", "demean_cupy32", "demean_cupy64"],
+    argnames="demeaner",
+    argvalues=[
+        MapDemeaner(backend="numba"),
+        MapDemeaner(backend="jax"),
+        MapDemeaner(backend="rust"),
+        LsmrDemeaner(use_gpu=False),
+    ],
+    ids=["numba", "jax", "rust", "lsmr_scipy"],
 )
-def test_demean_model_no_fixed_effects(benchmark, demean_func):
+def test_demean_model_no_fixed_effects(benchmark, demeaner):
     """Test demean_model when there are no fixed effects."""
     # Create sample data
     N = 1000
@@ -94,9 +100,7 @@ def test_demean_model_no_fixed_effects(benchmark, demean_func):
         weights=weights,
         lookup_demeaned_data=lookup_dict,
         na_index=frozenset(),
-        fixef_tol=1e-6,
-        fixef_maxiter=10_000,
-        demean_func=demean_func,
+        demeaner=demeaner,
     )
 
     # When no fixed effects, output should equal input
@@ -107,11 +111,16 @@ def test_demean_model_no_fixed_effects(benchmark, demean_func):
 
 
 @pytest.mark.parametrize(
-    argnames="demean_func",
-    argvalues=[demean, demean_jax, demean_rs, demean_cupy32, demean_cupy64],
-    ids=["demean_numba", "demean_jax", "demean_rs", "demean_cupy32", "demean_cupy64"],
+    argnames="demeaner",
+    argvalues=[
+        MapDemeaner(backend="numba"),
+        MapDemeaner(backend="jax"),
+        MapDemeaner(backend="rust"),
+        LsmrDemeaner(use_gpu=False),
+    ],
+    ids=["numba", "jax", "rust", "lsmr_scipy"],
 )
-def test_demean_model_with_fixed_effects(benchmark, demean_func):
+def test_demean_model_with_fixed_effects(benchmark, demeaner):
     """Test demean_model with fixed effects."""
     # Create sample data
     N = 1000
@@ -132,9 +141,7 @@ def test_demean_model_with_fixed_effects(benchmark, demean_func):
         weights=weights,
         lookup_demeaned_data=lookup_dict,
         na_index=frozenset(),
-        fixef_tol=1e-6,
-        fixef_maxiter=10_000,
-        demean_func=demean_func,
+        demeaner=demeaner,
     )
 
     # Verify results are different from input (since we're demeaning)
@@ -153,11 +160,16 @@ def test_demean_model_with_fixed_effects(benchmark, demean_func):
 
 
 @pytest.mark.parametrize(
-    argnames="demean_func",
-    argvalues=[demean, demean_jax, demean_rs, demean_cupy32, demean_cupy64],
-    ids=["demean_numba", "demean_jax", "demean_rs", "demean_cupy32", "demean_cupy64"],
+    argnames="demeaner",
+    argvalues=[
+        MapDemeaner(backend="numba"),
+        MapDemeaner(backend="jax"),
+        MapDemeaner(backend="rust"),
+        LsmrDemeaner(use_gpu=False),
+    ],
+    ids=["numba", "jax", "rust", "lsmr_scipy"],
 )
-def test_demean_model_with_weights(benchmark, demean_func):
+def test_demean_model_with_weights(benchmark, demeaner):
     """Test demean_model with weights."""
     N = 1000
     rng = np.random.default_rng(42)
@@ -177,9 +189,7 @@ def test_demean_model_with_weights(benchmark, demean_func):
         weights=weights,
         lookup_demeaned_data=lookup_dict,
         na_index=frozenset(),
-        fixef_tol=1e-6,
-        fixef_maxiter=10_000,
-        demean_func=demean_func,
+        demeaner=demeaner,
     )
 
     # Run without weights for comparison (fresh lookup dict to avoid cache hit)
@@ -190,9 +200,7 @@ def test_demean_model_with_weights(benchmark, demean_func):
         weights=np.ones(N),
         lookup_demeaned_data={},
         na_index=frozenset(),
-        fixef_tol=1e-6,
-        fixef_maxiter=10_000,
-        demean_func=demean_func,
+        demeaner=demeaner,
     )
 
     # Results should be different with weights vs without
@@ -201,11 +209,16 @@ def test_demean_model_with_weights(benchmark, demean_func):
 
 
 @pytest.mark.parametrize(
-    argnames="demean_func",
-    argvalues=[demean, demean_jax, demean_rs, demean_cupy32, demean_cupy64],
-    ids=["demean_numba", "demean_jax", "demean_rs", "demean_cupy32", "demean_cupy64"],
+    argnames="demeaner",
+    argvalues=[
+        MapDemeaner(backend="numba"),
+        MapDemeaner(backend="jax"),
+        MapDemeaner(backend="rust"),
+        LsmrDemeaner(use_gpu=False),
+    ],
+    ids=["numba", "jax", "rust", "lsmr_scipy"],
 )
-def test_demean_model_caching(benchmark, demean_func):
+def test_demean_model_caching(benchmark, demeaner):
     """Test the caching behavior of demean_model."""
     N = 1000
     rng = np.random.default_rng(42)
@@ -224,9 +237,7 @@ def test_demean_model_caching(benchmark, demean_func):
         weights=weights,
         lookup_demeaned_data=lookup_dict,
         na_index=frozenset(),
-        fixef_tol=1e-6,
-        fixef_maxiter=10_000,
-        demean_func=demean_func,
+        demeaner=demeaner,
     )
 
     # Second run - should use cache
@@ -238,9 +249,7 @@ def test_demean_model_caching(benchmark, demean_func):
         weights=weights,
         lookup_demeaned_data=lookup_dict,
         na_index=frozenset(),
-        fixef_tol=1e-6,
-        fixef_maxiter=10_000,
-        demean_func=demean_func,
+        demeaner=demeaner,
     )
 
     # Results should be identical
@@ -258,9 +267,7 @@ def test_demean_model_caching(benchmark, demean_func):
         weights=weights,
         lookup_demeaned_data=lookup_dict,
         na_index=frozenset(),
-        fixef_tol=1e-6,
-        fixef_maxiter=10_000,
-        demean_func=demean_func,
+        demeaner=demeaner,
     )
 
     # Original columns should match previous results
@@ -270,11 +277,16 @@ def test_demean_model_caching(benchmark, demean_func):
 
 
 @pytest.mark.parametrize(
-    argnames="demean_func",
-    argvalues=[demean, demean_jax, demean_rs, demean_cupy32, demean_cupy64],
-    ids=["demean_numba", "demean_jax", "demean_rs", "demean_cupy32", "demean_cupy64"],
+    argnames="demeaner",
+    argvalues=[
+        MapDemeaner(backend="numba", fixef_maxiter=1),
+        MapDemeaner(backend="jax", fixef_maxiter=1),
+        MapDemeaner(backend="rust", fixef_maxiter=1),
+        LsmrDemeaner(use_gpu=False, solver_maxiter=1),
+    ],
+    ids=["numba", "jax", "rust", "lsmr_scipy"],
 )
-def test_demean_model_maxiter_convergence_failure(demean_func):
+def test_demean_model_maxiter_convergence_failure(demeaner):
     """Test that demean_model fails when maxiter is too small."""
     N = 100
     rng = np.random.default_rng(42)
@@ -289,7 +301,7 @@ def test_demean_model_maxiter_convergence_failure(demean_func):
     lookup_dict = {}
 
     # Should fail with very small maxiter
-    with pytest.raises(ValueError, match="Demeaning failed after 1 iterations"):
+    with pytest.raises(ValueError, match="Demeaning failed after"):
         demean_model(
             Y=Y,
             X=X,
@@ -297,18 +309,21 @@ def test_demean_model_maxiter_convergence_failure(demean_func):
             weights=weights,
             lookup_demeaned_data=lookup_dict,
             na_index=frozenset(),
-            fixef_tol=1e-6,
-            fixef_maxiter=1,  # Very small limit
-            demean_func=demean_func,
+            demeaner=demeaner,
         )
 
 
 @pytest.mark.parametrize(
-    argnames="demean_func",
-    argvalues=[demean, demean_jax, demean_rs, demean_cupy32, demean_cupy64],
-    ids=["demean_numba", "demean_jax", "demean_rs", "demean_cupy32", "demean_cupy64"],
+    argnames="demeaner",
+    argvalues=[
+        MapDemeaner(backend="numba", fixef_maxiter=5000),
+        MapDemeaner(backend="jax", fixef_maxiter=5000),
+        MapDemeaner(backend="rust", fixef_maxiter=5000),
+        LsmrDemeaner(use_gpu=False, solver_maxiter=5000),
+    ],
+    ids=["numba", "jax", "rust", "lsmr_scipy"],
 )
-def test_demean_model_custom_maxiter_success(demean_func):
+def test_demean_model_custom_maxiter_success(demeaner):
     """Test that demean_model succeeds with reasonable maxiter."""
     N = 1000
     rng = np.random.default_rng(42)
@@ -327,9 +342,7 @@ def test_demean_model_custom_maxiter_success(demean_func):
         weights=weights,
         lookup_demeaned_data=lookup_dict,
         na_index=frozenset(),
-        fixef_tol=1e-6,
-        fixef_maxiter=5000,  # Custom limit
-        demean_func=demean_func,
+        demeaner=demeaner,
     )
 
     # Just verify it returns valid results

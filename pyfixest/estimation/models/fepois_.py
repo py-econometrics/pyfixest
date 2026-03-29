@@ -314,9 +314,6 @@ class Fepois(Feols):
                     x=ZX,
                     flist=self._fe,
                     weights=combined_weights.flatten(),
-                    fixef_tol=self._fixef_tol,
-                    fixef_maxiter=self._fixef_maxiter,
-                    demean_func=self._demean_func,
                     demeaner=self._demeaner,
                 )
                 if success is False:
@@ -333,7 +330,6 @@ class Fepois(Feols):
                         X_resid,
                         self._coefnames,
                         self._collin_tol,
-                        backend_func=self._find_collinear_variables_func,
                     )
                 )
                 if self._collin_index:

@@ -1,6 +1,6 @@
 import re
 import warnings
-from collections.abc import Callable, Mapping
+from collections.abc import Mapping
 from importlib import import_module
 from typing import Any, Literal, cast
 
@@ -11,17 +11,16 @@ from scipy.sparse import csc_matrix, diags, spmatrix
 from scipy.sparse.linalg import lsqr
 from scipy.stats import chi2, f, t
 
+from pyfixest.core.collinear import find_collinear_variables
+from pyfixest.core.crv1 import crv1_meat_loop
+from pyfixest.core.nested_fixed_effects import count_fixef_fully_nested_all
 from pyfixest.demeaners import MapDemeaner
 from pyfixest.errors import VcovTypeNotSupportedError
 from pyfixest.estimation.api.utils import _ALL_SAMPLE, _AllSampleSentinel
 from pyfixest.estimation.formula import model_matrix as model_matrix_fixest
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
-from pyfixest.estimation.internals.backends import BACKENDS
 from pyfixest.estimation.internals.demean_ import demean_model
-from pyfixest.estimation.internals.demeaner_options import (
-    ResolvedDemeaner,
-    get_demeaner_backend,
-)
+from pyfixest.estimation.internals.demeaner_options import ResolvedDemeaner
 from pyfixest.estimation.internals.literals import (
     PredictionErrorOptions,
     PredictionType,
@@ -333,16 +332,9 @@ class Feols(ResultAccessorMixin):
         # self._coefnames = None
         self._icovars = None
 
-        backend_key = get_demeaner_backend(demeaner)
-        try:
-            impl = BACKENDS[backend_key]
-        except KeyError:
-            raise ValueError(f"Unknown backend {backend_key!r}")
-
-        self._demean_func = impl["demean"]
-        self._find_collinear_variables_func = impl["collinear"]
-        self._crv1_meat_func = impl["crv1_meat"]
-        self._count_nested_fixef_func = impl["nonnested"]
+        # Removed: BACKENDS dict lookup. Collinearity, CRV1, and nested FE
+        # detection always use the Rust implementations. Demeaning backend
+        # is resolved inside dispatch_demean from the typed demeaner object.
 
         # set in get_fit()
         self._tZX = np.array([])
@@ -509,9 +501,6 @@ class Feols(ResultAccessorMixin):
                 self._weights.flatten(),
                 self._lookup_demeaned_data,
                 self._na_index,
-                self._fixef_tol,
-                self._fixef_maxiter,
-                self._demean_func,
                 self._demeaner,
             )
         else:
@@ -544,7 +533,6 @@ class Feols(ResultAccessorMixin):
                 self._X,
                 self._coefnames,
                 self._collin_tol,
-                backend_func=self._find_collinear_variables_func,
             )
         # update X_is_empty
         self._X_is_empty = self._X.shape[1] == 0
@@ -761,7 +749,7 @@ class Feols(ResultAccessorMixin):
             k_fe_nested = 0
             n_fe_fully_nested = 0
             if self._fixef is not None and self._ssc_dict["k_fixef"] == "nonnested":
-                k_fe_nested_flag, n_fe_fully_nested = self._count_nested_fixef_func(
+                k_fe_nested_flag, n_fe_fully_nested = count_fixef_fully_nested_all(
                     all_fixef_array=np.array(
                         self._fixef.replace("^", "_").split("+"), dtype=str
                     ),
@@ -954,7 +942,7 @@ class Feols(ResultAccessorMixin):
         k = self._scores.shape[1]
         meat = np.zeros((k, k))
 
-        meat = self._crv1_meat_func(
+        meat = crv1_meat_loop(
             scores=self._scores.astype(np.float64),
             clustid=clustid.astype(np.uintp),
             cluster_col=cluster_col.astype(np.uintp),
@@ -2420,7 +2408,6 @@ def _drop_multicollinear_variables(
     X: np.ndarray,
     names: list[str],
     collin_tol: float,
-    backend_func: Callable,
 ) -> tuple[np.ndarray, list[str], list[str], list[int]]:
     """
     Check for multicollinearity in the design matrices X and Z.
@@ -2433,8 +2420,6 @@ def _drop_multicollinear_variables(
         The names of the coefficients.
     collin_tol : float
         The tolerance level for the multicollinearity check.
-    backend_func: Callable
-        Which backend function to use for the multicollinearity check.
 
     Returns
     -------
@@ -2450,7 +2435,7 @@ def _drop_multicollinear_variables(
     # TODO: avoid doing this computation twice, e.g. compute tXXinv here as fixest does
 
     tXX = X.T @ X
-    id_excl, n_excl, all_removed = backend_func(tXX, collin_tol)
+    id_excl, n_excl, all_removed = find_collinear_variables(tXX, collin_tol)
 
     collin_vars = []
     collin_index = []

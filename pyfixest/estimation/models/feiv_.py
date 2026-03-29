@@ -215,9 +215,6 @@ class Feiv(Feols):
                 self._weights.flatten(),
                 self._lookup_demeaned_data,
                 self._na_index,
-                self._fixef_tol,
-                self._fixef_maxiter,
-                self._demean_func,
                 self._demeaner,
             )
         else:
@@ -236,7 +233,6 @@ class Feiv(Feols):
             self._Z,
             self._coefnames_z,
             self._collin_tol,
-            self._find_collinear_variables_func,
         )
 
     def get_fit(self) -> None:

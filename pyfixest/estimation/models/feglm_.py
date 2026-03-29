@@ -9,12 +9,8 @@ from pyfixest.errors import (
     NonConvergenceError,
 )
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
-from pyfixest.estimation.internals.backends import BACKENDS
 from pyfixest.estimation.internals.demean_ import dispatch_demean
-from pyfixest.estimation.internals.demeaner_options import (
-    ResolvedDemeaner,
-    get_demeaner_backend,
-)
+from pyfixest.estimation.internals.demeaner_options import ResolvedDemeaner
 from pyfixest.estimation.internals.solvers import solve_ols
 from pyfixest.estimation.models.feols_ import (
     Feols,
@@ -94,13 +90,6 @@ class Feglm(Feols, ABC):
         self.convergence = False
         self.separation_check = separation_check
         self._accelerate = accelerate
-
-        backend_key = get_demeaner_backend(self._demeaner)
-        try:
-            impl = BACKENDS[backend_key]
-        except KeyError:
-            raise ValueError(f"Unknown demeaner backend {backend_key!r}")
-        self._demean_func = impl["demean"]
 
         self._support_crv3_inference = True
         self._support_iid_inference = True
@@ -234,7 +223,6 @@ class Feglm(Feols, ABC):
                         X_tilde,
                         self._coefnames,
                         self._collin_tol,
-                        backend_func=self._find_collinear_variables_func,
                     )
                 )
                 if self._collin_index:
@@ -424,9 +412,6 @@ class Feglm(Feols, ABC):
                 x=np.c_[v, X],
                 flist=flist,
                 weights=weights,
-                fixef_tol=tol,
-                fixef_maxiter=maxiter,
-                demean_func=self._demean_func,
                 demeaner=self._demeaner,
             )
             if success is False:

@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 
 from pyfixest.core.demean import demean_within
-from pyfixest.demeaners import LsmrDemeaner, WithinDemeaner
+from pyfixest.demeaners import LsmrDemeaner, MapDemeaner, WithinDemeaner
 from pyfixest.estimation.internals.demeaner_options import ResolvedDemeaner
 from pyfixest.estimation.internals.literals import DemeanerBackendOptions
 
@@ -19,11 +19,7 @@ def demean_model(
     weights: np.ndarray | None,
     lookup_demeaned_data: dict[frozenset[int], Any],
     na_index: frozenset[int],
-    fixef_tol: float,
-    fixef_maxiter: int,
-    demean_func: Callable,
-    demeaner: ResolvedDemeaner | None = None,
-    # demeaner_backend: Literal["numba", "jax", "rust"] = "numba",
+    demeaner: ResolvedDemeaner,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     Demean a regression model.
@@ -51,25 +47,18 @@ def demean_model(
     na_index : frozenset[int]
         A frozenset of indices of dropped rows. Used as a hashable cache key
         for demeaned variables.
-    fixef_tol: float
-        The tolerance for the demeaning algorithm.
-    fixef_maxiter: int
-         The maximum number of iterations for the demeaning algorithm.
-    demeaner : ResolvedDemeaner | None, optional
-        Resolved typed demeaner configuration. If provided, backend-specific
-        runtime options are taken from this object.
-
+    demeaner : ResolvedDemeaner
+        Resolved typed demeaner configuration. Backend-specific runtime options
+        are taken from this object.
 
     Returns
     -------
-    tuple[pd.DataFrame, pd.DataFrame, Optional[pd.DataFrame]]
+    tuple[pd.DataFrame, pd.DataFrame]
         A tuple of the following elements:
         - Yd : pd.DataFrame
             A DataFrame of the demeaned dependent variable.
         - Xd : pd.DataFrame
             A DataFrame of the demeaned covariates.
-        - Id : pd.DataFrame or None
-            A DataFrame of the demeaned Instruments. None if no IV.
     """
     YX = pd.concat([Y, X], axis=1)
 
@@ -106,11 +95,8 @@ def demean_model(
 
             # if some variables still need to be demeaned
             if var_diff_names:
-                # var_diff_names = var_diff_names
-
                 yx_names_list = list(yx_names)
                 var_diff_index = [yx_names_list.index(item) for item in var_diff_names]
-                # var_diff_index = list(yx_names).index(var_diff_names)
                 var_diff = YX_array[:, var_diff_index]
                 if var_diff.ndim == 1:
                     var_diff = var_diff.reshape(len(var_diff), 1)
@@ -119,18 +105,11 @@ def demean_model(
                     x=var_diff,
                     flist=fe_array,
                     weights=weights_array,
-                    # TODO:fixef_tol, fixef_maxiter, demean_func are passed via
-                    # the demeaner_backend= string API and the _set_demeaner_backend function.
-                    # Remove passing fixef_tol, fixef_maxiter once all callers use the
-                    # typed demeaner= API.
-                    fixef_tol=fixef_tol,
-                    fixef_maxiter=fixef_maxiter,
-                    demean_func=demean_func,
                     demeaner=demeaner,
                 )
                 if success is False:
                     raise ValueError(
-                        f"Demeaning failed after {fixef_maxiter} iterations."
+                        f"Demeaning failed after {demeaner.fixef_maxiter} iterations."
                     )
 
                 YX_demeaned = pd.DataFrame(
@@ -154,13 +133,12 @@ def demean_model(
                 x=YX_array,
                 flist=fe_array,
                 weights=weights_array,
-                fixef_tol=fixef_tol,
-                fixef_maxiter=fixef_maxiter,
-                demean_func=demean_func,
                 demeaner=demeaner,
             )
             if success is False:
-                raise ValueError(f"Demeaning failed after {fixef_maxiter} iterations.")
+                raise ValueError(
+                    f"Demeaning failed after {demeaner.fixef_maxiter} iterations."
+                )
 
             YX_demeaned = pd.DataFrame(YX_demeaned_array)
             YX_demeaned.columns = yx_names
@@ -185,33 +163,24 @@ def dispatch_demean(
     x: np.ndarray,
     flist: np.ndarray,
     weights: np.ndarray,
-    fixef_tol: float,
-    fixef_maxiter: int,
-    demean_func: Callable,
-    demeaner: ResolvedDemeaner | None = None,
+    demeaner: ResolvedDemeaner,
 ) -> tuple[np.ndarray, bool]:
     """Demean an array using the configured backend for the resolved demeaner."""
+    flist_uint = flist.astype(np.uintp, copy=False)
+
     if isinstance(demeaner, WithinDemeaner):
         return demean_within(
             x=x,
-            flist=flist.astype(np.uintp, copy=False),
+            flist=flist_uint.astype(np.uint32, copy=False),
             weights=weights,
-            tol=fixef_tol,
-            maxiter=fixef_maxiter,
+            tol=demeaner.fixef_tol,
+            maxiter=demeaner.fixef_maxiter,
             krylov_method=demeaner.krylov_method,
             gmres_restart=demeaner.gmres_restart,
             preconditioner_type=demeaner.preconditioner_type,
         )
 
     if isinstance(demeaner, LsmrDemeaner):
-        solver_atol = demeaner.solver_atol if demeaner.solver_atol is not None else 1e-8
-        solver_btol = demeaner.solver_btol if demeaner.solver_btol is not None else 1e-8
-        solver_maxiter = (
-            demeaner.solver_maxiter
-            if demeaner.solver_maxiter is not None
-            else fixef_maxiter
-        )
-
         if demeaner.use_gpu is False:
             demean_scipy_configured = cast(
                 Callable[..., tuple[np.ndarray, bool]],
@@ -221,11 +190,11 @@ def dispatch_demean(
             )
             return demean_scipy_configured(
                 x=x,
-                flist=flist.astype(np.uintp, copy=False),
+                flist=flist_uint,
                 weights=weights,
-                solver_atol=solver_atol,
-                solver_btol=solver_btol,
-                solver_maxiter=solver_maxiter,
+                solver_atol=demeaner.solver_atol,
+                solver_btol=demeaner.solver_btol,
+                solver_maxiter=demeaner.solver_maxiter,
                 use_preconditioner=demeaner.use_preconditioner,
             )
 
@@ -237,24 +206,41 @@ def dispatch_demean(
         )
         return demean_cupy_configured(
             x=x,
-            flist=flist.astype(np.uintp, copy=False),
+            flist=flist_uint,
             weights=weights,
             use_gpu=demeaner.use_gpu,
-            solver_atol=solver_atol,
-            solver_btol=solver_btol,
-            solver_maxiter=solver_maxiter,
+            solver_atol=demeaner.solver_atol,
+            solver_btol=demeaner.solver_btol,
+            solver_maxiter=demeaner.solver_maxiter,
             warn_on_cpu_fallback=demeaner.warn_on_cpu_fallback,
             dtype=np.float32 if demeaner.precision == "float32" else np.float64,
             use_preconditioner=demeaner.use_preconditioner,
         )
 
-    return demean_func(
-        x=x,
-        flist=flist.astype(np.uintp, copy=False),
-        weights=weights,
-        tol=fixef_tol,
-        maxiter=fixef_maxiter,
-    )
+    if isinstance(demeaner, MapDemeaner):
+        backend = demeaner.backend
+        if backend == "numba":
+            demean_func = demean
+        elif backend == "rust":
+            from pyfixest.core.demean import demean as demean_rs
+
+            demean_func = demean_rs
+        elif backend == "jax":
+            from pyfixest.estimation.jax.demean_jax_ import demean_jax
+
+            demean_func = demean_jax
+        else:
+            raise ValueError(f"Unknown MapDemeaner backend: {backend!r}")
+
+        return demean_func(
+            x=x,
+            flist=flist_uint,
+            weights=weights,
+            tol=demeaner.fixef_tol,
+            maxiter=demeaner.fixef_maxiter,
+        )
+
+    raise TypeError(f"Unsupported demeaner type: {type(demeaner)!r}")
 
 
 @nb.njit
