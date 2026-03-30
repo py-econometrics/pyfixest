@@ -3,16 +3,14 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from dgps import BaseDGP, BipartiteDGP
+from dgps import BaseDGP
 from feols_benchmarkers import (
     FixestFeolsBenchmarker,
     JuliaFeolsBenchmarker,
-    PyFeolsBenchmarker,
+    PyFeolsBenchmarkerFullApi,
 )
 from interfaces import FeolsSpec
 from runner import export_and_plot, generate_datasets, run_benchmarks
-
-from pyfixest.core.demean import demean as demean_rust
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
@@ -20,16 +18,16 @@ if str(PROJECT_ROOT) not in sys.path:
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
-SIZES = [1_000, 10_000, 100_000]
+SIZES = [1_000, 10_000, 100_000, 1_000_000, 10_000_000]
 N_ITERS = 3
 BURN_IN = 1
 DATA_DIR = PROJECT_ROOT / "benchmarks" / "data"
 OUTPUT_CSV = PROJECT_ROOT / "benchmarks" / "results" / "feols_bench.csv"
+FIGURE_DIR = PROJECT_ROOT / "docs" / "explanation" / "figures" / "base-benchmarks"
 
 DGPS = [
+    BaseDGP(DATA_DIR, "simple"),
     BaseDGP(DATA_DIR, "difficult"),
-    BipartiteDGP(DATA_DIR, name="bipartite-low-mobility", n_time=20, p_move=0.05),
-    BipartiteDGP(DATA_DIR, name="bipartite-high-mobility", n_time=20, p_move=0.15),
 ]
 
 SPECS = [
@@ -48,10 +46,12 @@ SPECS = [
 ]
 
 BENCHMARKERS = [
-    PyFeolsBenchmarker("rust-ap", demean_rust),
-    FixestFeolsBenchmarker(),
-    JuliaFeolsBenchmarker(),
+    PyFeolsBenchmarkerFullApi("pyfixest (rust-cg)", "rust-cg"),
+    PyFeolsBenchmarkerFullApi("pyfixest (rust-map)", "rust"),
+    FixestFeolsBenchmarker("fixest-map"),
+    JuliaFeolsBenchmarker("FEM.jl (lsmr)"),
 ]
+FIGURE_BACKENDS = ["pyfixest (rust-cg)", "pyfixest (rust-map)"]
 
 # ---------------------------------------------------------------------------
 # Run
@@ -60,4 +60,6 @@ if __name__ == "__main__":
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     datasets = generate_datasets(DGPS, SIZES, N_ITERS, BURN_IN)
     results = run_benchmarks(BENCHMARKERS, datasets, SPECS)
-    export_and_plot(results, OUTPUT_CSV)
+    export_and_plot(
+        results, OUTPUT_CSV, figure_dir=FIGURE_DIR, figure_backends=FIGURE_BACKENDS
+    )

@@ -201,4 +201,4 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: ""
-          prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') }}
+          prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') || contains(github.ref, 'rc') || contains(github.ref, '0a') || contains(github.ref, '0b') }}

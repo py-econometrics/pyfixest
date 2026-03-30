@@ -22,6 +22,13 @@ def _demean_rs(
     tol: float = 1e-08,
     maxiter: int = 100_000,
 ) -> tuple[np.ndarray, bool]: ...
+def _demean_within_rs(
+    x: NDArray[np.float64],
+    flist: NDArray[np.uint32],
+    weights: NDArray[np.float64],
+    tol: float = 1e-06,
+    maxiter: int = 1_000,
+) -> tuple[np.ndarray, bool]: ...
 def _count_fixef_fully_nested_all_rs(
     all_fixef_array: NDArray,
     cluster_colnames: NDArray,

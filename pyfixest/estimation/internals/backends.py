@@ -1,6 +1,6 @@
 from pyfixest.core.collinear import find_collinear_variables
 from pyfixest.core.crv1 import crv1_meat_loop, crv1_vcov_loop
-from pyfixest.core.demean import demean
+from pyfixest.core.demean import demean, demean_within
 from pyfixest.core.nested_fixed_effects import count_fixef_fully_nested_all
 from pyfixest.estimation.internals.demean_ import demean as demean_nb
 from pyfixest.estimation.internals.vcov_utils import (
@@ -65,6 +65,12 @@ BACKENDS = {
         "collinear": find_collinear_variables,
         "crv1_meat": crv1_meat_loop,
         "crv1_vcov": crv1_vcov_loop,
+        "nonnested": count_fixef_fully_nested_all,
+    },
+    "rust-cg": {
+        "demean": demean_within,
+        "collinear": find_collinear_variables,
+        "crv1_meat": crv1_meat_loop,
         "nonnested": count_fixef_fully_nested_all,
     },
     "jax": {

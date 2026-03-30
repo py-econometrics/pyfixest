@@ -90,7 +90,9 @@ for (idx in seq_along(manifest)) {
     {
       df <- as.data.frame(read_parquet(entry$data_path))
       elapsed <- unname(system.time({
-        fit <- feols(formula, data = df, vcov = vcov_arg, nthreads = parallel::detectCores())
+        suppressMessages(
+          fit <- feols(formula, data = df, vcov = vcov_arg, nthreads = parallel::detectCores())
+        )
       })[["elapsed"]])
     },
     error = function(e) {
