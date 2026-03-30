@@ -3,18 +3,17 @@ from collections.abc import Callable, Mapping
 from functools import partial
 from typing import Any, Literal, cast
 
-import numba as nb
 import numpy as np
 import pandas as pd
 from scipy.linalg import cho_factor, solve_triangular
 from scipy.stats import norm
 
+from pyfixest.core.crv1 import crv1_vcov_qreg_loop
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.literals import (
     QuantregMethodOptions,
     SolverOptions,
 )
-from pyfixest.estimation.internals.vcov_utils import bucket_argsort
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.quantreg.frisch_newton_ip import (
     frisch_newton_solver,
@@ -470,9 +469,11 @@ class Quantreg(Feols):
         h_G = get_hall_sheather_bandwidth(q=q, N=N)
         delta = kappa * (norm.ppf(q + h_G) - norm.ppf(q - h_G))
 
-        vcov = _crv1_vcov_loop(
-            X=X, clustid=clustid, cluster_col=cluster_col, q=q, u_hat=u_hat, delta=delta
+        A, B = crv1_vcov_qreg_loop(
+            X, clustid.astype(np.uintp), cluster_col.astype(np.uintp), q, u_hat, delta
         )
+        B_inv = np.linalg.inv(B)
+        vcov = B_inv @ A @ B_inv
 
         return vcov
 
@@ -486,45 +487,3 @@ class Quantreg(Feols):
         # self._pseudo_r2 = 1 -
         pass
         # self.objective_value
-
-
-@nb.njit(parallel=False)
-def _crv1_vcov_loop(
-    X: np.ndarray,
-    clustid: np.ndarray,
-    cluster_col: np.ndarray,
-    q: float,
-    u_hat: np.ndarray,
-    delta: float,
-) -> np.ndarray:
-    _, k = X.shape
-
-    A = np.zeros((k, k))
-    B = np.zeros((k, k))
-    g_indices, g_locs = bucket_argsort(cluster_col)
-
-    eps = 1e-7
-
-    for g in clustid:
-        start = g_locs[g]
-        end = g_locs[g + 1]
-        g_index = g_indices[start:end]
-
-        Xg = X[g_index, :]
-        ug = u_hat[g_index]
-
-        ng = g_index.size
-        for i in range(ng):
-            Xgi = Xg[i, :]
-            psi_i = q - 1.0 * (ug[i] <= eps)
-            for j in range(ng):
-                Xgj = Xg[j, :]
-                psi_j = q - 1.0 * (ug[j] <= eps)
-                A += np.outer(Xgi, Xgj) * psi_i * psi_j
-
-            mask_i = (np.abs(ug[i]) < delta) * 1.0
-            B += np.outer(Xgi, Xgi) * mask_i
-
-    B /= 2 * delta
-
-    return np.linalg.inv(B) @ A @ np.linalg.inv(B)

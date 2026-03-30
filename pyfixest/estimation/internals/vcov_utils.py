@@ -262,3 +262,45 @@ def _crv1_meat_loop(
         meat += meat_i
 
     return meat
+
+
+@nb.njit(parallel=False)
+def _crv1_vcov_loop(
+    X: np.ndarray,
+    clustid: np.ndarray,
+    cluster_col: np.ndarray,
+    q: float,
+    u_hat: np.ndarray,
+    delta: float,
+) -> tuple[np.ndarray, np.ndarray]:
+    _, k = X.shape
+
+    A = np.zeros((k, k))
+    B = np.zeros((k, k))
+    g_indices, g_locs = bucket_argsort(cluster_col)
+
+    eps = 1e-7
+
+    for g in clustid:
+        start = g_locs[g]
+        end = g_locs[g + 1]
+        g_index = g_indices[start:end]
+
+        Xg = X[g_index, :]
+        ug = u_hat[g_index]
+
+        ng = g_index.size
+        for i in range(ng):
+            Xgi = Xg[i, :]
+            psi_i = q - 1.0 * (ug[i] <= eps)
+            for j in range(ng):
+                Xgj = Xg[j, :]
+                psi_j = q - 1.0 * (ug[j] <= eps)
+                A += np.outer(Xgi, Xgj) * psi_i * psi_j
+
+            mask_i = (np.abs(ug[i]) < delta) * 1.0
+            B += np.outer(Xgi, Xgi) * mask_i
+
+    B /= 2 * delta
+
+    return A, B
