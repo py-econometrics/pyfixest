@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from pyfixest.core.crv1 import crv1_vcov_loop as crv1_vcov_loop_rs
+from pyfixest.core.crv1 import crv1_vcov_qreg_loop as crv1_vcov_loop_rs
 from pyfixest.estimation.internals.vcov_utils import (
     _crv1_vcov_loop as crv1_vcov_loop_nb,
 )
