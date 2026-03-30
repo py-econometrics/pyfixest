@@ -8,8 +8,8 @@ import pandas as pd
 from scipy.linalg import cho_factor, solve_triangular
 from scipy.stats import norm
 
+from pyfixest.core.crv1 import crv1_vcov_qreg_loop
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
-from pyfixest.estimation.internals.backends import BACKENDS
 from pyfixest.estimation.internals.literals import (
     QuantregMethodOptions,
     SolverOptions,
@@ -80,8 +80,6 @@ class Quantreg(Feols):
            """,
             FutureWarning,
         )
-
-        self._crv1_vcov_func = BACKENDS[demeaner_backend]["crv1_vcov"]
 
         self._supports_wildboottest = False
         self._support_crv3_inference = False
@@ -471,7 +469,7 @@ class Quantreg(Feols):
         h_G = get_hall_sheather_bandwidth(q=q, N=N)
         delta = kappa * (norm.ppf(q + h_G) - norm.ppf(q - h_G))
 
-        A, B = self._crv1_vcov_func(
+        A, B = crv1_vcov_qreg_loop(
             X, clustid.astype(np.uintp), cluster_col.astype(np.uintp), q, u_hat, delta
         )
         B_inv = np.linalg.inv(B)

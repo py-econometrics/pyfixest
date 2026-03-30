@@ -7,7 +7,7 @@ def _crv1_meat_loop_rs(
     clustid: NDArray[np.uint64],
     cluster_col: NDArray[np.uint64],
 ) -> NDArray[np.float64]: ...
-def _crv1_vcov_loop_rs(
+def _crv1_vcov_loop_qreg_rs(
     x: NDArray[np.float64],
     clustid: NDArray[np.uint64],
     cluster_col: NDArray[np.uint64],

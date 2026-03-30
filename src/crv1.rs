@@ -150,7 +150,7 @@ fn crv1_vcov_loop(
 /// Compute the matrices for the CRV1 sandwich estimator
 /// in quantile regression, following Parente & Santos Silva (2016).
 #[pyfunction]
-pub fn _crv1_vcov_loop_rs(
+pub fn _crv1_vcov_loop_qreg_rs(
     py: Python,
     x: PyReadonlyArray2<f64>,
     clustid: PyReadonlyArray1<usize>,
