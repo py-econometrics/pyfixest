@@ -17,9 +17,8 @@ import pytest
 torch = pytest.importorskip("torch")
 
 from pyfixest.estimation.torch.demean_torch_ import (  # noqa: E402
-    _PreconditionedSparse,
     _build_sparse_dummy,
-    _scale_sparse_rows,
+    _PreconditionedSparse,
     demean_torch,
 )
 from pyfixest.estimation.torch.lsmr_torch import (  # noqa: E402
@@ -152,7 +151,9 @@ class TestBatchedLSMR:
 
         assert torch.allclose(
             X[:, 1], torch.zeros(n, dtype=torch.float64), atol=1e-12
-        ), f"Zero-RHS column has non-zero solution: ||x|| = {torch.norm(X[:, 1]).item()}"
+        ), (
+            f"Zero-RHS column has non-zero solution: ||x|| = {torch.norm(X[:, 1]).item()}"
+        )
 
     def test_all_zero_rhs(self):
         """All-zero B should return all-zero X with istop=0."""
@@ -188,9 +189,7 @@ class TestBatchedLSMR:
         )
         A_sparse = A_dense.to_sparse_csr()
 
-        X_true = torch.tensor(
-            [[1.0, 2.0, -1.0], [-1.0, 0.5, 3.0]], dtype=torch.float64
-        )
+        X_true = torch.tensor([[1.0, 2.0, -1.0], [-1.0, 0.5, 3.0]], dtype=torch.float64)
         B = A_dense @ X_true  # (3, 3)
 
         X_sol, istop, *_ = lsmr_torch_batched(A_sparse, B)
@@ -207,9 +206,7 @@ class TestBatchedLSMR:
         A = _make_sparse_problem(m, n)
         B = _make_rhs(m, K, seed=42)
 
-        _, istop, itn, *_ = lsmr_torch_batched(
-            A, B, maxiter=2, atol=1e-15, btol=1e-15
-        )
+        _, istop, itn, *_ = lsmr_torch_batched(A, B, maxiter=2, atol=1e-15, btol=1e-15)
 
         assert (istop == 7).all(), f"Expected istop=7, got {istop}"
         assert itn == 2
@@ -300,10 +297,12 @@ class TestDemeanBatched:
         rng = np.random.default_rng(929291)
         N, K = 1000, 10
         x = rng.normal(0, 1, (N, K))
-        flist = np.column_stack([
-            rng.choice(10, N),
-            rng.choice(10, N),
-        ]).astype(np.uint64)
+        flist = np.column_stack(
+            [
+                rng.choice(10, N),
+                rng.choice(10, N),
+            ]
+        ).astype(np.uint64)
         weights = np.ones(N)
 
         algorithm = pyhdfe.create(flist)
@@ -324,10 +323,12 @@ class TestDemeanBatched:
         rng = np.random.default_rng(929291)
         N, K = 1000, 5
         x = rng.normal(0, 1, (N, K))
-        flist = np.column_stack([
-            rng.choice(10, N),
-            rng.choice(10, N),
-        ]).astype(np.uint64)
+        flist = np.column_stack(
+            [
+                rng.choice(10, N),
+                rng.choice(10, N),
+            ]
+        ).astype(np.uint64)
         weights = rng.uniform(0.1, 2.0, N)
 
         algorithm = pyhdfe.create(flist)
@@ -457,7 +458,9 @@ class TestCompiledBatchedLSMR:
 
         assert torch.allclose(
             X[:, 1], torch.zeros(n, dtype=torch.float64), atol=1e-12
-        ), f"Zero-RHS column has non-zero solution: ||x|| = {torch.norm(X[:, 1]).item()}"
+        ), (
+            f"Zero-RHS column has non-zero solution: ||x|| = {torch.norm(X[:, 1]).item()}"
+        )
 
         # Non-zero columns should still solve correctly
         for k in [0, 2]:
@@ -513,9 +516,7 @@ class TestCompiledBatchedLSMR:
 
         X_mps, *_ = lsmr_torch_batched(A_mps, B_mps, use_compile=True)
 
-        max_diff = torch.max(
-            torch.abs(X_ref.float() - X_mps.cpu())
-        ).item()
+        max_diff = torch.max(torch.abs(X_ref.float() - X_mps.cpu())).item()
         assert max_diff < 0.1, (
             f"MPS f32 compiled vs CPU f64 too different: {max_diff:.2e}"
         )
@@ -534,6 +535,4 @@ class TestCompiledBatchedLSMR:
         X_nocomp, *_ = lsmr_torch_batched(A_mps, B_mps, use_compile=False)
 
         max_diff = torch.max(torch.abs(X_comp - X_nocomp)).item()
-        assert max_diff < 1e-4, (
-            f"Compiled vs uncompiled differ on MPS: {max_diff:.2e}"
-        )
+        assert max_diff < 1e-4, f"Compiled vs uncompiled differ on MPS: {max_diff:.2e}"

@@ -242,9 +242,7 @@ def _scalar_step(state: torch.Tensor, consts: torch.Tensor) -> torch.Tensor:
     maxrbar_new = torch.maximum(maxrbar, rhobarold)
     # Match SciPy: only update minrbar from iteration 2 onward.
     # maxrbar == 0 on the first call (initial state), so use it as guard.
-    minrbar_new = torch.where(
-        maxrbar > 0, torch.minimum(minrbar, rhobarold), minrbar
-    )
+    minrbar_new = torch.where(maxrbar > 0, torch.minimum(minrbar, rhobarold), minrbar)
     condA = torch.maximum(maxrbar_new, rhotemp) / torch.clamp(
         torch.minimum(minrbar_new, rhotemp), min=_DIV_GUARD
     )

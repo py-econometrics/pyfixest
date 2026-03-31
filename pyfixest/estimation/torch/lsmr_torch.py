@@ -50,7 +50,6 @@ from pyfixest.estimation.torch._lsmr_compiled_core import (
     _O_NORMA,
     _O_NORMAR,
     _O_NORMR,
-    _O_NORMX_EST,
     _O_RHOBAROLD,
     _O_RHOOLD,
     _O_THETABAR,
@@ -262,23 +261,28 @@ def _check_convergence_batched(
     new_stop = torch.where(test1 <= rtol, torch.ones_like(new_stop), new_stop)
     new_stop = torch.where(
         (test2 <= atol) & (new_stop == 0),
-        2 * torch.ones_like(new_stop), new_stop,
+        2 * torch.ones_like(new_stop),
+        new_stop,
     )
     new_stop = torch.where(
         (test3 <= ctol) & (new_stop == 0),
-        3 * torch.ones_like(new_stop), new_stop,
+        3 * torch.ones_like(new_stop),
+        new_stop,
     )
     new_stop = torch.where(
         (1.0 + t1 <= 1.0) & (new_stop == 0),
-        4 * torch.ones_like(new_stop), new_stop,
+        4 * torch.ones_like(new_stop),
+        new_stop,
     )
     new_stop = torch.where(
         (1.0 + test2 <= 1.0) & (new_stop == 0),
-        5 * torch.ones_like(new_stop), new_stop,
+        5 * torch.ones_like(new_stop),
+        new_stop,
     )
     new_stop = torch.where(
         (1.0 + test3 <= 1.0) & (new_stop == 0),
-        6 * torch.ones_like(new_stop), new_stop,
+        6 * torch.ones_like(new_stop),
+        new_stop,
     )
     return torch.where(not_yet, new_stop, istop)
 
@@ -306,8 +310,14 @@ def _lsmr_batched(
     conlim: float = 1e8,
     maxiter: int | None = None,
 ) -> tuple[
-    torch.Tensor, torch.Tensor, int, torch.Tensor, torch.Tensor,
-    torch.Tensor, torch.Tensor, torch.Tensor,
+    torch.Tensor,
+    torch.Tensor,
+    int,
+    torch.Tensor,
+    torch.Tensor,
+    torch.Tensor,
+    torch.Tensor,
+    torch.Tensor,
 ]:
     """
     Batched LSMR: solve min ||B - A X||_F for K RHS simultaneously.
@@ -352,16 +362,16 @@ def _lsmr_batched(
     At = _precompute_transpose(A)
 
     # --- Initialize Golub-Kahan bidiagonalization ---
-    U = B.clone()                                       # (m, K)
-    normb = torch.linalg.norm(U, dim=0)                 # (K,)
+    U = B.clone()  # (m, K)
+    normb = torch.linalg.norm(U, dim=0)  # (K,)
 
     X = torch.zeros(n, K, device=device, dtype=dtype)
-    beta = normb.clone()                                # (K,)
+    beta = normb.clone()  # (K,)
 
     U, beta = _safe_normalize_cols(U, beta)
 
-    V = _rmatvec_batched(At, U)                         # (n, K)  — SpMM
-    alpha = torch.linalg.norm(V, dim=0)                 # (K,)
+    V = _rmatvec_batched(At, U)  # (n, K)  — SpMM
+    alpha = torch.linalg.norm(V, dim=0)  # (K,)
 
     V, alpha = _safe_normalize_cols(V, alpha)
 
@@ -374,7 +384,7 @@ def _lsmr_batched(
     cbar = torch.ones(K, device=device, dtype=dtype)
     sbar = torch.zeros(K, device=device, dtype=dtype)
 
-    H = V.clone()                                       # (n, K)
+    H = V.clone()  # (n, K)
     Hbar = torch.zeros(n, K, device=device, dtype=dtype)
 
     # ||r|| estimation state
@@ -402,27 +412,41 @@ def _lsmr_batched(
 
     # Early exit: if all normar == 0 or all normb == 0
     if (normar == 0).all():
-        return (X, istop, itn, normr, normar,
-                torch.sqrt(normA2), torch.ones(K, device=device, dtype=dtype),
-                torch.zeros(K, device=device, dtype=dtype))
+        return (
+            X,
+            istop,
+            itn,
+            normr,
+            normar,
+            torch.sqrt(normA2),
+            torch.ones(K, device=device, dtype=dtype),
+            torch.zeros(K, device=device, dtype=dtype),
+        )
 
     if (normb == 0).all():
         X.zero_()
-        return (X, istop, itn, normr, normar,
-                torch.sqrt(normA2), torch.ones(K, device=device, dtype=dtype),
-                torch.zeros(K, device=device, dtype=dtype))
+        return (
+            X,
+            istop,
+            itn,
+            normr,
+            normar,
+            torch.sqrt(normA2),
+            torch.ones(K, device=device, dtype=dtype),
+            torch.zeros(K, device=device, dtype=dtype),
+        )
 
     # --- Main iteration loop ---
     while itn < maxiter:
         itn += 1
 
         # Bidiagonalization step: SpMM replaces SpMV
-        U = _matvec_batched(A, V) - alpha.unsqueeze(0) * U     # (m, K)
-        beta = torch.linalg.norm(U, dim=0)                     # (K,)
+        U = _matvec_batched(A, V) - alpha.unsqueeze(0) * U  # (m, K)
+        beta = torch.linalg.norm(U, dim=0)  # (K,)
         U, beta = _safe_normalize_cols(U, beta)
 
-        V = _rmatvec_batched(At, U) - beta.unsqueeze(0) * V    # (n, K)
-        alpha = torch.linalg.norm(V, dim=0)                    # (K,)
+        V = _rmatvec_batched(At, U) - beta.unsqueeze(0) * V  # (n, K)
+        alpha = torch.linalg.norm(V, dim=0)  # (K,)
         V, alpha = _safe_normalize_cols(V, alpha)
 
         # Givens rotation 1: (alphabar, damp)
@@ -487,7 +511,7 @@ def _lsmr_batched(
 
         # Per-column convergence check
         normar = torch.abs(zetabar)
-        normx = torch.linalg.norm(X, dim=0)        # (K,)
+        normx = torch.linalg.norm(X, dim=0)  # (K,)
 
         safe_normb = torch.clamp(normb, min=_DIV_GUARD)
         test1 = normr / safe_normb
@@ -498,7 +522,16 @@ def _lsmr_batched(
         rtol = btol + atol * normA * normx / safe_normb
 
         istop = _check_convergence_batched(
-            istop, test1, rtol, test2, test3, t1, atol, ctol, K, device,
+            istop,
+            test1,
+            rtol,
+            test2,
+            test3,
+            t1,
+            atol,
+            ctol,
+            K,
+            device,
         )
         if (istop > 0).all():
             break
@@ -734,6 +767,7 @@ def _lsmr_eager(
 # Implementation 2: compiled-state LSMR (CUDA)
 # ===========================================================================
 
+
 def _lsmr_compiled(
     A,
     b: torch.Tensor,
@@ -778,7 +812,9 @@ def _lsmr_compiled(
 
     v = _rmatvec(At, u)
     alpha = torch.linalg.norm(v)
-    v = v * torch.where(alpha > 0, 1.0 / torch.clamp(alpha, min=_DIV_GUARD), alpha * 0.0)
+    v = v * torch.where(
+        alpha > 0, 1.0 / torch.clamp(alpha, min=_DIV_GUARD), alpha * 0.0
+    )
 
     state = _make_initial_state(alpha, beta, normb, damp, dtype, device)
 
@@ -856,7 +892,9 @@ def _lsmr_compiled(
         normb_t = out[_I_NORMB]
 
         test1_t = normr_t / torch.clamp(normb_t, min=_DIV_GUARD)
-        t1_t = test1_t / (1.0 + normA_t * normx_t / torch.clamp(normb_t, min=_DIV_GUARD))
+        t1_t = test1_t / (
+            1.0 + normA_t * normx_t / torch.clamp(normb_t, min=_DIV_GUARD)
+        )
         rtol_t = btol + atol * normA_t * normx_t / torch.clamp(normb_t, min=_DIV_GUARD)
 
         converged_btol = (test1_t <= rtol_t) | (1.0 + t1_t <= 1.0)
@@ -930,8 +968,14 @@ def _lsmr_compiled_batched(
     maxiter: int | None = None,
     use_compile: bool = True,
 ) -> tuple[
-    torch.Tensor, torch.Tensor, int, torch.Tensor, torch.Tensor,
-    torch.Tensor, torch.Tensor, torch.Tensor,
+    torch.Tensor,
+    torch.Tensor,
+    int,
+    torch.Tensor,
+    torch.Tensor,
+    torch.Tensor,
+    torch.Tensor,
+    torch.Tensor,
 ]:
     """
     Compiled batched LSMR: solve min ||B - A X||_F for K RHS simultaneously.
@@ -958,16 +1002,16 @@ def _lsmr_compiled_batched(
     At = _precompute_transpose(A)
 
     # --- Initialize Golub-Kahan bidiagonalization ---
-    U = B.clone()                                           # (m, K)
-    normb = torch.linalg.norm(U, dim=0)                     # (K,)
+    U = B.clone()  # (m, K)
+    normb = torch.linalg.norm(U, dim=0)  # (K,)
 
     X = torch.zeros(n, K, device=device, dtype=dtype)
-    beta = normb.clone()                                    # (K,)
+    beta = normb.clone()  # (K,)
 
     U, beta = _safe_normalize_cols(U, beta)
 
-    V = _rmatvec_batched(At, U)                             # (n, K)  — SpMM
-    alpha = torch.linalg.norm(V, dim=0)                     # (K,)
+    V = _rmatvec_batched(At, U)  # (n, K)  — SpMM
+    alpha = torch.linalg.norm(V, dim=0)  # (K,)
     V, alpha = _safe_normalize_cols(V, alpha)
 
     state = _make_initial_state(alpha, beta, normb, damp, dtype, device, K=K)
@@ -980,18 +1024,30 @@ def _lsmr_compiled_batched(
     # Early exit check
     normar_init = alpha * beta  # (K,)
     if (normar_init == 0).all():
-        return (X, torch.zeros(K, device=device, dtype=torch.long), 0,
-                beta, torch.zeros(K, device=device, dtype=dtype),
-                alpha, torch.ones(K, device=device, dtype=dtype),
-                torch.zeros(K, device=device, dtype=dtype))
+        return (
+            X,
+            torch.zeros(K, device=device, dtype=torch.long),
+            0,
+            beta,
+            torch.zeros(K, device=device, dtype=dtype),
+            alpha,
+            torch.ones(K, device=device, dtype=dtype),
+            torch.zeros(K, device=device, dtype=dtype),
+        )
     if (normb == 0).all():
         X.zero_()
-        return (X, torch.zeros(K, device=device, dtype=torch.long), 0,
-                beta, torch.zeros(K, device=device, dtype=dtype),
-                alpha, torch.ones(K, device=device, dtype=dtype),
-                torch.zeros(K, device=device, dtype=dtype))
+        return (
+            X,
+            torch.zeros(K, device=device, dtype=torch.long),
+            0,
+            beta,
+            torch.zeros(K, device=device, dtype=dtype),
+            alpha,
+            torch.ones(K, device=device, dtype=dtype),
+            torch.zeros(K, device=device, dtype=dtype),
+        )
 
-    H = V.clone()                                           # (n, K)
+    H = V.clone()  # (n, K)
     Hbar = torch.zeros(n, K, device=device, dtype=dtype)
 
     # Convergence tracking: per-column istop, only-set-once latch
@@ -1005,12 +1061,12 @@ def _lsmr_compiled_batched(
         itn += 1
 
         # Phase 1: SpMM bidiagonalization (not compilable)
-        U = _matvec_batched(A, V) - state[_I_ALPHA].unsqueeze(0) * U   # (m, K)
-        beta_new = torch.linalg.norm(U, dim=0)                          # (K,)
+        U = _matvec_batched(A, V) - state[_I_ALPHA].unsqueeze(0) * U  # (m, K)
+        beta_new = torch.linalg.norm(U, dim=0)  # (K,)
         U, beta_new = _safe_normalize_cols(U, beta_new)
 
-        V = _rmatvec_batched(At, U) - beta_new.unsqueeze(0) * V        # (n, K)
-        alpha_new = torch.linalg.norm(V, dim=0)                         # (K,)
+        V = _rmatvec_batched(At, U) - beta_new.unsqueeze(0) * V  # (n, K)
+        alpha_new = torch.linalg.norm(V, dim=0)  # (K,)
         V, alpha_new = _safe_normalize_cols(V, alpha_new)
 
         # Update beta/alpha in state for the scalar step
@@ -1021,16 +1077,18 @@ def _lsmr_compiled_batched(
         out = step_fn(state, consts)
 
         # Phase 3: Vector updates using scalar results from compiled step
-        thetanew = out[_O_THETANEW]          # (K,)
-        thetabar = out[_O_THETABAR]          # (K,)
-        zeta = out[_O_ZETA]                  # (K,)
-        rho_new = out[_I_RHO]               # (K,)
-        rhobar_new = out[_I_RHOBAR]         # (K,)
-        rhoold = out[_O_RHOOLD]             # (K,)
-        rhobarold = out[_O_RHOBAROLD]       # (K,)
+        thetanew = out[_O_THETANEW]  # (K,)
+        thetabar = out[_O_THETABAR]  # (K,)
+        zeta = out[_O_ZETA]  # (K,)
+        rho_new = out[_I_RHO]  # (K,)
+        rhobar_new = out[_I_RHOBAR]  # (K,)
+        rhoold = out[_O_RHOOLD]  # (K,)
+        rhobarold = out[_O_RHOBAROLD]  # (K,)
 
         # Safe divisions: some columns may have zero RHS → zero denominators
-        hbar_coeff = -(thetabar * rho_new) / torch.clamp(rhoold * rhobarold, min=_DIV_GUARD)
+        hbar_coeff = -(thetabar * rho_new) / torch.clamp(
+            rhoold * rhobarold, min=_DIV_GUARD
+        )
         Hbar = H + Hbar * hbar_coeff.unsqueeze(0)
         x_coeff = zeta / torch.clamp(rho_new * rhobar_new, min=_DIV_GUARD)
         X = X + x_coeff.unsqueeze(0) * Hbar
@@ -1044,10 +1102,10 @@ def _lsmr_compiled_batched(
         # No not_yet.any() guard: the torch.where inside _check_convergence_batched
         # already protects converged columns, and the guard would add a second
         # host-device sync that costs more than the fused tensor ops it skips.
-        normx_t = torch.linalg.norm(X, dim=0)    # (K,)
-        normr_t = out[_O_NORMR]                   # (K,)
-        normA_t = out[_O_NORMA]                   # (K,)
-        normb_t = out[_I_NORMB]                   # (K,)
+        normx_t = torch.linalg.norm(X, dim=0)  # (K,)
+        normr_t = out[_O_NORMR]  # (K,)
+        normA_t = out[_O_NORMA]  # (K,)
+        normb_t = out[_I_NORMB]  # (K,)
 
         safe_normb = torch.clamp(normb_t, min=_DIV_GUARD)
         test1_t = normr_t / safe_normb
@@ -1058,7 +1116,16 @@ def _lsmr_compiled_batched(
         rtol_t = btol + atol * normA_t * normx_t / safe_normb
 
         istop = _check_convergence_batched(
-            istop, test1_t, rtol_t, test2_t, test3_t, t1_t, atol, ctol, K, device,
+            istop,
+            test1_t,
+            rtol_t,
+            test2_t,
+            test3_t,
+            t1_t,
+            atol,
+            ctol,
+            K,
+            device,
         )
 
         # Single .item() sync: check if all columns have converged
@@ -1069,9 +1136,16 @@ def _lsmr_compiled_batched(
 
     # Handle case where loop never ran
     if itn == 0:
-        return (X, istop, 0, normb, normar_init, alpha,
-                torch.ones(K, device=device, dtype=dtype),
-                torch.zeros(K, device=device, dtype=dtype))
+        return (
+            X,
+            istop,
+            0,
+            normb,
+            normar_init,
+            alpha,
+            torch.ones(K, device=device, dtype=dtype),
+            torch.zeros(K, device=device, dtype=dtype),
+        )
 
     return (
         X,
@@ -1147,8 +1221,14 @@ def lsmr_torch_batched(
     maxiter: int | None = None,
     use_compile: bool | None = None,
 ) -> tuple[
-    torch.Tensor, torch.Tensor, int, torch.Tensor, torch.Tensor,
-    torch.Tensor, torch.Tensor, torch.Tensor,
+    torch.Tensor,
+    torch.Tensor,
+    int,
+    torch.Tensor,
+    torch.Tensor,
+    torch.Tensor,
+    torch.Tensor,
+    torch.Tensor,
 ]:
     """
     Batched LSMR solver — solve K right-hand sides simultaneously via SpMM.
@@ -1212,9 +1292,21 @@ def lsmr_torch_batched(
 
     if use_compile:
         return _lsmr_compiled_batched(
-            A, B, damp=damp, atol=atol, btol=btol, conlim=conlim,
-            maxiter=maxiter, use_compile=True,
+            A,
+            B,
+            damp=damp,
+            atol=atol,
+            btol=btol,
+            conlim=conlim,
+            maxiter=maxiter,
+            use_compile=True,
         )
     return _lsmr_batched(
-        A, B, damp=damp, atol=atol, btol=btol, conlim=conlim, maxiter=maxiter,
+        A,
+        B,
+        damp=damp,
+        atol=atol,
+        btol=btol,
+        conlim=conlim,
+        maxiter=maxiter,
     )
