@@ -24,6 +24,11 @@ from pyfixest.estimation.torch.lsmr_torch import lsmr_torch, lsmr_torch_batched
 _BATCHED_K_THRESHOLD = 5
 
 
+def _should_use_batched_lsmr(device: torch.device, K: int) -> bool:
+    """Use batched LSMR only on devices where it has been benchmarked to help."""
+    return device.type != "cpu" and K >= _BATCHED_K_THRESHOLD
+
+
 def _get_device(dtype: torch.dtype = torch.float64) -> torch.device:
     """Auto-detect best available device: CUDA > MPS > CPU.
 
@@ -255,7 +260,7 @@ def _demean_torch_on_device_impl(
     # Solve for each column — batched SpMM for K >= threshold, sequential otherwise.
     theta = torch.zeros(D_cols, K, dtype=dtype, device=device)
 
-    if K >= _BATCHED_K_THRESHOLD:
+    if _should_use_batched_lsmr(device, K):
         # Batched: single call, K columns solved simultaneously via SpMM
         Z, istop_vec, _itn, *_ = lsmr_torch_batched(
             A_precond,
