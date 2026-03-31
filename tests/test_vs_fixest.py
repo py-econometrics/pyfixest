@@ -366,15 +366,6 @@ def test_single_fit_feols(
                     f"py_predict_all != r_predict_all for {col}",
                 )
 
-            # currently, bug when using predict with newdata and i() or C() or "^" syntax
-            blocked_transforms = ["i(", "^", "poly("]
-            blocked_transform_found = any(bt in fml for bt in blocked_transforms)
-
-            if blocked_transform_found:
-                with pytest.raises(NotImplementedError):
-                    py_predict_newsample = mod.predict(
-                        newdata=data.iloc[0:100], atol=1e-08, btol=1e-08
-                    )
             else:
                 py_predict_newsample = mod.predict(
                     newdata=data.iloc[0:100], atol=1e-12, btol=1e-12
@@ -939,8 +930,9 @@ def test_glm_vs_fixest(N, seed, dropna, fml, inference, family):
         ("Y~ I(X1**2) + csw(f1,f2)"),
         ("Y~ X1 + csw(f1, f2) | f3"),
         ("Y~ X1 + csw0(X2, f3)"),
-        ("Y~ csw0(X2, f3) + X2"),
-        ("Y~ X1 + csw0(X2, f3) + X2"),
+        # fixest doesn't recognise duplicates: `Y ~ X2 + X2`. TODO: Cover that this is correctly identified in tests/test_formula_parse
+        # ("Y~ csw0(X2, f3) + X2"),
+        # ("Y~ X1 + csw0(X2, f3) + X2"),
         ("Y ~ X1 + csw0(f1, f2) | f3"),
         ("Y ~ X1 + sw(X2, f1, f2)"),
         ("Y ~ csw(X1, X2, f3)"),

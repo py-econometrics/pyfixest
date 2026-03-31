@@ -8,7 +8,6 @@ from rpy2.robjects import pandas2ri
 from rpy2.robjects.packages import importr
 
 import pyfixest as pf
-from pyfixest.utils.dev_utils import _extract_variable_level
 
 pandas2ri.activate()
 
@@ -315,18 +314,6 @@ def test_specific_categorical_prediction():
     np.testing.assert_almost_equal(prediction[0], expected_prediction, decimal=3)
 
 
-def test_extract_variable_level():
-    """Verify the correct extracation of lists, floats, and integers."""
-    var = "C(SHOPPER_PLATFORM)[T.['ios', 'android']]"
-    assert _extract_variable_level(var) == ("C(SHOPPER_PLATFORM)", "['ios', 'android']")
-    var = "C(f3)[T.1.0]"
-    assert _extract_variable_level(var) == ("C(f3)", "1.0")
-    var = "C(f4)[T.1]"
-    assert _extract_variable_level(var) == ("C(f4)", "1")
-    var = "C(f5)[1.0]"
-    assert _extract_variable_level(var) == ("C(f5)", "1.0")
-
-
 def _lspline(series: pd.Series, knots: list[float]) -> np.array:
     """Generate a linear spline design matrix for the input series based on knots."""
     vector = series.values
@@ -349,14 +336,14 @@ def test_context_capture_with_out_of_sample_predict():
 
     spline_split = _lspline(data["X2"], [0, 1])
     data["X2_0"] = spline_split[:, 0]
-    data["0_X2_1"] = spline_split[:, 1]
-    data["1_X2"] = spline_split[:, 2]
+    data["X2_0_1"] = spline_split[:, 1]
+    data["X2_1"] = spline_split[:, 2]
 
     # Split data to training and testing
     data_train = data.iloc[:1000]
     data_test = data.iloc[1000:]
 
-    explicit_fit = pf.feols("Y ~ X2_0 + 0_X2_1 + 1_X2 | f1 + f2", data=data_train)
+    explicit_fit = pf.feols("Y ~ X2_0 + X2_0_1 + X2_1 | f1 + f2", data=data_train)
     context_captured_fit = pf.feols(
         "Y ~ _lspline(X2,[0,1]) | f1 + f2", data=data_train, context=0
     )

@@ -37,7 +37,7 @@ website:
     - contents:
       - reference/estimation.formula.parse.Formula.qmd
       - reference/estimation.formula.model_matrix.ModelMatrix.qmd
-      - reference/estimation.formula.factor_interaction.factor_interaction.qmd
+      - reference/estimation.formula.transforms.factor_interaction.factor_interaction.qmd
       section: Formula Parsing & Model Matrix
     - contents:
       - reference/estimation.internals.demean_.demean.qmd

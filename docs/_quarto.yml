@@ -94,17 +94,17 @@ website:
           file: explanation/compare-fixest-pyfixest.qmd
       - text: "Textbook Replications"
         menu:
-        - text: "All Textbook Replications"
-          file: textbook-replications/index.qmd
-        - text: "---"
-        - text: "Causal Inference for the Brave and True"
-          file: textbook-replications/brave_true.qmd
-        - text: "Causal Inference: The Mixtape"
-          file: textbook-replications/mixtape.qmd
-        - text: "The Effect"
-          file: textbook-replications/replicating-the-effect.qmd
-        - text: "Other Resources"
-          file: textbook-replications/resources.qmd
+          - text: "All Textbook Replications"
+            file: textbook-replications/index.qmd
+          - text: "---"
+          - text: "Causal Inference for the Brave and True"
+            file: textbook-replications/brave_true.qmd
+          - text: "Causal Inference: The Mixtape"
+            file: textbook-replications/mixtape.qmd
+          - text: "The Effect"
+            file: textbook-replications/replicating-the-effect.qmd
+          - text: "Other Resources"
+            file: textbook-replications/resources.qmd
       - text: "Changelog"
         file: changelog.qmd
       - text: "Contributing"
@@ -170,7 +170,7 @@ quartodoc:
       contents:
         - estimation.formula.parse.Formula
         - estimation.formula.model_matrix.ModelMatrix
-        - estimation.formula.factor_interaction.factor_interaction
+        - estimation.formula.transforms.factor_interaction.factor_interaction
     - title: Misc / Utilities
       desc: |
         PyFixest internals and utilities

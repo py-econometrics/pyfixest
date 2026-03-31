@@ -9,15 +9,9 @@ import pandas as pd
 from formulaic.parser import DefaultFormulaParser
 
 from pyfixest.core.detect_singletons import detect_singletons
-from pyfixest.estimation.formula import FORMULAIC_FEATURE_FLAG
-from pyfixest.estimation.formula.factor_interaction import factor_interaction
+from pyfixest.estimation.formula import FORMULAIC_FEATURE_FLAG, FORMULAIC_TRANSFORMS
 from pyfixest.estimation.formula.parse import Formula
-from pyfixest.estimation.formula.utils import (
-    _encode_fixed_effects,
-    _factorize,
-    _get_weights,
-    log,
-)
+from pyfixest.estimation.formula.utils import _get_weights
 from pyfixest.utils.utils import capture_context
 
 
@@ -327,12 +321,7 @@ def create_model_matrix(
         ensure_full_rank=ensure_full_rank,
         na_action="drop",
         output="pandas",
-        context={
-            "log": log,  # custom log settings infinite to nan
-            "i": factor_interaction,  # fixest::i()-style syntax
-            "__fixed_effect__": _factorize,
-        }
-        | {**capture_context(context)},
+        context=FORMULAIC_TRANSFORMS | {**capture_context(context)},
     )
     drop_rows: set[int] = set(range(n_observations)).difference(
         model_matrix[_ModelMatrixKey.main]["lhs"].index
@@ -352,12 +341,11 @@ def _get_formulaic_formula(
 ) -> formulaic.Formula:
     # Collate kwargs to be passed to formulaic.Formula
     formula_kwargs: dict[str, str] = {_ModelMatrixKey.main: formula.second_stage}
-    if formula.fixed_effects is not None:
-        fixed_effects_formula = _encode_fixed_effects(
-            fixed_effects=formula.fixed_effects, data=data
+    if formula.is_fixed_effects:
+        formula_kwargs.update(
+            {_ModelMatrixKey.fixed_effects: f"{formula.fixed_effects_wrapped} - 1"}
         )
-        formula_kwargs.update({_ModelMatrixKey.fixed_effects: fixed_effects_formula})
-    if formula.first_stage is not None:
+    if formula.is_instrumental_variable:
         formula_kwargs.update(
             {_ModelMatrixKey.instrumental_variable: formula.first_stage}
         )
@@ -366,6 +354,15 @@ def _get_formulaic_formula(
         formula_kwargs.update({_ModelMatrixKey.weights: f"{weights}-1"})
     formula_formulaic = formulaic.Formula(
         formula_kwargs,
-        _parser=DefaultFormulaParser(feature_flags=FORMULAIC_FEATURE_FLAG),
+        _parser=DefaultFormulaParser(
+            feature_flags=FORMULAIC_FEATURE_FLAG,
+            # When FEs are present, include_intercept=True so that spans_intercept=True
+            # terms (like i()) receive reduced_rank=True from formulaic, causing them to
+            # drop the first level (matching R/fixest). The intercept column is removed
+            # afterwards in ModelMatrix._process(). Without this, i() would receive
+            # reduced_rank=False and generate all levels; the post-hoc collinearity check
+            # would then drop the last level instead of the first, mismatching R.
+            include_intercept=formula.is_fixed_effects,
+        ),
     )
     return formula_formulaic
