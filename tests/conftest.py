@@ -50,3 +50,8 @@ if _run_hac_tests:
     os.environ["MKL_NUM_THREADS"] = "1"
     os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
     os.environ["NUMEXPR_NUM_THREADS"] = "1"
+
+# Trigger the maturin import hook build in the main process before xdist
+# spawns workers. This avoids lock contention when multiple workers try to
+# compile the Rust extension simultaneously.
+import pyfixest  # noqa: F401, E402

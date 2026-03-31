@@ -350,6 +350,10 @@ def _set_demeaner_backend(
         from pyfixest.core.demean import demean as demean_rs
 
         return demean_rs
+    elif demeaner_backend == "rust-cg":
+        from pyfixest.core.demean import demean_within
+
+        return demean_within
     elif demeaner_backend == "numba":
         return demean
     elif demeaner_backend == "jax":

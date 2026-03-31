@@ -78,7 +78,7 @@ exclude = [
 
 [tool.pytest.ini_options]
 addopts = [
-    "-v",
+    #    "-v",  # disabled to take advantage of pytest-sugar
     "--strict-markers",
     "--strict-config",
     "--cov=pyfixest",
@@ -142,7 +142,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**/*.py" = ["D100", "D102", "D103"]
+"tests/**/*.py" = ["D100", "D101", "D102", "D103"]
 "pyfixest/multcomp.py" = ["D103"]
 "pyfixest/summarize.py" = ["D103"]
 "pyfixest/visualize.py" = ["D103"]
@@ -215,9 +215,8 @@ test-py-extended = { cmd = 'pytest tests -n auto -m "extended" --cov=pyfixest --
 render-notebooks = { cmd = "python scripts/run_notebooks.py", description = "Run all notebooks" }
 
 [tool.pixi.tasks._setup]
-cmd = "python scripts/setup_maturin_hook.py && touch .pixi/.import-hook-installed"
+cmd = "python scripts/setup_maturin_hook.py"
 inputs = ["scripts/setup_maturin_hook.py"]
-outputs = [".pixi/.import-hook-installed"]
 
 # -- python version features ------------------------------------------------------------
 
@@ -260,7 +259,7 @@ outputs = ["tests/data/ritest_results.csv"]
 env = { RETICULATE_PYTHON = "$CONDA_PREFIX/bin/python" }
 
 [tool.pixi.feature.r.tasks.test-r-hac]
-cmd = "pytest tests/test_hac_vs_fixest.py -v -n auto"
+cmd = "pytest tests -v -n auto -m hac"
 depends-on = ["_setup"]
 description = "HAC standard error tests vs R"
 env = { OMP_NUM_THREADS = "1", OPENBLAS_NUM_THREADS = "1", MKL_NUM_THREADS = "1", VECLIB_MAXIMUM_THREADS = "1", NUMEXPR_NUM_THREADS = "1" }
@@ -291,7 +290,7 @@ lets-plot = ">=4.0.0"
 # docs-build: Generate API reference .qmd files from docstrings via quartodoc.
 # docs-render: Build the full static site (runs docs-build first, then quarto render).
 # docs-preview: Start a local dev server with live reload (does NOT run docs-build first).
-docs-build = { cmd = "quartodoc build --verbose --config docs/_quarto.yml", description = "Build API docs with quartodoc" }
+docs-build = { cmd = "quartodoc build --verbose --config docs/_quarto.yml", depends-on = ["_setup"], description = "Build API docs with quartodoc" }
 docs-render = { cmd = "quarto render docs", depends-on = ["docs-build"], env = { PYTHONWARNINGS = "ignore", KMP_WARNINGS = "0" }, description = "Render docs with Quarto" }
 docs-preview = { cmd = "quarto preview docs", depends-on = ["docs-build"], env = { PYTHONWARNINGS = "ignore", KMP_WARNINGS = "0" }, description = "Preview docs locally" }
 
@@ -316,6 +315,8 @@ juliaup = "*"
 [tool.pixi.feature.benchmark.tasks]
 _julia-setup = { cmd = """julia -e 'using Pkg; Pkg.add([Pkg.PackageSpec(name="FixedEffectModels", url="https://github.com/FixedEffects/FixedEffectModels.jl"), Pkg.PackageSpec("JSON3"), Pkg.PackageSpec("DataFrames"), Pkg.PackageSpec("Parquet2"), Pkg.PackageSpec("StatsModels")])'""" }
 benchmark = { cmd = "python benchmarks/modular/benchmark_main.py", depends-on = ["_setup", "_julia-setup"], description = "Run benchmarks (Python, R, Julia)" }
+benchmark-akm = { cmd = "python benchmarks/modular/benchmark_akm_sweep.py", depends-on = ["_setup", "_julia-setup"], description = "Run fixed-size AKM parameter sweep benchmarks (Python, R, Julia)" }
+benchmark-akm-occupation = { cmd = "python benchmarks/modular/benchmark_akm_occupation.py", depends-on = ["_setup", "_julia-setup"], description = "Run occupation-extended AKM benchmarks (Python, R, Julia)" }
 
 # -- environments ----------------------------------------------------------------------
 

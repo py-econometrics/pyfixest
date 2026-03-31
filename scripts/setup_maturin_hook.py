@@ -15,8 +15,9 @@ How it works:
   - Exclude .pixi/ from source file scanning (it contains nested Python
     environments that would confuse the file searcher)
 
-This script is run by the `_setup` pixi task, which all test tasks depend on.
-It is cached via a sentinel file so it only runs once per environment.
+This script is run by the `_setup` pixi task for environments that import
+pyfixest. The task is intentionally idempotent so it can run safely in each
+environment without relying on a shared cache sentinel.
 
 See Also
 --------
@@ -41,12 +42,19 @@ try:
     if not os.environ.get("CONDA_PREFIX") and not os.environ.get("VIRTUAL_ENV"):
         os.environ["CONDA_PREFIX"] = sys.prefix
 
+    # Ensure the environment's bin directory is on PATH so that maturin can be found.
+    # PyCharm (via pixi-pycharm shim) may not include it.
+    env_bin = os.path.join(sys.prefix, "bin")
+    if env_bin not in os.environ.get("PATH", "").split(os.pathsep):
+        os.environ["PATH"] = env_bin + os.pathsep + os.environ.get("PATH", "")
+
     excluded_dirs = DefaultProjectFileSearcher.DEFAULT_SOURCE_EXCLUDED_DIR_NAMES | {".pixi"}
     file_searcher = DefaultProjectFileSearcher(source_excluded_dir_names=excluded_dirs)
 
     maturin_import_hook.install(
         settings=MaturinSettings(release=True, strip=True, color=True),
         file_searcher=file_searcher,
+        lock_timeout_seconds=180,
         enable_project_importer=True,
         enable_rs_file_importer=True,
     )
