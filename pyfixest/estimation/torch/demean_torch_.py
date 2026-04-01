@@ -20,13 +20,18 @@ from numpy.typing import NDArray
 from pyfixest.estimation.torch.lsmr_torch import lsmr_torch, lsmr_torch_batched
 
 # Minimum K (number of RHS columns) for batched SpMM to beat sequential SpMV.
-# Benchmarked breakeven: ~K=5 on MPS (Metal) and CUDA (cuSPARSE).
-_BATCHED_K_THRESHOLD = 5
+# Benchmarked breakeven is device-specific.
+_BATCHED_K_THRESHOLD_CUDA = 2
+_BATCHED_K_THRESHOLD_MPS = 5
 
 
 def _should_use_batched_lsmr(device: torch.device, K: int) -> bool:
-    """Use batched LSMR only on devices where it has been benchmarked to help."""
-    return device.type != "cpu" and K >= _BATCHED_K_THRESHOLD
+    """Use batched LSMR only when device-specific benchmarks show a benefit."""
+    if device.type == "cuda":
+        return K >= _BATCHED_K_THRESHOLD_CUDA
+    if device.type == "mps":
+        return K >= _BATCHED_K_THRESHOLD_MPS
+    return False
 
 
 def _get_device(dtype: torch.dtype = torch.float64) -> torch.device:
