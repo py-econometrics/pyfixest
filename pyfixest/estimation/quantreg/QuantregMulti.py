@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import gc
 import inspect
 from collections.abc import Mapping
