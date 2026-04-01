@@ -11,7 +11,13 @@ fit2 = pf.feols("Y ~ X1 + X2", data = df)
 fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 ```
 
-## PyFixest 0.50.0 (In Development)
+## PyFixest 0.50.1
+
+### Bug Fixes
+
+- Fixes an import-time failure on Python 3.13 in some environments where a `narwhals` typing alias was exposed as a string at runtime. This could cause imports of `feols()` / `feglm()` to fail before any model code ran. See [#1263](https://github.com/py-econometrics/pyfixest/issues/1263) for details.
+
+## PyFixest 0.50.0
 
 ::: {.callout-tip}
 You can install the latest pre-release to try out the new features:
