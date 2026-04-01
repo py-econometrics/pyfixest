@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import re
 import warnings
 from collections.abc import Callable, Mapping
@@ -580,7 +582,7 @@ class Feols(ResultAccessorMixin):
         vcov: str | dict[str, str],
         vcov_kwargs: dict[str, str | int] | None = None,
         data: DataFrameType | None = None,
-    ) -> "Feols":
+    ) -> Feols:
         """
         Compute covariance matrices for an estimated regression model.
 
