@@ -71,11 +71,14 @@ def etable(
         Type of output. Either "df" for pandas DataFrame, "md" for markdown,
         "gt" for great_tables, or "tex" for LaTeX table. Default is "gt".
     signif_code : list, optional
-        Significance levels for the stars. Default is None, which sets [0.001, 0.01, 0.05].
-        If None, no stars are printed.
+        Significance levels for the stars. Default is None, which sets
+        [0.001, 0.01, 0.05]. Note that stars are only rendered if `coef_fmt`
+        includes `*` on a statistic token, for example `b*` or `b:.3f*`.
     coef_fmt : str, optional
         The format of the coefficient (b), standard error (se), t-stats (t), and
         p-value (p). Default is `"b \n (se)"`.
+        To render significance stars, include `*` on the relevant token, following
+        maketables syntax, for example `"b* \n (se)"` or `"b:.3f* \n (se:.3f)"`.
         Spaces ` `, parentheses `()`, brackets `[]`, newlines `\n` are supported.
     custom_stats: dict, optional
         A dictionary of custom statistics that can be used in the coef_fmt string to be displayed
