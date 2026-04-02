@@ -26,6 +26,7 @@ def fepois(
     vcov_kwargs: dict[str, str | int] | None = None,
     weights: None | str = None,
     weights_type: WeightsTypeOptions = "aweights",
+    offset: str | None = None,
     ssc: dict[str, str | bool] | None = None,
     fixef_rm: FixedRmOptions = "singleton",
     fixef_tol: float = 1e-06,
@@ -89,6 +90,13 @@ def fepois(
         precision weights, while `fweights` implement frequency weights. Frequency weights
         are useful for compressed count data where identical observations are aggregated.
         For details see this blog post: https://notstatschat.rbind.io/2020/08/04/weights-in-statistics/.
+
+    offset : str, optional
+        Default is None. The name of a column in `data` to use as an offset in the
+        Poisson regression. An offset is added to the linear predictor, which is
+        equivalent to constraining its coefficient to 1. This is useful for modeling
+        rates when the exposure variable differs across observations (e.g.
+        `offset = "log_population"`).
 
     ssc : str
         A ssc object specifying the small sample correction for inference.
@@ -259,6 +267,7 @@ def fepois(
         ssc=ssc,
         fixef_rm=fixef_rm,
         drop_intercept=drop_intercept,
+        offset=offset,
     )
     if fixest._is_iv:
         raise NotImplementedError(

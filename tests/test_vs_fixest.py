@@ -520,8 +520,9 @@ def test_single_fit_feols_empty(
 @pytest.mark.parametrize("k_adj", [True])
 @pytest.mark.parametrize("G_adj", [True])
 @pytest.mark.parametrize("weights", [None, "weights"])
+@pytest.mark.parametrize("offset", [False, True])
 def test_single_fit_fepois(
-    data_fepois, dropna, inference, f3_type, fml, k_adj, G_adj, weights
+    data_fepois, dropna, inference, f3_type, fml, k_adj, G_adj, weights, offset
 ):
     global test_counter_fepois
     test_counter_fepois += 1
@@ -532,6 +533,11 @@ def test_single_fit_fepois(
     ssc_ = ssc(k_adj=k_adj, G_adj=G_adj)
 
     data_fepois = data_fepois.copy()
+    if offset:
+        data_fepois["offset_var"] = np.log(np.ones(data_fepois.shape[0]) * 2)
+        offset_var = "offset_var"
+    else:
+        offset_var = None
     if dropna:
         data_fepois.dropna(inplace=True)
     # long story, but categories need to be strings to be converted to R factors,
@@ -552,27 +558,22 @@ def test_single_fit_fepois(
         iwls_tol=1e-10,
         iwls_maxiter=100,
         weights=weights,
+        offset=offset_var if offset else None,
     )
 
+    r_kwargs = {
+        "vcov": r_inference,
+        "data": data_r,
+        "ssc": fixest.ssc(k_adj, "nonnested", False, G_adj, "min", "min"),
+        "glm_tol": 1e-10,
+        "glm_maxiter": 100,
+    }
     if weights is not None:
-        r_fixest = fixest.fepois(
-            ro.Formula(r_fml),
-            vcov=r_inference,
-            data=data_r,
-            ssc=fixest.ssc(k_adj, "nonnested", False, G_adj, "min", "min"),
-            glm_tol=1e-10,
-            glm_maxiter=100,
-            weights=ro.Formula("~" + weights),
-        )
-    else:
-        r_fixest = fixest.fepois(
-            ro.Formula(r_fml),
-            vcov=r_inference,
-            data=data_r,
-            ssc=fixest.ssc(k_adj, "nonnested", False, G_adj, "min", "min"),
-            glm_tol=1e-10,
-            glm_maxiter=100,
-        )
+        r_kwargs["weights"] = ro.Formula("~" + weights)
+    if offset:
+        r_kwargs["offset"] = ro.Formula("~" + offset_var)
+
+    r_fixest = fixest.fepois(ro.Formula(r_fml), **r_kwargs)
 
     py_coef = mod.coef().xs("X1")
     py_se = mod.se().xs("X1")
@@ -638,8 +639,9 @@ def test_single_fit_fepois(
         py_tstat, r_tstat, 1e-06 if weights is None else 1e-05, "py_tstat != r_tstat"
     )
     check_absolute_diff(py_confint, r_confint, 1e-06, "py_confint != r_confint")
-    check_absolute_diff(py_deviance, r_deviance, 1e-08, "py_deviance != r_deviance")
-    check_absolute_diff(py_loglik, r_loglik, 1e-08, "py_ll != r_loglik")
+    _dev_tol = 1e-07 if offset else 1e-08
+    check_absolute_diff(py_deviance, r_deviance, _dev_tol, "py_deviance != r_deviance")
+    check_absolute_diff(py_loglik, r_loglik, _dev_tol, "py_ll != r_loglik")
 
     # cant match fixest yet
     if weights is None:

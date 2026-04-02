@@ -108,6 +108,7 @@ class Fepois(Feols):
         sample_split_var: str | None = None,
         sample_split_value: str | int | None = None,
         separation_check: list[str] | None = None,
+        offset: str | None = None,
     ):
         super().__init__(
             FixestFormula=FixestFormula,
@@ -143,6 +144,7 @@ class Fepois(Feols):
         self._method = "fepois"
         self.convergence = False
         self.separation_check = separation_check
+        self._offset_name = offset
 
         self._support_crv3_inference = True
         self._support_iid_inference = True
@@ -197,6 +199,16 @@ class Fepois(Feols):
             # possible to have dropped fixed effects level due to separation
             self._k_fe = self._fe.nunique(axis=0) if self._has_fixef else None
             self._n_fe = np.sum(self._k_fe > 1) if self._has_fixef else 0
+
+        # Extract offset after all drops (singleton + separation) so indices are aligned
+        if self._offset_name is not None:
+            if self._offset_name not in self._data.columns:
+                raise ValueError(
+                    f"Offset variable '{self._offset_name}' not found in data."
+                )
+            self._offset = self._data[self._offset_name].to_numpy().reshape((-1, 1))
+        else:
+            self._offset = np.zeros((self._N, 1))
 
     def to_array(self):
         "Turn estimation DataFrames to np arrays."
@@ -290,12 +302,12 @@ class Fepois(Feols):
                 _mean = np.mean(self._Y)
                 mu = (self._Y + _mean) / 2
                 eta = np.log(mu)
-                Z = eta + self._Y / mu - 1
+                Z = eta - self._offset + self._Y / mu - 1
                 reg_Z = Z.copy()
                 last = self._compute_deviance(self._Y, mu)
             else:
                 # update w and Z
-                Z = eta + self._Y / mu - 1  # eq (8)
+                Z = eta - self._offset + self._Y / mu - 1  # eq (8)
                 reg_Z = Z.copy()  # eq (9)
 
             # tighten HDFE tolerance - currently not possible with PyHDFE
@@ -351,7 +363,7 @@ class Fepois(Feols):
             resid = Z_resid - X_resid @ delta_new
 
             # more updating
-            eta = Z - resid
+            eta = Z - resid + self._offset
             mu = np.exp(eta)
 
             # same criterion as fixest
