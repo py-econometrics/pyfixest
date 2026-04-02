@@ -3,9 +3,11 @@ import pandas as pd
 import pyhdfe
 import pytest
 
+import pyfixest as pf
 from pyfixest.core import demean as demean_rs
 from pyfixest.core.demean import demean_within
 from pyfixest.estimation.cupy.demean_cupy_ import demean_cupy32, demean_cupy64
+from pyfixest.estimation.internals.backends import BACKENDS
 from pyfixest.estimation.internals.demean_ import (
     _set_demeaner_backend,
     demean,
@@ -46,22 +48,21 @@ def test_demean(benchmark, demean_func):
 
 
 def test_set_demeaner_backend():
-    # Test numba backend
-    demean_func = _set_demeaner_backend("numba")
-    assert demean_func == demean
-
-    # Test jax backend
-    demean_func = _set_demeaner_backend("jax")
-    assert demean_func == demean_jax
-
-    demean_func = _set_demeaner_backend("rust")
-    assert demean_func == demean_rs
-
-    demean_func = _set_demeaner_backend("cupy32")
-    assert demean_func == demean_cupy32
-
-    demean_func = _set_demeaner_backend("cupy64")
-    assert demean_func == demean_cupy64
+    for backend in [
+        "numba",
+        "jax",
+        "rust",
+        "cupy32",
+        "cupy64",
+        "scipy",
+        "torch",
+        "torch_cpu",
+        "torch_mps",
+        "torch_cuda",
+        "torch_cuda32",
+    ]:
+        demean_func = _set_demeaner_backend(backend)
+        assert demean_func == BACKENDS[backend]["demean"]
 
     demean_func = _set_demeaner_backend("rust-cg")
     assert demean_func == demean_within
@@ -69,6 +70,42 @@ def test_set_demeaner_backend():
     # Test invalid backend raises ValueError
     with pytest.raises(ValueError, match="Invalid demeaner backend: invalid"):
         _set_demeaner_backend("invalid")
+
+
+def test_feols_torch_backend_matches_numba():
+    pytest.importorskip("torch")
+
+    rng = np.random.default_rng(12345)
+    N = 400
+    df = pd.DataFrame(
+        {
+            "y": rng.normal(size=N),
+            "x1": rng.normal(size=N),
+            "x2": rng.normal(size=N),
+            "f1": rng.integers(0, 20, size=N),
+            "f2": rng.integers(0, 15, size=N),
+        }
+    )
+
+    fit_numba = pf.feols(
+        "y ~ x1 + x2 | f1 + f2",
+        data=df,
+        fixef_tol=1e-8,
+        demeaner_backend="numba",
+    )
+    fit_torch = pf.feols(
+        "y ~ x1 + x2 | f1 + f2",
+        data=df,
+        fixef_tol=1e-8,
+        demeaner_backend="torch",
+    )
+
+    np.testing.assert_allclose(
+        fit_torch.coef().sort_index().values,
+        fit_numba.coef().sort_index().values,
+        rtol=1e-7,
+        atol=1e-9,
+    )
 
 
 @pytest.mark.parametrize(
