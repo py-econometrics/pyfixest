@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import pandas as pd
 
 from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
