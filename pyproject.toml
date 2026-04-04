@@ -147,7 +147,6 @@ ignore = [
 "pyfixest/summarize.py" = ["D103"]
 "pyfixest/visualize.py" = ["D103"]
 "scripts/*.py" = ["D103"]
-"benchmarks/gpu_big_benchmarks.py" = ["E402", "F821", "RUF059", "B018", "TRY300"]
 "benchmarks/modular/*.py" = ["D101", "D102", "D103"]
 
 [tool.ruff.lint.pycodestyle]
@@ -308,6 +307,7 @@ lint = { cmd = "prek run --all-files", description = "Run all pre-commit hooks v
 platforms = ["linux-64", "osx-arm64"]
 
 [tool.pixi.feature.benchmark.dependencies]
+pytorch = "*"
 r-arrow = "*"
 r-jsonlite = "*"
 juliaup = "*"
@@ -331,4 +331,4 @@ py311-r = { features = ["py311", "r"], solve-group = "py311" }
 py312-r = { features = ["py312", "r"], solve-group = "py312" }
 docs = { features = ["docs"], solve-group = "default" }
 lint = { features = ["lint"], no-default-feature = true }
-benchmark = { features = ["benchmark", "r"] }
+benchmark = { features = ["py312", "benchmark", "r"], solve-group = "py312" }

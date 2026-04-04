@@ -8,6 +8,7 @@ import tempfile
 import time
 import warnings
 from collections.abc import Sequence
+from dataclasses import dataclass
 from pathlib import Path
 
 import pandas as pd
@@ -18,6 +19,35 @@ except ImportError:
     from interfaces import BenchmarkDataset, FeolsResult, FeolsSpec
 
 _MIN_DGP_WIDTH = 16
+
+
+@dataclass(frozen=True)
+class TorchRuntimeAvailability:
+    """Runtime availability of optional torch benchmark targets."""
+
+    has_torch: bool
+    has_mps: bool
+    has_cuda: bool
+
+
+def detect_torch_runtime_availability() -> TorchRuntimeAvailability:
+    """Detect whether torch and optional accelerator backends are available."""
+    try:
+        import torch
+    except ImportError:
+        return TorchRuntimeAvailability(
+            has_torch=False,
+            has_mps=False,
+            has_cuda=False,
+        )
+
+    has_mps = bool(hasattr(torch.backends, "mps") and torch.backends.mps.is_available())
+    has_cuda = bool(torch.cuda.is_available())
+    return TorchRuntimeAvailability(
+        has_torch=True,
+        has_mps=has_mps,
+        has_cuda=has_cuda,
+    )
 
 
 def _fmt_time(t: float) -> str:
