@@ -8,9 +8,14 @@ except PackageNotFoundError:
     __version__ = "unknown"
 
 __all__ = [
+    "BaseDemeaner",
+    "LsmrDemeaner",
+    "MapDemeaner",
     "SaturatedEventStudy",
+    "WithinDemeaner",
     "bonferroni",
     "coefplot",
+    "demeaners",
     "did",
     "did2s",
     "dtable",
@@ -40,7 +45,7 @@ __all__ = [
 ]
 
 # Submodules loaded lazily
-_submodules = ["did", "errors", "estimation", "report", "utils"]
+_submodules = ["demeaners", "did", "errors", "estimation", "report", "utils"]
 
 # Map function/class names to their module prefix
 # For direct module imports: import_module(f"{prefix}.{name}")
@@ -50,6 +55,11 @@ _lazy_imports = {
     "fepois": "pyfixest.estimation.api",
     "feglm": "pyfixest.estimation.api",
     "quantreg": "pyfixest.estimation.api",
+    # demeaners
+    "BaseDemeaner": "pyfixest.demeaners",
+    "LsmrDemeaner": "pyfixest.demeaners",
+    "MapDemeaner": "pyfixest.demeaners",
+    "WithinDemeaner": "pyfixest.demeaners",
     # estimation - other functions (still use parent module + getattr)
     "bonferroni": "pyfixest.estimation",
     "rwolf": "pyfixest.estimation",

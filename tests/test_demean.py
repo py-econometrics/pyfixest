@@ -1,12 +1,21 @@
+import pickle
+import re
+
 import numpy as np
 import pandas as pd
 import pyhdfe
 import pytest
 
 from pyfixest.core import demean as demean_rs
-from pyfixest.core.demean import demean_within
+from pyfixest.core.demean import (
+    WithinPreconditioner,
+    build_within_preconditioner,
+    demean_within,
+)
+from pyfixest.demeaners import LsmrDemeaner, MapDemeaner, WithinDemeaner
 from pyfixest.estimation.cupy.demean_cupy_ import demean_cupy32, demean_cupy64
 from pyfixest.estimation.internals.demean_ import (
+    _prepare_within_preconditioner,
     _set_demeaner_backend,
     demean,
     demean_model,
@@ -72,11 +81,16 @@ def test_set_demeaner_backend():
 
 
 @pytest.mark.parametrize(
-    argnames="demean_func",
-    argvalues=[demean, demean_jax, demean_rs, demean_cupy32, demean_cupy64],
-    ids=["demean_numba", "demean_jax", "demean_rs", "demean_cupy32", "demean_cupy64"],
+    argnames="demeaner",
+    argvalues=[
+        MapDemeaner(backend="numba"),
+        MapDemeaner(backend="jax"),
+        MapDemeaner(backend="rust"),
+        LsmrDemeaner(use_gpu=False),
+    ],
+    ids=["numba", "jax", "rust", "lsmr_scipy"],
 )
-def test_demean_model_no_fixed_effects(benchmark, demean_func):
+def test_demean_model_no_fixed_effects(benchmark, demeaner):
     """Test demean_model when there are no fixed effects."""
     # Create sample data
     N = 1000
@@ -94,9 +108,7 @@ def test_demean_model_no_fixed_effects(benchmark, demean_func):
         weights=weights,
         lookup_demeaned_data=lookup_dict,
         na_index=frozenset(),
-        fixef_tol=1e-6,
-        fixef_maxiter=10_000,
-        demean_func=demean_func,
+        demeaner=demeaner,
     )
 
     # When no fixed effects, output should equal input
@@ -107,11 +119,16 @@ def test_demean_model_no_fixed_effects(benchmark, demean_func):
 
 
 @pytest.mark.parametrize(
-    argnames="demean_func",
-    argvalues=[demean, demean_jax, demean_rs, demean_cupy32, demean_cupy64],
-    ids=["demean_numba", "demean_jax", "demean_rs", "demean_cupy32", "demean_cupy64"],
+    argnames="demeaner",
+    argvalues=[
+        MapDemeaner(backend="numba"),
+        MapDemeaner(backend="jax"),
+        MapDemeaner(backend="rust"),
+        LsmrDemeaner(use_gpu=False),
+    ],
+    ids=["numba", "jax", "rust", "lsmr_scipy"],
 )
-def test_demean_model_with_fixed_effects(benchmark, demean_func):
+def test_demean_model_with_fixed_effects(benchmark, demeaner):
     """Test demean_model with fixed effects."""
     # Create sample data
     N = 1000
@@ -132,9 +149,7 @@ def test_demean_model_with_fixed_effects(benchmark, demean_func):
         weights=weights,
         lookup_demeaned_data=lookup_dict,
         na_index=frozenset(),
-        fixef_tol=1e-6,
-        fixef_maxiter=10_000,
-        demean_func=demean_func,
+        demeaner=demeaner,
     )
 
     # Verify results are different from input (since we're demeaning)
@@ -147,17 +162,22 @@ def test_demean_model_with_fixed_effects(benchmark, demean_func):
 
     # Verify results are cached in lookup_dict
     assert frozenset() in lookup_dict
-    cached_data = lookup_dict[frozenset()][1]
+    cached_data = lookup_dict[frozenset()].demeaned
     assert np.allclose(cached_data[Y.columns].values, Yd.values)
     assert np.allclose(cached_data[X.columns].values, Xd.values)
 
 
 @pytest.mark.parametrize(
-    argnames="demean_func",
-    argvalues=[demean, demean_jax, demean_rs, demean_cupy32, demean_cupy64],
-    ids=["demean_numba", "demean_jax", "demean_rs", "demean_cupy32", "demean_cupy64"],
+    argnames="demeaner",
+    argvalues=[
+        MapDemeaner(backend="numba"),
+        MapDemeaner(backend="jax"),
+        MapDemeaner(backend="rust"),
+        LsmrDemeaner(use_gpu=False),
+    ],
+    ids=["numba", "jax", "rust", "lsmr_scipy"],
 )
-def test_demean_model_with_weights(benchmark, demean_func):
+def test_demean_model_with_weights(benchmark, demeaner):
     """Test demean_model with weights."""
     N = 1000
     rng = np.random.default_rng(42)
@@ -177,9 +197,7 @@ def test_demean_model_with_weights(benchmark, demean_func):
         weights=weights,
         lookup_demeaned_data=lookup_dict,
         na_index=frozenset(),
-        fixef_tol=1e-6,
-        fixef_maxiter=10_000,
-        demean_func=demean_func,
+        demeaner=demeaner,
     )
 
     # Run without weights for comparison (fresh lookup dict to avoid cache hit)
@@ -190,9 +208,7 @@ def test_demean_model_with_weights(benchmark, demean_func):
         weights=np.ones(N),
         lookup_demeaned_data={},
         na_index=frozenset(),
-        fixef_tol=1e-6,
-        fixef_maxiter=10_000,
-        demean_func=demean_func,
+        demeaner=demeaner,
     )
 
     # Results should be different with weights vs without
@@ -201,11 +217,16 @@ def test_demean_model_with_weights(benchmark, demean_func):
 
 
 @pytest.mark.parametrize(
-    argnames="demean_func",
-    argvalues=[demean, demean_jax, demean_rs, demean_cupy32, demean_cupy64],
-    ids=["demean_numba", "demean_jax", "demean_rs", "demean_cupy32", "demean_cupy64"],
+    argnames="demeaner",
+    argvalues=[
+        MapDemeaner(backend="numba"),
+        MapDemeaner(backend="jax"),
+        MapDemeaner(backend="rust"),
+        LsmrDemeaner(use_gpu=False),
+    ],
+    ids=["numba", "jax", "rust", "lsmr_scipy"],
 )
-def test_demean_model_caching(benchmark, demean_func):
+def test_demean_model_caching(benchmark, demeaner):
     """Test the caching behavior of demean_model."""
     N = 1000
     rng = np.random.default_rng(42)
@@ -224,9 +245,7 @@ def test_demean_model_caching(benchmark, demean_func):
         weights=weights,
         lookup_demeaned_data=lookup_dict,
         na_index=frozenset(),
-        fixef_tol=1e-6,
-        fixef_maxiter=10_000,
-        demean_func=demean_func,
+        demeaner=demeaner,
     )
 
     # Second run - should use cache
@@ -238,9 +257,7 @@ def test_demean_model_caching(benchmark, demean_func):
         weights=weights,
         lookup_demeaned_data=lookup_dict,
         na_index=frozenset(),
-        fixef_tol=1e-6,
-        fixef_maxiter=10_000,
-        demean_func=demean_func,
+        demeaner=demeaner,
     )
 
     # Results should be identical
@@ -258,9 +275,7 @@ def test_demean_model_caching(benchmark, demean_func):
         weights=weights,
         lookup_demeaned_data=lookup_dict,
         na_index=frozenset(),
-        fixef_tol=1e-6,
-        fixef_maxiter=10_000,
-        demean_func=demean_func,
+        demeaner=demeaner,
     )
 
     # Original columns should match previous results
@@ -270,11 +285,16 @@ def test_demean_model_caching(benchmark, demean_func):
 
 
 @pytest.mark.parametrize(
-    argnames="demean_func",
-    argvalues=[demean, demean_jax, demean_rs, demean_cupy32, demean_cupy64],
-    ids=["demean_numba", "demean_jax", "demean_rs", "demean_cupy32", "demean_cupy64"],
+    argnames="demeaner",
+    argvalues=[
+        MapDemeaner(backend="numba", fixef_maxiter=1),
+        MapDemeaner(backend="jax", fixef_maxiter=1),
+        MapDemeaner(backend="rust", fixef_maxiter=1),
+        LsmrDemeaner(use_gpu=False, solver_maxiter=1),
+    ],
+    ids=["numba", "jax", "rust", "lsmr_scipy"],
 )
-def test_demean_model_maxiter_convergence_failure(demean_func):
+def test_demean_model_maxiter_convergence_failure(demeaner):
     """Test that demean_model fails when maxiter is too small."""
     N = 100
     rng = np.random.default_rng(42)
@@ -289,7 +309,7 @@ def test_demean_model_maxiter_convergence_failure(demean_func):
     lookup_dict = {}
 
     # Should fail with very small maxiter
-    with pytest.raises(ValueError, match="Demeaning failed after 1 iterations"):
+    with pytest.raises(ValueError, match="Demeaning failed after"):
         demean_model(
             Y=Y,
             X=X,
@@ -297,18 +317,21 @@ def test_demean_model_maxiter_convergence_failure(demean_func):
             weights=weights,
             lookup_demeaned_data=lookup_dict,
             na_index=frozenset(),
-            fixef_tol=1e-6,
-            fixef_maxiter=1,  # Very small limit
-            demean_func=demean_func,
+            demeaner=demeaner,
         )
 
 
 @pytest.mark.parametrize(
-    argnames="demean_func",
-    argvalues=[demean, demean_jax, demean_rs, demean_cupy32, demean_cupy64],
-    ids=["demean_numba", "demean_jax", "demean_rs", "demean_cupy32", "demean_cupy64"],
+    argnames="demeaner",
+    argvalues=[
+        MapDemeaner(backend="numba", fixef_maxiter=5000),
+        MapDemeaner(backend="jax", fixef_maxiter=5000),
+        MapDemeaner(backend="rust", fixef_maxiter=5000),
+        LsmrDemeaner(use_gpu=False, solver_maxiter=5000),
+    ],
+    ids=["numba", "jax", "rust", "lsmr_scipy"],
 )
-def test_demean_model_custom_maxiter_success(demean_func):
+def test_demean_model_custom_maxiter_success(demeaner):
     """Test that demean_model succeeds with reasonable maxiter."""
     N = 1000
     rng = np.random.default_rng(42)
@@ -327,9 +350,7 @@ def test_demean_model_custom_maxiter_success(demean_func):
         weights=weights,
         lookup_demeaned_data=lookup_dict,
         na_index=frozenset(),
-        fixef_tol=1e-6,
-        fixef_maxiter=5000,  # Custom limit
-        demean_func=demean_func,
+        demeaner=demeaner,
     )
 
     # Just verify it returns valid results
@@ -381,6 +402,173 @@ def test_feols_integration_maxiter():
     # Should work with default
     model = pf.feols("y ~ x | fe", data=data)
     assert model is not None
+
+
+def test_demean_within_multiplicative_preconditioner_build_and_reuse():
+    rng = np.random.default_rng(123)
+    n = 400
+
+    x = rng.normal(size=(n, 3))
+    flist = np.column_stack([rng.integers(0, 40, n), rng.integers(0, 25, n)]).astype(
+        np.uint32
+    )
+    weights = rng.uniform(0.5, 1.5, n)
+
+    preconditioner = build_within_preconditioner(
+        flist,
+        weights,
+        preconditioner_type="multiplicative",
+    )
+
+    x_demeaned, success = demean_within(
+        x,
+        flist,
+        weights,
+        krylov_method="gmres",
+        preconditioner_type="multiplicative",
+        preconditioner=preconditioner,
+    )
+
+    assert success
+    assert x_demeaned.shape == x.shape
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape("Multiplicative Schwarz requires `krylov_method='gmres'`."),
+    ):
+        demean_within(
+            x,
+            flist,
+            weights,
+            krylov_method="cg",
+            preconditioner_type="multiplicative",
+            preconditioner=preconditioner,
+        )
+
+
+def test_prepare_within_preconditioner_builds_once_and_refreshes_on_request(
+    monkeypatch,
+):
+    rng = np.random.default_rng(321)
+    n = 200
+    flist = np.column_stack([rng.integers(0, 30, n), rng.integers(0, 20, n)]).astype(
+        np.uint32
+    )
+    demeaner = WithinDemeaner(krylov_method="gmres")
+
+    build_calls: list[np.ndarray] = []
+
+    def fake_build(
+        flist: np.ndarray,
+        weights: np.ndarray,
+        preconditioner_type: str,
+    ) -> WithinPreconditioner:
+        build_calls.append(weights.copy())
+        return WithinPreconditioner(
+            n_obs=flist.shape[0],
+            n_factors=flist.shape[1],
+            factor_cardinalities=tuple((flist.max(axis=0) + 1).tolist()),
+            preconditioner_type=preconditioner_type,
+            _preconditioner_handle=object(),
+        )
+
+    monkeypatch.setattr(
+        "pyfixest.estimation.internals.demean_.build_within_preconditioner",
+        fake_build,
+    )
+
+    weights0 = np.ones(n)
+    effective_demeaner, preconditioner = _prepare_within_preconditioner(
+        flist=flist,
+        weights=weights0,
+        demeaner=demeaner,
+        preconditioner=None,
+    )
+
+    assert len(build_calls) == 1
+    assert effective_demeaner.preconditioner is preconditioner
+
+    effective_demeaner, reused_preconditioner = _prepare_within_preconditioner(
+        flist=flist,
+        weights=weights0 * 1.01,
+        demeaner=demeaner,
+        preconditioner=preconditioner,
+    )
+
+    assert len(build_calls) == 1
+    assert effective_demeaner.preconditioner is reused_preconditioner
+    assert reused_preconditioner is preconditioner
+
+    effective_demeaner, refreshed_preconditioner = _prepare_within_preconditioner(
+        flist=flist,
+        weights=weights0 * 1.01,
+        demeaner=demeaner,
+        preconditioner=preconditioner,
+        refresh_preconditioner=True,
+    )
+
+    assert len(build_calls) == 2
+    assert effective_demeaner.preconditioner is refreshed_preconditioner
+    assert refreshed_preconditioner is not preconditioner
+
+
+def test_within_preconditioner_roundtrips_via_pickle():
+    rng = np.random.default_rng(777)
+    n = 250
+    x = rng.normal(size=(n, 3))
+    flist = np.column_stack([rng.integers(0, 30, n), rng.integers(0, 20, n)]).astype(
+        np.uint32
+    )
+    weights = rng.uniform(0.5, 1.5, n)
+
+    preconditioner = build_within_preconditioner(flist, weights)
+    restored_from_pickle = pickle.loads(pickle.dumps(preconditioner))
+
+    x_demeaned_original, success_original = demean_within(
+        x,
+        flist,
+        weights,
+        preconditioner=preconditioner,
+    )
+    x_demeaned_pickle, success_pickle = demean_within(
+        x,
+        flist,
+        weights,
+        preconditioner=restored_from_pickle,
+    )
+
+    assert success_original and success_pickle
+    np.testing.assert_allclose(x_demeaned_pickle, x_demeaned_original, rtol=1e-10)
+    assert (
+        restored_from_pickle.factor_cardinalities == preconditioner.factor_cardinalities
+    )
+
+
+def test_restored_within_preconditioner_still_validates_structure():
+    rng = np.random.default_rng(991)
+    n = 200
+    x = rng.normal(size=(n, 2))
+    flist = np.column_stack([rng.integers(0, 20, n), rng.integers(0, 15, n)]).astype(
+        np.uint32
+    )
+    weights = rng.uniform(0.5, 1.5, n)
+    preconditioner = build_within_preconditioner(flist, weights)
+    restored = pickle.loads(pickle.dumps(preconditioner))
+
+    incompatible_flist = np.column_stack(
+        [rng.integers(0, 25, n), rng.integers(0, 15, n)]
+    ).astype(np.uint32)
+
+    with pytest.raises(
+        ValueError,
+        match="fixed-effect cardinalities do not match",
+    ):
+        demean_within(
+            x,
+            incompatible_flist,
+            weights,
+            preconditioner=restored,
+        )
 
 
 @pytest.mark.parametrize(

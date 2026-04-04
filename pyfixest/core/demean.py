@@ -1,7 +1,220 @@
+from __future__ import annotations
+
+import warnings
+from dataclasses import dataclass, field
+from typing import Any
+
 import numpy as np
 from numpy.typing import NDArray
 
-from ._core_impl import _demean_rs, _demean_within_rs
+from ._core_impl import (
+    _build_within_preconditioner_rs,
+    _demean_rs,
+    _demean_within_rs,
+    _deserialize_within_preconditioner_rs,
+    _serialize_within_preconditioner_rs,
+)
+
+
+def _prepare_within_flist(flist: NDArray[np.uint32]) -> NDArray[np.uint32]:
+    flist_arr = np.asfortranarray(flist, dtype=np.uint32)
+    if flist_arr.ndim == 1:
+        flist_arr = flist_arr.reshape((-1, 1), order="F")
+    return flist_arr
+
+
+def _prepare_weights(weights: NDArray[np.float64]) -> NDArray[np.float64]:
+    return np.asarray(weights, dtype=np.float64).reshape(-1)
+
+
+def _compute_factor_cardinalities(flist: NDArray[np.uint32]) -> tuple[int, ...]:
+    # FE columns are dense 0..K-1 codes from `pd.factorize`, so cardinality is max + 1.
+    return tuple((flist.max(axis=0) + 1).tolist())
+
+
+def _sanitize_krylov_and_preconditioner(
+    krylov_method: str,
+    preconditioner_type: str,
+) -> tuple[str, str]:
+    krylov_method = krylov_method.lower()
+    preconditioner_type = preconditioner_type.lower()
+
+    if krylov_method not in {"cg", "gmres"}:
+        raise ValueError("`krylov_method` must be either 'cg' or 'gmres'.")
+    if preconditioner_type not in {"additive", "multiplicative"}:
+        raise ValueError(
+            "`preconditioner_type` must be either 'additive' or 'multiplicative'."
+        )
+    if preconditioner_type == "multiplicative" and krylov_method != "gmres":
+        raise ValueError("Multiplicative Schwarz requires `krylov_method='gmres'`.")
+
+    return krylov_method, preconditioner_type
+
+
+@dataclass(frozen=True, slots=True)
+class WithinPreconditioner:
+    """Thin in-process wrapper around a built `within::FePreconditioner`."""
+
+    n_obs: int
+    n_factors: int
+    factor_cardinalities: tuple[int, ...]
+    preconditioner_type: str
+    _preconditioner_handle: Any = field(repr=False)
+
+    def _to_pickle_bytes(self) -> bytes:
+        return _serialize_within_preconditioner_rs(self._preconditioner_handle)
+
+    @classmethod
+    def _from_pickle(
+        cls,
+        data: bytes,
+        n_obs: int,
+        n_factors: int,
+        factor_cardinalities: tuple[int, ...],
+        preconditioner_type: str,
+    ) -> WithinPreconditioner:
+        if not isinstance(data, (bytes, bytearray, memoryview)):
+            raise TypeError("`data` must be bytes-like.")
+        if not isinstance(n_obs, int) or n_obs <= 0:
+            raise ValueError("`n_obs` must be a positive int.")
+        if not isinstance(n_factors, int) or n_factors <= 0:
+            raise ValueError("`n_factors` must be a positive int.")
+        factor_cardinalities = tuple(int(card) for card in factor_cardinalities)
+        if len(factor_cardinalities) != n_factors:
+            raise ValueError(
+                "`factor_cardinalities` must have one entry per fixed-effect dimension."
+            )
+        if any(card <= 0 for card in factor_cardinalities):
+            raise ValueError("`factor_cardinalities` entries must be positive.")
+        if not isinstance(preconditioner_type, str):
+            raise TypeError("`preconditioner_type` must be a string.")
+        preconditioner_type = preconditioner_type.lower()
+        if preconditioner_type not in {"additive", "multiplicative"}:
+            raise ValueError(
+                "`preconditioner_type` must be either 'additive' or 'multiplicative'."
+            )
+
+        handle = _deserialize_within_preconditioner_rs(bytes(data))
+        return cls(
+            n_obs=n_obs,
+            n_factors=n_factors,
+            factor_cardinalities=factor_cardinalities,
+            preconditioner_type=preconditioner_type,
+            _preconditioner_handle=handle,
+        )
+
+    def __reduce__(self) -> tuple[Any, tuple[Any, ...]]:
+        return (
+            type(self)._from_pickle,
+            (
+                self._to_pickle_bytes(),
+                self.n_obs,
+                self.n_factors,
+                self.factor_cardinalities,
+                self.preconditioner_type,
+            ),
+        )
+
+
+def build_within_preconditioner(
+    flist: NDArray[np.uint32],
+    weights: NDArray[np.float64],
+    preconditioner_type: str = "additive",
+) -> WithinPreconditioner:
+    """
+    Build a reusable preconditioner for the `within` demeaner backend.
+
+    Parameters
+    ----------
+    flist : numpy.ndarray
+        Fixed-effects array of shape `(n_obs, n_factors)`.
+    weights : numpy.ndarray
+        Observation weights.
+    preconditioner_type : {"additive", "multiplicative"}
+        Schwarz preconditioner variant.
+
+    Returns
+    -------
+    WithinPreconditioner
+        In-process reusable preconditioner handle.
+
+    Notes
+    -----
+    This is a pyfixest convenience wrapper around the upstream `within` solver
+    flow: it constructs a temporary solver with upstream-compatible defaults and
+    extracts its built `FePreconditioner` for reuse.
+    """
+    preconditioner_type = preconditioner_type.lower()
+    if preconditioner_type not in {"additive", "multiplicative"}:
+        raise ValueError(
+            "`preconditioner_type` must be either 'additive' or 'multiplicative'."
+        )
+
+    flist_arr = _prepare_within_flist(flist)
+    if flist_arr.shape[1] == 1:
+        raise ValueError(
+            "A reusable `within` preconditioner requires at least two fixed effects."
+        )
+
+    weights_arr = _prepare_weights(weights)
+    handle = _build_within_preconditioner_rs(
+        flist_arr,
+        weights_arr,
+        preconditioner_type,
+    )
+    return WithinPreconditioner(
+        n_obs=flist_arr.shape[0],
+        n_factors=flist_arr.shape[1],
+        factor_cardinalities=_compute_factor_cardinalities(flist_arr),
+        preconditioner_type=preconditioner_type,
+        _preconditioner_handle=handle,
+    )
+
+
+def validate_within_preconditioner(
+    preconditioner: WithinPreconditioner,
+    flist: NDArray[np.uint32],
+    *,
+    preconditioner_type: str | None = None,
+) -> None:
+    """Validate compatibility and emit warnings for a reusable preconditioner.
+
+    Raises ``ValueError`` for hard incompatibilities (number of factors,
+    cardinalities, preconditioner type). Emits ``UserWarning`` for a differing
+    observation count.
+    """
+    flist_arr = _prepare_within_flist(flist)
+
+    if preconditioner.n_factors != flist_arr.shape[1]:
+        raise ValueError(
+            "The supplied within preconditioner is incompatible with the current "
+            "fixed-effects structure: the number of fixed effects does not match."
+        )
+    if (
+        preconditioner_type is not None
+        and preconditioner.preconditioner_type != preconditioner_type
+    ):
+        raise ValueError(
+            "The supplied within preconditioner uses "
+            f"`preconditioner_type='{preconditioner.preconditioner_type}'`, but "
+            f"`preconditioner_type='{preconditioner_type}'` was requested."
+        )
+
+    factor_cardinalities = _compute_factor_cardinalities(flist_arr)
+    if preconditioner.factor_cardinalities != factor_cardinalities:
+        raise ValueError(
+            "The supplied within preconditioner is incompatible with the current "
+            "fixed-effects structure: the fixed-effect cardinalities do not match."
+        )
+
+    # Soft warnings — reuse is allowed but may degrade effectiveness.
+    if preconditioner.n_obs != flist_arr.shape[0]:
+        warnings.warn(
+            "The supplied within preconditioner was built on a different number "
+            "of observations. Reuse is allowed, but effectiveness may degrade.",
+            UserWarning,
+            stacklevel=3,
+        )
 
 
 def demean(
@@ -36,39 +249,6 @@ def demean(
     tuple[numpy.ndarray, bool]
         A tuple containing the demeaned array of shape (n_samples, n_features)
         and a boolean indicating whether the algorithm converged successfully.
-
-    Examples
-    --------
-    ```{python}
-    import numpy as np
-    import pyfixest as pf
-    from pyfixest.utils.dgps import get_blw
-    from pyfixest.estimation.internals.demean_ import demean
-    from formulaic import model_matrix
-
-    fml = "y ~ treat | state + year"
-
-    data = get_blw()
-    data.head()
-
-    Y, rhs = model_matrix(fml, data)
-    X = rhs[0].drop(columns="Intercept")
-    fe = rhs[1].drop(columns="Intercept")
-    YX = np.concatenate([Y, X], axis=1)
-
-    # to numpy
-    Y = Y.to_numpy()
-    X = X.to_numpy()
-    YX = np.concatenate([Y, X], axis=1)
-    fe = fe.to_numpy().astype(int)  # demean requires fixed effects as ints!
-
-    YX_demeaned, success = demean(YX, fe, weights = np.ones(YX.shape[0]))
-    Y_demeaned = YX_demeaned[:, 0]
-    X_demeaned = YX_demeaned[:, 1:]
-
-    print(np.linalg.lstsq(X_demeaned, Y_demeaned, rcond=None)[0])
-    print(pf.feols(fml, data).coef())
-    ```
     """
     return _demean_rs(
         x.astype(np.float64, copy=False),
@@ -85,48 +265,49 @@ def demean_within(
     weights: NDArray[np.float64],
     tol: float = 1e-06,
     maxiter: int = 1_000,
+    krylov_method: str = "cg",
+    gmres_restart: int = 30,
+    preconditioner_type: str = "additive",
+    preconditioner: WithinPreconditioner | None = None,
 ) -> tuple[NDArray, bool]:
-    """
-    Demean an array using preconditioned conjugate gradient via the `within` crate.
+    """Demean an array using the configurable `within` backend."""
+    krylov_method, preconditioner_type = _sanitize_krylov_and_preconditioner(
+        krylov_method,
+        preconditioner_type,
+    )
 
-    Uses one-level Schwarz preconditioning with approximate Cholesky local
-    solvers. Converges faster than alternating projections on weakly-connected
-    or block-diagonal fixed-effect structures.
-
-    For single fixed effects, falls back to alternating projections (``_demean_rs``)
-    because the CG/Schwarz preconditioner is designed for multi-way FE problems.
-
-    Parameters
-    ----------
-    x : numpy.ndarray
-        Input array of shape (n_samples, n_features).
-    flist : numpy.ndarray
-        Array of shape (n_samples, n_factors) specifying the fixed effects
-        (integer-encoded).
-    weights : numpy.ndarray
-        Array of shape (n_samples,) specifying the weights.
-    tol : float, optional
-        Convergence tolerance. Defaults to 1e-06.
-    maxiter : int, optional
-        Maximum number of CG iterations. Defaults to 1_000.
-
-    Returns
-    -------
-    tuple[numpy.ndarray, bool]
-        Demeaned array and convergence flag.
-    """
-    if flist.ndim == 1 or flist.shape[1] == 1:
+    flist_arr = _prepare_within_flist(flist)
+    if flist_arr.shape[1] == 1:
         return _demean_rs(
             x.astype(np.float64, copy=False),
-            flist.astype(np.uint64, copy=False),
-            weights.astype(np.float64, copy=False),
+            flist_arr.astype(np.uint64, copy=False),
+            _prepare_weights(weights),
             tol,
             maxiter,
         )
+
+    weights_arr = _prepare_weights(weights)
+    x_arr = np.asarray(x, dtype=np.float64)
+    if x_arr.ndim == 1:
+        x_arr = x_arr.reshape((-1, 1))
+
+    preconditioner_handle = None
+    if preconditioner is not None:
+        validate_within_preconditioner(
+            preconditioner,
+            flist_arr,
+            preconditioner_type=preconditioner_type,
+        )
+        preconditioner_handle = preconditioner._preconditioner_handle
+
     return _demean_within_rs(
-        x.astype(np.float64, copy=False),
-        np.asfortranarray(flist, dtype=np.uint32),
-        weights.astype(np.float64, copy=False).reshape(-1),
+        x_arr,
+        flist_arr,
+        weights_arr,
         tol,
         maxiter,
+        krylov_method,
+        gmres_restart,
+        preconditioner_type,
+        preconditioner_handle,
     )

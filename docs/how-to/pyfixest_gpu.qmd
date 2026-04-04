@@ -6,8 +6,14 @@ jupyter: python3
 ---
 
 
-`PyFixest` allows to run the fixed effects demeaning on the GPU via the `demeaner_backend` argument.
-To do so, you will have to install `jax` and `jaxblib`, for example by typing `pip install pyfixest[jax]`.
+`PyFixest` allows fixed-effects demeaning on the GPU either via the legacy
+`demeaner_backend` shorthand or via a typed `demeaner=` configuration. For
+example, `demeaner_backend="jax"` and `demeaner=pf.MapDemeaner(backend="jax")`
+select the same JAX backend. If a typed `demeaner` is provided, it takes
+precedence over `demeaner_backend`, `fixef_tol`, and `fixef_maxiter`.
+
+To do so, you will have to install `jax` and `jaxlib`, for example by typing
+`pip install pyfixest[jax]`.
 
 We test two back-ends for the iterative alternating-projections component of the fixed-effects regression on an Nvidia A100 GPU with 40 GB VRAM (a GPU that one typically wouldn't have installed to play graphics-intensive videogames on consumer hardware). `numba` benchmarks are run on a 12-core xeon CPU.
 

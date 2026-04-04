@@ -1,3 +1,5 @@
+import pickle
+
 import duckdb
 import numpy as np
 import pandas as pd
@@ -5,6 +7,7 @@ import pytest
 from formulaic.errors import FactorEvaluationError
 
 import pyfixest as pf
+import pyfixest.estimation.models.fepois_ as fepois_model
 from pyfixest.utils.utils import get_data
 
 
@@ -90,6 +93,112 @@ def test_fepois_args():
     fit5 = pf.feols(fml="Y ~ X1 | f1 + f2", data=df, solver="np.linalg.lstsq")
 
     np.testing.assert_allclose(fit4.coef(), fit5.coef(), rtol=1e-12)
+
+
+def test_feols_exposes_and_reuses_within_preconditioner():
+    data = pf.get_data()
+    demeaner = pf.WithinDemeaner(krylov_method="gmres")
+
+    fit1 = pf.feols("Y ~ X1 | f1 + f2", data=data, demeaner=demeaner)
+
+    assert fit1.preconditioner_ is not None
+
+    fit2 = pf.feols(
+        "Y ~ X1 | f1 + f2",
+        data=data,
+        demeaner=pf.WithinDemeaner(
+            krylov_method="gmres",
+            preconditioner=fit1.preconditioner_,
+        ),
+    )
+
+    np.testing.assert_allclose(fit1.coef(), fit2.coef(), rtol=1e-10)
+
+
+def test_feols_reuses_pickled_within_preconditioner():
+    data = pf.get_data()
+    fit1 = pf.feols(
+        "Y ~ X1 | f1 + f2",
+        data=data,
+        demeaner=pf.WithinDemeaner(),
+    )
+
+    restored_preconditioner = pickle.loads(pickle.dumps(fit1.preconditioner_))
+
+    fit2 = pf.feols(
+        "Y ~ X1 | f1 + f2",
+        data=data,
+        demeaner=pf.WithinDemeaner(preconditioner=restored_preconditioner),
+    )
+
+    np.testing.assert_allclose(fit1.coef(), fit2.coef(), rtol=1e-10)
+
+
+def test_feglm_runs_with_within_demeaner():
+    data = pf.get_data().copy()
+    data["Y"] = (data["Y"] > 0).astype(int)
+
+    fit = pf.feglm(
+        "Y ~ X1 | f1 + f2",
+        data=data,
+        family="logit",
+        demeaner=pf.WithinDemeaner(),
+    )
+
+    assert np.isfinite(fit.coef().to_numpy()).all()
+
+
+def test_fepois_runs_with_within_demeaner():
+    data = pf.get_data(model="Fepois")
+
+    fit = pf.fepois(
+        "Y ~ X1 | f1 + f2",
+        data=data,
+        demeaner=pf.WithinDemeaner(),
+    )
+
+    assert np.isfinite(fit.coef().to_numpy()).all()
+
+
+def test_fepois_tightens_inner_tol_for_within_demeaner(monkeypatch):
+    data = pf.get_data(model="Fepois")
+    initial_inner_tol = 1e-2
+    tol_history: list[float] = []
+    refresh_history: list[bool] = []
+
+    original_prepare = fepois_model._prepare_within_preconditioner
+    original_override = fepois_model._override_demeaner_tol
+
+    def wrapped_prepare(*args, **kwargs):
+        refresh_history.append(kwargs.get("refresh_preconditioner", False))
+        return original_prepare(*args, **kwargs)
+
+    def wrapped_override(demeaner, *, tol=None):
+        if tol is not None:
+            tol_history.append(tol)
+        return original_override(demeaner, tol=tol)
+
+    monkeypatch.setattr(
+        fepois_model,
+        "_prepare_within_preconditioner",
+        wrapped_prepare,
+    )
+    monkeypatch.setattr(
+        fepois_model,
+        "_override_demeaner_tol",
+        wrapped_override,
+    )
+
+    fit = pf.fepois(
+        "Y ~ X1 | f1 + f2",
+        data=data,
+        demeaner=pf.WithinDemeaner(fixef_tol=initial_inner_tol),
+    )
+
+    assert np.isfinite(fit.coef().to_numpy()).all()
+    assert tol_history
+    assert min(tol_history) < initial_inner_tol
+    assert any(refresh_history)
 
 
 def test_lean():

@@ -1,0 +1,160 @@
+---
+title: "Choosing and Reusing Fixed-Effects Solvers"
+description: "How to configure fixed-effects demeaners, reuse within preconditioners, and persist them across sessions."
+categories: [Fixed Effects, Performance]
+---
+
+```{python}
+import numpy as np
+import pandas as pd
+import pickle
+
+import pyfixest as pf
+```
+
+`PyFixest` now accepts object-based demeaner configurations. This makes it easier
+to choose a backend, tune solver settings, and, for the `within` backend,
+reuse a pre-built fixed-effects preconditioner across regressions. As a good chunk of
+the computational cost of multi-fixed-effect problems is in the preconditioner setup, this can lead to a large performance increase when estimating several related regression models.
+
+If you are deciding whether a fixed-effects problem is likely to be easy or hard
+for alternating-projections methods, see
+[When Are Fixed Effects Problems Difficult?](../explanation/difficult-fixed-effects.md).
+
+## Choosing a Demeaner
+
+The main fixed-effects options are:
+
+| Demeaner | Main idea | Typical use |
+|---|---|---|
+| `pf.MapDemeaner(...)` | alternating projections on CPU or JAX | good for "dense" fixed effect networks |
+| `pf.WithinDemeaner(...)` | Krylov solver with Schwarz preconditioning via `within` | tailored to sparse FE problems and reuse workflows |
+| `pf.LsmrDemeaner(...)` | sparse LSMR-based demeaning on CPU or GPU | tba |
+
+Only `pf.WithinDemeaner(...)` currently supports reusable preconditioners.
+
+## Example Data
+
+```{python}
+panel = pf.get_worker_panel(N_workers=300, N_firms=40, N_years=8, seed=42)
+
+rng = np.random.default_rng(123)
+panel["log_bonus"] = (
+    0.4 * panel["worker_fe"]
+    - 0.2 * panel["firm_fe"]
+    + 0.01 * panel["experience"]
+    + 0.02 * panel["tenure"]
+    + rng.normal(0, 0.2, size=len(panel))
+)
+
+fml_y1 = "log_wage ~ experience + tenure | worker_id + firm_id"
+fml_y2 = "log_bonus ~ experience + tenure | worker_id + firm_id"
+panel.head()
+```
+
+## Pass Demeaners as Dataclasses
+
+Instead of string shorthands, you can pass a configured demeaner directly.
+When a typed `demeaner=` is provided, it is authoritative: its backend,
+`fixef_tol`, and `fixef_maxiter` take precedence over the top-level
+`demeaner_backend`, `fixef_tol`, and `fixef_maxiter` arguments.
+
+```{python}
+fit_map = pf.feols(
+    fml_y1,
+    data=panel,
+    demeaner=pf.MapDemeaner(backend="rust", fixef_maxiter=10_000),
+)
+
+fit_within = pf.feols(
+    fml_y1,
+    data=panel,
+    demeaner=pf.WithinDemeaner(
+        krylov_method="gmres",
+        gmres_restart=20,
+        preconditioner_type="multiplicative",
+    ),
+)
+
+pd.concat(
+    {
+        "map": fit_map.coef(),
+        "within": fit_within.coef(),
+    },
+    axis=1,
+)
+```
+
+## Reuse a Within Preconditioner
+
+The expensive part of the `within` backend is the preconditioner setup. For
+multi-fixed-effect problems, `PyFixest` caches that object during demeaning and
+exposes it on `feols` fits as `fit.preconditioner_`.
+
+You can then pass that preconditioner into a later `WithinDemeaner(...)`:
+
+```{python}
+fit1 = pf.feols(
+    fml_y1,
+    data=panel,
+    demeaner=pf.WithinDemeaner(),
+)
+
+fit1.preconditioner_
+```
+
+```{python}
+fit2 = pf.feols(
+    fml_y2,
+    data=panel,
+    demeaner=pf.WithinDemeaner(preconditioner=fit1.preconditioner_),
+)
+
+fit2.coef()
+```
+
+## When Does `preconditioner_` Exist?
+
+`fit.preconditioner_` is currently exposed on `feols()` fits that:
+
+- use `pf.WithinDemeaner(...)`
+- have at least two fixed-effects dimensions
+- successfully complete demeaning
+
+In simpler cases, such as no fixed effects, a single fixed effect, or a
+non-`within` demeaner, `fit.preconditioner_` is `None`.
+
+## Persist a Preconditioner Across Sessions
+
+It is possible to persist a preconditioner across Python sessions, which can be useful if you have a costly preconditioner setup and want to reuse it later without recomputing.
+
+The easiest path is via standard `pickle`:
+
+```{python}
+fit1 = pf.feols(
+    fml_y1,
+    data=panel,
+    demeaner=pf.WithinDemeaner(),
+)
+
+payload = pickle.dumps(fit1.preconditioner_)
+restored_preconditioner = pickle.loads(payload)
+
+fit2 = pf.feols(
+    fml_y2,
+    data=panel,
+    demeaner=pf.WithinDemeaner(preconditioner=restored_preconditioner),
+)
+
+fit2.coef()
+```
+
+Please make sure to only load persisted preconditioners from trusted sources. Like any Python pickle-based workflow, untrusted payloads are unsafe to deserialize.
+
+## Using stale Preconditioners
+
+A preconditioner is defined for a given sample, fixed effects structure, and weights. For regression with identical structure in these three dimensions, the cached preconditioner will be exactly valid - if you were to recompute the preconditioner instead of using the cached one, you would get exactly the same object.
+
+If you change the sample, fixed effects structure, or weights, the cached preconditioner will turn "stale". In some cases, a stale preconditioner may still be a good approximation. Even with a stale preconditioner, the Kyrlov solver will converge - but the more the new regression deviation deviates from the original problem, the less the preconditioner will help.
+
+For example, suppose that you fit a regression a slightly different sample, but with the same fixed effects and weights. The cached preconditioner may still be a good approximation to the new problem, and using it may lead to faster convergence than starting from scratch. If the sample changes too drastically, or if the fixed effects structure changes, or your new regression even drops levels from the fixed effects, the cached preconditioner may be a poor approximation and lead to slower convergence than creating a new preconditioner.

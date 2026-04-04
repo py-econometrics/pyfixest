@@ -3,8 +3,10 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
+from pyfixest.demeaners import BaseDemeaner
 from pyfixest.estimation.api.utils import _estimation_input_checks
 from pyfixest.estimation.FixestMulti_ import FixestMulti
+from pyfixest.estimation.internals.demeaner_options import resolve_demeaner
 from pyfixest.estimation.internals.literals import (
     DemeanerBackendOptions,
     FixedRmOptions,
@@ -36,6 +38,7 @@ def feols(
     weights_type: WeightsTypeOptions = "aweights",
     solver: SolverOptions = "scipy.linalg.solve",
     demeaner_backend: DemeanerBackendOptions = "numba",
+    demeaner: BaseDemeaner | None = None,
     use_compression: bool = False,
     reps: int = 100,
     context: int | Mapping[str, Any] | None = None,
@@ -153,7 +156,14 @@ def feols(
           matrices (requires cupy & GPU, defaults to scipy/CPU and float64 if no GPU available)
         - "scipy": Direct application of the Frisch-Waugh-Lovell Theorem on sparse matrice.
           Forces to use a scipy-sparse backend even when cupy is installed and GPU is available.
-        Defaults to "numba".
+        Defaults to "numba". This argument is treated as a shorthand and is only
+        used when `demeaner` is not provided.
+
+    demeaner : BaseDemeaner | None, optional
+        Typed demeaner configuration. If provided, it takes precedence over
+        `demeaner_backend`, `fixef_tol`, and `fixef_maxiter`. Backend-specific
+        settings and fixed-effects iteration controls are taken entirely from
+        this object.
 
     use_compression: bool
         Whether to use sufficient statistics to losslessly fit the regression model
@@ -494,6 +504,14 @@ def feols(
     if ssc is None:
         ssc = ssc_func()
     context = {} if context is None else capture_context(context)
+    resolved_demeaner = resolve_demeaner(
+        demeaner=demeaner,
+        demeaner_backend=demeaner_backend,
+        fixef_tol=fixef_tol,
+        fixef_maxiter=fixef_maxiter,
+    )
+    resolved_fixef_tol = resolved_demeaner.fixef_tol
+    resolved_fixef_maxiter = resolved_demeaner.fixef_maxiter
 
     _estimation_input_checks(
         fml=fml,
@@ -507,8 +525,8 @@ def feols(
         copy_data=copy_data,
         store_data=store_data,
         lean=lean,
-        fixef_tol=fixef_tol,
-        fixef_maxiter=fixef_maxiter,
+        fixef_tol=resolved_fixef_tol,
+        fixef_maxiter=resolved_fixef_maxiter,
         weights_type=weights_type,
         use_compression=use_compression,
         reps=reps,
@@ -522,8 +540,8 @@ def feols(
         copy_data=copy_data,
         store_data=store_data,
         lean=lean,
-        fixef_tol=fixef_tol,
-        fixef_maxiter=fixef_maxiter,
+        fixef_tol=resolved_fixef_tol,
+        fixef_maxiter=resolved_fixef_maxiter,
         weights_type=weights_type,
         use_compression=use_compression,
         reps=reps,
@@ -552,7 +570,7 @@ def feols(
         solver=solver,
         vcov_kwargs=vcov_kwargs,
         collin_tol=collin_tol,
-        demeaner_backend=demeaner_backend,
+        demeaner=resolved_demeaner,
     )
 
     if fixest._is_multiple_estimation:
