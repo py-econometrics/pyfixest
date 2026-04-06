@@ -137,7 +137,7 @@ def _lsmr_eager(
         zetaold = zeta
         thetabar = sbar * rho
         rhotemp = cbar * rho
-        cbar, sbar, rhobar = _sym_ortho(cbar * rho, thetanew)
+        cbar, sbar, rhobar = _sym_ortho(rhotemp, thetanew)
         zeta = cbar * zetabar
         zetabar = -sbar * zetabar
 

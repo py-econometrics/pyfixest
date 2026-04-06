@@ -93,6 +93,20 @@ def _safe_hypot(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
     )
 
 
+def _sym_ortho_tensor(
+    a: torch.Tensor,
+    b: torch.Tensor,
+    zero: torch.Tensor,
+    one: torch.Tensor,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    "Compute a stable Givens rotation for tensor scalars."
+    r = _safe_hypot(a, b)
+    safe_r = torch.where(r == zero, one, r)
+    c = torch.where(r == zero, zero, a / safe_r)
+    s = torch.where(r == zero, zero, b / safe_r)
+    return c, s, r
+
+
 # ---------------------------------------------------------------------------
 # Initial state packing
 # ---------------------------------------------------------------------------
@@ -181,17 +195,11 @@ def _scalar_step(state: torch.Tensor, consts: torch.Tensor) -> torch.Tensor:
     _ONE = _ZERO + 1.0
 
     # --- Givens 1: (alphabar, damp) ---
-    r1 = _safe_hypot(alphabar, damp)
-    safe_r1 = torch.where(r1 == _ZERO, _ONE, r1)
-    chat = torch.where(r1 == _ZERO, _ZERO, alphabar / safe_r1)
-    shat = torch.where(r1 == _ZERO, _ZERO, damp / safe_r1)
+    chat, shat, r1 = _sym_ortho_tensor(alphabar, damp, _ZERO, _ONE)
 
     # --- Givens 2: (alphahat=r1, beta) ---
     rhoold = rho
-    r2 = _safe_hypot(r1, beta)
-    safe_r2 = torch.where(r2 == _ZERO, _ONE, r2)
-    c = torch.where(r2 == _ZERO, _ZERO, r1 / safe_r2)
-    s = torch.where(r2 == _ZERO, _ZERO, beta / safe_r2)
+    c, s, r2 = _sym_ortho_tensor(r1, beta, _ZERO, _ONE)
     rho_new = r2
     thetanew = s * alpha
     alphabar_new = c * alpha
@@ -200,10 +208,7 @@ def _scalar_step(state: torch.Tensor, consts: torch.Tensor) -> torch.Tensor:
     rhobarold = rhobar
     thetabar = sbar * rho_new
     rhotemp = cbar * rho_new
-    r3 = _safe_hypot(rhotemp, thetanew)
-    safe_r3 = torch.where(r3 == _ZERO, _ONE, r3)
-    cbar_new = torch.where(r3 == _ZERO, _ZERO, rhotemp / safe_r3)
-    sbar_new = torch.where(r3 == _ZERO, _ZERO, thetanew / safe_r3)
+    cbar_new, sbar_new, r3 = _sym_ortho_tensor(rhotemp, thetanew, _ZERO, _ONE)
     rhobar_new = r3
     zeta = cbar_new * zetabar
     zetabar_new = -sbar_new * zetabar
@@ -215,10 +220,7 @@ def _scalar_step(state: torch.Tensor, consts: torch.Tensor) -> torch.Tensor:
     betadd_new = -s * betaacute
 
     # Givens 4: rhotilde
-    r4 = _safe_hypot(rhodold, thetabar)
-    safe_r4 = torch.where(r4 == _ZERO, _ONE, r4)
-    ctildeold = torch.where(r4 == _ZERO, _ZERO, rhodold / safe_r4)
-    stildeold = torch.where(r4 == _ZERO, _ZERO, thetabar / safe_r4)
+    ctildeold, stildeold, r4 = _sym_ortho_tensor(rhodold, thetabar, _ZERO, _ONE)
 
     thetatilde_new = stildeold * rhobar_new
     rhodold_new = ctildeold * rhobar_new
