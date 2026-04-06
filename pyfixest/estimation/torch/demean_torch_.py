@@ -17,6 +17,7 @@ import numpy as np
 import torch
 from numpy.typing import NDArray
 
+from pyfixest.estimation.torch._preconditioned_sparse import _PreconditionedSparse
 from pyfixest.estimation.torch._sparse_dummy import (
     _build_sparse_dummy,
     _scale_sparse_rows,
@@ -272,74 +273,3 @@ demean_torch_cuda = _make_demean_variant(
 demean_torch_cuda32 = _make_demean_variant(
     "cuda", torch.float32, "Torch demeaner on CUDA GPU, float32."
 )
-
-
-class _PreconditionedSparse:
-    """
-    Wraps a sparse matrix D and diagonal preconditioner M_inv
-    to present A_precond = D @ diag(M_inv) for LSMR.
-
-    This avoids forming the preconditioned matrix explicitly —
-    just element-wise multiply before/after matvec.
-
-    The transpose view is cached and returned by `.t()`, so LSMR's
-    repeated `A.t().mv(u)` calls don't allocate a new object each time.
-
-    D^T is pre-computed once in a GPU-friendly sparse layout to avoid
-    per-iteration reconversion (COO coalesce on MPS, CSR radixSort on CUDA).
-    """
-
-    def __init__(
-        self,
-        D: torch.Tensor,
-        M_inv: torch.Tensor,
-        *,
-        _transposed: bool = False,
-        _D_t: torch.Tensor | None = None,
-    ):
-        m, n = D.shape
-        self.shape = (n, m) if _transposed else (m, n)
-        self._D = D
-        self._M_inv = M_inv
-        self._transposed = _transposed
-        self._T: _PreconditionedSparse | None = None
-        self._D_t = _D_t if _D_t is not None else self._materialize_transpose(D)
-
-    @staticmethod
-    def _materialize_transpose(D: torch.Tensor) -> torch.Tensor:
-        """Pre-compute D^T in a GPU-friendly sparse layout."""
-        D_t = D.t()
-        layout = D_t.layout
-        if layout == torch.sparse_coo:
-            return D_t.coalesce()
-        if layout in (torch.sparse_csr, torch.sparse_csc):
-            return D_t.to_sparse_csr()
-        return D_t
-
-    def mv(self, v: torch.Tensor) -> torch.Tensor:
-        if self._transposed:
-            # Compute M_inv * (D^T @ u) — uses pre-computed transpose
-            return self._M_inv * (self._D_t @ v)
-        # Compute D @ (M_inv * v)
-        return self._D @ (self._M_inv * v)
-
-    def mm(self, V: torch.Tensor) -> torch.Tensor:
-        """Batched matvec: A_precond @ V where V is (n, K) or (m, K).
-
-        Same logic as mv() but broadcasts M_inv over K columns via unsqueeze.
-        """
-        if self._transposed:
-            return self._M_inv.unsqueeze(1) * (self._D_t @ V)
-        return self._D @ (self._M_inv.unsqueeze(1) * V)
-
-    def t(self) -> _PreconditionedSparse:
-        """Return cached transpose view."""
-        if self._T is None:
-            self._T = _PreconditionedSparse(
-                self._D,
-                self._M_inv,
-                _transposed=not self._transposed,
-                _D_t=self._D_t,
-            )
-            self._T._T = self  # cross-link so .t().t() returns self
-        return self._T
