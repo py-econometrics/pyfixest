@@ -67,29 +67,6 @@ def _get_device(dtype: torch.dtype = torch.float64) -> torch.device:
     return torch.device("cpu")
 
 
-def _demean_torch_on_device(
-    x: NDArray[np.float64],
-    flist: NDArray[np.uint64] | None,
-    weights: NDArray[np.float64] | None,
-    tol: float,
-    maxiter: int,
-    device: torch.device,
-    dtype: torch.dtype,
-) -> tuple[NDArray[np.float64], bool]:
-    """
-    Core demeaning implementation for a specific device and dtype.
-
-    This is the shared workhorse called by all public wrappers.
-    See `demean_torch` for full parameter documentation.
-    """
-    if flist is None:
-        raise ValueError("flist cannot be None")
-    if weights is None:
-        weights = np.ones(x.shape[0], dtype=np.float64)
-
-    return _demean_torch_on_device_impl(x, flist, weights, tol, maxiter, device, dtype)
-
-
 @torch.no_grad()
 def _demean_torch_on_device_impl(
     x: NDArray[np.float64],
@@ -228,8 +205,13 @@ def demean_torch(
     success : bool
         True if LSMR converged for all columns.
     """
+    if flist is None:
+        raise ValueError("flist cannot be None")
+    if weights is None:
+        weights = np.ones(x.shape[0], dtype=np.float64)
+
     device = _get_device(dtype)
-    return _demean_torch_on_device(x, flist, weights, tol, maxiter, device, dtype)
+    return _demean_torch_on_device_impl(x, flist, weights, tol, maxiter, device, dtype)
 
 
 def _make_demean_variant(
@@ -246,7 +228,7 @@ def _make_demean_variant(
         tol: float = 1e-8,
         maxiter: int = 100_000,
     ) -> tuple[NDArray[np.float64], bool]:
-        return _demean_torch_on_device(
+        return _demean_torch_on_device_impl(
             x,
             flist,
             weights,
