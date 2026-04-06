@@ -17,8 +17,9 @@ def _build_sparse_dummy(
     total_groups = sum of unique groups per factor. Columns are stacked:
     [factor0_groups | factor1_groups | ...].
 
-    No reference-level dropping - LSMR finds the min-norm solution,
-    which gives correct residuals for rank-deficient systems.
+    No reference level needs to be dropped: although the fixed-effect coefficients
+    are not uniquely identified in a rank-deficient dummy system, the implied fitted
+    FE component, and therefore the demeaned residuals, are unique.
 
     Returns COO on MPS (Metal has no CSR kernels), CSR otherwise.
 
@@ -47,6 +48,7 @@ def _build_sparse_dummy(
     row_indices = []
     col_indices = []
     col_offset = 0
+    rows = np.arange(N, dtype=np.int64)
 
     for j in range(n_factors):
         col_j = flist[:, j]
@@ -61,7 +63,6 @@ def _build_sparse_dummy(
                 f"Re-encode to contiguous 0-based integers."
             )
 
-        rows = np.arange(N, dtype=np.int64)
         cols = col_j.astype(np.int64) + col_offset
 
         row_indices.append(rows)
