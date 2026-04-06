@@ -64,6 +64,8 @@ def _lsmr_batched(
 
     if maxiter is None:
         maxiter = min(m, n)
+    if maxiter <= 0:
+        raise ValueError("maxiter must be a positive integer")
 
     At = _precompute_transpose(A)
 
@@ -260,6 +262,8 @@ def _lsmr_compiled_batched(
 
     if maxiter is None:
         maxiter = min(m, n)
+    if maxiter <= 0:
+        raise ValueError("maxiter must be a positive integer")
 
     step_fn = _get_compiled_step(device.type) if use_compile else _scalar_step
 
@@ -380,18 +384,6 @@ def _lsmr_compiled_batched(
             break
 
     istop = _mark_maxiter_batched(istop, itn, maxiter)
-
-    if itn == 0:
-        return (
-            X,
-            istop,
-            0,
-            normb,
-            normar_init,
-            alpha,
-            torch.ones(K, device=device, dtype=dtype),
-            torch.zeros(K, device=device, dtype=dtype),
-        )
 
     return (
         X,

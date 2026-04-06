@@ -55,6 +55,8 @@ def _lsmr_eager(
 
     if maxiter is None:
         maxiter = min(m, n)
+    if maxiter <= 0:
+        raise ValueError("maxiter must be a positive integer")
 
     At = _precompute_transpose(A)
 
@@ -223,6 +225,8 @@ def _lsmr_compiled(
 
     if maxiter is None:
         maxiter = min(m, n)
+    if maxiter <= 0:
+        raise ValueError("maxiter must be a positive integer")
 
     step_fn = _get_compiled_step(device.type) if use_compile else _scalar_step
 
@@ -342,9 +346,6 @@ def _lsmr_compiled(
 
     if itn >= maxiter and istop == 0:
         istop = 7
-
-    if itn == 0:
-        return x, istop, 0, normb.item(), normar_init, alpha.item(), 1.0, 0.0
 
     if istop == 0 or istop == 7:
         normx_val = torch.linalg.norm(x).item()

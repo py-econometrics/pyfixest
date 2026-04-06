@@ -22,6 +22,8 @@ from pyfixest.estimation.torch.demean_torch_ import (  # noqa: E402
     demean_torch,
 )
 from pyfixest.estimation.torch.lsmr_torch import (  # noqa: E402
+    _lsmr_batched,
+    _lsmr_compiled_batched,
     lsmr_torch,
     lsmr_torch_batched,
 )
@@ -78,11 +80,11 @@ class TestBatchedLSMR:
         B = _make_rhs(m, K, seed=123)
 
         # Batched solve
-        X_batch, istop_batch, itn_batch, *_ = lsmr_torch_batched(A, B)
+        X_batch, _istop_batch, _itn_batch, *_ = lsmr_torch_batched(A, B)
 
         # Sequential solve
         for k in range(K):
-            x_seq, istop_seq, itn_seq, *_ = lsmr_torch(A, B[:, k])
+            x_seq, _istop_seq, _itn_seq, *_ = lsmr_torch(A, B[:, k])
             assert torch.allclose(X_batch[:, k], x_seq, atol=1e-6, rtol=1e-6), (
                 f"Column {k}: max diff = "
                 f"{torch.max(torch.abs(X_batch[:, k] - x_seq)).item():.2e}"
@@ -110,8 +112,8 @@ class TestBatchedLSMR:
         A = _make_sparse_problem(m, n)
         b = _make_rhs(m, 1, seed=42)
 
-        X_batch, istop_batch, itn_batch, *_ = lsmr_torch_batched(A, b)
-        x_single, istop_single, itn_single, *_ = lsmr_torch(A, b[:, 0])
+        X_batch, _istop_batch, _itn_batch, *_ = lsmr_torch_batched(A, b)
+        x_single, _istop_single, _itn_single, *_ = lsmr_torch(A, b[:, 0])
 
         assert torch.allclose(X_batch[:, 0], x_single, atol=1e-6)
 
@@ -126,7 +128,7 @@ class TestBatchedLSMR:
         B[:, 0] = torch.tensor(rng.standard_normal(m) * 0.01, dtype=torch.float64)
         B[:, 1] = torch.tensor(rng.standard_normal(m) * 100.0, dtype=torch.float64)
 
-        X, istop, itn, *_ = lsmr_torch_batched(A, B)
+        X, istop, _itn, *_ = lsmr_torch_batched(A, B)
 
         # Both should converge (istop in 1-3)
         assert (istop >= 1).all() and (istop <= 3).all(), (
@@ -147,7 +149,7 @@ class TestBatchedLSMR:
         B = _make_rhs(m, 3, seed=42)
         B[:, 1] = 0.0  # Zero out middle column
 
-        X, istop, *_ = lsmr_torch_batched(A, B)
+        X, _istop, *_ = lsmr_torch_batched(A, B)
 
         assert torch.allclose(
             X[:, 1], torch.zeros(n, dtype=torch.float64), atol=1e-12
@@ -161,7 +163,7 @@ class TestBatchedLSMR:
         A = _make_sparse_problem(m, n)
         B = torch.zeros(m, K, dtype=torch.float64)
 
-        X, istop, itn, *_ = lsmr_torch_batched(A, B)
+        X, _istop, itn, *_ = lsmr_torch_batched(A, B)
 
         assert torch.allclose(X, torch.zeros(n, K, dtype=torch.float64), atol=1e-12)
         assert itn == 0
@@ -227,6 +229,22 @@ class TestBatchedLSMR:
         assert normA.shape == (K,)
         assert condA.shape == (K,)
         assert normx.shape == (K,)
+
+    @pytest.mark.parametrize(
+        ("solver", "kwargs"),
+        [
+            (_lsmr_batched, {}),
+            (_lsmr_compiled_batched, {"use_compile": False}),
+        ],
+    )
+    def test_invalid_maxiter_raises(self, solver, kwargs):
+        """Batched eager and compiled paths reject non-positive maxiter."""
+        m, n, K = 50, 20, 3
+        A = _make_sparse_problem(m, n)
+        B = _make_rhs(m, K, seed=321)
+
+        with pytest.raises(ValueError, match="maxiter must be a positive integer"):
+            solver(A, B, maxiter=0, **kwargs)
 
 
 # ---------------------------------------------------------------------------
@@ -402,8 +420,8 @@ class TestCompiledBatchedLSMR:
         A = _make_sparse_problem(m, n)
         B = _make_rhs(m, K, seed=123)
 
-        X_eager, istop_eager, itn_eager, *_ = _lsmr_batched(A, B)
-        X_comp, istop_comp, itn_comp, *_ = _lsmr_compiled_batched(
+        X_eager, _istop_eager, itn_eager, *_ = _lsmr_batched(A, B)
+        X_comp, _istop_comp, itn_comp, *_ = _lsmr_compiled_batched(
             A, B, use_compile=False
         )
 
@@ -454,7 +472,7 @@ class TestCompiledBatchedLSMR:
         B = _make_rhs(m, 3, seed=42)
         B[:, 1] = 0.0  # Zero out middle column
 
-        X, istop, *_ = _lsmr_compiled_batched(A, B, use_compile=False)
+        X, _istop, *_ = _lsmr_compiled_batched(A, B, use_compile=False)
 
         assert torch.allclose(
             X[:, 1], torch.zeros(n, dtype=torch.float64), atol=1e-12
@@ -493,7 +511,7 @@ class TestCompiledBatchedLSMR:
         A = _make_sparse_problem(m, n)
         B = torch.zeros(m, K, dtype=torch.float64)
 
-        X, istop, itn, *_ = _lsmr_compiled_batched(A, B, use_compile=False)
+        X, _istop, itn, *_ = _lsmr_compiled_batched(A, B, use_compile=False)
 
         assert torch.allclose(X, torch.zeros(n, K, dtype=torch.float64), atol=1e-12)
         assert itn == 0

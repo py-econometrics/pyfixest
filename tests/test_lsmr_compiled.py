@@ -14,8 +14,8 @@ import pytest
 import torch
 
 # Reference: original scalar-state LSMR (for correctness comparison)
+from pyfixest.estimation.torch.lsmr_torch import _lsmr_compiled, lsmr_torch
 from pyfixest.estimation.torch.lsmr_torch import _lsmr_eager as lsmr_torch_original
-from pyfixest.estimation.torch.lsmr_torch import lsmr_torch
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -102,6 +102,17 @@ def test_auto_cpu_defaults():
     x, istop, _itn, *_ = lsmr_torch(A, b)
     assert x.device.type == "cpu"
     assert istop in range(8)
+
+
+@pytest.mark.parametrize("solver", [lsmr_torch_original, _lsmr_compiled])
+def test_invalid_maxiter_raises(solver):
+    """Single-RHS eager and compiled paths reject non-positive maxiter."""
+    A, b = _make_sparse_problem(50, 20)
+
+    with pytest.raises(ValueError, match="maxiter must be a positive integer"):
+        solver(
+            A, b, maxiter=0, use_compile=False
+        ) if solver is _lsmr_compiled else solver(A, b, maxiter=0)
 
 
 # ---------------------------------------------------------------------------
