@@ -3,6 +3,8 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
+from tests._torch_test_utils import HAS_CUDA as HAS_CUDA
+from tests._torch_test_utils import HAS_MPS as HAS_MPS
 from tests._torch_test_utils import torch
 
 if torch is None:  # pragma: no cover - environment dependent
