@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import pytest
 
-pytest.importorskip("torch")
-
 from pyfixest.estimation.torch.lsmr_torch import lsmr_torch, lsmr_torch_batched
 from tests._lsmr_test_utils import make_rhs, make_sparse_problem, torch
 
