@@ -15,6 +15,8 @@ Public entry points:
 
 from __future__ import annotations
 
+import warnings
+
 import torch
 
 from pyfixest.estimation.torch._lsmr_batched import (
@@ -45,6 +47,14 @@ def lsmr_torch(
     device = b.device
     if use_compile is None:
         use_compile = device.type == "cuda"
+    elif use_compile and device.type == "mps":
+        warnings.warn(
+            "torch.compile is not supported reliably on MPS for LSMR; "
+            "falling back to eager execution.",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+        use_compile = False
 
     if use_compile:
         return _lsmr_compiled(
@@ -92,6 +102,14 @@ def lsmr_torch_batched(
     device = B.device
     if use_compile is None:
         use_compile = device.type == "cuda"
+    elif use_compile and device.type == "mps":
+        warnings.warn(
+            "torch.compile is not supported reliably on MPS for batched LSMR; "
+            "falling back to eager execution.",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+        use_compile = False
 
     if use_compile:
         return _lsmr_compiled_batched(

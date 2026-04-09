@@ -26,8 +26,8 @@ def _build_sparse_dummy(
     Parameters
     ----------
     flist : np.ndarray, shape (N, n_factors), dtype uint64
-        Integer-encoded fixed effects. Must be contiguous 0-based integers
-        per factor (i.e., values in [0, n_groups_j) with no gaps).
+        Integer-encoded fixed effects. Values are re-encoded to contiguous
+        0-based integers per factor when gaps are present.
     device : torch.device
         Target device.
     dtype : torch.dtype
@@ -38,10 +38,6 @@ def _build_sparse_dummy(
     D : torch.Tensor
         Sparse tensor of shape (N, total_groups). COO on MPS, CSR otherwise.
 
-    Raises
-    ------
-    ValueError
-        If any factor has non-contiguous group IDs (gaps in the integer encoding).
     """
     N, n_factors = flist.shape
 
@@ -52,18 +48,9 @@ def _build_sparse_dummy(
 
     for j in range(n_factors):
         col_j = flist[:, j]
-        unique_vals = np.unique(col_j)
-        n_unique_j = len(unique_vals)
-        n_groups_j = int(unique_vals[-1]) + 1
-
-        if n_groups_j != n_unique_j:
-            raise ValueError(
-                f"Factor {j} has non-contiguous group IDs: "
-                f"max ID is {n_groups_j - 1} but only {n_unique_j} unique values found. "
-                f"Re-encode to contiguous 0-based integers."
-            )
-
-        cols = col_j.astype(np.int64) + col_offset
+        unique_vals, inverse = np.unique(col_j, return_inverse=True)
+        n_groups_j = len(unique_vals)
+        cols = inverse.astype(np.int64, copy=False) + col_offset
 
         row_indices.append(rows)
         col_indices.append(cols)

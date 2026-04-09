@@ -107,6 +107,27 @@ def test_torch_device_backends_match_pyhdfe(backend_name, rtol, atol, demean_dat
     np.testing.assert_allclose(res_torch, res_pyhdfe, rtol=rtol, atol=atol)
 
 
+@pytest.mark.skipif(not HAS_TORCH, reason="torch not available")
+def test_sparse_dummy_reencodes_non_contiguous_groups():
+    from pyfixest.estimation.torch._sparse_dummy import _build_sparse_dummy
+    from tests._torch_test_utils import torch
+
+    flist = np.array([[2], [9], [2], [5]], dtype=np.uint64)
+
+    D = _build_sparse_dummy(flist, torch.device("cpu"), torch.float64).to_dense()
+    expected = torch.tensor(
+        [
+            [1.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0],
+            [1.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0],
+        ],
+        dtype=torch.float64,
+    )
+
+    assert torch.equal(D, expected)
+
+
 def test_set_demeaner_backend():
     for backend in [
         "numba",

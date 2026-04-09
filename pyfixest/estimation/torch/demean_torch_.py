@@ -30,6 +30,11 @@ _BATCHED_K_THRESHOLD_CUDA = 2
 _BATCHED_K_THRESHOLD_MPS = 5
 
 
+def _lsmr_istop_is_success(istop: int) -> bool:
+    """Treat standard LSMR stopping codes 1-6 as successful termination."""
+    return 1 <= int(istop) <= 6
+
+
 def _should_use_batched_lsmr(device: torch.device, K: int) -> bool:
     """Use batched LSMR only when device-specific benchmarks show a benefit."""
     if device.type == "cuda":
@@ -140,7 +145,7 @@ def _demean_torch_on_device_impl(
             maxiter=maxiter,
         )
         theta = M_inv.unsqueeze(1) * Z
-        success = ((istop_vec >= 1) & (istop_vec <= 3)).all().item()
+        success = all(_lsmr_istop_is_success(code) for code in istop_vec.tolist())
     else:
         # Sequential: K < threshold, per-column single-RHS path is faster
         success = True
@@ -154,7 +159,7 @@ def _demean_torch_on_device_impl(
                 maxiter=maxiter,
             )
             theta[:, k] = M_inv * z
-            success = success and (istop in (1, 2, 3))
+            success = success and _lsmr_istop_is_success(istop)
 
     # Compute residuals: x_demeaned = x - D_unweighted @ theta
     x_demeaned = x_t - D_unweighted @ theta
