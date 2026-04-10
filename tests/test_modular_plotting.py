@@ -182,9 +182,7 @@ def test_plot_benchmarks_passes_multiple_k_values_to_generic_figures(
     assert captured_k_values == [[1, 5]]
 
 
-def test_plot_benchmarks_defaults_missing_k_to_one(
-    tmp_path: Path, monkeypatch
-) -> None:
+def test_plot_benchmarks_defaults_missing_k_to_one(tmp_path: Path, monkeypatch) -> None:
     results_df = pd.DataFrame(
         {
             "dgp": ["simple", "simple"],

@@ -216,7 +216,9 @@ def _plot_dgp_figure(
     for row_idx, k in enumerate(k_vals):
         for col_idx, n_fe in enumerate(n_fes):
             ax = axes[row_idx][col_idx]
-            subset = dgp_summary[(dgp_summary["k"] == k) & (dgp_summary["n_fe"] == n_fe)]
+            subset = dgp_summary[
+                (dgp_summary["k"] == k) & (dgp_summary["n_fe"] == n_fe)
+            ]
 
             if subset.empty:
                 ax.set_axis_off()

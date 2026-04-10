@@ -44,7 +44,6 @@ def _backend_output_csv(output_csv: Path, backend: str) -> Path:
     return output_csv.with_name(f"{output_csv.stem}__{_backend_slug(backend)}.csv")
 
 
-
 def generate_datasets(
     dgps: list[DataGeneratorProtocol],
     sizes: list[int],
