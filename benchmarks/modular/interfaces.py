@@ -12,6 +12,7 @@ class BenchmarkDataset:
     dataset_id: str
     data_path: Path
     dgp: str
+    k: int
     n_obs: int
     iter_type: str
     iter_num: int
@@ -49,6 +50,10 @@ class FeolsSpec:
     def n_fe(self) -> int:
         return len(self.fe_cols)
 
+    @property
+    def k(self) -> int:
+        return len(self.covariates)
+
 
 @dataclass(frozen=True)
 class FeolsResult:
@@ -58,6 +63,7 @@ class FeolsResult:
     iter_type: str
     iter_num: int
     dgp: str
+    k: int
     n_obs: int
     n_fe: int
     backend: str

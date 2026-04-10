@@ -119,9 +119,11 @@ def _filter_backends(
 
 def _aggregate(results_df: pd.DataFrame) -> pd.DataFrame:
     return (
-        results_df.groupby(["dgp", "n_fe", "n_obs", "backend"], as_index=False)["time"]
+        results_df.groupby(["dgp", "k", "n_fe", "n_obs", "backend"], as_index=False)[
+            "time"
+        ]
         .agg(median="median")
-        .sort_values(["dgp", "n_fe", "n_obs", "backend"])
+        .sort_values(["dgp", "k", "n_fe", "n_obs", "backend"])
     )
 
 
@@ -197,42 +199,45 @@ def _plot_dgp_figure(
     y_scale: str = "log",
 ) -> None:
     dgp = dgp_summary["dgp"].iloc[0]
+    k_vals = sorted(dgp_summary["k"].unique())
     n_fes = sorted(dgp_summary["n_fe"].unique())
     n_obs_vals = sorted(dgp_summary["n_obs"].unique())
     backends = sorted(dgp_summary["backend"].unique())
 
     fig, axes = plt.subplots(
-        1,
+        len(k_vals),
         len(n_fes),
-        figsize=(5 * len(n_fes), 4.2),
+        figsize=(5 * len(n_fes), 3.8 * len(k_vals)),
         sharey=True,
-        squeeze=False,
+        squeeze=True,
     )
+    axes = np.asarray(axes, dtype=object).reshape(len(k_vals), len(n_fes))
 
-    for col_idx, n_fe in enumerate(n_fes):
-        ax = axes[0][col_idx]
-        subset = dgp_summary[dgp_summary["n_fe"] == n_fe]
+    for row_idx, k in enumerate(k_vals):
+        for col_idx, n_fe in enumerate(n_fes):
+            ax = axes[row_idx][col_idx]
+            subset = dgp_summary[(dgp_summary["k"] == k) & (dgp_summary["n_fe"] == n_fe)]
 
-        if subset.empty:
-            ax.set_axis_off()
-            continue
+            if subset.empty:
+                ax.set_axis_off()
+                continue
 
-        plot_cell(ax, subset, n_obs_vals, backends, styles)
+            plot_cell(ax, subset, n_obs_vals, backends, styles)
 
-        ax.set_title(
-            f"{_dgp_label(dgp)}  |  {_FE_LABELS.get(n_fe, f'{n_fe} FE')}",
-            fontsize=11,
-            fontweight="semibold",
-            pad=8,
-        )
-        ax.set_xticklabels(
-            [f"{n:,}" for n in n_obs_vals], rotation=30, ha="right", fontsize=9
-        )
-        ax.set_xlabel("Observations", fontsize=10)
-        if col_idx == 0:
-            ax.set_ylabel(y_label, fontsize=10)
-        ax.set_yscale(y_scale)
-        _apply_common_style(ax)
+            ax.set_title(
+                f"{_dgp_label(dgp)}  |  {_FE_LABELS.get(n_fe, f'{n_fe} FE')}  |  k={k}",
+                fontsize=11,
+                fontweight="semibold",
+                pad=8,
+            )
+            ax.set_xticklabels(
+                [f"{n:,}" for n in n_obs_vals], rotation=30, ha="right", fontsize=9
+            )
+            ax.set_xlabel("Observations", fontsize=10)
+            if col_idx == 0:
+                ax.set_ylabel(f"k={k}\n{y_label}", fontsize=10)
+            ax.set_yscale(y_scale)
+            _apply_common_style(ax)
 
     for row in axes:
         for ax in row:
@@ -464,6 +469,12 @@ def plot_benchmarks(
     figure_backends: Iterable[str] | None = None,
 ) -> None:
     """Create publication-ready benchmark plots, one figure per benchmark DGP."""
+    results_df = results_df.copy()
+    if "k" not in results_df.columns:
+        results_df["k"] = 1
+    else:
+        results_df["k"] = results_df["k"].fillna(1).astype(int)
+
     results_df = _filter_backends(results_df, figure_backends)
     if results_df.empty:
         return

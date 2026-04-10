@@ -6,7 +6,7 @@ from pathlib import Path
 from benchmarker_sets import build_standard_feols_benchmarkers
 from dgps import get_akm_sweep_scenarios
 from interfaces import FeolsSpec
-from runner import export_and_plot, run_benchmarks
+from runner import plot_results, run_benchmarks
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
@@ -61,9 +61,9 @@ if __name__ == "__main__":
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     datasets = generate_akm_datasets()
     bundle = build_standard_feols_benchmarkers(fixef_maxiter=10000)
-    results = run_benchmarks(bundle.benchmarkers, datasets, SPECS)
-    export_and_plot(
-        results,
+    results_df = run_benchmarks(bundle.benchmarkers, datasets, SPECS, OUTPUT_CSV)
+    plot_results(
+        results_df,
         OUTPUT_CSV,
         figure_dir=FIGURE_DIR,
         figure_backends=bundle.figure_backends,

@@ -30,6 +30,14 @@ class TorchRuntimeAvailability:
     has_cuda: bool
 
 
+@dataclass(frozen=True)
+class CupyRuntimeAvailability:
+    """Runtime availability of optional cupy benchmark targets."""
+
+    has_cupy: bool
+    has_cuda: bool
+
+
 def detect_torch_runtime_availability() -> TorchRuntimeAvailability:
     """Detect whether torch and optional accelerator backends are available."""
     try:
@@ -46,6 +54,37 @@ def detect_torch_runtime_availability() -> TorchRuntimeAvailability:
     return TorchRuntimeAvailability(
         has_torch=True,
         has_mps=has_mps,
+        has_cuda=has_cuda,
+    )
+
+
+def detect_jax_runtime_availability() -> bool:
+    """Detect whether jax is available."""
+    try:
+        import jax  # noqa: F401
+
+        return True
+    except ImportError:
+        return False
+
+
+def detect_cupy_runtime_availability() -> CupyRuntimeAvailability:
+    """Detect whether cupy and a CUDA runtime are available."""
+    try:
+        import cupy
+    except ImportError:
+        return CupyRuntimeAvailability(
+            has_cupy=False,
+            has_cuda=False,
+        )
+
+    try:
+        has_cuda = bool(cupy.cuda.runtime.getDeviceCount() > 0)
+    except Exception:
+        has_cuda = False
+
+    return CupyRuntimeAvailability(
+        has_cupy=True,
         has_cuda=has_cuda,
     )
 
@@ -67,7 +106,10 @@ class _TablePrinter:
 
     def __init__(self, dgp_w: int):
         self._w = dgp_w
-        self._hdr = f"{'dgp':<{dgp_w}} {'n_obs':>12} {'n_fe':>4} {'min':>10} {'median':>10} {'max':>10}  status"
+        self._hdr = (
+            f"{'dgp':<{dgp_w}} {'k':>3} {'n_obs':>12} {'n_fe':>4} "
+            f"{'min':>10} {'median':>10} {'max':>10}  status"
+        )
         self._sep = "-" * len(self._hdr)
 
     def print_header(self, name: str) -> None:
@@ -77,7 +119,7 @@ class _TablePrinter:
         print(f"  {self._sep}", flush=True)
 
     def _row_prefix(self, r: FeolsResult) -> str:
-        return f"{r.dgp:<{self._w}} {r.n_obs:>12,} {r.n_fe:>4}"
+        return f"{r.dgp:<{self._w}} {r.k:>3} {r.n_obs:>12,} {r.n_fe:>4}"
 
     def print_row(self, results: list[FeolsResult]) -> None:
         columns, status = _time_columns(results)
@@ -96,8 +138,8 @@ def _time_columns(results: list[FeolsResult]) -> tuple[str, str]:
     return columns, status
 
 
-def _group_key(r: FeolsResult) -> tuple[str, int, int]:
-    return (r.dgp, r.n_obs, r.n_fe)
+def _group_key(r: FeolsResult) -> tuple[str, int, int, int]:
+    return (r.dgp, r.k, r.n_obs, r.n_fe)
 
 
 def _result_from_dataset(
@@ -116,6 +158,7 @@ def _result_from_dataset(
         iter_type=dataset.iter_type,
         iter_num=dataset.iter_num,
         dgp=dataset.dgp,
+        k=spec.k,
         n_obs=n_obs_override if n_obs_override is not None else dataset.n_obs,
         n_fe=spec.n_fe,
         backend=backend,
@@ -193,6 +236,8 @@ class PyFeolsBenchmarkerFullApi:
                         fml=spec.formula,
                         data=df,
                         vcov=spec.vcov,
+                        copy_data=False,
+                        store_data=False,
                         demeaner_backend=self._demeaner_backend,
                         **self._feols_kwargs,
                     )
