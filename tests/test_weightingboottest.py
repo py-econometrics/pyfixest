@@ -27,7 +27,7 @@ def test_returns_dataframe(data, fml, method):
 def test_return_draws_shape(data, fml, method):
     fit = pf.feols(fml, data=data, vcov="iid")
     reps = 50
-    res, draws = fit.weightingboottest(
+    _, draws = fit.weightingboottest(
         reps=reps, method=method, seed=0, return_draws=True
     )
     k = len(fit._coefnames)
@@ -77,7 +77,7 @@ def test_multinomial_matches_pairs_bootstrap(data):
 
 @pytest.mark.parametrize("method", ["bayesian", "multinomial"])
 def test_se_close_to_analytic(data, method):
-    """Bootstrap SE (α=1) should be close to analytic iid SE."""
+    """Bootstrap SE (alpha=1) should be close to analytic iid SE."""
     fit = pf.feols("Y ~ X1 | f1", data=data, vcov="iid")
     analytic_se = fit.se().to_numpy()
     res = fit.weightingboottest(reps=500, method=method, seed=42)
