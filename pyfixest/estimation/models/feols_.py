@@ -412,7 +412,9 @@ class Feols(ResultAccessorMixin):
         self._Y = model_matrix.dependent
         self._Y_untransformed = model_matrix.dependent.copy()
         self._X = model_matrix.independent
-        self._X_untransformed_df = model_matrix.independent.copy()  # pre-demeaning DataFrame, for bootstrap
+        self._X_untransformed_df = (
+            model_matrix.independent.copy()
+        )  # pre-demeaning DataFrame, for bootstrap
         self._fe = model_matrix.fixed_effects
         self._endogvar = model_matrix.endogenous
         self._Z = model_matrix.instruments
@@ -1554,9 +1556,7 @@ class Feols(ResultAccessorMixin):
             )
 
         if cluster_var is not None and cluster_var not in self._data.columns:
-            raise ValueError(
-                f"Cluster variable '{cluster_var}' not found in the data."
-            )
+            raise ValueError(f"Cluster variable '{cluster_var}' not found in the data.")
 
         # --- unit-to-observation mapping for panel-aware weighting ---
         # np.unique returns sorted unique values and inverse maps each
@@ -1587,9 +1587,9 @@ class Feols(ResultAccessorMixin):
         for b in range(reps):
             # draw unit-level weights
             if method == "multinomial":
-                w_unit = rng.multinomial(
-                    n_units, np.ones(n_units) / n_units
-                ).astype(float)
+                w_unit = rng.multinomial(n_units, np.ones(n_units) / n_units).astype(
+                    float
+                )
             else:  # bayesian
                 w_unit = rng.dirichlet(np.full(n_units, alpha)) * n_units
 
@@ -1603,10 +1603,18 @@ class Feols(ResultAccessorMixin):
             # causing division-by-zero in the demeaning kernel.  Filter them out;
             # zero-weight rows contribute nothing to the WLS objective anyway.
             nz = w_combined > 0
-            w_f  = w_combined[nz]
-            Y_f  = self._Y_untransformed.iloc[nz].reset_index(drop=True)
-            X_f  = self._X_untransformed_df[list(self._coefnames)].iloc[nz].reset_index(drop=True)
-            fe_f = self._fe.iloc[nz].reset_index(drop=True) if self._fe is not None else None
+            w_f = w_combined[nz]
+            Y_f = self._Y_untransformed.iloc[nz].reset_index(drop=True)
+            X_f = (
+                self._X_untransformed_df[list(self._coefnames)]
+                .iloc[nz]
+                .reset_index(drop=True)
+            )
+            fe_f = (
+                self._fe.iloc[nz].reset_index(drop=True)
+                if self._fe is not None
+                else None
+            )
 
             if self._has_fixef:
                 # re-demean with bootstrap weights so FE absorption is exact;
@@ -1641,9 +1649,7 @@ class Feols(ResultAccessorMixin):
         ci_lower = np.quantile(beta_boots, q_lo, axis=0)
         ci_upper = np.quantile(beta_boots, q_hi, axis=0)
         # symmetric p-value: fraction of draws at least as extreme as observed
-        p_values = np.mean(
-            np.abs(beta_boots - beta_hat) >= np.abs(beta_hat), axis=0
-        )
+        p_values = np.mean(np.abs(beta_boots - beta_hat) >= np.abs(beta_hat), axis=0)
 
         res_df = pd.DataFrame(
             {
