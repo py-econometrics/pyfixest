@@ -27,7 +27,9 @@ def test_returns_dataframe(data, fml, method):
 def test_return_draws_shape(data, fml, method):
     fit = pf.feols(fml, data=data, vcov="iid")
     reps = 50
-    res, draws = fit.weightingboottest(reps=reps, method=method, seed=0, return_draws=True)
+    res, draws = fit.weightingboottest(
+        reps=reps, method=method, seed=0, return_draws=True
+    )
     k = len(fit._coefnames)
     assert draws.shape == (reps, k)
 
@@ -36,11 +38,15 @@ def test_return_draws_shape(data, fml, method):
 def test_estimates_close_to_original(data, fml):
     """Bootstrap mean should be close to the point estimate."""
     fit = pf.feols(fml, data=data, vcov="iid")
-    _, draws = fit.weightingboottest(reps=500, method="bayesian", seed=42, return_draws=True)
+    _, draws = fit.weightingboottest(
+        reps=500, method="bayesian", seed=42, return_draws=True
+    )
     for i, coef in enumerate(fit._coefnames):
         np.testing.assert_allclose(
-            draws[:, i].mean(), fit._beta_hat[i], atol=0.05,
-            err_msg=f"Bootstrap mean too far from β̂ for {coef} in {fml}"
+            draws[:, i].mean(),
+            fit._beta_hat[i],
+            atol=0.05,
+            err_msg=f"Bootstrap mean too far from β̂ for {coef} in {fml}",
         )
 
 
@@ -50,7 +56,9 @@ def test_multinomial_matches_pairs_bootstrap(data):
     fit = pf.feols(fml, data=data, vcov="iid")
 
     # multinomial via weightingboottest
-    _, multi_draws = fit.weightingboottest(reps=500, method="multinomial", seed=42, return_draws=True)
+    _, multi_draws = fit.weightingboottest(
+        reps=500, method="multinomial", seed=42, return_draws=True
+    )
     multi_se = multi_draws.std(axis=0, ddof=1)
 
     # manual pairs bootstrap
