@@ -64,6 +64,25 @@ def test_detect_cupy_runtime_availability_without_cupy(monkeypatch):
     )
 
 
+def test_detect_jax_runtime_availability_without_jax(monkeypatch):
+    """Test that detect_jax_runtime_availability reports no jax when import fails."""
+    real_import = __import__
+
+    def fake_import(name, *args, **kwargs):
+        if name == "jax":
+            raise ImportError("jax missing")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr("builtins.__import__", fake_import)
+
+    availability = fb.detect_jax_runtime_availability()
+
+    assert availability == fb.JaxRuntimeAvailability(
+        has_jax=False,
+        has_gpu=False,
+    )
+
+
 def test_build_standard_feols_benchmarkers_skips_torch_when_unavailable(
     monkeypatch, capsys
 ):
@@ -83,6 +102,11 @@ def test_build_standard_feols_benchmarkers_skips_torch_when_unavailable(
         "detect_cupy_runtime_availability",
         lambda: fb.CupyRuntimeAvailability(has_cupy=False, has_cuda=False),
     )
+    monkeypatch.setattr(
+        bs,
+        "detect_jax_runtime_availability",
+        lambda: fb.JaxRuntimeAvailability(has_jax=False, has_gpu=False),
+    )
 
     bundle = bs.build_standard_feols_benchmarkers()
 
@@ -93,6 +117,7 @@ def test_build_standard_feols_benchmarkers_skips_torch_when_unavailable(
 def test_build_standard_feols_benchmarkers_can_exclude_base_pyfixest(
     monkeypatch,
 ) -> None:
+    """Test that fixest and Julia remain when base pyfixest backends are disabled."""
     monkeypatch.setattr(
         bs,
         "detect_torch_runtime_availability",
@@ -106,6 +131,11 @@ def test_build_standard_feols_benchmarkers_can_exclude_base_pyfixest(
         bs,
         "detect_cupy_runtime_availability",
         lambda: fb.CupyRuntimeAvailability(has_cupy=False, has_cuda=False),
+    )
+    monkeypatch.setattr(
+        bs,
+        "detect_jax_runtime_availability",
+        lambda: fb.JaxRuntimeAvailability(has_jax=False, has_gpu=False),
     )
 
     bundle = bs.build_standard_feols_benchmarkers(
@@ -130,7 +160,7 @@ def test_build_standard_feols_benchmarkers_can_exclude_base_pyfixest(
 def test_build_standard_feols_benchmarkers_includes_explicit_torch_benchmarkers(
     monkeypatch, capsys
 ):
-    """Test that torch-cpu and torch-mps benchmarkers are included when available."""
+    """Test that torch-cpu benchmarker is included when torch is available."""
     availability = fb.TorchRuntimeAvailability(
         has_torch=True,
         has_mps=True,
@@ -146,16 +176,19 @@ def test_build_standard_feols_benchmarkers_includes_explicit_torch_benchmarkers(
         "detect_cupy_runtime_availability",
         lambda: fb.CupyRuntimeAvailability(has_cupy=False, has_cuda=False),
     )
+    monkeypatch.setattr(
+        bs,
+        "detect_jax_runtime_availability",
+        lambda: fb.JaxRuntimeAvailability(has_jax=False, has_gpu=False),
+    )
 
     bundle = bs.build_standard_feols_benchmarkers(fixef_maxiter=321)
 
     assert "pyfixest (torch-cpu)" in _names(bundle.benchmarkers)
-    assert "pyfixest (torch-mps)" in _names(bundle.benchmarkers)
+    assert "pyfixest (torch-mps)" not in _names(bundle.benchmarkers)
     assert "pyfixest (torch-cuda)" not in _names(bundle.benchmarkers)
     assert "CUDA unavailable" in capsys.readouterr().out
-    assert bundle.figure_backends == [
-        name for name in _names(bundle.benchmarkers) if name.startswith("pyfixest")
-    ]
+    assert bundle.figure_backends == _names(bundle.benchmarkers)
     assert all(
         benchmarker._feols_kwargs.get("fixef_maxiter") == 321
         for benchmarker in bundle.benchmarkers
@@ -180,11 +213,18 @@ def test_build_standard_feols_benchmarkers_includes_cuda_when_available(monkeypa
         "detect_cupy_runtime_availability",
         lambda: fb.CupyRuntimeAvailability(has_cupy=False, has_cuda=False),
     )
+    monkeypatch.setattr(
+        bs,
+        "detect_jax_runtime_availability",
+        lambda: fb.JaxRuntimeAvailability(has_jax=False, has_gpu=False),
+    )
 
     bundle = bs.build_standard_feols_benchmarkers()
 
     assert "pyfixest (torch-cuda)" in _names(bundle.benchmarkers)
     assert _backends(bundle.benchmarkers).count("torch_cuda") == 1
+    assert "fixest-map" in bundle.figure_backends
+    assert "FEM.jl (lsmr)" in bundle.figure_backends
 
 
 def test_build_standard_feols_benchmarkers_includes_cupy_when_available(monkeypatch):
@@ -203,6 +243,11 @@ def test_build_standard_feols_benchmarkers_includes_cupy_when_available(monkeypa
         "detect_cupy_runtime_availability",
         lambda: fb.CupyRuntimeAvailability(has_cupy=True, has_cuda=True),
     )
+    monkeypatch.setattr(
+        bs,
+        "detect_jax_runtime_availability",
+        lambda: fb.JaxRuntimeAvailability(has_jax=False, has_gpu=False),
+    )
 
     bundle = bs.build_standard_feols_benchmarkers()
 
@@ -213,6 +258,7 @@ def test_build_standard_feols_benchmarkers_includes_cupy_when_available(monkeypa
 def test_build_standard_feols_benchmarkers_keeps_torch_when_base_pyfixest_disabled(
     monkeypatch,
 ) -> None:
+    """Test that optional torch benchmarkers still work without base pyfixest ones."""
     monkeypatch.setattr(
         bs,
         "detect_torch_runtime_availability",
@@ -227,6 +273,11 @@ def test_build_standard_feols_benchmarkers_keeps_torch_when_base_pyfixest_disabl
         "detect_cupy_runtime_availability",
         lambda: fb.CupyRuntimeAvailability(has_cupy=False, has_cuda=False),
     )
+    monkeypatch.setattr(
+        bs,
+        "detect_jax_runtime_availability",
+        lambda: fb.JaxRuntimeAvailability(has_jax=False, has_gpu=False),
+    )
 
     bundle = bs.build_standard_feols_benchmarkers(
         include_pyfixest=False,
@@ -237,7 +288,6 @@ def test_build_standard_feols_benchmarkers_keeps_torch_when_base_pyfixest_disabl
 
     assert _names(bundle.benchmarkers) == [
         "pyfixest (torch-cpu)",
-        "pyfixest (torch-mps)",
     ]
     assert bundle.figure_backends == _names(bundle.benchmarkers)
 
@@ -245,6 +295,7 @@ def test_build_standard_feols_benchmarkers_keeps_torch_when_base_pyfixest_disabl
 def test_build_standard_feols_benchmarkers_raises_when_none_available(
     monkeypatch,
 ) -> None:
+    """Test that an empty benchmarker selection raises a clear error."""
     monkeypatch.setattr(
         bs,
         "detect_torch_runtime_availability",
@@ -259,10 +310,18 @@ def test_build_standard_feols_benchmarkers_raises_when_none_available(
         "detect_cupy_runtime_availability",
         lambda: fb.CupyRuntimeAvailability(has_cupy=False, has_cuda=False),
     )
+    monkeypatch.setattr(
+        bs,
+        "detect_jax_runtime_availability",
+        lambda: fb.JaxRuntimeAvailability(has_jax=False, has_gpu=False),
+    )
 
     with pytest.raises(
         ValueError,
-        match="No benchmarkers available after applying include flags and runtime availability checks.",
+        match=(
+            r"No benchmarkers available after applying include flags and runtime "
+            r"availability checks\."
+        ),
     ):
         bs.build_standard_feols_benchmarkers(
             include_pyfixest=False,
@@ -271,3 +330,63 @@ def test_build_standard_feols_benchmarkers_raises_when_none_available(
             include_torch=False,
             include_cupy=False,
         )
+
+
+def test_build_standard_feols_benchmarkers_skips_jax_when_gpu_unavailable(
+    monkeypatch, capsys
+):
+    """Test that jax benchmarkers are excluded when no GPU backend is available."""
+    monkeypatch.setattr(
+        bs,
+        "detect_torch_runtime_availability",
+        lambda: fb.TorchRuntimeAvailability(
+            has_torch=False,
+            has_mps=False,
+            has_cuda=False,
+        ),
+    )
+    monkeypatch.setattr(
+        bs,
+        "detect_cupy_runtime_availability",
+        lambda: fb.CupyRuntimeAvailability(has_cupy=False, has_cuda=False),
+    )
+    monkeypatch.setattr(
+        bs,
+        "detect_jax_runtime_availability",
+        lambda: fb.JaxRuntimeAvailability(has_jax=True, has_gpu=False),
+    )
+
+    bundle = bs.build_standard_feols_benchmarkers()
+
+    assert "pyfixest (jax)" not in _names(bundle.benchmarkers)
+    assert "GPU unavailable" in capsys.readouterr().out
+
+
+def test_build_standard_feols_benchmarkers_includes_jax_when_gpu_available(
+    monkeypatch,
+):
+    """Test that jax benchmarker is included when a GPU backend is available."""
+    monkeypatch.setattr(
+        bs,
+        "detect_torch_runtime_availability",
+        lambda: fb.TorchRuntimeAvailability(
+            has_torch=False,
+            has_mps=False,
+            has_cuda=False,
+        ),
+    )
+    monkeypatch.setattr(
+        bs,
+        "detect_cupy_runtime_availability",
+        lambda: fb.CupyRuntimeAvailability(has_cupy=False, has_cuda=False),
+    )
+    monkeypatch.setattr(
+        bs,
+        "detect_jax_runtime_availability",
+        lambda: fb.JaxRuntimeAvailability(has_jax=True, has_gpu=True),
+    )
+
+    bundle = bs.build_standard_feols_benchmarkers()
+
+    assert "pyfixest (jax)" in _names(bundle.benchmarkers)
+    assert _backends(bundle.benchmarkers).count("jax") == 1

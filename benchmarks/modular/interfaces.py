@@ -59,11 +59,12 @@ class FeolsSpec:
 class FeolsResult:
     """Result row for a full feols pipeline benchmark."""
 
-    dataset_id: str
+    source_dataset_id: str
+    source_k: int | None
     iter_type: str
     iter_num: int
     dgp: str
-    k: int
+    model_k: int
     n_obs: int
     n_fe: int
     backend: str

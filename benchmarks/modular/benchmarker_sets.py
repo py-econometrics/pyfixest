@@ -114,18 +114,24 @@ def build_standard_feols_benchmarkers(
             )
 
     if include_jax:
-        if detect_jax_runtime_availability():
+        availability = detect_jax_runtime_availability()
+        if not availability.has_jax:
+            print(
+                "[bench] skipping jax benchmarker: jax is not installed",
+                flush=True,
+            )
+        elif not availability.has_gpu:
+            print(
+                "[bench] skipping jax benchmarker: GPU unavailable",
+                flush=True,
+            )
+        else:
             pyfixest_benchmarkers.append(
                 PyFeolsBenchmarkerFullApi(
                     "pyfixest (jax)",
                     "jax",
                     **pyfixest_kwargs,
                 )
-            )
-        else:
-            print(
-                "[bench] skipping jax benchmarker: jax is not installed",
-                flush=True,
             )
 
     benchmarkers = list(pyfixest_benchmarkers)
@@ -140,9 +146,7 @@ def build_standard_feols_benchmarkers(
             "availability checks."
         )
 
-    figure_backends = [b.name for b in benchmarkers if b.name.startswith("pyfixest")]
-    if not figure_backends:
-        figure_backends = [b.name for b in benchmarkers]
+    figure_backends = [b.name for b in benchmarkers]
 
     return BenchmarkerBundle(
         benchmarkers=benchmarkers,

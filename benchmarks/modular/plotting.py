@@ -119,11 +119,11 @@ def _filter_backends(
 
 def _aggregate(results_df: pd.DataFrame) -> pd.DataFrame:
     return (
-        results_df.groupby(["dgp", "k", "n_fe", "n_obs", "backend"], as_index=False)[
-            "time"
-        ]
+        results_df.groupby(
+            ["dgp", "model_k", "n_fe", "n_obs", "backend"], as_index=False
+        )["time"]
         .agg(median="median")
-        .sort_values(["dgp", "k", "n_fe", "n_obs", "backend"])
+        .sort_values(["dgp", "model_k", "n_fe", "n_obs", "backend"])
     )
 
 
@@ -199,7 +199,7 @@ def _plot_dgp_figure(
     y_scale: str = "log",
 ) -> None:
     dgp = dgp_summary["dgp"].iloc[0]
-    k_vals = sorted(dgp_summary["k"].unique())
+    k_vals = sorted(dgp_summary["model_k"].unique())
     n_fes = sorted(dgp_summary["n_fe"].unique())
     n_obs_vals = sorted(dgp_summary["n_obs"].unique())
     backends = sorted(dgp_summary["backend"].unique())
@@ -217,7 +217,7 @@ def _plot_dgp_figure(
         for col_idx, n_fe in enumerate(n_fes):
             ax = axes[row_idx][col_idx]
             subset = dgp_summary[
-                (dgp_summary["k"] == k) & (dgp_summary["n_fe"] == n_fe)
+                (dgp_summary["model_k"] == k) & (dgp_summary["n_fe"] == n_fe)
             ]
 
             if subset.empty:
@@ -472,10 +472,7 @@ def plot_benchmarks(
 ) -> None:
     """Create publication-ready benchmark plots, one figure per benchmark DGP."""
     results_df = results_df.copy()
-    if "k" not in results_df.columns:
-        results_df["k"] = 1
-    else:
-        results_df["k"] = results_df["k"].fillna(1).astype(int)
+    results_df["model_k"] = results_df["model_k"].fillna(1).astype(int)
 
     results_df = _filter_backends(results_df, figure_backends)
     if results_df.empty:

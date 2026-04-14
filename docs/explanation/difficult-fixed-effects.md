@@ -475,13 +475,13 @@ combination thereof - vanilla MAP as in `rust-map` reveals poor convergence prop
 We conclude by showing two benchmarks from the `fixest` package that are designed to be simple and very challenging for the MAP algorithm. On the "simple" problem, the graph is dense and both PyFixest backends perform well; here, CG-Schwarz tends to lose because its setup overhead does not amortize. On the "difficult" sparse problem, vanilla MAP degrades sharply, while CG-Schwarz performs much better. In the checked-in results, `rust-cg` is substantially faster than `rust-map` on the hard three-way specification.
 
 <p align="center">
-  <img src="figures/base-benchmarks/bench_simple.png" width="85%">
+  <img src="figures/base-benchmarks/bench_simple_when_fixed_effects_slow.png" width="85%">
 </p>
 
 *Benchmark: "simple" DGP. A well-connected graph where both PyFixest solvers perform well, except CG-Schwarz whose preconditioner setup cost does not amortize.*
 
 <p align="center">
-  <img src="figures/base-benchmarks/bench_difficult.png" width="85%">
+  <img src="figures/base-benchmarks/bench_difficult_when_fixed_effects_slow.png" width="85%">
 </p>
 
 *Benchmark: "difficult" DGP. A sparse graph where vanilla MAP degrades dramatically, while CG-Schwarz remains fast.*

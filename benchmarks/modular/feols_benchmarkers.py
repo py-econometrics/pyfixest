@@ -38,6 +38,14 @@ class CupyRuntimeAvailability:
     has_cuda: bool
 
 
+@dataclass(frozen=True)
+class JaxRuntimeAvailability:
+    """Runtime availability of optional jax benchmark targets."""
+
+    has_jax: bool
+    has_gpu: bool
+
+
 def detect_torch_runtime_availability() -> TorchRuntimeAvailability:
     """Detect whether torch and optional accelerator backends are available."""
     try:
@@ -58,14 +66,29 @@ def detect_torch_runtime_availability() -> TorchRuntimeAvailability:
     )
 
 
-def detect_jax_runtime_availability() -> bool:
-    """Detect whether jax is available."""
+def detect_jax_runtime_availability() -> JaxRuntimeAvailability:
+    """Detect whether jax and a GPU runtime are available."""
     try:
-        import jax  # noqa: F401
-
-        return True
+        import jax
     except ImportError:
-        return False
+        return JaxRuntimeAvailability(
+            has_jax=False,
+            has_gpu=False,
+        )
+
+    try:
+        gpu_platforms = {"gpu", "cuda", "rocm", "metal"}
+        has_gpu = any(
+            getattr(device, "platform", "").lower() in gpu_platforms
+            for device in jax.devices()
+        )
+    except Exception:
+        has_gpu = False
+
+    return JaxRuntimeAvailability(
+        has_jax=True,
+        has_gpu=has_gpu,
+    )
 
 
 def detect_cupy_runtime_availability() -> CupyRuntimeAvailability:
@@ -119,7 +142,7 @@ class _TablePrinter:
         print(f"  {self._sep}", flush=True)
 
     def _row_prefix(self, r: FeolsResult) -> str:
-        return f"{r.dgp:<{self._w}} {r.k:>3} {r.n_obs:>12,} {r.n_fe:>4}"
+        return f"{r.dgp:<{self._w}} {r.model_k:>3} {r.n_obs:>12,} {r.n_fe:>4}"
 
     def print_row(self, results: list[FeolsResult]) -> None:
         columns, status = _time_columns(results)
@@ -139,7 +162,7 @@ def _time_columns(results: list[FeolsResult]) -> tuple[str, str]:
 
 
 def _group_key(r: FeolsResult) -> tuple[str, int, int, int]:
-    return (r.dgp, r.k, r.n_obs, r.n_fe)
+    return (r.dgp, r.model_k, r.n_obs, r.n_fe)
 
 
 def _result_from_dataset(
@@ -154,11 +177,12 @@ def _result_from_dataset(
     n_obs_override: int | None = None,
 ) -> FeolsResult:
     return FeolsResult(
-        dataset_id=dataset.dataset_id,
+        source_dataset_id=dataset.dataset_id,
+        source_k=dataset.k,
         iter_type=dataset.iter_type,
         iter_num=dataset.iter_num,
         dgp=dataset.dgp,
-        k=spec.k,
+        model_k=spec.k,
         n_obs=n_obs_override if n_obs_override is not None else dataset.n_obs,
         n_fe=spec.n_fe,
         backend=backend,
