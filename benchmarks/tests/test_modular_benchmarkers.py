@@ -185,7 +185,7 @@ def test_build_standard_feols_benchmarkers_includes_explicit_torch_benchmarkers(
     bundle = bs.build_standard_feols_benchmarkers(fixef_maxiter=321)
 
     assert "pyfixest (torch-cpu)" in _names(bundle.benchmarkers)
-    assert "pyfixest (torch-mps)" not in _names(bundle.benchmarkers)
+    assert "pyfixest (torch-mps)" in _names(bundle.benchmarkers)
     assert "pyfixest (torch-cuda)" not in _names(bundle.benchmarkers)
     assert "CUDA unavailable" in capsys.readouterr().out
     assert bundle.figure_backends == _names(bundle.benchmarkers)
@@ -288,6 +288,7 @@ def test_build_standard_feols_benchmarkers_keeps_torch_when_base_pyfixest_disabl
 
     assert _names(bundle.benchmarkers) == [
         "pyfixest (torch-cpu)",
+        "pyfixest (torch-mps)",
     ]
     assert bundle.figure_backends == _names(bundle.benchmarkers)
 

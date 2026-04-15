@@ -64,19 +64,19 @@ def build_standard_feols_benchmarkers(
                     **pyfixest_kwargs,
                 )
             )
-            # if availability.has_mps:
-            #    pyfixest_benchmarkers.append(
-            #        PyFeolsBenchmarkerFullApi(
-            #            "pyfixest (torch-mps)",
-            #            "torch_mps",
-            #            **pyfixest_kwargs,
-            #        )
-            #    )
-            # else:
-            #    print(
-            #        "[bench] skipping torch-mps benchmarker: MPS unavailable",
-            #        flush=True,
-            #    )
+            if availability.has_mps:
+                pyfixest_benchmarkers.append(
+                    PyFeolsBenchmarkerFullApi(
+                        "pyfixest (torch-mps)",
+                        "torch_mps",
+                        **pyfixest_kwargs,
+                    )
+                )
+            else:
+                print(
+                    "[bench] skipping torch-mps benchmarker: MPS unavailable",
+                    flush=True,
+                )
 
             if availability.has_cuda:
                 pyfixest_benchmarkers.append(
