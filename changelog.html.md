@@ -11,6 +11,10 @@ fit2 = pf.feols("Y ~ X1 + X2", data = df)
 fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 ```
 
+## PyFixest 0.60.0 (In Development)
+
+- Adds experimental GPU acceleration via PyTorch on CUDA and MPS, plus a PyTorch-based CPU LSMR demeaning backend.
+
 ## PyFixest 0.50.1
 
 ### Bug Fixes
