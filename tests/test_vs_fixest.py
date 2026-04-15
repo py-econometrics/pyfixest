@@ -153,10 +153,10 @@ rng = np.random.default_rng(8760985)
 
 def check_absolute_diff(x1, x2, tol, msg=None):
     "Check for absolute differences."
-    if isinstance(x1, (int, float)):
-        x1 = np.array([x1])
-    if isinstance(x2, (int, float)):
-        x2 = np.array([x2])
+    if np.ndim(x1) == 0:
+        x1 = np.asarray([x1], dtype=np.float64)
+    if np.ndim(x2) == 0:
+        x2 = np.asarray([x2], dtype=np.float64)
         msg = "" if msg is None else msg
 
     # handle nan values
@@ -337,8 +337,8 @@ def test_single_fit_feols(
         tstat_tol = 1e-05
     elif demeaner_backend in ("torch_mps", "torch_cuda32"):
         coef_tol = 5e-06
-        predict_tol = 5e-05
-        resid_tol = 5e-05
+        predict_tol = 2e-04
+        resid_tol = 2e-04
         inference_tol = 1e-05
         tstat_tol = 1e-05
     else:

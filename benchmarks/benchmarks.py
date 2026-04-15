@@ -16,13 +16,26 @@ from pathlib import Path
 
 import pandas as pd
 
-# Optional JAX availability detection
-try:
-    import jax  # noqa: F401
 
-    HAS_JAX = True
-except ImportError:
-    HAS_JAX = False
+def _detect_jax_gpu_availability() -> bool:
+    """Detect whether jax is installed and a GPU backend is usable."""
+    try:
+        import jax
+    except ImportError:
+        return False
+
+    try:
+        gpu_platforms = {"gpu", "cuda", "rocm", "metal"}
+        return any(
+            getattr(device, "platform", "").lower() in gpu_platforms
+            for device in jax.devices()
+        )
+    except Exception:
+        return False
+
+
+# Optional JAX GPU availability detection
+HAS_JAX = _detect_jax_gpu_availability()
 
 # Optional torch availability detection
 try:
@@ -65,7 +78,7 @@ _PYFIXEST_BACKENDS = {
 
 
 def _append_optional_backends(estimators, label_prefix, runner_func, func_name):
-    """Append JAX + torch backend estimators based on runtime availability."""
+    """Append optional accelerator backend estimators based on runtime availability."""
     optional = []
     if HAS_JAX:
         optional.append(("jax", "jax"))

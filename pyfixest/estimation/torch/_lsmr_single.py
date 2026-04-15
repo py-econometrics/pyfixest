@@ -143,9 +143,9 @@ def _lsmr_eager(
         zeta = cbar * zetabar
         zetabar = -sbar * zetabar
 
-        hbar = h + hbar * (-(thetabar * rho) / (rhoold * rhobarold))
-        x = x + (zeta / (rho * rhobar)) * hbar
-        h = v + h * (-(thetanew / rho))
+        hbar = h + hbar * (-(thetabar * rho) / max(rhoold * rhobarold, _DIV_GUARD))
+        x = x + (zeta / max(rho * rhobar, _DIV_GUARD)) * hbar
+        h = v + h * (-(thetanew / max(rho, _DIV_GUARD)))
 
         betaacute = chat * betadd
         betacheck = -shat * betadd
@@ -159,8 +159,10 @@ def _lsmr_eager(
         rhodold = ctildeold * rhobar
         betad = -stildeold * betad + ctildeold * betahat
 
-        tautildeold = (zetaold - thetatildeold * tautildeold) / rhotildeold
-        taud = (zeta - thetatilde * tautildeold) / rhodold
+        tautildeold = (zetaold - thetatildeold * tautildeold) / max(
+            rhotildeold, _DIV_GUARD
+        )
+        taud = (zeta - thetatilde * tautildeold) / max(rhodold, _DIV_GUARD)
         d = d + betacheck * betacheck
         normr = math.sqrt(d + (betad - taud) ** 2 + betadd * betadd)
 
@@ -171,7 +173,7 @@ def _lsmr_eager(
         maxrbar = max(maxrbar, rhobarold)
         if itn > 1:
             minrbar = min(minrbar, rhobarold)
-        condA = max(maxrbar, rhotemp) / min(minrbar, rhotemp)
+        condA = max(maxrbar, rhotemp) / max(min(minrbar, rhotemp), _DIV_GUARD)
 
         normar = abs(zetabar)
         normx = torch.linalg.norm(x).item()
@@ -263,6 +265,7 @@ def _lsmr_compiled(
 
     itn = 0
     istop = 0
+    normx_val = 0.0
 
     while itn < maxiter:
         itn += 1
@@ -296,9 +299,11 @@ def _lsmr_compiled(
         rhoold = out[_O_RHOOLD]
         rhobarold = out[_O_RHOBAROLD]
 
-        hbar = h + hbar * (-(thetabar * rho_new) / (rhoold * rhobarold))
-        x = x + (zeta / (rho_new * rhobar_new)) * hbar
-        h = v + h * (-(thetanew / rho_new))
+        hbar = h + hbar * (
+            -(thetabar * rho_new) / torch.clamp(rhoold * rhobarold, min=_DIV_GUARD)
+        )
+        x = x + (zeta / torch.clamp(rho_new * rhobar_new, min=_DIV_GUARD)) * hbar
+        h = v + h * (-(thetanew / torch.clamp(rho_new, min=_DIV_GUARD)))
 
         state = out[:_STATE_SIZE]
 

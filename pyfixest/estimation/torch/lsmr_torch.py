@@ -41,8 +41,8 @@ def lsmr_torch(
     LSMR solver - unified single-RHS entry point.
 
     Auto-selects implementation based on device:
-    - CUDA: compiled
-    - CPU/MPS: eager
+    - CUDA: compiled (torch.compile fuses ~60 scalar ops into one kernel)
+    - CPU/MPS: eager (see PR comments for why MPS uses eager)
     """
     device = b.device
     if use_compile is None:
