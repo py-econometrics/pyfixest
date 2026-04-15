@@ -21,11 +21,14 @@ def _rmatvec(At, u: torch.Tensor) -> torch.Tensor:
 
 def _precompute_transpose(A):
     """Pre-compute A^T in a GPU-friendly layout to avoid per-iteration reconversion."""
-    if isinstance(A, torch.Tensor) and A.is_sparse_csr:
+    if not isinstance(A, torch.Tensor):
+        return A.t()
+    if A.is_sparse_csr:
         return A.t().to_sparse_csr()
-    elif isinstance(A, torch.Tensor):
-        return A.t().contiguous()
-    return A.t()
+    if A.is_sparse:
+        # Sparse COO (used on MPS): coalesce for efficient SpMV/SpMM
+        return A.t().coalesce()
+    return A.t().contiguous()
 
 
 def _sym_ortho(a: float, b: float) -> tuple[float, float, float]:

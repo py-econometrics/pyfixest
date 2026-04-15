@@ -76,13 +76,18 @@ def _get_device(dtype: torch.dtype = torch.float64) -> torch.device:
 def _demean_torch_on_device_impl(
     x: NDArray[np.float64],
     flist: NDArray[np.uint64],
-    weights: NDArray[np.float64],
+    weights: NDArray[np.float64] | None,
     tol: float,
     maxiter: int,
     device: torch.device,
     dtype: torch.dtype,
 ) -> tuple[NDArray[np.float64], bool]:
     """Inner implementation wrapped in torch.no_grad() to skip autograd overhead."""
+    if flist is None:
+        raise ValueError("flist cannot be None")
+    if weights is None:
+        weights = np.ones(x.shape[0], dtype=np.float64)
+
     # Track original shape to restore on output
     was_1d = x.ndim == 1
     x_2d = x[:, None] if was_1d else x
