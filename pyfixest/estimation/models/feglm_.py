@@ -11,7 +11,7 @@ from pyfixest.errors import (
     NonConvergenceError,
 )
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
-from pyfixest.estimation.internals.backends import BACKENDS
+from pyfixest.estimation.internals.backends import get_backend
 from pyfixest.estimation.internals.literals import DemeanerBackendOptions
 from pyfixest.estimation.internals.solvers import solve_ols
 from pyfixest.estimation.models.feols_ import (
@@ -93,10 +93,7 @@ class Feglm(Feols, ABC):
         self._accelerate = accelerate
 
         self._demeaner_backend = demeaner_backend
-        try:
-            impl = BACKENDS[demeaner_backend]
-        except KeyError:
-            raise ValueError(f"Unknown demeaner backend {demeaner_backend!r}")
+        impl = get_backend(demeaner_backend)
         self._demean_func = impl["demean"]
 
         self._support_crv3_inference = True

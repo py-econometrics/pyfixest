@@ -1,3 +1,7 @@
+import warnings
+from collections.abc import Callable
+from typing import Any, TypedDict
+
 from pyfixest.core.collinear import find_collinear_variables
 from pyfixest.core.crv1 import crv1_meat_loop
 from pyfixest.core.demean import demean, demean_within
@@ -70,7 +74,21 @@ find_collinear_variables_torch = find_collinear_variables_nb
 crv1_meat_loop_torch = crv1_meat_loop_nb
 count_fixef_fully_nested_all_torch = count_fixef_fully_nested_all_nb
 
-BACKENDS = {
+_TORCH_BACKEND_NAMES = frozenset(
+    {"torch", "torch_cpu", "torch_mps", "torch_cuda", "torch_cuda32"}
+)
+
+
+class BackendFunctions(TypedDict):
+    """Typed function bundle for a configured estimation backend."""
+
+    demean: Callable[..., Any]
+    collinear: Callable[..., Any]
+    crv1_meat: Callable[..., Any]
+    nonnested: Callable[..., Any]
+
+
+BACKENDS: dict[str, BackendFunctions] = {
     "numba": {
         "demean": demean_nb,
         "collinear": find_collinear_variables_nb,
@@ -135,3 +153,24 @@ BACKENDS = {
         ]
     },
 }
+
+
+def get_backend(demeaner_backend: str) -> BackendFunctions:
+    """Resolve a backend implementation and warn for experimental torch paths."""
+    try:
+        impl = BACKENDS[demeaner_backend]
+    except KeyError as exc:
+        raise ValueError(f"Invalid demeaner backend: {demeaner_backend}") from exc
+
+    if TORCH_AVAILABLE and demeaner_backend in _TORCH_BACKEND_NAMES:
+        warnings.warn(
+            (
+                f"The `{demeaner_backend}` backend uses experimental torch "
+                "algorithms. Behavior and performance may change in future "
+                "releases."
+            ),
+            UserWarning,
+            stacklevel=2,
+        )
+
+    return impl

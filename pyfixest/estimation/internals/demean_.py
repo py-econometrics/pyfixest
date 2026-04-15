@@ -346,9 +346,6 @@ def _set_demeaner_backend(
     ValueError
         If the demeaning backend is not supported.
     """
-    from pyfixest.estimation.internals.backends import BACKENDS
+    from pyfixest.estimation.internals.backends import get_backend
 
-    try:
-        return BACKENDS[demeaner_backend]["demean"]
-    except KeyError as exc:
-        raise ValueError(f"Invalid demeaner backend: {demeaner_backend}") from exc
+    return get_backend(demeaner_backend)["demean"]

@@ -3,6 +3,7 @@ import pandas as pd
 import pyhdfe
 import pytest
 
+import pyfixest as pf
 from pyfixest.core import demean as demean_rs
 from pyfixest.core.demean import demean_within
 from pyfixest.estimation.cupy.demean_cupy_ import demean_cupy32, demean_cupy64
@@ -142,7 +143,11 @@ def test_set_demeaner_backend():
         "torch_cuda",
         "torch_cuda32",
     ]:
-        demean_func = _set_demeaner_backend(backend)
+        if backend.startswith("torch"):
+            with pytest.warns(UserWarning, match="experimental torch algorithms"):
+                demean_func = _set_demeaner_backend(backend)
+        else:
+            demean_func = _set_demeaner_backend(backend)
         assert demean_func == BACKENDS[backend]["demean"]
 
     demean_func = _set_demeaner_backend("rust-cg")
@@ -151,6 +156,20 @@ def test_set_demeaner_backend():
     # Test invalid backend raises ValueError
     with pytest.raises(ValueError, match="Invalid demeaner backend: invalid"):
         _set_demeaner_backend("invalid")
+
+
+@pytest.mark.skipif(not HAS_TORCH, reason="torch not available")
+def test_feols_warns_for_experimental_torch_backend():
+    data = pd.DataFrame(
+        {
+            "y": [1.0, 2.0, 3.0, 4.0],
+            "x": [0.0, 1.0, 0.0, 1.0],
+            "fe": [0, 0, 1, 1],
+        }
+    )
+
+    with pytest.warns(UserWarning, match="experimental torch algorithms"):
+        pf.feols("y ~ x | fe", data=data, demeaner_backend="torch_cpu")
 
 
 @pytest.mark.parametrize("demean_func", GENERIC_DEMEAN_FUNCS)
