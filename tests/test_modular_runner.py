@@ -18,11 +18,12 @@ def test_run_benchmarks_writes_per_backend_csv_and_skips_existing(
             run_count["a"] += 1
             return [
                 FeolsResult(
-                    dataset_id="d1",
+                    source_dataset_id="d1",
+                    source_k=1,
                     iter_type="measure",
                     iter_num=1,
                     dgp="simple",
-                    k=1,
+                    model_k=1,
                     n_obs=1_000,
                     n_fe=2,
                     backend="backend-a",
@@ -40,11 +41,12 @@ def test_run_benchmarks_writes_per_backend_csv_and_skips_existing(
             run_count["b"] += 1
             return [
                 FeolsResult(
-                    dataset_id="d1",
+                    source_dataset_id="d1",
+                    source_k=1,
                     iter_type="measure",
                     iter_num=1,
                     dgp="simple",
-                    k=1,
+                    model_k=1,
                     n_obs=1_000,
                     n_fe=2,
                     backend="backend-b",
