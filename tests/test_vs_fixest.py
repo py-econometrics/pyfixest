@@ -13,6 +13,7 @@ import pyfixest as pf
 from pyfixest.estimation import feols
 from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.utils.utils import get_data, ssc
+from tests._torch_test_utils import torch_param
 
 pandas2ri.activate()
 
@@ -213,6 +214,11 @@ SINGLE_F3 = ALL_F3[0]
 BACKEND_F3 = [
     *[("numba", t) for t in ALL_F3],
     *[(b, SINGLE_F3) for b in ("rust-cg", "jax", "rust", "cupy", "scipy")],
+    torch_param(("torch", SINGLE_F3), id="torch"),
+    torch_param(("torch_cpu", SINGLE_F3), id="torch_cpu"),
+    torch_param(("torch_mps", SINGLE_F3), id="torch_mps", require="mps"),
+    torch_param(("torch_cuda", SINGLE_F3), id="torch_cuda", require="cuda"),
+    torch_param(("torch_cuda32", SINGLE_F3), id="torch_cuda32", require="cuda"),
 ]
 
 
@@ -323,6 +329,18 @@ def test_single_fit_feols(
         if "^" in fml and weights is not None:
             predict_tol = 6e-06
             resid_tol = 6e-06
+    elif demeaner_backend in ("torch", "torch_cpu", "torch_cuda"):
+        coef_tol = 1e-08
+        predict_tol = 5e-05
+        resid_tol = 5e-05
+        inference_tol = 1e-06
+        tstat_tol = 1e-05
+    elif demeaner_backend in ("torch_mps", "torch_cuda32"):
+        coef_tol = 5e-06
+        predict_tol = 5e-05
+        resid_tol = 5e-05
+        inference_tol = 1e-05
+        tstat_tol = 1e-05
     else:
         coef_tol = 1e-08
         predict_tol = 1e-06

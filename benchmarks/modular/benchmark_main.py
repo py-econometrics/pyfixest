@@ -3,12 +3,8 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+from benchmarker_sets import build_standard_feols_benchmarkers
 from dgps import BaseDGP
-from feols_benchmarkers import (
-    FixestFeolsBenchmarker,
-    JuliaFeolsBenchmarker,
-    PyFeolsBenchmarkerFullApi,
-)
 from interfaces import FeolsSpec
 from runner import export_and_plot, generate_datasets, run_benchmarks
 
@@ -45,21 +41,17 @@ SPECS = [
     ),
 ]
 
-BENCHMARKERS = [
-    PyFeolsBenchmarkerFullApi("pyfixest (rust-cg)", "rust-cg"),
-    PyFeolsBenchmarkerFullApi("pyfixest (rust-map)", "rust"),
-    FixestFeolsBenchmarker("fixest-map"),
-    JuliaFeolsBenchmarker("FEM.jl (lsmr)"),
-]
-FIGURE_BACKENDS = ["pyfixest (rust-cg)", "pyfixest (rust-map)"]
-
 # ---------------------------------------------------------------------------
 # Run
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     datasets = generate_datasets(DGPS, SIZES, N_ITERS, BURN_IN)
-    results = run_benchmarks(BENCHMARKERS, datasets, SPECS)
+    bundle = build_standard_feols_benchmarkers()
+    results = run_benchmarks(bundle.benchmarkers, datasets, SPECS)
     export_and_plot(
-        results, OUTPUT_CSV, figure_dir=FIGURE_DIR, figure_backends=FIGURE_BACKENDS
+        results,
+        OUTPUT_CSV,
+        figure_dir=FIGURE_DIR,
+        figure_backends=bundle.figure_backends,
     )

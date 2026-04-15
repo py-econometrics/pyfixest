@@ -3,12 +3,8 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+from benchmarker_sets import build_standard_feols_benchmarkers
 from dgps import get_akm_sweep_scenarios
-from feols_benchmarkers import (
-    FixestFeolsBenchmarker,
-    JuliaFeolsBenchmarker,
-    PyFeolsBenchmarkerFullApi,
-)
 from interfaces import FeolsSpec
 from runner import export_and_plot, run_benchmarks
 
@@ -43,14 +39,6 @@ SPECS = [
     ),
 ]
 
-BENCHMARKERS = [
-    FixestFeolsBenchmarker("fixest-map"),
-    JuliaFeolsBenchmarker("FEM.jl (lsmr)"),
-    PyFeolsBenchmarkerFullApi("pyfixest (rust-cg)", "rust-cg", fixef_maxiter=10000),
-    PyFeolsBenchmarkerFullApi("pyfixest (rust-map)", "rust", fixef_maxiter=10000),
-]
-FIGURE_BACKENDS = ["pyfixest (rust-cg)", "pyfixest (rust-map)"]
-
 
 def _n_obs_for_akm_scenario(dgp_name: str) -> int:
     return SCALE_N_OBS.get(dgp_name, DEFAULT_N_OBS)
@@ -72,7 +60,11 @@ def generate_akm_datasets():
 if __name__ == "__main__":
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     datasets = generate_akm_datasets()
-    results = run_benchmarks(BENCHMARKERS, datasets, SPECS)
+    bundle = build_standard_feols_benchmarkers(fixef_maxiter=10000)
+    results = run_benchmarks(bundle.benchmarkers, datasets, SPECS)
     export_and_plot(
-        results, OUTPUT_CSV, figure_dir=FIGURE_DIR, figure_backends=FIGURE_BACKENDS
+        results,
+        OUTPUT_CSV,
+        figure_dir=FIGURE_DIR,
+        figure_backends=bundle.figure_backends,
     )
