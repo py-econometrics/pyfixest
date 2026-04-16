@@ -92,10 +92,10 @@ def test_invalid_method(data):
         fit.weightingboottest(reps=10, method="invalid")
 
 
-def test_invalid_alpha(data):
+def test_invalid_concentration(data):
     fit = pf.feols("Y ~ X1", data=data, vcov="iid")
     with pytest.raises(ValueError):
-        fit.weightingboottest(reps=10, method="bayesian", alpha=-1.0)
+        fit.weightingboottest(reps=10, method="bayesian", concentration=-1.0)
 
 
 def test_seed_reproducibility(data):

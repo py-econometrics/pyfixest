@@ -1467,7 +1467,7 @@ class Feols(ResultAccessorMixin):
         self,
         reps: int,
         method: Literal["bayesian", "multinomial"] = "bayesian",
-        alpha: float = 1.0,
+        concentration: float = 1.0,
         cluster: str | None = None,
         ci_level: float = 0.95,
         seed: int | None = None,
@@ -1495,11 +1495,11 @@ class Feols(ResultAccessorMixin):
         method : str, optional
             Either ``"bayesian"`` (Dirichlet/Gamma weights) or
             ``"multinomial"`` (integer counts). Defaults to ``"bayesian"``.
-        alpha : float, optional
+        concentration : float, optional
             Concentration parameter for the Dirichlet distribution.
-            Only used when ``method="bayesian"``. ``alpha=1`` is the standard
-            Bayesian bootstrap of Rubin (1981); larger values shrink weights
-            toward uniform (less variable draws). Defaults to 1.0.
+            Only used when ``method="bayesian"``. ``concentration=1`` is the
+            standard Bayesian bootstrap of Rubin (1981); larger values shrink
+            weights toward uniform (less variable draws). Defaults to 1.0.
         cluster : str or None, optional
             Column name in the data used to define sampling units for
             panel-aware weighting. If None, falls back to the model's
@@ -1531,7 +1531,7 @@ class Feols(ResultAccessorMixin):
         data = pf.get_data()
         fit = pf.feols("Y ~ X1 + X2 | f1", data)
 
-        fit.weightingboottest(reps=500, method="bayesian", alpha=1.0, seed=42)
+        fit.weightingboottest(reps=500, method="bayesian", concentration=1.0, seed=42)
         fit.weightingboottest(reps=500, method="multinomial", seed=42)
         ```
         """
@@ -1539,8 +1539,8 @@ class Feols(ResultAccessorMixin):
             raise ValueError(
                 f"method must be 'bayesian' or 'multinomial', got '{method}'."
             )
-        if method == "bayesian" and alpha <= 0:
-            raise ValueError(f"alpha must be positive, got {alpha}.")
+        if method == "bayesian" and concentration <= 0:
+            raise ValueError(f"concentration must be positive, got {concentration}.")
 
         rng = np.random.default_rng(seed)
 
@@ -1591,7 +1591,7 @@ class Feols(ResultAccessorMixin):
                     float
                 )
             else:  # bayesian
-                w_unit = rng.dirichlet(np.full(n_units, alpha)) * n_units
+                w_unit = rng.dirichlet(np.full(n_units, concentration)) * n_units
 
             # broadcast to observations — handles unbalanced panels correctly
             w_boot = w_unit[inverse]
