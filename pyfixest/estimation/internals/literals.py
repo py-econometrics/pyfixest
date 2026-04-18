@@ -21,6 +21,11 @@ DemeanerBackendOptions = Literal[
     "cupy32",
     "cupy64",
     "scipy",
+    "torch",
+    "torch_cpu",
+    "torch_mps",
+    "torch_cuda",
+    "torch_cuda32",
 ]
 PredictionErrorOptions = Literal["prediction"]
 QuantregMethodOptions = Literal["fn", "pfn"]

@@ -3,66 +3,168 @@ import pandas as pd
 import pyhdfe
 import pytest
 
+import pyfixest as pf
 from pyfixest.core import demean as demean_rs
 from pyfixest.core.demean import demean_within
 from pyfixest.demeaners import LsmrDemeaner, MapDemeaner
 from pyfixest.estimation.cupy.demean_cupy_ import demean_cupy32, demean_cupy64
+from pyfixest.estimation.internals.backends import BACKENDS
 from pyfixest.estimation.internals.demean_ import (
     _set_demeaner_backend,
     demean,
     demean_model,
 )
 from pyfixest.estimation.jax.demean_jax_ import demean_jax
+from tests._torch_test_utils import HAS_TORCH, torch_param
+
+GENERIC_DEMEAN_FUNCS = [
+    pytest.param(demean, id="demean_numba"),
+    pytest.param(demean_jax, id="demean_jax"),
+    pytest.param(demean_rs, id="demean_rs"),
+    pytest.param(demean_cupy32, id="demean_cupy32"),
+    pytest.param(demean_cupy64, id="demean_cupy64"),
+]
+
+if HAS_TORCH:
+    from pyfixest.estimation.torch.demean_torch_ import demean_torch
+
+    GENERIC_DEMEAN_FUNCS.append(pytest.param(demean_torch, id="demean_torch"))
 
 
-@pytest.mark.parametrize(
-    argnames="demean_func",
-    argvalues=[demean, demean_jax, demean_rs, demean_cupy32, demean_cupy64],
-    ids=["demean_numba", "demean_jax", "demean_rs", "demean_cupy32", "demean_cupy64"],
-)
-def test_demean(benchmark, demean_func):
+TORCH_DEVICE_DEMEANERS = [
+    torch_param(("demean_torch_cpu", 1e-6, 1e-8), id="demean_torch_cpu"),
+    torch_param(("demean_torch_mps", 1e-3, 1e-3), id="demean_torch_mps", require="mps"),
+    torch_param(
+        ("demean_torch_cuda", 1e-6, 1e-8), id="demean_torch_cuda", require="cuda"
+    ),
+    torch_param(
+        ("demean_torch_cuda32", 1e-3, 1e-3),
+        id="demean_torch_cuda32",
+        require="cuda",
+    ),
+]
+
+MODEL_DEMEANERS = [
+    pytest.param(MapDemeaner(backend="numba"), id="numba"),
+    pytest.param(MapDemeaner(backend="jax"), id="jax"),
+    pytest.param(MapDemeaner(backend="rust"), id="rust"),
+    pytest.param(LsmrDemeaner(use_gpu=False), id="lsmr_scipy"),
+]
+
+if HAS_TORCH:
+    MODEL_DEMEANERS.append(
+        pytest.param(
+            LsmrDemeaner(implementation="torch", device="cpu"),
+            id="lsmr_torch_cpu",
+        )
+    )
+
+
+@pytest.fixture(scope="module")
+def demean_data():
     rng = np.random.default_rng(929291)
 
-    N = 1_000
-    M = 10
-    x = rng.normal(0, 1, M * N).reshape((N, M))
-    f1 = rng.choice(list(range(M)), N).reshape((N, 1))
-    f2 = rng.choice(list(range(M)), N).reshape((N, 1))
+    n_obs = 1_000
+    n_cols = 10
+    x = rng.normal(0, 1, n_cols * n_obs).reshape((n_obs, n_cols))
+    f1 = rng.choice(list(range(n_cols)), n_obs).reshape((n_obs, 1))
+    f2 = rng.choice(list(range(n_cols)), n_obs).reshape((n_obs, 1))
+    flist = np.concatenate((f1, f2), axis=1).astype(np.uint64)
+    weights = rng.uniform(0, 1, n_obs)
 
-    flist = np.concatenate((f1, f2), axis=1).astype(np.uint)
+    return x, flist, weights
+
+
+@pytest.mark.parametrize("demean_func", GENERIC_DEMEAN_FUNCS)
+def test_demean(benchmark, demean_func, demean_data):
+    x, flist, weighted = demean_data
 
     # without weights
-    weights = np.ones(N)
+    weights = np.ones(x.shape[0])
     algorithm = pyhdfe.create(flist)
     res_pyhdfe = algorithm.residualize(x)
     res_pyfixest, _ = demean_func(x, flist, weights, tol=1e-10)
     assert np.allclose(res_pyhdfe[10, 0:], res_pyfixest[10, 0:], rtol=1e-06, atol=1e-08)
 
     # with weights
-    weights = rng.uniform(0, 1, N).reshape((N, 1))
     algorithm = pyhdfe.create(flist)
-    res_pyhdfe = algorithm.residualize(x, weights)
-    res_pyfixest, _ = benchmark(demean_func, x, flist, weights.flatten(), tol=1e-10)
+    res_pyhdfe = algorithm.residualize(x, weighted.reshape((x.shape[0], 1)))
+    res_pyfixest, _ = benchmark(demean_func, x, flist, weighted, tol=1e-10)
     assert np.allclose(res_pyhdfe[10, 0:], res_pyfixest[10, 0:], rtol=1e-06, atol=1e-08)
 
 
+@pytest.mark.parametrize(("backend_name", "rtol", "atol"), TORCH_DEVICE_DEMEANERS)
+def test_torch_device_backends_match_pyhdfe(backend_name, rtol, atol, demean_data):
+    from pyfixest.estimation.torch.demean_torch_ import (
+        demean_torch_cpu,
+        demean_torch_cuda,
+        demean_torch_cuda32,
+        demean_torch_mps,
+    )
+
+    backend_map = {
+        "demean_torch_cpu": demean_torch_cpu,
+        "demean_torch_mps": demean_torch_mps,
+        "demean_torch_cuda": demean_torch_cuda,
+        "demean_torch_cuda32": demean_torch_cuda32,
+    }
+
+    x, flist, weights = demean_data
+    demean_func = backend_map[backend_name]
+
+    algorithm = pyhdfe.create(flist)
+    res_pyhdfe = algorithm.residualize(x)
+    res_torch, success = demean_func(x, flist, np.ones(x.shape[0]), tol=1e-10)
+    assert success, f"{backend_name} did not converge on unweighted demeaning"
+    np.testing.assert_allclose(res_torch, res_pyhdfe, rtol=rtol, atol=atol)
+
+    res_pyhdfe = algorithm.residualize(x, weights.reshape((x.shape[0], 1)))
+    res_torch, success = demean_func(x, flist, weights, tol=1e-10)
+    assert success, f"{backend_name} did not converge on weighted demeaning"
+    np.testing.assert_allclose(res_torch, res_pyhdfe, rtol=rtol, atol=atol)
+
+
+@pytest.mark.skipif(not HAS_TORCH, reason="torch not available")
+def test_sparse_dummy_reencodes_non_contiguous_groups():
+    from pyfixest.estimation.torch._sparse_dummy import _build_sparse_dummy
+    from tests._torch_test_utils import torch
+
+    flist = np.array([[2], [9], [2], [5]], dtype=np.uint64)
+
+    D = _build_sparse_dummy(flist, torch.device("cpu"), torch.float64).to_dense()
+    expected = torch.tensor(
+        [
+            [1.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0],
+            [1.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0],
+        ],
+        dtype=torch.float64,
+    )
+
+    assert torch.equal(D, expected)
+
+
 def test_set_demeaner_backend():
-    # Test numba backend
-    demean_func = _set_demeaner_backend("numba")
-    assert demean_func == demean
-
-    # Test jax backend
-    demean_func = _set_demeaner_backend("jax")
-    assert demean_func == demean_jax
-
-    demean_func = _set_demeaner_backend("rust")
-    assert demean_func == demean_rs
-
-    demean_func = _set_demeaner_backend("cupy32")
-    assert demean_func == demean_cupy32
-
-    demean_func = _set_demeaner_backend("cupy64")
-    assert demean_func == demean_cupy64
+    for backend in [
+        "numba",
+        "jax",
+        "rust",
+        "cupy32",
+        "cupy64",
+        "scipy",
+        "torch",
+        "torch_cpu",
+        "torch_mps",
+        "torch_cuda",
+        "torch_cuda32",
+    ]:
+        if backend.startswith("torch"):
+            with pytest.warns(UserWarning, match="experimental torch algorithms"):
+                demean_func = _set_demeaner_backend(backend)
+        else:
+            demean_func = _set_demeaner_backend(backend)
+        assert demean_func == BACKENDS[backend]["demean"]
 
     demean_func = _set_demeaner_backend("rust-cg")
     assert demean_func == demean_within
@@ -72,16 +174,39 @@ def test_set_demeaner_backend():
         _set_demeaner_backend("invalid")
 
 
-@pytest.mark.parametrize(
-    argnames="demeaner",
-    argvalues=[
-        MapDemeaner(backend="numba"),
-        MapDemeaner(backend="jax"),
-        MapDemeaner(backend="rust"),
-        LsmrDemeaner(use_gpu=False),
-    ],
-    ids=["numba", "jax", "rust", "lsmr_scipy"],
-)
+@pytest.mark.skipif(not HAS_TORCH, reason="torch not available")
+def test_feols_warns_for_experimental_torch_backend():
+    data = pd.DataFrame(
+        {
+            "y": [1.0, 2.0, 3.0, 4.0],
+            "x": [0.0, 1.0, 0.0, 1.0],
+            "fe": [0, 0, 1, 1],
+        }
+    )
+
+    with pytest.warns(UserWarning, match="experimental torch algorithms"):
+        pf.feols("y ~ x | fe", data=data, demeaner_backend="torch_cpu")
+
+
+@pytest.mark.skipif(not HAS_TORCH, reason="torch not available")
+def test_feols_warns_for_experimental_torch_demeaner():
+    data = pd.DataFrame(
+        {
+            "y": [1.0, 2.0, 3.0, 4.0],
+            "x": [0.0, 1.0, 0.0, 1.0],
+            "fe": [0, 0, 1, 1],
+        }
+    )
+
+    with pytest.warns(UserWarning, match="experimental torch algorithms"):
+        pf.feols(
+            "y ~ x | fe",
+            data=data,
+            demeaner=LsmrDemeaner(implementation="torch", device="cpu"),
+        )
+
+
+@pytest.mark.parametrize("demeaner", MODEL_DEMEANERS)
 def test_demean_model_no_fixed_effects(benchmark, demeaner):
     """Test demean_model when there are no fixed effects."""
     # Create sample data
@@ -110,16 +235,7 @@ def test_demean_model_no_fixed_effects(benchmark, demeaner):
     assert Xd.columns.equals(X.columns)
 
 
-@pytest.mark.parametrize(
-    argnames="demeaner",
-    argvalues=[
-        MapDemeaner(backend="numba"),
-        MapDemeaner(backend="jax"),
-        MapDemeaner(backend="rust"),
-        LsmrDemeaner(use_gpu=False),
-    ],
-    ids=["numba", "jax", "rust", "lsmr_scipy"],
-)
+@pytest.mark.parametrize("demeaner", MODEL_DEMEANERS)
 def test_demean_model_with_fixed_effects(benchmark, demeaner):
     """Test demean_model with fixed effects."""
     # Create sample data
@@ -159,16 +275,7 @@ def test_demean_model_with_fixed_effects(benchmark, demeaner):
     assert np.allclose(cached_data[X.columns].values, Xd.values)
 
 
-@pytest.mark.parametrize(
-    argnames="demeaner",
-    argvalues=[
-        MapDemeaner(backend="numba"),
-        MapDemeaner(backend="jax"),
-        MapDemeaner(backend="rust"),
-        LsmrDemeaner(use_gpu=False),
-    ],
-    ids=["numba", "jax", "rust", "lsmr_scipy"],
-)
+@pytest.mark.parametrize("demeaner", MODEL_DEMEANERS)
 def test_demean_model_with_weights(benchmark, demeaner):
     """Test demean_model with weights."""
     N = 1000
@@ -208,16 +315,7 @@ def test_demean_model_with_weights(benchmark, demeaner):
     assert not np.allclose(Xd.values, Xd_unweighted.values)
 
 
-@pytest.mark.parametrize(
-    argnames="demeaner",
-    argvalues=[
-        MapDemeaner(backend="numba"),
-        MapDemeaner(backend="jax"),
-        MapDemeaner(backend="rust"),
-        LsmrDemeaner(use_gpu=False),
-    ],
-    ids=["numba", "jax", "rust", "lsmr_scipy"],
-)
+@pytest.mark.parametrize("demeaner", MODEL_DEMEANERS)
 def test_demean_model_caching(benchmark, demeaner):
     """Test the caching behavior of demean_model."""
     N = 1000
@@ -277,14 +375,13 @@ def test_demean_model_caching(benchmark, demeaner):
 
 
 @pytest.mark.parametrize(
-    argnames="demeaner",
-    argvalues=[
-        MapDemeaner(backend="numba", fixef_maxiter=1),
-        MapDemeaner(backend="jax", fixef_maxiter=1),
-        MapDemeaner(backend="rust", fixef_maxiter=1),
-        LsmrDemeaner(use_gpu=False, solver_maxiter=1),
+    "demeaner",
+    [
+        pytest.param(MapDemeaner(backend="numba", fixef_maxiter=1), id="numba"),
+        pytest.param(MapDemeaner(backend="jax", fixef_maxiter=1), id="jax"),
+        pytest.param(MapDemeaner(backend="rust", fixef_maxiter=1), id="rust"),
+        pytest.param(LsmrDemeaner(use_gpu=False, solver_maxiter=1), id="lsmr_scipy"),
     ],
-    ids=["numba", "jax", "rust", "lsmr_scipy"],
 )
 def test_demean_model_maxiter_convergence_failure(demeaner):
     """Test that demean_model fails when maxiter is too small."""
@@ -314,14 +411,16 @@ def test_demean_model_maxiter_convergence_failure(demeaner):
 
 
 @pytest.mark.parametrize(
-    argnames="demeaner",
-    argvalues=[
-        MapDemeaner(backend="numba", fixef_maxiter=5000),
-        MapDemeaner(backend="jax", fixef_maxiter=5000),
-        MapDemeaner(backend="rust", fixef_maxiter=5000),
-        LsmrDemeaner(use_gpu=False, solver_maxiter=5000),
+    "demeaner",
+    [
+        pytest.param(MapDemeaner(backend="numba", fixef_maxiter=5000), id="numba"),
+        pytest.param(MapDemeaner(backend="jax", fixef_maxiter=5000), id="jax"),
+        pytest.param(MapDemeaner(backend="rust", fixef_maxiter=5000), id="rust"),
+        pytest.param(
+            LsmrDemeaner(use_gpu=False, solver_maxiter=5000),
+            id="lsmr_scipy",
+        ),
     ],
-    ids=["numba", "jax", "rust", "lsmr_scipy"],
 )
 def test_demean_model_custom_maxiter_success(demeaner):
     """Test that demean_model succeeds with reasonable maxiter."""

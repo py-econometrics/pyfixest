@@ -1,0 +1,11 @@
+---
+title: Performance Optimization
+aliases:
+  - /performance-optimization.html
+jupyter: python3
+---
+
+- Use different demeaner: explain demaner backend and strengths (MAP vs cg-within) - reuse benchmarks from "when are fixed effects hard". introduce new backend api
+- GPU vs CPU - leave benchmarks open, these are tba. explain that extra deps need to be added (cupy, jax, torch, etc.) and that these are not installed by default. explain how to install them.
+- Multiple Estimation: cache already demeand fixed effects. Show benchmark of 10 individual regressions vs one multi estimation of the same
+- Preconditioner Reuse (non-stale or stale): initial fit, fit of new model, fit of new model with stale preconditioner. show benchmarks.

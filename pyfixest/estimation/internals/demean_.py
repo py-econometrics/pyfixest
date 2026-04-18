@@ -250,6 +250,55 @@ def dispatch_demean(
         )
 
     if isinstance(demeaner, LsmrDemeaner):
+        if demeaner.implementation == "torch":
+            try:
+                torch = import_module("torch")
+                torch_demean_module = import_module(
+                    "pyfixest.estimation.torch.demean_torch_"
+                )
+            except ImportError:
+                # Match the legacy torch-backend behavior and fall back to the
+                # default CPU MAP implementation when torch is unavailable.
+                return demean(
+                    x=x,
+                    flist=flist_uint,
+                    weights=weights,
+                    tol=demeaner.fixef_tol,
+                    maxiter=demeaner.fixef_maxiter,
+                )
+
+            dtype = torch.float32 if demeaner.precision == "float32" else torch.float64
+            tol = max(demeaner.solver_atol, demeaner.solver_btol)
+            flist_uint64 = flist.astype(np.uint64, copy=False)
+
+            if demeaner.device == "auto":
+                demean_torch = cast(
+                    Callable[..., tuple[np.ndarray, bool]],
+                    torch_demean_module.demean_torch,
+                )
+                return demean_torch(
+                    x=x,
+                    flist=flist_uint64,
+                    weights=weights,
+                    tol=tol,
+                    maxiter=demeaner.solver_maxiter,
+                    dtype=dtype,
+                )
+
+            demean_torch_on_device = cast(
+                Callable[..., tuple[np.ndarray, bool]],
+                torch_demean_module._demean_torch_on_device_impl,
+            )
+            return demean_torch_on_device(
+                x=x,
+                flist=flist_uint64,
+                weights=weights,
+                tol=tol,
+                maxiter=demeaner.solver_maxiter,
+                device=torch.device(demeaner.device),
+                dtype=dtype,
+            )
+
         if demeaner.use_gpu is False:
             demean_scipy_configured = cast(
                 Callable[..., tuple[np.ndarray, bool]],
@@ -497,27 +546,6 @@ def _set_demeaner_backend(
     ValueError
         If the demeaning backend is not supported.
     """
-    if demeaner_backend == "rust":
-        from pyfixest.core.demean import demean as demean_rs
+    from pyfixest.estimation.internals.backends import get_backend
 
-        return demean_rs
-    elif demeaner_backend == "rust-cg":
-        from pyfixest.core.demean import demean_within
-
-        return demean_within
-    elif demeaner_backend == "numba":
-        return demean
-    elif demeaner_backend == "jax":
-        from pyfixest.estimation.jax.demean_jax_ import demean_jax
-
-        return demean_jax
-    elif demeaner_backend in ["cupy", "cupy64"]:
-        from pyfixest.estimation.cupy.demean_cupy_ import demean_cupy64
-
-        return demean_cupy64
-    elif demeaner_backend == "cupy32":
-        from pyfixest.estimation.cupy.demean_cupy_ import demean_cupy32
-
-        return demean_cupy32
-    else:
-        raise ValueError(f"Invalid demeaner backend: {demeaner_backend}")
+    return get_backend(demeaner_backend)["demean"]

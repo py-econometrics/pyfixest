@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from typing import Literal, TypeAlias, cast
 
 from pyfixest.demeaners import (
@@ -48,14 +49,18 @@ def resolve_demeaner(
     if demeaner is not None:
         if not isinstance(demeaner, _DEMEANER_TYPES):
             raise TypeError("`demeaner` must be a supported pyfixest demeaner.")
-        return cast(ResolvedDemeaner, demeaner)
+        resolved = cast(ResolvedDemeaner, demeaner)
+        _warn_if_experimental_torch_demeaner(resolved)
+        return resolved
 
     shorthand = _from_backend_shorthand(
         demeaner_backend=backend,
         fixef_tol=fixef_tol,
         fixef_maxiter=fixef_maxiter,
     )
-    return cast(ResolvedDemeaner, shorthand)
+    resolved = cast(ResolvedDemeaner, shorthand)
+    _warn_if_experimental_torch_demeaner(resolved)
+    return resolved
 
 
 def get_demeaner_backend(demeaner: ResolvedDemeaner) -> DemeanerBackendOptions:
@@ -66,6 +71,16 @@ def get_demeaner_backend(demeaner: ResolvedDemeaner) -> DemeanerBackendOptions:
             demeaner.backend,
         )
     if isinstance(demeaner, LsmrDemeaner):
+        if demeaner.implementation == "torch":
+            if demeaner.device == "cpu":
+                return "torch_cpu"
+            if demeaner.device == "mps":
+                return "torch_mps"
+            if demeaner.device == "cuda":
+                return (
+                    "torch_cuda32" if demeaner.precision == "float32" else "torch_cuda"
+                )
+            return "torch"
         if demeaner.use_gpu is False:
             return "scipy"
         return "cupy32" if demeaner.precision == "float32" else "cupy"
@@ -88,25 +103,104 @@ def _from_backend_shorthand(
         return WithinDemeaner(fixef_tol=fixef_tol, fixef_maxiter=fixef_maxiter)
     if demeaner_backend == "cupy":
         return LsmrDemeaner(
+            implementation="cupy",
             fixef_tol=fixef_tol,
             fixef_maxiter=fixef_maxiter,
             precision="float64",
             use_gpu=True,
+            solver_atol=fixef_tol,
+            solver_btol=fixef_tol,
+            solver_maxiter=fixef_maxiter,
         )
     if demeaner_backend == "cupy32":
         return LsmrDemeaner(
+            implementation="cupy",
             fixef_tol=fixef_tol,
             fixef_maxiter=fixef_maxiter,
             precision="float32",
             use_gpu=True,
+            solver_atol=fixef_tol,
+            solver_btol=fixef_tol,
+            solver_maxiter=fixef_maxiter,
         )
     if demeaner_backend == "scipy":
         return LsmrDemeaner(
+            implementation="cupy",
             fixef_tol=fixef_tol,
             fixef_maxiter=fixef_maxiter,
             use_gpu=False,
+            solver_atol=fixef_tol,
+            solver_btol=fixef_tol,
+            solver_maxiter=fixef_maxiter,
+        )
+    if demeaner_backend == "torch":
+        return LsmrDemeaner(
+            implementation="torch",
+            fixef_tol=fixef_tol,
+            fixef_maxiter=fixef_maxiter,
+            precision="float64",
+            device="auto",
+            solver_atol=fixef_tol,
+            solver_btol=fixef_tol,
+            solver_maxiter=fixef_maxiter,
+        )
+    if demeaner_backend == "torch_cpu":
+        return LsmrDemeaner(
+            implementation="torch",
+            fixef_tol=fixef_tol,
+            fixef_maxiter=fixef_maxiter,
+            precision="float64",
+            device="cpu",
+            solver_atol=fixef_tol,
+            solver_btol=fixef_tol,
+            solver_maxiter=fixef_maxiter,
+        )
+    if demeaner_backend == "torch_mps":
+        return LsmrDemeaner(
+            implementation="torch",
+            fixef_tol=fixef_tol,
+            fixef_maxiter=fixef_maxiter,
+            precision="float32",
+            device="mps",
+            solver_atol=fixef_tol,
+            solver_btol=fixef_tol,
+            solver_maxiter=fixef_maxiter,
+        )
+    if demeaner_backend == "torch_cuda":
+        return LsmrDemeaner(
+            implementation="torch",
+            fixef_tol=fixef_tol,
+            fixef_maxiter=fixef_maxiter,
+            precision="float64",
+            device="cuda",
+            solver_atol=fixef_tol,
+            solver_btol=fixef_tol,
+            solver_maxiter=fixef_maxiter,
+        )
+    if demeaner_backend == "torch_cuda32":
+        return LsmrDemeaner(
+            implementation="torch",
+            fixef_tol=fixef_tol,
+            fixef_maxiter=fixef_maxiter,
+            precision="float32",
+            device="cuda",
+            solver_atol=fixef_tol,
+            solver_btol=fixef_tol,
+            solver_maxiter=fixef_maxiter,
         )
     raise ValueError(f"Unknown demeaner backend {demeaner_backend!r}.")
+
+
+def _warn_if_experimental_torch_demeaner(demeaner: ResolvedDemeaner) -> None:
+    if isinstance(demeaner, LsmrDemeaner) and demeaner.implementation == "torch":
+        warnings.warn(
+            (
+                f"The `{get_demeaner_backend(demeaner)}` backend uses experimental "
+                "torch algorithms. Behavior and performance may change in future releases."
+            ),
+            UserWarning,
+            stacklevel=3,
+        )
 
 
 __all__ = [

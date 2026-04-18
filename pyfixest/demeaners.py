@@ -114,10 +114,12 @@ class WithinDemeaner(BaseDemeaner):
 
 @dataclass(frozen=True, slots=True)
 class LsmrDemeaner(BaseDemeaner):
-    """Sparse LSMR demeaner for CPU and GPU backends."""
+    """Sparse LSMR demeaner for CuPy/SciPy and PyTorch backends."""
 
+    implementation: str = "cupy"
     precision: str = "float64"
     use_gpu: bool | None = None
+    device: str = "auto"
     solver_atol: float = 1e-8
     solver_btol: float = 1e-8
     solver_maxiter: int = 100_000
@@ -127,6 +129,13 @@ class LsmrDemeaner(BaseDemeaner):
 
     def __post_init__(self) -> None:
         BaseDemeaner.__post_init__(self)
+        if not isinstance(self.implementation, str):
+            raise TypeError("`implementation` must be a string.")
+        implementation = self.implementation.lower()
+        if implementation not in {"cupy", "torch"}:
+            raise ValueError("`implementation` must be either 'cupy' or 'torch'.")
+        object.__setattr__(self, "implementation", implementation)
+
         if not isinstance(self.precision, str):
             raise TypeError("`precision` must be a string.")
         precision = self.precision.lower()
@@ -136,6 +145,12 @@ class LsmrDemeaner(BaseDemeaner):
 
         if self.use_gpu is not None and not isinstance(self.use_gpu, bool):
             raise TypeError("`use_gpu` must be a bool or None.")
+        if not isinstance(self.device, str):
+            raise TypeError("`device` must be a string.")
+        device = self.device.lower()
+        if device not in {"auto", "cpu", "mps", "cuda"}:
+            raise ValueError("`device` must be one of 'auto', 'cpu', 'mps', or 'cuda'.")
+        object.__setattr__(self, "device", device)
 
         object.__setattr__(
             self,
@@ -157,6 +172,23 @@ class LsmrDemeaner(BaseDemeaner):
             raise TypeError("`warn_on_cpu_fallback` must be a bool.")
         if not isinstance(self.use_preconditioner, bool):
             raise TypeError("`use_preconditioner` must be a bool.")
+
+        if implementation == "cupy" and device != "auto":
+            raise ValueError("`device` is only supported for `implementation='torch'`.")
+
+        if implementation == "torch":
+            if self.use_gpu is not None:
+                raise ValueError(
+                    "`use_gpu` is only supported for `implementation='cupy'`."
+                )
+            if device == "mps" and precision != "float32":
+                raise ValueError(
+                    "The MPS torch backend requires `precision='float32'`."
+                )
+            if not self.use_preconditioner:
+                raise ValueError(
+                    "The torch LSMR backend currently always uses preconditioning."
+                )
 
 
 AnyDemeaner = MapDemeaner | WithinDemeaner | LsmrDemeaner

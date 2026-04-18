@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import functools
 from collections.abc import Mapping
 from importlib import import_module

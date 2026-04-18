@@ -19,6 +19,7 @@ def test_plot_benchmarks_writes_one_figure_per_generic_dgp(tmp_path: Path):
                 "difficult",
                 "difficult",
             ],
+            "model_k": [1] * 8,
             "n_fe": [2, 2, 3, 3, 2, 2, 3, 3],
             "n_obs": [1_000, 10_000, 1_000, 10_000, 1_000, 10_000, 1_000, 10_000],
             "backend": ["pyfixest"] * 8,
@@ -54,6 +55,7 @@ def test_plot_benchmarks_writes_akm_sweep_family_figures(tmp_path: Path):
                 "akm_freeze_1",
                 "akm_freeze_1",
             ],
+            "model_k": [1] * 12,
             "n_fe": [2, 3] * 6,
             "n_obs": [
                 1_000_000,
@@ -109,6 +111,7 @@ def test_plot_benchmarks_writes_occupation_family_figures(tmp_path: Path):
                 "akm_occlambda_2",
                 "akm_occsize_3",
             ],
+            "model_k": [1, 1, 1],
             "n_fe": [4, 4, 4],
             "n_obs": [1_000_000] * 3,
             "backend": ["fixest"] * 3,
@@ -133,6 +136,7 @@ def test_plot_benchmarks_filters_to_requested_backends(
     results_df = pd.DataFrame(
         {
             "dgp": ["simple", "simple", "simple", "simple"],
+            "model_k": [1, 1, 1, 1],
             "n_fe": [2, 2, 3, 3],
             "n_obs": [1_000, 10_000, 1_000, 10_000],
             "backend": ["pyfixest", "fixest", "pyfixest", "fixest"],
@@ -154,3 +158,55 @@ def test_plot_benchmarks_filters_to_requested_backends(
     )
 
     assert captured_backends == [["pyfixest"]]
+
+
+def test_plot_benchmarks_passes_multiple_k_values_to_generic_figures(
+    tmp_path: Path, monkeypatch
+) -> None:
+    results_df = pd.DataFrame(
+        {
+            "dgp": ["simple"] * 8,
+            "model_k": [1, 1, 1, 1, 5, 5, 5, 5],
+            "n_fe": [2, 2, 3, 3, 2, 2, 3, 3],
+            "n_obs": [1_000, 10_000, 1_000, 10_000] * 2,
+            "backend": ["pyfixest"] * 8,
+            "time": [0.1, 0.2, 0.3, 0.4, 0.11, 0.21, 0.31, 0.41],
+        }
+    )
+    captured_k_values: list[list[int]] = []
+
+    def fake_plot_dgp_figure(*args, **kwargs) -> None:
+        dgp_summary = args[0]
+        captured_k_values.append(sorted(dgp_summary["model_k"].unique().tolist()))
+
+    monkeypatch.setattr(plotting, "_plot_dgp_figure", fake_plot_dgp_figure)
+
+    plotting.plot_benchmarks(results_df, tmp_path / "feols_bench.png")
+
+    assert captured_k_values == [[1, 5]]
+
+
+def test_plot_benchmarks_defaults_missing_model_k_to_one(
+    tmp_path: Path, monkeypatch
+) -> None:
+    results_df = pd.DataFrame(
+        {
+            "dgp": ["simple", "simple"],
+            "model_k": [None, None],
+            "n_fe": [2, 3],
+            "n_obs": [1_000, 10_000],
+            "backend": ["pyfixest", "pyfixest"],
+            "time": [0.1, 0.3],
+        }
+    )
+    captured_k_values: list[list[int]] = []
+
+    def fake_plot_dgp_figure(*args, **kwargs) -> None:
+        dgp_summary = args[0]
+        captured_k_values.append(sorted(dgp_summary["model_k"].unique().tolist()))
+
+    monkeypatch.setattr(plotting, "_plot_dgp_figure", fake_plot_dgp_figure)
+
+    plotting.plot_benchmarks(results_df, tmp_path / "feols_bench.png")
+
+    assert captured_k_values == [[1]]

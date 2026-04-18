@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from collections.abc import Mapping
 from typing import Any
 
@@ -140,6 +142,11 @@ def fepois(
           matrices (requires cupy & GPU, defaults to scipy/CPU and float64 if no GPU available)
         - "scipy": Direct application of the Frisch-Waugh-Lovell Theorem on sparse matrice.
           Forces to use a scipy-sparse backend even when cupy is installed and GPU is available.
+        - "torch": Experimental PyTorch LSMR backend with automatic device selection.
+        - "torch_cpu": Experimental PyTorch LSMR backend pinned to CPU.
+        - "torch_mps": Experimental PyTorch LSMR backend pinned to Apple MPS with float32 precision.
+        - "torch_cuda": Experimental PyTorch LSMR backend pinned to CUDA with float64 precision.
+        - "torch_cuda32": Experimental PyTorch LSMR backend pinned to CUDA with float32 precision.
         Defaults to "numba". This argument is treated as a shorthand and is only
         used when `demeaner` is not provided.
 
