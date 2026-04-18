@@ -71,7 +71,7 @@ digraph IV {
 2. **Exclusion Restriction**: $Z$'s causal effect on $Y$ is fully mediated by $T$.
 3. **Instrumental Unconfoundedness**: $Z$ has no unobserved common causes with $Y$.
 
-In Figure 1, the path from $Z$ to $T$ shows relevance, no path from $Z$ to $Y$ encodes the exclusion restriction, and no path from the unobservable to the instrument shows the instrumental unconfoundedness.
+In Figure 1, the path from $Z$ to $T$ shows relevance, the absence of a direct path from $Z$ to $Y$ encodes the exclusion restriction, and the absence of a path from the unobservable to the instrument shows instrumental unconfoundedness.
 
 ```{dot}
 //| column: margin
@@ -108,7 +108,7 @@ Y ~ exogenous_controls | fixed_effects | endogenous ~ instrument
 When panel data are available, endogeneity may also stem from time-invariant unobserved heterogeneity — unit-specific characteristics (e.g., ability, culture, geography) that are fixed over time but correlated with both treatment and outcome. `PyFixest` addresses this simultaneously by applying a within-transformation (demeaning) to absorb unit fixed effects before running 2SLS, following the FE-IV approach described in @wooldridge2010 [Ch. 11]. Crucially, after demeaning, the instrument must retain within-unit variation over time — time-invariant instruments are eliminated along with the fixed effects and cannot be used for identification. When both fixed effects and an instrument are specified, `PyFixest` therefore isolates the clean variation in treatment that is both within-unit and driven by the instrument, blocking confounding from time-invariant unobservables and time-varying endogenous confounders simultaneously.
 :::
 
-This tutorial walks through three applications, all addressing endogeneity from **selection bias — a form of Omitted Variable Bias (OVB) where unobserved confounders drive both selection into treatment and the outcome.** Applications 1 and 2 operate in observational settings — exploiting quasi-random variation from individual-level selection and regional-level sorting respectively — while Application 3 arises in an experimental setting where encouragement is randomly assigned but treatment take-up remains subject to self-selection.
+This tutorial walks through three applications, all addressing endogeneity from **selection bias — a form of Omitted Variable Bias (OVB) where unobserved confounders drive both selection into treatment and the outcome.** Application 1 operates in an observational setting, exploiting quasi-random variation from individual-level selection. Application 2 arises in an experimental setting where encouragement is randomly assigned but treatment take-up remains subject to self-selection. Application 3 returns to an observational setting, exploiting regional-level sorting via a shift-share instrument.
 
 ```{python}
 import pyfixest as pf
@@ -173,7 +173,6 @@ pf.etable([
     model_heads=["OLS", "IV"],
     caption="Motherhood Penalty: OLS vs IV",
 )
-])
 ```
 
 
@@ -181,7 +180,7 @@ The IV estimate is closer to the true effect of -0.15. The "naive" OLS estimate 
 
 ### First-Stage Diagnostics
 
-In the section above, we have argued the IVF success is a credible instrument for fertility - the uncoufoundedness assumption is plausible given the quasi-random nature of IVF success. But how do we know if the instrument is strong enough to yield reliable estimates? For this reason, applied econometricians routinely run diagnostic checks for "weak instruments", which aim to validate the "relevance" assumption.
+In the section above, we have argued the IVF success is a credible instrument for fertility - the unconfoundedness assumption is plausible given the quasi-random nature of IVF success. But how do we know if the instrument is strong enough to yield reliable estimates? For this reason, applied econometricians routinely run diagnostic checks for "weak instruments", which aim to validate the "relevance" assumption.
 
 `PyFixest` provides two diagnostics for instrument strength: a standard first-stage F-statistic, and the more robust effective F-statistic from @oleapflueger2013 that remains valid under heteroskedasticity. Both can be accessed via the `._model_1st_stage` attribute.
 
@@ -198,15 +197,15 @@ print(f"First-stage F-statistic : {fit_iv._f_stat_1st_stage:.2f}")
 print(f"Effective F-statistic   : {fit_iv._eff_F:.2f}")
 ```
 
-Both F-statistics are well above 10, which is the canonical threshold for a strong instrument. More recent work instead suggest that for reliable inference, the effective F-statistic should be significantly higher.
+Both F-statistics are well above 10, which is the canonical threshold for a strong instrument. More recent work instead suggests that for reliable inference, the effective F-statistic should be significantly higher.
 
 ## Application 2: A/B Encouragement Design
 
 **Estimating the effect of feature adoption on revenue when users don't comply with treatment assignment.**
 
-A tech company runs an A/B test in which half of users are *encouraged* to try a new feature, e.g. by showing them a banner. But while the involved product manager would love if all users were to adopt the feature, not everyone who sees the banner actually tries out the feature. On top, some control users might discover the new feature on their own.
+A tech company runs an A/B test in which half of users are *encouraged* to try a new feature, e.g. by showing them a banner. But not everyone who sees the banner actually tries out the feature. On top, some control users might discover the new feature on their own.
 
-This setup is similar to drug drials. Suppose that medical researchers wanted to learn about the effect of taking Vitmin D on health outcomes. They could run a randomized trial in which some patients receive Vitamin D supplements for free, while control patients do not. Again, there will be imperfect compliance: some patients in the treatment group may not take their supplements, while others in the control group may take Vitamin D supplements on their own.
+This setup is similar to drug trials. Suppose that medical researchers wanted to learn about the effect of taking Vitamin D on health outcomes. They could run a randomized trial in which some patients receive Vitamin D supplements for free, while control patients do not. Again, there will be imperfect compliance: some patients in the treatment group may not take their supplements, while others in the control group may take Vitamin D supplements on their own.
 
 In such setups with imperfect compliance, one estimand of interest is the so-called **intent-to-treat (ITT)** effect, which compares outcomes between the encouraged and non-encouraged groups. However, the ITT estimates the effect of encouragement, not the effect of actual adoption. If we want to recover the effect of adoption itself, we need to use the random assignment of encouragement as an instrument for actual adoption.
 
@@ -257,6 +256,7 @@ pf.etable(
         "assigned_treatment": "Assigned Treatment",
     },
     felabels={"user_type": "User Type FE"},
+    model_heads=["ITT", "First Stage", "LATE"],
     caption="A/B Encouragement Design: ITT, First Stage, and LATE",
 )
 ```
