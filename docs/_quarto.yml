@@ -57,8 +57,8 @@ website:
           file: tutorials/formula-syntax.qmd
         #- text: "Standard Errors"
         #  file: tutorials/standard-errors.qmd
-        #- text: "Instrumental Variables"
-        #  file: tutorials/instrumental-variables.qmd
+        - text: "Instrumental Variables"
+          file: tutorials/instrumental-variables.qmd
         #- text: "Poisson & GLMs"
         #  file: tutorials/poisson-glm.qmd
         - text: "Regression Tables"
