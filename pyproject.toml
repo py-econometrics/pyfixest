@@ -322,6 +322,17 @@ benchmark = { cmd = "python benchmarks/modular/benchmark_main.py", depends-on = 
 benchmark-akm = { cmd = "python benchmarks/modular/benchmark_akm_sweep.py", depends-on = ["_setup", "_julia-setup"], description = "Run fixed-size AKM parameter sweep benchmarks (Python, R, Julia)" }
 benchmark-akm-occupation = { cmd = "python benchmarks/modular/benchmark_akm_occupation.py", depends-on = ["_setup", "_julia-setup"], description = "Run occupation-extended AKM benchmarks (Python, R, Julia)" }
 
+[tool.pixi.feature.benchmark.system-requirements]
+cuda = "12.8"
+
+[tool.pixi.feature.benchmark.target.linux-64.dependencies]
+cuda-version = "12.8.*"
+cupy = "*"
+
+[tool.pixi.feature.benchmark.target.linux-64.pypi-dependencies]
+jax = { version = ">=0.4.15", extras = ["cuda12"] }
+torch = { version = ">=2.7.0", index = "https://download.pytorch.org/whl/cu128" }
+
 # -- environments ----------------------------------------------------------------------
 
 [tool.pixi.environments]
@@ -335,4 +346,4 @@ py311-r = { features = ["py311", "torch", "r"], solve-group = "py311" }
 py312-r = { features = ["py312", "torch", "r"], solve-group = "py312" }
 docs = { features = ["docs"], solve-group = "default" }
 lint = { features = ["lint"], no-default-feature = true }
-benchmark = { features = ["py312", "torch", "benchmark", "r"], solve-group = "py312" }
+benchmark = { features = ["py312", "benchmark", "r"] }
