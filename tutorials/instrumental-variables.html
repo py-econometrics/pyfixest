@@ -56,10 +56,30 @@ div.sourceCode
 @media screen {
 pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
 }
-</style>
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+  margin-bottom: 0em;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
 
 
-<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" integrity="sha384-ZvpUoO/+PpLXR1lu4jmpXWu80pZlYUAfxl5NsBMWOEPSjUn/6Z/hRTt8+pR6L4N2" crossorigin="anonymous"></script><script src="../site_libs/quarto-nav/quarto-nav.js"></script>
 <script src="../site_libs/quarto-nav/headroom.min.js"></script>
 <script src="../site_libs/clipboard/clipboard.min.js"></script>
 <script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
@@ -105,6 +125,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   }
 }</script>
 <!-- Cloudflare Web Analytics --><script defer="" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon="{&quot;token&quot;: &quot;bfa3a9287252444c8aa02b664fea7f09&quot;}"></script><!-- End Cloudflare Web Analytics -->
+<script src="https://cdn.jsdelivr.net/npm/requirejs@2.3.6/require.min.js" integrity="sha384-c9c+LnTbwQ3aujuU7ULEPVvgLs+Fn6fJUvIGTsuu1ZcCf11fiEubah0ttpca4ntM sha384-6V1/AdqZRWk1KAlWbKBlGhN7VG4iE/yAZcO6NZPMF8od0vukrvr0tg4qY6NSrItx" crossorigin="anonymous"></script>
+
+<script type="application/javascript">define('jquery', [],function() {return window.jQuery;})</script>
 
   <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
   <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
@@ -139,7 +162,7 @@ window.Quarto = {
 <link rel="alternate" type="text/markdown" href="instrumental-variables.html.md">
 </head>
 
-<body class="floating nav-fixed quarto-light">
+<body class="floating nav-fixed slimcontent quarto-light">
 
 <div id="quarto-search-results"></div>
   <header id="quarto-header" class="headroom fixed-top">
@@ -180,6 +203,10 @@ window.Quarto = {
         <li>
     <a class="dropdown-item" href="../tutorials/formula-syntax.html">
  <span class="dropdown-text">Formula Syntax</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../tutorials/instrumental-variables.html">
+ <span class="dropdown-text">Instrumental Variables</span></a>
   </li>  
         <li>
     <a class="dropdown-item" href="../tutorials/regression-tables.html">
@@ -331,7 +358,6 @@ window.Quarto = {
   <li><a href="#synthetic-data" id="toc-synthetic-data" class="nav-link" data-scroll-target="#synthetic-data">Synthetic Data</a></li>
   <li><a href="#naive-ols" id="toc-naive-ols" class="nav-link" data-scroll-target="#naive-ols">Naive OLS</a></li>
   <li><a href="#iv-estimation" id="toc-iv-estimation" class="nav-link" data-scroll-target="#iv-estimation">IV Estimation</a></li>
-  <li><a href="#compare-ols-and-iv" id="toc-compare-ols-and-iv" class="nav-link" data-scroll-target="#compare-ols-and-iv">Compare OLS and IV</a></li>
   <li><a href="#first-stage-diagnostics" id="toc-first-stage-diagnostics" class="nav-link" data-scroll-target="#first-stage-diagnostics">First-Stage Diagnostics</a></li>
   </ul></li>
   <li><a href="#application-2-ab-encouragement-design" id="toc-application-2-ab-encouragement-design" class="nav-link" data-scroll-target="#application-2-ab-encouragement-design">Application 2: A/B Encouragement Design</a>
@@ -345,7 +371,6 @@ window.Quarto = {
   <ul class="collapse">
   <li><a href="#synthetic-data-2" id="toc-synthetic-data-2" class="nav-link" data-scroll-target="#synthetic-data-2">Synthetic Data</a></li>
   <li><a href="#ols-vs-iv" id="toc-ols-vs-iv" class="nav-link" data-scroll-target="#ols-vs-iv">OLS vs IV</a></li>
-  <li><a href="#diagnostics" id="toc-diagnostics" class="nav-link" data-scroll-target="#diagnostics">Diagnostics</a></li>
   </ul></li>
   <li><a href="#iv-diagnostics-in-pyfixest" id="toc-iv-diagnostics-in-pyfixest" class="nav-link" data-scroll-target="#iv-diagnostics-in-pyfixest">IV Diagnostics in PyFixest</a>
   <ul class="collapse">
@@ -360,7 +385,7 @@ window.Quarto = {
     <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
     </div>
 <!-- main -->
-<main class="content" id="quarto-document-content">
+<main class="content page-columns page-full" id="quarto-document-content">
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
@@ -399,191 +424,1230 @@ window.Quarto = {
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p>You should have read the <a href="../getting-started.html">Getting Started</a> page and have <code>pyfixest</code> installed.</p>
+<p>You should have read the <a href="../getting-started.html">Getting Started</a> page and have <code>PyFixest</code> installed.</p>
 </div>
 </div>
-<section id="introduction" class="level2">
+<style>
+.column-margin figure {
+  margin-top: -1.8em;
+}
+.column-margin figcaption {
+  font-size: 0.72em;
+  margin-top: 0.15em;
+  line-height: 1.3;
+}
+.margin-note {
+  font-size: 0.75em;
+  line-height: 1.4;
+  color: #444;
+}
+.appendix-math .math.display {
+  font-size: 0.85em;
+}
+</style>
+<section id="introduction" class="level2 page-columns page-full">
 <h2 class="anchored" data-anchor-id="introduction">Introduction</h2>
-<p>Ordinary Least Squares (OLS) delivers biased estimates when a regressor is correlated with the error term — due to omitted variables, simultaneity, or measurement error. <strong>Instrumental Variables (IV)</strong> estimation solves this by finding a variable <span class="math inline">\(Z\)</span> that:</p>
+<p>Estimation of a linear model via Ordinary Least Squares (OLS) yields biased and inconsistent estimates when a regressor is correlated with the error term — a problem known as endogeneity, which arises, for example, in the presence of unobserved confounders. <strong>Instrumental Variable (IV)</strong> estimation addresses this by finding a variable <span class="math inline">\(Z\)</span> that satisfies three conditions:</p>
+<div class="cell page-columns page-full" data-fig-width="2" data-fig-height="2" data-layout-align="default">
+
+<div class="no-row-height column-margin column-container"><div class="cell-output-display">
+<div>
+<p></p><figure class="figure"><p></p>
+<div>
+<svg width="192" height="192" viewbox="0.00 0.00 192.00 116.40" xmlns="http://www.w3.org/2000/svg" xlink="http://www.w3.org/1999/xlink" style="; max-width: none; max-height: none">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 112.4)">
+<title>IV</title>
+<polygon fill="white" stroke="transparent" points="-4,4 -4,-112.4 188,-112.4 188,4 -4,4"></polygon>
+<!-- Z -->
+<g id="node1" class="node">
+<title>Z</title>
+<ellipse fill="none" stroke="black" cx="11" cy="-97.4" rx="11" ry="11"></ellipse>
+<text text-anchor="middle" x="11" y="-94.1" font-family="serif" font-size="11.00">Z</text>
+</g>
+<!-- T -->
+<g id="node3" class="node">
+<title>T</title>
+<ellipse fill="none" stroke="black" cx="29" cy="-11" rx="11" ry="11"></ellipse>
+<text text-anchor="middle" x="29" y="-7.7" font-family="serif" font-size="11.00">T</text>
+</g>
+<!-- Z&#45;&gt;T -->
+<g id="edge1" class="edge">
+<title>Z-&gt;T</title>
+<path fill="none" stroke="black" d="M13.28,-86.46C16.42,-71.4 22.09,-44.18 25.69,-26.88"></path>
+<polygon fill="black" stroke="black" points="27.43,-27.11 26.74,-21.85 24.01,-26.39 27.43,-27.11"></polygon>
+</g>
+<!-- U -->
+<g id="node2" class="node">
+<title>U</title>
+<ellipse fill="none" stroke="black" stroke-dasharray="5,2" cx="101" cy="-97.4" rx="11" ry="11"></ellipse>
+<text text-anchor="middle" x="101" y="-94.1" font-family="serif" font-size="11.00">U</text>
+</g>
+<!-- U&#45;&gt;T -->
+<g id="edge3" class="edge">
+<title>U-&gt;T</title>
+<path fill="none" stroke="black" stroke-dasharray="5,2" d="M93.83,-88.8C81.11,-73.53 54.52,-41.63 39.65,-23.78"></path>
+<polygon fill="black" stroke="black" points="40.68,-22.29 36.14,-19.57 37.99,-24.53 40.68,-22.29"></polygon>
+</g>
+<!-- Y -->
+<g id="node4" class="node">
+<title>Y</title>
+<ellipse fill="none" stroke="black" cx="173" cy="-11" rx="11" ry="11"></ellipse>
+<text text-anchor="middle" x="173" y="-7.7" font-family="serif" font-size="11.00">Y</text>
+</g>
+<!-- U&#45;&gt;Y -->
+<g id="edge4" class="edge">
+<title>U-&gt;Y</title>
+<path fill="none" stroke="black" stroke-dasharray="5,2" d="M108.17,-88.8C120.89,-73.53 147.48,-41.63 162.35,-23.78"></path>
+<polygon fill="black" stroke="black" points="164.01,-24.53 165.86,-19.57 161.32,-22.29 164.01,-24.53"></polygon>
+</g>
+<!-- T&#45;&gt;Y -->
+<g id="edge2" class="edge">
+<title>T-&gt;Y</title>
+<path fill="none" stroke="black" d="M40.3,-11C65.64,-11 127.1,-11 156.63,-11"></path>
+<polygon fill="black" stroke="black" points="156.75,-12.75 161.75,-11 156.75,-9.25 156.75,-12.75"></polygon>
+</g>
+</g>
+</svg>
+</div>
+<p></p><figcaption> <strong>Figure 1.</strong> IV setup. Z is the instrument, T the endogenous treatment, Y the outcome, and U an unobserved confounder. Dashed elements are unobserved. U creates a backdoor path T ← U → Y, biasing OLS.</figcaption> </figure><p></p>
+</div>
+</div></div></div>
 <ol type="1">
-<li><strong>Relevance</strong>: <span class="math inline">\(Z\)</span> is correlated with the endogenous regressor <span class="math inline">\(X\)</span>.</li>
-<li><strong>Exclusion</strong>: <span class="math inline">\(Z\)</span> affects the outcome <span class="math inline">\(Y\)</span> <em>only through</em> <span class="math inline">\(X\)</span>.</li>
+<li><strong>Relevance</strong>: <span class="math inline">\(Z\)</span> has a causal effect on <span class="math inline">\(T\)</span>.</li>
+<li><strong>Exclusion Restriction</strong>: <span class="math inline">\(Z\)</span>’s causal effect on <span class="math inline">\(Y\)</span> is fully mediated by <span class="math inline">\(T\)</span>.</li>
+<li><strong>Instrumental Unconfoundedness</strong>: <span class="math inline">\(Z\)</span> has no unobserved common causes with <span class="math inline">\(Y\)</span>.</li>
 </ol>
-<p>The two-stage least squares (2SLS) estimator first regresses <span class="math inline">\(X\)</span> on <span class="math inline">\(Z\)</span> (and controls), then uses the predicted <span class="math inline">\(\hat{X}\)</span> in the outcome equation. In <code>pyfixest</code>, the IV syntax is:</p>
+<p>In Figure 1, the path from <span class="math inline">\(Z\)</span> to <span class="math inline">\(T\)</span> shows relevance, the absence of a direct path from <span class="math inline">\(Z\)</span> to <span class="math inline">\(Y\)</span> encodes the exclusion restriction, and the absence of a path from the unobservable to the instrument shows instrumental unconfoundedness.</p>
+<div class="cell page-columns page-full" data-fig-width="2" data-fig-height="2" data-layout-align="default">
+
+<div class="no-row-height column-margin column-container"><div class="cell-output-display">
+<div>
+<p></p><figure class="figure"><p></p>
+<div>
+<svg width="192" height="192" viewbox="0.00 0.00 192.00 116.40" xmlns="http://www.w3.org/2000/svg" xlink="http://www.w3.org/1999/xlink" style="; max-width: none; max-height: none">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 112.4)">
+<title>IV2</title>
+<polygon fill="white" stroke="transparent" points="-4,4 -4,-112.4 188,-112.4 188,4 -4,4"></polygon>
+<!-- Z -->
+<g id="node1" class="node">
+<title>Z</title>
+<ellipse fill="none" stroke="black" cx="11" cy="-97.4" rx="11" ry="11"></ellipse>
+<text text-anchor="middle" x="11" y="-94.1" font-family="serif" font-size="11.00">Z</text>
+</g>
+<!-- Th -->
+<g id="node3" class="node">
+<title>Th</title>
+<ellipse fill="none" stroke="black" cx="29" cy="-11" rx="11" ry="11"></ellipse>
+<text text-anchor="middle" x="29" y="-7.7" font-family="serif" font-size="11.00">T̂</text>
+</g>
+<!-- Z&#45;&gt;Th -->
+<g id="edge1" class="edge">
+<title>Z-&gt;Th</title>
+<path fill="none" stroke="black" d="M13.28,-86.46C16.42,-71.4 22.09,-44.18 25.69,-26.88"></path>
+<polygon fill="black" stroke="black" points="27.43,-27.11 26.74,-21.85 24.01,-26.39 27.43,-27.11"></polygon>
+</g>
+<!-- U -->
+<g id="node2" class="node">
+<title>U</title>
+<ellipse fill="none" stroke="black" stroke-dasharray="5,2" cx="101" cy="-97.4" rx="11" ry="11"></ellipse>
+<text text-anchor="middle" x="101" y="-94.1" font-family="serif" font-size="11.00">U</text>
+</g>
+<!-- Y -->
+<g id="node4" class="node">
+<title>Y</title>
+<ellipse fill="none" stroke="black" cx="173" cy="-11" rx="11" ry="11"></ellipse>
+<text text-anchor="middle" x="173" y="-7.7" font-family="serif" font-size="11.00">Y</text>
+</g>
+<!-- U&#45;&gt;Y -->
+<g id="edge3" class="edge">
+<title>U-&gt;Y</title>
+<path fill="none" stroke="black" stroke-dasharray="5,2" d="M108.17,-88.8C120.89,-73.53 147.48,-41.63 162.35,-23.78"></path>
+<polygon fill="black" stroke="black" points="164.01,-24.53 165.86,-19.57 161.32,-22.29 164.01,-24.53"></polygon>
+</g>
+<!-- Th&#45;&gt;Y -->
+<g id="edge2" class="edge">
+<title>Th-&gt;Y</title>
+<path fill="none" stroke="black" d="M40.3,-11C65.64,-11 127.1,-11 156.63,-11"></path>
+<polygon fill="black" stroke="black" points="156.75,-12.75 161.75,-11 156.75,-9.25 156.75,-12.75"></polygon>
+</g>
+</g>
+</svg>
+</div>
+<p></p><figcaption> <strong>Figure 2.</strong> After 2SLS first stage. T is replaced by T̂ (fitted values from projecting T onto Z). The backdoor path U → T̂ is eliminated — only the exogenous variation in T driven by Z remains.</figcaption> </figure><p></p>
+</div>
+</div></div></div>
+<p><code>PyFixest</code> estimates the IV using two-stage least squares (2SLS) estimator where it first projects <span class="math inline">\(T\)</span> onto <span class="math inline">\(Z\)</span> (and all other exogenous variables) to obtain <span class="math inline">\(\hat{T}\)</span>, then uses <span class="math inline">\(\hat{T}\)</span> to estimate the causal effect of <span class="math inline">\(T\)</span> on <span class="math inline">\(Y\)</span>. Because <span class="math inline">\(\hat{T}\)</span> is not a function of <span class="math inline">\(U\)</span>, we can think of the dashed path from the unobserved variable as blocked or removed.</p>
+<p>In <code>PyFixest</code>, the IV syntax is:</p>
 <pre><code>Y ~ exogenous_controls | fixed_effects | endogenous ~ instrument</code></pre>
-<p>This tutorial walks through three applications — each highlighting a different reason researchers reach for IV.</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</section>
-<section id="application-1-the-motherhood-penalty" class="level2">
-<h2 class="anchored" data-anchor-id="application-1-the-motherhood-penalty">Application 1: The Motherhood Penalty</h2>
-<p><strong>Does having children reduce women’s earnings?</strong></p>
-<p>A naive regression of earnings on fertility is biased: women with stronger career ambitions may both earn more <em>and</em> have fewer children. Since career ambition is positively correlated with earnings but negatively correlated with fertility, OLS <em>overstates</em> the motherhood penalty. Lundborg, Plug &amp; Rasmussen (2017) exploit the quasi-random success of IVF treatment as an instrument for fertility among women who sought treatment.</p>
-<section id="synthetic-data" class="level3">
-<h3 class="anchored" data-anchor-id="synthetic-data">Synthetic Data</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>ivf_df <span class="op">=</span> pf.get_ivf_data()</span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>ivf_df.head()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</section>
-<section id="naive-ols" class="level3">
-<h3 class="anchored" data-anchor-id="naive-ols">Naive OLS</h3>
-<p>Without accounting for endogeneity, OLS overstates the penalty because career ambition is an omitted variable that increases earnings while reducing fertility:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>fit_ols <span class="op">=</span> pf.feols(<span class="st">"earnings ~ num_children"</span>, data<span class="op">=</span>ivf_df)</span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>fit_ols.summary()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</section>
-<section id="iv-estimation" class="level3">
-<h3 class="anchored" data-anchor-id="iv-estimation">IV Estimation</h3>
-<p>Using <code>ivf_success</code> as an instrument for <code>num_children</code>:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>fit_iv <span class="op">=</span> pf.feols(<span class="st">"earnings ~ 1 | num_children ~ ivf_success"</span>, data<span class="op">=</span>ivf_df)</span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>fit_iv.summary()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>The IV estimate is closer to the true effect of -0.15 — less negative than the OLS estimate, which overstates the penalty due to omitted-variable bias from career ambition.</p>
-</section>
-<section id="compare-ols-and-iv" class="level3">
-<h3 class="anchored" data-anchor-id="compare-ols-and-iv">Compare OLS and IV</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>pf.etable(</span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    [fit_ols, fit_iv],</span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    labels<span class="op">=</span>{<span class="st">"earnings"</span>: <span class="st">"Earnings"</span>, <span class="st">"num_children"</span>: <span class="st">"Number of Children"</span>},</span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    caption<span class="op">=</span><span class="st">"Motherhood Penalty: OLS vs IV"</span>,</span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</section>
-<section id="first-stage-diagnostics" class="level3">
-<h3 class="anchored" data-anchor-id="first-stage-diagnostics">First-Stage Diagnostics</h3>
-<p>A strong first stage is essential for IV to work. We check the first-stage F-statistic and run <code>IV_Diag()</code>:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>fit_iv.first_stage()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>fit_iv.IV_Diag()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>The first-stage F-statistic should be well above 10, confirming that IVF success is a strong predictor of fertility.</p>
-</section>
-</section>
-<section id="application-2-ab-encouragement-design" class="level2">
-<h2 class="anchored" data-anchor-id="application-2-ab-encouragement-design">Application 2: A/B Encouragement Design</h2>
-<p><strong>Estimating the effect of feature adoption on revenue when users don’t comply with treatment assignment.</strong></p>
-<p>A tech company runs an A/B test: half of users are <em>encouraged</em> (shown a banner) to try a new feature. But not everyone who sees the banner actually adopts the feature, and some control users discover it on their own. The simple intent-to-treat (ITT) comparison underestimates the effect on users who actually adopt. Random assignment serves as an instrument for actual adoption, and the IV estimate recovers the <strong>Local Average Treatment Effect (LATE)</strong> on compliers.</p>
-<section id="synthetic-data-1" class="level3">
-<h3 class="anchored" data-anchor-id="synthetic-data-1">Synthetic Data</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>ab_df <span class="op">=</span> pf.get_encouragement_data()</span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>ab_df.head()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</section>
-<section id="three-estimands" class="level3">
-<h3 class="anchored" data-anchor-id="three-estimands">Three Estimands</h3>
-<p>We estimate the <strong>reduced form</strong> (ITT), the <strong>first stage</strong>, and the <strong>IV/LATE</strong>:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Intent-to-treat (reduced form)</span></span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>fit_itt <span class="op">=</span> pf.feols(<span class="st">"revenue ~ assigned_treatment | user_type"</span>, data<span class="op">=</span>ab_df)</span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="co"># First stage</span></span>
-<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>fit_fs <span class="op">=</span> pf.feols(<span class="st">"adopted_feature ~ assigned_treatment | user_type"</span>, data<span class="op">=</span>ab_df)</span>
-<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a><span class="co"># IV / LATE</span></span>
-<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>fit_late <span class="op">=</span> pf.feols(<span class="st">"revenue ~ 1 | user_type | adopted_feature ~ assigned_treatment"</span>, data<span class="op">=</span>ab_df)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>The Wald estimator says: <span class="math inline">\(\text{LATE} = \frac{\text{ITT}}{\text{First Stage}} = \frac{\text{Cov}(Y, Z)}{\text{Cov}(D, Z)}\)</span>.</p>
-<p>Let’s verify:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>itt_coef <span class="op">=</span> fit_itt.coef()[<span class="st">"assigned_treatment"</span>]</span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>fs_coef <span class="op">=</span> fit_fs.coef()[<span class="st">"assigned_treatment"</span>]</span>
-<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>late_coef <span class="op">=</span> fit_late.coef()[<span class="st">"adopted_feature"</span>]</span>
-<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"ITT coefficient:         </span><span class="sc">{</span>itt_coef<span class="sc">:.4f}</span><span class="ss">"</span>)</span>
-<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"First-stage coefficient: </span><span class="sc">{</span>fs_coef<span class="sc">:.4f}</span><span class="ss">"</span>)</span>
-<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Wald ratio (ITT / FS):   </span><span class="sc">{</span>itt_coef <span class="op">/</span> fs_coef<span class="sc">:.4f}</span><span class="ss">"</span>)</span>
-<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"IV/LATE coefficient:     </span><span class="sc">{</span>late_coef<span class="sc">:.4f}</span><span class="ss">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</section>
-<section id="compare-all-three" class="level3">
-<h3 class="anchored" data-anchor-id="compare-all-three">Compare All Three</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>pf.etable(</span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>    [fit_itt, fit_fs, fit_late],</span>
-<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>    labels<span class="op">=</span>{</span>
-<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>        <span class="st">"revenue"</span>: <span class="st">"Revenue"</span>,</span>
-<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>        <span class="st">"adopted_feature"</span>: <span class="st">"Adopted Feature"</span>,</span>
-<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>        <span class="st">"assigned_treatment"</span>: <span class="st">"Assigned Treatment"</span>,</span>
-<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>    },</span>
-<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>    felabels<span class="op">=</span>{<span class="st">"user_type"</span>: <span class="st">"User Type FE"</span>},</span>
-<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>    caption<span class="op">=</span><span class="st">"A/B Encouragement Design: ITT, First Stage, and LATE"</span>,</span>
-<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>pf.coefplot([fit_itt, fit_late], keep<span class="op">=</span><span class="st">"assigned_treatment|adopted_feature"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</section>
-<section id="iv-diagnostics" class="level3">
-<h3 class="anchored" data-anchor-id="iv-diagnostics">IV Diagnostics</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>fit_late.IV_Diag()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</section>
-</section>
-<section id="application-3-shift-share-bartik-instruments" class="level2">
-<h2 class="anchored" data-anchor-id="application-3-shift-share-bartik-instruments">Application 3: Shift-Share (Bartik) Instruments</h2>
-<p><strong>Does immigration affect local wages?</strong></p>
-<p>A long-standing question in labor economics. The challenge: regions that attract immigrants may also have booming labor markets, biasing OLS upward. The <strong>shift-share</strong> (Bartik) instrument, formalized by Borusyak, Hull &amp; Jaravel (2022), constructs predicted local immigration from:</p>
-<p><span class="math display">\[
-B_r = \sum_{k=1}^{K} s_{rk} \cdot g_k
-\]</span></p>
-<p>where <span class="math inline">\(s_{rk}\)</span> is region <span class="math inline">\(r\)</span>’s historical share of immigrants from origin <span class="math inline">\(k\)</span>, and <span class="math inline">\(g_k\)</span> is the national inflow from origin <span class="math inline">\(k\)</span>. Because the instrument is constructed from <em>national</em> shocks interacted with <em>historical</em> shares, it is plausibly exogenous to current local labor demand.</p>
-<section id="synthetic-data-2" class="level3">
-<h3 class="anchored" data-anchor-id="synthetic-data-2">Synthetic Data</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>bartik_df <span class="op">=</span> pf.get_bartik_data()</span>
-<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>bartik_df.head()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</section>
-<section id="ols-vs-iv" class="level3">
-<h3 class="anchored" data-anchor-id="ols-vs-iv">OLS vs IV</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co"># OLS: biased because local demand drives both immigration and wages</span></span>
-<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>fit_ols_b <span class="op">=</span> pf.feols(<span class="st">"wages ~ immigration + log_population"</span>, data<span class="op">=</span>bartik_df)</span>
-<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a><span class="co"># IV: using the Bartik instrument</span></span>
-<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>fit_iv_b <span class="op">=</span> pf.feols(</span>
-<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>    <span class="st">"wages ~ log_population | immigration ~ bartik_instrument"</span>,</span>
-<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>    data<span class="op">=</span>bartik_df,</span>
-<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>pf.etable(</span>
-<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>    [fit_ols_b, fit_iv_b],</span>
-<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>    labels<span class="op">=</span>{</span>
-<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>        <span class="st">"wages"</span>: <span class="st">"Wages"</span>,</span>
-<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>        <span class="st">"immigration"</span>: <span class="st">"Immigration"</span>,</span>
-<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>        <span class="st">"log_population"</span>: <span class="st">"Log Population"</span>,</span>
-<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>    },</span>
-<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>    caption<span class="op">=</span><span class="st">"Effect of Immigration on Wages: OLS vs Bartik IV"</span>,</span>
-<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>OLS attenuates the negative wage effect (or may even show a positive coefficient) because local demand is a positive confounder. The IV estimate is closer to the true effect of -0.3.</p>
-</section>
-<section id="diagnostics" class="level3">
-<h3 class="anchored" data-anchor-id="diagnostics">Diagnostics</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>fit_iv_b.first_stage()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>fit_iv_b.IV_Diag()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>pf.coefplot([fit_ols_b, fit_iv_b], keep<span class="op">=</span><span class="st">"immigration"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</section>
-</section>
-<section id="iv-diagnostics-in-pyfixest" class="level2">
-<h2 class="anchored" data-anchor-id="iv-diagnostics-in-pyfixest">IV Diagnostics in PyFixest</h2>
-<p>Weak instruments — instruments that are only loosely correlated with the endogenous variable — lead to biased and unreliable IV estimates. PyFixest provides two key diagnostic tools to detect this problem.</p>
-<section id="the-first-stage-f-statistic" class="level3">
-<h3 class="anchored" data-anchor-id="the-first-stage-f-statistic">The First-Stage F-Statistic</h3>
-<p>The <code>.first_stage()</code> method re-estimates the first-stage regression and computes the <strong>first-stage F-statistic</strong>, which tests <span class="math inline">\(H_0\colon \pi = 0\)</span> (all instrument coefficients are jointly zero). The classic rule of thumb is <span class="math inline">\(F &gt; 10\)</span> (Stock &amp; Yogo, 2005).</p>
-<p>The F-statistic adapts to your variance-covariance specification: if you fit the IV model with heteroskedasticity-robust or cluster-robust standard errors, the first-stage F-statistic is computed accordingly.</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Re-use the motherhood penalty IV model</span></span>
-<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>fit_iv.first_stage()</span>
-<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a><span class="co"># The F-stat is stored as an attribute after calling first_stage()</span></span>
-<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"First-stage F-statistic: </span><span class="sc">{</span>fit_iv<span class="sc">.</span>_f_stat_1st_stage<span class="sc">:.1f}</span><span class="ss">"</span>)</span>
-<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"First-stage p-value:     </span><span class="sc">{</span>fit_iv<span class="sc">.</span>_p_value_1st_stage<span class="sc">:.4f}</span><span class="ss">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</section>
-<section id="the-effective-f-statistic" class="level3">
-<h3 class="anchored" data-anchor-id="the-effective-f-statistic">The Effective F-Statistic</h3>
-<p>The standard F-statistic can be misleading when there are multiple endogenous regressors or when errors are non-homoskedastic. The <strong>effective F-statistic</strong> (Olea &amp; Pflueger, 2013) is a more robust measure of instrument strength that remains valid under heteroskedasticity:</p>
-<p><span class="math display">\[
-F_{\text{eff}} = \frac{\hat{\pi}' Q_{ZZ} \hat{\pi}}{\text{tr}(\hat{\Sigma} \, Q_{ZZ})}
-\]</span></p>
-<p>where <span class="math inline">\(\hat{\pi}\)</span> are the first-stage coefficients on the excluded instruments, <span class="math inline">\(Q_{ZZ} = Z'Z\)</span>, and <span class="math inline">\(\hat{\Sigma}\)</span> is the robust variance-covariance matrix of <span class="math inline">\(\hat{\pi}\)</span>.</p>
-<p>The <code>.IV_Diag()</code> method computes both the standard F-statistic and the effective F-statistic in one call:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb22"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>fit_iv.IV_Diag()</span>
-<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Standard F-statistic:  </span><span class="sc">{</span>fit_iv<span class="sc">.</span>_f_stat_1st_stage<span class="sc">:.1f}</span><span class="ss">"</span>)</span>
-<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Effective F-statistic: </span><span class="sc">{</span>fit_iv<span class="sc">.</span>_eff_F<span class="sc">:.1f}</span><span class="ss">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="callout callout-style-default callout-tip callout-titled">
+<div class="callout callout-style-default callout-note callout-titled">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
 <div class="callout-title-container flex-fill">
-<span class="screen-reader-only">Tip</span>When to worry
+<span class="screen-reader-only">Note</span>Fixed Effects with IV
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<ul>
-<li><strong><span class="math inline">\(F &lt; 10\)</span></strong>: instruments are likely too weak. Consider finding stronger instruments or using weak-instrument-robust inference.</li>
-<li><strong>Large gap between standard and effective F</strong>: suggests that heteroskedasticity matters for instrument strength. Rely on the effective F in this case.</li>
-<li><strong><span class="math inline">\(F_{\text{eff}} \gg 10\)</span></strong>: strong instruments under heteroskedasticity — you’re in good shape.</li>
-</ul>
+<p>When panel data are available, endogeneity may also stem from time-invariant unobserved heterogeneity — unit-specific characteristics (e.g., ability, culture, geography) that are fixed over time but correlated with both treatment and outcome. <code>PyFixest</code> addresses this simultaneously by applying a within-transformation (demeaning) to absorb unit fixed effects before running 2SLS, following the FE-IV approach described in <span class="citation" data-cites="wooldridge2010">Wooldridge (<a href="#ref-wooldridge2010" role="doc-biblioref">2010</a>, Ch. 11)</span>. Crucially, after demeaning, the instrument must retain within-unit variation over time — time-invariant instruments are eliminated along with the fixed effects and cannot be used for identification. When both fixed effects and an instrument are specified, <code>PyFixest</code> therefore isolates the clean variation in treatment that is both within-unit and driven by the instrument, blocking confounding from time-invariant unobservables and time-varying endogenous confounders simultaneously.</p>
+</div>
+</div>
+<p>This tutorial walks through three applications, all addressing endogeneity from <strong>selection bias — a form of Omitted Variable Bias (OVB) where unobserved confounders drive both selection into treatment and the outcome.</strong> Application 1 operates in an observational setting, exploiting quasi-random variation from individual-level selection. Application 2 arises in an experimental setting where encouragement is randomly assigned but treatment take-up remains subject to self-selection. Application 3 returns to an observational setting, exploiting regional-level sorting via a shift-share instrument.</p>
+<div id="dc978a98" class="cell" data-execution_count="1">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="application-1-the-motherhood-penalty" class="level2 page-columns page-full">
+<h2 class="anchored" data-anchor-id="application-1-the-motherhood-penalty">Application 1: The Motherhood Penalty</h2>
+<p><strong>Does having children reduce women’s earnings?</strong></p>
+<p>A naive regression of earnings on fertility is biased: women with stronger career ambitions may both earn more and be less likely to have children. Since career ambition is positively correlated with earnings but negatively correlated with fertility, OLS overstates the motherhood penalty, which is the reduction in earnings mothers experience after child birth. This is a classic case of omitted variable bias (OVB): career ambition is unobserved, yet it drives both fertility decisions and earnings outcomes. In order to disentangle the true causal effect of having a child on earnings from the confounding influence of career ambition, we need to find a “quasi-random” source of variation in fertility that is independent of career ambition.</p>
+<p><span class="citation" data-cites="lundborg2017">Lundborg, Plug, and Rasmussen (<a href="#ref-lundborg2017" role="doc-biblioref">2017</a>)</span> find such an “instrument” in the quasi-random success of in-vitro fertilization (IVF) treatment. IVF success is largely determined by biological factors outside a woman’s control, making it difficult to conceive of an unobserved variable that jointly drives both the success of treatment and labor market outcomes.</p>
+<section id="synthetic-data" class="level3">
+<h3 class="anchored" data-anchor-id="synthetic-data">Synthetic Data</h3>
+<div id="e5c67c7a" class="cell" data-execution_count="2">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>ivf_df <span class="op">=</span> pf.get_ivf_data()</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>ivf_df.head()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="2">
+<div>
+
+<table class="dataframe table table-sm table-striped small">
+  <thead>
+    <tr>
+      <th></th>
+      <th>earnings</th>
+      <th>num_children</th>
+      <th>ivf_success</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>7.394832</td>
+      <td>1.159067</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>12.714616</td>
+      <td>1.166081</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>9.621299</td>
+      <td>2.129572</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>11.543746</td>
+      <td>1.931092</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>9.333634</td>
+      <td>1.185489</td>
+      <td>0</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+</div>
+</div>
+<p>We create a synthetic dataset with <span class="math inline">\(N = 2{,}000\)</span> observations. The <strong>true causal effect</strong> of <code>num_children</code> on <code>earnings</code> is <span class="math inline">\(\beta = -0.15\)</span> — this is the treatment effect the IV estimator should recover (full DGP in the <a href="#appendix-dgp-design-notes">Appendix</a>).</p>
+</section>
+<section id="naive-ols" class="level3">
+<h3 class="anchored" data-anchor-id="naive-ols">Naive OLS</h3>
+<p>Without accounting for endogeneity, OLS overstates the penalty because career ambition is an omitted variable that increases earnings while reducing fertility:</p>
+<div id="72d5b548" class="cell" data-execution_count="3">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>fit_ols <span class="op">=</span> pf.feols(<span class="st">"earnings ~ num_children"</span>, data<span class="op">=</span>ivf_df)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>fit_ols.summary()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+
+        <div id="7xdTi0"></div>
+        <script type="text/javascript" data-lets-plot-script="library">
+            if(!window.letsPlotCallQueue) {
+                window.letsPlotCallQueue = [];
+            };
+            window.letsPlotCall = function(f) {
+                window.letsPlotCallQueue.push(f);
+            };
+            (function() {
+                var script = document.createElement("script");
+                script.type = "text/javascript";
+                script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.8.2/js-package/distr/lets-plot.min.js";
+                script.onload = function() {
+                    window.letsPlotCall = function(f) {f();};
+                    window.letsPlotCallQueue.forEach(function(f) {f();});
+                    window.letsPlotCallQueue = [];
+                    
+                };
+                script.onerror = function(event) {
+                    window.letsPlotCall = function(f) {};    // noop
+                    window.letsPlotCallQueue = [];
+                    var div = document.createElement("div");
+                    div.style.color = 'darkred';
+                    div.textContent = 'Error loading Lets-Plot JS';
+                    document.getElementById("7xdTi0").appendChild(div);
+                };
+                var e = document.getElementById("7xdTi0");
+                e.appendChild(script);
+            })()
+        </script>
+        
+</div>
+<div class="cell-output cell-output-display">
+
+        <div id="e7bpNW"></div>
+        <script type="text/javascript" data-lets-plot-script="library">
+            if(!window.letsPlotCallQueue) {
+                window.letsPlotCallQueue = [];
+            };
+            window.letsPlotCall = function(f) {
+                window.letsPlotCallQueue.push(f);
+            };
+            (function() {
+                var script = document.createElement("script");
+                script.type = "text/javascript";
+                script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.8.2/js-package/distr/lets-plot.min.js";
+                script.onload = function() {
+                    window.letsPlotCall = function(f) {f();};
+                    window.letsPlotCallQueue.forEach(function(f) {f();});
+                    window.letsPlotCallQueue = [];
+                    
+                };
+                script.onerror = function(event) {
+                    window.letsPlotCall = function(f) {};    // noop
+                    window.letsPlotCallQueue = [];
+                    var div = document.createElement("div");
+                    div.style.color = 'darkred';
+                    div.textContent = 'Error loading Lets-Plot JS';
+                    document.getElementById("e7bpNW").appendChild(div);
+                };
+                var e = document.getElementById("e7bpNW");
+                e.appendChild(script);
+            })()
+        </script>
+        
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>###
+
+Estimation:  OLS
+Dep. var.: earnings
+sample: None = all
+Inference:  iid
+Observations:  2000
+
+| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5% |   97.5% |
+|:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
+| Intercept     |     10.764 |        0.059 |   181.787 |      0.000 | 10.648 |  10.880 |
+| num_children  |     -0.631 |        0.034 |   -18.441 |      0.000 | -0.698 |  -0.564 |
+---
+RMSE: 1.126 R2: 0.145 </code></pre>
+</div>
+</div>
+</section>
+<section id="iv-estimation" class="level3 page-columns page-full">
+<h3 class="anchored" data-anchor-id="iv-estimation">IV Estimation</h3>
+<p>In the IV estimation, we use <code>ivf_success</code> as an instrument for <code>num_children</code>:</p>
+
+<div class="no-row-height column-margin column-container"><div class="">
+<div class="margin-note">
+<p><strong>2SLS = IV = Wald estimator</strong></p>
+<p>With a single instrument <span class="math inline">\(Z\)</span>, the 2SLS estimator is numerically identical to the IV estimator:</p>
+<p><span class="math display">\[\hat{\beta}_{IV} = \frac{\widehat{\text{Cov}}(Y,\, Z)}{\widehat{\text{Cov}}(T,\, Z)}\]</span></p>
+<p>With a binary instrument, this simplifies to the <strong>Wald estimator</strong>:</p>
+<p><span class="math display">\[\hat{\beta}_{\text{Wald}} = \frac{\bar{Y}_{Z=1} - \bar{Y}_{Z=0}}{\bar{T}_{Z=1} - \bar{T}_{Z=0}}\]</span></p>
+</div>
+</div></div><p>In <code>PyFixest</code>, we can fit the IV model using the formula interface:</p>
+<div id="efee2a99" class="cell" data-execution_count="4">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>fit_iv <span class="op">=</span> pf.feols(<span class="st">"earnings ~ 1 | num_children ~ ivf_success"</span>, data<span class="op">=</span>ivf_df)</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>pf.etable([</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    fit_ols,</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    fit_iv,</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>],</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>    labels<span class="op">=</span>{<span class="st">"earnings"</span>: <span class="st">"Earnings"</span>, <span class="st">"num_children"</span>: <span class="st">"Number of Children"</span>},</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>    model_heads<span class="op">=</span>[<span class="st">"OLS"</span>, <span class="st">"IV"</span>],</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>    caption<span class="op">=</span><span class="st">"Motherhood Penalty: OLS vs IV"</span>,</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="4">
+<div id="pbcgrkkjhn" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<style>
+#pbcgrkkjhn table {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
+        }
+
+#pbcgrkkjhn thead, tbody, tfoot, tr, td, th { border-style: none; }
+ tr { background-color: transparent; }
+#pbcgrkkjhn p { margin: 0; padding: 0; }
+ #pbcgrkkjhn .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: hidden; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
+ #pbcgrkkjhn .gt_caption { padding-top: 4px; padding-bottom: 4px; }
+ #pbcgrkkjhn .gt_title { color: #333333; font-size: 16px; font-weight: initial; padding-top: 6px; padding-bottom: 6px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
+ #pbcgrkkjhn .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 5px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
+ #pbcgrkkjhn .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #pbcgrkkjhn .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
+ #pbcgrkkjhn .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #pbcgrkkjhn .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 2px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
+ #pbcgrkkjhn .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
+ #pbcgrkkjhn .gt_column_spanner_outer:first-child { padding-left: 0; }
+ #pbcgrkkjhn .gt_column_spanner_outer:last-child { padding-right: 0; }
+ #pbcgrkkjhn .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: bottom; padding-top: 2px; padding-bottom: 2px; overflow-x: hidden; display: inline-block; width: 100%; }
+ #pbcgrkkjhn .gt_spanner_row { border-bottom-style: hidden; }
+ #pbcgrkkjhn .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
+ #pbcgrkkjhn .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: middle; }
+ #pbcgrkkjhn .gt_from_md> :first-child { margin-top: 0; }
+ #pbcgrkkjhn .gt_from_md> :last-child { margin-bottom: 0; }
+ #pbcgrkkjhn .gt_row { padding-top: 2px; padding-bottom: 2px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
+ #pbcgrkkjhn .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
+ #pbcgrkkjhn .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
+ #pbcgrkkjhn .gt_row_group_first td { border-top-width: 0.25px; }
+ #pbcgrkkjhn .gt_row_group_first th { border-top-width: 0.25px; }
+ #pbcgrkkjhn .gt_striped { color: #333333; background-color: #F4F4F4; }
+ #pbcgrkkjhn .gt_table_body { border-top-style: solid; border-top-width: 0px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
+ #pbcgrkkjhn .gt_grand_summary_row { color: #333333; background-color: #FFFFFF; text-transform: inherit; padding-top: 8px; padding-bottom: 8px; padding-left: 5px; padding-right: 5px; }
+ #pbcgrkkjhn .gt_first_grand_summary_row_bottom { border-top-style: double; border-top-width: 6px; border-top-color: #D3D3D3; }
+ #pbcgrkkjhn .gt_last_grand_summary_row_top { border-bottom-style: double; border-bottom-width: 6px; border-bottom-color: #D3D3D3; }
+ #pbcgrkkjhn .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
+ #pbcgrkkjhn .gt_sourcenote { font-size: 10px; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
+ #pbcgrkkjhn .gt_left { text-align: left; }
+ #pbcgrkkjhn .gt_center { text-align: center; }
+ #pbcgrkkjhn .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
+ #pbcgrkkjhn .gt_font_normal { font-weight: normal; }
+ #pbcgrkkjhn .gt_font_bold { font-weight: bold; }
+ #pbcgrkkjhn .gt_font_italic { font-style: italic; }
+ #pbcgrkkjhn .gt_super { font-size: 65%; }
+ #pbcgrkkjhn .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
+ #pbcgrkkjhn .gt_asterisk { font-size: 100%; vertical-align: 0; }
+ 
+</style>
+<table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
+<thead>
+
+  <tr class="gt_heading">
+    <td colspan="3" class="gt_heading gt_title gt_font_normal">Motherhood Penalty: OLS vs IV</td>
+  </tr>
+<tr class="gt_col_headings gt_spanner_row">
+  <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1" scope="col">
+    <span>&nbsp;</span>
+  </th>
+  <th class="gt_center gt_columns_bottom_border gt_columns_top_border gt_column_spanner_outer" rowspan="1" colspan="2" scope="colgroup">
+    <span class="gt_column_spanner">Earnings</span>
+  </th>
+</tr>
+<tr class="gt_col_headings gt_spanner_row">
+  <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="2" colspan="1" scope="col" id=""></th>
+  <th class="gt_center gt_columns_top_border gt_column_spanner_outer" rowspan="1" colspan="1" scope="col" id="OLS">
+    <span class="gt_column_spanner">OLS</span>
+  </th>
+  <th class="gt_center gt_columns_top_border gt_column_spanner_outer" rowspan="1" colspan="1" scope="col" id="IV">
+    <span class="gt_column_spanner">IV</span>
+  </th>
+</tr>
+<tr class="gt_col_headings">
+  <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1" scope="col" id="0">(1)</th>
+  <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1" scope="col" id="1">(2)</th>
+</tr>
+</thead>
+<tbody class="gt_table_body">
+  <tr class="gt_group_heading_row">
+    <th class="gt_group_heading" colspan="3">coef</th>
+  </tr>
+  <tr>
+    <th class="gt_row gt_left gt_stub">Number of Children</th>
+    <td class="gt_row gt_center">-0.631 <br> (0.034)</td>
+    <td class="gt_row gt_center">-0.222 <br> (0.066)</td>
+  </tr>
+  <tr>
+    <th class="gt_row gt_left gt_stub">Intercept</th>
+    <td class="gt_row gt_center">10.764 <br> (0.059)</td>
+    <td class="gt_row gt_center">10.123 <br> (0.107)</td>
+  </tr>
+  <tr class="gt_group_heading_row">
+    <th class="gt_group_heading" colspan="3">stats</th>
+  </tr>
+  <tr>
+    <th class="gt_row gt_left gt_stub">Observations</th>
+    <td class="gt_row gt_center">2,000</td>
+    <td class="gt_row gt_center">2,000</td>
+  </tr>
+  <tr>
+    <th class="gt_row gt_left gt_stub">R<sup>2</sup></th>
+    <td class="gt_row gt_center">0.145</td>
+    <td class="gt_row gt_center">-</td>
+  </tr>
+</tbody>
+  <tfoot class="gt_sourcenotes">
+  
+  <tr>
+    <td class="gt_sourcenote" colspan="3">Format of coefficient cell: Coefficient   (Std. Error)</td>
+  </tr>
+
+</tfoot>
+
+</table>
+
+</div>
+        
+</div>
+</div>
+<p>The IV estimate is closer to the true effect of -0.15. The “naive” OLS estimate is downward biased: it overstates the penalty due to omitted-variable bias from career ambition.</p>
+</section>
+<section id="first-stage-diagnostics" class="level3">
+<h3 class="anchored" data-anchor-id="first-stage-diagnostics">First-Stage Diagnostics</h3>
+<p>In the section above, we have argued the IVF success is a credible instrument for fertility - the unconfoundedness assumption is plausible given the quasi-random nature of IVF success. But how do we know if the instrument is strong enough to yield reliable estimates? For this reason, applied econometricians routinely run diagnostic checks for “weak instruments”, which aim to validate the “relevance” assumption.</p>
+<p><code>PyFixest</code> provides two diagnostics for instrument strength: a standard first-stage F-statistic, and the more robust effective F-statistic from <span class="citation" data-cites="oleapflueger2013">Montiel Olea and Pflueger (<a href="#ref-oleapflueger2013" role="doc-biblioref">2013</a>)</span> that remains valid under heteroskedasticity. Both can be accessed via the <code>._model_1st_stage</code> attribute.</p>
+<div id="516bb0ac" class="cell" data-execution_count="5">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># first_stage() must be called before IV_Diag() — it fits the first-stage OLS</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="co"># regression and stores the model in fit_iv._model_1st_stage, which IV_Diag() requires.</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>fit_iv.first_stage()</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>fit_iv._model_1st_stage.summary()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>###
+
+Estimation:  OLS
+Dep. var.: num_children
+sample: None = all
+Inference:  iid
+Observations:  2000
+
+| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5% |   97.5% |
+|:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
+| Intercept     |      1.207 |        0.019 |    64.106 |      0.000 |  1.171 |   1.244 |
+| ivf_success   |      0.791 |        0.028 |    28.286 |      0.000 |  0.736 |   0.846 |
+---
+RMSE: 0.622 R2: 0.286 </code></pre>
+</div>
+</div>
+<div id="5abc55d0" class="cell" data-execution_count="6">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>fit_iv.IV_Diag()</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"First-stage F-statistic : </span><span class="sc">{</span>fit_iv<span class="sc">.</span>_f_stat_1st_stage<span class="sc">:.2f}</span><span class="ss">"</span>)</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Effective F-statistic   : </span><span class="sc">{</span>fit_iv<span class="sc">.</span>_eff_F<span class="sc">:.2f}</span><span class="ss">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>First-stage F-statistic : 800.12
+Effective F-statistic   : 793.48</code></pre>
+</div>
+</div>
+<p>Both F-statistics are well above 10, which is the canonical threshold for a strong instrument. More recent work instead suggests that for reliable inference, the effective F-statistic should be significantly higher.</p>
+</section>
+</section>
+<section id="application-2-ab-encouragement-design" class="level2 page-columns page-full">
+<h2 class="anchored" data-anchor-id="application-2-ab-encouragement-design">Application 2: A/B Encouragement Design</h2>
+<p><strong>Estimating the effect of feature adoption on revenue when users don’t comply with treatment assignment.</strong></p>
+<p>A tech company runs an A/B test in which half of users are <em>encouraged</em> to try a new feature, e.g.&nbsp;by showing them a banner. But not everyone who sees the banner actually tries out the feature. On top, some control users might discover the new feature on their own.</p>
+<p>This setup is similar to drug trials. Suppose that medical researchers wanted to learn about the effect of taking Vitamin D on health outcomes. They could run a randomized trial in which some patients receive Vitamin D supplements for free, while control patients do not. Again, there will be imperfect compliance: some patients in the treatment group may not take their supplements, while others in the control group may take Vitamin D supplements on their own.</p>
+<p>In such setups with imperfect compliance, one estimand of interest is the so-called <strong>intent-to-treat (ITT)</strong> effect, which compares outcomes between the encouraged and non-encouraged groups. However, the ITT estimates the effect of encouragement, not the effect of actual adoption. If we want to recover the effect of adoption itself, we need to use the random assignment of encouragement as an instrument for actual adoption.</p>
+
+<div class="no-row-height column-margin column-container"><div class="">
+<div class="margin-note">
+<p>All three IV assumptions are credible for this application. Relevance is satisfied because encouragement has a causal effect on adoption. The exclusion restriction is plausible because encouragement only affects revenue through adoption — there are no other channels through which seeing the banner could affect revenue. Instrumental unconfoundedness holds because encouragement is randomly assigned, so there are no unobserved confounders that jointly affect encouragement and revenue.</p>
+</div>
+</div></div><p>The only remaining assumption to discuss is <strong>monotonicity</strong> — the assumption that there are no “defiers” who would do the opposite of their encouragement assignment. In this context, monotonicity means that there are no users who would adopt the feature if not encouraged but would fail to adopt if encouraged.</p>
+<p>If all assumptions hold, the IV estimate recovers the <strong>Local Average Treatment Effect (LATE)</strong> of adoption on revenue for the “compliers” — users whose adoption decisions are influenced by encouragement. LATE estimates are larger than the ITT because it scales up the effect of encouragement by the share of compliers in the population.</p>
+<section id="synthetic-data-1" class="level3">
+<h3 class="anchored" data-anchor-id="synthetic-data-1">Synthetic Data</h3>
+<div id="dd554f5f" class="cell" data-execution_count="7">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>ab_df <span class="op">=</span> pf.get_encouragement_data()</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>ab_df.head()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="7">
+<div>
+
+<table class="dataframe table table-sm table-striped small">
+  <thead>
+    <tr>
+      <th></th>
+      <th>revenue</th>
+      <th>assigned_treatment</th>
+      <th>adopted_feature</th>
+      <th>user_type</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>6.791617</td>
+      <td>1</td>
+      <td>1</td>
+      <td>2</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>7.995041</td>
+      <td>1</td>
+      <td>1</td>
+      <td>2</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>8.204051</td>
+      <td>0</td>
+      <td>1</td>
+      <td>2</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>4.264271</td>
+      <td>0</td>
+      <td>0</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>7.980713</td>
+      <td>1</td>
+      <td>1</td>
+      <td>0</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+</div>
+</div>
+<p>We first create a synthetic data set with <span class="math inline">\(N = 4{,}000\)</span> users. The <strong>true LATE</strong> of <code>adopted_feature</code> on <code>revenue</code> is <span class="math inline">\(2.0\)</span> — this is what the IV estimate should recover.</p>
+</section>
+<section id="three-estimands" class="level3">
+<h3 class="anchored" data-anchor-id="three-estimands">Three Estimands</h3>
+<p>We estimate three parameters of interest: the <strong>reduced form</strong> (ITT), the <strong>first stage</strong>, and the <strong>IV/LATE</strong>:</p>
+<div id="39a6459b" class="cell" data-execution_count="8">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Intent-to-treat (reduced form)</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>fit_itt <span class="op">=</span> pf.feols(<span class="st">"revenue ~ assigned_treatment | user_type"</span>, data<span class="op">=</span>ab_df)</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a><span class="co"># First stage</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>fit_fs <span class="op">=</span> pf.feols(<span class="st">"adopted_feature ~ assigned_treatment | user_type"</span>, data<span class="op">=</span>ab_df)</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a><span class="co"># IV / LATE</span></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>fit_late <span class="op">=</span> pf.feols(<span class="st">"revenue ~ 1 | user_type | adopted_feature ~ assigned_treatment"</span>, data<span class="op">=</span>ab_df)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="compare-all-three" class="level3">
+<h3 class="anchored" data-anchor-id="compare-all-three">Compare All Three</h3>
+<p>The table below places the ITT, first stage, and IV estimates side by side.</p>
+<div id="2eb842b3" class="cell" data-execution_count="9">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>pf.etable(</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>    [fit_itt, fit_fs, fit_late],</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>    labels<span class="op">=</span>{</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>        <span class="st">"revenue"</span>: <span class="st">"Revenue"</span>,</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>        <span class="st">"adopted_feature"</span>: <span class="st">"Adopted Feature"</span>,</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>        <span class="st">"assigned_treatment"</span>: <span class="st">"Assigned Treatment"</span>,</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>    },</span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>    felabels<span class="op">=</span>{<span class="st">"user_type"</span>: <span class="st">"User Type FE"</span>},</span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>    model_heads<span class="op">=</span>[<span class="st">"ITT"</span>, <span class="st">"First Stage"</span>, <span class="st">"LATE"</span>],</span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>    caption<span class="op">=</span><span class="st">"A/B Encouragement Design: ITT, First Stage, and LATE"</span>,</span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="9">
+<div id="wzapdrtsgo" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<style>
+#wzapdrtsgo table {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
+        }
+
+#wzapdrtsgo thead, tbody, tfoot, tr, td, th { border-style: none; }
+ tr { background-color: transparent; }
+#wzapdrtsgo p { margin: 0; padding: 0; }
+ #wzapdrtsgo .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: hidden; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
+ #wzapdrtsgo .gt_caption { padding-top: 4px; padding-bottom: 4px; }
+ #wzapdrtsgo .gt_title { color: #333333; font-size: 16px; font-weight: initial; padding-top: 6px; padding-bottom: 6px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
+ #wzapdrtsgo .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 5px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
+ #wzapdrtsgo .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #wzapdrtsgo .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
+ #wzapdrtsgo .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #wzapdrtsgo .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 2px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
+ #wzapdrtsgo .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
+ #wzapdrtsgo .gt_column_spanner_outer:first-child { padding-left: 0; }
+ #wzapdrtsgo .gt_column_spanner_outer:last-child { padding-right: 0; }
+ #wzapdrtsgo .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: bottom; padding-top: 2px; padding-bottom: 2px; overflow-x: hidden; display: inline-block; width: 100%; }
+ #wzapdrtsgo .gt_spanner_row { border-bottom-style: hidden; }
+ #wzapdrtsgo .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
+ #wzapdrtsgo .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: middle; }
+ #wzapdrtsgo .gt_from_md> :first-child { margin-top: 0; }
+ #wzapdrtsgo .gt_from_md> :last-child { margin-bottom: 0; }
+ #wzapdrtsgo .gt_row { padding-top: 2px; padding-bottom: 2px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
+ #wzapdrtsgo .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
+ #wzapdrtsgo .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
+ #wzapdrtsgo .gt_row_group_first td { border-top-width: 0.25px; }
+ #wzapdrtsgo .gt_row_group_first th { border-top-width: 0.25px; }
+ #wzapdrtsgo .gt_striped { color: #333333; background-color: #F4F4F4; }
+ #wzapdrtsgo .gt_table_body { border-top-style: solid; border-top-width: 0px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
+ #wzapdrtsgo .gt_grand_summary_row { color: #333333; background-color: #FFFFFF; text-transform: inherit; padding-top: 8px; padding-bottom: 8px; padding-left: 5px; padding-right: 5px; }
+ #wzapdrtsgo .gt_first_grand_summary_row_bottom { border-top-style: double; border-top-width: 6px; border-top-color: #D3D3D3; }
+ #wzapdrtsgo .gt_last_grand_summary_row_top { border-bottom-style: double; border-bottom-width: 6px; border-bottom-color: #D3D3D3; }
+ #wzapdrtsgo .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
+ #wzapdrtsgo .gt_sourcenote { font-size: 10px; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
+ #wzapdrtsgo .gt_left { text-align: left; }
+ #wzapdrtsgo .gt_center { text-align: center; }
+ #wzapdrtsgo .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
+ #wzapdrtsgo .gt_font_normal { font-weight: normal; }
+ #wzapdrtsgo .gt_font_bold { font-weight: bold; }
+ #wzapdrtsgo .gt_font_italic { font-style: italic; }
+ #wzapdrtsgo .gt_super { font-size: 65%; }
+ #wzapdrtsgo .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
+ #wzapdrtsgo .gt_asterisk { font-size: 100%; vertical-align: 0; }
+ 
+</style>
+<table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
+<thead>
+
+  <tr class="gt_heading">
+    <td colspan="4" class="gt_heading gt_title gt_font_normal">A/B Encouragement Design: ITT, First Stage, and LATE</td>
+  </tr>
+<tr class="gt_col_headings gt_spanner_row">
+  <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1" scope="col">
+    <span>&nbsp;</span>
+  </th>
+  <th class="gt_center gt_columns_bottom_border gt_columns_top_border gt_column_spanner_outer" rowspan="1" colspan="1" scope="col">
+    <span class="gt_column_spanner">Revenue</span>
+  </th>
+  <th class="gt_center gt_columns_bottom_border gt_columns_top_border gt_column_spanner_outer" rowspan="1" colspan="1" scope="col">
+    <span class="gt_column_spanner">Adopted Feature</span>
+  </th>
+  <th class="gt_center gt_columns_bottom_border gt_columns_top_border gt_column_spanner_outer" rowspan="1" colspan="1" scope="col">
+    <span class="gt_column_spanner">Revenue</span>
+  </th>
+</tr>
+<tr class="gt_col_headings gt_spanner_row">
+  <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="2" colspan="1" scope="col" id=""></th>
+  <th class="gt_center gt_columns_top_border gt_column_spanner_outer" rowspan="1" colspan="1" scope="col" id="ITT">
+    <span class="gt_column_spanner">ITT</span>
+  </th>
+  <th class="gt_center gt_columns_top_border gt_column_spanner_outer" rowspan="1" colspan="1" scope="col" id="First-Stage">
+    <span class="gt_column_spanner">First Stage</span>
+  </th>
+  <th class="gt_center gt_columns_top_border gt_column_spanner_outer" rowspan="1" colspan="1" scope="col" id="LATE">
+    <span class="gt_column_spanner">LATE</span>
+  </th>
+</tr>
+<tr class="gt_col_headings">
+  <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1" scope="col" id="0">(1)</th>
+  <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1" scope="col" id="1">(2)</th>
+  <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1" scope="col" id="2">(3)</th>
+</tr>
+</thead>
+<tbody class="gt_table_body">
+  <tr class="gt_group_heading_row">
+    <th class="gt_group_heading" colspan="4">coef</th>
+  </tr>
+  <tr>
+    <th class="gt_row gt_left gt_stub">Assigned Treatment</th>
+    <td class="gt_row gt_center">1.110 <br> (0.041)</td>
+    <td class="gt_row gt_center">0.554 <br> (0.013)</td>
+    <td class="gt_row gt_center"></td>
+  </tr>
+  <tr>
+    <th class="gt_row gt_left gt_stub">Adopted Feature</th>
+    <td class="gt_row gt_center"></td>
+    <td class="gt_row gt_center"></td>
+    <td class="gt_row gt_center">2.004 <br> (0.057)</td>
+  </tr>
+  <tr class="gt_group_heading_row">
+    <th class="gt_group_heading" colspan="4">fe</th>
+  </tr>
+  <tr>
+    <th class="gt_row gt_left gt_stub">User Type FE</th>
+    <td class="gt_row gt_center">x</td>
+    <td class="gt_row gt_center">x</td>
+    <td class="gt_row gt_center">x</td>
+  </tr>
+  <tr class="gt_group_heading_row">
+    <th class="gt_group_heading" colspan="4">stats</th>
+  </tr>
+  <tr>
+    <th class="gt_row gt_left gt_stub">Observations</th>
+    <td class="gt_row gt_center">4,000</td>
+    <td class="gt_row gt_center">4,000</td>
+    <td class="gt_row gt_center">4,000</td>
+  </tr>
+  <tr>
+    <th class="gt_row gt_left gt_stub">R<sup>2</sup></th>
+    <td class="gt_row gt_center">0.297</td>
+    <td class="gt_row gt_center">0.313</td>
+    <td class="gt_row gt_center">-</td>
+  </tr>
+</tbody>
+  <tfoot class="gt_sourcenotes">
+  
+  <tr>
+    <td class="gt_sourcenote" colspan="4">Format of coefficient cell: Coefficient   (Std. Error)</td>
+  </tr>
+
+</tfoot>
+
+</table>
+
+</div>
+        
+</div>
+</div>
+<p>The coefficient plot compares the ITT effect of encouragement on revenue with the IV (LATE) estimate of actual feature adoption. Because not all encouraged users adopt, the LATE is larger than the ITT — scaled up by the complier share.</p>
+<div id="4e85fe12" class="cell" data-execution_count="10">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>pf.coefplot([fit_itt, fit_late], keep<span class="op">=</span><span class="st">"assigned_treatment|adopted_feature"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="10">
+   <div id="BdLI9r"></div>
+   <script type="text/javascript" data-lets-plot-script="plot">
+   
+   (function() {
+   // ----------
+   
+   const forceImmediateRender = false;
+   const responsive = false;
+   
+   let sizing = {
+       width_mode: "MIN",
+       height_mode: "SCALED",
+       width: null, 
+       height: null 
+   };
+   
+   const preferredWidth = document.body.dataset.letsPlotPreferredWidth;
+   if (preferredWidth !== undefined) {
+       sizing = {
+           width_mode: 'FIXED',
+           height_mode: 'SCALED',
+           width: parseFloat(preferredWidth)
+       };
+   }
+   
+   const containerDiv = document.getElementById("BdLI9r");
+   let fig = null;
+   
+   function renderPlot() {
+       if (fig === null) {
+           const plotSpec = {
+"data":{
+"Coefficient":["assigned_treatment","adopted_feature"],
+"Estimate":[1.1101523162478635,2.003769289008357],
+"2.5%":[1.0292500392310375,1.8914532341075447],
+"97.5%":[1.1910545932646894,2.116085343909169],
+"Model":["revenue ~ assigned_treatment | user_type","revenue ~ 1 | user_type | adopted_feature ~ assigned_treatment"]
+},
+"mapping":{
+"x":"Coefficient",
+"y":"Estimate",
+"color":"Model"
+},
+"data_meta":{
+"series_annotations":[{
+"type":"int",
+"column":"level_0"
+},{
+"type":"str",
+"column":"Coefficient"
+},{
+"type":"int",
+"column":"index"
+},{
+"type":"float",
+"column":"Estimate"
+},{
+"type":"float",
+"column":"Std. Error"
+},{
+"type":"float",
+"column":"t value"
+},{
+"type":"float",
+"column":"Pr(>|t|)"
+},{
+"type":"float",
+"column":"2.5%"
+},{
+"type":"float",
+"column":"97.5%"
+},{
+"type":"str",
+"column":"Model"
+}]
+},
+"guides":{
+"y":{
+"title":"Estimate and 95.0% Confidence Interval"
+}
+},
+"coord":{
+"name":"flip",
+"flip":true
+},
+"ggsize":{
+"width":500.0,
+"height":300.0
+},
+"theme":{
+"axis_text_x":{
+"angle":0.0,
+"blank":false
+}
+},
+"kind":"plot",
+"scales":[],
+"layers":[{
+"geom":"point",
+"mapping":{
+},
+"position":{
+"name":"dodge",
+"width":0.5
+},
+"data_meta":{
+},
+"data":{
+}
+},{
+"geom":"errorbar",
+"mapping":{
+"ymin":"2.5%",
+"ymax":"97.5%"
+},
+"position":{
+"name":"dodge",
+"width":0.5
+},
+"data_meta":{
+},
+"width":0.05,
+"data":{
+}
+},{
+"geom":"hline",
+"mapping":{
+},
+"data_meta":{
+},
+"yintercept":0.0,
+"linetype":"dashed",
+"color":"black",
+"data":{
+}
+}],
+"metainfo_list":[],
+"spec_id":"1"
+};
+           window.letsPlotCall(function() { fig = LetsPlot.buildPlotFromProcessedSpecs(plotSpec, containerDiv, sizing); });
+       } else {
+           fig.updateView({});
+       }
+   }
+   
+   const renderImmediately = 
+       forceImmediateRender || (
+           sizing.width_mode === 'FIXED' && 
+           (sizing.height_mode === 'FIXED' || sizing.height_mode === 'SCALED')
+       );
+   
+   if (renderImmediately) {
+       renderPlot();
+   }
+   
+   if (!renderImmediately || responsive) {
+       // Set up observer for initial sizing or continuous monitoring
+       var observer = new ResizeObserver(function(entries) {
+           for (let entry of entries) {
+               if (entry.contentBoxSize && 
+                   entry.contentBoxSize[0].inlineSize > 0) {
+                   if (!responsive && observer) {
+                       observer.disconnect();
+                       observer = null;
+                   }
+                   renderPlot();
+                   if (!responsive) {
+                       break;
+                   }
+               }
+           }
+       });
+       
+       observer.observe(containerDiv);
+   }
+   
+   // ----------
+   })();
+   
+   </script>
+</div>
+</div>
+</section>
+<section id="iv-diagnostics" class="level3">
+<h3 class="anchored" data-anchor-id="iv-diagnostics">IV Diagnostics</h3>
+<p>Since the instrument (<code>assigned_treatment</code>) is fully randomized, the first stage is expected to be very strong and both statistics should comfortably exceed 10.</p>
+<div id="25ce561a" class="cell" data-execution_count="11">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co"># first_stage() must be called before IV_Diag()</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>fit_late.first_stage()</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>fit_late.IV_Diag()</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"First-stage F-statistic : </span><span class="sc">{</span>fit_late<span class="sc">.</span>_f_stat_1st_stage<span class="sc">:.2f}</span><span class="ss">"</span>)</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Effective F-statistic   : </span><span class="sc">{</span>fit_late<span class="sc">.</span>_eff_F<span class="sc">:.2f}</span><span class="ss">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>First-stage F-statistic : 1820.73
+Effective F-statistic   : 1832.97</code></pre>
+</div>
+</div>
+</section>
+</section>
+<section id="application-3-shift-share-bartik-instruments" class="level2">
+<h2 class="anchored" data-anchor-id="application-3-shift-share-bartik-instruments">Application 3: Shift-Share (Bartik) Instruments</h2>
+<p><strong>Does immigration affect local wages?</strong></p>
+<p>A long-standing question in labor economics is how immigration affects local wages. The challenge is that regions that attract immigrants may simultaneously have booming labor markets, biasing OLS upward: higher labor demand raises both wages and immigration, but the increased labor supply from immigration pushes wages down.</p>
+<p>To isolate the causal effect, we need variation in immigration that is unrelated to local demand conditions. The <strong>shift-share</strong> (Bartik) instrument, formalized by <span class="citation" data-cites="borusyak2022">Borusyak, Hull, and Jaravel (<a href="#ref-borusyak2022" role="doc-biblioref">2022</a>)</span>, provides exactly this by constructing predicted local immigration from:</p>
+<p><span class="math display">\[
+B_r = \sum_{k=1}^{K} s_{rk} \cdot g_k
+\]</span></p>
+<p>where <span class="math inline">\(s_{rk}\)</span> is region <span class="math inline">\(r\)</span>’s historical share of immigrants from origin <span class="math inline">\(k\)</span>, and <span class="math inline">\(g_k\)</span> is the national inflow from origin <span class="math inline">\(k\)</span>. The key identification assumption in <span class="citation" data-cites="borusyak2022">Borusyak, Hull, and Jaravel (<a href="#ref-borusyak2022" role="doc-biblioref">2022</a>)</span> is that the <em>shocks</em> <span class="math inline">\(g_k\)</span> are as-good-as-randomly assigned across origin countries — uncorrelated with unobserved local labor demand in destination regions. The historical shares <span class="math inline">\(s_{rk}\)</span> can themselves be endogenous (regions that historically attracted many immigrants may differ in other ways); what matters is that the national inflows that drive the instrument are exogenous.</p>
+<section id="synthetic-data-2" class="level3">
+<h3 class="anchored" data-anchor-id="synthetic-data-2">Synthetic Data</h3>
+<div id="6b7024a0" class="cell" data-execution_count="12">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>bartik_df <span class="op">=</span> pf.get_bartik_data()</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>bartik_df.head()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="12">
+<div>
+
+<table class="dataframe table table-sm table-striped small">
+  <thead>
+    <tr>
+      <th></th>
+      <th>wages</th>
+      <th>immigration</th>
+      <th>log_population</th>
+      <th>bartik_instrument</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>9.364518</td>
+      <td>-1.905364</td>
+      <td>1.871830</td>
+      <td>-1.184597</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>7.444654</td>
+      <td>0.160571</td>
+      <td>2.003176</td>
+      <td>-0.354516</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>7.095284</td>
+      <td>3.199375</td>
+      <td>1.985372</td>
+      <td>1.367312</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>8.220384</td>
+      <td>1.830628</td>
+      <td>1.937449</td>
+      <td>1.700122</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>8.270462</td>
+      <td>-0.135936</td>
+      <td>1.690355</td>
+      <td>-1.879589</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+</div>
+</div>
+<p>We create a synthetic data set with <span class="math inline">\(N = 300\)</span> regions. The <strong>true causal effect</strong> of <code>immigration</code> on <code>wages</code> is <span class="math inline">\(\beta = -0.3\)</span> — this is what the IV estimate should recover.</p>
+</section>
+<section id="ols-vs-iv" class="level3">
+<h3 class="anchored" data-anchor-id="ols-vs-iv">OLS vs IV</h3>
+<p>As in the first application, we can compare the naive OLS and IV estimates.</p>
+<div id="7abe0656" class="cell" data-execution_count="13">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co"># OLS: biased because local demand drives both immigration and wages</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>fit_ols_b <span class="op">=</span> pf.feols(<span class="st">"wages ~ immigration + log_population"</span>, data<span class="op">=</span>bartik_df)</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a><span class="co"># IV: using the Bartik instrument</span></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>fit_iv_b <span class="op">=</span> pf.feols(</span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>    <span class="st">"wages ~ log_population | immigration ~ bartik_instrument"</span>,</span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>    data<span class="op">=</span>bartik_df,</span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="252b15cf" class="cell" data-execution_count="14">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>pf.etable(</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>    [fit_ols_b, fit_iv_b],</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>    labels<span class="op">=</span>{</span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>        <span class="st">"wages"</span>: <span class="st">"Wages"</span>,</span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>        <span class="st">"immigration"</span>: <span class="st">"Immigration"</span>,</span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>        <span class="st">"log_population"</span>: <span class="st">"Log Population"</span>,</span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>    },</span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>    model_heads<span class="op">=</span>[<span class="st">"OLS"</span>, <span class="st">"IV"</span>],</span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>    caption<span class="op">=</span><span class="st">"Effect of Immigration on Wages: OLS vs Bartik IV"</span>,</span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="14">
+<div id="turinsycpb" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<style>
+#turinsycpb table {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
+        }
+
+#turinsycpb thead, tbody, tfoot, tr, td, th { border-style: none; }
+ tr { background-color: transparent; }
+#turinsycpb p { margin: 0; padding: 0; }
+ #turinsycpb .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: hidden; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
+ #turinsycpb .gt_caption { padding-top: 4px; padding-bottom: 4px; }
+ #turinsycpb .gt_title { color: #333333; font-size: 16px; font-weight: initial; padding-top: 6px; padding-bottom: 6px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
+ #turinsycpb .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 5px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
+ #turinsycpb .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #turinsycpb .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
+ #turinsycpb .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #turinsycpb .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 2px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
+ #turinsycpb .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
+ #turinsycpb .gt_column_spanner_outer:first-child { padding-left: 0; }
+ #turinsycpb .gt_column_spanner_outer:last-child { padding-right: 0; }
+ #turinsycpb .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: bottom; padding-top: 2px; padding-bottom: 2px; overflow-x: hidden; display: inline-block; width: 100%; }
+ #turinsycpb .gt_spanner_row { border-bottom-style: hidden; }
+ #turinsycpb .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
+ #turinsycpb .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: middle; }
+ #turinsycpb .gt_from_md> :first-child { margin-top: 0; }
+ #turinsycpb .gt_from_md> :last-child { margin-bottom: 0; }
+ #turinsycpb .gt_row { padding-top: 2px; padding-bottom: 2px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
+ #turinsycpb .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
+ #turinsycpb .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
+ #turinsycpb .gt_row_group_first td { border-top-width: 0.25px; }
+ #turinsycpb .gt_row_group_first th { border-top-width: 0.25px; }
+ #turinsycpb .gt_striped { color: #333333; background-color: #F4F4F4; }
+ #turinsycpb .gt_table_body { border-top-style: solid; border-top-width: 0px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
+ #turinsycpb .gt_grand_summary_row { color: #333333; background-color: #FFFFFF; text-transform: inherit; padding-top: 8px; padding-bottom: 8px; padding-left: 5px; padding-right: 5px; }
+ #turinsycpb .gt_first_grand_summary_row_bottom { border-top-style: double; border-top-width: 6px; border-top-color: #D3D3D3; }
+ #turinsycpb .gt_last_grand_summary_row_top { border-bottom-style: double; border-bottom-width: 6px; border-bottom-color: #D3D3D3; }
+ #turinsycpb .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
+ #turinsycpb .gt_sourcenote { font-size: 10px; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
+ #turinsycpb .gt_left { text-align: left; }
+ #turinsycpb .gt_center { text-align: center; }
+ #turinsycpb .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
+ #turinsycpb .gt_font_normal { font-weight: normal; }
+ #turinsycpb .gt_font_bold { font-weight: bold; }
+ #turinsycpb .gt_font_italic { font-style: italic; }
+ #turinsycpb .gt_super { font-size: 65%; }
+ #turinsycpb .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
+ #turinsycpb .gt_asterisk { font-size: 100%; vertical-align: 0; }
+ 
+</style>
+<table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
+<thead>
+
+  <tr class="gt_heading">
+    <td colspan="3" class="gt_heading gt_title gt_font_normal">Effect of Immigration on Wages: OLS vs Bartik IV</td>
+  </tr>
+<tr class="gt_col_headings gt_spanner_row">
+  <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1" scope="col">
+    <span>&nbsp;</span>
+  </th>
+  <th class="gt_center gt_columns_bottom_border gt_columns_top_border gt_column_spanner_outer" rowspan="1" colspan="2" scope="colgroup">
+    <span class="gt_column_spanner">Wages</span>
+  </th>
+</tr>
+<tr class="gt_col_headings gt_spanner_row">
+  <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="2" colspan="1" scope="col" id=""></th>
+  <th class="gt_center gt_columns_top_border gt_column_spanner_outer" rowspan="1" colspan="1" scope="col" id="OLS">
+    <span class="gt_column_spanner">OLS</span>
+  </th>
+  <th class="gt_center gt_columns_top_border gt_column_spanner_outer" rowspan="1" colspan="1" scope="col" id="IV">
+    <span class="gt_column_spanner">IV</span>
+  </th>
+</tr>
+<tr class="gt_col_headings">
+  <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1" scope="col" id="0">(1)</th>
+  <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1" scope="col" id="1">(2)</th>
+</tr>
+</thead>
+<tbody class="gt_table_body">
+  <tr class="gt_group_heading_row">
+    <th class="gt_group_heading" colspan="3">coef</th>
+  </tr>
+  <tr>
+    <th class="gt_row gt_left gt_stub">Immigration</th>
+    <td class="gt_row gt_center">0.002 <br> (0.053)</td>
+    <td class="gt_row gt_center">-0.384 <br> (0.097)</td>
+  </tr>
+  <tr>
+    <th class="gt_row gt_left gt_stub">Log Population</th>
+    <td class="gt_row gt_center">0.726 <br> (0.201)</td>
+    <td class="gt_row gt_center">1.158 <br> (0.235)</td>
+  </tr>
+  <tr>
+    <th class="gt_row gt_left gt_stub">Intercept</th>
+    <td class="gt_row gt_center">6.713 <br> (0.399)</td>
+    <td class="gt_row gt_center">6.092 <br> (0.451)</td>
+  </tr>
+  <tr class="gt_group_heading_row">
+    <th class="gt_group_heading" colspan="3">stats</th>
+  </tr>
+  <tr>
+    <th class="gt_row gt_left gt_stub">Observations</th>
+    <td class="gt_row gt_center">300</td>
+    <td class="gt_row gt_center">300</td>
+  </tr>
+  <tr>
+    <th class="gt_row gt_left gt_stub">R<sup>2</sup></th>
+    <td class="gt_row gt_center">0.046</td>
+    <td class="gt_row gt_center">-</td>
+  </tr>
+</tbody>
+  <tfoot class="gt_sourcenotes">
+  
+  <tr>
+    <td class="gt_sourcenote" colspan="3">Format of coefficient cell: Coefficient   (Std. Error)</td>
+  </tr>
+
+</tfoot>
+
+</table>
+
+</div>
+        
+</div>
+</div>
+<p>OLS attenuates the negative wage effect (or may even show a positive coefficient) because local demand is a positive confounder. The IV estimate is closer to the true effect of -0.3.</p>
+</section>
+</section>
+<section id="iv-diagnostics-in-pyfixest" class="level2">
+<h2 class="anchored" data-anchor-id="iv-diagnostics-in-pyfixest">IV Diagnostics in PyFixest</h2>
+<p>Weak instruments - instruments that are only loosely correlated with the endogenous variable - lead to biased and unreliable IV estimates. PyFixest provides two key diagnostic tools to detect this problem.</p>
+<section id="the-first-stage-f-statistic" class="level3">
+<h3 class="anchored" data-anchor-id="the-first-stage-f-statistic">The First-Stage F-Statistic</h3>
+<p>The <code>.first_stage()</code> method re-estimates the first-stage regression and computes the <strong>first-stage F-statistic</strong>, which tests <span class="math inline">\(H_0\colon \pi = 0\)</span> (all instrument coefficients are jointly zero). The classic rule of thumb is <span class="math inline">\(F &gt; 10\)</span> for iid errors (<span class="citation" data-cites="stockyogo2005">Stock and Yogo (<a href="#ref-stockyogo2005" role="doc-biblioref">2005</a>)</span>).</p>
+<div id="80b15129" class="cell" data-execution_count="15">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Re-use the motherhood penalty IV model</span></span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Note: IV_Diag() switches vcov to hetero internally for the effective F computation.</span></span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Reset to iid here to get the iid-based first-stage F-statistic.</span></span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>fit_iv.vcov(<span class="st">"iid"</span>)</span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>fit_iv.first_stage()</span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a><span class="co"># The F-stat is stored as an attribute after calling first_stage()</span></span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"First-stage F-statistic: </span><span class="sc">{</span>fit_iv<span class="sc">.</span>_f_stat_1st_stage<span class="sc">:.1f}</span><span class="ss">"</span>)</span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"First-stage p-value:     </span><span class="sc">{</span>fit_iv<span class="sc">.</span>_p_value_1st_stage<span class="sc">:.4f}</span><span class="ss">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>First-stage F-statistic: 800.1
+First-stage p-value:     0.0000</code></pre>
+</div>
+</div>
+</section>
+<section id="the-effective-f-statistic" class="level3">
+<h3 class="anchored" data-anchor-id="the-effective-f-statistic">The Effective F-Statistic</h3>
+<p>The standard F-statistic can be misleading when there are multiple endogenous regressors or when errors are non-homoskedastic. The <strong>effective F-statistic</strong> (<span class="citation" data-cites="oleapflueger2013">Montiel Olea and Pflueger (<a href="#ref-oleapflueger2013" role="doc-biblioref">2013</a>)</span>) is a more robust measure of instrument strength that remains valid under heteroskedasticity:</p>
+<p><span class="math display">\[
+F_{\text{eff}} = \frac{\hat{\pi}' Q_{ZZ} \hat{\pi}}{\text{tr}(\hat{\Sigma} \, Q_{ZZ})}
+\]</span></p>
+<p>where <span class="math inline">\(\hat{\pi}\)</span> are the first-stage coefficients on the excluded instruments, <span class="math inline">\(Q_{ZZ} = Z'Z\)</span>, and <span class="math inline">\(\hat{\Sigma}\)</span> is the robust variance-covariance matrix of <span class="math inline">\(\hat{\pi}\)</span>.</p>
+<p>The <code>.IV_Diag()</code> method computes both the standard F-statistic and the effective F-statistic in one call:</p>
+<div id="4ee59d82" class="cell" data-execution_count="16">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb22"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>fit_iv.IV_Diag()</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Standard F-statistic:  </span><span class="sc">{</span>fit_iv<span class="sc">.</span>_f_stat_1st_stage<span class="sc">:.1f}</span><span class="ss">"</span>)</span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Effective F-statistic: </span><span class="sc">{</span>fit_iv<span class="sc">.</span>_eff_F<span class="sc">:.1f}</span><span class="ss">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Standard F-statistic:  800.1
+Effective F-statistic: 793.5</code></pre>
 </div>
 </div>
 <div class="callout callout-style-default callout-tip callout-titled">
@@ -605,10 +1669,30 @@ F_{\text{eff}} = \frac{\hat{\pi}' Q_{ZZ} \hat{\pi}}{\text{tr}(\hat{\Sigma} \, Q_
 </div>
 
 
+
 </section>
 </section>
 
-</main> <!-- /main -->
+<div id="quarto-appendix" class="default"><section class="quarto-appendix-contents" role="doc-bibliography" id="quarto-bibliography"><h2 class="anchored quarto-appendix-heading">References</h2><div id="refs" class="references csl-bib-body hanging-indent" data-entry-spacing="0" role="list">
+<div id="ref-borusyak2022" class="csl-entry" role="listitem">
+Borusyak, Kirill, Peter Hull, and Xavier Jaravel. 2022. <span>“Quasi-Experimental Shift-Share Research Designs.”</span> <em>Review of Economic Studies</em> 89 (1): 181–213.
+</div>
+<div id="ref-lundborg2017" class="csl-entry" role="listitem">
+Lundborg, Petter, Erik Plug, and Astrid Würtz Rasmussen. 2017. <span>“Can Women Have Children and a Career? <span>IV</span> Evidence from <span>IVF</span> Treatments.”</span> <em>American Economic Review</em> 107 (6): 1611–37.
+</div>
+<div id="ref-oleapflueger2013" class="csl-entry" role="listitem">
+Montiel Olea, José Luis, and Carolin Pflueger. 2013. <span>“A Robust Test for Weak Instruments.”</span> <em>Journal of Business &amp; Economic Statistics</em> 31 (3): 358–69.
+</div>
+<div id="ref-neal2020" class="csl-entry" role="listitem">
+Neal, Brady. 2020. <span>“Introduction to Causal Inference from a Machine Learning Perspective.”</span> <a href="https://www.bradyneal.com/causal-inference-course" class="uri">https://www.bradyneal.com/causal-inference-course</a>.
+</div>
+<div id="ref-stockyogo2005" class="csl-entry" role="listitem">
+Stock, James H., and Motohiro Yogo. 2005. <span>“Testing for Weak Instruments in Linear <span>IV</span> Regression.”</span> In <em>Identification and Inference for Econometric Models: Essays in Honor of Thomas Rothenberg</em>, edited by Donald W. K. Andrews and James H. Stock, 80–108. Cambridge University Press.
+</div>
+<div id="ref-wooldridge2010" class="csl-entry" role="listitem">
+Wooldridge, Jeffrey M. 2010. <em>Econometric Analysis of Cross Section and Panel Data</em>. 2nd ed. MIT Press.
+</div>
+</div></section></div></main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
   window.document.addEventListener("DOMContentLoaded", function (event) {
     const icon = "";

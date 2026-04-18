@@ -155,6 +155,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
  <span class="dropdown-text">Formula Syntax</span></a>
   </li>  
         <li>
+    <a class="dropdown-item" href="../tutorials/instrumental-variables.html">
+ <span class="dropdown-text">Instrumental Variables</span></a>
+  </li>  
+        <li>
     <a class="dropdown-item" href="../tutorials/regression-tables.html">
  <span class="dropdown-text">Regression Tables</span></a>
   </li>  
@@ -673,7 +677,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="examples" class="level2 doc-section doc-section-examples">
 <h2 class="doc-section doc-section-examples anchored" data-anchor-id="examples">Examples</h2>
-<div id="d562f02e" class="cell" data-execution_count="1">
+<div id="edb96c1c" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.utils.dgps <span class="im">import</span> get_blw</span>
@@ -704,7 +708,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(pf.feols(fml, data).coef())</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 
-        <div id="z5nVwb"></div>
+        <div id="gC6rPO"></div>
         <script type="text/javascript" data-lets-plot-script="library">
             if(!window.letsPlotCallQueue) {
                 window.letsPlotCallQueue = [];
@@ -728,9 +732,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                     var div = document.createElement("div");
                     div.style.color = 'darkred';
                     div.textContent = 'Error loading Lets-Plot JS';
-                    document.getElementById("z5nVwb").appendChild(div);
+                    document.getElementById("gC6rPO").appendChild(div);
                 };
-                var e = document.getElementById("z5nVwb");
+                var e = document.getElementById("gC6rPO");
                 e.appendChild(script);
             })()
         </script>
@@ -738,7 +742,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <div class="cell-output cell-output-display">
 
-        <div id="yrue6b"></div>
+        <div id="W4crX0"></div>
         <script type="text/javascript" data-lets-plot-script="library">
             if(!window.letsPlotCallQueue) {
                 window.letsPlotCallQueue = [];
@@ -762,18 +766,18 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                     var div = document.createElement("div");
                     div.style.color = 'darkred';
                     div.textContent = 'Error loading Lets-Plot JS';
-                    document.getElementById("yrue6b").appendChild(div);
+                    document.getElementById("W4crX0").appendChild(div);
                 };
-                var e = document.getElementById("yrue6b");
+                var e = document.getElementById("W4crX0");
                 e.appendChild(script);
             })()
         </script>
         
 </div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[-6.65425863]
+<pre><code>[-6.70342464]
 Coefficient
-treat   -6.654259
+treat   -6.703425
 Name: Estimate, dtype: float64</code></pre>
 </div>
 </div>
