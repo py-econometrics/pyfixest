@@ -15,16 +15,44 @@ fit2 = pf.feols("Y ~ X1 + X2", data = df)
 fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 ```
 
-## PyFixest 0.50.0 (In Development)
+## PyFixest 0.60.0 (In Development)
+
+- Adds experimental GPU acceleration via PyTorch on CUDA and MPS, plus a PyTorch-based CPU LSMR demeaning backend.
+
+## PyFixest 0.50.1
+
+### Bug Fixes
+
+- Fixes an import-time failure on Python 3.13 in some environments where a `narwhals` typing alias was exposed as a string at runtime. This could cause imports of `feols()` / `feglm()` to fail before any model code ran. See [#1263](https://github.com/py-econometrics/pyfixest/issues/1263) for details.
+- Clarifies `pf.etable()` significance-star behavior after the migration to `maketables`: stars are rendered only when `coef_fmt` includes `*` on a statistic token, for example `b*` or `b:.3f*`.
+
+## PyFixest 0.50.0
 
 ::: {.callout-tip}
 You can install the latest pre-release to try out the new features:
 
 ```{.bash .code-copy}
-pip install pyfixest==0.50.0a1
+pip install pyfixest==0.50.0a2
 pip install --pre pyfixest
 ```
 :::
+
+### New Demeaner Backend via the `within` package
+
+We recently came together for a PyFixest sprint with the team from AppliedAI, and one new feature that already made it's way into the code base is a new demeaner backend that performs really well for sparse fixed effects structures.
+
+The new backend can be accessed via the `rust-cg` demeaner backend and is a significant performance improvement for sparse fixed effects structures - such as matched employer-employee data, patient-doctor panels, or trade networks - where the standard MAP algorithm might struggle. On well-connected graphs, the existing `rust` (MAP) backend remains competitive, but on sparse graphs, `rust-cg` is dramatically faster.
+
+![](explanation/figures/base-benchmarks/bench_difficult.png){width=85% fig-align="center"}
+
+*Benchmark on a sparse fixed effects structure: vanilla MAP degrades dramatically, while CG-Schwarz (`rust-cg`) remains fast.*
+
+For a detailed explanation of why some fixed effects problems are harder than others and comprehensive benchmarks, see [When Are Fixed Effects Estimations Difficult?](explanation/difficult-fixed-effects.md).
+
+The new backend can also be accessed via standalone [Python](https://pypi.org/project/within-py/) and [Rust](https://crates.io/crates/within) packages that are available on PyPI and crates.io (see also the [GitHub repo](https://github.com/py-econometrics/within)).
+
+Special shoutout to [Kristof](https://github.com/schroedk) from the [appliedAI Institute](https://www.appliedai-institute.de/en/) who developed and implemented the new algorithm.
+
 
 ### Reworked Formula Parsing and New `i()` Operator
 
@@ -789,7 +817,7 @@ fit_twfe = feols(
 
 iplot([fit, fit_twfe], coord_flip=False, figsize = (900, 400), title = "TWFE vs DID2S")
 ```
-![](figures/event_study.svg)
+
 
 
 

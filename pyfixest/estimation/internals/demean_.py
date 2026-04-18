@@ -346,23 +346,6 @@ def _set_demeaner_backend(
     ValueError
         If the demeaning backend is not supported.
     """
-    if demeaner_backend == "rust":
-        from pyfixest.core.demean import demean as demean_rs
+    from pyfixest.estimation.internals.backends import get_backend
 
-        return demean_rs
-    elif demeaner_backend == "numba":
-        return demean
-    elif demeaner_backend == "jax":
-        from pyfixest.estimation.jax.demean_jax_ import demean_jax
-
-        return demean_jax
-    elif demeaner_backend in ["cupy", "cupy64"]:
-        from pyfixest.estimation.cupy.demean_cupy_ import demean_cupy64
-
-        return demean_cupy64
-    elif demeaner_backend == "cupy32":
-        from pyfixest.estimation.cupy.demean_cupy_ import demean_cupy32
-
-        return demean_cupy32
-    else:
-        raise ValueError(f"Invalid demeaner backend: {demeaner_backend}")
+    return get_backend(demeaner_backend)["demean"]

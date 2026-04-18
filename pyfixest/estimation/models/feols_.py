@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import re
 import warnings
 from collections.abc import Callable, Mapping
@@ -15,7 +17,7 @@ from pyfixest.errors import VcovTypeNotSupportedError
 from pyfixest.estimation.api.utils import _ALL_SAMPLE, _AllSampleSentinel
 from pyfixest.estimation.formula import model_matrix as model_matrix_fixest
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
-from pyfixest.estimation.internals.backends import BACKENDS
+from pyfixest.estimation.internals.backends import get_backend
 from pyfixest.estimation.internals.demean_ import demean_model
 from pyfixest.estimation.internals.literals import (
     DemeanerBackendOptions,
@@ -322,10 +324,7 @@ class Feols(ResultAccessorMixin):
         # self._coefnames = None
         self._icovars = None
 
-        try:
-            impl = BACKENDS[demeaner_backend]
-        except KeyError:
-            raise ValueError(f"Unknown backend {demeaner_backend!r}")
+        impl = get_backend(demeaner_backend)
 
         self._demean_func = impl["demean"]
         self._find_collinear_variables_func = impl["collinear"]
@@ -580,7 +579,7 @@ class Feols(ResultAccessorMixin):
         vcov: str | dict[str, str],
         vcov_kwargs: dict[str, str | int] | None = None,
         data: DataFrameType | None = None,
-    ) -> "Feols":
+    ) -> Feols:
         """
         Compute covariance matrices for an estimated regression model.
 

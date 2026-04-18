@@ -142,16 +142,16 @@ triggers maturin automatically. No manual build step is needed.
 [maturin-import-hook](https://github.com/PyO3/maturin-import-hook) to
 automatically rebuild the Rust extension whenever you `import pyfixest` and
 the `.rs` source files have changed. The hook is installed via the `setup`
-task, which runs automatically as a dependency of all test tasks (cached after
-first run). You never need to manually rebuild.
+task, which runs automatically for pixi tasks that import `pyfixest`,
+including tests and docs builds. You never need to manually rebuild.
 
 ### Task dependencies and caching
 
 Several tasks use pixi's `depends-on`, `inputs`, and `outputs` to avoid
 redundant work:
 
-- **`_setup`** (maturin import hook): runs once, cached via sentinel file.
-  All test tasks depend on it.
+- **`_setup`** (maturin import hook): installs the hook into the active
+  environment before tasks that import `pyfixest`.
 - **`_update-test-data`**: runs `Rscript tests/r_test_comparisons.R` to
   generate `tests/data/ritest_results.csv`. Cached via `inputs`/`outputs` --
   only re-runs if the R script changes or the CSV is missing.

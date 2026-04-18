@@ -7,10 +7,10 @@ import sys
 import tempfile
 import time
 import warnings
-from collections.abc import Callable, Sequence
+from collections.abc import Sequence
+from dataclasses import dataclass
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 
 try:
@@ -18,9 +18,98 @@ try:
 except ImportError:
     from interfaces import BenchmarkDataset, FeolsResult, FeolsSpec
 
-SUBSTEP_KEYS = ("model_matrix", "demean", "solve", "vcov")
-
 _MIN_DGP_WIDTH = 16
+
+
+@dataclass(frozen=True)
+class TorchRuntimeAvailability:
+    """Runtime availability of optional torch benchmark targets."""
+
+    has_torch: bool
+    has_mps: bool
+    has_cuda: bool
+
+
+@dataclass(frozen=True)
+class CupyRuntimeAvailability:
+    """Runtime availability of optional cupy benchmark targets."""
+
+    has_cupy: bool
+    has_cuda: bool
+
+
+@dataclass(frozen=True)
+class JaxRuntimeAvailability:
+    """Runtime availability of optional jax benchmark targets."""
+
+    has_jax: bool
+    has_gpu: bool
+
+
+def detect_torch_runtime_availability() -> TorchRuntimeAvailability:
+    """Detect whether torch and optional accelerator backends are available."""
+    try:
+        import torch
+    except ImportError:
+        return TorchRuntimeAvailability(
+            has_torch=False,
+            has_mps=False,
+            has_cuda=False,
+        )
+
+    has_mps = bool(hasattr(torch.backends, "mps") and torch.backends.mps.is_available())
+    has_cuda = bool(torch.cuda.is_available())
+    return TorchRuntimeAvailability(
+        has_torch=True,
+        has_mps=has_mps,
+        has_cuda=has_cuda,
+    )
+
+
+def detect_jax_runtime_availability() -> JaxRuntimeAvailability:
+    """Detect whether jax and a GPU runtime are available."""
+    try:
+        import jax
+    except ImportError:
+        return JaxRuntimeAvailability(
+            has_jax=False,
+            has_gpu=False,
+        )
+
+    try:
+        gpu_platforms = {"gpu", "cuda", "rocm", "metal"}
+        has_gpu = any(
+            getattr(device, "platform", "").lower() in gpu_platforms
+            for device in jax.devices()
+        )
+    except Exception:
+        has_gpu = False
+
+    return JaxRuntimeAvailability(
+        has_jax=True,
+        has_gpu=has_gpu,
+    )
+
+
+def detect_cupy_runtime_availability() -> CupyRuntimeAvailability:
+    """Detect whether cupy and a CUDA runtime are available."""
+    try:
+        import cupy
+    except ImportError:
+        return CupyRuntimeAvailability(
+            has_cupy=False,
+            has_cuda=False,
+        )
+
+    try:
+        has_cuda = bool(cupy.cuda.runtime.getDeviceCount() > 0)
+    except Exception:
+        has_cuda = False
+
+    return CupyRuntimeAvailability(
+        has_cupy=True,
+        has_cuda=has_cuda,
+    )
 
 
 def _fmt_time(t: float) -> str:
@@ -40,10 +129,11 @@ class _TablePrinter:
 
     def __init__(self, dgp_w: int):
         self._w = dgp_w
-        self._hdr = f"{'dgp':<{dgp_w}} {'n_obs':>12} {'n_fe':>4} {'min':>10} {'median':>10} {'max':>10}  status"
+        self._hdr = (
+            f"{'dgp':<{dgp_w}} {'k':>3} {'n_obs':>12} {'n_fe':>4} "
+            f"{'min':>10} {'median':>10} {'max':>10}  status"
+        )
         self._sep = "-" * len(self._hdr)
-        self._sub_hdr = f"{'dgp':<{dgp_w}} {'n_obs':>12} {'n_fe':>4} {'matrix':>10} {'demean':>10} {'solve':>10} {'vcov':>10}  status"
-        self._sub_sep = "-" * len(self._sub_hdr)
 
     def print_header(self, name: str) -> None:
         print(f"\n  {name}", flush=True)
@@ -51,21 +141,11 @@ class _TablePrinter:
         print(f"  {self._hdr}", flush=True)
         print(f"  {self._sep}", flush=True)
 
-    def print_substep_header(self, name: str) -> None:
-        print(f"\n  {name} [substeps]", flush=True)
-        print(f"  {self._sub_sep}", flush=True)
-        print(f"  {self._sub_hdr}", flush=True)
-        print(f"  {self._sub_sep}", flush=True)
-
     def _row_prefix(self, r: FeolsResult) -> str:
-        return f"{r.dgp:<{self._w}} {r.n_obs:>12,} {r.n_fe:>4}"
+        return f"{r.dgp:<{self._w}} {r.model_k:>3} {r.n_obs:>12,} {r.n_fe:>4}"
 
     def print_row(self, results: list[FeolsResult]) -> None:
         columns, status = _time_columns(results)
-        print(f"  {self._row_prefix(results[0])} {columns}  {status}", flush=True)
-
-    def print_substep_row(self, results: list[FeolsResult]) -> None:
-        columns, status = _substep_columns(results)
         print(f"  {self._row_prefix(results[0])} {columns}  {status}", flush=True)
 
 
@@ -81,48 +161,8 @@ def _time_columns(results: list[FeolsResult]) -> tuple[str, str]:
     return columns, status
 
 
-def _substep_columns(results: list[FeolsResult]) -> tuple[str, str]:
-    substep_results = [r for r in results if r.success and r.substeps is not None]
-    if substep_results:
-        steps = {}
-        for key in SUBSTEP_KEYS:
-            vals = [r.substeps[key] for r in substep_results if key in r.substeps]
-            steps[key] = statistics.median(vals) if vals else 0.0
-        columns = (
-            f"{_fmt_time(steps['model_matrix']):>10} "
-            f"{_fmt_time(steps['demean']):>10} "
-            f"{_fmt_time(steps['solve']):>10} "
-            f"{_fmt_time(steps['vcov']):>10}"
-        )
-        return columns, "ok"
-    columns = f"{'—':>10} {'—':>10} {'—':>10} {'—':>10}"
-    return columns, "FAIL"
-
-
-def _group_key(r: FeolsResult) -> tuple[str, int, int]:
-    return (r.dgp, r.n_obs, r.n_fe)
-
-
-def _flush_groups(
-    results: list[FeolsResult],
-    print_fn: Callable[[list[FeolsResult]], None],
-    *,
-    skip_burnin: bool = True,
-) -> None:
-    group_buf: list[FeolsResult] = []
-    prev_key: tuple | None = None
-    for r in results:
-        if skip_burnin and r.iter_type == "burnin":
-            continue
-        key = _group_key(r)
-        if prev_key is not None and key != prev_key:
-            if group_buf:
-                print_fn(group_buf)
-            group_buf = []
-        group_buf.append(r)
-        prev_key = key
-    if group_buf:
-        print_fn(group_buf)
+def _group_key(r: FeolsResult) -> tuple[str, int, int, int]:
+    return (r.dgp, r.model_k, r.n_obs, r.n_fe)
 
 
 def _result_from_dataset(
@@ -137,10 +177,12 @@ def _result_from_dataset(
     n_obs_override: int | None = None,
 ) -> FeolsResult:
     return FeolsResult(
-        dataset_id=dataset.dataset_id,
+        source_dataset_id=dataset.dataset_id,
+        source_k=dataset.k,
         iter_type=dataset.iter_type,
         iter_num=dataset.iter_num,
         dgp=dataset.dgp,
+        model_k=spec.k,
         n_obs=n_obs_override if n_obs_override is not None else dataset.n_obs,
         n_fe=spec.n_fe,
         backend=backend,
@@ -170,107 +212,22 @@ def _normalize_vcov(vcov: str | dict[str, str]) -> str:
     return vcov
 
 
-class PyFeolsBenchmarker:
-    """Benchmark the full feols pipeline with a pluggable demean function."""
+class PyFeolsBenchmarkerFullApi:
+    """Benchmark pf.feols() end-to-end using one configured demeaner backend."""
 
-    def __init__(self, name: str, demean_func: Callable, **demean_kwargs):
+    def __init__(self, name: str, demeaner_backend: str, **feols_kwargs):
         self._name = name
-        self._demean_func = demean_func
-        self._demean_kwargs = demean_kwargs
+        self._demeaner_backend = demeaner_backend
+        self._feols_kwargs = feols_kwargs
 
     @property
     def name(self) -> str:
         return self._name
 
-    def _build_model_matrix(self, formula, df):
-        from pyfixest.estimation.formula.model_matrix import create_model_matrix
-
-        t0 = time.perf_counter()
-        mm = create_model_matrix(formula, df)
-        Y = mm.dependent
-        X = mm.independent
-        fe = mm.fixed_effects
-        t_mm = time.perf_counter() - t0
-        return mm, Y, X, fe, t_mm
-
-    def _demean(self, Y, X, fe):
-        t0 = time.perf_counter()
-        YX = np.concatenate(
-            [Y.to_numpy(dtype=np.float64), X.to_numpy(dtype=np.float64)],
-            axis=1,
-        )
-        weights = np.ones(YX.shape[0], dtype=np.float64)
-        if fe is None or fe.shape[1] == 0:
-            YX_d = YX
-            converged = True
-        else:
-            fe_arr = fe.to_numpy().astype(np.uint64)
-            YX_d, converged = self._demean_func(
-                x=YX, flist=fe_arr, weights=weights, **self._demean_kwargs
-            )
-        t_demean = time.perf_counter() - t0
-        return YX_d, converged, t_demean
-
-    def _solve_ols(self, YX_d, n_y):
-        from pyfixest.core.collinear import find_collinear_variables
-
-        t0 = time.perf_counter()
-        Yd = YX_d[:, :n_y]
-        Xd = YX_d[:, n_y:]
-
-        # Drop collinear variables
-        tXX = Xd.T @ Xd
-        id_excl, n_excl, _ = find_collinear_variables(tXX)
-        if n_excl > 0:
-            Xd = np.delete(Xd, id_excl[:n_excl], axis=1)
-            tXX = Xd.T @ Xd
-
-        tXy = Xd.T @ Yd
-        beta_hat = np.linalg.solve(tXX, tXy).flatten()
-        u_hat = Yd.flatten() - (Xd @ beta_hat).flatten()
-        t_solve = time.perf_counter() - t0
-        return Xd, beta_hat, u_hat, tXX, t_solve
-
-    def _compute_vcov(self, spec, df, mm, Xd, u_hat, tXX):
-        t0 = time.perf_counter()
-        N = Xd.shape[0]
-        k = Xd.shape[1]
-        bread = np.linalg.inv(tXX)
-
-        if spec.vcov == "hetero":
-            scores = Xd * u_hat[:, None]
-            meat = scores.T @ scores
-            _vcov = bread @ meat @ bread
-        elif isinstance(spec.vcov, dict) and "CRV1" in spec.vcov:
-            cluster_col_name = spec.vcov["CRV1"]
-            cluster_col = df[cluster_col_name].to_numpy()
-            if mm.na_index:
-                keep_mask = np.ones(len(df), dtype=bool)
-                keep_mask[np.asarray(mm.na_index)] = False
-                cluster_col = cluster_col[keep_mask]
-            assert len(cluster_col) == Xd.shape[0], (
-                f"cluster_col length {len(cluster_col)} != Xd rows {Xd.shape[0]}"
-            )
-            scores = Xd * u_hat[:, None]
-            cluster_ids, _ = pd.factorize(cluster_col)
-            n_clusters = cluster_ids.max() + 1
-            cluster_scores = np.zeros((n_clusters, k))
-            np.add.at(cluster_scores, cluster_ids, scores)
-            meat = cluster_scores.T @ cluster_scores
-            _vcov = bread @ meat @ bread
-        else:  # iid
-            sigma2 = np.sum(u_hat**2) / (N - k)
-            _vcov = sigma2 * bread
-        t_vcov = time.perf_counter() - t0
-        return _vcov, t_vcov
-
     def run(
         self, datasets: list[BenchmarkDataset], spec: FeolsSpec
     ) -> list[FeolsResult]:
-        from pyfixest.estimation.formula.parse import Formula
-
-        parsed_formulas = Formula.parse(spec.formula)
-        formula = parsed_formulas[0]
+        import pyfixest as pf
 
         results: list[FeolsResult] = []
 
@@ -283,7 +240,6 @@ class PyFeolsBenchmarker:
         tbl = _TablePrinter(_dgp_width(datasets))
         tbl.print_header(self.name)
 
-        # Track groups for incremental printing
         group_buf: list[FeolsResult] = []
         prev_key: tuple | None = None
 
@@ -293,23 +249,30 @@ class PyFeolsBenchmarker:
                 df = pd.read_parquet(dataset.data_path, columns=all_cols)
                 n_obs_for_result = len(df)
 
-                mm, Y, X, fe, t_mm = self._build_model_matrix(formula, df)
-                YX_d, converged, t_demean = self._demean(Y, X, fe)
-                n_y = Y.shape[1]
-                Xd, _beta_hat, u_hat, tXX, t_solve = self._solve_ols(YX_d, n_y)
-                _vcov, t_vcov = self._compute_vcov(spec, df, mm, Xd, u_hat, tXX)
-
-                total = t_mm + t_demean + t_solve + t_vcov
-                step_times = (t_mm, t_demean, t_solve, t_vcov)
-                substeps = dict(zip(SUBSTEP_KEYS, step_times, strict=True))
+                t0 = time.perf_counter()
+                with warnings.catch_warnings():
+                    warnings.filterwarnings(
+                        "ignore",
+                        message=r"\d+ singleton fixed effect\(s\) dropped from the model\.",
+                        category=UserWarning,
+                    )
+                    pf.feols(
+                        fml=spec.formula,
+                        data=df,
+                        vcov=spec.vcov,
+                        copy_data=False,
+                        store_data=False,
+                        demeaner_backend=self._demeaner_backend,
+                        **self._feols_kwargs,
+                    )
+                elapsed = time.perf_counter() - t0
 
                 result = _result_from_dataset(
                     dataset,
                     spec,
                     backend=self.name,
-                    elapsed=total,
-                    success=bool(converged),
-                    substeps=substeps,
+                    elapsed=elapsed,
+                    success=True,
                     n_obs_override=n_obs_for_result,
                 )
             except Exception as exc:
@@ -325,7 +288,6 @@ class PyFeolsBenchmarker:
 
             results.append(result)
 
-            # Print group as soon as it's complete (skip burnin for display)
             if result.iter_type != "burnin":
                 key = _group_key(result)
                 if prev_key is not None and key != prev_key and group_buf:
@@ -336,11 +298,6 @@ class PyFeolsBenchmarker:
 
         if group_buf:
             tbl.print_row(group_buf)
-
-        # Print substep breakdown
-        if any(r.substeps for r in results if r.iter_type != "burnin"):
-            tbl.print_substep_header(self.name)
-            _flush_groups(results, tbl.print_substep_row)
 
         return results
 
@@ -525,18 +482,32 @@ _SCRIPT_DIR = Path(__file__).parent
 
 
 class FixestFeolsBenchmarker(SubprocessFeolsBenchmarker):
-    def __init__(self, script_path: Path | None = None):
+    def __init__(self, name: str | Path | None = None, script_path: Path | None = None):
+        if isinstance(name, Path):
+            if script_path is not None:
+                raise TypeError(
+                    "script_path must not be provided twice for FixestFeolsBenchmarker."
+                )
+            script_path = name
+            name = None
         super().__init__(
-            name="r.fixest",
+            name=name or "r.fixest",
             command_prefix=["Rscript"],
             script_path=(script_path or _SCRIPT_DIR / "feols_r.R"),
         )
 
 
 class JuliaFeolsBenchmarker(SubprocessFeolsBenchmarker):
-    def __init__(self, script_path: Path | None = None):
+    def __init__(self, name: str | Path | None = None, script_path: Path | None = None):
+        if isinstance(name, Path):
+            if script_path is not None:
+                raise TypeError(
+                    "script_path must not be provided twice for JuliaFeolsBenchmarker."
+                )
+            script_path = name
+            name = None
         super().__init__(
-            name="julia.FixedEffectModels",
+            name=name or "julia.FixedEffectModels",
             command_prefix=["julia"],
             script_path=(script_path or _SCRIPT_DIR / "feols_julia.jl"),
         )

@@ -1,17 +1,29 @@
 from __future__ import annotations
 
+import re
 from dataclasses import asdict
 from pathlib import Path
 
 import pandas as pd
-from interfaces import (
-    BenchmarkDataset,
-    DataGeneratorProtocol,
-    FeolsBenchmarkerProtocol,
-    FeolsResult,
-    FeolsSpec,
-)
-from plotting import plot_benchmarks
+
+try:
+    from .interfaces import (
+        BenchmarkDataset,
+        DataGeneratorProtocol,
+        FeolsBenchmarkerProtocol,
+        FeolsResult,
+        FeolsSpec,
+    )
+    from .plotting import plot_benchmarks
+except ImportError:
+    from interfaces import (
+        BenchmarkDataset,
+        DataGeneratorProtocol,
+        FeolsBenchmarkerProtocol,
+        FeolsResult,
+        FeolsSpec,
+    )
+    from plotting import plot_benchmarks
 
 
 def _serialize_result(result: FeolsResult) -> dict:
@@ -23,6 +35,15 @@ def _serialize_result(result: FeolsResult) -> dict:
     return d
 
 
+def _backend_slug(backend: str) -> str:
+    slug = re.sub(r"[^A-Za-z0-9]+", "_", backend).strip("_").lower()
+    return slug or "backend"
+
+
+def _backend_output_csv(output_csv: Path, backend: str) -> Path:
+    return output_csv.with_name(f"{output_csv.stem}__{_backend_slug(backend)}.csv")
+
+
 def generate_datasets(
     dgps: list[DataGeneratorProtocol],
     sizes: list[int],
@@ -32,7 +53,6 @@ def generate_datasets(
     all_datasets: list[BenchmarkDataset] = []
     for dgp in dgps:
         for n in sizes:
-            print(f"[data] generating {dgp.dgp_name} n={n:,}")
             all_datasets.extend(dgp.generate(n=n, n_iters=n_iters, burn_in=burn_in))
     print(f"[data] {len(all_datasets)} datasets ready")
     return all_datasets
@@ -42,20 +62,40 @@ def run_benchmarks(
     benchmarkers: list[FeolsBenchmarkerProtocol],
     datasets: list[BenchmarkDataset],
     specs: list[FeolsSpec],
-) -> list[FeolsResult]:
-    all_results: list[FeolsResult] = []
-    for benchmarker in benchmarkers:
-        for spec in specs:
-            results = benchmarker.run(datasets, spec)
-            all_results.extend(results)
-    return all_results
-
-
-def export_and_plot(results: list[FeolsResult], output_csv: Path) -> None:
+    output_csv: Path,
+) -> pd.DataFrame:
     output_csv.parent.mkdir(parents=True, exist_ok=True)
-    results_df = pd.DataFrame([_serialize_result(r) for r in results])
-    results_df = results_df[results_df["iter_type"] != "burnin"].copy()
-    results_df.to_csv(output_csv, index=False)
+    frames: list[pd.DataFrame] = []
+    for benchmarker in benchmarkers:
+        csv_path = _backend_output_csv(output_csv, benchmarker.name)
+        if csv_path.exists():
+            print(f"[skip] {benchmarker.name}: {csv_path.name} already exists")
+            frames.append(pd.read_csv(csv_path))
+            continue
+        backend_results: list[FeolsResult] = []
+        for spec in specs:
+            spec_datasets = [dataset for dataset in datasets if dataset.k >= spec.k]
+            backend_results.extend(benchmarker.run(spec_datasets, spec))
+        if not backend_results:
+            continue
+        df = pd.DataFrame([_serialize_result(r) for r in backend_results])
+        df = df[df["iter_type"] != "burnin"].copy()
+        df.to_csv(csv_path, index=False)
+        frames.append(df)
+    return pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
 
+
+def plot_results(
+    results_df: pd.DataFrame,
+    output_csv: Path,
+    *,
+    figure_dir: Path | None = None,
+    figure_backends: list[str] | None = None,
+) -> None:
     plot_df = results_df[results_df["success"] & results_df["time"].notna()].copy()
-    plot_benchmarks(plot_df, output_csv.with_suffix(".png"))
+    plot_benchmarks(
+        plot_df,
+        output_csv.with_suffix(".png"),
+        figure_dir=figure_dir,
+        figure_backends=figure_backends,
+    )

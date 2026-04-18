@@ -262,8 +262,6 @@ Thanks for showing interest in contributing to `pyfixest`! We appreciate all
 contributions and constructive feedback, whether that be reporting bugs, requesting
 new features, or suggesting improvements to documentation.
 
-**Upcoming:** We're hosting a [PyFixest Sprint in Heilbronn](https://pyfixest.org/pyfixest-sprint.html) with [AppliedAI](https://www.appliedai.de/) in late February/early March 2026. Interested in joining? [Learn more and get in touch](https://pyfixest.org/pyfixest-sprint.html).
-
 If you'd like to get involved, but are not yet sure how, please feel free to send us an [email](alexander-fischer1801@t-online.de). Some familiarity with
 either Python or econometrics will help, but you really don't need to be a `numpy` core developer or have published in [Econometrica](https://onlinelibrary.wiley.com/journal/14680262) =) We'd be more than happy to invest time to help you get started!
 
@@ -341,6 +339,8 @@ Thanks goes to these wonderful people:
       <td align="center" valign="top" width="12.5%"><a href="https://github.com/mdizadi"><img src="https://avatars.githubusercontent.com/u/16979129?v=4?s=40" width="40px;" alt="mdizadi"/><br /><sub><b>mdizadi</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=mdizadi" title="Documentation">📖</a></td>
       <td align="center" valign="top" width="12.5%"><a href="https://tmensinger.com"><img src="https://avatars.githubusercontent.com/u/39708667?v=4?s=40" width="40px;" alt="Tim Mensinger"/><br /><sub><b>Tim Mensinger</b></sub></a><br /><a href="#infra-timmens" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a></td>
       <td align="center" valign="top" width="12.5%"><a href="https://nicholasjunge.com"><img src="https://avatars.githubusercontent.com/u/54248170?v=4?s=40" width="40px;" alt="Nicholas Junge"/><br /><sub><b>Nicholas Junge</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=nicholasjng" title="Code">💻</a> <a href="#infra-nicholasjng" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="https://portfolio-abelaba.vercel.app/"><img src="https://avatars.githubusercontent.com/u/61546411?v=4?s=40" width="40px;" alt="Abel Abate"/><br /><sub><b>Abel Abate</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=abelaba" title="Code">💻</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="http://janfb.github.io"><img src="https://avatars.githubusercontent.com/u/11921527?v=4?s=40" width="40px;" alt="Jan Teusen (né Boelts)"/><br /><sub><b>Jan Teusen (né Boelts)</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=janfb" title="Code">💻</a></td>
     </tr>
   </tbody>
 </table>
