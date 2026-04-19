@@ -20,9 +20,7 @@ def test_build_styles_assigns_distinct_style_to_full_backend_set() -> None:
     ]
 
     styles = plotting._build_styles(backends)
-    style_pairs = [
-        (style["color"], style["marker"]) for style in styles.values()
-    ]
+    style_pairs = [(style["color"], style["marker"]) for style in styles.values()]
 
     assert len(style_pairs) == len(set(style_pairs))
     assert (
