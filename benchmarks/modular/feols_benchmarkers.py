@@ -10,6 +10,7 @@ import tempfile
 import time
 import warnings
 from collections.abc import Sequence
+from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -38,10 +39,8 @@ def _trim_process_memory(demeaner_backend: str) -> None:
                 torch.cuda.ipc_collect()
 
     if sys.platform.startswith("linux"):
-        try:
+        with suppress(Exception):
             ctypes.CDLL("libc.so.6").malloc_trim(0)
-        except Exception:
-            pass
 
 
 @dataclass(frozen=True)
