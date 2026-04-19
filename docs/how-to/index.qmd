@@ -6,7 +6,7 @@ aliases:
 listing:
   type: grid
   contents:
-    - fixed-effects-solvers.qmd
+    #- fixed-effects-solvers.qmd
     - performance-optimization.qmd
     - marginaleffects.qmd
     - regression_decomposition.qmd
