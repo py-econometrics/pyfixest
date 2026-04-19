@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import ctypes
+import gc
 import json
 import statistics
 import subprocess
@@ -19,6 +21,37 @@ except ImportError:
     from interfaces import BenchmarkDataset, FeolsResult, FeolsSpec
 
 _MIN_DGP_WIDTH = 16
+
+
+def _trim_process_memory() -> None:
+    """Return unused Python and native allocator memory after large benchmark cases."""
+    gc.collect()
+
+    try:
+        import torch
+    except ImportError:
+        pass
+    else:
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            torch.cuda.ipc_collect()
+
+    try:
+        import cupy
+    except ImportError:
+        pass
+    else:
+        try:
+            cupy.get_default_memory_pool().free_all_blocks()
+            cupy.get_default_pinned_memory_pool().free_all_blocks()
+        except Exception:
+            pass
+
+    if sys.platform.startswith("linux"):
+        try:
+            ctypes.CDLL("libc.so.6").malloc_trim(0)
+        except Exception:
+            pass
 
 
 @dataclass(frozen=True)
@@ -245,6 +278,7 @@ class PyFeolsBenchmarkerFullApi:
 
         for dataset in datasets:
             n_obs_for_result = dataset.n_obs
+            df = None
             try:
                 df = pd.read_parquet(dataset.data_path, columns=all_cols)
                 n_obs_for_result = len(df)
@@ -285,6 +319,9 @@ class PyFeolsBenchmarkerFullApi:
                     error=str(exc),
                     n_obs_override=n_obs_for_result,
                 )
+            finally:
+                del df
+                _trim_process_memory()
 
             results.append(result)
 
