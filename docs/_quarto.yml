@@ -72,8 +72,10 @@ website:
         - text: "All Guides"
           file: how-to/index.qmd
         - text: "---"
-        - text: "Choosing and Reusing Fixed-Effects Solvers"
-          file: how-to/fixed-effects-solvers.qmd
+        - text: "Performance Optimization"
+          file: how-to/performance-optimization.qmd
+        #- text: "Choosing and Reusing Fixed-Effects Solvers"
+        #  file: how-to/fixed-effects-solvers.qmd
         - text: "Marginal Effects & Hypothesis Testing"
           file: how-to/marginaleffects.qmd
         - text: "Regression Decomposition"

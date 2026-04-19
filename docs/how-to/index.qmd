@@ -7,6 +7,7 @@ listing:
   type: grid
   contents:
     - fixed-effects-solvers.qmd
+    - performance-optimization.qmd
     - marginaleffects.qmd
     - regression_decomposition.qmd
     - pyfixest_gpu.qmd

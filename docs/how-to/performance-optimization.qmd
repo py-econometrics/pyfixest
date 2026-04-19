@@ -1,11 +1,394 @@
 ---
-title: Performance Optimization
+title: "Performance Optimization"
+description: "Speed up fixed-effects estimation by choosing the right solver, caching demeaned data, reusing preconditioners, and leveraging GPU acceleration."
+categories: [Performance, Fixed Effects]
 aliases:
   - /performance-optimization.html
 jupyter: python3
 ---
 
-- Use different demeaner: explain demaner backend and strengths (MAP vs cg-within) - reuse benchmarks from "when are fixed effects hard". introduce new backend api
-- GPU vs CPU - leave benchmarks open, these are tba. explain that extra deps need to be added (cupy, jax, torch, etc.) and that these are not installed by default. explain how to install them.
-- Multiple Estimation: cache already demeand fixed effects. Show benchmark of 10 individual regressions vs one multi estimation of the same
-- Preconditioner Reuse (non-stale or stale): initial fit, fit of new model, fit of new model with stale preconditioner. show benchmarks.
+Are you running a regression with `PyFixest`, but it is just taking too long? Here we collect some strategies to speed up estimation.
+
+In a first step, we create two large panel data sets - in the simple data generating process, the fixed effects are "well connected" - this might be a standard balanced panel with unit and time fixed effects. Connectedness here simply means that every "unit" is observed in every "time period". In the "difficult" dgp, the fixed effects are sparsely connected - for example, in a worker firm panel, workers might mostly stay with their initial employer and rarely move across firms. This creates a sparse bipartite graph of fixed effects.
+
+
+```{python}
+import time
+
+import numpy as np
+import pandas as pd
+
+import pyfixest as pf
+from benchmarks.modular.dgp_functions import base_dgp
+
+
+def timeit_mean(fn, n=3):
+    times = []
+    for _ in range(n):
+        start = time.perf_counter()
+        fn()
+        times.append(time.perf_counter() - start)
+    return float(np.mean(times))
+
+rng = np.random.default_rng(123)
+
+panel_simple = base_dgp(n=300_000, type_="simple", k=10, max_k=10, seed=42)
+panel_difficult = base_dgp(n=300_000, type_="difficult", k=10, max_k=10, seed=42)
+
+for panel in (panel_simple, panel_difficult):
+    panel["Y_binary"] = (panel["y"] > panel["y"].median()).astype(int)
+    panel["Y_opt"] = panel["y"] + rng.normal(0, 0.2, size=len(panel))
+```
+
+## Know your Data: Choosing a Demeaner Backend based on the Graph Structure
+
+The most impactful choice for improving performance is the choice of the demeaning algorithm. PyFixest offers two main algorithmic strategies for demeaning:
+
+- **MAP (Method of Alternating Projections)** iteratively demeans each fixed-effect dimensions one at a time. Each iteration is cheap, and convergence is fast when the bipartite graph of fixed effects is well-connected (many movers, cross-cutting factors).
+
+- **CG-Within (Krylov solver with Schwarz preconditioning)** builds a
+  preconditioner from the cross-tabulation structure of all fixed-effect
+  dimensions and then solves the system with a conjugate-gradient method.
+  The preconditioner setup can be expensive, but the solver converges quickly
+  even on sparse fixed-effect networks where MAP struggles.
+
+| Graph structure | Recommended | API (shorthand) | API (typed) |
+|---|---|---|---|
+| Dense (many movers, cross-cutting FEs) | MAP | `demeaner_backend="rust"` | `pf.MapDemeaner(backend="rust")` |
+| Sparse (few movers, nested FEs, strong sorting) | CG-Within | `demeaner_backend="within"` | `pf.WithinDemeaner()` |
+
+The benchmarks below (from
+[When Are Fixed Effects Problems Difficult?](../explanation/difficult-fixed-effects.md))
+illustrate the difference. On a well-connected graph both backends perform
+similarly:
+
+![Well-connected graph benchmarks](../explanation/figures/base-benchmarks/bench_simple.png)
+
+On a sparse graph, MAP convergence degrades sharply while CG-Within stays fast:
+
+![Sparse graph benchmarks](../explanation/figures/base-benchmarks/bench_difficult.png)
+
+Both backends produce identical coefficients:
+
+```{python}
+fml = "y ~ x1 + x2 | indiv_id + firm_id + year"
+
+fit_map = pf.feols(fml, data=panel_simple, demeaner=pf.MapDemeaner(backend="rust"))
+fit_within = pf.feols(fml, data=panel_simple, demeaner=pf.WithinDemeaner())
+
+pf.etable([fit_map, fit_within], model_heads=["MAP (rust)", "CG-Within"], digits = 6)
+```
+
+### Additive vs Multiplicative Schwarz Preconditioner
+
+The CG-Within backend supports two Schwarz preconditioner variants:
+
+- **Additive Schwarz** (default): applies sub-block solves in parallel and sums
+  the corrections. Paired with the symmetric CG Krylov solver.
+- **Multiplicative Schwarz**: applies sub-block solves sequentially, feeding
+  each correction into the next. Takes longer to set up, but leads to
+  convergence in fewer iterations. Requires the non-symmetric GMRES solver.
+
+On difficult problems (sparse graphs, nested fixed effects), the multiplicative
+variant can converge noticeably faster, albeit at a higher per-iteration cost. The benchmark below compares the two on the difficult DGP:
+
+```{python}
+fml_difficult = "y ~ x1 + x2 + x3 | indiv_id + firm_id + year"
+
+time_additive = timeit_mean(
+    lambda: pf.feols(
+        fml_difficult,
+        data=panel_difficult,
+        demeaner=pf.WithinDemeaner(
+            preconditioner_type="additive",
+        ),
+    )
+)
+
+time_multiplicative = timeit_mean(
+    lambda: pf.feols(
+        fml_difficult,
+        data=panel_difficult,
+        demeaner=pf.WithinDemeaner(
+            krylov_method="gmres",
+            preconditioner_type="multiplicative",
+        ),
+    )
+)
+
+pd.DataFrame({
+    "Preconditioner": ["Additive (CG)", "Multiplicative (GMRES)"],
+    "Time (s)": [f"{time_additive:.3f}", f"{time_multiplicative:.3f}"],
+    "Speedup": ["1.0x", f"{time_additive / time_multiplicative:.1f}x"],
+})
+```
+
+::: {.callout-tip}
+## When to use multiplicative Schwarz
+Try `preconditioner_type="multiplicative"` when you have a **sparse, difficult**
+fixed-effects structure (e.g. worker-firm panels with low mobility). On
+well-connected graphs the additive default is usually fast enough.
+Note that multiplicative Schwarz requires `krylov_method="gmres"`.
+:::
+
+Note that here, the multiplicative Schwarz leads to a longer runtime than additive - the larger setup cost does not amortize. Nevertheless, if you have a very difficult problem, we recommend that you try both the additive and multiplicative Schwarz to see which one converges faster.
+
+For detailed demeaner configuration (tolerance, max iterations, Krylov method,
+preconditioner type), see
+[Choosing and Reusing Fixed-Effects Solvers](fixed-effects-solvers.qmd).
+
+## Multi-Estimation Caching
+
+For many non-trivial fixed effects problem, a majority of the runtime is spent in the demeaning step. In applied research, it is common to estimate multiple related models that share the same set of fixed effects and only differ in their set of regressors or dependent variables. In this case, it is possible to cache the demeaned data from the first model run and reuse it for subsequent models. This process is implemented behind the scenes in `PyFixest` whenever you use multi-estimation syntax (e.g. `csw0()`, `sw()`, multiple dependent variables, etc.) within a single `feols()` call.
+
+For this benchmark we use the **difficult** DGP together with the **MAP**
+backend. This is the setting where multi-estimation caching is most valuable:
+when MAP spends a lot of time demeaning on a hard sparse graph, avoiding
+redundant demeaning work across related models can generate sizeable gains. (Note that of course it would be much more efficient to simply switch to the `within` backend for this problem.)
+
+In the benchmark below, we build ten nested specifications that all share the same outcome variable, sample, and fixed effects, while only adding one regressor at a time. We then compare the runtime of ten separate `feols()` calls (no caching) to a single multi-estimation call that includes all ten specifications (with caching).
+
+```{python}
+# Build ten nested specifications that all reuse the same outcome, sample,
+# and fixed effects, while only adding one regressor at a time.
+rhs_terms = [f"x{i}" for i in range(1, 11)]
+separate_formulas = [
+    f"Y_opt ~ {' + '.join(rhs_terms[:i])} | indiv_id + firm_id + year"
+    for i in range(1, 11)
+]
+
+# Approach 1: ten separate feols() calls — no caching across models
+time_separate = timeit_mean(
+    lambda: [
+        pf.feols(fml, data=panel_difficult, demeaner=pf.MapDemeaner(backend="rust"))
+        for fml in separate_formulas
+    ]
+)
+```
+
+```{python}
+# Approach 2: one multi-estimation call — caching kicks in
+multi_formula = (
+    "Y_opt ~ x1 + csw0(x2, x3, x4, x5, x6, x7, x8, x9, x10)"
+    " | indiv_id + firm_id + year"
+)
+time_multi = timeit_mean(
+    lambda: pf.feols(
+        multi_formula,
+        data=panel_difficult,
+        demeaner=pf.MapDemeaner(backend="rust"),
+    )
+)
+```
+
+```{python}
+pd.DataFrame({
+    "Approach": ["10 separate feols() calls", "1 multi-estimation call"],
+    "Time (s)": [f"{time_separate:.3f}", f"{time_multi:.3f}"],
+    "Speedup": ["1.0x", f"{time_separate / time_multi:.1f}x"],
+})
+```
+
+::: {.callout-tip}
+## When does caching help?
+Caching will help whenever you fit multiple models with the same fixed effects structure and many overlapping covariates / dependent variables. If the models have different fixed effects or are run on slightly different samples, then each model will trigger a fresh demeaning step and caching will not help. If the cost of demeaning is low relative to the setup and solve steps of the problem, then caching will also have a smaller impact on total runtime.
+:::
+
+## Preconditioner Reuse
+
+For the `WithinDemeaner`, PyFixest can reuse the Schwarz preconditioner across
+fits. Once built, it is stored on `fit.preconditioner_` and can be passed into
+subsequent fits to skip the preconditioner setup step. When using multi-estimation syntax, the preconditioner from the first model is automatically reused for subsequent models that share the same fixed effects and sample.
+
+Preconditioner reuse is a more flexible but less "clean" form of caching than the multi-estimation approach above. The preconditioner can be reused across models with different dependent variables and regressors. In other words, it is possible to use "stale" preconditioners that were built on slightly different samples, and these may - but do not guarantee to - speed up convergence compared to building a fresh preconditioner.
+
+The reuse of preconditioners is particularly valuable when the preconditioner setup takes a large share of the total runtime, which happens to be the case on dense, well-connected graphs.
+
+To reuse a preconditioner, we first need to fit one model to build it, and then we can pass it into subsequent fits:
+
+```{python}
+#| eval: false
+# Step 1: fit one model — the preconditioner is stored on the result
+fit1 = pf.feols(
+    "y ~ x1 + x2 + x3 | indiv_id + firm_id + year",
+    data=panel_simple,
+    demeaner=pf.WithinDemeaner(),
+)
+
+# Step 2: reuse the preconditioner for a different outcome
+fit2 = pf.feols(
+    "Y_binary ~ x1 + x2 + x3 | indiv_id + firm_id + year",
+    data=panel_simple,
+    demeaner=pf.WithinDemeaner(preconditioner=fit1.preconditioner_),
+)
+```
+
+The table below compares cold starts (fresh preconditioner) to warm starts
+(reused preconditioner) for both preconditioner types on both DGPs:
+
+```{python}
+#| code-fold: true
+#| code-summary: "Benchmark code"
+fml_y1 = "y ~ x1 + x2 + x3 | indiv_id + firm_id + year"
+fml_y_binary = "Y_binary ~ x1 + x2 + x3 | indiv_id + firm_id + year"
+
+demeaner_additive = pf.WithinDemeaner(preconditioner_type="additive")
+demeaner_multiplicative = pf.WithinDemeaner(
+    krylov_method="gmres", preconditioner_type="multiplicative"
+)
+
+# Simple DGP
+fit_add = pf.feols(fml_y1, data=panel_simple, demeaner=demeaner_additive)
+fit_mul = pf.feols(fml_y1, data=panel_simple, demeaner=demeaner_multiplicative)
+
+time_add_cold = timeit_mean(
+    lambda: pf.feols(fml_y_binary, data=panel_simple, demeaner=demeaner_additive)
+)
+time_add_warm = timeit_mean(
+    lambda: pf.feols(
+        fml_y_binary,
+        data=panel_simple,
+        demeaner=pf.WithinDemeaner(preconditioner=fit_add.preconditioner_),
+    )
+)
+time_mul_cold = timeit_mean(
+    lambda: pf.feols(fml_y_binary, data=panel_simple, demeaner=demeaner_multiplicative)
+)
+time_mul_warm = timeit_mean(
+    lambda: pf.feols(
+        fml_y_binary,
+        data=panel_simple,
+        demeaner=pf.WithinDemeaner(
+            krylov_method="gmres",
+            preconditioner=fit_mul.preconditioner_,
+        ),
+    )
+)
+
+# Difficult DGP
+fit_add_diff = pf.feols(fml_y1, data=panel_difficult, demeaner=demeaner_additive)
+fit_mul_diff = pf.feols(fml_y1, data=panel_difficult, demeaner=demeaner_multiplicative)
+
+time_diff_add_cold = timeit_mean(
+    lambda: pf.feols(fml_y_binary, data=panel_difficult, demeaner=demeaner_additive)
+)
+time_diff_add_warm = timeit_mean(
+    lambda: pf.feols(
+        fml_y_binary,
+        data=panel_difficult,
+        demeaner=pf.WithinDemeaner(preconditioner=fit_add_diff.preconditioner_),
+    )
+)
+time_diff_mul_cold = timeit_mean(
+    lambda: pf.feols(fml_y_binary, data=panel_difficult, demeaner=demeaner_multiplicative)
+)
+time_diff_mul_warm = timeit_mean(
+    lambda: pf.feols(
+        fml_y_binary,
+        data=panel_difficult,
+        demeaner=pf.WithinDemeaner(
+            krylov_method="gmres",
+            preconditioner=fit_mul_diff.preconditioner_,
+        ),
+    )
+)
+
+pd.DataFrame({
+    "DGP": ["simple", "simple", "difficult", "difficult"],
+    "Preconditioner": ["Additive", "Multiplicative", "Additive", "Multiplicative"],
+    "Cold (s)": [
+        f"{time_add_cold:.3f}", f"{time_mul_cold:.3f}",
+        f"{time_diff_add_cold:.3f}", f"{time_diff_mul_cold:.3f}",
+    ],
+    "Warm (s)": [
+        f"{time_add_warm:.3f}", f"{time_mul_warm:.3f}",
+        f"{time_diff_add_warm:.3f}", f"{time_diff_mul_warm:.3f}",
+    ],
+    "Warm-Start Speedup": [
+        f"{time_add_cold / time_add_warm:.2f}x",
+        f"{time_mul_cold / time_mul_warm:.2f}x",
+        f"{time_diff_add_cold / time_diff_add_warm:.2f}x",
+        f"{time_diff_mul_cold / time_diff_mul_warm:.2f}x",
+    ],
+})
+```
+
+Warm-start gains are largest on **dense, well-connected** graphs (the simple
+DGP) because the preconditioner setup takes a larger share of total runtime.
+
+For details on when a preconditioner becomes stale, how to persist
+preconditioners with `pickle`, and the full `WithinDemeaner` API, see
+[Choosing and Reusing Fixed-Effects Solvers](fixed-effects-solvers.qmd).
+
+
+## GPU Acceleration
+
+PyFixest supports GPU acceleration for the demeaning step through several
+backends. GPU acceleration is most beneficial for large problems (hundreds
+of thousands to millions of observations). None of the supported GPU backends are
+installed by default - you need to add the relevant dependency.
+
+For GPU acceleration, we support demeaning via the LSMR algorithm, which is a Krylov method that can be efficiently implemented on the GPU, and an implementation of the MAP algorithm via JAX.
+
+| Backend | Algorithm | GPU | Install |
+|---|---|---|---|
+| `"jax"` | MAP | NVIDIA / TPU | `pip install pyfixest[jax]` |
+| `"cupy"` | Sparse LSMR (float64) | NVIDIA CUDA | `pip install cupy-cuda12x` |
+| `"cupy32"` | Sparse LSMR (float32) | NVIDIA CUDA | `pip install cupy-cuda12x` |
+| `"torch_cuda"` | Sparse LSMR (float64) | NVIDIA CUDA | `pip install torch` |
+| `"torch_cuda32"` | Sparse LSMR (float32) | NVIDIA CUDA | `pip install torch` |
+| `"torch_mps"` | Sparse LSMR (float32) | Apple Silicon | `pip install torch` |
+
+For CuPy, you need to match the package to your CUDA driver version: `cupy-cuda11x`,
+`cupy-cuda12x`, or `cupy-cuda13x`.
+
+```{python}
+#| eval: false
+
+# JAX on GPU
+fit_jax = pf.feols(fml, data=panel_simple, demeaner_backend="jax")
+
+# CuPy on GPU (float32 for speed, float64 for precision)
+fit_cupy = pf.feols(fml, data=panel_simple, demeaner_backend="cupy32")
+
+# PyTorch with auto device detection
+fit_torch = pf.feols(fml, data=panel_simple, demeaner_backend="torch")
+
+# Typed config for full control
+fit_lsmr = pf.feols(
+    fml_y1,
+    data=panel_simple,
+    demeaner=pf.LsmrDemeaner(implementation="cupy", precision="float32"),
+)
+```
+
+::: {.callout-note}
+## GPU benchmarks: coming soon
+Detailed GPU vs CPU benchmarks across problem sizes are in progress and will
+be added here. Based on initial benchmarking, for very difficult fixed effects structures, the `within` algorithm performs just as good or better than GPU-accelerated alternatives (see e.g. [this issue](https://github.com/py-econometrics/pyfixest/issues/1042#issuecomment-4106985630)).
+:::
+
+For JAX-specific benchmarks, see
+[PyFixest on the GPU via JAX](pyfixest_gpu.qmd). For CuPy benchmarks and
+setup, see
+[PyFixest on the GPU via CuPy](../pyfixest-gpu-cupy.ipynb).
+
+
+## Reducing Memory with `lean=True`
+
+By default, PyFixest keeps large intermediate arrays and data frames (demeaned data, residuals,
+weights, etc.) on each fitted model. When estimating many models, this can
+add up and lead to out-of-memory errors. Setting `lean=True` drops these after estimation, keeping only the coefficients and summary statistics:
+
+```{python}
+#| eval: false
+fit = pf.feols(
+    "y + Y_binary ~ x1 + x2 | indiv_id + firm_id + year",
+    data=panel_simple,
+    lean=True,
+    vcov="hetero",  # compute SEs at estimation time
+)
+```
+
+The trade-off is that post-estimation methods like `predict()` and `vcov()`
+are no longer available. In general, we are discussing if we should make `lean = True` the default, with explicit opt-in requirements for users who want to keep the full model object. If you have thoughts on this, please don't hesitate to reach out!
