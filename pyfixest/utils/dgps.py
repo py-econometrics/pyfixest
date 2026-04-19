@@ -19,10 +19,10 @@ def get_ivf_data(N=2000, seed=1234):
         TRUE_EFFECT = -0.15
 
     OVB formula for naive OLS (earnings ~ num_children):
-        bias ≈ γ_ambition * Cov(num_children, ambition) / Var(num_children)
+        bias ≈ gamma_ambition * Cov(num_children, ambition) / Var(num_children)
              ≈ 0.6 * (-0.4) / 0.57 ≈ -0.42
-        β_OLS ≈ -0.15 + (-0.42) ≈ -0.57   (overstates the penalty)
-        β_IV  ≈ -0.15                        (recovers the true effect)
+        beta_OLS ≈ -0.15 + (-0.42) ≈ -0.57   (overstates the penalty)
+        beta_IV  ≈ -0.15                        (recovers the true effect)
 
     Parameters
     ----------
