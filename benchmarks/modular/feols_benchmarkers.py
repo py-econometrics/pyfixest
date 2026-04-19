@@ -23,29 +23,19 @@ except ImportError:
 _MIN_DGP_WIDTH = 16
 
 
-def _trim_process_memory() -> None:
+def _trim_process_memory(demeaner_backend: str) -> None:
     """Return unused Python and native allocator memory after large benchmark cases."""
     gc.collect()
 
-    try:
-        import torch
-    except ImportError:
-        pass
-    else:
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-            torch.cuda.ipc_collect()
-
-    try:
-        import cupy
-    except ImportError:
-        pass
-    else:
+    if demeaner_backend.startswith("torch"):
         try:
-            cupy.get_default_memory_pool().free_all_blocks()
-            cupy.get_default_pinned_memory_pool().free_all_blocks()
-        except Exception:
+            import torch
+        except ImportError:
             pass
+        else:
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+                torch.cuda.ipc_collect()
 
     if sys.platform.startswith("linux"):
         try:
@@ -321,7 +311,7 @@ class PyFeolsBenchmarkerFullApi:
                 )
             finally:
                 del df
-                _trim_process_memory()
+                _trim_process_memory(self._demeaner_backend)
 
             results.append(result)
 
