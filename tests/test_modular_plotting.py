@@ -6,6 +6,34 @@ import benchmarks.modular.plotting as plotting
 from benchmarks.modular.plotting import plot_benchmarks
 
 
+def test_build_styles_assigns_distinct_style_to_full_backend_set() -> None:
+    backends = [
+        "FEM.jl (lsmr)",
+        "fixest-map",
+        "pyfixest (cupy32)",
+        "pyfixest (jax)",
+        "pyfixest (rust-cg)",
+        "pyfixest (rust-map)",
+        "pyfixest (scipy-lsmr)",
+        "pyfixest (torch-cpu)",
+        "pyfixest (torch-cuda)",
+    ]
+
+    styles = plotting._build_styles(backends)
+    style_pairs = [
+        (style["color"], style["marker"]) for style in styles.values()
+    ]
+
+    assert len(style_pairs) == len(set(style_pairs))
+    assert (
+        styles["FEM.jl (lsmr)"]["color"],
+        styles["FEM.jl (lsmr)"]["marker"],
+    ) != (
+        styles["pyfixest (torch-cuda)"]["color"],
+        styles["pyfixest (torch-cuda)"]["marker"],
+    )
+
+
 def test_plot_benchmarks_writes_one_figure_per_generic_dgp(tmp_path: Path):
     results_df = pd.DataFrame(
         {
