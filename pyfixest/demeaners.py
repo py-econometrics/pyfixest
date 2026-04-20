@@ -1,0 +1,160 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+from numbers import Integral, Real
+from typing import ClassVar, Literal, cast, get_args
+
+MapBackend = Literal["numba", "rust", "jax"]
+WithinKrylovMethod = Literal["cg", "gmres"]
+PreconditionerType = Literal["additive", "multiplicative"]
+LsmrBackend = Literal["cupy", "torch"]
+LsmrPrecision = Literal["float32", "float64"]
+TorchDevice = Literal["auto", "cpu", "mps", "cuda"]
+
+
+def _validate_positive_float(value: float, name: str) -> None:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise TypeError(f"`{name}` must be a real number.")
+    if value <= 0:
+        raise ValueError(f"`{name}` must be strictly positive.")
+
+
+def _validate_positive_int(value: int, name: str) -> None:
+    if isinstance(value, bool) or not isinstance(value, Integral):
+        raise TypeError(f"`{name}` must be an int.")
+    if value <= 0:
+        raise ValueError(f"`{name}` must be strictly positive.")
+
+
+@dataclass(frozen=True, slots=True)
+class BaseDemeaner:
+    """Base configuration shared by all fixed-effects demeaners."""
+
+    fixef_tol: float = 1e-06
+    fixef_maxiter: int = 10_000
+    kind: ClassVar[str]
+
+    def __post_init__(self) -> None:
+        _validate_positive_float(self.fixef_tol, "fixef_tol")
+        _validate_positive_int(self.fixef_maxiter, "fixef_maxiter")
+
+
+@dataclass(frozen=True, slots=True)
+class MapDemeaner(BaseDemeaner):
+    """Alternating-projections demeaner with selectable implementation backend."""
+
+    backend: MapBackend = "numba"
+    kind: ClassVar[str] = "map"
+
+    def __post_init__(self) -> None:
+        BaseDemeaner.__post_init__(self)
+        if not isinstance(self.backend, str):
+            raise TypeError("`backend` must be a string.")
+        if self.backend not in get_args(MapBackend):
+            raise ValueError(f"`backend` must be one of {get_args(MapBackend)}.")
+
+
+@dataclass(frozen=True, slots=True)
+class WithinDemeaner(BaseDemeaner):
+    """Krylov-based demeaner configuration for the Rust `within` backend."""
+
+    krylov_method: WithinKrylovMethod = "cg"
+    gmres_restart: int = 30
+    preconditioner_type: PreconditionerType | None = None
+    kind: ClassVar[str] = "within"
+
+    @property
+    def effective_preconditioner_type(self) -> PreconditionerType:
+        """Return the validated preconditioner type used for within solves."""
+        if self.preconditioner_type is None:
+            return cast(PreconditionerType, "additive")
+        return self.preconditioner_type
+
+    def __post_init__(self) -> None:
+        BaseDemeaner.__post_init__(self)
+        if not isinstance(self.krylov_method, str):
+            raise TypeError("`krylov_method` must be a string.")
+        if self.krylov_method not in get_args(WithinKrylovMethod):
+            raise ValueError(f"`krylov_method` must be one of {get_args(WithinKrylovMethod)}.")
+        _validate_positive_int(self.gmres_restart, "gmres_restart")
+        if self.preconditioner_type is not None:
+            if not isinstance(self.preconditioner_type, str):
+                raise TypeError("`preconditioner_type` must be a string.")
+            if self.preconditioner_type not in get_args(PreconditionerType):
+                raise ValueError(f"`preconditioner_type` must be one of {get_args(PreconditionerType)}.")
+
+        if (
+            self.effective_preconditioner_type == "multiplicative"
+            and self.krylov_method != "gmres"
+        ):
+            raise ValueError("Multiplicative Schwarz requires `krylov_method='gmres'`.")
+
+
+@dataclass(frozen=True, slots=True)
+class LsmrDemeaner(BaseDemeaner):
+    """Sparse LSMR demeaner for CuPy/SciPy and PyTorch backends."""
+
+    backend: LsmrBackend = "cupy"
+    precision: LsmrPrecision = "float64"
+    device: TorchDevice = "auto"
+    solver_atol: float = 1e-8
+    solver_btol: float = 1e-8
+    warn_on_cpu_fallback: bool = True
+    use_preconditioner: bool = True
+    kind: ClassVar[str] = "lsmr"
+
+    def __post_init__(self) -> None:
+        BaseDemeaner.__post_init__(self)
+        if not isinstance(self.backend, str):
+            raise TypeError("`backend` must be a string.")
+        if self.backend not in get_args(LsmrBackend):
+            raise ValueError(
+                f"`backend` must be one of {get_args(LsmrBackend)}."
+            )
+
+        if not isinstance(self.precision, str):
+            raise TypeError("`precision` must be a string.")
+        if self.precision not in get_args(LsmrPrecision):
+            raise ValueError(f"`precision` must be one of {get_args(LsmrPrecision)}.")
+
+        if not isinstance(self.device, str):
+            raise TypeError("`device` must be a string.")
+        if self.device not in get_args(TorchDevice):
+            raise ValueError(f"`device` must be one of {get_args(TorchDevice)}.")
+        _validate_positive_float(self.solver_atol, "solver_atol")
+        _validate_positive_float(self.solver_btol, "solver_btol")
+
+        if not isinstance(self.warn_on_cpu_fallback, bool):
+            raise TypeError("`warn_on_cpu_fallback` must be a bool.")
+        if not isinstance(self.use_preconditioner, bool):
+            raise TypeError("`use_preconditioner` must be a bool.")
+
+        if self.backend == "cupy" and self.device == "mps":
+            raise ValueError("The CuPy backend does not support MPS devices.")
+
+        if self.backend == "torch":
+            if self.device == "mps" and self.precision != "float32":
+                raise ValueError(
+                    "The MPS torch backend requires `precision='float32'`."
+                )
+            if not self.use_preconditioner:
+                raise ValueError(
+                    "The torch LSMR backend currently always uses preconditioning."
+                )
+
+
+AnyDemeaner = MapDemeaner | WithinDemeaner | LsmrDemeaner
+
+__all__ = [
+    "AnyDemeaner",
+    "BaseDemeaner",
+    "LsmrDemeaner",
+    "LsmrBackend",
+    "LsmrPrecision",
+    "MapBackend",
+    "MapDemeaner",
+    "PreconditionerType",
+    "TorchDevice",
+    "WithinDemeaner",
+    "WithinKrylovMethod",
+]

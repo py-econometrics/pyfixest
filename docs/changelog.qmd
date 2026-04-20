@@ -39,13 +39,13 @@ pip install --pre pyfixest
 
 ### New Demeaner Backend via the `within` package
 
-We recently came together for a PyFixest sprint with the team from AppliedAI, and one new feature that already made it's way into the code base is a new demeaner backend that performs really well for sparse fixed effects structures.
+We recently came together for a PyFixest sprint with the team from AppliedAI, and one new feature that already made it's way into the code base is a new typed demeaner configuration that performs really well for sparse fixed effects structures.
 
-The new backend can be accessed via the `rust-cg` demeaner backend and is a significant performance improvement for sparse fixed effects structures - such as matched employer-employee data, patient-doctor panels, or trade networks - where the standard MAP algorithm might struggle. On well-connected graphs, the existing `rust` (MAP) backend remains competitive, but on sparse graphs, `rust-cg` is dramatically faster.
+The new solver is exposed via `pf.WithinDemeaner()` and is a significant performance improvement for sparse fixed effects structures - such as matched employer-employee data, patient-doctor panels, or trade networks - where the standard MAP algorithm might struggle. On well-connected graphs, `pf.MapDemeaner(backend="rust")` remains competitive, but on sparse graphs the within-based solver is dramatically faster.
 
 ![](explanation/figures/base-benchmarks/bench_difficult.png){width=85% fig-align="center"}
 
-*Benchmark on a sparse fixed effects structure: vanilla MAP degrades dramatically, while CG-Schwarz (`rust-cg`) remains fast.*
+*Benchmark on a sparse fixed effects structure: vanilla MAP degrades dramatically, while CG-Schwarz via `pf.WithinDemeaner()` remains fast.*
 
 For a detailed explanation of why some fixed effects problems are harder than others and comprehensive benchmarks, see [When Are Fixed Effects Estimations Difficult?](explanation/difficult-fixed-effects.md).
 

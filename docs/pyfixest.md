@@ -87,12 +87,20 @@ pip install cupy-cuda12x
 pip install cupy-cuda13x
 ```
 
-Once installed, you can use GPU-accelerated demeaning by setting the `demean_backend` parameter:
+Once installed, you can use GPU-accelerated demeaning via the typed `demeaner` API:
 
 ```python
 # Use GPU with float32 and float64 precision
-pf.feols("Y ~ X1 | f1 + f2", data=data, demean_backend="cupy32")
-pf.feols("Y ~ X1 | f1 + f2", data=data, demean_backend="cupy64")
+pf.feols(
+    "Y ~ X1 | f1 + f2",
+    data=data,
+    demeaner=pf.LsmrDemeaner(backend="cupy", precision="float32"),
+)
+pf.feols(
+    "Y ~ X1 | f1 + f2",
+    data=data,
+    demeaner=pf.LsmrDemeaner(backend="cupy", precision="float64"),
+)
 ```
 
 ## Benchmarks

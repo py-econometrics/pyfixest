@@ -1,6 +1,12 @@
 from pyfixest.core.detect_singletons import (
     detect_singletons,
 )
+from pyfixest.demeaners import (
+    BaseDemeaner,
+    LsmrDemeaner,
+    MapDemeaner,
+    WithinDemeaner,
+)
 from pyfixest.estimation.api import (
     feglm,
     feols,
@@ -37,6 +43,7 @@ from pyfixest.estimation.post_estimation.multcomp import (
 from pyfixest.estimation.quantreg.quantreg_ import Quantreg
 
 __all__ = [
+    "BaseDemeaner",
     "Fegaussian",
     "Feiv",
     "Felogit",
@@ -44,7 +51,10 @@ __all__ = [
     "Fepois",
     "Feprobit",
     "FixestMulti",
+    "LsmrDemeaner",
+    "MapDemeaner",
     "Quantreg",
+    "WithinDemeaner",
     "bonferroni",
     "demean",
     "detect_singletons",

@@ -4,8 +4,8 @@ from typing import Any, Literal
 import numpy as np
 import pandas as pd
 
+from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
-from pyfixest.estimation.internals.literals import DemeanerBackendOptions
 from pyfixest.estimation.models.feglm_ import Feglm
 
 
@@ -34,7 +34,7 @@ class Felogit(Feglm):
             "scipy.sparse.linalg.lsqr",
             "jax",
         ],
-        demeaner_backend: DemeanerBackendOptions = "numba",
+        demeaner: AnyDemeaner | None = None,
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
@@ -59,7 +59,7 @@ class Felogit(Feglm):
             tol=tol,
             maxiter=maxiter,
             solver=solver,
-            demeaner_backend=demeaner_backend,
+            demeaner=demeaner,
             store_data=store_data,
             copy_data=copy_data,
             lean=lean,
