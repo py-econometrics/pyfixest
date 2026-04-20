@@ -7,12 +7,15 @@ from typing import Any, Literal
 import numpy as np
 import pandas as pd
 
+from pyfixest.demeaners import AnyDemeaner
 from pyfixest.errors import (
     NonConvergenceError,
 )
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
-from pyfixest.estimation.internals.backends import get_backend
-from pyfixest.estimation.internals.literals import DemeanerBackendOptions
+from pyfixest.estimation.internals.demean_ import (
+    _override_demeaner_tol,
+    dispatch_demean,
+)
 from pyfixest.estimation.internals.solvers import solve_ols
 from pyfixest.estimation.models.feols_ import (
     Feols,
@@ -49,7 +52,7 @@ class Feglm(Feols, ABC):
             "scipy.sparse.linalg.lsqr",
             "jax",
         ],
-        demeaner_backend: DemeanerBackendOptions = "numba",
+        demeaner: AnyDemeaner | None = None,
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
@@ -78,6 +81,7 @@ class Feglm(Feols, ABC):
             sample_split_var=sample_split_var,
             sample_split_value=sample_split_value,
             context=context,
+            demeaner=demeaner,
         )
 
         _glm_input_checks(
@@ -91,10 +95,6 @@ class Feglm(Feols, ABC):
         self.convergence = False
         self.separation_check = separation_check
         self._accelerate = accelerate
-
-        self._demeaner_backend = demeaner_backend
-        impl = get_backend(demeaner_backend)
-        self._demean_func = impl["demean"]
 
         self._support_crv3_inference = True
         self._support_iid_inference = True
@@ -228,7 +228,6 @@ class Feglm(Feols, ABC):
                         X_tilde,
                         self._coefnames,
                         self._collin_tol,
-                        backend_func=self._find_collinear_variables_func,
                     )
                 )
                 if self._collin_index:
@@ -407,24 +406,26 @@ class Feglm(Feols, ABC):
         X: np.ndarray,
         flist: np.ndarray,
         weights: np.ndarray,
-        tol: np.ndarray,
+        tol: float,
         maxiter: int,
     ) -> tuple[np.ndarray, np.ndarray]:
         "Residualize v and X by flist using weights."
         if flist is None:
             return v, X
-        else:
-            vX_tilde, success = self._demean_func(
-                x=np.c_[v, X],
-                flist=flist.astype(np.uintp),
-                weights=weights,
-                tol=tol,
-                maxiter=maxiter,
+
+        effective_demeaner = _override_demeaner_tol(self._demeaner, tol=tol)
+        vX_tilde, success = dispatch_demean(
+            x=np.c_[v, X],
+            flist=flist,
+            weights=weights.flatten(),
+            demeaner=effective_demeaner,
+        )
+
+        if success is False:
+            raise ValueError(
+                f"Demeaning failed after {effective_demeaner.fixef_maxiter} iterations."
             )
-            if success is False:
-                raise ValueError(f"Demeaning failed after {maxiter} iterations.")
-            else:
-                return vX_tilde[:, 0], vX_tilde[:, 1:]
+        return vX_tilde[:, 0], vX_tilde[:, 1:]
 
     def _check_convergence(
         self,
