@@ -75,13 +75,17 @@ class WithinDemeaner(BaseDemeaner):
         if not isinstance(self.krylov_method, str):
             raise TypeError("`krylov_method` must be a string.")
         if self.krylov_method not in get_args(WithinKrylovMethod):
-            raise ValueError(f"`krylov_method` must be one of {get_args(WithinKrylovMethod)}.")
+            raise ValueError(
+                f"`krylov_method` must be one of {get_args(WithinKrylovMethod)}."
+            )
         _validate_positive_int(self.gmres_restart, "gmres_restart")
         if self.preconditioner_type is not None:
             if not isinstance(self.preconditioner_type, str):
                 raise TypeError("`preconditioner_type` must be a string.")
             if self.preconditioner_type not in get_args(PreconditionerType):
-                raise ValueError(f"`preconditioner_type` must be one of {get_args(PreconditionerType)}.")
+                raise ValueError(
+                    f"`preconditioner_type` must be one of {get_args(PreconditionerType)}."
+                )
 
         if (
             self.effective_preconditioner_type == "multiplicative"
@@ -108,9 +112,7 @@ class LsmrDemeaner(BaseDemeaner):
         if not isinstance(self.backend, str):
             raise TypeError("`backend` must be a string.")
         if self.backend not in get_args(LsmrBackend):
-            raise ValueError(
-                f"`backend` must be one of {get_args(LsmrBackend)}."
-            )
+            raise ValueError(f"`backend` must be one of {get_args(LsmrBackend)}.")
 
         if not isinstance(self.precision, str):
             raise TypeError("`precision` must be a string.")
@@ -148,8 +150,8 @@ AnyDemeaner = MapDemeaner | WithinDemeaner | LsmrDemeaner
 __all__ = [
     "AnyDemeaner",
     "BaseDemeaner",
-    "LsmrDemeaner",
     "LsmrBackend",
+    "LsmrDemeaner",
     "LsmrPrecision",
     "MapBackend",
     "MapDemeaner",
