@@ -1,7 +1,7 @@
 import warnings
 from collections.abc import Callable, Mapping
 from functools import partial
-from typing import Any, cast
+from typing import Any, Literal, cast
 
 import numpy as np
 import pandas as pd
@@ -9,7 +9,6 @@ from scipy.linalg import cho_factor, solve_triangular
 from scipy.stats import norm
 
 from pyfixest.core.crv1 import crv1_vcov_qreg_loop
-from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.literals import (
     QuantregMethodOptions,
@@ -39,7 +38,7 @@ class Quantreg(Feols):
         fixef_maxiter: int,
         lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
         solver: SolverOptions = "np.linalg.solve",
-        demeaner: AnyDemeaner | None = None,
+        demeaner_backend: Literal["numba", "jax"] = "numba",
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
@@ -71,7 +70,7 @@ class Quantreg(Feols):
             sample_split_var=sample_split_var,
             sample_split_value=sample_split_value,
             context=context,
-            demeaner=demeaner,
+            demeaner_backend=demeaner_backend,
         )
 
         warnings.warn(

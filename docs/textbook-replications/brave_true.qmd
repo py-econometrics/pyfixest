@@ -33,7 +33,7 @@ panel_fit = pf.feols(
     fml="lwage ~ married + expersq + union + hours | nr + year",
     data=data_df,
     vcov={"CRV1": "nr + year"},
-    demeaner=pf.MapDemeaner(backend="rust"),
+    demeaner_backend="rust",
 )
 ```
 

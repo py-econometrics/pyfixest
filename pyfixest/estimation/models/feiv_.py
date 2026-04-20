@@ -6,9 +6,9 @@ from typing import Any, Literal
 import numpy as np
 import pandas as pd
 
-from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.demean_ import demean_model
+from pyfixest.estimation.internals.literals import DemeanerBackendOptions
 from pyfixest.estimation.internals.solvers import solve_ols
 from pyfixest.estimation.models.feols_ import Feols, _drop_multicollinear_variables
 
@@ -44,8 +44,9 @@ class Feiv(Feols):
     solver: Literal["np.linalg.lstsq", "np.linalg.solve", "scipy.linalg.solve",
         "scipy.sparse.linalg.lsqr", "jax"],
         default is "scipy.linalg.solve". Solver to use for the estimation.
-    demeaner : Optional[AnyDemeaner]
-        Resolved typed demeaner configuration.
+    demeaner_backend: DemeanerBackendOptions, optional
+        The backend to use for demeaning. Can be either "numba", "jax", or "rust".
+        Defaults to "numba".
     weights_name : Optional[str]
         Name of the weights variable.
     weights_type : Optional[str]
@@ -153,7 +154,7 @@ class Feiv(Feols):
             "scipy.sparse.linalg.lsqr",
             "jax",
         ] = "scipy.linalg.solve",
-        demeaner: AnyDemeaner | None = None,
+        demeaner_backend: DemeanerBackendOptions = "numba",
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
@@ -180,7 +181,7 @@ class Feiv(Feols):
             sample_split_var=sample_split_var,
             sample_split_value=sample_split_value,
             context=context,
-            demeaner=demeaner,
+            demeaner_backend=demeaner_backend,
         )
 
         self._is_iv = True
@@ -214,7 +215,9 @@ class Feiv(Feols):
                 self._weights.flatten(),
                 self._lookup_demeaned_data,
                 self._na_index,
-                self._demeaner,
+                self._fixef_tol,
+                self._fixef_maxiter,
+                self._demean_func,
             )
         else:
             self._endogvard = self._endogvar
@@ -232,6 +235,7 @@ class Feiv(Feols):
             self._Z,
             self._coefnames_z,
             self._collin_tol,
+            self._find_collinear_variables_func,
         )
 
     def get_fit(self) -> None:

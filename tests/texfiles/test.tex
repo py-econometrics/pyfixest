@@ -1,19 +1,19 @@
+\renewcommand\cellalign{t}
 \begin{threeparttable}
 \begingroup
-\renewcommand\cellalign{t}
 \renewcommand\arraystretch{1}
 \setlength{\tabcolsep}{3pt}
-\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}l>{\centering\arraybackslash}X>{\centering\arraybackslash}X}
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}X>{\centering\arraybackslash}X>{\centering\arraybackslash}X}
 \toprule
  & \multicolumn{2}{c}{Y} \\
 \cmidrule(lr){2-3}
  & (1) & (2) \\
 \midrule
 \addlinespace[1ex]
-X1 & \makecell{-0.95 \\ (0.047)} & \makecell{0.004 \\ (0.033)} \\
+X1 & \makecell{-0.95*** \\ (0.047)} & \makecell{0.004 \\ (0.033)} \\
 \addlinespace[0.5ex]
 \addlinespace[0.5ex]
-X2 & \makecell{-0.174 \\ (0.012)} & \makecell{-0.014 \\ (0.011)} \\
+X2 & \makecell{-0.174*** \\ (0.012)} & \makecell{-0.014 \\ (0.011)} \\
 \addlinespace[0.5ex]
 \addlinespace[0.5ex]
 f2 &  & \makecell{0.003 \\ (0.004)} \\
@@ -32,7 +32,8 @@ $R^2$ & 0.489 & - \\
 \bottomrule
 \end{tabularx}
 \endgroup
+\footnotesize
 \noindent\begin{minipage}{\linewidth}\smallskip\footnotesize
-Format of coefficient cell: Coefficient   (Std. Error)\end{minipage}
+Significance levels: * p < 0.05, ** p < 0.01, *** p < 0.001. Format of coefficient cell: Coefficient   (Std. Error)\end{minipage}
 
 \end{threeparttable}

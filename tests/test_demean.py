@@ -6,7 +6,6 @@ import pytest
 import pyfixest as pf
 from pyfixest.core import demean as demean_rs
 from pyfixest.core.demean import demean_within
-from pyfixest.demeaners import LsmrDemeaner, MapDemeaner, WithinDemeaner
 from pyfixest.estimation.cupy.demean_cupy_ import demean_cupy32, demean_cupy64
 from pyfixest.estimation.internals.backends import BACKENDS
 from pyfixest.estimation.internals.demean_ import (
@@ -29,23 +28,6 @@ if HAS_TORCH:
     from pyfixest.estimation.torch.demean_torch_ import demean_torch
 
     GENERIC_DEMEAN_FUNCS.append(pytest.param(demean_torch, id="demean_torch"))
-
-
-MODEL_DEMEANERS = [
-    pytest.param(MapDemeaner(backend="numba"), id="numba"),
-    pytest.param(MapDemeaner(backend="jax"), id="jax"),
-    pytest.param(MapDemeaner(backend="rust"), id="rust"),
-    pytest.param(WithinDemeaner(), id="within"),
-    pytest.param(LsmrDemeaner(device="cpu"), id="lsmr_scipy"),
-]
-
-if HAS_TORCH:
-    MODEL_DEMEANERS.append(
-        pytest.param(
-            LsmrDemeaner(backend="torch", device="cpu"),
-            id="lsmr_torch_cpu",
-        )
-    )
 
 
 TORCH_DEVICE_DEMEANERS = [
@@ -190,44 +172,8 @@ def test_feols_warns_for_experimental_torch_backend():
         pf.feols("y ~ x | fe", data=data, demeaner_backend="torch_cpu")
 
 
-@pytest.mark.skipif(not HAS_TORCH, reason="torch not available")
-def test_feols_warns_for_experimental_torch_demeaner():
-    data = pd.DataFrame(
-        {
-            "y": [1.0, 2.0, 3.0, 4.0],
-            "x": [0.0, 1.0, 0.0, 1.0],
-            "fe": [0, 0, 1, 1],
-        }
-    )
-
-    with pytest.warns(UserWarning, match="experimental torch algorithms"):
-        pf.feols(
-            "y ~ x | fe",
-            data=data,
-            demeaner=LsmrDemeaner(backend="torch", device="cpu"),
-        )
-
-
-def test_feols_warns_when_demeaner_overrides_backend():
-    data = pd.DataFrame(
-        {
-            "y": [1.0, 2.0, 3.0, 4.0],
-            "x": [0.0, 1.0, 0.0, 1.0],
-            "fe": [0, 0, 1, 1],
-        }
-    )
-
-    with pytest.warns(UserWarning, match="ignored when `demeaner` is provided"):
-        pf.feols(
-            "y ~ x | fe",
-            data=data,
-            demeaner_backend="jax",
-            demeaner=MapDemeaner(backend="numba"),
-        )
-
-
-@pytest.mark.parametrize("demeaner", MODEL_DEMEANERS)
-def test_demean_model_no_fixed_effects(benchmark, demeaner):
+@pytest.mark.parametrize("demean_func", GENERIC_DEMEAN_FUNCS)
+def test_demean_model_no_fixed_effects(benchmark, demean_func):
     """Test demean_model when there are no fixed effects."""
     # Create sample data
     N = 1000
@@ -245,7 +191,9 @@ def test_demean_model_no_fixed_effects(benchmark, demeaner):
         weights=weights,
         lookup_demeaned_data=lookup_dict,
         na_index=frozenset(),
-        demeaner=demeaner,
+        fixef_tol=1e-6,
+        fixef_maxiter=10_000,
+        demean_func=demean_func,
     )
 
     # When no fixed effects, output should equal input
@@ -255,8 +203,8 @@ def test_demean_model_no_fixed_effects(benchmark, demeaner):
     assert Xd.columns.equals(X.columns)
 
 
-@pytest.mark.parametrize("demeaner", MODEL_DEMEANERS)
-def test_demean_model_with_fixed_effects(benchmark, demeaner):
+@pytest.mark.parametrize("demean_func", GENERIC_DEMEAN_FUNCS)
+def test_demean_model_with_fixed_effects(benchmark, demean_func):
     """Test demean_model with fixed effects."""
     # Create sample data
     N = 1000
@@ -277,7 +225,9 @@ def test_demean_model_with_fixed_effects(benchmark, demeaner):
         weights=weights,
         lookup_demeaned_data=lookup_dict,
         na_index=frozenset(),
-        demeaner=demeaner,
+        fixef_tol=1e-6,
+        fixef_maxiter=10_000,
+        demean_func=demean_func,
     )
 
     # Verify results are different from input (since we're demeaning)
@@ -290,13 +240,13 @@ def test_demean_model_with_fixed_effects(benchmark, demeaner):
 
     # Verify results are cached in lookup_dict
     assert frozenset() in lookup_dict
-    cached_data = lookup_dict[frozenset()]
+    cached_data = lookup_dict[frozenset()][1]
     assert np.allclose(cached_data[Y.columns].values, Yd.values)
     assert np.allclose(cached_data[X.columns].values, Xd.values)
 
 
-@pytest.mark.parametrize("demeaner", MODEL_DEMEANERS)
-def test_demean_model_with_weights(benchmark, demeaner):
+@pytest.mark.parametrize("demean_func", GENERIC_DEMEAN_FUNCS)
+def test_demean_model_with_weights(benchmark, demean_func):
     """Test demean_model with weights."""
     N = 1000
     rng = np.random.default_rng(42)
@@ -316,7 +266,9 @@ def test_demean_model_with_weights(benchmark, demeaner):
         weights=weights,
         lookup_demeaned_data=lookup_dict,
         na_index=frozenset(),
-        demeaner=demeaner,
+        fixef_tol=1e-6,
+        fixef_maxiter=10_000,
+        demean_func=demean_func,
     )
 
     # Run without weights for comparison (fresh lookup dict to avoid cache hit)
@@ -327,7 +279,9 @@ def test_demean_model_with_weights(benchmark, demeaner):
         weights=np.ones(N),
         lookup_demeaned_data={},
         na_index=frozenset(),
-        demeaner=demeaner,
+        fixef_tol=1e-6,
+        fixef_maxiter=10_000,
+        demean_func=demean_func,
     )
 
     # Results should be different with weights vs without
@@ -335,8 +289,8 @@ def test_demean_model_with_weights(benchmark, demeaner):
     assert not np.allclose(Xd.values, Xd_unweighted.values)
 
 
-@pytest.mark.parametrize("demeaner", MODEL_DEMEANERS)
-def test_demean_model_caching(benchmark, demeaner):
+@pytest.mark.parametrize("demean_func", GENERIC_DEMEAN_FUNCS)
+def test_demean_model_caching(benchmark, demean_func):
     """Test the caching behavior of demean_model."""
     N = 1000
     rng = np.random.default_rng(42)
@@ -355,7 +309,9 @@ def test_demean_model_caching(benchmark, demeaner):
         weights=weights,
         lookup_demeaned_data=lookup_dict,
         na_index=frozenset(),
-        demeaner=demeaner,
+        fixef_tol=1e-6,
+        fixef_maxiter=10_000,
+        demean_func=demean_func,
     )
 
     # Second run - should use cache
@@ -367,7 +323,9 @@ def test_demean_model_caching(benchmark, demeaner):
         weights=weights,
         lookup_demeaned_data=lookup_dict,
         na_index=frozenset(),
-        demeaner=demeaner,
+        fixef_tol=1e-6,
+        fixef_maxiter=10_000,
+        demean_func=demean_func,
     )
 
     # Results should be identical
@@ -385,7 +343,9 @@ def test_demean_model_caching(benchmark, demeaner):
         weights=weights,
         lookup_demeaned_data=lookup_dict,
         na_index=frozenset(),
-        demeaner=demeaner,
+        fixef_tol=1e-6,
+        fixef_maxiter=10_000,
+        demean_func=demean_func,
     )
 
     # Original columns should match previous results
@@ -394,16 +354,8 @@ def test_demean_model_caching(benchmark, demeaner):
     assert "x3" in Xd3.columns
 
 
-@pytest.mark.parametrize(
-    "demeaner",
-    [
-        pytest.param(MapDemeaner(backend="numba", fixef_maxiter=1), id="numba"),
-        pytest.param(MapDemeaner(backend="jax", fixef_maxiter=1), id="jax"),
-        pytest.param(MapDemeaner(backend="rust", fixef_maxiter=1), id="rust"),
-        pytest.param(LsmrDemeaner(device="cpu", fixef_maxiter=1), id="lsmr_scipy"),
-    ],
-)
-def test_demean_model_maxiter_convergence_failure(demeaner):
+@pytest.mark.parametrize("demean_func", GENERIC_DEMEAN_FUNCS)
+def test_demean_model_maxiter_convergence_failure(demean_func):
     """Test that demean_model fails when maxiter is too small."""
     N = 100
     rng = np.random.default_rng(42)
@@ -426,24 +378,14 @@ def test_demean_model_maxiter_convergence_failure(demeaner):
             weights=weights,
             lookup_demeaned_data=lookup_dict,
             na_index=frozenset(),
-            demeaner=demeaner,
+            fixef_tol=1e-6,
+            fixef_maxiter=1,  # Very small limit
+            demean_func=demean_func,
         )
 
 
-@pytest.mark.parametrize(
-    "demeaner",
-    [
-        pytest.param(MapDemeaner(backend="numba", fixef_maxiter=5000), id="numba"),
-        pytest.param(MapDemeaner(backend="jax", fixef_maxiter=5000), id="jax"),
-        pytest.param(MapDemeaner(backend="rust", fixef_maxiter=5000), id="rust"),
-        pytest.param(WithinDemeaner(fixef_maxiter=5000), id="within"),
-        pytest.param(
-            LsmrDemeaner(device="cpu", fixef_maxiter=5000),
-            id="lsmr_scipy",
-        ),
-    ],
-)
-def test_demean_model_custom_maxiter_success(demeaner):
+@pytest.mark.parametrize("demean_func", GENERIC_DEMEAN_FUNCS)
+def test_demean_model_custom_maxiter_success(demean_func):
     """Test that demean_model succeeds with reasonable maxiter."""
     N = 1000
     rng = np.random.default_rng(42)
@@ -462,7 +404,9 @@ def test_demean_model_custom_maxiter_success(demeaner):
         weights=weights,
         lookup_demeaned_data=lookup_dict,
         na_index=frozenset(),
-        demeaner=demeaner,
+        fixef_tol=1e-6,
+        fixef_maxiter=5000,  # Custom limit
+        demean_func=demean_func,
     )
 
     # Just verify it returns valid results

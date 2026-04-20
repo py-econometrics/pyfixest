@@ -61,13 +61,13 @@ In practice, however, panels are almost never balanced. Workers are observed onl
 Several algorithms have been proposed for this multi-fixed effect demeaning
 problem:
 
-- **Method of Alternating Projections (MAP).** Introduced by Guimarães & Portugal (2010) as the "Zig-Zag" and Gaure (2013), this is the workhorse algorithm in most FE packages (`reghdfe`, `lfe`, `fixest`). It sequentially sweeps through each fixed effect and demeans the target variable by the current fixed effects's group means. Usually, this approach is implemented with accelerations. For example, R's `fixest` uses MAP with Irons-Tuck acceleration and other optimization strategies. In PyFixest, `pf.MapDemeaner(backend="rust")` implements MAP without acceleration and is therefore quite a lot slower than `fixest`'s algorithm in cases where the accelerations pay off.
+- **Method of Alternating Projections (MAP).** Introduced by Guimarães & Portugal (2010) as the "Zig-Zag" and Gaure (2013), this is the workhorse algorithm in most FE packages (`reghdfe`, `lfe`, `fixest`). It sequentially sweeps through each fixed effect and demeans the target variable by the current fixed effects's group means. Usually, this approach is implemented with accelerations. For example, R's `fixest` uses MAP with Irons-Tuck acceleration and other optimization strategies. In PyFixest, the `"rust"` backend implements MAP without acceleration and is therefore quite a lot slower than `fixest`'s algorithm in cases where the accelerations pay off.
 
-- **LSMR.** The solver powering `FixedEffectsModels.jl`. It can be accessed in `pyfixest` via `pf.LsmrDemeaner(...)`.
+- **LSMR.** The solver powering `FixedEffectsModels.jl`. It can be accessed in `pyfixest` via the `scipy` and `cupy` demeaner backends.
 
 - **CG-Schwarz (Conjugate Gradients with Additive Schwarz Preconditioner).**
 The [`within`](https://github.com/py-econometrics/within) crate, used by
-PyFixest's `pf.WithinDemeaner()`, takes a different approach: it
+PyFixest's `"rust-cg"` backend, takes a different approach: it
 explicitly builds and exploits the block structure of the normal
 equations to form a high-quality preconditioner for the linear problem. We explain this structure below.
 
@@ -235,8 +235,8 @@ can significantly speed up MAP convergence, narrowing the gap on moderately spar
 
 The following benchmarks test two PyFixest backends:
 
-- `pyfixest (MapDemeaner(backend="rust"))` implements MAP without acceleration,
-- `pyfixest (WithinDemeaner())` implements the CG-Schwarz strategy via `within`'s solver.
+- `pyfixest (rust-map)` implements MAP without acceleration,
+- `pyfixest (rust-cg)` implements the CG-Schwarz strategy via `within`'s solver.
 
 All benchmarks time the full PyFixest estimation call.
 
@@ -271,7 +271,7 @@ In this initial scenario, we hold the graph structure fixed at the defaults and 
 
 *Benchmark: scale sweep. Runtime as a function of dataset size on a well-connected graph with default parameters.*
 
-On this easy problem, the standard worker + firm + year specification is solved routinely well by both algorithms because each sweep already removes most of the variation. `MapDemeaner(backend="rust")` will not look this good in any other of the benchmarks to follow, which all reduce the level of connectivity between workers and firms.
+On this easy problem, the standard worker + firm + year specification is solved routinely well by both algorithms because each sweep already removes most of the variation. The `rust-map` backend will not look this good in any other of the benchmarks to follow, which all reduce the level of connectivity between workers and firms.
 
 ## Complex Fixed Effects Structures
 
@@ -302,7 +302,7 @@ collinear.
   <img src="figures/akm-benchmarks/bench_mobility.png" width="85%">
 </p>
 
-*Benchmark: mobility sweep. `MapDemeaner(backend="rust")` degrades sharply as mobility decreases, while `WithinDemeaner()` remains stable.*
+*Benchmark: mobility sweep. The rust-map solver degrades sharply as mobility decreases, while CG-Schwarz (rust-cg) remains stable.*
 
 ### (b) Progressive freezing
 
@@ -470,9 +470,9 @@ The practical recommendation is straightforward: for well-connected
 graphs (high mobility, low sorting, cross-cutting factors), (accelerated)
 MAP is often hard to beat. For sparse
 graphs - low mobility, strong sorting, nested structures, or any
-combination thereof - vanilla MAP as in `MapDemeaner(backend="rust")` reveals poor convergence properties. Within PyFixest, `WithinDemeaner()` via the `within` crate is the more robust choice on these sparse graphs.
+combination thereof - vanilla MAP as in `rust-map` reveals poor convergence properties. Within PyFixest, the CG-Schwarz backend (`rust-cg` via the `within` crate) is the more robust choice on these sparse graphs.
 
-We conclude by showing two benchmarks from the `fixest` package that are designed to be simple and very challenging for the MAP algorithm. On the "simple" problem, the graph is dense and both PyFixest demeaners perform well; here, CG-Schwarz tends to lose because its setup overhead does not amortize. On the "difficult" sparse problem, vanilla MAP degrades sharply, while CG-Schwarz performs much better. In the checked-in results, `WithinDemeaner()` is substantially faster than `MapDemeaner(backend="rust")` on the hard three-way specification.
+We conclude by showing two benchmarks from the `fixest` package that are designed to be simple and very challenging for the MAP algorithm. On the "simple" problem, the graph is dense and both PyFixest backends perform well; here, CG-Schwarz tends to lose because its setup overhead does not amortize. On the "difficult" sparse problem, vanilla MAP degrades sharply, while CG-Schwarz performs much better. In the checked-in results, `rust-cg` is substantially faster than `rust-map` on the hard three-way specification.
 
 <p align="center">
   <img src="figures/base-benchmarks/bench_simple.png" width="85%">

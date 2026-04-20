@@ -3,10 +3,8 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.api.utils import _estimation_input_checks
 from pyfixest.estimation.FixestMulti_ import FixestMulti
-from pyfixest.estimation.internals.demeaner_options import resolve_demeaner
 from pyfixest.estimation.internals.literals import (
     DemeanerBackendOptions,
     FixedRmOptions,
@@ -36,7 +34,6 @@ def feglm(
     separation_check: list[str] | None = None,
     solver: SolverOptions = "scipy.linalg.solve",
     demeaner_backend: DemeanerBackendOptions = "numba",
-    demeaner: AnyDemeaner | None = None,
     drop_intercept: bool = False,
     copy_data: bool = True,
     store_data: bool = True,
@@ -112,13 +109,11 @@ def feglm(
 
     fixef_tol: float, optional
         Tolerance for the fixed effects demeaning algorithm. Defaults to 1e-06.
-        Deprecated: use the `demeaner` argument instead. Will be removed in a
-        future release.
+        Currently does not do anything, as fixed effects are not supported for GLMs.
 
     fixef_maxiter: int, optional
-        Maximum iterations for the demeaning algorithm. Defaults to 100,000.
-        Deprecated: use the `demeaner` argument instead. Will be removed in a
-        future release.
+         Maximum iterations for the demeaning algorithm.
+        Currently does not do anything, as fixed effects are not supported for GLMs.
 
     iwls_tol : Optional[float], optional
         Tolerance for IWLS convergence, by default 1e-08.
@@ -139,16 +134,22 @@ def feglm(
         Defaults to "scipy.linalg.solve".
 
     demeaner_backend: DemeanerBackendOptions, optional
-        Deprecated: use the `demeaner` argument instead. Will be removed in a
-        future release. A shorthand string to select the demeaning backend.
-        Only used when `demeaner` is not provided.
-
-    demeaner : AnyDemeaner | None, optional
-        Typed demeaner configuration. If provided, it takes precedence over
-        `demeaner_backend`, `fixef_tol`, and `fixef_maxiter`. Backend-specific
-        settings and fixed-effects iteration controls are taken entirely from
-        this object. Accepts a `MapDemeaner`, `WithinDemeaner`, or
-        `LsmrDemeaner` instance.
+        The backend to use for demeaning. Options include:
+        - "numba" (default): CPU-based demeaning using Numba JIT via the Alternating Projections Algorithm.
+        - "rust-cg": Implements the conjugate-gradient-schwarz algorithm from the
+          [`within`](https://github.com/py-econometrics/within) rust package.
+          Particularly effective for sparse fixed effects structures. See the
+          [difficult fixed effects vignette](https://pyfixest.org/explanation/difficult-fixed-effects.html)
+          for benchmarks.
+        - "rust": CPU-based demeaning implemented in Rust via the Alternating Projections Algorithm.
+        - "jax": CPU or GPU-accelerated using JAX (requires jax/jaxlib) via the Alternating Projections Algorithm.
+        - "cupy" or "cupy64": GPU-accelerated using CuPy with float64 precision via direct application of the Frisch-Waugh-Lovell Theorem on sparse
+          matrices (requires cupy & GPU, defaults to scipy/CPU if no GPU available)
+        - "cupy32": GPU-accelerated using CuPy with float32 precision via direct application of the Frisch-Waugh-Lovell Theorem on sparse
+          matrices (requires cupy & GPU, defaults to scipy/CPU and float64 if no GPU available)
+        - "scipy": Direct application of the Frisch-Waugh-Lovell Theorem on sparse matrice.
+          Forces to use a scipy-sparse backend even when cupy is installed and GPU is available.
+        Defaults to "numba".
 
     drop_intercept : bool, optional
         Whether to drop the intercept from the model, by default False.
@@ -264,15 +265,6 @@ def feglm(
 
     context = {} if context is None else capture_context(context)
 
-    resolved_demeaner = resolve_demeaner(
-        demeaner=demeaner,
-        demeaner_backend=demeaner_backend,
-        fixef_tol=fixef_tol,
-        fixef_maxiter=fixef_maxiter,
-    )
-    resolved_fixef_tol = resolved_demeaner.fixef_tol
-    resolved_fixef_maxiter = resolved_demeaner.fixef_maxiter
-
     _estimation_input_checks(
         fml=fml,
         data=data,
@@ -285,8 +277,8 @@ def feglm(
         copy_data=copy_data,
         store_data=store_data,
         lean=lean,
-        fixef_tol=resolved_fixef_tol,
-        fixef_maxiter=resolved_fixef_maxiter,
+        fixef_tol=fixef_tol,
+        fixef_maxiter=fixef_maxiter,
         weights_type=weights_type,
         use_compression=False,
         reps=None,
@@ -301,8 +293,8 @@ def feglm(
         copy_data=copy_data,
         store_data=store_data,
         lean=lean,
-        fixef_tol=resolved_fixef_tol,
-        fixef_maxiter=resolved_fixef_maxiter,
+        fixef_tol=fixef_tol,
+        fixef_maxiter=fixef_maxiter,
         weights_type=weights_type,
         use_compression=False,
         reps=None,
@@ -336,7 +328,7 @@ def feglm(
         iwls_maxiter=iwls_maxiter,
         collin_tol=collin_tol,
         separation_check=separation_check,
-        demeaner=resolved_demeaner,
+        demeaner_backend=demeaner_backend,
         accelerate=accelerate,
     )
 

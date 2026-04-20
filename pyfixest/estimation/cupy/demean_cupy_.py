@@ -35,7 +35,7 @@ class CupyFWLDemeaner:
 
     def __init__(
         self,
-        device: str = "auto",
+        use_gpu: bool | None = None,
         solver_atol: float = 1e-8,
         solver_btol: float = 1e-8,
         solver_maxiter: int | None = None,
@@ -48,9 +48,10 @@ class CupyFWLDemeaner:
 
         Parameters
         ----------
-        device : str, default="auto"
-            Device to run on: "auto" (auto-detect GPU), "cuda" (force GPU),
-            or "cpu" (force CPU/scipy).
+        use_gpu : bool, optional
+            Force GPU usage (True), CPU usage (False), or auto-detect (None).
+            Auto-detect checks if CuPy is available and GPU is accessible. If
+            both are True, runs on the GPU via CuPy.
         solver_atol : float, default=1e-8
             Absolute tolerance for LSMR stopping criterion.
         solver_btol : float, default=1e-8
@@ -58,28 +59,25 @@ class CupyFWLDemeaner:
         solver_maxiter : int, optional
             Maximum LSMR iterations. If None, uses LSMR's default.
         warn_on_cpu_fallback : bool, default=True
-            Warn when falling back to CPU despite device="cuda".
+            Warn when falling back to CPU despite use_gpu=True.
         dtype : type, default=np.float64
             Data type for GPU computations (np.float32 or np.float64).
         use_preconditioner : bool, default=True
             Whether to use diagonal preconditioning for LSMR. Preconditioning
             improves convergence when fixed effect group sizes vary.
         """
-        if device == "auto":
+        if use_gpu is None:
             self.use_gpu = CUPY_AVAILABLE and self._gpu_available()
-        elif device == "cuda":
-            if not CUPY_AVAILABLE:
-                if warn_on_cpu_fallback:
-                    warnings.warn(
-                        "CuPy not available. Falling back to CPU (scipy). "
-                        "Install CuPy for GPU acceleration: pip install cupy-cuda12x",
-                        UserWarning,
-                    )
-                self.use_gpu = False
-            else:
-                self.use_gpu = True
-        else:
+        elif use_gpu and not CUPY_AVAILABLE:
+            if warn_on_cpu_fallback:
+                warnings.warn(
+                    "CuPy not available. Falling back to CPU (scipy). "
+                    "Install CuPy for GPU acceleration: pip install cupy-cuda12x",
+                    UserWarning,
+                )
             self.use_gpu = False
+        else:
+            self.use_gpu = use_gpu
 
         self.solver_atol = solver_atol
         self.solver_btol = solver_btol
@@ -344,6 +342,7 @@ def demean_scipy(
     fe_df = pd.DataFrame(flist, columns=[f"f{i + 1}" for i in range(n_fe)], copy=False)
     fe_sparse_matrix = create_fe_sparse_matrix(fe_df)
 
+    # Force CPU usage (use_gpu=False) and disable warnings
     return CupyFWLDemeaner(
-        device="cpu", warn_on_cpu_fallback=False, dtype=np.float64
+        use_gpu=False, warn_on_cpu_fallback=False, dtype=np.float64
     ).demean(x, flist, weights, tol, maxiter, fe_sparse_matrix=fe_sparse_matrix)
