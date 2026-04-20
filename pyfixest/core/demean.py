@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import cast
+from typing import cast, get_args
 
 import numpy as np
 from numpy.typing import NDArray
@@ -29,11 +29,13 @@ def _sanitize_krylov_and_preconditioner(
         raise TypeError("`krylov_method` must be a string.")
     if not isinstance(preconditioner_type, str):
         raise TypeError("`preconditioner_type` must be a string.")
-    if krylov_method not in {"cg", "gmres"}:
-        raise ValueError("`krylov_method` must be either 'cg' or 'gmres'.")
-    if preconditioner_type not in {"additive", "multiplicative"}:
+    if krylov_method not in get_args(WithinKrylovMethod):
         raise ValueError(
-            "`preconditioner_type` must be either 'additive' or 'multiplicative'."
+            f"`krylov_method` must be either {get_args(WithinKrylovMethod)}."
+        )
+    if preconditioner_type not in get_args(PreconditionerType):
+        raise ValueError(
+            f"`preconditioner_type` must be either {get_args(PreconditionerType)}."
         )
     if preconditioner_type == "multiplicative" and krylov_method != "gmres":
         raise ValueError("Multiplicative Schwarz requires `krylov_method='gmres'`.")
@@ -48,8 +50,8 @@ def demean(
     x: NDArray[np.float64],
     flist: NDArray[np.uint64],
     weights: NDArray[np.float64],
-    tol: float = 1e-08,
-    maxiter: int = 100_000,
+    tol: float = 1e-06,
+    maxiter: int = 10_000,
 ) -> tuple[NDArray, bool]:
     """
     Demean an array.
