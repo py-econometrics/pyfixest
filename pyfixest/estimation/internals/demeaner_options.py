@@ -97,13 +97,6 @@ def _from_backend_shorthand(
     fixef_maxiter: int,
 ) -> AnyDemeaner:
     """Construct a demeaner object from a legacy backend shorthand."""
-    _LSMR_COMMON = dict(
-        fixef_tol=fixef_tol,
-        fixef_maxiter=fixef_maxiter,
-        solver_atol=fixef_tol,
-        solver_btol=fixef_tol,
-    )
-
     if demeaner_backend in {"numba", "rust", "jax"}:
         return MapDemeaner(
             backend=cast(Literal["numba", "rust", "jax"], demeaner_backend),
@@ -112,20 +105,86 @@ def _from_backend_shorthand(
         )
     if demeaner_backend == "within":
         return WithinDemeaner(fixef_tol=fixef_tol, fixef_maxiter=fixef_maxiter)
-
-    _LSMR_PRESETS: dict[str, dict] = {
-        "cupy": dict(backend="cupy", precision="float64", device="cuda"),
-        "cupy32": dict(backend="cupy", precision="float32", device="cuda"),
-        "scipy": dict(backend="cupy", device="cpu"),
-        "torch": dict(backend="torch", precision="float64", device="auto"),
-        "torch_cpu": dict(backend="torch", precision="float64", device="cpu"),
-        "torch_mps": dict(backend="torch", precision="float32", device="mps"),
-        "torch_cuda": dict(backend="torch", precision="float64", device="cuda"),
-        "torch_cuda32": dict(backend="torch", precision="float32", device="cuda"),
-    }
-
-    if demeaner_backend in _LSMR_PRESETS:
-        return LsmrDemeaner(**_LSMR_COMMON, **_LSMR_PRESETS[demeaner_backend])
+    if demeaner_backend == "cupy":
+        return LsmrDemeaner(
+            backend="cupy",
+            precision="float64",
+            device="cuda",
+            fixef_tol=fixef_tol,
+            fixef_maxiter=fixef_maxiter,
+            solver_atol=fixef_tol,
+            solver_btol=fixef_tol,
+        )
+    if demeaner_backend == "cupy32":
+        return LsmrDemeaner(
+            backend="cupy",
+            precision="float32",
+            device="cuda",
+            fixef_tol=fixef_tol,
+            fixef_maxiter=fixef_maxiter,
+            solver_atol=fixef_tol,
+            solver_btol=fixef_tol,
+        )
+    if demeaner_backend == "scipy":
+        return LsmrDemeaner(
+            backend="cupy",
+            precision="float64",
+            device="cpu",
+            fixef_tol=fixef_tol,
+            fixef_maxiter=fixef_maxiter,
+            solver_atol=fixef_tol,
+            solver_btol=fixef_tol,
+        )
+    if demeaner_backend == "torch":
+        return LsmrDemeaner(
+            backend="torch",
+            precision="float64",
+            device="auto",
+            fixef_tol=fixef_tol,
+            fixef_maxiter=fixef_maxiter,
+            solver_atol=fixef_tol,
+            solver_btol=fixef_tol,
+        )
+    if demeaner_backend == "torch_cpu":
+        return LsmrDemeaner(
+            backend="torch",
+            precision="float64",
+            device="cpu",
+            fixef_tol=fixef_tol,
+            fixef_maxiter=fixef_maxiter,
+            solver_atol=fixef_tol,
+            solver_btol=fixef_tol,
+        )
+    if demeaner_backend == "torch_mps":
+        return LsmrDemeaner(
+            backend="torch",
+            precision="float32",
+            device="mps",
+            fixef_tol=fixef_tol,
+            fixef_maxiter=fixef_maxiter,
+            solver_atol=fixef_tol,
+            solver_btol=fixef_tol,
+        )
+    if demeaner_backend == "torch_cuda":
+        return LsmrDemeaner(
+            backend="torch",
+            precision="float64",
+            device="cuda",
+            fixef_tol=fixef_tol,
+            fixef_maxiter=fixef_maxiter,
+            solver_atol=fixef_tol,
+            solver_btol=fixef_tol,
+        )
+    if demeaner_backend == "torch_cuda32":
+        return LsmrDemeaner(
+            backend="torch",
+            precision="float32",
+            device="cuda",
+            fixef_tol=fixef_tol,
+            fixef_maxiter=fixef_maxiter,
+            solver_atol=fixef_tol,
+            solver_btol=fixef_tol,
+        )
 
     raise ValueError(f"Unknown demeaner backend {demeaner_backend!r}.")
 

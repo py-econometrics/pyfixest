@@ -16,6 +16,7 @@ DemeanerBackendOptions = Literal[
     "jax",
     "rust",
     "rust-cg",
+    "within",
     "cupy",
     "cupy32",
     "cupy64",
