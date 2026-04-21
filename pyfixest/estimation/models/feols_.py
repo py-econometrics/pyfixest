@@ -418,6 +418,11 @@ class Feols(ResultAccessorMixin):
         self._fe = model_matrix.fixed_effects
         self._endogvar = model_matrix.endogenous
         self._Z = model_matrix.instruments
+        self._Z_untransformed_df = (
+            model_matrix.instruments.copy()
+            if model_matrix.instruments is not None
+            else None
+        )  # pre-demeaning instrument DataFrame; used by Feiv bootstrap
         self._weights_df = model_matrix.weights
         self._na_index = model_matrix.na_index
         # TODO: set dynamically based on naming set in pyfixest.estimation.formula.factor_interaction._encode_i
@@ -1108,6 +1113,7 @@ class Feols(ResultAccessorMixin):
                 "_Y_hat_response",
                 "_Y_untransformed",
                 "_X_untransformed_df",
+                "_Z_untransformed_df",
             ]
 
         for attr in attributes:
@@ -1603,44 +1609,7 @@ class Feols(ResultAccessorMixin):
             # causing division-by-zero in the demeaning kernel.  Filter them out;
             # zero-weight rows contribute nothing to the WLS objective anyway.
             nz = w_combined > 0
-            w_f = w_combined[nz]
-            Y_f = self._Y_untransformed.iloc[nz].reset_index(drop=True)
-            X_f = (
-                self._X_untransformed_df[list(self._coefnames)]
-                .iloc[nz]
-                .reset_index(drop=True)
-            )
-            fe_f = (
-                self._fe.iloc[nz].reset_index(drop=True)
-                if self._fe is not None
-                else None
-            )
-
-            if self._has_fixef:
-                # re-demean with bootstrap weights so FE absorption is exact;
-                # use the pre-demeaning DataFrames and a fresh cache per iteration
-                Yd, Xd = demean_model(
-                    Y=Y_f,
-                    X=X_f,
-                    fe=fe_f,
-                    weights=w_f,
-                    lookup_demeaned_data={},
-                    na_index=self._na_index,
-                    fixef_tol=self._fixef_tol,
-                    fixef_maxiter=self._fixef_maxiter,
-                    demean_func=self._demean_func,
-                )
-                _Y_b = Yd.to_numpy().flatten()
-                _X_b = Xd.to_numpy()
-            else:
-                _Y_b = Y_f.to_numpy().flatten()
-                _X_b = X_f.to_numpy()
-
-            # apply combined weights via WLS transform: X* = sqrt(w)*X
-            sqrt_w = np.sqrt(w_f)
-            Xw = _X_b * sqrt_w[:, None]
-            Yw = _Y_b * sqrt_w
-            beta_boots[b] = solve_ols(Xw.T @ Xw, Xw.T @ Yw, self._solver)
+            beta_boots[b] = self._bootstrap_one_rep(nz, w_combined)
 
         # --- inference from bootstrap distribution ---
         boot_se = beta_boots.std(axis=0, ddof=1)
@@ -1666,6 +1635,62 @@ class Feols(ResultAccessorMixin):
         if return_draws:
             return res_df, beta_boots
         return res_df
+
+    def _bootstrap_one_rep(self, nz: np.ndarray, w_combined: np.ndarray) -> np.ndarray:
+        """
+        Run one OLS/WLS bootstrap iteration.
+
+        Subclasses override this method to implement model-specific fitting
+        (e.g. 2SLS for Feiv, IRLS for Fepois/Feglm). The shared weight-drawing
+        and inference logic stays in ``weightingboottest()``.
+
+        Parameters
+        ----------
+        nz : np.ndarray
+            Boolean mask of observations with positive combined weight.
+        w_combined : np.ndarray
+            Combined weights (bootstrap * original analytic weights), length N.
+
+        Returns
+        -------
+        np.ndarray
+            Bootstrap coefficient vector of shape ``(k,)``.
+        """
+        w_f = w_combined[nz]
+        Y_f = self._Y_untransformed.iloc[nz].reset_index(drop=True)
+        X_f = (
+            self._X_untransformed_df[list(self._coefnames)]
+            .iloc[nz]
+            .reset_index(drop=True)
+        )
+        fe_f = (
+            self._fe.iloc[nz].reset_index(drop=True)
+            if self._fe is not None
+            else None
+        )
+
+        if self._has_fixef:
+            Yd, Xd = demean_model(
+                Y=Y_f,
+                X=X_f,
+                fe=fe_f,
+                weights=w_f,
+                lookup_demeaned_data={},
+                na_index=self._na_index,
+                fixef_tol=self._fixef_tol,
+                fixef_maxiter=self._fixef_maxiter,
+                demean_func=self._demean_func,
+            )
+            _Y_b = Yd.to_numpy().flatten()
+            _X_b = Xd.to_numpy()
+        else:
+            _Y_b = Y_f.to_numpy().flatten()
+            _X_b = X_f.to_numpy()
+
+        sqrt_w = np.sqrt(w_f)
+        Xw = _X_b * sqrt_w[:, None]
+        Yw = _Y_b * sqrt_w
+        return solve_ols(Xw.T @ Xw, Xw.T @ Yw, self._solver)
 
     def ccv(
         self,
