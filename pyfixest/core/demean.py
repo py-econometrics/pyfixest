@@ -1,11 +1,7 @@
 from __future__ import annotations
 
-from typing import cast, get_args
-
 import numpy as np
 from numpy.typing import NDArray
-
-from pyfixest.demeaners import PreconditionerType, WithinKrylovMethod
 
 from ._core_impl import _demean_rs, _demean_within_rs
 
@@ -19,31 +15,6 @@ def _prepare_within_flist(flist: NDArray[np.uint32]) -> NDArray[np.uint32]:
 
 def _prepare_weights(weights: NDArray[np.float64]) -> NDArray[np.float64]:
     return np.asarray(weights, dtype=np.float64).reshape(-1)
-
-
-def _sanitize_krylov_and_preconditioner(
-    krylov_method: WithinKrylovMethod,
-    preconditioner_type: PreconditionerType,
-) -> tuple[WithinKrylovMethod, PreconditionerType]:
-    if not isinstance(krylov_method, str):
-        raise TypeError("`krylov_method` must be a string.")
-    if not isinstance(preconditioner_type, str):
-        raise TypeError("`preconditioner_type` must be a string.")
-    if krylov_method not in get_args(WithinKrylovMethod):
-        raise ValueError(
-            f"`krylov_method` must be either {get_args(WithinKrylovMethod)}."
-        )
-    if preconditioner_type not in get_args(PreconditionerType):
-        raise ValueError(
-            f"`preconditioner_type` must be either {get_args(PreconditionerType)}."
-        )
-    if preconditioner_type == "multiplicative" and krylov_method != "gmres":
-        raise ValueError("Multiplicative Schwarz requires `krylov_method='gmres'`.")
-
-    return (
-        cast(WithinKrylovMethod, krylov_method),
-        cast(PreconditionerType, preconditioner_type),
-    )
 
 
 def demean(
@@ -127,11 +98,8 @@ def demean_within(
     weights: NDArray[np.float64],
     tol: float = 1e-06,
     maxiter: int = 1_000,
-    krylov_method: WithinKrylovMethod = "cg",
-    gmres_restart: int = 30,
-    preconditioner_type: PreconditionerType = "additive",
 ) -> tuple[NDArray, bool]:
-    """Demean an array using the configurable `within` backend.
+    """Demean an array using the `within` backend.
 
     Uses Krylov-based solvers with Schwarz preconditioning. Converges faster
     than alternating projections on weakly-connected or block-diagonal
@@ -154,23 +122,12 @@ def demean_within(
         Convergence tolerance. Defaults to 1e-06.
     maxiter : int, optional
         Maximum number of Krylov iterations. Defaults to 1_000.
-    krylov_method : {"cg", "gmres"}, optional
-        Krylov solver to use. Defaults to "cg".
-    gmres_restart : int, optional
-        Restart parameter for GMRES. Defaults to 30.
-    preconditioner_type : {"additive", "multiplicative"}, optional
-        Schwarz preconditioner variant. Defaults to "additive".
 
     Returns
     -------
     tuple[numpy.ndarray, bool]
         Demeaned array and convergence flag.
     """
-    krylov_method, preconditioner_type = _sanitize_krylov_and_preconditioner(
-        krylov_method,
-        preconditioner_type,
-    )
-
     flist_arr = _prepare_within_flist(flist)
     if flist_arr.shape[1] == 1:
         return _demean_rs(
@@ -192,7 +149,4 @@ def demean_within(
         weights_arr,
         tol,
         maxiter,
-        krylov_method,
-        gmres_restart,
-        preconditioner_type,
     )

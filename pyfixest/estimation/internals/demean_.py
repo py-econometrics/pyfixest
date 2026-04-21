@@ -182,9 +182,6 @@ def dispatch_demean(
             weights=weights,
             tol=demeaner.fixef_tol,
             maxiter=demeaner.fixef_maxiter,
-            krylov_method=demeaner.krylov_method,
-            gmres_restart=demeaner.gmres_restart,
-            preconditioner_type=demeaner.effective_preconditioner_type,
         )
 
     if isinstance(demeaner, LsmrDemeaner):

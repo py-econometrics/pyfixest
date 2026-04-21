@@ -2,11 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from numbers import Integral, Real
-from typing import ClassVar, Literal, cast, get_args
+from typing import ClassVar, Literal, get_args
 
 MapBackend = Literal["numba", "rust", "jax"]
-WithinKrylovMethod = Literal["cg", "gmres"]
-PreconditionerType = Literal["additive", "multiplicative"]
 LsmrBackend = Literal["cupy", "torch"]
 LsmrPrecision = Literal["float32", "float64"]
 TorchDevice = Literal["auto", "cpu", "mps", "cuda"]
@@ -56,42 +54,12 @@ class MapDemeaner(BaseDemeaner):
 
 @dataclass(frozen=True, slots=True)
 class WithinDemeaner(BaseDemeaner):
-    """Krylov-based demeaner configuration for the Rust `within` backend."""
+    """Demeaner configuration for the Rust `within` backend."""
 
-    krylov_method: WithinKrylovMethod = "cg"
-    gmres_restart: int = 30
-    preconditioner_type: PreconditionerType | None = None
     kind: ClassVar[str] = "within"
-
-    @property
-    def effective_preconditioner_type(self) -> PreconditionerType:
-        """Return the validated preconditioner type used for within solves."""
-        if self.preconditioner_type is None:
-            return cast(PreconditionerType, "additive")
-        return self.preconditioner_type
 
     def __post_init__(self) -> None:
         BaseDemeaner.__post_init__(self)
-        if not isinstance(self.krylov_method, str):
-            raise TypeError("`krylov_method` must be a string.")
-        if self.krylov_method not in get_args(WithinKrylovMethod):
-            raise ValueError(
-                f"`krylov_method` must be one of {get_args(WithinKrylovMethod)}."
-            )
-        _validate_positive_int(self.gmres_restart, "gmres_restart")
-        if self.preconditioner_type is not None:
-            if not isinstance(self.preconditioner_type, str):
-                raise TypeError("`preconditioner_type` must be a string.")
-            if self.preconditioner_type not in get_args(PreconditionerType):
-                raise ValueError(
-                    f"`preconditioner_type` must be one of {get_args(PreconditionerType)}."
-                )
-
-        if (
-            self.effective_preconditioner_type == "multiplicative"
-            and self.krylov_method != "gmres"
-        ):
-            raise ValueError("Multiplicative Schwarz requires `krylov_method='gmres'`.")
 
 
 @dataclass(frozen=True, slots=True)
@@ -155,8 +123,6 @@ __all__ = [
     "LsmrPrecision",
     "MapBackend",
     "MapDemeaner",
-    "PreconditionerType",
     "TorchDevice",
     "WithinDemeaner",
-    "WithinKrylovMethod",
 ]
