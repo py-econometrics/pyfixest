@@ -201,6 +201,7 @@ polars = ">=1.0.0"
 pyarrow = ">=14.0"
 doubleml = ">=0.10.1"
 pytest-sugar = ">=1.1.1"
+jupyterlab = ">=4.5.6,<5"
 
 [tool.pixi.pypi-dependencies]
 pyfixest = { path = ".", editable = true, extras = ["jax", "plots"] }

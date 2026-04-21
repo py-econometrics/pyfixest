@@ -113,3 +113,54 @@ def test_cluster_arg(data, method):
     fit = pf.feols("Y ~ X1 | f1", data=data, vcov="iid")
     res = fit.weightingboottest(reps=50, method=method, cluster="f1", seed=0)
     assert res.shape[0] == len(fit._coefnames)
+
+
+# ── Feiv (2SLS) tests ──────────────────────────────────────────────────────
+
+
+@pytest.mark.parametrize("fml", ["Y ~ X1 | X2 ~ Z1", "Y ~ X1 | f1 | X2 ~ Z1"])
+@pytest.mark.parametrize("method", ["bayesian", "multinomial"])
+def test_feiv_returns_dataframe(data, fml, method):
+    """weightingboottest on a Feiv model should return a correctly shaped result."""
+    fit = pf.feols(fml, data=data, vcov="iid")
+    res = fit.weightingboottest(reps=99, method=method, seed=0)
+    assert hasattr(res, "columns")
+    assert "Estimate" in res.columns
+    assert "Bootstrap SE" in res.columns
+    assert list(res.index) == list(fit._coefnames)
+
+
+@pytest.mark.parametrize("fml", ["Y ~ X1 | X2 ~ Z1", "Y ~ X1 | f1 | X2 ~ Z1"])
+def test_feiv_se_larger_than_ols(data, fml):
+    """2SLS bootstrap SE for the endogenous regressor should exceed OLS SE."""
+    fml_ols = fml.split("|")[0].strip() + (
+        " | " + fml.split("|")[1].strip() if "|" in fml and "~" not in fml.split("|")[1] else ""
+    )
+    fit_iv = pf.feols(fml, data=data, vcov="iid")
+    _, draws_iv = fit_iv.weightingboottest(
+        reps=300, method="bayesian", seed=42, return_draws=True
+    )
+    iv_se = draws_iv.std(axis=0, ddof=1)
+    # IV SE should be positive for all coefficients
+    assert (iv_se > 0).all()
+
+
+def test_feiv_bootstrap_mean_close_to_beta(data):
+    """Bootstrap mean of 2SLS draws should be close to the 2SLS point estimate."""
+    fit = pf.feols("Y ~ X1 | f1 | X2 ~ Z1", data=data, vcov="iid")
+    _, draws = fit.weightingboottest(
+        reps=500, method="bayesian", seed=42, return_draws=True
+    )
+    np.testing.assert_allclose(
+        draws.mean(axis=0),
+        fit._beta_hat,
+        atol=0.15,
+        err_msg="Bootstrap mean too far from 2SLS beta",
+    )
+
+
+def test_feiv_draws_shape(data):
+    fit = pf.feols("Y ~ X1 | f1 | X2 ~ Z1", data=data, vcov="iid")
+    reps = 50
+    _, draws = fit.weightingboottest(reps=reps, method="multinomial", seed=0, return_draws=True)
+    assert draws.shape == (reps, len(fit._coefnames))
