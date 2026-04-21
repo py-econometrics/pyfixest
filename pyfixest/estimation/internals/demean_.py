@@ -1,4 +1,3 @@
-from collections.abc import Callable
 from dataclasses import replace
 from importlib import import_module
 from typing import cast
@@ -10,7 +9,6 @@ import scipy.sparse as sp
 
 from pyfixest.core.demean import demean_within
 from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner, MapDemeaner, WithinDemeaner
-from pyfixest.estimation.internals.literals import DemeanerBackendOptions
 
 
 def demean_model(
@@ -442,32 +440,3 @@ def demean(
 
     success = not not_converged
     return (res, success)
-
-
-def _set_demeaner_backend(
-    demeaner_backend: DemeanerBackendOptions,
-) -> Callable:
-    """Set the demeaning backend.
-
-    Currently, we allow for a numba backend, rust backend, jax backend, and cupy backend.
-    JAX and CuPy are expected to be faster on GPU for larger problems, but not necessarily
-    faster than the numba and rust algos.
-
-    Parameters
-    ----------
-    demeaner_backend : Literal["numba", "jax", "rust", "cupy", "cupy32", "cupy64"]
-        The demeaning backend to use.
-
-    Returns
-    -------
-    Callable
-        The demeaning function.
-
-    Raises
-    ------
-    ValueError
-        If the demeaning backend is not supported.
-    """
-    from pyfixest.estimation.internals.backends import get_backend
-
-    return get_backend(demeaner_backend)["demean"]

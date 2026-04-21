@@ -143,8 +143,6 @@ class Feiv(Feols):
         weights: str | None,
         weights_type: str | None,
         collin_tol: float,
-        fixef_tol: float,
-        fixef_maxiter: int,
         lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
         solver: Literal[
             "np.linalg.lstsq",
@@ -170,8 +168,6 @@ class Feiv(Feols):
             weights=weights,
             weights_type=weights_type,
             collin_tol=collin_tol,
-            fixef_tol=fixef_tol,
-            fixef_maxiter=fixef_maxiter,
             lookup_demeaned_data=lookup_demeaned_data,
             solver=solver,
             store_data=store_data,

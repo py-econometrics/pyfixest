@@ -482,7 +482,7 @@ def test_coefplot_comprehensive(data_transform, annotate_shares):
     elif data_transform == "neg_y":
         data["y"] = -data["y"]
 
-    fit = pf.feols("y ~ x1 + x21 + x22 + x23 + f1", data=data, demeaner_backend="rust")
+    fit = pf.feols("y ~ x1 + x21 + x22 + x23 + f1", data=data, demeaner=pf.MapDemeaner(backend="rust"))
     gb = fit.decompose(  # type: ignore[attr-defined]
         decomp_var="x1",
         combine_covariates={"g1": ["x21"], "g2": ["x22", "x23", "f1"]},

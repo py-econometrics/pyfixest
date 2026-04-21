@@ -3,15 +3,13 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from pyfixest.demeaners import AnyDemeaner
+from pyfixest.demeaners import AnyDemeaner, MapDemeaner
 from pyfixest.estimation.api.utils import _estimation_input_checks
 from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.internals.demeaner_options import (
-    get_resolved_fixef_controls,
-    resolve_demeaner,
+    _warn_if_experimental_torch_demeaner,
 )
 from pyfixest.estimation.internals.literals import (
-    DemeanerBackendOptions,
     FixedRmOptions,
     SolverOptions,
     VcovTypeOptions,
@@ -31,14 +29,11 @@ def feglm(
     vcov_kwargs: dict[str, str | int] | None = None,
     ssc: dict[str, str | bool] | None = None,
     fixef_rm: FixedRmOptions = "singleton",
-    fixef_tol: float = 1e-06,
-    fixef_maxiter: int = 100_000,
     iwls_tol: float = 1e-08,
     iwls_maxiter: int = 25,
     collin_tol: float = 1e-09,
     separation_check: list[str] | None = None,
     solver: SolverOptions = "scipy.linalg.solve",
-    demeaner_backend: DemeanerBackendOptions = "numba",
     demeaner: AnyDemeaner | None = None,
     drop_intercept: bool = False,
     copy_data: bool = True,
@@ -113,16 +108,6 @@ def feglm(
         "singletons" will drop singleton fixed effects. This will not impact point
         estimates but it will impact standard errors.
 
-    fixef_tol: float, optional
-        Tolerance for the fixed effects demeaning algorithm. Defaults to 1e-06.
-        Deprecated: use the `demeaner` argument instead. Will be removed in a
-        future release.
-
-    fixef_maxiter: int, optional
-        Maximum iterations for the demeaning algorithm. Defaults to 10,000.
-        Deprecated: use the `demeaner` argument instead. Will be removed in a
-        future release.
-
     iwls_tol : Optional[float], optional
         Tolerance for IWLS convergence, by default 1e-08.
 
@@ -141,17 +126,11 @@ def feglm(
         "np.linalg.solve", "scipy.linalg.solve", "scipy.sparse.linalg.lsqr" and "jax".
         Defaults to "scipy.linalg.solve".
 
-    demeaner_backend: DemeanerBackendOptions, optional
-        Deprecated: use the `demeaner` argument instead. Will be removed in a
-        future release. A shorthand string to select the demeaning backend.
-        Only used when `demeaner` is not provided.
-
     demeaner : AnyDemeaner | None, optional
-        Typed demeaner configuration. If provided, it takes precedence over
-        `demeaner_backend`, `fixef_tol`, and `fixef_maxiter`. Backend-specific
-        settings and fixed-effects iteration controls are taken entirely from
-        this object. Accepts a `MapDemeaner`, `WithinDemeaner`, or
-        `LsmrDemeaner` instance.
+        Typed demeaner configuration. Controls the fixed-effects demeaning
+        backend, tolerance, and iteration limits. Accepts a `MapDemeaner`,
+        `WithinDemeaner`, or `LsmrDemeaner` instance. Defaults to
+        `MapDemeaner()` (numba MAP algorithm, tol=1e-6, maxiter=10_000).
 
     drop_intercept : bool, optional
         Whether to drop the intercept from the model, by default False.
@@ -266,16 +245,9 @@ def feglm(
     weights_type = "aweights"
 
     context = {} if context is None else capture_context(context)
-
-    resolved_demeaner = resolve_demeaner(
-        demeaner=demeaner,
-        demeaner_backend=demeaner_backend,
-        fixef_tol=fixef_tol,
-        fixef_maxiter=fixef_maxiter,
-    )
-    resolved_fixef_tol, resolved_fixef_maxiter = get_resolved_fixef_controls(
-        resolved_demeaner
-    )
+    if demeaner is None:
+        demeaner = MapDemeaner()
+    _warn_if_experimental_torch_demeaner(demeaner)
 
     _estimation_input_checks(
         fml=fml,
@@ -289,8 +261,6 @@ def feglm(
         copy_data=copy_data,
         store_data=store_data,
         lean=lean,
-        fixef_tol=resolved_fixef_tol,
-        fixef_maxiter=resolved_fixef_maxiter,
         weights_type=weights_type,
         use_compression=False,
         reps=None,
@@ -305,8 +275,6 @@ def feglm(
         copy_data=copy_data,
         store_data=store_data,
         lean=lean,
-        fixef_tol=resolved_fixef_tol,
-        fixef_maxiter=resolved_fixef_maxiter,
         weights_type=weights_type,
         use_compression=False,
         reps=None,
@@ -340,7 +308,7 @@ def feglm(
         iwls_maxiter=iwls_maxiter,
         collin_tol=collin_tol,
         separation_check=separation_check,
-        demeaner=resolved_demeaner,
+        demeaner=demeaner,
         accelerate=accelerate,
     )
 

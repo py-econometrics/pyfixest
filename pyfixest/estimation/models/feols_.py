@@ -255,8 +255,6 @@ class Feols(ResultAccessorMixin):
         weights: str | None,
         weights_type: str | None,
         collin_tol: float,
-        fixef_tol: float,
-        fixef_maxiter: int,
         lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
         solver: SolverOptions = "np.linalg.solve",
         demeaner: AnyDemeaner | None = None,
@@ -296,15 +294,12 @@ class Feols(ResultAccessorMixin):
         self._weights_type = weights_type
         self._has_weights = weights is not None
         self._collin_tol = collin_tol
-        self._fixef_tol = fixef_tol
-        self._fixef_maxiter = fixef_maxiter
         self._solver = solver
         if demeaner is None:
-            demeaner = MapDemeaner(
-                fixef_tol=fixef_tol,
-                fixef_maxiter=fixef_maxiter,
-            )
+            demeaner = MapDemeaner()
         self._demeaner = demeaner
+        self._fixef_tol = demeaner.fixef_tol
+        self._fixef_maxiter = demeaner.fixef_maxiter
         self._lookup_demeaned_data = lookup_demeaned_data
         self._store_data = store_data
         self._copy_data = copy_data

@@ -42,8 +42,6 @@ class FixestMulti:
         copy_data: bool,
         store_data: bool,
         lean: bool,
-        fixef_tol: float,
-        fixef_maxiter: int,
         weights_type: str,
         use_compression: bool,
         reps: int | None,
@@ -68,10 +66,6 @@ class FixestMulti:
             Whether to store the data in the resulting model object or not.
         lean: bool
             Whether to store large-memory objects in the resulting model object or not.
-        fixef_tol: float
-            The tolerance for the convergence of the demeaning algorithm.
-        fixef_maxiter: int
-             The maximum iterations for the demeaning algorithm.
         weights_type: str
             The type of weights employed in the estimation. Either analytical /
             precision weights are employed (`aweights`) or
@@ -105,8 +99,6 @@ class FixestMulti:
         self._copy_data = copy_data
         self._store_data = store_data
         self._lean = lean
-        self._fixef_tol = fixef_tol
-        self._fixef_maxiter = fixef_maxiter
         self._weights_type = weights_type
         self._use_compression = use_compression
         self._reps = reps
@@ -344,8 +336,6 @@ class FixestMulti:
                         "weights_type": self._weights_type,
                         "solver": solver,
                         "collin_tol": collin_tol,
-                        "fixef_tol": self._fixef_tol,
-                        "fixef_maxiter": self._fixef_maxiter,
                         "store_data": self._store_data,
                         "copy_data": self._copy_data,
                         "lean": self._lean,

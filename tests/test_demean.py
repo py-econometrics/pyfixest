@@ -8,9 +8,7 @@ from pyfixest.core import demean as demean_rs
 from pyfixest.core.demean import demean_within
 from pyfixest.demeaners import LsmrDemeaner, MapDemeaner, WithinDemeaner
 from pyfixest.estimation.cupy.demean_cupy_ import demean_cupy32, demean_cupy64
-from pyfixest.estimation.internals.backends import BACKENDS
 from pyfixest.estimation.internals.demean_ import (
-    _set_demeaner_backend,
     demean,
     demean_model,
 )
@@ -147,49 +145,6 @@ def test_sparse_dummy_reencodes_non_contiguous_groups():
     assert torch.equal(D, expected)
 
 
-def test_set_demeaner_backend():
-    for backend in [
-        "numba",
-        "jax",
-        "rust",
-        "cupy32",
-        "cupy64",
-        "scipy",
-        "torch",
-        "torch_cpu",
-        "torch_mps",
-        "torch_cuda",
-        "torch_cuda32",
-    ]:
-        if backend.startswith("torch"):
-            with pytest.warns(UserWarning, match="experimental torch algorithms"):
-                demean_func = _set_demeaner_backend(backend)
-        else:
-            demean_func = _set_demeaner_backend(backend)
-        assert demean_func == BACKENDS[backend]["demean"]
-
-    demean_func = _set_demeaner_backend("rust-cg")
-    assert demean_func == demean_within
-
-    # Test invalid backend raises ValueError
-    with pytest.raises(ValueError, match="Invalid demeaner backend: invalid"):
-        _set_demeaner_backend("invalid")
-
-
-@pytest.mark.skipif(not HAS_TORCH, reason="torch not available")
-def test_feols_warns_for_experimental_torch_backend():
-    data = pd.DataFrame(
-        {
-            "y": [1.0, 2.0, 3.0, 4.0],
-            "x": [0.0, 1.0, 0.0, 1.0],
-            "fe": [0, 0, 1, 1],
-        }
-    )
-
-    with pytest.warns(UserWarning, match="experimental torch algorithms"):
-        pf.feols("y ~ x | fe", data=data, demeaner_backend="torch_cpu")
-
-
 @pytest.mark.skipif(not HAS_TORCH, reason="torch not available")
 def test_feols_warns_for_experimental_torch_demeaner():
     data = pd.DataFrame(
@@ -200,29 +155,11 @@ def test_feols_warns_for_experimental_torch_demeaner():
         }
     )
 
-    with pytest.warns(UserWarning, match="experimental torch algorithms"):
+    with pytest.warns(UserWarning, match="experimental"):
         pf.feols(
             "y ~ x | fe",
             data=data,
             demeaner=LsmrDemeaner(backend="torch", device="cpu"),
-        )
-
-
-def test_feols_warns_when_demeaner_overrides_backend():
-    data = pd.DataFrame(
-        {
-            "y": [1.0, 2.0, 3.0, 4.0],
-            "x": [0.0, 1.0, 0.0, 1.0],
-            "fe": [0, 0, 1, 1],
-        }
-    )
-
-    with pytest.warns(UserWarning, match="ignored when `demeaner` is provided"):
-        pf.feols(
-            "y ~ x | fe",
-            data=data,
-            demeaner_backend="jax",
-            demeaner=MapDemeaner(backend="numba"),
         )
 
 
@@ -492,7 +429,7 @@ def test_demean_maxiter_parameter():
 
 
 def test_feols_integration_maxiter():
-    """Integration test: Test fixef_maxiter flows from feols to demean."""
+    """Integration test: Test fixef_maxiter flows from demeaner to demean."""
     import pyfixest as pf
 
     N = 1000  # More observations
@@ -509,7 +446,7 @@ def test_feols_integration_maxiter():
 
     # Should fail with tiny maxiter
     with pytest.raises(ValueError, match="Demeaning failed after 1 iterations"):
-        pf.feols("y ~ x | fe", data=data, fixef_maxiter=1)
+        pf.feols("y ~ x | fe", data=data, demeaner=MapDemeaner(fixef_maxiter=1))
 
     # Should work with default
     model = pf.feols("y ~ x | fe", data=data)

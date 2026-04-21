@@ -213,114 +213,61 @@ ALL_F3 = ["str", "object", "int", "categorical", "float"]
 SINGLE_F3 = ALL_F3[0]
 
 
-def _typed_demeaner(backend_name: str):
-    fixef_tol = 1e-06
-    fixef_maxiter = 10_000
-
-    if backend_name in {"numba", "rust", "jax"}:
-        return pf.MapDemeaner(
-            backend=backend_name,
-            fixef_tol=fixef_tol,
-            fixef_maxiter=fixef_maxiter,
-        )
-    if backend_name == "rust-cg":
-        return pf.WithinDemeaner(
-            fixef_tol=fixef_tol,
-            fixef_maxiter=fixef_maxiter,
-        )
-    if backend_name == "cupy":
-        return pf.LsmrDemeaner(
-            backend="cupy",
-            precision="float64",
-            device="cuda",
-            fixef_maxiter=fixef_maxiter,
-            fixef_atol=fixef_tol,
-            fixef_btol=fixef_tol,
-        )
-    if backend_name == "scipy":
-        return pf.LsmrDemeaner(
-            backend="cupy",
-            precision="float64",
-            device="cpu",
-            fixef_maxiter=fixef_maxiter,
-            fixef_atol=fixef_tol,
-            fixef_btol=fixef_tol,
-        )
-    if backend_name == "torch":
-        return pf.LsmrDemeaner(
-            backend="torch",
-            precision="float64",
-            device="auto",
-            fixef_maxiter=fixef_maxiter,
-            fixef_atol=fixef_tol,
-            fixef_btol=fixef_tol,
-        )
-    if backend_name == "torch_cpu":
-        return pf.LsmrDemeaner(
-            backend="torch",
-            precision="float64",
-            device="cpu",
-            fixef_maxiter=fixef_maxiter,
-            fixef_atol=fixef_tol,
-            fixef_btol=fixef_tol,
-        )
-    if backend_name == "torch_mps":
-        return pf.LsmrDemeaner(
-            backend="torch",
-            precision="float32",
-            device="mps",
-            fixef_maxiter=fixef_maxiter,
-            fixef_atol=fixef_tol,
-            fixef_btol=fixef_tol,
-        )
-    if backend_name == "torch_cuda":
-        return pf.LsmrDemeaner(
-            backend="torch",
-            precision="float64",
-            device="cuda",
-            fixef_maxiter=fixef_maxiter,
-            fixef_atol=fixef_tol,
-            fixef_btol=fixef_tol,
-        )
-    if backend_name == "torch_cuda32":
-        return pf.LsmrDemeaner(
-            backend="torch",
-            precision="float32",
-            device="cuda",
-            fixef_maxiter=fixef_maxiter,
-            fixef_atol=fixef_tol,
-            fixef_btol=fixef_tol,
-        )
-    raise ValueError(f"Unknown backend {backend_name!r}")
-
-
 BACKEND_F3 = [
     *[
-        pytest.param(name, _typed_demeaner(name), t, id=name)
+        pytest.param(name, pf.MapDemeaner(backend="numba"), t, id=name)
         for name in ("numba",)
         for t in ALL_F3
     ],
+    pytest.param("within", pf.WithinDemeaner(), SINGLE_F3, id="within"),
     *[
-        pytest.param(name, _typed_demeaner(name), SINGLE_F3, id=name)
-        for name in ("rust-cg", "jax", "rust", "cupy", "scipy")
+        pytest.param(name, pf.MapDemeaner(backend=name), SINGLE_F3, id=name)
+        for name in ("jax", "rust")
     ],
-    torch_param(("torch", _typed_demeaner("torch"), SINGLE_F3), id="torch"),
+    pytest.param(
+        "cupy",
+        pf.LsmrDemeaner(backend="cupy", precision="float64", device="cuda"),
+        SINGLE_F3,
+        id="cupy",
+    ),
+    pytest.param(
+        "scipy",
+        pf.LsmrDemeaner(backend="cupy", precision="float64", device="cpu"),
+        SINGLE_F3,
+        id="scipy",
+    ),
     torch_param(
-        ("torch_cpu", _typed_demeaner("torch_cpu"), SINGLE_F3),
+        ("torch", pf.LsmrDemeaner(backend="torch", device="auto"), SINGLE_F3),
+        id="torch",
+    ),
+    torch_param(
+        ("torch_cpu", pf.LsmrDemeaner(backend="torch", device="cpu"), SINGLE_F3),
         id="torch_cpu",
     ),
     torch_param(
-        ("torch_mps", _typed_demeaner("torch_mps"), SINGLE_F3),
+        (
+            "torch_mps",
+            pf.LsmrDemeaner(backend="torch", precision="float32", device="mps"),
+            SINGLE_F3,
+        ),
         id="torch_mps",
         require="mps",
     ),
     torch_param(
-        ("torch_cuda", _typed_demeaner("torch_cuda"), SINGLE_F3),
+        (
+            "torch_cuda",
+            pf.LsmrDemeaner(backend="torch", device="cuda"),
+            SINGLE_F3,
+        ),
         id="torch_cuda",
         require="cuda",
     ),
     torch_param(
-        ("torch_cuda32", _typed_demeaner("torch_cuda32"), SINGLE_F3),
+        (
+            "torch_cuda32",
+            pf.LsmrDemeaner(backend="torch", precision="float32", device="cuda"),
+            SINGLE_F3,
+        ),
         id="torch_cuda32",
         require="cuda",
     ),

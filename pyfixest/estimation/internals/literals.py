@@ -11,22 +11,6 @@ SolverOptions = Literal[
     "scipy.sparse.linalg.lsqr",
     "jax",
 ]
-DemeanerBackendOptions = Literal[
-    "numba",
-    "jax",
-    "rust",
-    "rust-cg",
-    "within",
-    "cupy",
-    "cupy32",
-    "cupy64",
-    "scipy",
-    "torch",
-    "torch_cpu",
-    "torch_mps",
-    "torch_cuda",
-    "torch_cuda32",
-]
 PredictionErrorOptions = Literal["prediction"]
 QuantregMethodOptions = Literal["fn", "pfn"]
 QuantregMultiOptions = Literal["cfm1", "cfm2"]
