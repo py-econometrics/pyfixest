@@ -288,14 +288,12 @@ class Feiv(Feols):
             .reset_index(drop=True)
         )
         fe_f = (
-            self._fe.iloc[nz].reset_index(drop=True)
-            if self._fe is not None
-            else None
+            self._fe.iloc[nz].reset_index(drop=True) if self._fe is not None else None
         )
 
         if self._has_fixef:
             Yd, Xd = demean_model(
-                Y=Y_f,
+                Y=Y_f,  # type: ignore[arg-type]
                 X=X_f,
                 fe=fe_f,
                 weights=w_f,
@@ -307,7 +305,7 @@ class Feiv(Feols):
             )
             # demean Z — pass Y_f as a placeholder Y (only Z columns matter)
             _, Zd = demean_model(
-                Y=Y_f,
+                Y=Y_f,  # type: ignore[arg-type]
                 X=Z_f,
                 fe=fe_f,
                 weights=w_f,
