@@ -298,7 +298,7 @@ class Feols(ResultAccessorMixin):
         if demeaner is None:
             demeaner = MapDemeaner()
         self._demeaner = demeaner
-        self._fixef_tol = demeaner.fixef_tol
+        self._fixef_tol = getattr(demeaner, "fixef_tol", None)
         self._fixef_maxiter = demeaner.fixef_maxiter
         self._lookup_demeaned_data = lookup_demeaned_data
         self._store_data = store_data
