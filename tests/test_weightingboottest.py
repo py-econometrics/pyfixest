@@ -121,7 +121,7 @@ def test_cluster_arg(data, method):
 @pytest.mark.parametrize("fml", ["Y ~ X1 | X2 ~ Z1", "Y ~ X1 | f1 | X2 ~ Z1"])
 @pytest.mark.parametrize("method", ["bayesian", "multinomial"])
 def test_feiv_returns_dataframe(data, fml, method):
-    """weightingboottest on a Feiv model should return a correctly shaped result."""
+    """Weightingboottest on a Feiv model should return a correctly shaped result."""
     fit = pf.feols(fml, data=data, vcov="iid")
     res = fit.weightingboottest(reps=99, method=method, seed=0)
     assert hasattr(res, "columns")
@@ -133,9 +133,6 @@ def test_feiv_returns_dataframe(data, fml, method):
 @pytest.mark.parametrize("fml", ["Y ~ X1 | X2 ~ Z1", "Y ~ X1 | f1 | X2 ~ Z1"])
 def test_feiv_se_larger_than_ols(data, fml):
     """2SLS bootstrap SE for the endogenous regressor should exceed OLS SE."""
-    fml_ols = fml.split("|")[0].strip() + (
-        " | " + fml.split("|")[1].strip() if "|" in fml and "~" not in fml.split("|")[1] else ""
-    )
     fit_iv = pf.feols(fml, data=data, vcov="iid")
     _, draws_iv = fit_iv.weightingboottest(
         reps=300, method="bayesian", seed=42, return_draws=True
@@ -162,5 +159,7 @@ def test_feiv_bootstrap_mean_close_to_beta(data):
 def test_feiv_draws_shape(data):
     fit = pf.feols("Y ~ X1 | f1 | X2 ~ Z1", data=data, vcov="iid")
     reps = 50
-    _, draws = fit.weightingboottest(reps=reps, method="multinomial", seed=0, return_draws=True)
+    _, draws = fit.weightingboottest(
+        reps=reps, method="multinomial", seed=0, return_draws=True
+    )
     assert draws.shape == (reps, len(fit._coefnames))
