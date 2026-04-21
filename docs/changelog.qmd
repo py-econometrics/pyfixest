@@ -368,7 +368,7 @@ print(f"Numba backend took {toc-tic}.")
 tic = time.time()
 fit_rust = pf.feols(
   fml = "Y ~ X1 + X2 + X3 | f1 + f2 + f3", data = benchmark_data,
-  demeaner_backend = "rust"
+  demeaner = pf.MapDemeaner(backend="rust")
 )
 toc = time.time()
 print(f"Rust backend took {toc-tic}.")
