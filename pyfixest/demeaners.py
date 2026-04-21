@@ -28,12 +28,10 @@ def _validate_positive_int(value: int, name: str) -> None:
 class BaseDemeaner:
     """Base configuration shared by all fixed-effects demeaners."""
 
-    fixef_tol: float = 1e-06
     fixef_maxiter: int = 10_000
     kind: ClassVar[str]
 
     def __post_init__(self) -> None:
-        _validate_positive_float(self.fixef_tol, "fixef_tol")
         _validate_positive_int(self.fixef_maxiter, "fixef_maxiter")
 
 
@@ -41,11 +39,13 @@ class BaseDemeaner:
 class MapDemeaner(BaseDemeaner):
     """Alternating-projections demeaner with selectable implementation backend."""
 
+    fixef_tol: float = 1e-06
     backend: MapBackend = "numba"
     kind: ClassVar[str] = "map"
 
     def __post_init__(self) -> None:
         BaseDemeaner.__post_init__(self)
+        _validate_positive_float(self.fixef_tol, "fixef_tol")
         if not isinstance(self.backend, str):
             raise TypeError("`backend` must be a string.")
         if self.backend not in get_args(MapBackend):
@@ -56,10 +56,13 @@ class MapDemeaner(BaseDemeaner):
 class WithinDemeaner(BaseDemeaner):
     """Demeaner configuration for the Rust `within` backend."""
 
+    fixef_tol: float = 1e-06
+    fixef_maxiter: int = 1_000
     kind: ClassVar[str] = "within"
 
     def __post_init__(self) -> None:
         BaseDemeaner.__post_init__(self)
+        _validate_positive_float(self.fixef_tol, "fixef_tol")
 
 
 @dataclass(frozen=True, slots=True)
@@ -69,8 +72,8 @@ class LsmrDemeaner(BaseDemeaner):
     backend: LsmrBackend = "cupy"
     precision: LsmrPrecision = "float64"
     device: TorchDevice = "auto"
-    solver_atol: float = 1e-8
-    solver_btol: float = 1e-8
+    fixef_atol: float = 1e-8
+    fixef_btol: float = 1e-8
     warn_on_cpu_fallback: bool = True
     use_preconditioner: bool = True
     kind: ClassVar[str] = "lsmr"
@@ -91,8 +94,8 @@ class LsmrDemeaner(BaseDemeaner):
             raise TypeError("`device` must be a string.")
         if self.device not in get_args(TorchDevice):
             raise ValueError(f"`device` must be one of {get_args(TorchDevice)}.")
-        _validate_positive_float(self.solver_atol, "solver_atol")
-        _validate_positive_float(self.solver_btol, "solver_btol")
+        _validate_positive_float(self.fixef_atol, "fixef_atol")
+        _validate_positive_float(self.fixef_btol, "fixef_btol")
 
         if not isinstance(self.warn_on_cpu_fallback, bool):
             raise TypeError("`warn_on_cpu_fallback` must be a bool.")

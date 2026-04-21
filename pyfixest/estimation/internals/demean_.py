@@ -154,15 +154,16 @@ def _override_demeaner_tol(
     tol: float | None = None,
 ) -> AnyDemeaner:
     """Override FE tolerance on a typed demeaner when needed. Used for IWLS acceleration."""
-    if tol is None or tol == demeaner.fixef_tol:
-        return demeaner
     if isinstance(demeaner, LsmrDemeaner):
+        if tol is None or (tol == demeaner.fixef_atol and tol == demeaner.fixef_btol):
+            return demeaner
         return replace(
             demeaner,
-            fixef_tol=tol,
-            solver_atol=tol,
-            solver_btol=tol,
+            fixef_atol=tol,
+            fixef_btol=tol,
         )
+    if tol is None or tol == demeaner.fixef_tol:
+        return demeaner
     return replace(demeaner, fixef_tol=tol)
 
 
@@ -196,12 +197,12 @@ def dispatch_demean(
                     x=x,
                     flist=flist_uint,
                     weights=weights,
-                    tol=demeaner.fixef_tol,
+                    tol=max(demeaner.fixef_atol, demeaner.fixef_btol),
                     maxiter=demeaner.fixef_maxiter,
                 )
 
             dtype = torch.float32 if demeaner.precision == "float32" else torch.float64
-            tol = max(demeaner.solver_atol, demeaner.solver_btol)
+            tol = max(demeaner.fixef_atol, demeaner.fixef_btol)
             flist_uint64 = flist.astype(np.uint64, copy=False)
 
             if demeaner.device == "auto":
@@ -244,9 +245,9 @@ def dispatch_demean(
         )
         cupy_demeaner = cupy_demean_module.CupyFWLDemeaner(
             device=demeaner.device,
-            solver_atol=demeaner.solver_atol,
-            solver_btol=demeaner.solver_btol,
-            solver_maxiter=demeaner.fixef_maxiter,
+            fixef_atol=demeaner.fixef_atol,
+            fixef_btol=demeaner.fixef_btol,
+            fixef_maxiter=demeaner.fixef_maxiter,
             warn_on_cpu_fallback=demeaner.warn_on_cpu_fallback,
             dtype=np.float32 if demeaner.precision == "float32" else np.float64,
             use_preconditioner=demeaner.use_preconditioner,

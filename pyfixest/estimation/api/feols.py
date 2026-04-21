@@ -6,7 +6,10 @@ from typing import Any
 from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.api.utils import _estimation_input_checks
 from pyfixest.estimation.FixestMulti_ import FixestMulti
-from pyfixest.estimation.internals.demeaner_options import resolve_demeaner
+from pyfixest.estimation.internals.demeaner_options import (
+    get_resolved_fixef_controls,
+    resolve_demeaner,
+)
 from pyfixest.estimation.internals.literals import (
     DemeanerBackendOptions,
     FixedRmOptions,
@@ -501,8 +504,9 @@ def feols(
         fixef_tol=fixef_tol,
         fixef_maxiter=fixef_maxiter,
     )
-    resolved_fixef_tol = resolved_demeaner.fixef_tol
-    resolved_fixef_maxiter = resolved_demeaner.fixef_maxiter
+    resolved_fixef_tol, resolved_fixef_maxiter = get_resolved_fixef_controls(
+        resolved_demeaner
+    )
 
     _estimation_input_checks(
         fml=fml,

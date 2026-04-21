@@ -330,10 +330,6 @@ class Feols(ResultAccessorMixin):
         # self._coefnames = None
         self._icovars = None
 
-        # Collinearity, CRV1, and nested FE detection always use the Rust
-        # implementations. Demeaning backend is resolved inside dispatch_demean
-        # from the typed demeaner object.
-
         # set in get_fit()
         self._tZX = np.array([])
         # self._tZXinv = None

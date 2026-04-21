@@ -91,6 +91,13 @@ def get_demeaner_backend(demeaner: AnyDemeaner) -> DemeanerBackendOptions:
     return "within"
 
 
+def get_resolved_fixef_controls(demeaner: AnyDemeaner) -> tuple[float, int]:
+    """Return FE control values used by API-level validation and wiring."""
+    if isinstance(demeaner, LsmrDemeaner):
+        return max(demeaner.fixef_atol, demeaner.fixef_btol), demeaner.fixef_maxiter
+    return demeaner.fixef_tol, demeaner.fixef_maxiter
+
+
 def _from_backend_shorthand(
     demeaner_backend: DemeanerBackendOptions,
     fixef_tol: float,
@@ -110,80 +117,72 @@ def _from_backend_shorthand(
             backend="cupy",
             precision="float64",
             device="cuda",
-            fixef_tol=fixef_tol,
             fixef_maxiter=fixef_maxiter,
-            solver_atol=fixef_tol,
-            solver_btol=fixef_tol,
+            fixef_atol=fixef_tol,
+            fixef_btol=fixef_tol,
         )
     if demeaner_backend == "cupy32":
         return LsmrDemeaner(
             backend="cupy",
             precision="float32",
             device="cuda",
-            fixef_tol=fixef_tol,
             fixef_maxiter=fixef_maxiter,
-            solver_atol=fixef_tol,
-            solver_btol=fixef_tol,
+            fixef_atol=fixef_tol,
+            fixef_btol=fixef_tol,
         )
     if demeaner_backend == "scipy":
         return LsmrDemeaner(
             backend="cupy",
             precision="float64",
             device="cpu",
-            fixef_tol=fixef_tol,
             fixef_maxiter=fixef_maxiter,
-            solver_atol=fixef_tol,
-            solver_btol=fixef_tol,
+            fixef_atol=fixef_tol,
+            fixef_btol=fixef_tol,
         )
     if demeaner_backend == "torch":
         return LsmrDemeaner(
             backend="torch",
             precision="float64",
             device="auto",
-            fixef_tol=fixef_tol,
             fixef_maxiter=fixef_maxiter,
-            solver_atol=fixef_tol,
-            solver_btol=fixef_tol,
+            fixef_atol=fixef_tol,
+            fixef_btol=fixef_tol,
         )
     if demeaner_backend == "torch_cpu":
         return LsmrDemeaner(
             backend="torch",
             precision="float64",
             device="cpu",
-            fixef_tol=fixef_tol,
             fixef_maxiter=fixef_maxiter,
-            solver_atol=fixef_tol,
-            solver_btol=fixef_tol,
+            fixef_atol=fixef_tol,
+            fixef_btol=fixef_tol,
         )
     if demeaner_backend == "torch_mps":
         return LsmrDemeaner(
             backend="torch",
             precision="float32",
             device="mps",
-            fixef_tol=fixef_tol,
             fixef_maxiter=fixef_maxiter,
-            solver_atol=fixef_tol,
-            solver_btol=fixef_tol,
+            fixef_atol=fixef_tol,
+            fixef_btol=fixef_tol,
         )
     if demeaner_backend == "torch_cuda":
         return LsmrDemeaner(
             backend="torch",
             precision="float64",
             device="cuda",
-            fixef_tol=fixef_tol,
             fixef_maxiter=fixef_maxiter,
-            solver_atol=fixef_tol,
-            solver_btol=fixef_tol,
+            fixef_atol=fixef_tol,
+            fixef_btol=fixef_tol,
         )
     if demeaner_backend == "torch_cuda32":
         return LsmrDemeaner(
             backend="torch",
             precision="float32",
             device="cuda",
-            fixef_tol=fixef_tol,
             fixef_maxiter=fixef_maxiter,
-            solver_atol=fixef_tol,
-            solver_btol=fixef_tol,
+            fixef_atol=fixef_tol,
+            fixef_btol=fixef_tol,
         )
 
     raise ValueError(f"Unknown demeaner backend {demeaner_backend!r}.")
@@ -203,6 +202,7 @@ def _warn_if_experimental_torch_demeaner(demeaner: AnyDemeaner) -> None:
 
 __all__ = [
     "get_demeaner_backend",
+    "get_resolved_fixef_controls",
     "normalize_demeaner_backend",
     "resolve_demeaner",
 ]

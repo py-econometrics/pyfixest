@@ -36,9 +36,9 @@ class CupyFWLDemeaner:
     def __init__(
         self,
         device: str = "auto",
-        solver_atol: float = 1e-8,
-        solver_btol: float = 1e-8,
-        solver_maxiter: int | None = None,
+        fixef_atol: float = 1e-8,
+        fixef_btol: float = 1e-8,
+        fixef_maxiter: int | None = None,
         warn_on_cpu_fallback: bool = True,
         dtype: type = np.float64,
         use_preconditioner: bool = True,
@@ -51,11 +51,11 @@ class CupyFWLDemeaner:
         device : str, default="auto"
             Device to run on: "auto" (auto-detect GPU), "cuda" (force GPU),
             or "cpu" (force CPU/scipy).
-        solver_atol : float, default=1e-8
+        fixef_atol : float, default=1e-8
             Absolute tolerance for LSMR stopping criterion.
-        solver_btol : float, default=1e-8
+        fixef_btol : float, default=1e-8
             Relative tolerance for LSMR stopping criterion.
-        solver_maxiter : int, optional
+        fixef_maxiter : int, optional
             Maximum LSMR iterations. If None, uses LSMR's default.
         warn_on_cpu_fallback : bool, default=True
             Warn when falling back to CPU despite device="cuda".
@@ -81,9 +81,9 @@ class CupyFWLDemeaner:
         else:
             self.use_gpu = False
 
-        self.solver_atol = solver_atol
-        self.solver_btol = solver_btol
-        self.solver_maxiter = solver_maxiter
+        self.fixef_atol = fixef_atol
+        self.fixef_btol = fixef_btol
+        self.fixef_maxiter = fixef_maxiter
         self.warn_on_cpu_fallback = warn_on_cpu_fallback
         self.dtype = dtype
         self.use_preconditioner = use_preconditioner
@@ -147,9 +147,9 @@ class CupyFWLDemeaner:
                 A_op,
                 x_weighted[:, k],
                 damp=0.0,
-                atol=self.solver_atol,
-                btol=self.solver_btol,
-                maxiter=self.solver_maxiter,
+                atol=self.fixef_atol,
+                btol=self.fixef_btol,
+                maxiter=self.fixef_maxiter,
             )
             z = result[0]
 
@@ -202,8 +202,8 @@ class CupyFWLDemeaner:
             True if solver converged/succeeded.
         """
         # Override maxiter if not set in __init__
-        if self.solver_maxiter is None:
-            self.solver_maxiter = maxiter
+        if self.fixef_maxiter is None:
+            self.fixef_maxiter = maxiter
 
         D = fe_sparse_matrix
         if self.use_gpu:

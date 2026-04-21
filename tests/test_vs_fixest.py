@@ -233,70 +233,63 @@ def _typed_demeaner(backend_name: str):
             backend="cupy",
             precision="float64",
             device="cuda",
-            fixef_tol=fixef_tol,
             fixef_maxiter=fixef_maxiter,
-            solver_atol=fixef_tol,
-            solver_btol=fixef_tol,
+            fixef_atol=fixef_tol,
+            fixef_btol=fixef_tol,
         )
     if backend_name == "scipy":
         return pf.LsmrDemeaner(
             backend="cupy",
             precision="float64",
             device="cpu",
-            fixef_tol=fixef_tol,
             fixef_maxiter=fixef_maxiter,
-            solver_atol=fixef_tol,
-            solver_btol=fixef_tol,
+            fixef_atol=fixef_tol,
+            fixef_btol=fixef_tol,
         )
     if backend_name == "torch":
         return pf.LsmrDemeaner(
             backend="torch",
             precision="float64",
             device="auto",
-            fixef_tol=fixef_tol,
             fixef_maxiter=fixef_maxiter,
-            solver_atol=fixef_tol,
-            solver_btol=fixef_tol,
+            fixef_atol=fixef_tol,
+            fixef_btol=fixef_tol,
         )
     if backend_name == "torch_cpu":
         return pf.LsmrDemeaner(
             backend="torch",
             precision="float64",
             device="cpu",
-            fixef_tol=fixef_tol,
             fixef_maxiter=fixef_maxiter,
-            solver_atol=fixef_tol,
-            solver_btol=fixef_tol,
+            fixef_atol=fixef_tol,
+            fixef_btol=fixef_tol,
         )
     if backend_name == "torch_mps":
         return pf.LsmrDemeaner(
             backend="torch",
             precision="float32",
             device="mps",
-            fixef_tol=fixef_tol,
             fixef_maxiter=fixef_maxiter,
-            solver_atol=fixef_tol,
-            solver_btol=fixef_tol,
+            fixef_atol=fixef_tol,
+            fixef_btol=fixef_tol,
         )
     if backend_name == "torch_cuda":
         return pf.LsmrDemeaner(
             backend="torch",
             precision="float64",
             device="cuda",
-            fixef_tol=fixef_tol,
             fixef_maxiter=fixef_maxiter,
-            solver_atol=fixef_tol,
-            solver_btol=fixef_tol,
+            fixef_atol=fixef_tol,
+            fixef_btol=fixef_tol,
         )
     if backend_name == "torch_cuda32":
         return pf.LsmrDemeaner(
             backend="torch",
             precision="float32",
             device="cuda",
-            fixef_tol=fixef_tol,
             fixef_maxiter=fixef_maxiter,
-            solver_atol=fixef_tol,
-            solver_btol=fixef_tol,
+            fixef_atol=fixef_tol,
+            fixef_btol=fixef_tol,
         )
     raise ValueError(f"Unknown backend {backend_name!r}")
 
