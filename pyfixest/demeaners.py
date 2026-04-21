@@ -61,7 +61,7 @@ class WithinDemeaner(BaseDemeaner):
     kind: ClassVar[str] = "within"
 
     def __post_init__(self) -> None:
-        super().__post_init__()
+        BaseDemeaner.__post_init__(self)
         _validate_positive_float(self.fixef_tol, "fixef_tol")
 
 
