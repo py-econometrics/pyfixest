@@ -92,6 +92,35 @@ def test_fepois_args():
     np.testing.assert_allclose(fit4.coef(), fit5.coef(), rtol=1e-12)
 
 
+def test_legacy_demeaner_args_map_with_deprecation_warning():
+    data = pf.get_data()
+
+    with pytest.warns(DeprecationWarning):
+        fit = pf.feols(
+            "Y ~ X1 | f1 + f2",
+            data=data,
+            demeaner_backend="rust-cg",
+            fixef_tol=1e-4,
+            fixef_maxiter=321,
+        )
+
+    assert isinstance(fit._demeaner, pf.WithinDemeaner)
+    assert fit._demeaner.fixef_tol == 1e-4
+    assert fit._demeaner.fixef_maxiter == 321
+
+
+def test_legacy_demeaner_args_conflict_with_typed_demeaner():
+    data = pf.get_data()
+
+    with pytest.raises(ValueError, match="Pass either `demeaner`"):
+        pf.feols(
+            "Y ~ X1 | f1 + f2",
+            data=data,
+            demeaner=pf.MapDemeaner(),
+            fixef_tol=1e-4,
+        )
+
+
 def test_lean():
     data = pf.get_data()
     fit = pf.feols("Y ~ X1 + X2 | f1", data=data, lean=True)

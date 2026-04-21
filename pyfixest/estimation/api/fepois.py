@@ -3,10 +3,11 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from pyfixest.demeaners import AnyDemeaner, MapDemeaner
+from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.api.utils import _estimation_input_checks
 from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.internals.demeaner_options import (
+    _resolve_demeaner,
     _warn_if_experimental_torch_demeaner,
 )
 from pyfixest.estimation.internals.literals import (
@@ -37,6 +38,9 @@ def fepois(
     separation_check: list[str] | None = None,
     solver: SolverOptions = "scipy.linalg.solve",
     demeaner: AnyDemeaner | None = None,
+    demeaner_backend: str | None = None,
+    fixef_tol: float | None = None,
+    fixef_maxiter: int | None = None,
     drop_intercept: bool = False,
     copy_data: bool = True,
     store_data: bool = True,
@@ -193,8 +197,12 @@ def fepois(
     if ssc is None:
         ssc = ssc_func()
     context = {} if context is None else capture_context(context)
-    if demeaner is None:
-        demeaner = MapDemeaner()
+    demeaner = _resolve_demeaner(
+        demeaner=demeaner,
+        demeaner_backend=demeaner_backend,
+        fixef_tol=fixef_tol,
+        fixef_maxiter=fixef_maxiter,
+    )
     _warn_if_experimental_torch_demeaner(demeaner)
 
     _estimation_input_checks(
