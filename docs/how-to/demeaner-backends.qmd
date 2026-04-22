@@ -26,7 +26,7 @@ For a deeper discussion on when to use which backend, see [When Are Fixed Effect
 | `WithinDemeaner()` | Best for **sparse** fixed-effect structures (e.g. matched employer-employee data). |
 | `MapDemeaner(backend="jax")` | MAP on the GPU via JAX (requires `pip install pyfixest[jax]`). |
 | `LsmrDemeaner(backend="torch", device="cuda")` | GPU acceleration via PyTorch. Experimental. |
-| `LsmrDemeaner(backend = "scipy", device="cpu")` | LSMR solver on CPU via CuPy/SciPy. |
+| `LsmrDemeaner(backend="cupy", device="cpu")` | LSMR solver on CPU via SciPy. |
 | `LsmrDemeaner(backend = "cupy", device="cuda")` | LSMR solver on CUDA via CuPy. |
 
 ## Usage
