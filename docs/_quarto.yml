@@ -72,6 +72,8 @@ website:
         - text: "All Guides"
           file: how-to/index.qmd
         - text: "---"
+        - text: "Choosing a Demeaner Backend"
+          file: how-to/demeaner-backends.qmd
         - text: "Marginal Effects & Hypothesis Testing"
           file: how-to/marginaleffects.qmd
         - text: "Regression Decomposition"
