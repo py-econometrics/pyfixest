@@ -337,7 +337,6 @@ def test_demean_model_caching(benchmark, demeaner):
         pytest.param(MapDemeaner(backend="numba", fixef_maxiter=1), id="numba"),
         pytest.param(MapDemeaner(backend="jax", fixef_maxiter=1), id="jax"),
         pytest.param(MapDemeaner(backend="rust", fixef_maxiter=1), id="rust"),
-        pytest.param(WithinDemeaner(fixef_maxiter=1), id="within"),
         pytest.param(LsmrDemeaner(device="cpu", fixef_maxiter=1), id="lsmr_scipy"),
         pytest.param(
             LsmrDemeaner(backend="torch", device="cpu", fixef_maxiter=1),

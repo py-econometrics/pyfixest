@@ -226,7 +226,7 @@ BACKEND_F3 = [
     ],
     pytest.param(
         "cupy",
-        pf.LsmrDemeaner(backend="cupy", precision="float64", device="cuda"),
+        pf.LsmrDemeaner(backend="cupy", precision="float64", device="auto"),
         SINGLE_F3,
         id="cupy",
     ),

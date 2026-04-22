@@ -16,7 +16,7 @@ from scipy.stats import chi2, f, t
 from pyfixest.core.collinear import find_collinear_variables
 from pyfixest.core.crv1 import crv1_meat_loop
 from pyfixest.core.nested_fixed_effects import count_fixef_fully_nested_all
-from pyfixest.demeaners import AnyDemeaner, MapDemeaner
+from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner, MapDemeaner
 from pyfixest.errors import VcovTypeNotSupportedError
 from pyfixest.estimation.api.utils import _ALL_SAMPLE, _AllSampleSentinel
 from pyfixest.estimation.formula import model_matrix as model_matrix_fixest
@@ -298,7 +298,10 @@ class Feols(ResultAccessorMixin):
         if demeaner is None:
             demeaner = MapDemeaner()
         self._demeaner = demeaner
-        self._fixef_tol = getattr(demeaner, "fixef_tol", None)
+        if isinstance(demeaner, LsmrDemeaner):
+            self._fixef_tol = max(demeaner.fixef_atol, demeaner.fixef_btol)
+        else:
+            self._fixef_tol = demeaner.fixef_tol
         self._fixef_maxiter = demeaner.fixef_maxiter
         self._lookup_demeaned_data = lookup_demeaned_data
         self._store_data = store_data

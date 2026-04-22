@@ -121,6 +121,20 @@ def test_legacy_demeaner_args_conflict_with_typed_demeaner():
         )
 
 
+@pytest.mark.parametrize(
+    "builder, invalid_name",
+    [
+        (lambda: pf.MapDemeaner(fixef_tol=1.0), "fixef_tol"),
+        (lambda: pf.WithinDemeaner(fixef_tol=1.0), "fixef_tol"),
+        (lambda: pf.LsmrDemeaner(fixef_atol=1.0), "fixef_atol"),
+        (lambda: pf.LsmrDemeaner(fixef_btol=1.0), "fixef_btol"),
+    ],
+)
+def test_typed_demeaners_reject_tolerances_ge_one(builder, invalid_name):
+    with pytest.raises(ValueError, match=invalid_name):
+        builder()
+
+
 def test_lean():
     data = pf.get_data()
     fit = pf.feols("Y ~ X1 + X2 | f1", data=data, lean=True)
