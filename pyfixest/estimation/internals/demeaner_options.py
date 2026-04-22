@@ -21,18 +21,12 @@ def _build_map_demeaner(
     fixef_tol: float | None,
     fixef_maxiter: int | None,
 ) -> MapDemeaner:
-    if fixef_tol is None and fixef_maxiter is None:
-        return MapDemeaner(backend=backend)
-    if fixef_tol is None:
-        assert fixef_maxiter is not None
-        return MapDemeaner(backend=backend, fixef_maxiter=fixef_maxiter)
-    if fixef_maxiter is None:
-        return MapDemeaner(backend=backend, fixef_tol=fixef_tol)
-    return MapDemeaner(
-        backend=backend,
-        fixef_tol=fixef_tol,
-        fixef_maxiter=fixef_maxiter,
-    )
+    kwargs: dict = {"backend": backend}
+    if fixef_tol is not None:
+        kwargs["fixef_tol"] = fixef_tol
+    if fixef_maxiter is not None:
+        kwargs["fixef_maxiter"] = fixef_maxiter
+    return MapDemeaner(**kwargs)
 
 
 def _build_within_demeaner(
@@ -40,53 +34,29 @@ def _build_within_demeaner(
     fixef_tol: float | None,
     fixef_maxiter: int | None,
 ) -> WithinDemeaner:
-    if fixef_tol is None and fixef_maxiter is None:
-        return WithinDemeaner()
-    if fixef_tol is None:
-        assert fixef_maxiter is not None
-        return WithinDemeaner(fixef_maxiter=fixef_maxiter)
-    if fixef_maxiter is None:
-        return WithinDemeaner(fixef_tol=fixef_tol)
-    return WithinDemeaner(
-        fixef_tol=fixef_tol,
-        fixef_maxiter=fixef_maxiter,
-    )
+    kwargs: dict = {}
+    if fixef_tol is not None:
+        kwargs["fixef_tol"] = fixef_tol
+    if fixef_maxiter is not None:
+        kwargs["fixef_maxiter"] = fixef_maxiter
+    return WithinDemeaner(**kwargs)
 
 
 def _build_lsmr_demeaner(
     *,
     backend: LsmrBackend,
     device: TorchDevice,
-    precision: LsmrPrecision,
-    fixef_tol: float | None,
-    fixef_maxiter: int | None,
+    precision: LsmrPrecision = "float64",
+    fixef_tol: float | None = None,
+    fixef_maxiter: int | None = None,
 ) -> LsmrDemeaner:
-    if fixef_tol is None and fixef_maxiter is None:
-        return LsmrDemeaner(backend=backend, device=device, precision=precision)
-    if fixef_tol is None:
-        assert fixef_maxiter is not None
-        return LsmrDemeaner(
-            backend=backend,
-            device=device,
-            precision=precision,
-            fixef_maxiter=fixef_maxiter,
-        )
-    if fixef_maxiter is None:
-        return LsmrDemeaner(
-            backend=backend,
-            device=device,
-            precision=precision,
-            fixef_atol=fixef_tol,
-            fixef_btol=fixef_tol,
-        )
-    return LsmrDemeaner(
-        backend=backend,
-        device=device,
-        precision=precision,
-        fixef_atol=fixef_tol,
-        fixef_btol=fixef_tol,
-        fixef_maxiter=fixef_maxiter,
-    )
+    kwargs: dict = {"backend": backend, "device": device, "precision": precision}
+    if fixef_tol is not None:
+        kwargs["fixef_atol"] = fixef_tol
+        kwargs["fixef_btol"] = fixef_tol
+    if fixef_maxiter is not None:
+        kwargs["fixef_maxiter"] = fixef_maxiter
+    return LsmrDemeaner(**kwargs)
 
 
 def _resolve_demeaner(
