@@ -10,11 +10,9 @@ estimation.models.feiv_.Feiv(
     weights,
     weights_type,
     collin_tol,
-    fixef_tol,
-    fixef_maxiter,
     lookup_demeaned_data,
     solver='scipy.linalg.solve',
-    demeaner_backend='numba',
+    demeaner=None,
     store_data=True,
     copy_data=True,
     lean=False,
@@ -34,20 +32,20 @@ estimation).
 
 ## Parameters {.doc-section .doc-section-parameters}
 
-| Name             | Type                                                                                                               | Description                                                                                               | Default                |
-|------------------|--------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------|------------------------|
-| Y                | np.ndarray                                                                                                         | Dependent variable, a two-dimensional np.array.                                                           | _required_             |
-| X                | np.ndarray                                                                                                         | Independent variables, a two-dimensional np.array.                                                        | _required_             |
-| endgvar          | np.ndarray                                                                                                         | Endogenous Indenpendent variables, a two-dimensional np.array.                                            | _required_             |
-| Z                | np.ndarray                                                                                                         | Instruments, a two-dimensional np.array.                                                                  | _required_             |
-| weights          | np.ndarray                                                                                                         | Weights, a one-dimensional np.array.                                                                      | _required_             |
-| coefnames_x      | list                                                                                                               | Names of the coefficients of X.                                                                           | _required_             |
-| coefnames_z      | list                                                                                                               | Names of the coefficients of Z.                                                                           | _required_             |
-| collin_tol       | float                                                                                                              | Tolerance for collinearity check.                                                                         | _required_             |
-| solver           | Literal\[\'np.linalg.lstsq\', \'np.linalg.solve\', \'scipy.linalg.solve\', \'scipy.sparse.linalg.lsqr\', \'jax\'\] | "scipy.sparse.linalg.lsqr", "jax"], default is "scipy.linalg.solve". Solver to use for the estimation.    | `'scipy.linalg.solve'` |
-| demeaner_backend | DemeanerBackendOptions                                                                                             | The backend to use for demeaning. Can be either "numba", "jax", or "rust". Defaults to "numba".           | `'numba'`              |
-| weights_name     | Optional\[str\]                                                                                                    | Name of the weights variable.                                                                             | _required_             |
-| weights_type     | Optional\[str\]                                                                                                    | Type of the weights variable. Either "aweights" for analytic weights or "fweights" for frequency weights. | _required_             |
+| Name         | Type                                                                                                               | Description                                                                                               | Default                |
+|--------------|--------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------|------------------------|
+| Y            | np.ndarray                                                                                                         | Dependent variable, a two-dimensional np.array.                                                           | _required_             |
+| X            | np.ndarray                                                                                                         | Independent variables, a two-dimensional np.array.                                                        | _required_             |
+| endgvar      | np.ndarray                                                                                                         | Endogenous Indenpendent variables, a two-dimensional np.array.                                            | _required_             |
+| Z            | np.ndarray                                                                                                         | Instruments, a two-dimensional np.array.                                                                  | _required_             |
+| weights      | np.ndarray                                                                                                         | Weights, a one-dimensional np.array.                                                                      | _required_             |
+| coefnames_x  | list                                                                                                               | Names of the coefficients of X.                                                                           | _required_             |
+| coefnames_z  | list                                                                                                               | Names of the coefficients of Z.                                                                           | _required_             |
+| collin_tol   | float                                                                                                              | Tolerance for collinearity check.                                                                         | _required_             |
+| solver       | Literal\[\'np.linalg.lstsq\', \'np.linalg.solve\', \'scipy.linalg.solve\', \'scipy.sparse.linalg.lsqr\', \'jax\'\] | "scipy.sparse.linalg.lsqr", "jax"], default is "scipy.linalg.solve". Solver to use for the estimation.    | `'scipy.linalg.solve'` |
+| demeaner     | Optional\[AnyDemeaner\]                                                                                            | Resolved typed demeaner configuration.                                                                    | `None`                 |
+| weights_name | Optional\[str\]                                                                                                    | Name of the weights variable.                                                                             | _required_             |
+| weights_type | Optional\[str\]                                                                                                    | Type of the weights variable. Either "aweights" for analytic weights or "fweights" for frequency weights. | _required_             |
 
 ## Attributes {.doc-section .doc-section-attributes}
 

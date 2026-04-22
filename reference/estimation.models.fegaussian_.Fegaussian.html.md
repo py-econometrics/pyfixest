@@ -10,8 +10,6 @@ estimation.models.fegaussian_.Fegaussian(
     weights,
     weights_type,
     collin_tol,
-    fixef_tol,
-    fixef_maxiter,
     lookup_demeaned_data,
     tol,
     maxiter,
@@ -23,7 +21,7 @@ estimation.models.fegaussian_.Fegaussian(
     sample_split_value=None,
     separation_check=None,
     context=0,
-    demeaner_backend='numba',
+    demeaner=None,
     accelerate=True,
 )
 ```

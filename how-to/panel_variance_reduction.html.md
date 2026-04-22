@@ -219,7 +219,7 @@ fit_panel = pf.feols(
     "minutes_watched ~ treat | user + day",
     data=data,
     vcov="hetero",
-    demeaner_backend="rust",
+    demeaner=pf.MapDemeaner(backend="rust"),
 )
 ```
 
@@ -238,7 +238,7 @@ fit_panel_crv = pf.feols(
     "minutes_watched ~ treat | user + day",
     data=data,
     vcov={"CRV1": "user"},
-    demeaner_backend="rust",
+    demeaner=pf.MapDemeaner(backend="rust"),
 )
 ```
 
@@ -266,7 +266,7 @@ fit_panel_time = pf.feols(
     "minutes_watched ~ i(day, ever_treated, ref = 14) | user + day",
     vcov={"CRV1": "user"},
     data=data,
-    demeaner_backend="rust",
+    demeaner=pf.MapDemeaner(backend="rust"),
 )
 fit_panel_time.iplot(
     coord_flip=False,
@@ -293,7 +293,7 @@ def _variance_monte_carlo(data):
         "minutes_watched ~ treat | user + day",
         data=data,
         vcov={"CRV1": "user"},
-        demeaner_backend="rust",
+        demeaner=pf.MapDemeaner(backend="rust"),
     )
 
     dim_se = fit_dim.tidy().xs("treat")["Std. Error"]

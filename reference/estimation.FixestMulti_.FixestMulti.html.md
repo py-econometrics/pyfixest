@@ -6,8 +6,6 @@ estimation.FixestMulti_.FixestMulti(
     copy_data,
     store_data,
     lean,
-    fixef_tol,
-    fixef_maxiter,
     weights_type,
     use_compression,
     reps,

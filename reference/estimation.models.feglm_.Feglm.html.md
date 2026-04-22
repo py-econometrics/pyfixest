@@ -10,13 +10,11 @@ estimation.models.feglm_.Feglm(
     weights,
     weights_type,
     collin_tol,
-    fixef_tol,
-    fixef_maxiter,
     lookup_demeaned_data,
     tol,
     maxiter,
     solver,
-    demeaner_backend='numba',
+    demeaner=None,
     store_data=True,
     copy_data=True,
     lean=False,
@@ -105,7 +103,7 @@ Prepare model inputs for estimation.
 ### residualize { #pyfixest.estimation.models.feglm_.Feglm.residualize }
 
 ```python
-estimation.models.feglm_.Feglm.residualize(v, X, flist, weights, tol, maxiter)
+estimation.models.feglm_.Feglm.residualize(v, X, flist, weights, tol)
 ```
 
 Residualize v and X by flist using weights.

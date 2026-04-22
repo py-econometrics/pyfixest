@@ -13,6 +13,25 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ## PyFixest 0.60.0 (In Development)
 
+### Typed Demeaner API
+
+A new typed demeaner API replaces the old `demeaner_backend`, `fixef_tol`, and `fixef_maxiter` arguments to `feols()`, `fepois()`, and related functions. Instead of passing loose keyword arguments, we now ask you to pass a typed configuration object. The new API is no longer "stringly typed" but "strongly typed" with strong type hints and clearer code organisation.
+
+```python
+import pyfixest as pf
+from pyfixest.demeaners import MapDemeaner, WithinDemeaner, LsmrDemeaner
+
+# Old API (deprecated)
+fit = pf.feols("Y ~ X1 | f1", data=df, demeaner_backend="rust", fixef_tol=1e-8, fixef_maxiter=5000)
+
+# New API
+fit = pf.feols("Y ~ X1 | f1", data=df, demeaner=MapDemeaner(backend="rust", fixef_tol=1e-8, fixef_maxiter=5000))
+fit = pf.feols("Y ~ X1 | f1", data=df, demeaner=WithinDemeaner(fixef_tol=1e-8, fixef_maxiter=5000))
+fit = pf.feols("Y ~ X1 | f1", data=df, demeaner=LsmrDemeaner(backend="torch", device="cuda"))
+```
+
+**Deprecations:** The `demeaner_backend`, `fixef_tol`, and `fixef_maxiter` arguments to `feols()` and related functions are deprecated and will be removed in a future release. Likewise, the `_fixef_tol` and `_fixef_maxiter` attributes on fitted model objects are deprecated — use `model.demeaner.fixef_tol` and `model.demeaner.fixef_maxiter` instead.
+
 - Adds experimental GPU acceleration via PyTorch on CUDA and MPS, plus a PyTorch-based CPU LSMR demeaning backend.
 
 ## PyFixest 0.50.1
@@ -35,13 +54,13 @@ pip install --pre pyfixest
 
 ### New Demeaner Backend via the `within` package
 
-We recently came together for a PyFixest sprint with the team from AppliedAI, and one new feature that already made it's way into the code base is a new demeaner backend that performs really well for sparse fixed effects structures.
+We recently came together for a PyFixest sprint with the team from AppliedAI, and one new feature that already made it's way into the code base is a new typed demeaner configuration that performs really well for sparse fixed effects structures.
 
-The new backend can be accessed via the `rust-cg` demeaner backend and is a significant performance improvement for sparse fixed effects structures - such as matched employer-employee data, patient-doctor panels, or trade networks - where the standard MAP algorithm might struggle. On well-connected graphs, the existing `rust` (MAP) backend remains competitive, but on sparse graphs, `rust-cg` is dramatically faster.
+The new solver is exposed via `pf.WithinDemeaner()` and is a significant performance improvement for sparse fixed effects structures - such as matched employer-employee data, patient-doctor panels, or trade networks - where the standard MAP algorithm might struggle. On well-connected graphs, `pf.MapDemeaner(backend="rust")` remains competitive, but on sparse graphs the within-based solver is dramatically faster.
 
 ![](explanation/figures/base-benchmarks/bench_difficult.png){width=85% fig-align="center"}
 
-*Benchmark on a sparse fixed effects structure: vanilla MAP degrades dramatically, while CG-Schwarz (`rust-cg`) remains fast.*
+*Benchmark on a sparse fixed effects structure: vanilla MAP degrades dramatically, while CG-Schwarz via `pf.WithinDemeaner()` remains fast.*
 
 For a detailed explanation of why some fixed effects problems are harder than others and comprehensive benchmarks, see [When Are Fixed Effects Estimations Difficult?](explanation/difficult-fixed-effects.md).
 
@@ -364,7 +383,7 @@ print(f"Numba backend took {toc-tic}.")
 tic = time.time()
 fit_rust = pf.feols(
   fml = "Y ~ X1 + X2 + X3 | f1 + f2 + f3", data = benchmark_data,
-  demeaner_backend = "rust"
+  demeaner = pf.MapDemeaner(backend="rust")
 )
 toc = time.time()
 print(f"Rust backend took {toc-tic}.")

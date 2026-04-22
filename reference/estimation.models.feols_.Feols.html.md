@@ -10,11 +10,9 @@ estimation.models.feols_.Feols(
     weights,
     weights_type,
     collin_tol,
-    fixef_tol,
-    fixef_maxiter,
     lookup_demeaned_data,
     solver='np.linalg.solve',
-    demeaner_backend='numba',
+    demeaner=None,
     store_data=True,
     copy_data=True,
     lean=False,
@@ -103,7 +101,6 @@ estimation).
 | _adj_r2                      | float                                                                      | Adjusted R-squared value of the model.                                                                                                                                                                                                                                                                 |
 | _adj_r2_within               | float                                                                      | Adjusted R-squared value computed on demeaned dependent variable.                                                                                                                                                                                                                                      |
 | _solver                      | Literal\[\"np.linalg.lstsq\", \"np.linalg.solve\", \"scipy.linalg.solve\", | "scipy.sparse.linalg.lsqr", "jax"], default is "scipy.linalg.solve". Solver to use for the estimation.                                                                                                                                                                                                 |
-| _demeaner_backend            | DemeanerBackendOptions                                                     |                                                                                                                                                                                                                                                                                                        |
 | _data                        | pd.DataFrame                                                               | The data frame used in the estimation. None if arguments `lean = True` or `store_data = False`.                                                                                                                                                                                                        |
 | _model_name                  | str                                                                        | The name of the model. Usually just the formula string. If split estimation is used, the model name will include the split variable and value.                                                                                                                                                         |
 | _model_name_plot             | str                                                                        | The name of the model used when plotting and summarizing models. Usually identical to `_model_name`. This might be different when pf.summary() or pf.coefplot() are called and models with identical _model_name attributes are passed. In this case, the _model_name_plot attribute will be modified. |

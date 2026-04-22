@@ -6,8 +6,9 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
+<meta name="description" content="How to pick the right fixed-effects demeaner for your problem.">
 
-<title>PyFixest</title>
+<title>Choosing a Demeaner Backend</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -20,27 +21,62 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
 </style>
 
 
-<script src="site_libs/quarto-nav/quarto-nav.js"></script>
-<script src="site_libs/quarto-nav/headroom.min.js"></script>
-<script src="site_libs/clipboard/clipboard.min.js"></script>
-<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
-<script src="site_libs/quarto-search/fuse.min.js"></script>
-<script src="site_libs/quarto-search/quarto-search.js"></script>
-<meta name="quarto:offset" content="./">
-<script src="site_libs/quarto-html/quarto.js" type="module"></script>
-<script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
-<script src="site_libs/quarto-html/axe/axe-check.js" type="module"></script>
-<script src="site_libs/quarto-html/popper.min.js"></script>
-<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
-<script src="site_libs/quarto-html/anchor.min.js"></script>
-<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="site_libs/quarto-html/quarto-syntax-highlighting-ed96de9b727972fe78a7b5d16c58bf87.css" rel="stylesheet" id="quarto-text-highlighting-styles">
-<script src="site_libs/bootstrap/bootstrap.min.js"></script>
-<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="site_libs/bootstrap/bootstrap-87e21f5b6dd40cea75343502a84e78d9.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" integrity="sha384-ZvpUoO/+PpLXR1lu4jmpXWu80pZlYUAfxl5NsBMWOEPSjUn/6Z/hRTt8+pR6L4N2" crossorigin="anonymous"></script><script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-ed96de9b727972fe78a7b5d16c58bf87.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-87e21f5b6dd40cea75343502a84e78d9.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -69,12 +105,15 @@ ul.task-list li input[type="checkbox"] {
   }
 }</script>
 <!-- Cloudflare Web Analytics --><script defer="" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon="{&quot;token&quot;: &quot;bfa3a9287252444c8aa02b664fea7f09&quot;}"></script><!-- End Cloudflare Web Analytics -->
+<script src="https://cdn.jsdelivr.net/npm/requirejs@2.3.6/require.min.js" integrity="sha384-c9c+LnTbwQ3aujuU7ULEPVvgLs+Fn6fJUvIGTsuu1ZcCf11fiEubah0ttpca4ntM sha384-6V1/AdqZRWk1KAlWbKBlGhN7VG4iE/yAZcO6NZPMF8od0vukrvr0tg4qY6NSrItx" crossorigin="anonymous"></script>
+
+<script type="application/javascript">define('jquery', [],function() {return window.jQuery;})</script>
 
 
-<link rel="alternate" type="text/markdown" href="index.html.md">
+<link rel="alternate" type="text/markdown" href="demeaner-backends.html.md">
 </head>
 
-<body class="nav-fixed quarto-light">
+<body class="nav-fixed fullcontent quarto-light">
 
 <div id="quarto-search-results"></div>
   <header id="quarto-header" class="headroom fixed-top">
@@ -87,15 +126,15 @@ ul.task-list li input[type="checkbox"] {
           <div class="collapse navbar-collapse" id="navbarCollapse">
             <ul class="navbar-nav navbar-nav-scroll me-auto">
   <li class="nav-item">
-    <a class="nav-link" href="./pyfixest.html"> 
+    <a class="nav-link" href="../pyfixest.html"> 
 <span class="menu-text">PyFixest</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./getting-started.html"> 
+    <a class="nav-link" href="../getting-started.html"> 
 <span class="menu-text">Getting Started</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./reference/index.html"> 
+    <a class="nav-link" href="../reference/index.html"> 
 <span class="menu-text">Function Reference</span></a>
   </li>  
   <li class="nav-item dropdown ">
@@ -104,32 +143,32 @@ ul.task-list li input[type="checkbox"] {
     </a>
     <ul class="dropdown-menu" aria-labelledby="nav-menu-tutorials">    
         <li>
-    <a class="dropdown-item" href="./tutorials/index.html">
+    <a class="dropdown-item" href="../tutorials/index.html">
  <span class="dropdown-text">All Tutorials</span></a>
   </li>  
         <li><hr class="dropdown-divider"></li>
         <li>
-    <a class="dropdown-item" href="./tutorials/ols-fixed-effects.html">
+    <a class="dropdown-item" href="../tutorials/ols-fixed-effects.html">
  <span class="dropdown-text">OLS with Fixed Effects</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="./tutorials/formula-syntax.html">
+    <a class="dropdown-item" href="../tutorials/formula-syntax.html">
  <span class="dropdown-text">Formula Syntax</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="./tutorials/instrumental-variables.html">
+    <a class="dropdown-item" href="../tutorials/instrumental-variables.html">
  <span class="dropdown-text">Instrumental Variables</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="./tutorials/regression-tables.html">
+    <a class="dropdown-item" href="../tutorials/regression-tables.html">
  <span class="dropdown-text">Regression Tables</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="./tutorials/difference-in-differences.html">
+    <a class="dropdown-item" href="../tutorials/difference-in-differences.html">
  <span class="dropdown-text">Difference-in-Differences</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="./tutorials/quantile-regression.html">
+    <a class="dropdown-item" href="../tutorials/quantile-regression.html">
  <span class="dropdown-text">Quantile Regression</span></a>
   </li>  
     </ul>
@@ -140,36 +179,36 @@ ul.task-list li input[type="checkbox"] {
     </a>
     <ul class="dropdown-menu" aria-labelledby="nav-menu-guides">    
         <li>
-    <a class="dropdown-item" href="./how-to/index.html">
+    <a class="dropdown-item" href="../how-to/index.html">
  <span class="dropdown-text">All Guides</span></a>
   </li>  
         <li><hr class="dropdown-divider"></li>
         <li>
-    <a class="dropdown-item" href="./how-to/demeaner-backends.html">
+    <a class="dropdown-item" href="../how-to/demeaner-backends.html">
  <span class="dropdown-text">Choosing a Demeaner Backend</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="./how-to/marginaleffects.html">
+    <a class="dropdown-item" href="../how-to/marginaleffects.html">
  <span class="dropdown-text">Marginal Effects &amp; Hypothesis Testing</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="./how-to/regression_decomposition.html">
+    <a class="dropdown-item" href="../how-to/regression_decomposition.html">
  <span class="dropdown-text">Regression Decomposition</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="./how-to/pyfixest_gpu.html">
+    <a class="dropdown-item" href="../how-to/pyfixest_gpu.html">
  <span class="dropdown-text">PyFixest on the GPU via JAX</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="./pyfixest-gpu-cupy.html">
+    <a class="dropdown-item" href="../pyfixest-gpu-cupy.html">
  <span class="dropdown-text">PyFixest on the GPU via CuPy</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="./how-to/stata-2-pyfixest.html">
+    <a class="dropdown-item" href="../how-to/stata-2-pyfixest.html">
  <span class="dropdown-text">Compare Stata &amp; PyFixest</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="./how-to/panel_variance_reduction.html">
+    <a class="dropdown-item" href="../how-to/panel_variance_reduction.html">
  <span class="dropdown-text">Variance Reduction in AB Tests</span></a>
   </li>  
     </ul>
@@ -180,15 +219,15 @@ ul.task-list li input[type="checkbox"] {
     </a>
     <ul class="dropdown-menu" aria-labelledby="nav-menu-explanation">    
         <li>
-    <a class="dropdown-item" href="./explanation/difficult-fixed-effects.html">
+    <a class="dropdown-item" href="../explanation/difficult-fixed-effects.html">
  <span class="dropdown-text">When Are Fixed Effects Problems Difficult?</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="./explanation/ssc.html">
+    <a class="dropdown-item" href="../explanation/ssc.html">
  <span class="dropdown-text">On Small Sample Corrections</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="./explanation/compare-fixest-pyfixest.html">
+    <a class="dropdown-item" href="../explanation/compare-fixest-pyfixest.html">
  <span class="dropdown-text">Does PyFixest Match fixest?</span></a>
   </li>  
     </ul>
@@ -199,53 +238,53 @@ ul.task-list li input[type="checkbox"] {
     </a>
     <ul class="dropdown-menu" aria-labelledby="nav-menu-textbook-replications">    
         <li>
-    <a class="dropdown-item" href="./textbook-replications/index.html">
+    <a class="dropdown-item" href="../textbook-replications/index.html">
  <span class="dropdown-text">All Textbook Replications</span></a>
   </li>  
         <li><hr class="dropdown-divider"></li>
         <li>
-    <a class="dropdown-item" href="./textbook-replications/brave_true.html">
+    <a class="dropdown-item" href="../textbook-replications/brave_true.html">
  <span class="dropdown-text">Causal Inference for the Brave and True</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="./textbook-replications/mixtape.html">
+    <a class="dropdown-item" href="../textbook-replications/mixtape.html">
  <span class="dropdown-text">Causal Inference: The Mixtape</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="./textbook-replications/replicating-the-effect.html">
+    <a class="dropdown-item" href="../textbook-replications/replicating-the-effect.html">
  <span class="dropdown-text">The Effect</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="./textbook-replications/resources.html">
+    <a class="dropdown-item" href="../textbook-replications/resources.html">
  <span class="dropdown-text">Other Resources</span></a>
   </li>  
     </ul>
   </li>
   <li class="nav-item">
-    <a class="nav-link" href="./changelog.html"> 
+    <a class="nav-link" href="../changelog.html"> 
 <span class="menu-text">Changelog</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./contributing.html"> 
+    <a class="nav-link" href="../contributing.html"> 
 <span class="menu-text">Contributing</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./acknowledgements.html"> 
+    <a class="nav-link" href="../acknowledgements.html"> 
 <span class="menu-text">Acknowledgements</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./pyfixest-sprint.html"> 
+    <a class="nav-link" href="../pyfixest-sprint.html"> 
 <span class="menu-text">Sprint 2026</span></a>
   </li>  
 </ul>
             <ul class="navbar-nav navbar-nav-scroll ms-auto">
   <li class="nav-item">
-    <a class="nav-link" href="./llms.txt"> <i class="bi bi-robot" role="img">
+    <a class="nav-link" href="../llms.txt"> <i class="bi bi-robot" role="img">
 </i> 
 <span class="menu-text">llms.txt</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./skills.html"> 
+    <a class="nav-link" href="../skills.html"> 
 <span class="menu-text">Skills.md</span></a>
   </li>  
   <li class="nav-item compact">
@@ -261,21 +300,30 @@ ul.task-list li input[type="checkbox"] {
     </nav>
 </header>
 <!-- content -->
-<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-full page-navbar">
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
 <!-- sidebar -->
 <!-- margin-sidebar -->
     
 <!-- main -->
-<main class="content column-page" id="quarto-document-content">
+<main class="content" id="quarto-document-content">
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">PyFixest</h1>
+<h1 class="title">Choosing a Demeaner Backend</h1>
+  <div class="quarto-categories">
+    <div class="quarto-category">performance</div>
+    <div class="quarto-category">fixed effects</div>
+  </div>
+  </div>
+
+<div>
+  <div class="description">
+    How to pick the right fixed-effects demeaner for your problem.
+  </div>
 </div>
 
 
-
-<div class="quarto-title-meta column-page">
+<div class="quarto-title-meta">
 
     
   
@@ -287,13 +335,151 @@ ul.task-list li input[type="checkbox"] {
 </header>
 
 
-<meta http-equiv="refresh" content="0; url=pyfixest.html">
-<script>
-  window.location.replace("pyfixest.html");
-</script>
-<p>If you are not redirected automatically, go to <a href="pyfixest.html">PyFixest Documentation</a>.</p>
+<p>PyFixest exposes several demeaner backends via the <code>demeaner=</code> argument. All backends produce numerically equivalent results; the choice only affects <strong>speed</strong>.</p>
+<div id="b6ad1dfc" class="cell" data-execution_count="1">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.demeaners <span class="im">import</span> LsmrDemeaner, MapDemeaner, WithinDemeaner</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> pf.get_data()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<section id="quick-reference" class="level2">
+<h2 class="anchored" data-anchor-id="quick-reference">Quick Reference</h2>
+<p>For a deeper discussion on when to use which backend, see <a href="../explanation/difficult-fixed-effects.html">When Are Fixed Effects Problems Difficult?</a>.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Backend</th>
+<th>When to use</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>MapDemeaner(backend="numba")</code></td>
+<td>Default. Works well for dense fixed effects / well connected graphs.</td>
+</tr>
+<tr class="even">
+<td><code>MapDemeaner(backend="rust")</code></td>
+<td>Identical algorithm to <code>MapDemeaner(backend="numba")</code>, but implemented in Rust. Despite being Rust, performance should be roughly identical to numba.</td>
+</tr>
+<tr class="odd">
+<td><code>WithinDemeaner()</code></td>
+<td>Best for <strong>sparse</strong> fixed-effect structures (e.g.&nbsp;matched employer-employee data).</td>
+</tr>
+<tr class="even">
+<td><code>MapDemeaner(backend="jax")</code></td>
+<td>MAP on the GPU via JAX (requires <code>pip install pyfixest[jax]</code>).</td>
+</tr>
+<tr class="odd">
+<td><code>LsmrDemeaner(backend="torch", device="cuda")</code></td>
+<td>GPU acceleration via PyTorch. Experimental.</td>
+</tr>
+<tr class="even">
+<td><code>LsmrDemeaner(backend="cupy", device="cpu")</code></td>
+<td>LSMR solver on CPU via SciPy.</td>
+</tr>
+<tr class="odd">
+<td><code>LsmrDemeaner(backend = "cupy", device="cuda")</code></td>
+<td>LSMR solver on CUDA via CuPy.</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="usage" class="level2">
+<h2 class="anchored" data-anchor-id="usage">Usage</h2>
+<p>To select a demeaner backend, simply pass an instance of the desired demeaner to the <code>demeaner</code> argument of <code>feols</code>:</p>
+<div id="4224d22e" class="cell" data-execution_count="2">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Default (numba MAP): best for dense FE / well-connected graphs</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 | f1"</span>, data<span class="op">=</span>df)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Rust MAP: roughly same performance as numba</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 | f1"</span>, data<span class="op">=</span>df, demeaner<span class="op">=</span>MapDemeaner(backend<span class="op">=</span><span class="st">"rust"</span>))</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="co"># CG-Schwarz via `within` - best for sparse FE structures</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 | f1"</span>, data<span class="op">=</span>df, demeaner<span class="op">=</span>WithinDemeaner())</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+
+        <div id="NR7F2J"></div>
+        <script type="text/javascript" data-lets-plot-script="library">
+            if(!window.letsPlotCallQueue) {
+                window.letsPlotCallQueue = [];
+            };
+            window.letsPlotCall = function(f) {
+                window.letsPlotCallQueue.push(f);
+            };
+            (function() {
+                var script = document.createElement("script");
+                script.type = "text/javascript";
+                script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.8.2/js-package/distr/lets-plot.min.js";
+                script.onload = function() {
+                    window.letsPlotCall = function(f) {f();};
+                    window.letsPlotCallQueue.forEach(function(f) {f();});
+                    window.letsPlotCallQueue = [];
+                    
+                };
+                script.onerror = function(event) {
+                    window.letsPlotCall = function(f) {};    // noop
+                    window.letsPlotCallQueue = [];
+                    var div = document.createElement("div");
+                    div.style.color = 'darkred';
+                    div.textContent = 'Error loading Lets-Plot JS';
+                    document.getElementById("NR7F2J").appendChild(div);
+                };
+                var e = document.getElementById("NR7F2J");
+                e.appendChild(script);
+            })()
+        </script>
+        
+</div>
+<div class="cell-output cell-output-display">
+
+        <div id="Oww7D0"></div>
+        <script type="text/javascript" data-lets-plot-script="library">
+            if(!window.letsPlotCallQueue) {
+                window.letsPlotCallQueue = [];
+            };
+            window.letsPlotCall = function(f) {
+                window.letsPlotCallQueue.push(f);
+            };
+            (function() {
+                var script = document.createElement("script");
+                script.type = "text/javascript";
+                script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.8.2/js-package/distr/lets-plot.min.js";
+                script.onload = function() {
+                    window.letsPlotCall = function(f) {f();};
+                    window.letsPlotCallQueue.forEach(function(f) {f();});
+                    window.letsPlotCallQueue = [];
+                    
+                };
+                script.onerror = function(event) {
+                    window.letsPlotCall = function(f) {};    // noop
+                    window.letsPlotCallQueue = [];
+                    var div = document.createElement("div");
+                    div.style.color = 'darkred';
+                    div.textContent = 'Error loading Lets-Plot JS';
+                    document.getElementById("Oww7D0").appendChild(div);
+                };
+                var e = document.getElementById("Oww7D0");
+                e.appendChild(script);
+            })()
+        </script>
+        
+</div>
+</div>
+<p>The <code>MapDemeaner</code> and <code>WithinDemeaner</code> backends accept <code>fixef_tol</code> and <code>fixef_maxiter</code> arguments to control convergence. For compatibility with <code>scipy</code>, the <code>LsmrDemeaner</code> has two arguments to control the convergence tolerance - <code>fixef_atol</code> and <code>fixef_btol</code>.</p>
+<div id="c3a1be66" class="cell" data-execution_count="3">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Y ~ X1 | f1"</span>,</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    data<span class="op">=</span>df,</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    demeaner<span class="op">=</span>MapDemeaner(backend<span class="op">=</span><span class="st">"rust"</span>, fixef_tol<span class="op">=</span><span class="fl">1e-10</span>, fixef_maxiter<span class="op">=</span><span class="dv">50_000</span>),</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
 
 
+</section>
 
 </main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">

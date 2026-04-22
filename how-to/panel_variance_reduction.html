@@ -76,7 +76,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <link href="../site_libs/quarto-html/quarto-syntax-highlighting-ed96de9b727972fe78a7b5d16c58bf87.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-5ca837e5edc0d9070fa4a1d1e5b3c99b.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-87e21f5b6dd40cea75343502a84e78d9.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -212,6 +212,10 @@ window.Quarto = {
  <span class="dropdown-text">All Guides</span></a>
   </li>  
         <li><hr class="dropdown-divider"></li>
+        <li>
+    <a class="dropdown-item" href="../how-to/demeaner-backends.html">
+ <span class="dropdown-text">Choosing a Demeaner Backend</span></a>
+  </li>  
         <li>
     <a class="dropdown-item" href="../how-to/marginaleffects.html">
  <span class="dropdown-text">Marginal Effects &amp; Hypothesis Testing</span></a>
@@ -362,7 +366,7 @@ window.Quarto = {
 
 <section id="panel-estimators-for-ab-tests-with-repeated-observations" class="level2">
 <h2 class="anchored" data-anchor-id="panel-estimators-for-ab-tests-with-repeated-observations">Panel Estimators for AB Tests with Repeated Observations</h2>
-<div id="baead8ce" class="cell" data-execution_count="1">
+<div id="c160f566" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> IPython.display <span class="im">import</span> display</span>
@@ -374,7 +378,7 @@ window.Quarto = {
 <p>In this tutorial, we show how to use pyfixest to reduce the variance of your estimators in AB tests with repeated observations.</p>
 <p>For example, we may be a streaming platform and we want to estimate the effect of a new feature on the amount of time users spend watching videos. To do so, we randomly assign the treatment to half of our users. For 15 days prior to the experiment, we track the desired outcome (minutes watched) for each user. If users are not seen on the platform on a given day, the number of minutes watched is 0. Our experiment runs for 15 days. All in all, we have 30 days of data for each user.</p>
 <p>To get started, we simulate a panel data set of 100_000 users, with mentioned 30 days of data, with 15 days of pre and post data.</p>
-<div id="1e0aa377" class="cell" data-execution_count="2">
+<div id="6113602c" class="cell" data-execution_count="2">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> get_data(num_units: <span class="bu">int</span>, sigma_unit: <span class="bu">int</span>) <span class="op">-&gt;</span> pd.DataFrame:</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""</span></span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co">    Random example data set.</span></span>
@@ -461,7 +465,7 @@ window.Quarto = {
 </div>
 </div>
 <p>We can inspect the data generating process via the <code>panelview()</code> function:</p>
-<div id="139c2ba9" class="cell" data-execution_count="3">
+<div id="b4bde5ae" class="cell" data-execution_count="3">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>pf.panelview(</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    data,</span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    unit<span class="op">=</span><span class="st">"user"</span>,</span>
@@ -476,71 +480,71 @@ window.Quarto = {
 <span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 
-            <div id="BJl06S"></div>
-            <script type="text/javascript" data-lets-plot-script="library">
-                if(!window.letsPlotCallQueue) {
+        <div id="td7VhQ"></div>
+        <script type="text/javascript" data-lets-plot-script="library">
+            if(!window.letsPlotCallQueue) {
+                window.letsPlotCallQueue = [];
+            };
+            window.letsPlotCall = function(f) {
+                window.letsPlotCallQueue.push(f);
+            };
+            (function() {
+                var script = document.createElement("script");
+                script.type = "text/javascript";
+                script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.8.2/js-package/distr/lets-plot.min.js";
+                script.onload = function() {
+                    window.letsPlotCall = function(f) {f();};
+                    window.letsPlotCallQueue.forEach(function(f) {f();});
                     window.letsPlotCallQueue = [];
-                }; 
-                window.letsPlotCall = function(f) {
-                    window.letsPlotCallQueue.push(f);
+                    
                 };
-                (function() {
-                    var script = document.createElement("script");
-                    script.type = "text/javascript";
-                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.7.3/js-package/distr/lets-plot.min.js";
-                    script.onload = function() {
-                        window.letsPlotCall = function(f) {f();};
-                        window.letsPlotCallQueue.forEach(function(f) {f();});
-                        window.letsPlotCallQueue = [];
-                        
-                    };
-                    script.onerror = function(event) {
-                        window.letsPlotCall = function(f) {};    // noop
-                        window.letsPlotCallQueue = [];
-                        var div = document.createElement("div");
-                        div.style.color = 'darkred';
-                        div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("BJl06S").appendChild(div);
-                    };
-                    var e = document.getElementById("BJl06S");
-                    e.appendChild(script);
-                })()
-            </script>
-            
+                script.onerror = function(event) {
+                    window.letsPlotCall = function(f) {};    // noop
+                    window.letsPlotCallQueue = [];
+                    var div = document.createElement("div");
+                    div.style.color = 'darkred';
+                    div.textContent = 'Error loading Lets-Plot JS';
+                    document.getElementById("td7VhQ").appendChild(div);
+                };
+                var e = document.getElementById("td7VhQ");
+                e.appendChild(script);
+            })()
+        </script>
+        
 </div>
 <div class="cell-output cell-output-display">
 
-            <div id="4LyUJq"></div>
-            <script type="text/javascript" data-lets-plot-script="library">
-                if(!window.letsPlotCallQueue) {
+        <div id="zkCDGL"></div>
+        <script type="text/javascript" data-lets-plot-script="library">
+            if(!window.letsPlotCallQueue) {
+                window.letsPlotCallQueue = [];
+            };
+            window.letsPlotCall = function(f) {
+                window.letsPlotCallQueue.push(f);
+            };
+            (function() {
+                var script = document.createElement("script");
+                script.type = "text/javascript";
+                script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.8.2/js-package/distr/lets-plot.min.js";
+                script.onload = function() {
+                    window.letsPlotCall = function(f) {f();};
+                    window.letsPlotCallQueue.forEach(function(f) {f();});
                     window.letsPlotCallQueue = [];
-                }; 
-                window.letsPlotCall = function(f) {
-                    window.letsPlotCallQueue.push(f);
+                    
                 };
-                (function() {
-                    var script = document.createElement("script");
-                    script.type = "text/javascript";
-                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.7.3/js-package/distr/lets-plot.min.js";
-                    script.onload = function() {
-                        window.letsPlotCall = function(f) {f();};
-                        window.letsPlotCallQueue.forEach(function(f) {f();});
-                        window.letsPlotCallQueue = [];
-                        
-                    };
-                    script.onerror = function(event) {
-                        window.letsPlotCall = function(f) {};    // noop
-                        window.letsPlotCallQueue = [];
-                        var div = document.createElement("div");
-                        div.style.color = 'darkred';
-                        div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("4LyUJq").appendChild(div);
-                    };
-                    var e = document.getElementById("4LyUJq");
-                    e.appendChild(script);
-                })()
-            </script>
-            
+                script.onerror = function(event) {
+                    window.letsPlotCall = function(f) {};    // noop
+                    window.letsPlotCallQueue = [];
+                    var div = document.createElement("div");
+                    div.style.color = 'darkred';
+                    div.textContent = 'Error loading Lets-Plot JS';
+                    document.getElementById("zkCDGL").appendChild(div);
+                };
+                var e = document.getElementById("zkCDGL");
+                e.appendChild(script);
+            })()
+        </script>
+        
 </div>
 <div class="cell-output cell-output-display">
 <div>
@@ -582,7 +586,7 @@ window.Quarto = {
     \tau = \frac{1}{n_1} \sum_{i=1}^{n_1} Y_{i,1} - \frac{1}{n_0} \sum_{i=1}^{n_0}  Y_{i,0}
 \]</span></p>
 <p>We can compute it in a few lines of <code>pandas</code> by implementing three steps: - First, we throw away all pre-experimental data. - Then, we sum the post-treatment minutes watched into a single data point per user. - Finally, we compute the difference of means of total minutes watched between the treated and control group. Done!</p>
-<div id="2e755823" class="cell" data-execution_count="4">
+<div id="91429914" class="cell" data-execution_count="4">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> _difference_in_means_pd(data):</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="co"># standard analyses: throw away pre-experimental data</span></span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    data2 <span class="op">=</span> data.copy()</span>
@@ -634,7 +638,7 @@ window.Quarto = {
 </div>
 </div>
 <p>Because linear regression is just a fency way to compute and compare differences, we could also have estimated this via <code>pf.feols()</code>:</p>
-<div id="1073f987" class="cell" data-execution_count="5">
+<div id="31c3d5c4" class="cell" data-execution_count="5">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> _difference_in_means(data):</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    data2 <span class="op">=</span> data.copy()</span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -650,7 +654,8 @@ window.Quarto = {
 <pre><code>###
 
 Estimation:  OLS
-Dep. var.: minutes_watched, Fixed effects: 0
+Dep. var.: minutes_watched
+sample: None = all
 Inference:  iid
 Observations:  1500000
 
@@ -670,7 +675,7 @@ RMSE: 18.07 R2: 0.0 </code></pre>
 <p>More specifically, instead of throwing away all of the pre-experimental measures, we could instead have used them as a control!</p>
 <p>This should help reduce the variance of our estimators because pre-experimental behavior is likely to be highly predicitive of what users do after the launch of the experiment. Consequently, including these baselines in our regression models should help us “explain residual errors” and thereby reduce the variance of our estimators.</p>
 <p>If this works, it’s great news, as it allows us to run the same experiment on a smaller number of users and still achieve the same level of power!</p>
-<div id="4e7f12fe" class="cell" data-execution_count="6">
+<div id="43bae0e6" class="cell" data-execution_count="6">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> _regression_cuped(data):</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    data <span class="op">=</span> data.copy()</span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    data[<span class="st">"pre_experiment"</span>] <span class="op">=</span> data[<span class="st">"day"</span>] <span class="op">&lt;</span> <span class="dv">15</span></span>
@@ -707,7 +712,7 @@ RMSE: 18.07 R2: 0.0 </code></pre>
 <p><span class="math display">\[
     \text{total minutes watched after treatment} = \alpha + \beta \text{treat} + \gamma (\text{total minutes watched before treatment} - \text{avg total minutes watched before treatment}) + \epsilon
 \]</span></p>
-<div id="b6919c3c" class="cell" data-execution_count="7">
+<div id="5e9a0354" class="cell" data-execution_count="7">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>data_cuped.head()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="7">
 <div>
@@ -772,58 +777,58 @@ RMSE: 18.07 R2: 0.0 </code></pre>
 </div>
 </div>
 <p>We can compare with the previous results:</p>
-<div id="07d2fb2b" class="cell" data-execution_count="8">
+<div id="b2d5247c" class="cell" data-execution_count="8">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>pf.etable([fit_difference_in_means, fit_cuped])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="8">
-<div id="badssoccrt" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<div id="edcszaxohs" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
 <style>
-#badssoccrt table {
+#edcszaxohs table {
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
           -webkit-font-smoothing: antialiased;
           -moz-osx-font-smoothing: grayscale;
         }
 
-#badssoccrt thead, tbody, tfoot, tr, td, th { border-style: none; }
+#edcszaxohs thead, tbody, tfoot, tr, td, th { border-style: none; }
  tr { background-color: transparent; }
-#badssoccrt p { margin: 0; padding: 0; }
- #badssoccrt .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: solid; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
- #badssoccrt .gt_caption { padding-top: 4px; padding-bottom: 4px; }
- #badssoccrt .gt_title { color: #333333; font-size: 16px; font-weight: initial; padding-top: 6px; padding-bottom: 6px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
- #badssoccrt .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 5px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
- #badssoccrt .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
- #badssoccrt .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
- #badssoccrt .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
- #badssoccrt .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 2px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
- #badssoccrt .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
- #badssoccrt .gt_column_spanner_outer:first-child { padding-left: 0; }
- #badssoccrt .gt_column_spanner_outer:last-child { padding-right: 0; }
- #badssoccrt .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: bottom; padding-top: 2px; padding-bottom: 2px; overflow-x: hidden; display: inline-block; width: 100%; }
- #badssoccrt .gt_spanner_row { border-bottom-style: hidden; }
- #badssoccrt .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
- #badssoccrt .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: middle; }
- #badssoccrt .gt_from_md> :first-child { margin-top: 0; }
- #badssoccrt .gt_from_md> :last-child { margin-bottom: 0; }
- #badssoccrt .gt_row { padding-top: 2px; padding-bottom: 2px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
- #badssoccrt .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
- #badssoccrt .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
- #badssoccrt .gt_row_group_first td { border-top-width: 0.25px; }
- #badssoccrt .gt_row_group_first th { border-top-width: 0.25px; }
- #badssoccrt .gt_striped { color: #333333; background-color: #F4F4F4; }
- #badssoccrt .gt_table_body { border-top-style: solid; border-top-width: 0px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
- #badssoccrt .gt_grand_summary_row { color: #333333; background-color: #FFFFFF; text-transform: inherit; padding-top: 8px; padding-bottom: 8px; padding-left: 5px; padding-right: 5px; }
- #badssoccrt .gt_first_grand_summary_row_bottom { border-top-style: double; border-top-width: 6px; border-top-color: #D3D3D3; }
- #badssoccrt .gt_last_grand_summary_row_top { border-bottom-style: double; border-bottom-width: 6px; border-bottom-color: #D3D3D3; }
- #badssoccrt .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
- #badssoccrt .gt_sourcenote { font-size: 10px; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
- #badssoccrt .gt_left { text-align: left; }
- #badssoccrt .gt_center { text-align: center; }
- #badssoccrt .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
- #badssoccrt .gt_font_normal { font-weight: normal; }
- #badssoccrt .gt_font_bold { font-weight: bold; }
- #badssoccrt .gt_font_italic { font-style: italic; }
- #badssoccrt .gt_super { font-size: 65%; }
- #badssoccrt .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
- #badssoccrt .gt_asterisk { font-size: 100%; vertical-align: 0; }
+#edcszaxohs p { margin: 0; padding: 0; }
+ #edcszaxohs .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: solid; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
+ #edcszaxohs .gt_caption { padding-top: 4px; padding-bottom: 4px; }
+ #edcszaxohs .gt_title { color: #333333; font-size: 16px; font-weight: initial; padding-top: 6px; padding-bottom: 6px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
+ #edcszaxohs .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 5px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
+ #edcszaxohs .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #edcszaxohs .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
+ #edcszaxohs .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #edcszaxohs .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 2px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
+ #edcszaxohs .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
+ #edcszaxohs .gt_column_spanner_outer:first-child { padding-left: 0; }
+ #edcszaxohs .gt_column_spanner_outer:last-child { padding-right: 0; }
+ #edcszaxohs .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: bottom; padding-top: 2px; padding-bottom: 2px; overflow-x: hidden; display: inline-block; width: 100%; }
+ #edcszaxohs .gt_spanner_row { border-bottom-style: hidden; }
+ #edcszaxohs .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
+ #edcszaxohs .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: middle; }
+ #edcszaxohs .gt_from_md> :first-child { margin-top: 0; }
+ #edcszaxohs .gt_from_md> :last-child { margin-bottom: 0; }
+ #edcszaxohs .gt_row { padding-top: 2px; padding-bottom: 2px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
+ #edcszaxohs .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
+ #edcszaxohs .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
+ #edcszaxohs .gt_row_group_first td { border-top-width: 0.25px; }
+ #edcszaxohs .gt_row_group_first th { border-top-width: 0.25px; }
+ #edcszaxohs .gt_striped { color: #333333; background-color: #F4F4F4; }
+ #edcszaxohs .gt_table_body { border-top-style: solid; border-top-width: 0px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
+ #edcszaxohs .gt_grand_summary_row { color: #333333; background-color: #FFFFFF; text-transform: inherit; padding-top: 8px; padding-bottom: 8px; padding-left: 5px; padding-right: 5px; }
+ #edcszaxohs .gt_first_grand_summary_row_bottom { border-top-style: double; border-top-width: 6px; border-top-color: #D3D3D3; }
+ #edcszaxohs .gt_last_grand_summary_row_top { border-bottom-style: double; border-bottom-width: 6px; border-bottom-color: #D3D3D3; }
+ #edcszaxohs .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
+ #edcszaxohs .gt_sourcenote { font-size: 10px; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
+ #edcszaxohs .gt_left { text-align: left; }
+ #edcszaxohs .gt_center { text-align: center; }
+ #edcszaxohs .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
+ #edcszaxohs .gt_font_normal { font-weight: normal; }
+ #edcszaxohs .gt_font_bold { font-weight: bold; }
+ #edcszaxohs .gt_font_italic { font-style: italic; }
+ #edcszaxohs .gt_super { font-size: 65%; }
+ #edcszaxohs .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
+ #edcszaxohs .gt_asterisk { font-size: 100%; vertical-align: 0; }
  
 </style>
 
@@ -850,22 +855,22 @@ RMSE: 18.07 R2: 0.0 </code></pre>
 </tr>
 <tr class="even">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">treat</th>
-<td class="gt_row gt_center">0.762***<br>
+<td class="gt_row gt_center">0.762<br>
 (0.209)</td>
-<td class="gt_row gt_center">0.192***<br>
+<td class="gt_row gt_center">0.192<br>
 (0.029)</td>
 </tr>
 <tr class="odd">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">minutes_pre_c</th>
 <td class="gt_row gt_center"></td>
-<td class="gt_row gt_center">0.999***<br>
+<td class="gt_row gt_center">0.999<br>
 (0.000116)</td>
 </tr>
 <tr class="even">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">Intercept</th>
-<td class="gt_row gt_center">0.357***<br>
+<td class="gt_row gt_center">0.357<br>
 (0.015)</td>
-<td class="gt_row gt_center">0.36***<br>
+<td class="gt_row gt_center">0.36<br>
 (0.002)</td>
 </tr>
 <tr class="gt_group_heading_row odd">
@@ -883,7 +888,7 @@ RMSE: 18.07 R2: 0.0 </code></pre>
 </tr>
 </tbody><tfoot class="gt_sourcenotes">
 <tr class="odd">
-<td colspan="3" class="gt_sourcenote">Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001. Format of coefficient cell: Coefficient (Std. Error)</td>
+<td colspan="3" class="gt_sourcenote">Format of coefficient cell: Coefficient (Std. Error)</td>
 </tr>
 </tfoot>
 
@@ -899,67 +904,67 @@ RMSE: 18.07 R2: 0.0 </code></pre>
 <h2 class="anchored" data-anchor-id="panel-estimator">Panel Estimator</h2>
 <p>Instead of collapsing all pre-and post information into a single average (and thereby losing information), we can as well be lazy and just use a panel estimator.</p>
 <p>Via <code>pyfixest</code>, that’s one line of code:</p>
-<div id="7dc94766" class="cell" data-execution_count="9">
+<div id="ca8c37d8" class="cell" data-execution_count="9">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>fit_panel <span class="op">=</span> pf.feols(</span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">"minutes_watched ~ treat | user + day"</span>,</span>
 <span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    data<span class="op">=</span>data,</span>
 <span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span><span class="st">"hetero"</span>,</span>
-<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>    demeaner_backend<span class="op">=</span><span class="st">"rust"</span>,</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>    demeaner<span class="op">=</span>pf.MapDemeaner(backend<span class="op">=</span><span class="st">"rust"</span>),</span>
 <span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>We can compare all results:</p>
-<div id="3bf7a4b3" class="cell" data-execution_count="10">
+<div id="5e211af1" class="cell" data-execution_count="10">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>pf.etable([fit_difference_in_means, fit_cuped, fit_panel])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="10">
-<div id="bqwvrbxorh" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<div id="ztifgmqdjq" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
 <style>
-#bqwvrbxorh table {
+#ztifgmqdjq table {
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
           -webkit-font-smoothing: antialiased;
           -moz-osx-font-smoothing: grayscale;
         }
 
-#bqwvrbxorh thead, tbody, tfoot, tr, td, th { border-style: none; }
+#ztifgmqdjq thead, tbody, tfoot, tr, td, th { border-style: none; }
  tr { background-color: transparent; }
-#bqwvrbxorh p { margin: 0; padding: 0; }
- #bqwvrbxorh .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: solid; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
- #bqwvrbxorh .gt_caption { padding-top: 4px; padding-bottom: 4px; }
- #bqwvrbxorh .gt_title { color: #333333; font-size: 16px; font-weight: initial; padding-top: 6px; padding-bottom: 6px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
- #bqwvrbxorh .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 5px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
- #bqwvrbxorh .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
- #bqwvrbxorh .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
- #bqwvrbxorh .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
- #bqwvrbxorh .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 2px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
- #bqwvrbxorh .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
- #bqwvrbxorh .gt_column_spanner_outer:first-child { padding-left: 0; }
- #bqwvrbxorh .gt_column_spanner_outer:last-child { padding-right: 0; }
- #bqwvrbxorh .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: bottom; padding-top: 2px; padding-bottom: 2px; overflow-x: hidden; display: inline-block; width: 100%; }
- #bqwvrbxorh .gt_spanner_row { border-bottom-style: hidden; }
- #bqwvrbxorh .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
- #bqwvrbxorh .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: middle; }
- #bqwvrbxorh .gt_from_md> :first-child { margin-top: 0; }
- #bqwvrbxorh .gt_from_md> :last-child { margin-bottom: 0; }
- #bqwvrbxorh .gt_row { padding-top: 2px; padding-bottom: 2px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
- #bqwvrbxorh .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
- #bqwvrbxorh .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
- #bqwvrbxorh .gt_row_group_first td { border-top-width: 0.25px; }
- #bqwvrbxorh .gt_row_group_first th { border-top-width: 0.25px; }
- #bqwvrbxorh .gt_striped { color: #333333; background-color: #F4F4F4; }
- #bqwvrbxorh .gt_table_body { border-top-style: solid; border-top-width: 0px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
- #bqwvrbxorh .gt_grand_summary_row { color: #333333; background-color: #FFFFFF; text-transform: inherit; padding-top: 8px; padding-bottom: 8px; padding-left: 5px; padding-right: 5px; }
- #bqwvrbxorh .gt_first_grand_summary_row_bottom { border-top-style: double; border-top-width: 6px; border-top-color: #D3D3D3; }
- #bqwvrbxorh .gt_last_grand_summary_row_top { border-bottom-style: double; border-bottom-width: 6px; border-bottom-color: #D3D3D3; }
- #bqwvrbxorh .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
- #bqwvrbxorh .gt_sourcenote { font-size: 10px; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
- #bqwvrbxorh .gt_left { text-align: left; }
- #bqwvrbxorh .gt_center { text-align: center; }
- #bqwvrbxorh .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
- #bqwvrbxorh .gt_font_normal { font-weight: normal; }
- #bqwvrbxorh .gt_font_bold { font-weight: bold; }
- #bqwvrbxorh .gt_font_italic { font-style: italic; }
- #bqwvrbxorh .gt_super { font-size: 65%; }
- #bqwvrbxorh .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
- #bqwvrbxorh .gt_asterisk { font-size: 100%; vertical-align: 0; }
+#ztifgmqdjq p { margin: 0; padding: 0; }
+ #ztifgmqdjq .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: solid; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
+ #ztifgmqdjq .gt_caption { padding-top: 4px; padding-bottom: 4px; }
+ #ztifgmqdjq .gt_title { color: #333333; font-size: 16px; font-weight: initial; padding-top: 6px; padding-bottom: 6px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
+ #ztifgmqdjq .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 5px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
+ #ztifgmqdjq .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #ztifgmqdjq .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
+ #ztifgmqdjq .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #ztifgmqdjq .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 2px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
+ #ztifgmqdjq .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
+ #ztifgmqdjq .gt_column_spanner_outer:first-child { padding-left: 0; }
+ #ztifgmqdjq .gt_column_spanner_outer:last-child { padding-right: 0; }
+ #ztifgmqdjq .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: bottom; padding-top: 2px; padding-bottom: 2px; overflow-x: hidden; display: inline-block; width: 100%; }
+ #ztifgmqdjq .gt_spanner_row { border-bottom-style: hidden; }
+ #ztifgmqdjq .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
+ #ztifgmqdjq .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: middle; }
+ #ztifgmqdjq .gt_from_md> :first-child { margin-top: 0; }
+ #ztifgmqdjq .gt_from_md> :last-child { margin-bottom: 0; }
+ #ztifgmqdjq .gt_row { padding-top: 2px; padding-bottom: 2px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
+ #ztifgmqdjq .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
+ #ztifgmqdjq .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
+ #ztifgmqdjq .gt_row_group_first td { border-top-width: 0.25px; }
+ #ztifgmqdjq .gt_row_group_first th { border-top-width: 0.25px; }
+ #ztifgmqdjq .gt_striped { color: #333333; background-color: #F4F4F4; }
+ #ztifgmqdjq .gt_table_body { border-top-style: solid; border-top-width: 0px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
+ #ztifgmqdjq .gt_grand_summary_row { color: #333333; background-color: #FFFFFF; text-transform: inherit; padding-top: 8px; padding-bottom: 8px; padding-left: 5px; padding-right: 5px; }
+ #ztifgmqdjq .gt_first_grand_summary_row_bottom { border-top-style: double; border-top-width: 6px; border-top-color: #D3D3D3; }
+ #ztifgmqdjq .gt_last_grand_summary_row_top { border-bottom-style: double; border-bottom-width: 6px; border-bottom-color: #D3D3D3; }
+ #ztifgmqdjq .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
+ #ztifgmqdjq .gt_sourcenote { font-size: 10px; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
+ #ztifgmqdjq .gt_left { text-align: left; }
+ #ztifgmqdjq .gt_center { text-align: center; }
+ #ztifgmqdjq .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
+ #ztifgmqdjq .gt_font_normal { font-weight: normal; }
+ #ztifgmqdjq .gt_font_bold { font-weight: bold; }
+ #ztifgmqdjq .gt_font_italic { font-style: italic; }
+ #ztifgmqdjq .gt_super { font-size: 65%; }
+ #ztifgmqdjq .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
+ #ztifgmqdjq .gt_asterisk { font-size: 100%; vertical-align: 0; }
  
 </style>
 
@@ -989,25 +994,25 @@ RMSE: 18.07 R2: 0.0 </code></pre>
 </tr>
 <tr class="even">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">treat</th>
-<td class="gt_row gt_center">0.762***<br>
+<td class="gt_row gt_center">0.762<br>
 (0.209)</td>
-<td class="gt_row gt_center">0.192***<br>
+<td class="gt_row gt_center">0.192<br>
 (0.029)</td>
-<td class="gt_row gt_center">0.191***<br>
+<td class="gt_row gt_center">0.191<br>
 (0.012)</td>
 </tr>
 <tr class="odd">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">minutes_pre_c</th>
 <td class="gt_row gt_center"></td>
-<td class="gt_row gt_center">0.999***<br>
+<td class="gt_row gt_center">0.999<br>
 (0.000116)</td>
 <td class="gt_row gt_center"></td>
 </tr>
 <tr class="even">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">Intercept</th>
-<td class="gt_row gt_center">0.357***<br>
+<td class="gt_row gt_center">0.357<br>
 (0.015)</td>
-<td class="gt_row gt_center">0.36***<br>
+<td class="gt_row gt_center">0.36<br>
 (0.002)</td>
 <td class="gt_row gt_center"></td>
 </tr>
@@ -1043,7 +1048,7 @@ RMSE: 18.07 R2: 0.0 </code></pre>
 </tr>
 </tbody><tfoot class="gt_sourcenotes">
 <tr class="odd">
-<td colspan="4" class="gt_sourcenote">Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001. Format of coefficient cell: Coefficient (Std. Error)</td>
+<td colspan="4" class="gt_sourcenote">Format of coefficient cell: Coefficient (Std. Error)</td>
 </tr>
 </tfoot>
 
@@ -1055,70 +1060,70 @@ RMSE: 18.07 R2: 0.0 </code></pre>
 </div>
 <p>The panel estimator almost exactly matches CUPED, and we do even better in terms of variance.</p>
 <p>However, because we are working with panel data, the error terms are likely correlated over time within each user. If we ignore this dependence, our standard errors may be underestimated, which in turn can lead to over-rejecting the null hypothesis of no effect. A common way to address this issue is to compute cluster-robust standard errors at the user level, which account for arbitrary heteroskedasticity and autocorrelation within users.</p>
-<div id="30c84499" class="cell" data-execution_count="11">
+<div id="18ed2c3b" class="cell" data-execution_count="11">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>fit_panel_crv <span class="op">=</span> pf.feols(</span>
 <span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">"minutes_watched ~ treat | user + day"</span>,</span>
 <span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>    data<span class="op">=</span>data,</span>
 <span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span>{<span class="st">"CRV1"</span>: <span class="st">"user"</span>},</span>
-<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>    demeaner_backend<span class="op">=</span><span class="st">"rust"</span>,</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>    demeaner<span class="op">=</span>pf.MapDemeaner(backend<span class="op">=</span><span class="st">"rust"</span>),</span>
 <span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>Comparing all results, the panel estimator still does quite well in terms of the size of the estimated standard errors.</p>
-<div id="494610b9" class="cell" data-execution_count="12">
+<div id="15d4b919" class="cell" data-execution_count="12">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>pf.etable(</span>
 <span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>    [fit_difference_in_means, fit_cuped, fit_panel, fit_panel_crv],</span>
 <span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>    digits<span class="op">=</span><span class="dv">4</span>,</span>
 <span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="12">
-<div id="swtbwdcsjg" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<div id="vszeadliji" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
 <style>
-#swtbwdcsjg table {
+#vszeadliji table {
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
           -webkit-font-smoothing: antialiased;
           -moz-osx-font-smoothing: grayscale;
         }
 
-#swtbwdcsjg thead, tbody, tfoot, tr, td, th { border-style: none; }
+#vszeadliji thead, tbody, tfoot, tr, td, th { border-style: none; }
  tr { background-color: transparent; }
-#swtbwdcsjg p { margin: 0; padding: 0; }
- #swtbwdcsjg .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: solid; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
- #swtbwdcsjg .gt_caption { padding-top: 4px; padding-bottom: 4px; }
- #swtbwdcsjg .gt_title { color: #333333; font-size: 16px; font-weight: initial; padding-top: 6px; padding-bottom: 6px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
- #swtbwdcsjg .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 5px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
- #swtbwdcsjg .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
- #swtbwdcsjg .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
- #swtbwdcsjg .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
- #swtbwdcsjg .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 2px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
- #swtbwdcsjg .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
- #swtbwdcsjg .gt_column_spanner_outer:first-child { padding-left: 0; }
- #swtbwdcsjg .gt_column_spanner_outer:last-child { padding-right: 0; }
- #swtbwdcsjg .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: bottom; padding-top: 2px; padding-bottom: 2px; overflow-x: hidden; display: inline-block; width: 100%; }
- #swtbwdcsjg .gt_spanner_row { border-bottom-style: hidden; }
- #swtbwdcsjg .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
- #swtbwdcsjg .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: middle; }
- #swtbwdcsjg .gt_from_md> :first-child { margin-top: 0; }
- #swtbwdcsjg .gt_from_md> :last-child { margin-bottom: 0; }
- #swtbwdcsjg .gt_row { padding-top: 2px; padding-bottom: 2px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
- #swtbwdcsjg .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
- #swtbwdcsjg .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
- #swtbwdcsjg .gt_row_group_first td { border-top-width: 0.25px; }
- #swtbwdcsjg .gt_row_group_first th { border-top-width: 0.25px; }
- #swtbwdcsjg .gt_striped { color: #333333; background-color: #F4F4F4; }
- #swtbwdcsjg .gt_table_body { border-top-style: solid; border-top-width: 0px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
- #swtbwdcsjg .gt_grand_summary_row { color: #333333; background-color: #FFFFFF; text-transform: inherit; padding-top: 8px; padding-bottom: 8px; padding-left: 5px; padding-right: 5px; }
- #swtbwdcsjg .gt_first_grand_summary_row_bottom { border-top-style: double; border-top-width: 6px; border-top-color: #D3D3D3; }
- #swtbwdcsjg .gt_last_grand_summary_row_top { border-bottom-style: double; border-bottom-width: 6px; border-bottom-color: #D3D3D3; }
- #swtbwdcsjg .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
- #swtbwdcsjg .gt_sourcenote { font-size: 10px; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
- #swtbwdcsjg .gt_left { text-align: left; }
- #swtbwdcsjg .gt_center { text-align: center; }
- #swtbwdcsjg .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
- #swtbwdcsjg .gt_font_normal { font-weight: normal; }
- #swtbwdcsjg .gt_font_bold { font-weight: bold; }
- #swtbwdcsjg .gt_font_italic { font-style: italic; }
- #swtbwdcsjg .gt_super { font-size: 65%; }
- #swtbwdcsjg .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
- #swtbwdcsjg .gt_asterisk { font-size: 100%; vertical-align: 0; }
+#vszeadliji p { margin: 0; padding: 0; }
+ #vszeadliji .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: solid; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
+ #vszeadliji .gt_caption { padding-top: 4px; padding-bottom: 4px; }
+ #vszeadliji .gt_title { color: #333333; font-size: 16px; font-weight: initial; padding-top: 6px; padding-bottom: 6px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
+ #vszeadliji .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 5px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
+ #vszeadliji .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #vszeadliji .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
+ #vszeadliji .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #vszeadliji .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 2px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
+ #vszeadliji .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
+ #vszeadliji .gt_column_spanner_outer:first-child { padding-left: 0; }
+ #vszeadliji .gt_column_spanner_outer:last-child { padding-right: 0; }
+ #vszeadliji .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: bottom; padding-top: 2px; padding-bottom: 2px; overflow-x: hidden; display: inline-block; width: 100%; }
+ #vszeadliji .gt_spanner_row { border-bottom-style: hidden; }
+ #vszeadliji .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
+ #vszeadliji .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: middle; }
+ #vszeadliji .gt_from_md> :first-child { margin-top: 0; }
+ #vszeadliji .gt_from_md> :last-child { margin-bottom: 0; }
+ #vszeadliji .gt_row { padding-top: 2px; padding-bottom: 2px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
+ #vszeadliji .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
+ #vszeadliji .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
+ #vszeadliji .gt_row_group_first td { border-top-width: 0.25px; }
+ #vszeadliji .gt_row_group_first th { border-top-width: 0.25px; }
+ #vszeadliji .gt_striped { color: #333333; background-color: #F4F4F4; }
+ #vszeadliji .gt_table_body { border-top-style: solid; border-top-width: 0px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
+ #vszeadliji .gt_grand_summary_row { color: #333333; background-color: #FFFFFF; text-transform: inherit; padding-top: 8px; padding-bottom: 8px; padding-left: 5px; padding-right: 5px; }
+ #vszeadliji .gt_first_grand_summary_row_bottom { border-top-style: double; border-top-width: 6px; border-top-color: #D3D3D3; }
+ #vszeadliji .gt_last_grand_summary_row_top { border-bottom-style: double; border-bottom-width: 6px; border-bottom-color: #D3D3D3; }
+ #vszeadliji .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
+ #vszeadliji .gt_sourcenote { font-size: 10px; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
+ #vszeadliji .gt_left { text-align: left; }
+ #vszeadliji .gt_center { text-align: center; }
+ #vszeadliji .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
+ #vszeadliji .gt_font_normal { font-weight: normal; }
+ #vszeadliji .gt_font_bold { font-weight: bold; }
+ #vszeadliji .gt_font_italic { font-style: italic; }
+ #vszeadliji .gt_super { font-size: 65%; }
+ #vszeadliji .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
+ #vszeadliji .gt_asterisk { font-size: 100%; vertical-align: 0; }
  
 </style>
 
@@ -1150,28 +1155,28 @@ RMSE: 18.07 R2: 0.0 </code></pre>
 </tr>
 <tr class="even">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">treat</th>
-<td class="gt_row gt_center">0.7615***<br>
+<td class="gt_row gt_center">0.7615<br>
 (0.2092)</td>
-<td class="gt_row gt_center">0.1918***<br>
+<td class="gt_row gt_center">0.1918<br>
 (0.0288)</td>
-<td class="gt_row gt_center">0.1913***<br>
+<td class="gt_row gt_center">0.1913<br>
 (0.0118)</td>
-<td class="gt_row gt_center">0.1913***<br>
+<td class="gt_row gt_center">0.1913<br>
 (0.0287)</td>
 </tr>
 <tr class="odd">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">minutes_pre_c</th>
 <td class="gt_row gt_center"></td>
-<td class="gt_row gt_center">0.9992***<br>
+<td class="gt_row gt_center">0.9992<br>
 (0.0001)</td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
 </tr>
 <tr class="even">
 <th class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">Intercept</th>
-<td class="gt_row gt_center">0.3574***<br>
+<td class="gt_row gt_center">0.3574<br>
 (0.0148)</td>
-<td class="gt_row gt_center">0.3602***<br>
+<td class="gt_row gt_center">0.3602<br>
 (0.0021)</td>
 <td class="gt_row gt_center"></td>
 <td class="gt_row gt_center"></td>
@@ -1212,7 +1217,7 @@ RMSE: 18.07 R2: 0.0 </code></pre>
 </tr>
 </tbody><tfoot class="gt_sourcenotes">
 <tr class="odd">
-<td colspan="5" class="gt_sourcenote">Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001. Format of coefficient cell: Coefficient (Std. Error)</td>
+<td colspan="5" class="gt_sourcenote">Format of coefficient cell: Coefficient (Std. Error)</td>
 </tr>
 </tfoot>
 
@@ -1227,12 +1232,12 @@ RMSE: 18.07 R2: 0.0 </code></pre>
 <section id="digression-heterogeneous-effects-over-time-via-panel-estimators" class="level3">
 <h3 class="anchored" data-anchor-id="digression-heterogeneous-effects-over-time-via-panel-estimators">Digression: Heterogeneous Effects over Time via Panel Estimators</h3>
 <p>One example of the panel estimator is that it allows us to track treatment effects over time. This allows us to track novelty effects where in the beginning, users interact a lot with a new feature, i.e.&nbsp;they spend a lot of time playing a gamee, but over time lose interest.</p>
-<div id="5e74003d" class="cell" data-execution_count="13">
+<div id="f963acfc" class="cell" data-execution_count="13">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>fit_panel_time <span class="op">=</span> pf.feols(</span>
 <span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">"minutes_watched ~ i(day, ever_treated, ref = 14) | user + day"</span>,</span>
 <span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span>{<span class="st">"CRV1"</span>: <span class="st">"user"</span>},</span>
 <span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>    data<span class="op">=</span>data,</span>
-<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>    demeaner_backend<span class="op">=</span><span class="st">"rust"</span>,</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>    demeaner<span class="op">=</span>pf.MapDemeaner(backend<span class="op">=</span><span class="st">"rust"</span>),</span>
 <span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>fit_panel_time.iplot(</span>
 <span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>    coord_flip<span class="op">=</span><span class="va">False</span>,</span>
@@ -1243,7 +1248,7 @@ RMSE: 18.07 R2: 0.0 </code></pre>
 <div class="cell-output cell-output-display" data-execution_count="13">
 <div>
 <figure class="figure">
-<p><img src="panel_variance_reduction_files/figure-html/cell-14-output-1.png" width="949" height="564" class="figure-img"></p>
+<p><img src="panel_variance_reduction_files/figure-html/cell-14-output-1.png" width="945" height="564" class="figure-img"></p>
 </figure>
 </div>
 </div>
@@ -1255,7 +1260,7 @@ RMSE: 18.07 R2: 0.0 </code></pre>
 <section id="monte-carlo-simulation" class="level2">
 <h2 class="anchored" data-anchor-id="monte-carlo-simulation">Monte Carlo Simulation</h2>
 <p>To rule out that the examples above were purely do to look, we simply repeat them a couple of times using a monte carlo simulation.</p>
-<div id="b607dbb8" class="cell" data-execution_count="14">
+<div id="d02a8d47" class="cell" data-execution_count="14">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> _variance_monte_carlo(data):</span>
 <span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>    fit_dim <span class="op">=</span> _difference_in_means(data)</span>
 <span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>    fit_cuped, _ <span class="op">=</span> _regression_cuped(data)</span>
@@ -1263,7 +1268,7 @@ RMSE: 18.07 R2: 0.0 </code></pre>
 <span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>        <span class="st">"minutes_watched ~ treat | user + day"</span>,</span>
 <span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>        data<span class="op">=</span>data,</span>
 <span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>        vcov<span class="op">=</span>{<span class="st">"CRV1"</span>: <span class="st">"user"</span>},</span>
-<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>        demeaner_backend<span class="op">=</span><span class="st">"rust"</span>,</span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>        demeaner<span class="op">=</span>pf.MapDemeaner(backend<span class="op">=</span><span class="st">"rust"</span>),</span>
 <span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>    )</span>
 <span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>    dim_se <span class="op">=</span> fit_dim.tidy().xs(<span class="st">"treat"</span>)[<span class="st">"Std. Error"</span>]</span>
@@ -1302,14 +1307,11 @@ RMSE: 18.07 R2: 0.0 </code></pre>
 <span id="cb15-44"><a href="#cb15-44" aria-hidden="true" tabindex="-1"></a>        }</span>
 <span id="cb15-45"><a href="#cb15-45" aria-hidden="true" tabindex="-1"></a>    )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<div id="8770cf5b" class="cell" data-execution_count="15">
+<div id="cf0600f2" class="cell" data-execution_count="15">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co"># note that in a proper scientific simulation, we might want to set the</span></span>
 <span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="co"># number of iterations to be much higher than 10</span></span>
 <span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>se_sim_18 <span class="op">=</span> _run_simulation(N<span class="op">=</span><span class="dv">100_000</span>, sigma_unit<span class="op">=</span><span class="dv">18</span>, n_sim<span class="op">=</span><span class="dv">20</span>)</span>
 <span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>display(se_sim_18)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>  0%|          | 0/20 [00:00&lt;?, ?it/s]  5%|▌         | 1/20 [00:01&lt;00:22,  1.17s/it] 10%|█         | 2/20 [00:02&lt;00:20,  1.15s/it] 15%|█▌        | 3/20 [00:03&lt;00:19,  1.12s/it] 20%|██        | 4/20 [00:04&lt;00:17,  1.12s/it] 25%|██▌       | 5/20 [00:05&lt;00:16,  1.11s/it] 30%|███       | 6/20 [00:06&lt;00:15,  1.11s/it] 35%|███▌      | 7/20 [00:07&lt;00:14,  1.11s/it] 40%|████      | 8/20 [00:08&lt;00:13,  1.10s/it] 45%|████▌     | 9/20 [00:09&lt;00:12,  1.10s/it] 50%|█████     | 10/20 [00:11&lt;00:10,  1.10s/it] 55%|█████▌    | 11/20 [00:12&lt;00:09,  1.10s/it] 60%|██████    | 12/20 [00:13&lt;00:08,  1.10s/it] 65%|██████▌   | 13/20 [00:14&lt;00:07,  1.09s/it] 70%|███████   | 14/20 [00:15&lt;00:06,  1.09s/it] 75%|███████▌  | 15/20 [00:16&lt;00:05,  1.10s/it] 80%|████████  | 16/20 [00:17&lt;00:04,  1.10s/it] 85%|████████▌ | 17/20 [00:18&lt;00:03,  1.10s/it] 90%|█████████ | 18/20 [00:19&lt;00:02,  1.10s/it] 95%|█████████▌| 19/20 [00:20&lt;00:01,  1.10s/it]100%|██████████| 20/20 [00:22&lt;00:00,  1.10s/it]100%|██████████| 20/20 [00:22&lt;00:00,  1.10s/it]</code></pre>
-</div>
 <div class="cell-output cell-output-display">
 <pre><code>Difference-in-Means    0.029457
 Cuped                  0.004184
@@ -1322,71 +1324,62 @@ dtype: float64</code></pre>
 <section id="power-simulation" class="level2">
 <h2 class="anchored" data-anchor-id="power-simulation">Power Simulation</h2>
 <p>In all simulations, we conduct a two-sided t-test with size <span class="math inline">\(\alpha = 0.01\)</span>.</p>
-<div id="93e00f66" class="cell" data-execution_count="16">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> _power(nobs, n_sim):</span>
-<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>    res_df <span class="op">=</span> pd.DataFrame()</span>
-<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> N <span class="kw">in</span> nobs:</span>
-<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>        dim_reject_null_arr <span class="op">=</span> np.zeros(n_sim)</span>
-<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>        cuped_reject_null_arr <span class="op">=</span> np.zeros(n_sim)</span>
-<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>        panel_reject_null_arr <span class="op">=</span> np.zeros(n_sim)</span>
-<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> i <span class="kw">in</span> tqdm(<span class="bu">range</span>(n_sim)):</span>
-<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>            data <span class="op">=</span> get_sharkfin(</span>
-<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a>                num_units<span class="op">=</span>N,</span>
-<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a>                num_periods<span class="op">=</span><span class="dv">30</span>,</span>
-<span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a>                num_treated<span class="op">=</span><span class="bu">int</span>(N <span class="op">/</span> <span class="dv">2</span>),</span>
-<span id="cb19-14"><a href="#cb19-14" aria-hidden="true" tabindex="-1"></a>                treatment_start<span class="op">=</span><span class="dv">15</span>,</span>
-<span id="cb19-15"><a href="#cb19-15" aria-hidden="true" tabindex="-1"></a>                seed<span class="op">=</span>i,</span>
-<span id="cb19-16"><a href="#cb19-16" aria-hidden="true" tabindex="-1"></a>                sigma_unit<span class="op">=</span><span class="dv">18</span>,</span>
-<span id="cb19-17"><a href="#cb19-17" aria-hidden="true" tabindex="-1"></a>            )</span>
-<span id="cb19-18"><a href="#cb19-18" aria-hidden="true" tabindex="-1"></a>            data.rename(</span>
-<span id="cb19-19"><a href="#cb19-19" aria-hidden="true" tabindex="-1"></a>                columns<span class="op">=</span>{<span class="st">"Y"</span>: <span class="st">"minutes_watched"</span>, <span class="st">"unit"</span>: <span class="st">"user"</span>, <span class="st">"year"</span>: <span class="st">"day"</span>},</span>
-<span id="cb19-20"><a href="#cb19-20" aria-hidden="true" tabindex="-1"></a>                inplace<span class="op">=</span><span class="va">True</span>,</span>
-<span id="cb19-21"><a href="#cb19-21" aria-hidden="true" tabindex="-1"></a>            )</span>
-<span id="cb19-22"><a href="#cb19-22" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb19-23"><a href="#cb19-23" aria-hidden="true" tabindex="-1"></a>            fit_dim <span class="op">=</span> _difference_in_means(data)</span>
-<span id="cb19-24"><a href="#cb19-24" aria-hidden="true" tabindex="-1"></a>            fit_cuped, _ <span class="op">=</span> _regression_cuped(data)</span>
-<span id="cb19-25"><a href="#cb19-25" aria-hidden="true" tabindex="-1"></a>            fit_panel <span class="op">=</span> pf.feols(</span>
-<span id="cb19-26"><a href="#cb19-26" aria-hidden="true" tabindex="-1"></a>                <span class="st">"minutes_watched ~ treat | user + day"</span>, data<span class="op">=</span>data, vcov<span class="op">=</span>{<span class="st">"CRV1"</span>: <span class="st">"user"</span>}</span>
-<span id="cb19-27"><a href="#cb19-27" aria-hidden="true" tabindex="-1"></a>            )</span>
-<span id="cb19-28"><a href="#cb19-28" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb19-29"><a href="#cb19-29" aria-hidden="true" tabindex="-1"></a>            dim_reject_null_arr[i] <span class="op">=</span> fit_dim.pvalue().xs(<span class="st">"treat"</span>) <span class="op">&lt;</span> <span class="fl">0.01</span></span>
-<span id="cb19-30"><a href="#cb19-30" aria-hidden="true" tabindex="-1"></a>            cuped_reject_null_arr[i] <span class="op">=</span> fit_cuped.pvalue().xs(<span class="st">"treat"</span>) <span class="op">&lt;</span> <span class="fl">0.01</span></span>
-<span id="cb19-31"><a href="#cb19-31" aria-hidden="true" tabindex="-1"></a>            panel_reject_null_arr[i] <span class="op">=</span> fit_panel.pvalue().xs(<span class="st">"treat"</span>) <span class="op">&lt;</span> <span class="fl">0.01</span></span>
-<span id="cb19-32"><a href="#cb19-32" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb19-33"><a href="#cb19-33" aria-hidden="true" tabindex="-1"></a>        dim_reject_null_mean <span class="op">=</span> np.mean(dim_reject_null_arr)</span>
-<span id="cb19-34"><a href="#cb19-34" aria-hidden="true" tabindex="-1"></a>        cuped_reject_null_mean <span class="op">=</span> np.mean(cuped_reject_null_arr)</span>
-<span id="cb19-35"><a href="#cb19-35" aria-hidden="true" tabindex="-1"></a>        panel_reject_null_mean <span class="op">=</span> np.mean(panel_reject_null_arr)</span>
-<span id="cb19-36"><a href="#cb19-36" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb19-37"><a href="#cb19-37" aria-hidden="true" tabindex="-1"></a>        res <span class="op">=</span> pd.DataFrame(</span>
-<span id="cb19-38"><a href="#cb19-38" aria-hidden="true" tabindex="-1"></a>            {</span>
-<span id="cb19-39"><a href="#cb19-39" aria-hidden="true" tabindex="-1"></a>                <span class="st">"N"</span>: [N],</span>
-<span id="cb19-40"><a href="#cb19-40" aria-hidden="true" tabindex="-1"></a>                <span class="st">"Difference-in-Means"</span>: [dim_reject_null_mean],</span>
-<span id="cb19-41"><a href="#cb19-41" aria-hidden="true" tabindex="-1"></a>                <span class="st">"Cuped"</span>: [cuped_reject_null_mean],</span>
-<span id="cb19-42"><a href="#cb19-42" aria-hidden="true" tabindex="-1"></a>                <span class="st">"Panel"</span>: [panel_reject_null_mean],</span>
-<span id="cb19-43"><a href="#cb19-43" aria-hidden="true" tabindex="-1"></a>            }</span>
-<span id="cb19-44"><a href="#cb19-44" aria-hidden="true" tabindex="-1"></a>        )</span>
-<span id="cb19-45"><a href="#cb19-45" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb19-46"><a href="#cb19-46" aria-hidden="true" tabindex="-1"></a>        res_df <span class="op">=</span> pd.concat([res_df, res], axis<span class="op">=</span><span class="dv">0</span>, ignore_index<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb19-47"><a href="#cb19-47" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb19-48"><a href="#cb19-48" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> res_df</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div id="8fbf6fdb" class="cell" data-execution_count="16">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> _power(nobs, n_sim):</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>    res_df <span class="op">=</span> pd.DataFrame()</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> N <span class="kw">in</span> nobs:</span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>        dim_reject_null_arr <span class="op">=</span> np.zeros(n_sim)</span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>        cuped_reject_null_arr <span class="op">=</span> np.zeros(n_sim)</span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>        panel_reject_null_arr <span class="op">=</span> np.zeros(n_sim)</span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> i <span class="kw">in</span> tqdm(<span class="bu">range</span>(n_sim)):</span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>            data <span class="op">=</span> get_sharkfin(</span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>                num_units<span class="op">=</span>N,</span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a>                num_periods<span class="op">=</span><span class="dv">30</span>,</span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a>                num_treated<span class="op">=</span><span class="bu">int</span>(N <span class="op">/</span> <span class="dv">2</span>),</span>
+<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a>                treatment_start<span class="op">=</span><span class="dv">15</span>,</span>
+<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a>                seed<span class="op">=</span>i,</span>
+<span id="cb18-16"><a href="#cb18-16" aria-hidden="true" tabindex="-1"></a>                sigma_unit<span class="op">=</span><span class="dv">18</span>,</span>
+<span id="cb18-17"><a href="#cb18-17" aria-hidden="true" tabindex="-1"></a>            )</span>
+<span id="cb18-18"><a href="#cb18-18" aria-hidden="true" tabindex="-1"></a>            data.rename(</span>
+<span id="cb18-19"><a href="#cb18-19" aria-hidden="true" tabindex="-1"></a>                columns<span class="op">=</span>{<span class="st">"Y"</span>: <span class="st">"minutes_watched"</span>, <span class="st">"unit"</span>: <span class="st">"user"</span>, <span class="st">"year"</span>: <span class="st">"day"</span>},</span>
+<span id="cb18-20"><a href="#cb18-20" aria-hidden="true" tabindex="-1"></a>                inplace<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb18-21"><a href="#cb18-21" aria-hidden="true" tabindex="-1"></a>            )</span>
+<span id="cb18-22"><a href="#cb18-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-23"><a href="#cb18-23" aria-hidden="true" tabindex="-1"></a>            fit_dim <span class="op">=</span> _difference_in_means(data)</span>
+<span id="cb18-24"><a href="#cb18-24" aria-hidden="true" tabindex="-1"></a>            fit_cuped, _ <span class="op">=</span> _regression_cuped(data)</span>
+<span id="cb18-25"><a href="#cb18-25" aria-hidden="true" tabindex="-1"></a>            fit_panel <span class="op">=</span> pf.feols(</span>
+<span id="cb18-26"><a href="#cb18-26" aria-hidden="true" tabindex="-1"></a>                <span class="st">"minutes_watched ~ treat | user + day"</span>, data<span class="op">=</span>data, vcov<span class="op">=</span>{<span class="st">"CRV1"</span>: <span class="st">"user"</span>}</span>
+<span id="cb18-27"><a href="#cb18-27" aria-hidden="true" tabindex="-1"></a>            )</span>
+<span id="cb18-28"><a href="#cb18-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-29"><a href="#cb18-29" aria-hidden="true" tabindex="-1"></a>            dim_reject_null_arr[i] <span class="op">=</span> fit_dim.pvalue().xs(<span class="st">"treat"</span>) <span class="op">&lt;</span> <span class="fl">0.01</span></span>
+<span id="cb18-30"><a href="#cb18-30" aria-hidden="true" tabindex="-1"></a>            cuped_reject_null_arr[i] <span class="op">=</span> fit_cuped.pvalue().xs(<span class="st">"treat"</span>) <span class="op">&lt;</span> <span class="fl">0.01</span></span>
+<span id="cb18-31"><a href="#cb18-31" aria-hidden="true" tabindex="-1"></a>            panel_reject_null_arr[i] <span class="op">=</span> fit_panel.pvalue().xs(<span class="st">"treat"</span>) <span class="op">&lt;</span> <span class="fl">0.01</span></span>
+<span id="cb18-32"><a href="#cb18-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-33"><a href="#cb18-33" aria-hidden="true" tabindex="-1"></a>        dim_reject_null_mean <span class="op">=</span> np.mean(dim_reject_null_arr)</span>
+<span id="cb18-34"><a href="#cb18-34" aria-hidden="true" tabindex="-1"></a>        cuped_reject_null_mean <span class="op">=</span> np.mean(cuped_reject_null_arr)</span>
+<span id="cb18-35"><a href="#cb18-35" aria-hidden="true" tabindex="-1"></a>        panel_reject_null_mean <span class="op">=</span> np.mean(panel_reject_null_arr)</span>
+<span id="cb18-36"><a href="#cb18-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-37"><a href="#cb18-37" aria-hidden="true" tabindex="-1"></a>        res <span class="op">=</span> pd.DataFrame(</span>
+<span id="cb18-38"><a href="#cb18-38" aria-hidden="true" tabindex="-1"></a>            {</span>
+<span id="cb18-39"><a href="#cb18-39" aria-hidden="true" tabindex="-1"></a>                <span class="st">"N"</span>: [N],</span>
+<span id="cb18-40"><a href="#cb18-40" aria-hidden="true" tabindex="-1"></a>                <span class="st">"Difference-in-Means"</span>: [dim_reject_null_mean],</span>
+<span id="cb18-41"><a href="#cb18-41" aria-hidden="true" tabindex="-1"></a>                <span class="st">"Cuped"</span>: [cuped_reject_null_mean],</span>
+<span id="cb18-42"><a href="#cb18-42" aria-hidden="true" tabindex="-1"></a>                <span class="st">"Panel"</span>: [panel_reject_null_mean],</span>
+<span id="cb18-43"><a href="#cb18-43" aria-hidden="true" tabindex="-1"></a>            }</span>
+<span id="cb18-44"><a href="#cb18-44" aria-hidden="true" tabindex="-1"></a>        )</span>
+<span id="cb18-45"><a href="#cb18-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-46"><a href="#cb18-46" aria-hidden="true" tabindex="-1"></a>        res_df <span class="op">=</span> pd.concat([res_df, res], axis<span class="op">=</span><span class="dv">0</span>, ignore_index<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb18-47"><a href="#cb18-47" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-48"><a href="#cb18-48" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> res_df</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<div id="08624a6f" class="cell" data-execution_count="17">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="co"># </span><span class="al">TODO</span><span class="co">: set n_sim higher</span></span>
-<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>power_df <span class="op">=</span> _power(nobs<span class="op">=</span>[<span class="dv">100</span>, <span class="dv">500</span>, <span class="dv">1000</span>, <span class="dv">5_000</span>, <span class="dv">10_000</span>, <span class="dv">100_000</span>], n_sim<span class="op">=</span><span class="dv">10</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>  0%|          | 0/10 [00:00&lt;?, ?it/s]OMP: Info #276: omp_set_nested routine deprecated, please use omp_set_max_active_levels instead.
- 10%|█         | 1/10 [00:03&lt;00:29,  3.27s/it] 20%|██        | 2/10 [00:03&lt;00:11,  1.44s/it] 30%|███       | 3/10 [00:03&lt;00:05,  1.18it/s] 40%|████      | 4/10 [00:03&lt;00:03,  1.75it/s] 50%|█████     | 5/10 [00:03&lt;00:02,  2.39it/s] 60%|██████    | 6/10 [00:04&lt;00:01,  3.06it/s] 70%|███████   | 7/10 [00:04&lt;00:00,  3.71it/s] 80%|████████  | 8/10 [00:04&lt;00:00,  4.33it/s] 90%|█████████ | 9/10 [00:04&lt;00:00,  4.88it/s]100%|██████████| 10/10 [00:04&lt;00:00,  5.33it/s]100%|██████████| 10/10 [00:04&lt;00:00,  2.17it/s]
-  0%|          | 0/10 [00:00&lt;?, ?it/s] 10%|█         | 1/10 [00:00&lt;00:01,  6.24it/s] 20%|██        | 2/10 [00:00&lt;00:01,  6.31it/s] 30%|███       | 3/10 [00:00&lt;00:01,  6.25it/s] 40%|████      | 4/10 [00:00&lt;00:00,  6.28it/s] 50%|█████     | 5/10 [00:00&lt;00:00,  6.27it/s] 60%|██████    | 6/10 [00:00&lt;00:00,  6.29it/s] 70%|███████   | 7/10 [00:01&lt;00:00,  6.28it/s] 80%|████████  | 8/10 [00:01&lt;00:00,  6.29it/s] 90%|█████████ | 9/10 [00:01&lt;00:00,  6.24it/s]100%|██████████| 10/10 [00:01&lt;00:00,  6.30it/s]100%|██████████| 10/10 [00:01&lt;00:00,  6.28it/s]
-  0%|          | 0/10 [00:00&lt;?, ?it/s] 10%|█         | 1/10 [00:00&lt;00:01,  6.09it/s] 20%|██        | 2/10 [00:00&lt;00:01,  6.01it/s] 30%|███       | 3/10 [00:00&lt;00:01,  6.05it/s] 40%|████      | 4/10 [00:00&lt;00:00,  6.14it/s] 50%|█████     | 5/10 [00:00&lt;00:00,  6.14it/s] 60%|██████    | 6/10 [00:00&lt;00:00,  6.15it/s] 70%|███████   | 7/10 [00:01&lt;00:00,  6.16it/s] 80%|████████  | 8/10 [00:01&lt;00:00,  6.16it/s] 90%|█████████ | 9/10 [00:01&lt;00:00,  6.12it/s]100%|██████████| 10/10 [00:01&lt;00:00,  6.12it/s]100%|██████████| 10/10 [00:01&lt;00:00,  6.12it/s]
-  0%|          | 0/10 [00:00&lt;?, ?it/s] 10%|█         | 1/10 [00:00&lt;00:01,  4.95it/s] 20%|██        | 2/10 [00:00&lt;00:01,  4.97it/s] 30%|███       | 3/10 [00:00&lt;00:01,  4.99it/s] 40%|████      | 4/10 [00:00&lt;00:01,  4.90it/s] 50%|█████     | 5/10 [00:01&lt;00:01,  4.55it/s] 60%|██████    | 6/10 [00:01&lt;00:00,  4.27it/s] 70%|███████   | 7/10 [00:01&lt;00:00,  4.21it/s] 80%|████████  | 8/10 [00:01&lt;00:00,  4.25it/s] 90%|█████████ | 9/10 [00:02&lt;00:00,  4.28it/s]100%|██████████| 10/10 [00:02&lt;00:00,  4.43it/s]100%|██████████| 10/10 [00:02&lt;00:00,  4.48it/s]
-  0%|          | 0/10 [00:00&lt;?, ?it/s] 10%|█         | 1/10 [00:00&lt;00:02,  3.43it/s] 20%|██        | 2/10 [00:00&lt;00:02,  3.42it/s] 30%|███       | 3/10 [00:00&lt;00:01,  3.58it/s] 40%|████      | 4/10 [00:01&lt;00:01,  3.64it/s] 50%|█████     | 5/10 [00:01&lt;00:01,  3.71it/s] 60%|██████    | 6/10 [00:01&lt;00:01,  3.72it/s] 70%|███████   | 7/10 [00:01&lt;00:00,  3.73it/s] 80%|████████  | 8/10 [00:02&lt;00:00,  3.72it/s] 90%|█████████ | 9/10 [00:02&lt;00:00,  3.75it/s]100%|██████████| 10/10 [00:02&lt;00:00,  3.76it/s]100%|██████████| 10/10 [00:02&lt;00:00,  3.69it/s]
-  0%|          | 0/10 [00:00&lt;?, ?it/s] 10%|█         | 1/10 [00:01&lt;00:12,  1.38s/it] 20%|██        | 2/10 [00:02&lt;00:11,  1.40s/it] 30%|███       | 3/10 [00:04&lt;00:09,  1.36s/it] 40%|████      | 4/10 [00:05&lt;00:08,  1.33s/it] 50%|█████     | 5/10 [00:06&lt;00:06,  1.32s/it] 60%|██████    | 6/10 [00:08&lt;00:05,  1.32s/it] 70%|███████   | 7/10 [00:09&lt;00:04,  1.35s/it] 80%|████████  | 8/10 [00:10&lt;00:02,  1.34s/it] 90%|█████████ | 9/10 [00:12&lt;00:01,  1.36s/it]100%|██████████| 10/10 [00:13&lt;00:00,  1.39s/it]100%|██████████| 10/10 [00:13&lt;00:00,  1.36s/it]</code></pre>
+<div id="be735d53" class="cell" data-execution_count="17">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="co"># </span><span class="al">TODO</span><span class="co">: set n_sim higher</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>power_df <span class="op">=</span> _power(nobs<span class="op">=</span>[<span class="dv">100</span>, <span class="dv">500</span>, <span class="dv">1000</span>, <span class="dv">5_000</span>, <span class="dv">10_000</span>, <span class="dv">100_000</span>], n_sim<span class="op">=</span><span class="dv">10</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-</div>
-<div id="5d644ee1" class="cell" data-execution_count="18">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb22"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>display(power_df)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div id="36c4aa52" class="cell" data-execution_count="18">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>display(power_df)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 <div>
 
@@ -1456,14 +1449,11 @@ dtype: float64</code></pre>
 <h2 class="anchored" data-anchor-id="when-does-cuped-not-work">When does CUPED not work?</h2>
 <p>CUPED only works when we explain a lot of “residual” variation, which in our example data set is controlled by the <code>sigma_unit</code> parameter. Let’s see what happens if we drastically reduce it - we now change the parameter from <code>18</code> to <code>4</code>.</p>
 <p>We repeat the standard error monte carlo simulation, but set <code>sigma_unit = 4</code>.</p>
-<div id="3b1615f7" class="cell" data-execution_count="19">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>se_sim_1 <span class="op">=</span> _run_simulation(N<span class="op">=</span><span class="dv">100_000</span>, sigma_unit<span class="op">=</span><span class="dv">4</span>, n_sim<span class="op">=</span><span class="dv">10</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>  0%|          | 0/10 [00:00&lt;?, ?it/s] 10%|█         | 1/10 [00:01&lt;00:10,  1.20s/it] 20%|██        | 2/10 [00:02&lt;00:09,  1.16s/it] 30%|███       | 3/10 [00:03&lt;00:07,  1.14s/it] 40%|████      | 4/10 [00:04&lt;00:06,  1.14s/it] 50%|█████     | 5/10 [00:05&lt;00:05,  1.14s/it] 60%|██████    | 6/10 [00:06&lt;00:04,  1.14s/it] 70%|███████   | 7/10 [00:07&lt;00:03,  1.13s/it] 80%|████████  | 8/10 [00:09&lt;00:02,  1.13s/it] 90%|█████████ | 9/10 [00:10&lt;00:01,  1.13s/it]100%|██████████| 10/10 [00:11&lt;00:00,  1.13s/it]100%|██████████| 10/10 [00:11&lt;00:00,  1.14s/it]</code></pre>
+<div id="d5880510" class="cell" data-execution_count="19">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>se_sim_1 <span class="op">=</span> _run_simulation(N<span class="op">=</span><span class="dv">100_000</span>, sigma_unit<span class="op">=</span><span class="dv">4</span>, n_sim<span class="op">=</span><span class="dv">10</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-</div>
-<div id="b95b8962" class="cell" data-execution_count="20">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb25"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>display(se_sim_1)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div id="ada91f9c" class="cell" data-execution_count="20">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb22"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>display(se_sim_1)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 <pre><code>Difference-in-Means    0.006852
 Cuped                  0.004174
@@ -1472,8 +1462,8 @@ dtype: float64</code></pre>
 </div>
 </div>
 <p>All of a sudden, the difference-in-means estimator has lower variance!</p>
-<div id="f1df16b4" class="cell" data-execution_count="21">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb27"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>display(se_sim_18)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div id="39fccaec" class="cell" data-execution_count="21">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb24"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>display(se_sim_18)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 <pre><code>Difference-in-Means    0.029457
 Cuped                  0.004184
