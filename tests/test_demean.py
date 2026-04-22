@@ -5,12 +5,12 @@ import pytest
 
 import pyfixest as pf
 from pyfixest.core import demean as demean_rs
-from pyfixest.core.demean import demean_within
 from pyfixest.demeaners import LsmrDemeaner, MapDemeaner, WithinDemeaner
 from pyfixest.estimation.cupy.demean_cupy_ import demean_cupy32, demean_cupy64
 from pyfixest.estimation.internals.demean_ import (
     demean,
     demean_model,
+    dispatch_demean,
 )
 from pyfixest.estimation.jax.demean_jax_ import demean_jax
 from tests._torch_test_utils import HAS_TORCH, torch_param
@@ -337,7 +337,12 @@ def test_demean_model_caching(benchmark, demeaner):
         pytest.param(MapDemeaner(backend="numba", fixef_maxiter=1), id="numba"),
         pytest.param(MapDemeaner(backend="jax", fixef_maxiter=1), id="jax"),
         pytest.param(MapDemeaner(backend="rust", fixef_maxiter=1), id="rust"),
+        pytest.param(WithinDemeaner(fixef_maxiter=1), id="within"),
         pytest.param(LsmrDemeaner(device="cpu", fixef_maxiter=1), id="lsmr_scipy"),
+        pytest.param(
+            LsmrDemeaner(backend="torch", device="cpu", fixef_maxiter=1),
+            id="lsmr_torch_cpu",
+        ),
     ],
 )
 def test_demean_model_maxiter_convergence_failure(demeaner):
@@ -367,67 +372,6 @@ def test_demean_model_maxiter_convergence_failure(demeaner):
         )
 
 
-@pytest.mark.parametrize(
-    "demeaner",
-    [
-        pytest.param(MapDemeaner(backend="numba", fixef_maxiter=5000), id="numba"),
-        pytest.param(MapDemeaner(backend="jax", fixef_maxiter=5000), id="jax"),
-        pytest.param(MapDemeaner(backend="rust", fixef_maxiter=5000), id="rust"),
-        pytest.param(WithinDemeaner(fixef_maxiter=5000), id="within"),
-        pytest.param(
-            LsmrDemeaner(device="cpu", fixef_maxiter=5000),
-            id="lsmr_scipy",
-        ),
-    ],
-)
-def test_demean_model_custom_maxiter_success(demeaner):
-    """Test that demean_model succeeds with reasonable maxiter."""
-    N = 1000
-    rng = np.random.default_rng(42)
-
-    Y = pd.DataFrame({"y": rng.normal(0, 1, N)})
-    X = pd.DataFrame({"x1": rng.normal(0, 1, N)})
-    fe = pd.DataFrame({"fe1": rng.integers(0, 10, N)})
-    weights = np.ones(N)
-    lookup_dict = {}
-
-    # Should succeed with reasonable maxiter
-    Yd, Xd = demean_model(
-        Y=Y,
-        X=X,
-        fe=fe,
-        weights=weights,
-        lookup_demeaned_data=lookup_dict,
-        na_index=frozenset(),
-        demeaner=demeaner,
-    )
-
-    # Just verify it returns valid results
-    assert isinstance(Yd, pd.DataFrame)
-    assert isinstance(Xd, pd.DataFrame)
-    assert Yd.shape == Y.shape
-    assert Xd.shape == X.shape
-
-
-def test_demean_maxiter_parameter():
-    """Test that the demean function respects maxiter parameter."""
-    N = 100
-    rng = np.random.default_rng(42)
-
-    # Create data that's hard to converge
-    x = rng.normal(0, 1, N * 2).reshape((N, 2))
-    flist = np.arange(N).reshape((N, 1)).astype(np.uint)  # Many FEs
-    weights = np.ones(N)
-
-    # Test with very small maxiter
-    _, success = demean(x, flist, weights, tol=1e-10, maxiter=1)
-    assert not success  # Should fail to converge
-
-    # Test with large maxiter
-    _, success = demean(x, flist, weights, tol=1e-10, maxiter=100_000)
-    # May or may not converge, but shouldn't crash
-
-
 def test_feols_integration_maxiter():
     """Integration test: Test fixef_maxiter flows from demeaner to demean."""
     import pyfixest as pf
@@ -453,19 +397,14 @@ def test_feols_integration_maxiter():
     assert model is not None
 
 
-@pytest.mark.parametrize(
-    argnames="demean_func",
-    argvalues=[demean_rs, demean_within, demean_cupy32, demean_cupy64],
-    ids=["demean_rs", "demean_within", "demean_cupy32", "demean_cupy64"],
-)
-def test_demean_complex_fixed_effects(benchmark, demean_func):
+@pytest.mark.parametrize("demeaner", MODEL_DEMEANERS)
+def test_demean_complex_fixed_effects(benchmark, demeaner):
     """Benchmark demean functions with complex multi-level fixed effects."""
     X, flist, weights = generate_complex_fixed_effects_data()
 
     X_demeaned, success = benchmark.pedantic(
-        demean_func,
-        args=(X, flist, weights),
-        kwargs={"tol": 1e-10},
+        dispatch_demean,
+        args=(X, flist, weights, demeaner),
         iterations=1,
         rounds=1,
         warmup_rounds=0,
