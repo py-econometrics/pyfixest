@@ -1,20 +1,7 @@
-from __future__ import annotations
-
 import numpy as np
 from numpy.typing import NDArray
 
 from ._core_impl import _demean_rs, _demean_within_rs
-
-
-def _prepare_within_flist(flist: NDArray[np.uint32]) -> NDArray[np.uint32]:
-    flist_arr = np.asfortranarray(flist, dtype=np.uint32)
-    if flist_arr.ndim == 1:
-        flist_arr = flist_arr.reshape((-1, 1), order="F")
-    return flist_arr
-
-
-def _prepare_weights(weights: NDArray[np.float64]) -> NDArray[np.float64]:
-    return np.asarray(weights, dtype=np.float64).reshape(-1)
 
 
 def demean(
@@ -99,15 +86,15 @@ def demean_within(
     tol: float = 1e-06,
     maxiter: int = 1_000,
 ) -> tuple[NDArray, bool]:
-    """Demean an array using the `within` backend.
+    """
+    Demean an array using preconditioned conjugate gradient via the `within` crate.
 
     Uses Krylov-based solvers with Schwarz preconditioning. Converges faster
     than alternating projections on weakly-connected or block-diagonal
     fixed-effect structures.
 
-    For single fixed effects, falls back to alternating projections
-    (``_demean_rs``) because the Schwarz preconditioner is designed for
-    multi-way FE problems.
+    For single fixed effects, falls back to alternating projections (``_demean_rs``)
+    because the CG/Schwarz preconditioner is designed for multi-way FE problems.
 
     Parameters
     ----------
@@ -121,32 +108,25 @@ def demean_within(
     tol : float, optional
         Convergence tolerance. Defaults to 1e-06.
     maxiter : int, optional
-        Maximum number of Krylov iterations. Defaults to 1_000.
+        Maximum number of CG iterations. Defaults to 1_000.
 
     Returns
     -------
     tuple[numpy.ndarray, bool]
         Demeaned array and convergence flag.
     """
-    flist_arr = _prepare_within_flist(flist)
-    if flist_arr.shape[1] == 1:
+    if flist.ndim == 1 or flist.shape[1] == 1:
         return _demean_rs(
             x.astype(np.float64, copy=False),
-            flist_arr.astype(np.uint64, copy=False),
-            _prepare_weights(weights),
+            flist.astype(np.uint64, copy=False),
+            weights.astype(np.float64, copy=False),
             tol,
             maxiter,
         )
-
-    weights_arr = _prepare_weights(weights)
-    x_arr = np.asarray(x, dtype=np.float64)
-    if x_arr.ndim == 1:
-        x_arr = x_arr.reshape((-1, 1))
-
     return _demean_within_rs(
-        x_arr,
-        flist_arr,
-        weights_arr,
+        x.astype(np.float64, copy=False),
+        np.asfortranarray(flist, dtype=np.uint32),
+        weights.astype(np.float64, copy=False).reshape(-1),
         tol,
         maxiter,
     )
