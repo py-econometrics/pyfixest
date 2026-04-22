@@ -213,7 +213,6 @@ class Feglm(Feols, ABC):
                 flist=self._fe,
                 weights=W.flatten(),
                 tol=inner_tol,
-                maxiter=self._fixef_maxiter,
             )
 
             if r == 0:
@@ -403,7 +402,6 @@ class Feglm(Feols, ABC):
         flist: np.ndarray,
         weights: np.ndarray,
         tol: float,
-        maxiter: int,
     ) -> tuple[np.ndarray, np.ndarray]:
         "Residualize v and X by flist using weights."
         if flist is None:
