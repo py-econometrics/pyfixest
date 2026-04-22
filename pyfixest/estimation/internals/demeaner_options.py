@@ -14,49 +14,18 @@ from pyfixest.demeaners import (
     WithinDemeaner,
 )
 
-
-def _build_map_demeaner(
-    backend: MapBackend,
-    *,
-    fixef_tol: float | None,
-    fixef_maxiter: int | None,
-) -> MapDemeaner:
-    kwargs: dict = {"backend": backend}
-    if fixef_tol is not None:
-        kwargs["fixef_tol"] = fixef_tol
-    if fixef_maxiter is not None:
-        kwargs["fixef_maxiter"] = fixef_maxiter
-    return MapDemeaner(**kwargs)
-
-
-def _build_within_demeaner(
-    *,
-    fixef_tol: float | None,
-    fixef_maxiter: int | None,
-) -> WithinDemeaner:
-    kwargs: dict = {}
-    if fixef_tol is not None:
-        kwargs["fixef_tol"] = fixef_tol
-    if fixef_maxiter is not None:
-        kwargs["fixef_maxiter"] = fixef_maxiter
-    return WithinDemeaner(**kwargs)
-
-
-def _build_lsmr_demeaner(
-    *,
-    backend: LsmrBackend,
-    device: TorchDevice,
-    precision: LsmrPrecision = "float64",
-    fixef_tol: float | None = None,
-    fixef_maxiter: int | None = None,
-) -> LsmrDemeaner:
-    kwargs: dict = {"backend": backend, "device": device, "precision": precision}
-    if fixef_tol is not None:
-        kwargs["fixef_atol"] = fixef_tol
-        kwargs["fixef_btol"] = fixef_tol
-    if fixef_maxiter is not None:
-        kwargs["fixef_maxiter"] = fixef_maxiter
-    return LsmrDemeaner(**kwargs)
+# Legacy string backend → (LsmrBackend, TorchDevice, LsmrPrecision)
+_LSMR_PRESETS: dict[str, tuple[LsmrBackend, TorchDevice, LsmrPrecision]] = {
+    "cupy": ("cupy", "auto", "float64"),
+    "cupy64": ("cupy", "auto", "float64"),
+    "cupy32": ("cupy", "auto", "float32"),
+    "scipy": ("cupy", "cpu", "float64"),
+    "torch": ("torch", "auto", "float64"),
+    "torch_cpu": ("torch", "cpu", "float64"),
+    "torch_mps": ("torch", "mps", "float32"),
+    "torch_cuda": ("torch", "cuda", "float64"),
+    "torch_cuda32": ("torch", "cuda", "float32"),
+}
 
 
 def _resolve_demeaner(
@@ -73,9 +42,8 @@ def _resolve_demeaner(
     if demeaner is not None:
         if legacy_args_used:
             raise ValueError(
-                "Please either pass a typed `demeaner` or the deprecated legacy arguments "
-                "`demeaner_backend`, `fixef_tol`, and `fixef_maxiter`, not both. Here we prioritize the typed `demeaner` argument and ignore the legacy arguments, but in a future release passing legacy arguments with a typed `demeaner` will raise an error."
-                ""
+                "Pass either `demeaner` or the deprecated legacy arguments "
+                "`demeaner_backend`, `fixef_tol`, and `fixef_maxiter`, not both."
             )
         return demeaner
 
@@ -88,6 +56,12 @@ def _resolve_demeaner(
         if fixef_tol <= 0 or fixef_tol >= 1:
             raise ValueError("fixef_tol must be greater than zero and less than one")
 
+    if fixef_maxiter is not None:
+        if isinstance(fixef_maxiter, bool) or not isinstance(fixef_maxiter, int):
+            raise TypeError("fixef_maxiter must be an int")
+        if fixef_maxiter <= 0:
+            raise ValueError("fixef_maxiter must be greater than zero")
+
     warnings.warn(
         (
             "The `demeaner_backend`, `fixef_tol`, and `fixef_maxiter` arguments "
@@ -99,83 +73,31 @@ def _resolve_demeaner(
     )
 
     backend = "numba" if demeaner_backend is None else demeaner_backend
+    effective_fixef_tol = 1e-06 if fixef_tol is None else fixef_tol
+    effective_fixef_maxiter = 10_000 if fixef_maxiter is None else fixef_maxiter
 
     if backend in {"numba", "rust", "jax"}:
-        return _build_map_demeaner(
-            cast(MapBackend, backend),
-            fixef_tol=fixef_tol,
-            fixef_maxiter=fixef_maxiter,
+        return MapDemeaner(
+            backend=cast(MapBackend, backend),
+            fixef_tol=effective_fixef_tol,
+            fixef_maxiter=effective_fixef_maxiter,
         )
 
     if backend in {"rust-cg", "within"}:
-        return _build_within_demeaner(
-            fixef_tol=fixef_tol,
-            fixef_maxiter=fixef_maxiter,
+        return WithinDemeaner(
+            fixef_tol=effective_fixef_tol,
+            fixef_maxiter=effective_fixef_maxiter,
         )
 
-    if backend in {"cupy", "cupy64"}:
-        return _build_lsmr_demeaner(
-            backend="cupy",
-            device="cuda",
-            precision="float64",
-            fixef_tol=fixef_tol,
-            fixef_maxiter=fixef_maxiter,
-        )
-    if backend == "cupy32":
-        return _build_lsmr_demeaner(
-            backend="cupy",
-            device="cuda",
-            precision="float32",
-            fixef_tol=fixef_tol,
-            fixef_maxiter=fixef_maxiter,
-        )
-    if backend == "scipy":
-        return _build_lsmr_demeaner(
-            backend="cupy",
-            device="cpu",
-            precision="float64",
-            fixef_tol=fixef_tol,
-            fixef_maxiter=fixef_maxiter,
-        )
-    if backend == "torch":
-        return _build_lsmr_demeaner(
-            backend="torch",
-            device="auto",
-            precision="float64",
-            fixef_tol=fixef_tol,
-            fixef_maxiter=fixef_maxiter,
-        )
-    if backend == "torch_cpu":
-        return _build_lsmr_demeaner(
-            backend="torch",
-            device="cpu",
-            precision="float64",
-            fixef_tol=fixef_tol,
-            fixef_maxiter=fixef_maxiter,
-        )
-    if backend == "torch_mps":
-        return _build_lsmr_demeaner(
-            backend="torch",
-            device="mps",
-            precision="float32",
-            fixef_tol=fixef_tol,
-            fixef_maxiter=fixef_maxiter,
-        )
-    if backend == "torch_cuda":
-        return _build_lsmr_demeaner(
-            backend="torch",
-            device="cuda",
-            precision="float64",
-            fixef_tol=fixef_tol,
-            fixef_maxiter=fixef_maxiter,
-        )
-    if backend == "torch_cuda32":
-        return _build_lsmr_demeaner(
-            backend="torch",
-            device="cuda",
-            precision="float32",
-            fixef_tol=fixef_tol,
-            fixef_maxiter=fixef_maxiter,
+    if backend in _LSMR_PRESETS:
+        lsmr_backend, device, precision = _LSMR_PRESETS[backend]
+        return LsmrDemeaner(
+            backend=lsmr_backend,
+            device=device,
+            precision=precision,
+            fixef_atol=effective_fixef_tol,
+            fixef_btol=effective_fixef_tol,
+            fixef_maxiter=effective_fixef_maxiter,
         )
 
     raise ValueError(f"Invalid demeaner backend: {backend}")
