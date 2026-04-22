@@ -10,11 +10,14 @@ LsmrPrecision = Literal["float32", "float64"]
 TorchDevice = Literal["auto", "cpu", "mps", "cuda"]
 
 
-def _validate_positive_float(value: float, name: str) -> None:
+def _validate_unit_interval_float(value: float, name: str) -> None:
+
     if isinstance(value, bool) or not isinstance(value, Real):
         raise TypeError(f"`{name}` must be a real number.")
     if value <= 0:
         raise ValueError(f"`{name}` must be strictly positive.")
+    if value >= 1:
+        raise ValueError(f"`{name}` must be less than one.")
 
 
 def _validate_positive_int(value: int, name: str) -> None:
@@ -45,7 +48,7 @@ class MapDemeaner(BaseDemeaner):
 
     def __post_init__(self) -> None:
         BaseDemeaner.__post_init__(self)
-        _validate_positive_float(self.fixef_tol, "fixef_tol")
+        _validate_unit_interval_float(self.fixef_tol, "fixef_tol")
         if not isinstance(self.backend, str):
             raise TypeError("`backend` must be a string.")
         if self.backend not in get_args(MapBackend):
@@ -62,7 +65,7 @@ class WithinDemeaner(BaseDemeaner):
 
     def __post_init__(self) -> None:
         BaseDemeaner.__post_init__(self)
-        _validate_positive_float(self.fixef_tol, "fixef_tol")
+        _validate_unit_interval_float(self.fixef_tol, "fixef_tol")
 
 
 @dataclass(frozen=True, slots=True)
@@ -94,8 +97,8 @@ class LsmrDemeaner(BaseDemeaner):
             raise TypeError("`device` must be a string.")
         if self.device not in get_args(TorchDevice):
             raise ValueError(f"`device` must be one of {get_args(TorchDevice)}.")
-        _validate_positive_float(self.fixef_atol, "fixef_atol")
-        _validate_positive_float(self.fixef_btol, "fixef_btol")
+        _validate_unit_interval_float(self.fixef_atol, "fixef_atol")
+        _validate_unit_interval_float(self.fixef_btol, "fixef_btol")
 
         if not isinstance(self.warn_on_cpu_fallback, bool):
             raise TypeError("`warn_on_cpu_fallback` must be a bool.")
