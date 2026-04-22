@@ -4,8 +4,8 @@ from typing import Any, Literal
 import numpy as np
 import pandas as pd
 
+from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
-from pyfixest.estimation.internals.literals import DemeanerBackendOptions
 from pyfixest.estimation.models.feglm_ import Feglm
 
 
@@ -22,8 +22,6 @@ class Fegaussian(Feglm):
         weights: str | None,
         weights_type: str | None,
         collin_tol: float,
-        fixef_tol: float,
-        fixef_maxiter: int,
         lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
         tol: float,
         maxiter: int,
@@ -41,7 +39,7 @@ class Fegaussian(Feglm):
         sample_split_value: str | int | None = None,
         separation_check: list[str] | None = None,
         context: int | Mapping[str, Any] = 0,
-        demeaner_backend: DemeanerBackendOptions = "numba",
+        demeaner: AnyDemeaner | None = None,
         accelerate: bool = True,
     ):
         super().__init__(
@@ -53,8 +51,6 @@ class Fegaussian(Feglm):
             weights=weights,
             weights_type=weights_type,
             collin_tol=collin_tol,
-            fixef_tol=fixef_tol,
-            fixef_maxiter=fixef_maxiter,
             lookup_demeaned_data=lookup_demeaned_data,
             tol=tol,
             maxiter=maxiter,
@@ -66,7 +62,7 @@ class Fegaussian(Feglm):
             sample_split_value=sample_split_value,
             separation_check=separation_check,
             context=context,
-            demeaner_backend=demeaner_backend,
+            demeaner=demeaner,
             accelerate=accelerate,
         )
 

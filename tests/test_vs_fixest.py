@@ -211,19 +211,71 @@ test_counter_feiv = 0
 
 ALL_F3 = ["str", "object", "int", "categorical", "float"]
 SINGLE_F3 = ALL_F3[0]
+
+
 BACKEND_F3 = [
-    *[("numba", t) for t in ALL_F3],
-    *[(b, SINGLE_F3) for b in ("rust-cg", "jax", "rust", "cupy", "scipy")],
-    torch_param(("torch", SINGLE_F3), id="torch"),
-    torch_param(("torch_cpu", SINGLE_F3), id="torch_cpu"),
-    torch_param(("torch_mps", SINGLE_F3), id="torch_mps", require="mps"),
-    torch_param(("torch_cuda", SINGLE_F3), id="torch_cuda", require="cuda"),
-    torch_param(("torch_cuda32", SINGLE_F3), id="torch_cuda32", require="cuda"),
+    *[
+        pytest.param(name, pf.MapDemeaner(backend="numba"), t, id=name)
+        for name in ("numba",)
+        for t in ALL_F3
+    ],
+    pytest.param("within", pf.WithinDemeaner(), SINGLE_F3, id="within"),
+    *[
+        pytest.param(name, pf.MapDemeaner(backend=name), SINGLE_F3, id=name)
+        for name in ("jax", "rust")
+    ],
+    pytest.param(
+        "cupy",
+        pf.LsmrDemeaner(backend="cupy", precision="float64", device="auto"),
+        SINGLE_F3,
+        id="cupy",
+    ),
+    pytest.param(
+        "scipy",
+        pf.LsmrDemeaner(backend="cupy", precision="float64", device="cpu"),
+        SINGLE_F3,
+        id="scipy",
+    ),
+    torch_param(
+        ("torch", pf.LsmrDemeaner(backend="torch", device="auto"), SINGLE_F3),
+        id="torch",
+    ),
+    torch_param(
+        ("torch_cpu", pf.LsmrDemeaner(backend="torch", device="cpu"), SINGLE_F3),
+        id="torch_cpu",
+    ),
+    torch_param(
+        (
+            "torch_mps",
+            pf.LsmrDemeaner(backend="torch", precision="float32", device="mps"),
+            SINGLE_F3,
+        ),
+        id="torch_mps",
+        require="mps",
+    ),
+    torch_param(
+        (
+            "torch_cuda",
+            pf.LsmrDemeaner(backend="torch", device="cuda"),
+            SINGLE_F3,
+        ),
+        id="torch_cuda",
+        require="cuda",
+    ),
+    torch_param(
+        (
+            "torch_cuda32",
+            pf.LsmrDemeaner(backend="torch", precision="float32", device="cuda"),
+            SINGLE_F3,
+        ),
+        id="torch_cuda32",
+        require="cuda",
+    ),
 ]
 
 
 @pytest.mark.against_r_core
-@pytest.mark.parametrize("demeaner_backend,f3_type", BACKEND_F3)
+@pytest.mark.parametrize("backend_name,demeaner,f3_type", BACKEND_F3)
 @pytest.mark.parametrize("dropna", [False, True])
 @pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
 @pytest.mark.parametrize("weights", [None, "weights"])
@@ -239,7 +291,8 @@ def test_single_fit_feols(
     fml,
     k_adj,
     G_adj,
-    demeaner_backend,
+    backend_name,
+    demeaner,
 ):
     global test_counter_feols
     test_counter_feols += 1
@@ -273,7 +326,7 @@ def test_single_fit_feols(
         vcov=inference,
         weights=weights,
         ssc=ssc_,
-        demeaner_backend=demeaner_backend,
+        demeaner=demeaner,
     )
     if weights is not None:
         r_fixest = fixest.feols(
@@ -320,7 +373,7 @@ def test_single_fit_feols(
     r_df_k = int(ro.r('attr(r_fixest$cov.scaled, "df.K")')[0])
     r_df_t = int(ro.r('attr(r_fixest$cov.scaled, "df.t")')[0])
 
-    if demeaner_backend in ("cupy", "scipy"):
+    if backend_name in ("cupy", "scipy"):
         coef_tol = 1e-08
         predict_tol = 2e-06
         resid_tol = 2e-06
@@ -329,13 +382,13 @@ def test_single_fit_feols(
         if "^" in fml and weights is not None:
             predict_tol = 6e-06
             resid_tol = 6e-06
-    elif demeaner_backend in ("torch", "torch_cpu", "torch_cuda"):
+    elif backend_name in ("torch", "torch_cpu", "torch_cuda"):
         coef_tol = 1e-08
         predict_tol = 5e-05
         resid_tol = 5e-05
         inference_tol = 1e-06
         tstat_tol = 1e-05
-    elif demeaner_backend in ("torch_mps", "torch_cuda32"):
+    elif backend_name in ("torch_mps", "torch_cuda32"):
         coef_tol = 5e-06
         predict_tol = 2e-04
         resid_tol = 2e-04

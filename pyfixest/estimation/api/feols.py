@@ -3,10 +3,14 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
+from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.api.utils import _estimation_input_checks
 from pyfixest.estimation.FixestMulti_ import FixestMulti
+from pyfixest.estimation.internals.demeaner_options import (
+    _resolve_demeaner,
+    _warn_if_experimental_torch_demeaner,
+)
 from pyfixest.estimation.internals.literals import (
-    DemeanerBackendOptions,
     FixedRmOptions,
     SolverOptions,
     VcovTypeOptions,
@@ -26,8 +30,6 @@ def feols(
     weights: None | str = None,
     ssc: dict[str, str | bool] | None = None,
     fixef_rm: FixedRmOptions = "singleton",
-    fixef_tol=1e-06,
-    fixef_maxiter: int = 10_000,
     collin_tol: float = 1e-09,
     drop_intercept: bool = False,
     copy_data: bool = True,
@@ -35,7 +37,10 @@ def feols(
     lean: bool = False,
     weights_type: WeightsTypeOptions = "aweights",
     solver: SolverOptions = "scipy.linalg.solve",
-    demeaner_backend: DemeanerBackendOptions = "numba",
+    demeaner: AnyDemeaner | None = None,
+    demeaner_backend: str | None = None,
+    fixef_tol: float | None = None,
+    fixef_maxiter: int | None = None,
     use_compression: bool = False,
     reps: int = 100,
     context: int | Mapping[str, Any] | None = None,
@@ -94,12 +99,6 @@ def feols(
     collin_tol : float, optional
         Tolerance for collinearity check, by default 1e-10.
 
-    fixef_tol: float, optional
-        Tolerance for the fixed effects demeaning algorithm. Defaults to 1e-06.
-
-    fixef_maxiter: int, optional
-         Maximum number of iterations for the demeaning algorithm. Defaults to 100,000.
-
     drop_intercept : bool, optional
         Whether to drop the intercept from the model, by default False.
 
@@ -137,23 +136,11 @@ def feols(
         "np.linalg.solve", "scipy.linalg.solve", "scipy.sparse.linalg.lsqr" and "jax".
         Defaults to "scipy.linalg.solve".
 
-    demeaner_backend: DemeanerBackendOptions, optional
-        The backend to use for demeaning. Options include:
-        - "numba" (default): CPU-based demeaning using Numba JIT via the Alternating Projections Algorithm.
-        - "rust-cg": Implements the conjugate-gradient-schwarz algorithm from the
-          [`within`](https://github.com/py-econometrics/within) rust package.
-          Particularly effective for sparse fixed effects structures. See the
-          [difficult fixed effects vignette](https://pyfixest.org/explanation/difficult-fixed-effects.html)
-          for benchmarks.
-        - "rust": CPU-based demeaning implemented in Rust via the Alternating Projections Algorithm.
-        - "jax": CPU or GPU-accelerated using JAX (requires jax/jaxlib) via the Alternating Projections Algorithm.
-        - "cupy" or "cupy64": GPU-accelerated using CuPy with float64 precision via direct application of the Frisch-Waugh-Lovell Theorem on sparse
-          matrices (requires cupy & GPU, defaults to scipy/CPU if no GPU available)
-        - "cupy32": GPU-accelerated using CuPy with float32 precision via direct application of the Frisch-Waugh-Lovell Theorem on sparse
-          matrices (requires cupy & GPU, defaults to scipy/CPU and float64 if no GPU available)
-        - "scipy": Direct application of the Frisch-Waugh-Lovell Theorem on sparse matrice.
-          Forces to use a scipy-sparse backend even when cupy is installed and GPU is available.
-        Defaults to "numba".
+    demeaner : AnyDemeaner | None, optional
+        Typed demeaner configuration. Controls the fixed-effects demeaning
+        backend, tolerance, and iteration limits. Accepts a `MapDemeaner`,
+        `WithinDemeaner`, or `LsmrDemeaner` instance. Defaults to
+        `MapDemeaner()` (numba MAP algorithm, tol=1e-6, maxiter=10_000).
 
     use_compression: bool
         Whether to use sufficient statistics to losslessly fit the regression model
@@ -494,6 +481,13 @@ def feols(
     if ssc is None:
         ssc = ssc_func()
     context = {} if context is None else capture_context(context)
+    demeaner = _resolve_demeaner(
+        demeaner=demeaner,
+        demeaner_backend=demeaner_backend,
+        fixef_tol=fixef_tol,
+        fixef_maxiter=fixef_maxiter,
+    )
+    _warn_if_experimental_torch_demeaner(demeaner)
 
     _estimation_input_checks(
         fml=fml,
@@ -507,8 +501,6 @@ def feols(
         copy_data=copy_data,
         store_data=store_data,
         lean=lean,
-        fixef_tol=fixef_tol,
-        fixef_maxiter=fixef_maxiter,
         weights_type=weights_type,
         use_compression=use_compression,
         reps=reps,
@@ -522,8 +514,6 @@ def feols(
         copy_data=copy_data,
         store_data=store_data,
         lean=lean,
-        fixef_tol=fixef_tol,
-        fixef_maxiter=fixef_maxiter,
         weights_type=weights_type,
         use_compression=use_compression,
         reps=reps,
@@ -552,7 +542,7 @@ def feols(
         solver=solver,
         vcov_kwargs=vcov_kwargs,
         collin_tol=collin_tol,
-        demeaner_backend=demeaner_backend,
+        demeaner=demeaner,
     )
 
     if fixest._is_multiple_estimation:

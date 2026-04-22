@@ -8,8 +8,8 @@ def demean(
     x: NDArray[np.float64],
     flist: NDArray[np.uint64],
     weights: NDArray[np.float64],
-    tol: float = 1e-08,
-    maxiter: int = 100_000,
+    tol: float = 1e-06,
+    maxiter: int = 10_000,
 ) -> tuple[NDArray, bool]:
     """
     Demean an array.
@@ -89,9 +89,9 @@ def demean_within(
     """
     Demean an array using preconditioned conjugate gradient via the `within` crate.
 
-    Uses one-level Schwarz preconditioning with approximate Cholesky local
-    solvers. Converges faster than alternating projections on weakly-connected
-    or block-diagonal fixed-effect structures.
+    Uses Krylov-based solvers with Schwarz preconditioning. Converges faster
+    than alternating projections on weakly-connected or block-diagonal
+    fixed-effect structures.
 
     For single fixed effects, falls back to alternating projections (``_demean_rs``)
     because the CG/Schwarz preconditioner is designed for multi-way FE problems.

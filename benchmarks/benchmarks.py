@@ -103,12 +103,27 @@ def _append_optional_backends(estimators, label_prefix, runner_func, func_name):
 # =============================================================================
 
 
+def _make_demeaner(backend: str):
+    """Create a typed demeaner from a backend name string."""
+    import pyfixest as pf
+
+    if backend in {"numba", "rust", "jax"}:
+        return pf.MapDemeaner(backend=backend)
+    if backend in {"rust-cg", "within"}:
+        return pf.WithinDemeaner()
+    if backend == "cupy":
+        return pf.LsmrDemeaner(backend="cupy", device="cuda")
+    if backend == "scipy":
+        return pf.LsmrDemeaner(backend="cupy", device="cpu")
+    raise ValueError(f"Unknown backend {backend!r}")
+
+
 def run_pyfixest_feols(data: pd.DataFrame, formula: str, backend: str) -> float:
     """Run pyfixest feols and return timing."""
     import pyfixest as pf
 
     start = time.perf_counter()
-    _ = pf.feols(formula, data, demeaner_backend=backend)
+    _ = pf.feols(formula, data, demeaner=_make_demeaner(backend))
     return time.perf_counter() - start
 
 
@@ -117,7 +132,7 @@ def run_pyfixest_fepois(data: pd.DataFrame, formula: str, backend: str) -> float
     import pyfixest as pf
 
     start = time.perf_counter()
-    _ = pf.fepois(formula, data, demeaner_backend=backend)
+    _ = pf.fepois(formula, data, demeaner=_make_demeaner(backend))
     return time.perf_counter() - start
 
 
@@ -126,7 +141,7 @@ def run_pyfixest_feglm_logit(data: pd.DataFrame, formula: str, backend: str) -> 
     import pyfixest as pf
 
     start = time.perf_counter()
-    _ = pf.feglm(formula, data, family="logit", demeaner_backend=backend)
+    _ = pf.feglm(formula, data, family="logit", demeaner=_make_demeaner(backend))
     return time.perf_counter() - start
 
 
