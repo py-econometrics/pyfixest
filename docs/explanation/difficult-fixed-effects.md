@@ -65,11 +65,13 @@ problem:
 
 - **LSMR.** The solver powering `FixedEffectsModels.jl`. It can be accessed in `pyfixest` via `pf.LsmrDemeaner(...)`.
 
-- **CG-Schwarz (Conjugate Gradients with Additive Schwarz Preconditioner).**
+- **Krylov-Schwarz solvers via `within`.**
 The [`within`](https://github.com/py-econometrics/within) crate, used by
 PyFixest's `pf.WithinDemeaner()`, takes a different approach: it
 explicitly builds and exploits the block structure of the normal
-equations to form a high-quality preconditioner for the linear problem. We explain this structure below.
+equations to form a high-quality preconditioner for the linear problem.
+PyFixest defaults to additive Schwarz with CG, and also supports additive
+or multiplicative Schwarz with GMRES.
 
 ## The Normal Equations and Their Block Structure
 

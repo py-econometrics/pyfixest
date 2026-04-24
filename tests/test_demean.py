@@ -124,6 +124,86 @@ def test_torch_device_backends_match_pyhdfe(backend_name, rtol, atol, demean_dat
     np.testing.assert_allclose(res_torch, res_pyhdfe, rtol=rtol, atol=atol)
 
 
+@pytest.mark.parametrize(
+    ("demeaner", "rtol", "atol"),
+    [
+        (WithinDemeaner(), 1e-6, 1e-8),
+        (
+            WithinDemeaner(
+                krylov="gmres",
+                preconditioner="additive",
+                gmres_restart=20,
+            ),
+            1e-6,
+            1e-8,
+        ),
+        (
+            WithinDemeaner(
+                krylov="gmres",
+                preconditioner="multiplicative",
+                gmres_restart=30,
+            ),
+            1e-6,
+            1e-8,
+        ),
+    ],
+)
+def test_within_solver_variants_match_pyhdfe(demeaner, rtol, atol, demean_data):
+    x, flist, weights = demean_data
+
+    algorithm = pyhdfe.create(flist)
+    expected_unweighted = algorithm.residualize(x)
+    result_unweighted, success = dispatch_demean(
+        x=x,
+        flist=flist,
+        weights=np.ones(x.shape[0]),
+        demeaner=demeaner,
+    )
+    assert success
+    np.testing.assert_allclose(
+        result_unweighted, expected_unweighted, rtol=rtol, atol=atol
+    )
+
+    expected_weighted = algorithm.residualize(x, weights.reshape((x.shape[0], 1)))
+    result_weighted, success = dispatch_demean(
+        x=x,
+        flist=flist,
+        weights=weights,
+        demeaner=demeaner,
+    )
+    assert success
+    np.testing.assert_allclose(result_weighted, expected_weighted, rtol=rtol, atol=atol)
+
+
+def test_within_single_fe_fallback_ignores_nondefault_solver_options():
+    rng = np.random.default_rng(1234)
+    x = rng.normal(size=(100, 3))
+    flist = rng.integers(0, 10, size=(100, 1), dtype=np.uint64)
+    weights = rng.uniform(0.5, 1.5, size=100)
+
+    within_result, success = dispatch_demean(
+        x=x,
+        flist=flist,
+        weights=weights,
+        demeaner=WithinDemeaner(
+            krylov="gmres",
+            preconditioner="multiplicative",
+            gmres_restart=17,
+        ),
+    )
+    assert success
+
+    map_result, success = demean_rs(
+        x,
+        flist,
+        weights,
+        tol=1e-6,
+        maxiter=1_000,
+    )
+    assert success
+    np.testing.assert_allclose(within_result, map_result, rtol=1e-10, atol=1e-10)
+
+
 @pytest.mark.skipif(not HAS_TORCH, reason="torch not available")
 def test_sparse_dummy_reencodes_non_contiguous_groups():
     from pyfixest.estimation.torch._sparse_dummy import _build_sparse_dummy
