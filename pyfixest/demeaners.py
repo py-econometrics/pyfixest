@@ -8,6 +8,8 @@ MapBackend = Literal["numba", "rust", "jax"]
 LsmrBackend = Literal["cupy", "torch"]
 LsmrPrecision = Literal["float32", "float64"]
 TorchDevice = Literal["auto", "cpu", "mps", "cuda"]
+WithinKrylov = Literal["cg", "gmres"]
+WithinPreconditioner = Literal["additive", "multiplicative", "off"]
 
 
 def _validate_unit_interval_float(value: float, name: str) -> None:
@@ -61,11 +63,32 @@ class WithinDemeaner(BaseDemeaner):
 
     fixef_tol: float = 1e-06
     fixef_maxiter: int = 1_000
+    krylov: WithinKrylov = "cg"
+    preconditioner: WithinPreconditioner = "additive"
+    gmres_restart: int = 30
     kind: ClassVar[str] = "within"
 
     def __post_init__(self) -> None:
         BaseDemeaner.__post_init__(self)
         _validate_unit_interval_float(self.fixef_tol, "fixef_tol")
+        if not isinstance(self.krylov, str):
+            raise TypeError("`krylov` must be a string.")
+        if self.krylov not in get_args(WithinKrylov):
+            raise ValueError(f"`krylov` must be one of {get_args(WithinKrylov)}.")
+
+        if not isinstance(self.preconditioner, str):
+            raise TypeError("`preconditioner` must be a string.")
+        if self.preconditioner not in get_args(WithinPreconditioner):
+            raise ValueError(
+                f"`preconditioner` must be one of {get_args(WithinPreconditioner)}."
+            )
+
+        _validate_positive_int(self.gmres_restart, "gmres_restart")
+
+        if self.krylov == "cg" and self.preconditioner == "multiplicative":
+            raise ValueError(
+                "`preconditioner='multiplicative'` requires `krylov='gmres'`."
+            )
 
 
 @dataclass(frozen=True, slots=True)
@@ -131,4 +154,6 @@ __all__ = [
     "MapDemeaner",
     "TorchDevice",
     "WithinDemeaner",
+    "WithinKrylov",
+    "WithinPreconditioner",
 ]
