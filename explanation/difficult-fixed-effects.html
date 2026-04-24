@@ -40,7 +40,7 @@ ul.task-list li input[type="checkbox"] {
 <link href="../site_libs/quarto-html/quarto-syntax-highlighting-ed96de9b727972fe78a7b5d16c58bf87.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-87e21f5b6dd40cea75343502a84e78d9.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-5ca837e5edc0d9070fa4a1d1e5b3c99b.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -337,7 +337,7 @@ window.Quarto = {
 <ul>
 <li><p><strong>Method of Alternating Projections (MAP).</strong> Introduced by Guimarães &amp; Portugal (2010) as the “Zig-Zag” and Gaure (2013), this is the workhorse algorithm in most FE packages (<code>reghdfe</code>, <code>lfe</code>, <code>fixest</code>). It sequentially sweeps through each fixed effect and demeans the target variable by the current fixed effects’s group means. Usually, this approach is implemented with accelerations. For example, R’s <code>fixest</code> uses MAP with Irons-Tuck acceleration and other optimization strategies. In PyFixest, <code>pf.MapDemeaner(backend="rust")</code> implements MAP without acceleration and is therefore quite a lot slower than <code>fixest</code>’s algorithm in cases where the accelerations pay off.</p></li>
 <li><p><strong>LSMR.</strong> The solver powering <code>FixedEffectsModels.jl</code>. It can be accessed in <code>pyfixest</code> via <code>pf.LsmrDemeaner(...)</code>.</p></li>
-<li><p><strong>CG-Schwarz (Conjugate Gradients with Additive Schwarz Preconditioner).</strong> The <a href="https://github.com/py-econometrics/within"><code>within</code></a> crate, used by PyFixest’s <code>pf.WithinDemeaner()</code>, takes a different approach: it explicitly builds and exploits the block structure of the normal equations to form a high-quality preconditioner for the linear problem. We explain this structure below.</p></li>
+<li><p><strong>Krylov-Schwarz solvers via <code>within</code>.</strong> The <a href="https://github.com/py-econometrics/within"><code>within</code></a> crate, used by PyFixest’s <code>pf.WithinDemeaner()</code>, takes a different approach: it explicitly builds and exploits the block structure of the normal equations to form a high-quality preconditioner for the linear problem. PyFixest defaults to additive Schwarz with CG, and also supports additive or multiplicative Schwarz with GMRES. The preconditioner can be disabled with <code>preconditioner="off"</code>.</p></li>
 </ul>
 </section>
 <section id="the-normal-equations-and-their-block-structure" class="level2">

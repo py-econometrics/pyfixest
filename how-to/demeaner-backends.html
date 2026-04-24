@@ -76,7 +76,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <link href="../site_libs/quarto-html/quarto-syntax-highlighting-ed96de9b727972fe78a7b5d16c58bf87.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-87e21f5b6dd40cea75343502a84e78d9.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-5ca837e5edc0d9070fa4a1d1e5b3c99b.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -336,7 +336,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 
 <p>PyFixest exposes several demeaner backends via the <code>demeaner=</code> argument. All backends produce numerically equivalent results; the choice only affects <strong>speed</strong>.</p>
-<div id="b6ad1dfc" class="cell" data-execution_count="1">
+<div id="f8a34940" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.demeaners <span class="im">import</span> LsmrDemeaner, MapDemeaner, WithinDemeaner</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -367,7 +367,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tr>
 <tr class="odd">
 <td><code>WithinDemeaner()</code></td>
-<td>Best for <strong>sparse</strong> fixed-effect structures (e.g.&nbsp;matched employer-employee data).</td>
+<td>Best for <strong>sparse</strong> fixed-effect structures (e.g.&nbsp;matched employer-employee data). Supports additive Schwarz with CG or GMRES, multiplicative Schwarz with GMRES, and unpreconditioned solves via <code>preconditioner="off"</code>.</td>
 </tr>
 <tr class="even">
 <td><code>MapDemeaner(backend="jax")</code></td>
@@ -391,18 +391,40 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="usage" class="level2">
 <h2 class="anchored" data-anchor-id="usage">Usage</h2>
 <p>To select a demeaner backend, simply pass an instance of the desired demeaner to the <code>demeaner</code> argument of <code>feols</code>:</p>
-<div id="4224d22e" class="cell" data-execution_count="2">
+<div id="e839c9f1" class="cell" data-execution_count="2">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Default (numba MAP): best for dense FE / well-connected graphs</span></span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 | f1"</span>, data<span class="op">=</span>df)</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Rust MAP: roughly same performance as numba</span></span>
 <span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 | f1"</span>, data<span class="op">=</span>df, demeaner<span class="op">=</span>MapDemeaner(backend<span class="op">=</span><span class="st">"rust"</span>))</span>
 <span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="co"># CG-Schwarz via `within` - best for sparse FE structures</span></span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 | f1"</span>, data<span class="op">=</span>df, demeaner<span class="op">=</span>WithinDemeaner())</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="co"># `within` backend - best for sparse multi-way FE structures</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 | f1 + f2"</span>, data<span class="op">=</span>df, demeaner<span class="op">=</span>WithinDemeaner())</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Additive Schwarz + GMRES</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Y ~ X1 | f1 + f2"</span>,</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    data<span class="op">=</span>df,</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    demeaner<span class="op">=</span>WithinDemeaner(</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>        krylov<span class="op">=</span><span class="st">"gmres"</span>,</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>        preconditioner<span class="op">=</span><span class="st">"additive"</span>,</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>        gmres_restart<span class="op">=</span><span class="dv">30</span>,</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a><span class="co"># Multiplicative Schwarz + GMRES</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(</span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Y ~ X1 | f1 + f2"</span>,</span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>    data<span class="op">=</span>df,</span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>    demeaner<span class="op">=</span>WithinDemeaner(</span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>        krylov<span class="op">=</span><span class="st">"gmres"</span>,</span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>        preconditioner<span class="op">=</span><span class="st">"multiplicative"</span>,</span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>        gmres_restart<span class="op">=</span><span class="dv">50</span>,</span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 
-        <div id="NR7F2J"></div>
+        <div id="gCJD7s"></div>
         <script type="text/javascript" data-lets-plot-script="library">
             if(!window.letsPlotCallQueue) {
                 window.letsPlotCallQueue = [];
@@ -426,9 +448,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                     var div = document.createElement("div");
                     div.style.color = 'darkred';
                     div.textContent = 'Error loading Lets-Plot JS';
-                    document.getElementById("NR7F2J").appendChild(div);
+                    document.getElementById("gCJD7s").appendChild(div);
                 };
-                var e = document.getElementById("NR7F2J");
+                var e = document.getElementById("gCJD7s");
                 e.appendChild(script);
             })()
         </script>
@@ -436,7 +458,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <div class="cell-output cell-output-display">
 
-        <div id="Oww7D0"></div>
+        <div id="rGK7Cy"></div>
         <script type="text/javascript" data-lets-plot-script="library">
             if(!window.letsPlotCallQueue) {
                 window.letsPlotCallQueue = [];
@@ -460,17 +482,17 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                     var div = document.createElement("div");
                     div.style.color = 'darkred';
                     div.textContent = 'Error loading Lets-Plot JS';
-                    document.getElementById("Oww7D0").appendChild(div);
+                    document.getElementById("rGK7Cy").appendChild(div);
                 };
-                var e = document.getElementById("Oww7D0");
+                var e = document.getElementById("rGK7Cy");
                 e.appendChild(script);
             })()
         </script>
         
 </div>
 </div>
-<p>The <code>MapDemeaner</code> and <code>WithinDemeaner</code> backends accept <code>fixef_tol</code> and <code>fixef_maxiter</code> arguments to control convergence. For compatibility with <code>scipy</code>, the <code>LsmrDemeaner</code> has two arguments to control the convergence tolerance - <code>fixef_atol</code> and <code>fixef_btol</code>.</p>
-<div id="c3a1be66" class="cell" data-execution_count="3">
+<p>The <code>MapDemeaner</code> and <code>WithinDemeaner</code> backends accept <code>fixef_tol</code> and <code>fixef_maxiter</code> arguments to control convergence. <code>WithinDemeaner</code> additionally accepts <code>krylov</code>, <code>preconditioner</code>, and <code>gmres_restart</code> (used only with <code>krylov="gmres"</code>). The <code>preconditioner</code> argument accepts <code>"additive"</code>, <code>"multiplicative"</code>, and <code>"off"</code>; <code>"off"</code> matches <code>within.Preconditioner.Off</code>. For compatibility with <code>scipy</code>, the <code>LsmrDemeaner</code> has two arguments to control the convergence tolerance - <code>fixef_atol</code> and <code>fixef_btol</code>.</p>
+<div id="e072e3dd" class="cell" data-execution_count="3">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Y ~ X1 | f1"</span>,</span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    data<span class="op">=</span>df,</span>
