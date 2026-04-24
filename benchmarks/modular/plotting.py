@@ -12,16 +12,18 @@ import pandas as pd
 # Style generation
 # ---------------------------------------------------------------------------
 _PALETTE = [
-    "#E24A33",
-    "#348ABD",
-    "#988ED5",
-    "#8EBA42",
-    "#FBC15E",
-    "#FFB5B8",
-    "#777777",
-    "#E5AE38",
+    "#4E79A7",
+    "#F28E2B",
+    "#59A14F",
+    "#E15759",
+    "#76B7B2",
+    "#EDC948",
+    "#B07AA1",
+    "#FF9DA7",
+    "#9C755F",
+    "#BAB0AC",
 ]
-_MARKERS = ["o", "s", "D", "^", "v", "P", "X", "*"]
+_MARKERS = ["o", "s", "^", "D", "v", "P", "X", "*", "<", ">"]
 _FE_LABELS = {
     2: "Worker + Year",
     3: "Worker + Firm + Year",
@@ -94,14 +96,16 @@ _AKM_SWEEP_TICK_LABELS = {
 
 
 def _build_styles(backends: list[str]) -> dict[str, dict]:
-    return {
-        name: {
-            "color": _PALETTE[i % len(_PALETTE)],
-            "marker": _MARKERS[i % len(_MARKERS)],
+    styles = {}
+    for i, name in enumerate(backends):
+        color_idx = i % len(_PALETTE)
+        marker_idx = (i + i // len(_PALETTE)) % len(_MARKERS)
+        styles[name] = {
+            "color": _PALETTE[color_idx],
+            "marker": _MARKERS[marker_idx],
             "label": name,
         }
-        for i, name in enumerate(backends)
-    }
+    return styles
 
 
 def _filter_backends(
