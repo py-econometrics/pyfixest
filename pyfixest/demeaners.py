@@ -9,7 +9,7 @@ LsmrBackend = Literal["cupy", "torch"]
 LsmrPrecision = Literal["float32", "float64"]
 TorchDevice = Literal["auto", "cpu", "mps", "cuda"]
 WithinKrylov = Literal["cg", "gmres"]
-WithinPreconditioner = Literal["additive", "multiplicative"]
+WithinPreconditioner = Literal["additive", "multiplicative", "off"]
 
 
 def _validate_unit_interval_float(value: float, name: str) -> None:

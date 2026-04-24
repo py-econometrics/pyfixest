@@ -163,6 +163,14 @@ def test_within_demeaner_accepts_gmres_variants():
     assert multiplicative.gmres_restart == 50
 
 
+def test_within_demeaner_accepts_preconditioner_off():
+    cg_off = pf.WithinDemeaner(krylov="cg", preconditioner="off")
+    gmres_off = pf.WithinDemeaner(krylov="gmres", preconditioner="off")
+
+    assert cg_off.preconditioner == "off"
+    assert gmres_off.preconditioner == "off"
+
+
 @pytest.mark.parametrize(
     "kwargs, message",
     [

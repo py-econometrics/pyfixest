@@ -146,6 +146,16 @@ def test_torch_device_backends_match_pyhdfe(backend_name, rtol, atol, demean_dat
             1e-6,
             1e-8,
         ),
+        (
+            WithinDemeaner(
+                krylov="cg",
+                preconditioner="off",
+                fixef_tol=1e-10,
+                fixef_maxiter=10_000,
+            ),
+            1e-6,
+            1e-8,
+        ),
     ],
 )
 def test_within_solver_variants_match_pyhdfe(demeaner, rtol, atol, demean_data):

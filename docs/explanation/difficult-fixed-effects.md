@@ -71,7 +71,8 @@ PyFixest's `pf.WithinDemeaner()`, takes a different approach: it
 explicitly builds and exploits the block structure of the normal
 equations to form a high-quality preconditioner for the linear problem.
 PyFixest defaults to additive Schwarz with CG, and also supports additive
-or multiplicative Schwarz with GMRES.
+or multiplicative Schwarz with GMRES. The preconditioner can be disabled
+with `preconditioner="off"`.
 
 ## The Normal Equations and Their Block Structure
 

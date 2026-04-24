@@ -39,13 +39,14 @@ fn demean_within_impl(
         ..within::SolverParams::default()
     };
     let preconditioner = match preconditioner {
-        "additive" => within::Preconditioner::Additive(
+        "additive" => Some(within::Preconditioner::Additive(
             within::LocalSolverConfig::solver_default(),
             within::ReductionStrategy::Auto,
-        ),
-        "multiplicative" => {
-            within::Preconditioner::Multiplicative(within::LocalSolverConfig::solver_default())
-        }
+        )),
+        "multiplicative" => Some(within::Preconditioner::Multiplicative(
+            within::LocalSolverConfig::solver_default(),
+        )),
+        "off" => None,
         _ => panic!("validated in Python: unsupported preconditioner"),
     };
 
@@ -54,7 +55,7 @@ fn demean_within_impl(
         &x_slices,
         Some(&weights_vec),
         &params,
-        Some(&preconditioner),
+        preconditioner.as_ref(),
     )?;
 
     let all_converged = result.converged().iter().all(|&c| c);

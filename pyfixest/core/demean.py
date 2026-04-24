@@ -114,9 +114,10 @@ def demean_within(
         Maximum number of Krylov iterations. Defaults to 1_000.
     krylov : {"cg", "gmres"}, optional
         Krylov solver used for multi-way fixed effects. Defaults to ``"cg"``.
-    preconditioner : {"additive", "multiplicative"}, optional
-        Schwarz preconditioner used for multi-way fixed effects. Defaults to
-        ``"additive"``.
+    preconditioner : {"additive", "multiplicative", "off"}, optional
+        Schwarz preconditioner used for multi-way fixed effects. ``"off"``
+        disables preconditioning.
+        Defaults to ``"additive"``.
     gmres_restart : int, optional
         Restart dimension when ``krylov="gmres"``. Ignored for CG.
 
