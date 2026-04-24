@@ -5,6 +5,7 @@ import pytest
 
 import pyfixest as pf
 from pyfixest.core import demean as demean_rs
+from pyfixest.core.demean import demean_within
 from pyfixest.demeaners import LsmrDemeaner, MapDemeaner, WithinDemeaner
 from pyfixest.estimation.cupy.demean_cupy_ import demean_cupy32, demean_cupy64
 from pyfixest.estimation.internals.demean_ import (
@@ -212,6 +213,29 @@ def test_within_single_fe_fallback_ignores_nondefault_solver_options():
     )
     assert success
     np.testing.assert_allclose(within_result, map_result, rtol=1e-10, atol=1e-10)
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "message"),
+    [
+        ({"krylov": "bicg"}, "`krylov`"),
+        ({"preconditioner": "ilu"}, "`preconditioner`"),
+        (
+            {"krylov": "cg", "preconditioner": "multiplicative"},
+            "CG requires a symmetric preconditioner",
+        ),
+    ],
+)
+def test_demean_within_rejects_invalid_solver_options(kwargs, message, demean_data):
+    x, flist, weights = demean_data
+
+    with pytest.raises(ValueError, match=message):
+        demean_within(
+            x=x,
+            flist=flist.astype(np.uint32, copy=False),
+            weights=weights,
+            **kwargs,
+        )
 
 
 @pytest.mark.skipif(not HAS_TORCH, reason="torch not available")
