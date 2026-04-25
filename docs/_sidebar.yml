@@ -12,8 +12,13 @@ website:
       - reference/did.estimation.event_study.qmd
       - reference/estimation.post_estimation.multcomp.bonferroni.qmd
       - reference/estimation.post_estimation.multcomp.rwolf.qmd
+      - reference/estimation.post_estimation.multcomp.wyoung.qmd
       section: Estimation Functions
     - contents:
+      - reference/demeaners.BaseDemeaner.qmd
+      - reference/demeaners.MapDemeaner.qmd
+      - reference/demeaners.WithinDemeaner.qmd
+      - reference/demeaners.LsmrDemeaner.qmd
       - reference/estimation.models.feols_.Feols.qmd
       - reference/estimation.models.fepois_.Fepois.qmd
       - reference/estimation.models.feiv_.Feiv.qmd
@@ -32,7 +37,6 @@ website:
       - reference/report.dtable.qmd
       - reference/report.coefplot.qmd
       - reference/report.iplot.qmd
-      - reference/did.visualize.panelview.qmd
       section: Summarize and Visualize
     - contents:
       - reference/estimation.formula.parse.Formula.qmd
@@ -42,6 +46,8 @@ website:
     - contents:
       - reference/estimation.internals.demean_.demean.qmd
       - reference/core.detect_singletons.detect_singletons.qmd
+      - reference/utils.utils.ssc.qmd
+      - reference/utils.utils.get_ssc.qmd
       - reference/estimation.deprecated.model_matrix_fixest_.model_matrix_fixest.qmd
       section: Misc / Utilities
     id: reference

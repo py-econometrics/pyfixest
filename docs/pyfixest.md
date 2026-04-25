@@ -14,8 +14,8 @@
 [![Donate | GiveDirectly](https://img.shields.io/static/v1?label=GiveDirectly&message=Donate&color=blue&style=flat-square)](https://github.com/py-econometrics/pyfixest?tab=readme-ov-file#support-pyfixest)
 [![PyPI](https://img.shields.io/pypi/v/pyfixest)](https://pypi.org/project/pyfixest)
 [![Citation](https://img.shields.io/badge/Cite%20as-PyFixest-blue)](https://github.com/py-econometrics/pyfixest?tab=readme-ov-file#how-to-cite)
-[![Documentation](https://img.shields.io/badge/Cite%20as-PyFixest-green)](https://pyfixest.org/pyfixest.html)
-[![Function Reference](https://img.shields.io/badge/Cite%20as-PyFixest-yellow)](https://pyfixest.org/reference/)
+[![Documentation](https://img.shields.io/badge/Docs-PyFixest-green)](https://pyfixest.org/pyfixest.html)
+[![Function Reference](https://img.shields.io/badge/Reference-PyFixest-yellow)](https://pyfixest.org/reference/)
 [![DeepWiki](https://img.shields.io/badge/DeepWiki-pyfixest-blue)](https://deepwiki.com/py-econometrics/pyfixest)
 
 
@@ -42,7 +42,7 @@ You can also leave a message through the donation form - your support and encour
 
 -   **OLS**, **WLS** and **IV** Regression with Fixed-Effects Demeaning via [Frisch-Waugh-Lovell](https://bookdown.org/ts_robinson1994/10EconometricTheorems/frisch.html)
 -   **Poisson Regression** following the [pplmhdfe algorithm](https://journals.sagepub.com/doi/full/10.1177/1536867X20909691)
--   Probit, Logit and Gaussian Family **GLMs** (currently without fixed effects demeaning, this is WIP)
+-   Probit, Logit and Gaussian Family **GLMs** with fixed effects
 -   **Quantile Regression** using an Interior Point Solver
 -   Multiple Estimation Syntax
 -   Several **Robust**, **Cluster Robust** and **HAC Variance-Covariance** Estimators
@@ -259,9 +259,9 @@ Thanks for showing interest in contributing to `pyfixest`! We appreciate all
 contributions and constructive feedback, whether that be reporting bugs, requesting
 new features, or suggesting improvements to documentation.
 
-**Upcoming:** We're hosting a [PyFixest Sprint in Heilbronn](pyfixest-sprint.md) with [AppliedAI](https://www.appliedai.de/) in late February/early March 2026. Interested in joining? [Learn more and get in touch](pyfixest-sprint.md).
+We periodically organize development sprints and contributor events. Interested in joining future PyFixest work? [Learn more and get in touch](pyfixest-sprint.md).
 
-If you'd like to get involved, but are not yet sure how, please feel free to send us an [email](alexander-fischer1801@t-online.de). Some familiarity with
+If you'd like to get involved, but are not yet sure how, please feel free to send us an [email](mailto:alexander-fischer1801@t-online.de). Some familiarity with
 either Python or econometrics will help, but you really don't need to be a `numpy` core developer or have published in [Econometrica](https://onlinelibrary.wiley.com/journal/14680262) =) We'd be more than happy to invest time to help you get started!
 
 ## Contributors ✨
