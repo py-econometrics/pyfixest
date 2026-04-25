@@ -336,7 +336,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 
 <p>PyFixest exposes several demeaner backends via the <code>demeaner=</code> argument. All backends produce numerically equivalent results; the choice only affects <strong>speed</strong>.</p>
-<div id="7bee3ae2" class="cell" data-execution_count="1">
+<div id="0f2ddacf" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.demeaners <span class="im">import</span> LsmrDemeaner, MapDemeaner, WithinDemeaner</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -391,7 +391,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="usage" class="level2">
 <h2 class="anchored" data-anchor-id="usage">Usage</h2>
 <p>To select a demeaner backend, simply pass an instance of the desired demeaner to the <code>demeaner</code> argument of <code>feols</code>:</p>
-<div id="8af09635" class="cell" data-execution_count="2">
+<div id="06b0c8ad" class="cell" data-execution_count="2">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Default (numba MAP): best for dense FE / well-connected graphs</span></span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 | f1"</span>, data<span class="op">=</span>df)</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -424,7 +424,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 
-        <div id="aYESCj"></div>
+        <div id="6m7ogL"></div>
         <script type="text/javascript" data-lets-plot-script="library">
             if(!window.letsPlotCallQueue) {
                 window.letsPlotCallQueue = [];
@@ -448,9 +448,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                     var div = document.createElement("div");
                     div.style.color = 'darkred';
                     div.textContent = 'Error loading Lets-Plot JS';
-                    document.getElementById("aYESCj").appendChild(div);
+                    document.getElementById("6m7ogL").appendChild(div);
                 };
-                var e = document.getElementById("aYESCj");
+                var e = document.getElementById("6m7ogL");
                 e.appendChild(script);
             })()
         </script>
@@ -458,7 +458,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <div class="cell-output cell-output-display">
 
-        <div id="xygjVV"></div>
+        <div id="TZ7Qux"></div>
         <script type="text/javascript" data-lets-plot-script="library">
             if(!window.letsPlotCallQueue) {
                 window.letsPlotCallQueue = [];
@@ -482,9 +482,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                     var div = document.createElement("div");
                     div.style.color = 'darkred';
                     div.textContent = 'Error loading Lets-Plot JS';
-                    document.getElementById("xygjVV").appendChild(div);
+                    document.getElementById("TZ7Qux").appendChild(div);
                 };
-                var e = document.getElementById("xygjVV");
+                var e = document.getElementById("TZ7Qux");
                 e.appendChild(script);
             })()
         </script>
@@ -492,7 +492,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 <p>The <code>MapDemeaner</code> and <code>WithinDemeaner</code> backends accept <code>fixef_tol</code> and <code>fixef_maxiter</code> arguments to control convergence. <code>WithinDemeaner</code> additionally accepts <code>krylov</code>, <code>preconditioner</code>, and <code>gmres_restart</code> (used only with <code>krylov="gmres"</code>). The <code>preconditioner</code> argument accepts <code>"additive"</code>, <code>"multiplicative"</code>, and <code>"off"</code>; <code>"off"</code> matches <code>within.Preconditioner.Off</code>. For compatibility with <code>scipy</code>, the <code>LsmrDemeaner</code> has two arguments to control the convergence tolerance - <code>fixef_atol</code> and <code>fixef_btol</code>.</p>
-<div id="8d8d9189" class="cell" data-execution_count="3">
+<div id="5849e148" class="cell" data-execution_count="3">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Y ~ X1 | f1"</span>,</span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    data<span class="op">=</span>df,</span>

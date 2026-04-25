@@ -1354,18 +1354,31 @@ This vignette compares estimation results from `fixest` with `pyfixest` via the 
 ```{python}
 import pandas as pd
 import rpy2.robjects as ro
-from rpy2.robjects import pandas2ri
+from rpy2.robjects import numpy2ri, pandas2ri
+from rpy2.robjects.conversion import Converter
 from rpy2.robjects.packages import importr
+from rpy2.robjects.vectors import ListVector
+from rpy2.rinterface import ListSexpVector
 
 import pyfixest as pf
-
-# Activate pandas2ri
-pandas2ri.activate()
 
 # Import R packages
 fixest = importr("fixest")
 stats = importr("stats")
 broom = importr("broom")
+
+# Enable automatic pandas <-> R DataFrame conversion (rpy2 >= 3.6)
+# Keep R list classes intact (avoid conversion to NamedList).
+_list_guard = Converter("pandas2ri-list-guard")
+
+@_list_guard.rpy2py.register(ListSexpVector)
+def _keep_r_list_classes(obj):
+    return ListVector(obj)
+
+_converter_ctx = (
+    ro.default_converter + numpy2ri.converter + pandas2ri.converter + _list_guard
+).context()
+_converter_ctx.__enter__()
 
 # IPython magic commands for autoreloading
 %load_ext autoreload
