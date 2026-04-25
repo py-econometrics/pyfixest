@@ -219,17 +219,15 @@ def wyoung(
     Examples
     --------
     ```{python}
-    from pyfixest.estimation import feols
-    from pyfixest.utils import get_data
-    from pyfixest.multcomp import wyoung
+    import pyfixest as pf
 
-    data = get_data().dropna()
-    fit = feols("Y ~ Y2 + X1 + X2", data=data)
-    wyoung(fit, "X1", reps=9999, seed=123)
+    data = pf.get_data().dropna()
+    fit = pf.feols("Y ~ Y2 + X1 + X2", data=data)
+    pf.wyoung(fit, "X1", reps=9999, seed=123)
 
-    fit1 = feols("Y ~ X1", data=data)
-    fit2 = feols("Y ~ X1 + X2", data=data)
-    wyoung_df = wyoung([fit1, fit2], "X1", reps=9999, seed=123)
+    fit1 = pf.feols("Y ~ X1", data=data)
+    fit2 = pf.feols("Y ~ X1 + X2", data=data)
+    wyoung_df = pf.wyoung([fit1, fit2], "X1", reps=9999, seed=123)
     wyoung_df
     ```
     """
