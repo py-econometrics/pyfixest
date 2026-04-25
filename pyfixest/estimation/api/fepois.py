@@ -177,20 +177,34 @@ def fepois(
 
     Examples
     --------
-    The `fepois()` function can be used to estimate a simple Poisson regression
-    model with fixed effects.
-    The following example regresses `Y` on `X1` and `X2` with fixed effects for
-    `f1` and `f2`: fixed effects are specified after the `|` symbol.
+    The `fepois()` function estimates Poisson models with the same formula interface
+    as `feols()`. Fixed effects are specified after the `|` symbol.
 
     ```{python}
     import pyfixest as pf
 
-    data = pf.get_data(model = "Fepois")
+    data = pf.get_data(model="Fepois")
     fit = pf.fepois("Y ~ X1 + X2 | f1 + f2", data)
     fit.summary()
     ```
 
-    For more examples on the use of other function arguments, please take a look at the documentation of the [feols()](https://pyfixest.org/reference/estimation.api.feols.html#pyfixest.estimation.api.feols) function.
+    Cluster-robust inference uses the same `vcov` syntax as `feols()`:
+
+    ```{python}
+    fit_crv = pf.fepois("Y ~ X1 + X2 | f1 + f2", data, vcov={"CRV1": "f1"})
+    fit_crv.tidy()
+    ```
+
+    Multiple-estimation and sample-splitting features also work as in `feols()`:
+
+    ```{python}
+    fits = pf.fepois("Y ~ X1 | sw0(f1, f2)", data)
+    pf.etable(fits)
+    ```
+
+    Shared arguments such as `vcov`, `ssc`, `split`, `fsplit`, `context`, and typed demeaners
+    are documented in the [feols() reference](/reference/estimation.api.feols.feols.html).
+    For applied examples, see the [Poisson & GLMs tutorial](/tutorials/poisson-glm.html).
     """
     if separation_check is None:
         separation_check = ["fe"]
