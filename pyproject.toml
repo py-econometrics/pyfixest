@@ -245,9 +245,9 @@ pytorch = "*"
 platforms = ["linux-64", "osx-arm64"]
 
 [tool.pixi.feature.r.dependencies]
-rpy2 = "==3.5.11"
+rpy2 = ">=3.6,<4"
 r-base = "*"
-r-fixest = ">=0.13.2"
+r-fixest = ">=0.14.0"
 r-stringmagic = ">=1.2.0"
 r-sandwich = ">=3.0_2"
 r-broom = ">=1.0.5"

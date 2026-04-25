@@ -4,7 +4,6 @@ import numpy as np
 import pandas as pd
 import pytest
 import rpy2.robjects as ro
-from rpy2.robjects import pandas2ri
 
 # rpy2 imports
 from rpy2.robjects.packages import importr
@@ -14,8 +13,6 @@ from pyfixest.estimation import feols
 from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.utils.utils import get_data, ssc
 from tests._torch_test_utils import torch_param
-
-pandas2ri.activate()
 
 fixest = importr("fixest")
 stats = importr("stats")
@@ -1033,31 +1030,12 @@ def test_glm_vs_fixest(N, seed, dropna, fml, inference, family):
         ("Y + Y2 ~ X1 | csw0(f1,f2)"),
         ("Y + log(Y2) ~ sw(X1, X2) | csw0(f1,f2,f3)"),
         ("Y ~ C(f2):X2 + sw0(X1, f3)"),
-        # TODO: enable once fixest bug is fixed, see https://github.com/lrberge/fixest/issues/631
-        pytest.param(
-            "Y ~ X1 | sw0(f1, f1+f2)",
-            marks=pytest.mark.skip(reason="fixest nparams bug (#631)"),
-        ),
-        pytest.param(
-            "Y ~ X1 | csw0(f1, f1+f2)",
-            marks=pytest.mark.skip(reason="fixest nparams bug (#631)"),
-        ),
-        pytest.param(
-            "Y ~ X1 | sw(f1, f1+f2)",
-            marks=pytest.mark.skip(reason="fixest nparams bug (#631)"),
-        ),
-        pytest.param(
-            "Y ~ X1 | sw0(f1, f1+f2, f1+f2+f3)",
-            marks=pytest.mark.skip(reason="fixest nparams bug (#631)"),
-        ),
-        pytest.param(
-            "Y ~ X1 | csw0(f1, f1+f2, f1+f2+f3)",
-            marks=pytest.mark.skip(reason="fixest nparams bug (#631)"),
-        ),
-        pytest.param(
-            "Y ~ X1 | mvsw(f1, f2)",
-            marks=pytest.mark.skip(reason="fixest nparams bug (#631)"),
-        ),
+        ("Y ~ X1 | sw0(f1, f1+f2)"),
+        ("Y ~ X1 | csw0(f1, f1+f2)"),
+        ("Y ~ X1 | sw(f1, f1+f2)"),
+        ("Y ~ X1 | sw0(f1, f1+f2, f1+f2+f3)"),
+        ("Y ~ X1 | csw0(f1, f1+f2, f1+f2+f3)"),
+        ("Y ~ X1 | mvsw(f1, f2)"),
         ("Y ~ X1 | csw(f1, f1+f2)"),
         ("Y ~ sw0(X1, X1+X2)"),
         ("Y ~ csw0(X1, X1+X2)"),

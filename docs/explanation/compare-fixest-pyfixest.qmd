@@ -20,8 +20,9 @@ from rpy2.robjects.packages import importr
 
 import pyfixest as pf
 
-# Activate pandas2ri
-pandas2ri.activate()
+# Enable automatic pandas <-> R DataFrame conversion (rpy2 >= 3.6)
+_converter_ctx = (ro.default_converter + pandas2ri.converter).context()
+_converter_ctx.__enter__()
 
 # Import R packages
 fixest = importr("fixest")
