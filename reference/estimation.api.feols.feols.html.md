@@ -95,9 +95,9 @@ t-statistics, and p-values.
 fit.tidy()
 ```
 
-You can also access all elements in the tidy data frame by dedicated methods,
+You can also access common outputs via dedicated methods,
 e.g. `fit.coef()` for the coefficients, `fit.se()` for the standard errors,
-`fit.tstat()` for the t-statistics, and `fit.pval()` for the p-values, and
+`fit.tstat()` for the t-statistics, `fit.pvalue()` for the p-values, and
 `fit.confint()` for the confidence intervals.
 
 The employed type of inference can be specified via the `vcov` argument. For compatibility
@@ -243,7 +243,8 @@ pf.etable([first_stage, fit_iv])
 ```
 
 Last, `feols()` supports interaction of variables via the `i()` syntax.
-Documentation on this is tba.
+For a compact overview of formula features including `i()`, see the
+[formula syntax tutorial](/tutorials/formula-syntax.html).
 
 You can pass custom transforms via the `context` argument. If you set `context = 0`, all
 functions from the level of the call to `feols()` will be available:

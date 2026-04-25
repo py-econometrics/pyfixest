@@ -383,6 +383,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
  <span class="menu-text">estimation.post_estimation.multcomp.rwolf</span></a>
   </div>
 </li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.post_estimation.multcomp.wyoung.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.post_estimation.multcomp.wyoung</span></a>
+  </div>
+</li>
       </ul>
   </li>
         <li class="sidebar-item sidebar-item-section">
@@ -394,6 +400,30 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
           </a> 
       </div>
       <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/demeaners.BaseDemeaner.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">demeaners.BaseDemeaner</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/demeaners.MapDemeaner.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">demeaners.MapDemeaner</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/demeaners.WithinDemeaner.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">demeaners.WithinDemeaner</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/demeaners.LsmrDemeaner.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">demeaners.LsmrDemeaner</span></a>
+  </div>
+</li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../reference/estimation.models.feols_.Feols.html" class="sidebar-item-text sidebar-link">
@@ -501,12 +531,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
  <span class="menu-text">report.iplot</span></a>
   </div>
 </li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/did.visualize.panelview.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">did.visualize.panelview</span></a>
-  </div>
-</li>
       </ul>
   </li>
         <li class="sidebar-item sidebar-item-section">
@@ -557,6 +581,18 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <div class="sidebar-item-container"> 
   <a href="../reference/core.detect_singletons.detect_singletons.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">core.detect_singletons.detect_singletons</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/utils.utils.ssc.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">utils.utils.ssc</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/utils.utils.get_ssc.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">utils.utils.get_ssc</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -686,7 +722,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tr class="odd">
 <td>ssc</td>
 <td>dict[str, Union[str, bool]]</td>
-<td>A dictionary specifying the small sample correction for inference. If None, uses default settings from <code>ssc_func()</code>. Note that by default, R’s quantreg and Stata’s qreg2 do not use small sample corrections. To match their behavior, set <code>ssc = pf.ssc(adj = False, cluster_adj = False)</code>.</td>
+<td>A dictionary specifying the small sample correction for inference. If None, uses default settings from <code>ssc_func()</code>. Note that by default, R’s quantreg and Stata’s qreg2 do not use small sample corrections. To match their behavior, set <code>ssc = pf.ssc(k_adj=False, G_adj=False)</code>.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="even">
@@ -774,18 +810,16 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="examples" class="level2 doc-section doc-section-examples">
 <h2 class="doc-section doc-section-examples anchored" data-anchor-id="examples">Examples</h2>
 <p>The following example regresses <code>Y</code> on <code>X1</code> and <code>X2</code> at the median (0.5 quantile):</p>
-<div id="94f1a6a3" class="cell" data-execution_count="1">
+<div id="06d4c8f8" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> pf.get_data()</span>
 <span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> pf.get_data()</span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.quantreg(<span class="st">"Y ~ X1 + X2"</span>, data, quantile<span class="op">=</span><span class="fl">0.5</span>)</span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>fit.summary()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.quantreg(<span class="st">"Y ~ X1 + X2"</span>, data, quantile<span class="op">=</span><span class="fl">0.5</span>)</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>fit.summary()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 
-        <div id="KiqBjk"></div>
+        <div id="ry17JI"></div>
         <script type="text/javascript" data-lets-plot-script="library">
             if(!window.letsPlotCallQueue) {
                 window.letsPlotCallQueue = [];
@@ -809,9 +843,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                     var div = document.createElement("div");
                     div.style.color = 'darkred';
                     div.textContent = 'Error loading Lets-Plot JS';
-                    document.getElementById("KiqBjk").appendChild(div);
+                    document.getElementById("ry17JI").appendChild(div);
                 };
-                var e = document.getElementById("KiqBjk");
+                var e = document.getElementById("ry17JI");
                 e.appendChild(script);
             })()
         </script>
@@ -819,7 +853,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <div class="cell-output cell-output-display">
 
-        <div id="clb6M1"></div>
+        <div id="Vksvws"></div>
         <script type="text/javascript" data-lets-plot-script="library">
             if(!window.letsPlotCallQueue) {
                 window.letsPlotCallQueue = [];
@@ -843,9 +877,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                     var div = document.createElement("div");
                     div.style.color = 'darkred';
                     div.textContent = 'Error loading Lets-Plot JS';
-                    document.getElementById("clb6M1").appendChild(div);
+                    document.getElementById("Vksvws").appendChild(div);
                 };
-                var e = document.getElementById("clb6M1");
+                var e = document.getElementById("Vksvws");
                 e.appendChild(script);
             })()
         </script>
@@ -869,7 +903,26 @@ Observations:  998
 </code></pre>
 </div>
 </div>
-<p>For details around inference, estimation techniques, (fast) fitting and visualizing the full quantile regression process, please take a look at the dedicated <a href="https://pyfixest.org/quantile-regression.html">vignette</a>.</p>
+<p>To fit multiple quantiles in one call:</p>
+<div id="1217f2fb" class="cell" data-execution_count="2">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>fits <span class="op">=</span> pf.quantreg(<span class="st">"Y ~ X1 + X2"</span>, data, quantile<span class="op">=</span>[<span class="fl">0.1</span>, <span class="fl">0.5</span>, <span class="fl">0.9</span>])</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>pf.qplot(fits)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="2">
+<pre><code>(&lt;Figure size 960x576 with 3 Axes&gt;,
+ array([&lt;Axes: title={'center': 'Intercept'}, xlabel='Quantile', ylabel='Coefficient (95 % CI)'&gt;,
+        &lt;Axes: title={'center': 'X1'}, xlabel='Quantile', ylabel='Coefficient (95 % CI)'&gt;,
+        &lt;Axes: title={'center': 'X2'}, xlabel='Quantile', ylabel='Coefficient (95 % CI)'&gt;],
+       dtype=object))</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="estimation.api.quantreg.quantreg_files/figure-html/cell-3-output-2.png" width="949" height="564" class="figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Arguments such as <code>split</code>, <code>fsplit</code>, <code>context</code>, <code>lean</code>, and <code>copy_data</code> behave as in <code>feols()</code>, but quantile regression does not support fixed-effects formula syntax. For details around inference, fast fitting, and visualization of the full quantile regression process, see the <a href="../tutorials/quantile-regression.html">quantile regression tutorial</a>.</p>
 
 
 </section>

@@ -81,42 +81,43 @@ Supported families: [logit](/reference/estimation.models.felogit_.Felogit.qmd),
 
 ## Examples {.doc-section .doc-section-examples}
 
-The following example regresses `Y` on `X1` and `X2` with fixed effects for
-`f1` and `f2`: fixed effects are specified after the `|` symbol.
+The example below fits a logit model with fixed effects. As in `feols()`,
+fixed effects are specified after the `|` symbol.
 
 ```{python}
 import pyfixest as pf
 import numpy as np
 
 data = pf.get_data()
-data["Y"] = np.where(data["Y"] > 0, 1, 0)
-data["f1"] = np.where(data["f1"] > data["f1"].median(), "group1", "group2")
+data["Y_bin"] = np.where(data["Y"] > 0, 1, 0)
 
-fit_probit = pf.feglm("Y ~ X1*f1", data, family = "probit")
-fit_logit = pf.feglm("Y ~ X1*f1", data, family = "logit")
-fit_gaussian = pf.feglm("Y ~ X1*f1", data, family = "gaussian")
-
-pf.etable([fit_probit, fit_logit, fit_gaussian])
+fit_logit = pf.feglm("Y_bin ~ X1 + X2 | f1", data, family="logit")
+fit_logit.summary()
 ```
 
-`PyFixest` integrates with the [marginaleffects](https://marginaleffects.com/bonus/python.html) package. For example, to compute average marginal effects
-for the probit model above, you can use the following code:
+To compare families with the same specification:
 
 ```{python}
-# we load polars as marginaleffects outputs pl.DataFrame's
-import polars as pl
+fit_probit = pf.feglm("Y_bin ~ X1 + X2 | f1", data, family="probit")
+fit_gaussian = pf.feglm("Y_bin ~ X1 + X2 | f1", data, family="gaussian")
+pf.etable([fit_logit, fit_probit, fit_gaussian])
+```
+
+`PyFixest` also integrates with the [marginaleffects](https://marginaleffects.com/bonus/python.html) package.
+To compute average marginal effects for the logit model above:
+
+```{python}
 from marginaleffects import avg_slopes
-results = [avg_slopes(model, variables  = "X1") for model in [fit_probit, fit_logit, fit_gaussian]]
-pl.concat([r.to_polars() for r in results])
+avg_slopes(fit_logit, variables="X1")
 ```
 
 We can also compute marginal effects by group (group average marginal effects):
 
 ```{python}
-avg_slopes(fit_probit, variables  = "X1", by = "f1")
+avg_slopes(fit_logit, variables="X1", by="f1")
 ```
 
-We find homogeneous effects by "f1" in the probit model.
-
-For more examples of other function arguments, please take a look at the documentation of the [feols()](https://pyfixest.org/reference/estimation.api.feols.html#pyfixest.estimation.api.feols)
-function.
+Shared arguments such as `vcov`, `ssc`, `split`, `fsplit`, `context`, and typed demeaners
+work the same way as in `feols()`. See the [feols() reference](/reference/estimation.api.feols.feols.html)
+for those details, and the [Marginal Effects guide](/how-to/marginaleffects.html)
+for a compact post-estimation workflow.

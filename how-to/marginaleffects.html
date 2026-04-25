@@ -335,11 +335,10 @@ window.Quarto = {
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#non-linear-hypothesis-tests-ratio-estimates" id="toc-non-linear-hypothesis-tests-ratio-estimates" class="nav-link active" data-scroll-target="#non-linear-hypothesis-tests-ratio-estimates">Non-Linear Hypothesis Tests: Ratio Estimates</a>
-  <ul class="collapse">
-  <li><a href="#the-multivariate-delta-method" id="toc-the-multivariate-delta-method" class="nav-link" data-scroll-target="#the-multivariate-delta-method">The Multivariate Delta Method</a></li>
-  <li><a href="#using-the-delta-method-via-marginaleffects" id="toc-using-the-delta-method-via-marginaleffects" class="nav-link" data-scroll-target="#using-the-delta-method-via-marginaleffects">Using the Delta Method via <code>marginaleffects</code>:</a></li>
-  </ul></li>
+  <li><a href="#average-marginal-effects" id="toc-average-marginal-effects" class="nav-link active" data-scroll-target="#average-marginal-effects">Average marginal effects</a></li>
+  <li><a href="#linear-hypothesis-tests" id="toc-linear-hypothesis-tests" class="nav-link" data-scroll-target="#linear-hypothesis-tests">Linear hypothesis tests</a></li>
+  <li><a href="#non-linear-hypothesis-tests" id="toc-non-linear-hypothesis-tests" class="nav-link" data-scroll-target="#non-linear-hypothesis-tests">Non-linear hypothesis tests</a></li>
+  <li><a href="#notes" id="toc-notes" class="nav-link" data-scroll-target="#notes">Notes</a></li>
   </ul>
 </nav>
 </nav>
@@ -369,83 +368,90 @@ window.Quarto = {
 </header>
 
 
-<p>We can compute marginal effects and linear and non-linear hypothesis tests via the excellent <a href="https://github.com/vincentarelbundock/pymarginaleffects">marginaleffects</a> package.</p>
-<div id="541cbee7" class="cell" data-execution_count="1">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> marginaleffects <span class="im">import</span> hypotheses</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> pf.get_data()</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 + X2"</span>, data<span class="op">=</span>data)</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>fit.tidy()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><code>PyFixest</code> integrates with the excellent <a href="https://github.com/vincentarelbundock/pymarginaleffects">marginaleffects</a> package. Among many other things, <code>marginaleffects</code> allows you to compute:</p>
+<ul>
+<li>average marginal effects,</li>
+<li>subgroup marginal effects,</li>
+<li>linear and non-linear hypothesis tests.</li>
+</ul>
+<div id="81a85459" class="cell" data-execution_count="1">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> marginaleffects <span class="im">import</span> avg_slopes, hypotheses</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> pf.get_data()</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>data[<span class="st">"Y_bin"</span>] <span class="op">=</span> np.where(data[<span class="st">"Y"</span>] <span class="op">&gt;</span> <span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">0</span>)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feglm(<span class="st">"Y_bin ~ X1 + X2 | f1"</span>, data<span class="op">=</span>data, family<span class="op">=</span><span class="st">"logit"</span>)</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>fit.tidy()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 
-            <div id="3Z5dhe"></div>
-            <script type="text/javascript" data-lets-plot-script="library">
-                if(!window.letsPlotCallQueue) {
+        <div id="aQPNEw"></div>
+        <script type="text/javascript" data-lets-plot-script="library">
+            if(!window.letsPlotCallQueue) {
+                window.letsPlotCallQueue = [];
+            };
+            window.letsPlotCall = function(f) {
+                window.letsPlotCallQueue.push(f);
+            };
+            (function() {
+                var script = document.createElement("script");
+                script.type = "text/javascript";
+                script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.8.2/js-package/distr/lets-plot.min.js";
+                script.onload = function() {
+                    window.letsPlotCall = function(f) {f();};
+                    window.letsPlotCallQueue.forEach(function(f) {f();});
                     window.letsPlotCallQueue = [];
-                }; 
-                window.letsPlotCall = function(f) {
-                    window.letsPlotCallQueue.push(f);
+                    
                 };
-                (function() {
-                    var script = document.createElement("script");
-                    script.type = "text/javascript";
-                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.7.3/js-package/distr/lets-plot.min.js";
-                    script.onload = function() {
-                        window.letsPlotCall = function(f) {f();};
-                        window.letsPlotCallQueue.forEach(function(f) {f();});
-                        window.letsPlotCallQueue = [];
-                        
-                    };
-                    script.onerror = function(event) {
-                        window.letsPlotCall = function(f) {};    // noop
-                        window.letsPlotCallQueue = [];
-                        var div = document.createElement("div");
-                        div.style.color = 'darkred';
-                        div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("3Z5dhe").appendChild(div);
-                    };
-                    var e = document.getElementById("3Z5dhe");
-                    e.appendChild(script);
-                })()
-            </script>
-            
+                script.onerror = function(event) {
+                    window.letsPlotCall = function(f) {};    // noop
+                    window.letsPlotCallQueue = [];
+                    var div = document.createElement("div");
+                    div.style.color = 'darkred';
+                    div.textContent = 'Error loading Lets-Plot JS';
+                    document.getElementById("aQPNEw").appendChild(div);
+                };
+                var e = document.getElementById("aQPNEw");
+                e.appendChild(script);
+            })()
+        </script>
+        
 </div>
 <div class="cell-output cell-output-display">
 
-            <div id="sVefwA"></div>
-            <script type="text/javascript" data-lets-plot-script="library">
-                if(!window.letsPlotCallQueue) {
+        <div id="2S9WKl"></div>
+        <script type="text/javascript" data-lets-plot-script="library">
+            if(!window.letsPlotCallQueue) {
+                window.letsPlotCallQueue = [];
+            };
+            window.letsPlotCall = function(f) {
+                window.letsPlotCallQueue.push(f);
+            };
+            (function() {
+                var script = document.createElement("script");
+                script.type = "text/javascript";
+                script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.8.2/js-package/distr/lets-plot.min.js";
+                script.onload = function() {
+                    window.letsPlotCall = function(f) {f();};
+                    window.letsPlotCallQueue.forEach(function(f) {f();});
                     window.letsPlotCallQueue = [];
-                }; 
-                window.letsPlotCall = function(f) {
-                    window.letsPlotCallQueue.push(f);
+                    
                 };
-                (function() {
-                    var script = document.createElement("script");
-                    script.type = "text/javascript";
-                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.7.3/js-package/distr/lets-plot.min.js";
-                    script.onload = function() {
-                        window.letsPlotCall = function(f) {f();};
-                        window.letsPlotCallQueue.forEach(function(f) {f();});
-                        window.letsPlotCallQueue = [];
-                        
-                    };
-                    script.onerror = function(event) {
-                        window.letsPlotCall = function(f) {};    // noop
-                        window.letsPlotCallQueue = [];
-                        var div = document.createElement("div");
-                        div.style.color = 'darkred';
-                        div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("sVefwA").appendChild(div);
-                    };
-                    var e = document.getElementById("sVefwA");
-                    e.appendChild(script);
-                })()
-            </script>
-            
+                script.onerror = function(event) {
+                    window.letsPlotCall = function(f) {};    // noop
+                    window.letsPlotCallQueue = [];
+                    var div = document.createElement("div");
+                    div.style.color = 'darkred';
+                    div.textContent = 'Error loading Lets-Plot JS';
+                    document.getElementById("2S9WKl").appendChild(div);
+                };
+                var e = document.getElementById("2S9WKl");
+                e.appendChild(script);
+            })()
+        </script>
+        
 </div>
 <div class="cell-output cell-output-display" data-execution_count="1">
 <div>
@@ -473,41 +479,33 @@ window.Quarto = {
   </thead>
   <tbody>
     <tr>
-      <th>Intercept</th>
-      <td>0.888779</td>
-      <td>0.108422</td>
-      <td>8.197374</td>
-      <td>8.881784e-16</td>
-      <td>0.676016</td>
-      <td>1.101542</td>
-    </tr>
-    <tr>
       <th>X1</th>
-      <td>-0.992936</td>
-      <td>0.082117</td>
-      <td>-12.091650</td>
+      <td>-1.016344</td>
+      <td>0.109323</td>
+      <td>-9.296712</td>
       <td>0.000000e+00</td>
-      <td>-1.154079</td>
-      <td>-0.831792</td>
+      <td>-1.230613</td>
+      <td>-0.802075</td>
     </tr>
     <tr>
       <th>X2</th>
-      <td>-0.176342</td>
-      <td>0.021766</td>
-      <td>-8.101743</td>
-      <td>1.554312e-15</td>
-      <td>-0.219055</td>
-      <td>-0.133630</td>
+      <td>-0.165899</td>
+      <td>0.028449</td>
+      <td>-5.831409</td>
+      <td>5.496138e-09</td>
+      <td>-0.221659</td>
+      <td>-0.110140</td>
     </tr>
   </tbody>
 </table>
 </div>
 </div>
 </div>
-<p>Suppose we were interested in testing the hypothesis that <span class="math inline">\(X_{1} = X_{2}\)</span>. Given the relatively large differences in coefficients and small standard errors, we will likely reject the null that the two parameters are equal.</p>
-<p>We can run the formal test via the <code>hypotheses</code> function from the <code>marginaleffects</code> package.</p>
-<div id="2ba5e10c" class="cell" data-execution_count="2">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>hypotheses(fit, <span class="st">"X1 - X2 = 0"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<section id="average-marginal-effects" class="level2">
+<h2 class="anchored" data-anchor-id="average-marginal-effects">Average marginal effects</h2>
+<p>To compute the average marginal effect of <code>X1</code> on the response scale:</p>
+<div id="68433c4b" class="cell" data-execution_count="2">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>avg_slopes(fit, variables<span class="op">=</span><span class="st">"X1"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="2">
 <div><style>
 .dataframe > thead > tr,
@@ -516,45 +514,51 @@ window.Quarto = {
   white-space: pre-wrap;
 }
 </style>
-<small>shape: (1, 8)</small><table class="dataframe table table-sm table-striped small"><thead><tr><th>term</th><th>estimate</th><th>std_error</th><th>statistic</th><th>p_value</th><th>s_value</th><th>conf_low</th><th>conf_high</th></tr><tr><td>str</td><td>f64</td><td>f64</td><td>f64</td><td>f64</td><td>f64</td><td>f64</td><td>f64</td></tr></thead><tbody><tr><td>"X1-X2=0"</td><td>-0.816593</td><td>0.085179</td><td>-9.586797</td><td>0.0</td><td>inf</td><td>-0.983541</td><td>-0.649646</td></tr></tbody></table></div>
+<small>shape: (1, 3)</small><table class="dataframe table table-sm table-striped small"><thead><tr><th>term</th><th>contrast</th><th>estimate</th></tr><tr><td>str</td><td>str</td><td>f64</td></tr></thead><tbody><tr><td>"X1"</td><td>"dY/dX"</td><td>-1.016344</td></tr></tbody></table></div>
 </div>
 </div>
-<p>And indeed, we reject the null of equality of coefficients: we get a p-value of zero and a confidence interval that does not contain 0.</p>
-<section id="non-linear-hypothesis-tests-ratio-estimates" class="level2">
-<h2 class="anchored" data-anchor-id="non-linear-hypothesis-tests-ratio-estimates">Non-Linear Hypothesis Tests: Ratio Estimates</h2>
-<p>We can also test run-linear hypotheses, in which case <code>marginaleffects</code> will automatically compute correct standard errors based on the estimated covariance matrix and the Delta method. This is for example useful for computing inferential statistics for the “relative uplift” in an AB test.</p>
-<p>For the moment, let’s assume that <span class="math inline">\(X1\)</span> is a randomly assigned treatment variable. As before, <span class="math inline">\(Y\)</span> is our variable / KPI of interest.</p>
-<p>Under randomization, the model intercept measures the “baseline”, i.e.&nbsp;the population average of <span class="math inline">\(Y\)</span> in the absence of treatment. To compute a relative uplift, we might compute</p>
-<div id="d402fbcf" class="cell" data-execution_count="3">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>(fit.coef().xs(<span class="st">"X1"</span>) <span class="op">/</span> fit.coef().xs(<span class="st">"Intercept"</span>) <span class="op">-</span> <span class="dv">1</span>) <span class="op">*</span> <span class="dv">100</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>You can also report group-specific average marginal effects:</p>
+<div id="eeb053a6" class="cell" data-execution_count="3">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>avg_slopes(fit, variables<span class="op">=</span><span class="st">"X1"</span>, by<span class="op">=</span><span class="st">"f1"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="3">
-<pre><code>np.float64(-211.71906665561212)</code></pre>
+<div><style>
+.dataframe > thead > tr,
+.dataframe > tbody > tr {
+  text-align: right;
+  white-space: pre-wrap;
+}
+</style>
+<small>shape: (30, 4)</small><table class="dataframe table table-sm table-striped small"><thead><tr><th>f1</th><th>term</th><th>contrast</th><th>estimate</th></tr><tr><td>f64</td><td>str</td><td>str</td><td>f64</td></tr></thead><tbody><tr><td>0.0</td><td>"X1"</td><td>"dY/dX"</td><td>-1.016344</td></tr><tr><td>1.0</td><td>"X1"</td><td>"dY/dX"</td><td>-1.016344</td></tr><tr><td>2.0</td><td>"X1"</td><td>"dY/dX"</td><td>-1.016344</td></tr><tr><td>3.0</td><td>"X1"</td><td>"dY/dX"</td><td>-1.016344</td></tr><tr><td>4.0</td><td>"X1"</td><td>"dY/dX"</td><td>-1.016344</td></tr><tr><td>…</td><td>…</td><td>…</td><td>…</td></tr><tr><td>25.0</td><td>"X1"</td><td>"dY/dX"</td><td>-1.016344</td></tr><tr><td>26.0</td><td>"X1"</td><td>"dY/dX"</td><td>-1.016344</td></tr><tr><td>27.0</td><td>"X1"</td><td>"dY/dX"</td><td>-1.016344</td></tr><tr><td>28.0</td><td>"X1"</td><td>"dY/dX"</td><td>-1.016344</td></tr><tr><td>29.0</td><td>"X1"</td><td>"dY/dX"</td><td>-1.016344</td></tr></tbody></table></div>
 </div>
 </div>
-<p>So we have a really big negative treatment effect of around minus 212%! To conduct correct inference on this ratio statistic, we need to use the delta method.</p>
-<section id="the-multivariate-delta-method" class="level3">
-<h3 class="anchored" data-anchor-id="the-multivariate-delta-method">The Multivariate Delta Method</h3>
-<p>In a nutshell, the delta method provides a way to approximate the asympotic distribution of any non-linear transformation <span class="math inline">\(g()\)</span> or one or more random variables.</p>
-<p>In the case of the ratio statistics, this non-linear transformation can be denoted as <span class="math inline">\(g(\theta_{1}, \theta_{2}) = \theta_{1} / \theta_{2}\)</span>.</p>
-<p>Here’s the <strong>Delta Method theorem</strong>:</p>
-<p>First, we define <span class="math inline">\(\theta = (\theta_{1}, \theta_{2})'\)</span> and <span class="math inline">\(\mu = (\mu_{1}, \mu_{2})'\)</span>.</p>
-<p>By the law of large numbers, we know that</p>
-<p><span class="math display">\[
-\sqrt{N} (\theta - \mu) \rightarrow_{d} N(0_{2}, \Sigma_{2,2}) \text{ if } N \rightarrow \infty.
-\]</span></p>
-<p>By the <strong>Delta Method</strong>, we can then approximate the limit distribution of <span class="math inline">\(g(\theta)\)</span> as</p>
-<p><span class="math display">\[
-\sqrt{N}  (g(\theta) - g(\mu)) \rightarrow_{d} N(0_{1}, g'(\theta) \times \Sigma \times g(\theta)) \text{ if } N \rightarrow \infty.
-\]</span>.</p>
-<p><a href="https://stats.stackexchange.com/questions/291594/estimation-of-population-ratio-using-delta-method">Here’s a long derivation of how to use the the delta method for inference of ratio statistics.</a>. The key steps from the formula above is to derive the expression for the asymptotic variance $ g’() g()$.</p>
-<p>But hey - we’re lucky, because marginaleffects will do all this work for us: we don’t have to derive analytic gradients ourselves =)</p>
 </section>
-<section id="using-the-delta-method-via-marginaleffects" class="level3">
-<h3 class="anchored" data-anchor-id="using-the-delta-method-via-marginaleffects">Using the Delta Method via <code>marginaleffects</code>:</h3>
-<p>We can employ the Delta Method via <code>marginaleffects</code> via the <code>hypotheses</code> function:</p>
-<div id="8c2b5238" class="cell" data-execution_count="4">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>hypotheses(fit, <span class="st">"(X1 / Intercept - 1) * 100 = 0"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<section id="linear-hypothesis-tests" class="level2">
+<h2 class="anchored" data-anchor-id="linear-hypothesis-tests">Linear hypothesis tests</h2>
+<p>Suppose we want to test the linear restriction <span class="math inline">\(X_1 = X_2\)</span>. The <code>hypotheses()</code> function uses the model’s estimated covariance matrix, so it works naturally with <code>PyFixest</code> objects.</p>
+<div id="72b4bab7" class="cell" data-execution_count="4">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>hypotheses(fit, <span class="st">"X1 - X2 = 0"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="4">
+<div><style>
+.dataframe > thead > tr,
+.dataframe > tbody > tr {
+  text-align: right;
+  white-space: pre-wrap;
+}
+</style>
+<small>shape: (1, 8)</small><table class="dataframe table table-sm table-striped small"><thead><tr><th>term</th><th>estimate</th><th>std_error</th><th>statistic</th><th>p_value</th><th>s_value</th><th>conf_low</th><th>conf_high</th></tr><tr><td>str</td><td>f64</td><td>f64</td><td>f64</td><td>f64</td><td>f64</td><td>f64</td><td>f64</td></tr></thead><tbody><tr><td>"X1-X2=0"</td><td>-0.850445</td><td>0.1086</td><td>-7.830952</td><td>4.8850e-15</td><td>47.540568</td><td>-1.063297</td><td>-0.637592</td></tr></tbody></table></div>
+</div>
+</div>
+</section>
+<section id="non-linear-hypothesis-tests" class="level2">
+<h2 class="anchored" data-anchor-id="non-linear-hypothesis-tests">Non-linear hypothesis tests</h2>
+<p>For non-linear transformations, <code>marginaleffects</code> applies the delta method automatically. This is useful for ratio-style summaries or uplift calculations.</p>
+<p>Here is a simple OLS example:</p>
+<div id="300ae416" class="cell" data-execution_count="5">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>fit_ols <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 + X2"</span>, data<span class="op">=</span>data)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="2f3cdd4e" class="cell" data-execution_count="6">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>hypotheses(fit_ols, <span class="st">"(X1 / Intercept - 1) * 100 = 0"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="6">
 <div><style>
 .dataframe > thead > tr,
 .dataframe > tbody > tr {
@@ -565,11 +569,12 @@ window.Quarto = {
 <small>shape: (1, 8)</small><table class="dataframe table table-sm table-striped small"><thead><tr><th>term</th><th>estimate</th><th>std_error</th><th>statistic</th><th>p_value</th><th>s_value</th><th>conf_low</th><th>conf_high</th></tr><tr><td>str</td><td>f64</td><td>f64</td><td>f64</td><td>f64</td><td>f64</td><td>f64</td><td>f64</td></tr></thead><tbody><tr><td>"(X1/Intercept-1)*100=0"</td><td>-211.719067</td><td>8.478682</td><td>-24.970752</td><td>0.0</td><td>inf</td><td>-228.336978</td><td>-195.101155</td></tr></tbody></table></div>
 </div>
 </div>
-<p>As before, we get an estimate of around -212%. Additionally, we obtain a 95% CI via the Delta Method of [-228%, -195%].</p>
-<p>Besides hypopotheses testing, you can do a range of other cool things with the <code>marginaleffects</code> package. For example (and likely unsurprisingly), you can easily compute all sorts of marginal effects for your regression models. For all the details, we highly recommend to take a look at the <a href="https://marginaleffects.com/index.html">marginaleffects zoo book!</a>.</p>
-
-
 </section>
+<section id="notes" class="level2">
+<h2 class="anchored" data-anchor-id="notes">Notes</h2>
+<p>For broader functionality / the full capability of <code>marginaleffects</code>, see the <a href="https://marginaleffects.com/index.html">marginaleffects book</a>.</p>
+
+
 </section>
 
 </main> <!-- /main -->

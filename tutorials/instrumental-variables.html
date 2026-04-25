@@ -597,7 +597,7 @@ window.Quarto = {
 </div>
 </div>
 <p>This tutorial walks through three applications, all addressing endogeneity from <strong>selection bias — a form of Omitted Variable Bias (OVB) where unobserved confounders drive both selection into treatment and the outcome.</strong> Application 1 operates in an observational setting, exploiting quasi-random variation from individual-level selection. Application 2 arises in an experimental setting where encouragement is randomly assigned but treatment take-up remains subject to self-selection. Application 3 returns to an observational setting, exploiting regional-level sorting via a shift-share instrument.</p>
-<div id="f9af4410" class="cell" data-execution_count="1">
+<div id="a35204d6" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
@@ -608,7 +608,7 @@ window.Quarto = {
 <p><span class="citation" data-cites="lundborg2017">Lundborg, Plug, and Rasmussen (<a href="#ref-lundborg2017" role="doc-biblioref">2017</a>)</span> find such an “instrument” in the quasi-random success of in-vitro fertilization (IVF) treatment. IVF success is largely determined by biological factors outside a woman’s control, making it difficult to conceive of an unobserved variable that jointly drives both the success of treatment and labor market outcomes.</p>
 <section id="synthetic-data" class="level3">
 <h3 class="anchored" data-anchor-id="synthetic-data">Synthetic Data</h3>
-<div id="1a26bf58" class="cell" data-execution_count="2">
+<div id="46509b75" class="cell" data-execution_count="2">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>ivf_df <span class="op">=</span> pf.get_ivf_data()</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>ivf_df.head()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="2">
@@ -664,12 +664,12 @@ window.Quarto = {
 <section id="naive-ols" class="level3">
 <h3 class="anchored" data-anchor-id="naive-ols">Naive OLS</h3>
 <p>Without accounting for endogeneity, OLS overstates the penalty because career ambition is an omitted variable that increases earnings while reducing fertility:</p>
-<div id="70fc5a0a" class="cell" data-execution_count="3">
+<div id="e0164842" class="cell" data-execution_count="3">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>fit_ols <span class="op">=</span> pf.feols(<span class="st">"earnings ~ num_children"</span>, data<span class="op">=</span>ivf_df)</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>fit_ols.summary()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 
-        <div id="BbCDCG"></div>
+        <div id="8m80DA"></div>
         <script type="text/javascript" data-lets-plot-script="library">
             if(!window.letsPlotCallQueue) {
                 window.letsPlotCallQueue = [];
@@ -693,9 +693,9 @@ window.Quarto = {
                     var div = document.createElement("div");
                     div.style.color = 'darkred';
                     div.textContent = 'Error loading Lets-Plot JS';
-                    document.getElementById("BbCDCG").appendChild(div);
+                    document.getElementById("8m80DA").appendChild(div);
                 };
-                var e = document.getElementById("BbCDCG");
+                var e = document.getElementById("8m80DA");
                 e.appendChild(script);
             })()
         </script>
@@ -703,7 +703,7 @@ window.Quarto = {
 </div>
 <div class="cell-output cell-output-display">
 
-        <div id="dWSwe7"></div>
+        <div id="jsZzUd"></div>
         <script type="text/javascript" data-lets-plot-script="library">
             if(!window.letsPlotCallQueue) {
                 window.letsPlotCallQueue = [];
@@ -727,9 +727,9 @@ window.Quarto = {
                     var div = document.createElement("div");
                     div.style.color = 'darkred';
                     div.textContent = 'Error loading Lets-Plot JS';
-                    document.getElementById("dWSwe7").appendChild(div);
+                    document.getElementById("jsZzUd").appendChild(div);
                 };
-                var e = document.getElementById("dWSwe7");
+                var e = document.getElementById("jsZzUd");
                 e.appendChild(script);
             })()
         </script>
@@ -766,7 +766,7 @@ RMSE: 1.126 R2: 0.145 </code></pre>
 <p><span class="math display">\[\hat{\beta}_{\text{Wald}} = \frac{\bar{Y}_{Z=1} - \bar{Y}_{Z=0}}{\bar{T}_{Z=1} - \bar{T}_{Z=0}}\]</span></p>
 </div>
 </div></div><p>In <code>PyFixest</code>, we can fit the IV model using the formula interface:</p>
-<div id="0d1a7c19" class="cell" data-execution_count="4">
+<div id="c7109190" class="cell" data-execution_count="4">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>fit_iv <span class="op">=</span> pf.feols(<span class="st">"earnings ~ 1 | num_children ~ ivf_success"</span>, data<span class="op">=</span>ivf_df)</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>pf.etable([</span>
@@ -778,55 +778,55 @@ RMSE: 1.126 R2: 0.145 </code></pre>
 <span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>    caption<span class="op">=</span><span class="st">"Motherhood Penalty: OLS vs IV"</span>,</span>
 <span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="4">
-<div id="qnhguevzcs" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<div id="dianfjciqt" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
 <style>
-#qnhguevzcs table {
+#dianfjciqt table {
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
           -webkit-font-smoothing: antialiased;
           -moz-osx-font-smoothing: grayscale;
         }
 
-#qnhguevzcs thead, tbody, tfoot, tr, td, th { border-style: none; }
+#dianfjciqt thead, tbody, tfoot, tr, td, th { border-style: none; }
  tr { background-color: transparent; }
-#qnhguevzcs p { margin: 0; padding: 0; }
- #qnhguevzcs .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: hidden; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
- #qnhguevzcs .gt_caption { padding-top: 4px; padding-bottom: 4px; }
- #qnhguevzcs .gt_title { color: #333333; font-size: 16px; font-weight: initial; padding-top: 6px; padding-bottom: 6px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
- #qnhguevzcs .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 5px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
- #qnhguevzcs .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
- #qnhguevzcs .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
- #qnhguevzcs .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
- #qnhguevzcs .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 2px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
- #qnhguevzcs .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
- #qnhguevzcs .gt_column_spanner_outer:first-child { padding-left: 0; }
- #qnhguevzcs .gt_column_spanner_outer:last-child { padding-right: 0; }
- #qnhguevzcs .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: bottom; padding-top: 2px; padding-bottom: 2px; overflow-x: hidden; display: inline-block; width: 100%; }
- #qnhguevzcs .gt_spanner_row { border-bottom-style: hidden; }
- #qnhguevzcs .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
- #qnhguevzcs .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: middle; }
- #qnhguevzcs .gt_from_md> :first-child { margin-top: 0; }
- #qnhguevzcs .gt_from_md> :last-child { margin-bottom: 0; }
- #qnhguevzcs .gt_row { padding-top: 2px; padding-bottom: 2px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
- #qnhguevzcs .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
- #qnhguevzcs .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
- #qnhguevzcs .gt_row_group_first td { border-top-width: 0.25px; }
- #qnhguevzcs .gt_row_group_first th { border-top-width: 0.25px; }
- #qnhguevzcs .gt_striped { color: #333333; background-color: #F4F4F4; }
- #qnhguevzcs .gt_table_body { border-top-style: solid; border-top-width: 0px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
- #qnhguevzcs .gt_grand_summary_row { color: #333333; background-color: #FFFFFF; text-transform: inherit; padding-top: 8px; padding-bottom: 8px; padding-left: 5px; padding-right: 5px; }
- #qnhguevzcs .gt_first_grand_summary_row_bottom { border-top-style: double; border-top-width: 6px; border-top-color: #D3D3D3; }
- #qnhguevzcs .gt_last_grand_summary_row_top { border-bottom-style: double; border-bottom-width: 6px; border-bottom-color: #D3D3D3; }
- #qnhguevzcs .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
- #qnhguevzcs .gt_sourcenote { font-size: 10px; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
- #qnhguevzcs .gt_left { text-align: left; }
- #qnhguevzcs .gt_center { text-align: center; }
- #qnhguevzcs .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
- #qnhguevzcs .gt_font_normal { font-weight: normal; }
- #qnhguevzcs .gt_font_bold { font-weight: bold; }
- #qnhguevzcs .gt_font_italic { font-style: italic; }
- #qnhguevzcs .gt_super { font-size: 65%; }
- #qnhguevzcs .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
- #qnhguevzcs .gt_asterisk { font-size: 100%; vertical-align: 0; }
+#dianfjciqt p { margin: 0; padding: 0; }
+ #dianfjciqt .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: hidden; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
+ #dianfjciqt .gt_caption { padding-top: 4px; padding-bottom: 4px; }
+ #dianfjciqt .gt_title { color: #333333; font-size: 16px; font-weight: initial; padding-top: 6px; padding-bottom: 6px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
+ #dianfjciqt .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 5px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
+ #dianfjciqt .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #dianfjciqt .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
+ #dianfjciqt .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #dianfjciqt .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 2px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
+ #dianfjciqt .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
+ #dianfjciqt .gt_column_spanner_outer:first-child { padding-left: 0; }
+ #dianfjciqt .gt_column_spanner_outer:last-child { padding-right: 0; }
+ #dianfjciqt .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: bottom; padding-top: 2px; padding-bottom: 2px; overflow-x: hidden; display: inline-block; width: 100%; }
+ #dianfjciqt .gt_spanner_row { border-bottom-style: hidden; }
+ #dianfjciqt .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
+ #dianfjciqt .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: middle; }
+ #dianfjciqt .gt_from_md> :first-child { margin-top: 0; }
+ #dianfjciqt .gt_from_md> :last-child { margin-bottom: 0; }
+ #dianfjciqt .gt_row { padding-top: 2px; padding-bottom: 2px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
+ #dianfjciqt .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
+ #dianfjciqt .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
+ #dianfjciqt .gt_row_group_first td { border-top-width: 0.25px; }
+ #dianfjciqt .gt_row_group_first th { border-top-width: 0.25px; }
+ #dianfjciqt .gt_striped { color: #333333; background-color: #F4F4F4; }
+ #dianfjciqt .gt_table_body { border-top-style: solid; border-top-width: 0px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
+ #dianfjciqt .gt_grand_summary_row { color: #333333; background-color: #FFFFFF; text-transform: inherit; padding-top: 8px; padding-bottom: 8px; padding-left: 5px; padding-right: 5px; }
+ #dianfjciqt .gt_first_grand_summary_row_bottom { border-top-style: double; border-top-width: 6px; border-top-color: #D3D3D3; }
+ #dianfjciqt .gt_last_grand_summary_row_top { border-bottom-style: double; border-bottom-width: 6px; border-bottom-color: #D3D3D3; }
+ #dianfjciqt .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
+ #dianfjciqt .gt_sourcenote { font-size: 10px; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
+ #dianfjciqt .gt_left { text-align: left; }
+ #dianfjciqt .gt_center { text-align: center; }
+ #dianfjciqt .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
+ #dianfjciqt .gt_font_normal { font-weight: normal; }
+ #dianfjciqt .gt_font_bold { font-weight: bold; }
+ #dianfjciqt .gt_font_italic { font-style: italic; }
+ #dianfjciqt .gt_super { font-size: 65%; }
+ #dianfjciqt .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
+ #dianfjciqt .gt_asterisk { font-size: 100%; vertical-align: 0; }
  
 </style>
 <table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
@@ -905,7 +905,7 @@ RMSE: 1.126 R2: 0.145 </code></pre>
 <h3 class="anchored" data-anchor-id="first-stage-diagnostics">First-Stage Diagnostics</h3>
 <p>In the section above, we have argued the IVF success is a credible instrument for fertility - the unconfoundedness assumption is plausible given the quasi-random nature of IVF success. But how do we know if the instrument is strong enough to yield reliable estimates? For this reason, applied econometricians routinely run diagnostic checks for “weak instruments”, which aim to validate the “relevance” assumption.</p>
 <p><code>PyFixest</code> provides two diagnostics for instrument strength: a standard first-stage F-statistic, and the more robust effective F-statistic from <span class="citation" data-cites="oleapflueger2013">Montiel Olea and Pflueger (<a href="#ref-oleapflueger2013" role="doc-biblioref">2013</a>)</span> that remains valid under heteroskedasticity. Both can be accessed via the <code>._model_1st_stage</code> attribute.</p>
-<div id="8f23a155" class="cell" data-execution_count="5">
+<div id="596ac817" class="cell" data-execution_count="5">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># first_stage() must be called before IV_Diag() — it fits the first-stage OLS</span></span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="co"># regression and stores the model in fit_iv._model_1st_stage, which IV_Diag() requires.</span></span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>fit_iv.first_stage()</span>
@@ -927,7 +927,7 @@ Observations:  2000
 RMSE: 0.622 R2: 0.286 </code></pre>
 </div>
 </div>
-<div id="4892234e" class="cell" data-execution_count="6">
+<div id="cf500d71" class="cell" data-execution_count="6">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>fit_iv.IV_Diag()</span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"First-stage F-statistic : </span><span class="sc">{</span>fit_iv<span class="sc">.</span>_f_stat_1st_stage<span class="sc">:.2f}</span><span class="ss">"</span>)</span>
 <span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Effective F-statistic   : </span><span class="sc">{</span>fit_iv<span class="sc">.</span>_eff_F<span class="sc">:.2f}</span><span class="ss">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -954,7 +954,7 @@ Effective F-statistic   : 793.48</code></pre>
 <p>If all assumptions hold, the IV estimate recovers the <strong>Local Average Treatment Effect (LATE)</strong> of adoption on revenue for the “compliers” — users whose adoption decisions are influenced by encouragement. LATE estimates are larger than the ITT because it scales up the effect of encouragement by the share of compliers in the population.</p>
 <section id="synthetic-data-1" class="level3">
 <h3 class="anchored" data-anchor-id="synthetic-data-1">Synthetic Data</h3>
-<div id="37db241f" class="cell" data-execution_count="7">
+<div id="2b7a7096" class="cell" data-execution_count="7">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>ab_df <span class="op">=</span> pf.get_encouragement_data()</span>
 <span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>ab_df.head()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="7">
@@ -1016,7 +1016,7 @@ Effective F-statistic   : 793.48</code></pre>
 <section id="three-estimands" class="level3">
 <h3 class="anchored" data-anchor-id="three-estimands">Three Estimands</h3>
 <p>We estimate three parameters of interest: the <strong>reduced form</strong> (ITT), the <strong>first stage</strong>, and the <strong>IV/LATE</strong>:</p>
-<div id="5ab839f7" class="cell" data-execution_count="8">
+<div id="b08fe04b" class="cell" data-execution_count="8">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Intent-to-treat (reduced form)</span></span>
 <span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>fit_itt <span class="op">=</span> pf.feols(<span class="st">"revenue ~ assigned_treatment | user_type"</span>, data<span class="op">=</span>ab_df)</span>
 <span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -1030,7 +1030,7 @@ Effective F-statistic   : 793.48</code></pre>
 <section id="compare-all-three" class="level3">
 <h3 class="anchored" data-anchor-id="compare-all-three">Compare All Three</h3>
 <p>The table below places the ITT, first stage, and IV estimates side by side.</p>
-<div id="bd0b9d4e" class="cell" data-execution_count="9">
+<div id="cb16f7f1" class="cell" data-execution_count="9">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>pf.etable(</span>
 <span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>    [fit_itt, fit_fs, fit_late],</span>
 <span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>    labels<span class="op">=</span>{</span>
@@ -1043,55 +1043,55 @@ Effective F-statistic   : 793.48</code></pre>
 <span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>    caption<span class="op">=</span><span class="st">"A/B Encouragement Design: ITT, First Stage, and LATE"</span>,</span>
 <span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="9">
-<div id="nuipnyavpf" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<div id="oftzivyssz" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
 <style>
-#nuipnyavpf table {
+#oftzivyssz table {
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
           -webkit-font-smoothing: antialiased;
           -moz-osx-font-smoothing: grayscale;
         }
 
-#nuipnyavpf thead, tbody, tfoot, tr, td, th { border-style: none; }
+#oftzivyssz thead, tbody, tfoot, tr, td, th { border-style: none; }
  tr { background-color: transparent; }
-#nuipnyavpf p { margin: 0; padding: 0; }
- #nuipnyavpf .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: hidden; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
- #nuipnyavpf .gt_caption { padding-top: 4px; padding-bottom: 4px; }
- #nuipnyavpf .gt_title { color: #333333; font-size: 16px; font-weight: initial; padding-top: 6px; padding-bottom: 6px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
- #nuipnyavpf .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 5px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
- #nuipnyavpf .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
- #nuipnyavpf .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
- #nuipnyavpf .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
- #nuipnyavpf .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 2px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
- #nuipnyavpf .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
- #nuipnyavpf .gt_column_spanner_outer:first-child { padding-left: 0; }
- #nuipnyavpf .gt_column_spanner_outer:last-child { padding-right: 0; }
- #nuipnyavpf .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: bottom; padding-top: 2px; padding-bottom: 2px; overflow-x: hidden; display: inline-block; width: 100%; }
- #nuipnyavpf .gt_spanner_row { border-bottom-style: hidden; }
- #nuipnyavpf .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
- #nuipnyavpf .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: middle; }
- #nuipnyavpf .gt_from_md> :first-child { margin-top: 0; }
- #nuipnyavpf .gt_from_md> :last-child { margin-bottom: 0; }
- #nuipnyavpf .gt_row { padding-top: 2px; padding-bottom: 2px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
- #nuipnyavpf .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
- #nuipnyavpf .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
- #nuipnyavpf .gt_row_group_first td { border-top-width: 0.25px; }
- #nuipnyavpf .gt_row_group_first th { border-top-width: 0.25px; }
- #nuipnyavpf .gt_striped { color: #333333; background-color: #F4F4F4; }
- #nuipnyavpf .gt_table_body { border-top-style: solid; border-top-width: 0px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
- #nuipnyavpf .gt_grand_summary_row { color: #333333; background-color: #FFFFFF; text-transform: inherit; padding-top: 8px; padding-bottom: 8px; padding-left: 5px; padding-right: 5px; }
- #nuipnyavpf .gt_first_grand_summary_row_bottom { border-top-style: double; border-top-width: 6px; border-top-color: #D3D3D3; }
- #nuipnyavpf .gt_last_grand_summary_row_top { border-bottom-style: double; border-bottom-width: 6px; border-bottom-color: #D3D3D3; }
- #nuipnyavpf .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
- #nuipnyavpf .gt_sourcenote { font-size: 10px; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
- #nuipnyavpf .gt_left { text-align: left; }
- #nuipnyavpf .gt_center { text-align: center; }
- #nuipnyavpf .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
- #nuipnyavpf .gt_font_normal { font-weight: normal; }
- #nuipnyavpf .gt_font_bold { font-weight: bold; }
- #nuipnyavpf .gt_font_italic { font-style: italic; }
- #nuipnyavpf .gt_super { font-size: 65%; }
- #nuipnyavpf .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
- #nuipnyavpf .gt_asterisk { font-size: 100%; vertical-align: 0; }
+#oftzivyssz p { margin: 0; padding: 0; }
+ #oftzivyssz .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: hidden; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
+ #oftzivyssz .gt_caption { padding-top: 4px; padding-bottom: 4px; }
+ #oftzivyssz .gt_title { color: #333333; font-size: 16px; font-weight: initial; padding-top: 6px; padding-bottom: 6px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
+ #oftzivyssz .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 5px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
+ #oftzivyssz .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #oftzivyssz .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
+ #oftzivyssz .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #oftzivyssz .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 2px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
+ #oftzivyssz .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
+ #oftzivyssz .gt_column_spanner_outer:first-child { padding-left: 0; }
+ #oftzivyssz .gt_column_spanner_outer:last-child { padding-right: 0; }
+ #oftzivyssz .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: bottom; padding-top: 2px; padding-bottom: 2px; overflow-x: hidden; display: inline-block; width: 100%; }
+ #oftzivyssz .gt_spanner_row { border-bottom-style: hidden; }
+ #oftzivyssz .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
+ #oftzivyssz .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: middle; }
+ #oftzivyssz .gt_from_md> :first-child { margin-top: 0; }
+ #oftzivyssz .gt_from_md> :last-child { margin-bottom: 0; }
+ #oftzivyssz .gt_row { padding-top: 2px; padding-bottom: 2px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
+ #oftzivyssz .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
+ #oftzivyssz .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
+ #oftzivyssz .gt_row_group_first td { border-top-width: 0.25px; }
+ #oftzivyssz .gt_row_group_first th { border-top-width: 0.25px; }
+ #oftzivyssz .gt_striped { color: #333333; background-color: #F4F4F4; }
+ #oftzivyssz .gt_table_body { border-top-style: solid; border-top-width: 0px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
+ #oftzivyssz .gt_grand_summary_row { color: #333333; background-color: #FFFFFF; text-transform: inherit; padding-top: 8px; padding-bottom: 8px; padding-left: 5px; padding-right: 5px; }
+ #oftzivyssz .gt_first_grand_summary_row_bottom { border-top-style: double; border-top-width: 6px; border-top-color: #D3D3D3; }
+ #oftzivyssz .gt_last_grand_summary_row_top { border-bottom-style: double; border-bottom-width: 6px; border-bottom-color: #D3D3D3; }
+ #oftzivyssz .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
+ #oftzivyssz .gt_sourcenote { font-size: 10px; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
+ #oftzivyssz .gt_left { text-align: left; }
+ #oftzivyssz .gt_center { text-align: center; }
+ #oftzivyssz .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
+ #oftzivyssz .gt_font_normal { font-weight: normal; }
+ #oftzivyssz .gt_font_bold { font-weight: bold; }
+ #oftzivyssz .gt_font_italic { font-style: italic; }
+ #oftzivyssz .gt_super { font-size: 65%; }
+ #oftzivyssz .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
+ #oftzivyssz .gt_asterisk { font-size: 100%; vertical-align: 0; }
  
 </style>
 <table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
@@ -1188,10 +1188,10 @@ Effective F-statistic   : 793.48</code></pre>
 </div>
 </div>
 <p>The coefficient plot compares the ITT effect of encouragement on revenue with the IV (LATE) estimate of actual feature adoption. Because not all encouraged users adopt, the LATE is larger than the ITT — scaled up by the complier share.</p>
-<div id="07b16027" class="cell" data-execution_count="10">
+<div id="49004398" class="cell" data-execution_count="10">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>pf.coefplot([fit_itt, fit_late], keep<span class="op">=</span><span class="st">"assigned_treatment|adopted_feature"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="10">
-   <div id="BV8Aia"></div>
+   <div id="m3Ieng"></div>
    <script type="text/javascript" data-lets-plot-script="plot">
    
    (function() {
@@ -1216,7 +1216,7 @@ Effective F-statistic   : 793.48</code></pre>
        };
    }
    
-   const containerDiv = document.getElementById("BV8Aia");
+   const containerDiv = document.getElementById("m3Ieng");
    let fig = null;
    
    function renderPlot() {
@@ -1224,9 +1224,9 @@ Effective F-statistic   : 793.48</code></pre>
            const plotSpec = {
 "data":{
 "Coefficient":["assigned_treatment","adopted_feature"],
-"Estimate":[1.1101523162478626,2.003769289008358],
-"2.5%":[1.0292500392310366,1.8914532341075454],
-"97.5%":[1.1910545932646885,2.11608534390917],
+"Estimate":[1.1101523162478635,2.003769289008357],
+"2.5%":[1.0292500392310375,1.8914532341075447],
+"97.5%":[1.1910545932646894,2.116085343909169],
 "Model":["revenue ~ assigned_treatment | user_type","revenue ~ 1 | user_type | adopted_feature ~ assigned_treatment"]
 },
 "mapping":{
@@ -1377,7 +1377,7 @@ Effective F-statistic   : 793.48</code></pre>
 <section id="iv-diagnostics" class="level3">
 <h3 class="anchored" data-anchor-id="iv-diagnostics">IV Diagnostics</h3>
 <p>Since the instrument (<code>assigned_treatment</code>) is fully randomized, the first stage is expected to be very strong and both statistics should comfortably exceed 10.</p>
-<div id="c5f1e347" class="cell" data-execution_count="11">
+<div id="8950968f" class="cell" data-execution_count="11">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co"># first_stage() must be called before IV_Diag()</span></span>
 <span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>fit_late.first_stage()</span>
 <span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>fit_late.IV_Diag()</span>
@@ -1401,7 +1401,7 @@ B_r = \sum_{k=1}^{K} s_{rk} \cdot g_k
 <p>where <span class="math inline">\(s_{rk}\)</span> is region <span class="math inline">\(r\)</span>’s historical share of immigrants from origin <span class="math inline">\(k\)</span>, and <span class="math inline">\(g_k\)</span> is the national inflow from origin <span class="math inline">\(k\)</span>. The key identification assumption in <span class="citation" data-cites="borusyak2022">Borusyak, Hull, and Jaravel (<a href="#ref-borusyak2022" role="doc-biblioref">2022</a>)</span> is that the <em>shocks</em> <span class="math inline">\(g_k\)</span> are as-good-as-randomly assigned across origin countries — uncorrelated with unobserved local labor demand in destination regions. The historical shares <span class="math inline">\(s_{rk}\)</span> can themselves be endogenous (regions that historically attracted many immigrants may differ in other ways); what matters is that the national inflows that drive the instrument are exogenous.</p>
 <section id="synthetic-data-2" class="level3">
 <h3 class="anchored" data-anchor-id="synthetic-data-2">Synthetic Data</h3>
-<div id="281d9fcd" class="cell" data-execution_count="12">
+<div id="0d6b1c60" class="cell" data-execution_count="12">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>bartik_df <span class="op">=</span> pf.get_bartik_data()</span>
 <span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>bartik_df.head()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="12">
@@ -1463,7 +1463,7 @@ B_r = \sum_{k=1}^{K} s_{rk} \cdot g_k
 <section id="ols-vs-iv" class="level3">
 <h3 class="anchored" data-anchor-id="ols-vs-iv">OLS vs IV</h3>
 <p>As in the first application, we can compare the naive OLS and IV estimates.</p>
-<div id="0ffd1985" class="cell" data-execution_count="13">
+<div id="563a3385" class="cell" data-execution_count="13">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co"># OLS: biased because local demand drives both immigration and wages</span></span>
 <span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>fit_ols_b <span class="op">=</span> pf.feols(<span class="st">"wages ~ immigration + log_population"</span>, data<span class="op">=</span>bartik_df)</span>
 <span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -1473,7 +1473,7 @@ B_r = \sum_{k=1}^{K} s_{rk} \cdot g_k
 <span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>    data<span class="op">=</span>bartik_df,</span>
 <span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<div id="690dca49" class="cell" data-execution_count="14">
+<div id="735b1d1c" class="cell" data-execution_count="14">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>pf.etable(</span>
 <span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>    [fit_ols_b, fit_iv_b],</span>
 <span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>    labels<span class="op">=</span>{</span>
@@ -1485,55 +1485,55 @@ B_r = \sum_{k=1}^{K} s_{rk} \cdot g_k
 <span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>    caption<span class="op">=</span><span class="st">"Effect of Immigration on Wages: OLS vs Bartik IV"</span>,</span>
 <span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="14">
-<div id="dehczrlqnt" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<div id="ulndqbkzgk" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
 <style>
-#dehczrlqnt table {
+#ulndqbkzgk table {
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
           -webkit-font-smoothing: antialiased;
           -moz-osx-font-smoothing: grayscale;
         }
 
-#dehczrlqnt thead, tbody, tfoot, tr, td, th { border-style: none; }
+#ulndqbkzgk thead, tbody, tfoot, tr, td, th { border-style: none; }
  tr { background-color: transparent; }
-#dehczrlqnt p { margin: 0; padding: 0; }
- #dehczrlqnt .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: hidden; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
- #dehczrlqnt .gt_caption { padding-top: 4px; padding-bottom: 4px; }
- #dehczrlqnt .gt_title { color: #333333; font-size: 16px; font-weight: initial; padding-top: 6px; padding-bottom: 6px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
- #dehczrlqnt .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 5px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
- #dehczrlqnt .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
- #dehczrlqnt .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
- #dehczrlqnt .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
- #dehczrlqnt .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 2px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
- #dehczrlqnt .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
- #dehczrlqnt .gt_column_spanner_outer:first-child { padding-left: 0; }
- #dehczrlqnt .gt_column_spanner_outer:last-child { padding-right: 0; }
- #dehczrlqnt .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: bottom; padding-top: 2px; padding-bottom: 2px; overflow-x: hidden; display: inline-block; width: 100%; }
- #dehczrlqnt .gt_spanner_row { border-bottom-style: hidden; }
- #dehczrlqnt .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
- #dehczrlqnt .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: middle; }
- #dehczrlqnt .gt_from_md> :first-child { margin-top: 0; }
- #dehczrlqnt .gt_from_md> :last-child { margin-bottom: 0; }
- #dehczrlqnt .gt_row { padding-top: 2px; padding-bottom: 2px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
- #dehczrlqnt .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
- #dehczrlqnt .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
- #dehczrlqnt .gt_row_group_first td { border-top-width: 0.25px; }
- #dehczrlqnt .gt_row_group_first th { border-top-width: 0.25px; }
- #dehczrlqnt .gt_striped { color: #333333; background-color: #F4F4F4; }
- #dehczrlqnt .gt_table_body { border-top-style: solid; border-top-width: 0px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
- #dehczrlqnt .gt_grand_summary_row { color: #333333; background-color: #FFFFFF; text-transform: inherit; padding-top: 8px; padding-bottom: 8px; padding-left: 5px; padding-right: 5px; }
- #dehczrlqnt .gt_first_grand_summary_row_bottom { border-top-style: double; border-top-width: 6px; border-top-color: #D3D3D3; }
- #dehczrlqnt .gt_last_grand_summary_row_top { border-bottom-style: double; border-bottom-width: 6px; border-bottom-color: #D3D3D3; }
- #dehczrlqnt .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
- #dehczrlqnt .gt_sourcenote { font-size: 10px; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
- #dehczrlqnt .gt_left { text-align: left; }
- #dehczrlqnt .gt_center { text-align: center; }
- #dehczrlqnt .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
- #dehczrlqnt .gt_font_normal { font-weight: normal; }
- #dehczrlqnt .gt_font_bold { font-weight: bold; }
- #dehczrlqnt .gt_font_italic { font-style: italic; }
- #dehczrlqnt .gt_super { font-size: 65%; }
- #dehczrlqnt .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
- #dehczrlqnt .gt_asterisk { font-size: 100%; vertical-align: 0; }
+#ulndqbkzgk p { margin: 0; padding: 0; }
+ #ulndqbkzgk .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: hidden; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
+ #ulndqbkzgk .gt_caption { padding-top: 4px; padding-bottom: 4px; }
+ #ulndqbkzgk .gt_title { color: #333333; font-size: 16px; font-weight: initial; padding-top: 6px; padding-bottom: 6px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
+ #ulndqbkzgk .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 5px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
+ #ulndqbkzgk .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #ulndqbkzgk .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
+ #ulndqbkzgk .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #ulndqbkzgk .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 2px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
+ #ulndqbkzgk .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
+ #ulndqbkzgk .gt_column_spanner_outer:first-child { padding-left: 0; }
+ #ulndqbkzgk .gt_column_spanner_outer:last-child { padding-right: 0; }
+ #ulndqbkzgk .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: bottom; padding-top: 2px; padding-bottom: 2px; overflow-x: hidden; display: inline-block; width: 100%; }
+ #ulndqbkzgk .gt_spanner_row { border-bottom-style: hidden; }
+ #ulndqbkzgk .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
+ #ulndqbkzgk .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: middle; }
+ #ulndqbkzgk .gt_from_md> :first-child { margin-top: 0; }
+ #ulndqbkzgk .gt_from_md> :last-child { margin-bottom: 0; }
+ #ulndqbkzgk .gt_row { padding-top: 2px; padding-bottom: 2px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
+ #ulndqbkzgk .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
+ #ulndqbkzgk .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
+ #ulndqbkzgk .gt_row_group_first td { border-top-width: 0.25px; }
+ #ulndqbkzgk .gt_row_group_first th { border-top-width: 0.25px; }
+ #ulndqbkzgk .gt_striped { color: #333333; background-color: #F4F4F4; }
+ #ulndqbkzgk .gt_table_body { border-top-style: solid; border-top-width: 0px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
+ #ulndqbkzgk .gt_grand_summary_row { color: #333333; background-color: #FFFFFF; text-transform: inherit; padding-top: 8px; padding-bottom: 8px; padding-left: 5px; padding-right: 5px; }
+ #ulndqbkzgk .gt_first_grand_summary_row_bottom { border-top-style: double; border-top-width: 6px; border-top-color: #D3D3D3; }
+ #ulndqbkzgk .gt_last_grand_summary_row_top { border-bottom-style: double; border-bottom-width: 6px; border-bottom-color: #D3D3D3; }
+ #ulndqbkzgk .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
+ #ulndqbkzgk .gt_sourcenote { font-size: 10px; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
+ #ulndqbkzgk .gt_left { text-align: left; }
+ #ulndqbkzgk .gt_center { text-align: center; }
+ #ulndqbkzgk .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
+ #ulndqbkzgk .gt_font_normal { font-weight: normal; }
+ #ulndqbkzgk .gt_font_bold { font-weight: bold; }
+ #ulndqbkzgk .gt_font_italic { font-style: italic; }
+ #ulndqbkzgk .gt_super { font-size: 65%; }
+ #ulndqbkzgk .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
+ #ulndqbkzgk .gt_asterisk { font-size: 100%; vertical-align: 0; }
  
 </style>
 <table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
@@ -1620,7 +1620,7 @@ B_r = \sum_{k=1}^{K} s_{rk} \cdot g_k
 <section id="the-first-stage-f-statistic" class="level3">
 <h3 class="anchored" data-anchor-id="the-first-stage-f-statistic">The First-Stage F-Statistic</h3>
 <p>The <code>.first_stage()</code> method re-estimates the first-stage regression and computes the <strong>first-stage F-statistic</strong>, which tests <span class="math inline">\(H_0\colon \pi = 0\)</span> (all instrument coefficients are jointly zero). The classic rule of thumb is <span class="math inline">\(F &gt; 10\)</span> for iid errors (<span class="citation" data-cites="stockyogo2005">Stock and Yogo (<a href="#ref-stockyogo2005" role="doc-biblioref">2005</a>)</span>).</p>
-<div id="987bd1ad" class="cell" data-execution_count="15">
+<div id="4d986b06" class="cell" data-execution_count="15">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Re-use the motherhood penalty IV model</span></span>
 <span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Note: IV_Diag() switches vcov to hetero internally for the effective F computation.</span></span>
 <span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Reset to iid here to get the iid-based first-stage F-statistic.</span></span>
@@ -1644,7 +1644,7 @@ F_{\text{eff}} = \frac{\hat{\pi}' Q_{ZZ} \hat{\pi}}{\text{tr}(\hat{\Sigma} \, Q_
 \]</span></p>
 <p>where <span class="math inline">\(\hat{\pi}\)</span> are the first-stage coefficients on the excluded instruments, <span class="math inline">\(Q_{ZZ} = Z'Z\)</span>, and <span class="math inline">\(\hat{\Sigma}\)</span> is the robust variance-covariance matrix of <span class="math inline">\(\hat{\pi}\)</span>.</p>
 <p>The <code>.IV_Diag()</code> method computes both the standard F-statistic and the effective F-statistic in one call:</p>
-<div id="d4b044cb" class="cell" data-execution_count="16">
+<div id="3e79174b" class="cell" data-execution_count="16">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb22"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>fit_iv.IV_Diag()</span>
 <span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Standard F-statistic:  </span><span class="sc">{</span>fit_iv<span class="sc">.</span>_f_stat_1st_stage<span class="sc">:.1f}</span><span class="ss">"</span>)</span>

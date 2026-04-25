@@ -345,6 +345,12 @@ ul.task-list li input[type="checkbox"] {
  <span class="menu-text">estimation.post_estimation.multcomp.rwolf</span></a>
   </div>
 </li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.post_estimation.multcomp.wyoung.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.post_estimation.multcomp.wyoung</span></a>
+  </div>
+</li>
       </ul>
   </li>
         <li class="sidebar-item sidebar-item-section">
@@ -356,6 +362,30 @@ ul.task-list li input[type="checkbox"] {
           </a> 
       </div>
       <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/demeaners.BaseDemeaner.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">demeaners.BaseDemeaner</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/demeaners.MapDemeaner.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">demeaners.MapDemeaner</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/demeaners.WithinDemeaner.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">demeaners.WithinDemeaner</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/demeaners.LsmrDemeaner.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">demeaners.LsmrDemeaner</span></a>
+  </div>
+</li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../reference/estimation.models.feols_.Feols.html" class="sidebar-item-text sidebar-link">
@@ -463,12 +493,6 @@ ul.task-list li input[type="checkbox"] {
  <span class="menu-text">report.iplot</span></a>
   </div>
 </li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/did.visualize.panelview.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">did.visualize.panelview</span></a>
-  </div>
-</li>
       </ul>
   </li>
         <li class="sidebar-item sidebar-item-section">
@@ -519,6 +543,18 @@ ul.task-list li input[type="checkbox"] {
   <div class="sidebar-item-container"> 
   <a href="../reference/core.detect_singletons.detect_singletons.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">core.detect_singletons.detect_singletons</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/utils.utils.ssc.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">utils.utils.ssc</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/utils.utils.get_ssc.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">utils.utils.get_ssc</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -584,6 +620,10 @@ ul.task-list li input[type="checkbox"] {
 <td><a href="../reference/estimation.post_estimation.multcomp.rwolf.html#pyfixest.estimation.post_estimation.multcomp.rwolf">estimation.post_estimation.multcomp.rwolf</a></td>
 <td>Compute Romano-Wolf adjusted p-values for multiple hypothesis testing.</td>
 </tr>
+<tr class="even">
+<td><a href="../reference/estimation.post_estimation.multcomp.wyoung.html#pyfixest.estimation.post_estimation.multcomp.wyoung">estimation.post_estimation.multcomp.wyoung</a></td>
+<td>Compute the Westfall-Young adjusted p-values for multiple hypothesis testing.</td>
+</tr>
 </tbody>
 </table>
 </section>
@@ -592,6 +632,22 @@ ul.task-list li input[type="checkbox"] {
 <p>Details on Methods and Attributes</p>
 <table class="caption-top table">
 <tbody>
+<tr class="odd">
+<td><a href="../reference/demeaners.BaseDemeaner.html#pyfixest.demeaners.BaseDemeaner">demeaners.BaseDemeaner</a></td>
+<td>Base configuration shared by all fixed-effects demeaners.</td>
+</tr>
+<tr class="even">
+<td><a href="../reference/demeaners.MapDemeaner.html#pyfixest.demeaners.MapDemeaner">demeaners.MapDemeaner</a></td>
+<td>Alternating-projections demeaner with selectable implementation backend.</td>
+</tr>
+<tr class="odd">
+<td><a href="../reference/demeaners.WithinDemeaner.html#pyfixest.demeaners.WithinDemeaner">demeaners.WithinDemeaner</a></td>
+<td>Demeaner configuration for the Rust <code>within</code> backend.</td>
+</tr>
+<tr class="even">
+<td><a href="../reference/demeaners.LsmrDemeaner.html#pyfixest.demeaners.LsmrDemeaner">demeaners.LsmrDemeaner</a></td>
+<td>Sparse LSMR demeaner for CuPy/SciPy and PyTorch backends.</td>
+</tr>
 <tr class="odd">
 <td><a href="../reference/estimation.models.feols_.Feols.html#pyfixest.estimation.models.feols_.Feols">estimation.models.feols_.Feols</a></td>
 <td>Non user-facing class to estimate a linear regression via OLS.</td>
@@ -664,10 +720,6 @@ ul.task-list li input[type="checkbox"] {
 <td><a href="../reference/report.iplot.html#pyfixest.report.iplot">report.iplot</a></td>
 <td>Plot model coefficients for variables interacted via “i()” syntax, with</td>
 </tr>
-<tr class="odd">
-<td><a href="../reference/did.visualize.panelview.html#pyfixest.did.visualize.panelview">did.visualize.panelview</a></td>
-<td>Generate a panel view of the treatment variable over time for each unit.</td>
-</tr>
 </tbody>
 </table>
 </section>
@@ -703,6 +755,14 @@ ul.task-list li input[type="checkbox"] {
 <tr class="even">
 <td><a href="../reference/core.detect_singletons.detect_singletons.html#pyfixest.core.detect_singletons.detect_singletons">core.detect_singletons.detect_singletons</a></td>
 <td>Detect singleton fixed effects in a dataset.</td>
+</tr>
+<tr class="odd">
+<td><a href="../reference/utils.utils.ssc.html#pyfixest.utils.utils.ssc">utils.utils.ssc</a></td>
+<td>Set the small sample correction factor applied in <code>get_ssc()</code>.</td>
+</tr>
+<tr class="even">
+<td><a href="../reference/utils.utils.get_ssc.html#pyfixest.utils.utils.get_ssc">utils.utils.get_ssc</a></td>
+<td>Compute small sample adjustment factors.</td>
 </tr>
 <tr class="odd">
 <td><a href="../reference/estimation.deprecated.model_matrix_fixest_.model_matrix_fixest.html#pyfixest.estimation.deprecated.model_matrix_fixest_.model_matrix_fixest">estimation.deprecated.model_matrix_fixest_.model_matrix_fixest</a></td>

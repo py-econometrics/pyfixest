@@ -4,7 +4,7 @@ A few classes and textbooks have adopted PyFixest for teaching. And for core tex
 
 - Data Analysis for Business, Economics, and Policy ("Gabor's Data Analysis"). [Data and code](https://gabors-data-analysis.com/data-and-code/) and [Jupyter Notebooks on github](https://github.com/gabors-data-analysis/da_case_studies)
 - Coding for Economists: [Regression](https://aeturrell.github.io/coding-for-economists/econmt-regression.html)
-- Tidy Finance comes with a [chapter on fixed effects](https://www.tidy-finance.org/python/fixed-effects-and-clustered-standard-errors.html) and clustered standard errors and [Differene-in-Differences estimation](https://www.tidy-finance.org/python/difference-in-differences.html) that uses pyfixest
+- Tidy Finance comes with a [chapter on fixed effects](https://www.tidy-finance.org/python/fixed-effects-and-clustered-standard-errors.html) and clustered standard errors and [Difference-in-Differences estimation](https://www.tidy-finance.org/python/difference-in-differences.html) that uses pyfixest
 - The Effect (first edition): [our PyFixest translation](replicating-the-effect.qmd)
 - The Panel Data Chapter in [the Mixtape](https://mixtape.scunning.com/08-panel_data#data-exercise-survey-of-adult-service-providers). You can find a PyFixest translation [here](mixtape.qmd)
 

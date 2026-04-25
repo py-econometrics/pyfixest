@@ -317,7 +317,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#propensity-via-logitprobit-with-fixed-effects" id="toc-propensity-via-logitprobit-with-fixed-effects" class="nav-link" data-scroll-target="#propensity-via-logitprobit-with-fixed-effects">Propensity via logit/probit (with fixed effects)</a></li>
   <li><a href="#outcome-regressions-and-a-simple-aipw-score" id="toc-outcome-regressions-and-a-simple-aipw-score" class="nav-link" data-scroll-target="#outcome-regressions-and-a-simple-aipw-score">Outcome regressions and a simple AIPW score</a></li>
   </ul></li>
-  <li><a href="#glms-with-marginal-effects-placeholder" id="toc-glms-with-marginal-effects-placeholder" class="nav-link" data-scroll-target="#glms-with-marginal-effects-placeholder">6. GLMs with Marginal Effects (Placeholder)</a></li>
+  <li><a href="#glms-with-marginal-effects" id="toc-glms-with-marginal-effects" class="nav-link" data-scroll-target="#glms-with-marginal-effects">6. GLMs with Marginal Effects</a></li>
   <li><a href="#fixed-effects-support-summary" id="toc-fixed-effects-support-summary" class="nav-link" data-scroll-target="#fixed-effects-support-summary">7. Fixed Effects Support (Summary)</a></li>
   <li><a href="#where-to-go-next" id="toc-where-to-go-next" class="nav-link" data-scroll-target="#where-to-go-next">Where to Go Next</a></li>
   </ul>
@@ -384,12 +384,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="a-standard-gravity-style-trade-example-boring-but-useful" class="level2">
 <h2 class="anchored" data-anchor-id="a-standard-gravity-style-trade-example-boring-but-useful">2. A Standard Gravity-Style Trade Example (Boring but Useful)</h2>
 <p>Below is a simple gravity-style trade panel (exporter-importer-year). This is a synthetic dataset, but the specification mirrors common trade applications.</p>
-<div id="6513e1b1" class="cell" data-execution_count="1">
+<div id="573fc50b" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<div id="5cb91c06" class="cell" data-execution_count="2">
+<div id="a92a04c4" class="cell" data-execution_count="2">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> make_trade_data(seed<span class="op">=</span><span class="dv">123</span>, n_exporters<span class="op">=</span><span class="dv">15</span>, n_importers<span class="op">=</span><span class="dv">15</span>, years<span class="op">=</span><span class="bu">range</span>(<span class="dv">2010</span>, <span class="dv">2016</span>)):</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    rng <span class="op">=</span> np.random.default_rng(seed)</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -467,23 +467,23 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <td>I3</td>
       <td>7453.326046</td>
       <td>0</td>
-      <td>1</td>
+      <td>3</td>
     </tr>
     <tr>
       <th>4</th>
       <td>2010</td>
       <td>E0</td>
       <td>I4</td>
-      <td>8361.183875</td>
+      <td>7232.301132</td>
       <td>0</td>
-      <td>1</td>
+      <td>0</td>
     </tr>
   </tbody>
 </table>
 </div>
 </div>
 </div>
-<div id="180b4325" class="cell" data-execution_count="3">
+<div id="12bb06ad" class="cell" data-execution_count="3">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>fit_trade <span class="op">=</span> pf.fepois(</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">"trade ~ np.log(distance) + fta | exporter + importer + year"</span>,</span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    data<span class="op">=</span>trade,</span>
@@ -492,71 +492,71 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>fit_trade.summary()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 
-            <div id="o9lLGv"></div>
-            <script type="text/javascript" data-lets-plot-script="library">
-                if(!window.letsPlotCallQueue) {
+        <div id="aCvk7Y"></div>
+        <script type="text/javascript" data-lets-plot-script="library">
+            if(!window.letsPlotCallQueue) {
+                window.letsPlotCallQueue = [];
+            };
+            window.letsPlotCall = function(f) {
+                window.letsPlotCallQueue.push(f);
+            };
+            (function() {
+                var script = document.createElement("script");
+                script.type = "text/javascript";
+                script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.8.2/js-package/distr/lets-plot.min.js";
+                script.onload = function() {
+                    window.letsPlotCall = function(f) {f();};
+                    window.letsPlotCallQueue.forEach(function(f) {f();});
                     window.letsPlotCallQueue = [];
-                }; 
-                window.letsPlotCall = function(f) {
-                    window.letsPlotCallQueue.push(f);
+                    
                 };
-                (function() {
-                    var script = document.createElement("script");
-                    script.type = "text/javascript";
-                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.7.3/js-package/distr/lets-plot.min.js";
-                    script.onload = function() {
-                        window.letsPlotCall = function(f) {f();};
-                        window.letsPlotCallQueue.forEach(function(f) {f();});
-                        window.letsPlotCallQueue = [];
-                        
-                    };
-                    script.onerror = function(event) {
-                        window.letsPlotCall = function(f) {};    // noop
-                        window.letsPlotCallQueue = [];
-                        var div = document.createElement("div");
-                        div.style.color = 'darkred';
-                        div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("o9lLGv").appendChild(div);
-                    };
-                    var e = document.getElementById("o9lLGv");
-                    e.appendChild(script);
-                })()
-            </script>
-            
+                script.onerror = function(event) {
+                    window.letsPlotCall = function(f) {};    // noop
+                    window.letsPlotCallQueue = [];
+                    var div = document.createElement("div");
+                    div.style.color = 'darkred';
+                    div.textContent = 'Error loading Lets-Plot JS';
+                    document.getElementById("aCvk7Y").appendChild(div);
+                };
+                var e = document.getElementById("aCvk7Y");
+                e.appendChild(script);
+            })()
+        </script>
+        
 </div>
 <div class="cell-output cell-output-display">
 
-            <div id="BVFkyo"></div>
-            <script type="text/javascript" data-lets-plot-script="library">
-                if(!window.letsPlotCallQueue) {
+        <div id="pGVFG0"></div>
+        <script type="text/javascript" data-lets-plot-script="library">
+            if(!window.letsPlotCallQueue) {
+                window.letsPlotCallQueue = [];
+            };
+            window.letsPlotCall = function(f) {
+                window.letsPlotCallQueue.push(f);
+            };
+            (function() {
+                var script = document.createElement("script");
+                script.type = "text/javascript";
+                script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.8.2/js-package/distr/lets-plot.min.js";
+                script.onload = function() {
+                    window.letsPlotCall = function(f) {f();};
+                    window.letsPlotCallQueue.forEach(function(f) {f();});
                     window.letsPlotCallQueue = [];
-                }; 
-                window.letsPlotCall = function(f) {
-                    window.letsPlotCallQueue.push(f);
+                    
                 };
-                (function() {
-                    var script = document.createElement("script");
-                    script.type = "text/javascript";
-                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.7.3/js-package/distr/lets-plot.min.js";
-                    script.onload = function() {
-                        window.letsPlotCall = function(f) {f();};
-                        window.letsPlotCallQueue.forEach(function(f) {f();});
-                        window.letsPlotCallQueue = [];
-                        
-                    };
-                    script.onerror = function(event) {
-                        window.letsPlotCall = function(f) {};    // noop
-                        window.letsPlotCallQueue = [];
-                        var div = document.createElement("div");
-                        div.style.color = 'darkred';
-                        div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("BVFkyo").appendChild(div);
-                    };
-                    var e = document.getElementById("BVFkyo");
-                    e.appendChild(script);
-                })()
-            </script>
-            
+                script.onerror = function(event) {
+                    window.letsPlotCall = function(f) {};    // noop
+                    window.letsPlotCallQueue = [];
+                    var div = document.createElement("div");
+                    div.style.color = 'darkred';
+                    div.textContent = 'Error loading Lets-Plot JS';
+                    document.getElementById("pGVFG0").appendChild(div);
+                };
+                var e = document.getElementById("pGVFG0");
+                e.appendChild(script);
+            })()
+        </script>
+        
 </div>
 <div class="cell-output cell-output-stdout">
 <pre><code>###
@@ -569,10 +569,10 @@ Observations:  1350
 
 | Coefficient      |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5% |   97.5% |
 |:-----------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
-| np.log(distance) |     -0.368 |        0.022 |   -16.829 |      0.000 | -0.411 |  -0.325 |
-| fta              |      0.254 |        0.040 |     6.338 |      0.000 |  0.175 |   0.332 |
+| np.log(distance) |     -0.358 |        0.031 |   -11.653 |      0.000 | -0.419 |  -0.298 |
+| fta              |      0.263 |        0.060 |     4.420 |      0.000 |  0.147 |   0.380 |
 ---
-Deviance: 1504.676 </code></pre>
+Deviance: 1457.805 </code></pre>
 </div>
 </div>
 <p>This is the basic PPML gravity workflow in <code>pyfixest</code>.</p>
@@ -585,11 +585,11 @@ Deviance: 1504.676 </code></pre>
 <li>Bellégo, Benatia, and Pape (2024), <em>Dealing with Logs and Zeros in Regression Models</em> (<a href="https://academic.oup.com/qje/article-abstract/139/2/891/7473710">QJE</a>).</li>
 </ul>
 <p>Quick contrast:</p>
-<div id="f5e5af3d" class="cell" data-execution_count="4">
+<div id="8b7511d6" class="cell" data-execution_count="4">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>share_zeros <span class="op">=</span> (trade[<span class="st">"trade"</span>] <span class="op">==</span> <span class="dv">0</span>).mean()</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>share_zeros</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="4">
-<pre><code>np.float64(0.32296296296296295)</code></pre>
+<pre><code>np.float64(0.2874074074074074)</code></pre>
 </div>
 </div>
 <p>With PPML, zero observations are naturally part of the likelihood through the mean function.</p>
@@ -597,7 +597,7 @@ Deviance: 1504.676 </code></pre>
 <section id="poisson-for-a-simple-did" class="level2">
 <h2 class="anchored" data-anchor-id="poisson-for-a-simple-did">4. Poisson for a Simple DiD</h2>
 <p>Poisson DiD is useful when the outcome is a count or nonnegative rate and treatment is staggered or panel-based.</p>
-<div id="f8335e5a" class="cell" data-execution_count="5">
+<div id="259b8931" class="cell" data-execution_count="5">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> make_count_did(seed<span class="op">=</span><span class="dv">42</span>, n_states<span class="op">=</span><span class="dv">30</span>, years<span class="op">=</span><span class="bu">range</span>(<span class="dv">2010</span>, <span class="dv">2018</span>)):</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    rng <span class="op">=</span> np.random.default_rng(seed)</span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    states <span class="op">=</span> [<span class="ss">f"S</span><span class="sc">{</span>s<span class="sc">}</span><span class="ss">"</span> <span class="cf">for</span> s <span class="kw">in</span> <span class="bu">range</span>(n_states)]</span>
@@ -642,9 +642,9 @@ Observations:  240
 
 | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5% |   97.5% |
 |:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
-| did           |      0.172 |        0.088 |     1.955 |      0.051 | -0.000 |   0.345 |
+| did           |      0.099 |        0.118 |     0.837 |      0.403 | -0.132 |   0.330 |
 ---
-Deviance: 244.495 </code></pre>
+Deviance: 216.056 </code></pre>
 </div>
 </div>
 <p>If your outcome is nonnegative and has many zeros, this can be a practical alternative to log-linear OLS DiD.</p>
@@ -659,7 +659,7 @@ Deviance: 244.495 </code></pre>
 <p>This yields doubly robust / doubly debiased estimators (AIPW-style scores).</p>
 <section id="simulate-an-ab-setting" class="level3">
 <h3 class="anchored" data-anchor-id="simulate-an-ab-setting">Simulate an AB setting</h3>
-<div id="47fd290c" class="cell" data-execution_count="6">
+<div id="7bb2161f" class="cell" data-execution_count="6">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> make_ab_data(seed<span class="op">=</span><span class="dv">1</span>, n<span class="op">=</span><span class="dv">5000</span>):</span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>    rng <span class="op">=</span> np.random.default_rng(seed)</span>
 <span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -742,7 +742,7 @@ Deviance: 244.495 </code></pre>
 </section>
 <section id="propensity-via-logitprobit-with-fixed-effects" class="level3">
 <h3 class="anchored" data-anchor-id="propensity-via-logitprobit-with-fixed-effects">Propensity via logit/probit (with fixed effects)</h3>
-<div id="e094f744" class="cell" data-execution_count="7">
+<div id="db515ee6" class="cell" data-execution_count="7">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># both support fixed effects via the | syntax</span></span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>ps_logit <span class="op">=</span> pf.feglm(<span class="st">"t ~ x1 + x2 | segment"</span>, data<span class="op">=</span>ab, family<span class="op">=</span><span class="st">"logit"</span>)</span>
 <span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>ps_probit <span class="op">=</span> pf.feglm(<span class="st">"t ~ x1 + x2 | segment"</span>, data<span class="op">=</span>ab, family<span class="op">=</span><span class="st">"probit"</span>)</span>
@@ -753,7 +753,7 @@ Deviance: 244.495 </code></pre>
 </section>
 <section id="outcome-regressions-and-a-simple-aipw-score" class="level3">
 <h3 class="anchored" data-anchor-id="outcome-regressions-and-a-simple-aipw-score">Outcome regressions and a simple AIPW score</h3>
-<div id="7aad04db" class="cell" data-execution_count="8">
+<div id="433b44bf" class="cell" data-execution_count="8">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>mu1 <span class="op">=</span> pf.feols(<span class="st">"y ~ x1 + x2 | segment"</span>, data<span class="op">=</span>ab.loc[ab[<span class="st">"t"</span>] <span class="op">==</span> <span class="dv">1</span>]).predict(newdata<span class="op">=</span>ab)</span>
 <span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>mu0 <span class="op">=</span> pf.feols(<span class="st">"y ~ x1 + x2 | segment"</span>, data<span class="op">=</span>ab.loc[ab[<span class="st">"t"</span>] <span class="op">==</span> <span class="dv">0</span>]).predict(newdata<span class="op">=</span>ab)</span>
 <span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -776,33 +776,27 @@ Deviance: 244.495 </code></pre>
 <p>This is the basic doubly debiased pattern: estimate treatment propensities with <code>feglm</code> (logit/probit), combine with outcome models, and form an orthogonal score.</p>
 </section>
 </section>
-<section id="glms-with-marginal-effects-placeholder" class="level2">
-<h2 class="anchored" data-anchor-id="glms-with-marginal-effects-placeholder">6. GLMs with Marginal Effects (Placeholder)</h2>
-<div class="callout callout-style-default callout-note callout-titled">
-<div class="callout-header d-flex align-content-center">
-<div class="callout-icon-container">
-<i class="callout-icon"></i>
-</div>
-<div class="callout-title-container flex-fill">
-<span class="screen-reader-only">Note</span>Coming Soon
-</div>
-</div>
-<div class="callout-body-container callout-body">
-<p>This section will add a full workflow for marginal effects after <code>feglm()</code> estimation, including:</p>
-<ul>
-<li>average marginal effects (AMEs),</li>
-<li>subgroup/conditional marginal effects,</li>
-<li>inference with robust and clustered standard errors,</li>
-<li>comparison of coefficient-scale vs probability-scale interpretation.</li>
-</ul>
+<section id="glms-with-marginal-effects" class="level2">
+<h2 class="anchored" data-anchor-id="glms-with-marginal-effects">6. GLMs with Marginal Effects</h2>
+<p>After <code>feglm()</code>, coefficients live on the link scale. For applied work, average marginal effects are often easier to interpret.</p>
+<div id="e9680eab" class="cell" data-execution_count="9">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> marginaleffects <span class="im">import</span> avg_slopes</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>avg_slopes(ps_logit, variables<span class="op">=</span><span class="st">"x1"</span>)</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>avg_slopes(ps_logit, variables<span class="op">=</span><span class="st">"x1"</span>, by<span class="op">=</span><span class="st">"segment"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="9">
+<div><style>
+.dataframe > thead > tr,
+.dataframe > tbody > tr {
+  text-align: right;
+  white-space: pre-wrap;
+}
+</style>
+<small>shape: (20, 4)</small><table class="dataframe table table-sm table-striped small"><thead><tr><th>segment</th><th>term</th><th>contrast</th><th>estimate</th></tr><tr><td>i64</td><td>str</td><td>str</td><td>f64</td></tr></thead><tbody><tr><td>0</td><td>"x1"</td><td>"dY/dX"</td><td>0.764503</td></tr><tr><td>1</td><td>"x1"</td><td>"dY/dX"</td><td>0.764503</td></tr><tr><td>2</td><td>"x1"</td><td>"dY/dX"</td><td>0.764503</td></tr><tr><td>3</td><td>"x1"</td><td>"dY/dX"</td><td>0.764503</td></tr><tr><td>4</td><td>"x1"</td><td>"dY/dX"</td><td>0.764503</td></tr><tr><td>…</td><td>…</td><td>…</td><td>…</td></tr><tr><td>15</td><td>"x1"</td><td>"dY/dX"</td><td>0.764503</td></tr><tr><td>16</td><td>"x1"</td><td>"dY/dX"</td><td>0.764503</td></tr><tr><td>17</td><td>"x1"</td><td>"dY/dX"</td><td>0.764503</td></tr><tr><td>18</td><td>"x1"</td><td>"dY/dX"</td><td>0.764503</td></tr><tr><td>19</td><td>"x1"</td><td>"dY/dX"</td><td>0.764503</td></tr></tbody></table></div>
 </div>
 </div>
-<p>Planned examples:</p>
-<ul>
-<li>Binary outcome with <code>family="logit"</code> and <code>family="probit"</code>.</li>
-<li>Post-estimation marginal effects tables suitable for reporting.</li>
-<li>Practical guidance on when marginal effects change substantive conclusions relative to raw GLM coefficients.</li>
-</ul>
+<p>This reports the change in the predicted treatment probability associated with <code>x1</code>, averaged either over the full sample or within groups.</p>
+<p>For a compact workflow covering marginal effects and hypothesis tests with <code>PyFixest</code>, see the dedicated guide on <a href="../how-to/marginaleffects.html">Marginal Effects &amp; Hypothesis Testing</a>.</p>
 </section>
 <section id="fixed-effects-support-summary" class="level2">
 <h2 class="anchored" data-anchor-id="fixed-effects-support-summary">7. Fixed Effects Support (Summary)</h2>

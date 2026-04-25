@@ -16,6 +16,7 @@ User facing estimation functions
 | [did.estimation.event_study](did.estimation.event_study.qmd#pyfixest.did.estimation.event_study) | Estimate Event Study Model. |
 | [estimation.post_estimation.multcomp.bonferroni](estimation.post_estimation.multcomp.bonferroni.qmd#pyfixest.estimation.post_estimation.multcomp.bonferroni) | Compute Bonferroni adjusted p-values for multiple hypothesis testing. |
 | [estimation.post_estimation.multcomp.rwolf](estimation.post_estimation.multcomp.rwolf.qmd#pyfixest.estimation.post_estimation.multcomp.rwolf) | Compute Romano-Wolf adjusted p-values for multiple hypothesis testing. |
+| [estimation.post_estimation.multcomp.wyoung](estimation.post_estimation.multcomp.wyoung.qmd#pyfixest.estimation.post_estimation.multcomp.wyoung) | Compute the Westfall-Young adjusted p-values for multiple hypothesis testing. |
 
 ## Estimation Classes
 
@@ -24,6 +25,10 @@ Details on Methods and Attributes
 
 | | |
 | --- | --- |
+| [demeaners.BaseDemeaner](demeaners.BaseDemeaner.qmd#pyfixest.demeaners.BaseDemeaner) | Base configuration shared by all fixed-effects demeaners. |
+| [demeaners.MapDemeaner](demeaners.MapDemeaner.qmd#pyfixest.demeaners.MapDemeaner) | Alternating-projections demeaner with selectable implementation backend. |
+| [demeaners.WithinDemeaner](demeaners.WithinDemeaner.qmd#pyfixest.demeaners.WithinDemeaner) | Demeaner configuration for the Rust `within` backend. |
+| [demeaners.LsmrDemeaner](demeaners.LsmrDemeaner.qmd#pyfixest.demeaners.LsmrDemeaner) | Sparse LSMR demeaner for CuPy/SciPy and PyTorch backends. |
 | [estimation.models.feols_.Feols](estimation.models.feols_.Feols.qmd#pyfixest.estimation.models.feols_.Feols) | Non user-facing class to estimate a linear regression via OLS. |
 | [estimation.models.fepois_.Fepois](estimation.models.fepois_.Fepois.qmd#pyfixest.estimation.models.fepois_.Fepois) | Estimate a Poisson regression model. |
 | [estimation.models.feiv_.Feiv](estimation.models.feiv_.Feiv.qmd#pyfixest.estimation.models.feiv_.Feiv) | Non user-facing class to estimate an IV model using a 2SLS estimator. |
@@ -48,7 +53,6 @@ Post-Processing of Estimation Results
 | [report.dtable](report.dtable.qmd#pyfixest.report.dtable) | Generate descriptive statistics tables and create a booktab style table in |
 | [report.coefplot](report.coefplot.qmd#pyfixest.report.coefplot) | Plot model coefficients with confidence intervals. |
 | [report.iplot](report.iplot.qmd#pyfixest.report.iplot) | Plot model coefficients for variables interacted via "i()" syntax, with |
-| [did.visualize.panelview](did.visualize.panelview.qmd#pyfixest.did.visualize.panelview) | Generate a panel view of the treatment variable over time for each unit. |
 
 ## Formula Parsing & Model Matrix
 
@@ -70,4 +74,6 @@ PyFixest internals and utilities
 | --- | --- |
 | [estimation.internals.demean_.demean](estimation.internals.demean_.demean.qmd#pyfixest.estimation.internals.demean_.demean) | Demean an array. |
 | [core.detect_singletons.detect_singletons](core.detect_singletons.detect_singletons.qmd#pyfixest.core.detect_singletons.detect_singletons) | Detect singleton fixed effects in a dataset. |
+| [utils.utils.ssc](utils.utils.ssc.qmd#pyfixest.utils.utils.ssc) | Set the small sample correction factor applied in `get_ssc()`. |
+| [utils.utils.get_ssc](utils.utils.get_ssc.qmd#pyfixest.utils.utils.get_ssc) | Compute small sample adjustment factors. |
 | [estimation.deprecated.model_matrix_fixest_.model_matrix_fixest](estimation.deprecated.model_matrix_fixest_.model_matrix_fixest.qmd#pyfixest.estimation.deprecated.model_matrix_fixest_.model_matrix_fixest) | Create model matrices for fixed effects estimation. |

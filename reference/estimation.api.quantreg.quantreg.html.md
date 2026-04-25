@@ -39,7 +39,7 @@ Note that the interior point algorithm assumes independent observations.
 | tol              | float                                      | The tolerance for the algorithm. Defaults to 1e-06. As in R's quantreg package, the algorithm stops when the relative change in the duality gap is less than tol.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | `1e-06`    |
 | maxiter          | int                                        | The maximum number of iterations. If None, maxiter = the number of observations in the model (as in R's quantreg package via nit(3) = n).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | `None`     |
 | vcov             | Union\[VcovTypeOptions, dict\[str, str\]\] | Type of variance-covariance matrix for inference. Currently supported are "iid", "nid", and cluster robust errors, "iid" by default. All of "iid", "hetero"and "cluster" robust error are based on a kernel-based estimator as in Powell (1991). The "nid" method implements the robust sandwich estimator proposed in Hendricks and Koenker (1993). Any of "HC1 / HC2 / HC3 also works and is equivalent to "hetero". Cluster robust inference following Parente and Santos Silva (2016) can be specified via a dictionary with the keys "type" and "cluster". Only one-way clustering is supported.                                                | `'nid'`    |
-| ssc              | dict\[str, Union\[str, bool\]\]            | A dictionary specifying the small sample correction for inference. If None, uses default settings from `ssc_func()`. Note that by default, R's quantreg and Stata's qreg2 do not use small sample corrections. To match their behavior, set `ssc = pf.ssc(adj = False, cluster_adj = False)`.                                                                                                                                                                                                                                                                                                                                                        | `None`     |
+| ssc              | dict\[str, Union\[str, bool\]\]            | A dictionary specifying the small sample correction for inference. If None, uses default settings from `ssc_func()`. Note that by default, R's quantreg and Stata's qreg2 do not use small sample corrections. To match their behavior, set `ssc = pf.ssc(k_adj=False, G_adj=False)`.                                                                                                                                                                                                                                                                                                                                                                | `None`     |
 | collin_tol       | float                                      | Tolerance for collinearity check, by default 1e-10.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | `1e-09`    |
 | separation_check | list\[str\]                                | Methods to identify and drop separated observations. Not used in quantile regression.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | `None`     |
 | drop_intercept   | bool                                       | Whether to drop the intercept from the model, by default False.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | `False`    |
@@ -63,8 +63,6 @@ The following example regresses `Y` on `X1` and `X2` at the median (0.5 quantile
 
 ```{python}
 import pyfixest as pf
-import pandas as pd
-import numpy as np
 
 data = pf.get_data()
 
@@ -72,5 +70,15 @@ fit = pf.quantreg("Y ~ X1 + X2", data, quantile=0.5)
 fit.summary()
 ```
 
-For details around inference, estimation techniques, (fast) fitting and visualizing the full quantile regression
-process, please take a look at the dedicated [vignette](https://pyfixest.org/quantile-regression.html).
+To fit multiple quantiles in one call:
+
+```{python}
+fits = pf.quantreg("Y ~ X1 + X2", data, quantile=[0.1, 0.5, 0.9])
+pf.qplot(fits)
+```
+
+Arguments such as `split`, `fsplit`, `context`, `lean`, and `copy_data`
+behave as in `feols()`, but quantile regression does not support fixed-effects
+formula syntax. For details around inference, fast fitting, and visualization
+of the full quantile regression process, see the
+[quantile regression tutorial](/tutorials/quantile-regression.html).

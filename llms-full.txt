@@ -1186,13 +1186,13 @@ Thanks for showing interest in contributing to `pyfixest`! We appreciate all
 contributions and constructive feedback, whether that be reporting bugs, requesting
 new features, or suggesting improvements to documentation.
 
-If you'd like to get involved, but are not yet sure how, please feel free to send us an [email](alexander-fischer1801@t-online.de). Some familiarity with
+If you'd like to get involved, but are not yet sure how, please feel free to send us an [email](mailto:alexander-fischer1801@t-online.de). Some familiarity with
 either Python or econometrics will help, but you really don't need to be a `numpy` core developer or have published in [Econometrica](https://onlinelibrary.wiley.com/journal/14680262) =) We'd be more than happy to invest time to help you get started!
 
 ::: {.callout-note}
 ## PyFixest Sprint in Heilbronn
 
-We're hosting a [PyFixest Sprint](pyfixest-sprint.md) with [AppliedAI](https://www.appliedai.de/) in late February/early March 2026. If you're interested in contributing to PyFixest in person, [learn more and get in touch](pyfixest-sprint.md)!
+We periodically organize development sprints and contributor events. If you're interested in contributing to PyFixest in person, [learn more and get in touch](pyfixest-sprint.md)!
 :::
 
 For a comprehensive overview of the codebase architecture and internals, check out the [DeepWiki](https://deepwiki.com/py-econometrics/pyfixest). While not perfect and correct in all regards, we think it is a pretty good starting point to learn about the codebase!
@@ -2486,96 +2486,68 @@ Task-oriented guides that show you how to accomplish specific goals with PyFixes
 
 # how-to/marginaleffects.html
 
-We can compute marginal effects and linear and non-linear hypothesis tests via the excellent [marginaleffects](https://github.com/vincentarelbundock/pymarginaleffects) package.
+`PyFixest` integrates with the excellent [marginaleffects](https://github.com/vincentarelbundock/pymarginaleffects) package.
+Among many other things, `marginaleffects` allows you to compute:
 
+- average marginal effects,
+- subgroup marginal effects,
+- linear and non-linear hypothesis tests.
 
 ```{python}
-from marginaleffects import hypotheses
+import numpy as np
+from marginaleffects import avg_slopes, hypotheses
 
 import pyfixest as pf
 
 data = pf.get_data()
-fit = pf.feols("Y ~ X1 + X2", data=data)
+data["Y_bin"] = np.where(data["Y"] > 0, 1, 0)
 
+fit = pf.feglm("Y_bin ~ X1 + X2 | f1", data=data, family="logit")
 fit.tidy()
 ```
 
+## Average marginal effects
 
-Suppose we were interested in testing the hypothesis that $X_{1} = X_{2}$. Given the relatively large differences in coefficients and
-small standard errors, we will likely reject the null that the two parameters are equal.
+To compute the average marginal effect of `X1` on the response scale:
 
-We can run the formal test via the `hypotheses` function from the `marginaleffects` package.
+```{python}
+avg_slopes(fit, variables="X1")
+```
 
+You can also report group-specific average marginal effects:
+
+```{python}
+avg_slopes(fit, variables="X1", by="f1")
+```
+
+## Linear hypothesis tests
+
+Suppose we want to test the linear restriction $X_1 = X_2$.
+The `hypotheses()` function uses the model's estimated covariance matrix, so it works naturally with `PyFixest` objects.
 
 ```{python}
 hypotheses(fit, "X1 - X2 = 0")
 ```
 
+## Non-linear hypothesis tests
 
-And indeed, we reject the null of equality of coefficients: we get a p-value of zero and a confidence interval that does not contain 0.
+For non-linear transformations, `marginaleffects` applies the delta method automatically.
+This is useful for ratio-style summaries or uplift calculations.
 
-## Non-Linear Hypothesis Tests: Ratio Estimates
-
-We can also test run-linear hypotheses, in which case `marginaleffects` will automatically compute correct standard errors
-based on the estimated covariance matrix and the Delta method. This is for example useful for computing inferential
-statistics for the "relative uplift" in an AB test.
-
-For the moment, let's assume that $X1$ is a randomly assigned treatment variable. As before, $Y$ is our variable / KPI of interest.
-
-Under randomization, the model intercept measures the "baseline", i.e. the population average of $Y$ in the absence of treatment. To compute a relative uplift, we might compute
-
+Here is a simple OLS example:
 
 ```{python}
-(fit.coef().xs("X1") / fit.coef().xs("Intercept") - 1) * 100
+fit_ols = pf.feols("Y ~ X1 + X2", data=data)
 ```
-
-
-So we have a really big negative treatment effect of around minus 212%! To conduct correct inference on this
-ratio statistic, we need to use the delta method.
-
-
-### The Multivariate Delta Method
-
-In a nutshell, the delta method provides a way to approximate the asympotic distribution of any non-linear transformation $g()$ or one or more random variables.
-
-In the case of the ratio statistics, this non-linear transformation can be denoted as $g(\theta_{1}, \theta_{2}) = \theta_{1} / \theta_{2}$.
-
-Here's the **Delta Method theorem**:
-
-First, we define $\theta = (\theta_{1}, \theta_{2})'$ and $\mu = (\mu_{1}, \mu_{2})'$.
-
-By the law of large numbers, we know that
-
-$$
-\sqrt{N} (\theta - \mu) \rightarrow_{d} N(0_{2}, \Sigma_{2,2}) \text{ if } N \rightarrow \infty.
-$$
-
-By the **Delta Method**, we can then approximate the limit distribution of $g(\theta)$ as
-
-
-$$
-\sqrt{N}  (g(\theta) - g(\mu)) \rightarrow_{d} N(0_{1}, g'(\theta) \times \Sigma \times g(\theta)) \text{ if } N \rightarrow \infty.
-$$.
-
-[Here's a long derivation of how to use the the delta method for inference of ratio statistics.](https://stats.stackexchange.com/questions/291594/estimation-of-population-ratio-using-delta-method). The key steps from the formula above is to derive the expression for the asymptotic variance $ g'(\theta) \times \Sigma \times g(\theta)$.
-
-But hey - we're lucky, because marginaleffects will do all this work for us: we don't have to derive analytic gradients ourselves =)
-
-### Using the Delta Method via `marginaleffects`:
-
-We can employ the Delta Method via `marginaleffects` via the `hypotheses` function:
-
 
 ```{python}
-hypotheses(fit, "(X1 / Intercept - 1) * 100 = 0")
+hypotheses(fit_ols, "(X1 / Intercept - 1) * 100 = 0")
 ```
 
-As before, we get an estimate of around -212%. Additionally, we obtain a 95% CI via the Delta Method of [-228%, -195%].
+## Notes
 
-Besides hypopotheses testing, you can do a range of other cool things with the `marginaleffects` package.
-For example (and likely unsurprisingly), you can easily compute all sorts of marginal effects for your regression models.
-For all the details, we highly recommend to take a look
-at the [marginaleffects zoo book!](https://marginaleffects.com/index.html).
+
+For broader functionality / the full capability of `marginaleffects`, see the [marginaleffects book](https://marginaleffects.com/index.html).
 
 ---
 
@@ -4198,8 +4170,8 @@ If you're excited about econometrics tooling and want to contribute, we'd love t
 [![Donate | GiveDirectly](https://img.shields.io/static/v1?label=GiveDirectly&message=Donate&color=blue&style=flat-square)](https://github.com/py-econometrics/pyfixest?tab=readme-ov-file#support-pyfixest)
 [![PyPI](https://img.shields.io/pypi/v/pyfixest)](https://pypi.org/project/pyfixest)
 [![Citation](https://img.shields.io/badge/Cite%20as-PyFixest-blue)](https://github.com/py-econometrics/pyfixest?tab=readme-ov-file#how-to-cite)
-[![Documentation](https://img.shields.io/badge/Cite%20as-PyFixest-green)](https://pyfixest.org/pyfixest.html)
-[![Function Reference](https://img.shields.io/badge/Cite%20as-PyFixest-yellow)](https://pyfixest.org/reference/)
+[![Documentation](https://img.shields.io/badge/Docs-PyFixest-green)](https://pyfixest.org/pyfixest.html)
+[![Function Reference](https://img.shields.io/badge/Reference-PyFixest-yellow)](https://pyfixest.org/reference/)
 [![DeepWiki](https://img.shields.io/badge/DeepWiki-pyfixest-blue)](https://deepwiki.com/py-econometrics/pyfixest)
 
 
@@ -4226,7 +4198,7 @@ You can also leave a message through the donation form - your support and encour
 
 -   **OLS**, **WLS** and **IV** Regression with Fixed-Effects Demeaning via [Frisch-Waugh-Lovell](https://bookdown.org/ts_robinson1994/10EconometricTheorems/frisch.html)
 -   **Poisson Regression** following the [pplmhdfe algorithm](https://journals.sagepub.com/doi/full/10.1177/1536867X20909691)
--   Probit, Logit and Gaussian Family **GLMs** (currently without fixed effects demeaning, this is WIP)
+-   Probit, Logit and Gaussian Family **GLMs** with fixed effects
 -   **Quantile Regression** using an Interior Point Solver
 -   Multiple Estimation Syntax
 -   Several **Robust**, **Cluster Robust** and **HAC Variance-Covariance** Estimators
@@ -4443,9 +4415,9 @@ Thanks for showing interest in contributing to `pyfixest`! We appreciate all
 contributions and constructive feedback, whether that be reporting bugs, requesting
 new features, or suggesting improvements to documentation.
 
-**Upcoming:** We're hosting a [PyFixest Sprint in Heilbronn](pyfixest-sprint.md) with [AppliedAI](https://www.appliedai.de/) in late February/early March 2026. Interested in joining? [Learn more and get in touch](pyfixest-sprint.md).
+We periodically organize development sprints and contributor events. Interested in joining future PyFixest work? [Learn more and get in touch](pyfixest-sprint.md).
 
-If you'd like to get involved, but are not yet sure how, please feel free to send us an [email](alexander-fischer1801@t-online.de). Some familiarity with
+If you'd like to get involved, but are not yet sure how, please feel free to send us an [email](mailto:alexander-fischer1801@t-online.de). Some familiarity with
 either Python or econometrics will help, but you really don't need to be a `numpy` core developer or have published in [Econometrica](https://onlinelibrary.wiley.com/journal/14680262) =) We'd be more than happy to invest time to help you get started!
 
 ## Contributors ✨
@@ -4594,7 +4566,7 @@ Or display a formatted regression table:
 pf.etable(fit)
 ```
 
-Alternatively, the `.summarize` module contains a `summary` function, which can be applied on instances of regression model objects or lists of regression model objects. For details on how to customize `etable()`, please take a look at the [dedicated vignette](https://pyfixest.org/table-layout.html).
+Alternatively, the `.summarize` module contains a `summary` function, which can be applied on instances of regression model objects or lists of regression model objects. For details on how to customize `etable()`, please take a look at the [dedicated vignette](tutorials/regression-tables.qmd).
 
 ```{python}
 pf.summary(fit)
@@ -4899,7 +4871,7 @@ fit_qr = pf.quantreg("Y ~ X1 + X2", data = data, quantile = [0.1, 0.5, 0.9])
 pf.qplot(fit_qr)
 ```
 
-For details, take a look at the dedicated [quantreg vignette](https://pyfixest.org/quantile-regression.html).
+For details, take a look at the dedicated [quantreg vignette](tutorials/quantile-regression.qmd).
 
 # Tests of Multiple Hypothesis / Wald Tests
 
@@ -5100,7 +5072,7 @@ fit_did2s = pf.event_study(
 pf.etable([fit_twfe, fit_did2s])
 ```
 
-For more details see the vignette on [Difference-in-Differences Estimation](https://pyfixest.org/difference-in-differences.html).
+For more details see the vignette on [Difference-in-Differences Estimation](tutorials/difference-in-differences.qmd).
 
 ---
 
@@ -5140,6 +5112,69 @@ lead to the emergence of new singletons in subsequent columns.
 
 For performance reasons, the input array should be in column-major order.
 Operating on a row-major array can lead to significant performance losses.
+
+---
+
+# reference/demeaners.BaseDemeaner.html
+
+# demeaners.BaseDemeaner { #pyfixest.demeaners.BaseDemeaner }
+
+```python
+demeaners.BaseDemeaner(fixef_maxiter=10000)
+```
+
+Base configuration shared by all fixed-effects demeaners.
+
+---
+
+# reference/demeaners.LsmrDemeaner.html
+
+# demeaners.LsmrDemeaner { #pyfixest.demeaners.LsmrDemeaner }
+
+```python
+demeaners.LsmrDemeaner(
+    fixef_maxiter=10000,
+    backend='cupy',
+    precision='float64',
+    device='auto',
+    fixef_atol=1e-08,
+    fixef_btol=1e-08,
+    warn_on_cpu_fallback=True,
+    use_preconditioner=True,
+)
+```
+
+Sparse LSMR demeaner for CuPy/SciPy and PyTorch backends.
+
+---
+
+# reference/demeaners.MapDemeaner.html
+
+# demeaners.MapDemeaner { #pyfixest.demeaners.MapDemeaner }
+
+```python
+demeaners.MapDemeaner(fixef_maxiter=10000, fixef_tol=1e-06, backend='numba')
+```
+
+Alternating-projections demeaner with selectable implementation backend.
+
+---
+
+# reference/demeaners.WithinDemeaner.html
+
+# demeaners.WithinDemeaner { #pyfixest.demeaners.WithinDemeaner }
+
+```python
+demeaners.WithinDemeaner(
+    fixef_maxiter=1000,
+    fixef_tol=1e-06,
+    krylov='cg',
+    preconditioner='additive',
+    gmres_restart=30,
+)
+```
+
+Demeaner configuration for the Rust `within` backend.
 
 ---
 
@@ -5802,45 +5837,46 @@ Supported families: [logit](/reference/estimation.models.felogit_.Felogit.qmd),
 
 ## Examples {.doc-section .doc-section-examples}
 
-The following example regresses `Y` on `X1` and `X2` with fixed effects for
-`f1` and `f2`: fixed effects are specified after the `|` symbol.
+The example below fits a logit model with fixed effects. As in `feols()`,
+fixed effects are specified after the `|` symbol.
 
 ```{python}
 import pyfixest as pf
 import numpy as np
 
 data = pf.get_data()
-data["Y"] = np.where(data["Y"] > 0, 1, 0)
-data["f1"] = np.where(data["f1"] > data["f1"].median(), "group1", "group2")
+data["Y_bin"] = np.where(data["Y"] > 0, 1, 0)
 
-fit_probit = pf.feglm("Y ~ X1*f1", data, family = "probit")
-fit_logit = pf.feglm("Y ~ X1*f1", data, family = "logit")
-fit_gaussian = pf.feglm("Y ~ X1*f1", data, family = "gaussian")
-
-pf.etable([fit_probit, fit_logit, fit_gaussian])
+fit_logit = pf.feglm("Y_bin ~ X1 + X2 | f1", data, family="logit")
+fit_logit.summary()
 ```
 
-`PyFixest` integrates with the [marginaleffects](https://marginaleffects.com/bonus/python.html) package. For example, to compute average marginal effects
-for the probit model above, you can use the following code:
+To compare families with the same specification:
 
 ```{python}
-# we load polars as marginaleffects outputs pl.DataFrame's
-import polars as pl
+fit_probit = pf.feglm("Y_bin ~ X1 + X2 | f1", data, family="probit")
+fit_gaussian = pf.feglm("Y_bin ~ X1 + X2 | f1", data, family="gaussian")
+pf.etable([fit_logit, fit_probit, fit_gaussian])
+```
+
+`PyFixest` also integrates with the [marginaleffects](https://marginaleffects.com/bonus/python.html) package.
+To compute average marginal effects for the logit model above:
+
+```{python}
 from marginaleffects import avg_slopes
-results = [avg_slopes(model, variables  = "X1") for model in [fit_probit, fit_logit, fit_gaussian]]
-pl.concat([r.to_polars() for r in results])
+avg_slopes(fit_logit, variables="X1")
 ```
 
 We can also compute marginal effects by group (group average marginal effects):
 
 ```{python}
-avg_slopes(fit_probit, variables  = "X1", by = "f1")
+avg_slopes(fit_logit, variables="X1", by="f1")
 ```
 
-We find homogeneous effects by "f1" in the probit model.
-
-For more examples of other function arguments, please take a look at the documentation of the [feols()](https://pyfixest.org/reference/estimation.api.feols.html#pyfixest.estimation.api.feols)
-function.
+Shared arguments such as `vcov`, `ssc`, `split`, `fsplit`, `context`, and typed demeaners
+work the same way as in `feols()`. See the [feols() reference](/reference/estimation.api.feols.feols.html)
+for those details, and the [Marginal Effects guide](/how-to/marginaleffects.html)
+for a compact post-estimation workflow.
 
 ---
 
@@ -5943,9 +5979,9 @@ t-statistics, and p-values.
 fit.tidy()
 ```
 
-You can also access all elements in the tidy data frame by dedicated methods,
+You can also access common outputs via dedicated methods,
 e.g. `fit.coef()` for the coefficients, `fit.se()` for the standard errors,
-`fit.tstat()` for the t-statistics, and `fit.pval()` for the p-values, and
+`fit.tstat()` for the t-statistics, `fit.pvalue()` for the p-values, and
 `fit.confint()` for the confidence intervals.
 
 The employed type of inference can be specified via the `vcov` argument. For compatibility
@@ -6091,7 +6127,8 @@ pf.etable([first_stage, fit_iv])
 ```
 
 Last, `feols()` supports interaction of variables via the `i()` syntax.
-Documentation on this is tba.
+For a compact overview of formula features including `i()`, see the
+[formula syntax tutorial](/tutorials/formula-syntax.html).
 
 You can pass custom transforms via the `context` argument. If you set `context = 0`, all
 functions from the level of the call to `feols()` will be available:
@@ -6278,20 +6315,34 @@ Estimate Poisson regression model with fixed effects using the `ppmlhdfe` algori
 
 ## Examples {.doc-section .doc-section-examples}
 
-The `fepois()` function can be used to estimate a simple Poisson regression
-model with fixed effects.
-The following example regresses `Y` on `X1` and `X2` with fixed effects for
-`f1` and `f2`: fixed effects are specified after the `|` symbol.
+The `fepois()` function estimates Poisson models with the same formula interface
+as `feols()`. Fixed effects are specified after the `|` symbol.
 
 ```{python}
 import pyfixest as pf
 
-data = pf.get_data(model = "Fepois")
+data = pf.get_data(model="Fepois")
 fit = pf.fepois("Y ~ X1 + X2 | f1 + f2", data)
 fit.summary()
 ```
 
-For more examples on the use of other function arguments, please take a look at the documentation of the [feols()](https://pyfixest.org/reference/estimation.api.feols.html#pyfixest.estimation.api.feols) function.
+Cluster-robust inference uses the same `vcov` syntax as `feols()`:
+
+```{python}
+fit_crv = pf.fepois("Y ~ X1 + X2 | f1 + f2", data, vcov={"CRV1": "f1"})
+fit_crv.tidy()
+```
+
+Multiple-estimation and sample-splitting features also work as in `feols()`:
+
+```{python}
+fits = pf.fepois("Y ~ X1 | sw0(f1, f2)", data)
+pf.etable(fits)
+```
+
+Shared arguments such as `vcov`, `ssc`, `split`, `fsplit`, `context`, and typed demeaners
+are documented in the [feols() reference](/reference/estimation.api.feols.feols.html).
+For applied examples, see the [Poisson & GLMs tutorial](/tutorials/poisson-glm.html).
 
 ---
 
@@ -6338,7 +6389,7 @@ Note that the interior point algorithm assumes independent observations.
 | tol              | float                                      | The tolerance for the algorithm. Defaults to 1e-06. As in R's quantreg package, the algorithm stops when the relative change in the duality gap is less than tol.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | `1e-06`    |
 | maxiter          | int                                        | The maximum number of iterations. If None, maxiter = the number of observations in the model (as in R's quantreg package via nit(3) = n).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | `None`     |
 | vcov             | Union\[VcovTypeOptions, dict\[str, str\]\] | Type of variance-covariance matrix for inference. Currently supported are "iid", "nid", and cluster robust errors, "iid" by default. All of "iid", "hetero"and "cluster" robust error are based on a kernel-based estimator as in Powell (1991). The "nid" method implements the robust sandwich estimator proposed in Hendricks and Koenker (1993). Any of "HC1 / HC2 / HC3 also works and is equivalent to "hetero". Cluster robust inference following Parente and Santos Silva (2016) can be specified via a dictionary with the keys "type" and "cluster". Only one-way clustering is supported.                                                | `'nid'`    |
-| ssc              | dict\[str, Union\[str, bool\]\]            | A dictionary specifying the small sample correction for inference. If None, uses default settings from `ssc_func()`. Note that by default, R's quantreg and Stata's qreg2 do not use small sample corrections. To match their behavior, set `ssc = pf.ssc(adj = False, cluster_adj = False)`.                                                                                                                                                                                                                                                                                                                                                        | `None`     |
+| ssc              | dict\[str, Union\[str, bool\]\]            | A dictionary specifying the small sample correction for inference. If None, uses default settings from `ssc_func()`. Note that by default, R's quantreg and Stata's qreg2 do not use small sample corrections. To match their behavior, set `ssc = pf.ssc(k_adj=False, G_adj=False)`.                                                                                                                                                                                                                                                                                                                                                                | `None`     |
 | collin_tol       | float                                      | Tolerance for collinearity check, by default 1e-10.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | `1e-09`    |
 | separation_check | list\[str\]                                | Methods to identify and drop separated observations. Not used in quantile regression.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | `None`     |
 | drop_intercept   | bool                                       | Whether to drop the intercept from the model, by default False.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | `False`    |
@@ -6362,8 +6413,6 @@ The following example regresses `Y` on `X1` and `X2` at the median (0.5 quantile
 
 ```{python}
 import pyfixest as pf
-import pandas as pd
-import numpy as np
 
 data = pf.get_data()
 
@@ -6371,8 +6420,18 @@ fit = pf.quantreg("Y ~ X1 + X2", data, quantile=0.5)
 fit.summary()
 ```
 
-For details around inference, estimation techniques, (fast) fitting and visualizing the full quantile regression
-process, please take a look at the dedicated [vignette](https://pyfixest.org/quantile-regression.html).
+To fit multiple quantiles in one call:
+
+```{python}
+fits = pf.quantreg("Y ~ X1 + X2", data, quantile=[0.1, 0.5, 0.9])
+pf.qplot(fits)
+```
+
+Arguments such as `split`, `fsplit`, `context`, `lean`, and `copy_data`
+behave as in `feols()`, but quantile regression does not support fixed-effects
+formula syntax. For details around inference, fast fitting, and visualization
+of the full quantile regression process, see the
+[quantile regression tutorial](/tutorials/quantile-regression.html).
 
 ---
 
@@ -8210,6 +8269,59 @@ rwolf_df
 
 ---
 
+# reference/estimation.post_estimation.multcomp.wyoung.html
+
+# estimation.post_estimation.multcomp.wyoung { #pyfixest.estimation.post_estimation.multcomp.wyoung }
+
+```python
+estimation.post_estimation.multcomp.wyoung(
+    models,
+    param,
+    reps,
+    seed,
+    sampling_method='wild-bootstrap',
+)
+```
+
+Compute the Westfall-Young adjusted p-values for multiple hypothesis testing.
+
+For each model, it is assumed that tests to adjust are of the form
+"param = 0". This function uses the `wildboottest()` method for running the
+bootstrap, hence models of type `Feiv` or `Fepois` are not supported.
+
+## Parameters {.doc-section .doc-section-parameters}
+
+| Name            | Type                         | Description                                                                                                                               | Default            |
+|-----------------|------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------|--------------------|
+| models          | list\[Feols\] or FixestMulti | A list of models for which the p-values should be computed, or a FixestMulti object. Models of type `Feiv` or `Fepois` are not supported. | _required_         |
+| param           | str                          | The parameter for which the p-values should be computed.                                                                                  | _required_         |
+| reps            | int                          | The number of bootstrap replications.                                                                                                     | _required_         |
+| seed            | int                          | The seed for the random number generator.                                                                                                 | _required_         |
+| sampling_method | str                          | Sampling method for computing resampled statistics. Users can choose either bootstrap('wild-bootstrap') or randomization inference('ri')  | `'wild-bootstrap'` |
+
+## Returns {.doc-section .doc-section-returns}
+
+| Name   | Type         | Description                                                                                   |
+|--------|--------------|-----------------------------------------------------------------------------------------------|
+|        | pd.DataFrame | A DataFrame containing estimation statistics, including the Westfall-Young adjusted p-values. |
+
+## Examples {.doc-section .doc-section-examples}
+
+```{python}
+import pyfixest as pf
+
+data = pf.get_data().dropna()
+fit = pf.feols("Y ~ Y2 + X1 + X2", data=data)
+pf.wyoung(fit, "X1", reps=9999, seed=123)
+
+fit1 = pf.feols("Y ~ X1", data=data)
+fit2 = pf.feols("Y ~ X1 + X2", data=data)
+wyoung_df = pf.wyoung([fit1, fit2], "X1", reps=9999, seed=123)
+wyoung_df
+```
+
+---
+
 # reference/estimation.quantreg.quantreg_.Quantreg.html
 
 # estimation.quantreg.quantreg_.Quantreg { #pyfixest.estimation.quantreg.quantreg_.Quantreg }
@@ -8347,6 +8459,7 @@ User facing estimation functions
 | [did.estimation.event_study](did.estimation.event_study.qmd#pyfixest.did.estimation.event_study) | Estimate Event Study Model. |
 | [estimation.post_estimation.multcomp.bonferroni](estimation.post_estimation.multcomp.bonferroni.qmd#pyfixest.estimation.post_estimation.multcomp.bonferroni) | Compute Bonferroni adjusted p-values for multiple hypothesis testing. |
 | [estimation.post_estimation.multcomp.rwolf](estimation.post_estimation.multcomp.rwolf.qmd#pyfixest.estimation.post_estimation.multcomp.rwolf) | Compute Romano-Wolf adjusted p-values for multiple hypothesis testing. |
+| [estimation.post_estimation.multcomp.wyoung](estimation.post_estimation.multcomp.wyoung.qmd#pyfixest.estimation.post_estimation.multcomp.wyoung) | Compute the Westfall-Young adjusted p-values for multiple hypothesis testing. |
 
 ## Estimation Classes
 
@@ -8355,6 +8468,10 @@ Details on Methods and Attributes
 
 | | |
 | --- | --- |
+| [demeaners.BaseDemeaner](demeaners.BaseDemeaner.qmd#pyfixest.demeaners.BaseDemeaner) | Base configuration shared by all fixed-effects demeaners. |
+| [demeaners.MapDemeaner](demeaners.MapDemeaner.qmd#pyfixest.demeaners.MapDemeaner) | Alternating-projections demeaner with selectable implementation backend. |
+| [demeaners.WithinDemeaner](demeaners.WithinDemeaner.qmd#pyfixest.demeaners.WithinDemeaner) | Demeaner configuration for the Rust `within` backend. |
+| [demeaners.LsmrDemeaner](demeaners.LsmrDemeaner.qmd#pyfixest.demeaners.LsmrDemeaner) | Sparse LSMR demeaner for CuPy/SciPy and PyTorch backends. |
 | [estimation.models.feols_.Feols](estimation.models.feols_.Feols.qmd#pyfixest.estimation.models.feols_.Feols) | Non user-facing class to estimate a linear regression via OLS. |
 | [estimation.models.fepois_.Fepois](estimation.models.fepois_.Fepois.qmd#pyfixest.estimation.models.fepois_.Fepois) | Estimate a Poisson regression model. |
 | [estimation.models.feiv_.Feiv](estimation.models.feiv_.Feiv.qmd#pyfixest.estimation.models.feiv_.Feiv) | Non user-facing class to estimate an IV model using a 2SLS estimator. |
@@ -8379,7 +8496,6 @@ Post-Processing of Estimation Results
 | [report.dtable](report.dtable.qmd#pyfixest.report.dtable) | Generate descriptive statistics tables and create a booktab style table in |
 | [report.coefplot](report.coefplot.qmd#pyfixest.report.coefplot) | Plot model coefficients with confidence intervals. |
 | [report.iplot](report.iplot.qmd#pyfixest.report.iplot) | Plot model coefficients for variables interacted via "i()" syntax, with |
-| [did.visualize.panelview](did.visualize.panelview.qmd#pyfixest.did.visualize.panelview) | Generate a panel view of the treatment variable over time for each unit. |
 
 ## Formula Parsing & Model Matrix
 
@@ -8401,6 +8517,8 @@ PyFixest internals and utilities
 | --- | --- |
 | [estimation.internals.demean_.demean](estimation.internals.demean_.demean.qmd#pyfixest.estimation.internals.demean_.demean) | Demean an array. |
 | [core.detect_singletons.detect_singletons](core.detect_singletons.detect_singletons.qmd#pyfixest.core.detect_singletons.detect_singletons) | Detect singleton fixed effects in a dataset. |
+| [utils.utils.ssc](utils.utils.ssc.qmd#pyfixest.utils.utils.ssc) | Set the small sample correction factor applied in `get_ssc()`. |
+| [utils.utils.get_ssc](utils.utils.get_ssc.qmd#pyfixest.utils.utils.get_ssc) | Compute small sample adjustment factors. |
 | [estimation.deprecated.model_matrix_fixest_.model_matrix_fixest](estimation.deprecated.model_matrix_fixest_.model_matrix_fixest.qmd#pyfixest.estimation.deprecated.model_matrix_fixest_.model_matrix_fixest) | Create model matrices for fixed effects estimation. |
 
 ---
@@ -9171,6 +9289,123 @@ pf.summary([fit1, fit2, fit3])
 
 ---
 
+# reference/utils.utils.get_ssc.html
+
+# utils.utils.get_ssc { #pyfixest.utils.utils.get_ssc }
+
+```python
+utils.utils.get_ssc(
+    ssc_dict,
+    N,
+    k,
+    k_fe,
+    k_fe_nested,
+    n_fe,
+    n_fe_fully_nested,
+    G,
+    vcov_sign,
+    vcov_type,
+)
+```
+
+Compute small sample adjustment factors.
+
+## Parameters {.doc-section .doc-section-parameters}
+
+| Name              | Type         | Description                                                                                   | Default    |
+|-------------------|--------------|-----------------------------------------------------------------------------------------------|------------|
+| ssc_dict          | dict         | A dictionary created via the ssc() function.                                                  | _required_ |
+| N                 | int          | The number of observations.                                                                   | _required_ |
+| k                 | int          | The number of estimated parameters (as in the first part of the model formula)                | _required_ |
+| k_fe              | int          | The number of estimated fixed effects (as specified in the second part of the model formula). | _required_ |
+| k_fe_nested       | int          | The number of estimated fixed effects nested within clusters.                                 | _required_ |
+| n_fe              | int          | The number of fixed effects in the model. I.e. 'Y ~ X1  \| f1 + f2' has 2 fixed effects.      | _required_ |
+| n_fe_fully_nested | int          | The number of fixed effects that are fully nested within clusters.                            | _required_ |
+| G                 | int          | The number of clusters.                                                                       | _required_ |
+| vcov_sign         | array - like | A vector that helps create the covariance matrix.                                             | _required_ |
+| vcov_type         | str          | The type of covariance matrix. Must be one of "iid", "hetero", "HAC", or "CRV".               | _required_ |
+
+## Returns {.doc-section .doc-section-returns}
+
+| Name   | Type                        | Description                                                                                         |
+|--------|-----------------------------|-----------------------------------------------------------------------------------------------------|
+|        | tuple of np.ndarray and int | A small sample adjustment factor and the effective number of coefficients k used in the adjustment. |
+
+## Raises {.doc-section .doc-section-raises}
+
+| Name   | Type       | Description                                                                                    |
+|--------|------------|------------------------------------------------------------------------------------------------|
+|        | ValueError | If vcov_type is not "iid", "hetero", or "CRV", or if G_df is neither "conventional" nor "min". |
+
+---
+
+# reference/utils.utils.ssc.html
+
+# utils.utils.ssc { #pyfixest.utils.utils.ssc }
+
+```python
+utils.utils.ssc(
+    k_adj=True,
+    k_fixef='nonnested',
+    G_adj=True,
+    G_df='min',
+    *args,
+    **kwargs,
+)
+```
+
+Set the small sample correction factor applied in `get_ssc()`.
+
+## Details {.doc-section .doc-section-details}
+
+The small sample correction choices mimic fixest's behavior. For details, see
+https://cran.r-project.org/web/packages/fixest/vignettes/standard_errors.html.
+
+In general, if k_adj = True, we multiply the variance covariance matrix V with a
+small sample correction factor of (N-1) / (N-k), where N is the number of
+observations and k is the number of estimated coefficients.
+
+If k_fixef = "none", the fixed effects parameters are discarded when
+calculating k. This is the default behavior and currently the only
+option. Note that it is not r-fixest's default behavior.
+
+Hence if k_adj = True, the covariance matrix is computed as
+V = V x (N-1) / (N-k) for iid and heteroskedastic errors.
+
+If k_adj = False, no small sample correction is applied of the type
+above is applied.
+
+If G_adj = True, a cluster correction of G/(G-1) is performed,
+with G the number of clusters.
+
+If k_adj = True and G_adj = True, V = V x (N - 1) / N - k) x G/(G-1)
+for cluster robust errors where G is the number of clusters.
+
+If k_adj = False and G_adj = True, V = V x G/(G-1) for cluster robust
+errors, i.e. we drop the (N-1) / (N-k) factor. And if G_adj = False,
+no cluster correction is applied.
+
+Things are slightly more complicated for multiway clustering. In this
+case, we compute the variance covariance matrix as V = V1 + V2 - V_12.
+
+If G_adj = True and G_df = "conventional", then
+V += [V x G_i / (G_i - 1) for i in [1, 2, 12]], i.e. each separate
+covariance matrix G_i is multiplied with a small sample adjustment
+G_i / (G_i - 1) corresponding to the number of clusters in the
+respective covariance matrix. This is the default behavior
+for clustered errors.
+
+If G_df = "min", then
+V += [V x min(G) / (min(G) - 1) for i in [1, 2, 12]].
+
+## Returns {.doc-section .doc-section-returns}
+
+| Name   | Type   | Description                                                            |
+|--------|--------|------------------------------------------------------------------------|
+|        | dict   | A dictionary with encoded info on how to form small sample corrections |
+
+---
+
 # skills.html
 
 # Skills
@@ -9660,7 +9895,7 @@ A few classes and textbooks have adopted PyFixest for teaching. And for core tex
 
 - Data Analysis for Business, Economics, and Policy ("Gabor's Data Analysis"). [Data and code](https://gabors-data-analysis.com/data-and-code/) and [Jupyter Notebooks on github](https://github.com/gabors-data-analysis/da_case_studies)
 - Coding for Economists: [Regression](https://aeturrell.github.io/coding-for-economists/econmt-regression.html)
-- Tidy Finance comes with a [chapter on fixed effects](https://www.tidy-finance.org/python/fixed-effects-and-clustered-standard-errors.html) and clustered standard errors and [Differene-in-Differences estimation](https://www.tidy-finance.org/python/difference-in-differences.html) that uses pyfixest
+- Tidy Finance comes with a [chapter on fixed effects](https://www.tidy-finance.org/python/fixed-effects-and-clustered-standard-errors.html) and clustered standard errors and [Difference-in-Differences estimation](https://www.tidy-finance.org/python/difference-in-differences.html) that uses pyfixest
 - The Effect (first edition): [our PyFixest translation](replicating-the-effect.qmd)
 - The Panel Data Chapter in [the Mixtape](https://mixtape.scunning.com/08-panel_data#data-exercise-survey-of-adult-service-providers). You can find a PyFixest translation [here](mixtape.qmd)
 
@@ -11017,23 +11252,20 @@ ate_aipw_logit
 
 This is the basic doubly debiased pattern: estimate treatment propensities with `feglm` (logit/probit), combine with outcome models, and form an orthogonal score.
 
-## 6. GLMs with Marginal Effects (Placeholder)
+## 6. GLMs with Marginal Effects
 
-::: {.callout-note}
-## Coming Soon
-This section will add a full workflow for marginal effects after `feglm()` estimation, including:
+After `feglm()`, coefficients live on the link scale. For applied work, average marginal effects are often easier to interpret.
 
-- average marginal effects (AMEs),
-- subgroup/conditional marginal effects,
-- inference with robust and clustered standard errors,
-- comparison of coefficient-scale vs probability-scale interpretation.
-:::
+```{python}
+from marginaleffects import avg_slopes
 
-Planned examples:
+avg_slopes(ps_logit, variables="x1")
+avg_slopes(ps_logit, variables="x1", by="segment")
+```
 
-- Binary outcome with `family="logit"` and `family="probit"`.
-- Post-estimation marginal effects tables suitable for reporting.
-- Practical guidance on when marginal effects change substantive conclusions relative to raw GLM coefficients.
+This reports the change in the predicted treatment probability associated with `x1`, averaged either over the full sample or within groups.
+
+For a compact workflow covering marginal effects and hypothesis tests with `PyFixest`, see the dedicated guide on [Marginal Effects & Hypothesis Testing](../how-to/marginaleffects.qmd).
 
 ## 7. Fixed Effects Support (Summary)
 
