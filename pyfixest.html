@@ -397,8 +397,27 @@ RMSE: 1.441   R2: 0.609   R2 Within: 0.2</code></pre>
 </section>
 <section id="benchmarks" class="level2">
 <h2 class="anchored" data-anchor-id="benchmarks">Benchmarks</h2>
-<p>All benchmarks follow the <a href="https://github.com/lrberge/fixest/tree/master/_BENCHMARK">fixest benchmarks</a>. All non-PyFixest timings are taken from the <code>fixest</code> benchmarks.</p>
-<p><img src="benchmarks/lets-plot-images/benchmarks_ols.svg" class="img-fluid"></p>
+<p>All benchmarks follow the <a href="https://github.com/kylebutts/fixest_benchmarks">fixest benchmarks</a>. All non-PyFixest timings are taken from the <code>fixest</code> benchmarks.</p>
+<table>
+<tbody><tr>
+<th>
+Simple DGP
+</th>
+<th>
+Difficult DGP
+</th>
+</tr>
+<tr>
+<td>
+<img src="explanation/figures/base-benchmarks/bench_simple.png" width="100%">
+</td>
+<td>
+<img src="explanation/figures/base-benchmarks/bench_difficult.png" width="100%">
+</td>
+</tr>
+</tbody></table>
+<p>To reproduce the benchmarks, run the modular benchmark script:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> benchmarks/modular/benchmark_main.py</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>For the full benchmark suite, see the <a href="https://github.com/py-econometrics/pyfixest/tree/master/benchmarks"><code>benchmarks/</code></a> directory and the note on <a href="https://github.com/py-econometrics/pyfixest/blob/master/docs/explanation/difficult-fixed-effects.md">difficult fixed effects problems</a>.</p>
 </section>
 <section id="learn-more" class="level2">
@@ -422,12 +441,12 @@ RMSE: 1.441   R2: 0.609   R2 Within: 0.2</code></pre>
 <section id="how-to-cite" class="level2">
 <h2 class="anchored" data-anchor-id="how-to-cite">How to Cite</h2>
 <p>If you want to cite PyFixest, you can use the following BibTeX entry:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode bibtex code-with-copy"><code class="sourceCode bibtex"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co">@software{pyfixest,</span></span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="co">  author  = {{The PyFixest Authors}},</span></span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="co">  title   = {{pyfixest: Fast high-dimensional fixed effect estimation in Python}},</span></span>
-<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="co">  year    = {2025},</span></span>
-<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="co">  url     = {https://github.com/py-econometrics/pyfixest}</span></span>
-<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="co">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="sourceCode bibtex code-with-copy"><code class="sourceCode bibtex"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co">@software{pyfixest,</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="co">  author  = {{The PyFixest Authors}},</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="co">  title   = {{pyfixest: Fast high-dimensional fixed effect estimation in Python}},</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="co">  year    = {2025},</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="co">  url     = {https://github.com/py-econometrics/pyfixest}</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a><span class="co">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
 <section id="support-pyfixest" class="level2">
 <h2 class="anchored" data-anchor-id="support-pyfixest">Support PyFixest</h2>
