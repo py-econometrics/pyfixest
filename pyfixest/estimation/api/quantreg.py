@@ -115,7 +115,8 @@ def quantreg(
     ssc : dict[str, Union[str, bool]], optional
         A dictionary specifying the small sample correction for inference.
         If None, uses default settings from `ssc_func()`. Note that by default, R's quantreg and Stata's qreg2 do not use
-        small sample corrections. To match their behavior, set `ssc = pf.ssc(adj = False, cluster_adj = False)`.
+        small sample corrections. To match their behavior, set
+        `ssc = pf.ssc(k_adj=False, G_adj=False)`.
 
     collin_tol : float, optional
         Tolerance for collinearity check, by default 1e-10.
@@ -174,8 +175,6 @@ def quantreg(
 
     ```{python}
     import pyfixest as pf
-    import pandas as pd
-    import numpy as np
 
     data = pf.get_data()
 
@@ -183,8 +182,18 @@ def quantreg(
     fit.summary()
     ```
 
-    For details around inference, estimation techniques, (fast) fitting and visualizing the full quantile regression
-    process, please take a look at the dedicated [vignette](https://pyfixest.org/quantile-regression.html).
+    To fit multiple quantiles in one call:
+
+    ```{python}
+    fits = pf.quantreg("Y ~ X1 + X2", data, quantile=[0.1, 0.5, 0.9])
+    pf.qplot(fits)
+    ```
+
+    Arguments such as `split`, `fsplit`, `context`, `lean`, and `copy_data`
+    behave as in `feols()`, but quantile regression does not support fixed-effects
+    formula syntax. For details around inference, fast fitting, and visualization
+    of the full quantile regression process, see the
+    [quantile regression tutorial](/tutorials/quantile-regression.html).
     """
     # WLS currently not supported for quantile regression
     weights = None
@@ -197,8 +206,6 @@ def quantreg(
     context = {} if context is None else capture_context(context)
 
     fixef_rm = "none"
-    fixef_tol = 1e-06
-    fixef_maxiter = 100_000
     iwls_tol = 1e-08
     iwls_maxiter = 25
 
@@ -215,12 +222,10 @@ def quantreg(
         weights=weights,
         ssc=ssc,
         fixef_rm=fixef_rm,
-        fixef_maxiter=fixef_maxiter,
         collin_tol=collin_tol,
         copy_data=copy_data,
         store_data=store_data,
         lean=lean,
-        fixef_tol=fixef_tol,
         weights_type=weights_type,
         use_compression=False,
         reps=None,
@@ -235,8 +240,6 @@ def quantreg(
         copy_data=copy_data,
         store_data=store_data,
         lean=lean,
-        fixef_tol=fixef_tol,
-        fixef_maxiter=fixef_maxiter,
         weights_type=weights_type,
         use_compression=False,
         reps=None,

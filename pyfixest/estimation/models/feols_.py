@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 import warnings
-from collections.abc import Callable, Mapping
+from collections.abc import Mapping
 from importlib import import_module
 from typing import Any, Literal, cast
 
@@ -13,14 +13,16 @@ from scipy.sparse import csc_matrix, diags, spmatrix
 from scipy.sparse.linalg import lsqr
 from scipy.stats import chi2, f, t
 
+from pyfixest.core.collinear import find_collinear_variables
+from pyfixest.core.crv1 import crv1_meat_loop
+from pyfixest.core.nested_fixed_effects import count_fixef_fully_nested_all
+from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner, MapDemeaner
 from pyfixest.errors import VcovTypeNotSupportedError
 from pyfixest.estimation.api.utils import _ALL_SAMPLE, _AllSampleSentinel
 from pyfixest.estimation.formula import model_matrix as model_matrix_fixest
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
-from pyfixest.estimation.internals.backends import get_backend
 from pyfixest.estimation.internals.demean_ import demean_model
 from pyfixest.estimation.internals.literals import (
-    DemeanerBackendOptions,
     PredictionErrorOptions,
     PredictionType,
     SolverOptions,
@@ -216,7 +218,6 @@ class Feols(ResultAccessorMixin):
     _solver: Literal["np.linalg.lstsq", "np.linalg.solve", "scipy.linalg.solve",
         "scipy.sparse.linalg.lsqr", "jax"],
         default is "scipy.linalg.solve". Solver to use for the estimation.
-    _demeaner_backend: DemeanerBackendOptions
     _data: pd.DataFrame
         The data frame used in the estimation. None if arguments `lean = True` or
         `store_data = False`.
@@ -254,11 +255,9 @@ class Feols(ResultAccessorMixin):
         weights: str | None,
         weights_type: str | None,
         collin_tol: float,
-        fixef_tol: float,
-        fixef_maxiter: int,
         lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
         solver: SolverOptions = "np.linalg.solve",
-        demeaner_backend: DemeanerBackendOptions = "numba",
+        demeaner: AnyDemeaner | None = None,
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
@@ -295,10 +294,15 @@ class Feols(ResultAccessorMixin):
         self._weights_type = weights_type
         self._has_weights = weights is not None
         self._collin_tol = collin_tol
-        self._fixef_tol = fixef_tol
-        self._fixef_maxiter = fixef_maxiter
         self._solver = solver
-        self._demeaner_backend = demeaner_backend
+        if demeaner is None:
+            demeaner = MapDemeaner()
+        self._demeaner = demeaner
+        if isinstance(demeaner, LsmrDemeaner):
+            self._fixef_tol = max(demeaner.fixef_atol, demeaner.fixef_btol)
+        else:
+            self._fixef_tol = demeaner.fixef_tol
+        self._fixef_maxiter = demeaner.fixef_maxiter
         self._lookup_demeaned_data = lookup_demeaned_data
         self._store_data = store_data
         self._copy_data = copy_data
@@ -323,13 +327,6 @@ class Feols(ResultAccessorMixin):
         self._fixef = FixestFormula.fixed_effects
         # self._coefnames = None
         self._icovars = None
-
-        impl = get_backend(demeaner_backend)
-
-        self._demean_func = impl["demean"]
-        self._find_collinear_variables_func = impl["collinear"]
-        self._crv1_meat_func = impl["crv1_meat"]
-        self._count_nested_fixef_func = impl["nonnested"]
 
         # set in get_fit()
         self._tZX = np.array([])
@@ -496,10 +493,7 @@ class Feols(ResultAccessorMixin):
                 self._weights.flatten(),
                 self._lookup_demeaned_data,
                 self._na_index,
-                self._fixef_tol,
-                self._fixef_maxiter,
-                self._demean_func,
-                # self._demeaner_backend,
+                self._demeaner,
             )
         else:
             self._Yd, self._Xd = self._Y, self._X
@@ -531,7 +525,6 @@ class Feols(ResultAccessorMixin):
                 self._X,
                 self._coefnames,
                 self._collin_tol,
-                backend_func=self._find_collinear_variables_func,
             )
         # update X_is_empty
         self._X_is_empty = self._X.shape[1] == 0
@@ -748,7 +741,7 @@ class Feols(ResultAccessorMixin):
             k_fe_nested = 0
             n_fe_fully_nested = 0
             if self._fixef is not None and self._ssc_dict["k_fixef"] == "nonnested":
-                k_fe_nested_flag, n_fe_fully_nested = self._count_nested_fixef_func(
+                k_fe_nested_flag, n_fe_fully_nested = count_fixef_fully_nested_all(
                     all_fixef_array=np.array(
                         self._fixef.replace("^", "_").split("+"), dtype=str
                     ),
@@ -941,7 +934,7 @@ class Feols(ResultAccessorMixin):
         k = self._scores.shape[1]
         meat = np.zeros((k, k))
 
-        meat = self._crv1_meat_func(
+        meat = crv1_meat_loop(
             scores=self._scores.astype(np.float64),
             clustid=clustid.astype(np.uintp),
             cluster_col=cluster_col.astype(np.uintp),
@@ -2407,7 +2400,6 @@ def _drop_multicollinear_variables(
     X: np.ndarray,
     names: list[str],
     collin_tol: float,
-    backend_func: Callable,
 ) -> tuple[np.ndarray, list[str], list[str], list[int]]:
     """
     Check for multicollinearity in the design matrices X and Z.
@@ -2420,8 +2412,6 @@ def _drop_multicollinear_variables(
         The names of the coefficients.
     collin_tol : float
         The tolerance level for the multicollinearity check.
-    backend_func: Callable
-        Which backend function to use for the multicollinearity check.
 
     Returns
     -------
@@ -2436,8 +2426,8 @@ def _drop_multicollinear_variables(
     """
     # TODO: avoid doing this computation twice, e.g. compute tXXinv here as fixest does
 
-    tXX = X.T @ X
-    id_excl, n_excl, all_removed = backend_func(tXX, collin_tol)
+    tXX = np.ascontiguousarray(X.T @ X, dtype=np.float64)
+    id_excl, n_excl, all_removed = find_collinear_variables(tXX, collin_tol)
 
     collin_vars = []
     collin_index = []

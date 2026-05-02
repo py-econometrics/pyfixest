@@ -10,12 +10,13 @@ import numpy as np
 import pandas as pd
 from scipy.special import gammaln
 
+from pyfixest.demeaners import AnyDemeaner
 from pyfixest.errors import (
     NonConvergenceError,
 )
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
+from pyfixest.estimation.internals.demean_ import dispatch_demean
 from pyfixest.estimation.internals.literals import (
-    DemeanerBackendOptions,
     SolverOptions,
 )
 from pyfixest.estimation.internals.solvers import solve_ols
@@ -66,8 +67,8 @@ class Fepois(Feols):
         The solver to use for the regression. Can be "np.linalg.lstsq",
         "np.linalg.solve", "scipy.linalg.solve", "scipy.sparse.linalg.lsqr" and "jax".
         Defaults to "scipy.linalg.solve".
-    demeaner_backend: DemeanerBackendOptions.
-        The backend used for demeaning.
+    demeaner : Optional[AnyDemeaner]
+        Resolved typed demeaner configuration.
     fixef_tol: float, default = 1e-06.
         Tolerance level for the convergence of the demeaning algorithm.
     context : int or Mapping[str, Any]
@@ -94,13 +95,11 @@ class Fepois(Feols):
         weights: str | None,
         weights_type: str | None,
         collin_tol: float,
-        fixef_tol: float,
-        fixef_maxiter: int,
         lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
         tol: float,
         maxiter: int,
         solver: SolverOptions = "np.linalg.solve",
-        demeaner_backend: DemeanerBackendOptions = "numba",
+        demeaner: AnyDemeaner | None = None,
         context: int | Mapping[str, Any] = 0,
         store_data: bool = True,
         copy_data: bool = True,
@@ -118,8 +117,6 @@ class Fepois(Feols):
             weights=weights,
             weights_type=weights_type,
             collin_tol=collin_tol,
-            fixef_tol=fixef_tol,
-            fixef_maxiter=fixef_maxiter,
             lookup_demeaned_data=lookup_demeaned_data,
             solver=solver,
             store_data=store_data,
@@ -128,7 +125,7 @@ class Fepois(Feols):
             sample_split_var=sample_split_var,
             sample_split_value=sample_split_value,
             context=context,
-            demeaner_backend=demeaner_backend,
+            demeaner=demeaner,
         )
 
         # input checks
@@ -310,15 +307,17 @@ class Fepois(Feols):
             if self._fe is None:
                 ZX_resid = ZX
             else:
-                ZX_resid, success = self._demean_func(
+                ZX_resid, success = dispatch_demean(
                     x=ZX,
-                    flist=self._fe.astype(np.uintp),
+                    flist=self._fe,
                     weights=combined_weights.flatten(),
-                    tol=self._fixef_tol,
-                    maxiter=self._fixef_maxiter,
+                    demeaner=self._demeaner,
                 )
-                if success is False:
-                    raise ValueError("Demeaning failed after 100_000 iterations.")
+                if not success:
+                    raise ValueError(
+                        "Demeaning failed after "
+                        f"{self._demeaner.fixef_maxiter} iterations."
+                    )
 
             Z_resid = ZX_resid[:, 0].reshape((self._N, 1))  # z_resid
             X_resid = ZX_resid[:, 1:]  # x_resid
@@ -331,7 +330,6 @@ class Fepois(Feols):
                         X_resid,
                         self._coefnames,
                         self._collin_tol,
-                        backend_func=self._find_collinear_variables_func,
                     )
                 )
                 if self._collin_index:

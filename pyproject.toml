@@ -242,12 +242,12 @@ pytorch = "*"
 # -- r feature --------------------------------------------------------------------------
 
 [tool.pixi.feature.r]
-platforms = ["linux-64", "osx-arm64"]
+platforms = ["win-64", "linux-64", "osx-arm64"]
 
 [tool.pixi.feature.r.dependencies]
-rpy2 = "==3.5.11"
+rpy2 = ">=3.6,<4"
 r-base = "*"
-r-fixest = ">=0.13.2"
+r-fixest = ">=0.14.0"
 r-stringmagic = ">=1.2.0"
 r-sandwich = ">=3.0_2"
 r-broom = ">=1.0.5"
@@ -309,7 +309,7 @@ lint = { cmd = "prek run --all-files", description = "Run all pre-commit hooks v
 # -- benchmark feature -----------------------------------------------------------------
 
 [tool.pixi.feature.benchmark]
-platforms = ["linux-64", "osx-arm64"]
+platforms = ["win-64", "linux-64", "osx-arm64"]
 
 [tool.pixi.feature.benchmark.dependencies]
 r-arrow = "*"
@@ -344,6 +344,6 @@ py314 = ["py314", "torch"]
 py310-r = { features = ["py310", "torch", "r"], solve-group = "py310" }
 py311-r = { features = ["py311", "torch", "r"], solve-group = "py311" }
 py312-r = { features = ["py312", "torch", "r"], solve-group = "py312" }
-docs = { features = ["docs"], solve-group = "default" }
+docs = { features = ["docs", "py312", "r"], solve-group = "py312" }
 lint = { features = ["lint"], no-default-feature = true }
 benchmark = { features = ["py312", "benchmark", "r"] }

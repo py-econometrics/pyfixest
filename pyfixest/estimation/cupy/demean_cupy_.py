@@ -35,10 +35,10 @@ class CupyFWLDemeaner:
 
     def __init__(
         self,
-        use_gpu: bool | None = None,
-        solver_atol: float = 1e-8,
-        solver_btol: float = 1e-8,
-        solver_maxiter: int | None = None,
+        device: str = "auto",
+        fixef_atol: float = 1e-8,
+        fixef_btol: float = 1e-8,
+        fixef_maxiter: int | None = None,
         warn_on_cpu_fallback: bool = True,
         dtype: type = np.float64,
         use_preconditioner: bool = True,
@@ -48,40 +48,42 @@ class CupyFWLDemeaner:
 
         Parameters
         ----------
-        use_gpu : bool, optional
-            Force GPU usage (True), CPU usage (False), or auto-detect (None).
-            Auto-detect checks if CuPy is available and GPU is accessible. If
-            both are True, runs on the GPU via CuPy.
-        solver_atol : float, default=1e-8
+        device : str, default="auto"
+            Device to run on: "auto" (auto-detect GPU), "cuda" (force GPU),
+            or "cpu" (force CPU/scipy).
+        fixef_atol : float, default=1e-8
             Absolute tolerance for LSMR stopping criterion.
-        solver_btol : float, default=1e-8
+        fixef_btol : float, default=1e-8
             Relative tolerance for LSMR stopping criterion.
-        solver_maxiter : int, optional
+        fixef_maxiter : int, optional
             Maximum LSMR iterations. If None, uses LSMR's default.
         warn_on_cpu_fallback : bool, default=True
-            Warn when falling back to CPU despite use_gpu=True.
+            Warn when falling back to CPU despite device="cuda".
         dtype : type, default=np.float64
             Data type for GPU computations (np.float32 or np.float64).
         use_preconditioner : bool, default=True
             Whether to use diagonal preconditioning for LSMR. Preconditioning
             improves convergence when fixed effect group sizes vary.
         """
-        if use_gpu is None:
+        if device == "auto":
             self.use_gpu = CUPY_AVAILABLE and self._gpu_available()
-        elif use_gpu and not CUPY_AVAILABLE:
-            if warn_on_cpu_fallback:
-                warnings.warn(
-                    "CuPy not available. Falling back to CPU (scipy). "
-                    "Install CuPy for GPU acceleration: pip install cupy-cuda12x",
-                    UserWarning,
-                )
-            self.use_gpu = False
+        elif device == "cuda":
+            if not CUPY_AVAILABLE:
+                if warn_on_cpu_fallback:
+                    warnings.warn(
+                        "CuPy not available. Falling back to CPU (scipy). "
+                        "Install CuPy for GPU acceleration: pip install cupy-cuda12x",
+                        UserWarning,
+                    )
+                self.use_gpu = False
+            else:
+                self.use_gpu = True
         else:
-            self.use_gpu = use_gpu
+            self.use_gpu = False
 
-        self.solver_atol = solver_atol
-        self.solver_btol = solver_btol
-        self.solver_maxiter = solver_maxiter
+        self.fixef_atol = fixef_atol
+        self.fixef_btol = fixef_btol
+        self.fixef_maxiter = fixef_maxiter
         self.warn_on_cpu_fallback = warn_on_cpu_fallback
         self.dtype = dtype
         self.use_preconditioner = use_preconditioner
@@ -145,9 +147,9 @@ class CupyFWLDemeaner:
                 A_op,
                 x_weighted[:, k],
                 damp=0.0,
-                atol=self.solver_atol,
-                btol=self.solver_btol,
-                maxiter=self.solver_maxiter,
+                atol=self.fixef_atol,
+                btol=self.fixef_btol,
+                maxiter=self.fixef_maxiter,
             )
             z = result[0]
 
@@ -200,8 +202,8 @@ class CupyFWLDemeaner:
             True if solver converged/succeeded.
         """
         # Override maxiter if not set in __init__
-        if self.solver_maxiter is None:
-            self.solver_maxiter = maxiter
+        if self.fixef_maxiter is None:
+            self.fixef_maxiter = maxiter
 
         D = fe_sparse_matrix
         if self.use_gpu:
@@ -342,7 +344,6 @@ def demean_scipy(
     fe_df = pd.DataFrame(flist, columns=[f"f{i + 1}" for i in range(n_fe)], copy=False)
     fe_sparse_matrix = create_fe_sparse_matrix(fe_df)
 
-    # Force CPU usage (use_gpu=False) and disable warnings
     return CupyFWLDemeaner(
-        use_gpu=False, warn_on_cpu_fallback=False, dtype=np.float64
+        device="cpu", warn_on_cpu_fallback=False, dtype=np.float64
     ).demean(x, flist, weights, tol, maxiter, fe_sparse_matrix=fe_sparse_matrix)

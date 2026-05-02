@@ -72,6 +72,8 @@ website:
         - text: "All Guides"
           file: how-to/index.qmd
         - text: "---"
+        - text: "Choosing a Demeaner Backend"
+          file: how-to/demeaner-backends.qmd
         - text: "Marginal Effects & Hypothesis Testing"
           file: how-to/marginaleffects.qmd
         - text: "Regression Decomposition"
@@ -84,6 +86,8 @@ website:
           file: how-to/stata-2-pyfixest.qmd
         - text: "Variance Reduction in AB Tests"
           file: how-to/panel_variance_reduction.qmd
+        #- text: "Surrogate Indices & Experimental Selection"
+        #  file: how-to/surrogate-indices-experimental-selection.qmd
       - text: "Explanation"
         menu:
         - text: "When Are Fixed Effects Problems Difficult?"
@@ -135,10 +139,15 @@ quartodoc:
         - did.estimation.event_study
         - estimation.post_estimation.multcomp.bonferroni
         - estimation.post_estimation.multcomp.rwolf
+        - estimation.post_estimation.multcomp.wyoung
     - title: Estimation Classes
       desc: |
         Details on Methods and Attributes
       contents:
+        - demeaners.BaseDemeaner
+        - demeaners.MapDemeaner
+        - demeaners.WithinDemeaner
+        - demeaners.LsmrDemeaner
         - estimation.models.feols_.Feols
         - estimation.models.fepois_.Fepois
         - estimation.models.feiv_.Feiv
@@ -163,7 +172,6 @@ quartodoc:
         - report.dtable
         - report.coefplot
         - report.iplot
-        - did.visualize.panelview
     - title: Formula Parsing & Model Matrix
       desc: |
         Internal APIs for formula parsing and model matrix construction
@@ -177,4 +185,6 @@ quartodoc:
       contents:
         - estimation.internals.demean_.demean
         - core.detect_singletons.detect_singletons
+        - utils.utils.ssc
+        - utils.utils.get_ssc
         - estimation.deprecated.model_matrix_fixest_.model_matrix_fixest

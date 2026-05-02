@@ -3,12 +3,13 @@ from __future__ import annotations
 import gc
 import inspect
 from collections.abc import Mapping
-from typing import Any, Literal
+from typing import Any
 
 import numpy as np
 import pandas as pd
 from scipy.stats import norm
 
+from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.literals import (
     QuantregMethodOptions,
@@ -34,11 +35,9 @@ class QuantregMulti:
         weights: str | None,
         weights_type: str | None,
         collin_tol: float,
-        fixef_tol: float,
-        fixef_maxiter: int,
         lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
         solver: SolverOptions = "np.linalg.solve",
-        demeaner_backend: Literal["numba", "jax"] = "numba",
+        demeaner: AnyDemeaner | None = None,
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,

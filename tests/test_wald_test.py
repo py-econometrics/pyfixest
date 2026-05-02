@@ -4,14 +4,11 @@ import pytest
 
 # rpy2 imports
 import rpy2.robjects as ro
-from rpy2.robjects import pandas2ri
 from rpy2.robjects.packages import importr
 
 import pyfixest as pf
 from pyfixest.estimation import feols
 from pyfixest.utils.utils import ssc
-
-pandas2ri.activate()
 
 # Core R packages
 fixest = importr("fixest")

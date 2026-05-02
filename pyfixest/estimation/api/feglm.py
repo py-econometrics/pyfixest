@@ -3,10 +3,14 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
+from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.api.utils import _estimation_input_checks
 from pyfixest.estimation.FixestMulti_ import FixestMulti
+from pyfixest.estimation.internals.demeaner_options import (
+    _resolve_demeaner,
+    _warn_if_experimental_torch_demeaner,
+)
 from pyfixest.estimation.internals.literals import (
-    DemeanerBackendOptions,
     FixedRmOptions,
     SolverOptions,
     VcovTypeOptions,
@@ -26,14 +30,15 @@ def feglm(
     vcov_kwargs: dict[str, str | int] | None = None,
     ssc: dict[str, str | bool] | None = None,
     fixef_rm: FixedRmOptions = "singleton",
-    fixef_tol: float = 1e-06,
-    fixef_maxiter: int = 100_000,
     iwls_tol: float = 1e-08,
     iwls_maxiter: int = 25,
     collin_tol: float = 1e-09,
     separation_check: list[str] | None = None,
     solver: SolverOptions = "scipy.linalg.solve",
-    demeaner_backend: DemeanerBackendOptions = "numba",
+    demeaner: AnyDemeaner | None = None,
+    demeaner_backend: str | None = None,
+    fixef_tol: float | None = None,
+    fixef_maxiter: int | None = None,
     drop_intercept: bool = False,
     copy_data: bool = True,
     store_data: bool = True,
@@ -107,14 +112,6 @@ def feglm(
         "singletons" will drop singleton fixed effects. This will not impact point
         estimates but it will impact standard errors.
 
-    fixef_tol: float, optional
-        Tolerance for the fixed effects demeaning algorithm. Defaults to 1e-06.
-        Currently does not do anything, as fixed effects are not supported for GLMs.
-
-    fixef_maxiter: int, optional
-         Maximum iterations for the demeaning algorithm.
-        Currently does not do anything, as fixed effects are not supported for GLMs.
-
     iwls_tol : Optional[float], optional
         Tolerance for IWLS convergence, by default 1e-08.
 
@@ -133,23 +130,11 @@ def feglm(
         "np.linalg.solve", "scipy.linalg.solve", "scipy.sparse.linalg.lsqr" and "jax".
         Defaults to "scipy.linalg.solve".
 
-    demeaner_backend: DemeanerBackendOptions, optional
-        The backend to use for demeaning. Options include:
-        - "numba" (default): CPU-based demeaning using Numba JIT via the Alternating Projections Algorithm.
-        - "rust-cg": Implements the conjugate-gradient-schwarz algorithm from the
-          [`within`](https://github.com/py-econometrics/within) rust package.
-          Particularly effective for sparse fixed effects structures. See the
-          [difficult fixed effects vignette](https://pyfixest.org/explanation/difficult-fixed-effects.html)
-          for benchmarks.
-        - "rust": CPU-based demeaning implemented in Rust via the Alternating Projections Algorithm.
-        - "jax": CPU or GPU-accelerated using JAX (requires jax/jaxlib) via the Alternating Projections Algorithm.
-        - "cupy" or "cupy64": GPU-accelerated using CuPy with float64 precision via direct application of the Frisch-Waugh-Lovell Theorem on sparse
-          matrices (requires cupy & GPU, defaults to scipy/CPU if no GPU available)
-        - "cupy32": GPU-accelerated using CuPy with float32 precision via direct application of the Frisch-Waugh-Lovell Theorem on sparse
-          matrices (requires cupy & GPU, defaults to scipy/CPU and float64 if no GPU available)
-        - "scipy": Direct application of the Frisch-Waugh-Lovell Theorem on sparse matrice.
-          Forces to use a scipy-sparse backend even when cupy is installed and GPU is available.
-        Defaults to "numba".
+    demeaner : AnyDemeaner | None, optional
+        Typed demeaner configuration. Controls the fixed-effects demeaning
+        backend, tolerance, and iteration limits. Accepts a `MapDemeaner`,
+        `WithinDemeaner`, or `LsmrDemeaner` instance. Defaults to
+        `MapDemeaner()` (numba MAP algorithm, tol=1e-6, maxiter=10_000).
 
     drop_intercept : bool, optional
         Whether to drop the intercept from the model, by default False.
@@ -209,45 +194,46 @@ def feglm(
 
     Examples
     --------
-    The following example regresses `Y` on `X1` and `X2` with fixed effects for
-    `f1` and `f2`: fixed effects are specified after the `|` symbol.
+    The example below fits a logit model with fixed effects. As in `feols()`,
+    fixed effects are specified after the `|` symbol.
 
     ```{python}
     import pyfixest as pf
     import numpy as np
 
     data = pf.get_data()
-    data["Y"] = np.where(data["Y"] > 0, 1, 0)
-    data["f1"] = np.where(data["f1"] > data["f1"].median(), "group1", "group2")
+    data["Y_bin"] = np.where(data["Y"] > 0, 1, 0)
 
-    fit_probit = pf.feglm("Y ~ X1*f1", data, family = "probit")
-    fit_logit = pf.feglm("Y ~ X1*f1", data, family = "logit")
-    fit_gaussian = pf.feglm("Y ~ X1*f1", data, family = "gaussian")
-
-    pf.etable([fit_probit, fit_logit, fit_gaussian])
+    fit_logit = pf.feglm("Y_bin ~ X1 + X2 | f1", data, family="logit")
+    fit_logit.summary()
     ```
 
-    `PyFixest` integrates with the [marginaleffects](https://marginaleffects.com/bonus/python.html) package. For example, to compute average marginal effects
-    for the probit model above, you can use the following code:
+    To compare families with the same specification:
 
     ```{python}
-    # we load polars as marginaleffects outputs pl.DataFrame's
-    import polars as pl
+    fit_probit = pf.feglm("Y_bin ~ X1 + X2 | f1", data, family="probit")
+    fit_gaussian = pf.feglm("Y_bin ~ X1 + X2 | f1", data, family="gaussian")
+    pf.etable([fit_logit, fit_probit, fit_gaussian])
+    ```
+
+    `PyFixest` also integrates with the [marginaleffects](https://marginaleffects.com/bonus/python.html) package.
+    To compute average marginal effects for the logit model above:
+
+    ```{python}
     from marginaleffects import avg_slopes
-    results = [avg_slopes(model, variables  = "X1") for model in [fit_probit, fit_logit, fit_gaussian]]
-    pl.concat([r.to_polars() for r in results])
+    avg_slopes(fit_logit, variables="X1")
     ```
 
     We can also compute marginal effects by group (group average marginal effects):
 
     ```{python}
-    avg_slopes(fit_probit, variables  = "X1", by = "f1")
+    avg_slopes(fit_logit, variables="X1", by="f1")
     ```
 
-    We find homogeneous effects by "f1" in the probit model.
-
-    For more examples of other function arguments, please take a look at the documentation of the [feols()](https://pyfixest.org/reference/estimation.api.feols.html#pyfixest.estimation.api.feols)
-    function.
+    Shared arguments such as `vcov`, `ssc`, `split`, `fsplit`, `context`, and typed demeaners
+    work the same way as in `feols()`. See the [feols() reference](/reference/estimation.api.feols.feols.html)
+    for those details, and the [Marginal Effects guide](/how-to/marginaleffects.html)
+    for a compact post-estimation workflow.
 
     """
     if family not in ["logit", "probit", "gaussian"]:
@@ -264,6 +250,13 @@ def feglm(
     weights_type = "aweights"
 
     context = {} if context is None else capture_context(context)
+    demeaner = _resolve_demeaner(
+        demeaner=demeaner,
+        demeaner_backend=demeaner_backend,
+        fixef_tol=fixef_tol,
+        fixef_maxiter=fixef_maxiter,
+    )
+    _warn_if_experimental_torch_demeaner(demeaner)
 
     _estimation_input_checks(
         fml=fml,
@@ -277,8 +270,6 @@ def feglm(
         copy_data=copy_data,
         store_data=store_data,
         lean=lean,
-        fixef_tol=fixef_tol,
-        fixef_maxiter=fixef_maxiter,
         weights_type=weights_type,
         use_compression=False,
         reps=None,
@@ -293,8 +284,6 @@ def feglm(
         copy_data=copy_data,
         store_data=store_data,
         lean=lean,
-        fixef_tol=fixef_tol,
-        fixef_maxiter=fixef_maxiter,
         weights_type=weights_type,
         use_compression=False,
         reps=None,
@@ -328,7 +317,7 @@ def feglm(
         iwls_maxiter=iwls_maxiter,
         collin_tol=collin_tol,
         separation_check=separation_check,
-        demeaner_backend=demeaner_backend,
+        demeaner=demeaner,
         accelerate=accelerate,
     )
 
