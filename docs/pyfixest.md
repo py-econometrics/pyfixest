@@ -119,9 +119,24 @@ For more examples, see the [quickstart](https://pyfixest.org/quickstart.html), t
 
 ## Benchmarks
 
-All benchmarks follow the [fixest benchmarks](https://github.com/lrberge/fixest/tree/master/_BENCHMARK). All non-PyFixest timings are taken from the `fixest` benchmarks.
+All benchmarks follow the [fixest benchmarks](https://github.com/kylebutts/fixest_benchmarks). All non-PyFixest timings are taken from the `fixest` benchmarks.
 
-![](benchmarks/lets-plot-images/benchmarks_ols.svg)
+<table>
+<tr>
+<th>Simple DGP</th>
+<th>Difficult DGP</th>
+</tr>
+<tr>
+<td><img src="explanation/figures/base-benchmarks/bench_simple.png" width="100%"></td>
+<td><img src="explanation/figures/base-benchmarks/bench_difficult.png" width="100%"></td>
+</tr>
+</table>
+
+To reproduce the benchmarks, run the modular benchmark script:
+
+```bash
+python benchmarks/modular/benchmark_main.py
+```
 
 For the full benchmark suite, see the [`benchmarks/`](https://github.com/py-econometrics/pyfixest/tree/master/benchmarks) directory and the note on [difficult fixed effects problems](https://github.com/py-econometrics/pyfixest/blob/master/docs/explanation/difficult-fixed-effects.md).
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 
 from feols_benchmarkers import (
@@ -16,6 +17,13 @@ from feols_benchmarkers import (
 class BenchmarkerBundle:
     benchmarkers: list
     figure_backends: list[str]
+
+
+def _env_flag(name: str, *, default: bool) -> bool:
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return value.strip().lower() not in {"0", "false", "no", "off"}
 
 
 def build_standard_feols_benchmarkers(
@@ -92,6 +100,10 @@ def build_standard_feols_benchmarkers(
                     flush=True,
                 )
 
+    include_cupy = include_cupy and _env_flag(
+        "PYFIXEST_BENCHMARK_INCLUDE_CUPY",
+        default=False,
+    )
     if include_cupy:
         availability = detect_cupy_runtime_availability()
         if not availability.has_cupy:
@@ -112,6 +124,12 @@ def build_standard_feols_benchmarkers(
                     **pyfixest_kwargs,
                 )
             )
+    else:
+        print(
+            "[bench] skipping cupy benchmarker: disabled by default; set "
+            "PYFIXEST_BENCHMARK_INCLUDE_CUPY=1 to enable",
+            flush=True,
+        )
 
     if include_jax:
         availability = detect_jax_runtime_availability()
