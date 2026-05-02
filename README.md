@@ -121,13 +121,16 @@ For more examples, see the [quickstart](https://pyfixest.org/quickstart.html), t
 
 The dgps follow the "simple" and "difficult" dgps from the [fixest benchmarks](https://github.com/kylebutts/fixest_benchmarks).
 
-### Simple DGP
-
-![](docs/explanation/figures/base-benchmarks/bench_simple.png)
-
-### Difficult DGP
-
-![](docs/explanation/figures/base-benchmarks/bench_difficult.png)
+<table>
+<tr>
+<th>Simple DGP</th>
+<th>Difficult DGP</th>
+</tr>
+<tr>
+<td><img src="docs/explanation/figures/base-benchmarks/bench_simple.png" width="100%"></td>
+<td><img src="docs/explanation/figures/base-benchmarks/bench_difficult.png" width="100%"></td>
+</tr>
+</table>
 
 For the full benchmark suite, see the [`benchmarks/`](https://github.com/py-econometrics/pyfixest/tree/master/benchmarks) directory and the note on [difficult fixed effects problems](https://github.com/py-econometrics/pyfixest/blob/master/docs/explanation/difficult-fixed-effects.md).
 

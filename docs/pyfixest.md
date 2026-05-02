@@ -121,13 +121,16 @@ For more examples, see the [quickstart](https://pyfixest.org/quickstart.html), t
 
 All benchmarks follow the [fixest benchmarks](https://github.com/kylebutts/fixest_benchmarks). All non-PyFixest timings are taken from the `fixest` benchmarks.
 
-### Simple DGP
-
-![](explanation/figures/base-benchmarks/bench_simple.png)
-
-### Difficult DGP
-
-![](explanation/figures/base-benchmarks/bench_difficult.png)
+<table>
+<tr>
+<th>Simple DGP</th>
+<th>Difficult DGP</th>
+</tr>
+<tr>
+<td><img src="explanation/figures/base-benchmarks/bench_simple.png" width="100%"></td>
+<td><img src="explanation/figures/base-benchmarks/bench_difficult.png" width="100%"></td>
+</tr>
+</table>
 
 To reproduce the benchmarks, run the modular benchmark script:
 
