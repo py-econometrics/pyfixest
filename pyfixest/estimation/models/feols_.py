@@ -1668,9 +1668,7 @@ class Feols(ResultAccessorMixin):
                 weights=w_f,
                 lookup_demeaned_data={},
                 na_index=self._na_index,
-                fixef_tol=self._fixef_tol,
-                fixef_maxiter=self._fixef_maxiter,
-                demean_func=self._demean_func,
+                demeaner=self._demeaner,
             )
             _Y_b = Yd.to_numpy().flatten()
             _X_b = Xd.to_numpy()

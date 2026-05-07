@@ -41,6 +41,12 @@ class Fepois(Feols):
     Note that no demeaning is performed in this class: demeaning is performed in the
     FixestMulti class (to allow for caching of demeaned variables for multiple estimation).
 
+    Note: Fepois inherits directly from Feols rather than from Feglm. This is intentional:
+    Fepois predates Feglm and implements a Poisson-optimised IRLS following the ppmlhdfe
+    algorithm (Correia et al. 2019). Feglm is a separate abstract base class for other
+    GLM families (logit, probit, gaussian). The two hierarchies share Feols as their
+    common base but are otherwise independent.
+
     The method implements the algorithm from Stata's `ppmlhdfe` module.
 
     Attributes
@@ -194,6 +200,10 @@ class Fepois(Feols):
             # possible to have dropped fixed effects level due to separation
             self._k_fe = self._fe.nunique(axis=0) if self._has_fixef else None
             self._n_fe = np.sum(self._k_fe > 1) if self._has_fixef else 0
+
+        # save DataFrame versions before to_array() converts them to numpy
+        self._fe_df = self._fe.copy() if self._fe is not None else None
+        self._user_weights = self._weights.flatten().copy()
 
     def to_array(self):
         "Turn estimation DataFrames to np arrays."
@@ -414,6 +424,70 @@ class Fepois(Feols):
 
         if self.convergence:
             self._convergence = True
+
+    def _bootstrap_one_rep(self, nz: np.ndarray, w_combined: np.ndarray) -> np.ndarray:
+        """
+        Run one Poisson bootstrap iteration via a mini-IRLS loop.
+
+        Subsets Y, X, and fe to the bootstrap sample, then re-estimates via
+        IRLS with combined weights (bootstrap draw * Poisson IRLS weights).
+        Separation checks are skipped per rep for performance.
+        """
+        w_f = w_combined[nz]
+
+        Y_b = self._Y_untransformed.iloc[nz].reset_index(drop=True).to_numpy().flatten()
+        X_b = (
+            self._X_untransformed_df[list(self._coefnames)]
+            .iloc[nz]
+            .reset_index(drop=True)
+            .to_numpy()
+        )
+        fe_b = (
+            self._fe_df.iloc[nz].reset_index(drop=True).to_numpy()
+            if self._fe_df is not None
+            else None
+        )
+        if fe_b is not None and fe_b.ndim == 1:
+            fe_b = fe_b.reshape(-1, 1)
+
+        _mean = np.mean(Y_b)
+        mu = (Y_b + _mean) / 2
+        eta = np.log(mu)
+        last = self._compute_deviance(Y_b, mu)
+        delta = np.zeros(X_b.shape[1])
+
+        for _ in range(self.maxiter):
+            Z = eta + Y_b / mu - 1
+            combined_w = w_f * mu
+
+            ZX = np.c_[Z, X_b]
+            if fe_b is not None:
+                ZX, success = dispatch_demean(
+                    x=ZX,
+                    flist=fe_b,
+                    weights=combined_w.flatten(),
+                    demeaner=self._demeaner,
+                )
+                if not success:
+                    break
+
+            Z_resid = ZX[:, 0]
+            X_resid = ZX[:, 1:]
+            sqrt_w = np.sqrt(combined_w)
+            WX = sqrt_w[:, None] * X_resid
+            WZ = sqrt_w * Z_resid
+
+            delta = solve_ols(WX.T @ WX, WX.T @ WZ, self._solver)
+            resid = Z_resid - X_resid @ delta
+            eta = Z - resid
+            mu = np.exp(eta)
+
+            deviance = self._compute_deviance(Y_b, mu)
+            if np.abs(deviance - last) / (0.1 + np.abs(last)) < self.tol:
+                break
+            last = deviance
+
+        return delta
 
     def resid(self, type: str = "response") -> np.ndarray:
         """

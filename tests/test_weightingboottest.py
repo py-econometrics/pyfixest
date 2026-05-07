@@ -163,3 +163,58 @@ def test_feiv_draws_shape(data):
         reps=reps, method="multinomial", seed=0, return_draws=True
     )
     assert draws.shape == (reps, len(fit._coefnames))
+
+
+# ── Fepois (Poisson) tests ─────────────────────────────────────────────────────
+
+
+@pytest.fixture
+def pois_data():
+    data = pf.get_data(N=500, seed=42).dropna().reset_index(drop=True)
+    data["Y"] = (data["Y"] - data["Y"].min() + 1).round().astype(int)
+    return data
+
+
+@pytest.mark.parametrize("fml", ["Y ~ X1", "Y ~ X1 | f1"])
+@pytest.mark.parametrize("method", ["bayesian", "multinomial"])
+def test_fepois_returns_dataframe(pois_data, fml, method):
+    """Weightingboottest on Fepois should return a correctly shaped result."""
+    fit = pf.fepois(fml, data=pois_data, vcov="iid")
+    res = fit.weightingboottest(reps=99, method=method, seed=0)
+    assert hasattr(res, "columns")
+    assert "Estimate" in res.columns
+    assert "Bootstrap SE" in res.columns
+    assert list(res.index) == list(fit._coefnames)
+
+
+@pytest.mark.parametrize("fml", ["Y ~ X1", "Y ~ X1 | f1"])
+def test_fepois_draws_shape(pois_data, fml):
+    fit = pf.fepois(fml, data=pois_data, vcov="iid")
+    reps = 50
+    _, draws = fit.weightingboottest(
+        reps=reps, method="bayesian", seed=0, return_draws=True
+    )
+    assert draws.shape == (reps, len(fit._coefnames))
+
+
+def test_fepois_bootstrap_mean_close_to_beta(pois_data):
+    """Bootstrap mean of Poisson draws should be close to the point estimate."""
+    fit = pf.fepois("Y ~ X1 | f1", data=pois_data, vcov="iid")
+    _, draws = fit.weightingboottest(
+        reps=300, method="bayesian", seed=42, return_draws=True
+    )
+    np.testing.assert_allclose(
+        draws.mean(axis=0),
+        fit._beta_hat,
+        atol=0.15,
+        err_msg="Bootstrap mean too far from Poisson beta",
+    )
+
+
+def test_fepois_se_positive(pois_data):
+    """Bootstrap SE should be positive for all coefficients."""
+    fit = pf.fepois("Y ~ X1 | f1", data=pois_data, vcov="iid")
+    _, draws = fit.weightingboottest(
+        reps=100, method="bayesian", seed=0, return_draws=True
+    )
+    assert (draws.std(axis=0, ddof=1) > 0).all()
