@@ -397,25 +397,8 @@ RMSE: 1.441   R2: 0.609   R2 Within: 0.2</code></pre>
 </section>
 <section id="benchmarks" class="level2">
 <h2 class="anchored" data-anchor-id="benchmarks">Benchmarks</h2>
-<p>All benchmarks follow the <a href="https://github.com/kylebutts/fixest_benchmarks">fixest benchmarks</a>. All non-PyFixest timings are taken from the <code>fixest</code> benchmarks.</p>
-<table>
-<tbody><tr>
-<th>
-Simple DGP
-</th>
-<th>
-Difficult DGP
-</th>
-</tr>
-<tr>
-<td>
-<img src="explanation/figures/base-benchmarks/bench_simple.png" width="100%">
-</td>
-<td>
-<img src="explanation/figures/base-benchmarks/bench_difficult.png" width="100%">
-</td>
-</tr>
-</tbody></table>
+<p>The DGPs follow the “simple” and “difficult” designs from the <a href="https://github.com/kylebutts/fixest_benchmarks">fixest benchmarks</a>. The figure timings for regressions with <code>k=10</code> covariates and plots the median runtime across three runs for PyFixest MAP, PyFixest within, PyFixest torch on CUDA GPU, fixest, and FixedEffectModels.jl.</p>
+<p><img src="explanation/figures/base-benchmarks/bench_readme.png" width="100%" alt="Fixed-effects OLS benchmark for k=10 comparing PyFixest MAP, PyFixest within, PyFixest torch GPU, fixest, and FixedEffectModels.jl"></p>
 <p>To reproduce the benchmarks, run the modular benchmark script:</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> benchmarks/modular/benchmark_main.py</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>For the full benchmark suite, see the <a href="https://github.com/py-econometrics/pyfixest/tree/master/benchmarks"><code>benchmarks/</code></a> directory and the note on <a href="https://github.com/py-econometrics/pyfixest/blob/master/docs/explanation/difficult-fixed-effects.md">difficult fixed effects problems</a>.</p>

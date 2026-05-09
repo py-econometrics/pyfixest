@@ -119,18 +119,9 @@ For more examples, see the [quickstart](https://pyfixest.org/quickstart.html), t
 
 ## Benchmarks
 
-All benchmarks follow the [fixest benchmarks](https://github.com/kylebutts/fixest_benchmarks). All non-PyFixest timings are taken from the `fixest` benchmarks.
+The DGPs follow the "simple" and "difficult" designs from the [fixest benchmarks](https://github.com/kylebutts/fixest_benchmarks). The figure timings for regressions with `k=10` covariates and plots the median runtime across three runs for PyFixest MAP, PyFixest within, PyFixest torch on CUDA GPU, fixest, and FixedEffectModels.jl.
 
-<table>
-<tr>
-<th>Simple DGP</th>
-<th>Difficult DGP</th>
-</tr>
-<tr>
-<td><img src="explanation/figures/base-benchmarks/bench_simple.png" width="100%"></td>
-<td><img src="explanation/figures/base-benchmarks/bench_difficult.png" width="100%"></td>
-</tr>
-</table>
+<img src="explanation/figures/base-benchmarks/bench_readme.png" width="100%" alt="Fixed-effects OLS benchmark for k=10 comparing PyFixest MAP, PyFixest within, PyFixest torch GPU, fixest, and FixedEffectModels.jl">
 
 To reproduce the benchmarks, run the modular benchmark script:
 
