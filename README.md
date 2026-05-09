@@ -123,7 +123,7 @@ The DGPs follow the "simple" and "difficult" designs from the [fixest benchmarks
 
 <img src="docs/explanation/figures/base-benchmarks/bench_readme.png" width="100%" alt="Fixed-effects OLS benchmark for k=10 comparing PyFixest MAP, PyFixest within, PyFixest torch GPU, fixest, and FixedEffectModels.jl">
 
-Runtime comparisons are hardware-dependent, especially for GPU backends. For the full benchmark suite, additional `k` values, and optional accelerator backends, see the [`benchmarks/`](https://github.com/py-econometrics/pyfixest/tree/master/benchmarks) directory and the note on [difficult fixed effects problems](https://github.com/py-econometrics/pyfixest/blob/master/docs/explanation/difficult-fixed-effects.md).
+Runtime comparisons are hardware-dependent, especially for GPU backends. For the full benchmark suite, see the [`benchmarks/`](https://github.com/py-econometrics/pyfixest/tree/master/benchmarks) directory and the note on [difficult fixed effects problems](https://github.com/py-econometrics/pyfixest/blob/master/docs/explanation/difficult-fixed-effects.md).
 
 ## Learn More
 
