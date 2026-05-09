@@ -6,6 +6,7 @@ from pathlib import Path
 from benchmarker_sets import build_standard_feols_benchmarkers
 from dgps import BaseDGP
 from interfaces import FeolsSpec
+from plotting import plot_readme_benchmarks
 from runner import generate_datasets, plot_results, run_benchmarks
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -52,3 +53,4 @@ if __name__ == "__main__":
         figure_dir=FIGURE_DIR,
         figure_backends=bundle.figure_backends,
     )
+    plot_readme_benchmarks(results_df, FIGURE_DIR / "bench_readme.png")
