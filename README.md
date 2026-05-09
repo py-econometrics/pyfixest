@@ -6,8 +6,8 @@
 ![Python Versions](https://img.shields.io/badge/Python-3.9–3.14-blue)
 [![PyPI Version](https://img.shields.io/pypi/v/pyfixest.svg)](https://pypi.org/project/pyfixest/)
 [![Coverage](https://codecov.io/gh/py-econometrics/pyfixest/branch/master/graph/badge.svg)](https://codecov.io/gh/py-econometrics/pyfixest)
-[![Downloads](https://static.pepy.tech/badge/pyfixest)](https://pepy.tech/project/pyfixest)
-[![Downloads](https://static.pepy.tech/badge/pyfixest/month)](https://pepy.tech/project/pyfixest)
+[![Downloads](https://img.shields.io/pepy/dt/pyfixest)](https://pepy.tech/project/pyfixest)
+[![Downloads](https://img.shields.io/pypi/dm/pyfixest)](https://pepy.tech/project/pyfixest)
 
 [![Project Chat][chat-badge]][chat-url]
 
