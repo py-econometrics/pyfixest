@@ -119,20 +119,11 @@ For more examples, see the [quickstart](https://pyfixest.org/quickstart.html), t
 
 ## Benchmarks
 
-The dgps follow the "simple" and "difficult" dgps from the [fixest benchmarks](https://github.com/kylebutts/fixest_benchmarks).
+The DGPs follow the "simple" and "difficult" designs from the [fixest benchmarks](https://github.com/kylebutts/fixest_benchmarks). The figure timings for regressions with `k=10` covariates and plots the median runtime across three runs for PyFixest MAP, PyFixest within, PyFixest torch on CUDA GPU, fixest, and FixedEffectModels.jl.
 
-<table>
-<tr>
-<th>Simple DGP</th>
-<th>Difficult DGP</th>
-</tr>
-<tr>
-<td><img src="docs/explanation/figures/base-benchmarks/bench_simple.png" width="100%"></td>
-<td><img src="docs/explanation/figures/base-benchmarks/bench_difficult.png" width="100%"></td>
-</tr>
-</table>
+<img src="docs/explanation/figures/base-benchmarks/bench_readme.png" width="100%" alt="Fixed-effects OLS benchmark for k=10 comparing PyFixest MAP, PyFixest within, PyFixest torch GPU, fixest, and FixedEffectModels.jl">
 
-For the full benchmark suite, see the [`benchmarks/`](https://github.com/py-econometrics/pyfixest/tree/master/benchmarks) directory and the note on [difficult fixed effects problems](https://github.com/py-econometrics/pyfixest/blob/master/docs/explanation/difficult-fixed-effects.md).
+Runtime comparisons are hardware-dependent, especially for GPU backends. For the full benchmark suite, additional `k` values, and optional accelerator backends, see the [`benchmarks/`](https://github.com/py-econometrics/pyfixest/tree/master/benchmarks) directory and the note on [difficult fixed effects problems](https://github.com/py-econometrics/pyfixest/blob/master/docs/explanation/difficult-fixed-effects.md).
 
 ## Learn More
 
