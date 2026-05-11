@@ -186,6 +186,19 @@ def test_poisson_errors():
         pf.fepois("Y ~ 1 | X1 ~ Z1", data=data)
 
 
+def test_poisson_offset_errors():
+    data = pf.get_data(model="Fepois")
+
+    # offset column does not exist in the data
+    with pytest.raises(ValueError, match="not found in data"):
+        pf.fepois("Y ~ X1", data=data, offset="does_not_exist")
+
+    # offset column is not numeric
+    data["offset_str"] = "a"
+    with pytest.raises(ValueError, match="must be numeric"):
+        pf.fepois("Y ~ X1", data=data, offset="offset_str")
+
+
 def test_all_variables_multicollinear():
     data = get_data()
     with pytest.raises(ValueError):
