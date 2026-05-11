@@ -134,6 +134,10 @@ class Feglm(Feols, ABC):
             self.na_index = np.concatenate([self.na_index, np.array(na_separation)])
             self.n_separation_na = len(na_separation)
 
+        # save DataFrame versions before to_array() converts them to numpy
+        self._fe_df = self._fe.copy() if self._fe is not None else None
+        self._user_weights = self._weights.flatten().copy()
+
     def to_array(self):
         "Turn estimation DataFrames to np arrays."
         self._Y, self._X, self._Z = (
@@ -307,6 +311,91 @@ class Feglm(Feols, ABC):
         if self.convergence:
             self._convergence = True
 
+    def _bootstrap_one_rep(self, nz: np.ndarray, w_combined: np.ndarray) -> np.ndarray:
+        """
+        Run one GLM bootstrap iteration via a mini-IRLS loop.
+
+        Subsets Y, X, and fe to the bootstrap sample, then re-estimates via
+        IRLS using combined weights (bootstrap draw * GLM IRLS weights).
+        Family-specific functions (_get_mu, _get_gprime, etc.) are dispatched
+        to the concrete subclass (Felogit, Feprobit, Fegaussian) automatically.
+        Separation checks are skipped per rep for performance.
+        """
+        w_f = w_combined[nz]
+
+        Y_b = self._Y_untransformed.iloc[nz].reset_index(drop=True).to_numpy().flatten()
+        X_b = (
+            self._X_untransformed_df[list(self._coefnames)]
+            .iloc[nz]
+            .reset_index(drop=True)
+            .to_numpy()
+        )
+        fe_b = (
+            self._fe_df.iloc[nz].reset_index(drop=True).to_numpy()
+            if self._fe_df is not None
+            else None
+        )
+        if fe_b is not None and fe_b.ndim == 1:
+            fe_b = fe_b.reshape(-1, 1)
+
+        _mean = np.mean(Y_b)
+        if self._method in ("feglm-logit", "feglm-probit"):
+            mu = np.full_like(Y_b, 0.5, dtype=float)
+        else:
+            mu = np.full_like(Y_b, _mean, dtype=float)
+        eta = self._get_link(mu)
+        deviance = self._get_deviance(Y_b, mu)
+        delta = np.zeros(X_b.shape[1])
+
+        for _ in range(self.maxiter):
+            gprime = self._get_gprime(mu)
+            W = self._update_W(mu).flatten()
+            z = eta + (Y_b - mu) * gprime
+            combined_w = w_f * W
+
+            ZX = np.c_[z, X_b]
+            if fe_b is not None:
+                ZX, success = dispatch_demean(
+                    x=ZX,
+                    flist=fe_b,
+                    weights=combined_w.flatten(),
+                    demeaner=self._demeaner,
+                )
+                if not success:
+                    break
+
+            z_resid = ZX[:, 0]
+            X_resid = ZX[:, 1:]
+            sqrt_cw = np.sqrt(combined_w)
+            WX = sqrt_cw[:, None] * X_resid
+            WZ = sqrt_cw * z_resid
+
+            delta_new = solve_ols(WX.T @ WX, WX.T @ WZ, self._solver)
+            resid = z_resid - X_resid @ delta_new
+            eta_new = z - resid
+            mu_new = self._get_mu(eta_new)
+            deviance_new = self._get_deviance(Y_b, mu_new)
+
+            # step-halving for stability (important for logit/probit); if it
+            # exhausts without improvement (rare with bootstrap weights), stop
+            try:
+                eta_new, mu_new, deviance_new = self._step_halving(
+                    eta, eta_new, mu_new, deviance, deviance_new, Y=Y_b
+                )
+            except RuntimeError:
+                break
+
+            rel_change = np.abs(deviance_new - deviance) / (0.1 + np.abs(deviance))
+            delta = delta_new
+            eta = eta_new
+            mu = mu_new
+            deviance = deviance_new
+
+            if rel_change < self.tol or self._method == "feglm-gaussian":
+                break
+
+        return delta
+
     def _vcov_iid(self):
         return self._bread
 
@@ -369,21 +458,28 @@ class Feglm(Feols, ABC):
         deviance: np.ndarray,
         deviance_new: np.ndarray,
         step_halving_tol: float = 1e-12,
+        Y: np.ndarray | None = None,
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Apply step-halving if deviance did not decrease.
+
+        Y: response vector for deviance evaluation. Defaults to self._Y (used
+           during normal estimation). Pass Y_b from _bootstrap_one_rep so
+           deviance is evaluated on the bootstrap sample, not the full dataset.
 
         Returns updated (eta_new, mu_new, deviance_new).
         """
         if deviance_new < deviance:
             return eta_new, mu_new, deviance_new
 
+        Y_eval = self._Y.flatten() if Y is None else Y
+
         alpha = 1.0
         while alpha > step_halving_tol:
             alpha /= 2.0
             eta_try = eta + alpha * (eta_new - eta)
             mu_try = self._get_mu(eta=eta_try)
-            deviance_try = self._get_deviance(self._Y.flatten(), mu_try)
+            deviance_try = self._get_deviance(Y_eval, mu_try)
             if deviance_try < deviance:
                 return eta_try, mu_try, deviance_try
 
