@@ -27,6 +27,7 @@ class _ModelMatrixKey:
     fixed_effects: str = "fe"
     instrumental_variable: str = "first_stage"
     weights: str = "weights"
+    offset: str = "offset"
 
 
 class ModelMatrix:
@@ -95,6 +96,7 @@ class ModelMatrix:
             model_matrix, _ModelMatrixKey.instrumental_variable, "rhs"
         )
         self._weights = self._get_columns(model_matrix, _ModelMatrixKey.weights)
+        self._offset = self._get_columns(model_matrix, _ModelMatrixKey.offset)
 
     def _collect_data(self, model_matrix: formulaic.ModelMatrix) -> None:
         datas: list[pd.DataFrame] = list(model_matrix._flatten())
@@ -248,6 +250,23 @@ class ModelMatrix:
             return self._data.loc[:, self._weights]
 
     @property
+    def offset(self) -> pd.DataFrame | None:
+        """
+        Get the offset variable for GLM estimation.
+
+        Returns
+        -------
+        pd.DataFrame or None
+            DataFrame containing the offset variable (added to the linear
+            predictor with a fixed coefficient of 1), or None if no offset
+            is specified.
+        """
+        if self._offset is None:
+            return None
+        else:
+            return self._data.loc[:, self._offset]
+
+    @property
     def model_spec(self) -> formulaic.ModelSpec:
         """
         Get the underlying formulaic model specification.
@@ -270,6 +289,7 @@ def create_model_matrix(
     formula: Formula,
     data: pd.DataFrame,
     weights: str | None = None,
+    offset: str | None = None,
     drop_singletons: bool = False,
     drop_intercept: bool = False,
     ensure_full_rank: bool = True,
@@ -293,6 +313,10 @@ def create_model_matrix(
     weights : str or None, default=None
         Column name in data to use as observation weights. Weights must be
         non-negative numeric values. If None, no weighting is applied.
+    offset : str or None, default=None
+        Column name in data to use as an offset (added to the linear predictor
+        with a fixed coefficient of 1). Rows with NaN in the offset column are
+        dropped together with NaN rows in the rest of the formula.
     drop_singletons : bool, default=False
         If True, observations that are singletons in any fixed effect category
         are dropped from the model.
@@ -320,7 +344,7 @@ def create_model_matrix(
     data.reset_index(drop=True, inplace=True)  # Sanitise index
     n_observations: Final[int] = data.shape[0]
     formula_formulaic = _get_formulaic_formula(
-        formula=formula, data=data, weights=weights
+        formula=formula, data=data, weights=weights, offset=offset
     )
     model_matrix = formula_formulaic.get_model_matrix(
         data=data,
@@ -349,6 +373,7 @@ def _get_formulaic_formula(
     formula: Formula,
     data: pd.DataFrame,
     weights: str | None = None,
+    offset: str | None = None,
 ) -> formulaic.Formula:
     # Collate kwargs to be passed to formulaic.Formula
     formula_kwargs: dict[str, str] = {_ModelMatrixKey.main: formula.second_stage}
@@ -364,6 +389,14 @@ def _get_formulaic_formula(
     if weights is not None:
         data[weights] = _get_weights(data, weights)
         formula_kwargs.update({_ModelMatrixKey.weights: f"{weights}-1"})
+    if offset is not None:
+        if offset not in data.columns:
+            raise ValueError(f"Offset variable '{offset}' not found in data.")
+        try:
+            data[offset] = pd.to_numeric(data[offset], errors="raise")
+        except ValueError:
+            raise ValueError(f"The offset column '{offset}' must be numeric.")
+        formula_kwargs.update({_ModelMatrixKey.offset: f"{offset}-1"})
     formula_formulaic = formulaic.Formula(
         formula_kwargs,
         _parser=DefaultFormulaParser(feature_flags=FORMULAIC_FEATURE_FLAG),

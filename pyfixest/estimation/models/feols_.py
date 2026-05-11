@@ -293,6 +293,7 @@ class Feols(ResultAccessorMixin):
         self._weights_name = weights
         self._weights_type = weights_type
         self._has_weights = weights is not None
+        self._offset_name: str | None = None
         self._collin_tol = collin_tol
         self._solver = solver
         if demeaner is None:
@@ -403,6 +404,7 @@ class Feols(ResultAccessorMixin):
             drop_singletons=self._drop_singletons,
             drop_intercept=self._drop_intercept,
             weights=self._weights_name,
+            offset=self._offset_name,
             context=self._context,
         )
 
