@@ -247,6 +247,7 @@ Thanks goes to these wonderful people:
       <td align="center" valign="top" width="12.5%"><a href="https://nicholasjunge.com"><img src="https://avatars.githubusercontent.com/u/54248170?v=4?s=40" width="40px;" alt="Nicholas Junge"/><br /><sub><b>Nicholas Junge</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=nicholasjng" title="Code">💻</a> <a href="#infra-nicholasjng" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a></td>
       <td align="center" valign="top" width="12.5%"><a href="https://portfolio-abelaba.vercel.app/"><img src="https://avatars.githubusercontent.com/u/61546411?v=4?s=40" width="40px;" alt="Abel Abate"/><br /><sub><b>Abel Abate</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=abelaba" title="Code">💻</a></td>
       <td align="center" valign="top" width="12.5%"><a href="http://janfb.github.io"><img src="https://avatars.githubusercontent.com/u/11921527?v=4?s=40" width="40px;" alt="Jan Teusen (né Boelts)"/><br /><sub><b>Jan Teusen (né Boelts)</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=janfb" title="Code">💻</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="https://bradhackinen.ca"><img src="https://avatars.githubusercontent.com/u/14437616?v=4?s=40" width="40px;" alt="Brad Hackinen"/><br /><sub><b>Brad Hackinen</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=bradhackinen" title="Code">💻</a></td>
     </tr>
   </tbody>
 </table>
