@@ -248,6 +248,7 @@ Thanks goes to these wonderful people:
       <td align="center" valign="top" width="12.5%"><a href="https://portfolio-abelaba.vercel.app/"><img src="https://avatars.githubusercontent.com/u/61546411?v=4?s=40" width="40px;" alt="Abel Abate"/><br /><sub><b>Abel Abate</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=abelaba" title="Code">💻</a></td>
       <td align="center" valign="top" width="12.5%"><a href="http://janfb.github.io"><img src="https://avatars.githubusercontent.com/u/11921527?v=4?s=40" width="40px;" alt="Jan Teusen (né Boelts)"/><br /><sub><b>Jan Teusen (né Boelts)</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=janfb" title="Code">💻</a></td>
       <td align="center" valign="top" width="12.5%"><a href="https://github.com/marie-gar"><img src="https://avatars.githubusercontent.com/u/185077947?v=4?s=40" width="40px;" alt="Marie Garkavenko"/><br /><sub><b>Marie Garkavenko</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/pulls?q=is%3Apr+reviewed-by%3Amarie-gar" title="Reviewed Pull Requests">👀</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="https://bradhackinen.ca"><img src="https://avatars.githubusercontent.com/u/14437616?v=4?s=40" width="40px;" alt="Brad Hackinen"/><br /><sub><b>Brad Hackinen</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=bradhackinen" title="Code">💻</a></td>
     </tr>
   </tbody>
 </table>
