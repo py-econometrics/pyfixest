@@ -35,8 +35,11 @@ def test_polars_input():
     fit.predict(newdata=data_pl)
 
     data = get_data(model="Fepois")
+    data["offset"] = np.log(np.random.default_rng(0).uniform(0.5, 3.0, len(data)))
     data_pl = pl.from_pandas(data)
     fit = fepois("Y ~ X1", data=data_pl)
+    fit_offset = fepois("Y ~ X1", data=data, offset="offset")
+    fit_offset.predict(newdata=data_pl)
 
 
 def test_integer_XY():

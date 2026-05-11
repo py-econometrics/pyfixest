@@ -2060,6 +2060,7 @@ class Feols(ResultAccessorMixin):
             )
             n_observations = self._N
         else:
+            newdata = _narwhals_to_pandas(newdata)
             y_hat, X, X_index = get_design_matrix_and_yhat(
                 model=self,
                 newdata=newdata,
