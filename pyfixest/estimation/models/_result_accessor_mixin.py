@@ -170,20 +170,22 @@ class ResultAccessorMixin:
                 UserWarning,
             )
 
-        tidy_df = pd.DataFrame(
-            {
-                "Coefficient": self._coefnames,
-                "Estimate": self._beta_hat,
-                "Std. Error": self._se,
-                "t value": self._tstat,
-                "Pr(>|t|)": self._pvalue,
-                # use slice because self._conf_int might be empty
-                f"{lb * 100:.1f}%": self._conf_int[:1].flatten(),
-                f"{ub * 100:.1f}%": self._conf_int[1:2].flatten(),
-            }
-        )
-
-        return tidy_df.set_index("Coefficient")
+        data = {
+            "Coefficient": self._coefnames,
+            "Estimate": self._beta_hat,
+            "Std. Error": self._se,
+            "t value": self._tstat,
+            "Pr(>|t|)": self._pvalue,
+            # use slice because self._conf_int might be empty
+            f"{lb * 100:.1f}%": self._conf_int[:1].flatten(),
+            f"{ub * 100:.1f}%": self._conf_int[1:2].flatten(),
+        }
+        if (
+            getattr(self, "_sample_split_var", None) is not None
+            and (sample := getattr(self, "_sample_split_value", None)) is not None
+        ):
+            data["Sample"] = sample
+        return pd.DataFrame(data).set_index("Coefficient")
 
     def coef(self) -> pd.Series:
         """

@@ -135,6 +135,18 @@ def test_summary():
     etable(fit_qreg)
 
 
+def test_etable_significance_stars_follow_coef_fmt():
+    data = get_data()
+    fit1 = feols("Y ~ X1", data=data)
+    fit2 = feols("Y ~ X1 + X2 | f1", data=data)
+
+    default_table = etable([fit1, fit2], type="df")
+    assert not any("*" in str(value) for value in default_table.to_numpy().ravel())
+
+    custom_fmt_table = etable([fit1, fit2], type="df", coef_fmt="b* (se)\nt [p]")
+    assert any("*" in str(value) for value in custom_fmt_table.to_numpy().ravel())
+
+
 @pytest.mark.skip("Pyfixest PR is not yet merged into stargazer.")
 def test_stargazer():
     data = pf.get_data()

@@ -6,8 +6,8 @@ import numpy as np
 import pandas as pd
 from scipy.stats import norm
 
+from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
-from pyfixest.estimation.internals.literals import DemeanerBackendOptions
 from pyfixest.estimation.models.feglm_ import Feglm
 
 
@@ -24,8 +24,6 @@ class Feprobit(Feglm):
         weights: str | None,
         weights_type: str | None,
         collin_tol: float,
-        fixef_tol: float,
-        fixef_maxiter: int,
         lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
         tol: float,
         maxiter: int,
@@ -36,7 +34,7 @@ class Feprobit(Feglm):
             "scipy.sparse.linalg.lsqr",
             "jax",
         ],
-        demeaner_backend: DemeanerBackendOptions = "numba",
+        demeaner: AnyDemeaner | None = None,
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
@@ -55,13 +53,11 @@ class Feprobit(Feglm):
             weights=weights,
             weights_type=weights_type,
             collin_tol=collin_tol,
-            fixef_tol=fixef_tol,
-            fixef_maxiter=fixef_maxiter,
             lookup_demeaned_data=lookup_demeaned_data,
             tol=tol,
             maxiter=maxiter,
             solver=solver,
-            demeaner_backend=demeaner_backend,
+            demeaner=demeaner,
             store_data=store_data,
             copy_data=copy_data,
             lean=lean,

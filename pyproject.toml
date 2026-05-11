@@ -147,7 +147,6 @@ ignore = [
 "pyfixest/summarize.py" = ["D103"]
 "pyfixest/visualize.py" = ["D103"]
 "scripts/*.py" = ["D103"]
-"benchmarks/gpu_big_benchmarks.py" = ["E402", "F821", "RUF059", "B018", "TRY300"]
 "benchmarks/modular/*.py" = ["D101", "D102", "D103"]
 
 [tool.ruff.lint.pycodestyle]
@@ -235,15 +234,20 @@ python = "~=3.13.0"
 [tool.pixi.feature.py314.dependencies]
 python = "~=3.14.0"
 
+# -- torch feature ----------------------------------------------------------------------
+
+[tool.pixi.feature.torch.dependencies]
+pytorch = "*"
+
 # -- r feature --------------------------------------------------------------------------
 
 [tool.pixi.feature.r]
-platforms = ["linux-64", "osx-arm64"]
+platforms = ["win-64", "linux-64", "osx-arm64"]
 
 [tool.pixi.feature.r.dependencies]
-rpy2 = "==3.5.11"
+rpy2 = ">=3.6,<4"
 r-base = "*"
-r-fixest = ">=0.13.2"
+r-fixest = ">=0.14.0"
 r-stringmagic = ">=1.2.0"
 r-sandwich = ">=3.0_2"
 r-broom = ">=1.0.5"
@@ -305,7 +309,7 @@ lint = { cmd = "prek run --all-files", description = "Run all pre-commit hooks v
 # -- benchmark feature -----------------------------------------------------------------
 
 [tool.pixi.feature.benchmark]
-platforms = ["linux-64", "osx-arm64"]
+platforms = ["win-64", "linux-64", "osx-arm64"]
 
 [tool.pixi.feature.benchmark.dependencies]
 r-arrow = "*"
@@ -318,17 +322,28 @@ benchmark = { cmd = "python benchmarks/modular/benchmark_main.py", depends-on = 
 benchmark-akm = { cmd = "python benchmarks/modular/benchmark_akm_sweep.py", depends-on = ["_setup", "_julia-setup"], description = "Run fixed-size AKM parameter sweep benchmarks (Python, R, Julia)" }
 benchmark-akm-occupation = { cmd = "python benchmarks/modular/benchmark_akm_occupation.py", depends-on = ["_setup", "_julia-setup"], description = "Run occupation-extended AKM benchmarks (Python, R, Julia)" }
 
+[tool.pixi.feature.benchmark.system-requirements]
+cuda = "12.8"
+
+[tool.pixi.feature.benchmark.target.linux-64.dependencies]
+cuda-version = "12.8.*"
+cupy = "*"
+
+[tool.pixi.feature.benchmark.target.linux-64.pypi-dependencies]
+jax = { version = ">=0.4.15", extras = ["cuda12"] }
+torch = { version = ">=2.7.0", index = "https://download.pytorch.org/whl/cu128" }
+
 # -- environments ----------------------------------------------------------------------
 
 [tool.pixi.environments]
-py310 = ["py310"]
-py311 = ["py311"]
-py312 = ["py312"]
-py313 = ["py313"]
-py314 = ["py314"]
-py310-r = { features = ["py310", "r"], solve-group = "py310" }
-py311-r = { features = ["py311", "r"], solve-group = "py311" }
-py312-r = { features = ["py312", "r"], solve-group = "py312" }
-docs = { features = ["docs"], solve-group = "default" }
+py310 = ["py310", "torch"]
+py311 = ["py311", "torch"]
+py312 = ["py312", "torch"]
+py313 = ["py313", "torch"]
+py314 = ["py314", "torch"]
+py310-r = { features = ["py310", "torch", "r"], solve-group = "py310" }
+py311-r = { features = ["py311", "torch", "r"], solve-group = "py311" }
+py312-r = { features = ["py312", "torch", "r"], solve-group = "py312" }
+docs = { features = ["docs", "py312", "r"], solve-group = "py312" }
 lint = { features = ["lint"], no-default-feature = true }
-benchmark = { features = ["benchmark", "r"] }
+benchmark = { features = ["py312", "benchmark", "r"] }

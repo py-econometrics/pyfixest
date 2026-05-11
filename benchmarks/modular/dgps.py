@@ -48,6 +48,7 @@ def _generate_datasets(
     *,
     dgp_name: str,
     n: int,
+    k: int,
     n_iters: int,
     burn_in: int,
     data_dir: Path,
@@ -63,7 +64,7 @@ def _generate_datasets(
     for i in range(1, total + 1):
         iter_type = "burnin" if i <= burn_in else "iter"
         iter_num = i if i <= burn_in else i - burn_in
-        dataset_id = f"{dgp_name}_{n}_{iter_type}_{iter_num}"
+        dataset_id = f"{dgp_name}_{n}_k{k}_{iter_type}_{iter_num}"
         data_path = data_dir / f"{dataset_id}.parquet"
 
         seed = _seed_for(dgp_name, n, i)
@@ -84,6 +85,7 @@ def _generate_datasets(
                 dataset_id=dataset_id,
                 data_path=data_path.resolve(),
                 dgp=dgp_name,
+                k=k,
                 n_obs=n_obs_actual,
                 iter_type=iter_type,
                 iter_num=iter_num,
@@ -91,10 +93,11 @@ def _generate_datasets(
         )
 
     if cached_count == total:
-        print(f"  [{dgp_name} n={n:,}] all {total} cached")
+        print(f"  [{dgp_name} n={n:,} k={k}] all {total} cached")
     elif cached_count > 0:
         print(
-            f"  [{dgp_name} n={n:,}] {cached_count}/{total} cached, {total - cached_count} generated"
+            f"  [{dgp_name} n={n:,} k={k}] "
+            f"{cached_count}/{total} cached, {total - cached_count} generated"
         )
 
     return datasets
@@ -222,9 +225,12 @@ def _akm_occupation_scenarios() -> list[AKMSweepScenario]:
 
 
 class BaseDGP:
-    def __init__(self, data_dir: Path, dgp_type: str = "simple"):
+    def __init__(
+        self, data_dir: Path, dgp_type: str = "simple", k_values: tuple[int, ...] = (1,)
+    ):
         self._data_dir = data_dir
         self._dgp_type = dgp_type
+        self._k_values = tuple(sorted(set(k_values)))
 
     @property
     def dgp_name(self) -> str:
@@ -234,14 +240,24 @@ class BaseDGP:
         self, n: int, n_iters: int = 3, burn_in: int = 1
     ) -> list[BenchmarkDataset]:
         dgp_type = self._dgp_type
+        max_k = max(self._k_values)
+        k_label = ",".join(str(k) for k in self._k_values)
+        print(f"[data] generating {self.dgp_name} n={n:,} k={k_label}")
         return _generate_datasets(
             dgp_name=self.dgp_name,
             n=n,
+            k=max_k,
             n_iters=n_iters,
             burn_in=burn_in,
             data_dir=self._data_dir,
-            make_params=lambda seed: {"dgp_type": dgp_type, "n": n, "seed": seed},
-            generate=lambda seed: base_dgp(n=n, type_=dgp_type, seed=seed),
+            make_params=lambda seed: {
+                "dgp_type": dgp_type,
+                "n": n,
+                "k_values": self._k_values,
+                "active_k": max_k,
+                "seed": seed,
+            },
+            generate=lambda seed: base_dgp(n=n, type_=dgp_type, k=max_k, seed=seed),
         )
 
 
@@ -274,6 +290,7 @@ class AKMSweepDGP:
         return _generate_datasets(
             dgp_name=self.dgp_name,
             n=n,
+            k=1,
             n_iters=n_iters,
             burn_in=burn_in,
             data_dir=self._data_dir,

@@ -12,15 +12,12 @@ import numpy as np
 import pandas as pd
 import pytest
 import rpy2.robjects as ro
-from rpy2.robjects import pandas2ri
 
 # rpy2 imports
 from rpy2.robjects.packages import importr
 
 import pyfixest as pf
 from pyfixest.utils.utils import ssc
-
-pandas2ri.activate()
 
 fixest = importr("fixest")
 stats = importr("stats")

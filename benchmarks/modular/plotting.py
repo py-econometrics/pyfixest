@@ -12,16 +12,18 @@ import pandas as pd
 # Style generation
 # ---------------------------------------------------------------------------
 _PALETTE = [
-    "#E24A33",
-    "#348ABD",
-    "#988ED5",
-    "#8EBA42",
-    "#FBC15E",
-    "#FFB5B8",
-    "#777777",
-    "#E5AE38",
+    "#4E79A7",
+    "#F28E2B",
+    "#59A14F",
+    "#E15759",
+    "#76B7B2",
+    "#EDC948",
+    "#B07AA1",
+    "#FF9DA7",
+    "#9C755F",
+    "#BAB0AC",
 ]
-_MARKERS = ["o", "s", "D", "^", "v", "P", "X", "*"]
+_MARKERS = ["o", "s", "^", "D", "v", "P", "X", "*", "<", ">"]
 _FE_LABELS = {
     2: "Worker + Year",
     3: "Worker + Firm + Year",
@@ -91,17 +93,54 @@ _AKM_SWEEP_TICK_LABELS = {
         4: "n_occ=5000",
     },
 }
+_README_BACKENDS = (
+    "pyfixest (rust-map)",
+    "pyfixest (rust-cg)",
+    "pyfixest (torch-cuda)",
+    "fixest-map",
+    "FEM.jl (lsmr)",
+)
+_README_BACKEND_LABELS = {
+    "pyfixest (rust-map)": "PyFixest MAP",
+    "pyfixest (rust-cg)": "PyFixest within",
+    "pyfixest (torch-cuda)": "PyFixest torch GPU",
+    "fixest-map": "fixest",
+    "FEM.jl (lsmr)": "FixedEffectModels.jl",
+}
+_README_DIRECT_LABELS = {
+    "pyfixest (rust-map)": "MAP",
+    "pyfixest (rust-cg)": "within",
+    "pyfixest (torch-cuda)": "torch GPU",
+    "fixest-map": "fixest",
+    "FEM.jl (lsmr)": "FEM.jl",
+}
+_README_DIRECT_LABEL_YOFFSETS = {
+    "pyfixest (rust-map)": 1.0,
+    "pyfixest (rust-cg)": 0.66,
+    "pyfixest (torch-cuda)": 1.12,
+    "fixest-map": 0.82,
+    "FEM.jl (lsmr)": 1.24,
+}
+_README_BACKEND_STYLES = {
+    "pyfixest (rust-map)": {"color": "#047857", "marker": "o"},
+    "pyfixest (rust-cg)": {"color": "#16A34A", "marker": "s"},
+    "pyfixest (torch-cuda)": {"color": "#65A30D", "marker": "P"},
+    "fixest-map": {"color": "#2563EB", "marker": "^"},
+    "FEM.jl (lsmr)": {"color": "#EAB308", "marker": "D"},
+}
 
 
 def _build_styles(backends: list[str]) -> dict[str, dict]:
-    return {
-        name: {
-            "color": _PALETTE[i % len(_PALETTE)],
-            "marker": _MARKERS[i % len(_MARKERS)],
+    styles = {}
+    for i, name in enumerate(backends):
+        color_idx = i % len(_PALETTE)
+        marker_idx = (i + i // len(_PALETTE)) % len(_MARKERS)
+        styles[name] = {
+            "color": _PALETTE[color_idx],
+            "marker": _MARKERS[marker_idx],
             "label": name,
         }
-        for i, name in enumerate(backends)
-    }
+    return styles
 
 
 def _filter_backends(
@@ -119,9 +158,11 @@ def _filter_backends(
 
 def _aggregate(results_df: pd.DataFrame) -> pd.DataFrame:
     return (
-        results_df.groupby(["dgp", "n_fe", "n_obs", "backend"], as_index=False)["time"]
+        results_df.groupby(
+            ["dgp", "model_k", "n_fe", "n_obs", "backend"], as_index=False
+        )["time"]
         .agg(median="median")
-        .sort_values(["dgp", "n_fe", "n_obs", "backend"])
+        .sort_values(["dgp", "model_k", "n_fe", "n_obs", "backend"])
     )
 
 
@@ -197,42 +238,47 @@ def _plot_dgp_figure(
     y_scale: str = "log",
 ) -> None:
     dgp = dgp_summary["dgp"].iloc[0]
+    k_vals = sorted(dgp_summary["model_k"].unique())
     n_fes = sorted(dgp_summary["n_fe"].unique())
     n_obs_vals = sorted(dgp_summary["n_obs"].unique())
     backends = sorted(dgp_summary["backend"].unique())
 
     fig, axes = plt.subplots(
-        1,
+        len(k_vals),
         len(n_fes),
-        figsize=(5 * len(n_fes), 4.2),
+        figsize=(5 * len(n_fes), 3.8 * len(k_vals)),
         sharey=True,
-        squeeze=False,
+        squeeze=True,
     )
+    axes = np.asarray(axes, dtype=object).reshape(len(k_vals), len(n_fes))
 
-    for col_idx, n_fe in enumerate(n_fes):
-        ax = axes[0][col_idx]
-        subset = dgp_summary[dgp_summary["n_fe"] == n_fe]
+    for row_idx, k in enumerate(k_vals):
+        for col_idx, n_fe in enumerate(n_fes):
+            ax = axes[row_idx][col_idx]
+            subset = dgp_summary[
+                (dgp_summary["model_k"] == k) & (dgp_summary["n_fe"] == n_fe)
+            ]
 
-        if subset.empty:
-            ax.set_axis_off()
-            continue
+            if subset.empty:
+                ax.set_axis_off()
+                continue
 
-        plot_cell(ax, subset, n_obs_vals, backends, styles)
+            plot_cell(ax, subset, n_obs_vals, backends, styles)
 
-        ax.set_title(
-            f"{_dgp_label(dgp)}  |  {_FE_LABELS.get(n_fe, f'{n_fe} FE')}",
-            fontsize=11,
-            fontweight="semibold",
-            pad=8,
-        )
-        ax.set_xticklabels(
-            [f"{n:,}" for n in n_obs_vals], rotation=30, ha="right", fontsize=9
-        )
-        ax.set_xlabel("Observations", fontsize=10)
-        if col_idx == 0:
-            ax.set_ylabel(y_label, fontsize=10)
-        ax.set_yscale(y_scale)
-        _apply_common_style(ax)
+            ax.set_title(
+                f"{_dgp_label(dgp)}  |  {_FE_LABELS.get(n_fe, f'{n_fe} FE')}  |  k={k}",
+                fontsize=11,
+                fontweight="semibold",
+                pad=8,
+            )
+            ax.set_xticklabels(
+                [f"{n:,}" for n in n_obs_vals], rotation=30, ha="right", fontsize=9
+            )
+            ax.set_xlabel("Observations", fontsize=10)
+            if col_idx == 0:
+                ax.set_ylabel(f"k={k}\n{y_label}", fontsize=10)
+            ax.set_yscale(y_scale)
+            _apply_common_style(ax)
 
     for row in axes:
         for ax in row:
@@ -464,6 +510,9 @@ def plot_benchmarks(
     figure_backends: Iterable[str] | None = None,
 ) -> None:
     """Create publication-ready benchmark plots, one figure per benchmark DGP."""
+    results_df = results_df.copy()
+    results_df["model_k"] = results_df["model_k"].fillna(1).astype(int)
+
     results_df = _filter_backends(results_df, figure_backends)
     if results_df.empty:
         return
@@ -492,3 +541,137 @@ def plot_benchmarks(
             fig_path,
             _line_cell,
         )
+
+
+def _format_obs_tick(value: int) -> str:
+    if value >= 1_000_000:
+        return f"{value // 1_000_000}M"
+    if value >= 1_000:
+        return f"{value // 1_000}k"
+    return str(value)
+
+
+def plot_readme_benchmarks(
+    results_df: pd.DataFrame,
+    output_path: Path,
+    *,
+    model_k: int = 10,
+    backends: Iterable[str] = _README_BACKENDS,
+) -> None:
+    """Create the compact benchmark figure used in the repository README."""
+    selected_backends = list(dict.fromkeys(backends))
+    plot_df = results_df[
+        results_df["success"]
+        & results_df["time"].notna()
+        & (results_df["model_k"] == model_k)
+        & results_df["backend"].isin(selected_backends)
+    ].copy()
+
+    if plot_df.empty:
+        return
+
+    summary = _aggregate(plot_df)
+    dgps = [dgp for dgp in ("simple", "difficult") if dgp in set(summary["dgp"])]
+    if not dgps:
+        return
+    n_fes = sorted(summary["n_fe"].unique())
+    n_obs_vals = sorted(summary["n_obs"].unique())
+
+    fig, axes = plt.subplots(
+        len(dgps),
+        len(n_fes),
+        figsize=(4.8 * len(n_fes), 3.5 * len(dgps)),
+        sharex=True,
+        sharey=True,
+        squeeze=False,
+    )
+
+    for row_idx, dgp in enumerate(dgps):
+        for col_idx, n_fe in enumerate(n_fes):
+            ax = axes[row_idx][col_idx]
+            subset = summary[(summary["dgp"] == dgp) & (summary["n_fe"] == n_fe)]
+            annotate_line_ends = dgp == "difficult" and n_fe == 3
+
+            for backend in selected_backends:
+                backend_df = (
+                    subset[subset["backend"] == backend]
+                    .set_index("n_obs")
+                    .reindex(n_obs_vals)
+                )
+                medians = backend_df["median"].to_numpy(dtype=float)
+                valid = ~np.isnan(medians)
+                if not np.any(valid):
+                    continue
+
+                style = _README_BACKEND_STYLES.get(backend, {})
+                ax.plot(
+                    np.array(n_obs_vals)[valid],
+                    medians[valid],
+                    color=style.get("color"),
+                    marker=style.get("marker", "o"),
+                    label=_README_BACKEND_LABELS.get(backend, backend),
+                    linewidth=2.0,
+                    markersize=5,
+                    zorder=3,
+                )
+                if annotate_line_ends:
+                    ax.text(
+                        1.012,
+                        medians[valid][-1]
+                        * _README_DIRECT_LABEL_YOFFSETS.get(backend, 1.0),
+                        _README_DIRECT_LABELS.get(backend, backend),
+                        color=style.get("color"),
+                        fontsize=9,
+                        ha="left",
+                        va="center",
+                        transform=ax.get_yaxis_transform(),
+                        clip_on=False,
+                        bbox={
+                            "facecolor": "white",
+                            "edgecolor": "none",
+                            "alpha": 0.75,
+                            "pad": 0.4,
+                        },
+                    )
+
+            ax.set_title(
+                f"{_dgp_label(dgp)} DGP | {_FE_LABELS.get(n_fe, f'{n_fe} FE')}",
+                fontsize=11,
+                fontweight="semibold",
+                pad=8,
+            )
+            ax.set_xscale("log")
+            ax.set_yscale("log")
+            ax.set_xticks(n_obs_vals)
+            ax.set_xticklabels([_format_obs_tick(n) for n in n_obs_vals])
+            ax.set_xlabel("Observations", fontsize=10)
+            if col_idx == 0:
+                ax.set_ylabel("Runtime (s)", fontsize=10)
+            _apply_common_style(ax)
+
+    for row in axes:
+        for ax in row:
+            if ax.axison:
+                _ensure_min_yticks(ax)
+
+    handles, labels = axes[0][0].get_legend_handles_labels()
+    if handles:
+        fig.legend(
+            handles,
+            labels,
+            loc="upper center",
+            ncol=len(handles),
+            frameon=False,
+            fontsize=10,
+            bbox_to_anchor=(0.5, 0.952),
+        )
+    fig.suptitle(
+        f"Fixed-effects OLS benchmark, k={model_k}",
+        y=0.995,
+        fontsize=13,
+        fontweight="bold",
+    )
+    fig.tight_layout(rect=(0, 0, 1, 0.89))
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output_path, dpi=220, bbox_inches="tight")
+    plt.close(fig)

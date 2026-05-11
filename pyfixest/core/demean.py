@@ -8,8 +8,8 @@ def demean(
     x: NDArray[np.float64],
     flist: NDArray[np.uint64],
     weights: NDArray[np.float64],
-    tol: float = 1e-08,
-    maxiter: int = 100_000,
+    tol: float = 1e-06,
+    maxiter: int = 10_000,
 ) -> tuple[NDArray, bool]:
     """
     Demean an array.
@@ -85,13 +85,16 @@ def demean_within(
     weights: NDArray[np.float64],
     tol: float = 1e-06,
     maxiter: int = 1_000,
+    krylov: str = "cg",
+    preconditioner: str = "additive",
+    gmres_restart: int = 30,
 ) -> tuple[NDArray, bool]:
     """
-    Demean an array using preconditioned conjugate gradient via the `within` crate.
+    Demean an array using Krylov solvers and Schwarz preconditioning via `within`.
 
-    Uses one-level Schwarz preconditioning with approximate Cholesky local
-    solvers. Converges faster than alternating projections on weakly-connected
-    or block-diagonal fixed-effect structures.
+    Uses Krylov-based solvers with Schwarz preconditioning. Converges faster
+    than alternating projections on weakly-connected or block-diagonal
+    fixed-effect structures.
 
     For single fixed effects, falls back to alternating projections (``_demean_rs``)
     because the CG/Schwarz preconditioner is designed for multi-way FE problems.
@@ -108,7 +111,15 @@ def demean_within(
     tol : float, optional
         Convergence tolerance. Defaults to 1e-06.
     maxiter : int, optional
-        Maximum number of CG iterations. Defaults to 1_000.
+        Maximum number of Krylov iterations. Defaults to 1_000.
+    krylov : {"cg", "gmres"}, optional
+        Krylov solver used for multi-way fixed effects. Defaults to ``"cg"``.
+    preconditioner : {"additive", "multiplicative", "off"}, optional
+        Schwarz preconditioner used for multi-way fixed effects. ``"off"``
+        disables preconditioning.
+        Defaults to ``"additive"``.
+    gmres_restart : int, optional
+        Restart dimension when ``krylov="gmres"``. Ignored for CG.
 
     Returns
     -------
@@ -129,4 +140,7 @@ def demean_within(
         weights.astype(np.float64, copy=False).reshape(-1),
         tol,
         maxiter,
+        krylov,
+        preconditioner,
+        gmres_restart,
     )

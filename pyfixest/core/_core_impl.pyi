@@ -7,6 +7,14 @@ def _crv1_meat_loop_rs(
     clustid: NDArray[np.uint64],
     cluster_col: NDArray[np.uint64],
 ) -> NDArray[np.float64]: ...
+def _crv1_vcov_loop_qreg_rs(
+    x: NDArray[np.float64],
+    clustid: NDArray[np.uint64],
+    cluster_col: NDArray[np.uint64],
+    q: float,
+    u_hat: NDArray[np.float64],
+    delta: float,
+) -> tuple[NDArray[np.float64], NDArray[np.float64]]: ...
 def _demean_rs(
     x: NDArray[np.float64],
     flist: NDArray[np.uint64],
@@ -20,6 +28,9 @@ def _demean_within_rs(
     weights: NDArray[np.float64],
     tol: float = 1e-06,
     maxiter: int = 1_000,
+    krylov: str = "cg",
+    preconditioner: str = "additive",
+    gmres_restart: int = 30,
 ) -> tuple[np.ndarray, bool]: ...
 def _count_fixef_fully_nested_all_rs(
     all_fixef_array: NDArray,

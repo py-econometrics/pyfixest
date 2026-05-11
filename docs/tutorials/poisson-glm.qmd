@@ -203,23 +203,20 @@ ate_aipw_logit
 
 This is the basic doubly debiased pattern: estimate treatment propensities with `feglm` (logit/probit), combine with outcome models, and form an orthogonal score.
 
-## 6. GLMs with Marginal Effects (Placeholder)
+## 6. GLMs with Marginal Effects
 
-::: {.callout-note}
-## Coming Soon
-This section will add a full workflow for marginal effects after `feglm()` estimation, including:
+After `feglm()`, coefficients live on the link scale. For applied work, average marginal effects are often easier to interpret.
 
-- average marginal effects (AMEs),
-- subgroup/conditional marginal effects,
-- inference with robust and clustered standard errors,
-- comparison of coefficient-scale vs probability-scale interpretation.
-:::
+```{python}
+from marginaleffects import avg_slopes
 
-Planned examples:
+avg_slopes(ps_logit, variables="x1")
+avg_slopes(ps_logit, variables="x1", by="segment")
+```
 
-- Binary outcome with `family="logit"` and `family="probit"`.
-- Post-estimation marginal effects tables suitable for reporting.
-- Practical guidance on when marginal effects change substantive conclusions relative to raw GLM coefficients.
+This reports the change in the predicted treatment probability associated with `x1`, averaged either over the full sample or within groups.
+
+For a compact workflow covering marginal effects and hypothesis tests with `PyFixest`, see the dedicated guide on [Marginal Effects & Hypothesis Testing](../how-to/marginaleffects.qmd).
 
 ## 7. Fixed Effects Support (Summary)
 

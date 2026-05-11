@@ -12,6 +12,7 @@ mod nw;
 fn _core_impl(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_wrapped(wrap_pyfunction!(collinear::_find_collinear_variables_rs))?;
     m.add_wrapped(wrap_pyfunction!(crv1::_crv1_meat_loop_rs))?;
+    m.add_wrapped(wrap_pyfunction!(crv1::_crv1_vcov_loop_qreg_rs))?;
     m.add_wrapped(wrap_pyfunction!(demean::_demean_rs))?;
     m.add_wrapped(wrap_pyfunction!(demean_within::_demean_within_rs))?;
     m.add_wrapped(wrap_pyfunction!(

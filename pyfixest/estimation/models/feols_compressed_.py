@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -8,9 +10,9 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
+from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.literals import (
-    DemeanerBackendOptions,
     SolverOptions,
 )
 from pyfixest.estimation.models.feols_ import (
@@ -93,11 +95,9 @@ class FeolsCompressed(Feols):
         weights: str | None,
         weights_type: str | None,
         collin_tol: float,
-        fixef_tol: float,
-        fixef_maxiter: int,
         lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
         solver: SolverOptions = "np.linalg.solve",
-        demeaner_backend: DemeanerBackendOptions = "numba",
+        demeaner: AnyDemeaner | None = None,
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
@@ -116,11 +116,9 @@ class FeolsCompressed(Feols):
             weights,
             weights_type,
             collin_tol,
-            fixef_tol,
-            fixef_maxiter,
             lookup_demeaned_data,
             solver,
-            demeaner_backend,
+            demeaner,
             store_data,
             copy_data,
             lean,
