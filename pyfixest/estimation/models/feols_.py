@@ -415,6 +415,7 @@ class Feols(ResultAccessorMixin):
         self._endogvar = model_matrix.endogenous
         self._Z = model_matrix.instruments
         self._weights_df = model_matrix.weights
+        self._offset_df = model_matrix.offset
         self._na_index = model_matrix.na_index
         # TODO: set dynamically based on naming set in pyfixest.estimation.formula.factor_interaction._encode_i
         is_icovar = (

@@ -185,8 +185,10 @@ class FixestMulti:
             An array of weights.
             Either None or a 1D array of length N. Default is None.
         offset : Union[None, str], optional
-            Default is None. Offset variable for Poisson regression. If None, no offset.
-            If a string, the name of the column in `data` that contains the offset.
+            Default is None. Name of a numeric column in `data` to use as an offset
+            in Poisson regression. The offset is added to the linear predictor
+            with its coefficient fixed at 1. For exposure adjustments, pass the
+            exposure on the log scale.
         ssc : dict[str, str], optional
             A dictionary specifying the type of standard errors to use for inference.
             See `feols()` or `fepois()`.

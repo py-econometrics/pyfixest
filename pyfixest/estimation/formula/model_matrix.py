@@ -252,7 +252,7 @@ class ModelMatrix:
     @property
     def offset(self) -> pd.DataFrame | None:
         """
-        Get the offset variable for GLM estimation.
+        Get the offset variable for GLM estimation (currently supported only for Fepois).
 
         Returns
         -------
