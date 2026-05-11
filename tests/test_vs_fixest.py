@@ -602,7 +602,8 @@ def test_single_fit_fepois(
 
     data_fepois = data_fepois.copy()
     if offset:
-        data_fepois["offset_var"] = np.log(np.ones(data_fepois.shape[0]) * 2)
+        rng = np.random.default_rng(20260511)
+        data_fepois["offset_var"] = np.log(rng.uniform(0.5, 3.0, data_fepois.shape[0]))
         offset_var = "offset_var"
     else:
         offset_var = None
