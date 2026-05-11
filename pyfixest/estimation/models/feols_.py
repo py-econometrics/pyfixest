@@ -293,6 +293,8 @@ class Feols(ResultAccessorMixin):
         self._weights_name = weights
         self._weights_type = weights_type
         self._has_weights = weights is not None
+        self._offset_name: str | None = None
+        self._offset: np.ndarray | None = None
         self._collin_tol = collin_tol
         self._solver = solver
         if demeaner is None:
@@ -403,6 +405,7 @@ class Feols(ResultAccessorMixin):
             drop_singletons=self._drop_singletons,
             drop_intercept=self._drop_intercept,
             weights=self._weights_name,
+            offset=self._offset_name,
             context=self._context,
         )
 
@@ -413,6 +416,7 @@ class Feols(ResultAccessorMixin):
         self._endogvar = model_matrix.endogenous
         self._Z = model_matrix.instruments
         self._weights_df = model_matrix.weights
+        self._offset_df = model_matrix.offset
         self._na_index = model_matrix.na_index
         # TODO: set dynamically based on naming set in pyfixest.estimation.formula.factor_interaction._encode_i
         is_icovar = (
@@ -1934,6 +1938,12 @@ class Feols(ResultAccessorMixin):
                 # determine residuals from estimated linear predictor
                 # equation (5.2) in Stammann (2018) http://arxiv.org/abs/1707.01815
                 Y = self._Y_hat_link
+                # _Y_hat_link contains the offset as part of eta; subtract it so
+                # that _sumFE represents the pure FE contribution and predict()
+                # can add the offset back from newdata without double-counting.
+                if self._offset_name is not None:
+                    assert self._offset is not None
+                    Y = Y - self._offset.flatten()
             uhat = (Y - X @ self._beta_hat).flatten()
         D2 = Formula("-1+" + fixef_fml).get_model_matrix(self._data, output="sparse")
         cols = D2.model_spec.column_names
@@ -2050,6 +2060,7 @@ class Feols(ResultAccessorMixin):
             )
             n_observations = self._N
         else:
+            newdata = _narwhals_to_pandas(newdata)
             y_hat, X, X_index = get_design_matrix_and_yhat(
                 model=self,
                 newdata=newdata,
@@ -2058,6 +2069,20 @@ class Feols(ResultAccessorMixin):
             y_hat += _get_fixed_effects_prediction_component(
                 model=self, newdata=newdata, atol=atol, btol=btol
             )
+            if self._offset_name is not None:
+                if self._offset_name not in newdata.columns:
+                    raise ValueError(
+                        f"Offset variable '{self._offset_name}' not found in newdata."
+                    )
+                offset = pd.to_numeric(
+                    newdata[self._offset_name], errors="coerce"
+                ).to_numpy()
+                if np.isnan(offset).any():
+                    raise ValueError(
+                        f"Offset column '{self._offset_name}' in newdata contains "
+                        "NaN or non-numeric values."
+                    )
+                y_hat = y_hat + offset
             n_observations = newdata.shape[0]
             if type == "response" and self._method == "fepois":
                 y_hat = np.exp(y_hat)

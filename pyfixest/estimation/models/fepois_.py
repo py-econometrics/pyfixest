@@ -107,6 +107,7 @@ class Fepois(Feols):
         sample_split_var: str | None = None,
         sample_split_value: str | int | None = None,
         separation_check: list[str] | None = None,
+        offset: str | None = None,
     ):
         super().__init__(
             FixestFormula=FixestFormula,
@@ -140,6 +141,7 @@ class Fepois(Feols):
         self._method = "fepois"
         self.convergence = False
         self.separation_check = separation_check
+        self._offset_name = offset
 
         self._support_crv3_inference = True
         self._support_iid_inference = True
@@ -184,6 +186,8 @@ class Fepois(Feols):
             self._data.drop(na_separation, axis=0, inplace=True)
             if self._weights_df is not None:
                 self._weights_df.drop(na_separation, axis=0, inplace=True)
+            if self._offset_df is not None:
+                self._offset_df.drop(na_separation, axis=0, inplace=True)
             self._N = self._Y.shape[0]
             self._N_rows = self._N
             # Re-set weights after dropping rows (handles both weighted and unweighted)
@@ -206,6 +210,10 @@ class Fepois(Feols):
             self._fe = self._fe.to_numpy()
             if self._fe.ndim == 1:
                 self._fe = self._fe.reshape((self._N, 1))
+        if self._offset_df is not None:
+            self._offset = self._offset_df.to_numpy().reshape((-1, 1))
+        else:
+            self._offset = np.zeros((self._N, 1))
 
     def _compute_deviance(
         self, Y: np.ndarray, mu: np.ndarray, weights: np.ndarray | None = None
@@ -287,12 +295,12 @@ class Fepois(Feols):
                 _mean = np.mean(self._Y)
                 mu = (self._Y + _mean) / 2
                 eta = np.log(mu)
-                Z = eta + self._Y / mu - 1
+                Z = eta - self._offset + self._Y / mu - 1
                 reg_Z = Z.copy()
                 last = self._compute_deviance(self._Y, mu)
             else:
                 # update w and Z
-                Z = eta + self._Y / mu - 1  # eq (8)
+                Z = eta - self._offset + self._Y / mu - 1  # eq (8)
                 reg_Z = Z.copy()  # eq (9)
 
             # tighten HDFE tolerance - currently not possible with PyHDFE
@@ -349,7 +357,7 @@ class Fepois(Feols):
             resid = Z_resid - X_resid @ delta_new
 
             # more updating
-            eta = Z - resid
+            eta = Z - resid + self._offset
             mu = np.exp(eta)
 
             # same criterion as fixest

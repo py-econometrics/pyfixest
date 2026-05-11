@@ -186,6 +186,33 @@ def test_poisson_errors():
         pf.fepois("Y ~ 1 | X1 ~ Z1", data=data)
 
 
+def test_poisson_offset_errors():
+    data = pf.get_data(model="Fepois").dropna()
+
+    # offset column does not exist in the data
+    with pytest.raises(ValueError, match="not found in data"):
+        pf.fepois("Y ~ X1", data=data, offset="does_not_exist")
+
+    # offset column is not numeric
+    data_str = data.copy()
+    data_str["offset_str"] = "a"
+    with pytest.raises(ValueError, match="must be numeric"):
+        pf.fepois("Y ~ X1", data=data_str, offset="offset_str")
+
+    # predict(newdata=...) with offset column missing in newdata
+    data = data.copy()
+    data["off"] = np.log(np.random.default_rng(0).uniform(0.5, 3.0, len(data)))
+    mod = pf.fepois("Y ~ X1", data=data, offset="off")
+    with pytest.raises(ValueError, match="not found in newdata"):
+        mod.predict(newdata=data.drop(columns=["off"]))
+
+    # predict(newdata=...) with NaN in offset column
+    nd_nan = data.copy()
+    nd_nan.loc[nd_nan.index[0], "off"] = np.nan
+    with pytest.raises(ValueError, match="NaN or non-numeric"):
+        mod.predict(newdata=nd_nan)
+
+
 def test_all_variables_multicollinear():
     data = get_data()
     with pytest.raises(ValueError):

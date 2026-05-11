@@ -30,6 +30,7 @@ def fepois(
     vcov_kwargs: dict[str, str | int] | None = None,
     weights: None | str = None,
     weights_type: WeightsTypeOptions = "aweights",
+    offset: str | None = None,
     ssc: dict[str, str | bool] | None = None,
     fixef_rm: FixedRmOptions = "singleton",
     iwls_tol: float = 1e-08,
@@ -94,6 +95,13 @@ def fepois(
         precision weights, while `fweights` implement frequency weights. Frequency weights
         are useful for compressed count data where identical observations are aggregated.
         For details see this blog post: https://notstatschat.rbind.io/2020/08/04/weights-in-statistics/.
+
+    offset : str, optional
+        Default is None. Name of a numeric column in `data` to use as an offset
+        in the Poisson regression. The offset is added to the linear predictor
+        with its coefficient fixed at 1. This is useful for modeling rates when
+        exposure differs across observations; pass the exposure on the log scale,
+        e.g. `offset="log_population"`.
 
     ssc : str
         A ssc object specifying the small sample correction for inference.
@@ -195,6 +203,26 @@ def fepois(
     fit_crv.tidy()
     ```
 
+    To model rates, keep the dependent variable as a count and pass
+    `log(exposure)` as the `offset`. For example, with population as the
+    exposure:
+
+    ```{python}
+    import numpy as np
+
+    data["population"] = np.random.default_rng(123).integers(
+        50_000, 500_000, size=len(data)
+    )
+    data["log_population"] = np.log(data["population"])
+
+    fit_rate = pf.fepois(
+        "Y ~ X1 + X2 | f1 + f2",
+        data=data,
+        offset="log_population",
+    )
+    fit_rate.tidy()
+    ```
+
     Multiple-estimation and sample-splitting features also work as in `feols()`:
 
     ```{python}
@@ -263,6 +291,7 @@ def fepois(
         ssc=ssc,
         fixef_rm=fixef_rm,
         drop_intercept=drop_intercept,
+        offset=offset,
     )
     if fixest._is_iv:
         raise NotImplementedError(

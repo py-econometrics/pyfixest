@@ -159,6 +159,7 @@ class FixestMulti:
         quantile: float | None = None,
         quantile_tol: float = 1e-06,
         quantile_maxiter: int | None = None,
+        offset: str | None = None,
     ) -> None:
         """
         Prepare model for estimation.
@@ -183,6 +184,11 @@ class FixestMulti:
         weights : Union[None, np.ndarray], optional
             An array of weights.
             Either None or a 1D array of length N. Default is None.
+        offset : Union[None, str], optional
+            Default is None. Name of a numeric column in `data` to use as an offset
+            in Poisson regression. The offset is added to the linear predictor
+            with its coefficient fixed at 1. For exposure adjustments, pass the
+            exposure on the log scale.
         ssc : dict[str, str], optional
             A dictionary specifying the type of standard errors to use for inference.
             See `feols()` or `fepois()`.
@@ -214,6 +220,7 @@ class FixestMulti:
         self._drop_singletons = False
         self._is_multiple_estimation = False
         self._weights = weights
+        self._offset = offset
         self._has_weights = False
         if weights is not None:
             self._has_weights = True
@@ -369,6 +376,13 @@ class FixestMulti:
                                 "separation_check": separation_check,
                                 "tol": iwls_tol,
                                 "maxiter": iwls_maxiter,
+                            }
+                        )
+
+                    if self._method == "fepois":
+                        model_kwargs.update(
+                            {
+                                "offset": self._offset,
                             }
                         )
 
