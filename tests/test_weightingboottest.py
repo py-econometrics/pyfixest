@@ -218,3 +218,130 @@ def test_fepois_se_positive(pois_data):
         reps=100, method="bayesian", seed=0, return_draws=True
     )
     assert (draws.std(axis=0, ddof=1) > 0).all()
+
+
+# ── Feglm (logit, probit, gaussian) tests ──────────────────────────────────────
+
+
+@pytest.fixture
+def glm_data():
+    data = pf.get_data(N=500, seed=42).dropna().reset_index(drop=True)
+    data["Y_bin"] = (data["Y"] > data["Y"].median()).astype(int)
+    data["Y_cont"] = data["Y"]
+    return data
+
+
+@pytest.mark.parametrize(
+    "fml,family",
+    [
+        ("Y_bin ~ X1", "logit"),
+        ("Y_bin ~ X1 | f1", "logit"),
+        ("Y_bin ~ X1", "probit"),
+        ("Y_bin ~ X1 | f1", "probit"),
+        ("Y_cont ~ X1", "gaussian"),
+        ("Y_cont ~ X1 | f1", "gaussian"),
+    ],
+)
+@pytest.mark.parametrize("method", ["bayesian", "multinomial"])
+def test_feglm_returns_dataframe(glm_data, fml, family, method):
+    """Weightingboottest on Feglm subclasses should return a correctly shaped result."""
+    fit = pf.feglm(fml, data=glm_data, family=family, vcov="iid")
+    res = fit.weightingboottest(reps=50, method=method, seed=0)
+    assert hasattr(res, "columns")
+    assert "Estimate" in res.columns
+    assert "Bootstrap SE" in res.columns
+    assert list(res.index) == list(fit._coefnames)
+
+
+@pytest.mark.parametrize(
+    "fml,family",
+    [
+        ("Y_bin ~ X1", "logit"),
+        ("Y_bin ~ X1 | f1", "logit"),
+        ("Y_cont ~ X1", "gaussian"),
+    ],
+)
+def test_feglm_draws_shape(glm_data, fml, family):
+    fit = pf.feglm(fml, data=glm_data, family=family, vcov="iid")
+    reps = 50
+    _, draws = fit.weightingboottest(
+        reps=reps, method="bayesian", seed=0, return_draws=True
+    )
+    assert draws.shape == (reps, len(fit._coefnames))
+
+
+def test_feglm_bootstrap_mean_close_to_beta_logit(glm_data):
+    """Bootstrap mean of logit draws should be close to the point estimate."""
+    fit = pf.feglm("Y_bin ~ X1 | f1", data=glm_data, family="logit", vcov="iid")
+    _, draws = fit.weightingboottest(
+        reps=300, method="bayesian", seed=42, return_draws=True
+    )
+    np.testing.assert_allclose(
+        draws.mean(axis=0),
+        fit._beta_hat,
+        atol=0.20,
+        err_msg="Bootstrap mean too far from logit beta",
+    )
+
+
+def test_feglm_bootstrap_mean_close_to_beta_gaussian(glm_data):
+    """Bootstrap mean of gaussian draws should be close to the point estimate."""
+    fit = pf.feglm("Y_cont ~ X1 | f1", data=glm_data, family="gaussian", vcov="iid")
+    _, draws = fit.weightingboottest(
+        reps=300, method="bayesian", seed=42, return_draws=True
+    )
+    np.testing.assert_allclose(
+        draws.mean(axis=0),
+        fit._beta_hat,
+        atol=0.10,
+        err_msg="Bootstrap mean too far from gaussian beta",
+    )
+
+
+def test_feglm_se_positive(glm_data):
+    """Bootstrap SE should be positive for all families."""
+    for family, fml in [
+        ("logit", "Y_bin ~ X1 | f1"),
+        ("probit", "Y_bin ~ X1 | f1"),
+        ("gaussian", "Y_cont ~ X1 | f1"),
+    ]:
+        fit = pf.feglm(fml, data=glm_data, family=family, vcov="iid")
+        _, draws = fit.weightingboottest(
+            reps=100, method="bayesian", seed=0, return_draws=True
+        )
+        assert (draws.std(axis=0, ddof=1) > 0).all(), f"Zero SE for {family}"
+
+
+@pytest.mark.parametrize("method", ["bayesian", "multinomial"])
+@pytest.mark.parametrize("family", ["logit", "probit"])
+def test_feglm_se_close_to_analytic(glm_data, method, family):
+    """Bootstrap SE should be close to analytic iid SE for logit/probit (within 20% for 500 reps).
+
+    Gaussian is excluded: the GLM analytic SE fixes dispersion=1 and therefore
+    differs from OLS SE. The bootstrap SE is correct; it is tested separately
+    against the OLS bootstrap SE in test_feglm_gaussian_matches_ols.
+    """
+    fit = pf.feglm("Y_bin ~ X1 | f1", data=glm_data, family=family, vcov="iid")
+    analytic_se = fit.se().to_numpy()
+    res = fit.weightingboottest(reps=500, method=method, seed=42)
+    boot_se = res["Bootstrap SE"].to_numpy()
+    np.testing.assert_allclose(boot_se, analytic_se, rtol=0.20)
+
+
+def test_feglm_gaussian_matches_ols(glm_data):
+    """Gaussian GLM bootstrap SE should equal OLS bootstrap SE (same model, same data)."""
+    fit_ols = pf.feols("Y_cont ~ X1 | f1", data=glm_data, vcov="iid")
+    fit_gauss = pf.feglm(
+        "Y_cont ~ X1 | f1", data=glm_data, family="gaussian", vcov="iid"
+    )
+    _, draws_ols = fit_ols.weightingboottest(
+        reps=500, method="bayesian", seed=42, return_draws=True
+    )
+    _, draws_gauss = fit_gauss.weightingboottest(
+        reps=500, method="bayesian", seed=42, return_draws=True
+    )
+    np.testing.assert_allclose(
+        draws_gauss.std(axis=0, ddof=1),
+        draws_ols.std(axis=0, ddof=1),
+        rtol=0.05,
+    )
