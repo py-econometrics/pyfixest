@@ -22,6 +22,7 @@ estimation.models.fepois_.Fepois(
     sample_split_var=None,
     sample_split_value=None,
     separation_check=None,
+    offset=None,
 )
 ```
 

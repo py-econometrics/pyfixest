@@ -34,6 +34,8 @@ fit = pf.feols("Y ~ X1 | f1", data=df, demeaner=LsmrDemeaner(backend="torch", de
 
 - Adds experimental GPU acceleration via PyTorch on CUDA and MPS, plus a PyTorch-based CPU LSMR demeaning backend.
 
+- Adds support for `offset`s in `pf.fepois()`, thanks to @bradhackinen and @marie-gar.
+
 ## PyFixest 0.50.1
 
 ### Bug Fixes
