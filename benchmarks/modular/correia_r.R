@@ -14,6 +14,7 @@ config <- fromJSON(args[[1]], simplifyVector = FALSE)
 manifest <- config$manifest
 formula <- as.formula(config$formula)
 tolerance <- config$tolerance
+fixef_iterations <- config$fixef_iterations
 
 for (entry in manifest) {
   elapsed <- NULL
@@ -26,7 +27,14 @@ for (entry in manifest) {
       df <- utils::read.csv(entry$data_path)
       n_obs <- nrow(df)
       elapsed <- unname(system.time({
-        suppressMessages(feols(formula, data = df, fixef.tol = tolerance))
+        suppressMessages(
+          feols(
+            formula,
+            data = df,
+            fixef.tol = tolerance,
+            fixef.iter = fixef_iterations
+          )
+        )
       })[["elapsed"]])
     },
     error = function(e) {

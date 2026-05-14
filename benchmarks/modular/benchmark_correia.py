@@ -27,6 +27,7 @@ OUTPUT_CSV = PROJECT_ROOT / "benchmarks" / "results" / "correia-benchmarks.csv"
 SCRIPT_DIR = Path(__file__).resolve().parent
 N_ITERATIONS = 3
 TOLERANCE = 1e-8
+R_FIXEF_ITERATIONS = 100_000
 
 DATASETS = [
     "credit2",
@@ -96,7 +97,7 @@ def load_datasets() -> list[BenchmarkDataset]:
 def build_benchmarkers() -> list:
     import pyfixest as pf
 
-    extra_config = {"tolerance": TOLERANCE}
+    extra_config = {"tolerance": TOLERANCE, "fixef_iterations": R_FIXEF_ITERATIONS}
     return [
         PyFeolsBenchmarkerFullApi(
             "pyfixest-map",
