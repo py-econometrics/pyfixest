@@ -99,7 +99,8 @@ def build_benchmarkers() -> list:
     extra_config = {"tolerance": TOLERANCE}
     return [
         PyFeolsBenchmarkerFullApi(
-            "pyfixest-map", demeaner=pf.MapDemeaner(fixef_tol=TOLERANCE)
+            "pyfixest-map",
+            demeaner=pf.MapDemeaner(fixef_tol=TOLERANCE, fixef_maxiter=100_000),
         ),
         PyFeolsBenchmarkerFullApi(
             "pyfixest-within", demeaner=pf.WithinDemeaner(fixef_tol=TOLERANCE)
