@@ -1,0 +1,323 @@
+---
+title: "Benchmarking Fixed Effects Implementations and Solvers"
+description: "Runtime comparison of PyFixest, fixest, FixedEffectModels.jl, and Correia's published Stata results on real-world HDFE datasets."
+categories: [performance, fixed effects, benchmarks]
+jupyter: python3
+format:
+  html:
+    html-table-processing: none
+toc: true
+toc-title: "On this page"
+toc-location: left
+---
+
+## Overview
+
+[Sergio Correia's HDFE benchmark suite](https://www.scorreia.com/data/hdfe/index.html)
+consists of a collection of real-world datasets that stress different graph topologies and are the most extensive collection of public benchmark data sets for HDFE solvers we are aware of.
+
+In addition, we also include benchmarks on synthetic data generating processes from the
+[fixest benchmarks](https://github.com/kylebutts/fixest_benchmarks) suite, which have formed a core reference point for PyFixest development and contrast nicely the relative strenghts and weaknesses of different solvers.
+
+We benchmark solvers in PyFixest against the following references:
+
+- [**fixest**](https://lrberge.github.io/fixest/), which is the reference HDFE implementation in R. `fixest` implements a MAP-style solver with Irons-Tuck acceleration and other optimizations.
+- [**FixedEffectModels.jl**](https://github.com/FixedEffects/FixedEffectModels.jl), which is the reference Julia implementation and implements an LSMR solver with diagonal preconditioning
+- [**reghdfe**](https://scorreia.com/software/reghdfe/) via [**Sergio Correia's published Stata results**](https://www.scorreia.com/data/hdfe/index.html), which is the reference Stata implementation that includes a wide variety of solvers.
+
+All Python, Julia and R benchmarks are run on Alex' local machine (Mac mini, Apple M4, 10 cores, 16 GB RAM, macOS 15.3.1); because Alex does not have access to Stata, we take the Stata runtimes from Sergio Correia's website. This leads to the caveat that Stata runtimes are not directly comparable to the other benchmarks due to hardware differences.
+
+For the Correia data sets, we fit two-way fixed effects regressions using the `fixest`, `PyFixest` and `FixedEffectModels.jl` defaults: this means that all packages drop multicollinear variables (albeit using different algorithms), drop singletions, and use iid inference. To get closer to the Stata benchmarks, we change the default tolerance to `1e-8` for the Stata benchmarks. Note that convergence criteria differ across implementations, so the tolerance is only a common stopping threshold and does not guarantee identical convergence behavior across packages.
+For the `fixest` benchmark, we use the default 1e-6 tolerance for `fixest`, `PyFixest` and `FixedEffectModels.jl` and fit three-way fixed effects models using the "simple" and "difficult" DGPs.
+
+::: {.callout}
+For an explanation why different fixed effects / graph structures lead to differences in solver performance, please take a look at the [When Are Fixed Effects Estimations Difficult?](difficult-fixed-effects.md) vignette.
+:::
+
+
+## Benchmarks
+
+```{python}
+# | echo: false
+from __future__ import annotations
+
+from pathlib import Path
+
+import great_tables as gt
+import pandas as pd
+
+RESULTS_DIR = Path("../../benchmarks/results")
+
+CORREIA_DATASETS = [
+    "credit2", "credit", "soccer", "synthetic-complete",
+    "synthetic-uniform-easy", "synthetic-uniform-hard",
+    "synthetic-uniform-harder", "synthetic-assortative",
+    "synthetic-zigzag", "enron", "github", "patents",
+    "workers", "schools", "directors",
+]
+MAIN_SIZES = [10_000, 10_000_000]
+DGP_LABELS = {"simple": "Simple 3-way FE", "difficult": "Difficult 3-way FE"}
+
+# Column order in the unified table.
+BACKEND_COLS = [
+    "pyfixest_map",
+    "pyfixest_within",
+    "pyfixest_torch",
+    "fixest",
+    "fem_jl",
+    "stata_aitken",
+    "stata_sd",
+    "stata_cgsym",
+    "stata_prune",
+    "stata_lsmr",
+]
+LOCAL_COLS = BACKEND_COLS[:5]
+STATA_COLS = BACKEND_COLS[5:]
+
+BACKEND_LABELS = {
+    "pyfixest_map": "PyFixest MAP (no acc.)",
+    "pyfixest_within": "PyFixest CG (Schwarz precond.)",
+    "pyfixest_torch": "PyFixest Torch (CUDA)",
+    "fixest": "fixest MAP (IT acc.)",
+    "fem_jl": "FEM.jl LSMR (diag. precond.)",
+    "stata_aitken": "MAP-Aitken",
+    "stata_sd": "MAP-SD",
+    "stata_cgsym": "MAP-CG-Sym",
+    "stata_prune": "MAP+Prune",
+    "stata_lsmr": "LSMR",
+}
+
+# Mapping from raw "algo" / "backend" strings to our column ids.
+CORREIA_ALGO_MAP = {
+    "pyfixest-map": "pyfixest_map",
+    "pyfixest-within": "pyfixest_within",
+    "fixest": "fixest",
+    "FixedEffectModels": "fem_jl",
+    "MAP-Aitken": "stata_aitken",
+    "MAP-SD": "stata_sd",
+    "MAP-CG-Sym": "stata_cgsym",
+    "MAP+Prune": "stata_prune",
+    "LSMR": "stata_lsmr",
+}
+MAIN_BACKEND_MAP = {
+    "pyfixest (rust-map)": "pyfixest_map",
+    "pyfixest (rust-cg)": "pyfixest_within",   # rust-cg = WithinDemeaner (CG solver)
+    "pyfixest (torch-cuda)": "pyfixest_torch",
+    "fixest-map": "fixest",
+    "FEM.jl (lsmr)": "fem_jl",
+}
+
+# Sentinel strings used in formatted cells.
+NB_TEXT = "NB"
+FAIL_TEXT = "fail"
+
+
+def _format_seconds(value: float) -> str:
+    if pd.isna(value):
+        return NB_TEXT
+    if value < 0.01:
+        return f"{value:.4f}"
+    if value < 1:
+        return f"{value:.3f}"
+    if value < 10:
+        return f"{value:.2f}"
+    return f"{value:.1f}"
+
+
+def _load_correia() -> pd.DataFrame:
+    correia = pd.read_csv(RESULTS_DIR / "correia-benchmarks.csv")
+    stata = pd.read_csv(RESULTS_DIR / "correia-stata-benchmarks.csv")
+    df = pd.concat([correia, stata], ignore_index=True)
+    df = df[df["dataset"].isin(CORREIA_DATASETS)].copy()
+    df["row_id"] = df["dataset"]
+    df["row_label"] = df["dataset"].str.replace("synthetic-", "synth-")
+    df["group"] = "Correia datasets"
+    df["column"] = df["algo"].map(CORREIA_ALGO_MAP)
+    return df
+
+
+def _load_main() -> pd.DataFrame:
+    frames: list[pd.DataFrame] = []
+    for path in RESULTS_DIR.glob("feols_bench__*.csv"):
+        frames.append(pd.read_csv(path))
+    if not frames:
+        return pd.DataFrame()
+    df = pd.concat(frames, ignore_index=True)
+    # Restrict to 3-way FE, k=1 covariate (closest analog to the Correia spec).
+    df = df[
+        (df["n_fe"] == 3)
+        & (df["model_k"] == 1)
+        & (df["n_obs"].isin(MAIN_SIZES))
+        & (df["dgp"].isin(DGP_LABELS))
+        & (df["backend"].isin(MAIN_BACKEND_MAP))
+    ].copy()
+    df["row_id"] = df["dgp"] + "_" + df["n_obs"].astype(str)
+    df["row_label"] = (
+        df["dgp"].map(DGP_LABELS) + ", N=" + df["n_obs"].map(lambda n: f"{n:,}")
+    )
+    df["group"] = "fixest DGPs (3-way FE)"
+    df["column"] = df["backend"].map(MAIN_BACKEND_MAP)
+    return df
+
+
+def _summarize(df: pd.DataFrame) -> pd.DataFrame:
+    out = (
+        df.groupby(["row_id", "row_label", "group", "column"], observed=True, sort=False)
+        .agg(time=("time", "median"), success=("success", "all"))
+        .reset_index()
+    )
+    out["time"] = out.apply(
+        lambda r: r["time"] if r["success"] and pd.notna(r["time"]) else pd.NA,
+        axis=1,
+    )
+    out["status"] = out.apply(
+        lambda r: "ok" if pd.notna(r["time"]) else "fail",
+        axis=1,
+    )
+    return out[["row_id", "row_label", "group", "column", "time", "status"]]
+
+
+def _build_wide(long: pd.DataFrame, row_order: list[tuple[str, str, str]]) -> pd.DataFrame:
+    """Wide table with one row per dataset, one column per backend."""
+    rows: list[dict] = []
+    for row_id, row_label, group in row_order:
+        record = {"row_id": row_id, "row_label": row_label, "group": group}
+        subset = long[long["row_id"] == row_id]
+        times: dict[str, float] = {}
+        for col in BACKEND_COLS:
+            cell = subset[subset["column"] == col]
+            if cell.empty:
+                record[col] = NB_TEXT
+                record[f"{col}__status"] = "nb"
+                continue
+            cell_row = cell.iloc[0]
+            if cell_row["status"] != "ok":
+                record[col] = FAIL_TEXT
+                record[f"{col}__status"] = "fail"
+                continue
+            record[col] = _format_seconds(float(cell_row["time"]))
+            record[f"{col}__status"] = "ok"
+            times[col] = float(cell_row["time"])
+        if times:
+            record[f"{min(times, key=times.get)}__status"] = "fastest"
+        rows.append(record)
+    return pd.DataFrame(rows)
+
+
+correia_long = _summarize(_load_correia())
+main_long = _summarize(_load_main())
+long_df = pd.concat([correia_long, main_long], ignore_index=True)
+
+row_order: list[tuple[str, str, str]] = []
+for ds in CORREIA_DATASETS:
+    label = ds.replace("synthetic-", "synth-")
+    label = label[:1].upper() + label[1:]
+    row_order.append((ds, label, "Correia datasets"))
+for dgp in ("simple", "difficult"):
+    for n in MAIN_SIZES:
+        row_order.append(
+            (
+                f"{dgp}_{n}",
+                f"{DGP_LABELS[dgp]}, N={n:,}",
+                "fixest DGPs (3-way FE)",
+            )
+        )
+
+wide = _build_wide(long_df, row_order)
+status_cols = [f"{c}__status" for c in BACKEND_COLS]
+
+
+def _style_for(status: str) -> dict | None:
+    if status == "fastest":
+        return {
+            "color": "#065F46",
+            "weight": "bold",
+            "background": "#ECFDF5",
+        }
+    if status == "fail":
+        return {"color": "#B91C1C", "style": "italic"}
+    if status == "nb":
+        return {"color": "#94A3B8"}
+    return None
+
+
+tbl = (
+    gt.GT(wide.drop(columns=status_cols), rowname_col="row_label", groupname_col="group")
+    .tab_header(
+        title="PyFixest vs fixest, FixedEffectModels.jl & Stata on the Correia datasets",
+        subtitle="Runtime in seconds - median of 3 iterations",
+    )
+    .cols_label(**{col: BACKEND_LABELS[col] for col in BACKEND_COLS})
+    .cols_hide(columns=["row_id"])
+    .tab_spanner(label="Local backends", columns=LOCAL_COLS)
+    .tab_spanner(label="Stata reference (Correia)", columns=STATA_COLS)
+    .tab_options(
+        table_font_size="13px",
+        heading_title_font_size="16px",
+        heading_subtitle_font_size="12px",
+        row_group_font_weight="bold",
+        column_labels_font_weight="bold",
+    )
+    .opt_horizontal_padding(scale=1.2)
+    .tab_source_note(
+        gt.md(
+            "**NB** = not benchmarked (distinct from `fail`, which means the run hit "
+            "its iteration limit without converging). Torch (CUDA) was not run on the Correia "
+            "datasets, so those cells are `NB`. Stata was not run on the fixest DGP rows (Correia only published numbers for his 15 datasets), so those cells are `NB` too. Note that Torch (CUDA) and the Stata reference ran on different hardware than the local Python / R / Julia benchmarks."
+        )
+    )
+    .tab_source_note(
+        gt.md(
+            "Local backends ran on a Mac mini (Apple M4, 10 cores, 16 GB RAM, macOS "
+            "15.3.1); Stata runtimes are reproduced from "
+            "[Correia's website](https://www.scorreia.com/data/hdfe/index.html) and "
+            "were obtained on different hardware. Tolerance is `1e-8` for every "
+            "backend of the 'Correia data sets', else we use the package defaults.; convergence criteria differ across implementations."
+        )
+    )
+)
+
+# Per-cell styles (fastest / fail / nb). great_tables doesn't support per-cell
+# conditional styling directly via tab_style, so iterate over (row, col) pairs.
+for col in BACKEND_COLS:
+    status_series = wide[f"{col}__status"]
+    for idx, status in enumerate(status_series):
+        style = _style_for(status)
+        if not style:
+            continue
+        css: list[gt.style] = []
+        if "background" in style:
+            css.append(gt.style.fill(color=style["background"]))
+        text_kwargs: dict[str, str] = {}
+        if "color" in style:
+            text_kwargs["color"] = style["color"]
+        if "weight" in style:
+            text_kwargs["weight"] = style["weight"]
+        if "style" in style:
+            text_kwargs["style"] = style["style"]
+        if text_kwargs:
+            css.append(gt.style.text(**text_kwargs))
+        tbl = tbl.tab_style(style=css, locations=gt.loc.body(columns=col, rows=[idx]))
+
+tbl
+```
+
+
+::: {.callout-warning}
+## Reading the table
+
+Cells that say `NB` indicate the cell was **not benchmarked** - we never ran that
+backend on that dataset - and are distinct from `fail`, which means the backend ran
+to its iteration limit without converging at the requested tolerance. Torch (CUDA) was not run on the Correia datasets, so those cells are `NB`. Stata was not run on the fixest DGP rows (Correia only published numbers for his 15 datasets), so those cells are `NB` too. Note that Torch (CUDA) and the Stata reference ran on different hardware than the local Python / R / Julia benchmarks.
+:::
+
+## Reproducing these numbers
+
+To run the benchmarks yourself, you can use the `pixi` tasks below, which will automatically install all required (open source) dependencies, create synethetic data sets and run the benchmarks. You will have to download the Correia datasets from [Correia's website](https://www.scorreia.com/data/hdfe/index.html) and place them in the `benchmarks/modular/data/correia` directory.
+
+```bash
+# benchmark fixest-dgp's
+pixi run benchmark
+# benchmark R, Julia, Pyton on the Correia datasets
+pixi run benchmark-correia
+```

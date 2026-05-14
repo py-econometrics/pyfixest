@@ -96,6 +96,8 @@ website:
           file: explanation/ssc.qmd
         - text: "Does PyFixest Match fixest?"
           file: explanation/compare-fixest-pyfixest.qmd
+      - text: "Benchmarks"
+        file: explanation/benchmarks-correia.qmd
       - text: "Textbook Replications"
         menu:
         - text: "All Textbook Replications"
