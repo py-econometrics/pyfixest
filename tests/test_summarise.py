@@ -1,6 +1,4 @@
 import pandas as pd
-import pytest
-import statsmodels.formula.api as smf
 from great_tables import GT
 
 import pyfixest as pf
