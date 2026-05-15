@@ -38,8 +38,11 @@ For an explanation why different fixed effects / graph structures lead to differ
 
 ```{python}
 # | echo: false
-# | fig-width: 14
-# | fig-height: 6
+# | fig-width: 11
+# | fig-height: 5
+# | fig-align: center
+# | fig-dpi: 130
+# | column: page
 from __future__ import annotations
 
 from pathlib import Path
@@ -98,8 +101,9 @@ def _load_main() -> pd.DataFrame:
     if not frames:
         return pd.DataFrame(columns=["dataset", "algo", "singleton_drop", "time"])
     df = pd.concat(frames, ignore_index=True)
+    # fixest DGPs are designed for 3-way FE — that's where "difficult" is actually hard.
     df = df[
-        (df["n_fe"] == 2) & (df["model_k"] == 1) & (df["n_obs"] == 10_000_000)
+        (df["n_fe"] == 3) & (df["model_k"] == 1) & (df["n_obs"] == 10_000_000)
         & df["backend"].isin(MAIN_BACKEND_MAP) & df["success"].astype(bool) & df["time"].notna()
     ].copy()
     df["algo"] = df["backend"].map(MAIN_BACKEND_MAP)
@@ -129,7 +133,7 @@ def _make_figure(agg: pd.DataFrame, singleton: bool) -> plt.Figure:
     ds_xs = {**real_xs, **synth_xs}
     all_ds = real_order + synth_order
 
-    fig, ax = plt.subplots(figsize=(14, 6))
+    fig, ax = plt.subplots(figsize=(11, 5))
 
     sub_all  = agg[agg["singleton_drop"] == singleton].copy()
     baseline = (
@@ -157,7 +161,7 @@ def _make_figure(agg: pd.DataFrame, singleton: bool) -> plt.Figure:
             for _, row in sub.iterrows():
                 ax.annotate(_fmt(row["base_time"]), xy=(row["x"], 1.0), xytext=(0, 6),
                             textcoords="offset points", ha="center", va="bottom",
-                            fontsize=5.5, color=meta["color"])
+                            fontsize=8, color=meta["color"])
         else:
             valid = sub[sub["ratio"].notna()]
             ax.scatter(valid["x"], valid["ratio"], color=meta["color"], marker=meta["marker"],
@@ -170,7 +174,7 @@ def _make_figure(agg: pd.DataFrame, singleton: bool) -> plt.Figure:
                             xytext=(0, 6 if above else -8),
                             textcoords="offset points", ha="center",
                             va="bottom" if above else "top",
-                            fontsize=5.5, color=meta["color"])
+                            fontsize=8, color=meta["color"])
 
     sep_x = len(real_order) - 0.5 + GAP / 2
     ax.axvline(sep_x, color="#CBD5E1", lw=1.2, ls="--", zorder=0)
@@ -220,8 +224,11 @@ plt.show()
 
 ```{python}
 # | echo: false
-# | fig-width: 14
-# | fig-height: 6
+# | fig-width: 11
+# | fig-height: 5
+# | fig-align: center
+# | fig-dpi: 130
+# | column: page
 fig2 = _make_figure(agg, singleton=False)
 plt.show()
 ```
