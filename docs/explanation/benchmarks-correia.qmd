@@ -56,11 +56,13 @@ RESULTS_DIR = Path("../../benchmarks/results")
 
 # Colors / markers from benchmarks/modular/plotting.py
 ALGO_META: dict[str, dict] = {
-    "pyfixest-map":     {"label": "PyFixest MAP (baseline)", "color": "#047857", "marker": "o", "jitter": -0.22, "zorder": 4, "size": 90},
-    "pyfixest-within":  {"label": "PyFixest CG",             "color": "#16A34A", "marker": "s", "jitter": -0.07, "zorder": 5, "size": 80},
-    "fixest":           {"label": "fixest (R)",               "color": "#2563EB", "marker": "^", "jitter": +0.07, "zorder": 5, "size": 80},
+    "pyfixest-map":     {"label": "PyFixest MAP",             "color": "#047857", "marker": "o", "jitter": -0.22, "zorder": 5, "size": 80},
+    "pyfixest-within":  {"label": "PyFixest CG",              "color": "#16A34A", "marker": "s", "jitter": -0.07, "zorder": 5, "size": 80},
+    "fixest":           {"label": "fixest (R, baseline)",     "color": "#2563EB", "marker": "^", "jitter": +0.07, "zorder": 4, "size": 90},
     "FixedEffectModels":{"label": "FEM.jl (Julia)",           "color": "#EAB308", "marker": "D", "jitter": +0.22, "zorder": 5, "size": 80},
 }
+
+BASELINE_ALGO = "fixest"
 
 CORREIA_DATASETS = [
     "credit2", "credit", "soccer", "synthetic-complete",
@@ -112,9 +114,9 @@ def _load_main() -> pd.DataFrame:
     return df[["dataset", "algo", "singleton_drop", "time"]]
 
 
-def _sorted_by_map(agg: pd.DataFrame, datasets: set[str], singleton: bool) -> list[str]:
+def _sorted_by_baseline(agg: pd.DataFrame, datasets: set[str], singleton: bool) -> list[str]:
     base = (
-        agg[(agg["algo"] == "pyfixest-map") & (agg["singleton_drop"] == singleton) & agg["dataset"].isin(datasets)]
+        agg[(agg["algo"] == BASELINE_ALGO) & (agg["singleton_drop"] == singleton) & agg["dataset"].isin(datasets)]
         .sort_values("time")
     )
     ordered = base["dataset"].tolist()
@@ -122,10 +124,10 @@ def _sorted_by_map(agg: pd.DataFrame, datasets: set[str], singleton: bool) -> li
 
 
 def _make_figure(agg: pd.DataFrame, singleton: bool) -> plt.Figure:
-    real_order  = _sorted_by_map(agg, REAL_DATASETS, singleton)
-    synth_order = _sorted_by_map(agg, SYNTH_CORREIA, singleton)
+    real_order  = _sorted_by_baseline(agg, REAL_DATASETS, singleton)
+    synth_order = _sorted_by_baseline(agg, SYNTH_CORREIA, singleton)
     if singleton:
-        synth_order += _sorted_by_map(agg, FIXEST_DGPS, singleton=True)
+        synth_order += _sorted_by_baseline(agg, FIXEST_DGPS, singleton=True)
 
     real_xs = {ds: float(i) for i, ds in enumerate(real_order)}
     s0 = len(real_order) + GAP
@@ -137,7 +139,7 @@ def _make_figure(agg: pd.DataFrame, singleton: bool) -> plt.Figure:
 
     sub_all  = agg[agg["singleton_drop"] == singleton].copy()
     baseline = (
-        sub_all[sub_all["algo"] == "pyfixest-map"][["dataset", "time"]]
+        sub_all[sub_all["algo"] == BASELINE_ALGO][["dataset", "time"]]
         .rename(columns={"time": "base_time"})
     )
 
@@ -153,7 +155,7 @@ def _make_figure(agg: pd.DataFrame, singleton: bool) -> plt.Figure:
         sub["ratio"] = sub["time"] / sub["base_time"]
         sub["x"] = sub["dataset"].map(ds_xs) + meta["jitter"]
 
-        if algo == "pyfixest-map":
+        if algo == BASELINE_ALGO:
             sub["ratio"] = 1.0
             ax.scatter(sub["x"], sub["ratio"], color=meta["color"], marker=meta["marker"],
                        s=meta["size"], zorder=meta["zorder"], label=meta["label"],
@@ -196,16 +198,16 @@ def _make_figure(agg: pd.DataFrame, singleton: bool) -> plt.Figure:
 
     ax.set_xticks([ds_xs[ds] for ds in all_ds])
     ax.set_xticklabels([_xlabel(ds) for ds in all_ds], rotation=45, ha="right", fontsize=8)
-    ax.set_ylabel("Runtime ratio vs PyFixest MAP (log scale)", fontsize=10)
+    ax.set_ylabel("Runtime ratio vs fixest (R) (log scale)", fontsize=10)
     ax.grid(True, which="both", axis="y", alpha=0.25, ls=":", color="#64748B")
     ax.set_axisbelow(True)
     ax.spines[["top", "right"]].set_visible(False)
 
     suffix = "with singleton dropping" if singleton else "without singleton dropping"
     ax.set_title(
-        f"Runtime relative to PyFixest MAP ({suffix}, tol=1e-8)\n"
+        f"Runtime relative to fixest (R) ({suffix}, tol=1e-8)\n"
         "Correia datasets: 2-way FE. fixest DGPs: 3-way FE, N=10M.\n"
-        "Datasets sorted by increasing PyFixest MAP runtime within each group",
+        "Datasets sorted by increasing fixest runtime within each group",
         fontsize=10, pad=20,
     )
     handles, labels = ax.get_legend_handles_labels()
