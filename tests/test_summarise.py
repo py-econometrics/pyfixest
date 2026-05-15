@@ -166,13 +166,3 @@ def test_etable_correct_output_type():
 
     typst_table = pf.etable(fit, type="typst")
     assert isinstance(typst_table, str)
-
-
-@pytest.mark.skip("Pyfixest PR is not yet merged into stargazer.")
-def test_stargazer():
-    data = pf.get_data()
-
-    fit = pf.feols("Y ~ X1", data=data)
-    fit_smf = smf.ols("Y ~ X1", data=data).fit()
-
-    pf.Stargazer([fit, fit_smf])
