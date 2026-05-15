@@ -40,8 +40,8 @@ For an explanation why different fixed effects / graph structures lead to differ
 
 ```{python}
 # | echo: false
-# | fig-width: 11
-# | fig-height: 5
+# | fig-width: 16
+# | fig-height: 8
 # | fig-dpi: 130
 from __future__ import annotations
 
@@ -133,7 +133,7 @@ def _make_figure(agg: pd.DataFrame, singleton: bool) -> plt.Figure:
     ds_xs = {**real_xs, **synth_xs}
     all_ds = real_order + synth_order
 
-    fig, ax = plt.subplots(figsize=(11, 5))
+    fig, ax = plt.subplots(figsize=(16, 8))
 
     sub_all  = agg[agg["singleton_drop"] == singleton].copy()
     baseline = (
@@ -229,8 +229,8 @@ plt.show()
 
 ```{python}
 # | echo: false
-# | fig-width: 11
-# | fig-height: 5
+# | fig-width: 16
+# | fig-height: 8
 # | fig-dpi: 130
 fig2 = _make_figure(agg, singleton=False)
 plt.show()
