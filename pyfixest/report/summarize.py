@@ -69,7 +69,7 @@ def etable(
         The models to be summarized in the table.
     type : str, optional
         Type of output. Either "df" for pandas DataFrame, "md" for markdown,
-        "gt" for great_tables, or "tex" for LaTeX table. Default is "gt".
+        "gt" for great_tables, "tex" for LaTeX table, or "typst" for Typst table. Default is "gt".
     signif_code : list, optional
         Significance levels for the stars. Default is None, which sets
         [0.001, 0.01, 0.05]. Note that stars are only rendered if `coef_fmt`
@@ -196,10 +196,11 @@ def etable(
 
     assert type in [
         "df",
-        "tex",
         "md",
         "html",
         "gt",
+        "tex",
+        "typst",
     ], "type must be either 'df', 'md', 'html', 'gt' or 'tex'"
 
     models_list = _post_processing_input_checks(models)
@@ -221,7 +222,7 @@ def etable(
         assert isinstance(custom_model_stats, dict), "custom_model_stats must be a dict"
         for stat, values in custom_model_stats.items():
             assert isinstance(stat, str), "custom_model_stats keys must be strings"
-            assert isinstance(values, list), "custom_model_stats values must lists"
+            assert isinstance(values, list), "custom_model_stats values must be lists"
             assert len(values) == len(models_list), (
                 "lists in custom_model_stats values must have the same length as models"
             )
@@ -266,6 +267,12 @@ def etable(
         if file_name is not None:
             with open(file_name, "w") as f:
                 f.write(result.as_raw_html())
+        return result
+    elif type == "typst":
+        result = table.make(type="typst")
+        if file_name is not None:
+            with open(file_name, "w") as f:
+                f.write(result)
         return result
 
     return None
