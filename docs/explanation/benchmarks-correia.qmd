@@ -1,6 +1,6 @@
 ---
 title: "Benchmarking Fixed Effects Implementations and Solvers"
-description: "Runtime comparison of PyFixest, fixest, FixedEffectModels.jl, and Correia's published Stata results on real-world HDFE datasets."
+description: "Runtime comparison of PyFixest, fixest, and FixedEffectModels.jl on real-world HDFE datasets."
 categories: [performance, fixed effects, benchmarks]
 jupyter: python3
 format:
@@ -16,19 +16,18 @@ toc-location: left
 [Sergio Correia's HDFE benchmark suite](https://www.scorreia.com/data/hdfe/index.html)
 consists of a collection of real-world datasets that stress different graph topologies and are the most extensive collection of public benchmark data sets for HDFE solvers we are aware of.
 
-In addition, we also include benchmarks on synthetic data generating processes from the
-[fixest benchmarks](https://github.com/kylebutts/fixest_benchmarks) suite, which have formed a core reference point for PyFixest development and contrast nicely the relative strenghts and weaknesses of different solvers.
-
-We benchmark solvers in PyFixest against the following references:
+We benchmark PyFixest against the following references:
 
 - [**fixest**](https://lrberge.github.io/fixest/), which is the reference HDFE implementation in R. `fixest` implements a MAP-style solver with Irons-Tuck acceleration and other optimizations.
-- [**FixedEffectModels.jl**](https://github.com/FixedEffects/FixedEffectModels.jl), which is the reference Julia implementation and implements an LSMR solver with diagonal preconditioning
-- [**reghdfe**](https://scorreia.com/software/reghdfe/) via [**Sergio Correia's published Stata results**](https://www.scorreia.com/data/hdfe/index.html), which is the reference Stata implementation that includes a wide variety of solvers.
+- [**FixedEffectModels.jl**](https://github.com/FixedEffects/FixedEffectModels.jl), which is the reference Julia implementation and implements an LSMR solver with diagonal preconditioning.
 
-All Python, Julia and R benchmarks are run on Alex' local machine (Mac mini, Apple M4, 10 cores, 16 GB RAM, macOS 15.3.1); because Alex does not have access to Stata, we take the Stata runtimes from Sergio Correia's website. This leads to the caveat that Stata runtimes are not directly comparable to the other benchmarks due to hardware differences.
+All benchmarks are run on Alex' local machine (Mac mini, Apple M4, 10 cores, 16 GB RAM, macOS 15.3.1).
 
-For the Correia data sets, we fit two-way fixed effects regressions using the `fixest`, `PyFixest` and `FixedEffectModels.jl` defaults: this means that all packages drop multicollinear variables (albeit using different algorithms), drop singletions, and use iid inference. To get closer to the Stata benchmarks, we change the default tolerance to `1e-8` for the Stata benchmarks. Note that convergence criteria differ across implementations, so the tolerance is only a common stopping threshold and does not guarantee identical convergence behavior across packages.
-For the `fixest` benchmark, we use the default 1e-6 tolerance for `fixest`, `PyFixest` and `FixedEffectModels.jl` and fit three-way fixed effects models using the "simple" and "difficult" DGPs.
+We fit two-way fixed effects regressions using each package's defaults: multicollinear variables are dropped (using package-specific algorithms), singletons are optionally dropped, and iid inference is used. We run each benchmark with and without singleton dropping. We use a tolerance of `1e-8`. Note that convergence criteria differ across implementations, so the tolerance is only a common stopping threshold and does not guarantee identical convergence behavior.
+
+::: {.callout-note}
+Benchmarks for [**reghdfe**](https://scorreia.com/software/reghdfe/) (Stata) can be found on [Sergio Correia's website](https://www.scorreia.com/data/hdfe/index.html). Note, however, that those numbers were collected roughly nine years ago on older hardware, so Python, R, and Julia implementations have a substantial hardware advantage in any direct comparison.
+:::
 
 ::: {.callout}
 For an explanation why different fixed effects / graph structures lead to differences in solver performance, please take a look at the [When Are Fixed Effects Estimations Difficult?](difficult-fixed-effects.md) vignette.
@@ -39,14 +38,26 @@ For an explanation why different fixed effects / graph structures lead to differ
 
 ```{python}
 # | echo: false
+# | fig-width: 14
+# | fig-height: 6
 from __future__ import annotations
 
 from pathlib import Path
 
-import great_tables as gt
+import matplotlib.pyplot as plt
+import matplotlib.ticker as mticker
+from matplotlib.transforms import blended_transform_factory
 import pandas as pd
 
 RESULTS_DIR = Path("../../benchmarks/results")
+
+# Colors / markers from benchmarks/modular/plotting.py
+ALGO_META: dict[str, dict] = {
+    "pyfixest-map":     {"label": "PyFixest MAP (baseline)", "color": "#047857", "marker": "o", "jitter": -0.22, "zorder": 4, "size": 90},
+    "pyfixest-within":  {"label": "PyFixest CG",             "color": "#16A34A", "marker": "s", "jitter": -0.07, "zorder": 5, "size": 80},
+    "fixest":           {"label": "fixest (R)",               "color": "#2563EB", "marker": "^", "jitter": +0.07, "zorder": 5, "size": 80},
+    "FixedEffectModels":{"label": "FEM.jl (Julia)",           "color": "#EAB308", "marker": "D", "jitter": +0.22, "zorder": 5, "size": 80},
+}
 
 CORREIA_DATASETS = [
     "credit2", "credit", "soccer", "synthetic-complete",
@@ -55,261 +66,165 @@ CORREIA_DATASETS = [
     "synthetic-zigzag", "enron", "github", "patents",
     "workers", "schools", "directors",
 ]
-MAIN_SIZES = [10_000, 10_000_000]
-DGP_LABELS = {"simple": "Simple 3-way FE", "difficult": "Difficult 3-way FE"}
+REAL_DATASETS = {d for d in CORREIA_DATASETS if not d.startswith("synthetic")}
+SYNTH_CORREIA = {d for d in CORREIA_DATASETS if d.startswith("synthetic")}
+FIXEST_DGPS   = {"fixest-simple", "fixest-difficult"}
 
-# Column order in the unified table.
-BACKEND_COLS = [
-    "pyfixest_map",
-    "pyfixest_within",
-    "pyfixest_torch",
-    "fixest",
-    "fem_jl",
-    "stata_aitken",
-    "stata_sd",
-    "stata_cgsym",
-    "stata_prune",
-    "stata_lsmr",
-]
-LOCAL_COLS = BACKEND_COLS[:5]
-STATA_COLS = BACKEND_COLS[5:]
-
-BACKEND_LABELS = {
-    "pyfixest_map": "PyFixest MAP (no acc.)",
-    "pyfixest_within": "PyFixest CG (Schwarz precond.)",
-    "pyfixest_torch": "PyFixest Torch (CUDA)",
-    "fixest": "fixest MAP (IT acc.)",
-    "fem_jl": "FEM.jl LSMR (diag. precond.)",
-    "stata_aitken": "MAP-Aitken",
-    "stata_sd": "MAP-SD",
-    "stata_cgsym": "MAP-CG-Sym",
-    "stata_prune": "MAP+Prune",
-    "stata_lsmr": "LSMR",
-}
-
-# Mapping from raw "algo" / "backend" strings to our column ids.
 CORREIA_ALGO_MAP = {
-    "pyfixest-map": "pyfixest_map",
-    "pyfixest-within": "pyfixest_within",
-    "fixest": "fixest",
-    "FixedEffectModels": "fem_jl",
-    "MAP-Aitken": "stata_aitken",
-    "MAP-SD": "stata_sd",
-    "MAP-CG-Sym": "stata_cgsym",
-    "MAP+Prune": "stata_prune",
-    "LSMR": "stata_lsmr",
+    "pyfixest-map": "pyfixest-map", "pyfixest-within": "pyfixest-within",
+    "fixest": "fixest", "FixedEffectModels": "FixedEffectModels",
 }
 MAIN_BACKEND_MAP = {
-    "pyfixest (rust-map)": "pyfixest_map",
-    "pyfixest (rust-cg)": "pyfixest_within",   # rust-cg = WithinDemeaner (CG solver)
-    "pyfixest (torch-cuda)": "pyfixest_torch",
-    "fixest-map": "fixest",
-    "FEM.jl (lsmr)": "fem_jl",
+    "pyfixest (rust-map)": "pyfixest-map", "pyfixest (rust-cg)": "pyfixest-within",
+    "fixest-map": "fixest", "FEM.jl (lsmr)": "FixedEffectModels",
 }
 
-# Sentinel strings used in formatted cells.
-NB_TEXT = "NB"
-FAIL_TEXT = "fail"
+GAP = 1.5
 
 
-def _format_seconds(value: float) -> str:
-    if pd.isna(value):
-        return NB_TEXT
-    if value < 0.01:
-        return f"{value:.4f}"
-    if value < 1:
-        return f"{value:.3f}"
-    if value < 10:
-        return f"{value:.2f}"
-    return f"{value:.1f}"
+def _fmt(t: float) -> str:
+    return f"{t:.1f}s"
 
 
 def _load_correia() -> pd.DataFrame:
-    correia = pd.read_csv(RESULTS_DIR / "correia-benchmarks.csv")
-    stata = pd.read_csv(RESULTS_DIR / "correia-stata-benchmarks.csv")
-    df = pd.concat([correia, stata], ignore_index=True)
-    df = df[df["dataset"].isin(CORREIA_DATASETS)].copy()
-    df["row_id"] = df["dataset"]
-    df["row_label"] = df["dataset"].str.replace("synthetic-", "synth-")
-    df["group"] = "Correia datasets"
-    df["column"] = df["algo"].map(CORREIA_ALGO_MAP)
-    return df
+    df = pd.read_csv(RESULTS_DIR / "correia-benchmarks.csv")
+    df = df[df["dataset"].isin(CORREIA_DATASETS) & df["success"].astype(bool) & df["time"].notna()].copy()
+    df["algo"] = df["algo"].map(CORREIA_ALGO_MAP)
+    return df[["dataset", "algo", "singleton_drop", "time"]]
 
 
 def _load_main() -> pd.DataFrame:
-    frames: list[pd.DataFrame] = []
-    for path in RESULTS_DIR.glob("feols_bench__*.csv"):
-        frames.append(pd.read_csv(path))
+    frames = [pd.read_csv(p) for p in RESULTS_DIR.glob("feols_bench__*.csv")]
     if not frames:
-        return pd.DataFrame()
+        return pd.DataFrame(columns=["dataset", "algo", "singleton_drop", "time"])
     df = pd.concat(frames, ignore_index=True)
-    # Restrict to 3-way FE, k=1 covariate (closest analog to the Correia spec).
     df = df[
-        (df["n_fe"] == 3)
-        & (df["model_k"] == 1)
-        & (df["n_obs"].isin(MAIN_SIZES))
-        & (df["dgp"].isin(DGP_LABELS))
-        & (df["backend"].isin(MAIN_BACKEND_MAP))
+        (df["n_fe"] == 2) & (df["model_k"] == 1) & (df["n_obs"] == 10_000_000)
+        & df["backend"].isin(MAIN_BACKEND_MAP) & df["success"].astype(bool) & df["time"].notna()
     ].copy()
-    df["row_id"] = df["dgp"] + "_" + df["n_obs"].astype(str)
-    df["row_label"] = (
-        df["dgp"].map(DGP_LABELS) + ", N=" + df["n_obs"].map(lambda n: f"{n:,}")
+    df["algo"] = df["backend"].map(MAIN_BACKEND_MAP)
+    df["dataset"] = "fixest-" + df["dgp"]
+    df["singleton_drop"] = True  # fixest DGPs drop singletons
+    return df[["dataset", "algo", "singleton_drop", "time"]]
+
+
+def _sorted_by_map(agg: pd.DataFrame, datasets: set[str], singleton: bool) -> list[str]:
+    base = (
+        agg[(agg["algo"] == "pyfixest-map") & (agg["singleton_drop"] == singleton) & agg["dataset"].isin(datasets)]
+        .sort_values("time")
     )
-    df["group"] = "fixest DGPs (3-way FE)"
-    df["column"] = df["backend"].map(MAIN_BACKEND_MAP)
-    return df
+    ordered = base["dataset"].tolist()
+    return ordered + sorted(d for d in datasets if d not in ordered)
 
 
-def _summarize(df: pd.DataFrame) -> pd.DataFrame:
-    out = (
-        df.groupby(["row_id", "row_label", "group", "column"], observed=True, sort=False)
-        .agg(time=("time", "median"), success=("success", "all"))
-        .reset_index()
+def _make_figure(agg: pd.DataFrame, singleton: bool) -> plt.Figure:
+    real_order  = _sorted_by_map(agg, REAL_DATASETS, singleton)
+    synth_order = _sorted_by_map(agg, SYNTH_CORREIA, singleton)
+    if singleton:
+        synth_order += _sorted_by_map(agg, FIXEST_DGPS, singleton=True)
+
+    real_xs = {ds: float(i) for i, ds in enumerate(real_order)}
+    s0 = len(real_order) + GAP
+    synth_xs = {ds: s0 + i for i, ds in enumerate(synth_order)}
+    ds_xs = {**real_xs, **synth_xs}
+    all_ds = real_order + synth_order
+
+    fig, ax = plt.subplots(figsize=(14, 6))
+
+    sub_all  = agg[agg["singleton_drop"] == singleton].copy()
+    baseline = (
+        sub_all[sub_all["algo"] == "pyfixest-map"][["dataset", "time"]]
+        .rename(columns={"time": "base_time"})
     )
-    out["time"] = out.apply(
-        lambda r: r["time"] if r["success"] and pd.notna(r["time"]) else pd.NA,
-        axis=1,
-    )
-    out["status"] = out.apply(
-        lambda r: "ok" if pd.notna(r["time"]) else "fail",
-        axis=1,
-    )
-    return out[["row_id", "row_label", "group", "column", "time", "status"]]
 
-
-def _build_wide(long: pd.DataFrame, row_order: list[tuple[str, str, str]]) -> pd.DataFrame:
-    """Wide table with one row per dataset, one column per backend."""
-    rows: list[dict] = []
-    for row_id, row_label, group in row_order:
-        record = {"row_id": row_id, "row_label": row_label, "group": group}
-        subset = long[long["row_id"] == row_id]
-        times: dict[str, float] = {}
-        for col in BACKEND_COLS:
-            cell = subset[subset["column"] == col]
-            if cell.empty:
-                record[col] = NB_TEXT
-                record[f"{col}__status"] = "nb"
-                continue
-            cell_row = cell.iloc[0]
-            if cell_row["status"] != "ok":
-                record[col] = FAIL_TEXT
-                record[f"{col}__status"] = "fail"
-                continue
-            record[col] = _format_seconds(float(cell_row["time"]))
-            record[f"{col}__status"] = "ok"
-            times[col] = float(cell_row["time"])
-        if times:
-            record[f"{min(times, key=times.get)}__status"] = "fastest"
-        rows.append(record)
-    return pd.DataFrame(rows)
-
-
-correia_long = _summarize(_load_correia())
-main_long = _summarize(_load_main())
-long_df = pd.concat([correia_long, main_long], ignore_index=True)
-
-row_order: list[tuple[str, str, str]] = []
-for ds in CORREIA_DATASETS:
-    label = ds.replace("synthetic-", "synth-")
-    label = label[:1].upper() + label[1:]
-    row_order.append((ds, label, "Correia datasets"))
-for dgp in ("simple", "difficult"):
-    for n in MAIN_SIZES:
-        row_order.append(
-            (
-                f"{dgp}_{n}",
-                f"{DGP_LABELS[dgp]}, N={n:,}",
-                "fixest DGPs (3-way FE)",
-            )
+    for algo, meta in ALGO_META.items():
+        sub = (
+            sub_all[sub_all["algo"] == algo]
+            .merge(baseline, on="dataset", how="inner")
+            .copy()
         )
-
-wide = _build_wide(long_df, row_order)
-status_cols = [f"{c}__status" for c in BACKEND_COLS]
-
-
-def _style_for(status: str) -> dict | None:
-    if status == "fastest":
-        return {
-            "color": "#065F46",
-            "weight": "bold",
-            "background": "#ECFDF5",
-        }
-    if status == "fail":
-        return {"color": "#B91C1C", "style": "italic"}
-    if status == "nb":
-        return {"color": "#94A3B8"}
-    return None
-
-
-tbl = (
-    gt.GT(wide.drop(columns=status_cols), rowname_col="row_label", groupname_col="group")
-    .tab_header(
-        title="PyFixest vs fixest, FixedEffectModels.jl & Stata on the Correia datasets",
-        subtitle="Runtime in seconds - median of 3 iterations",
-    )
-    .cols_label(**{col: BACKEND_LABELS[col] for col in BACKEND_COLS})
-    .cols_hide(columns=["row_id"])
-    .tab_spanner(label="Local backends", columns=LOCAL_COLS)
-    .tab_spanner(label="Stata reference (Correia)", columns=STATA_COLS)
-    .tab_options(
-        table_font_size="13px",
-        heading_title_font_size="16px",
-        heading_subtitle_font_size="12px",
-        row_group_font_weight="bold",
-        column_labels_font_weight="bold",
-    )
-    .opt_horizontal_padding(scale=1.2)
-    .tab_source_note(
-        gt.md(
-            "**NB** = not benchmarked (distinct from `fail`, which means the run hit "
-            "its iteration limit without converging). Torch (CUDA) was not run on the Correia "
-            "datasets, so those cells are `NB`. Stata was not run on the fixest DGP rows (Correia only published numbers for his 15 datasets), so those cells are `NB` too. Note that Torch (CUDA) and the Stata reference ran on different hardware than the local Python / R / Julia benchmarks."
-        )
-    )
-    .tab_source_note(
-        gt.md(
-            "Local backends ran on a Mac mini (Apple M4, 10 cores, 16 GB RAM, macOS "
-            "15.3.1); Stata runtimes are reproduced from "
-            "[Correia's website](https://www.scorreia.com/data/hdfe/index.html) and "
-            "were obtained on different hardware. Tolerance is `1e-8` for every "
-            "backend of the 'Correia data sets', else we use the package defaults.; convergence criteria differ across implementations."
-        )
-    )
-)
-
-# Per-cell styles (fastest / fail / nb). great_tables doesn't support per-cell
-# conditional styling directly via tab_style, so iterate over (row, col) pairs.
-for col in BACKEND_COLS:
-    status_series = wide[f"{col}__status"]
-    for idx, status in enumerate(status_series):
-        style = _style_for(status)
-        if not style:
+        sub = sub[sub["dataset"].isin(all_ds)]
+        if sub.empty:
             continue
-        css: list[gt.style] = []
-        if "background" in style:
-            css.append(gt.style.fill(color=style["background"]))
-        text_kwargs: dict[str, str] = {}
-        if "color" in style:
-            text_kwargs["color"] = style["color"]
-        if "weight" in style:
-            text_kwargs["weight"] = style["weight"]
-        if "style" in style:
-            text_kwargs["style"] = style["style"]
-        if text_kwargs:
-            css.append(gt.style.text(**text_kwargs))
-        tbl = tbl.tab_style(style=css, locations=gt.loc.body(columns=col, rows=[idx]))
+        sub["ratio"] = sub["time"] / sub["base_time"]
+        sub["x"] = sub["dataset"].map(ds_xs) + meta["jitter"]
 
-tbl
+        if algo == "pyfixest-map":
+            sub["ratio"] = 1.0
+            ax.scatter(sub["x"], sub["ratio"], color=meta["color"], marker=meta["marker"],
+                       s=meta["size"], zorder=meta["zorder"], label=meta["label"],
+                       edgecolors="white", linewidths=0.5)
+            for _, row in sub.iterrows():
+                ax.annotate(_fmt(row["base_time"]), xy=(row["x"], 1.0), xytext=(0, 6),
+                            textcoords="offset points", ha="center", va="bottom",
+                            fontsize=5.5, color=meta["color"])
+        else:
+            valid = sub[sub["ratio"].notna()]
+            ax.scatter(valid["x"], valid["ratio"], color=meta["color"], marker=meta["marker"],
+                       s=meta["size"], zorder=meta["zorder"], label=meta["label"],
+                       edgecolors="white", linewidths=0.5)
+            for _, row in valid.iterrows():
+                actual = row["ratio"] * row["base_time"]
+                above = row["ratio"] >= 1.0
+                ax.annotate(_fmt(actual), xy=(row["x"], row["ratio"]),
+                            xytext=(0, 6 if above else -8),
+                            textcoords="offset points", ha="center",
+                            va="bottom" if above else "top",
+                            fontsize=5.5, color=meta["color"])
+
+    sep_x = len(real_order) - 0.5 + GAP / 2
+    ax.axvline(sep_x, color="#CBD5E1", lw=1.2, ls="--", zorder=0)
+    trans = blended_transform_factory(ax.transData, ax.transAxes)
+    real_mid  = (len(real_order) - 1) / 2
+    synth_mid = s0 + (len(synth_order) - 1) / 2
+    for x_mid, lbl in [(real_mid, "Real datasets"), (synth_mid, "Synthetic datasets")]:
+        ax.text(x_mid, 1.01, lbl, ha="center", va="bottom", fontsize=10,
+                color="#475569", fontstyle="italic", transform=trans, clip_on=False)
+
+    ax.axhline(1.0, color="#94A3B8", lw=0.8, ls="--", zorder=1)
+    ax.set_yscale("log")
+    ax.yaxis.set_major_formatter(mticker.FuncFormatter(lambda y, _: f"{y:g}×"))
+
+    def _xlabel(ds: str) -> str:
+        if ds.startswith("fixest-"):
+            return ds.replace("fixest-", "") + "\n(fixest DGP)"
+        return ds.replace("synthetic-", "synth-")
+
+    ax.set_xticks([ds_xs[ds] for ds in all_ds])
+    ax.set_xticklabels([_xlabel(ds) for ds in all_ds], rotation=45, ha="right", fontsize=8)
+    ax.set_ylabel("Runtime ratio vs PyFixest MAP (log scale)", fontsize=10)
+    ax.grid(True, which="both", axis="y", alpha=0.25, ls=":", color="#64748B")
+    ax.set_axisbelow(True)
+    ax.spines[["top", "right"]].set_visible(False)
+
+    suffix = "with singleton dropping" if singleton else "without singleton dropping"
+    ax.set_title(
+        f"Runtime relative to PyFixest MAP ({suffix}, Correia 2-way FE, tol=1e-8)\n"
+        "Datasets sorted by increasing PyFixest MAP runtime within each group",
+        fontsize=10, pad=20,
+    )
+    handles, labels = ax.get_legend_handles_labels()
+    fig.legend(handles, labels, loc="lower center", bbox_to_anchor=(0.5, -0.01),
+               ncol=4, fontsize=9, framealpha=0.95, edgecolor="#CBD5E1",
+               handletextpad=0.5, columnspacing=1.2)
+    plt.tight_layout(rect=[0, 0.07, 1, 1])
+    return fig
+
+
+raw = pd.concat([_load_correia(), _load_main()], ignore_index=True)
+agg = raw.groupby(["dataset", "algo", "singleton_drop"], observed=True)["time"].median().reset_index()
+
+fig1 = _make_figure(agg, singleton=True)
+plt.show()
 ```
 
-
-::: {.callout-warning}
-## Reading the table
-
-Cells that say `NB` indicate the cell was **not benchmarked** - we never ran that
-backend on that dataset - and are distinct from `fail`, which means the backend ran
-to its iteration limit without converging at the requested tolerance. Torch (CUDA) was not run on the Correia datasets, so those cells are `NB`. Stata was not run on the fixest DGP rows (Correia only published numbers for his 15 datasets), so those cells are `NB` too. Note that Torch (CUDA) and the Stata reference ran on different hardware than the local Python / R / Julia benchmarks.
-:::
+```{python}
+# | echo: false
+# | fig-width: 14
+# | fig-height: 6
+fig2 = _make_figure(agg, singleton=False)
+plt.show()
+```
 
 ## Reproducing these numbers
 
