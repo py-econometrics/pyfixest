@@ -36,13 +36,13 @@ For an explanation why different fixed effects / graph structures lead to differ
 
 ## Benchmarks
 
+::: {.column-page style="text-align: center;"}
+
 ```{python}
 # | echo: false
 # | fig-width: 11
 # | fig-height: 5
-# | fig-align: center
 # | fig-dpi: 130
-# | column: page
 from __future__ import annotations
 
 from pathlib import Path
@@ -191,7 +191,7 @@ def _make_figure(agg: pd.DataFrame, singleton: bool) -> plt.Figure:
 
     def _xlabel(ds: str) -> str:
         if ds.startswith("fixest-"):
-            return ds.replace("fixest-", "") + "\n(fixest DGP)"
+            return ds.replace("fixest-", "") + "\n(fixest DGP, 3-way FE, N=10M)"
         return ds.replace("synthetic-", "synth-")
 
     ax.set_xticks([ds_xs[ds] for ds in all_ds])
@@ -203,7 +203,8 @@ def _make_figure(agg: pd.DataFrame, singleton: bool) -> plt.Figure:
 
     suffix = "with singleton dropping" if singleton else "without singleton dropping"
     ax.set_title(
-        f"Runtime relative to PyFixest MAP ({suffix}, Correia 2-way FE, tol=1e-8)\n"
+        f"Runtime relative to PyFixest MAP ({suffix}, tol=1e-8)\n"
+        "Correia datasets: 2-way FE. fixest DGPs: 3-way FE, N=10M.\n"
         "Datasets sorted by increasing PyFixest MAP runtime within each group",
         fontsize=10, pad=20,
     )
@@ -222,16 +223,20 @@ fig1 = _make_figure(agg, singleton=True)
 plt.show()
 ```
 
+:::
+
+::: {.column-page style="text-align: center;"}
+
 ```{python}
 # | echo: false
 # | fig-width: 11
 # | fig-height: 5
-# | fig-align: center
 # | fig-dpi: 130
-# | column: page
 fig2 = _make_figure(agg, singleton=False)
 plt.show()
 ```
+
+:::
 
 ## Reproducing these numbers
 
