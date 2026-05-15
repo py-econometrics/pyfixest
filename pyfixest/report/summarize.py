@@ -37,7 +37,7 @@ def etable(
     models: ModelInputType,
     type: str = "gt",
     signif_code: list | None = None,
-    coef_fmt: str = "b \n (se)",
+    coef_fmt: str | None = None,
     custom_stats: dict | None = None,
     custom_model_stats: dict | None = None,
     keep: list | str | None = None,
@@ -76,10 +76,11 @@ def etable(
         includes `*` on a statistic token, for example `b*` or `b:.3f*`.
     coef_fmt : str, optional
         The format of the coefficient (b), standard error (se), t-stats (t), and
-        p-value (p). Default is `"b \n (se)"`.
+        p-value (p). Default is inherited from maketables.
         To render significance stars, include `*` on the relevant token, following
-        maketables syntax, for example `"b* \n (se)"` or `"b:.3f* \n (se:.3f)"`.
+        maketables syntax, for example `"b:.3f* \n (se:.3f)"` with 3 decimal places.
         Spaces ` `, parentheses `()`, brackets `[]`, newlines `\n` are supported.
+        For further available formatting rules, see `maketables.ETable`.
     custom_stats: dict, optional
         A dictionary of custom statistics that can be used in the coef_fmt string to be displayed
         in the coefficuent cells analogously to "b", "se" etc. The keys are the names of the custom
