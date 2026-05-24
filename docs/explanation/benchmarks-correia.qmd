@@ -1,6 +1,6 @@
 ---
 title: "Benchmarking Fixed Effects Implementations and Solvers"
-description: "Runtime comparison of PyFixest, fixest, and FixedEffectModels.jl on real-world HDFE datasets."
+description: "Runtime comparison of PyFixest, fixest, and FixedEffectModels.jl on real-world and synthetic HDFE datasets."
 categories: [performance, fixed effects, benchmarks]
 jupyter: python3
 format:
@@ -13,26 +13,28 @@ toc-location: left
 
 ## Overview
 
-[Sergio Correia's HDFE benchmark suite](https://www.scorreia.com/data/hdfe/index.html)
-consists of a collection of real-world datasets that stress different graph topologies and are the most extensive collection of public benchmark data sets for HDFE solvers we are aware of.
+High-dimensional fixed effects solvers behave very differently depending on the structure of the fixed effects graph: some graphs converge in a handful of iterations, while others are notoriously slow to converge. To get a realistic picture of where different solvers in the open source ecosystem shine, and where each solver struggles, we lean on two complementary sources of benchmark data:
 
-We benchmark PyFixest against the following references:
-
-- [**fixest**](https://lrberge.github.io/fixest/), which is the reference HDFE implementation in R. `fixest` implements a MAP-style solver with Irons-Tuck acceleration and other optimizations.
-- [**FixedEffectModels.jl**](https://github.com/FixedEffects/FixedEffectModels.jl), which is the reference Julia implementation and implements an LSMR solver with diagonal preconditioning.
-
-All benchmarks are run on Alex' local machine (Mac mini, Apple M4, 10 cores, 16 GB RAM, macOS 15.3.1).
-
-We fit two-way fixed effects regressions using each package's defaults: multicollinear variables are dropped (using package-specific algorithms), singletons are optionally dropped, and iid inference is used. We run each benchmark with and without singleton dropping. We use a tolerance of `1e-8`. Note that convergence criteria differ across implementations, so the tolerance is only a common stopping threshold and does not guarantee identical convergence behavior.
-
-::: {.callout-note}
-Benchmarks for [**reghdfe**](https://scorreia.com/software/reghdfe/) (Stata) can be found on [Sergio Correia's website](https://www.scorreia.com/data/hdfe/index.html). Note, however, that those numbers were collected roughly nine years ago on older hardware, so Python, R, and Julia implementations have a substantial hardware advantage in any direct comparison.
-:::
+- [**Sergio Correia's HDFE benchmark suite**](https://www.scorreia.com/data/hdfe/index.html), the most extensive collection of public HDFE benchmark datasets we are aware of. It bundles real-world datasets (credit, soccer, enron, patents, …) that stress a wide range of graph topologies.
+- A set of **synthetic DGPs** distributed with Correia's suite and with [**fixest**](https://lrberge.github.io/fixest/), which let us probe specific regimes (uniform vs. assortative matching) in a controlled way.
 
 ::: {.callout}
 For an explanation why different fixed effects / graph structures lead to differences in solver performance, please take a look at the [When Are Fixed Effects Estimations Difficult?](difficult-fixed-effects.md) vignette.
 :::
 
+We benchmark the following software packages and their solvers:
+
+- [**fixest**](https://lrberge.github.io/fixest/) (R), the reference HDFE implementation (and the package after which PyFixest is modeled), uses a MAP-style solver with Irons-Tuck acceleration and other optimizations.
+- [**FixedEffectModels.jl**](https://github.com/FixedEffects/FixedEffectModels.jl) (Julia), which solves the demeaning problem via LSMR with diagonal preconditioning.
+- **PyFixest**, which can run either a MAP solver (analogous to `fixest`'s, without any accelerations) or a conjugate-gradient solver on the within transformation.
+
+All benchmarks are run on Alex' local machine (Mac mini, Apple M4, 10 cores, 16 GB RAM, macOS 15.3.1).
+
+We fit fixed effects regressions using each package's defaults. The Correia datasets are fit with two-way fixed effects, while the fixest DGPs are fit with three-way fixed effects (where the "difficult" DGP is actually difficult). We run each benchmark with and without singleton dropping. We use a tolerance of `1e-8`. Note that convergence criteria differ across implementations, so the tolerance is only a common stopping threshold and does not guarantee identical convergence rules and behavior.
+
+::: {.callout-note}
+Benchmark timings for [**reghdfe**](https://scorreia.com/software/reghdfe/) (Stata) can be found on [Sergio Correia's website](https://www.scorreia.com/data/hdfe/index.html). Note, however, that those numbers were collected roughly nine years ago on older hardware, so Python, R, and Julia implementations have a substantial hardware advantage in any direct comparison.
+:::
 
 ## Benchmarks
 
@@ -47,10 +49,16 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 from matplotlib.transforms import blended_transform_factory
 import pandas as pd
+
+# Save figures at exact figsize × dpi (no bbox trimming) so both figures have
+# identical pixel dimensions and the centered fenced-div wrapper aligns them.
+mpl.rcParams["savefig.bbox"] = "standard"
+mpl.rcParams["savefig.pad_inches"] = 0.05
 
 RESULTS_DIR = Path("../../benchmarks/results")
 
@@ -115,20 +123,16 @@ def _load_main() -> pd.DataFrame:
 
 
 def _sorted_by_baseline(agg: pd.DataFrame, datasets: set[str], singleton: bool) -> list[str]:
+    # Only include datasets where the baseline has valid timing; datasets where
+    # the baseline failed (e.g. synthetic-zigzag) would just produce empty ticks.
     base = (
         agg[(agg["algo"] == BASELINE_ALGO) & (agg["singleton_drop"] == singleton) & agg["dataset"].isin(datasets)]
         .sort_values("time")
     )
-    ordered = base["dataset"].tolist()
-    return ordered + sorted(d for d in datasets if d not in ordered)
+    return base["dataset"].tolist()
 
 
-def _make_figure(agg: pd.DataFrame, singleton: bool) -> plt.Figure:
-    real_order  = _sorted_by_baseline(agg, REAL_DATASETS, singleton)
-    synth_order = _sorted_by_baseline(agg, SYNTH_CORREIA, singleton)
-    if singleton:
-        synth_order += _sorted_by_baseline(agg, FIXEST_DGPS, singleton=True)
-
+def _make_figure(agg: pd.DataFrame, singleton: bool, real_order: list[str], synth_order: list[str]) -> plt.Figure:
     real_xs = {ds: float(i) for i, ds in enumerate(real_order)}
     s0 = len(real_order) + GAP
     synth_xs = {ds: s0 + i for i, ds in enumerate(synth_order)}
@@ -204,24 +208,38 @@ def _make_figure(agg: pd.DataFrame, singleton: bool) -> plt.Figure:
     ax.spines[["top", "right"]].set_visible(False)
 
     suffix = "with singleton dropping" if singleton else "without singleton dropping"
+    spec_line = (
+        "Correia datasets: 2-way FE. fixest DGPs: 3-way FE, N=10M."
+        if singleton else
+        "Correia datasets: 2-way FE."
+    )
     ax.set_title(
         f"Runtime relative to fixest (R) ({suffix}, tol=1e-8)\n"
-        "Correia datasets: 2-way FE. fixest DGPs: 3-way FE, N=10M.\n"
+        f"{spec_line}\n"
         "Datasets sorted by increasing fixest runtime within each group",
         fontsize=10, pad=20,
     )
     handles, labels = ax.get_legend_handles_labels()
-    fig.legend(handles, labels, loc="lower center", bbox_to_anchor=(0.5, -0.01),
+    fig.legend(handles, labels, loc="lower center", bbox_to_anchor=(0.5, 0.02),
                ncol=4, fontsize=9, framealpha=0.95, edgecolor="#CBD5E1",
                handletextpad=0.5, columnspacing=1.2)
-    plt.tight_layout(rect=[0, 0.07, 1, 1])
+    # Use fixed margins (not tight_layout) so both figures have identical dimensions
+    # regardless of y-axis tick label widths or title content.
+    fig.subplots_adjust(left=0.05, right=0.99, top=0.85, bottom=0.22)
     return fig
 
 
 raw = pd.concat([_load_correia(), _load_main()], ignore_index=True)
 agg = raw.groupby(["dataset", "algo", "singleton_drop"], observed=True)["time"].median().reset_index()
 
-fig1 = _make_figure(agg, singleton=True)
+# Build the x-axis order ONCE from singleton=True data so both figures are horizontally parallel.
+# fixest DGPs only have data with singleton dropping, so they appear as empty positions in
+# the no-singleton figure.
+REAL_ORDER  = _sorted_by_baseline(agg, REAL_DATASETS, singleton=True)
+SYNTH_ORDER = _sorted_by_baseline(agg, SYNTH_CORREIA, singleton=True)
+SYNTH_ORDER += _sorted_by_baseline(agg, FIXEST_DGPS, singleton=True)
+
+fig1 = _make_figure(agg, singleton=True, real_order=REAL_ORDER, synth_order=SYNTH_ORDER)
 plt.show()
 ```
 
@@ -234,7 +252,7 @@ plt.show()
 # | fig-width: 16
 # | fig-height: 8
 # | fig-dpi: 130
-fig2 = _make_figure(agg, singleton=False)
+fig2 = _make_figure(agg, singleton=False, real_order=REAL_ORDER, synth_order=SYNTH_ORDER)
 plt.show()
 ```
 
@@ -242,11 +260,11 @@ plt.show()
 
 ## Reproducing these numbers
 
-To run the benchmarks yourself, you can use the `pixi` tasks below, which will automatically install all required (open source) dependencies, create synethetic data sets and run the benchmarks. You will have to download the Correia datasets from [Correia's website](https://www.scorreia.com/data/hdfe/index.html) and place them in the `benchmarks/modular/data/correia` directory.
+To run the benchmarks yourself, you can use the `pixi` tasks below, which will automatically install all required (open source) dependencies, create synthetic data sets and run the benchmarks. You will have to download the Correia datasets from [Correia's website](https://www.scorreia.com/data/hdfe/index.html) and place them in the `benchmarks/modular/data/correia` directory.
 
 ```bash
 # benchmark fixest-dgp's
 pixi run benchmark
-# benchmark R, Julia, Pyton on the Correia datasets
+# benchmark R, Julia, Python on the Correia datasets
 pixi run benchmark-correia
 ```
