@@ -192,6 +192,7 @@ def _read_parquet_columns(path: Path, columns: list[str]) -> pd.DataFrame:
 
 
 def enumerate_datasets() -> list[DatasetSpec]:
+    """Discover datasets from what is already cached on disk."""
     specs: list[DatasetSpec] = []
 
     for name in CORREIA_DATASETS:
