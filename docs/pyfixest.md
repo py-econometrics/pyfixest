@@ -66,6 +66,13 @@ python -m pip install pyfixest[plots]
 
 `matplotlib` is included by default, so plotting works without this extra.
 
+The Numba MAP backend is deprecated and optional. Install the extra only if you
+need `MapDemeaner(backend="numba")` or fast randomization inference:
+
+```bash
+python -m pip install pyfixest[numba]
+```
+
 For GPU-accelerated fixed-effects demeaning via CuPy, install the build matching your CUDA version:
 
 ```bash

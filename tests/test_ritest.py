@@ -8,6 +8,17 @@ import pyfixest as pf
 matplotlib.use("Agg")  # Use a non-interactive backend
 
 
+def test_fast_ritest_requires_numba(monkeypatch):
+    import pyfixest.estimation.post_estimation.ritest as ritest
+
+    monkeypatch.setattr(ritest, "nb", None)
+
+    fit = pf.feols("Y ~ X1", data=pf.get_data(N=50))
+
+    with pytest.raises(ImportError, match=r"pyfixest\[numba\]"):
+        fit.ritest("X1", reps=10, choose_algorithm="fast")
+
+
 @pytest.mark.extended
 @pytest.mark.parametrize("fml", ["Y~X1+f3", "Y~X1+f3|f1", "Y~X1+f3|f1+f2"])
 @pytest.mark.parametrize("resampvar", ["X1", "f3"])

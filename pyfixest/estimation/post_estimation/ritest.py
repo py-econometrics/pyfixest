@@ -1,7 +1,6 @@
 from importlib import import_module
 
 import matplotlib.pyplot as plt
-import numba as nb
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -27,7 +26,19 @@ except ImportError:
 from scipy.stats import norm
 from tqdm import tqdm
 
-from pyfixest.estimation.internals.demean_ import demean
+try:
+    import numba as nb
+
+    from pyfixest.estimation.numba.demean_nb import demean
+except ImportError:
+    nb = None
+    demean = None
+
+_NUMBA_RITEST_ERROR = (
+    "Fast randomization inference requires the optional `numba` extra. "
+    "Install it with `pip install pyfixest[numba]`, or pass "
+    "`choose_algorithm='slow'`."
+)
 
 # Only setup lets-plot if it's available
 if _HAS_LETS_PLOT:
@@ -154,6 +165,9 @@ def _get_ritest_stats_fast(
         The test statistics. For this algorithm, regression coefficients are
         returned.
     """
+    if nb is None:
+        raise ImportError(_NUMBA_RITEST_ERROR)
+
     X_demean = X
     Y_demean = Y.flatten()
 
@@ -192,12 +206,11 @@ def _get_ritest_stats_fast(
     )
 
 
-@nb.njit()
 def _run_ri(
     reps: int,
     resampvar_arr: np.ndarray,
     rng: np.random.Generator,
-    fval: np.ndarray,
+    fval: np.ndarray | None,
     weights: np.ndarray,
     Y_demean: np.ndarray,
     X_demean2: np.ndarray,
@@ -252,7 +265,6 @@ def _run_ri(
     return ri_coefs
 
 
-@nb.njit
 def _resample(
     resampvar_arr: np.ndarray,
     rng: np.random.Generator,
@@ -301,7 +313,6 @@ def _resample(
     return D_treat
 
 
-@nb.njit
 def random_choice(arr: np.ndarray, size: int, rng: np.random.Generator) -> np.ndarray:
     """
     Randomly sample from an array.
@@ -328,7 +339,6 @@ def random_choice(arr: np.ndarray, size: int, rng: np.random.Generator) -> np.nd
     return result
 
 
-@nb.njit()
 def lstsq_numba(A, B):
     """Implement np.linalg.lstsq(A, B) using SVD decomposition."""
     U, s, VT = np.linalg.svd(A, full_matrices=False)
@@ -336,6 +346,13 @@ def lstsq_numba(A, B):
     w = np.linalg.solve(np.diag(s), c)
     x = np.dot(VT.T, w)
     return x
+
+
+if nb is not None:
+    random_choice = nb.njit(random_choice)
+    _resample = nb.njit(_resample)
+    lstsq_numba = nb.njit()(lstsq_numba)
+    _run_ri = nb.njit()(_run_ri)
 
 
 def _get_ritest_pvalue(

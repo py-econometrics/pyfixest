@@ -9,15 +9,15 @@ from pyfixest.core.demean import demean_within
 from pyfixest.demeaners import LsmrDemeaner, MapDemeaner, WithinDemeaner
 from pyfixest.estimation.cupy.demean_cupy_ import demean_cupy32, demean_cupy64
 from pyfixest.estimation.internals.demean_ import (
-    demean,
     demean_model,
     dispatch_demean,
 )
 from pyfixest.estimation.jax.demean_jax_ import demean_jax
+from pyfixest.estimation.numba.demean_nb import demean as demean_numba
 from tests._torch_test_utils import HAS_TORCH, torch_param
 
 GENERIC_DEMEAN_FUNCS = [
-    pytest.param(demean, id="demean_numba"),
+    pytest.param(demean_numba, id="demean_numba"),
     pytest.param(demean_jax, id="demean_jax"),
     pytest.param(demean_rs, id="demean_rs"),
     pytest.param(demean_cupy32, id="demean_cupy32"),

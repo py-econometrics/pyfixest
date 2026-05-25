@@ -45,7 +45,7 @@ class MapDemeaner(BaseDemeaner):
     """Alternating-projections demeaner with selectable implementation backend."""
 
     fixef_tol: float = 1e-06
-    backend: MapBackend = "numba"
+    backend: MapBackend = "rust"
     kind: ClassVar[str] = "map"
 
     def __post_init__(self) -> None:

@@ -140,7 +140,9 @@ def feols(
         Typed demeaner configuration. Controls the fixed-effects demeaning
         backend, tolerance, and iteration limits. Accepts a `MapDemeaner`,
         `WithinDemeaner`, or `LsmrDemeaner` instance. Defaults to
-        `MapDemeaner()` (numba MAP algorithm, tol=1e-6, maxiter=10_000).
+        `MapDemeaner()` (a MAP algorithm implemented in Rust without accelerations,
+        tol=1e-6, maxiter=10_000). For other options, take a look at the
+        Demeaner Options vignette: https://pyfixest.org/how-to/demeaner-backends.html.
 
     use_compression: bool
         Whether to use sufficient statistics to losslessly fit the regression model

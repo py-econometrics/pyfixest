@@ -17,6 +17,13 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ## PyFixest 0.60.0 (In Development)
 
+### Rust MAP Default and Optional Numba
+
+`MapDemeaner()` now defaults to `backend="rust"`. The previous Numba MAP backend
+is deprecated but still available via `MapDemeaner(backend="numba")`, and fast
+randomization inference still uses Numba. Numba is now an optional dependency
+installed with `pip install pyfixest[numba]`.
+
 ### Typed Demeaner API
 
 A new typed demeaner API replaces the old `demeaner_backend`, `fixef_tol`, and `fixef_maxiter` arguments to `feols()`, `fepois()`, and related functions. Instead of passing loose keyword arguments, we now ask you to pass a typed configuration object. The new API is no longer "stringly typed" but "strongly typed" with strong type hints and clearer code organisation.

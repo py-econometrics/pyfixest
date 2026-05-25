@@ -21,8 +21,8 @@ For a deeper discussion on when to use which backend, see [When Are Fixed Effect
 
 | Backend | When to use |
 |---|---|
-| `MapDemeaner(backend="numba")` | Default. Works well for dense fixed effects / well connected graphs. |
-| `MapDemeaner(backend="rust")` | Identical algorithm to `MapDemeaner(backend="numba")`, but implemented in Rust. Despite being Rust, performance should be roughly identical to numba. |
+| `MapDemeaner(backend="rust")` | Default. Works well for dense fixed effects / well connected graphs and avoids the optional Numba dependency. |
+| `MapDemeaner(backend="numba")` | Optional MAP implementation. Requires installing `pyfixest[numba]`. |
 | `WithinDemeaner()` | Best for **sparse** fixed-effect structures (e.g. matched employer-employee data). Supports additive Schwarz with CG or GMRES, multiplicative Schwarz with GMRES, and unpreconditioned solves via `preconditioner="off"`. |
 | `MapDemeaner(backend="jax")` | MAP on the GPU via JAX (requires `pip install pyfixest[jax]`). |
 | `LsmrDemeaner(backend="torch", device="cuda")` | GPU acceleration via PyTorch. Experimental. |
@@ -33,11 +33,14 @@ For a deeper discussion on when to use which backend, see [When Are Fixed Effect
 
 To select a demeaner backend, simply pass an instance of the desired demeaner to the `demeaner` argument of `feols`:
 ```{python}
-# Default (numba MAP): best for dense FE / well-connected graphs
+# Default (Rust MAP): best for dense FE / well-connected graphs
 fit = pf.feols("Y ~ X1 | f1", data=df)
 
-# Rust MAP: roughly same performance as numba
+# Rust MAP explicitly
 fit = pf.feols("Y ~ X1 | f1", data=df, demeaner=MapDemeaner(backend="rust"))
+
+# Optional Numba MAP backend
+fit = pf.feols("Y ~ X1 | f1", data=df, demeaner=MapDemeaner(backend="numba"))
 
 # `within` backend - best for sparse multi-way FE structures
 fit = pf.feols("Y ~ X1 | f1 + f2", data=df, demeaner=WithinDemeaner())
