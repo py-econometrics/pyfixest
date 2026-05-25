@@ -36,6 +36,12 @@ fit = pf.feols("Y ~ X1 | f1", data=df, demeaner=LsmrDemeaner(backend="torch", de
 
 **Deprecations:** The `demeaner_backend`, `fixef_tol`, and `fixef_maxiter` arguments to `feols()` and related functions are deprecated and will be removed in a future release. Likewise, the `_fixef_tol` and `_fixef_maxiter` attributes on fitted model objects are deprecated — use `model.demeaner.fixef_tol` and `model.demeaner.fixef_maxiter` instead.
 
+### Regression Compression Deprecation
+
+The `use_compression` argument to `feols()` is deprecated and will be removed in a future release. This feature implemented the in-memory regression compression approach from [Wong et al. (2021)](https://arxiv.org/abs/2102.11297) via a Mundlak/sufficient-statistics transform. Out-of-memory regression on large datasets is better served by the [`duckreg`](https://github.com/py-econometrics/duckreg) package, which provides a more general and actively maintained solution. See [#1302](https://github.com/py-econometrics/pyfixest/issues/1302) for context.
+
+Passing `use_compression=True` now raises a `DeprecationWarning`.
+
 - Adds experimental GPU acceleration via PyTorch on CUDA and MPS, plus a PyTorch-based CPU LSMR demeaning backend.
 
 - Adds support for `offset`s in `pf.fepois()`, thanks to @bradhackinen and @marie-gar.
