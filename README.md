@@ -126,11 +126,19 @@ For more examples, see the [quickstart](https://pyfixest.org/quickstart.html), t
 
 ## Benchmarks
 
-The DGPs follow the "simple" and "difficult" designs from the [fixest benchmarks](https://github.com/kylebutts/fixest_benchmarks). The figure timings for regressions with `k=10` covariates and plots the median runtime across three runs for PyFixest MAP, PyFixest within, PyFixest torch on CUDA GPU, fixest, and FixedEffectModels.jl.
+The DGPs follow the "simple" and "difficult" designs from the [fixest benchmarks](https://github.com/kylebutts/fixest_benchmarks). Timings are for regressions with `k=10` covariates; each bar shows the median runtime across three runs for PyFixest MAP (`MapDemeaner`), PyFixest within (`WithinDemeaner`), PyFixest torch on CUDA GPU (`LsmrDemeaner`), fixest, and FixedEffectModels.jl.
 
 <img src="docs/explanation/figures/base-benchmarks/bench_readme.png" width="100%" alt="Fixed-effects OLS benchmark for k=10 comparing PyFixest MAP, PyFixest within, PyFixest torch GPU, fixest, and FixedEffectModels.jl">
 
-Runtime comparisons are hardware-dependent, especially for GPU backends. For the full benchmark suite, see the [`benchmarks/`](https://github.com/py-econometrics/pyfixest/tree/master/benchmarks) directory and the note on [difficult fixed effects problems](https://github.com/py-econometrics/pyfixest/blob/master/docs/explanation/difficult-fixed-effects.md).
+**Simple DGP** (dense, well-connected graph) — both CPU backends are competitive:
+
+<img src="docs/explanation/figures/base-benchmarks/bench_simple.png" width="100%" alt="Simple DGP benchmark">
+
+**Difficult DGP** (sparse, weakly-connected graph) — vanilla MAP degrades sharply; `WithinDemeaner` remains fast:
+
+<img src="docs/explanation/figures/base-benchmarks/bench_difficult.png" width="100%" alt="Difficult DGP benchmark">
+
+Runtime comparisons are hardware-dependent, especially for GPU backends. For the full benchmark suite — including AKM employer-employee panels with varying mobility and sorting — see the [`benchmarks/`](https://github.com/py-econometrics/pyfixest/tree/master/benchmarks) directory and the guide on [difficult fixed effects problems](https://github.com/py-econometrics/pyfixest/blob/master/docs/explanation/difficult-fixed-effects.md).
 
 ## Learn More
 
