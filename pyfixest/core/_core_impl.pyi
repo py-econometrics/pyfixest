@@ -55,3 +55,10 @@ def _dk_meat_panel_rs(
     idx: NDArray[np.uint64],
     lag: int,
 ) -> NDArray[np.float64]: ...
+def _run_ri_rs(
+    resampled_d: NDArray[np.float64],
+    y_demean: NDArray[np.float64],
+    x_demean2: NDArray[np.float64],
+    fval: NDArray[np.uint64] | None,
+    weights: NDArray[np.float64],
+) -> NDArray[np.float64]: ...

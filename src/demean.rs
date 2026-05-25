@@ -59,7 +59,7 @@ mod internal {
     }
 }
 
-fn demean_impl(
+pub(crate) fn demean_impl(
     x: &ArrayView2<f64>,
     flist: &ArrayView2<usize>,
     weights: &ArrayView1<f64>,

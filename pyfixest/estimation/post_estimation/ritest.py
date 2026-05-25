@@ -1,7 +1,6 @@
 from importlib import import_module
 
 import matplotlib.pyplot as plt
-import numba as nb
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -27,7 +26,7 @@ except ImportError:
 from scipy.stats import norm
 from tqdm import tqdm
 
-from pyfixest.estimation.internals.demean_ import demean
+from pyfixest.core.ritest import run_ri
 
 # Only setup lets-plot if it's available
 if _HAS_LETS_PLOT:
@@ -180,79 +179,25 @@ def _get_ritest_stats_fast(
 
     resampvar_arr = D
 
-    return _run_ri(
-        reps=reps,
-        resampvar_arr=resampvar_arr,
-        clustervar_arr=clustervar_arr,
-        Y_demean=Y_demean,
-        X_demean2=X_demean2,
-        fval=fval,
-        weights=weights,
-        rng=rng,
-    )
-
-
-@nb.njit()
-def _run_ri(
-    reps: int,
-    resampvar_arr: np.ndarray,
-    rng: np.random.Generator,
-    fval: np.ndarray,
-    weights: np.ndarray,
-    Y_demean: np.ndarray,
-    X_demean2: np.ndarray,
-    clustervar_arr: np.ndarray | None = None,
-) -> np.ndarray:
-    """
-    Run the randomization inference.
-
-    Parameters
-    ----------
-    reps : int
-        The number of repetitions.
-    resampvar_arr : np.ndarray
-        Array containing the treatment variable.
-    rng : np.random.Generator
-        The random number generator.
-    fval : np.ndarray
-        The fixed effects decoded as integers.
-    weights : np.ndarray
-        The sample weights.
-    X_demean2 : np.ndarray
-        The demeaned design matrix.
-    Y_demean : np.ndarray
-    clustervar_arr : np.ndarray, optional
-        Array containing the cluster variable. Defaults to None.
-
-    Returns
-    -------
-    np.ndarray
-        The coefficients of the randomization inference.
-        For this algorithm, regression coefficients are
-        returned.
-    """
-    ri_coefs = np.zeros(reps)
-
-    X_demean2 = np.ascontiguousarray(X_demean2)
-
+    N = resampvar_arr.shape[0]
+    resampled_d = np.zeros((N, reps))
     for i in range(reps):
-        D2 = _resample(
+        resampled_d[:, i] = _resample(
             resampvar_arr=resampvar_arr,
             clustervar_arr=clustervar_arr,
             rng=rng,
             iterations=1,
-        )
+        ).flatten()
 
-        D2_demean = demean(D2, fval, weights)[0] if fval is not None else D2
+    return run_ri(
+        resampled_d=resampled_d,
+        y_demean=Y_demean,
+        x_demean2=X_demean2,
+        fval=fval,
+        weights=weights,
+    )
 
-        ri_coefs[i] = lstsq_numba(
-            np.concatenate((D2_demean, X_demean2), axis=1), Y_demean
-        )[0]
 
-    return ri_coefs
-
-
-@nb.njit
 def _resample(
     resampvar_arr: np.ndarray,
     rng: np.random.Generator,
@@ -291,20 +236,19 @@ def _resample(
 
         for i, _ in enumerate(clustervar_values):
             idx = (clustervar_arr == clustervar_values[i]).flatten()
-            D_treat[idx, :] = random_choice(resampvar_values, 1 * iterations, rng)
+            D_treat[idx, :] = _random_choice(resampvar_values, 1 * iterations, rng)
 
     else:
-        D_treat = random_choice(resampvar_values, N * iterations, rng).reshape(
+        D_treat = _random_choice(resampvar_values, N * iterations, rng).reshape(
             (N, iterations)
         )
 
     return D_treat
 
 
-@nb.njit
-def random_choice(arr: np.ndarray, size: int, rng: np.random.Generator) -> np.ndarray:
+def _random_choice(arr: np.ndarray, size: int, rng: np.random.Generator) -> np.ndarray:
     """
-    Randomly sample from an array.
+    Randomly sample from an array with replacement.
 
     Parameters
     ----------
@@ -321,21 +265,8 @@ def random_choice(arr: np.ndarray, size: int, rng: np.random.Generator) -> np.nd
         The sampled array (with replacement) of size `size`.
     """
     n = len(arr)
-    result = np.empty(size, dtype=arr.dtype)
-    for i in range(size):
-        idx = rng.integers(0, n)
-        result[i] = arr[idx]
-    return result
-
-
-@nb.njit()
-def lstsq_numba(A, B):
-    """Implement np.linalg.lstsq(A, B) using SVD decomposition."""
-    U, s, VT = np.linalg.svd(A, full_matrices=False)
-    c = np.dot(U.T, B)
-    w = np.linalg.solve(np.diag(s), c)
-    x = np.dot(VT.T, w)
-    return x
+    indices = rng.integers(0, n, size=size)
+    return arr[indices]
 
 
 def _get_ritest_pvalue(

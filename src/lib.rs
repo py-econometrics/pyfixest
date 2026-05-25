@@ -7,6 +7,7 @@ mod demean_within;
 mod nested_fixed_effects;
 mod detect_singletons;
 mod nw;
+mod ritest;
 
 #[pymodule]
 fn _core_impl(m: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -22,5 +23,6 @@ fn _core_impl(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_wrapped(wrap_pyfunction!(nw::_nw_meat_panel_rs))?;
     m.add_wrapped(wrap_pyfunction!(nw::_nw_meat_time_rs))?;
     m.add_wrapped(wrap_pyfunction!(nw::_dk_meat_panel_rs))?;
+    m.add_wrapped(wrap_pyfunction!(ritest::_run_ri_rs))?;
     Ok(())
 }
