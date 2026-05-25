@@ -60,7 +60,7 @@ pip install --pre pyfixest
 
 ### New Demeaner Backend via the `within` package
 
-One new feature that already made it's way into the code base is a new typed demeaner configuration that performs really well for sparse fixed effects structures.
+We recently came together for a PyFixest sprint with the team from AppliedAI, and one new feature that already made it's way into the code base is a new typed demeaner configuration that performs really well for sparse fixed effects structures.
 
 The new solver is exposed via `pf.WithinDemeaner()` and is a significant performance improvement for sparse fixed effects structures - such as matched employer-employee data, patient-doctor panels, or trade networks - where the standard MAP algorithm might struggle. On well-connected graphs, `pf.MapDemeaner(backend="rust")` remains competitive, but on sparse graphs the within-based solver is dramatically faster.
 
