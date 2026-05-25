@@ -115,8 +115,6 @@ website:
         file: contributing.qmd
       - text: "Acknowledgements"
         file: acknowledgements.md
-      - text: "Sprint 2026"
-        file: pyfixest-sprint.md
 
 quartodoc:
   package: pyfixest
