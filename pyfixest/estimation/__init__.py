@@ -1,3 +1,6 @@
+from pyfixest.core.demean import (
+    demean,
+)
 from pyfixest.core.detect_singletons import (
     detect_singletons,
 )
@@ -20,9 +23,6 @@ from pyfixest.estimation.FixestMulti_ import (
     FixestMulti,
 )
 from pyfixest.estimation.internals import literals
-from pyfixest.estimation.internals.demean_ import (
-    demean,
-)
 from pyfixest.estimation.models.fegaussian_ import Fegaussian
 from pyfixest.estimation.models.feiv_ import (
     Feiv,

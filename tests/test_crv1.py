@@ -1,12 +1,9 @@
 import numpy as np
-import pytest
 
-from pyfixest.core import crv1_meat_loop as crv1_meat_loop_rs
-from pyfixest.estimation.internals.vcov_utils import _crv1_meat_loop
+from pyfixest.core import crv1_meat_loop
 
 
-@pytest.mark.parametrize("func", [_crv1_meat_loop, crv1_meat_loop_rs])
-def test_crv1_meat_loop(benchmark, func):
+def test_crv1_meat_loop(benchmark):
     # Input data
     scores = np.array(
         [
@@ -28,7 +25,10 @@ def test_crv1_meat_loop(benchmark, func):
     expected = np.array([[160, 192], [192, 232]])
 
     result = benchmark(
-        func, scores, clustid.astype(np.uint), cluster_col.astype(np.uint)
+        crv1_meat_loop,
+        scores,
+        clustid.astype(np.uint64),
+        cluster_col.astype(np.uint64),
     )
 
     assert np.allclose(result, expected), f"Expected {expected}, got {result}"

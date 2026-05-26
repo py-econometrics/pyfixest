@@ -72,7 +72,7 @@ def _resolve_demeaner(
         stacklevel=3,
     )
 
-    backend = "numba" if demeaner_backend is None else demeaner_backend
+    backend = "rust" if demeaner_backend is None else demeaner_backend
     effective_fixef_tol = 1e-06 if fixef_tol is None else fixef_tol
     effective_fixef_maxiter = 10_000 if fixef_maxiter is None else fixef_maxiter
 

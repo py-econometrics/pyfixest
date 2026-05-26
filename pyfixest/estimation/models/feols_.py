@@ -2137,9 +2137,10 @@ class Feols(ResultAccessorMixin):
             A random number generator. Defaults to None.
         choose_algorithm: str, optional
             The algorithm to use for the computation. Defaults to "auto".
-            The alternative is "fast" and "slow", and should only be used
-            for running CI tests. Ironically, this argument is not tested
-            for any input errors from the user! So please don't use it =)
+            The alternatives are "fast" and "slow". The fast algorithm requires
+            the optional `numba` extra (install via `pip install pyfixest[numba]`);
+            without it, the fast path raises an `ImportError`. The slow path
+            does not require numba.
         include_plot: bool, optional
             Whether to include a plot of the distribution p-values. Defaults to False.
         store_ritest_statistics: bool, optional
