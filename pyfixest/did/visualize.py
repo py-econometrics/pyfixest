@@ -125,7 +125,8 @@ def panelview(
             f"Found values: {unique_vals}"
         )
     # Normalize treat to boolean to handle integer (0/1) columns robustly
-    data = _normalize_treat_column(data, treat)
+    data = data.copy()
+    data[treat] = data[treat].astype(bool)
 
     if outcome:
         data_pivot = _prepare_panelview_df_for_outcome_plot(
@@ -178,17 +179,6 @@ def panelview(
             noticks=noticks,
             title=title,
         )
-
-
-def _normalize_treat_column(data: pd.DataFrame, treat: str) -> pd.DataFrame:
-    """Normalize the treatment column to boolean dtype.
-
-    Accepts boolean or binary integer (0/1) columns. Mutates a copy of the
-    dataframe to avoid modifying the user's data.
-    """
-    data = data.copy()
-    data[treat] = data[treat].astype(bool)
-    return data
 
 
 def _prepare_panelview_df_for_outcome_plot(
