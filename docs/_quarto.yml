@@ -78,10 +78,6 @@ website:
           file: how-to/marginaleffects.qmd
         - text: "Regression Decomposition"
           file: how-to/regression_decomposition.qmd
-        - text: "PyFixest on the GPU via JAX"
-          file: how-to/pyfixest_gpu.qmd
-        - text: "PyFixest on the GPU via CuPy"
-          file: pyfixest-gpu-cupy.ipynb
         - text: "Compare Stata & PyFixest"
           file: how-to/stata-2-pyfixest.qmd
         - text: "Variance Reduction in AB Tests"
