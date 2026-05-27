@@ -124,6 +124,65 @@ def test_legacy_demeaner_args_conflict_with_typed_demeaner():
         )
 
 
+def _run_with_deprecated_kwargs(estimator_name, **kwargs):
+    if estimator_name == "feols":
+        return pf.feols("Y ~ X1 | f1", data=pf.get_data(), **kwargs)
+    if estimator_name == "fepois":
+        return pf.fepois("Y ~ X1 | f1", data=pf.get_data(model="Fepois"), **kwargs)
+    if estimator_name == "feglm":
+        return pf.feglm("Y ~ X1 | f1", data=pf.get_data(), family="gaussian", **kwargs)
+    raise ValueError(estimator_name)
+
+
+_DEPRECATION_ESTIMATORS = ["feols", "fepois", "feglm"]
+
+
+@pytest.mark.parametrize("estimator_name", _DEPRECATION_ESTIMATORS)
+def test_solver_jax_emits_deprecation_warning(estimator_name):
+    with pytest.warns(DeprecationWarning, match=r"solver='jax'"):
+        _run_with_deprecated_kwargs(estimator_name, solver="jax")
+
+
+@pytest.mark.parametrize("estimator_name", _DEPRECATION_ESTIMATORS)
+def test_demeaner_backend_jax_emits_deprecation_warning(estimator_name):
+    with pytest.warns(DeprecationWarning, match=r"`jax` MAP demeaner backend"):
+        _run_with_deprecated_kwargs(
+            estimator_name, demeaner=pf.MapDemeaner(backend="jax")
+        )
+
+
+def test_demeaner_backend_cupy_emits_deprecation_warning():
+    from pyfixest.estimation.internals.demeaner_options import (
+        _warn_if_deprecated_demeaner_backend,
+    )
+
+    with pytest.warns(DeprecationWarning, match=r"`cupy` LSMR demeaner backend"):
+        _warn_if_deprecated_demeaner_backend(pf.LsmrDemeaner(backend="cupy"))
+
+
+@pytest.mark.parametrize("estimator_name", _DEPRECATION_ESTIMATORS)
+def test_legacy_demeaner_backend_jax_emits_both_deprecation_warnings(estimator_name):
+    with pytest.warns(DeprecationWarning) as records:
+        _run_with_deprecated_kwargs(estimator_name, demeaner_backend="jax")
+
+    messages = [str(r.message) for r in records]
+    assert any("demeaner_backend" in m for m in messages)
+    assert any("`jax` MAP demeaner backend" in m for m in messages)
+
+
+@pytest.mark.parametrize("legacy_backend", ["cupy", "scipy"])
+def test_legacy_demeaner_backend_cupy_preset_chains_to_cupy_warning(legacy_backend):
+    from pyfixest.estimation.internals.demeaner_options import _resolve_demeaner
+
+    with pytest.warns(DeprecationWarning) as records:
+        resolved = _resolve_demeaner(demeaner=None, demeaner_backend=legacy_backend)
+
+    assert isinstance(resolved, pf.LsmrDemeaner)
+    assert resolved.backend == "cupy"
+    messages = [str(r.message) for r in records]
+    assert any("demeaner_backend" in m for m in messages)
+
+
 @pytest.mark.parametrize(
     "builder, invalid_name",
     [
