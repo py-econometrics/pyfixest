@@ -176,9 +176,6 @@ def dispatch_demean(
 
     if isinstance(demeaner, LsmrDemeaner):
         if demeaner.backend == "within":
-            preconditioner = (
-                demeaner.preconditioner if demeaner.use_preconditioner else "off"
-            )
             return demean_within(
                 x=x,
                 flist=flist.astype(np.uint32, copy=False),
@@ -186,7 +183,7 @@ def dispatch_demean(
                 tol=max(demeaner.fixef_atol, demeaner.fixef_btol),
                 maxiter=demeaner.fixef_maxiter,
                 krylov="lsmr",
-                preconditioner=preconditioner,
+                preconditioner=demeaner.preconditioner,
                 local_size=demeaner.local_size,
             )
 
