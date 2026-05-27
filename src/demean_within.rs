@@ -12,13 +12,6 @@ fn extract_columns(x: &ArrayView2<f64>) -> Vec<Vec<f64>> {
         .collect()
 }
 
-fn validate_krylov(krylov: &str) -> PyResult<()> {
-    match krylov {
-        "lsmr" => Ok(()),
-        _ => Err(py_value_error("`krylov` must be 'lsmr'.")),
-    }
-}
-
 fn extract_preconditioner(
     preconditioner: &str,
 ) -> PyResult<Option<within::PreconditionerConfig>> {
@@ -81,7 +74,6 @@ fn demean_within_impl(
     weights,
     tol=1e-8,
     maxiter=10_000,
-    krylov="lsmr",
     preconditioner="additive",
     local_size=None
 ))]
@@ -92,14 +84,12 @@ pub fn _demean_within_rs(
     weights: PyReadonlyArray1<f64>,
     tol: f64,
     maxiter: usize,
-    krylov: &str,
     preconditioner: &str,
     local_size: Option<usize>,
 ) -> PyResult<(Py<PyArray2<f64>>, bool)> {
     let x_arr = x.as_array();
     let flist_arr = flist.as_array();
     let weights_arr = weights.as_array();
-    validate_krylov(krylov)?;
     let preconditioner = extract_preconditioner(preconditioner)?;
     validate_local_size(local_size)?;
 

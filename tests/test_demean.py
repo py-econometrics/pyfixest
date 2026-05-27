@@ -210,7 +210,6 @@ def test_lsmr_within_single_fe_fallback_ignores_nondefault_solver_options():
 @pytest.mark.parametrize(
     ("kwargs", "message"),
     [
-        ({"krylov": "cg"}, "`krylov`"),
         ({"preconditioner": "ilu"}, "`preconditioner`"),
         ({"preconditioner": "multiplicative"}, "`preconditioner`"),
         ({"local_size": 0}, "`local_size`"),

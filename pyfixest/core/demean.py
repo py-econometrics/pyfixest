@@ -85,7 +85,6 @@ def demean_within(
     weights: NDArray[np.float64],
     tol: float = 1e-08,
     maxiter: int = 10_000,
-    krylov: str = "lsmr",
     preconditioner: str = "additive",
     local_size: int | None = None,
 ) -> tuple[NDArray, bool]:
@@ -113,8 +112,6 @@ def demean_within(
     maxiter : int, optional
         Maximum number of LSMR iterations. Defaults to 10_000, matching
         ``LsmrDemeaner``.
-    krylov : {"lsmr"}, optional
-        Solver used for multi-way fixed effects. Defaults to ``"lsmr"``.
     preconditioner : {"additive", "off"}, optional
         Schwarz preconditioner used for multi-way fixed effects. ``"off"``
         disables preconditioning.
@@ -127,8 +124,6 @@ def demean_within(
     tuple[numpy.ndarray, bool]
         Demeaned array and convergence flag.
     """
-    if krylov != "lsmr":
-        raise ValueError("`krylov` must be 'lsmr'.")
     if preconditioner not in ("additive", "off"):
         raise ValueError("`preconditioner` must be one of ('additive', 'off').")
     if local_size is not None:
@@ -151,7 +146,6 @@ def demean_within(
         weights.astype(np.float64, copy=False).reshape(-1),
         tol,
         maxiter,
-        krylov,
         preconditioner,
         local_size,
     )

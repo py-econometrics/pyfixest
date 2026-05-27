@@ -28,7 +28,6 @@ def _demean_within_rs(
     weights: NDArray[np.float64],
     tol: float = 1e-08,
     maxiter: int = 10_000,
-    krylov: str = "lsmr",
     preconditioner: str = "additive",
     local_size: int | None = None,
 ) -> tuple[np.ndarray, bool]: ...

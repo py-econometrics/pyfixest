@@ -180,7 +180,6 @@ def dispatch_demean(
                 weights=weights,
                 tol=max(demeaner.fixef_atol, demeaner.fixef_btol),
                 maxiter=demeaner.fixef_maxiter,
-                krylov="lsmr",
                 preconditioner=demeaner.preconditioner,
                 local_size=demeaner.local_size,
             )
