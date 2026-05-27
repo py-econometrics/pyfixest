@@ -140,7 +140,6 @@ quartodoc:
       contents:
         - demeaners.BaseDemeaner
         - demeaners.MapDemeaner
-        - demeaners.WithinDemeaner
         - demeaners.LsmrDemeaner
         - estimation.models.feols_.Feols
         - estimation.models.fepois_.Fepois
@@ -177,7 +176,7 @@ quartodoc:
       desc: |
         PyFixest internals and utilities
       contents:
-        - estimation.internals.demean_.demean
+        - estimation.demean
         - core.detect_singletons.detect_singletons
         - utils.utils.ssc
         - utils.utils.get_ssc

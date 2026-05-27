@@ -1382,12 +1382,12 @@ dependencies = [
 [[package]]
 name = "schwarz-precond"
 version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f32c75299c86cb61cc76134440f370cb61015555febab85324db8147fe276eb0"
+source = "git+https://github.com/py-econometrics/within.git#8f01bc1d8f7d2d2f9d864f4d14479cc53533f273"
 dependencies = [
  "faer",
  "rayon",
  "serde",
+ "thiserror 2.0.17",
  "thread_local",
 ]
 
@@ -1943,8 +1943,7 @@ dependencies = [
 [[package]]
 name = "within"
 version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f7df961e684950e65e7b1ccce88d5a9fc81555256d78e5025b42a49d54906c50"
+source = "git+https://github.com/py-econometrics/within.git#8f01bc1d8f7d2d2f9d864f4d14479cc53533f273"
 dependencies = [
  "approx-chol",
  "faer",
@@ -1954,6 +1953,7 @@ dependencies = [
  "rayon",
  "schwarz-precond",
  "serde",
+ "thiserror 2.0.17",
 ]
 
 [[package]]

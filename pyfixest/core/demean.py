@@ -27,9 +27,9 @@ def demean(
     weights : numpy.ndarray
         Array of shape (n_samples,) specifying the weights.
     tol : float, optional
-        Tolerance criterion for convergence. Defaults to 1e-08.
+        Tolerance criterion for convergence. Defaults to 1e-06.
     maxiter : int, optional
-        Maximum number of iterations. Defaults to 100_000.
+        Maximum number of iterations. Defaults to 10_000.
 
     Returns
     -------
@@ -43,7 +43,7 @@ def demean(
     import numpy as np
     import pyfixest as pf
     from pyfixest.utils.dgps import get_blw
-    from pyfixest.estimation.internals.demean_ import demean
+    from pyfixest.estimation import demean
     from formulaic import model_matrix
 
     fml = "y ~ treat | state + year"
@@ -83,21 +83,20 @@ def demean_within(
     x: NDArray[np.float64],
     flist: NDArray[np.uint32],
     weights: NDArray[np.float64],
-    tol: float = 1e-06,
-    maxiter: int = 1_000,
-    krylov: str = "cg",
+    tol: float = 1e-08,
+    maxiter: int = 10_000,
     preconditioner: str = "additive",
-    gmres_restart: int = 30,
+    local_size: int | None = None,
 ) -> tuple[NDArray, bool]:
     """
-    Demean an array using Krylov solvers and Schwarz preconditioning via `within`.
+    Demean an array using LSMR and Schwarz preconditioning via `within`.
 
-    Uses Krylov-based solvers with Schwarz preconditioning. Converges faster
-    than alternating projections on weakly-connected or block-diagonal
+    Uses a modified LSMR solver with Schwarz preconditioning. Converges faster
+    than alternating projections on weakly connected or block-diagonal
     fixed-effect structures.
 
     For single fixed effects, falls back to alternating projections (``_demean_rs``)
-    because the CG/Schwarz preconditioner is designed for multi-way FE problems.
+    because the ``within`` solver is designed for multi-way FE problems.
 
     Parameters
     ----------
@@ -109,23 +108,30 @@ def demean_within(
     weights : numpy.ndarray
         Array of shape (n_samples,) specifying the weights.
     tol : float, optional
-        Convergence tolerance. Defaults to 1e-06.
+        Convergence tolerance. Defaults to 1e-08, matching ``LsmrDemeaner``.
     maxiter : int, optional
-        Maximum number of Krylov iterations. Defaults to 1_000.
-    krylov : {"cg", "gmres"}, optional
-        Krylov solver used for multi-way fixed effects. Defaults to ``"cg"``.
-    preconditioner : {"additive", "multiplicative", "off"}, optional
+        Maximum number of LSMR iterations. Defaults to 10_000, matching
+        ``LsmrDemeaner``.
+    preconditioner : {"additive", "off"}, optional
         Schwarz preconditioner used for multi-way fixed effects. ``"off"``
         disables preconditioning.
         Defaults to ``"additive"``.
-    gmres_restart : int, optional
-        Restart dimension when ``krylov="gmres"``. Ignored for CG.
+    local_size : int | None, optional
+        Optional reorthogonalization window for LSMR.
 
     Returns
     -------
     tuple[numpy.ndarray, bool]
         Demeaned array and convergence flag.
     """
+    if preconditioner not in ("additive", "off"):
+        raise ValueError("`preconditioner` must be one of ('additive', 'off').")
+    if local_size is not None:
+        if isinstance(local_size, bool) or not isinstance(local_size, int):
+            raise TypeError("`local_size` must be an int.")
+        if local_size <= 0:
+            raise ValueError("`local_size` must be strictly positive.")
+
     if flist.ndim == 1 or flist.shape[1] == 1:
         return _demean_rs(
             x.astype(np.float64, copy=False),
@@ -140,7 +146,6 @@ def demean_within(
         weights.astype(np.float64, copy=False).reshape(-1),
         tol,
         maxiter,
-        krylov,
         preconditioner,
-        gmres_restart,
+        local_size,
     )
