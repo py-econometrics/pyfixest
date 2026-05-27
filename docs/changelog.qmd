@@ -46,6 +46,13 @@ Passing `use_compression=True` now raises a `DeprecationWarning`.
 
 - Adds support for `offset`s in `pf.fepois()`, thanks to @bradhackinen and @marie-gar.
 
+### panelview Bug Fixes
+
+- Validates that the `treat` column is binary (`{0, 1, True, False}`) and normalizes it to boolean before plotting, matching R's `panelView` behavior. See [#1311](https://github.com/py-econometrics/pyfixest/issues/1311).
+- Fixes `sort_by_timing` to sort units by the period of first treatment (via `argmax`) rather than by the total number of treated periods.
+- Raises an explicit `ValueError` when the `treat` column contains missing values instead of silently dropping them.
+- Fixes a latent bug in `_plot_panelview` where passing a user-supplied `ax` together with `legend=True` referenced an unbound figure variable; the colorbar is now attached via `ax.figure`.
+
 ## PyFixest 0.50.1
 
 ### Bug Fixes
