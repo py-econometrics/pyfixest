@@ -79,8 +79,8 @@ fn demean_within_impl(
     x,
     flist,
     weights,
-    tol=1e-6,
-    maxiter=1_000,
+    tol=1e-8,
+    maxiter=10_000,
     krylov="lsmr",
     preconditioner="additive",
     local_size=None

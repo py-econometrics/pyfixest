@@ -83,8 +83,8 @@ def demean_within(
     x: NDArray[np.float64],
     flist: NDArray[np.uint32],
     weights: NDArray[np.float64],
-    tol: float = 1e-06,
-    maxiter: int = 1_000,
+    tol: float = 1e-08,
+    maxiter: int = 10_000,
     krylov: str = "lsmr",
     preconditioner: str = "additive",
     local_size: int | None = None,
@@ -109,9 +109,10 @@ def demean_within(
     weights : numpy.ndarray
         Array of shape (n_samples,) specifying the weights.
     tol : float, optional
-        Convergence tolerance. Defaults to 1e-06.
+        Convergence tolerance. Defaults to 1e-08, matching ``LsmrDemeaner``.
     maxiter : int, optional
-        Maximum number of LSMR iterations. Defaults to 1_000.
+        Maximum number of LSMR iterations. Defaults to 10_000, matching
+        ``LsmrDemeaner``.
     krylov : {"lsmr"}, optional
         Solver used for multi-way fixed effects. Defaults to ``"lsmr"``.
     preconditioner : {"additive", "off"}, optional
