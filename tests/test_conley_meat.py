@@ -231,40 +231,89 @@ class TestConleyValidationErrors:
     def test_missing_required_keys(self):
         data = pf.get_data()
         with pytest.raises(ValueError, match="must contain 'lat', 'lon', and 'cutoff'"):
-            pf.feols("Y ~ X1", data=data, vcov="conley", vcov_kwargs={"lat": "lat", "lon": "lon"})
+            pf.feols(
+                "Y ~ X1",
+                data=data,
+                vcov="conley",
+                vcov_kwargs={"lat": "lat", "lon": "lon"},
+            )
 
     def test_invalid_key_type(self):
         data = pf.get_data()
-        with pytest.raises(TypeError, match="must be a dictionary with string values for 'lat'"):
-            pf.feols("Y ~ X1", data=data, vcov="conley", vcov_kwargs={"lat": 123, "lon": "lon", "cutoff": 100})
+        with pytest.raises(
+            TypeError, match="must be a dictionary with string values for 'lat'"
+        ):
+            pf.feols(
+                "Y ~ X1",
+                data=data,
+                vcov="conley",
+                vcov_kwargs={"lat": 123, "lon": "lon", "cutoff": 100},
+            )
 
     def test_variable_not_in_data(self):
         data = pf.get_data()
         with pytest.raises(ValueError, match="is not in the data"):
-            pf.feols("Y ~ X1", data=data, vcov="conley", vcov_kwargs={"lat": "nonexistent_lat", "lon": "lon", "cutoff": 100})
+            pf.feols(
+                "Y ~ X1",
+                data=data,
+                vcov="conley",
+                vcov_kwargs={"lat": "nonexistent_lat", "lon": "lon", "cutoff": 100},
+            )
 
     def test_invalid_cutoff(self):
         data = pf.get_data()
         data["lat"] = np.linspace(-20, 20, data.shape[0])
         data["lon"] = np.linspace(-60, -20, data.shape[0])
-        with pytest.raises(TypeError, match="must be a dictionary with a numeric value for 'cutoff'"):
-            pf.feols("Y ~ X1", data=data, vcov="conley", vcov_kwargs={"lat": "lat", "lon": "lon", "cutoff": "invalid"})
-        with pytest.raises(ValueError, match="must contain a non-negative finite value for 'cutoff'"):
-            pf.feols("Y ~ X1", data=data, vcov="conley", vcov_kwargs={"lat": "lat", "lon": "lon", "cutoff": -50})
+        with pytest.raises(
+            TypeError, match="must be a dictionary with a numeric value for 'cutoff'"
+        ):
+            pf.feols(
+                "Y ~ X1",
+                data=data,
+                vcov="conley",
+                vcov_kwargs={"lat": "lat", "lon": "lon", "cutoff": "invalid"},
+            )
+        with pytest.raises(
+            ValueError, match="must contain a non-negative finite value for 'cutoff'"
+        ):
+            pf.feols(
+                "Y ~ X1",
+                data=data,
+                vcov="conley",
+                vcov_kwargs={"lat": "lat", "lon": "lon", "cutoff": -50},
+            )
 
     def test_invalid_distance(self):
         data = pf.get_data()
         data["lat"] = np.linspace(-20, 20, data.shape[0])
         data["lon"] = np.linspace(-60, -20, data.shape[0])
-        with pytest.raises(ValueError, match="The Conley distance must be either 'triangular' or 'spherical'"):
-            pf.feols("Y ~ X1", data=data, vcov="conley", vcov_kwargs={"lat": "lat", "lon": "lon", "cutoff": 100, "distance": "euclidean"})
+        with pytest.raises(
+            ValueError,
+            match="The Conley distance must be either 'triangular' or 'spherical'",
+        ):
+            pf.feols(
+                "Y ~ X1",
+                data=data,
+                vcov="conley",
+                vcov_kwargs={
+                    "lat": "lat",
+                    "lon": "lon",
+                    "cutoff": 100,
+                    "distance": "euclidean",
+                },
+            )
 
     def test_non_numeric_coordinates(self):
         data = pf.get_data()
         data["lat"] = "not_numeric"
         data["lon"] = np.linspace(-60, -20, data.shape[0])
         with pytest.raises(ValueError, match="The latitude variable must be numeric"):
-            pf.feols("Y ~ X1", data=data, vcov="conley", vcov_kwargs={"lat": "lat", "lon": "lon", "cutoff": 100})
+            pf.feols(
+                "Y ~ X1",
+                data=data,
+                vcov="conley",
+                vcov_kwargs={"lat": "lat", "lon": "lon", "cutoff": 100},
+            )
 
     def test_nan_in_coordinates(self):
         data = pf.get_data()
@@ -272,8 +321,15 @@ class TestConleyValidationErrors:
         data["lon"] = np.linspace(-60, -20, data.shape[0])
         idx = data[["Y", "X1"]].dropna().index[0]
         data.loc[idx, "lat"] = np.nan
-        with pytest.raises(ValueError, match="Conley inference is not supported with missing values"):
-            pf.feols("Y ~ X1", data=data, vcov="conley", vcov_kwargs={"lat": "lat", "lon": "lon", "cutoff": 100})
+        with pytest.raises(
+            ValueError, match="Conley inference is not supported with missing values"
+        ):
+            pf.feols(
+                "Y ~ X1",
+                data=data,
+                vcov="conley",
+                vcov_kwargs={"lat": "lat", "lon": "lon", "cutoff": 100},
+            )
 
     def test_nan_in_dropped_model_row_is_ignored(self):
         data = pf.get_data()
@@ -311,15 +367,31 @@ class TestConleyValidationErrors:
         data["Y"] = np.abs(data["Y"])
         data["lat"] = np.linspace(-20, 20, data.shape[0])
         data["lon"] = np.linspace(-60, -20, data.shape[0])
-        with pytest.raises(NotImplementedError, match="Conley inference is currently only supported for feols models"):
-            pf.fepois("Y ~ X1", data=data, vcov="conley", vcov_kwargs={"lat": "lat", "lon": "lon", "cutoff": 100})
+        with pytest.raises(
+            NotImplementedError,
+            match="Conley inference is currently only supported for feols models",
+        ):
+            pf.fepois(
+                "Y ~ X1",
+                data=data,
+                vcov="conley",
+                vcov_kwargs={"lat": "lat", "lon": "lon", "cutoff": 100},
+            )
 
     def test_feiv_not_implemented(self):
         data = pf.get_data()
         data["lat"] = np.linspace(-20, 20, data.shape[0])
         data["lon"] = np.linspace(-60, -20, data.shape[0])
-        with pytest.raises(NotImplementedError, match="Conley inference is currently only supported for feols models"):
-            pf.feols("Y ~ X1 | X2 ~ Z1", data=data, vcov="conley", vcov_kwargs={"lat": "lat", "lon": "lon", "cutoff": 100})
+        with pytest.raises(
+            NotImplementedError,
+            match="Conley inference is currently only supported for feols models",
+        ):
+            pf.feols(
+                "Y ~ X1 | X2 ~ Z1",
+                data=data,
+                vcov="conley",
+                vcov_kwargs={"lat": "lat", "lon": "lon", "cutoff": 100},
+            )
 
 
 @pytest.mark.hac
@@ -336,7 +408,11 @@ def test_conley_meat_2d_coordinate_squeezing():
 
     # 2D input with shape (N, 1)
     meat_2d = _conley_meat(
-        scores=scores, lon_arr=lon[:, None], lat_arr=lat[:, None], cutoff=500, distance="triangular"
+        scores=scores,
+        lon_arr=lon[:, None],
+        lat_arr=lat[:, None],
+        cutoff=500,
+        distance="triangular",
     )
 
     np.testing.assert_allclose(meat_1d, meat_2d, atol=1e-12)
