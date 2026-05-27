@@ -11,11 +11,12 @@ from pyfixest.demeaners import (
     MapBackend,
     MapDemeaner,
     TorchDevice,
-    WithinDemeaner,
 )
 
 # Legacy string backend → (LsmrBackend, TorchDevice, LsmrPrecision)
 _LSMR_PRESETS: dict[str, tuple[LsmrBackend, TorchDevice, LsmrPrecision]] = {
+    "within": ("within", "auto", "float64"),
+    "rust-cg": ("within", "auto", "float64"),
     "cupy": ("cupy", "auto", "float64"),
     "cupy64": ("cupy", "auto", "float64"),
     "cupy32": ("cupy", "auto", "float32"),
@@ -79,12 +80,6 @@ def _resolve_demeaner(
     if backend in {"numba", "rust", "jax"}:
         return MapDemeaner(
             backend=cast(MapBackend, backend),
-            fixef_tol=effective_fixef_tol,
-            fixef_maxiter=effective_fixef_maxiter,
-        )
-
-    if backend in {"rust-cg", "within"}:
-        return WithinDemeaner(
             fixef_tol=effective_fixef_tol,
             fixef_maxiter=effective_fixef_maxiter,
         )

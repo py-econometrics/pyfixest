@@ -26,7 +26,7 @@ For questions on `PyFixest`, head over to our [GitHub discussions](https://githu
 
 - **Estimation**
   - **OLS**, **WLS**, **IV**, and **GLMs** (Poisson, logit, probit, gaussian) with high-dimensional fixed effects
-  - Different **demeaning backends** (MAP, [within](https://github.com/py-econometrics/within), LSMR) on CPU and GPU
+  - Different **demeaning backends** (MAP and LSMR via [within](https://github.com/py-econometrics/within), CuPy, or Torch)
   - Fast **quantile regression** via an interior-point solver
   - **Difference-in-differences** estimators, including TWFE, `Did2s`, local projections, and Sun-Abraham event studies
   - Regression **decomposition** following [Gelbach (2016)](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=1425737)
@@ -126,7 +126,7 @@ For more examples, see the [quickstart](https://pyfixest.org/quickstart.html), t
 
 ## Benchmarks
 
-The DGPs follow the "simple" and "difficult" designs from the [fixest benchmarks](https://github.com/kylebutts/fixest_benchmarks). Timings are for regressions with `k=10` covariates; each bar shows the median runtime across three runs for PyFixest MAP (`MapDemeaner`), PyFixest within (`WithinDemeaner`), PyFixest torch on CUDA GPU (`LsmrDemeaner`), fixest, and FixedEffectModels.jl.
+The DGPs follow the "simple" and "difficult" designs from the [fixest benchmarks](https://github.com/kylebutts/fixest_benchmarks). Timings are for regressions with `k=10` covariates; each bar shows the median runtime across three runs for PyFixest MAP (`MapDemeaner`), PyFixest within (`LsmrDemeaner(backend="within")`), PyFixest torch on CUDA GPU (`LsmrDemeaner(backend="torch")`), fixest, and FixedEffectModels.jl.
 
 <img src="docs/explanation/figures/base-benchmarks/bench_readme.png" width="100%" alt="Fixed-effects OLS benchmark for k=10 comparing PyFixest MAP, PyFixest within, PyFixest torch GPU, fixest, and FixedEffectModels.jl">
 
@@ -134,7 +134,7 @@ The DGPs follow the "simple" and "difficult" designs from the [fixest benchmarks
 
 <img src="docs/explanation/figures/base-benchmarks/bench_simple.png" width="100%" alt="Simple DGP benchmark">
 
-**Difficult DGP** (sparse, weakly-connected graph) — vanilla MAP degrades sharply; `WithinDemeaner` remains fast:
+**Difficult DGP** (sparse, weakly-connected graph) — vanilla MAP degrades sharply; `LsmrDemeaner(backend="within")` remains fast:
 
 <img src="docs/explanation/figures/base-benchmarks/bench_difficult.png" width="100%" alt="Difficult DGP benchmark">
 

@@ -8,7 +8,7 @@ import pandas as pd
 import scipy.sparse as sp
 
 from pyfixest.core.demean import demean_within
-from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner, MapDemeaner, WithinDemeaner
+from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner, MapDemeaner
 
 
 def demean_model(
@@ -174,19 +174,22 @@ def dispatch_demean(
     """Demean an array using the configured backend for the resolved demeaner."""
     flist_uint = flist.astype(np.uintp, copy=False)
 
-    if isinstance(demeaner, WithinDemeaner):
-        return demean_within(
-            x=x,
-            flist=flist.astype(np.uint32, copy=False),
-            weights=weights,
-            tol=demeaner.fixef_tol,
-            maxiter=demeaner.fixef_maxiter,
-            krylov=demeaner.krylov,
-            preconditioner=demeaner.preconditioner,
-            gmres_restart=demeaner.gmres_restart,
-        )
-
     if isinstance(demeaner, LsmrDemeaner):
+        if demeaner.backend == "within":
+            preconditioner = (
+                demeaner.preconditioner if demeaner.use_preconditioner else "off"
+            )
+            return demean_within(
+                x=x,
+                flist=flist.astype(np.uint32, copy=False),
+                weights=weights,
+                tol=max(demeaner.fixef_atol, demeaner.fixef_btol),
+                maxiter=demeaner.fixef_maxiter,
+                krylov="lsmr",
+                preconditioner=preconditioner,
+                local_size=demeaner.local_size,
+            )
+
         if demeaner.backend == "torch":
             try:
                 torch = import_module("torch")

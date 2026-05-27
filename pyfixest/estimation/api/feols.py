@@ -138,8 +138,8 @@ def feols(
 
     demeaner : AnyDemeaner | None, optional
         Typed demeaner configuration. Controls the fixed-effects demeaning
-        backend, tolerance, and iteration limits. Accepts a `MapDemeaner`,
-        `WithinDemeaner`, or `LsmrDemeaner` instance. Defaults to
+        backend, tolerance, and iteration limits. Accepts a `MapDemeaner`
+        or `LsmrDemeaner` instance. Defaults to
         `MapDemeaner()` (a MAP algorithm implemented in Rust without accelerations,
         tol=1e-6, maxiter=10_000). For other options, take a look at the
         Demeaner Options vignette: https://pyfixest.org/how-to/demeaner-backends.html.

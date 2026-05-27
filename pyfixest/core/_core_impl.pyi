@@ -28,9 +28,9 @@ def _demean_within_rs(
     weights: NDArray[np.float64],
     tol: float = 1e-06,
     maxiter: int = 1_000,
-    krylov: str = "cg",
+    krylov: str = "lsmr",
     preconditioner: str = "additive",
-    gmres_restart: int = 30,
+    local_size: int | None = None,
 ) -> tuple[np.ndarray, bool]: ...
 def _count_fixef_fully_nested_all_rs(
     all_fixef_array: NDArray,

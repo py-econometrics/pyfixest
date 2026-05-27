@@ -12,45 +12,28 @@ fn extract_columns(x: &ArrayView2<f64>) -> Vec<Vec<f64>> {
         .collect()
 }
 
-fn extract_krylov(krylov: &str, gmres_restart: usize) -> PyResult<within::KrylovMethod> {
+fn validate_krylov(krylov: &str) -> PyResult<()> {
     match krylov {
-        "cg" => Ok(within::KrylovMethod::Cg),
-        "gmres" => Ok(within::KrylovMethod::Gmres {
-            restart: gmres_restart,
-        }),
-        _ => Err(py_value_error("`krylov` must be one of ('cg', 'gmres').")),
+        "lsmr" => Ok(()),
+        _ => Err(py_value_error("`krylov` must be 'lsmr'.")),
     }
 }
 
-fn extract_preconditioner(preconditioner: &str) -> PyResult<Option<within::Preconditioner>> {
+fn extract_preconditioner(
+    preconditioner: &str,
+) -> PyResult<Option<within::PreconditionerConfig>> {
     match preconditioner {
-        "additive" => Ok(Some(within::Preconditioner::Additive(
-            within::LocalSolverConfig::solver_default(),
-            within::ReductionStrategy::Auto,
-        ))),
-        "multiplicative" => Ok(Some(within::Preconditioner::Multiplicative(
-            within::LocalSolverConfig::solver_default(),
-        ))),
-        "off" => Ok(None),
+        "additive" => Ok(None),
+        "off" => Ok(Some(within::PreconditionerConfig::Off)),
         _ => Err(py_value_error(
-            "`preconditioner` must be one of ('additive', 'multiplicative', 'off').",
+            "`preconditioner` must be one of ('additive', 'off').",
         )),
     }
 }
 
-fn validate_cg_preconditioner(
-    krylov: within::KrylovMethod,
-    preconditioner: Option<&within::Preconditioner>,
-) -> PyResult<()> {
-    if matches!(krylov, within::KrylovMethod::Cg)
-        && matches!(
-            preconditioner,
-            Some(within::Preconditioner::Multiplicative(_))
-        )
-    {
-        return Err(py_value_error(
-            "CG requires a symmetric preconditioner; use 'additive' or switch to GMRES",
-        ));
+fn validate_local_size(local_size: Option<usize>) -> PyResult<()> {
+    if matches!(local_size, Some(0)) {
+        return Err(py_value_error("`local_size` must be strictly positive."));
     }
     Ok(())
 }
@@ -61,8 +44,8 @@ fn demean_within_impl(
     weights: &ArrayView1<f64>,
     tol: f64,
     maxiter: usize,
-    krylov: within::KrylovMethod,
-    preconditioner: Option<&within::Preconditioner>,
+    local_size: Option<usize>,
+    preconditioner: Option<&within::PreconditionerConfig>,
 ) -> Result<(Array2<f64>, bool), within::WithinError> {
     let n_obs = x.nrows();
     let n_rhs = x.ncols();
@@ -71,11 +54,10 @@ fn demean_within_impl(
     let x_slices: Vec<&[f64]> = x_columns.iter().map(|col| col.as_slice()).collect();
     let weights_vec: Vec<f64> = weights.iter().copied().collect();
 
-    let params = within::SolverParams {
-        krylov,
+    let params = within::LsmrOptions {
         tol,
         maxiter,
-        ..within::SolverParams::default()
+        local_size,
     };
 
     let result = within::solve_batch(
@@ -86,8 +68,8 @@ fn demean_within_impl(
         preconditioner,
     )?;
 
-    let all_converged = result.converged().iter().all(|&c| c);
-    let out = Array2::from_shape_vec((n_obs, n_rhs).f(), result.demeaned_all().to_vec())
+    let all_converged = result.converged.iter().all(|&c| c);
+    let out = Array2::from_shape_vec((n_obs, n_rhs).f(), result.demeaned)
         .expect("within returns one demeaned column per RHS");
     Ok((out, all_converged))
 }
@@ -99,9 +81,9 @@ fn demean_within_impl(
     weights,
     tol=1e-6,
     maxiter=1_000,
-    krylov="cg",
+    krylov="lsmr",
     preconditioner="additive",
-    gmres_restart=30
+    local_size=None
 ))]
 pub fn _demean_within_rs(
     py: Python<'_>,
@@ -112,14 +94,14 @@ pub fn _demean_within_rs(
     maxiter: usize,
     krylov: &str,
     preconditioner: &str,
-    gmres_restart: usize,
+    local_size: Option<usize>,
 ) -> PyResult<(Py<PyArray2<f64>>, bool)> {
     let x_arr = x.as_array();
     let flist_arr = flist.as_array();
     let weights_arr = weights.as_array();
-    let krylov = extract_krylov(krylov, gmres_restart)?;
+    validate_krylov(krylov)?;
     let preconditioner = extract_preconditioner(preconditioner)?;
-    validate_cg_preconditioner(krylov, preconditioner.as_ref())?;
+    validate_local_size(local_size)?;
 
     let (out, success) = py
         .detach(|| {
@@ -129,7 +111,7 @@ pub fn _demean_within_rs(
                 &weights_arr,
                 tol,
                 maxiter,
-                krylov,
+                local_size,
                 preconditioner.as_ref(),
             )
         })

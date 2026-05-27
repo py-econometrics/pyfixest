@@ -14,7 +14,7 @@ benchmarks comparing all backends — see
 
 ```{python}
 import pyfixest as pf
-from pyfixest.demeaners import LsmrDemeaner, MapDemeaner, WithinDemeaner
+from pyfixest.demeaners import LsmrDemeaner, MapDemeaner
 
 df = pf.get_data()
 ```
@@ -25,10 +25,7 @@ df = pf.get_data()
 |---|---|
 | `MapDemeaner(backend="rust")` | **Default.** Dense fixed effects / well-connected graphs. No extra dependencies. |
 | `MapDemeaner(backend="numba")` | Alternative MAP implementation. Requires `pip install pyfixest[numba]`. |
-| `WithinDemeaner()` | Best for **sparse** fixed-effect structures (e.g. matched employer-employee data). |
-| `MapDemeaner(backend="jax")` | MAP on the GPU via JAX. Requires `pip install pyfixest[jax]`. |
-| `LsmrDemeaner(backend="cupy", device="cuda")` | LSMR solver on CUDA via CuPy. |
-| `LsmrDemeaner(backend="cupy", device="cpu")` | LSMR solver on CPU via SciPy. |
+| `LsmrDemeaner(backend="within")` | Best for **sparse** fixed-effect structures (e.g. matched employer-employee data). |
 | `LsmrDemeaner(backend="torch", device="cuda")` | GPU acceleration via PyTorch. Experimental. |
 
 ## `MapDemeaner` — Method of Alternating Projections
@@ -36,9 +33,9 @@ df = pf.get_data()
 The default demeaner. It iteratively subtracts each fixed effect's group means
 in turn until convergence — the classic Gauss-Seidel / "ZigZag" algorithm.
 
-**When to use:** dense, well-connected fixed-effect graphs (e.g. a standard two-way
+Use it for dense, well-connected fixed-effect graphs (e.g. a standard two-way
 firm + worker FE where many workers move across many firms). For sparse or weakly-connected
-graphs, use `WithinDemeaner` instead.
+graphs, take a look at the `LsmrDemeaner()` instead.
 
 ```{python}
 # Default (Rust MAP)
@@ -58,76 +55,52 @@ fit = pf.feols(
 )
 ```
 
-## `WithinDemeaner` — Krylov-Schwarz Solver
+## `LsmrDemeaner` — Sparse LSMR
 
-Solves the demeaning problem as a sparse linear system using a Krylov method
-(CG or GMRES) with an additive or multiplicative Schwarz preconditioner.
-Implemented in Rust via the [`within`](https://github.com/py-econometrics/within) library.
+Solves the demeaning problem as a sparse linear system using LSMR
+(Fong & Saunders, 2011). The default `backend="within"` is implemented in
+Rust via the [`within`](https://github.com/py-econometrics/within) library
+and uses an additive Schwarz preconditioner.
 
 **When to use:** sparse or weakly-connected fixed-effect structures — for example
 matched employer-employee panels where each worker appears in only a handful of firms.
-In these cases `MapDemeaner` can converge very slowly, while `WithinDemeaner` often needs
-far fewer iterations.
+In these cases `MapDemeaner` can converge very slowly, while
+`LsmrDemeaner(backend="within")` often needs far fewer iterations.
 
 ```{python}
-# CG + additive Schwarz (default)
-fit = pf.feols("Y ~ X1 | f1 + f2", data=df, demeaner=WithinDemeaner())
+# Rust LSMR + additive Schwarz
+fit = pf.feols("Y ~ X1 | f1 + f2", data=df, demeaner=LsmrDemeaner())
 
-# GMRES + additive Schwarz
+# Optional local reorthogonalization window
 fit = pf.feols(
     "Y ~ X1 | f1 + f2",
     data=df,
-    demeaner=WithinDemeaner(krylov="gmres", preconditioner="additive", gmres_restart=30),
+    demeaner=LsmrDemeaner(backend="within", local_size=20),
 )
 
-# GMRES + multiplicative Schwarz — stronger preconditioner for very sparse graphs
+# Unpreconditioned LSMR — useful for debugging
 fit = pf.feols(
     "Y ~ X1 | f1 + f2",
-    data=df,
-    demeaner=WithinDemeaner(
-        krylov="gmres",
-        preconditioner="multiplicative",
-        gmres_restart=50,
-    ),
-)
-
-# Unpreconditioned CG — useful for debugging
-fit = pf.feols(
-    "Y ~ X1 | f1 + f2", data=df, demeaner=WithinDemeaner(krylov="cg", preconditioner="off")
+    data=df, demeaner=LsmrDemeaner(backend="within", preconditioner="off")
 )
 ```
 
-The `preconditioner` argument accepts `"additive"` (default), `"multiplicative"`, and `"off"`.
-Note that `"multiplicative"` requires `krylov="gmres"`.
+The `preconditioner` argument defaults to `"auto"`, which resolves to
+additive Schwarz for `backend="within"` and diagonal preconditioning for
+`backend="cupy"` / `backend="torch"`. Torch always uses diagonal
+preconditioning; additive Schwarz is only supported by `backend="within"`.
 
-## `LsmrDemeaner` — Sparse LSMR
-
-Instead of group-ID arithmetic, this backend builds the sparse dummy-variable design matrix
-for all fixed effects and solves via LSMR (Fong & Saunders, 2011).
-Two sub-backends are available: `"cupy"` (CuPy/SciPy) and `"torch"` (experimental PyTorch).
-
-**When to use:** GPU-accelerated workloads. On CPU, `WithinDemeaner` is generally faster.
+**GPU-accelerated workloads**. In our experience, on CPU,
+`LsmrDemeaner(backend="within")` with the Schwarz preconditioner is generally
+faster than the `torch` backend, which runs with a diagonal preconditioner on
+CPU. For very large problems, the GPU backend via torch might be faster, but
+we haven't yet found such an example.
 
 ```{python}
-# SciPy on CPU (always available, no GPU required)
 fit = pf.feols(
     "Y ~ X1 | f1 + f2",
     data=df,
-    demeaner=LsmrDemeaner(backend="cupy", device="cpu"),
-)
-```
-
-LSMR uses two tolerance parameters instead of one:
-
-- `fixef_atol` — gradient-norm stopping criterion (default `1e-8`)
-- `fixef_btol` — residual-norm stopping criterion (default `1e-8`)
-
-```{python}
-# Tight tolerances
-fit = pf.feols(
-    "Y ~ X1 | f1",
-    data=df,
-    demeaner=LsmrDemeaner(backend="cupy", device="cpu", fixef_atol=1e-10, fixef_btol=1e-10),
+    demeaner=LsmrDemeaner(backend="torch", device="cuda"),
 )
 ```
 

@@ -5,11 +5,10 @@ from numbers import Integral, Real
 from typing import ClassVar, Literal, get_args
 
 MapBackend = Literal["numba", "rust", "jax"]
-LsmrBackend = Literal["cupy", "torch"]
+LsmrBackend = Literal["within", "cupy", "torch"]
 LsmrPrecision = Literal["float32", "float64"]
 TorchDevice = Literal["auto", "cpu", "mps", "cuda"]
-WithinKrylov = Literal["cg", "gmres"]
-WithinPreconditioner = Literal["additive", "multiplicative", "off"]
+LsmrPreconditioner = Literal["auto", "additive", "diagonal", "off"]
 
 
 def _validate_unit_interval_float(value: float, name: str) -> None:
@@ -35,7 +34,7 @@ class BaseDemeaner:
     Base configuration shared by all fixed-effects demeaners.
 
     This class is not used directly. Instantiate one of its subclasses
-    (`MapDemeaner`, `WithinDemeaner`, or `LsmrDemeaner`) and pass it as the
+    (`MapDemeaner` or `LsmrDemeaner`) and pass it as the
     ``demeaner`` argument to ``feols``, ``fepois``, or related estimators.
 
     Parameters
@@ -44,10 +43,10 @@ class BaseDemeaner:
         Maximum number of iterations before the demeaning loop is declared
         diverged. The meaning of one *iteration* differs by algorithm:
 
-        - **MapDemeaner / WithinDemeaner**: one full sweep over all fixed
-          effects (subtract the group mean for every FE once).
-        - **LsmrDemeaner**: one LSMR iteration (matrix-vector product
-          pair against the stacked design matrix).
+        - **MapDemeaner**: one full sweep over all fixed effects (subtract
+          the group mean for every FE once).
+        - **LsmrDemeaner**: one LSMR iteration
+          (matrix-vector product pair against the fixed-effects design).
 
         When the limit is reached without convergence a ``ValueError`` is
         raised.  Increase this value if you encounter convergence failures on
@@ -80,7 +79,8 @@ class MapDemeaner(BaseDemeaner):
     (every group appears many times) and well-connected (e.g. the standard
     two-way FE with many firms *and* many workers per firm).  For sparse,
     weakly-connected graphs (e.g. matched employer-employee data with
-    many singleton movers) prefer :class:`WithinDemeaner`.
+    many singleton movers) prefer :class:`LsmrDemeaner` with
+    ``backend="within"``.
 
     Parameters
     ----------
@@ -151,157 +151,26 @@ class MapDemeaner(BaseDemeaner):
 
 
 @dataclass(frozen=True, slots=True)
-class WithinDemeaner(BaseDemeaner):
-    """
-    Krylov-subspace demeaner implemented in Rust via the ``within`` library.
-
-    Instead of alternating projections, this backend solves the demeaning
-    problem as a linear system whose coefficient matrix is the block-diagonal
-    normal-equations matrix of the fixed-effects design.  A Krylov solver
-    (CG or GMRES) is applied with an optional Schwarz preconditioner that
-    inverts the diagonal blocks locally.
-
-    **When to use**
-
-    ``WithinDemeaner`` is the preferred choice for *sparse* or
-    *weakly-connected* fixed-effect structures - for example matched
-    employer-employee panels where each worker appears in only a handful of
-    firms.  In these cases alternating projections (``MapDemeaner``) can
-    converge very slowly, while a Krylov solver with a good preconditioner
-    can converge in far fewer iterations.
-
-    For dense, well-connected structures ``MapDemeaner`` is usually faster.
-
-    Parameters
-    ----------
-    krylov : {"cg", "gmres"}
-        Krylov solver for the normal equations.
-
-        ``"cg"`` *(default)*
-            Conjugate Gradient.  Requires a *symmetric positive-definite*
-            preconditioner, so only ``preconditioner="additive"`` or
-            ``preconditioner="off"`` are valid.
-
-        ``"gmres"``
-            Generalized Minimum Residual.  Supports both ``"additive"``
-            and ``"multiplicative"`` preconditioners.  Use when CG stalls
-            or when you want to try multiplicative Schwarz.
-
-    preconditioner : {"additive", "multiplicative", "off"}
-        Schwarz preconditioner applied at each Krylov step.  A Schwarz
-        preconditioner inverts the diagonal block for each fixed-effect
-        group independently, then combines the local solutions.
-
-        ``"additive"`` *(default)*
-            Additive Schwarz: solves each FE group in
-            parallel and sums the corrections.  Symmetric, so compatible
-            with both CG and GMRES.  Generally robust and fast.
-
-        ``"multiplicative"``
-            Multiplicative Schwarz (block-Gauss-Seidel): applies
-            corrections sequentially, each one seeing the residual
-            updated by previous blocks.  Typically converges in fewer
-            iterations than additive Schwarz but is *not symmetric*,
-            so it **requires** ``krylov="gmres"``.
-
-        ``"off"``
-            No preconditioning.  Rarely beneficial; mainly useful for
-            debugging or comparing with preconditioned runs.
-
-    gmres_restart : int
-        Restart dimension for GMRES (the "m" in GMRES(m)).  Only used
-        when ``krylov="gmres"``. Default is ``30``.
-
-    fixef_tol : float
-        Convergence tolerance for the Krylov solver.  The solver stops
-        when the relative residual norm satisfies::
-
-            ||r_k|| / ||r_0|| < fixef_tol
-
-        Defaults to ``1e-6``.
-
-    fixef_maxiter : int
-        Maximum Krylov iterations.  Defaults to ``1_000`` (lower than
-        ``MapDemeaner`` because each iteration is more expensive, and
-        generally fewer iterations are needed).
-
-    Examples
-    --------
-    >>> import pyfixest as pf
-    >>> from pyfixest.demeaners import WithinDemeaner
-    >>> df = pf.get_data()
-    >>> # CG + additive Schwarz (default)
-    >>> pf.feols("Y ~ X1 | f1 + f2", data=df, demeaner=WithinDemeaner())
-    >>> # GMRES + multiplicative Schwarz - better for weakly connected graphs
-    >>> pf.feols(
-    ...     "Y ~ X1 | f1 + f2",
-    ...     data=df,
-    ...     demeaner=WithinDemeaner(
-    ...         krylov="gmres",
-    ...         preconditioner="multiplicative",
-    ...         gmres_restart=50,
-    ...     ),
-    ... )
-    >>> # Unpreconditioned CG
-    >>> pf.feols(
-    ...     "Y ~ X1 | f1 + f2",
-    ...     data=df,
-    ...     demeaner=WithinDemeaner(krylov="cg", preconditioner="off"),
-    ... )
-    """
-
-    fixef_tol: float = 1e-06
-    fixef_maxiter: int = 1_000
-    krylov: WithinKrylov = "cg"
-    preconditioner: WithinPreconditioner = "additive"
-    gmres_restart: int = 30
-    kind: ClassVar[str] = "within"
-
-    def __post_init__(self) -> None:
-        BaseDemeaner.__post_init__(self)
-        _validate_unit_interval_float(self.fixef_tol, "fixef_tol")
-        if not isinstance(self.krylov, str):
-            raise TypeError("`krylov` must be a string.")
-        if self.krylov not in get_args(WithinKrylov):
-            raise ValueError(f"`krylov` must be one of {get_args(WithinKrylov)}.")
-
-        if not isinstance(self.preconditioner, str):
-            raise TypeError("`preconditioner` must be a string.")
-        if self.preconditioner not in get_args(WithinPreconditioner):
-            raise ValueError(
-                f"`preconditioner` must be one of {get_args(WithinPreconditioner)}."
-            )
-
-        _validate_positive_int(self.gmres_restart, "gmres_restart")
-
-        if self.krylov == "cg" and self.preconditioner == "multiplicative":
-            raise ValueError(
-                "`preconditioner='multiplicative'` requires `krylov='gmres'`."
-            )
-
-
-@dataclass(frozen=True, slots=True)
 class LsmrDemeaner(BaseDemeaner):
     """
     Sparse LSMR demeaner.
 
-    Rather than working with integer-encoded group IDs, this backend
-    constructs the sparse dummy-variable design matrix *D* for all
-    fixed effects and solves the demeaning problem as a sparse least-squares
-    system using the LSMR algorithm (Fong & Saunders, 2011).  The result
-    is mathematically identical to alternating projections but the
-    convergence profile can differ substantially.
+    Solves the demeaning problem as a sparse least-squares system using
+    the LSMR algorithm (Fong & Saunders, 2011). The result is
+    mathematically identical to alternating projections but the convergence
+    profile can differ substantially.
 
     Two execution backends are available:
 
-    * ``"cupy"`` - uses CuPy's CUDA-accelerated LSMR on a GPU, or falls
-      back to SciPy's CPU LSMR when no GPU / CuPy is available.
+    * ``"within"`` - bundled Rust solver via the ``within`` crate. This is
+      the default and preferred CPU backend for sparse or weakly connected
+      fixed-effect structures.
     * ``"torch"`` - experimental PyTorch-based LSMR (CPU or GPU).
 
     **When to use**
 
-    Can be faster than MAP on problems where MAP struggles, but generally
-    at mildly lower performance than :class:`WithinDemeaner`.
+    Can be faster than MAP on problems where MAP struggles, especially
+    with ``backend="within"`` on sparse multi-way fixed effects.
 
     **Convergence criteria**
 
@@ -325,22 +194,24 @@ class LsmrDemeaner(BaseDemeaner):
       This checks that the absolute residual is small relative to the
       right-hand side.
 
+    For ``backend="within"``, the Rust solver currently accepts a single
+    relative tolerance; PyFixest passes ``max(fixef_atol, fixef_btol)``.
+
     Parameters
     ----------
-    backend : {"cupy", "torch"}
+    backend : {"within", "cupy", "torch"}
         Execution engine.
 
-        ``"cupy"`` *(default)*
-            Builds the sparse FE design matrix once (via formulaic) and
-            solves with LSMR from `CuPy <https://cupy.dev>`_ on a CUDA
-            GPU, or with SciPy on the CPU if ``device="cpu"`` or no GPU
-            is found.  Requires ``pip install pyfixest[cupy]`` for GPU
-            use; SciPy is always available.
+        ``"within"`` *(default)*
+            Rust LSMR-Schwarz backend from the
+            `within <https://github.com/py-econometrics/within>`_ crate.
+            This backend works on CPU and does not require optional Python
+            GPU dependencies.
 
         ``"torch"``
             Experimental PyTorch-based LSMR.  Supports CUDA and Apple
-            MPS devices in addition to the CPU.  Always uses a
-            preconditioner.  Requires ``pip install pyfixest[torch]``.
+            MPS devices in addition to the CPU.  Always uses diagonal
+            preconditioning.  Requires ``pip install pyfixest[torch]``.
 
     precision : {"float64", "float32"}
         Floating-point precision used on the GPU.
@@ -357,10 +228,10 @@ class LsmrDemeaner(BaseDemeaner):
             Silicon does not support float64 in MPS kernels).
 
     device : {"auto", "cpu", "cuda", "mps"}
-        Target device.
+        Target device for the ``"torch"`` backend.
 
         ``"auto"`` *(default)*
-            Auto-detect: use the GPU if CuPy/CUDA is available,
+            Auto-detect: use the GPU if CUDA is available,
             otherwise fall back to CPU.
 
         ``"cpu"``
@@ -391,15 +262,18 @@ class LsmrDemeaner(BaseDemeaner):
 
     warn_on_cpu_fallback : bool
         If ``True`` (default), emit a ``UserWarning`` when
-        ``device="cuda"`` is requested but CuPy or a CUDA-capable GPU
+        ``device="cuda"`` is requested but a CUDA-capable GPU
         is not available and the solver silently falls back to CPU.
         Set to ``False`` to suppress the warning (e.g. in test suites
         that run on CPU-only machines).
 
     use_preconditioner : bool
-        If ``True`` (default), scale the design matrix *D* by the
-        inverse square root of each group's total weight before passing
-        it to LSMR::
+        If ``True`` (default), use backend-specific preconditioning. The
+        effective variant is controlled by ``preconditioner``. For
+        ``backend="within"``, the default is additive Schwarz. For the
+        ``"torch"`` backend, the default is diagonal preconditioning, which
+        scales the design matrix *D* by the inverse square root of each group's
+        total weight before passing it to LSMR::
 
             M_inv = 1 / sqrt(diag(D^T W D))   # W = diag(weights)
 
@@ -407,32 +281,29 @@ class LsmrDemeaner(BaseDemeaner):
         sizes are highly imbalanced (some fixed-effect levels have many
         more observations than others).
 
-        Always ``True`` for the ``"torch"`` backend (cannot be
-        disabled).
+        Always ``True`` for the ``"torch"`` backend (cannot be disabled).
+
+    preconditioner : {"auto", "additive", "diagonal", "off"}
+        Preconditioner variant. ``"auto"`` (default) resolves to
+        ``"additive"`` for ``backend="within"`` and ``"diagonal"`` for
+        ``backend="torch"``. ``"additive"`` uses
+        additive Schwarz over local fixed-effect blocks and is only
+        supported by ``backend="within"``. ``"diagonal"`` is supported by
+        Torch LSMR backends. ``"off"`` disables
+        preconditioning where the backend supports doing so; Torch always
+        uses diagonal preconditioning.
+
+    local_size : int | None
+        Optional reorthogonalization window for ``backend="within"``.
+        ``None`` disables reorthogonalization.
 
     Examples
     --------
     >>> import pyfixest as pf
     >>> from pyfixest.demeaners import LsmrDemeaner
     >>> df = pf.get_data()
-    >>> # CuPy GPU (falls back to SciPy CPU if no GPU)
-    >>> pf.feols("Y ~ X1 | f1 + f2", data=df, demeaner=LsmrDemeaner(backend="cupy"))
-    >>> # Force CPU via SciPy
-    >>> pf.feols(
-    ...     "Y ~ X1 | f1 + f2", data=df, demeaner=LsmrDemeaner(backend="cupy", device="cpu")
-    ... )
-    >>> # CUDA GPU, float32, tight tolerance
-    >>> pf.feols(
-    ...     "Y ~ X1 | f1 + f2",
-    ...     data=df,
-    ...     demeaner=LsmrDemeaner(
-    ...         backend="cupy",
-    ...         device="cuda",
-    ...         precision="float32",
-    ...         fixef_atol=1e-10,
-    ...         fixef_btol=1e-10,
-    ...     ),
-    ... )
+    >>> # Rust LSMR-Schwarz backend
+    >>> pf.feols("Y ~ X1 | f1 + f2", data=df, demeaner=LsmrDemeaner())
     >>> # Apple Silicon (MPS), requires float32
     >>> pf.feols(
     ...     "Y ~ X1 | f1 + f2",
@@ -445,13 +316,15 @@ class LsmrDemeaner(BaseDemeaner):
     ... )
     """
 
-    backend: LsmrBackend = "cupy"
+    backend: LsmrBackend = "within"
     precision: LsmrPrecision = "float64"
     device: TorchDevice = "auto"
     fixef_atol: float = 1e-8
     fixef_btol: float = 1e-8
     warn_on_cpu_fallback: bool = True
     use_preconditioner: bool = True
+    preconditioner: LsmrPreconditioner = "auto"
+    local_size: int | None = None
     kind: ClassVar[str] = "lsmr"
 
     def __post_init__(self) -> None:
@@ -478,21 +351,76 @@ class LsmrDemeaner(BaseDemeaner):
         if not isinstance(self.use_preconditioner, bool):
             raise TypeError("`use_preconditioner` must be a bool.")
 
+        if not isinstance(self.preconditioner, str):
+            raise TypeError("`preconditioner` must be a string.")
+        if self.preconditioner not in get_args(LsmrPreconditioner):
+            raise ValueError(
+                f"`preconditioner` must be one of {get_args(LsmrPreconditioner)}."
+            )
+        resolved_preconditioner: LsmrPreconditioner
+        if self.preconditioner == "auto":
+            if self.backend == "within":
+                resolved_preconditioner = (
+                    "additive" if self.use_preconditioner else "off"
+                )
+            elif self.backend == "cupy":
+                resolved_preconditioner = (
+                    "diagonal" if self.use_preconditioner else "off"
+                )
+            else:
+                resolved_preconditioner = "diagonal"
+        else:
+            resolved_preconditioner = self.preconditioner
+
+        if self.backend == "within":
+            if resolved_preconditioner == "diagonal":
+                raise ValueError(
+                    "The within LSMR backend supports "
+                    "`preconditioner='additive'` or `preconditioner='off'`; "
+                    "diagonal preconditioning is only supported by the "
+                    "CuPy/SciPy and Torch backends."
+                )
+            if not self.use_preconditioner:
+                resolved_preconditioner = "off"
+        elif self.backend == "cupy":
+            if resolved_preconditioner == "additive":
+                raise ValueError(
+                    "Additive Schwarz preconditioning is only supported by "
+                    "`backend='within'`. The CuPy/SciPy LSMR backend uses "
+                    "diagonal preconditioning."
+                )
+            if not self.use_preconditioner:
+                resolved_preconditioner = "off"
+        else:
+            if not self.use_preconditioner:
+                raise ValueError(
+                    "The torch LSMR backend always uses diagonal preconditioning."
+                )
+            if resolved_preconditioner != "diagonal":
+                raise ValueError(
+                    "The torch LSMR backend always uses diagonal "
+                    "preconditioning. Additive Schwarz preconditioning is "
+                    "only supported by `backend='within'`."
+                )
+
+        object.__setattr__(self, "preconditioner", resolved_preconditioner)
+        object.__setattr__(self, "use_preconditioner", resolved_preconditioner != "off")
+
+        if self.local_size is not None:
+            _validate_positive_int(self.local_size, "local_size")
+
         if self.backend == "cupy" and self.device == "mps":
             raise ValueError("The CuPy backend does not support MPS devices.")
 
-        if self.backend == "torch":
-            if self.device == "mps" and self.precision != "float32":
-                raise ValueError(
-                    "The MPS torch backend requires `precision='float32'`."
-                )
-            if not self.use_preconditioner:
-                raise ValueError(
-                    "The torch LSMR backend currently always uses preconditioning."
-                )
+        if (
+            self.backend == "torch"
+            and self.device == "mps"
+            and self.precision != "float32"
+        ):
+            raise ValueError("The MPS torch backend requires `precision='float32'`.")
 
 
-AnyDemeaner = MapDemeaner | WithinDemeaner | LsmrDemeaner
+AnyDemeaner = MapDemeaner | LsmrDemeaner
 
 __all__ = [
     "AnyDemeaner",
@@ -500,10 +428,8 @@ __all__ = [
     "LsmrBackend",
     "LsmrDemeaner",
     "LsmrPrecision",
+    "LsmrPreconditioner",
     "MapBackend",
     "MapDemeaner",
     "TorchDevice",
-    "WithinDemeaner",
-    "WithinKrylov",
-    "WithinPreconditioner",
 ]

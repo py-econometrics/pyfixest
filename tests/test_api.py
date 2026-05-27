@@ -104,12 +104,13 @@ def test_legacy_demeaner_args_map_with_deprecation_warning():
             fixef_maxiter=321,
         )
 
-    assert isinstance(fit._demeaner, pf.WithinDemeaner)
-    assert fit._demeaner.fixef_tol == 1e-4
+    assert isinstance(fit._demeaner, pf.LsmrDemeaner)
+    assert fit._demeaner.backend == "within"
+    assert fit._demeaner.fixef_atol == 1e-4
+    assert fit._demeaner.fixef_btol == 1e-4
     assert fit._demeaner.fixef_maxiter == 321
-    assert fit._demeaner.krylov == "cg"
     assert fit._demeaner.preconditioner == "additive"
-    assert fit._demeaner.gmres_restart == 30
+    assert fit._demeaner.local_size is None
 
 
 def test_map_demeaner_defaults_to_rust():
@@ -139,63 +140,94 @@ def test_legacy_demeaner_args_conflict_with_typed_demeaner():
     "builder, invalid_name",
     [
         (lambda: pf.MapDemeaner(fixef_tol=1.0), "fixef_tol"),
-        (lambda: pf.WithinDemeaner(fixef_tol=1.0), "fixef_tol"),
-        (lambda: pf.WithinDemeaner(gmres_restart=0), "gmres_restart"),
+        (lambda: pf.LsmrDemeaner(local_size=0), "local_size"),
         (lambda: pf.LsmrDemeaner(fixef_atol=1.0), "fixef_atol"),
         (lambda: pf.LsmrDemeaner(fixef_btol=1.0), "fixef_btol"),
     ],
 )
-def test_typed_demeaners_reject_tolerances_ge_one(builder, invalid_name):
+def test_typed_demeaners_reject_invalid_numeric_options(builder, invalid_name):
     with pytest.raises(ValueError, match=invalid_name):
         builder()
 
 
-def test_within_demeaner_defaults():
-    demeaner = pf.WithinDemeaner()
+def test_lsmr_demeaner_defaults_to_within_backend():
+    demeaner = pf.LsmrDemeaner()
 
-    assert demeaner.krylov == "cg"
+    assert demeaner.backend == "within"
     assert demeaner.preconditioner == "additive"
-    assert demeaner.gmres_restart == 30
+    assert demeaner.local_size is None
 
 
-def test_within_demeaner_accepts_gmres_variants():
-    additive = pf.WithinDemeaner(
-        krylov="gmres",
-        preconditioner="additive",
-        gmres_restart=20,
-    )
-    multiplicative = pf.WithinDemeaner(
-        krylov="gmres",
-        preconditioner="multiplicative",
-        gmres_restart=50,
-    )
+def test_lsmr_demeaner_torch_defaults_to_diagonal_preconditioner():
+    demeaner = pf.LsmrDemeaner(backend="torch", device="cpu")
 
-    assert additive.gmres_restart == 20
-    assert multiplicative.gmres_restart == 50
+    assert demeaner.preconditioner == "diagonal"
+    assert demeaner.use_preconditioner is True
 
 
-def test_within_demeaner_accepts_preconditioner_off():
-    cg_off = pf.WithinDemeaner(krylov="cg", preconditioner="off")
-    gmres_off = pf.WithinDemeaner(krylov="gmres", preconditioner="off")
+def test_lsmr_demeaner_cupy_defaults_to_diagonal_preconditioner():
+    demeaner = pf.LsmrDemeaner(backend="cupy", device="cpu")
 
-    assert cg_off.preconditioner == "off"
-    assert gmres_off.preconditioner == "off"
+    assert demeaner.preconditioner == "diagonal"
+    assert demeaner.use_preconditioner is True
+
+
+def test_lsmr_demeaner_accepts_within_options():
+    additive = pf.LsmrDemeaner(backend="within", preconditioner="additive")
+    reorthogonalized = pf.LsmrDemeaner(backend="within", local_size=20)
+
+    assert additive.preconditioner == "additive"
+    assert reorthogonalized.local_size == 20
+
+
+def test_lsmr_demeaner_accepts_preconditioner_off():
+    off = pf.LsmrDemeaner(backend="within", preconditioner="off")
+
+    assert off.preconditioner == "off"
+    assert off.use_preconditioner is False
+
+
+@pytest.mark.parametrize(
+    "kwargs, message",
+    [
+        ({"preconditioner": "multiplicative"}, "`preconditioner`"),
+        ({"preconditioner": "ilu"}, "`preconditioner`"),
+    ],
+)
+def test_lsmr_demeaner_rejects_invalid_within_options(kwargs, message):
+    with pytest.raises(ValueError, match=message):
+        pf.LsmrDemeaner(**kwargs)
 
 
 @pytest.mark.parametrize(
     "kwargs, message",
     [
         (
-            {"krylov": "cg", "preconditioner": "multiplicative"},
-            "requires `krylov='gmres'`",
+            {"backend": "torch", "preconditioner": "additive"},
+            "diagonal preconditioning",
         ),
-        ({"krylov": "bicg"}, "`krylov`"),
-        ({"preconditioner": "ilu"}, "`preconditioner`"),
+        (
+            {"backend": "torch", "preconditioner": "off"},
+            "diagonal preconditioning",
+        ),
+        (
+            {"backend": "cupy", "preconditioner": "additive"},
+            "Additive Schwarz",
+        ),
+        (
+            {"backend": "within", "preconditioner": "diagonal"},
+            "within LSMR backend",
+        ),
     ],
 )
-def test_within_demeaner_rejects_invalid_solver_options(kwargs, message):
+def test_lsmr_demeaner_rejects_backend_incompatible_preconditioners(kwargs, message):
     with pytest.raises(ValueError, match=message):
-        pf.WithinDemeaner(**kwargs)
+        pf.LsmrDemeaner(**kwargs)
+
+
+def test_within_demeaner_removed_from_public_api():
+    with pytest.raises(AttributeError):
+        pf.WithinDemeaner()
 
 
 def test_lean():
