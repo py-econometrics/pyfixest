@@ -337,9 +337,10 @@ def _prepare_df_for_panelview(
     if collapse_to_cohort:
         treatment_quilt = treatment_quilt.drop_duplicates()
     if sort_by_timing:
-        treatment_quilt = treatment_quilt.loc[
-            treatment_quilt.sum(axis=1).sort_values().index
-        ]
+        first_treated = treatment_quilt.apply(
+            lambda row: row.argmax() if row.any() else len(row), axis=1
+        )
+        treatment_quilt = treatment_quilt.loc[first_treated.sort_values().index]
 
     return treatment_quilt
 
