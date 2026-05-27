@@ -172,8 +172,6 @@ def dispatch_demean(
     demeaner: AnyDemeaner,
 ) -> tuple[np.ndarray, bool]:
     """Demean an array using the configured backend for the resolved demeaner."""
-    flist_uint = flist.astype(np.uintp, copy=False)
-
     if isinstance(demeaner, LsmrDemeaner):
         if demeaner.backend == "within":
             return demean_within(
@@ -198,7 +196,7 @@ def dispatch_demean(
 
                 return demean_rs(
                     x=x,
-                    flist=flist_uint,
+                    flist=flist.astype(np.uintp, copy=False),
                     weights=weights,
                     tol=max(demeaner.fixef_atol, demeaner.fixef_btol),
                     maxiter=demeaner.fixef_maxiter,
@@ -236,6 +234,7 @@ def dispatch_demean(
                 dtype=dtype,
             )
 
+        flist_uint = flist.astype(np.uintp, copy=False)
         cupy_demean_module = import_module("pyfixest.estimation.cupy.demean_cupy_")
         fe_df = pd.DataFrame(
             flist_uint,
@@ -279,7 +278,7 @@ def dispatch_demean(
 
         return demean_func(
             x=x,
-            flist=flist_uint,
+            flist=flist.astype(np.uintp, copy=False),
             weights=weights,
             tol=demeaner.fixef_tol,
             maxiter=demeaner.fixef_maxiter,
