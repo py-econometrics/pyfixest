@@ -114,7 +114,7 @@ def panelview(
             "Cannot use 'collapse_to_cohort' together with 'subsamp' or 'units_to_plot'."
         )
     unique_vals = set(data[treat].dropna().unique())
-    if not unique_vals.issubset({0, 1, True, False}):
+    if not unique_vals.issubset({0, 1}):
         raise ValueError(
             f"Column '{treat}' must be binary (bool or 0/1 integer). "
             f"Found values: {unique_vals}"
