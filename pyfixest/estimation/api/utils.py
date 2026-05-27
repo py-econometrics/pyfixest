@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from math import isfinite
+from numbers import Real
+
 import pandas as pd
 
 from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
@@ -9,7 +12,7 @@ def _estimation_input_checks(
     fml: str,
     data: DataFrameType,
     vcov: str | dict[str, str] | None,
-    vcov_kwargs: dict[str, str | int] | None,
+    vcov_kwargs: dict[str, str | int | float] | None,
     weights: None | str,
     ssc: dict[str, str | bool],
     fixef_rm: str,
@@ -111,6 +114,67 @@ def _estimation_input_checks(
             raise ValueError(
                 "The function argument `separation_check` must be a list of strings containing 'fe' and/or 'ir'."
             )
+
+    if vcov == "conley":
+        if vcov_kwargs is None:
+            raise ValueError(
+                "Missing required vcov_kwargs for Conley standard errors. "
+                "Please provide 'lat', 'lon', and 'cutoff'."
+            )
+
+        allowed_conley_keys = ["lat", "lon", "cutoff", "distance"]
+        if not all(key in allowed_conley_keys for key in vcov_kwargs):
+            raise ValueError(
+                "The function argument `vcov_kwargs` must be a dictionary with keys "
+                "'lat', 'lon', 'cutoff', or 'distance' for Conley standard errors."
+            )
+
+        required_conley_keys = ["lat", "lon", "cutoff"]
+        missing_keys = [key for key in required_conley_keys if key not in vcov_kwargs]
+        if missing_keys:
+            raise ValueError(
+                "The function argument `vcov_kwargs` must contain 'lat', 'lon', "
+                "and 'cutoff' for Conley standard errors."
+            )
+
+        for key in ["lat", "lon"]:
+            if not isinstance(vcov_kwargs[key], str):
+                raise TypeError(
+                    "The function argument `vcov_kwargs` must be a dictionary with "
+                    f"string values for '{key}' if explicitly provided."
+                )
+            if vcov_kwargs[key] not in data.columns:
+                raise ValueError(
+                    f"The variable '{vcov_kwargs[key]}' is not in the data."
+                )
+            if not pd.api.types.is_numeric_dtype(data[vcov_kwargs[key]]):
+                name = "latitude" if key == "lat" else "longitude"
+                raise ValueError(f"The {name} variable must be numeric.")
+
+        cutoff = vcov_kwargs["cutoff"]
+        if not isinstance(cutoff, Real) or isinstance(cutoff, bool):
+            raise TypeError(
+                "The function argument `vcov_kwargs` must be a dictionary with a "
+                "numeric value for 'cutoff' if explicitly provided."
+            )
+        if not isfinite(float(cutoff)) or cutoff < 0:
+            raise ValueError(
+                "The function argument `vcov_kwargs` must contain a non-negative "
+                "finite value for 'cutoff'."
+            )
+
+        if "distance" in vcov_kwargs:
+            distance = vcov_kwargs["distance"]
+            if not isinstance(distance, str):
+                raise ValueError(
+                    "The function argument `vcov_kwargs` must be a dictionary with "
+                    "a string value for 'distance' if explicitly provided."
+                )
+            if distance not in ["triangular", "spherical"]:
+                raise ValueError(
+                    "The Conley distance must be either 'triangular' or 'spherical'."
+                )
+        return
 
     if vcov_kwargs is not None:
         # check that dict keys are either "lag", "time_id", or "panel_id"

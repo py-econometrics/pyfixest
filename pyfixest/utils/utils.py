@@ -169,7 +169,8 @@ def get_ssc(
     vcov_sign : array-like
         A vector that helps create the covariance matrix.
     vcov_type : str
-        The type of covariance matrix. Must be one of "iid", "hetero", "HAC", or "CRV".
+        The type of covariance matrix. Must be one of "iid", "hetero", "HAC",
+        "conley", or "CRV".
 
     Returns
     -------
@@ -215,7 +216,11 @@ def get_ssc(
         raise ValueError("k_fixef is neither none, nonnested, nor full.")
 
     if k_adj:
-        adj_value = (N - 1) / (N - df_k) if vcov_type != "hetero" else N / (N - df_k)
+        adj_value = (
+            N / (N - df_k)
+            if vcov_type in ["hetero", "conley"]
+            else (N - 1) / (N - df_k)
+        )
 
     # G_adj applied with G = N for hetero but not for iid
     if vcov_type in ["CRV", "HAC"] and G_adj:
@@ -227,7 +232,7 @@ def get_ssc(
         else:
             raise ValueError("G_df is neither conventional nor min.")
 
-    df_t = N - df_k if vcov_type in ["iid", "hetero", "HAC-TS"] else G - 1
+    df_t = N - df_k if vcov_type in ["iid", "hetero", "HAC-TS", "conley"] else G - 1
     return np.array([adj_value * G_adj_value * vcov_sign]), df_k, df_t
 
 

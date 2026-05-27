@@ -491,7 +491,7 @@ class FixestMulti:
     def vcov(
         self,
         vcov: str | dict[str, str],
-        vcov_kwargs: dict[str, str | int] | None = None,
+        vcov_kwargs: dict[str, str | int | float] | None = None,
     ):
         """
         Update regression inference "on the fly".

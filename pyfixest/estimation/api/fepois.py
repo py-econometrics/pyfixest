@@ -29,7 +29,7 @@ def fepois(
     fml: str,
     data: DataFrameType,  # type: ignore
     vcov: VcovTypeOptions | dict[str, str] | None = None,
-    vcov_kwargs: dict[str, str | int] | None = None,
+    vcov_kwargs: dict[str, str | int | float] | None = None,
     weights: None | str = None,
     weights_type: WeightsTypeOptions = "aweights",
     offset: str | None = None,

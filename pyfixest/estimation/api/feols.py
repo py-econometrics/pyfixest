@@ -29,7 +29,7 @@ def feols(
     fml: str,
     data: DataFrameType,  # type: ignore
     vcov: VcovTypeOptions | dict[str, str] | None = None,
-    vcov_kwargs: dict[str, str | int] | None = None,
+    vcov_kwargs: dict[str, str | int | float] | None = None,
     weights: None | str = None,
     ssc: dict[str, str | bool] | None = None,
     fixef_rm: FixedRmOptions = "singleton",
@@ -72,17 +72,23 @@ def feols(
     vcov : Union[VcovTypeOptions, dict[str, str]]
         Type of variance-covariance matrix for inference. Options include "iid",
           "hetero", "HC1", "HC2", "HC3", "NW" for Newey-West HAC standard errors,
-        "DK" for Driscoll-Kraay HAC standard errors, or a dictionary for CRV1/CRV3 inference.
-        Note that NW and DK require to pass additional keyword arguments via the `vcov_kwargs` argument.
+        "DK" for Driscoll-Kraay HAC standard errors, "conley" for Conley spatial
+        HAC standard errors, or a dictionary for CRV1/CRV3 inference.
+        Note that NW, DK, and conley require additional keyword arguments via the `vcov_kwargs` argument.
         For time-series HAC, you need to pass the 'time_id' column. For panel-HAC, you need to add
-        pass both 'time_id' and 'panel_id'. See `vcov_kwargs` for details.
+        pass both 'time_id' and 'panel_id'. For Conley standard errors, pass
+        'lat', 'lon', and 'cutoff'. See `vcov_kwargs` for details.
 
     vcov_kwargs : Optional[dict[str, any]]
          Additional keyword arguments to pass to the vcov function. These keywoards include
         "lag" for the number of lag to use in the Newey-West (NW) and Driscoll-Kraay (DK) HAC standard errors.
         "time_id" for the time ID used for NW and DK standard errors, and "panel_id" for the panel
-         identifier used for NW and DK standard errors. Currently, the the time difference between consecutive time
-         periods is always treated as 1. More flexible time-step selection is work in progress.
+        identifier used for NW and DK standard errors. For Conley standard errors,
+        pass "lat" and "lon" column names, "cutoff" in kilometers, and optionally
+        "distance" as either "triangular" or "spherical". A zero cutoff includes
+        only observations with identical coordinates. Currently, the the time
+        difference between consecutive time periods is always treated as 1. More
+        flexible time-step selection is work in progress.
 
     weights : Union[None, str], optional.
         Default is None. Weights for WLS estimation. If None, all observations
@@ -252,8 +258,8 @@ def feols(
     fit3 = pf.feols("Y ~ X1 + X2 | f1 + f2", data, vcov={"CRV1": "f1"})
     ```
 
-    Supported inference types are "iid", "hetero", "HC1", "HC2", "HC3", and
-    "CRV1"/"CRV3". Clustered standard errors are specified via a dictionary,
+    Supported inference types are "iid", "hetero", "HC1", "HC2", "HC3", "NW",
+    "DK", "conley", and "CRV1"/"CRV3". Clustered standard errors are specified via a dictionary,
     e.g. `{"CRV1": "f1"}` for CRV1 inference with clustering by `f1` or
     `{"CRV3": "f1"}` for CRV3 inference with clustering by `f1`. For two-way
     clustering, you can provide a formula string, e.g. `{"CRV1": "f1 + f2"}` for
@@ -261,6 +267,18 @@ def feols(
 
     ```{python}
     fit4 = pf.feols("Y ~ X1 + X2 | f1 + f2", data, vcov={"CRV1": "f1 + f2"})
+    ```
+
+    Conley spatial standard errors are specified via `vcov="conley"` and
+    `vcov_kwargs`:
+
+    ```{python}
+    fit5 = pf.feols(
+        "Y ~ X1 + X2",
+        data,
+        vcov="conley",
+        vcov_kwargs={"lat": "lat", "lon": "lon", "cutoff": 100},
+    )
     ```
 
     Inference can be adjusted post estimation via the `vcov` method:

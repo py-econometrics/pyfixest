@@ -145,6 +145,7 @@ class Fepois(Feols):
 
         self._support_crv3_inference = True
         self._support_iid_inference = True
+        self._support_conley_inference = False
         self._supports_cluster_causal_variance = False
         self._support_decomposition = False
 
