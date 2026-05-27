@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -367,3 +368,33 @@ def test_panelview_output_plot_params():
     )
     assert ax.get_legend() is not None
     plt.close()
+
+
+def test_panelview_user_ax_with_legend():
+    """Legend on user-supplied ax should not raise (was UnboundLocalError on `f`)."""
+    data = pd.DataFrame(
+        {
+            "unit": [1, 1, 2, 2],
+            "time": [1, 2, 1, 2],
+            "treat": [0, 1, 0, 0],
+        }
+    )
+    _, user_ax = plt.subplots()
+    ax = panelview(
+        data, unit="unit", time="time", treat="treat", ax=user_ax, legend=True
+    )
+    assert ax is user_ax
+    plt.close("all")
+
+
+def test_panelview_treat_nan_raises():
+    """NaN in treat must raise instead of being silently coerced to True."""
+    data = pd.DataFrame(
+        {
+            "unit": [1, 1, 2, 2],
+            "time": [1, 2, 1, 2],
+            "treat": [0, 1, 0, np.nan],
+        }
+    )
+    with pytest.raises(ValueError, match="missing values"):
+        panelview(data, unit="unit", time="time", treat="treat")

@@ -113,7 +113,12 @@ def panelview(
         raise ValueError(
             "Cannot use 'collapse_to_cohort' together with 'subsamp' or 'units_to_plot'."
         )
-    unique_vals = set(data[treat].dropna().unique())
+    if data[treat].isna().any():
+        raise ValueError(
+            f"Column '{treat}' contains missing values. "
+            "Please drop them before calling panelview."
+        )
+    unique_vals = set(data[treat].unique())
     if not unique_vals.issubset({0, 1}):
         raise ValueError(
             f"Column '{treat}' must be binary (bool or 0/1 integer). "
@@ -356,9 +361,10 @@ def _plot_panelview(
     title: str | None = None,
 ) -> plt.Axes:
     if not ax:
-        f, ax = plt.subplots(figsize=figsize)
+        _, ax = plt.subplots(figsize=figsize)
     cax = ax.matshow(treatment_quilt, cmap="viridis", aspect="auto")
-    f.colorbar(cax) if legend else None
+    if legend:
+        ax.figure.colorbar(cax, ax=ax)
     ax.set_xlabel(xlab) if xlab else None
     ax.set_ylabel(ylab) if ylab else None
 
