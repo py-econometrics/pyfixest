@@ -220,3 +220,150 @@ def test_panelview():
     )
     assert isinstance(ax, plt.Axes)
     plt.close()
+
+
+def test_panelview_raises():
+    data = pd.DataFrame(
+        {
+            "unit": [1, 1, 2, 2],
+            "time": [1, 2, 1, 2],
+            "y": [1.0, 1.5, 2.0, 3.0],
+            "treat": [0, 0, 0, 1],
+        }
+    )
+
+    # Missing unit/time/treat column
+    with pytest.raises(ValueError, match="Column 'bad_col' not found in data."):
+        panelview(data, unit="bad_col", time="time", treat="treat")
+
+    # Missing outcome column
+    with pytest.raises(
+        ValueError, match="Outcome column 'bad_outcome' not found in data."
+    ):
+        panelview(data, unit="unit", time="time", treat="treat", outcome="bad_outcome")
+
+    # collapse_to_cohort with subsamp
+    with pytest.raises(ValueError, match="Cannot use 'collapse_to_cohort'"):
+        panelview(
+            data,
+            unit="unit",
+            time="time",
+            treat="treat",
+            collapse_to_cohort=True,
+            subsamp=2,
+        )
+
+    # collapse_to_cohort with units_to_plot
+    with pytest.raises(ValueError, match="Cannot use 'collapse_to_cohort'"):
+        panelview(
+            data,
+            unit="unit",
+            time="time",
+            treat="treat",
+            collapse_to_cohort=True,
+            units_to_plot=[1],
+        )
+
+
+def test_panelview_treat_normalization():
+    """Test that treat column is normalized correctly (bug #1311)."""
+    data = pd.DataFrame(
+        {
+            "unit": [1, 1, 2, 2, 3, 3],
+            "time": [1, 2, 1, 2, 1, 2],
+            "y": [1.0, 1.5, 2.0, 3.0, 1.8, 1.9],
+            "treat_int": [0, 0, 0, 1, 0, 0],
+            "treat_bool": [False, False, False, True, False, False],
+        }
+    )
+
+    # Integer treat should not raise
+    ax = panelview(data, unit="unit", time="time", treat="treat_int")
+    assert isinstance(ax, plt.Axes)
+    plt.close()
+
+    # Integer treat with collapse_to_cohort should not raise
+    ax = panelview(
+        data,
+        outcome="y",
+        unit="unit",
+        time="time",
+        treat="treat_int",
+        collapse_to_cohort=True,
+    )
+    assert isinstance(ax, plt.Axes)
+    plt.close()
+
+    # Integer and bool treat should produce the same number of lines
+    ax_int = panelview(
+        data,
+        outcome="y",
+        unit="unit",
+        time="time",
+        treat="treat_int",
+        collapse_to_cohort=True,
+    )
+    ax_bool = panelview(
+        data,
+        outcome="y",
+        unit="unit",
+        time="time",
+        treat="treat_bool",
+        collapse_to_cohort=True,
+    )
+    assert len(ax_int.lines) == len(ax_bool.lines)
+    plt.close("all")
+
+    # Never-treated column (all zeros) should not raise
+    data["treat_never"] = 0
+    ax = panelview(data, unit="unit", time="time", treat="treat_never")
+    assert isinstance(ax, plt.Axes)
+    plt.close()
+
+    # Always-treated column (all ones) should not raise
+    data["treat_always"] = 1
+    ax = panelview(data, unit="unit", time="time", treat="treat_always")
+    assert isinstance(ax, plt.Axes)
+    plt.close()
+
+    # Non-binary treat should raise a clear ValueError
+    data["treat_invalid"] = [0, 1, 2, 0, 1, 2]
+    with pytest.raises(ValueError, match="binary"):
+        panelview(data, unit="unit", time="time", treat="treat_invalid")
+
+    # Original data should not be mutated
+    original_dtype = data["treat_int"].dtype
+    panelview(data, unit="unit", time="time", treat="treat_int")
+    assert data["treat_int"].dtype == original_dtype
+
+
+def test_panelview_output_plot_params():
+    df_het = pd.read_csv("pyfixest/did/data/df_het.csv")
+
+    # xlim and ylim
+    ax = panelview(
+        df_het,
+        outcome="dep_var",
+        unit="unit",
+        time="year",
+        treat="treat",
+        subsamp=50,
+        xlim=(2000, 2010),
+        ylim=(-5, 5),
+    )
+    assert ax.get_xlim() == (2000, 2010)
+    assert ax.get_ylim() == (-5, 5)
+    plt.close()
+
+    # legend
+    ax = panelview(
+        df_het,
+        outcome="dep_var",
+        unit="unit",
+        time="year",
+        treat="treat",
+        subsamp=50,
+        legend=True,
+    )
+    assert ax.get_legend() is not None
+    plt.close()
