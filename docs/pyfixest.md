@@ -66,21 +66,14 @@ python -m pip install pyfixest[plots]
 
 `matplotlib` is included by default, so plotting works without this extra.
 
-For GPU-accelerated fixed-effects demeaning via CuPy, install the build matching your CUDA version:
-
-```bash
-pip install cupy-cuda11x
-pip install cupy-cuda12x
-pip install cupy-cuda13x
-```
-
+For GPU-accelerated fixed-effects demeaning, you need to install a CUDA-enabled PyTorch build.
 Then use the typed `demeaner` API for GPU execution:
 
 ```python
 pf.feols(
     "Y ~ X1 | f1 + f2",
     data=data,
-    demeaner=pf.LsmrDemeaner(backend="cupy", precision="float32"),
+    demeaner=pf.LsmrDemeaner(backend="torch", device="cuda", precision="float32"),
 )
 ```
 

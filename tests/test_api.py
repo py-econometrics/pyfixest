@@ -173,6 +173,19 @@ def test_demeaner_backend_cupy_emits_deprecation_warning():
     with pytest.warns(DeprecationWarning, match=r"`cupy` LSMR demeaner backend") as rec:
         _warn_if_deprecated_demeaner_backend(pf.LsmrDemeaner(backend="cupy"))
     assert any("torch', device='cuda" in str(r.message) for r in rec)
+    assert any("torch', device='cpu" in str(r.message) for r in rec)
+
+
+def test_demeaner_backend_cupy_cuda_emits_gpu_replacement_warning():
+    from pyfixest.estimation.internals.demeaner_options import (
+        _warn_if_deprecated_demeaner_backend,
+    )
+
+    with pytest.warns(DeprecationWarning, match=r"`cupy` LSMR demeaner backend") as rec:
+        _warn_if_deprecated_demeaner_backend(
+            pf.LsmrDemeaner(backend="cupy", device="cuda")
+        )
+    assert any("torch', device='cuda" in str(r.message) for r in rec)
 
 
 def test_demeaner_backend_scipy_emits_deprecation_warning():

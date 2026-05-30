@@ -156,6 +156,20 @@ def _warn_if_deprecated_demeaner_backend(demeaner: object) -> None:
                 DeprecationWarning,
                 stacklevel=3,
             )
+        elif demeaner.device == "auto":
+            warnings.warn(
+                (
+                    "The `cupy` LSMR demeaner backend is deprecated and will "
+                    "be removed in a future release. With device='auto', this "
+                    "backend may run on CuPy/CUDA or fall back to SciPy CPU. "
+                    "If you were running on GPU, switch to "
+                    "`LsmrDemeaner(backend='torch', device='cuda')`; if you "
+                    "were running on CPU, switch to "
+                    "`LsmrDemeaner(backend='torch', device='cpu')`."
+                ),
+                DeprecationWarning,
+                stacklevel=3,
+            )
         else:
             warnings.warn(
                 (
