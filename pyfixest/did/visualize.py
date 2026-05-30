@@ -113,6 +113,20 @@ def panelview(
         raise ValueError(
             "Cannot use 'collapse_to_cohort' together with 'subsamp' or 'units_to_plot'."
         )
+    if data[treat].isna().any():
+        raise ValueError(
+            f"Column '{treat}' contains missing values. "
+            "Please drop them before calling panelview."
+        )
+    unique_vals = set(data[treat].unique())
+    if not unique_vals.issubset({0, 1}):
+        raise ValueError(
+            f"Column '{treat}' must be binary (bool or 0/1 integer). "
+            f"Found values: {unique_vals}"
+        )
+    # Normalize treat to boolean to handle integer (0/1) columns robustly
+    data = data.copy()
+    data[treat] = data[treat].astype(bool)
 
     if outcome:
         data_pivot = _prepare_panelview_df_for_outcome_plot(
@@ -318,9 +332,10 @@ def _prepare_df_for_panelview(
     if collapse_to_cohort:
         treatment_quilt = treatment_quilt.drop_duplicates()
     if sort_by_timing:
-        treatment_quilt = treatment_quilt.loc[
-            treatment_quilt.sum(axis=1).sort_values().index
-        ]
+        first_treated = treatment_quilt.apply(
+            lambda row: row.argmax() if row.any() else len(row), axis=1
+        )
+        treatment_quilt = treatment_quilt.loc[first_treated.sort_values().index]
 
     return treatment_quilt
 
@@ -336,9 +351,10 @@ def _plot_panelview(
     title: str | None = None,
 ) -> plt.Axes:
     if not ax:
-        f, ax = plt.subplots(figsize=figsize)
+        _, ax = plt.subplots(figsize=figsize)
     cax = ax.matshow(treatment_quilt, cmap="viridis", aspect="auto")
-    f.colorbar(cax) if legend else None
+    if legend:
+        ax.figure.colorbar(cax, ax=ax)
     ax.set_xlabel(xlab) if xlab else None
     ax.set_ylabel(ylab) if ylab else None
 

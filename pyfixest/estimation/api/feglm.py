@@ -8,6 +8,8 @@ from pyfixest.estimation.api.utils import _estimation_input_checks
 from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.internals.demeaner_options import (
     _resolve_demeaner,
+    _warn_if_deprecated_demeaner_backend,
+    _warn_if_deprecated_solver,
     _warn_if_experimental_torch_demeaner,
 )
 from pyfixest.estimation.internals.literals import (
@@ -130,6 +132,11 @@ def feglm(
         "np.linalg.solve", "scipy.linalg.solve", "scipy.sparse.linalg.lsqr" and "jax".
         Defaults to "scipy.linalg.solve".
 
+        .. deprecated::
+            ``solver="jax"`` is deprecated and will be removed in a future
+            release. Use one of the NumPy/SciPy solvers instead; for GPU
+            acceleration, see ``LsmrDemeaner(backend="torch", device="cuda")``.
+
     demeaner : AnyDemeaner | None, optional
         Typed demeaner configuration. Controls the fixed-effects demeaning
         backend, tolerance, and iteration limits. Accepts a `MapDemeaner`,
@@ -137,6 +144,15 @@ def feglm(
         `MapDemeaner()` (Rust MAP algorithm, tol=1e-6, maxiter=10_000).
         For other options - including the optional Numba and JAX backends -
         see the [Demeaner Backends vignette](../../how-to/demeaner-backends.qmd).
+
+        .. deprecated::
+            The ``jax`` MAP backend and the ``cupy``/``scipy`` LSMR backends
+            are deprecated and will be removed in a future release. Use
+            ``MapDemeaner()`` for dense fixed-effects problems,
+            ``WithinDemeaner()`` (additive Schwarz with conjugate gradient)
+            for difficult/sparse problems, and
+            ``LsmrDemeaner(backend="torch", device="cuda")`` for GPU
+            acceleration.
 
     drop_intercept : bool, optional
         Whether to drop the intercept from the model, by default False.
@@ -259,6 +275,8 @@ def feglm(
         fixef_maxiter=fixef_maxiter,
     )
     _warn_if_experimental_torch_demeaner(demeaner)
+    _warn_if_deprecated_demeaner_backend(demeaner)
+    _warn_if_deprecated_solver(solver)
 
     _estimation_input_checks(
         fml=fml,

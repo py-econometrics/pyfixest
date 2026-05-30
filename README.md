@@ -250,6 +250,10 @@ Thanks goes to these wonderful people:
       <td align="center" valign="top" width="12.5%"><a href="https://github.com/marie-gar"><img src="https://avatars.githubusercontent.com/u/185077947?v=4?s=40" width="40px;" alt="Marie Garkavenko"/><br /><sub><b>Marie Garkavenko</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/pulls?q=is%3Apr+reviewed-by%3Amarie-gar" title="Reviewed Pull Requests">👀</a></td>
       <td align="center" valign="top" width="12.5%"><a href="https://bradhackinen.ca"><img src="https://avatars.githubusercontent.com/u/14437616?v=4?s=40" width="40px;" alt="Brad Hackinen"/><br /><sub><b>Brad Hackinen</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=bradhackinen" title="Code">💻</a></td>
     </tr>
+    <tr>
+      <td align="center" valign="top" width="12.5%"><a href="https://github.com/buddejul"><img src="https://avatars.githubusercontent.com/u/66945206?v=4?s=40" width="40px;" alt="Julian Budde"/><br /><sub><b>Julian Budde</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/issues?q=author%3Abuddejul" title="Bug reports">🐛</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="https://github.com/felixschmitz"><img src="https://avatars.githubusercontent.com/u/33942086?v=4?s=40" width="40px;" alt="Felix Schmitz"/><br /><sub><b>Felix Schmitz</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=felixschmitz" title="Code">💻</a></td>
+    </tr>
   </tbody>
 </table>
 
