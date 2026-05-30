@@ -6,37 +6,43 @@ jupyter: python3
 ---
 
 PyFixest exposes several demeaner backends via the `demeaner=` argument.
-All backends produce numerically equivalent results; the choice only affects **speed**.
+All backends produce numerically equivalent results; the choice only affects **performance**, which
+itself depends on the structure of the fixed effects and the size of the dataset.
 
-For a deeper discussion on when to use which backend, see
-[When Are Fixed Effects Problems Difficult?](../explanation/difficult-fixed-effects.md).
+For a deep dive on *why* some fixed-effects problems are harder than others — and detailed
+benchmarks comparing all backends — see
+[When Are Fixed Effects Estimations Difficult?](../explanation/difficult-fixed-effects.md).
 
 ```{python}
 import pyfixest as pf
-from pyfixest.demeaners import LsmrDemeaner, MapDemeaner, WithinDemeaner
+from pyfixest.demeaners import LsmrDemeaner, MapDemeaner
 
 df = pf.get_data()
 ```
 
 ## Quick Reference
 
+What are **dense / well-connected** vs "sparse / weakly-connected"** fixed-effect structures?
+The typical example for "dense" fixed effects is a balanced panel - each unit appears exactly once for every single time period. In contrast, a "sparse" or "weakly" connected fixed effect structure arises when units apear in only a few time periods. For example, in a matched employer-employee panel, each worker may only appear in a handful of firms.
+
+
 | Backend | When to use |
 |---|---|
-| `MapDemeaner(backend="rust")` | **Default.** Dense fixed effects / well-connected graphs. No optional dependencies required. |
-| `MapDemeaner(backend="numba")` | Alternative MAP implementation. Requires `pip install pyfixest[numba]`. |
+| `MapDemeaner(backend="rust")` | **Default.** Fast for dense fixed effects with well-connected graphs. No optional dependencies required. |
+| `MapDemeaner(backend="numba")` | An alternative MAP implementation written in `numba`. Requires installation via `pip install pyfixest[numba]`. |
+| `MapDemeaner(backend="jax")` | An alternative MAP implementation written in `jax`. Mostly useful on GPUs, slower than the other map implementations on CPU. Requires `pip install pyfixest[jax]`. |
 | `WithinDemeaner()` | Best for **sparse** fixed-effect structures (e.g. matched employer-employee data). Supports additive Schwarz with CG or GMRES, multiplicative Schwarz with GMRES, and unpreconditioned solves via `preconditioner="off"`. |
-| `MapDemeaner(backend="jax")` | MAP on the GPU via JAX. Requires `pip install pyfixest[jax]`. |
-| `LsmrDemeaner(backend="cupy", device="cpu")` | LSMR solver on CPU via SciPy. |
-| `LsmrDemeaner(backend="cupy", device="cuda")` | LSMR solver on CUDA via CuPy. |
-| `LsmrDemeaner(backend="torch", device="cuda")` | GPU acceleration via PyTorch. Experimental. |
+| `LsmrDemeaner(backend="cupy", device="cpu")` | LSMR solver on CPU via SciPy's LSMR implementation. Good middle ground performance between the MAP and Within demeaners.|
+| `LsmrDemeaner(backend="cupy", device="cuda")` | LSMR solver on the GPU (CUDA) via CuPy. |
+| `LsmrDemeaner(backend="torch", device="cuda")` | LSMR solver on the GPU (CUDA and MPS) via PyTorch. Experimental. |
 
 Since release `0.60.0`, `pyfixest` defaults to the Rust-backed MAP demeaner.
-Numba is now an optional dependency: install it with `pip install pyfixest[numba]`
+Numba is now an optional dependency: you can install it via `pip install pyfixest[numba]`
 if you want to use `MapDemeaner(backend="numba")` or the fast `ritest` path.
 
 ## Usage
 
-To select a demeaner backend, pass an instance of the desired demeaner to
+To select a demeaner backend, you need to pass an instance of the desired demeaner to
 the `demeaner` argument of `feols`:
 
 ```{python}
@@ -76,7 +82,7 @@ fit = pf.feols(
 ```
 
 The `MapDemeaner` and `WithinDemeaner` backends accept `fixef_tol` and `fixef_maxiter`
-arguments to control convergence. `WithinDemeaner` additionally accepts `krylov`,
+arguments to control convergence. The `WithinDemeaner` additionally accepts `krylov`,
 `preconditioner`, and `gmres_restart` (used only with `krylov="gmres"`). The
 `preconditioner` argument accepts `"additive"`, `"multiplicative"`, and `"off"`;
 `"off"` matches `within.Preconditioner.Off`. For compatibility with `scipy`, the
