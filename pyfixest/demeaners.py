@@ -72,17 +72,18 @@ class LsmrDemeaner(BaseDemeaner):
 
     ``preconditioner`` selects the preconditioner. Supported values:
 
-    - ``"auto"`` (default) — pick the natural choice for the backend
-      (``"schwarz"`` for ``within``; ``"diag"`` for ``torch`` / ``cupy``).
-    - ``"none"`` — disable preconditioning. Supported by ``within`` and
+    - ``"auto"`` (default): selects different preconditioners for different
+        backend implementations: ``"schwarz"`` for ``within``; ``"diag"`` for ``torch``
+        / ``cupy``.
+    - ``"none"``: disables preconditioning. Supported by ``within`` and
       ``cupy``; not supported by ``torch``.
-    - ``"schwarz"`` — additive Schwarz preconditioner. Only supported by the
+    - ``"schwarz"``: additive Schwarz preconditioner. Only supported by the
       ``within`` backend.
-    - ``"diag"`` — diagonal (Jacobi) preconditioner. Supported by ``torch``
+    - ``"diag"``: diagonal (Jacobi) preconditioner. Supported by ``torch``
       and ``cupy``; not supported by ``within``.
 
     If a value is incompatible with the chosen backend, a ``UserWarning`` is
-    emitted at solve time and the backend's natural choice is used.
+    emitted at solve time and the backend's default is used.
     """
 
     fixef_maxiter: int = 1_000

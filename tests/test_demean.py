@@ -146,7 +146,7 @@ def test_torch_device_backends_match_pyhdfe(backend_name, rtol, atol, demean_dat
         ),
     ],
 )
-def test_within_lsmr_backend_matches_pyhdfe(demeaner, rtol, atol, demean_data):
+def test_within_solver_variants_match_pyhdfe(demeaner, rtol, atol, demean_data):
     x, flist, weights = demean_data
 
     algorithm = pyhdfe.create(flist)

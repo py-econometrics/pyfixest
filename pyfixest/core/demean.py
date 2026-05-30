@@ -134,9 +134,10 @@ def demean_within(
         Demeaned array and convergence flag.
     """
     if flist.ndim == 1 or flist.shape[1] == 1:
+        flist_2d = flist.reshape(-1, 1) if flist.ndim == 1 else flist
         return _demean_rs(
             x.astype(np.float64, copy=False),
-            flist.astype(np.uint64, copy=False),
+            flist_2d.astype(np.uint64, copy=False),
             weights.astype(np.float64, copy=False)
             if weights is not None
             else np.ones(x.shape[0], dtype=np.float64),
@@ -146,7 +147,7 @@ def demean_within(
     return _demean_within_rs(
         x.astype(np.float64, copy=False),
         np.asfortranarray(flist, dtype=np.uint32),
-        weights,
+        weights.astype(np.float64, copy=False) if weights is not None else None,
         tol,
         maxiter,
         local_size,
