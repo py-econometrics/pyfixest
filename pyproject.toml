@@ -55,6 +55,9 @@ numba = [
 jax = [
     "jax>=0.4.15",
 ]
+torch = [
+    "torch>=2.0",
+]
 plots = [
     "lets-plot>=4.0.0",
 ]

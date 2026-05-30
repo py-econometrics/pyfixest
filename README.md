@@ -66,26 +66,37 @@ python -m pip install pyfixest[plots]
 
 `matplotlib` is included by default, so plotting works without this extra.
 
-For GPU-accelerated fixed-effects demeaning via CuPy, install the build matching your CUDA version:
+To run the LSMR demeaner via `PyTorch` (CPU and GPU), you need to install `PyTorch`, which you can do via
 
 ```bash
-pip install cupy-cuda11x
-pip install cupy-cuda12x
-pip install cupy-cuda13x
+python -m pip install pyfixest[torch]
 ```
 
-Then use the typed `demeaner` API for GPU execution:
+For GPU acceleration on CUDA, you additionally need to install a CUDA-enabled torch build. See the [PyTorch installation guide](https://pytorch.org/get-started/locally/) for details.
+
+Then use the typed `demeaner` API:
 
 ```python
+# CPU
 pf.feols(
     "Y ~ X1 | f1 + f2",
     data=data,
-    demeaner=pf.LsmrDemeaner(backend="cupy", precision="float32"),
+    demeaner=pf.LsmrDemeaner(backend="torch", device="cpu"),
+)
+
+# CUDA GPU
+pf.feols(
+    "Y ~ X1 | f1 + f2",
+    data=data,
+    demeaner=pf.LsmrDemeaner(backend="torch", device="cuda"),
 )
 ```
 
-</details>
+> **Note:** The `cupy` / `scipy` LSMR backends and the `jax` MAP backend are
+> deprecated and will be removed in a future release. Please use the torch-based
+> backends instead.
 
+</details>
 ## Quickstart
 
 ```python
