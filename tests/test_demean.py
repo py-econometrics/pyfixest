@@ -9,6 +9,7 @@ from pyfixest.core.demean import demean_lsmr_within
 from pyfixest.demeaners import LsmrDemeaner, MapDemeaner
 from pyfixest.estimation.cupy.demean_cupy_ import demean_cupy32, demean_cupy64
 from pyfixest.estimation.internals.demean_ import (
+    _resolve_preconditioner,
     demean_model,
     dispatch_demean,
 )
@@ -236,6 +237,49 @@ def test_demean_lsmr_within_unpreconditioned_matches_pyhdfe(demean_data):
 
     assert success
     np.testing.assert_allclose(result, expected, rtol=1e-6, atol=1e-8)
+
+
+@pytest.mark.parametrize(
+    ("backend", "requested", "expected"),
+    [
+        # within: supports schwarz, none; auto -> schwarz
+        ("within", "auto", "schwarz"),
+        ("within", "schwarz", "schwarz"),
+        ("within", "none", "none"),
+        # torch: supports diag; auto -> diag
+        ("torch", "auto", "diag"),
+        ("torch", "diag", "diag"),
+        # cupy: supports diag, none; auto -> diag
+        ("cupy", "auto", "diag"),
+        ("cupy", "diag", "diag"),
+        ("cupy", "none", "none"),
+    ],
+)
+def test_resolve_preconditioner_compatible_silent(backend, requested, expected):
+    """Compatible (and ``auto``) requests resolve without warning."""
+    import warnings
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")  # any warning fails the test
+        assert _resolve_preconditioner(backend, requested) == expected
+
+
+@pytest.mark.parametrize(
+    ("backend", "requested", "fallback"),
+    [
+        ("within", "diag", "schwarz"),
+        ("torch", "schwarz", "diag"),
+        ("torch", "none", "diag"),
+        ("cupy", "schwarz", "diag"),
+    ],
+)
+def test_resolve_preconditioner_incompatible_warns(backend, requested, fallback):
+    """Unsupported requests warn and fall back to the backend's natural default."""
+    with pytest.warns(
+        UserWarning,
+        match=rf"{requested!r}.*{backend!r}.*{fallback!r}",
+    ):
+        assert _resolve_preconditioner(backend, requested) == fallback
 
 
 @pytest.mark.skipif(not HAS_TORCH, reason="torch not available")
