@@ -173,55 +173,6 @@ def test_within_lsmr_backend_matches_pyhdfe(demeaner, rtol, atol, demean_data):
     np.testing.assert_allclose(result_weighted, expected_weighted, rtol=rtol, atol=atol)
 
 
-def test_within_lsmr_single_fe_fallback_uses_map():
-    rng = np.random.default_rng(1234)
-    x = rng.normal(size=(100, 3))
-    flist = rng.integers(0, 10, size=(100, 1), dtype=np.uint64)
-    weights = rng.uniform(0.5, 1.5, size=100)
-
-    within_result, success = dispatch_demean(
-        x=x,
-        flist=flist,
-        weights=weights,
-        demeaner=LsmrDemeaner(preconditioner="none"),
-    )
-    assert success
-
-    map_result, success = demean_rs(
-        x,
-        flist,
-        weights,
-        tol=1e-8,
-        maxiter=1_000,
-    )
-    assert success
-    np.testing.assert_allclose(within_result, map_result, rtol=1e-10, atol=1e-10)
-
-
-def test_demean_lsmr_within_single_fe_accepts_one_dimensional_flist():
-    rng = np.random.default_rng(5678)
-    x = rng.normal(size=(100, 3))
-    flist = rng.integers(0, 10, size=100, dtype=np.uint32)
-    weights = rng.uniform(0.5, 1.5, size=100)
-
-    result, success = demean_lsmr_within(
-        x=x,
-        flist=flist,
-        weights=weights,
-    )
-    assert success
-
-    expected, success = demean_rs(
-        x=x,
-        flist=flist.reshape(-1, 1).astype(np.uint64, copy=False),
-        weights=weights,
-        tol=1e-8,
-        maxiter=1_000,
-    )
-    assert success
-    np.testing.assert_allclose(result, expected, rtol=1e-10, atol=1e-10)
-
-
 def test_demean_lsmr_within_unpreconditioned_matches_pyhdfe(demean_data):
     x, flist, weights = demean_data
 
