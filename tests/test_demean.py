@@ -5,7 +5,7 @@ import pytest
 
 import pyfixest as pf
 from pyfixest.core import demean as demean_rs
-from pyfixest.core.demean import demean_lsmr_within
+from pyfixest.core.demean import demean_within
 from pyfixest.demeaners import LsmrDemeaner, MapDemeaner
 from pyfixest.estimation.cupy.demean_cupy_ import demean_cupy32, demean_cupy64
 from pyfixest.estimation.internals.demean_ import (
@@ -173,11 +173,11 @@ def test_within_lsmr_backend_matches_pyhdfe(demeaner, rtol, atol, demean_data):
     np.testing.assert_allclose(result_weighted, expected_weighted, rtol=rtol, atol=atol)
 
 
-def test_demean_lsmr_within_unpreconditioned_matches_pyhdfe(demean_data):
+def test_demean_within_unpreconditioned_matches_pyhdfe(demean_data):
     x, flist, weights = demean_data
 
     expected = pyhdfe.create(flist).residualize(x, weights.reshape((x.shape[0], 1)))
-    result, success = demean_lsmr_within(
+    result, success = demean_within(
         x=x,
         flist=flist.astype(np.uint32, copy=False),
         weights=weights,

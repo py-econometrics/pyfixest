@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 import scipy.sparse as sp
 
-from pyfixest.core.demean import demean_lsmr_within
+from pyfixest.core.demean import demean_within
 from pyfixest.demeaners import (
     AnyDemeaner,
     LsmrBackend,
@@ -203,7 +203,7 @@ def dispatch_demean(
 
     if isinstance(demeaner, LsmrDemeaner) and demeaner.backend == "within":
         resolved = _resolve_preconditioner("within", demeaner.preconditioner)
-        return demean_lsmr_within(
+        return demean_within(
             x=x,
             flist=flist.astype(np.uint32, copy=False),
             weights=weights,

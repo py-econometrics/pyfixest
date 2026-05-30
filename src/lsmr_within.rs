@@ -8,7 +8,7 @@ fn extract_columns(x: &ArrayView2<f64>) -> Vec<Vec<f64>> {
         .collect()
 }
 
-fn demean_lsmr_within_impl(
+fn demean_within_impl(
     x: &ArrayView2<f64>,
     flist: &ArrayView2<u32>,
     weights: Option<&ArrayView1<f64>>,
@@ -92,7 +92,7 @@ pub fn _demean_within_rs(
 
     let (out, success) = py
         .detach(|| {
-            demean_lsmr_within_impl(
+            demean_within_impl(
                 &x_arr,
                 &flist_arr,
                 weights_arr.as_ref(),

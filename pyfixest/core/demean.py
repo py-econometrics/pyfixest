@@ -79,7 +79,7 @@ def demean(
     )
 
 
-def demean_lsmr_within(
+def demean_within(
     x: NDArray[np.float64],
     flist: NDArray[np.uint32],
     weights: NDArray[np.float64] | None = None,
