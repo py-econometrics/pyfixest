@@ -41,29 +41,7 @@ fit = pf.feols("Y ~ X1 | f1", data=df, demeaner=LsmrDemeaner(backend="within", f
 fit = pf.feols("Y ~ X1 | f1", data=df, demeaner=LsmrDemeaner(backend="torch", device="cuda"))
 ```
 
-**Deprecations:** The `demeaner_backend`, `fixef_tol`, and `fixef_maxiter` arguments to `feols()` and related functions are deprecated and will be removed in a future release. Likewise, the `_fixef_tol` and `_fixef_maxiter` attributes on fitted model objects are deprecated — use the typed `model.demeaner` configuration instead.
-
-### `within` LSMR Backend
-
-`LsmrDemeaner()` now defaults to `backend="within"`, which uses the modified
-LSMR solver from the Rust [`within`](https://github.com/py-econometrics/within)
-crate with additive Schwarz preconditioning. The development-only
-`WithinDemeaner` API has been removed before release; use
-`LsmrDemeaner(backend="within")` or simply `LsmrDemeaner()` instead.
-
-The old CG, GMRES, and multiplicative Schwarz options are no longer exposed,
-matching the updated `within` API.
-
-Preconditioning is now selected via a single string-valued argument:
-`LsmrDemeaner(preconditioner=...)`. Supported values are `"auto"` (default),
-`"none"`, `"schwarz"` (within only), and `"diag"` (torch / cupy only). When a
-value is incompatible with the chosen backend a `UserWarning` is emitted and
-the backend's natural choice is used. The boolean `use_preconditioner` field
-has been removed.
-
-`LsmrDemeaner` also gains a `local_size` field that forwards to `within`'s
-windowed Gram-Schmidt reorthogonalization. Only relevant for
-`backend="within"`; ignored by `torch` and `cupy`.
+**Deprecations:** The `demeaner_backend`, `fixef_tol`, and `fixef_maxiter` arguments to `feols()` and related functions are deprecated and will be removed in a future release. Likewise, the `_fixef_tol` and `_fixef_maxiter` attributes on fitted model objects are deprecated — read the values off the typed `fit._demeaner` via `fit._demeaner.fixef_tol` and `fit._demeaner.fixef_maxiter` instead.
 
 ### JAX, CuPy, and SciPy Backend Deprecations
 
