@@ -30,15 +30,28 @@ The typical example for "dense" fixed effects is a balanced panel - each unit ap
 |---|---|
 | `MapDemeaner(backend="rust")` | **Default.** Fast for dense fixed effects with well-connected graphs. No optional dependencies required. |
 | `MapDemeaner(backend="numba")` | An alternative MAP implementation written in `numba`. Requires installation via `pip install pyfixest[numba]`. |
-| `MapDemeaner(backend="jax")` | An alternative MAP implementation written in `jax`. Mostly useful on GPUs, slower than the other map implementations on CPU. Requires `pip install pyfixest[jax]`. |
 | `WithinDemeaner()` | Best for **sparse** fixed-effect structures (e.g. matched employer-employee data). Supports additive Schwarz with CG or GMRES, multiplicative Schwarz with GMRES, and unpreconditioned solves via `preconditioner="off"`. |
-| `LsmrDemeaner(backend="cupy", device="cpu")` | LSMR solver on CPU via SciPy's LSMR implementation. Good middle ground performance between the MAP and Within demeaners.|
-| `LsmrDemeaner(backend="cupy", device="cuda")` | LSMR solver on the GPU (CUDA) via CuPy. |
+| `LsmrDemeaner(backend="torch", device="cpu")` | LSMR solver on CPU via PyTorch. Good middle ground performance between the MAP and Within demeaners. |
 | `LsmrDemeaner(backend="torch", device="cuda")` | LSMR solver on the GPU (CUDA and MPS) via PyTorch. Experimental. |
 
 Since release `0.60.0`, `pyfixest` defaults to the Rust-backed MAP demeaner.
 Numba is now an optional dependency: you can install it via `pip install pyfixest[numba]`
 if you want to use `MapDemeaner(backend="numba")` or the fast `ritest` path.
+
+::: {.callout-warning}
+The `jax` MAP demeaner backend and the `cupy` / `scipy` LSMR demeaner backends
+are deprecated and will be removed in a future release. Switch to the
+recommendations above:
+
+- Users running `MapDemeaner(backend="jax")` on CPU should use the default
+  `MapDemeaner()` (rust MAP).
+- Users running `MapDemeaner(backend="jax")` or
+  `LsmrDemeaner(backend="cupy", device="cuda")` on GPU should use
+  `LsmrDemeaner(backend="torch", device="cuda")`.
+- Users running the legacy `scipy` LSMR backend (which corresponds to
+  `LsmrDemeaner(backend="cupy", device="cpu")`) should use
+  `LsmrDemeaner(backend="torch", device="cpu")`.
+:::
 
 ## Usage
 
