@@ -106,9 +106,7 @@ def demean_within(
         Array of shape (n_samples, n_factors) specifying the fixed effects
         (integer-encoded).
     weights : numpy.ndarray or None, optional
-        Array of shape (n_samples,) specifying observation weights. ``None``
-        (default) solves the unweighted problem and lets `within` skip the
-        per-iteration weight multiplication.
+        Array of shape (n_samples,) specifying observation weights.
     tol : float, optional
         Convergence tolerance. Defaults to 1e-08.
     maxiter : int, optional
