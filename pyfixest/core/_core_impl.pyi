@@ -22,7 +22,7 @@ def _demean_rs(
     tol: float = 1e-08,
     maxiter: int = 100_000,
 ) -> tuple[np.ndarray, bool]: ...
-def _demean_lsmr_within_rs(
+def _demean_within_rs(
     x: NDArray[np.float64],
     flist: NDArray[np.uint32],
     weights: NDArray[np.float64] | None = None,

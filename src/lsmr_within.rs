@@ -66,7 +66,7 @@ fn demean_lsmr_within_impl(
     local_size=None,
     preconditioner="schwarz"
 ))]
-pub fn _demean_lsmr_within_rs(
+pub fn _demean_within_rs(
     py: Python<'_>,
     x: PyReadonlyArray2<f64>,
     flist: PyReadonlyArray2<u32>,

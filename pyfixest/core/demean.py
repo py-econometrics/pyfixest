@@ -1,7 +1,7 @@
 import numpy as np
 from numpy.typing import NDArray
 
-from ._core_impl import _demean_lsmr_within_rs, _demean_rs
+from ._core_impl import _demean_rs, _demean_within_rs
 
 
 def demean(
@@ -153,7 +153,7 @@ def demean_lsmr_within(
     weights_arg = (
         None if weights is None else weights.astype(np.float64, copy=False).reshape(-1)
     )
-    return _demean_lsmr_within_rs(
+    return _demean_within_rs(
         x.astype(np.float64, copy=False),
         np.asfortranarray(flist_2d, dtype=np.uint32),
         weights_arg,
