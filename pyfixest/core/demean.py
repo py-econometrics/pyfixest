@@ -92,8 +92,8 @@ def demean_lsmr_within(
     Demean an array using modified LSMR via `within`.
 
     Uses `within`'s modified LSMR solver with additive Schwarz preconditioning.
-    This backend is designed for weakly-connected or block-diagonal fixed-effect
-    structures.
+    This backend is designed to be fast for sparse / poorly connected fixed effect
+    structures, where the method of alternating projections (MAP) can struggle.
 
     For single fixed effects, falls back to alternating projections (``_demean_rs``)
     because the sparse iterative solver is designed for multi-way FE problems.
@@ -114,10 +114,17 @@ def demean_lsmr_within(
     maxiter : int, optional
         Maximum number of LSMR iterations. Defaults to 1_000.
     local_size : int or None, optional
-        Number of past ``v`` vectors to reorthogonalize against via windowed
-        modified Gram-Schmidt. ``None`` (default) uses the plain short recurrence.
-        Set to a small integer (e.g. 5-20) for ill-conditioned problems where
-        rounding causes the bidiagonalization to lose orthogonality.
+        Numerical-stability knob for the LSMR solver. ``None`` (default) is
+        usually fine and is the fastest setting. Try a small integer
+        (typically ``5`` to ``20``) if the solver fails to converge on a
+        numerically difficult problem — for example, fixed effects with
+        very unequal group sizes, near-collinear factors, or extreme
+        weights. Larger values are more numerically robust but use more
+        memory: the solver keeps ``local_size`` extra working vectors,
+        each the length of the total fixed-effect coefficient count,
+        and twice that many when a preconditioner is active. Under the
+        hood this enables windowed Gram-Schmidt reorthogonalization
+        inside LSMR's bidiagonalization.
     preconditioner : {"schwarz", "none"}, optional
         Preconditioner choice for `within`'s LSMR solver. ``"schwarz"``
         (default) uses additive Schwarz preconditioning; ``"none"`` disables

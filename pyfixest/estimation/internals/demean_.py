@@ -17,7 +17,6 @@ from pyfixest.demeaners import (
     MapDemeaner,
 )
 
-# Per-backend supported preconditioners and natural default.
 _PRECONDITIONER_SUPPORT: dict[LsmrBackend, tuple[set[str], str]] = {
     "within": ({"none", "schwarz"}, "schwarz"),
     "torch": ({"diag"}, "diag"),
@@ -206,12 +205,7 @@ def dispatch_demean(
     weights: np.ndarray | None,
     demeaner: AnyDemeaner,
 ) -> tuple[np.ndarray, bool]:
-    """Demean an array using the configured backend for the resolved demeaner.
-
-    ``weights=None`` is forwarded directly to the ``within`` LSMR backend so the
-    solver can skip per-iteration weight multiplication. Other backends require
-    a concrete weight vector and receive an all-ones array materialized here.
-    """
+    """Demean an array using the configured backend for the resolved demeaner."""
     flist_uint = flist.astype(np.uintp, copy=False)
 
     if isinstance(demeaner, LsmrDemeaner) and demeaner.backend == "within":
