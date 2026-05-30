@@ -22,10 +22,7 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 `MapDemeaner()` now defaults to `backend="rust"`. The Numba MAP backend remains
 available via `MapDemeaner(backend="numba")`, and the fast randomization-inference
 path (`fit.ritest(..., choose_algorithm="fast")`) still uses Numba. Numba is now
-an optional dependency installed with `pip install pyfixest[numba]`. If Numba
-is not installed, `MapDemeaner(backend="numba")` and the fast randomization
-inference path raise a clear `ImportError`; the default Rust MAP backend and the
-slow randomization inference path work without it.
+an optional dependency installed with `pip install pyfixest[numba]`.
 
 ### Typed Demeaner API
 

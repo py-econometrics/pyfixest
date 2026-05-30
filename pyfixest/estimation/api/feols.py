@@ -142,8 +142,7 @@ def feols(
         `WithinDemeaner`, or `LsmrDemeaner` instance. Defaults to
         `MapDemeaner()` (Rust MAP algorithm, tol=1e-6, maxiter=10_000).
         For other options - including the optional Numba and JAX backends -
-        see the Demeaner Backends vignette:
-        https://pyfixest.org/how-to/demeaner-backends.html.
+        see the [Demeaner Backends vignette](../../how-to/demeaner-backends.qmd).
 
     use_compression: bool
         Whether to use sufficient statistics to losslessly fit the regression model
