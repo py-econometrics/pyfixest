@@ -95,9 +95,6 @@ def demean_within(
     This backend is designed to be fast for sparse / poorly connected fixed effect
     structures, where the method of alternating projections (MAP) can struggle.
 
-    For single fixed effects, falls back to alternating projections (``_demean_rs``)
-    because the sparse iterative solver is designed for multi-way FE problems.
-
     Parameters
     ----------
     x : numpy.ndarray
@@ -133,28 +130,10 @@ def demean_within(
     tuple[numpy.ndarray, bool]
         Demeaned array and convergence flag.
     """
-    flist_2d = flist.reshape(-1, 1) if flist.ndim == 1 else flist
-
-    if flist_2d.shape[1] == 1:
-        weights_for_map = (
-            np.ones(x.shape[0], dtype=np.float64)
-            if weights is None
-            else weights.astype(np.float64, copy=False)
-        )
-        return _demean_rs(
-            x.astype(np.float64, copy=False),
-            flist_2d.astype(np.uint64, copy=False),
-            weights_for_map,
-            tol,
-            maxiter,
-        )
-    weights_arg = (
-        None if weights is None else weights.astype(np.float64, copy=False).reshape(-1)
-    )
     return _demean_within_rs(
         x.astype(np.float64, copy=False),
-        np.asfortranarray(flist_2d, dtype=np.uint32),
-        weights_arg,
+        np.asfortranarray(flist, dtype=np.uint32),
+        weights,
         tol,
         maxiter,
         local_size,
