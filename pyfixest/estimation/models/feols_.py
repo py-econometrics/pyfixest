@@ -51,6 +51,7 @@ from pyfixest.estimation.post_estimation.prediction import (
     get_design_matrix_and_yhat,
 )
 from pyfixest.estimation.post_estimation.ritest import (
+    _HAS_NUMBA,
     _decode_resampvar,
     _get_ritest_pvalue,
     _get_ritest_stats_fast,
@@ -2225,6 +2226,9 @@ class Feols(ResultAccessorMixin):
 
         # always run slow algorithm for randomization-t
         choose_algorithm = "slow" if type == "randomization-t" else choose_algorithm
+
+        if choose_algorithm == "auto":
+            choose_algorithm = "fast" if _HAS_NUMBA else "slow"
 
         assert isinstance(reps, int) and reps > 0, "reps must be a positive integer."
 

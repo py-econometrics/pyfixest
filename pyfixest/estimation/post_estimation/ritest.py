@@ -34,9 +34,12 @@ try:
     import numba as nb
 
     from pyfixest.estimation.numba.demean_nb import demean
+
+    _HAS_NUMBA = True
 except ImportError:
     nb = None
     demean = None
+    _HAS_NUMBA = False
 
 _NUMBA_RITEST_ERROR = (
     "Fast randomization inference requires the optional `numba` extra. "

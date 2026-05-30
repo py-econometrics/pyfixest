@@ -15,7 +15,7 @@ benchmarks comparing all backends — see
 
 ```{python}
 import pyfixest as pf
-from pyfixest.demeaners import LsmrDemeaner, MapDemeaner
+from pyfixest.demeaners import LsmrDemeaner, MapDemeaner, WithinDemeaner
 
 df = pf.get_data()
 ```
