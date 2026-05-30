@@ -26,9 +26,9 @@ Details on Methods and Attributes
 | | |
 | --- | --- |
 | [demeaners.BaseDemeaner](demeaners.BaseDemeaner.qmd#pyfixest.demeaners.BaseDemeaner) | Base configuration shared by all fixed-effects demeaners. |
-| [demeaners.MapDemeaner](demeaners.MapDemeaner.qmd#pyfixest.demeaners.MapDemeaner) | Alternating-projections demeaner with selectable implementation backend. |
-| [demeaners.WithinDemeaner](demeaners.WithinDemeaner.qmd#pyfixest.demeaners.WithinDemeaner) | Demeaner configuration for the Rust `within` backend. |
-| [demeaners.LsmrDemeaner](demeaners.LsmrDemeaner.qmd#pyfixest.demeaners.LsmrDemeaner) | Sparse LSMR demeaner for CuPy/SciPy and PyTorch backends. |
+| [demeaners.MapDemeaner](demeaners.MapDemeaner.qmd#pyfixest.demeaners.MapDemeaner) | Method of Alternating Projections (MAP) demeaner. |
+| [demeaners.WithinDemeaner](demeaners.WithinDemeaner.qmd#pyfixest.demeaners.WithinDemeaner) | Krylov-subspace demeaner implemented in Rust via the ``within`` library. |
+| [demeaners.LsmrDemeaner](demeaners.LsmrDemeaner.qmd#pyfixest.demeaners.LsmrDemeaner) | Sparse LSMR demeaner. |
 | [estimation.models.feols_.Feols](estimation.models.feols_.Feols.qmd#pyfixest.estimation.models.feols_.Feols) | Non user-facing class to estimate a linear regression via OLS. |
 | [estimation.models.fepois_.Fepois](estimation.models.fepois_.Fepois.qmd#pyfixest.estimation.models.fepois_.Fepois) | Estimate a Poisson regression model. |
 | [estimation.models.feiv_.Feiv](estimation.models.feiv_.Feiv.qmd#pyfixest.estimation.models.feiv_.Feiv) | Non user-facing class to estimate an IV model using a 2SLS estimator. |
@@ -72,7 +72,7 @@ PyFixest internals and utilities
 
 | | |
 | --- | --- |
-| [estimation.internals.demean_.demean](estimation.internals.demean_.demean.qmd#pyfixest.estimation.internals.demean_.demean) | Demean an array. |
+| [estimation.demean](estimation.demean.qmd#pyfixest.estimation.demean) | Demean an array. |
 | [core.detect_singletons.detect_singletons](core.detect_singletons.detect_singletons.qmd#pyfixest.core.detect_singletons.detect_singletons) | Detect singleton fixed effects in a dataset. |
 | [utils.utils.ssc](utils.utils.ssc.qmd#pyfixest.utils.utils.ssc) | Set the small sample correction factor applied in `get_ssc()`. |
 | [utils.utils.get_ssc](utils.utils.get_ssc.qmd#pyfixest.utils.utils.get_ssc) | Compute small sample adjustment factors. |

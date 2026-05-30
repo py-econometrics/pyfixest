@@ -13,4 +13,4 @@ demeaners.LsmrDemeaner(
 )
 ```
 
-Sparse LSMR demeaner for CuPy/SciPy and PyTorch backends.
+Sparse LSMR demeaner.

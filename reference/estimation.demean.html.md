@@ -1,13 +1,7 @@
-# estimation.internals.demean_.demean { #pyfixest.estimation.internals.demean_.demean }
+# estimation.demean { #pyfixest.estimation.demean }
 
 ```python
-estimation.internals.demean_.demean(
-    x,
-    flist,
-    weights,
-    tol=1e-08,
-    maxiter=100000,
-)
+estimation.demean(x, flist, weights, tol=1e-06, maxiter=10000)
 ```
 
 Demean an array.
@@ -22,8 +16,8 @@ effects and weights via the alternating projections algorithm.
 | x       | numpy.ndarray | Input array of shape (n_samples, n_features). Needs to be of type float.                                       | _required_ |
 | flist   | numpy.ndarray | Array of shape (n_samples, n_factors) specifying the fixed effects. Needs to already be converted to integers. | _required_ |
 | weights | numpy.ndarray | Array of shape (n_samples,) specifying the weights.                                                            | _required_ |
-| tol     | float         | Tolerance criterion for convergence. Defaults to 1e-08.                                                        | `1e-08`    |
-| maxiter | int           | Maximum number of iterations. Defaults to 100_000.                                                             | `100000`   |
+| tol     | float         | Tolerance criterion for convergence. Defaults to 1e-06.                                                        | `1e-06`    |
+| maxiter | int           | Maximum number of iterations. Defaults to 10_000.                                                              | `10000`    |
 
 ## Returns {.doc-section .doc-section-returns}
 
@@ -37,7 +31,7 @@ effects and weights via the alternating projections algorithm.
 import numpy as np
 import pyfixest as pf
 from pyfixest.utils.dgps import get_blw
-from pyfixest.estimation.internals.demean_ import demean
+from pyfixest.estimation import demean
 from formulaic import model_matrix
 
 fml = "y ~ treat | state + year"

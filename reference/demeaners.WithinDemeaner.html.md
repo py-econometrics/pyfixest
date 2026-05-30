@@ -10,4 +10,4 @@ demeaners.WithinDemeaner(
 )
 ```
 
-Demeaner configuration for the Rust `within` backend.
+Krylov-subspace demeaner implemented in Rust via the ``within`` library.

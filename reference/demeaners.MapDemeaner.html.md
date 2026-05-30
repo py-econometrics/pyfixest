@@ -1,7 +1,7 @@
 # demeaners.MapDemeaner { #pyfixest.demeaners.MapDemeaner }
 
 ```python
-demeaners.MapDemeaner(fixef_maxiter=10000, fixef_tol=1e-06, backend='numba')
+demeaners.MapDemeaner(fixef_maxiter=10000, fixef_tol=1e-06, backend='rust')
 ```
 
-Alternating-projections demeaner with selectable implementation backend.
+Method of Alternating Projections (MAP) demeaner.

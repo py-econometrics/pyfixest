@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>estimation.internals.demean_.demean</title>
+<title>estimation.demean</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -75,7 +75,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <link href="../site_libs/quarto-html/quarto-syntax-highlighting-ed96de9b727972fe78a7b5d16c58bf87.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-dc29e2a399d569944613f91096388b77.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-ef5bac62e62af600a2317a1f06c73570.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -109,7 +109,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script type="application/javascript">define('jquery', [],function() {return window.jQuery;})</script>
 
 
-<link rel="alternate" type="text/markdown" href="estimation.internals.demean_.demean.html.md">
+<link rel="alternate" type="text/markdown" href="estimation.demean.html.md">
 </head>
 
 <body class="nav-sidebar floating nav-fixed fullcontent quarto-light">
@@ -290,7 +290,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/estimation.internals.demean_.demean.html">Misc / Utilities</a></li><li class="breadcrumb-item"><a href="../reference/estimation.internals.demean_.demean.html">estimation.internals.demean_.demean</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/estimation.demean.html">Misc / Utilities</a></li><li class="breadcrumb-item"><a href="../reference/estimation.demean.html">estimation.demean</a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
     </div>
@@ -561,8 +561,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <ul id="quarto-sidebar-section-5" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.internals.demean_.demean.html" class="sidebar-item-text sidebar-link active">
- <span class="menu-text">estimation.internals.demean_.demean</span></a>
+  <a href="../reference/estimation.demean.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text">estimation.demean</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -600,9 +600,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <!-- main -->
 <main class="content" id="quarto-document-content">
 
-<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/estimation.internals.demean_.demean.html">Misc / Utilities</a></li><li class="breadcrumb-item"><a href="../reference/estimation.internals.demean_.demean.html">estimation.internals.demean_.demean</a></li></ol></nav>
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/estimation.demean.html">Misc / Utilities</a></li><li class="breadcrumb-item"><a href="../reference/estimation.demean.html">estimation.demean</a></li></ol></nav>
 <div class="quarto-title">
-<h1 class="title">estimation.internals.demean_.demean</h1>
+<h1 class="title">estimation.demean</h1>
 </div>
 
 
@@ -619,13 +619,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>estimation.internals.demean_.demean(</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    x,</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    flist,</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    weights,</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    tol<span class="op">=</span><span class="fl">1e-08</span>,</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    maxiter<span class="op">=</span><span class="dv">100000</span>,</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>estimation.demean(x, flist, weights, tol<span class="op">=</span><span class="fl">1e-06</span>, maxiter<span class="op">=</span><span class="dv">10000</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Demean an array.</p>
 <p>Workhorse for demeaning an input array <code>x</code> based on the specified fixed effects and weights via the alternating projections algorithm.</p>
 <section id="parameters" class="level2 doc-section doc-section-parameters">
@@ -667,14 +661,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tr class="even">
 <td>tol</td>
 <td>float</td>
-<td>Tolerance criterion for convergence. Defaults to 1e-08.</td>
-<td><code>1e-08</code></td>
+<td>Tolerance criterion for convergence. Defaults to 1e-06.</td>
+<td><code>1e-06</code></td>
 </tr>
 <tr class="odd">
 <td>maxiter</td>
 <td>int</td>
-<td>Maximum number of iterations. Defaults to 100_000.</td>
-<td><code>100000</code></td>
+<td>Maximum number of iterations. Defaults to 10_000.</td>
+<td><code>10000</code></td>
 </tr>
 </tbody>
 </table>
@@ -705,11 +699,11 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="examples" class="level2 doc-section doc-section-examples">
 <h2 class="doc-section doc-section-examples anchored" data-anchor-id="examples">Examples</h2>
-<div id="27f98fc2" class="cell" data-execution_count="1">
+<div id="bbf51041" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.utils.dgps <span class="im">import</span> get_blw</span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.estimation.internals.demean_ <span class="im">import</span> demean</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.estimation <span class="im">import</span> demean</span>
 <span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> formulaic <span class="im">import</span> model_matrix</span>
 <span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>fml <span class="op">=</span> <span class="st">"y ~ treat | state + year"</span></span>
@@ -736,7 +730,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(pf.feols(fml, data).coef())</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 
-        <div id="7RkVJA"></div>
+        <div id="uTzDxL"></div>
         <script type="text/javascript" data-lets-plot-script="library">
             if(!window.letsPlotCallQueue) {
                 window.letsPlotCallQueue = [];
@@ -760,9 +754,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                     var div = document.createElement("div");
                     div.style.color = 'darkred';
                     div.textContent = 'Error loading Lets-Plot JS';
-                    document.getElementById("7RkVJA").appendChild(div);
+                    document.getElementById("uTzDxL").appendChild(div);
                 };
-                var e = document.getElementById("7RkVJA");
+                var e = document.getElementById("uTzDxL");
                 e.appendChild(script);
             })()
         </script>
@@ -770,7 +764,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <div class="cell-output cell-output-display">
 
-        <div id="pxRNUM"></div>
+        <div id="ZgbLGv"></div>
         <script type="text/javascript" data-lets-plot-script="library">
             if(!window.letsPlotCallQueue) {
                 window.letsPlotCallQueue = [];
@@ -794,18 +788,18 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                     var div = document.createElement("div");
                     div.style.color = 'darkred';
                     div.textContent = 'Error loading Lets-Plot JS';
-                    document.getElementById("pxRNUM").appendChild(div);
+                    document.getElementById("ZgbLGv").appendChild(div);
                 };
-                var e = document.getElementById("pxRNUM");
+                var e = document.getElementById("ZgbLGv");
                 e.appendChild(script);
             })()
         </script>
         
 </div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[-6.68363386]
+<pre><code>[-6.70779018]
 Coefficient
-treat   -6.683634
+treat   -6.70779
 Name: Estimate, dtype: float64</code></pre>
 </div>
 </div>
