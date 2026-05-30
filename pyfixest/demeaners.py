@@ -31,26 +31,7 @@ def _validate_positive_int(value: int, name: str) -> None:
 
 @dataclass(frozen=True, slots=True)
 class BaseDemeaner:
-    """
-    Base configuration shared by all fixed-effects demeaners.
-
-    This class is not used directly. Instantiate one of its subclasses
-    (`MapDemeaner`, `WithinDemeaner`, or `LsmrDemeaner`) and pass it as the
-    ``demeaner`` argument to ``feols``, ``fepois``, or related estimators.
-
-    Parameters
-    ----------
-    fixef_maxiter : int
-        Maximum number of iterations before the demeaning loop is declared
-        diverged. The meaning of one *iteration* differs by algorithm:
-
-        - **MapDemeaner / WithinDemeaner**: one full sweep over all fixed
-          effects (subtract the group mean for every FE once).
-        - **LsmrDemeaner**: one LSMR iteration.
-
-        When the limit is reached without convergence a ``ValueError`` is
-        raised.
-    """
+    """Base configuration shared by all fixed-effects demeaners."""
 
     fixef_maxiter: int = 10_000
     kind: ClassVar[str]
