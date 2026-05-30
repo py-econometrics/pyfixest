@@ -27,9 +27,9 @@ def demean(
     weights : numpy.ndarray
         Array of shape (n_samples,) specifying the weights.
     tol : float, optional
-        Tolerance criterion for convergence. Defaults to 1e-08.
+        Tolerance criterion for convergence. Defaults to 1e-06.
     maxiter : int, optional
-        Maximum number of iterations. Defaults to 100_000.
+        Maximum number of iterations. Defaults to 10_000.
 
     Returns
     -------
@@ -43,7 +43,7 @@ def demean(
     import numpy as np
     import pyfixest as pf
     from pyfixest.utils.dgps import get_blw
-    from pyfixest.estimation.internals.demean_ import demean
+    from pyfixest.estimation import demean
     from formulaic import model_matrix
 
     fml = "y ~ treat | state + year"

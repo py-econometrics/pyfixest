@@ -177,7 +177,7 @@ quartodoc:
       desc: |
         PyFixest internals and utilities
       contents:
-        - estimation.internals.demean_.demean
+        - estimation.demean
         - core.detect_singletons.detect_singletons
         - utils.utils.ssc
         - utils.utils.get_ssc

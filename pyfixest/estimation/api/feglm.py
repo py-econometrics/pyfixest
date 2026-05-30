@@ -141,7 +141,9 @@ def feglm(
         Typed demeaner configuration. Controls the fixed-effects demeaning
         backend, tolerance, and iteration limits. Accepts a `MapDemeaner`,
         `WithinDemeaner`, or `LsmrDemeaner` instance. Defaults to
-        `MapDemeaner()` (numba MAP algorithm, tol=1e-6, maxiter=10_000).
+        `MapDemeaner()` (Rust MAP algorithm, tol=1e-6, maxiter=10_000).
+        For other options - including the optional Numba and JAX backends -
+        see the [Demeaner Backends vignette](../../how-to/demeaner-backends.qmd).
 
         .. deprecated::
             The ``jax`` MAP backend and the ``cupy``/``scipy`` LSMR backends

@@ -112,6 +112,17 @@ def test_legacy_demeaner_args_map_with_deprecation_warning():
     assert fit._demeaner.gmres_restart == 30
 
 
+def test_map_demeaner_defaults_to_rust():
+    data = pf.get_data()
+
+    assert pf.MapDemeaner().backend == "rust"
+
+    fit = pf.feols("Y ~ X1 | f1", data=data)
+
+    assert isinstance(fit._demeaner, pf.MapDemeaner)
+    assert fit._demeaner.backend == "rust"
+
+
 def test_legacy_demeaner_args_conflict_with_typed_demeaner():
     data = pf.get_data()
 

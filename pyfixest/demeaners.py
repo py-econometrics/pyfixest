@@ -42,10 +42,10 @@ class BaseDemeaner:
 
 @dataclass(frozen=True, slots=True)
 class MapDemeaner(BaseDemeaner):
-    """Alternating-projections demeaner with selectable implementation backend."""
+    """Method of Alternating Projections (MAP) demeaner."""
 
     fixef_tol: float = 1e-06
-    backend: MapBackend = "numba"
+    backend: MapBackend = "rust"
     kind: ClassVar[str] = "map"
 
     def __post_init__(self) -> None:
@@ -59,7 +59,7 @@ class MapDemeaner(BaseDemeaner):
 
 @dataclass(frozen=True, slots=True)
 class WithinDemeaner(BaseDemeaner):
-    """Demeaner configuration for the Rust `within` backend."""
+    """Krylov-subspace demeaner implemented in Rust via the ``within`` library."""
 
     fixef_tol: float = 1e-06
     fixef_maxiter: int = 1_000
@@ -93,7 +93,7 @@ class WithinDemeaner(BaseDemeaner):
 
 @dataclass(frozen=True, slots=True)
 class LsmrDemeaner(BaseDemeaner):
-    """Sparse LSMR demeaner for CuPy/SciPy and PyTorch backends."""
+    """Sparse LSMR demeaner."""
 
     backend: LsmrBackend = "cupy"
     precision: LsmrPrecision = "float64"
