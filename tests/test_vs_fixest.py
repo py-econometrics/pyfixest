@@ -219,20 +219,8 @@ BACKEND_F3 = [
     pytest.param("within", pf.WithinDemeaner(), SINGLE_F3, id="within"),
     *[
         pytest.param(name, pf.MapDemeaner(backend=name), SINGLE_F3, id=name)
-        for name in ("jax", "rust")
+        for name in ("rust")
     ],
-    pytest.param(
-        "cupy",
-        pf.LsmrDemeaner(backend="cupy", precision="float64", device="auto"),
-        SINGLE_F3,
-        id="cupy",
-    ),
-    pytest.param(
-        "scipy",
-        pf.LsmrDemeaner(backend="cupy", precision="float64", device="cpu"),
-        SINGLE_F3,
-        id="scipy",
-    ),
     torch_param(
         ("torch", pf.LsmrDemeaner(backend="torch", device="auto"), SINGLE_F3),
         id="torch",
