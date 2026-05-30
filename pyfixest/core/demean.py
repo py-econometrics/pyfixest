@@ -86,7 +86,7 @@ def demean_lsmr_within(
     tol: float = 1e-08,
     maxiter: int = 1_000,
     local_size: int | None = None,
-    use_preconditioner: bool = True,
+    preconditioner: str = "schwarz",
 ) -> tuple[NDArray, bool]:
     """
     Demean an array using modified LSMR via `within`.
@@ -118,9 +118,10 @@ def demean_lsmr_within(
         modified Gram-Schmidt. ``None`` (default) uses the plain short recurrence.
         Set to a small integer (e.g. 5-20) for ill-conditioned problems where
         rounding causes the bidiagonalization to lose orthogonality.
-    use_preconditioner : bool, optional
-        Whether to use `within`'s additive Schwarz preconditioner. Defaults to
-        ``True``.
+    preconditioner : {"schwarz", "none"}, optional
+        Preconditioner choice for `within`'s LSMR solver. ``"schwarz"``
+        (default) uses additive Schwarz preconditioning; ``"none"`` disables
+        preconditioning.
 
     Returns
     -------
@@ -152,5 +153,5 @@ def demean_lsmr_within(
         tol,
         maxiter,
         local_size,
-        use_preconditioner,
+        preconditioner,
     )

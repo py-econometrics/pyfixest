@@ -54,6 +54,17 @@ crate with additive Schwarz preconditioning. The development-only
 The old CG, GMRES, and multiplicative Schwarz options are no longer exposed,
 matching the updated `within` API.
 
+Preconditioning is now selected via a single string-valued argument:
+`LsmrDemeaner(preconditioner=...)`. Supported values are `"auto"` (default),
+`"none"`, `"schwarz"` (within only), and `"diag"` (torch / cupy only). When a
+value is incompatible with the chosen backend a `UserWarning` is emitted and
+the backend's natural choice is used. The boolean `use_preconditioner` field
+has been removed.
+
+`LsmrDemeaner` also gains a `local_size` field that forwards to `within`'s
+windowed Gram-Schmidt reorthogonalization. Only relevant for
+`backend="within"`; ignored by `torch` and `cupy`.
+
 ### JAX, CuPy, and SciPy Backend Deprecations
 
 The `jax` MAP demeaner backend, the `cupy` / `scipy` LSMR demeaner backends, and the `solver="jax"` OLS solver option are deprecated and will be removed in a future release. Passing any of them now raises a `DeprecationWarning`.

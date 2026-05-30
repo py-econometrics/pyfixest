@@ -135,7 +135,7 @@ def test_torch_device_backends_match_pyhdfe(backend_name, rtol, atol, demean_dat
         ),
         (
             LsmrDemeaner(
-                use_preconditioner=False,
+                preconditioner="none",
                 fixef_atol=1e-10,
                 fixef_btol=1e-10,
                 fixef_maxiter=10_000,
@@ -182,7 +182,7 @@ def test_within_lsmr_single_fe_fallback_uses_map():
         x=x,
         flist=flist,
         weights=weights,
-        demeaner=LsmrDemeaner(use_preconditioner=False),
+        demeaner=LsmrDemeaner(preconditioner="none"),
     )
     assert success
 
@@ -229,7 +229,7 @@ def test_demean_lsmr_within_unpreconditioned_matches_pyhdfe(demean_data):
         x=x,
         flist=flist.astype(np.uint32, copy=False),
         weights=weights,
-        use_preconditioner=False,
+        preconditioner="none",
         tol=1e-10,
         maxiter=10_000,
     )

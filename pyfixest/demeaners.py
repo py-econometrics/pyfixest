@@ -8,6 +8,7 @@ MapBackend = Literal["numba", "rust", "jax"]
 LsmrBackend = Literal["within", "cupy", "torch"]
 LsmrPrecision = Literal["float32", "float64"]
 TorchDevice = Literal["auto", "cpu", "mps", "cuda"]
+LsmrPreconditioner = Literal["auto", "none", "schwarz", "diag"]
 
 
 def _validate_unit_interval_float(value: float, name: str) -> None:
@@ -68,6 +69,20 @@ class LsmrDemeaner(BaseDemeaner):
 
     The ``local_size`` field only applies to ``backend="within"``; the
     ``cupy`` and ``torch`` backends ignore it.
+
+    ``preconditioner`` selects the preconditioner. Supported values:
+
+    - ``"auto"`` (default) — pick the natural choice for the backend
+      (``"schwarz"`` for ``within``; ``"diag"`` for ``torch`` / ``cupy``).
+    - ``"none"`` — disable preconditioning. Supported by ``within`` and
+      ``cupy``; not supported by ``torch``.
+    - ``"schwarz"`` — additive Schwarz preconditioner. Only supported by the
+      ``within`` backend.
+    - ``"diag"`` — diagonal (Jacobi) preconditioner. Supported by ``torch``
+      and ``cupy``; not supported by ``within``.
+
+    If a value is incompatible with the chosen backend, a ``UserWarning`` is
+    emitted at solve time and the backend's natural choice is used.
     """
 
     fixef_maxiter: int = 1_000
@@ -77,7 +92,7 @@ class LsmrDemeaner(BaseDemeaner):
     fixef_atol: float = 1e-8
     fixef_btol: float = 1e-8
     warn_on_cpu_fallback: bool = True
-    use_preconditioner: bool = True
+    preconditioner: LsmrPreconditioner = "auto"
     local_size: int | None = None
     kind: ClassVar[str] = "lsmr"
 
@@ -102,8 +117,12 @@ class LsmrDemeaner(BaseDemeaner):
 
         if not isinstance(self.warn_on_cpu_fallback, bool):
             raise TypeError("`warn_on_cpu_fallback` must be a bool.")
-        if not isinstance(self.use_preconditioner, bool):
-            raise TypeError("`use_preconditioner` must be a bool.")
+        if not isinstance(self.preconditioner, str):
+            raise TypeError("`preconditioner` must be a string.")
+        if self.preconditioner not in get_args(LsmrPreconditioner):
+            raise ValueError(
+                f"`preconditioner` must be one of {get_args(LsmrPreconditioner)}."
+            )
 
         if self.local_size is not None:
             _validate_positive_int(self.local_size, "local_size")
@@ -111,15 +130,12 @@ class LsmrDemeaner(BaseDemeaner):
         if self.backend == "cupy" and self.device == "mps":
             raise ValueError("The CuPy backend does not support MPS devices.")
 
-        if self.backend == "torch":
-            if self.device == "mps" and self.precision != "float32":
-                raise ValueError(
-                    "The MPS torch backend requires `precision='float32'`."
-                )
-            if not self.use_preconditioner:
-                raise ValueError(
-                    "The torch LSMR backend currently always uses preconditioning."
-                )
+        if (
+            self.backend == "torch"
+            and self.device == "mps"
+            and self.precision != "float32"
+        ):
+            raise ValueError("The MPS torch backend requires `precision='float32'`.")
 
 
 AnyDemeaner = MapDemeaner | LsmrDemeaner
@@ -130,6 +146,7 @@ __all__ = [
     "LsmrBackend",
     "LsmrDemeaner",
     "LsmrPrecision",
+    "LsmrPreconditioner",
     "MapBackend",
     "MapDemeaner",
     "TorchDevice",

@@ -259,14 +259,38 @@ def test_lsmr_demeaner_defaults_to_within():
     demeaner = pf.LsmrDemeaner()
 
     assert demeaner.backend == "within"
-    assert demeaner.use_preconditioner is True
+    assert demeaner.preconditioner == "auto"
 
 
 def test_lsmr_demeaner_accepts_unpreconditioned_within():
-    demeaner = pf.LsmrDemeaner(use_preconditioner=False)
+    demeaner = pf.LsmrDemeaner(preconditioner="none")
 
     assert demeaner.backend == "within"
-    assert demeaner.use_preconditioner is False
+    assert demeaner.preconditioner == "none"
+
+
+def test_lsmr_demeaner_rejects_unknown_preconditioner():
+    with pytest.raises(ValueError, match="`preconditioner`"):
+        pf.LsmrDemeaner(preconditioner="bogus")  # type: ignore[arg-type]
+
+
+def test_lsmr_demeaner_warns_on_incompatible_within_preconditioner():
+    from pyfixest.estimation.internals.demean_ import dispatch_demean
+
+    rng = np.random.default_rng(0)
+    n = 200
+    x = rng.normal(size=(n, 2))
+    flist = np.column_stack(
+        [
+            rng.integers(0, 5, size=n),
+            rng.integers(0, 5, size=n),
+        ]
+    ).astype(np.uint64)
+
+    demeaner = pf.LsmrDemeaner(preconditioner="diag")
+
+    with pytest.warns(UserWarning, match=r"'diag'.*'within'.*'schwarz'"):
+        dispatch_demean(x=x, flist=flist, weights=None, demeaner=demeaner)
 
 
 def test_lean():

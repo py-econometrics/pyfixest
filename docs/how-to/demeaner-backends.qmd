@@ -77,14 +77,33 @@ fit = pf.feols("Y ~ X1 | f1 + f2", data=df, demeaner=LsmrDemeaner())
 fit = pf.feols(
     "Y ~ X1 | f1 + f2",
     data=df,
-    demeaner=LsmrDemeaner(use_preconditioner=False),
+    demeaner=LsmrDemeaner(preconditioner="none"),
 )
 ```
 
+### Selecting a preconditioner
+
+`LsmrDemeaner` exposes a `preconditioner` argument. The default,
+``"auto"``, picks the natural choice for the selected backend; an explicit
+value that the backend does not support emits a `UserWarning` and falls
+back to the natural choice.
+
+| Backend  | Supported values         | `"auto"` resolves to |
+|----------|--------------------------|----------------------|
+| `within` | `"schwarz"`, `"none"`    | `"schwarz"`          |
+| `torch`  | `"diag"`                 | `"diag"`             |
+| `cupy`   | `"diag"`, `"none"`       | `"diag"`             |
+
+The `local_size` argument is forwarded to `within`'s windowed
+Gram-Schmidt reorthogonalization (useful for ill-conditioned problems
+where the bidiagonalization stalls). It only applies to
+`backend="within"`; `torch` and `cupy` ignore it.
+
 `MapDemeaner` accepts `fixef_tol` and `fixef_maxiter` arguments to control
-convergence. `LsmrDemeaner` uses `fixef_atol` and `fixef_btol`; PyFixest passes
-the larger of the two tolerances to the `within` and torch LSMR solvers for
-compatibility with the older SciPy-style API.
+convergence. `LsmrDemeaner` uses `fixef_atol` and `fixef_btol`. For the
+`within` backend the two tolerances are collapsed to
+`max(fixef_atol, fixef_btol)` (the solver takes a single tolerance);
+`torch` and `cupy` use both independently (SciPy LSMR convention).
 
 ```{python}
 fit = pf.feols(

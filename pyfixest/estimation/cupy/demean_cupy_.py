@@ -41,7 +41,7 @@ class CupyFWLDemeaner:
         fixef_maxiter: int | None = None,
         warn_on_cpu_fallback: bool = True,
         dtype: type = np.float64,
-        use_preconditioner: bool = True,
+        preconditioner: str = "diag",
     ):
         """
         Initialize CuPy FWL demeaner.
@@ -61,9 +61,10 @@ class CupyFWLDemeaner:
             Warn when falling back to CPU despite device="cuda".
         dtype : type, default=np.float64
             Data type for GPU computations (np.float32 or np.float64).
-        use_preconditioner : bool, default=True
-            Whether to use diagonal preconditioning for LSMR. Preconditioning
-            improves convergence when fixed effect group sizes vary.
+        preconditioner : {"diag", "none"}, default="diag"
+            Preconditioner choice. ``"diag"`` uses diagonal (Jacobi)
+            preconditioning — improves convergence when fixed effect group
+            sizes vary. ``"none"`` disables preconditioning.
         """
         if device == "auto":
             self.use_gpu = CUPY_AVAILABLE and self._gpu_available()
@@ -86,7 +87,7 @@ class CupyFWLDemeaner:
         self.fixef_maxiter = fixef_maxiter
         self.warn_on_cpu_fallback = warn_on_cpu_fallback
         self.dtype = dtype
-        self.use_preconditioner = use_preconditioner
+        self.preconditioner = preconditioner
 
         if self.use_gpu:
             self.xp = cp
@@ -128,7 +129,7 @@ class CupyFWLDemeaner:
         theta = self.xp.zeros((D_k, X_k), dtype=x_unweighted.dtype)
         success = True
 
-        if self.use_preconditioner:
+        if self.preconditioner == "diag":
             group_weights = self.xp.asarray(D_unweighted.T @ weights).ravel()
             M_inv = 1.0 / self.xp.sqrt(group_weights)
 

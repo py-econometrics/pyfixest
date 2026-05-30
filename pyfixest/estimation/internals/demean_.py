@@ -1,3 +1,4 @@
+import warnings
 from collections.abc import Callable
 from dataclasses import replace
 from importlib import import_module
@@ -8,7 +9,41 @@ import pandas as pd
 import scipy.sparse as sp
 
 from pyfixest.core.demean import demean_lsmr_within
-from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner, MapDemeaner
+from pyfixest.demeaners import (
+    AnyDemeaner,
+    LsmrBackend,
+    LsmrDemeaner,
+    LsmrPreconditioner,
+    MapDemeaner,
+)
+
+# Per-backend supported preconditioners and natural default.
+_PRECONDITIONER_SUPPORT: dict[LsmrBackend, tuple[set[str], str]] = {
+    "within": ({"none", "schwarz"}, "schwarz"),
+    "torch": ({"diag"}, "diag"),
+    "cupy": ({"none", "diag"}, "diag"),
+}
+
+
+def _resolve_preconditioner(backend: LsmrBackend, requested: LsmrPreconditioner) -> str:
+    """Resolve ``preconditioner`` against the backend's supported set.
+
+    ``"auto"`` always resolves silently to the backend's natural default.
+    An explicit but unsupported value emits a ``UserWarning`` and is replaced
+    with the natural default.
+    """
+    supported, default = _PRECONDITIONER_SUPPORT[backend]
+    if requested == "auto" or requested in supported:
+        return default if requested == "auto" else requested
+    warnings.warn(
+        (
+            f"preconditioner={requested!r} is not supported by the {backend!r} "
+            f"LSMR backend; falling back to {default!r}."
+        ),
+        UserWarning,
+        stacklevel=3,
+    )
+    return default
 
 
 def demean_model(
@@ -179,23 +214,24 @@ def dispatch_demean(
     """
     flist_uint = flist.astype(np.uintp, copy=False)
 
-    if isinstance(demeaner, LsmrDemeaner):
-        if demeaner.backend == "within":
-            return demean_lsmr_within(
-                x=x,
-                flist=flist.astype(np.uint32, copy=False),
-                weights=weights,
-                tol=max(demeaner.fixef_atol, demeaner.fixef_btol),
-                maxiter=demeaner.fixef_maxiter,
-                local_size=demeaner.local_size,
-                use_preconditioner=demeaner.use_preconditioner,
-            )
+    if isinstance(demeaner, LsmrDemeaner) and demeaner.backend == "within":
+        resolved = _resolve_preconditioner("within", demeaner.preconditioner)
+        return demean_lsmr_within(
+            x=x,
+            flist=flist.astype(np.uint32, copy=False),
+            weights=weights,
+            tol=max(demeaner.fixef_atol, demeaner.fixef_btol),
+            maxiter=demeaner.fixef_maxiter,
+            local_size=demeaner.local_size,
+            preconditioner=resolved,
+        )
 
     if weights is None:
         weights = np.ones(x.shape[0], dtype=np.float64)
 
     if isinstance(demeaner, LsmrDemeaner):
         if demeaner.backend == "torch":
+            _resolve_preconditioner("torch", demeaner.preconditioner)
             try:
                 torch = import_module("torch")
                 torch_demean_module = import_module(
@@ -244,6 +280,7 @@ def dispatch_demean(
                 dtype=dtype,
             )
 
+        cupy_resolved = _resolve_preconditioner("cupy", demeaner.preconditioner)
         cupy_demean_module = import_module("pyfixest.estimation.cupy.demean_cupy_")
         fe_df = pd.DataFrame(
             flist_uint,
@@ -261,7 +298,7 @@ def dispatch_demean(
             fixef_maxiter=demeaner.fixef_maxiter,
             warn_on_cpu_fallback=demeaner.warn_on_cpu_fallback,
             dtype=np.float32 if demeaner.precision == "float32" else np.float64,
-            use_preconditioner=demeaner.use_preconditioner,
+            preconditioner=cupy_resolved,
         )
         return cupy_demeaner.demean(
             x=x,

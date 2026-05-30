@@ -29,7 +29,7 @@ def _demean_lsmr_within_rs(
     tol: float = 1e-08,
     maxiter: int = 1_000,
     local_size: int | None = None,
-    use_preconditioner: bool = True,
+    preconditioner: str = "schwarz",
 ) -> tuple[np.ndarray, bool]: ...
 def _count_fixef_fully_nested_all_rs(
     all_fixef_array: NDArray,

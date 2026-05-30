@@ -15,7 +15,7 @@ fn demean_lsmr_within_impl(
     tol: f64,
     maxiter: usize,
     local_size: Option<usize>,
-    use_preconditioner: bool,
+    use_schwarz: bool,
 ) -> Result<(Array2<f64>, bool), within::WithinError> {
     let n_obs = x.nrows();
     let n_rhs = x.ncols();
@@ -31,7 +31,7 @@ fn demean_lsmr_within_impl(
         local_size,
     };
 
-    let result = if use_preconditioner {
+    let result = if use_schwarz {
         within::solve_batch(
             flist.view(),
             &x_slices,
@@ -64,7 +64,7 @@ fn demean_lsmr_within_impl(
     tol=1e-8,
     maxiter=1_000,
     local_size=None,
-    use_preconditioner=true
+    preconditioner="schwarz"
 ))]
 pub fn _demean_lsmr_within_rs(
     py: Python<'_>,
@@ -74,8 +74,18 @@ pub fn _demean_lsmr_within_rs(
     tol: f64,
     maxiter: usize,
     local_size: Option<usize>,
-    use_preconditioner: bool,
+    preconditioner: &str,
 ) -> PyResult<(Py<PyArray2<f64>>, bool)> {
+    let use_schwarz = match preconditioner {
+        "schwarz" => true,
+        "none" => false,
+        other => {
+            return Err(pyo3::exceptions::PyValueError::new_err(format!(
+                "preconditioner must be 'schwarz' or 'none', got {other:?}"
+            )));
+        }
+    };
+
     let x_arr = x.as_array();
     let flist_arr = flist.as_array();
     let weights_arr = weights.as_ref().map(|w| w.as_array());
@@ -89,7 +99,7 @@ pub fn _demean_lsmr_within_rs(
                 tol,
                 maxiter,
                 local_size,
-                use_preconditioner,
+                use_schwarz,
             )
         })
         .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
