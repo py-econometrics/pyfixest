@@ -101,13 +101,6 @@ def demean_model(
     if YX_array.dtype != np.dtype("float64"):
         YX_array = YX_array.astype(np.float64)
 
-    if weights is None:
-        weights_array = None
-    elif weights.ndim > 1:
-        weights_array = weights.flatten()
-    else:
-        weights_array = weights
-
     if fe is not None:
         YX_demeaned: pd.DataFrame
         fe_array = fe.to_numpy()
@@ -129,7 +122,7 @@ def demean_model(
                 YX_demean_new, success = dispatch_demean(
                     x=var_diff,
                     flist=fe_array,
-                    weights=weights_array,
+                    weights=weights,
                     demeaner=demeaner,
                 )
                 if success is False:
@@ -156,7 +149,7 @@ def demean_model(
             YX_demeaned_array, success = dispatch_demean(
                 x=YX_array,
                 flist=fe_array,
-                weights=weights_array,
+                weights=weights,
                 demeaner=demeaner,
             )
             if success is False:
