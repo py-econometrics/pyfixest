@@ -5,11 +5,9 @@ from numbers import Integral, Real
 from typing import ClassVar, Literal, get_args
 
 MapBackend = Literal["numba", "rust", "jax"]
-LsmrBackend = Literal["cupy", "torch"]
+LsmrBackend = Literal["within", "cupy", "torch"]
 LsmrPrecision = Literal["float32", "float64"]
 TorchDevice = Literal["auto", "cpu", "mps", "cuda"]
-WithinKrylov = Literal["cg", "gmres"]
-WithinPreconditioner = Literal["additive", "multiplicative", "off"]
 
 
 def _validate_unit_interval_float(value: float, name: str) -> None:
@@ -58,50 +56,29 @@ class MapDemeaner(BaseDemeaner):
 
 
 @dataclass(frozen=True, slots=True)
-class WithinDemeaner(BaseDemeaner):
-    """Krylov-subspace demeaner implemented in Rust via the ``within`` library."""
-
-    fixef_tol: float = 1e-06
-    fixef_maxiter: int = 1_000
-    krylov: WithinKrylov = "cg"
-    preconditioner: WithinPreconditioner = "additive"
-    gmres_restart: int = 30
-    kind: ClassVar[str] = "within"
-
-    def __post_init__(self) -> None:
-        BaseDemeaner.__post_init__(self)
-        _validate_unit_interval_float(self.fixef_tol, "fixef_tol")
-        if not isinstance(self.krylov, str):
-            raise TypeError("`krylov` must be a string.")
-        if self.krylov not in get_args(WithinKrylov):
-            raise ValueError(f"`krylov` must be one of {get_args(WithinKrylov)}.")
-
-        if not isinstance(self.preconditioner, str):
-            raise TypeError("`preconditioner` must be a string.")
-        if self.preconditioner not in get_args(WithinPreconditioner):
-            raise ValueError(
-                f"`preconditioner` must be one of {get_args(WithinPreconditioner)}."
-            )
-
-        _validate_positive_int(self.gmres_restart, "gmres_restart")
-
-        if self.krylov == "cg" and self.preconditioner == "multiplicative":
-            raise ValueError(
-                "`preconditioner='multiplicative'` requires `krylov='gmres'`."
-            )
-
-
-@dataclass(frozen=True, slots=True)
 class LsmrDemeaner(BaseDemeaner):
-    """Sparse LSMR demeaner."""
+    """Sparse LSMR demeaner.
 
-    backend: LsmrBackend = "cupy"
+    Notes
+    -----
+    The ``within`` backend takes a single tolerance, so ``fixef_atol`` and
+    ``fixef_btol`` are collapsed to ``max(fixef_atol, fixef_btol)`` for that
+    backend. The ``cupy`` and ``torch`` backends use both tolerances
+    independently (SciPy LSMR convention).
+
+    The ``local_size`` field only applies to ``backend="within"``; the
+    ``cupy`` and ``torch`` backends ignore it.
+    """
+
+    fixef_maxiter: int = 1_000
+    backend: LsmrBackend = "within"
     precision: LsmrPrecision = "float64"
     device: TorchDevice = "auto"
     fixef_atol: float = 1e-8
     fixef_btol: float = 1e-8
     warn_on_cpu_fallback: bool = True
     use_preconditioner: bool = True
+    local_size: int | None = None
     kind: ClassVar[str] = "lsmr"
 
     def __post_init__(self) -> None:
@@ -128,6 +105,9 @@ class LsmrDemeaner(BaseDemeaner):
         if not isinstance(self.use_preconditioner, bool):
             raise TypeError("`use_preconditioner` must be a bool.")
 
+        if self.local_size is not None:
+            _validate_positive_int(self.local_size, "local_size")
+
         if self.backend == "cupy" and self.device == "mps":
             raise ValueError("The CuPy backend does not support MPS devices.")
 
@@ -142,7 +122,7 @@ class LsmrDemeaner(BaseDemeaner):
                 )
 
 
-AnyDemeaner = MapDemeaner | WithinDemeaner | LsmrDemeaner
+AnyDemeaner = MapDemeaner | LsmrDemeaner
 
 __all__ = [
     "AnyDemeaner",
@@ -153,7 +133,4 @@ __all__ = [
     "MapBackend",
     "MapDemeaner",
     "TorchDevice",
-    "WithinDemeaner",
-    "WithinKrylov",
-    "WithinPreconditioner",
 ]

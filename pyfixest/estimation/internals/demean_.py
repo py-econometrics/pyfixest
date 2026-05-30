@@ -7,8 +7,8 @@ import numpy as np
 import pandas as pd
 import scipy.sparse as sp
 
-from pyfixest.core.demean import demean_within
-from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner, MapDemeaner, WithinDemeaner
+from pyfixest.core.demean import demean_lsmr_within
+from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner, MapDemeaner
 
 
 def demean_model(
@@ -68,7 +68,7 @@ def demean_model(
         YX_array = YX_array.astype(np.float64)
 
     if weights is None:
-        weights_array = np.ones(YX_array.shape[0], dtype=np.float64)
+        weights_array = None
     elif weights.ndim > 1:
         weights_array = weights.flatten()
     else:
@@ -168,23 +168,31 @@ def _override_demeaner_tol(
 def dispatch_demean(
     x: np.ndarray,
     flist: np.ndarray,
-    weights: np.ndarray,
+    weights: np.ndarray | None,
     demeaner: AnyDemeaner,
 ) -> tuple[np.ndarray, bool]:
-    """Demean an array using the configured backend for the resolved demeaner."""
+    """Demean an array using the configured backend for the resolved demeaner.
+
+    ``weights=None`` is forwarded directly to the ``within`` LSMR backend so the
+    solver can skip per-iteration weight multiplication. Other backends require
+    a concrete weight vector and receive an all-ones array materialized here.
+    """
     flist_uint = flist.astype(np.uintp, copy=False)
 
-    if isinstance(demeaner, WithinDemeaner):
-        return demean_within(
-            x=x,
-            flist=flist.astype(np.uint32, copy=False),
-            weights=weights,
-            tol=demeaner.fixef_tol,
-            maxiter=demeaner.fixef_maxiter,
-            krylov=demeaner.krylov,
-            preconditioner=demeaner.preconditioner,
-            gmres_restart=demeaner.gmres_restart,
-        )
+    if isinstance(demeaner, LsmrDemeaner):
+        if demeaner.backend == "within":
+            return demean_lsmr_within(
+                x=x,
+                flist=flist.astype(np.uint32, copy=False),
+                weights=weights,
+                tol=max(demeaner.fixef_atol, demeaner.fixef_btol),
+                maxiter=demeaner.fixef_maxiter,
+                local_size=demeaner.local_size,
+                use_preconditioner=demeaner.use_preconditioner,
+            )
+
+    if weights is None:
+        weights = np.ones(x.shape[0], dtype=np.float64)
 
     if isinstance(demeaner, LsmrDemeaner):
         if demeaner.backend == "torch":

@@ -1,7 +1,7 @@
 import numpy as np
 from numpy.typing import NDArray
 
-from ._core_impl import _demean_rs, _demean_within_rs
+from ._core_impl import _demean_lsmr_within_rs, _demean_rs
 
 
 def demean(
@@ -79,25 +79,24 @@ def demean(
     )
 
 
-def demean_within(
+def demean_lsmr_within(
     x: NDArray[np.float64],
     flist: NDArray[np.uint32],
-    weights: NDArray[np.float64],
-    tol: float = 1e-06,
+    weights: NDArray[np.float64] | None = None,
+    tol: float = 1e-08,
     maxiter: int = 1_000,
-    krylov: str = "cg",
-    preconditioner: str = "additive",
-    gmres_restart: int = 30,
+    local_size: int | None = None,
+    use_preconditioner: bool = True,
 ) -> tuple[NDArray, bool]:
     """
-    Demean an array using Krylov solvers and Schwarz preconditioning via `within`.
+    Demean an array using modified LSMR via `within`.
 
-    Uses Krylov-based solvers with Schwarz preconditioning. Converges faster
-    than alternating projections on weakly-connected or block-diagonal
-    fixed-effect structures.
+    Uses `within`'s modified LSMR solver with additive Schwarz preconditioning.
+    This backend is designed for weakly-connected or block-diagonal fixed-effect
+    structures.
 
     For single fixed effects, falls back to alternating projections (``_demean_rs``)
-    because the CG/Schwarz preconditioner is designed for multi-way FE problems.
+    because the sparse iterative solver is designed for multi-way FE problems.
 
     Parameters
     ----------
@@ -106,41 +105,52 @@ def demean_within(
     flist : numpy.ndarray
         Array of shape (n_samples, n_factors) specifying the fixed effects
         (integer-encoded).
-    weights : numpy.ndarray
-        Array of shape (n_samples,) specifying the weights.
+    weights : numpy.ndarray or None, optional
+        Array of shape (n_samples,) specifying observation weights. ``None``
+        (default) solves the unweighted problem and lets `within` skip the
+        per-iteration weight multiplication.
     tol : float, optional
-        Convergence tolerance. Defaults to 1e-06.
+        Convergence tolerance. Defaults to 1e-08.
     maxiter : int, optional
-        Maximum number of Krylov iterations. Defaults to 1_000.
-    krylov : {"cg", "gmres"}, optional
-        Krylov solver used for multi-way fixed effects. Defaults to ``"cg"``.
-    preconditioner : {"additive", "multiplicative", "off"}, optional
-        Schwarz preconditioner used for multi-way fixed effects. ``"off"``
-        disables preconditioning.
-        Defaults to ``"additive"``.
-    gmres_restart : int, optional
-        Restart dimension when ``krylov="gmres"``. Ignored for CG.
+        Maximum number of LSMR iterations. Defaults to 1_000.
+    local_size : int or None, optional
+        Number of past ``v`` vectors to reorthogonalize against via windowed
+        modified Gram-Schmidt. ``None`` (default) uses the plain short recurrence.
+        Set to a small integer (e.g. 5-20) for ill-conditioned problems where
+        rounding causes the bidiagonalization to lose orthogonality.
+    use_preconditioner : bool, optional
+        Whether to use `within`'s additive Schwarz preconditioner. Defaults to
+        ``True``.
 
     Returns
     -------
     tuple[numpy.ndarray, bool]
         Demeaned array and convergence flag.
     """
-    if flist.ndim == 1 or flist.shape[1] == 1:
+    flist_2d = flist.reshape(-1, 1) if flist.ndim == 1 else flist
+
+    if flist_2d.shape[1] == 1:
+        weights_for_map = (
+            np.ones(x.shape[0], dtype=np.float64)
+            if weights is None
+            else weights.astype(np.float64, copy=False)
+        )
         return _demean_rs(
             x.astype(np.float64, copy=False),
-            flist.astype(np.uint64, copy=False),
-            weights.astype(np.float64, copy=False),
+            flist_2d.astype(np.uint64, copy=False),
+            weights_for_map,
             tol,
             maxiter,
         )
-    return _demean_within_rs(
+    weights_arg = (
+        None if weights is None else weights.astype(np.float64, copy=False).reshape(-1)
+    )
+    return _demean_lsmr_within_rs(
         x.astype(np.float64, copy=False),
-        np.asfortranarray(flist, dtype=np.uint32),
-        weights.astype(np.float64, copy=False).reshape(-1),
+        np.asfortranarray(flist_2d, dtype=np.uint32),
+        weights_arg,
         tol,
         maxiter,
-        krylov,
-        preconditioner,
-        gmres_restart,
+        local_size,
+        use_preconditioner,
     )

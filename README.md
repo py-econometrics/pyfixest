@@ -26,7 +26,7 @@ For questions on `PyFixest`, head over to our [GitHub discussions](https://githu
 
 - **Estimation**
   - **OLS**, **WLS**, **IV**, and **GLMs** (Poisson, logit, probit, gaussian) with high-dimensional fixed effects
-  - Different **demeaning backends** (MAP, [within](https://github.com/py-econometrics/within), LSMR) on CPU and GPU
+  - Different **demeaning backends** (MAP, [within](https://github.com/py-econometrics/within) LSMR, torch LSMR) on CPU and GPU
   - Fast **quantile regression** via an interior-point solver
   - **Difference-in-differences** estimators, including TWFE, `Did2s`, local projections, and Sun-Abraham event studies
   - Regression **decomposition** following [Gelbach (2016)](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=1425737)
@@ -93,8 +93,9 @@ pf.feols(
 ```
 
 > **Note:** The `cupy` / `scipy` LSMR backends and the `jax` MAP backend are
-> deprecated and will be removed in a future release. Please use the torch-based
-> backends instead.
+> deprecated and will be removed in a future release. Use `pf.LsmrDemeaner()`
+> for the default Rust `within` LSMR backend on CPU, or the torch-based backend
+> for GPU acceleration.
 
 </details>
 ## Quickstart

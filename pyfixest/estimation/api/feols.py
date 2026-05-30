@@ -146,8 +146,8 @@ def feols(
 
     demeaner : AnyDemeaner | None, optional
         Typed demeaner configuration. Controls the fixed-effects demeaning
-        backend, tolerance, and iteration limits. Accepts a `MapDemeaner`,
-        `WithinDemeaner`, or `LsmrDemeaner` instance. Defaults to
+        backend, tolerance, and iteration limits. Accepts a `MapDemeaner`
+        or `LsmrDemeaner` instance. Defaults to
         `MapDemeaner()` (Rust MAP algorithm, tol=1e-6, maxiter=10_000).
         For other options - including the optional Numba backend and the
         torch-based LSMR backends - see the
@@ -161,8 +161,8 @@ def feols(
             - JAX MAP on CPU → ``MapDemeaner()`` (the default rust MAP).
             - JAX MAP / cupy LSMR on GPU →
               ``LsmrDemeaner(backend="torch", device="cuda")``.
-            - Scipy / cupy LSMR on CPU → ``LsmrDemeaner(backend="torch", device="cpu")`` for
-              CPU and ``LsmrDemeaner(backend="torch", device="gpu")`` for GPU.
+            - Scipy / cupy LSMR on CPU → ``LsmrDemeaner()``
+              (the default within backend).
 
     use_compression: bool
         .. deprecated::

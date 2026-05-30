@@ -15,30 +15,30 @@ benchmarks comparing all backends — see
 
 ```{python}
 import pyfixest as pf
-from pyfixest.demeaners import LsmrDemeaner, MapDemeaner, WithinDemeaner
+from pyfixest.demeaners import LsmrDemeaner, MapDemeaner
 
 df = pf.get_data()
 ```
 
 ## Quick Reference
 
-What are **dense / well-connected** vs "sparse / weakly-connected"** fixed-effect structures?
-The typical example for "dense" fixed effects is a balanced panel - each unit appears exactly once for every single time period. In contrast, a "sparse" or "weakly" connected fixed effect structure arises when units apear in only a few time periods. For example, in a matched employer-employee panel, each worker may only appear in a handful of firms.
+What are **dense / well-connected** vs **sparse / weakly-connected** fixed-effect structures?
+The typical example for "dense" fixed effects is a balanced panel - each unit appears exactly once for every single time period. In contrast, a "sparse" or "weakly" connected fixed effect structure arises when units appear in only a few time periods. For example, in a matched employer-employee panel, each worker may only appear in a handful of firms.
 
 
 | Backend | When to use |
 |---|---|
 | `MapDemeaner(backend="rust")` | **Default.** Fast for dense fixed effects with well-connected graphs. No optional dependencies required. |
 | `MapDemeaner(backend="numba")` | An alternative MAP implementation written in `numba`. Requires installation via `pip install pyfixest[numba]`. |
-| `WithinDemeaner()` | Best for **sparse** fixed-effect structures (e.g. matched employer-employee data). Supports additive Schwarz with CG or GMRES, multiplicative Schwarz with GMRES, and unpreconditioned solves via `preconditioner="off"`. |
-| `LsmrDemeaner(backend="torch", device="cpu")` | LSMR solver on CPU via PyTorch. Good middle ground performance between the MAP and Within demeaners. Requires `pytorch`.|
+| `LsmrDemeaner()` | Rust `within` LSMR backend. Best for **sparse** fixed-effect structures (e.g. matched employer-employee data). Uses modified LSMR with additive Schwarz preconditioning by default. |
+| `LsmrDemeaner(backend="torch", device="cpu")` | LSMR solver on CPU via PyTorch. Requires `pytorch`.|
 | `LsmrDemeaner(backend="torch", device="cuda")` | LSMR solver on CUDA GPUs via PyTorch. Experimental. Requires `pytorch`, plus a CUDA-enabled PyTorch build (see [PyTorch install instructions](https://pytorch.org/get-started/locally/)). |
 | `LsmrDemeaner(backend="torch", device="mps", precision="float32")` | LSMR solver on Apple Silicon GPUs via PyTorch MPS. Experimental. In our experience, MPS provides little performance improvement, but we'd love to hear about differing experiences! Requires `pytorch`. |
 
 Since release `0.60.0`, `pyfixest` defaults to the Rust-backed MAP demeaner.
 Numba is now an optional dependency: you can install it via `pip install pyfixest[numba]`
 if you want to use `MapDemeaner(backend="numba")` or the fast `ritest` path.
-The torch-based LSMR backends requires `pytorch`, which you can install manually or via `pip install pyfixest[torch]`. ; for GPU acceleration on CUDA, you additionally need a CUDA-enabled PyTorch wheel from the [PyTorch installation guide](https://pytorch.org/get-started/locally/).
+The torch-based LSMR backends require `pytorch`, which you can install manually or via `pip install pyfixest[torch]`. For GPU acceleration on CUDA, you additionally need a CUDA-enabled PyTorch wheel from the [PyTorch installation guide](https://pytorch.org/get-started/locally/).
 
 ::: {.callout-warning}
 The `jax` MAP demeaner backend and the `cupy` / `scipy` LSMR demeaner backends
@@ -52,7 +52,7 @@ recommendations above:
   `LsmrDemeaner(backend="torch", device="cuda")`.
 - Users running the legacy `scipy` LSMR backend (which corresponds to
   `LsmrDemeaner(backend="cupy", device="cpu")`) should use
-  `LsmrDemeaner(backend="torch", device="cpu")`.
+  `LsmrDemeaner()` (the default `within` backend).
 :::
 
 ## Usage
@@ -70,39 +70,21 @@ fit = pf.feols("Y ~ X1 | f1", data=df, demeaner=MapDemeaner(backend="rust"))
 # Numba MAP (requires pip install pyfixest[numba])
 fit = pf.feols("Y ~ X1 | f1", data=df, demeaner=MapDemeaner(backend="numba"))
 
-# `within` backend – best for sparse multi-way FE structures
-fit = pf.feols("Y ~ X1 | f1 + f2", data=df, demeaner=WithinDemeaner())
+# `within` LSMR backend – best for sparse multi-way FE structures
+fit = pf.feols("Y ~ X1 | f1 + f2", data=df, demeaner=LsmrDemeaner())
 
-# Additive Schwarz + GMRES
+# `within` LSMR without additive Schwarz preconditioning
 fit = pf.feols(
     "Y ~ X1 | f1 + f2",
     data=df,
-    demeaner=WithinDemeaner(
-        krylov="gmres",
-        preconditioner="additive",
-        gmres_restart=30,
-    ),
-)
-
-# Multiplicative Schwarz + GMRES
-fit = pf.feols(
-    "Y ~ X1 | f1 + f2",
-    data=df,
-    demeaner=WithinDemeaner(
-        krylov="gmres",
-        preconditioner="multiplicative",
-        gmres_restart=50,
-    ),
+    demeaner=LsmrDemeaner(use_preconditioner=False),
 )
 ```
 
-The `MapDemeaner` and `WithinDemeaner` backends accept `fixef_tol` and `fixef_maxiter`
-arguments to control convergence. The `WithinDemeaner` additionally accepts `krylov`,
-`preconditioner`, and `gmres_restart` (used only with `krylov="gmres"`). The
-`preconditioner` argument accepts `"additive"`, `"multiplicative"`, and `"off"`;
-`"off"` matches `within.Preconditioner.Off`. For compatibility with `scipy`, the
-`LsmrDemeaner` has two arguments to control the convergence tolerance - `fixef_atol`
-and `fixef_btol`.
+`MapDemeaner` accepts `fixef_tol` and `fixef_maxiter` arguments to control
+convergence. `LsmrDemeaner` uses `fixef_atol` and `fixef_btol`; PyFixest passes
+the larger of the two tolerances to the `within` and torch LSMR solvers for
+compatibility with the older SciPy-style API.
 
 ```{python}
 fit = pf.feols(

@@ -89,7 +89,7 @@ def test_build_standard_feols_benchmarkers_can_exclude_base_pyfixest(
     assert all(
         name not in _names(bundle.benchmarkers)
         for name in [
-            "pyfixest (rust-cg)",
+            "pyfixest (within)",
             "pyfixest (rust-map)",
         ]
     )
