@@ -219,20 +219,8 @@ BACKEND_F3 = [
     pytest.param("within", pf.WithinDemeaner(), SINGLE_F3, id="within"),
     *[
         pytest.param(name, pf.MapDemeaner(backend=name), SINGLE_F3, id=name)
-        for name in ("jax", "rust")
+        for name in ("rust",)
     ],
-    pytest.param(
-        "cupy",
-        pf.LsmrDemeaner(backend="cupy", precision="float64", device="auto"),
-        SINGLE_F3,
-        id="cupy",
-    ),
-    pytest.param(
-        "scipy",
-        pf.LsmrDemeaner(backend="cupy", precision="float64", device="cpu"),
-        SINGLE_F3,
-        id="scipy",
-    ),
     torch_param(
         ("torch", pf.LsmrDemeaner(backend="torch", device="auto"), SINGLE_F3),
         id="torch",
@@ -370,16 +358,7 @@ def test_single_fit_feols(
     r_df_k = int(ro.r('attr(r_fixest$cov.scaled, "df.K")')[0])
     r_df_t = int(ro.r('attr(r_fixest$cov.scaled, "df.t")')[0])
 
-    if backend_name in ("cupy", "scipy"):
-        coef_tol = 1e-08
-        predict_tol = 2e-06
-        resid_tol = 2e-06
-        inference_tol = 5e-07
-        tstat_tol = 1e-06
-        if "^" in fml and weights is not None:
-            predict_tol = 6e-06
-            resid_tol = 6e-06
-    elif backend_name in ("torch", "torch_cpu", "torch_cuda"):
+    if backend_name in ("torch", "torch_cpu", "torch_cuda"):
         coef_tol = 1e-08
         predict_tol = 5e-05
         resid_tol = 5e-05

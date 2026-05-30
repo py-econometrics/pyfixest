@@ -115,14 +115,6 @@ def _warn_if_experimental_torch_demeaner(demeaner: object) -> None:
         )
 
 
-_DEPRECATED_BACKEND_RECOMMENDATION = (
-    "We recommend `MapDemeaner()` for dense fixed-effects problems, "
-    "`WithinDemeaner()` (additive Schwarz with conjugate gradient) for "
-    "difficult/sparse problems, and "
-    "`LsmrDemeaner(backend='torch', device='cuda')` for GPU acceleration."
-)
-
-
 def _warn_if_deprecated_solver(solver: str) -> None:
     """Warn when the user requests the deprecated `jax` OLS solver."""
     if solver == "jax":
@@ -144,18 +136,48 @@ def _warn_if_deprecated_demeaner_backend(demeaner: object) -> None:
         warnings.warn(
             (
                 "The `jax` MAP demeaner backend is deprecated and will be "
-                "removed in a future release. " + _DEPRECATED_BACKEND_RECOMMENDATION
+                "removed in a future release. If you were running JAX MAP on "
+                "CPU, switch to the default `MapDemeaner()` (rust MAP). If "
+                "you were running JAX MAP on GPU, switch to "
+                "`LsmrDemeaner(backend='torch', device='cuda')`."
             ),
             DeprecationWarning,
             stacklevel=3,
         )
     elif isinstance(demeaner, LsmrDemeaner) and demeaner.backend == "cupy":
-        warnings.warn(
-            (
-                "The `cupy` LSMR demeaner backend (also used by the legacy "
-                "`scipy` backend preset) is deprecated and will be removed "
-                "in a future release. " + _DEPRECATED_BACKEND_RECOMMENDATION
-            ),
-            DeprecationWarning,
-            stacklevel=3,
-        )
+        if demeaner.device == "cpu":
+            warnings.warn(
+                (
+                    "The `scipy` LSMR demeaner backend (LsmrDemeaner with "
+                    "backend='cupy' and device='cpu') is deprecated and will "
+                    "be removed in a future release. Switch to "
+                    "`LsmrDemeaner(backend='torch', device='cpu')`."
+                ),
+                DeprecationWarning,
+                stacklevel=3,
+            )
+        elif demeaner.device == "auto":
+            warnings.warn(
+                (
+                    "The `cupy` LSMR demeaner backend is deprecated and will "
+                    "be removed in a future release. With device='auto', this "
+                    "backend may run on CuPy/CUDA or fall back to SciPy CPU. "
+                    "If you were running on GPU, switch to "
+                    "`LsmrDemeaner(backend='torch', device='cuda')`; if you "
+                    "were running on CPU, switch to "
+                    "`LsmrDemeaner(backend='torch', device='cpu')`."
+                ),
+                DeprecationWarning,
+                stacklevel=3,
+            )
+        else:
+            warnings.warn(
+                (
+                    "The `cupy` LSMR demeaner backend is deprecated and will "
+                    "be removed in a future release. Switch to "
+                    "`LsmrDemeaner(backend='torch', device='cuda')` for GPU "
+                    "acceleration."
+                ),
+                DeprecationWarning,
+                stacklevel=3,
+            )

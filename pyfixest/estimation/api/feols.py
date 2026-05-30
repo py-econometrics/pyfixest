@@ -149,17 +149,20 @@ def feols(
         backend, tolerance, and iteration limits. Accepts a `MapDemeaner`,
         `WithinDemeaner`, or `LsmrDemeaner` instance. Defaults to
         `MapDemeaner()` (Rust MAP algorithm, tol=1e-6, maxiter=10_000).
-        For other options - including the optional Numba and JAX backends -
-        see the [Demeaner Backends vignette](../../how-to/demeaner-backends.qmd).
+        For other options - including the optional Numba backend and the
+        torch-based LSMR backends - see the
+        [Demeaner Backends vignette](../../how-to/demeaner-backends.qmd).
 
         .. deprecated::
-            The ``jax`` MAP backend and the ``cupy``/``scipy`` LSMR backends
-            are deprecated and will be removed in a future release. Use
-            ``MapDemeaner()`` for dense fixed-effects problems,
-            ``WithinDemeaner()`` (additive Schwarz with conjugate gradient)
-            for difficult/sparse problems, and
-            ``LsmrDemeaner(backend="torch", device="cuda")`` for GPU
-            acceleration.
+            The ``jax`` MAP backend and the ``cupy`` / ``scipy`` LSMR
+            backends are deprecated and will be removed in a future release.
+            Replacements:
+
+            - JAX MAP on CPU → ``MapDemeaner()`` (the default rust MAP).
+            - JAX MAP / cupy LSMR on GPU →
+              ``LsmrDemeaner(backend="torch", device="cuda")``.
+            - Scipy / cupy LSMR on CPU → ``LsmrDemeaner(backend="torch", device="cpu")`` for
+              CPU and ``LsmrDemeaner(backend="torch", device="gpu")`` for GPU.
 
     use_compression: bool
         .. deprecated::

@@ -156,10 +156,13 @@ def test_solver_jax_emits_deprecation_warning(estimator_name):
 
 @pytest.mark.parametrize("estimator_name", _DEPRECATION_ESTIMATORS)
 def test_demeaner_backend_jax_emits_deprecation_warning(estimator_name):
-    with pytest.warns(DeprecationWarning, match=r"`jax` MAP demeaner backend"):
+    with pytest.warns(DeprecationWarning, match=r"`jax` MAP demeaner backend") as rec:
         _run_with_deprecated_kwargs(
             estimator_name, demeaner=pf.MapDemeaner(backend="jax")
         )
+    messages = [str(r.message) for r in rec]
+    assert any("rust MAP" in m for m in messages)
+    assert any("torch', device='cuda" in m for m in messages)
 
 
 def test_demeaner_backend_cupy_emits_deprecation_warning():
@@ -167,8 +170,36 @@ def test_demeaner_backend_cupy_emits_deprecation_warning():
         _warn_if_deprecated_demeaner_backend,
     )
 
-    with pytest.warns(DeprecationWarning, match=r"`cupy` LSMR demeaner backend"):
+    with pytest.warns(DeprecationWarning, match=r"`cupy` LSMR demeaner backend") as rec:
         _warn_if_deprecated_demeaner_backend(pf.LsmrDemeaner(backend="cupy"))
+    assert any("torch', device='cuda" in str(r.message) for r in rec)
+    assert any("torch', device='cpu" in str(r.message) for r in rec)
+
+
+def test_demeaner_backend_cupy_cuda_emits_gpu_replacement_warning():
+    from pyfixest.estimation.internals.demeaner_options import (
+        _warn_if_deprecated_demeaner_backend,
+    )
+
+    with pytest.warns(DeprecationWarning, match=r"`cupy` LSMR demeaner backend") as rec:
+        _warn_if_deprecated_demeaner_backend(
+            pf.LsmrDemeaner(backend="cupy", device="cuda")
+        )
+    assert any("torch', device='cuda" in str(r.message) for r in rec)
+
+
+def test_demeaner_backend_scipy_emits_deprecation_warning():
+    from pyfixest.estimation.internals.demeaner_options import (
+        _warn_if_deprecated_demeaner_backend,
+    )
+
+    with pytest.warns(
+        DeprecationWarning, match=r"`scipy` LSMR demeaner backend"
+    ) as rec:
+        _warn_if_deprecated_demeaner_backend(
+            pf.LsmrDemeaner(backend="cupy", device="cpu")
+        )
+    assert any("torch', device='cpu" in str(r.message) for r in rec)
 
 
 @pytest.mark.parametrize("estimator_name", _DEPRECATION_ESTIMATORS)
@@ -192,6 +223,24 @@ def test_legacy_demeaner_backend_cupy_preset_chains_to_cupy_warning(legacy_backe
     assert resolved.backend == "cupy"
     messages = [str(r.message) for r in records]
     assert any("demeaner_backend" in m for m in messages)
+
+
+@pytest.mark.parametrize("estimator_name", _DEPRECATION_ESTIMATORS)
+@pytest.mark.parametrize(
+    "legacy_backend, expected_label, expected_replacement",
+    [
+        ("cupy", "`cupy` LSMR demeaner backend", "torch', device='cuda"),
+        ("scipy", "`scipy` LSMR demeaner backend", "torch', device='cpu"),
+    ],
+)
+def test_legacy_demeaner_backend_cupy_preset_replacement_message(
+    estimator_name, legacy_backend, expected_label, expected_replacement
+):
+    with pytest.warns(DeprecationWarning) as records:
+        _run_with_deprecated_kwargs(estimator_name, demeaner_backend=legacy_backend)
+    messages = [str(r.message) for r in records]
+    assert any(expected_label in m for m in messages)
+    assert any(expected_replacement in m for m in messages)
 
 
 @pytest.mark.parametrize(
