@@ -30,7 +30,7 @@ The typical example for "dense" fixed effects is a balanced panel - each unit ap
 |---|---|
 | `MapDemeaner(backend="rust")` | **Default.** Fast for dense fixed effects with well-connected graphs. No optional dependencies required. |
 | `MapDemeaner(backend="numba")` | An alternative MAP implementation written in `numba`. Requires installation via `pip install pyfixest[numba]`. |
-| `LsmrDemeaner()` | Rust `within` LSMR backend. Best for **sparse** fixed-effect structures (e.g. matched employer-employee data). Uses modified LSMR with additive Schwarz preconditioning by default. |
+| `LsmrDemeaner()` | Uses modified LSMR with additive Schwarz preconditioning by default via the `within` crate. Best for **sparse** fixed-effect structures (e.g. matched employer-employee data).|
 | `LsmrDemeaner(backend="torch", device="cpu")` | LSMR solver on CPU via PyTorch. Requires `pytorch`.|
 | `LsmrDemeaner(backend="torch", device="cuda")` | LSMR solver on CUDA GPUs via PyTorch. Experimental. Requires `pytorch`, plus a CUDA-enabled PyTorch build (see [PyTorch install instructions](https://pytorch.org/get-started/locally/)). |
 | `LsmrDemeaner(backend="torch", device="mps", precision="float32")` | LSMR solver on Apple Silicon GPUs via PyTorch MPS. Experimental. In our experience, MPS provides little performance improvement, but we'd love to hear about differing experiences! Requires `pytorch`. |
@@ -81,25 +81,7 @@ fit = pf.feols(
 )
 ```
 
-### Selecting a preconditioner
-
-`LsmrDemeaner` exposes a `preconditioner` argument. The default,
-``"auto"``, picks the natural choice for the selected backend; an explicit
-value that the backend does not support emits a `UserWarning` and falls
-back to the natural choice.
-
-| Backend  | Supported values         | `"auto"` resolves to |
-|----------|--------------------------|----------------------|
-| `within` | `"schwarz"`, `"none"`    | `"schwarz"`          |
-| `torch`  | `"diag"`                 | `"diag"`             |
-| `cupy`   | `"diag"`, `"none"`       | `"diag"`             |
-
-The `local_size` argument is forwarded to `within`'s windowed
-Gram-Schmidt reorthogonalization (useful for ill-conditioned problems
-where the bidiagonalization stalls). It only applies to
-`backend="within"`; `torch` and `cupy` ignore it.
-
-`MapDemeaner` accepts `fixef_tol` and `fixef_maxiter` arguments to control
+The `MapDemeaner` accepts `fixef_tol` and `fixef_maxiter` arguments to control
 convergence. `LsmrDemeaner` uses `fixef_atol` and `fixef_btol`. For the
 `within` backend the two tolerances are collapsed to
 `max(fixef_atol, fixef_btol)` (the solver takes a single tolerance);

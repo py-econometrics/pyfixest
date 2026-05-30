@@ -178,16 +178,6 @@ $$
 G \, \hat{\alpha} = D^\top \mu.
 $$
 
-The implementation uses modified LSMR on the weighted dummy-variable design
-rather than explicitly forming and solving the normal equations.
-
-This is especially appealing in the FWL setting because the matrix $G$
-is the same for $y$ and for every column of $X$; only the right-hand
-side changes. The key computational question is therefore not whether we
-can write down the system, but how to solve it quickly.
-
-This sparse least-squares problem can be solved with iterative solvers such as **LSMR**.
-
 The main idea behind `within` is to build a good **preconditioner**
 $M$ for this large sparse system. The matrix $M$ is chosen so that it
 is cheap to invert and so that the preconditioned system
@@ -207,8 +197,8 @@ entry $(i,j)$ counts how often worker $i$ is observed at firm $j$.
 This special bipartite structure allows `within` to use fast approximate
 solvers for the pairwise graph problems. These local solves are then
 assembled into a **Schwarz preconditioner** for the full
-system. Finally, `within` applies modified LSMR to the weighted dummy-variable
-design with this preconditioner.
+system. Finally, `within` solves the normal equations with modified LSMR,
+using this preconditioner.
 
 Compared with MAP, the important difference is that `within` LSMR uses the
 block structure of the full Gramian $G$ directly, rather than waiting
