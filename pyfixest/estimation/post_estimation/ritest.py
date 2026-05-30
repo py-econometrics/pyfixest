@@ -352,9 +352,6 @@ def lstsq_numba(A, B):
     return x
 
 
-# Apply numba JIT compilation only when numba is available. The functions
-# remain callable pure-Python objects when numba is missing so import-time
-# works; calling the fast ritest path then raises an ImportError up front.
 if nb is not None:
     random_choice = nb.njit(random_choice)
     _resample = nb.njit(_resample)
