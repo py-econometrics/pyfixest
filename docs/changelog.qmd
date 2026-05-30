@@ -41,7 +41,7 @@ fit = pf.feols("Y ~ X1 | f1", data=df, demeaner=LsmrDemeaner(backend="within", f
 fit = pf.feols("Y ~ X1 | f1", data=df, demeaner=LsmrDemeaner(backend="torch", device="cuda"))
 ```
 
-**Deprecations:** The `demeaner_backend`, `fixef_tol`, and `fixef_maxiter` arguments to `feols()` and related functions are deprecated and will be removed in a future release. Likewise, the `_fixef_tol` and `_fixef_maxiter` attributes on fitted model objects are deprecated — read the values off the typed `fit._demeaner` via `fit._demeaner.fixef_tol` and `fit._demeaner.fixef_maxiter` instead.
+**Deprecations:** The `demeaner_backend`, `fixef_tol`, and `fixef_maxiter` arguments to `feols()` and related functions are deprecated and will be removed in a future release. Likewise, the `_fixef_tol` and `_fixef_maxiter` attributes on fitted model objects are deprecated — going forward, this information is collected from the typed `fit._demeaner` via `fit._demeaner.fixef_tol` and `fit._demeaner.fixef_maxiter` instead.
 
 ### JAX, CuPy, and SciPy Backend Deprecations
 
