@@ -43,6 +43,8 @@ fit = pf.feols("Y ~ X1 | f1", data=df, demeaner=LsmrDemeaner(backend="torch", de
 
 **Deprecations:** The `demeaner_backend`, `fixef_tol`, and `fixef_maxiter` arguments to `feols()` and related functions are deprecated and will be removed in a future release. Likewise, the `_fixef_tol` and `_fixef_maxiter` attributes on fitted model objects are deprecated — going forward, this information is collected from the typed `fit._demeaner` via `fit._demeaner.fixef_tol` and `fit._demeaner.fixef_maxiter` instead.
 
+**Default change:** `LsmrDemeaner()` now defaults to `fixef_maxiter=1_000` (previously inherited `10_000` from `BaseDemeaner`). LSMR typically converges in far fewer than 1,000 iterations, but if you hit `"Demeaning failed after 1000 iterations"` on a difficult problem, pass `LsmrDemeaner(fixef_maxiter=10_000)` (or higher) explicitly.
+
 ### JAX, CuPy, and SciPy Backend Deprecations
 
 The `jax` MAP demeaner backend, the `cupy` / `scipy` LSMR demeaner backends, and the `solver="jax"` OLS solver option are deprecated and will be removed in a future release. Passing any of them now raises a `DeprecationWarning`.
