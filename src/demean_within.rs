@@ -81,7 +81,8 @@ pub fn _demean_within_rs(
         "none" => false,
         other => {
             return Err(pyo3::exceptions::PyValueError::new_err(format!(
-                "preconditioner must be 'schwarz' or 'none', got {other:?}"
+                "preconditioner={other:?} is not supported by the 'within' \
+                 LSMR backend; use 'schwarz' (default) or 'none'."
             )));
         }
     };
