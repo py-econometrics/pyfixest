@@ -218,7 +218,10 @@ def dispatch_demean(
 
     if isinstance(demeaner, LsmrDemeaner):
         if demeaner.backend == "torch":
-            _resolve_preconditioner("torch", demeaner.preconditioner)
+            # Torch LSMR always uses its built-in diagonal preconditioner.
+            # Call resolver for its UserWarning side effect on incompatible
+            # requests; the returned value is intentionally unused.
+            _ = _resolve_preconditioner("torch", demeaner.preconditioner)
             try:
                 torch = import_module("torch")
                 torch_demean_module = import_module(
