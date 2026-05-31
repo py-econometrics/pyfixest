@@ -211,6 +211,7 @@ class Feiv(Feols):
                 self._lookup_demeaned_data,
                 self._na_index,
                 self._demeaner,
+                self._preconditioners,
             )
         else:
             self._endogvard = self._endogvar

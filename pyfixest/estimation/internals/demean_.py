@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 import scipy.sparse as sp
 
-from pyfixest.core.demean import demean_within
+from pyfixest.core.demean import WithinPreconditioner, demean_within
 from pyfixest.demeaners import (
     AnyDemeaner,
     LsmrBackend,
@@ -53,6 +53,7 @@ def demean_model(
     lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
     na_index: frozenset[int],
     demeaner: AnyDemeaner,
+    preconditioner_store: list[WithinPreconditioner] | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     Demean a regression model.
@@ -124,6 +125,7 @@ def demean_model(
                     flist=fe_array,
                     weights=weights,
                     demeaner=demeaner,
+                    preconditioner_store=preconditioner_store,
                 )
                 if success is False:
                     raise ValueError(
@@ -151,6 +153,7 @@ def demean_model(
                 flist=fe_array,
                 weights=weights,
                 demeaner=demeaner,
+                preconditioner_store=preconditioner_store,
             )
             if success is False:
                 raise ValueError(
@@ -197,21 +200,62 @@ def dispatch_demean(
     flist: np.ndarray,
     weights: np.ndarray | None,
     demeaner: AnyDemeaner,
+    preconditioner_store: list[WithinPreconditioner] | None = None,
 ) -> tuple[np.ndarray, bool]:
-    """Demean an array using the configured backend for the resolved demeaner."""
+    """Demean an array using the configured backend for the resolved demeaner.
+
+    Parameters
+    ----------
+    preconditioner_store : list[WithinPreconditioner] or None, optional
+        Optional mutable list used to cache the within Schwarz preconditioner
+        across repeated calls on the same fixed-effect design (e.g. IWLS
+        iterations or staged demeans). On the first call the built
+        preconditioner is appended; subsequent default ``"schwarz"`` calls
+        reuse it. For an explicit user-supplied ``WithinPreconditioner``, the
+        same object is appended after a successful 2+way FE solve so fitted
+        models can expose it via ``fit.preconditioners``; that append is for
+        reporting / later manual reuse, not cache substitution.
+    """
     flist_uint = flist.astype(np.uintp, copy=False)
 
     if isinstance(demeaner, LsmrDemeaner) and demeaner.backend == "within":
-        resolved = _resolve_preconditioner("within", demeaner.preconditioner)
-        return demean_within(
+        preconditioner: str | WithinPreconditioner
+        if isinstance(demeaner.preconditioner, WithinPreconditioner):
+            preconditioner = demeaner.preconditioner
+        else:
+            preconditioner = _resolve_preconditioner("within", demeaner.preconditioner)
+
+        # Capture the user's explicit preconditioner BEFORE any cache
+        # substitution so we can preserve its Python identity below.
+        explicit_preconditioner = (
+            preconditioner if isinstance(preconditioner, WithinPreconditioner) else None
+        )
+        # If a previously built preconditioner is cached, reuse it. Only the
+        # default "schwarz" path can be hot-swapped; explicit user-supplied
+        # WithinPreconditioner instances pass through unchanged.
+        if preconditioner_store and preconditioner == "schwarz":
+            preconditioner = preconditioner_store[-1]
+
+        result, success, built = demean_within(
             x=x,
             flist=flist.astype(np.uint32, copy=False),
             weights=weights,
             tol=max(demeaner.fixef_atol, demeaner.fixef_btol),
             maxiter=demeaner.fixef_maxiter,
             local_size=demeaner.local_size,
-            preconditioner=resolved,
+            preconditioner=preconditioner,
         )
+        # First-time store: prefer the user's original Python object (identity
+        # preservation for `fit.preconditioners`), fall back to the freshly
+        # built one. `built is None` signals the single-FE MAP fallback was
+        # taken, in which case no preconditioner was actually used.
+        if (
+            preconditioner_store is not None
+            and not preconditioner_store
+            and built is not None
+        ):
+            preconditioner_store.append(explicit_preconditioner or built)
+        return result, success
 
     if weights is None:
         weights = np.ones(x.shape[0], dtype=np.float64)
@@ -221,7 +265,9 @@ def dispatch_demean(
             # Torch LSMR always uses its built-in diagonal preconditioner.
             # Call resolver for its UserWarning side effect on incompatible
             # requests; the returned value is intentionally unused.
-            _ = _resolve_preconditioner("torch", demeaner.preconditioner)
+            _ = _resolve_preconditioner(
+                "torch", cast(LsmrPreconditioner, demeaner.preconditioner)
+            )
             try:
                 torch = import_module("torch")
                 torch_demean_module = import_module(
@@ -270,7 +316,9 @@ def dispatch_demean(
                 dtype=dtype,
             )
 
-        cupy_resolved = _resolve_preconditioner("cupy", demeaner.preconditioner)
+        cupy_resolved = _resolve_preconditioner(
+            "cupy", cast(LsmrPreconditioner, demeaner.preconditioner)
+        )
         cupy_demean_module = import_module("pyfixest.estimation.cupy.demean_cupy_")
         fe_df = pd.DataFrame(
             flist_uint,

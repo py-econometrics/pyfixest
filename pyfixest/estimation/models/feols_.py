@@ -15,6 +15,7 @@ from scipy.stats import chi2, f, t
 
 from pyfixest.core.collinear import find_collinear_variables
 from pyfixest.core.crv1 import crv1_meat_loop
+from pyfixest.core.demean import WithinPreconditioner
 from pyfixest.core.nested_fixed_effects import count_fixef_fully_nested_all
 from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner, MapDemeaner
 from pyfixest.errors import VcovTypeNotSupportedError
@@ -307,6 +308,7 @@ class Feols(ResultAccessorMixin):
             self._fixef_tol = demeaner.fixef_tol
         self._fixef_maxiter = demeaner.fixef_maxiter
         self._lookup_demeaned_data = lookup_demeaned_data
+        self._preconditioners: list[WithinPreconditioner] = []
         self._store_data = store_data
         self._copy_data = copy_data
         self._lean = lean
@@ -499,9 +501,28 @@ class Feols(ResultAccessorMixin):
                 self._lookup_demeaned_data,
                 self._na_index,
                 self._demeaner,
+                self._preconditioners,
             )
         else:
             self._Yd, self._Xd = self._Y, self._X
+
+    @property
+    def preconditioners(self) -> tuple[WithinPreconditioner, ...]:
+        """Return the within Schwarz preconditioner(s) used during demeaning.
+
+        Empty unless the within LSMR backend was used and a Schwarz
+        preconditioner was actually employed. The tuple contains either the
+        Schwarz preconditioner that was built on the first solve (the
+        ``"schwarz"`` path) or the user-supplied one
+        (``LsmrDemeaner(preconditioner=<WithinPreconditioner>)``). It stays
+        empty when ``preconditioner='none'`` is set, when only a single
+        fixed effect is present (which takes the MAP fallback, so no
+        preconditioner is computed or applied), or when a non-within backend
+        is used. Pass an entry back via
+        ``LsmrDemeaner(backend='within', preconditioner=...)`` to amortise
+        the setup phase across solves on the same design.
+        """
+        return tuple(self._preconditioners)
 
     def to_array(self):
         "Convert estimation data frames to np arrays."

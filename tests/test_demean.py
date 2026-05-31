@@ -1,3 +1,5 @@
+import pickle
+
 import numpy as np
 import pandas as pd
 import pyhdfe
@@ -173,11 +175,358 @@ def test_within_solver_variants_match_pyhdfe(demeaner, rtol, atol, demean_data):
     np.testing.assert_allclose(result_weighted, expected_weighted, rtol=rtol, atol=atol)
 
 
+def test_demean_within_returns_preconditioner_for_reuse(demean_data):
+    x, flist, weights = demean_data
+
+    result, success, preconditioner = demean_within(
+        x=x,
+        flist=flist.astype(np.uint32, copy=False),
+        weights=weights,
+    )
+    assert success
+    assert isinstance(preconditioner, pf.WithinPreconditioner)
+    assert preconditioner.nrows == preconditioner.ncols
+
+    # Reusing the preconditioner yields the same demeaned output.
+    result_reused, success_reused, preconditioner_reused = demean_within(
+        x=x,
+        flist=flist.astype(np.uint32, copy=False),
+        weights=weights,
+        preconditioner=preconditioner,
+    )
+    assert success_reused
+    assert preconditioner_reused is not None
+    np.testing.assert_allclose(result_reused, result, rtol=1e-10, atol=1e-10)
+
+
+def test_demean_within_preconditioner_pickle_roundtrip(demean_data):
+    x, flist, weights = demean_data
+
+    result, success, preconditioner = demean_within(
+        x=x,
+        flist=flist.astype(np.uint32, copy=False),
+        weights=weights,
+    )
+    assert success
+    assert preconditioner is not None
+
+    restored = pickle.loads(pickle.dumps(preconditioner))
+    assert isinstance(restored, pf.WithinPreconditioner)
+    assert restored.nrows == preconditioner.nrows
+    assert restored.ncols == preconditioner.ncols
+
+    result_reused, success_reused, _ = demean_within(
+        x=x,
+        flist=flist.astype(np.uint32, copy=False),
+        weights=weights,
+        preconditioner=restored,
+    )
+    assert success_reused
+    np.testing.assert_allclose(result_reused, result, rtol=1e-10, atol=1e-10)
+
+
+def test_demean_within_rejects_invalid_preconditioner():
+    rng = np.random.default_rng(0)
+    x = rng.normal(size=(20, 2))
+    flist = np.column_stack(
+        [rng.integers(0, 3, size=20), rng.integers(0, 3, size=20)]
+    ).astype(np.uint32)
+    weights = np.ones(20)
+
+    with pytest.raises(TypeError):
+        demean_within(
+            x=x,
+            flist=flist,
+            weights=weights,
+            preconditioner=object(),  # type: ignore[arg-type]
+        )
+
+
+def test_demean_within_rejects_unknown_preconditioner_string():
+    """Unknown string preconditioners must raise on every FE-count path.
+
+    Regression test: pre-fix, the single-FE MAP fallback bypassed string
+    validation and silently accepted garbage like ``preconditioner="bogus"``.
+    """
+    rng = np.random.default_rng(0)
+    x = rng.normal(size=(20, 2))
+    weights = np.ones(20)
+
+    single = np.asfortranarray(rng.integers(0, 3, size=(20, 1)).astype(np.uint32))
+    multi = np.asfortranarray(
+        np.column_stack(
+            [rng.integers(0, 3, size=20), rng.integers(0, 3, size=20)]
+        ).astype(np.uint32)
+    )
+    for flist in (single, multi):
+        with pytest.raises(ValueError, match="bogus"):
+            demean_within(
+                x=x,
+                flist=flist,
+                weights=weights,
+                preconditioner="bogus",
+            )
+
+
+def test_demean_within_rejects_mismatched_preconditioner(demean_data):
+    """Reusing a preconditioner built for a smaller FE design must raise."""
+    x, flist, weights = demean_data
+
+    # Build a preconditioner on a *smaller* 2-FE design (fewer levels per factor).
+    flist_small = (flist % 5).astype(np.uint32, copy=False)
+    _, _, small_pre = demean_within(
+        x=x,
+        flist=flist_small,
+        weights=weights,
+    )
+    assert small_pre is not None
+
+    with pytest.raises(ValueError, match="DOF"):
+        demean_within(
+            x=x,
+            flist=flist.astype(np.uint32, copy=False),
+            weights=weights,
+            preconditioner=small_pre,
+        )
+
+
+def test_within_preconditioner_value_equality(demean_data):
+    """``WithinPreconditioner`` uses value semantics for ``__eq__`` / ``__hash__``.
+
+    Three contracts are pinned down:
+
+    1. Two distinct Python objects that wrap the same factorization compare
+       equal under ``==``. We use ``pickle`` round-tripping to manufacture a
+       second object with identical content but a different identity.
+    2. ``hash(a) == hash(b)`` whenever ``a == b`` (Python's rule for sane
+       behaviour in sets and dicts).
+    3. Preconditioners built from *different* designs do not collide:
+       ``__eq__`` actually inspects content rather than returning True
+       indiscriminately.
+
+    Motivation: the documented "save in session 1, reload in session 2"
+    workflow relies on users being able to check ``loaded == fit.preconditioners[0]``
+    and key dicts/sets by preconditioner content. Identity-based equality
+    (Python's default) would silently break both.
+    """
+    x, flist, weights = demean_data
+
+    # Build the reference preconditioner from the full 2-FE design.
+    _, _, original = demean_within(
+        x=x,
+        flist=flist.astype(np.uint32, copy=False),
+        weights=weights,
+    )
+    # Defensive: demean_data is multi-FE so this path returns a built
+    # preconditioner. If a future refactor changes that, fail loudly here
+    # instead of further down with a confusing ``NoneType has no __eq__``.
+    assert original is not None
+
+    # Round-tripping through pickle gives us a second Python object backed by
+    # the same serialized factorization — exactly the "different object, same
+    # content" case __eq__ needs to handle.
+    restored = pickle.loads(pickle.dumps(original))
+    assert original is not restored, "pickle should produce a fresh object"
+    assert original == restored, "same content must compare equal"
+    assert hash(original) == hash(restored), "equal objects must hash equally"
+
+    # Negative case: a *different* design (fewer levels per factor via % 5)
+    # produces a preconditioner with different n_dofs and different internal
+    # state. __eq__ must distinguish it from the original.
+    _, _, different = demean_within(
+        x=x,
+        flist=(flist % 5).astype(np.uint32, copy=False),
+        weights=weights,
+    )
+    assert different is not None
+    assert original != different, "different factorizations must compare unequal"
+
+
+def test_lsmr_within_reuses_preconditioner_store(demean_data):
+    """End-to-end coverage of ``dispatch_demean``'s preconditioner-cache policy.
+
+    Context
+    -------
+    ``dispatch_demean`` is the orchestration layer that the model classes
+    (``Feols``, ``Fepois``, ``Feglm``) call to demean their working data on
+    each iteration. The ``preconditioner_store`` argument is a mutable list
+    threaded through by the model class — it is the cache that turns IWLS's
+    "build the Schwarz factorization once, reuse it across iterations" claim
+    into reality. This test exercises that cache directly, bypassing the
+    model classes so failures point at the cache logic instead of the IWLS
+    loop.
+
+    Three behaviours are pinned down:
+
+    Leg 1 — first call seeds the cache
+        With an empty store, a default ``LsmrDemeaner(backend="within")``
+        builds a fresh Schwarz preconditioner and appends it to the store.
+        Verifies the store ends up with exactly one ``WithinPreconditioner``
+        entry.
+
+    Leg 2 — subsequent calls reuse the cached preconditioner under changed
+    weights (the IWLS hot path)
+        IWLS changes the working weights at every iteration (``W := W * mu``).
+        A pure implementation would rebuild the preconditioner each time,
+        which is the expensive step. The cache lets us reuse the *original*
+        factorization even though the weights — and therefore the true
+        normal-equations operator — have changed. The factorization is
+        "stale" in that sense, but LSMR still converges to the correct
+        demeaned values, just possibly in a few more iterations. We simulate
+        a weight change with ``weights + 0.25``, then check both that no new
+        entry was appended (the cache was hit, not bypassed) and that the
+        demeaned output still matches an independent ground truth.
+
+        Ground truth comes from ``pyhdfe.residualize`` — a separate, mature
+        FE-residualization implementation. Matching it under changed weights
+        is the strongest evidence that the stale-preconditioner path is
+        mathematically correct, not just self-consistent.
+
+    Leg 3 — passing a cached preconditioner back via ``LsmrDemeaner``
+    reproduces the original solve
+        This is the documented "save in session 1, reload in session 2"
+        workflow in miniature. A fresh ``LsmrDemeaner(preconditioner=store[0])``
+        with the *original* weights should reproduce leg 1's output bit-for-bit
+        because we are running the same LSMR with the same factorization on
+        the same data.
+
+    Tolerance choices
+    -----------------
+    Leg 2 uses ``rtol=1e-6, atol=1e-8`` because pyhdfe and ``within`` are two
+    different iterative solvers; they agree to within solver tolerance, not
+    machine precision. Leg 3 uses ``1e-10`` on both because we are comparing
+    ``within`` against itself with identical inputs — only floating-point
+    summation order from rayon parallelism could differ.
+    """
+    x, flist, weights = demean_data
+    store: list = []
+    demeaner = LsmrDemeaner(backend="within")
+
+    # ----- Leg 1: empty store → build a fresh preconditioner and cache it.
+    result, success = dispatch_demean(
+        x=x,
+        flist=flist,
+        weights=weights,
+        demeaner=demeaner,
+        preconditioner_store=store,
+    )
+    assert success
+    assert len(store) == 1, "first call must seed the cache with one entry"
+    assert isinstance(store[0], pf.WithinPreconditioner)
+
+    # ----- Leg 2: changed weights, same store. Mimics an IWLS iteration where
+    # only the working weights moved. The cache must hit (no new append) and
+    # the result must still be numerically correct under the *new* weights.
+    adjusted_weights = weights + 0.25
+    result_reused, success = dispatch_demean(
+        x=x,
+        flist=flist,
+        weights=adjusted_weights,
+        demeaner=demeaner,
+        preconditioner_store=store,
+    )
+    assert success
+    assert len(store) == 1, "cache hit must not append a second entry"
+
+    # Independent ground truth: pyhdfe residualizes the same design+weights
+    # via its own MAP solver. Matching it proves the stale-preconditioner
+    # path produces correct demeaned values, not just plausible ones.
+    expected_reused = pyhdfe.create(flist).residualize(
+        x, adjusted_weights.reshape((x.shape[0], 1))
+    )
+    np.testing.assert_allclose(
+        result_reused,
+        expected_reused,
+        rtol=1e-6,
+        atol=1e-8,
+        err_msg="stale-preconditioner LSMR must still converge to the correct residuals",
+    )
+
+    # ----- Leg 3: explicit preconditioner reuse. Mimics the across-sessions
+    # workflow: pull `store[0]` (or a pickled+restored copy) and pass it
+    # through `LsmrDemeaner(preconditioner=...)`. With the original weights,
+    # the result must reproduce leg 1 down to floating-point noise.
+    result_explicit, success = dispatch_demean(
+        x=x,
+        flist=flist,
+        weights=weights,
+        demeaner=LsmrDemeaner(backend="within", preconditioner=store[0]),
+    )
+    assert success
+    np.testing.assert_allclose(
+        result_explicit,
+        result,
+        rtol=1e-10,
+        atol=1e-10,
+        err_msg="same precond + same weights + same data must reproduce the original solve",
+    )
+
+
+def test_lsmr_within_does_not_store_unused_explicit_preconditioner(demean_data):
+    """The cache only holds preconditioners that were actually applied to the solve.
+
+    Scenario
+    --------
+    A user passes an explicit ``WithinPreconditioner`` via ``LsmrDemeaner``,
+    but the underlying data has a *single* fixed effect. ``demean_within``
+    special-cases single-FE designs and routes them to the MAP fallback,
+    which does not consult the preconditioner — the user-supplied object is
+    silently ignored.
+
+    What we are pinning down
+    ------------------------
+    The dispatcher must *not* append the ignored preconditioner to the
+    cache. Entries in ``preconditioner_store`` (and therefore in
+    ``fit.preconditioners``) are supposed to reflect factorizations that
+    actually participated in a solve. Storing an unused one would mislead
+    any code that inspects, pickles, or hashes the cache.
+
+    Why this is the only regression test for that guard
+    ---------------------------------------------------
+    The dispatcher's append branch is gated on ``built is not None`` —
+    ``built`` comes from ``demean_within`` and is ``None`` precisely when
+    the single-FE MAP fallback ran. Every *other* path either has
+    ``built is not None`` (multi-FE schwarz ran, storing is correct) or has
+    no explicit preconditioner to store in the first place. So this is the
+    one combination that exercises the guard; without this test a refactor
+    that drops the ``built is not None`` check would silently regress the
+    cache contract.
+    """
+    x, flist, weights = demean_data
+
+    # Build a real preconditioner on the full 2-FE design so we have a
+    # genuine ``WithinPreconditioner`` to pass back in below. We only need
+    # the third return value; the demeaned output is incidental.
+    _, _, preconditioner = demean_within(
+        x=x,
+        flist=flist.astype(np.uint32, copy=False),
+        weights=weights,
+    )
+    assert preconditioner is not None
+
+    # The setup: explicit preconditioner + single-FE design (``flist[:, :1]``
+    # slices off the second factor). ``demean_within`` will route this to
+    # the MAP fallback and the preconditioner will go unused.
+    store: list = []
+    _, success = dispatch_demean(
+        x=x,
+        flist=flist[:, :1],
+        weights=weights,
+        demeaner=LsmrDemeaner(backend="within", preconditioner=preconditioner),
+        preconditioner_store=store,
+    )
+    assert success
+    # The load-bearing assertion: the cache stayed empty even though an
+    # explicit preconditioner was passed. If this ever fails, the dispatcher
+    # is appending things that never touched the data.
+    assert store == [], "unused explicit preconditioner must not pollute the cache"
+
+
 def test_demean_within_unpreconditioned_matches_pyhdfe(demean_data):
     x, flist, weights = demean_data
 
     expected = pyhdfe.create(flist).residualize(x, weights.reshape((x.shape[0], 1)))
-    result, success = demean_within(
+    result, success, built = demean_within(
         x=x,
         flist=flist.astype(np.uint32, copy=False),
         weights=weights,
@@ -187,6 +536,7 @@ def test_demean_within_unpreconditioned_matches_pyhdfe(demean_data):
     )
 
     assert success
+    assert built is None  # preconditioner="none" never builds one
     np.testing.assert_allclose(result, expected, rtol=1e-6, atol=1e-8)
 
 

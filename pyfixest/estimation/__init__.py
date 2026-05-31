@@ -1,4 +1,5 @@
 from pyfixest.core.demean import (
+    WithinPreconditioner,
     demean,
 )
 from pyfixest.core.detect_singletons import (
@@ -53,6 +54,7 @@ __all__ = [
     "LsmrDemeaner",
     "MapDemeaner",
     "Quantreg",
+    "WithinPreconditioner",
     "bonferroni",
     "demean",
     "detect_singletons",

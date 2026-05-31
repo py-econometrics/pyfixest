@@ -293,6 +293,14 @@ def test_lsmr_demeaner_rejects_unknown_preconditioner():
         pf.LsmrDemeaner(preconditioner="bogus")  # type: ignore[arg-type]
 
 
+def test_lsmr_demeaner_rejects_non_string_non_preconditioner():
+    """Anything that is neither a string nor a WithinPreconditioner raises TypeError."""
+    with pytest.raises(TypeError, match="WithinPreconditioner"):
+        pf.LsmrDemeaner(preconditioner=42)  # type: ignore[arg-type]
+    with pytest.raises(TypeError, match="WithinPreconditioner"):
+        pf.LsmrDemeaner(preconditioner=object())  # type: ignore[arg-type]
+
+
 def test_lsmr_demeaner_warns_on_incompatible_within_preconditioner():
     from pyfixest.estimation.internals.demean_ import dispatch_demean
 
@@ -310,6 +318,63 @@ def test_lsmr_demeaner_warns_on_incompatible_within_preconditioner():
 
     with pytest.warns(UserWarning, match=r"'diag'.*'within'.*'schwarz'"):
         dispatch_demean(x=x, flist=flist, weights=None, demeaner=demeaner)
+
+
+def test_feols_stores_within_preconditioner_for_reuse():
+    data = pf.get_data()
+    demeaner = pf.LsmrDemeaner(backend="within")
+
+    fit = pf.feols("Y ~ X1 | f1 + f2", data=data, demeaner=demeaner)
+
+    assert len(fit.preconditioners) == 1
+    preconditioner = fit.preconditioners[0]
+    assert isinstance(preconditioner, pf.WithinPreconditioner)
+
+    with pytest.raises(ValueError, match="WithinPreconditioner"):
+        pf.LsmrDemeaner(backend="torch", preconditioner=preconditioner)
+    with pytest.raises(ValueError, match="WithinPreconditioner"):
+        pf.LsmrDemeaner(backend="cupy", preconditioner=preconditioner)
+
+    fit_reused = pf.feols(
+        "Y ~ X1 | f1 + f2",
+        data=data,
+        demeaner=pf.LsmrDemeaner(backend="within", preconditioner=preconditioner),
+    )
+
+    np.testing.assert_allclose(fit_reused.coef(), fit.coef(), rtol=1e-10, atol=1e-10)
+    assert fit_reused.preconditioners == (preconditioner,)
+
+
+def test_feols_without_preconditioner_has_no_cached_preconditioner():
+    data = pf.get_data()
+    fit = pf.feols(
+        "Y ~ X1 | f1 + f2",
+        data=data,
+        demeaner=pf.LsmrDemeaner(backend="within", preconditioner="none"),
+    )
+    assert fit.preconditioners == ()
+
+
+def test_iwls_models_reuse_within_preconditioner_by_default():
+    pois_data = pf.get_data(model="Fepois")
+    pois_fit = pf.fepois(
+        "Y ~ X1 | f1 + f2",
+        data=pois_data,
+        demeaner=pf.LsmrDemeaner(backend="within"),
+    )
+    assert len(pois_fit.preconditioners) == 1
+
+    glm_data = pf.get_data()
+    glm_data["Y_bin"] = (glm_data["Y"] > glm_data["Y"].median()).astype(int)
+    glm_fit = pf.feglm(
+        "Y_bin ~ X1 | f1 + f2",
+        data=glm_data,
+        family="logit",
+        demeaner=pf.LsmrDemeaner(backend="within"),
+    )
+    # if we did not reuse the initial preconditioner, lenght would be
+    # greater than 1 as each IWLS iteration would produce a preconditioner
+    assert len(glm_fit.preconditioners) == 1
 
 
 def test_lean():

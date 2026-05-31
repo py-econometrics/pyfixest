@@ -413,6 +413,7 @@ class Feglm(Feols, ABC):
             flist=flist,
             weights=weights.flatten(),
             demeaner=effective_demeaner,
+            preconditioner_store=self._preconditioners,
         )
 
         if success is False:

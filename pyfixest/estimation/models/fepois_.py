@@ -320,6 +320,7 @@ class Fepois(Feols):
                     flist=self._fe,
                     weights=combined_weights.flatten(),
                     demeaner=self._demeaner,
+                    preconditioner_store=self._preconditioners,
                 )
                 if not success:
                     raise ValueError(

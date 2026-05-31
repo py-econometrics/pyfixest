@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from numbers import Integral, Real
 from typing import ClassVar, Literal, get_args
 
+from pyfixest.core.demean import WithinPreconditioner
+
 MapBackend = Literal["numba", "rust", "jax"]
 LsmrBackend = Literal["within", "cupy", "torch"]
 LsmrPrecision = Literal["float32", "float64"]
@@ -86,9 +88,19 @@ class LsmrDemeaner(BaseDemeaner):
       ``within`` backend.
     - ``"diag"``: diagonal (Jacobi) preconditioner. Supported by ``torch``
       and ``cupy``; not supported by ``within``.
+    - A :class:`pyfixest.WithinPreconditioner` instance: a previously built
+      Schwarz preconditioner (typically obtained via ``fit.preconditioners``
+      or pickled across sessions). Only supported by ``backend='within'``;
+      preconditioners are only computed and applied for two or more
+      fixed-effect factors because single-factor problems run MAP as the within algo
+      provides no benefits. Passing a preconditioner to any other backend raises ``ValueError``
+      at construction time.
 
-    If a value is incompatible with the chosen backend, a ``UserWarning`` is
-    emitted at solve time and the backend's default is used.
+    If a *string* value is incompatible with the chosen backend, a
+    ``UserWarning`` is emitted at solve time and the backend's default is
+    used. A ``WithinPreconditioner`` paired with a non-``within`` backend is
+    rejected eagerly with ``ValueError`` because there is no sensible
+    fallback for a prebuilt object.
     """
 
     fixef_maxiter: int = 1_000
@@ -98,7 +110,7 @@ class LsmrDemeaner(BaseDemeaner):
     fixef_atol: float = 1e-8
     fixef_btol: float = 1e-8
     warn_on_cpu_fallback: bool = True
-    preconditioner: LsmrPreconditioner = "auto"
+    preconditioner: LsmrPreconditioner | WithinPreconditioner = "auto"
     local_size: int | None = None
     kind: ClassVar[str] = "lsmr"
 
@@ -123,11 +135,19 @@ class LsmrDemeaner(BaseDemeaner):
 
         if not isinstance(self.warn_on_cpu_fallback, bool):
             raise TypeError("`warn_on_cpu_fallback` must be a bool.")
-        if not isinstance(self.preconditioner, str):
-            raise TypeError("`preconditioner` must be a string.")
-        if self.preconditioner not in get_args(LsmrPreconditioner):
+        if isinstance(self.preconditioner, WithinPreconditioner):
+            if self.backend != "within":
+                raise ValueError(
+                    "A WithinPreconditioner can only be reused with `backend='within'`."
+                )
+        elif not isinstance(self.preconditioner, str):
+            raise TypeError(
+                "`preconditioner` must be a string or a WithinPreconditioner."
+            )
+        elif self.preconditioner not in get_args(LsmrPreconditioner):
             raise ValueError(
-                f"`preconditioner` must be one of {get_args(LsmrPreconditioner)}."
+                f"`preconditioner` must be one of {get_args(LsmrPreconditioner)} "
+                "or a WithinPreconditioner."
             )
 
         if self.local_size is not None:
