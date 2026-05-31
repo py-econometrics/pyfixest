@@ -45,6 +45,8 @@ fit = pf.feols("Y ~ X1 | f1", data=df, demeaner=LsmrDemeaner(backend="torch", de
 
 **Default change:** `LsmrDemeaner()` now defaults to `fixef_maxiter=1_000` (previously inherited `10_000` from `BaseDemeaner`). LSMR typically converges in far fewer than 1,000 iterations, but if you hit `"Demeaning failed after 1000 iterations"` on a difficult problem, pass `LsmrDemeaner(fixef_maxiter=10_000)` (or higher) explicitly.
 
+The lower-level `pyfixest.core.demean.demean_within(...)` helper also tightened its default `tol` from `1e-6` to `1e-8`. Calls through `LsmrDemeaner` already pass `max(fixef_atol, fixef_btol)` (default `1e-8`), so the new default just matches what the typed API was already using; only direct callers of `demean_within(...)` with no `tol` argument see a behaviour change.
+
 ### JAX, CuPy, and SciPy Backend Deprecations
 
 The `jax` MAP demeaner backend, the `cupy` / `scipy` LSMR demeaner backends, and the `solver="jax"` OLS solver option are deprecated and will be removed in a future release. Passing any of them now raises a `DeprecationWarning`.
