@@ -26,28 +26,32 @@ A new typed demeaner API replaces the old `demeaner_backend`, `fixef_tol`, and `
 
 ```python
 import pyfixest as pf
-from pyfixest.demeaners import MapDemeaner, WithinDemeaner, LsmrDemeaner
+from pyfixest.demeaners import MapDemeaner, LsmrDemeaner
 
 # Old API (deprecated)
 fit = pf.feols("Y ~ X1 | f1", data=df, demeaner_backend="rust", fixef_tol=1e-8, fixef_maxiter=5000)
 
 # New API
 fit = pf.feols("Y ~ X1 | f1", data=df, demeaner=MapDemeaner(backend="rust", fixef_tol=1e-8, fixef_maxiter=5000))
-fit = pf.feols("Y ~ X1 | f1", data=df, demeaner=WithinDemeaner(fixef_tol=1e-8, fixef_maxiter=5000))
+fit = pf.feols("Y ~ X1 | f1", data=df, demeaner=LsmrDemeaner(backend="within", fixef_atol=1e-8, fixef_btol=1e-8, fixef_maxiter=5000))
 fit = pf.feols("Y ~ X1 | f1", data=df, demeaner=LsmrDemeaner(backend="torch", device="cuda"))
 ```
 
-**Deprecations:** The `demeaner_backend`, `fixef_tol`, and `fixef_maxiter` arguments to `feols()` and related functions are deprecated and will be removed in a future release. Likewise, the `_fixef_tol` and `_fixef_maxiter` attributes on fitted model objects are deprecated — use `model.demeaner.fixef_tol` and `model.demeaner.fixef_maxiter` instead.
+**Deprecations:** The `demeaner_backend`, `fixef_tol`, and `fixef_maxiter` arguments to `feols()` and related functions are deprecated and will be removed in a future release. Likewise, the `_fixef_tol` and `_fixef_maxiter` attributes on fitted model objects are deprecated — going forward, this information is collected from the typed `fit._demeaner` via `fit._demeaner.fixef_tol` and `fit._demeaner.fixef_maxiter` instead.
+
+**Default change:** `LsmrDemeaner()` now defaults to `fixef_maxiter=1_000` (previously inherited `10_000` from `BaseDemeaner`). LSMR typically converges in far fewer than 1,000 iterations, but if you hit `"Demeaning failed after 1000 iterations"` on a difficult problem, pass `LsmrDemeaner(fixef_maxiter=10_000)` (or higher) explicitly.
+
+The lower-level `pyfixest.core.demean.demean_within(...)` helper also tightened its default `tol` from `1e-6` to `1e-8`. Calls through `LsmrDemeaner` already pass `max(fixef_atol, fixef_btol)` (default `1e-8`), so the new default just matches what the typed API was already using; only direct callers of `demean_within(...)` with no `tol` argument see a behaviour change.
 
 ### JAX, CuPy, and SciPy Backend Deprecations
 
 The `jax` MAP demeaner backend, the `cupy` / `scipy` LSMR demeaner backends, and the `solver="jax"` OLS solver option are deprecated and will be removed in a future release. Passing any of them now raises a `DeprecationWarning`.
 
-We recommended the following replacements:
+We recommend the following replacements:
 
 - **JAX MAP on CPU** → `MapDemeaner()` (the default rust MAP).
 - **JAX MAP on GPU** or **`LsmrDemeaner(backend="cupy", device="cuda")`** → `LsmrDemeaner(backend="torch", device="cuda")`.
-- **Scipy or Cupy LSMR** → `LsmrDemeaner(backend="torch", device="cpu") or LsmrDemeaner(backend="torch", device="gpu")`.
+- **Scipy or Cupy LSMR on CPU** → `LsmrDemeaner()` (the default `within` backend).
 ### Regression Compression Deprecation
 
 The `use_compression` argument to `feols()` is deprecated and will be removed in a future release. This feature implemented the in-memory regression compression approach from [Wong et al. (2021)](https://arxiv.org/abs/2102.11297) via a Mundlak/sufficient-statistics transform. For large-dataset use cases, the [`duckreg`](https://github.com/py-econometrics/duckreg) package provides a more general out-of-memory solution. See [#1302](https://github.com/py-econometrics/pyfixest/issues/1302) for context.
@@ -87,11 +91,11 @@ pip install --pre pyfixest
 
 We recently came together for a PyFixest sprint with the team from AppliedAI, and one new feature that already made it's way into the code base is a new typed demeaner configuration that performs really well for sparse fixed effects structures.
 
-The new solver is exposed via `pf.WithinDemeaner()` and is a significant performance improvement for sparse fixed effects structures - such as matched employer-employee data, patient-doctor panels, or trade networks - where the standard MAP algorithm might struggle. On well-connected graphs, `pf.MapDemeaner(backend="rust")` remains competitive, but on sparse graphs the within-based solver is dramatically faster.
+The new solver is exposed via `pf.LsmrDemeaner(backend="within")` and is a significant performance improvement for sparse fixed effects structures - such as matched employer-employee data, patient-doctor panels, or trade networks - where the standard MAP algorithm might struggle. On well-connected graphs, `pf.MapDemeaner(backend="rust")` remains competitive, but on sparse graphs the within-based solver is dramatically faster.
 
 ![](explanation/figures/base-benchmarks/bench_difficult.png){width=85% fig-align="center"}
 
-*Benchmark on a sparse fixed effects structure: vanilla MAP degrades dramatically, while CG-Schwarz via `pf.WithinDemeaner()` remains fast.*
+*Benchmark on a sparse fixed effects structure: vanilla MAP degrades dramatically, while `within` LSMR via `pf.LsmrDemeaner()` remains fast.*
 
 For a detailed explanation of why some fixed effects problems are harder than others and comprehensive benchmarks, see [When Are Fixed Effects Estimations Difficult?](explanation/difficult-fixed-effects.md).
 

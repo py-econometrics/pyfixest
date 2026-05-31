@@ -399,12 +399,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/demeaners.WithinDemeaner.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">demeaners.WithinDemeaner</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
   <a href="../reference/demeaners.LsmrDemeaner.html" class="sidebar-item-text sidebar-link active">
  <span class="menu-text">demeaners.LsmrDemeaner</span></a>
   </div>
@@ -603,18 +597,33 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="pyfixest.demeaners.LsmrDemeaner" class="level1">
 <h1>demeaners.LsmrDemeaner</h1>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>demeaners.LsmrDemeaner(</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    fixef_maxiter<span class="op">=</span><span class="dv">10000</span>,</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    backend<span class="op">=</span><span class="st">'cupy'</span>,</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    fixef_maxiter<span class="op">=</span><span class="dv">1000</span>,</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    backend<span class="op">=</span><span class="st">'within'</span>,</span>
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    precision<span class="op">=</span><span class="st">'float64'</span>,</span>
 <span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    device<span class="op">=</span><span class="st">'auto'</span>,</span>
 <span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    fixef_atol<span class="op">=</span><span class="fl">1e-08</span>,</span>
 <span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    fixef_btol<span class="op">=</span><span class="fl">1e-08</span>,</span>
 <span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    warn_on_cpu_fallback<span class="op">=</span><span class="va">True</span>,</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    use_preconditioner<span class="op">=</span><span class="va">True</span>,</span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    preconditioner<span class="op">=</span><span class="st">'auto'</span>,</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    local_size<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Sparse LSMR demeaner.</p>
+<section id="notes" class="level2 doc-section doc-section-notes">
+<h2 class="doc-section doc-section-notes anchored" data-anchor-id="notes">Notes</h2>
+<p>The <code>within</code> backend takes a single tolerance, so <code>fixef_atol</code> and <code>fixef_btol</code> are collapsed to <code>max(fixef_atol, fixef_btol)</code> for that backend. The <code>cupy</code> and <code>torch</code> backends use both tolerances independently (SciPy LSMR convention).</p>
+<p>The <code>local_size</code> field only applies to <code>backend="within"</code>; the <code>cupy</code> and <code>torch</code> backends ignore it.</p>
+<p>The <code>precision</code>, <code>device</code>, and <code>warn_on_cpu_fallback</code> fields are only relevant for the <code>torch</code> backend (and the deprecated <code>cupy</code> backend). The <code>within</code> backend always runs on CPU in float64 and ignores these fields.</p>
+<p><code>preconditioner</code> selects the preconditioner. Supported values:</p>
+<ul>
+<li><code>"auto"</code> (default): selects different preconditioners for different backend implementations: <code>"schwarz"</code> for <code>within</code>; <code>"diag"</code> for <code>torch</code> / <code>cupy</code>.</li>
+<li><code>"none"</code>: disables preconditioning. Supported by <code>within</code> and <code>cupy</code>; not supported by <code>torch</code>.</li>
+<li><code>"schwarz"</code>: additive Schwarz preconditioner. Only supported by the <code>within</code> backend.</li>
+<li><code>"diag"</code>: diagonal (Jacobi) preconditioner. Supported by <code>torch</code> and <code>cupy</code>; not supported by <code>within</code>.</li>
+</ul>
+<p>If a value is incompatible with the chosen backend, a <code>UserWarning</code> is emitted at solve time and the backend’s default is used.</p>
 
 
+</section>
 </section>
 
 </main> <!-- /main -->

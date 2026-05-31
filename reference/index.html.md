@@ -27,7 +27,6 @@ Details on Methods and Attributes
 | --- | --- |
 | [demeaners.BaseDemeaner](demeaners.BaseDemeaner.qmd#pyfixest.demeaners.BaseDemeaner) | Base configuration shared by all fixed-effects demeaners. |
 | [demeaners.MapDemeaner](demeaners.MapDemeaner.qmd#pyfixest.demeaners.MapDemeaner) | Method of Alternating Projections (MAP) demeaner. |
-| [demeaners.WithinDemeaner](demeaners.WithinDemeaner.qmd#pyfixest.demeaners.WithinDemeaner) | Krylov-subspace demeaner implemented in Rust via the ``within`` library. |
 | [demeaners.LsmrDemeaner](demeaners.LsmrDemeaner.qmd#pyfixest.demeaners.LsmrDemeaner) | Sparse LSMR demeaner. |
 | [estimation.models.feols_.Feols](estimation.models.feols_.Feols.qmd#pyfixest.estimation.models.feols_.Feols) | Non user-facing class to estimate a linear regression via OLS. |
 | [estimation.models.fepois_.Fepois](estimation.models.fepois_.Fepois.qmd#pyfixest.estimation.models.fepois_.Fepois) | Estimate a Poisson regression model. |
