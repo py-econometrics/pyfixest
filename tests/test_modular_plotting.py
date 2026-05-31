@@ -12,7 +12,7 @@ def test_build_styles_assigns_distinct_style_to_full_backend_set() -> None:
         "fixest-map",
         "pyfixest (cupy32)",
         "pyfixest (jax)",
-        "pyfixest (rust-cg)",
+        "pyfixest (within)",
         "pyfixest (rust-map)",
         "pyfixest (scipy-lsmr)",
         "pyfixest (torch-cpu)",

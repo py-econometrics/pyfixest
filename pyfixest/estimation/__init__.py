@@ -8,7 +8,6 @@ from pyfixest.demeaners import (
     BaseDemeaner,
     LsmrDemeaner,
     MapDemeaner,
-    WithinDemeaner,
 )
 from pyfixest.estimation.api import (
     feglm,
@@ -54,7 +53,6 @@ __all__ = [
     "LsmrDemeaner",
     "MapDemeaner",
     "Quantreg",
-    "WithinDemeaner",
     "bonferroni",
     "demean",
     "detect_singletons",

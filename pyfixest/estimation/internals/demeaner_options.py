@@ -11,11 +11,16 @@ from pyfixest.demeaners import (
     MapBackend,
     MapDemeaner,
     TorchDevice,
-    WithinDemeaner,
 )
 
 # Legacy string backend → (LsmrBackend, TorchDevice, LsmrPrecision)
 _LSMR_PRESETS: dict[str, tuple[LsmrBackend, TorchDevice, LsmrPrecision]] = {
+    "within": ("within", "auto", "float64"),
+    # Pre-0.60 alias: the within backend used to be named "rust-cg" when it
+    # was still wrapping a CG/Schwarz solver. Keep it as a silent alias of
+    # "within" for one more release cycle; the surrounding `demeaner_backend=`
+    # argument already raises a DeprecationWarning.
+    "rust-cg": ("within", "auto", "float64"),
     "cupy": ("cupy", "auto", "float64"),
     "cupy64": ("cupy", "auto", "float64"),
     "cupy32": ("cupy", "auto", "float32"),
@@ -83,12 +88,6 @@ def _resolve_demeaner(
             fixef_maxiter=effective_fixef_maxiter,
         )
 
-    if backend in {"rust-cg", "within"}:
-        return WithinDemeaner(
-            fixef_tol=effective_fixef_tol,
-            fixef_maxiter=effective_fixef_maxiter,
-        )
-
     if backend in _LSMR_PRESETS:
         lsmr_backend, device, precision = _LSMR_PRESETS[backend]
         return LsmrDemeaner(
@@ -151,7 +150,7 @@ def _warn_if_deprecated_demeaner_backend(demeaner: object) -> None:
                     "The `scipy` LSMR demeaner backend (LsmrDemeaner with "
                     "backend='cupy' and device='cpu') is deprecated and will "
                     "be removed in a future release. Switch to "
-                    "`LsmrDemeaner(backend='torch', device='cpu')`."
+                    "`LsmrDemeaner()` (the default within backend)."
                 ),
                 DeprecationWarning,
                 stacklevel=3,
@@ -165,7 +164,7 @@ def _warn_if_deprecated_demeaner_backend(demeaner: object) -> None:
                     "If you were running on GPU, switch to "
                     "`LsmrDemeaner(backend='torch', device='cuda')`; if you "
                     "were running on CPU, switch to "
-                    "`LsmrDemeaner(backend='torch', device='cpu')`."
+                    "`LsmrDemeaner()` (the default within backend)."
                 ),
                 DeprecationWarning,
                 stacklevel=3,

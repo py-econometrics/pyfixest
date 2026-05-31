@@ -25,12 +25,11 @@ def _demean_rs(
 def _demean_within_rs(
     x: NDArray[np.float64],
     flist: NDArray[np.uint32],
-    weights: NDArray[np.float64],
-    tol: float = 1e-06,
+    weights: NDArray[np.float64] | None = None,
+    tol: float = 1e-08,
     maxiter: int = 1_000,
-    krylov: str = "cg",
-    preconditioner: str = "additive",
-    gmres_restart: int = 30,
+    local_size: int | None = None,
+    preconditioner: str = "schwarz",
 ) -> tuple[np.ndarray, bool]: ...
 def _count_fixef_fully_nested_all_rs(
     all_fixef_array: NDArray,

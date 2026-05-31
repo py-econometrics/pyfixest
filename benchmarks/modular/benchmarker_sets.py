@@ -34,7 +34,7 @@ def build_standard_feols_benchmarkers(
         pyfixest_benchmarkers.extend(
             [
                 PyFeolsBenchmarkerFullApi(
-                    "pyfixest (rust-cg)", "rust-cg", **pyfixest_kwargs
+                    "pyfixest (within)", "within", **pyfixest_kwargs
                 ),
                 PyFeolsBenchmarkerFullApi(
                     "pyfixest (rust-map)", "rust", **pyfixest_kwargs

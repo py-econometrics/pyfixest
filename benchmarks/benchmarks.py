@@ -32,6 +32,7 @@ except ImportError:
 _PYFIXEST_BACKENDS = {
     "numba",
     "rust",
+    "within",
     "torch_cpu",
     "torch_mps",
     "torch_cuda",
@@ -70,8 +71,8 @@ def _make_demeaner(backend: str):
 
     if backend in {"numba", "rust"}:
         return pf.MapDemeaner(backend=backend)
-    if backend in {"rust-cg", "within"}:
-        return pf.WithinDemeaner()
+    if backend == "within":
+        return pf.LsmrDemeaner()
     raise ValueError(f"Unknown backend {backend!r}")
 
 
@@ -267,6 +268,13 @@ def get_estimators(
                 False,
                 "pyfixest_feols",
             ),
+            (
+                "pyfixest.feols (within)",
+                "within",
+                run_pyfixest_feols,
+                False,
+                "pyfixest_feols",
+            ),
         ]
         _append_optional_backends(
             estimators, "pyfixest.feols", run_pyfixest_feols, "pyfixest_feols"
@@ -307,6 +315,13 @@ def get_estimators(
                 False,
                 "pyfixest_fepois",
             ),
+            (
+                "pyfixest.fepois (within)",
+                "within",
+                run_pyfixest_fepois,
+                False,
+                "pyfixest_fepois",
+            ),
         ]
         _append_optional_backends(
             estimators, "pyfixest.fepois", run_pyfixest_fepois, "pyfixest_fepois"
@@ -327,6 +342,13 @@ def get_estimators(
             (
                 "pyfixest.feglm_logit (rust)",
                 "rust",
+                run_pyfixest_feglm_logit,
+                False,
+                "pyfixest_feglm_logit",
+            ),
+            (
+                "pyfixest.feglm_logit (within)",
+                "within",
                 run_pyfixest_feglm_logit,
                 False,
                 "pyfixest_feglm_logit",
