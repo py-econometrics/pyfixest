@@ -16,6 +16,11 @@ from pyfixest.demeaners import (
 # Legacy string backend → (LsmrBackend, TorchDevice, LsmrPrecision)
 _LSMR_PRESETS: dict[str, tuple[LsmrBackend, TorchDevice, LsmrPrecision]] = {
     "within": ("within", "auto", "float64"),
+    # Pre-0.60 alias: the within backend used to be named "rust-cg" when it
+    # was still wrapping a CG/Schwarz solver. Keep it as a silent alias of
+    # "within" for one more release cycle; the surrounding `demeaner_backend=`
+    # argument already raises a DeprecationWarning.
+    "rust-cg": ("within", "auto", "float64"),
     "cupy": ("cupy", "auto", "float64"),
     "cupy64": ("cupy", "auto", "float64"),
     "cupy32": ("cupy", "auto", "float32"),

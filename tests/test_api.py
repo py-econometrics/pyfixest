@@ -111,6 +111,25 @@ def test_legacy_demeaner_backend_within_chains_to_lsmr_warning():
     assert fit._demeaner.fixef_maxiter == 321
 
 
+def test_legacy_demeaner_backend_rust_cg_aliases_to_within():
+    data = pf.get_data()
+
+    with pytest.warns(DeprecationWarning):
+        fit = pf.feols(
+            "Y ~ X1 | f1 + f2",
+            data=data,
+            demeaner_backend="rust-cg",
+            fixef_tol=1e-4,
+            fixef_maxiter=321,
+        )
+
+    assert isinstance(fit._demeaner, pf.LsmrDemeaner)
+    assert fit._demeaner.backend == "within"
+    assert fit._demeaner.fixef_atol == 1e-4
+    assert fit._demeaner.fixef_btol == 1e-4
+    assert fit._demeaner.fixef_maxiter == 321
+
+
 def test_map_demeaner_defaults_to_rust():
     data = pf.get_data()
 
