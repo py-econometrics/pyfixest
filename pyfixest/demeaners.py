@@ -70,6 +70,11 @@ class LsmrDemeaner(BaseDemeaner):
     The ``local_size`` field only applies to ``backend="within"``; the
     ``cupy`` and ``torch`` backends ignore it.
 
+    The ``precision``, ``device``, and ``warn_on_cpu_fallback`` fields are
+    only relevant for the ``torch`` backend (and the deprecated ``cupy``
+    backend). The ``within`` backend always runs on CPU in float64 and
+    ignores these fields.
+
     ``preconditioner`` selects the preconditioner. Supported values:
 
     - ``"auto"`` (default): selects different preconditioners for different
