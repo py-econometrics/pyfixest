@@ -308,7 +308,7 @@ class Feols(ResultAccessorMixin):
             self._fixef_tol = demeaner.fixef_tol
         self._fixef_maxiter = demeaner.fixef_maxiter
         self._lookup_demeaned_data = lookup_demeaned_data
-        self._preconditioners: list[WithinPreconditioner] = []
+        self._preconditioner: WithinPreconditioner | None = None
         self._store_data = store_data
         self._copy_data = copy_data
         self._lean = lean
@@ -493,7 +493,7 @@ class Feols(ResultAccessorMixin):
     def demean(self):
         "Demean the dependent variable and covariates by the fixed effect(s)."
         if self._has_fixef:
-            self._Yd, self._Xd = demean_model(
+            self._Yd, self._Xd, used_pre = demean_model(
                 self._Y,
                 self._X,
                 self._fe,
@@ -501,8 +501,10 @@ class Feols(ResultAccessorMixin):
                 self._lookup_demeaned_data,
                 self._na_index,
                 self._demeaner,
-                self._preconditioners,
+                cached_preconditioner=self._preconditioner,
             )
+            if self._preconditioner is None and used_pre is not None:
+                self._preconditioner = used_pre
         else:
             self._Yd, self._Xd = self._Y, self._X
 
@@ -527,7 +529,7 @@ class Feols(ResultAccessorMixin):
         ``LsmrDemeaner(backend='within', preconditioner=...)`` to amortise
         the setup phase across solves on the same design.
         """
-        return self._preconditioners[-1] if self._preconditioners else None
+        return self._preconditioner
 
     def to_array(self):
         "Convert estimation data frames to np arrays."

@@ -53,8 +53,8 @@ def demean_model(
     lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
     na_index: frozenset[int],
     demeaner: AnyDemeaner,
-    preconditioner_store: list[WithinPreconditioner] | None = None,
-) -> tuple[pd.DataFrame, pd.DataFrame]:
+    cached_preconditioner: WithinPreconditioner | None = None,
+) -> tuple[pd.DataFrame, pd.DataFrame, WithinPreconditioner | None]:
     """
     Demean a regression model.
 
@@ -87,13 +87,19 @@ def demean_model(
 
     Returns
     -------
-    tuple[pd.DataFrame, pd.DataFrame]
+    tuple[pd.DataFrame, pd.DataFrame, WithinPreconditioner | None]
         A tuple of the following elements:
         - Yd : pd.DataFrame
             A DataFrame of the demeaned dependent variable.
         - Xd : pd.DataFrame
             A DataFrame of the demeaned covariates.
+        - used_preconditioner : WithinPreconditioner or None
+            The within preconditioner used during the solve (Schwarz, diagonal,
+            or the cached/explicit instance), or ``None`` for non-within
+            backends, ``preconditioner='none'``, the single-FE MAP fallback,
+            or when no demeaning happened.
     """
+    used_preconditioner: WithinPreconditioner | None = None
     YX = pd.concat([Y, X], axis=1)
 
     yx_names = YX.columns
@@ -120,12 +126,12 @@ def demean_model(
                 if var_diff.ndim == 1:
                     var_diff = var_diff.reshape(len(var_diff), 1)
 
-                YX_demean_new, success = dispatch_demean(
+                YX_demean_new, success, used_preconditioner = dispatch_demean(
                     x=var_diff,
                     flist=fe_array,
                     weights=weights,
                     demeaner=demeaner,
-                    preconditioner_store=preconditioner_store,
+                    cached_preconditioner=cached_preconditioner,
                 )
                 if success is False:
                     raise ValueError(
@@ -148,12 +154,12 @@ def demean_model(
                 YX_demeaned = YX_demeaned_old[yx_names]
 
         else:
-            YX_demeaned_array, success = dispatch_demean(
+            YX_demeaned_array, success, used_preconditioner = dispatch_demean(
                 x=YX_array,
                 flist=fe_array,
                 weights=weights,
                 demeaner=demeaner,
-                preconditioner_store=preconditioner_store,
+                cached_preconditioner=cached_preconditioner,
             )
             if success is False:
                 raise ValueError(
@@ -173,7 +179,7 @@ def demean_model(
     Yd = YX_demeaned[Y.columns]
     Xd = YX_demeaned[X.columns]
 
-    return Yd, Xd
+    return Yd, Xd, used_preconditioner
 
 
 def _override_demeaner_tol(
@@ -200,22 +206,31 @@ def dispatch_demean(
     flist: np.ndarray,
     weights: np.ndarray | None,
     demeaner: AnyDemeaner,
-    preconditioner_store: list[WithinPreconditioner] | None = None,
-) -> tuple[np.ndarray, bool]:
+    cached_preconditioner: WithinPreconditioner | None = None,
+) -> tuple[np.ndarray, bool, WithinPreconditioner | None]:
     """Demean an array using the configured backend for the resolved demeaner.
 
     Parameters
     ----------
-    preconditioner_store : list[WithinPreconditioner] or None, optional
-        Optional mutable list used to cache the within preconditioner
-        (``"schwarz"`` or ``"diag"``) across repeated calls on the same
-        fixed-effect design (e.g. IWLS iterations or staged demeans). On the
-        first call the built preconditioner is appended; subsequent calls
-        requesting the same variant reuse it. For an explicit user-supplied
-        ``WithinPreconditioner``, the same object is appended after a
-        successful 2+way FE solve so fitted models can expose it via
-        ``fit.preconditioner``; that append is for reporting / later manual
-        reuse, not cache substitution.
+    cached_preconditioner : WithinPreconditioner or None, optional
+        A previously built within preconditioner to reuse on this solve. If
+        its variant matches the variant the demeaner would request as a
+        string (``"schwarz"`` → Additive, ``"diag"`` → Diagonal), it is
+        substituted in to avoid a rebuild. Mismatched variants and explicit
+        user-supplied ``WithinPreconditioner`` instances on the demeaner take
+        precedence over the cache.
+
+    Returns
+    -------
+    tuple[np.ndarray, bool, WithinPreconditioner | None]
+        The demeaned array, a convergence flag, and the within preconditioner
+        actually used during the solve. The third element is ``None`` for
+        non-within backends, when ``preconditioner='none'`` was requested, or
+        when the single-FE MAP fallback path was taken inside
+        ``demean_within`` — in those cases no preconditioner participated in
+        the solve. Callers (e.g. model classes) can cache the returned
+        instance to amortise setup across subsequent solves on the same
+        design.
     """
     flist_uint = flist.astype(np.uintp, copy=False)
 
@@ -226,19 +241,17 @@ def dispatch_demean(
         else:
             preconditioner = _resolve_preconditioner("within", demeaner.preconditioner)
 
-        # Capture the user's explicit preconditioner BEFORE any cache
-        # substitution so we can preserve its Python identity below.
-        explicit_preconditioner = (
-            preconditioner if isinstance(preconditioner, WithinPreconditioner) else None
-        )
-        # If a previously built preconditioner is cached, reuse it when the
-        # requested string matches the cached variant. Explicit user-supplied
-        # WithinPreconditioner instances pass through unchanged.
+        # Reuse the caller-supplied cached preconditioner when its variant
+        # matches the requested string. Explicit user-supplied
+        # WithinPreconditioner instances on the demeaner pass through
+        # unchanged.
         _string_to_variant = {"schwarz": "Additive", "diag": "Diagonal"}
-        if preconditioner_store and isinstance(preconditioner, str):
-            cached = preconditioner_store[-1]
-            if _string_to_variant.get(preconditioner) == cached.variant:
-                preconditioner = cached
+        if (
+            cached_preconditioner is not None
+            and isinstance(preconditioner, str)
+            and _string_to_variant.get(preconditioner) == cached_preconditioner.variant
+        ):
+            preconditioner = cached_preconditioner
 
         result, success, built = demean_within(
             x=x,
@@ -249,21 +262,26 @@ def dispatch_demean(
             local_size=demeaner.local_size,
             preconditioner=preconditioner,
         )
-        # First-time store: prefer the user's original Python object (identity
-        # preservation for `fit.preconditioner`), fall back to the freshly
-        # built one. `built is None` signals the single-FE MAP fallback was
-        # taken, in which case no preconditioner was actually used.
-        if (
-            preconditioner_store is not None
-            and not preconditioner_store
-            and built is not None
-        ):
-            preconditioner_store.append(explicit_preconditioner or built)
-        return result, success
+        # ``built is None`` signals the single-FE MAP fallback was taken (or
+        # ``preconditioner='none'``), in which case no preconditioner was
+        # actually used and the return is ``None``. Otherwise, if we passed
+        # an instance in (explicit user object or cached one), preserve its
+        # Python identity rather than the freshly wrapped object returned by
+        # ``demean_within``.
+        used: WithinPreconditioner | None
+        if built is None:
+            used = None
+        elif isinstance(preconditioner, WithinPreconditioner):
+            used = preconditioner
+        else:
+            used = built
+        return result, success, used
 
     if weights is None:
         weights = np.ones(x.shape[0], dtype=np.float64)
 
+    # Non-within branches never produce a WithinPreconditioner, so their
+    # third return value is always None.
     if isinstance(demeaner, LsmrDemeaner):
         if demeaner.backend == "torch":
             # Torch LSMR always uses its built-in diagonal preconditioner.
@@ -280,13 +298,14 @@ def dispatch_demean(
             except ImportError:
                 from pyfixest.core.demean import demean as demean_rs
 
-                return demean_rs(
+                result, success = demean_rs(
                     x=x,
                     flist=flist_uint,
                     weights=weights,
                     tol=max(demeaner.fixef_atol, demeaner.fixef_btol),
                     maxiter=demeaner.fixef_maxiter,
                 )
+                return result, success, None
 
             dtype = torch.float32 if demeaner.precision == "float32" else torch.float64
             tol = max(demeaner.fixef_atol, demeaner.fixef_btol)
@@ -297,7 +316,7 @@ def dispatch_demean(
                     Callable[..., tuple[np.ndarray, bool]],
                     torch_demean_module.demean_torch,
                 )
-                return demean_torch(
+                result, success = demean_torch(
                     x=x,
                     flist=flist_uint64,
                     weights=weights,
@@ -305,12 +324,13 @@ def dispatch_demean(
                     maxiter=demeaner.fixef_maxiter,
                     dtype=dtype,
                 )
+                return result, success, None
 
             demean_torch_on_device = cast(
                 Callable[..., tuple[np.ndarray, bool]],
                 torch_demean_module._demean_torch_on_device_impl,
             )
-            return demean_torch_on_device(
+            result, success = demean_torch_on_device(
                 x=x,
                 flist=flist_uint64,
                 weights=weights,
@@ -319,6 +339,7 @@ def dispatch_demean(
                 device=torch.device(demeaner.device),
                 dtype=dtype,
             )
+            return result, success, None
 
         cupy_resolved = _resolve_preconditioner(
             "cupy", cast(LsmrPreconditioner, demeaner.preconditioner)
@@ -342,12 +363,13 @@ def dispatch_demean(
             dtype=np.float32 if demeaner.precision == "float32" else np.float64,
             preconditioner=cupy_resolved,
         )
-        return cupy_demeaner.demean(
+        result, success = cupy_demeaner.demean(
             x=x,
             flist=flist_uint,
             weights=weights,
             fe_sparse_matrix=fe_sparse_matrix,
         )
+        return result, success, None
 
     if isinstance(demeaner, MapDemeaner):
         backend = demeaner.backend
@@ -364,13 +386,14 @@ def dispatch_demean(
         else:
             raise ValueError(f"Unknown MapDemeaner backend: {backend!r}")
 
-        return demean_func(
+        result, success = demean_func(
             x=x,
             flist=flist_uint,
             weights=weights,
             tol=demeaner.fixef_tol,
             maxiter=demeaner.fixef_maxiter,
         )
+        return result, success, None
 
     raise TypeError(f"Unsupported demeaner type: {type(demeaner)!r}")
 

@@ -153,7 +153,7 @@ def test_within_solver_variants_match_pyhdfe(demeaner, rtol, atol, demean_data):
 
     algorithm = pyhdfe.create(flist)
     expected_unweighted = algorithm.residualize(x)
-    result_unweighted, success = dispatch_demean(
+    result_unweighted, success, _ = dispatch_demean(
         x=x,
         flist=flist,
         weights=np.ones(x.shape[0]),
@@ -165,7 +165,7 @@ def test_within_solver_variants_match_pyhdfe(demeaner, rtol, atol, demean_data):
     )
 
     expected_weighted = algorithm.residualize(x, weights.reshape((x.shape[0], 1)))
-    result_weighted, success = dispatch_demean(
+    result_weighted, success, _ = dispatch_demean(
         x=x,
         flist=flist,
         weights=weights,
@@ -342,40 +342,42 @@ def test_within_preconditioner_value_equality(demean_data):
     assert original != different, "different factorizations must compare unequal"
 
 
-def test_lsmr_within_reuses_preconditioner_store(demean_data):
-    """End-to-end coverage of ``dispatch_demean``'s preconditioner-cache policy.
+def test_lsmr_within_reuses_cached_preconditioner(demean_data):
+    """End-to-end coverage of ``dispatch_demean``'s preconditioner-reuse policy.
 
     Context
     -------
     ``dispatch_demean`` is the orchestration layer that the model classes
     (``Feols``, ``Fepois``, ``Feglm``) call to demean their working data on
-    each iteration. The ``preconditioner_store`` argument is a mutable list
-    threaded through by the model class — it is the cache that turns IWLS's
-    "build the Schwarz factorization once, reuse it across iterations" claim
-    into reality. This test exercises that cache directly, bypassing the
-    model classes so failures point at the cache logic instead of the IWLS
-    loop.
+    each iteration. The ``cached_preconditioner`` argument is the
+    callsite-supplied factorization that turns IWLS's "build the Schwarz
+    factorization once, reuse it across iterations" claim into reality. The
+    dispatcher returns the preconditioner actually used so callers can hold
+    onto it for the next solve. This test exercises that contract directly,
+    bypassing the model classes so failures point at the reuse logic instead
+    of the IWLS loop.
 
     Three behaviours are pinned down:
 
-    Leg 1 — first call seeds the cache
-        With an empty store, a default ``LsmrDemeaner(backend="within")``
-        builds a fresh Schwarz preconditioner and appends it to the store.
-        Verifies the store ends up with exactly one ``WithinPreconditioner``
-        entry.
+    Leg 1 — first call reports the freshly built preconditioner
+        With no ``cached_preconditioner``, a default
+        ``LsmrDemeaner(backend="within")`` builds a fresh Schwarz
+        factorization. The dispatcher must return it as the third tuple
+        element so the caller can hold onto it.
 
-    Leg 2 — subsequent calls reuse the cached preconditioner under changed
+    Leg 2 — subsequent calls reuse the supplied preconditioner under changed
     weights (the IWLS hot path)
         IWLS changes the working weights at every iteration (``W := W * mu``).
         A pure implementation would rebuild the preconditioner each time,
-        which is the expensive step. The cache lets us reuse the *original*
-        factorization even though the weights — and therefore the true
-        normal-equations operator — have changed. The factorization is
-        "stale" in that sense, but LSMR still converges to the correct
-        demeaned values, just possibly in a few more iterations. We simulate
-        a weight change with ``weights + 0.25``, then check both that no new
-        entry was appended (the cache was hit, not bypassed) and that the
-        demeaned output still matches an independent ground truth.
+        which is the expensive step. Passing the first-iteration factorization
+        back in via ``cached_preconditioner`` lets us reuse it even though
+        the weights — and therefore the true normal-equations operator — have
+        changed. The factorization is "stale" in that sense, but LSMR still
+        converges to the correct demeaned values, just possibly in a few more
+        iterations. We simulate a weight change with ``weights + 0.25``, then
+        check both that the dispatcher returns the *same* Python object (no
+        rebuild) and that the demeaned output still matches an independent
+        ground truth.
 
         Ground truth comes from ``pyhdfe.residualize`` — a separate, mature
         FE-residualization implementation. Matching it under changed weights
@@ -385,7 +387,7 @@ def test_lsmr_within_reuses_preconditioner_store(demean_data):
     Leg 3 — passing a cached preconditioner back via ``LsmrDemeaner``
     reproduces the original solve
         This is the documented "save in session 1, reload in session 2"
-        workflow in miniature. A fresh ``LsmrDemeaner(preconditioner=store[0])``
+        workflow in miniature. A fresh ``LsmrDemeaner(preconditioner=...)``
         with the *original* weights should reproduce leg 1's output bit-for-bit
         because we are running the same LSMR with the same factorization on
         the same data.
@@ -399,34 +401,34 @@ def test_lsmr_within_reuses_preconditioner_store(demean_data):
     summation order from rayon parallelism could differ.
     """
     x, flist, weights = demean_data
-    store: list = []
     demeaner = LsmrDemeaner(backend="within")
 
-    # ----- Leg 1: empty store → build a fresh preconditioner and cache it.
-    result, success = dispatch_demean(
+    # ----- Leg 1: no cache → build a fresh preconditioner and return it.
+    result, success, built = dispatch_demean(
         x=x,
         flist=flist,
         weights=weights,
         demeaner=demeaner,
-        preconditioner_store=store,
     )
     assert success
-    assert len(store) == 1, "first call must seed the cache with one entry"
-    assert isinstance(store[0], pf.WithinPreconditioner)
+    assert isinstance(built, pf.WithinPreconditioner), (
+        "first call must report the freshly built preconditioner"
+    )
 
-    # ----- Leg 2: changed weights, same store. Mimics an IWLS iteration where
-    # only the working weights moved. The cache must hit (no new append) and
-    # the result must still be numerically correct under the *new* weights.
+    # ----- Leg 2: changed weights, cached preconditioner supplied. Mimics
+    # an IWLS iteration where only the working weights moved. The dispatcher
+    # must reuse the cached object (returning the same identity) and the
+    # result must still be numerically correct under the *new* weights.
     adjusted_weights = weights + 0.25
-    result_reused, success = dispatch_demean(
+    result_reused, success, reused = dispatch_demean(
         x=x,
         flist=flist,
         weights=adjusted_weights,
         demeaner=demeaner,
-        preconditioner_store=store,
+        cached_preconditioner=built,
     )
     assert success
-    assert len(store) == 1, "cache hit must not append a second entry"
+    assert reused is built, "cache hit must reuse the supplied preconditioner identity"
 
     # Independent ground truth: pyhdfe residualizes the same design+weights
     # via its own MAP solver. Matching it proves the stale-preconditioner
@@ -442,15 +444,16 @@ def test_lsmr_within_reuses_preconditioner_store(demean_data):
         err_msg="stale-preconditioner LSMR must still converge to the correct residuals",
     )
 
-    # ----- Leg 3: explicit preconditioner reuse. Mimics the across-sessions
-    # workflow: pull `store[0]` (or a pickled+restored copy) and pass it
-    # through `LsmrDemeaner(preconditioner=...)`. With the original weights,
-    # the result must reproduce leg 1 down to floating-point noise.
-    result_explicit, success = dispatch_demean(
+    # ----- Leg 3: explicit preconditioner reuse via ``LsmrDemeaner``. Mimics
+    # the across-sessions workflow: pull the built preconditioner (or a
+    # pickled+restored copy) and pass it through
+    # ``LsmrDemeaner(preconditioner=...)``. With the original weights, the
+    # result must reproduce leg 1 down to floating-point noise.
+    result_explicit, success, _ = dispatch_demean(
         x=x,
         flist=flist,
         weights=weights,
-        demeaner=LsmrDemeaner(backend="within", preconditioner=store[0]),
+        demeaner=LsmrDemeaner(backend="within", preconditioner=built),
     )
     assert success
     np.testing.assert_allclose(
@@ -462,8 +465,8 @@ def test_lsmr_within_reuses_preconditioner_store(demean_data):
     )
 
 
-def test_lsmr_within_does_not_store_unused_explicit_preconditioner(demean_data):
-    """The cache only holds preconditioners that were actually applied to the solve.
+def test_lsmr_within_reports_no_preconditioner_when_unused(demean_data):
+    """The dispatcher only reports preconditioners that were actually applied.
 
     Scenario
     --------
@@ -475,22 +478,22 @@ def test_lsmr_within_does_not_store_unused_explicit_preconditioner(demean_data):
 
     What we are pinning down
     ------------------------
-    The dispatcher must *not* append the ignored preconditioner to the
-    cache. Entries in ``preconditioner_store`` (and therefore
-    ``fit.preconditioner``) are supposed to reflect factorizations that
-    actually participated in a solve. Storing an unused one would mislead
-    any code that inspects, pickles, or hashes the cache.
+    The dispatcher must report ``None`` as the used preconditioner in this
+    case. The returned third tuple element is what model classes assign to
+    ``fit.preconditioner``; it is supposed to reflect factorizations that
+    actually participated in a solve. Returning the unused one would
+    mislead any code that inspects, pickles, or hashes it.
 
     Why this is the only regression test for that guard
     ---------------------------------------------------
-    The dispatcher's append branch is gated on ``built is not None`` —
+    The dispatcher's "used" computation is gated on ``built is not None`` —
     ``built`` comes from ``demean_within`` and is ``None`` precisely when
     the single-FE MAP fallback ran. Every *other* path either has
-    ``built is not None`` (multi-FE schwarz ran, storing is correct) or has
-    no explicit preconditioner to store in the first place. So this is the
-    one combination that exercises the guard; without this test a refactor
-    that drops the ``built is not None`` check would silently regress the
-    cache contract.
+    ``built is not None`` (multi-FE schwarz ran, reporting is correct) or
+    has no explicit preconditioner in the first place. So this is the one
+    combination that exercises the guard; without this test a refactor that
+    drops the ``built is not None`` check would silently regress the
+    contract.
     """
     x, flist, weights = demean_data
 
@@ -507,19 +510,17 @@ def test_lsmr_within_does_not_store_unused_explicit_preconditioner(demean_data):
     # The setup: explicit preconditioner + single-FE design (``flist[:, :1]``
     # slices off the second factor). ``demean_within`` will route this to
     # the MAP fallback and the preconditioner will go unused.
-    store: list = []
-    _, success = dispatch_demean(
+    _, success, used = dispatch_demean(
         x=x,
         flist=flist[:, :1],
         weights=weights,
         demeaner=LsmrDemeaner(backend="within", preconditioner=preconditioner),
-        preconditioner_store=store,
     )
     assert success
-    # The load-bearing assertion: the cache stayed empty even though an
-    # explicit preconditioner was passed. If this ever fails, the dispatcher
-    # is appending things that never touched the data.
-    assert store == [], "unused explicit preconditioner must not pollute the cache"
+    # The load-bearing assertion: ``used`` is None even though an explicit
+    # preconditioner was passed. If this ever fails, the dispatcher is
+    # reporting things that never touched the data.
+    assert used is None, "unused explicit preconditioner must not be reported as used"
 
 
 def test_demean_within_unpreconditioned_matches_pyhdfe(demean_data):
@@ -633,7 +634,7 @@ def test_demean_model_no_fixed_effects(benchmark, demeaner):
     lookup_dict = {}
 
     # Test without fixed effects
-    Yd, Xd = benchmark(
+    Yd, Xd, _ = benchmark(
         demean_model,
         Y=Y,
         X=X,
@@ -665,7 +666,7 @@ def test_demean_model_with_fixed_effects(benchmark, demeaner):
     lookup_dict = {}
 
     # Run demean_model
-    Yd, Xd = benchmark(
+    Yd, Xd, _ = benchmark(
         demean_model,
         Y=Y,
         X=X,
@@ -704,7 +705,7 @@ def test_demean_model_with_weights(benchmark, demeaner):
     lookup_dict = {}
 
     # Run with weights
-    Yd, Xd = benchmark(
+    Yd, Xd, _ = benchmark(
         demean_model,
         Y=Y,
         X=X,
@@ -716,7 +717,7 @@ def test_demean_model_with_weights(benchmark, demeaner):
     )
 
     # Run without weights for comparison (fresh lookup dict to avoid cache hit)
-    Yd_unweighted, Xd_unweighted = demean_model(
+    Yd_unweighted, Xd_unweighted, _ = demean_model(
         Y=Y,
         X=X,
         fe=fe,
@@ -744,7 +745,7 @@ def test_demean_model_caching(benchmark, demeaner):
     lookup_dict = {}
 
     # First run - should compute and cache
-    Yd1, Xd1 = demean_model(
+    Yd1, Xd1, _ = demean_model(
         Y=Y,
         X=X,
         fe=fe,
@@ -755,7 +756,7 @@ def test_demean_model_caching(benchmark, demeaner):
     )
 
     # Second run - should use cache
-    Yd2, Xd2 = benchmark(
+    Yd2, Xd2, _ = benchmark(
         demean_model,
         Y=Y,
         X=X,
@@ -774,7 +775,7 @@ def test_demean_model_caching(benchmark, demeaner):
     X_new = X.copy()
     X_new["x3"] = rng.normal(0, 1, N)
 
-    _, Xd3 = demean_model(
+    _, Xd3, _ = demean_model(
         Y=Y,
         X=X_new,
         fe=fe,
@@ -863,7 +864,7 @@ def test_demean_complex_fixed_effects(benchmark, demeaner):
     """Benchmark demean functions with complex multi-level fixed effects."""
     X, flist, weights = generate_complex_fixed_effects_data()
 
-    X_demeaned, success = benchmark.pedantic(
+    X_demeaned, success, _ = benchmark.pedantic(
         dispatch_demean,
         args=(X, flist, weights, demeaner),
         iterations=1,

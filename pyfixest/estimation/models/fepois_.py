@@ -315,13 +315,15 @@ class Fepois(Feols):
             if self._fe is None:
                 ZX_resid = ZX
             else:
-                ZX_resid, success = dispatch_demean(
+                ZX_resid, success, used_pre = dispatch_demean(
                     x=ZX,
                     flist=self._fe,
                     weights=combined_weights.flatten(),
                     demeaner=self._demeaner,
-                    preconditioner_store=self._preconditioners,
+                    cached_preconditioner=self._preconditioner,
                 )
+                if self._preconditioner is None and used_pre is not None:
+                    self._preconditioner = used_pre
                 if not success:
                     raise ValueError(
                         "Demeaning failed after "

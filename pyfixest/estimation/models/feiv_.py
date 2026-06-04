@@ -203,7 +203,7 @@ class Feiv(Feols):
         "Demean instruments and endogeneous variable."
         super().demean()
         if self._has_fixef:
-            self._endogvard, self._Zd = demean_model(
+            self._endogvard, self._Zd, used_pre = demean_model(
                 self._endogvar,
                 self._Z,
                 self._fe,
@@ -211,8 +211,10 @@ class Feiv(Feols):
                 self._lookup_demeaned_data,
                 self._na_index,
                 self._demeaner,
-                self._preconditioners,
+                cached_preconditioner=self._preconditioner,
             )
+            if self._preconditioner is None and used_pre is not None:
+                self._preconditioner = used_pre
         else:
             self._endogvard = self._endogvar
             self._Zd = self._Z
