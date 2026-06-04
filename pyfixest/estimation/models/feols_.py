@@ -515,13 +515,17 @@ class Feols(ResultAccessorMixin):
         the first solve — either the additive Schwarz variant (``"schwarz"``)
         or the diagonal Jacobi variant (``"diag"``) — or a user-supplied one
         (``LsmrDemeaner(preconditioner=<WithinPreconditioner>)``). For IWLS
-        models (Poisson, GLM) the first-iteration preconditioner is cached
-        and reused across all subsequent iterations. Stays ``None`` when
-        ``preconditioner='none'`` is set, when only a single fixed effect is
-        present (which takes the MAP fallback, so no preconditioner is
-        computed or applied), or when a non-within backend is used. Pass it
-        back via ``LsmrDemeaner(backend='within', preconditioner=...)`` to
-        amortise the setup phase across solves on the same design.
+        models (Poisson, GLM), the preconditioner built on the first
+        iteration is reused across all subsequent iterations even though the
+        IWLS weights change. This trades a (typically small) loss in
+        per-iteration LSMR convergence speed for avoiding a full Schwarz
+        rebuild on every reweight; LSMR remains correct under stale
+        preconditioning. Stays ``None`` when ``preconditioner='none'`` is
+        set, when only a single fixed effect is present (which takes the MAP
+        fallback, so no preconditioner is computed or applied), or when a
+        non-within backend is used. Pass it back via
+        ``LsmrDemeaner(backend='within', preconditioner=...)`` to amortise
+        the setup phase across solves on the same design.
         """
         return self._preconditioners[-1] if self._preconditioners else None
 

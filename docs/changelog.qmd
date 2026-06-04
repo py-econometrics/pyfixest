@@ -80,8 +80,7 @@ fit_fast = pf.feols(
 
 For `fepois()` and `feglm()`, the first IWLS iteration builds the
 preconditioner and every subsequent iteration reuses it under the changing
-working weights. The reused factorization is "stale" - it was built for the
-first iteration's weights - but LSMR still converges to the correct demeaned
+working weights. As a  result, the reused preconditioner turns "stale" - it was built under the initial iteration's weights - but LSMR still converges to the correct demeaned
 values; it may just take a few extra iterations per IWLS step. The setup phase
 is paid once instead of once per IWLS iteration.
 

@@ -143,7 +143,7 @@ def demean_within(
         The demeaned array, a convergence flag, and the preconditioner used
         during the solve (Schwarz for ``preconditioner="schwarz"``, diagonal
         for ``"diag"``, or the user-supplied instance). The preconditioner is
-        ``None`` when none was constructed or applied — i.e. when
+        ``None`` when none was constructed or applied -i.e. when
         ``preconditioner="none"`` or the single-factor MAP fallback path was
         taken.
     """
