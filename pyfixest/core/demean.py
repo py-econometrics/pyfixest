@@ -128,8 +128,8 @@ def demean_within(
     preconditioner : {"schwarz", "none", "diag"} or WithinPreconditioner, optional
         Preconditioner choice for `within`'s LSMR solver. ``"schwarz"``
         (default) uses additive Schwarz preconditioning; ``"none"`` disables
-        preconditioning; ``"diag"`` uses a diagonal (Jacobi) preconditioner
-        (``M⁻¹ = diag(DᵀWD)⁻¹``). Schwarz preconditioners are only computed and applied
+        preconditioning; ``"diag"`` uses a diagonal (Jacobi) preconditioner.
+        Schwarz preconditioners are only computed and applied
         for two or more fixed-effect factors; single-factor problems use
         MAP and do not use a preconditioner. Alternatively, you can
         pass a previously-built :class:`WithinPreconditioner` and reuse it for
@@ -140,10 +140,12 @@ def demean_within(
     Returns
     -------
     tuple[numpy.ndarray, bool, WithinPreconditioner | None]
-        The demeaned array, a convergence flag, and the Schwarz preconditioner
-        used during the solve. The preconditioner is ``None`` when none was
-        constructed or applied — i.e. when ``preconditioner="none"`` or the
-        single-factor MAP fallback path was taken.
+        The demeaned array, a convergence flag, and the preconditioner used
+        during the solve (Schwarz for ``preconditioner="schwarz"``, diagonal
+        for ``"diag"``, or the user-supplied instance). The preconditioner is
+        ``None`` when none was constructed or applied — i.e. when
+        ``preconditioner="none"`` or the single-factor MAP fallback path was
+        taken.
     """
     if not isinstance(preconditioner, (str, WithinPreconditioner)):
         raise TypeError(

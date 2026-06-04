@@ -89,7 +89,7 @@ class LsmrDemeaner(BaseDemeaner):
     - ``"diag"``: diagonal (Jacobi) preconditioner. Supported by ``within``,
       ``torch``, and ``cupy``.
     - A :class:`pyfixest.WithinPreconditioner` instance: a previously built
-      preconditioner (typically obtained via ``fit.preconditioners`` or
+      preconditioner (typically obtained via ``fit.preconditioner`` or
       pickled across sessions). Only supported by ``backend='within'``;
       preconditioners are only computed and applied for two or more
       fixed-effect factors because single-factor problems run MAP as the within algo

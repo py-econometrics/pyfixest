@@ -507,22 +507,23 @@ class Feols(ResultAccessorMixin):
             self._Yd, self._Xd = self._Y, self._X
 
     @property
-    def preconditioners(self) -> tuple[WithinPreconditioner, ...]:
-        """Return the within Schwarz preconditioner(s) used during demeaning.
+    def preconditioner(self) -> WithinPreconditioner | None:
+        """Return the within preconditioner used during demeaning.
 
-        Empty unless the within LSMR backend was used and a Schwarz
-        preconditioner was actually employed. The tuple contains either the
-        Schwarz preconditioner that was built on the first solve (the
-        ``"schwarz"`` path) or the user-supplied one
-        (``LsmrDemeaner(preconditioner=<WithinPreconditioner>)``). It stays
-        empty when ``preconditioner='none'`` is set, when only a single
-        fixed effect is present (which takes the MAP fallback, so no
-        preconditioner is computed or applied), or when a non-within backend
-        is used. Pass an entry back via
-        ``LsmrDemeaner(backend='within', preconditioner=...)`` to amortise
-        the setup phase across solves on the same design.
+        ``None`` unless the within LSMR backend was used and a preconditioner
+        was actually employed. When set, it is the preconditioner built on
+        the first solve — either the additive Schwarz variant (``"schwarz"``)
+        or the diagonal Jacobi variant (``"diag"``) — or a user-supplied one
+        (``LsmrDemeaner(preconditioner=<WithinPreconditioner>)``). For IWLS
+        models (Poisson, GLM) the first-iteration preconditioner is cached
+        and reused across all subsequent iterations. Stays ``None`` when
+        ``preconditioner='none'`` is set, when only a single fixed effect is
+        present (which takes the MAP fallback, so no preconditioner is
+        computed or applied), or when a non-within backend is used. Pass it
+        back via ``LsmrDemeaner(backend='within', preconditioner=...)`` to
+        amortise the setup phase across solves on the same design.
         """
-        return tuple(self._preconditioners)
+        return self._preconditioners[-1] if self._preconditioners else None
 
     def to_array(self):
         "Convert estimation data frames to np arrays."

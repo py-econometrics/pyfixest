@@ -214,7 +214,7 @@ def dispatch_demean(
         requesting the same variant reuse it. For an explicit user-supplied
         ``WithinPreconditioner``, the same object is appended after a
         successful 2+way FE solve so fitted models can expose it via
-        ``fit.preconditioners``; that append is for reporting / later manual
+        ``fit.preconditioner``; that append is for reporting / later manual
         reuse, not cache substitution.
     """
     flist_uint = flist.astype(np.uintp, copy=False)
@@ -250,7 +250,7 @@ def dispatch_demean(
             preconditioner=preconditioner,
         )
         # First-time store: prefer the user's original Python object (identity
-        # preservation for `fit.preconditioners`), fall back to the freshly
+        # preservation for `fit.preconditioner`), fall back to the freshly
         # built one. `built is None` signals the single-FE MAP fallback was
         # taken, in which case no preconditioner was actually used.
         if (

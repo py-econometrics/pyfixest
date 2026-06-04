@@ -314,8 +314,7 @@ def test_feols_stores_within_preconditioner_for_reuse():
 
     fit = pf.feols("Y ~ X1 | f1 + f2", data=data, demeaner=demeaner)
 
-    assert len(fit.preconditioners) == 1
-    preconditioner = fit.preconditioners[0]
+    preconditioner = fit.preconditioner
     assert isinstance(preconditioner, pf.WithinPreconditioner)
 
     with pytest.raises(ValueError, match="WithinPreconditioner"):
@@ -330,7 +329,7 @@ def test_feols_stores_within_preconditioner_for_reuse():
     )
 
     np.testing.assert_allclose(fit_reused.coef(), fit.coef(), rtol=1e-10, atol=1e-10)
-    assert fit_reused.preconditioners == (preconditioner,)
+    assert fit_reused.preconditioner == preconditioner
 
 
 def test_feols_without_preconditioner_has_no_cached_preconditioner():
@@ -340,7 +339,7 @@ def test_feols_without_preconditioner_has_no_cached_preconditioner():
         data=data,
         demeaner=pf.LsmrDemeaner(backend="within", preconditioner="none"),
     )
-    assert fit.preconditioners == ()
+    assert fit.preconditioner is None
 
 
 def test_iwls_models_reuse_within_preconditioner_by_default():
@@ -350,7 +349,7 @@ def test_iwls_models_reuse_within_preconditioner_by_default():
         data=pois_data,
         demeaner=pf.LsmrDemeaner(backend="within"),
     )
-    assert len(pois_fit.preconditioners) == 1
+    assert isinstance(pois_fit.preconditioner, pf.WithinPreconditioner)
 
     glm_data = pf.get_data()
     glm_data["Y_bin"] = (glm_data["Y"] > glm_data["Y"].median()).astype(int)
@@ -360,9 +359,9 @@ def test_iwls_models_reuse_within_preconditioner_by_default():
         family="logit",
         demeaner=pf.LsmrDemeaner(backend="within"),
     )
-    # if we did not reuse the initial preconditioner, lenght would be
-    # greater than 1 as each IWLS iteration would produce a preconditioner
-    assert len(glm_fit.preconditioners) == 1
+    # IWLS reuses the first preconditioner across iterations; without that
+    # reuse, each iteration would build a new one.
+    assert isinstance(glm_fit.preconditioner, pf.WithinPreconditioner)
 
 
 def test_lean():

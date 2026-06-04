@@ -305,7 +305,7 @@ def test_within_preconditioner_value_equality(demean_data):
        indiscriminately.
 
     Motivation: the documented "save in session 1, reload in session 2"
-    workflow relies on users being able to check ``loaded == fit.preconditioners[0]``
+    workflow relies on users being able to check ``loaded == fit.preconditioner``
     and key dicts/sets by preconditioner content. Identity-based equality
     (Python's default) would silently break both.
     """
@@ -476,8 +476,8 @@ def test_lsmr_within_does_not_store_unused_explicit_preconditioner(demean_data):
     What we are pinning down
     ------------------------
     The dispatcher must *not* append the ignored preconditioner to the
-    cache. Entries in ``preconditioner_store`` (and therefore in
-    ``fit.preconditioners``) are supposed to reflect factorizations that
+    cache. Entries in ``preconditioner_store`` (and therefore
+    ``fit.preconditioner``) are supposed to reflect factorizations that
     actually participated in a solve. Storing an unused one would mislead
     any code that inspects, pickles, or hashes the cache.
 
