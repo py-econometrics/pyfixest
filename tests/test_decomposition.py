@@ -155,6 +155,7 @@ def test_against_stata(stata_results, combine_covariates, se, agg_first):
             reps=reps,
             cluster=cluster,
             agg_first=agg_first,
+            inference="bootstrap" if cluster is not None else "analytic",
         )
 
         results = fit.GelbachDecompositionResults.tidy()
@@ -270,7 +271,12 @@ def test_cluster():
 
     # cluster set in feols call
     fit1.decompose(
-        param="x1", combine_covariates={"g1": ["x21", "x22"], "g2": ["x23"]}, digits=6
+        param="x1",
+        combine_covariates={"g1": ["x21", "x22"], "g2": ["x23"]},
+        digits=6,
+        inference="bootstrap",
+        reps=3,
+        seed=123,
     )
     # cluster set in decompose
     fit2.decompose(
@@ -278,6 +284,9 @@ def test_cluster():
         combine_covariates={"g1": ["x21", "x22"], "g2": ["x23"]},
         digits=6,
         cluster="cluster",
+        inference="bootstrap",
+        reps=3,
+        seed=123,
     )
 
     for key, value in fit1.GelbachDecompositionResults.results.absolute.items():
@@ -296,10 +305,16 @@ def test_fixef():
     fit2 = pf.feols("y ~ x1 + x21 + x22 + x23 + C(cluster)", data=df)
 
     fit1.decompose(
-        param="x1", combine_covariates={"g1": ["x21", "x22"], "g2": ["x23"]}, digits=6
+        param="x1",
+        combine_covariates={"g1": ["x21", "x22"], "g2": ["x23"]},
+        digits=6,
+        only_coef=True,
     )
     fit2.decompose(
-        param="x1", combine_covariates={"g1": ["x21", "x22"], "g2": ["x23"]}, digits=6
+        param="x1",
+        combine_covariates={"g1": ["x21", "x22"], "g2": ["x23"]},
+        digits=6,
+        only_coef=True,
     )
 
     for key, value in fit1.GelbachDecompositionResults.results.absolute.items():
@@ -414,6 +429,121 @@ def test_tidy_snapshot(gelbach_decomposition):
     tidy_result.round(6).to_string()
 
     return tidy_result
+
+
+def test_decompose_defaults_to_analytic_inference():
+    data = gelbach_data(nobs=150)
+    fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
+
+    gb = fit.decompose(decomp_var="x1")
+    tidy = gb.tidy().query("panels == 'Levels (units)'")
+
+    assert gb.inference == "analytic"
+    assert {"std_error", "ci_lower", "ci_upper"}.issubset(tidy.columns)
+    assert np.all(np.isfinite(tidy["std_error"]))
+
+
+def test_decompose_bootstrap_inference_preserved():
+    data = gelbach_data(nobs=100)
+    fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
+
+    gb = fit.decompose(decomp_var="x1", inference="bootstrap", reps=5, seed=123)
+    tidy = gb.tidy().query("panels == 'Levels (units)'")
+
+    assert gb.inference == "bootstrap"
+    assert {"ci_lower", "ci_upper"}.issubset(tidy.columns)
+    assert "std_error" not in tidy.columns
+
+
+def test_only_coef_has_no_inference_columns():
+    data = gelbach_data(nobs=100)
+    fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
+
+    gb = fit.decompose(decomp_var="x1", only_coef=True)
+    tidy = gb.tidy()
+
+    assert "std_error" not in tidy.columns
+    assert "ci_lower" not in tidy.columns
+    assert "ci_upper" not in tidy.columns
+
+
+def test_analytic_matches_only_coef_point_estimates():
+    data = gelbach_data(nobs=150)
+    fit_analytic = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
+    fit_only_coef = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
+
+    analytic = fit_analytic.decompose(
+        decomp_var="x1",
+        combine_covariates={"g1": ["x21", "x22"], "g2": ["x23"]},
+    ).tidy()
+    only_coef = fit_only_coef.decompose(
+        decomp_var="x1",
+        combine_covariates={"g1": ["x21", "x22"], "g2": ["x23"]},
+        only_coef=True,
+    ).tidy()
+
+    np.testing.assert_allclose(analytic["coefficients"], only_coef["coefficients"])
+
+
+def test_analytic_ci_changes_with_alpha():
+    data = gelbach_data(nobs=150)
+    fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
+
+    gb = fit.decompose(decomp_var="x1")
+    ci_95 = gb.tidy(alpha=0.05).query("panels == 'Levels (units)'")
+    ci_90 = gb.tidy(alpha=0.10).query("panels == 'Levels (units)'")
+
+    assert np.any(np.abs(ci_95["ci_lower"] - ci_90["ci_lower"]) > 1e-12)
+    assert np.any(np.abs(ci_95["ci_upper"] - ci_90["ci_upper"]) > 1e-12)
+
+
+@pytest.mark.parametrize("agg_first", [True, False])
+def test_analytic_inference_with_x1_vars_and_combine_covariates(agg_first):
+    data = pd.read_csv("tests/data/gelbach.csv")
+    fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
+
+    gb = fit.decompose(
+        decomp_var="x1",
+        x1_vars=["x21"],
+        combine_covariates={"ALL": ["x22", "x23"]},
+        agg_first=agg_first,
+    )
+    tidy = gb.tidy().query("panels == 'Levels (units)'")
+
+    assert {"std_error", "ci_lower", "ci_upper"}.issubset(tidy.columns)
+    assert np.isfinite(tidy.loc["ALL", "std_error"])
+
+
+def test_analytic_agg_first_equivalent_standard_errors():
+    data = gelbach_data(nobs=150)
+    results = {}
+
+    for agg_first in [True, False]:
+        fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
+        results[agg_first] = fit.decompose(
+            decomp_var="x1",
+            combine_covariates={"g1": ["x21", "x22"], "g2": ["x23"]},
+            agg_first=agg_first,
+        ).tidy()
+
+    pd.testing.assert_frame_equal(
+        results[True],
+        results[False],
+        check_exact=False,
+        rtol=1e-10,
+        atol=1e-10,
+    )
+
+
+def test_etable_analytic_df():
+    data = gelbach_data(nobs=100)
+    fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
+
+    gb = fit.decompose(decomp_var="x1")
+    table_df = gb.etable(type="df")
+
+    assert isinstance(table_df, pd.DataFrame)
+    assert "" in table_df.index.get_level_values(-1)
 
 
 @pytest.mark.parametrize(

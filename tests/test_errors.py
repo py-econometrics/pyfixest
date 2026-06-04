@@ -737,7 +737,7 @@ def test_gelbach_errors():
         fit.decompose(decomp_var="x1", x1_vars=["x1"])
 
     with pytest.raises(
-        ValueError, match=r"cannot be in both x1_vars and combine_covariates keys"
+        ValueError, match=r"cannot be in both x1_vars and combine_covariates values"
     ):
         fit.decompose(
             decomp_var="x1", x1_vars=["x21"], combine_covariates={"g1": ["x21"]}
@@ -782,10 +782,27 @@ def test_gelbach_errors():
 
     with pytest.warns(
         UserWarning,
-        match=r"You have provided combine_covariates, but agg_first is False. We recommend setting agg_first=True as this might massively decrease the computation time \(in particular when boostrapping CIs\)\.",
+        match=(
+            r"You have provided combine_covariates, but agg_first is False\. "
+            r"We recommend setting agg_first=True as this might massively "
+            r"decrease the computation time \(in particular when bootstrapping CIs\)\."
+        ),
     ):
         fit.decompose(
             decomp_var="x1", combine_covariates={"g1": ["x21"]}, agg_first=False
+        )
+
+    with pytest.raises(ValueError, match=r"'inference' must be one of"):
+        fit.decompose(decomp_var="x1", inference="none")
+
+    with pytest.raises(
+        NotImplementedError,
+        match=r"Analytical decomposition inference is currently not supported with clustered models",
+    ):
+        fit.decompose(
+            decomp_var="x1",
+            combine_covariates={"g1": ["x21"]},
+            cluster="f1",
         )
 
     # error for WLS and aweights
@@ -801,7 +818,7 @@ def test_gelbach_errors():
     # error with fweights and only_coef=False
     with pytest.raises(
         NotImplementedError,
-        match=r"Decomposition is currently only supported for models with frequency weights when only_coef is False.",
+        match=r"Decomposition inference is currently not supported for weighted models.",
     ):
         fit = pf.feols(
             "y ~ x1 + x21", data=data, weights="weights", weights_type="fweights"
