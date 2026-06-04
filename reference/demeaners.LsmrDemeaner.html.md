@@ -34,14 +34,14 @@ ignores these fields.
 ``preconditioner`` selects the preconditioner. Supported values:
 
 - ``"auto"`` (default): selects different preconditioners for different
-    backend implementations: ``"schwarz"`` for ``within``; ``"diag"`` for ``torch``
-    / ``cupy``.
+  backend implementations: ``"schwarz"`` for ``within``; ``"diag"`` for
+  ``torch`` / ``cupy``.
 - ``"none"``: disables preconditioning. Supported by ``within`` and
   ``cupy``; not supported by ``torch``.
 - ``"schwarz"``: additive Schwarz preconditioner. Only supported by the
   ``within`` backend.
-- ``"diag"``: diagonal (Jacobi) preconditioner. Supported by ``torch``
-  and ``cupy``; not supported by ``within``.
+- ``"diag"``: diagonal (Jacobi) preconditioner. Supported by ``within``,
+  ``torch``, and ``cupy``.
 
 If a value is incompatible with the chosen backend, a ``UserWarning`` is
 emitted at solve time and the backend's default is used.

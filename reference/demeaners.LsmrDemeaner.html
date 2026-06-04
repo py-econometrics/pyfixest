@@ -618,7 +618,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li><code>"auto"</code> (default): selects different preconditioners for different backend implementations: <code>"schwarz"</code> for <code>within</code>; <code>"diag"</code> for <code>torch</code> / <code>cupy</code>.</li>
 <li><code>"none"</code>: disables preconditioning. Supported by <code>within</code> and <code>cupy</code>; not supported by <code>torch</code>.</li>
 <li><code>"schwarz"</code>: additive Schwarz preconditioner. Only supported by the <code>within</code> backend.</li>
-<li><code>"diag"</code>: diagonal (Jacobi) preconditioner. Supported by <code>torch</code> and <code>cupy</code>; not supported by <code>within</code>.</li>
+<li><code>"diag"</code>: diagonal (Jacobi) preconditioner. Supported by <code>within</code>, <code>torch</code>, and <code>cupy</code>.</li>
 </ul>
 <p>If a value is incompatible with the chosen backend, a <code>UserWarning</code> is emitted at solve time and the backend’s default is used.</p>
 

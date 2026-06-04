@@ -13,6 +13,13 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ## PyFixest 0.60.0 (In Development)
 
+### Diagonal Preconditioner for the `within` LSMR Backend
+
+Bumped the bundled `within` Rust solver to 0.2.0, which adds a diagonal
+(Jacobi) preconditioner. It is now exposed on `LsmrDemeaner(backend="within")`
+via `preconditioner="diag"`, alongside the existing `"schwarz"` (default) and
+`"none"` options.
+
 ### Rust MAP Default and Optional Numba
 
 `MapDemeaner()` now defaults to `backend="rust"`. The Numba MAP backend remains

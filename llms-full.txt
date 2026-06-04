@@ -163,6 +163,13 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ## PyFixest 0.60.0 (In Development)
 
+### Diagonal Preconditioner for the `within` LSMR Backend
+
+Bumped the bundled `within` Rust solver to 0.2.0, which adds a diagonal
+(Jacobi) preconditioner. It is now exposed on `LsmrDemeaner(backend="within")`
+via `preconditioner="diag"`, alongside the existing `"schwarz"` (default) and
+`"none"` options.
+
 ### Rust MAP Default and Optional Numba
 
 `MapDemeaner()` now defaults to `backend="rust"`. The Numba MAP backend remains
@@ -2463,7 +2470,7 @@ The typical example for "dense" fixed effects is a balanced panel - each unit ap
 |---|---|
 | `MapDemeaner(backend="rust")` | **Default.** Fast for dense fixed effects with well-connected graphs. No optional dependencies required. |
 | `MapDemeaner(backend="numba")` | An alternative MAP implementation written in `numba`. Requires installation via `pip install pyfixest[numba]`. |
-| `LsmrDemeaner()` | Uses modified LSMR with additive Schwarz preconditioning by default via the `within` crate. Best for **sparse** fixed-effect structures (e.g. matched employer-employee data).|
+| `LsmrDemeaner()` | Uses modified LSMR with additive Schwarz preconditioning by default via the `within` crate. Best for **sparse** fixed-effect structures (e.g. matched employer-employee data). Also supports no preconditioner - which we never recommend - and a diagonal preconditioner, which can be a good choice for dense fixed effects.|
 | `LsmrDemeaner(backend="torch", device="cpu")` | LSMR solver on CPU via PyTorch. Requires `pytorch`.|
 | `LsmrDemeaner(backend="torch", device="cuda")` | LSMR solver on CUDA GPUs via PyTorch. Experimental. Requires `pytorch`, plus a CUDA-enabled PyTorch build (see [PyTorch install instructions](https://pytorch.org/get-started/locally/)). |
 | `LsmrDemeaner(backend="torch", device="mps", precision="float32")` | LSMR solver on Apple Silicon GPUs via PyTorch MPS. Experimental. In our experience, MPS provides little performance improvement, but we'd love to hear about differing experiences! Requires `pytorch`. |
@@ -5091,14 +5098,14 @@ ignores these fields.
 ``preconditioner`` selects the preconditioner. Supported values:
 
 - ``"auto"`` (default): selects different preconditioners for different
-    backend implementations: ``"schwarz"`` for ``within``; ``"diag"`` for ``torch``
-    / ``cupy``.
+  backend implementations: ``"schwarz"`` for ``within``; ``"diag"`` for
+  ``torch`` / ``cupy``.
 - ``"none"``: disables preconditioning. Supported by ``within`` and
   ``cupy``; not supported by ``torch``.
 - ``"schwarz"``: additive Schwarz preconditioner. Only supported by the
   ``within`` backend.
-- ``"diag"``: diagonal (Jacobi) preconditioner. Supported by ``torch``
-  and ``cupy``; not supported by ``within``.
+- ``"diag"``: diagonal (Jacobi) preconditioner. Supported by ``within``,
+  ``torch``, and ``cupy``.
 
 If a value is incompatible with the chosen backend, a ``UserWarning`` is
 emitted at solve time and the backend's default is used.

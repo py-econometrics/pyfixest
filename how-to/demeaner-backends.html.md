@@ -23,7 +23,7 @@ The typical example for "dense" fixed effects is a balanced panel - each unit ap
 |---|---|
 | `MapDemeaner(backend="rust")` | **Default.** Fast for dense fixed effects with well-connected graphs. No optional dependencies required. |
 | `MapDemeaner(backend="numba")` | An alternative MAP implementation written in `numba`. Requires installation via `pip install pyfixest[numba]`. |
-| `LsmrDemeaner()` | Uses modified LSMR with additive Schwarz preconditioning by default via the `within` crate. Best for **sparse** fixed-effect structures (e.g. matched employer-employee data).|
+| `LsmrDemeaner()` | Uses modified LSMR with additive Schwarz preconditioning by default via the `within` crate. Best for **sparse** fixed-effect structures (e.g. matched employer-employee data). Also supports no preconditioner - which we never recommend - and a diagonal preconditioner, which can be a good choice for dense fixed effects.|
 | `LsmrDemeaner(backend="torch", device="cpu")` | LSMR solver on CPU via PyTorch. Requires `pytorch`.|
 | `LsmrDemeaner(backend="torch", device="cuda")` | LSMR solver on CUDA GPUs via PyTorch. Experimental. Requires `pytorch`, plus a CUDA-enabled PyTorch build (see [PyTorch install instructions](https://pytorch.org/get-started/locally/)). |
 | `LsmrDemeaner(backend="torch", device="mps", precision="float32")` | LSMR solver on Apple Silicon GPUs via PyTorch MPS. Experimental. In our experience, MPS provides little performance improvement, but we'd love to hear about differing experiences! Requires `pytorch`. |
