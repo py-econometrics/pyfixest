@@ -111,7 +111,7 @@ preconditioner via the `preconditioners` attribute:
 
 ```{python}
 fit = pf.feols("Y ~ X1 | f1 + f2", data=df, demeaner=LsmrDemeaner())
-pre = fit.preconditioners[0]
+pre = fit.preconditioners
 print(pre)
 ```
 
@@ -143,7 +143,7 @@ import tempfile, os
 fit = pf.feols("Y ~ X1 | f1 + f2", data=df, demeaner=LsmrDemeaner())
 tmp = os.path.join(tempfile.gettempdir(), "precond.pkl")
 with open(tmp, "wb") as f:
-    pickle.dump(fit.preconditioners[0], f)
+    pickle.dump(fit.preconditioners, f)
 
 # session 2: load and reuse
 with open(tmp, "rb") as f:
@@ -159,5 +159,5 @@ pf.etable([fit, fit2], digits = 6)
 ```
 
 ::: {.callout-warning}
-`WithinPreconditioner` instances are tied to specific fixed effect structures. The `within` crate validates that the preconditioner's DOF count matches the new design — a dimension mismatch raises `ValueError`. It does *not* check whether the FE *structure* matches when the dimensions happen to coincide; reusing on a different-but-same-size FE design will still run but may converge more slowly or fail to converge. It is the user's responsibility to ensure that the preconditioner is reused on the same FE structure.
+`WithinPreconditioner` instances are tied to specific fixed effect structures. The `within` crate validates that the preconditioner's DOF count matches the new design- a dimension mismatch raises `ValueError`. It does *not* check whether the FE *structure* matches when the dimensions happen to coincide; reusing on a different-but-same-size FE design will still run but may converge more slowly or fail to converge. It is the user's responsibility to ensure that the preconditioner is reused on the same FE structure.
 :::

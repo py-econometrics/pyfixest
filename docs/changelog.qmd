@@ -67,7 +67,7 @@ df = pf.get_data()
 
 # Every Feols-family fit exposes the preconditioner(s) that were built.
 fit = pf.feols("Y ~ X1 | f1 + f2", data=df, demeaner=LsmrDemeaner())
-pre = fit.preconditioners[0]
+pre = fit.preconditioners
 
 # Pass it back via `LsmrDemeaner(preconditioner=...)` to skip the setup
 # phase on a later fit over the same design.
