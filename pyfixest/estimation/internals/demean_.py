@@ -18,7 +18,7 @@ from pyfixest.demeaners import (
 )
 
 _PRECONDITIONER_SUPPORT: dict[LsmrBackend, tuple[set[str], str]] = {
-    "within": ({"none", "schwarz"}, "schwarz"),
+    "within": ({"none", "schwarz", "diag"}, "schwarz"),
     "torch": ({"diag"}, "diag"),
     "cupy": ({"none", "diag"}, "diag"),
 }
@@ -207,14 +207,15 @@ def dispatch_demean(
     Parameters
     ----------
     preconditioner_store : list[WithinPreconditioner] or None, optional
-        Optional mutable list used to cache the within Schwarz preconditioner
-        across repeated calls on the same fixed-effect design (e.g. IWLS
-        iterations or staged demeans). On the first call the built
-        preconditioner is appended; subsequent default ``"schwarz"`` calls
-        reuse it. For an explicit user-supplied ``WithinPreconditioner``, the
-        same object is appended after a successful 2+way FE solve so fitted
-        models can expose it via ``fit.preconditioners``; that append is for
-        reporting / later manual reuse, not cache substitution.
+        Optional mutable list used to cache the within preconditioner
+        (``"schwarz"`` or ``"diag"``) across repeated calls on the same
+        fixed-effect design (e.g. IWLS iterations or staged demeans). On the
+        first call the built preconditioner is appended; subsequent calls
+        requesting the same variant reuse it. For an explicit user-supplied
+        ``WithinPreconditioner``, the same object is appended after a
+        successful 2+way FE solve so fitted models can expose it via
+        ``fit.preconditioners``; that append is for reporting / later manual
+        reuse, not cache substitution.
     """
     flist_uint = flist.astype(np.uintp, copy=False)
 
@@ -230,11 +231,14 @@ def dispatch_demean(
         explicit_preconditioner = (
             preconditioner if isinstance(preconditioner, WithinPreconditioner) else None
         )
-        # If a previously built preconditioner is cached, reuse it. Only the
-        # default "schwarz" path can be hot-swapped; explicit user-supplied
+        # If a previously built preconditioner is cached, reuse it when the
+        # requested string matches the cached variant. Explicit user-supplied
         # WithinPreconditioner instances pass through unchanged.
-        if preconditioner_store and preconditioner == "schwarz":
-            preconditioner = preconditioner_store[-1]
+        _string_to_variant = {"schwarz": "Additive", "diag": "Diagonal"}
+        if preconditioner_store and isinstance(preconditioner, str):
+            cached = preconditioner_store[-1]
+            if _string_to_variant.get(preconditioner) == cached.variant:
+                preconditioner = cached
 
         result, success, built = demean_within(
             x=x,

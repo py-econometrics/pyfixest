@@ -301,23 +301,11 @@ def test_lsmr_demeaner_rejects_non_string_non_preconditioner():
         pf.LsmrDemeaner(preconditioner=object())  # type: ignore[arg-type]
 
 
-def test_lsmr_demeaner_warns_on_incompatible_within_preconditioner():
-    from pyfixest.estimation.internals.demean_ import dispatch_demean
-
-    rng = np.random.default_rng(0)
-    n = 200
-    x = rng.normal(size=(n, 2))
-    flist = np.column_stack(
-        [
-            rng.integers(0, 5, size=n),
-            rng.integers(0, 5, size=n),
-        ]
-    ).astype(np.uint64)
-
+def test_lsmr_demeaner_accepts_diag_within():
     demeaner = pf.LsmrDemeaner(preconditioner="diag")
 
-    with pytest.warns(UserWarning, match=r"'diag'.*'within'.*'schwarz'"):
-        dispatch_demean(x=x, flist=flist, weights=None, demeaner=demeaner)
+    assert demeaner.backend == "within"
+    assert demeaner.preconditioner == "diag"
 
 
 def test_feols_stores_within_preconditioner_for_reuse():

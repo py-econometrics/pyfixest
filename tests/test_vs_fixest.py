@@ -216,7 +216,18 @@ BACKEND_F3 = [
         for name in ("numba",)
         for t in ALL_F3
     ],
-    pytest.param("within", pf.LsmrDemeaner(), SINGLE_F3, id="within"),
+    pytest.param(
+        "within",
+        pf.LsmrDemeaner(preconditioner="schwarz"),
+        SINGLE_F3,
+        id="within_schwarz",
+    ),
+    pytest.param(
+        "within_diag",
+        pf.LsmrDemeaner(preconditioner="diag"),
+        SINGLE_F3,
+        id="within_diag",
+    ),
     *[
         pytest.param(name, pf.MapDemeaner(backend=name), SINGLE_F3, id=name)
         for name in ("rust",)

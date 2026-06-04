@@ -80,17 +80,17 @@ class LsmrDemeaner(BaseDemeaner):
     ``preconditioner`` selects the preconditioner. Supported values:
 
     - ``"auto"`` (default): selects different preconditioners for different
-        backend implementations: ``"schwarz"`` for ``within``; ``"diag"`` for ``torch``
-        / ``cupy``.
+      backend implementations: ``"schwarz"`` for ``within``; ``"diag"`` for
+      ``torch`` / ``cupy``.
     - ``"none"``: disables preconditioning. Supported by ``within`` and
       ``cupy``; not supported by ``torch``.
     - ``"schwarz"``: additive Schwarz preconditioner. Only supported by the
       ``within`` backend.
-    - ``"diag"``: diagonal (Jacobi) preconditioner. Supported by ``torch``
-      and ``cupy``; not supported by ``within``.
+    - ``"diag"``: diagonal (Jacobi) preconditioner. Supported by ``within``,
+      ``torch``, and ``cupy``.
     - A :class:`pyfixest.WithinPreconditioner` instance: a previously built
-      Schwarz preconditioner (typically obtained via ``fit.preconditioners``
-      or pickled across sessions). Only supported by ``backend='within'``;
+      preconditioner (typically obtained via ``fit.preconditioners`` or
+      pickled across sessions). Only supported by ``backend='within'``;
       preconditioners are only computed and applied for two or more
       fixed-effect factors because single-factor problems run MAP as the within algo
       provides no benefits. Passing a preconditioner to any other backend raises ``ValueError``

@@ -125,10 +125,11 @@ def demean_within(
         and twice that many when a preconditioner is active. Under the
         hood this enables windowed Gram-Schmidt reorthogonalization
         inside LSMR's bidiagonalization.
-    preconditioner : {"schwarz", "none"} or WithinPreconditioner, optional
+    preconditioner : {"schwarz", "none", "diag"} or WithinPreconditioner, optional
         Preconditioner choice for `within`'s LSMR solver. ``"schwarz"``
         (default) uses additive Schwarz preconditioning; ``"none"`` disables
-        preconditioning. Schwarz preconditioners are only computed and applied
+        preconditioning; ``"diag"`` uses a diagonal (Jacobi) preconditioner
+        (``M⁻¹ = diag(DᵀWD)⁻¹``). Schwarz preconditioners are only computed and applied
         for two or more fixed-effect factors; single-factor problems use
         MAP and do not use a preconditioner. Alternatively, you can
         pass a previously-built :class:`WithinPreconditioner` and reuse it for
@@ -146,13 +147,17 @@ def demean_within(
     """
     if not isinstance(preconditioner, (str, WithinPreconditioner)):
         raise TypeError(
-            "`preconditioner` must be 'schwarz', 'none', or a "
+            "`preconditioner` must be 'schwarz', 'none', 'diag', or a "
             "WithinPreconditioner instance."
         )
-    if isinstance(preconditioner, str) and preconditioner not in {"schwarz", "none"}:
+    if isinstance(preconditioner, str) and preconditioner not in {
+        "schwarz",
+        "none",
+        "diag",
+    }:
         raise ValueError(
             f"preconditioner={preconditioner!r} is not supported by the 'within' "
-            "LSMR backend; use 'schwarz' (default), 'none', or a "
+            "LSMR backend; use 'schwarz' (default), 'none', 'diag', or a "
             "WithinPreconditioner instance."
         )
 

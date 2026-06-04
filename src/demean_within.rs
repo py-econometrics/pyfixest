@@ -3,7 +3,7 @@ use numpy::{PyArray2, PyReadonlyArray1, PyReadonlyArray2};
 use pyo3::prelude::*;
 use pyo3::types::{PyAny, PyBytes};
 
-/// Opaque handle to a pre-built within Schwarz preconditioner.
+/// Opaque handle to a pre-built within preconditioner (Schwarz or Diagonal).
 ///
 /// Two instances compare equal when their serialized representations match
 /// — i.e. they describe the same factorization. ``__hash__`` is consistent
@@ -46,17 +46,21 @@ impl PyWithinPreconditioner {
         self.inner.ncols()
     }
 
+    #[getter]
+    fn variant(&self) -> &'static str {
+        self.inner.variant_name()
+    }
+
     fn __repr__(&self) -> String {
         format!(
-            "WithinPreconditioner(nrows={}, ncols={})",
+            "WithinPreconditioner(variant={}, nrows={}, ncols={})",
+            self.inner.variant_name(),
             self.inner.nrows(),
             self.inner.ncols()
         )
     }
 
     fn __eq__(&self, other: &Self) -> PyResult<bool> {
-        // Identity shortcut covers the IWLS reuse hot path without
-        // re-serializing on every comparison.
         if std::ptr::eq(self, other) {
             return Ok(true);
         }
@@ -93,6 +97,7 @@ impl PyWithinPreconditioner {
 enum PreconditionerArg {
     Default,
     Off,
+    Diagonal,
     Prebuilt(within::Preconditioner),
 }
 
@@ -113,9 +118,10 @@ fn extract_preconditioner(
         return match s {
             "schwarz" => Ok(PreconditionerArg::Default),
             "none" => Ok(PreconditionerArg::Off),
+            "diag" => Ok(PreconditionerArg::Diagonal),
             other => Err(pyo3::exceptions::PyValueError::new_err(format!(
                 "preconditioner={other:?} is not supported by the 'within' \
-                 LSMR backend; use 'schwarz' (default), 'none', or a \
+                 LSMR backend; use 'schwarz' (default), 'none', 'diag', or a \
                  WithinPreconditioner instance."
             ))),
         };
@@ -126,7 +132,7 @@ fn extract_preconditioner(
     }
 
     Err(pyo3::exceptions::PyTypeError::new_err(
-        "`preconditioner` must be 'schwarz', 'none', or a WithinPreconditioner instance.",
+        "`preconditioner` must be 'schwarz', 'none', 'diag', or a WithinPreconditioner instance.",
     ))
 }
 
@@ -162,6 +168,11 @@ fn demean_within_impl(
             flist.view(),
             weights_vec,
             within::PreconditionerConfig::Off,
+        )?,
+        PreconditionerArg::Diagonal => within::Solver::new(
+            flist.view(),
+            weights_vec,
+            within::PreconditionerConfig::Diagonal,
         )?,
         PreconditionerArg::Prebuilt(pre) => {
             within::Solver::new(flist.view(), weights_vec, pre)?
