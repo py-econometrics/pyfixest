@@ -123,10 +123,11 @@ def demean_within(
         and twice that many when a preconditioner is active. Under the
         hood this enables windowed Gram-Schmidt reorthogonalization
         inside LSMR's bidiagonalization.
-    preconditioner : {"schwarz", "none"}, optional
+    preconditioner : {"schwarz", "none", "diag"}, optional
         Preconditioner choice for `within`'s LSMR solver. ``"schwarz"``
         (default) uses additive Schwarz preconditioning; ``"none"`` disables
-        preconditioning.
+        preconditioning; ``"diag"`` uses a diagonal (Jacobi) preconditioner
+        (``M⁻¹ = diag(DᵀWD)⁻¹``).
 
     Returns
     -------

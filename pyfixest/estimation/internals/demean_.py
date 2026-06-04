@@ -18,7 +18,7 @@ from pyfixest.demeaners import (
 )
 
 _PRECONDITIONER_SUPPORT: dict[LsmrBackend, tuple[set[str], str]] = {
-    "within": ({"none", "schwarz"}, "schwarz"),
+    "within": ({"none", "schwarz", "diag"}, "schwarz"),
     "torch": ({"diag"}, "diag"),
     "cupy": ({"none", "diag"}, "diag"),
 }

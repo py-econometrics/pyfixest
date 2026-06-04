@@ -8,6 +8,12 @@ fn extract_columns(x: &ArrayView2<f64>) -> Vec<Vec<f64>> {
         .collect()
 }
 
+enum Preconditioner {
+    Schwarz,
+    Off,
+    Diagonal,
+}
+
 fn demean_within_impl(
     x: &ArrayView2<f64>,
     flist: &ArrayView2<u32>,
@@ -15,7 +21,7 @@ fn demean_within_impl(
     tol: f64,
     maxiter: usize,
     local_size: Option<usize>,
-    use_schwarz: bool,
+    preconditioner: Preconditioner,
 ) -> Result<(Array2<f64>, bool), within::WithinError> {
     let n_obs = x.nrows();
     let n_rhs = x.ncols();
@@ -31,23 +37,22 @@ fn demean_within_impl(
         local_size,
     };
 
-    let result = if use_schwarz {
-        within::solve_batch(
+    let result = match preconditioner {
+        Preconditioner::Schwarz => within::solve_batch(
             flist.view(),
             &x_slices,
             weights_ref,
             &options,
             None::<&within::PreconditionerConfig>,
-        )?
-    } else {
-        let off = within::PreconditionerConfig::Off;
-        within::solve_batch(
-            flist.view(),
-            &x_slices,
-            weights_ref,
-            &options,
-            Some(&off),
-        )?
+        )?,
+        Preconditioner::Off => {
+            let off = within::PreconditionerConfig::Off;
+            within::solve_batch(flist.view(), &x_slices, weights_ref, &options, Some(&off))?
+        }
+        Preconditioner::Diagonal => {
+            let diag = within::PreconditionerConfig::Diagonal;
+            within::solve_batch(flist.view(), &x_slices, weights_ref, &options, Some(&diag))?
+        }
     };
 
     let all_converged = result.converged.iter().all(|&c| c);
@@ -76,13 +81,14 @@ pub fn _demean_within_rs(
     local_size: Option<usize>,
     preconditioner: &str,
 ) -> PyResult<(Py<PyArray2<f64>>, bool)> {
-    let use_schwarz = match preconditioner {
-        "schwarz" => true,
-        "none" => false,
+    let precond = match preconditioner {
+        "schwarz" => Preconditioner::Schwarz,
+        "none" => Preconditioner::Off,
+        "diag" => Preconditioner::Diagonal,
         other => {
             return Err(pyo3::exceptions::PyValueError::new_err(format!(
                 "preconditioner={other:?} is not supported by the 'within' \
-                 LSMR backend; use 'schwarz' (default) or 'none'."
+                 LSMR backend; use 'schwarz' (default), 'none', or 'diag'."
             )));
         }
     };
@@ -100,7 +106,7 @@ pub fn _demean_within_rs(
                 tol,
                 maxiter,
                 local_size,
-                use_schwarz,
+                precond,
             )
         })
         .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
