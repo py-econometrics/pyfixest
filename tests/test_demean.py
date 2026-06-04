@@ -193,10 +193,11 @@ def test_demean_within_unpreconditioned_matches_pyhdfe(demean_data):
 @pytest.mark.parametrize(
     ("backend", "requested", "expected"),
     [
-        # within: supports schwarz, none; auto -> schwarz
+        # within: supports schwarz, none, diag; auto -> schwarz
         ("within", "auto", "schwarz"),
         ("within", "schwarz", "schwarz"),
         ("within", "none", "none"),
+        ("within", "diag", "diag"),
         # torch: supports diag; auto -> diag
         ("torch", "auto", "diag"),
         ("torch", "diag", "diag"),
@@ -218,7 +219,6 @@ def test_resolve_preconditioner_compatible_silent(backend, requested, expected):
 @pytest.mark.parametrize(
     ("backend", "requested", "fallback"),
     [
-        ("within", "diag", "schwarz"),
         ("torch", "schwarz", "diag"),
         ("torch", "none", "diag"),
         ("cupy", "schwarz", "diag"),
