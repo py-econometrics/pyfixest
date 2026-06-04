@@ -27,9 +27,9 @@ def demean(
     weights : numpy.ndarray
         Array of shape (n_samples,) specifying the weights.
     tol : float, optional
-        Tolerance criterion for convergence. Defaults to 1e-08.
+        Tolerance criterion for convergence. Defaults to 1e-06.
     maxiter : int, optional
-        Maximum number of iterations. Defaults to 100_000.
+        Maximum number of iterations. Defaults to 10_000.
 
     Returns
     -------
@@ -43,7 +43,7 @@ def demean(
     import numpy as np
     import pyfixest as pf
     from pyfixest.utils.dgps import get_blw
-    from pyfixest.estimation.internals.demean_ import demean
+    from pyfixest.estimation import demean
     from formulaic import model_matrix
 
     fml = "y ~ treat | state + year"
@@ -82,22 +82,21 @@ def demean(
 def demean_within(
     x: NDArray[np.float64],
     flist: NDArray[np.uint32],
-    weights: NDArray[np.float64],
-    tol: float = 1e-06,
+    weights: NDArray[np.float64] | None = None,
+    tol: float = 1e-08,
     maxiter: int = 1_000,
-    krylov: str = "cg",
-    preconditioner: str = "additive",
-    gmres_restart: int = 30,
+    local_size: int | None = None,
+    preconditioner: str = "schwarz",
 ) -> tuple[NDArray, bool]:
     """
-    Demean an array using Krylov solvers and Schwarz preconditioning via `within`.
+    Demean an array using modified LSMR via `within`.
 
-    Uses Krylov-based solvers with Schwarz preconditioning. Converges faster
-    than alternating projections on weakly-connected or block-diagonal
-    fixed-effect structures.
+    Uses `within`'s modified LSMR solver with additive Schwarz preconditioning.
+    This backend is designed to be fast for sparse / poorly connected fixed effect
+    structures, where the method of alternating projections (MAP) can struggle.
 
     For single fixed effects, falls back to alternating projections (``_demean_rs``)
-    because the CG/Schwarz preconditioner is designed for multi-way FE problems.
+    because the sparse iterative solver is designed for multi-way FE problems.
 
     Parameters
     ----------
@@ -106,20 +105,28 @@ def demean_within(
     flist : numpy.ndarray
         Array of shape (n_samples, n_factors) specifying the fixed effects
         (integer-encoded).
-    weights : numpy.ndarray
-        Array of shape (n_samples,) specifying the weights.
+    weights : numpy.ndarray or None, optional
+        Array of shape (n_samples,) specifying observation weights.
     tol : float, optional
-        Convergence tolerance. Defaults to 1e-06.
+        Convergence tolerance. Defaults to 1e-08.
     maxiter : int, optional
-        Maximum number of Krylov iterations. Defaults to 1_000.
-    krylov : {"cg", "gmres"}, optional
-        Krylov solver used for multi-way fixed effects. Defaults to ``"cg"``.
-    preconditioner : {"additive", "multiplicative", "off"}, optional
-        Schwarz preconditioner used for multi-way fixed effects. ``"off"``
-        disables preconditioning.
-        Defaults to ``"additive"``.
-    gmres_restart : int, optional
-        Restart dimension when ``krylov="gmres"``. Ignored for CG.
+        Maximum number of LSMR iterations. Defaults to 1_000.
+    local_size : int or None, optional
+        Numerical-stability knob for the LSMR solver. ``None`` (default) is
+        usually fine and is the fastest setting. Try a small integer
+        (typically ``5`` to ``20``) if the solver fails to converge on a
+        numerically difficult problem — for example, fixed effects with
+        very unequal group sizes, near-collinear factors, or extreme
+        weights. Larger values are more numerically robust but use more
+        memory: the solver keeps ``local_size`` extra working vectors,
+        each the length of the total fixed-effect coefficient count,
+        and twice that many when a preconditioner is active. Under the
+        hood this enables windowed Gram-Schmidt reorthogonalization
+        inside LSMR's bidiagonalization.
+    preconditioner : {"schwarz", "none"}, optional
+        Preconditioner choice for `within`'s LSMR solver. ``"schwarz"``
+        (default) uses additive Schwarz preconditioning; ``"none"`` disables
+        preconditioning.
 
     Returns
     -------
@@ -127,20 +134,22 @@ def demean_within(
         Demeaned array and convergence flag.
     """
     if flist.ndim == 1 or flist.shape[1] == 1:
+        flist_2d = flist.reshape(-1, 1) if flist.ndim == 1 else flist
         return _demean_rs(
             x.astype(np.float64, copy=False),
-            flist.astype(np.uint64, copy=False),
-            weights.astype(np.float64, copy=False),
+            flist_2d.astype(np.uint64, copy=False),
+            weights.astype(np.float64, copy=False)
+            if weights is not None
+            else np.ones(x.shape[0], dtype=np.float64),
             tol,
             maxiter,
         )
     return _demean_within_rs(
         x.astype(np.float64, copy=False),
         np.asfortranarray(flist, dtype=np.uint32),
-        weights.astype(np.float64, copy=False).reshape(-1),
+        weights.astype(np.float64, copy=False) if weights is not None else None,
         tol,
         maxiter,
-        krylov,
+        local_size,
         preconditioner,
-        gmres_restart,
     )

@@ -52,22 +52,6 @@ class TorchRuntimeAvailability:
     has_cuda: bool
 
 
-@dataclass(frozen=True)
-class CupyRuntimeAvailability:
-    """Runtime availability of optional cupy benchmark targets."""
-
-    has_cupy: bool
-    has_cuda: bool
-
-
-@dataclass(frozen=True)
-class JaxRuntimeAvailability:
-    """Runtime availability of optional jax benchmark targets."""
-
-    has_jax: bool
-    has_gpu: bool
-
-
 def detect_torch_runtime_availability() -> TorchRuntimeAvailability:
     """Detect whether torch and optional accelerator backends are available."""
     try:
@@ -84,52 +68,6 @@ def detect_torch_runtime_availability() -> TorchRuntimeAvailability:
     return TorchRuntimeAvailability(
         has_torch=True,
         has_mps=has_mps,
-        has_cuda=has_cuda,
-    )
-
-
-def detect_jax_runtime_availability() -> JaxRuntimeAvailability:
-    """Detect whether jax and a GPU runtime are available."""
-    try:
-        import jax
-    except ImportError:
-        return JaxRuntimeAvailability(
-            has_jax=False,
-            has_gpu=False,
-        )
-
-    try:
-        gpu_platforms = {"gpu", "cuda", "rocm", "metal"}
-        has_gpu = any(
-            getattr(device, "platform", "").lower() in gpu_platforms
-            for device in jax.devices()
-        )
-    except Exception:
-        has_gpu = False
-
-    return JaxRuntimeAvailability(
-        has_jax=True,
-        has_gpu=has_gpu,
-    )
-
-
-def detect_cupy_runtime_availability() -> CupyRuntimeAvailability:
-    """Detect whether cupy and a CUDA runtime are available."""
-    try:
-        import cupy
-    except ImportError:
-        return CupyRuntimeAvailability(
-            has_cupy=False,
-            has_cuda=False,
-        )
-
-    try:
-        has_cuda = bool(cupy.cuda.runtime.getDeviceCount() > 0)
-    except Exception:
-        has_cuda = False
-
-    return CupyRuntimeAvailability(
-        has_cupy=True,
         has_cuda=has_cuda,
     )
 

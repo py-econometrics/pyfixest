@@ -74,7 +74,7 @@ def _compute_CCV(
             aux_tau_full = tau_full
         else:
             fit_m_full = feols(fml, data[ind_m])
-            aux_tau_full = float(fit_m_full.coef().xs(treatment))
+            aux_tau_full = float(fit_m_full.coef().xs(treatment))  # type: ignore[arg-type]
 
         # treatment effect in cluster for subsample
         if treatment_nested_in_cluster_split:

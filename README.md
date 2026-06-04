@@ -26,7 +26,7 @@ For questions on `PyFixest`, head over to our [GitHub discussions](https://githu
 
 - **Estimation**
   - **OLS**, **WLS**, **IV**, and **GLMs** (Poisson, logit, probit, gaussian) with high-dimensional fixed effects
-  - Different **demeaning backends** (MAP, [within](https://github.com/py-econometrics/within), LSMR) on CPU and GPU
+  - Different **demeaning backends** (MAP, [within](https://github.com/py-econometrics/within) LSMR, torch LSMR) on CPU and GPU
   - Fast **quantile regression** via an interior-point solver
   - **Difference-in-differences** estimators, including TWFE, `Did2s`, local projections, and Sun-Abraham event studies
   - Regression **decomposition** following [Gelbach (2016)](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=1425737)
@@ -66,26 +66,38 @@ python -m pip install pyfixest[plots]
 
 `matplotlib` is included by default, so plotting works without this extra.
 
-For GPU-accelerated fixed-effects demeaning via CuPy, install the build matching your CUDA version:
+To run the LSMR demeaner via `PyTorch` (CPU and GPU), you need to install `PyTorch`, which you can do via
 
 ```bash
-pip install cupy-cuda11x
-pip install cupy-cuda12x
-pip install cupy-cuda13x
+python -m pip install pyfixest[torch]
 ```
 
-Then use the typed `demeaner` API for GPU execution:
+For GPU acceleration on CUDA, you additionally need to install a CUDA-enabled torch build. See the [PyTorch installation guide](https://pytorch.org/get-started/locally/) for details.
+
+Then use the typed `demeaner` API:
 
 ```python
+# CPU
 pf.feols(
     "Y ~ X1 | f1 + f2",
     data=data,
-    demeaner=pf.LsmrDemeaner(backend="cupy", precision="float32"),
+    demeaner=pf.LsmrDemeaner(backend="torch", device="cpu"),
+)
+
+# CUDA GPU
+pf.feols(
+    "Y ~ X1 | f1 + f2",
+    data=data,
+    demeaner=pf.LsmrDemeaner(backend="torch", device="cuda"),
 )
 ```
 
-</details>
+> **Note:** The `cupy` / `scipy` LSMR backends and the `jax` MAP backend are
+> deprecated and will be removed in a future release. Use `pf.LsmrDemeaner()`
+> for the default Rust `within` LSMR backend on CPU, or the torch-based backend
+> for GPU acceleration.
 
+</details>
 ## Quickstart
 
 ```python
@@ -249,6 +261,10 @@ Thanks goes to these wonderful people:
       <td align="center" valign="top" width="12.5%"><a href="http://janfb.github.io"><img src="https://avatars.githubusercontent.com/u/11921527?v=4?s=40" width="40px;" alt="Jan Teusen (né Boelts)"/><br /><sub><b>Jan Teusen (né Boelts)</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=janfb" title="Code">💻</a></td>
       <td align="center" valign="top" width="12.5%"><a href="https://github.com/marie-gar"><img src="https://avatars.githubusercontent.com/u/185077947?v=4?s=40" width="40px;" alt="Marie Garkavenko"/><br /><sub><b>Marie Garkavenko</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/pulls?q=is%3Apr+reviewed-by%3Amarie-gar" title="Reviewed Pull Requests">👀</a></td>
       <td align="center" valign="top" width="12.5%"><a href="https://bradhackinen.ca"><img src="https://avatars.githubusercontent.com/u/14437616?v=4?s=40" width="40px;" alt="Brad Hackinen"/><br /><sub><b>Brad Hackinen</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=bradhackinen" title="Code">💻</a></td>
+    </tr>
+    <tr>
+      <td align="center" valign="top" width="12.5%"><a href="https://github.com/buddejul"><img src="https://avatars.githubusercontent.com/u/66945206?v=4?s=40" width="40px;" alt="Julian Budde"/><br /><sub><b>Julian Budde</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/issues?q=author%3Abuddejul" title="Bug reports">🐛</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="https://github.com/felixschmitz"><img src="https://avatars.githubusercontent.com/u/33942086?v=4?s=40" width="40px;" alt="Felix Schmitz"/><br /><sub><b>Felix Schmitz</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=felixschmitz" title="Code">💻</a></td>
     </tr>
   </tbody>
 </table>

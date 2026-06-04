@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from collections.abc import Mapping
 from typing import Any
 
@@ -8,6 +9,8 @@ from pyfixest.estimation.api.utils import _estimation_input_checks
 from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.internals.demeaner_options import (
     _resolve_demeaner,
+    _warn_if_deprecated_demeaner_backend,
+    _warn_if_deprecated_solver,
     _warn_if_experimental_torch_demeaner,
 )
 from pyfixest.estimation.internals.literals import (
@@ -136,13 +139,37 @@ def feols(
         "np.linalg.solve", "scipy.linalg.solve", "scipy.sparse.linalg.lsqr" and "jax".
         Defaults to "scipy.linalg.solve".
 
+        .. deprecated::
+            ``solver="jax"`` is deprecated and will be removed in a future
+            release. Use one of the NumPy/SciPy solvers instead; for GPU
+            acceleration, see ``LsmrDemeaner(backend="torch", device="cuda")``.
+
     demeaner : AnyDemeaner | None, optional
         Typed demeaner configuration. Controls the fixed-effects demeaning
-        backend, tolerance, and iteration limits. Accepts a `MapDemeaner`,
-        `WithinDemeaner`, or `LsmrDemeaner` instance. Defaults to
-        `MapDemeaner()` (numba MAP algorithm, tol=1e-6, maxiter=10_000).
+        backend, tolerance, and iteration limits. Accepts a `MapDemeaner`
+        or `LsmrDemeaner` instance. Defaults to
+        `MapDemeaner()` (Rust MAP algorithm, tol=1e-6, maxiter=10_000).
+        For other options - including the optional Numba backend and the
+        torch-based LSMR backends - see the
+        [Demeaner Backends vignette](../../how-to/demeaner-backends.qmd).
+
+        .. deprecated::
+            The ``jax`` MAP backend and the ``cupy`` / ``scipy`` LSMR
+            backends are deprecated and will be removed in a future release.
+            Replacements:
+
+            - JAX MAP on CPU → ``MapDemeaner()`` (the default rust MAP).
+            - JAX MAP / cupy LSMR on GPU →
+              ``LsmrDemeaner(backend="torch", device="cuda")``.
+            - Scipy / cupy LSMR on CPU → ``LsmrDemeaner()``
+              (the default within backend).
 
     use_compression: bool
+        .. deprecated::
+            ``use_compression`` is deprecated and will be removed in a future release.
+            For out-of-memory regression on large datasets, consider using the
+            `duckreg <https://github.com/py-econometrics/duckreg>`_ package instead.
+
         Whether to use sufficient statistics to losslessly fit the regression model
         on compressed data. False by default. If True, the model is estimated on
         compressed data, which can lead to a significant speed-up for large data sets.
@@ -489,6 +516,20 @@ def feols(
         fixef_maxiter=fixef_maxiter,
     )
     _warn_if_experimental_torch_demeaner(demeaner)
+    _warn_if_deprecated_demeaner_backend(demeaner)
+    _warn_if_deprecated_solver(solver)
+
+    if use_compression:
+        warnings.warn(
+            (
+                "The `use_compression` argument is deprecated and will be removed in a future release. "
+                "For out-of-memory regression on large datasets, consider using the "
+                "`duckreg` package (https://github.com/py-econometrics/duckreg) instead. "
+                "See https://github.com/py-econometrics/pyfixest/issues/1302 for context."
+            ),
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
     _estimation_input_checks(
         fml=fml,

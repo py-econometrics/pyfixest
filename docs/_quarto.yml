@@ -1,6 +1,8 @@
 project:
   type: website
   output-dir: _site
+  resources:
+    - CNAME
   render:
     - "*.qmd"
     - "*.ipynb"
@@ -78,10 +80,6 @@ website:
           file: how-to/marginaleffects.qmd
         - text: "Regression Decomposition"
           file: how-to/regression_decomposition.qmd
-        - text: "PyFixest on the GPU via JAX"
-          file: how-to/pyfixest_gpu.qmd
-        - text: "PyFixest on the GPU via CuPy"
-          file: pyfixest-gpu-cupy.ipynb
         - text: "Compare Stata & PyFixest"
           file: how-to/stata-2-pyfixest.qmd
         - text: "Variance Reduction in AB Tests"
@@ -117,8 +115,6 @@ website:
         file: contributing.qmd
       - text: "Acknowledgements"
         file: acknowledgements.md
-      - text: "Sprint 2026"
-        file: pyfixest-sprint.md
 
 quartodoc:
   package: pyfixest
@@ -148,7 +144,6 @@ quartodoc:
       contents:
         - demeaners.BaseDemeaner
         - demeaners.MapDemeaner
-        - demeaners.WithinDemeaner
         - demeaners.LsmrDemeaner
         - estimation.models.feols_.Feols
         - estimation.models.fepois_.Fepois
@@ -185,7 +180,7 @@ quartodoc:
       desc: |
         PyFixest internals and utilities
       contents:
-        - estimation.internals.demean_.demean
+        - estimation.demean
         - core.detect_singletons.detect_singletons
         - utils.utils.ssc
         - utils.utils.get_ssc

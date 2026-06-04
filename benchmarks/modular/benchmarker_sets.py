@@ -1,14 +1,11 @@
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass
 
 from feols_benchmarkers import (
     FixestFeolsBenchmarker,
     JuliaFeolsBenchmarker,
     PyFeolsBenchmarkerFullApi,
-    detect_cupy_runtime_availability,
-    detect_jax_runtime_availability,
     detect_torch_runtime_availability,
 )
 
@@ -19,13 +16,6 @@ class BenchmarkerBundle:
     figure_backends: list[str]
 
 
-def _env_flag(name: str, *, default: bool) -> bool:
-    value = os.environ.get(name)
-    if value is None:
-        return default
-    return value.strip().lower() not in {"0", "false", "no", "off"}
-
-
 def build_standard_feols_benchmarkers(
     *,
     fixef_maxiter: int | None = None,
@@ -33,8 +23,6 @@ def build_standard_feols_benchmarkers(
     include_fixest: bool = True,
     include_julia: bool = True,
     include_torch: bool = True,
-    include_jax: bool = True,
-    include_cupy: bool = True,
 ) -> BenchmarkerBundle:
     """Build the shared feols benchmark runner set used by modular benchmarks."""
     pyfixest_kwargs = {}
@@ -46,13 +34,10 @@ def build_standard_feols_benchmarkers(
         pyfixest_benchmarkers.extend(
             [
                 PyFeolsBenchmarkerFullApi(
-                    "pyfixest (rust-cg)", "rust-cg", **pyfixest_kwargs
+                    "pyfixest (within)", "within", **pyfixest_kwargs
                 ),
                 PyFeolsBenchmarkerFullApi(
                     "pyfixest (rust-map)", "rust", **pyfixest_kwargs
-                ),
-                PyFeolsBenchmarkerFullApi(
-                    "pyfixest (scipy-lsmr)", "scipy", **pyfixest_kwargs
                 ),
             ]
         )
@@ -99,58 +84,6 @@ def build_standard_feols_benchmarkers(
                     "[bench] skipping torch-cuda benchmarker: CUDA unavailable",
                     flush=True,
                 )
-
-    include_cupy = include_cupy and _env_flag(
-        "PYFIXEST_BENCHMARK_INCLUDE_CUPY",
-        default=False,
-    )
-    if include_cupy:
-        availability = detect_cupy_runtime_availability()
-        if not availability.has_cupy:
-            print(
-                "[bench] skipping cupy benchmarkers: cupy is not installed",
-                flush=True,
-            )
-        elif not availability.has_cuda:
-            print(
-                "[bench] skipping cupy benchmarkers: CUDA unavailable",
-                flush=True,
-            )
-        else:
-            pyfixest_benchmarkers.append(
-                PyFeolsBenchmarkerFullApi(
-                    "pyfixest (cupy32)",
-                    "cupy32",
-                    **pyfixest_kwargs,
-                )
-            )
-    else:
-        print(
-            "[bench] skipping cupy benchmarker: disabled by default; set "
-            "PYFIXEST_BENCHMARK_INCLUDE_CUPY=1 to enable",
-            flush=True,
-        )
-
-    if include_jax:
-        availability = detect_jax_runtime_availability()
-        if not availability.has_jax:
-            print(
-                "[bench] skipping jax benchmarker: jax is not installed",
-                flush=True,
-            )
-        elif not availability.has_gpu:
-            print(
-                "[bench] skipping jax benchmarker: GPU unavailable",
-                flush=True,
-            )
-        else:
-            pyfixest_benchmarkers.append(
-                PyFeolsBenchmarkerFullApi(
-                    "pyfixest (jax)",
-                    "jax",
-                    **pyfixest_kwargs,
-                )
-            )
 
     benchmarkers = list(pyfixest_benchmarkers)
     if include_fixest:

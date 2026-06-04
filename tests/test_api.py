@@ -92,7 +92,26 @@ def test_fepois_args():
     np.testing.assert_allclose(fit4.coef(), fit5.coef(), rtol=1e-12)
 
 
-def test_legacy_demeaner_args_map_with_deprecation_warning():
+def test_legacy_demeaner_backend_within_chains_to_lsmr_warning():
+    data = pf.get_data()
+
+    with pytest.warns(DeprecationWarning):
+        fit = pf.feols(
+            "Y ~ X1 | f1 + f2",
+            data=data,
+            demeaner_backend="within",
+            fixef_tol=1e-4,
+            fixef_maxiter=321,
+        )
+
+    assert isinstance(fit._demeaner, pf.LsmrDemeaner)
+    assert fit._demeaner.backend == "within"
+    assert fit._demeaner.fixef_atol == 1e-4
+    assert fit._demeaner.fixef_btol == 1e-4
+    assert fit._demeaner.fixef_maxiter == 321
+
+
+def test_legacy_demeaner_backend_rust_cg_aliases_to_within():
     data = pf.get_data()
 
     with pytest.warns(DeprecationWarning):
@@ -104,12 +123,22 @@ def test_legacy_demeaner_args_map_with_deprecation_warning():
             fixef_maxiter=321,
         )
 
-    assert isinstance(fit._demeaner, pf.WithinDemeaner)
-    assert fit._demeaner.fixef_tol == 1e-4
+    assert isinstance(fit._demeaner, pf.LsmrDemeaner)
+    assert fit._demeaner.backend == "within"
+    assert fit._demeaner.fixef_atol == 1e-4
+    assert fit._demeaner.fixef_btol == 1e-4
     assert fit._demeaner.fixef_maxiter == 321
-    assert fit._demeaner.krylov == "cg"
-    assert fit._demeaner.preconditioner == "additive"
-    assert fit._demeaner.gmres_restart == 30
+
+
+def test_map_demeaner_defaults_to_rust():
+    data = pf.get_data()
+
+    assert pf.MapDemeaner().backend == "rust"
+
+    fit = pf.feols("Y ~ X1 | f1", data=data)
+
+    assert isinstance(fit._demeaner, pf.MapDemeaner)
+    assert fit._demeaner.backend == "rust"
 
 
 def test_legacy_demeaner_args_conflict_with_typed_demeaner():
@@ -124,12 +153,118 @@ def test_legacy_demeaner_args_conflict_with_typed_demeaner():
         )
 
 
+def _run_with_deprecated_kwargs(estimator_name, **kwargs):
+    if estimator_name == "feols":
+        return pf.feols("Y ~ X1 | f1", data=pf.get_data(), **kwargs)
+    if estimator_name == "fepois":
+        return pf.fepois("Y ~ X1 | f1", data=pf.get_data(model="Fepois"), **kwargs)
+    if estimator_name == "feglm":
+        return pf.feglm("Y ~ X1 | f1", data=pf.get_data(), family="gaussian", **kwargs)
+    raise ValueError(estimator_name)
+
+
+_DEPRECATION_ESTIMATORS = ["feols", "fepois", "feglm"]
+
+
+@pytest.mark.parametrize("estimator_name", _DEPRECATION_ESTIMATORS)
+def test_solver_jax_emits_deprecation_warning(estimator_name):
+    with pytest.warns(DeprecationWarning, match=r"solver='jax'"):
+        _run_with_deprecated_kwargs(estimator_name, solver="jax")
+
+
+@pytest.mark.parametrize("estimator_name", _DEPRECATION_ESTIMATORS)
+def test_demeaner_backend_jax_emits_deprecation_warning(estimator_name):
+    with pytest.warns(DeprecationWarning, match=r"`jax` MAP demeaner backend") as rec:
+        _run_with_deprecated_kwargs(
+            estimator_name, demeaner=pf.MapDemeaner(backend="jax")
+        )
+    messages = [str(r.message) for r in rec]
+    assert any("rust MAP" in m for m in messages)
+    assert any("torch', device='cuda" in m for m in messages)
+
+
+def test_demeaner_backend_cupy_emits_deprecation_warning():
+    from pyfixest.estimation.internals.demeaner_options import (
+        _warn_if_deprecated_demeaner_backend,
+    )
+
+    with pytest.warns(DeprecationWarning, match=r"`cupy` LSMR demeaner backend") as rec:
+        _warn_if_deprecated_demeaner_backend(pf.LsmrDemeaner(backend="cupy"))
+    assert any("torch', device='cuda" in str(r.message) for r in rec)
+    assert any("default within backend" in str(r.message) for r in rec)
+
+
+def test_demeaner_backend_cupy_cuda_emits_gpu_replacement_warning():
+    from pyfixest.estimation.internals.demeaner_options import (
+        _warn_if_deprecated_demeaner_backend,
+    )
+
+    with pytest.warns(DeprecationWarning, match=r"`cupy` LSMR demeaner backend") as rec:
+        _warn_if_deprecated_demeaner_backend(
+            pf.LsmrDemeaner(backend="cupy", device="cuda")
+        )
+    assert any("torch', device='cuda" in str(r.message) for r in rec)
+
+
+def test_demeaner_backend_scipy_emits_deprecation_warning():
+    from pyfixest.estimation.internals.demeaner_options import (
+        _warn_if_deprecated_demeaner_backend,
+    )
+
+    with pytest.warns(
+        DeprecationWarning, match=r"`scipy` LSMR demeaner backend"
+    ) as rec:
+        _warn_if_deprecated_demeaner_backend(
+            pf.LsmrDemeaner(backend="cupy", device="cpu")
+        )
+    assert any("default within backend" in str(r.message) for r in rec)
+
+
+@pytest.mark.parametrize("estimator_name", _DEPRECATION_ESTIMATORS)
+def test_legacy_demeaner_backend_jax_emits_both_deprecation_warnings(estimator_name):
+    with pytest.warns(DeprecationWarning) as records:
+        _run_with_deprecated_kwargs(estimator_name, demeaner_backend="jax")
+
+    messages = [str(r.message) for r in records]
+    assert any("demeaner_backend" in m for m in messages)
+    assert any("`jax` MAP demeaner backend" in m for m in messages)
+
+
+@pytest.mark.parametrize("legacy_backend", ["cupy", "scipy"])
+def test_legacy_demeaner_backend_cupy_preset_chains_to_cupy_warning(legacy_backend):
+    from pyfixest.estimation.internals.demeaner_options import _resolve_demeaner
+
+    with pytest.warns(DeprecationWarning) as records:
+        resolved = _resolve_demeaner(demeaner=None, demeaner_backend=legacy_backend)
+
+    assert isinstance(resolved, pf.LsmrDemeaner)
+    assert resolved.backend == "cupy"
+    messages = [str(r.message) for r in records]
+    assert any("demeaner_backend" in m for m in messages)
+
+
+@pytest.mark.parametrize("estimator_name", _DEPRECATION_ESTIMATORS)
+@pytest.mark.parametrize(
+    "legacy_backend, expected_label, expected_replacement",
+    [
+        ("cupy", "`cupy` LSMR demeaner backend", "torch', device='cuda"),
+        ("scipy", "`scipy` LSMR demeaner backend", "default within backend"),
+    ],
+)
+def test_legacy_demeaner_backend_cupy_preset_replacement_message(
+    estimator_name, legacy_backend, expected_label, expected_replacement
+):
+    with pytest.warns(DeprecationWarning) as records:
+        _run_with_deprecated_kwargs(estimator_name, demeaner_backend=legacy_backend)
+    messages = [str(r.message) for r in records]
+    assert any(expected_label in m for m in messages)
+    assert any(expected_replacement in m for m in messages)
+
+
 @pytest.mark.parametrize(
     "builder, invalid_name",
     [
         (lambda: pf.MapDemeaner(fixef_tol=1.0), "fixef_tol"),
-        (lambda: pf.WithinDemeaner(fixef_tol=1.0), "fixef_tol"),
-        (lambda: pf.WithinDemeaner(gmres_restart=0), "gmres_restart"),
         (lambda: pf.LsmrDemeaner(fixef_atol=1.0), "fixef_atol"),
         (lambda: pf.LsmrDemeaner(fixef_btol=1.0), "fixef_btol"),
     ],
@@ -139,52 +274,42 @@ def test_typed_demeaners_reject_tolerances_ge_one(builder, invalid_name):
         builder()
 
 
-def test_within_demeaner_defaults():
-    demeaner = pf.WithinDemeaner()
+def test_lsmr_demeaner_defaults_to_within():
+    demeaner = pf.LsmrDemeaner()
 
-    assert demeaner.krylov == "cg"
-    assert demeaner.preconditioner == "additive"
-    assert demeaner.gmres_restart == 30
-
-
-def test_within_demeaner_accepts_gmres_variants():
-    additive = pf.WithinDemeaner(
-        krylov="gmres",
-        preconditioner="additive",
-        gmres_restart=20,
-    )
-    multiplicative = pf.WithinDemeaner(
-        krylov="gmres",
-        preconditioner="multiplicative",
-        gmres_restart=50,
-    )
-
-    assert additive.gmres_restart == 20
-    assert multiplicative.gmres_restart == 50
+    assert demeaner.backend == "within"
+    assert demeaner.preconditioner == "auto"
 
 
-def test_within_demeaner_accepts_preconditioner_off():
-    cg_off = pf.WithinDemeaner(krylov="cg", preconditioner="off")
-    gmres_off = pf.WithinDemeaner(krylov="gmres", preconditioner="off")
+def test_lsmr_demeaner_accepts_unpreconditioned_within():
+    demeaner = pf.LsmrDemeaner(preconditioner="none")
 
-    assert cg_off.preconditioner == "off"
-    assert gmres_off.preconditioner == "off"
+    assert demeaner.backend == "within"
+    assert demeaner.preconditioner == "none"
 
 
-@pytest.mark.parametrize(
-    "kwargs, message",
-    [
-        (
-            {"krylov": "cg", "preconditioner": "multiplicative"},
-            "requires `krylov='gmres'`",
-        ),
-        ({"krylov": "bicg"}, "`krylov`"),
-        ({"preconditioner": "ilu"}, "`preconditioner`"),
-    ],
-)
-def test_within_demeaner_rejects_invalid_solver_options(kwargs, message):
-    with pytest.raises(ValueError, match=message):
-        pf.WithinDemeaner(**kwargs)
+def test_lsmr_demeaner_rejects_unknown_preconditioner():
+    with pytest.raises(ValueError, match="`preconditioner`"):
+        pf.LsmrDemeaner(preconditioner="bogus")  # type: ignore[arg-type]
+
+
+def test_lsmr_demeaner_warns_on_incompatible_within_preconditioner():
+    from pyfixest.estimation.internals.demean_ import dispatch_demean
+
+    rng = np.random.default_rng(0)
+    n = 200
+    x = rng.normal(size=(n, 2))
+    flist = np.column_stack(
+        [
+            rng.integers(0, 5, size=n),
+            rng.integers(0, 5, size=n),
+        ]
+    ).astype(np.uint64)
+
+    demeaner = pf.LsmrDemeaner(preconditioner="diag")
+
+    with pytest.warns(UserWarning, match=r"'diag'.*'within'.*'schwarz'"):
+        dispatch_demean(x=x, flist=flist, weights=None, demeaner=demeaner)
 
 
 def test_lean():

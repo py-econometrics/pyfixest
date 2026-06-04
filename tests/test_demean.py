@@ -6,18 +6,19 @@ import pytest
 import pyfixest as pf
 from pyfixest.core import demean as demean_rs
 from pyfixest.core.demean import demean_within
-from pyfixest.demeaners import LsmrDemeaner, MapDemeaner, WithinDemeaner
+from pyfixest.demeaners import LsmrDemeaner, MapDemeaner
 from pyfixest.estimation.cupy.demean_cupy_ import demean_cupy32, demean_cupy64
 from pyfixest.estimation.internals.demean_ import (
-    demean,
+    _resolve_preconditioner,
     demean_model,
     dispatch_demean,
 )
 from pyfixest.estimation.jax.demean_jax_ import demean_jax
+from pyfixest.estimation.numba.demean_nb import demean as demean_numba
 from tests._torch_test_utils import HAS_TORCH, torch_param
 
 GENERIC_DEMEAN_FUNCS = [
-    pytest.param(demean, id="demean_numba"),
+    pytest.param(demean_numba, id="demean_numba"),
     pytest.param(demean_jax, id="demean_jax"),
     pytest.param(demean_rs, id="demean_rs"),
     pytest.param(demean_cupy32, id="demean_cupy32"),
@@ -34,8 +35,8 @@ MODEL_DEMEANERS = [
     pytest.param(MapDemeaner(backend="numba"), id="numba"),
     pytest.param(MapDemeaner(backend="jax"), id="jax"),
     pytest.param(MapDemeaner(backend="rust"), id="rust"),
-    pytest.param(WithinDemeaner(), id="within"),
-    pytest.param(LsmrDemeaner(device="cpu"), id="lsmr_scipy"),
+    pytest.param(LsmrDemeaner(), id="within"),
+    pytest.param(LsmrDemeaner(backend="cupy", device="cpu"), id="lsmr_scipy"),
 ]
 
 if HAS_TORCH:
@@ -128,30 +129,16 @@ def test_torch_device_backends_match_pyhdfe(backend_name, rtol, atol, demean_dat
 @pytest.mark.parametrize(
     ("demeaner", "rtol", "atol"),
     [
-        (WithinDemeaner(), 1e-6, 1e-8),
         (
-            WithinDemeaner(
-                krylov="gmres",
-                preconditioner="additive",
-                gmres_restart=20,
-            ),
+            LsmrDemeaner(),
             1e-6,
             1e-8,
         ),
         (
-            WithinDemeaner(
-                krylov="gmres",
-                preconditioner="multiplicative",
-                gmres_restart=30,
-            ),
-            1e-6,
-            1e-8,
-        ),
-        (
-            WithinDemeaner(
-                krylov="cg",
-                preconditioner="off",
-                fixef_tol=1e-10,
+            LsmrDemeaner(
+                preconditioner="none",
+                fixef_atol=1e-10,
+                fixef_btol=1e-10,
                 fixef_maxiter=10_000,
             ),
             1e-6,
@@ -186,56 +173,64 @@ def test_within_solver_variants_match_pyhdfe(demeaner, rtol, atol, demean_data):
     np.testing.assert_allclose(result_weighted, expected_weighted, rtol=rtol, atol=atol)
 
 
-def test_within_single_fe_fallback_ignores_nondefault_solver_options():
-    rng = np.random.default_rng(1234)
-    x = rng.normal(size=(100, 3))
-    flist = rng.integers(0, 10, size=(100, 1), dtype=np.uint64)
-    weights = rng.uniform(0.5, 1.5, size=100)
+def test_demean_within_unpreconditioned_matches_pyhdfe(demean_data):
+    x, flist, weights = demean_data
 
-    within_result, success = dispatch_demean(
+    expected = pyhdfe.create(flist).residualize(x, weights.reshape((x.shape[0], 1)))
+    result, success = demean_within(
         x=x,
-        flist=flist,
+        flist=flist.astype(np.uint32, copy=False),
         weights=weights,
-        demeaner=WithinDemeaner(
-            krylov="gmres",
-            preconditioner="multiplicative",
-            gmres_restart=17,
-        ),
+        preconditioner="none",
+        tol=1e-10,
+        maxiter=10_000,
     )
-    assert success
 
-    map_result, success = demean_rs(
-        x,
-        flist,
-        weights,
-        tol=1e-6,
-        maxiter=1_000,
-    )
     assert success
-    np.testing.assert_allclose(within_result, map_result, rtol=1e-10, atol=1e-10)
+    np.testing.assert_allclose(result, expected, rtol=1e-6, atol=1e-8)
 
 
 @pytest.mark.parametrize(
-    ("kwargs", "message"),
+    ("backend", "requested", "expected"),
     [
-        ({"krylov": "bicg"}, "`krylov`"),
-        ({"preconditioner": "ilu"}, "`preconditioner`"),
-        (
-            {"krylov": "cg", "preconditioner": "multiplicative"},
-            "CG requires a symmetric preconditioner",
-        ),
+        # within: supports schwarz, none; auto -> schwarz
+        ("within", "auto", "schwarz"),
+        ("within", "schwarz", "schwarz"),
+        ("within", "none", "none"),
+        # torch: supports diag; auto -> diag
+        ("torch", "auto", "diag"),
+        ("torch", "diag", "diag"),
+        # cupy: supports diag, none; auto -> diag
+        ("cupy", "auto", "diag"),
+        ("cupy", "diag", "diag"),
+        ("cupy", "none", "none"),
     ],
 )
-def test_demean_within_rejects_invalid_solver_options(kwargs, message, demean_data):
-    x, flist, weights = demean_data
+def test_resolve_preconditioner_compatible_silent(backend, requested, expected):
+    """Compatible (and ``auto``) requests resolve without warning."""
+    import warnings
 
-    with pytest.raises(ValueError, match=message):
-        demean_within(
-            x=x,
-            flist=flist.astype(np.uint32, copy=False),
-            weights=weights,
-            **kwargs,
-        )
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")  # any warning fails the test
+        assert _resolve_preconditioner(backend, requested) == expected
+
+
+@pytest.mark.parametrize(
+    ("backend", "requested", "fallback"),
+    [
+        ("within", "diag", "schwarz"),
+        ("torch", "schwarz", "diag"),
+        ("torch", "none", "diag"),
+        ("cupy", "schwarz", "diag"),
+    ],
+)
+def test_resolve_preconditioner_incompatible_warns(backend, requested, fallback):
+    """Unsupported requests warn and fall back to the backend's natural default."""
+    with pytest.warns(
+        UserWarning,
+        match=rf"{requested!r}.*{backend!r}.*{fallback!r}",
+    ):
+        assert _resolve_preconditioner(backend, requested) == fallback
 
 
 @pytest.mark.skipif(not HAS_TORCH, reason="torch not available")
@@ -451,7 +446,10 @@ def test_demean_model_caching(benchmark, demeaner):
         pytest.param(MapDemeaner(backend="numba", fixef_maxiter=1), id="numba"),
         pytest.param(MapDemeaner(backend="jax", fixef_maxiter=1), id="jax"),
         pytest.param(MapDemeaner(backend="rust", fixef_maxiter=1), id="rust"),
-        pytest.param(LsmrDemeaner(device="cpu", fixef_maxiter=1), id="lsmr_scipy"),
+        pytest.param(
+            LsmrDemeaner(backend="cupy", device="cpu", fixef_maxiter=1),
+            id="lsmr_scipy",
+        ),
         pytest.param(
             LsmrDemeaner(backend="torch", device="cpu", fixef_maxiter=1),
             id="lsmr_torch_cpu",

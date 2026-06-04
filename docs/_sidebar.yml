@@ -17,7 +17,6 @@ website:
     - contents:
       - reference/demeaners.BaseDemeaner.qmd
       - reference/demeaners.MapDemeaner.qmd
-      - reference/demeaners.WithinDemeaner.qmd
       - reference/demeaners.LsmrDemeaner.qmd
       - reference/estimation.models.feols_.Feols.qmd
       - reference/estimation.models.fepois_.Fepois.qmd
@@ -44,7 +43,7 @@ website:
       - reference/estimation.formula.factor_interaction.factor_interaction.qmd
       section: Formula Parsing & Model Matrix
     - contents:
-      - reference/estimation.internals.demean_.demean.qmd
+      - reference/estimation.demean.qmd
       - reference/core.detect_singletons.detect_singletons.qmd
       - reference/utils.utils.ssc.qmd
       - reference/utils.utils.get_ssc.qmd
