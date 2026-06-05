@@ -217,12 +217,15 @@ def dispatch_demean(
     Parameters
     ----------
     cached_preconditioner : Preconditioner or None, optional
-        A previously built within preconditioner to reuse on this solve. If
-        its variant matches the variant the demeaner would request as a
-        string (``"additive"`` -> Additive, ``"diagonal"`` -> Diagonal), it is
-        substituted in to avoid a rebuild. Mismatched variants and explicit
-        user-supplied ``Preconditioner`` instances on the demeaner take
-        precedence over the cache.
+        A preconditioner saved by the caller from an earlier within solve on
+        the same fixed-effect design. This is separate from
+        ``demeaner.preconditioner``: the latter is the user's requested
+        configuration, while ``cached_preconditioner`` is the model's internal
+        "reuse this if it still matches" handle. The cache is used only when
+        the current request is a string preconditioner with the same variant
+        (``"additive"`` or ``"diagonal"``). If the user explicitly supplied a
+        ``Preconditioner`` on the demeaner, that object is passed through and
+        the model cache is ignored.
 
     Returns
     -------
@@ -248,11 +251,12 @@ def dispatch_demean(
                 _resolve_preconditioner("within", demeaner.preconditioner),
             )
 
-        # Reuse the caller-supplied cached preconditioner when its variant
-        # matches the requested string. Variant names are titlecased on the
-        # Rust side (``Additive`` / ``Diagonal``), the public strings are
-        # lowercase. Explicit user-supplied Preconditioner instances on the
-        # demeaner pass through unchanged.
+        # If the user requested a preconditioner by string, we would normally
+        # pass that string to Rust and let within build a fresh factorization.
+        # When the model already has a cached preconditioner of the same
+        # variant, pass the object instead so Rust takes the reuse path.
+        # We do not replace an explicit user-supplied preconditioner.
+
         if (
             cached_preconditioner is not None
             and isinstance(preconditioner, str)
@@ -269,11 +273,6 @@ def dispatch_demean(
             local_size=demeaner.local_size,
             preconditioner=preconditioner,
         )
-        # ``built is None`` signals the single-FE MAP fallback was taken (or
-        # ``preconditioner='off'``); no preconditioner participated in the
-        # solve, so report ``None``. Otherwise return whatever
-        # ``demean_within`` returned — Python identity is *not* preserved for
-        # user-supplied instances (mirrors upstream ``within`` semantics).
         return result, success, built
 
     if weights is None:

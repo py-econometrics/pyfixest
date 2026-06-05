@@ -158,18 +158,18 @@ def demean_within(
         i.e. when ``preconditioner="off"`` or the single-factor MAP fallback
         path was taken.
     """
+    _valid_names = get_args(WithinPreconditionerName)
+    _valid_str = ", ".join(repr(n) for n in _valid_names)
     if isinstance(preconditioner, Preconditioner):
         pass
     elif not isinstance(preconditioner, str):
         raise TypeError(
-            "`preconditioner` must be 'additive', 'off', 'diagonal', or a "
-            "Preconditioner instance."
+            f"`preconditioner` must be {_valid_str}, or a Preconditioner instance."
         )
-    elif preconditioner not in get_args(WithinPreconditionerName):
+    elif preconditioner not in _valid_names:
         raise ValueError(
             f"preconditioner={preconditioner!r} is not supported by the 'within' "
-            "LSMR backend; use 'additive' (default), 'off', 'diagonal', or a "
-            "Preconditioner instance."
+            f"LSMR backend; use {_valid_str}, or a Preconditioner instance."
         )
 
     if flist.ndim == 1 or flist.shape[1] == 1:

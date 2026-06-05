@@ -70,10 +70,29 @@ fit = pf.feols("Y ~ X1 | f1", data=df, demeaner=MapDemeaner(backend="rust"))
 # Numba MAP (requires pip install pyfixest[numba])
 fit = pf.feols("Y ~ X1 | f1", data=df, demeaner=MapDemeaner(backend="numba"))
 
-# `within` LSMR backend – best for sparse multi-way FE structures
+# `within` LSMR backend – best for sparse multi-way FE structures.
+# Defaults to the additive Schwarz preconditioner.
 fit = pf.feols("Y ~ X1 | f1 + f2", data=df, demeaner=LsmrDemeaner())
 
-# `within` LSMR without additive Schwarz preconditioning
+# `within` LSMR with the additive Schwarz preconditioner - the default;
+# best for sparse / weakly connected fixed effects.
+fit = pf.feols(
+    "Y ~ X1 | f1 + f2",
+    data=df,
+    demeaner=LsmrDemeaner(preconditioner="additive"),
+)
+
+# `within` LSMR with the diagonal (Jacobi) preconditioner - cheaper to set up,
+# often a good choice for denser / well-connected fixed effects.
+fit = pf.feols(
+    "Y ~ X1 | f1 + f2",
+    data=df,
+    demeaner=LsmrDemeaner(preconditioner="diagonal"),
+)
+
+# you can also turn off the preconditioner; this is almost never recommended
+# we only offer it for benchmarking / users who are curious to learn how much
+# the preconditioner helps
 fit = pf.feols(
     "Y ~ X1 | f1 + f2",
     data=df,

@@ -508,40 +508,28 @@ class Feols(ResultAccessorMixin):
             self._Yd, self._Xd = self._Y, self._X
 
     def _seed_preconditioner(self, used_pre: Preconditioner | None) -> None:
-        """Store the preconditioner returned by demean dispatch, at most once.
+        """Store only the first preconditioner returned by demean dispatch.
 
-        The dispatcher returns a fresh pyo3 wrapper around the same
-        factorization on every call, so a naive assign would churn
-        ``self._preconditioner``'s Python identity across IWLS iterations
-        (Poisson, GLM). Seeding only when the slot is empty keeps
-        user-held references to ``fit.preconditioner`` stable. ``used_pre``
-        is ``None`` on the MAP-fallback / ``preconditioner='off'`` / non-within
-        paths; in those cases there is nothing to seed.
+        For IWLS (Poisson, GLM) the dispatcher is called once per iteration
+        and returns a preconditioner each time; we keep the one from the
+        first call and ignore the rest. ``used_pre`` is ``None`` when no
+        preconditioner participated in the solve (MAP fallback,
+        ``preconditioner='off'``, non-within backend), in which case there
+        is nothing to store.
         """
         if self._preconditioner is None and used_pre is not None:
             self._preconditioner = used_pre
 
     @property
     def preconditioner(self) -> Preconditioner | None:
-        """Return the within preconditioner used during demeaning.
+        """The within preconditioner used during demeaning, if any.
 
-        ``None`` unless the within LSMR backend was used and a preconditioner
-        was actually employed. When set, it is the preconditioner built on
-        the first solve — either the additive Schwarz variant
-        (``"additive"``) or the diagonal Jacobi variant (``"diagonal"``) —
-        or a user-supplied one
-        (``LsmrDemeaner(preconditioner=<Preconditioner>)``). For IWLS
-        models (Poisson, GLM), the preconditioner built on the first
-        iteration is reused across all subsequent iterations even though the
-        IWLS weights change. This trades a (typically small) loss in
-        per-iteration LSMR convergence speed for avoiding a full Schwarz
-        rebuild on every reweight; LSMR remains correct under stale
-        preconditioning. Stays ``None`` when ``preconditioner='off'`` is
-        set, when only a single fixed effect is present (which takes the MAP
-        fallback, so no preconditioner is computed or applied), or when a
-        non-within backend is used. Pass it back via
-        ``LsmrDemeaner(backend='within', preconditioner=...)`` to amortise
-        the setup phase across solves on the same design.
+        ``None`` when no preconditioner participated in the solve —
+        ``preconditioner='off'``, single-FE designs (MAP fallback), or any
+        non-within backend. Otherwise the instance built on the first solve.
+        Pass it back via
+        ``LsmrDemeaner(backend='within', preconditioner=...)`` to skip the
+        setup phase on a later fit over the same design.
         """
         return self._preconditioner
 
