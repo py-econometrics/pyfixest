@@ -133,7 +133,7 @@ fit to skip the setup phase:
 
 ```{python}
 fit_reused = pf.feols(
-    "Y ~ X1 + X2 | f1 + f2",
+    "Y ~ X1 | f1 + f2",
     data=df,
     demeaner=LsmrDemeaner(preconditioner=pre),
 )
