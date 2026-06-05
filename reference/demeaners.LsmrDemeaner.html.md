@@ -34,14 +34,24 @@ ignores these fields.
 ``preconditioner`` selects the preconditioner. Supported values:
 
 - ``"auto"`` (default): selects different preconditioners for different
-  backend implementations: ``"schwarz"`` for ``within``; ``"diag"`` for
-  ``torch`` / ``cupy``.
-- ``"none"``: disables preconditioning. Supported by ``within`` and
+  backend implementations: ``"additive"`` for ``within``; ``"diagonal"``
+  for ``torch`` / ``cupy``.
+- ``"off"``: disables preconditioning. Supported by ``within`` and
   ``cupy``; not supported by ``torch``.
-- ``"schwarz"``: additive Schwarz preconditioner. Only supported by the
+- ``"additive"``: additive Schwarz preconditioner. Only supported by the
   ``within`` backend.
-- ``"diag"``: diagonal (Jacobi) preconditioner. Supported by ``within``,
-  ``torch``, and ``cupy``.
+- ``"diagonal"``: diagonal (Jacobi) preconditioner. Supported by
+  ``within``, ``torch``, and ``cupy``.
+- A :class:`pyfixest.Preconditioner` instance: a previously built
+  preconditioner (typically obtained via ``fit.preconditioner`` or
+  pickled across sessions). Only supported by ``backend='within'``;
+  preconditioners are only computed and applied for two or more
+  fixed-effect factors because single-factor problems run MAP as the within algo
+  provides no benefits. Passing a preconditioner to any other backend raises ``ValueError``
+  at construction time.
 
-If a value is incompatible with the chosen backend, a ``UserWarning`` is
-emitted at solve time and the backend's default is used.
+If a *string* value is incompatible with the chosen backend, a
+``UserWarning`` is emitted at solve time and the backend's default is
+used. A ``Preconditioner`` paired with a non-``within`` backend is
+rejected eagerly with ``ValueError`` because there is no sensible
+fallback for a prebuilt object.
