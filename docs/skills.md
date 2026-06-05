@@ -83,6 +83,7 @@ Pass to `vcov`:
 - `{"CRV3": "cluster_var"}` — Leave-one-cluster-out jackknife
 - `"NW"` — Newey-West HAC (requires `vcov_kwargs` with `time_id`; optional `panel_id`, `lag`)
 - `"DK"` — Driscoll-Kraay HAC (requires `vcov_kwargs` with `time_id`; optional `panel_id`, `lag`)
+- `"conley"` — Conley spatial HAC (requires `vcov_kwargs` with `lat`, `lon`, `cutoff`; optional `distance`; zero cutoff matches identical coordinates only)
 
 Two-way clustering: `{"CRV1": "var1 + var2"}`.
 

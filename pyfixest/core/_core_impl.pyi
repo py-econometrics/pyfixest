@@ -2,6 +2,13 @@ import numpy as np
 from numpy.typing import NDArray
 
 def _find_collinear_variables_rs(x: NDArray[np.float64], tol: float = 1e-10): ...
+def _conley_meat_rs(
+    scores: NDArray[np.float64],
+    lon_arr: NDArray[np.float64],
+    lat_arr: NDArray[np.float64],
+    distance: int,
+    cutoff: float,
+) -> NDArray[np.float64]: ...
 def _crv1_meat_loop_rs(
     scores: NDArray[np.float64],
     clustid: NDArray[np.uint64],

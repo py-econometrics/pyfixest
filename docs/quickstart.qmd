@@ -222,7 +222,7 @@ pf.feols(
 
 # Standard Errors and Inference
 
-Supported covariance types are "iid", "HC1-3", CRV1 and CRV3 (up to two-way clustering).
+Supported covariance types are "iid", "HC1-3", CRV1 and CRV3 (up to two-way clustering), NW/DK HAC, and Conley spatial HAC.
 
 **Why do we have so many different types of standard errors?**
 
@@ -232,6 +232,7 @@ The standard errors of the coefficients are crucial for inference. They tell us 
 - `HC1-3`: heteroskedasticity-robust standard errors according to White (1980) and MacKinnon and White (1985). See [Econometric Computing with HC and HAC
 Covariance Matrix Estimators](https://cran.r-project.org/web/packages/sandwich/vignettes/sandwich.pdf) from the [`sandwich`](https://cran.r-project.org/web/packages/sandwich/) package for more details.
 - `CRV1` and `CRV3`: cluster robust standard errors according to Cameron, Gelbach, and Miller (2011). See [A Practitioner's Guide to Cluster-Robust Inference](https://cameron.econ.ucdavis.edu/research/Cameron_Miller_JHR_2015_February.pdf).  For   `CRV1` and `CRV3` one should pass a dictionaty of the form `{"CRV1": "clustervar"}`.
+- `NW`, `DK`, and `conley`: HAC-style standard errors. `NW` and `DK` use `vcov_kwargs` with `time_id`, while `conley` uses `vcov_kwargs` with `lat`, `lon`, and `cutoff`. For Conley, a zero cutoff includes only observations with identical coordinates.
 
 Inference can be adjusted "on-the-fly" via the `.vcov()` method:
 

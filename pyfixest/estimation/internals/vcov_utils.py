@@ -1,6 +1,9 @@
 import numpy as np
 import pandas as pd
 
+from pyfixest.core.conley import (
+    conley_meat as _conley_meat_rs,
+)
 from pyfixest.core.nw import (
     dk_meat_panel as _dk_meat_panel_rs,
 )
@@ -171,6 +174,99 @@ def _dk_meat_panel(
             np.ascontiguousarray(scores, dtype=np.float64),
             np.ascontiguousarray(idx, dtype=np.uint64),
             lag,
+        )
+    )
+
+
+def _normalize_conley_coordinates(
+    lon_arr: np.ndarray, lat_arr: np.ndarray
+) -> tuple[np.ndarray, np.ndarray]:
+    """Normalize Conley coordinates to longitude [-180, 180) and latitude [-90, 90]."""
+    lon_arr = np.asarray(lon_arr, dtype=np.float64).flatten()
+    lat_arr = np.asarray(lat_arr, dtype=np.float64).flatten()
+
+    if not np.isfinite(lon_arr).all() or not np.isfinite(lat_arr).all():
+        raise ValueError(
+            "Conley inference is not supported with missing values or non-finite coordinate values."
+        )
+
+    lon_min = lon_arr.min(initial=0.0)
+    lon_max = lon_arr.max(initial=0.0)
+    lon_in_standard = lon_min >= -180 and lon_max <= 180
+    lon_in_positive = lon_min >= 0 and lon_max <= 360
+    lon_in_negative = lon_min >= -360 and lon_max <= 0
+    if not (lon_in_standard or lon_in_positive or lon_in_negative):
+        raise ValueError(
+            "The longitude variable must be in [-180, 180], [0, 360], or [-360, 0]."
+        )
+
+    lat_min = lat_arr.min(initial=0.0)
+    lat_max = lat_arr.max(initial=0.0)
+    lat_in_standard = lat_min >= -90 and lat_max <= 90
+    lat_in_positive = lat_min >= 0 and lat_max <= 180
+    lat_in_negative = lat_min >= -180 and lat_max <= 0
+    if not (lat_in_standard or lat_in_positive or lat_in_negative):
+        raise ValueError(
+            "The latitude variable must be in [-90, 90], [0, 180], or [-180, 0]."
+        )
+
+    if not lat_in_standard:
+        lat_arr = lat_arr - 90 if lat_in_positive else lat_arr + 90
+
+    lon_arr = np.mod(lon_arr + 180, 360) - 180
+    return lon_arr, lat_arr
+
+
+def _aggregate_conley_scores(
+    scores: np.ndarray, lon_arr: np.ndarray, lat_arr: np.ndarray
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Sum scores over exact coordinate cells."""
+    coordinates = np.column_stack((lat_arr, lon_arr))
+    unique_coordinates, inverse = np.unique(coordinates, axis=0, return_inverse=True)
+
+    if unique_coordinates.shape[0] == scores.shape[0]:
+        return scores, lon_arr, lat_arr
+
+    scores_agg = np.zeros(
+        (unique_coordinates.shape[0], scores.shape[1]), dtype=np.float64
+    )
+    np.add.at(scores_agg, inverse, scores)
+    return scores_agg, unique_coordinates[:, 1], unique_coordinates[:, 0]
+
+
+def _conley_meat(
+    scores: np.ndarray,
+    lon_arr: np.ndarray,
+    lat_arr: np.ndarray,
+    cutoff: float,
+    distance: str = "triangular",
+    aggregate: bool = True,
+) -> np.ndarray:
+    """Compute Conley spatial HAC meat matrix (Rust backend)."""
+    distance_code = {"spherical": 1, "triangular": 2}[distance]
+
+    scores = np.ascontiguousarray(scores, dtype=np.float64)
+    if scores.ndim != 2:
+        raise ValueError("Scores must be a two-dimensional array.")
+    # Python owns coordinate normalization because exact-coordinate aggregation
+    # depends on canonical coordinate cells before entering the Rust kernel.
+    lon_arr, lat_arr = _normalize_conley_coordinates(lon_arr, lat_arr)
+
+    if scores.shape[0] != lon_arr.shape[0] or scores.shape[0] != lat_arr.shape[0]:
+        raise ValueError(
+            "Scores, longitude, and latitude arrays must have the same number of observations."
+        )
+
+    if aggregate:
+        scores, lon_arr, lat_arr = _aggregate_conley_scores(scores, lon_arr, lat_arr)
+
+    return np.asarray(
+        _conley_meat_rs(
+            np.ascontiguousarray(scores, dtype=np.float64),
+            np.ascontiguousarray(lon_arr, dtype=np.float64),
+            np.ascontiguousarray(lat_arr, dtype=np.float64),
+            distance_code,
+            cutoff,
         )
     )
 

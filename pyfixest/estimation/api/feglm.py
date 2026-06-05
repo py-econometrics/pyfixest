@@ -29,7 +29,7 @@ def feglm(
     data: DataFrameType,  # type: ignore
     family: str,
     vcov: VcovTypeOptions | dict[str, str] | None = None,
-    vcov_kwargs: dict[str, str | int] | None = None,
+    vcov_kwargs: dict[str, str | int | float] | None = None,
     ssc: dict[str, str | bool] | None = None,
     fixef_rm: FixedRmOptions = "singleton",
     iwls_tol: float = 1e-08,

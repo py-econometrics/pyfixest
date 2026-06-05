@@ -189,7 +189,7 @@ class QuantregMulti:
     def vcov(
         self,
         vcov: str | dict[str, str],
-        vcov_kwargs: dict[str, str | int] | None = None,
+        vcov_kwargs: dict[str, str | int | float] | None = None,
         data: DataFrameType | None = None,
     ):
         "Compute variance-covariance matrices for all models in the quantile regression process."

@@ -1084,3 +1084,69 @@ def test_errors_hac():
                 vcov=vcov,
                 vcov_kwargs={"time_id": "time3", "panel_id": "panel", "lag": 5},
             )
+
+
+def test_errors_conley():
+    """Test error conditions for Conley standard errors."""
+    data = pf.get_data()
+    data["lat"] = np.linspace(-20, 20, data.shape[0])
+    data["lon"] = np.linspace(-60, -20, data.shape[0])
+    conley_kwargs = {"lat": "lat", "lon": "lon", "cutoff": 250}
+
+    with pytest.raises(ValueError, match=r"must contain 'lat', 'lon', and 'cutoff'"):
+        pf.feols("Y ~ X1", data=data, vcov="conley", vcov_kwargs={"lat": "lat"})
+
+    with pytest.raises(
+        ValueError, match=r"The variable 'missing_lat' is not in the data"
+    ):
+        pf.feols(
+            "Y ~ X1",
+            data=data,
+            vcov="conley",
+            vcov_kwargs={"lat": "missing_lat", "lon": "lon", "cutoff": 250},
+        )
+
+    with pytest.raises(ValueError, match=r"non-negative finite value for 'cutoff'"):
+        pf.feols(
+            "Y ~ X1",
+            data=data,
+            vcov="conley",
+            vcov_kwargs={"lat": "lat", "lon": "lon", "cutoff": -1},
+        )
+
+    with pytest.raises(ValueError, match=r"must be either 'triangular' or 'spherical'"):
+        pf.feols(
+            "Y ~ X1",
+            data=data,
+            vcov="conley",
+            vcov_kwargs={**conley_kwargs, "distance": "invalid"},
+        )
+
+    data_nonnumeric = data.copy()
+    data_nonnumeric["lat_str"] = "not numeric"
+    with pytest.raises(ValueError, match=r"The latitude variable must be numeric"):
+        pf.feols(
+            "Y ~ X1",
+            data=data_nonnumeric,
+            vcov="conley",
+            vcov_kwargs={"lat": "lat_str", "lon": "lon", "cutoff": 250},
+        )
+
+    data_missing = data.copy()
+    data_missing.loc[data_missing[["Y", "X1"]].dropna().index[0], "lat"] = np.nan
+    with pytest.raises(ValueError, match=r"missing values in latitude or longitude"):
+        pf.feols("Y ~ X1", data=data_missing, vcov="conley", vcov_kwargs=conley_kwargs)
+
+    data_pois = pf.get_data(model="Fepois")
+    data_pois["lat"] = np.linspace(-20, 20, data_pois.shape[0])
+    data_pois["lon"] = np.linspace(-60, -20, data_pois.shape[0])
+    with pytest.raises(
+        NotImplementedError,
+        match=r"Conley inference is currently only supported for feols models",
+    ):
+        pf.fepois(
+            "Y ~ X1",
+            data=data_pois,
+            vcov="conley",
+            vcov_kwargs=conley_kwargs,
+        )

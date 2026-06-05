@@ -4,6 +4,8 @@ import re
 import warnings
 from collections.abc import Mapping
 from importlib import import_module
+from math import isfinite
+from numbers import Real
 from typing import Any, Literal, cast
 
 import numpy as np
@@ -32,6 +34,7 @@ from pyfixest.estimation.internals.solvers import solve_ols
 from pyfixest.estimation.internals.vcov_utils import (
     _check_cluster_df,
     _compute_bread,
+    _conley_meat,
     _count_G_for_ssc_correction,
     _dk_meat_panel,
     _get_cluster_df,
@@ -315,6 +318,7 @@ class Feols(ResultAccessorMixin):
 
         self._support_crv3_inference = True
         self._support_hac_inference = True
+        self._support_conley_inference = True
         if self._weights_name is not None:
             self._supports_wildboottest = False
         self._supports_wildboottest = True
@@ -575,7 +579,7 @@ class Feols(ResultAccessorMixin):
     def vcov(
         self,
         vcov: str | dict[str, str],
-        vcov_kwargs: dict[str, str | int] | None = None,
+        vcov_kwargs: dict[str, str | int | float] | None = None,
         data: DataFrameType | None = None,
     ) -> Feols:
         """
@@ -586,7 +590,7 @@ class Feols(ResultAccessorMixin):
         vcov : Union[str, dict[str, str]]
             A string or dictionary specifying the type of variance-covariance matrix
             to use for inference.
-            If a string, it can be one of "iid", "hetero", "HC1", "HC2", "HC3", "NW", "DK".
+            If a string, it can be one of "iid", "hetero", "HC1", "HC2", "HC3", "NW", "DK", or "conley".
             If a dictionary, it should have the format {"CRV1": "clustervar"} for
             CRV1 inference or {"CRV3": "clustervar"}
             for CRV3 inference. Note that CRV3 inference is currently not supported
@@ -639,6 +643,16 @@ class Feols(ResultAccessorMixin):
         )
         self._is_sorted = (
             vcov_kwargs.get("is_sorted", None) if vcov_kwargs is not None else None
+        )
+        self._lat = vcov_kwargs.get("lat", None) if vcov_kwargs is not None else None
+        self._lon = vcov_kwargs.get("lon", None) if vcov_kwargs is not None else None
+        self._cutoff = (
+            vcov_kwargs.get("cutoff", None) if vcov_kwargs is not None else None
+        )
+        self._distance = (
+            vcov_kwargs.get("distance", "triangular")
+            if vcov_kwargs is not None
+            else "triangular"
         )
 
         ssc_kwargs = {
@@ -694,6 +708,20 @@ class Feols(ResultAccessorMixin):
             self._ssc, self._df_k, self._df_t = get_ssc(**all_kwargs)
 
             self._vcov = self._ssc * self._vcov_hac()
+
+        elif self._vcov_type == "conley":
+            ssc_kwargs_conley = {
+                "k_fe_nested": 0,  # nesting ignored / irrelevant for Conley SEs
+                "n_fe_fully_nested": 0,  # nesting ignored / irrelevant for Conley SEs
+                "vcov_sign": 1,
+                "vcov_type": "conley",
+                "G": self._N,
+            }
+
+            all_kwargs = {**ssc_kwargs, **ssc_kwargs_conley}
+            self._ssc, self._df_k, self._df_t = get_ssc(**all_kwargs)
+
+            self._vcov = self._ssc * self._vcov_conley()
 
         elif self._vcov_type == "nid":
             ssc_kwargs_hetero = {
@@ -929,6 +957,41 @@ class Feols(ResultAccessorMixin):
         _vcov = _bread @ _meat @ _bread
 
         return _vcov
+
+    def _vcov_conley(self):
+        _scores = self._scores
+        _bread = self._bread
+        _lat = self._lat
+        _lon = self._lon
+        _cutoff = self._cutoff
+        _distance = self._distance
+        _data = self._data
+
+        if not self._support_conley_inference or self._method != "feols" or self._is_iv:
+            raise NotImplementedError(
+                "Conley inference is currently only supported for feols models."
+            )
+
+        if not pd.api.types.is_numeric_dtype(_data[_lat]):
+            raise ValueError("The latitude variable must be numeric.")
+        if not pd.api.types.is_numeric_dtype(_data[_lon]):
+            raise ValueError("The longitude variable must be numeric.")
+        if _data[[_lat, _lon]].isna().any().any():
+            raise ValueError(
+                "Conley inference is not supported with missing values in latitude or longitude."
+            )
+
+        conley_meat = _conley_meat(
+            scores=_scores,
+            lon_arr=_data[_lon].to_numpy(),
+            lat_arr=_data[_lat].to_numpy(),
+            cutoff=float(_cutoff),
+            distance=str(_distance),
+        )
+
+        vcov = _bread @ conley_meat @ _bread
+
+        return vcov
 
     def _vcov_nid(self):
         raise NotImplementedError(
@@ -2548,9 +2611,10 @@ def _check_vcov_input(
             "HC3",
             "NW",
             "DK",
+            "conley",
             "nid",
         ], (
-            "vcov string must be iid, hetero, HC1, HC2, HC3, NW, or DK, or for quantile regression, 'nid'."
+            "vcov string must be iid, hetero, HC1, HC2, HC3, NW, DK, or conley, or for quantile regression, 'nid'."
         )
 
         # check that time_id is provided if vcov is NW or DK
@@ -2560,6 +2624,70 @@ def _check_vcov_input(
             and "time_id" not in vcov_kwargs
         ):
             raise ValueError("Missing required 'time_id' for NW/DK vcov")
+
+        if vcov == "conley":
+            if vcov_kwargs is None:
+                raise ValueError(
+                    "Missing required vcov_kwargs for Conley standard errors. "
+                    "Please provide 'lat', 'lon', and 'cutoff'."
+                )
+
+            allowed_conley_keys = ["lat", "lon", "cutoff", "distance"]
+            if not all(key in allowed_conley_keys for key in vcov_kwargs):
+                raise ValueError(
+                    "The function argument `vcov_kwargs` must be a dictionary with "
+                    "keys 'lat', 'lon', 'cutoff', or 'distance' for Conley "
+                    "standard errors."
+                )
+
+            required_conley_keys = ["lat", "lon", "cutoff"]
+            missing_keys = [
+                key for key in required_conley_keys if key not in vcov_kwargs
+            ]
+            if missing_keys:
+                raise ValueError(
+                    "The function argument `vcov_kwargs` must contain 'lat', 'lon', "
+                    "and 'cutoff' for Conley standard errors."
+                )
+
+            for key in ["lat", "lon"]:
+                if not isinstance(vcov_kwargs[key], str):
+                    raise TypeError(
+                        "The function argument `vcov_kwargs` must be a dictionary "
+                        f"with string values for '{key}' if explicitly provided."
+                    )
+                if vcov_kwargs[key] not in data.columns:
+                    raise ValueError(
+                        f"The variable '{vcov_kwargs[key]}' is not in the data."
+                    )
+                if not pd.api.types.is_numeric_dtype(data[vcov_kwargs[key]]):
+                    name = "latitude" if key == "lat" else "longitude"
+                    raise ValueError(f"The {name} variable must be numeric.")
+
+            cutoff = vcov_kwargs["cutoff"]
+            if not isinstance(cutoff, Real) or isinstance(cutoff, bool):
+                raise TypeError(
+                    "The function argument `vcov_kwargs` must be a dictionary with "
+                    "a numeric value for 'cutoff' if explicitly provided."
+                )
+            if not isfinite(float(cutoff)) or cutoff < 0:
+                raise ValueError(
+                    "The function argument `vcov_kwargs` must contain a "
+                    "non-negative finite value for 'cutoff'."
+                )
+
+            if "distance" in vcov_kwargs:
+                distance = vcov_kwargs["distance"]
+                if not isinstance(distance, str):
+                    raise ValueError(
+                        "The function argument `vcov_kwargs` must be a dictionary "
+                        "with a string value for 'distance' if explicitly provided."
+                    )
+                if distance not in ["triangular", "spherical"]:
+                    raise ValueError(
+                        "The Conley distance must be either 'triangular' or "
+                        "'spherical'."
+                    )
 
 
 def _deparse_vcov_input(vcov: str | dict[str, str], has_fixef: bool, is_iv: bool):
@@ -2615,6 +2743,10 @@ def _deparse_vcov_input(vcov: str | dict[str, str], has_fixef: bool, is_iv: bool
                 )
     elif vcov_type_detail in ["NW", "DK"]:
         vcov_type = "HAC"
+        is_clustered = False
+
+    elif vcov_type_detail == "conley":
+        vcov_type = "conley"
         is_clustered = False
 
     elif vcov_type_detail in ["CRV1", "CRV3"]:
