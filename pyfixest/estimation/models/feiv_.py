@@ -1,12 +1,13 @@
 import warnings
 from collections.abc import Mapping
+from dataclasses import replace
 from importlib import import_module
 from typing import Any, Literal
 
 import numpy as np
 import pandas as pd
 
-from pyfixest.demeaners import AnyDemeaner
+from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.demean_ import demean_model
 from pyfixest.estimation.internals.solvers import solve_ols
@@ -203,7 +204,7 @@ class Feiv(Feols):
         "Demean instruments and endogeneous variable."
         super().demean()
         if self._has_fixef:
-            self._endogvard, self._Zd = demean_model(
+            self._endogvard, self._Zd, used_pre = demean_model(
                 self._endogvar,
                 self._Z,
                 self._fe,
@@ -211,7 +212,9 @@ class Feiv(Feols):
                 self._lookup_demeaned_data,
                 self._na_index,
                 self._demeaner,
+                cached_preconditioner=self._preconditioner,
             )
+            self._seed_preconditioner(used_pre)
         else:
             self._endogvard = self._endogvar
             self._Zd = self._Z
@@ -283,6 +286,10 @@ class Feiv(Feols):
         else:
             vcov_detail = self._vcov_type_detail
 
+        demeaner = self._demeaner
+        if isinstance(demeaner, LsmrDemeaner) and self._preconditioner is not None:
+            demeaner = replace(demeaner, preconditioner=self._preconditioner)
+
         # Do first stage regression
         model1 = fit_(
             fml=fml_first_stage,
@@ -291,6 +298,8 @@ class Feiv(Feols):
             weights=self._weights_name,
             weights_type=self._weights_type,
             collin_tol=self._collin_tol,
+            solver=self._solver,
+            demeaner=demeaner,
         )
 
         # Ensure model1 is of type Feols

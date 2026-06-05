@@ -408,12 +408,14 @@ class Feglm(Feols, ABC):
             return v, X
 
         effective_demeaner = _override_demeaner_tol(self._demeaner, tol=tol)
-        vX_tilde, success = dispatch_demean(
+        vX_tilde, success, used_pre = dispatch_demean(
             x=np.c_[v, X],
             flist=flist,
             weights=weights.flatten(),
             demeaner=effective_demeaner,
+            cached_preconditioner=self._preconditioner,
         )
+        self._seed_preconditioner(used_pre)
 
         if success is False:
             raise ValueError(

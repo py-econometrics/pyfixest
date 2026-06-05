@@ -2,13 +2,17 @@ import warnings
 from collections.abc import Callable
 from dataclasses import replace
 from importlib import import_module
-from typing import cast
+from typing import cast, get_args
 
 import numpy as np
 import pandas as pd
 import scipy.sparse as sp
 
-from pyfixest.core.demean import demean_within
+from pyfixest.core.demean import (
+    Preconditioner,
+    WithinPreconditionerName,
+    demean_within,
+)
 from pyfixest.demeaners import (
     AnyDemeaner,
     LsmrBackend,
@@ -18,9 +22,9 @@ from pyfixest.demeaners import (
 )
 
 _PRECONDITIONER_SUPPORT: dict[LsmrBackend, tuple[set[str], str]] = {
-    "within": ({"none", "schwarz", "diag"}, "schwarz"),
-    "torch": ({"diag"}, "diag"),
-    "cupy": ({"none", "diag"}, "diag"),
+    "within": (set(get_args(WithinPreconditionerName)), "additive"),
+    "torch": ({"diagonal"}, "diagonal"),
+    "cupy": ({"off", "diagonal"}, "diagonal"),
 }
 
 
@@ -53,7 +57,8 @@ def demean_model(
     lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
     na_index: frozenset[int],
     demeaner: AnyDemeaner,
-) -> tuple[pd.DataFrame, pd.DataFrame]:
+    cached_preconditioner: Preconditioner | None = None,
+) -> tuple[pd.DataFrame, pd.DataFrame, Preconditioner | None]:
     """
     Demean a regression model.
 
@@ -86,13 +91,19 @@ def demean_model(
 
     Returns
     -------
-    tuple[pd.DataFrame, pd.DataFrame]
+    tuple[pd.DataFrame, pd.DataFrame, Preconditioner | None]
         A tuple of the following elements:
         - Yd : pd.DataFrame
             A DataFrame of the demeaned dependent variable.
         - Xd : pd.DataFrame
             A DataFrame of the demeaned covariates.
+        - used_preconditioner : Preconditioner or None
+            The within preconditioner used during the solve (Schwarz, diagonal,
+            or the cached/explicit instance), or ``None`` for non-within
+            backends, ``preconditioner='off'``, the single-FE MAP fallback,
+            or when no demeaning happened.
     """
+    used_preconditioner: Preconditioner | None = None
     YX = pd.concat([Y, X], axis=1)
 
     yx_names = YX.columns
@@ -119,11 +130,12 @@ def demean_model(
                 if var_diff.ndim == 1:
                     var_diff = var_diff.reshape(len(var_diff), 1)
 
-                YX_demean_new, success = dispatch_demean(
+                YX_demean_new, success, used_preconditioner = dispatch_demean(
                     x=var_diff,
                     flist=fe_array,
                     weights=weights,
                     demeaner=demeaner,
+                    cached_preconditioner=cached_preconditioner,
                 )
                 if success is False:
                     raise ValueError(
@@ -146,11 +158,12 @@ def demean_model(
                 YX_demeaned = YX_demeaned_old[yx_names]
 
         else:
-            YX_demeaned_array, success = dispatch_demean(
+            YX_demeaned_array, success, used_preconditioner = dispatch_demean(
                 x=YX_array,
                 flist=fe_array,
                 weights=weights,
                 demeaner=demeaner,
+                cached_preconditioner=cached_preconditioner,
             )
             if success is False:
                 raise ValueError(
@@ -170,7 +183,7 @@ def demean_model(
     Yd = YX_demeaned[Y.columns]
     Xd = YX_demeaned[X.columns]
 
-    return Yd, Xd
+    return Yd, Xd, used_preconditioner
 
 
 def _override_demeaner_tol(
@@ -197,31 +210,84 @@ def dispatch_demean(
     flist: np.ndarray,
     weights: np.ndarray | None,
     demeaner: AnyDemeaner,
-) -> tuple[np.ndarray, bool]:
-    """Demean an array using the configured backend for the resolved demeaner."""
+    cached_preconditioner: Preconditioner | None = None,
+) -> tuple[np.ndarray, bool, Preconditioner | None]:
+    """Demean an array using the configured backend for the resolved demeaner.
+
+    Parameters
+    ----------
+    cached_preconditioner : Preconditioner or None, optional
+        A preconditioner saved by the caller from an earlier within solve on
+        the same fixed-effect design. This is separate from
+        ``demeaner.preconditioner``: the latter is the user's requested
+        configuration, while ``cached_preconditioner`` is the model's internal
+        "reuse this if it still matches" handle. The cache is used only when
+        the current request is a string preconditioner with the same variant
+        (``"additive"`` or ``"diagonal"``). If the user explicitly supplied a
+        ``Preconditioner`` on the demeaner, that object is passed through and
+        the model cache is ignored.
+
+    Returns
+    -------
+    tuple[np.ndarray, bool, Preconditioner | None]
+        The demeaned array, a convergence flag, and the within preconditioner
+        actually used during the solve. The third element is ``None`` for
+        non-within backends, when ``preconditioner='off'`` was requested, or
+        when the single-FE MAP fallback path was taken inside
+        ``demean_within`` — in those cases no preconditioner participated in
+        the solve. Callers (e.g. model classes) can cache the returned
+        instance to amortise setup across subsequent solves on the same
+        design.
+    """
     flist_uint = flist.astype(np.uintp, copy=False)
 
     if isinstance(demeaner, LsmrDemeaner) and demeaner.backend == "within":
-        resolved = _resolve_preconditioner("within", demeaner.preconditioner)
-        return demean_within(
+        preconditioner: WithinPreconditionerName | Preconditioner
+        if isinstance(demeaner.preconditioner, Preconditioner):
+            preconditioner = demeaner.preconditioner
+        else:
+            preconditioner = cast(
+                WithinPreconditionerName,
+                _resolve_preconditioner("within", demeaner.preconditioner),
+            )
+
+        # If the user requested a preconditioner by string, we would normally
+        # pass that string to Rust and let within build a fresh factorization.
+        # When the model already has a cached preconditioner of the same
+        # variant, pass the object instead so Rust takes the reuse path.
+        # We do not replace an explicit user-supplied preconditioner.
+
+        if (
+            cached_preconditioner is not None
+            and isinstance(preconditioner, str)
+            and cached_preconditioner.variant.lower() == preconditioner
+        ):
+            preconditioner = cached_preconditioner
+
+        result, success, built = demean_within(
             x=x,
             flist=flist.astype(np.uint32, copy=False),
             weights=weights,
             tol=max(demeaner.fixef_atol, demeaner.fixef_btol),
             maxiter=demeaner.fixef_maxiter,
             local_size=demeaner.local_size,
-            preconditioner=resolved,
+            preconditioner=preconditioner,
         )
+        return result, success, built
 
     if weights is None:
         weights = np.ones(x.shape[0], dtype=np.float64)
 
+    # Non-within branches never produce a Preconditioner, so their
+    # third return value is always None.
     if isinstance(demeaner, LsmrDemeaner):
         if demeaner.backend == "torch":
             # Torch LSMR always uses its built-in diagonal preconditioner.
             # Call resolver for its UserWarning side effect on incompatible
             # requests; the returned value is intentionally unused.
-            _ = _resolve_preconditioner("torch", demeaner.preconditioner)
+            _ = _resolve_preconditioner(
+                "torch", cast(LsmrPreconditioner, demeaner.preconditioner)
+            )
             try:
                 torch = import_module("torch")
                 torch_demean_module = import_module(
@@ -230,13 +296,14 @@ def dispatch_demean(
             except ImportError:
                 from pyfixest.core.demean import demean as demean_rs
 
-                return demean_rs(
+                result, success = demean_rs(
                     x=x,
                     flist=flist_uint,
                     weights=weights,
                     tol=max(demeaner.fixef_atol, demeaner.fixef_btol),
                     maxiter=demeaner.fixef_maxiter,
                 )
+                return result, success, None
 
             dtype = torch.float32 if demeaner.precision == "float32" else torch.float64
             tol = max(demeaner.fixef_atol, demeaner.fixef_btol)
@@ -247,7 +314,7 @@ def dispatch_demean(
                     Callable[..., tuple[np.ndarray, bool]],
                     torch_demean_module.demean_torch,
                 )
-                return demean_torch(
+                result, success = demean_torch(
                     x=x,
                     flist=flist_uint64,
                     weights=weights,
@@ -255,12 +322,13 @@ def dispatch_demean(
                     maxiter=demeaner.fixef_maxiter,
                     dtype=dtype,
                 )
+                return result, success, None
 
             demean_torch_on_device = cast(
                 Callable[..., tuple[np.ndarray, bool]],
                 torch_demean_module._demean_torch_on_device_impl,
             )
-            return demean_torch_on_device(
+            result, success = demean_torch_on_device(
                 x=x,
                 flist=flist_uint64,
                 weights=weights,
@@ -269,8 +337,11 @@ def dispatch_demean(
                 device=torch.device(demeaner.device),
                 dtype=dtype,
             )
+            return result, success, None
 
-        cupy_resolved = _resolve_preconditioner("cupy", demeaner.preconditioner)
+        cupy_resolved = _resolve_preconditioner(
+            "cupy", cast(LsmrPreconditioner, demeaner.preconditioner)
+        )
         cupy_demean_module = import_module("pyfixest.estimation.cupy.demean_cupy_")
         fe_df = pd.DataFrame(
             flist_uint,
@@ -290,12 +361,13 @@ def dispatch_demean(
             dtype=np.float32 if demeaner.precision == "float32" else np.float64,
             preconditioner=cupy_resolved,
         )
-        return cupy_demeaner.demean(
+        result, success = cupy_demeaner.demean(
             x=x,
             flist=flist_uint,
             weights=weights,
             fe_sparse_matrix=fe_sparse_matrix,
         )
+        return result, success, None
 
     if isinstance(demeaner, MapDemeaner):
         backend = demeaner.backend
@@ -312,13 +384,14 @@ def dispatch_demean(
         else:
             raise ValueError(f"Unknown MapDemeaner backend: {backend!r}")
 
-        return demean_func(
+        result, success = demean_func(
             x=x,
             flist=flist_uint,
             weights=weights,
             tol=demeaner.fixef_tol,
             maxiter=demeaner.fixef_maxiter,
         )
+        return result, success, None
 
     raise TypeError(f"Unsupported demeaner type: {type(demeaner)!r}")
 

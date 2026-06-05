@@ -274,30 +274,129 @@ def test_typed_demeaners_reject_tolerances_ge_one(builder, invalid_name):
         builder()
 
 
-def test_lsmr_demeaner_defaults_to_within():
-    demeaner = pf.LsmrDemeaner()
-
+@pytest.mark.parametrize("requested", ["auto", "off", "additive", "diagonal"])
+def test_lsmr_demeaner_accepts_within_preconditioner_strings(requested):
+    """All four documented string options round-trip through ``LsmrDemeaner``."""
+    demeaner = pf.LsmrDemeaner(preconditioner=requested)
     assert demeaner.backend == "within"
-    assert demeaner.preconditioner == "auto"
+    assert demeaner.preconditioner == requested
 
 
-def test_lsmr_demeaner_accepts_unpreconditioned_within():
-    demeaner = pf.LsmrDemeaner(preconditioner="none")
+@pytest.mark.parametrize(
+    ("bad", "exc", "match"),
+    [
+        ("bogus", ValueError, "`preconditioner`"),
+        (42, TypeError, "Preconditioner"),
+        (object(), TypeError, "Preconditioner"),
+    ],
+)
+def test_lsmr_demeaner_rejects_invalid_preconditioner(bad, exc, match):
+    """Unknown strings raise ValueError; non-string/non-Preconditioner raises TypeError."""
+    with pytest.raises(exc, match=match):
+        pf.LsmrDemeaner(preconditioner=bad)  # type: ignore[arg-type]
 
-    assert demeaner.backend == "within"
-    assert demeaner.preconditioner == "none"
+
+def _glm_binary_data():
+    data = pf.get_data()
+    data["Y_bin"] = (data["Y"] > data["Y"].median()).astype(int)
+    return data
 
 
-def test_lsmr_demeaner_rejects_unknown_preconditioner():
-    with pytest.raises(ValueError, match="`preconditioner`"):
-        pf.LsmrDemeaner(preconditioner="bogus")  # type: ignore[arg-type]
+def _feglm_logit(data, demeaner):
+    return pf.feglm(
+        "Y_bin ~ X1 | f1 + f2", data=data, family="logit", demeaner=demeaner
+    )
 
 
-def test_lsmr_demeaner_accepts_diag_within():
-    demeaner = pf.LsmrDemeaner(preconditioner="diag")
+_REUSE_ESTIMATORS = [
+    pytest.param(
+        lambda: pf.get_data(),
+        lambda data, demeaner: pf.feols(
+            "Y ~ X1 | f1 + f2", data=data, demeaner=demeaner
+        ),
+        id="feols",
+    ),
+    pytest.param(
+        lambda: pf.get_data(model="Fepois"),
+        lambda data, demeaner: pf.fepois(
+            "Y ~ X1 | f1 + f2", data=data, demeaner=demeaner
+        ),
+        id="fepois",
+    ),
+    pytest.param(_glm_binary_data, _feglm_logit, id="feglm"),
+]
 
-    assert demeaner.backend == "within"
-    assert demeaner.preconditioner == "diag"
+
+@pytest.mark.parametrize(("data_fn", "fit_fn"), _REUSE_ESTIMATORS)
+def test_within_preconditioner_reuse_across_estimators(data_fn, fit_fn):
+    """Every Feols-family estimator exposes a Preconditioner that round-trips.
+
+    Pinned down for ``feols``, ``fepois`` (IWLS), and ``feglm`` (IWLS):
+    - the fit exposes a non-None ``Preconditioner`` after a 2-FE solve, and
+    - feeding it back via ``LsmrDemeaner(preconditioner=...)`` reproduces the
+      original coefficients to machine precision.
+    """
+    data = data_fn()
+    fit = fit_fn(data, pf.LsmrDemeaner(backend="within"))
+
+    pre = fit.preconditioner
+    assert isinstance(pre, pf.Preconditioner)
+
+    fit_reused = fit_fn(data, pf.LsmrDemeaner(backend="within", preconditioner=pre))
+
+    # Load-bearing correctness check: the reused factorization must produce
+    # the same solve as the original.
+    np.testing.assert_allclose(fit_reused.coef(), fit.coef(), rtol=1e-10, atol=1e-10)
+    assert isinstance(fit_reused.preconditioner, pf.Preconditioner)
+    assert fit_reused.preconditioner.variant == pre.variant
+    assert fit_reused.preconditioner.nrows == pre.nrows
+
+
+def test_within_preconditioner_off_yields_no_cached_preconditioner():
+    """``preconditioner='off'`` disables Schwarz, so ``fit.preconditioner`` is None."""
+    data = pf.get_data()
+    fit = pf.feols(
+        "Y ~ X1 | f1 + f2",
+        data=data,
+        demeaner=pf.LsmrDemeaner(backend="within", preconditioner="off"),
+    )
+    assert fit.preconditioner is None
+
+
+@pytest.mark.parametrize("backend", ["torch", "cupy"])
+def test_preconditioner_rejected_on_non_within_backend(backend):
+    """A built ``Preconditioner`` is only valid for ``backend='within'``."""
+    data = pf.get_data()
+    pre = pf.feols(
+        "Y ~ X1 | f1 + f2",
+        data=data,
+        demeaner=pf.LsmrDemeaner(backend="within"),
+    ).preconditioner
+    assert pre is not None
+    with pytest.raises(ValueError, match="Preconditioner"):
+        pf.LsmrDemeaner(backend=backend, preconditioner=pre)
+
+
+def test_feiv_first_stage_reuses_within_preconditioner():
+    data = pf.get_data()
+    fit = pf.feols(
+        "Y ~ 1 | f1 + f2 | X1 ~ Z1",
+        data=data,
+        demeaner=pf.LsmrDemeaner(backend="within"),
+    )
+
+    preconditioner = fit.preconditioner
+    assert isinstance(preconditioner, pf.Preconditioner)
+    assert isinstance(fit._model_1st_stage._demeaner, pf.LsmrDemeaner)
+    # The 1st-stage demeaner's config stores the 2nd-stage's preconditioner
+    # verbatim (identity preserved on assignment).
+    assert fit._model_1st_stage._demeaner.preconditioner is preconditioner
+    # The 1st-stage model's preconditioner is what came back from the solve;
+    # a fresh pyo3 wrapper around the same factorization (identity differs;
+    # value semantics match upstream — compare structurally).
+    assert isinstance(fit._model_1st_stage.preconditioner, pf.Preconditioner)
+    assert fit._model_1st_stage.preconditioner.variant == preconditioner.variant
+    assert fit._model_1st_stage.preconditioner.nrows == preconditioner.nrows
 
 
 def test_lean():

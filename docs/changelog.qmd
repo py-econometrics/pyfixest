@@ -21,8 +21,8 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 Bumped the bundled `within` Rust solver to 0.2.0, which adds a diagonal
 (Jacobi) preconditioner. It is now exposed on `LsmrDemeaner(backend="within")`
-via `preconditioner="diag"`, alongside the existing `"schwarz"` (default) and
-`"none"` options.
+via `preconditioner="diagonal"`, alongside the existing `"additive"` (default) and
+`"off"` options.
 
 ### Rust MAP Default and Optional Numba
 
@@ -53,6 +53,42 @@ fit = pf.feols("Y ~ X1 | f1", data=df, demeaner=LsmrDemeaner(backend="torch", de
 **Default change:** `LsmrDemeaner()` now defaults to `fixef_maxiter=1_000` (previously inherited `10_000` from `BaseDemeaner`). LSMR typically converges in far fewer than 1,000 iterations, but if you hit `"Demeaning failed after 1000 iterations"` on a difficult problem, pass `LsmrDemeaner(fixef_maxiter=10_000)` (or higher) explicitly.
 
 The lower-level `pyfixest.core.demean.demean_within(...)` helper also tightened its default `tol` from `1e-6` to `1e-8`. Calls through `LsmrDemeaner` already pass `max(fixef_atol, fixef_btol)` (default `1e-8`), so the new default just matches what the typed API was already using; only direct callers of `demean_within(...)` with no `tol` argument see a behaviour change.
+
+### Reusing Preconditioners
+
+The `within` LSMR backend now exposes its additive Schwarz preconditioner so the
+(potentially) expensive setup phase can be amortised when users explicitly reuse it across
+regressions based on the same fixed-effect design.
+
+```python
+import pyfixest as pf
+from pyfixest.demeaners import LsmrDemeaner
+
+df = pf.get_data()
+
+# Every Feols-family fit exposes the preconditioner that was used.
+fit = pf.feols("Y ~ X1 | f1 + f2", data=df, demeaner=LsmrDemeaner())
+pre = fit.preconditioner
+
+# Pass it back via `LsmrDemeaner(preconditioner=...)` to skip the setup
+# phase on a later fit over the same design.
+fit_fast = pf.feols(
+    "Y ~ X1 + X2 | f1 + f2",
+    data=df,
+    demeaner=LsmrDemeaner(preconditioner=pre),
+)
+```
+
+For `fepois()` and `feglm()`, the first IWLS iteration builds the
+preconditioner and every subsequent iteration reuses it under the changing
+working weights. As a  result, the reused preconditioner turns "stale" - it was built under the initial iteration's weights - but LSMR still converges to the correct demeaned
+values; it may just take a few extra iterations per IWLS step. The setup phase
+is paid once instead of once per IWLS iteration.
+
+`Preconditioner` instances are pickleable, so the setup phase can also
+be amortised across Python sessions. See
+[Choosing a Demeaner Backend](how-to/demeaner-backends.qmd) for details.
+
 
 ### JAX, CuPy, and SciPy Backend Deprecations
 

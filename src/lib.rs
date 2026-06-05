@@ -14,6 +14,7 @@ fn _core_impl(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_wrapped(wrap_pyfunction!(crv1::_crv1_meat_loop_rs))?;
     m.add_wrapped(wrap_pyfunction!(crv1::_crv1_vcov_loop_qreg_rs))?;
     m.add_wrapped(wrap_pyfunction!(demean::_demean_rs))?;
+    demean_within::add_pyclass(m)?;
     m.add_wrapped(wrap_pyfunction!(demean_within::_demean_within_rs))?;
     m.add_wrapped(wrap_pyfunction!(
         nested_fixed_effects::_count_fixef_fully_nested_all_rs

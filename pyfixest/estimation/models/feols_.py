@@ -15,6 +15,7 @@ from scipy.stats import chi2, f, t
 
 from pyfixest.core.collinear import find_collinear_variables
 from pyfixest.core.crv1 import crv1_meat_loop
+from pyfixest.core.demean import Preconditioner
 from pyfixest.core.nested_fixed_effects import count_fixef_fully_nested_all
 from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner, MapDemeaner
 from pyfixest.errors import VcovTypeNotSupportedError
@@ -307,6 +308,7 @@ class Feols(ResultAccessorMixin):
             self._fixef_tol = demeaner.fixef_tol
         self._fixef_maxiter = demeaner.fixef_maxiter
         self._lookup_demeaned_data = lookup_demeaned_data
+        self._preconditioner: Preconditioner | None = None
         self._store_data = store_data
         self._copy_data = copy_data
         self._lean = lean
@@ -491,7 +493,7 @@ class Feols(ResultAccessorMixin):
     def demean(self):
         "Demean the dependent variable and covariates by the fixed effect(s)."
         if self._has_fixef:
-            self._Yd, self._Xd = demean_model(
+            self._Yd, self._Xd, used_pre = demean_model(
                 self._Y,
                 self._X,
                 self._fe,
@@ -499,9 +501,37 @@ class Feols(ResultAccessorMixin):
                 self._lookup_demeaned_data,
                 self._na_index,
                 self._demeaner,
+                cached_preconditioner=self._preconditioner,
             )
+            self._seed_preconditioner(used_pre)
         else:
             self._Yd, self._Xd = self._Y, self._X
+
+    def _seed_preconditioner(self, used_pre: Preconditioner | None) -> None:
+        """Store only the first preconditioner returned by demean dispatch.
+
+        For IWLS (Poisson, GLM) the dispatcher is called once per iteration
+        and returns a preconditioner each time; we keep the one from the
+        first call and ignore the rest. ``used_pre`` is ``None`` when no
+        preconditioner participated in the solve (MAP fallback,
+        ``preconditioner='off'``, non-within backend), in which case there
+        is nothing to store.
+        """
+        if self._preconditioner is None and used_pre is not None:
+            self._preconditioner = used_pre
+
+    @property
+    def preconditioner(self) -> Preconditioner | None:
+        """The within preconditioner used during demeaning, if any.
+
+        ``None`` when no preconditioner participated in the solve —
+        ``preconditioner='off'``, single-FE designs (MAP fallback), or any
+        non-within backend. Otherwise the instance built on the first solve.
+        Pass it back via
+        ``LsmrDemeaner(backend='within', preconditioner=...)`` to skip the
+        setup phase on a later fit over the same design.
+        """
+        return self._preconditioner
 
     def to_array(self):
         "Convert estimation data frames to np arrays."

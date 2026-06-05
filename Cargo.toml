@@ -14,6 +14,7 @@ ndarray = { version = "0.16.1", features = ["rayon"] }
 rayon   = "1.11.0"
 numpy = "0.26.0"
 thiserror = "2.0.16"
+postcard = { version = "1", features = ["use-std"] }
 within = "0.2.0"
 
 [profile.release]

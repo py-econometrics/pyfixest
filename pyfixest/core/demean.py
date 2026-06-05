@@ -1,7 +1,18 @@
+from typing import Literal, get_args
+
 import numpy as np
 from numpy.typing import NDArray
 
-from ._core_impl import _demean_rs, _demean_within_rs
+from ._core_impl import Preconditioner, _demean_rs, _demean_within_rs
+
+WithinPreconditionerName = Literal["additive", "off", "diagonal"]
+
+__all__ = [
+    "Preconditioner",
+    "WithinPreconditionerName",
+    "demean",
+    "demean_within",
+]
 
 
 def demean(
@@ -86,8 +97,8 @@ def demean_within(
     tol: float = 1e-08,
     maxiter: int = 1_000,
     local_size: int | None = None,
-    preconditioner: str = "schwarz",
-) -> tuple[NDArray, bool]:
+    preconditioner: WithinPreconditionerName | Preconditioner = "additive",
+) -> tuple[NDArray, bool, Preconditioner | None]:
     """
     Demean an array using modified LSMR via `within`.
 
@@ -123,20 +134,47 @@ def demean_within(
         and twice that many when a preconditioner is active. Under the
         hood this enables windowed Gram-Schmidt reorthogonalization
         inside LSMR's bidiagonalization.
-    preconditioner : {"schwarz", "none", "diag"}, optional
-        Preconditioner choice for `within`'s LSMR solver. ``"schwarz"``
-        (default) uses additive Schwarz preconditioning; ``"none"`` disables
-        preconditioning; ``"diag"`` uses a diagonal (Jacobi) preconditioner
-        (``M⁻¹ = diag(DᵀWD)⁻¹``).
+    preconditioner : {"additive", "off", "diagonal"} or Preconditioner, optional
+        Preconditioner choice for `within`'s LSMR solver. ``"additive"``
+        (default) uses additive Schwarz preconditioning; ``"off"`` disables
+        preconditioning; ``"diagonal"`` uses a diagonal (Jacobi) preconditioner.
+        Preconditioners are only computed and applied
+        for two or more fixed-effect factors; single-factor problems use
+        MAP and do not use a preconditioner. Alternatively, you can
+        pass a previously-built :class:`Preconditioner` and reuse it for
+        the current problem.
+        If the computation of the pre-conditioner takes a long time, this can
+        speed up subsequent calls to ``demean_within`` with the same fixed effect structure.
 
     Returns
     -------
-    tuple[numpy.ndarray, bool]
-        Demeaned array and convergence flag.
+    tuple[numpy.ndarray, bool, Preconditioner | None]
+        The demeaned array, a convergence flag, and the preconditioner used
+        during the solve (additive Schwarz for ``preconditioner="additive"``,
+        diagonal for ``"diagonal"``, or an equivalent object for a
+        user-supplied preconditioner). This low-level helper does not
+        preserve Python object identity for user-supplied preconditioners.
+        The preconditioner is ``None`` when none was constructed or applied —
+        i.e. when ``preconditioner="off"`` or the single-factor MAP fallback
+        path was taken.
     """
+    _valid_names = get_args(WithinPreconditionerName)
+    _valid_str = ", ".join(repr(n) for n in _valid_names)
+    if isinstance(preconditioner, Preconditioner):
+        pass
+    elif not isinstance(preconditioner, str):
+        raise TypeError(
+            f"`preconditioner` must be {_valid_str}, or a Preconditioner instance."
+        )
+    elif preconditioner not in _valid_names:
+        raise ValueError(
+            f"preconditioner={preconditioner!r} is not supported by the 'within' "
+            f"LSMR backend; use {_valid_str}, or a Preconditioner instance."
+        )
+
     if flist.ndim == 1 or flist.shape[1] == 1:
         flist_2d = flist.reshape(-1, 1) if flist.ndim == 1 else flist
-        return _demean_rs(
+        demeaned, success = _demean_rs(
             x.astype(np.float64, copy=False),
             flist_2d.astype(np.uint64, copy=False),
             weights.astype(np.float64, copy=False)
@@ -145,6 +183,8 @@ def demean_within(
             tol,
             maxiter,
         )
+        return demeaned, success, None
+
     return _demean_within_rs(
         x.astype(np.float64, copy=False),
         np.asfortranarray(flist, dtype=np.uint32),
