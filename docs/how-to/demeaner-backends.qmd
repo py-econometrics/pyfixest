@@ -124,6 +124,12 @@ preconditioner is computed or applied. For large multi-way FE problems, setting 
 the preconditioner can be a meaningful fraction of total runtime, so it is worth
 reusing the preconditioner across solves on the same design.
 
+Each `Preconditioner` records the wall-clock seconds spent building it on its
+`build_secs` attribute (`None` when the value isn't known — e.g. after
+unpickling a preconditioner produced by an older PyFixest). When a prebuilt
+preconditioner is reused on a later fit, the original `build_secs` is carried
+over so you can still see what the one-time setup cost was.
+
 ### Within a session
 
 Every fit produced with `LsmrDemeaner(backend="within")` exposes the
@@ -140,7 +146,7 @@ fit to skip the setup phase:
 
 ```{python}
 fit_reused = pf.feols(
-    "Y ~ X1 + X2 | f1 + f2",
+    "Y ~ X1 | f1 + f2",
     data=df,
     demeaner=LsmrDemeaner(preconditioner=pre),
 )
