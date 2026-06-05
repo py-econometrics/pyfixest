@@ -3,28 +3,19 @@ use numpy::{PyArray2, PyReadonlyArray1, PyReadonlyArray2};
 use pyo3::prelude::*;
 use pyo3::types::{PyAny, PyBytes};
 
-/// Opaque handle to a pre-built within preconditioner (Schwarz or Diagonal).
+/// Opaque handle to a pre-built within preconditioner (Additive Schwarz or
+/// Diagonal Jacobi).
 ///
-/// Two instances compare equal when their serialized representations match
-/// — i.e. they describe the same factorization. ``__hash__`` is consistent
-/// with ``__eq__``.
-#[pyclass(frozen, name = "WithinPreconditioner", module = "pyfixest.core._core_impl")]
-#[derive(Clone)]
-pub struct PyWithinPreconditioner {
+/// Equality / hashing follow Python's pyo3 defaults (object identity), in
+/// line with upstream ``within._within.Preconditioner``. Pickle uses
+/// ``postcard`` round-tripping via ``__reduce__``.
+#[pyclass(frozen, name = "Preconditioner", module = "pyfixest.core._core_impl")]
+pub struct PyPreconditioner {
     inner: within::Preconditioner,
 }
 
-fn serialize_preconditioner(inner: &within::Preconditioner) -> PyResult<Vec<u8>> {
-    postcard::to_stdvec(inner).map_err(|e| {
-        pyo3::exceptions::PyRuntimeError::new_err(format!(
-            "failed to serialize preconditioner: {}",
-            e
-        ))
-    })
-}
-
 #[pymethods]
-impl PyWithinPreconditioner {
+impl PyPreconditioner {
     #[new]
     fn new(data: &[u8]) -> PyResult<Self> {
         let inner: within::Preconditioner = postcard::from_bytes(data).map_err(|e| {
@@ -53,52 +44,38 @@ impl PyWithinPreconditioner {
 
     fn __repr__(&self) -> String {
         format!(
-            "WithinPreconditioner(variant={}, nrows={}, ncols={})",
+            "Preconditioner(variant={}, nrows={}, ncols={})",
             self.inner.variant_name(),
             self.inner.nrows(),
             self.inner.ncols()
         )
     }
 
-    fn __eq__(&self, other: &Self) -> PyResult<bool> {
-        if std::ptr::eq(self, other) {
-            return Ok(true);
-        }
-        if self.inner.nrows() != other.inner.nrows()
-            || self.inner.ncols() != other.inner.ncols()
-        {
-            return Ok(false);
-        }
-        let a = serialize_preconditioner(&self.inner)?;
-        let b = serialize_preconditioner(&other.inner)?;
-        Ok(a == b)
-    }
-
-    fn __hash__(&self) -> PyResult<isize> {
-        use std::collections::hash_map::DefaultHasher;
-        use std::hash::{Hash, Hasher};
-        let bytes = serialize_preconditioner(&self.inner)?;
-        let mut hasher = DefaultHasher::new();
-        bytes.hash(&mut hasher);
-        Ok(hasher.finish() as isize)
-    }
-
     fn __reduce__<'py>(
         &self,
         py: Python<'py>,
     ) -> PyResult<(Bound<'py, PyAny>, (Bound<'py, PyBytes>,))> {
-        let bytes = serialize_preconditioner(&self.inner)?;
+        let bytes = postcard::to_stdvec(&self.inner).map_err(|e| {
+            pyo3::exceptions::PyRuntimeError::new_err(format!(
+                "failed to serialize preconditioner: {}",
+                e
+            ))
+        })?;
         let cls = py.get_type::<Self>();
         let py_bytes = PyBytes::new(py, &bytes);
         Ok((cls.into_any(), (py_bytes,)))
     }
 }
 
-enum PreconditionerArg {
-    Default,
-    Off,
-    Diagonal,
+/// Native interpretation of the Python `preconditioner` argument.
+///
+/// Mirrors `within`'s own `PrecondInput`: a prebuilt `Preconditioner`
+/// takes the reuse path; everything else is an `Option<PreconditionerConfig>`
+/// (None ⇒ upstream library default = additive Schwarz) that `Solver::new`
+/// can build from directly.
+enum PrecondInput {
     Prebuilt(within::Preconditioner),
+    Config(Option<within::PreconditionerConfig>),
 }
 
 fn extract_columns(x: &ArrayView2<f64>) -> Vec<Vec<f64>> {
@@ -107,32 +84,36 @@ fn extract_columns(x: &ArrayView2<f64>) -> Vec<Vec<f64>> {
         .collect()
 }
 
-fn extract_preconditioner(
+fn resolve_precond_input(
     preconditioner: Option<&Bound<'_, PyAny>>,
-) -> PyResult<PreconditionerArg> {
+) -> PyResult<PrecondInput> {
     let Some(preconditioner) = preconditioner else {
-        return Ok(PreconditionerArg::Default);
+        return Ok(PrecondInput::Config(None));
     };
 
     if let Ok(s) = preconditioner.extract::<&str>() {
         return match s {
-            "schwarz" => Ok(PreconditionerArg::Default),
-            "none" => Ok(PreconditionerArg::Off),
-            "diag" => Ok(PreconditionerArg::Diagonal),
+            "additive" => Ok(PrecondInput::Config(None)),
+            "off" => Ok(PrecondInput::Config(Some(
+                within::PreconditionerConfig::Off,
+            ))),
+            "diagonal" => Ok(PrecondInput::Config(Some(
+                within::PreconditionerConfig::Diagonal,
+            ))),
             other => Err(pyo3::exceptions::PyValueError::new_err(format!(
                 "preconditioner={other:?} is not supported by the 'within' \
-                 LSMR backend; use 'schwarz' (default), 'none', 'diag', or a \
-                 WithinPreconditioner instance."
+                 LSMR backend; use 'additive' (default), 'off', 'diagonal', \
+                 or a Preconditioner instance."
             ))),
         };
     }
 
-    if let Ok(pre) = preconditioner.downcast::<PyWithinPreconditioner>() {
-        return Ok(PreconditionerArg::Prebuilt(pre.get().inner.clone()));
+    if let Ok(pre) = preconditioner.downcast::<PyPreconditioner>() {
+        return Ok(PrecondInput::Prebuilt(pre.get().inner.clone()));
     }
 
     Err(pyo3::exceptions::PyTypeError::new_err(
-        "`preconditioner` must be 'schwarz', 'none', 'diag', or a WithinPreconditioner instance.",
+        "`preconditioner` must be 'additive', 'off', 'diagonal', or a Preconditioner instance.",
     ))
 }
 
@@ -143,7 +124,7 @@ fn demean_within_impl(
     tol: f64,
     maxiter: usize,
     local_size: Option<usize>,
-    preconditioner: PreconditionerArg,
+    preconditioner: PrecondInput,
 ) -> Result<(Array2<f64>, bool, Option<within::Preconditioner>), within::WithinError> {
     let n_obs = x.nrows();
     let n_rhs = x.ncols();
@@ -159,23 +140,11 @@ fn demean_within_impl(
     };
 
     let solver = match preconditioner {
-        PreconditionerArg::Default => within::Solver::new(
-            flist.view(),
-            weights_vec,
-            Option::<&within::PreconditionerConfig>::None,
-        )?,
-        PreconditionerArg::Off => within::Solver::new(
-            flist.view(),
-            weights_vec,
-            within::PreconditionerConfig::Off,
-        )?,
-        PreconditionerArg::Diagonal => within::Solver::new(
-            flist.view(),
-            weights_vec,
-            within::PreconditionerConfig::Diagonal,
-        )?,
-        PreconditionerArg::Prebuilt(pre) => {
+        PrecondInput::Prebuilt(pre) => {
             within::Solver::new(flist.view(), weights_vec, pre)?
+        }
+        PrecondInput::Config(cfg) => {
+            within::Solver::new(flist.view(), weights_vec, cfg.as_ref())?
         }
     };
 
@@ -207,8 +176,8 @@ pub fn _demean_within_rs(
     maxiter: usize,
     local_size: Option<usize>,
     preconditioner: Option<&Bound<'_, PyAny>>,
-) -> PyResult<(Py<PyArray2<f64>>, bool, Option<Py<PyWithinPreconditioner>>)> {
-    let preconditioner = extract_preconditioner(preconditioner)?;
+) -> PyResult<(Py<PyArray2<f64>>, bool, Option<Py<PyPreconditioner>>)> {
+    let preconditioner = resolve_precond_input(preconditioner)?;
 
     let x_arr = x.as_array();
     let flist_arr = flist.as_array();
@@ -238,13 +207,13 @@ pub fn _demean_within_rs(
 
     let pyarray = PyArray2::from_owned_array(py, out);
     let py_preconditioner = match built {
-        Some(inner) => Some(Py::new(py, PyWithinPreconditioner { inner })?),
+        Some(inner) => Some(Py::new(py, PyPreconditioner { inner })?),
         None => None,
     };
     Ok((pyarray.into(), success, py_preconditioner))
 }
 
 pub fn add_pyclass(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add_class::<PyWithinPreconditioner>()?;
+    m.add_class::<PyPreconditioner>()?;
     Ok(())
 }

@@ -138,7 +138,7 @@ def test_torch_device_backends_match_pyhdfe(backend_name, rtol, atol, demean_dat
         ),
         (
             LsmrDemeaner(
-                preconditioner="none",
+                preconditioner="off",
                 fixef_atol=1e-10,
                 fixef_btol=1e-10,
                 fixef_maxiter=10_000,
@@ -184,7 +184,7 @@ def test_demean_within_returns_preconditioner_for_reuse(demean_data):
         weights=weights,
     )
     assert success
-    assert isinstance(preconditioner, pf.WithinPreconditioner)
+    assert isinstance(preconditioner, pf.Preconditioner)
     assert preconditioner.nrows == preconditioner.ncols
 
     # Reusing the preconditioner yields the same demeaned output.
@@ -196,6 +196,15 @@ def test_demean_within_returns_preconditioner_for_reuse(demean_data):
     )
     assert success_reused
     assert preconditioner_reused is not None
+    # Structural match: reused returns a wrapper around the same factorization
+    # (same variant and DOF count) but not the same Python object — pyo3
+    # round-trips produce fresh wrappers, matching upstream's value semantics.
+    assert preconditioner_reused is not preconditioner
+    assert preconditioner_reused.variant == preconditioner.variant
+    assert preconditioner_reused.nrows == preconditioner.nrows
+    assert preconditioner_reused.ncols == preconditioner.ncols
+    # Solve-equivalence is the load-bearing correctness check: same factorization
+    # applied to the same data must yield bitwise-identical demeaned output.
     np.testing.assert_allclose(result_reused, result, rtol=1e-10, atol=1e-10)
 
 
@@ -211,7 +220,7 @@ def test_demean_within_preconditioner_pickle_roundtrip(demean_data):
     assert preconditioner is not None
 
     restored = pickle.loads(pickle.dumps(preconditioner))
-    assert isinstance(restored, pf.WithinPreconditioner)
+    assert isinstance(restored, pf.Preconditioner)
     assert restored.nrows == preconditioner.nrows
     assert restored.ncols == preconditioner.ncols
 
@@ -290,59 +299,16 @@ def test_demean_within_rejects_mismatched_preconditioner(demean_data):
         )
 
 
-def test_within_preconditioner_value_equality(demean_data):
-    """``WithinPreconditioner`` uses value semantics for ``__eq__`` / ``__hash__``.
-
-    Three contracts are pinned down:
-
-    1. Two distinct Python objects that wrap the same factorization compare
-       equal under ``==``. We use ``pickle`` round-tripping to manufacture a
-       second object with identical content but a different identity.
-    2. ``hash(a) == hash(b)`` whenever ``a == b`` (Python's rule for sane
-       behaviour in sets and dicts).
-    3. Preconditioners built from *different* designs do not collide:
-       ``__eq__`` actually inspects content rather than returning True
-       indiscriminately.
-
-    Motivation: the documented "save in session 1, reload in session 2"
-    workflow relies on users being able to check ``loaded == fit.preconditioner``
-    and key dicts/sets by preconditioner content. Identity-based equality
-    (Python's default) would silently break both.
-    """
-    x, flist, weights = demean_data
-
-    # Build the reference preconditioner from the full 2-FE design.
-    _, _, original = demean_within(
-        x=x,
-        flist=flist.astype(np.uint32, copy=False),
-        weights=weights,
-    )
-    # Defensive: demean_data is multi-FE so this path returns a built
-    # preconditioner. If a future refactor changes that, fail loudly here
-    # instead of further down with a confusing ``NoneType has no __eq__``.
-    assert original is not None
-
-    # Round-tripping through pickle gives us a second Python object backed by
-    # the same serialized factorization — exactly the "different object, same
-    # content" case __eq__ needs to handle.
-    restored = pickle.loads(pickle.dumps(original))
-    assert original is not restored, "pickle should produce a fresh object"
-    assert original == restored, "same content must compare equal"
-    assert hash(original) == hash(restored), "equal objects must hash equally"
-
-    # Negative case: a *different* design (fewer levels per factor via % 5)
-    # produces a preconditioner with different n_dofs and different internal
-    # state. __eq__ must distinguish it from the original.
-    _, _, different = demean_within(
-        x=x,
-        flist=(flist % 5).astype(np.uint32, copy=False),
-        weights=weights,
-    )
-    assert different is not None
-    assert original != different, "different factorizations must compare unequal"
-
-
-def test_lsmr_within_reuses_cached_preconditioner(demean_data):
+@pytest.mark.parametrize(
+    ("preconditioner", "expected_variant"),
+    [
+        ("additive", "Additive"),
+        ("diagonal", "Diagonal"),
+    ],
+)
+def test_lsmr_within_reuses_cached_preconditioner(
+    preconditioner, expected_variant, demean_data
+):
     """End-to-end coverage of ``dispatch_demean``'s preconditioner-reuse policy.
 
     Context
@@ -350,7 +316,7 @@ def test_lsmr_within_reuses_cached_preconditioner(demean_data):
     ``dispatch_demean`` is the orchestration layer that the model classes
     (``Feols``, ``Fepois``, ``Feglm``) call to demean their working data on
     each iteration. The ``cached_preconditioner`` argument is the
-    callsite-supplied factorization that turns IWLS's "build the Schwarz
+    callsite-supplied factorization that turns IWLS's "build the
     factorization once, reuse it across iterations" claim into reality. The
     dispatcher returns the preconditioner actually used so callers can hold
     onto it for the next solve. This test exercises that contract directly,
@@ -360,10 +326,9 @@ def test_lsmr_within_reuses_cached_preconditioner(demean_data):
     Three behaviours are pinned down:
 
     Leg 1 — first call reports the freshly built preconditioner
-        With no ``cached_preconditioner``, a default
-        ``LsmrDemeaner(backend="within")`` builds a fresh Schwarz
-        factorization. The dispatcher must return it as the third tuple
-        element so the caller can hold onto it.
+        With no ``cached_preconditioner``, ``LsmrDemeaner(backend="within")``
+        builds the requested factorization. The dispatcher must return it as
+        the third tuple element so the caller can hold onto it.
 
     Leg 2 — subsequent calls reuse the supplied preconditioner under changed
     weights (the IWLS hot path)
@@ -401,7 +366,13 @@ def test_lsmr_within_reuses_cached_preconditioner(demean_data):
     summation order from rayon parallelism could differ.
     """
     x, flist, weights = demean_data
-    demeaner = LsmrDemeaner(backend="within")
+    demeaner = LsmrDemeaner(
+        backend="within",
+        preconditioner=preconditioner,
+        fixef_atol=1e-10,
+        fixef_btol=1e-10,
+        fixef_maxiter=10_000,
+    )
 
     # ----- Leg 1: no cache → build a fresh preconditioner and return it.
     result, success, built = dispatch_demean(
@@ -411,14 +382,16 @@ def test_lsmr_within_reuses_cached_preconditioner(demean_data):
         demeaner=demeaner,
     )
     assert success
-    assert isinstance(built, pf.WithinPreconditioner), (
+    assert isinstance(built, pf.Preconditioner), (
         "first call must report the freshly built preconditioner"
     )
+    assert built.variant == expected_variant
 
     # ----- Leg 2: changed weights, cached preconditioner supplied. Mimics
     # an IWLS iteration where only the working weights moved. The dispatcher
-    # must reuse the cached object (returning the same identity) and the
-    # result must still be numerically correct under the *new* weights.
+    # must reuse the cached factorization (same variant + DOF count; pyo3
+    # produces a fresh wrapper, identity semantics match upstream ``within``)
+    # and the result must still be numerically correct under the *new* weights.
     adjusted_weights = weights + 0.25
     result_reused, success, reused = dispatch_demean(
         x=x,
@@ -428,7 +401,10 @@ def test_lsmr_within_reuses_cached_preconditioner(demean_data):
         cached_preconditioner=built,
     )
     assert success
-    assert reused is built, "cache hit must reuse the supplied preconditioner identity"
+    assert isinstance(reused, pf.Preconditioner)
+    assert reused.variant == built.variant
+    assert reused.nrows == built.nrows
+    assert reused.ncols == built.ncols
 
     # Independent ground truth: pyhdfe residualizes the same design+weights
     # via its own MAP solver. Matching it proves the stale-preconditioner
@@ -453,7 +429,13 @@ def test_lsmr_within_reuses_cached_preconditioner(demean_data):
         x=x,
         flist=flist,
         weights=weights,
-        demeaner=LsmrDemeaner(backend="within", preconditioner=built),
+        demeaner=LsmrDemeaner(
+            backend="within",
+            preconditioner=built,
+            fixef_atol=1e-10,
+            fixef_btol=1e-10,
+            fixef_maxiter=10_000,
+        ),
     )
     assert success
     np.testing.assert_allclose(
@@ -466,96 +448,80 @@ def test_lsmr_within_reuses_cached_preconditioner(demean_data):
 
 
 def test_lsmr_within_reports_no_preconditioner_when_unused(demean_data):
-    """The dispatcher only reports preconditioners that were actually applied.
+    """The dispatcher reports ``None`` whenever no preconditioner ran.
 
-    Scenario
-    --------
-    A user passes an explicit ``WithinPreconditioner`` via ``LsmrDemeaner``,
-    but the underlying data has a *single* fixed effect. ``demean_within``
-    special-cases single-FE designs and routes them to the MAP fallback,
-    which does not consult the preconditioner — the user-supplied object is
-    silently ignored.
+    Two routes produce that outcome, both pinned here:
 
-    What we are pinning down
-    ------------------------
-    The dispatcher must report ``None`` as the used preconditioner in this
-    case. The returned third tuple element is what model classes assign to
-    ``fit.preconditioner``; it is supposed to reflect factorizations that
-    actually participated in a solve. Returning the unused one would
-    mislead any code that inspects, pickles, or hashes it.
+    1. ``preconditioner="off"`` — preconditioning is explicitly disabled, so
+       ``demean_within`` never builds one.
+    2. Single-FE design with an explicit ``Preconditioner`` —
+       ``demean_within`` special-cases single-FE designs to the MAP fallback,
+       which ignores the user-supplied object entirely.
+
+    In both, ``demean_within``'s third return is ``None`` and the dispatcher
+    must propagate that. ``fit.preconditioner`` is supposed to reflect
+    factorizations that actually participated in a solve; reporting an
+    unused one would mislead any code that inspects or pickles it.
 
     Why this is the only regression test for that guard
     ---------------------------------------------------
-    The dispatcher's "used" computation is gated on ``built is not None`` —
-    ``built`` comes from ``demean_within`` and is ``None`` precisely when
-    the single-FE MAP fallback ran. Every *other* path either has
-    ``built is not None`` (multi-FE schwarz ran, reporting is correct) or
-    has no explicit preconditioner in the first place. So this is the one
-    combination that exercises the guard; without this test a refactor that
-    drops the ``built is not None`` check would silently regress the
-    contract.
+    The dispatcher's "used" computation is gated on ``built is not None``.
+    Every other code path has ``built is not None`` (multi-FE Schwarz ran,
+    reporting is correct) or has no explicit preconditioner to mishandle in
+    the first place. Without these two cases, a refactor that drops the
+    ``built is not None`` check would silently regress the contract.
     """
     x, flist, weights = demean_data
 
-    # Build a real preconditioner on the full 2-FE design so we have a
-    # genuine ``WithinPreconditioner`` to pass back in below. We only need
-    # the third return value; the demeaned output is incidental.
-    _, _, preconditioner = demean_within(
+    # Case 1: preconditioner="off" — demean_within returns built=None.
+    expected = pyhdfe.create(flist).residualize(x, weights.reshape((x.shape[0], 1)))
+    result_off, success, built_off = demean_within(
+        x=x,
+        flist=flist.astype(np.uint32, copy=False),
+        weights=weights,
+        preconditioner="off",
+        tol=1e-10,
+        maxiter=10_000,
+    )
+    assert success
+    assert built_off is None
+    np.testing.assert_allclose(result_off, expected, rtol=1e-6, atol=1e-8)
+
+    # Case 2: explicit preconditioner + single-FE design routes to MAP, which
+    # ignores the preconditioner. Build a real one on the 2-FE design first
+    # so we have a genuine object to feed back in.
+    _, _, full_pre = demean_within(
         x=x,
         flist=flist.astype(np.uint32, copy=False),
         weights=weights,
     )
-    assert preconditioner is not None
+    assert full_pre is not None
 
-    # The setup: explicit preconditioner + single-FE design (``flist[:, :1]``
-    # slices off the second factor). ``demean_within`` will route this to
-    # the MAP fallback and the preconditioner will go unused.
     _, success, used = dispatch_demean(
         x=x,
         flist=flist[:, :1],
         weights=weights,
-        demeaner=LsmrDemeaner(backend="within", preconditioner=preconditioner),
+        demeaner=LsmrDemeaner(backend="within", preconditioner=full_pre),
     )
     assert success
-    # The load-bearing assertion: ``used`` is None even though an explicit
-    # preconditioner was passed. If this ever fails, the dispatcher is
-    # reporting things that never touched the data.
     assert used is None, "unused explicit preconditioner must not be reported as used"
-
-
-def test_demean_within_unpreconditioned_matches_pyhdfe(demean_data):
-    x, flist, weights = demean_data
-
-    expected = pyhdfe.create(flist).residualize(x, weights.reshape((x.shape[0], 1)))
-    result, success, built = demean_within(
-        x=x,
-        flist=flist.astype(np.uint32, copy=False),
-        weights=weights,
-        preconditioner="none",
-        tol=1e-10,
-        maxiter=10_000,
-    )
-
-    assert success
-    assert built is None  # preconditioner="none" never builds one
-    np.testing.assert_allclose(result, expected, rtol=1e-6, atol=1e-8)
 
 
 @pytest.mark.parametrize(
     ("backend", "requested", "expected"),
     [
-        # within: supports schwarz, none, diag; auto -> schwarz
-        ("within", "auto", "schwarz"),
-        ("within", "schwarz", "schwarz"),
-        ("within", "none", "none"),
-        ("within", "diag", "diag"),
-        # torch: supports diag; auto -> diag
-        ("torch", "auto", "diag"),
-        ("torch", "diag", "diag"),
-        # cupy: supports diag, none; auto -> diag
-        ("cupy", "auto", "diag"),
-        ("cupy", "diag", "diag"),
-        ("cupy", "none", "none"),
+        # within: supports additive, off, diagonal; auto -> additive
+        ("within", "auto", "additive"),
+        ("within", "additive", "additive"),
+        ("within", "off", "off"),
+        ("within", "diagonal", "diagonal"),
+        # torch: supports diagonal; auto -> diagonal
+        ("torch", "auto", "diagonal"),
+        ("torch", "diagonal", "diagonal"),
+        # cupy: supports diagonal, off; auto -> diagonal
+        ("cupy", "auto", "diagonal"),
+        ("cupy", "diagonal", "diagonal"),
+        ("cupy", "off", "off"),
     ],
 )
 def test_resolve_preconditioner_compatible_silent(backend, requested, expected):
@@ -570,9 +536,9 @@ def test_resolve_preconditioner_compatible_silent(backend, requested, expected):
 @pytest.mark.parametrize(
     ("backend", "requested", "fallback"),
     [
-        ("torch", "schwarz", "diag"),
-        ("torch", "none", "diag"),
-        ("cupy", "schwarz", "diag"),
+        ("torch", "additive", "diagonal"),
+        ("torch", "off", "diagonal"),
+        ("cupy", "additive", "diagonal"),
     ],
 )
 def test_resolve_preconditioner_incompatible_warns(backend, requested, fallback):

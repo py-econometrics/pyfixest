@@ -4,13 +4,13 @@ from dataclasses import dataclass
 from numbers import Integral, Real
 from typing import ClassVar, Literal, get_args
 
-from pyfixest.core.demean import WithinPreconditioner
+from pyfixest.core.demean import Preconditioner
 
 MapBackend = Literal["numba", "rust", "jax"]
 LsmrBackend = Literal["within", "cupy", "torch"]
 LsmrPrecision = Literal["float32", "float64"]
 TorchDevice = Literal["auto", "cpu", "mps", "cuda"]
-LsmrPreconditioner = Literal["auto", "none", "schwarz", "diag"]
+LsmrPreconditioner = Literal["auto", "off", "additive", "diagonal"]
 
 
 def _validate_unit_interval_float(value: float, name: str) -> None:
@@ -80,15 +80,15 @@ class LsmrDemeaner(BaseDemeaner):
     ``preconditioner`` selects the preconditioner. Supported values:
 
     - ``"auto"`` (default): selects different preconditioners for different
-      backend implementations: ``"schwarz"`` for ``within``; ``"diag"`` for
-      ``torch`` / ``cupy``.
-    - ``"none"``: disables preconditioning. Supported by ``within`` and
+      backend implementations: ``"additive"`` for ``within``; ``"diagonal"``
+      for ``torch`` / ``cupy``.
+    - ``"off"``: disables preconditioning. Supported by ``within`` and
       ``cupy``; not supported by ``torch``.
-    - ``"schwarz"``: additive Schwarz preconditioner. Only supported by the
+    - ``"additive"``: additive Schwarz preconditioner. Only supported by the
       ``within`` backend.
-    - ``"diag"``: diagonal (Jacobi) preconditioner. Supported by ``within``,
-      ``torch``, and ``cupy``.
-    - A :class:`pyfixest.WithinPreconditioner` instance: a previously built
+    - ``"diagonal"``: diagonal (Jacobi) preconditioner. Supported by
+      ``within``, ``torch``, and ``cupy``.
+    - A :class:`pyfixest.Preconditioner` instance: a previously built
       preconditioner (typically obtained via ``fit.preconditioner`` or
       pickled across sessions). Only supported by ``backend='within'``;
       preconditioners are only computed and applied for two or more
@@ -98,7 +98,7 @@ class LsmrDemeaner(BaseDemeaner):
 
     If a *string* value is incompatible with the chosen backend, a
     ``UserWarning`` is emitted at solve time and the backend's default is
-    used. A ``WithinPreconditioner`` paired with a non-``within`` backend is
+    used. A ``Preconditioner`` paired with a non-``within`` backend is
     rejected eagerly with ``ValueError`` because there is no sensible
     fallback for a prebuilt object.
     """
@@ -110,7 +110,7 @@ class LsmrDemeaner(BaseDemeaner):
     fixef_atol: float = 1e-8
     fixef_btol: float = 1e-8
     warn_on_cpu_fallback: bool = True
-    preconditioner: LsmrPreconditioner | WithinPreconditioner = "auto"
+    preconditioner: LsmrPreconditioner | Preconditioner = "auto"
     local_size: int | None = None
     kind: ClassVar[str] = "lsmr"
 
@@ -135,19 +135,17 @@ class LsmrDemeaner(BaseDemeaner):
 
         if not isinstance(self.warn_on_cpu_fallback, bool):
             raise TypeError("`warn_on_cpu_fallback` must be a bool.")
-        if isinstance(self.preconditioner, WithinPreconditioner):
+        if isinstance(self.preconditioner, Preconditioner):
             if self.backend != "within":
                 raise ValueError(
-                    "A WithinPreconditioner can only be reused with `backend='within'`."
+                    "A Preconditioner can only be reused with `backend='within'`."
                 )
         elif not isinstance(self.preconditioner, str):
-            raise TypeError(
-                "`preconditioner` must be a string or a WithinPreconditioner."
-            )
+            raise TypeError("`preconditioner` must be a string or a Preconditioner.")
         elif self.preconditioner not in get_args(LsmrPreconditioner):
             raise ValueError(
                 f"`preconditioner` must be one of {get_args(LsmrPreconditioner)} "
-                "or a WithinPreconditioner."
+                "or a Preconditioner."
             )
 
         if self.local_size is not None:

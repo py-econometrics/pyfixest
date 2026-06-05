@@ -1,12 +1,13 @@
 import warnings
 from collections.abc import Mapping
+from dataclasses import replace
 from importlib import import_module
 from typing import Any, Literal
 
 import numpy as np
 import pandas as pd
 
-from pyfixest.demeaners import AnyDemeaner
+from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.demean_ import demean_model
 from pyfixest.estimation.internals.solvers import solve_ols
@@ -286,6 +287,10 @@ class Feiv(Feols):
         else:
             vcov_detail = self._vcov_type_detail
 
+        demeaner = self._demeaner
+        if isinstance(demeaner, LsmrDemeaner) and self._preconditioner is not None:
+            demeaner = replace(demeaner, preconditioner=self._preconditioner)
+
         # Do first stage regression
         model1 = fit_(
             fml=fml_first_stage,
@@ -294,6 +299,8 @@ class Feiv(Feols):
             weights=self._weights_name,
             weights_type=self._weights_type,
             collin_tol=self._collin_tol,
+            solver=self._solver,
+            demeaner=demeaner,
         )
 
         # Ensure model1 is of type Feols

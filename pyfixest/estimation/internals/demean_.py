@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 import scipy.sparse as sp
 
-from pyfixest.core.demean import WithinPreconditioner, demean_within
+from pyfixest.core.demean import Preconditioner, demean_within
 from pyfixest.demeaners import (
     AnyDemeaner,
     LsmrBackend,
@@ -18,9 +18,9 @@ from pyfixest.demeaners import (
 )
 
 _PRECONDITIONER_SUPPORT: dict[LsmrBackend, tuple[set[str], str]] = {
-    "within": ({"none", "schwarz", "diag"}, "schwarz"),
-    "torch": ({"diag"}, "diag"),
-    "cupy": ({"none", "diag"}, "diag"),
+    "within": ({"off", "additive", "diagonal"}, "additive"),
+    "torch": ({"diagonal"}, "diagonal"),
+    "cupy": ({"off", "diagonal"}, "diagonal"),
 }
 
 
@@ -53,8 +53,8 @@ def demean_model(
     lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
     na_index: frozenset[int],
     demeaner: AnyDemeaner,
-    cached_preconditioner: WithinPreconditioner | None = None,
-) -> tuple[pd.DataFrame, pd.DataFrame, WithinPreconditioner | None]:
+    cached_preconditioner: Preconditioner | None = None,
+) -> tuple[pd.DataFrame, pd.DataFrame, Preconditioner | None]:
     """
     Demean a regression model.
 
@@ -87,19 +87,19 @@ def demean_model(
 
     Returns
     -------
-    tuple[pd.DataFrame, pd.DataFrame, WithinPreconditioner | None]
+    tuple[pd.DataFrame, pd.DataFrame, Preconditioner | None]
         A tuple of the following elements:
         - Yd : pd.DataFrame
             A DataFrame of the demeaned dependent variable.
         - Xd : pd.DataFrame
             A DataFrame of the demeaned covariates.
-        - used_preconditioner : WithinPreconditioner or None
+        - used_preconditioner : Preconditioner or None
             The within preconditioner used during the solve (Schwarz, diagonal,
             or the cached/explicit instance), or ``None`` for non-within
-            backends, ``preconditioner='none'``, the single-FE MAP fallback,
+            backends, ``preconditioner='off'``, the single-FE MAP fallback,
             or when no demeaning happened.
     """
-    used_preconditioner: WithinPreconditioner | None = None
+    used_preconditioner: Preconditioner | None = None
     YX = pd.concat([Y, X], axis=1)
 
     yx_names = YX.columns
@@ -206,26 +206,26 @@ def dispatch_demean(
     flist: np.ndarray,
     weights: np.ndarray | None,
     demeaner: AnyDemeaner,
-    cached_preconditioner: WithinPreconditioner | None = None,
-) -> tuple[np.ndarray, bool, WithinPreconditioner | None]:
+    cached_preconditioner: Preconditioner | None = None,
+) -> tuple[np.ndarray, bool, Preconditioner | None]:
     """Demean an array using the configured backend for the resolved demeaner.
 
     Parameters
     ----------
-    cached_preconditioner : WithinPreconditioner or None, optional
+    cached_preconditioner : Preconditioner or None, optional
         A previously built within preconditioner to reuse on this solve. If
         its variant matches the variant the demeaner would request as a
-        string (``"schwarz"`` → Additive, ``"diag"`` → Diagonal), it is
+        string (``"additive"`` -> Additive, ``"diagonal"`` -> Diagonal), it is
         substituted in to avoid a rebuild. Mismatched variants and explicit
-        user-supplied ``WithinPreconditioner`` instances on the demeaner take
+        user-supplied ``Preconditioner`` instances on the demeaner take
         precedence over the cache.
 
     Returns
     -------
-    tuple[np.ndarray, bool, WithinPreconditioner | None]
+    tuple[np.ndarray, bool, Preconditioner | None]
         The demeaned array, a convergence flag, and the within preconditioner
         actually used during the solve. The third element is ``None`` for
-        non-within backends, when ``preconditioner='none'`` was requested, or
+        non-within backends, when ``preconditioner='off'`` was requested, or
         when the single-FE MAP fallback path was taken inside
         ``demean_within`` — in those cases no preconditioner participated in
         the solve. Callers (e.g. model classes) can cache the returned
@@ -235,21 +235,21 @@ def dispatch_demean(
     flist_uint = flist.astype(np.uintp, copy=False)
 
     if isinstance(demeaner, LsmrDemeaner) and demeaner.backend == "within":
-        preconditioner: str | WithinPreconditioner
-        if isinstance(demeaner.preconditioner, WithinPreconditioner):
+        preconditioner: str | Preconditioner
+        if isinstance(demeaner.preconditioner, Preconditioner):
             preconditioner = demeaner.preconditioner
         else:
             preconditioner = _resolve_preconditioner("within", demeaner.preconditioner)
 
         # Reuse the caller-supplied cached preconditioner when its variant
-        # matches the requested string. Explicit user-supplied
-        # WithinPreconditioner instances on the demeaner pass through
-        # unchanged.
-        _string_to_variant = {"schwarz": "Additive", "diag": "Diagonal"}
+        # matches the requested string. Variant names are titlecased on the
+        # Rust side (``Additive`` / ``Diagonal``), the public strings are
+        # lowercase. Explicit user-supplied Preconditioner instances on the
+        # demeaner pass through unchanged.
         if (
             cached_preconditioner is not None
             and isinstance(preconditioner, str)
-            and _string_to_variant.get(preconditioner) == cached_preconditioner.variant
+            and cached_preconditioner.variant.lower() == preconditioner
         ):
             preconditioner = cached_preconditioner
 
@@ -263,24 +263,16 @@ def dispatch_demean(
             preconditioner=preconditioner,
         )
         # ``built is None`` signals the single-FE MAP fallback was taken (or
-        # ``preconditioner='none'``), in which case no preconditioner was
-        # actually used and the return is ``None``. Otherwise, if we passed
-        # an instance in (explicit user object or cached one), preserve its
-        # Python identity rather than the freshly wrapped object returned by
-        # ``demean_within``.
-        used: WithinPreconditioner | None
-        if built is None:
-            used = None
-        elif isinstance(preconditioner, WithinPreconditioner):
-            used = preconditioner
-        else:
-            used = built
-        return result, success, used
+        # ``preconditioner='off'``); no preconditioner participated in the
+        # solve, so report ``None``. Otherwise return whatever
+        # ``demean_within`` returned — Python identity is *not* preserved for
+        # user-supplied instances (mirrors upstream ``within`` semantics).
+        return result, success, built
 
     if weights is None:
         weights = np.ones(x.shape[0], dtype=np.float64)
 
-    # Non-within branches never produce a WithinPreconditioner, so their
+    # Non-within branches never produce a Preconditioner, so their
     # third return value is always None.
     if isinstance(demeaner, LsmrDemeaner):
         if demeaner.backend == "torch":

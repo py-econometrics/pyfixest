@@ -218,15 +218,15 @@ BACKEND_F3 = [
     ],
     pytest.param(
         "within",
-        pf.LsmrDemeaner(preconditioner="schwarz"),
+        pf.LsmrDemeaner(preconditioner="additive"),
         SINGLE_F3,
-        id="within_schwarz",
+        id="within_additive",
     ),
     pytest.param(
         "within_diag",
-        pf.LsmrDemeaner(preconditioner="diag"),
+        pf.LsmrDemeaner(preconditioner="diagonal"),
         SINGLE_F3,
-        id="within_diag",
+        id="within_diagonal",
     ),
     *[
         pytest.param(name, pf.MapDemeaner(backend=name), SINGLE_F3, id=name)

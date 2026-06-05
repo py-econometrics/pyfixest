@@ -1,7 +1,7 @@
 import numpy as np
 from numpy.typing import NDArray
 
-class WithinPreconditioner:
+class Preconditioner:
     def __init__(self, data: bytes) -> None: ...
     @property
     def nrows(self) -> int: ...
@@ -42,8 +42,8 @@ def _demean_within_rs(
     tol: float = 1e-08,
     maxiter: int = 1_000,
     local_size: int | None = None,
-    preconditioner: str | WithinPreconditioner | None = None,
-) -> tuple[np.ndarray, bool, WithinPreconditioner | None]: ...
+    preconditioner: str | Preconditioner | None = None,
+) -> tuple[np.ndarray, bool, Preconditioner | None]: ...
 def _count_fixef_fully_nested_all_rs(
     all_fixef_array: NDArray,
     cluster_colnames: NDArray,

@@ -1,9 +1,9 @@
 import numpy as np
 from numpy.typing import NDArray
 
-from ._core_impl import WithinPreconditioner, _demean_rs, _demean_within_rs
+from ._core_impl import Preconditioner, _demean_rs, _demean_within_rs
 
-__all__ = ["WithinPreconditioner", "demean", "demean_within"]
+__all__ = ["Preconditioner", "demean", "demean_within"]
 
 
 def demean(
@@ -88,8 +88,8 @@ def demean_within(
     tol: float = 1e-08,
     maxiter: int = 1_000,
     local_size: int | None = None,
-    preconditioner: str | WithinPreconditioner = "schwarz",
-) -> tuple[NDArray, bool, WithinPreconditioner | None]:
+    preconditioner: str | Preconditioner = "additive",
+) -> tuple[NDArray, bool, Preconditioner | None]:
     """
     Demean an array using modified LSMR via `within`.
 
@@ -125,42 +125,44 @@ def demean_within(
         and twice that many when a preconditioner is active. Under the
         hood this enables windowed Gram-Schmidt reorthogonalization
         inside LSMR's bidiagonalization.
-    preconditioner : {"schwarz", "none", "diag"} or WithinPreconditioner, optional
-        Preconditioner choice for `within`'s LSMR solver. ``"schwarz"``
-        (default) uses additive Schwarz preconditioning; ``"none"`` disables
-        preconditioning; ``"diag"`` uses a diagonal (Jacobi) preconditioner.
-        Schwarz preconditioners are only computed and applied
+    preconditioner : {"additive", "off", "diagonal"} or Preconditioner, optional
+        Preconditioner choice for `within`'s LSMR solver. ``"additive"``
+        (default) uses additive Schwarz preconditioning; ``"off"`` disables
+        preconditioning; ``"diagonal"`` uses a diagonal (Jacobi) preconditioner.
+        Preconditioners are only computed and applied
         for two or more fixed-effect factors; single-factor problems use
         MAP and do not use a preconditioner. Alternatively, you can
-        pass a previously-built :class:`WithinPreconditioner` and reuse it for
+        pass a previously-built :class:`Preconditioner` and reuse it for
         the current problem.
         If the computation of the pre-conditioner takes a long time, this can
         speed up subsequent calls to ``demean_within`` with the same fixed effect structure.
 
     Returns
     -------
-    tuple[numpy.ndarray, bool, WithinPreconditioner | None]
+    tuple[numpy.ndarray, bool, Preconditioner | None]
         The demeaned array, a convergence flag, and the preconditioner used
-        during the solve (Schwarz for ``preconditioner="schwarz"``, diagonal
-        for ``"diag"``, or the user-supplied instance). The preconditioner is
-        ``None`` when none was constructed or applied -i.e. when
-        ``preconditioner="none"`` or the single-factor MAP fallback path was
-        taken.
+        during the solve (additive Schwarz for ``preconditioner="additive"``,
+        diagonal for ``"diagonal"``, or an equivalent object for a
+        user-supplied preconditioner). This low-level helper does not
+        preserve Python object identity for user-supplied preconditioners.
+        The preconditioner is ``None`` when none was constructed or applied —
+        i.e. when ``preconditioner="off"`` or the single-factor MAP fallback
+        path was taken.
     """
-    if not isinstance(preconditioner, (str, WithinPreconditioner)):
+    if not isinstance(preconditioner, (str, Preconditioner)):
         raise TypeError(
-            "`preconditioner` must be 'schwarz', 'none', 'diag', or a "
-            "WithinPreconditioner instance."
+            "`preconditioner` must be 'additive', 'off', 'diagonal', or a "
+            "Preconditioner instance."
         )
     if isinstance(preconditioner, str) and preconditioner not in {
-        "schwarz",
-        "none",
-        "diag",
+        "additive",
+        "off",
+        "diagonal",
     }:
         raise ValueError(
             f"preconditioner={preconditioner!r} is not supported by the 'within' "
-            "LSMR backend; use 'schwarz' (default), 'none', 'diag', or a "
-            "WithinPreconditioner instance."
+            "LSMR backend; use 'additive' (default), 'off', 'diagonal', or a "
+            "Preconditioner instance."
         )
 
     if flist.ndim == 1 or flist.shape[1] == 1:
