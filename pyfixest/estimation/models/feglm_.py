@@ -415,8 +415,7 @@ class Feglm(Feols, ABC):
             demeaner=effective_demeaner,
             cached_preconditioner=self._preconditioner,
         )
-        if self._preconditioner is None and used_pre is not None:
-            self._preconditioner = used_pre
+        self._seed_preconditioner(used_pre)
 
         if success is False:
             raise ValueError(

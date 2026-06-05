@@ -57,7 +57,7 @@ The lower-level `pyfixest.core.demean.demean_within(...)` helper also tightened 
 ### Reusing Preconditioners
 
 The `within` LSMR backend now exposes its additive Schwarz preconditioner so the
-expensive setup phase can be amortised when users explicitly reuse it across
+(potentially) expensive setup phase can be amortised when users explicitly reuse it across
 regressions based on the same fixed-effect design.
 
 ```python

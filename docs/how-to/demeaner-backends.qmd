@@ -99,9 +99,10 @@ fit = pf.feols(
 
 The `within` LSMR backend builds an additive Schwarz preconditioner from the
 fixed-effect design before the iterative solve for two or more fixed-effect
-factors. For single fixed effects, PyFixest uses the MAP fallback and no
-preconditioner is computed or applied. For large multi-way FE problems this
-*setup* phase can be a meaningful fraction of total runtime, so it is worth
+factors. For single fixed effects, PyFixest falls back to closed form demeaning
+(via the MAP algo, which converges in one iteration) and no
+preconditioner is computed or applied. For large multi-way FE problems, setting up
+the preconditioner can be a meaningful fraction of total runtime, so it is worth
 reusing the preconditioner across solves on the same design.
 
 ### Within a session

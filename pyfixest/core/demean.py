@@ -1,9 +1,18 @@
+from typing import Literal, get_args
+
 import numpy as np
 from numpy.typing import NDArray
 
 from ._core_impl import Preconditioner, _demean_rs, _demean_within_rs
 
-__all__ = ["Preconditioner", "demean", "demean_within"]
+WithinPreconditionerName = Literal["additive", "off", "diagonal"]
+
+__all__ = [
+    "Preconditioner",
+    "WithinPreconditionerName",
+    "demean",
+    "demean_within",
+]
 
 
 def demean(
@@ -88,7 +97,7 @@ def demean_within(
     tol: float = 1e-08,
     maxiter: int = 1_000,
     local_size: int | None = None,
-    preconditioner: str | Preconditioner = "additive",
+    preconditioner: WithinPreconditionerName | Preconditioner = "additive",
 ) -> tuple[NDArray, bool, Preconditioner | None]:
     """
     Demean an array using modified LSMR via `within`.
@@ -149,16 +158,14 @@ def demean_within(
         i.e. when ``preconditioner="off"`` or the single-factor MAP fallback
         path was taken.
     """
-    if not isinstance(preconditioner, (str, Preconditioner)):
+    if isinstance(preconditioner, Preconditioner):
+        pass
+    elif not isinstance(preconditioner, str):
         raise TypeError(
             "`preconditioner` must be 'additive', 'off', 'diagonal', or a "
             "Preconditioner instance."
         )
-    if isinstance(preconditioner, str) and preconditioner not in {
-        "additive",
-        "off",
-        "diagonal",
-    }:
+    elif preconditioner not in get_args(WithinPreconditionerName):
         raise ValueError(
             f"preconditioner={preconditioner!r} is not supported by the 'within' "
             "LSMR backend; use 'additive' (default), 'off', 'diagonal', or a "

@@ -2,13 +2,17 @@ import warnings
 from collections.abc import Callable
 from dataclasses import replace
 from importlib import import_module
-from typing import cast
+from typing import cast, get_args
 
 import numpy as np
 import pandas as pd
 import scipy.sparse as sp
 
-from pyfixest.core.demean import Preconditioner, demean_within
+from pyfixest.core.demean import (
+    Preconditioner,
+    WithinPreconditionerName,
+    demean_within,
+)
 from pyfixest.demeaners import (
     AnyDemeaner,
     LsmrBackend,
@@ -18,7 +22,7 @@ from pyfixest.demeaners import (
 )
 
 _PRECONDITIONER_SUPPORT: dict[LsmrBackend, tuple[set[str], str]] = {
-    "within": ({"off", "additive", "diagonal"}, "additive"),
+    "within": (set(get_args(WithinPreconditionerName)), "additive"),
     "torch": ({"diagonal"}, "diagonal"),
     "cupy": ({"off", "diagonal"}, "diagonal"),
 }
@@ -235,11 +239,14 @@ def dispatch_demean(
     flist_uint = flist.astype(np.uintp, copy=False)
 
     if isinstance(demeaner, LsmrDemeaner) and demeaner.backend == "within":
-        preconditioner: str | Preconditioner
+        preconditioner: WithinPreconditionerName | Preconditioner
         if isinstance(demeaner.preconditioner, Preconditioner):
             preconditioner = demeaner.preconditioner
         else:
-            preconditioner = _resolve_preconditioner("within", demeaner.preconditioner)
+            preconditioner = cast(
+                WithinPreconditionerName,
+                _resolve_preconditioner("within", demeaner.preconditioner),
+            )
 
         # Reuse the caller-supplied cached preconditioner when its variant
         # matches the requested string. Variant names are titlecased on the
