@@ -128,7 +128,9 @@ pre = fit.preconditioner
 print(pre)
 ```
 
-You can pass that instance back through `LsmrDemeaner(preconditioner=...)` on a later
+The `preconditioner` instance reuturns the preconditioner for reuse, along with some metadata, including the time it took to build the preconditioner.
+
+After creating a preconditioner, you can pass that instance back through `LsmrDemeaner(preconditioner=...)` on a later
 fit to skip the setup phase:
 
 ```{python}
