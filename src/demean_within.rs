@@ -13,10 +13,8 @@ use pyo3::types::{PyAny, PyBytes};
 pub struct PyPreconditioner {
     inner: within::Preconditioner,
     /// Wall-clock time spent building the preconditioner, in seconds.
-    ///
-    /// Measured around `within::Solver::new` (where the preconditioner is
-    /// constructed) and carried through `__reduce__`, so a pickle round-trip
-    /// preserves the original build cost.
+    /// If preconditioner is reused, the initial timing is not overwritten,
+    /// so this reflects the original build time.
     build_time_secs: f64,
 }
 
@@ -51,7 +49,6 @@ impl PyPreconditioner {
         self.inner.variant_name()
     }
 
-    /// Wall-clock time spent building this preconditioner, in seconds.
     #[getter]
     fn build_time_secs(&self) -> f64 {
         self.build_time_secs
@@ -155,9 +152,6 @@ fn demean_within_impl(
         local_size,
     };
 
-    // Time the preconditioner build. `Solver::new` is where `within`
-    // constructs (or reuses) the preconditioner, so the wall-clock around
-    // this call is the build cost we want to expose.
     let build_start = std::time::Instant::now();
     let solver = match preconditioner {
         PrecondInput::Prebuilt(pre) => {
