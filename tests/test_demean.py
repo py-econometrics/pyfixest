@@ -203,21 +203,17 @@ def test_demean_within_returns_preconditioner_for_reuse(demean_data):
     assert preconditioner_reused.variant == preconditioner.variant
     assert preconditioner_reused.nrows == preconditioner.nrows
     assert preconditioner_reused.ncols == preconditioner.ncols
+    assert preconditioner_reused.build_time_seconds == preconditioner.build_time_seconds
     # Solve-equivalence is the load-bearing correctness check: same factorization
     # applied to the same data must yield bitwise-identical demeaned output.
     np.testing.assert_allclose(result_reused, result, rtol=1e-10, atol=1e-10)
 
 
 def test_demean_within_preconditioner_reports_build_time(demean_data):
-    """A freshly built preconditioner exposes a non-negative build time.
-
-    The build time is the wall-clock spent in ``within::Solver::new`` (where
-    the preconditioner is constructed), measured in the Rust bindings and
-    surfaced as ``Preconditioner.build_time_secs``. It is carried through
-    ``__reduce__``, so a pickle round-trip preserves the original build cost.
+    """The preconditioner must report its build time in seconds as a float.
+    If the preconditioner is reused, we still report the initial build time,
+    and not a new build time of approximately 0.
     """
-    import pickle
-
     x, flist, weights = demean_data
 
     _, success, preconditioner = demean_within(
@@ -228,14 +224,36 @@ def test_demean_within_preconditioner_reports_build_time(demean_data):
     assert success
     assert preconditioner is not None
 
-    build_time = preconditioner.build_time_secs
+    build_time = preconditioner.build_time_seconds
     assert isinstance(build_time, float)
     assert build_time >= 0.0
-    assert f"build_time_secs={build_time:.6f}" in repr(preconditioner)
+    assert f"build_time_seconds={build_time:.2f}" in repr(preconditioner)
 
+    # the build time survives preconditioner reuse unchagned
+    # 1) directly feed preconditioner
+    _, success_reused, preconditioner_reused = demean_within(
+        x=x,
+        flist=flist.astype(np.uint32, copy=False),
+        weights=weights,
+        preconditioner=preconditioner,
+    )
+    assert success_reused
+    assert preconditioner_reused is not None
+    assert preconditioner_reused.build_time_seconds == build_time
+
+    # 2) load cached preconditioner
     # The build cost survives serialization unchanged.
     restored = pickle.loads(pickle.dumps(preconditioner))
-    assert restored.build_time_secs == build_time
+    assert restored.build_time_seconds == build_time
+    _, success_reused, preconditioner_reused = demean_within(
+        x=x,
+        flist=flist.astype(np.uint32, copy=False),
+        weights=weights,
+        preconditioner=restored,
+    )
+    assert success_reused
+    assert preconditioner_reused is not None
+    assert preconditioner_reused.build_time_seconds == build_time
 
 
 def test_demean_within_preconditioner_pickle_roundtrip(demean_data):
@@ -435,6 +453,7 @@ def test_lsmr_within_reuses_cached_preconditioner(
     assert reused.variant == built.variant
     assert reused.nrows == built.nrows
     assert reused.ncols == built.ncols
+    assert reused.build_time_seconds == built.build_time_seconds
 
     # Independent ground truth: pyhdfe residualizes the same design+weights
     # via its own MAP solver. Matching it proves the stale-preconditioner
