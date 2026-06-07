@@ -208,6 +208,36 @@ def test_demean_within_returns_preconditioner_for_reuse(demean_data):
     np.testing.assert_allclose(result_reused, result, rtol=1e-10, atol=1e-10)
 
 
+def test_demean_within_preconditioner_reports_build_time(demean_data):
+    """A freshly built preconditioner exposes a non-negative build time.
+
+    The build time is the wall-clock spent in ``within::Solver::new`` (where
+    the preconditioner is constructed), measured in the Rust bindings and
+    surfaced as ``Preconditioner.build_time_secs``. It is carried through
+    ``__reduce__``, so a pickle round-trip preserves the original build cost.
+    """
+    import pickle
+
+    x, flist, weights = demean_data
+
+    _, success, preconditioner = demean_within(
+        x=x,
+        flist=flist.astype(np.uint32, copy=False),
+        weights=weights,
+    )
+    assert success
+    assert preconditioner is not None
+
+    build_time = preconditioner.build_time_secs
+    assert isinstance(build_time, float)
+    assert build_time >= 0.0
+    assert f"build_time_secs={build_time:.6f}" in repr(preconditioner)
+
+    # The build cost survives serialization unchanged.
+    restored = pickle.loads(pickle.dumps(preconditioner))
+    assert restored.build_time_secs == build_time
+
+
 def test_demean_within_preconditioner_pickle_roundtrip(demean_data):
     x, flist, weights = demean_data
 

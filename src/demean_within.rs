@@ -12,19 +12,28 @@ use pyo3::types::{PyAny, PyBytes};
 #[pyclass(frozen, name = "Preconditioner", module = "pyfixest.core._core_impl")]
 pub struct PyPreconditioner {
     inner: within::Preconditioner,
+    /// Wall-clock time spent building the preconditioner, in seconds.
+    ///
+    /// Measured around `within::Solver::new` (where the preconditioner is
+    /// constructed) and carried through `__reduce__`, so a pickle round-trip
+    /// preserves the original build cost.
+    build_time_secs: f64,
 }
 
 #[pymethods]
 impl PyPreconditioner {
     #[new]
-    fn new(data: &[u8]) -> PyResult<Self> {
+    fn new(data: &[u8], build_time_secs: f64) -> PyResult<Self> {
         let inner: within::Preconditioner = postcard::from_bytes(data).map_err(|e| {
             pyo3::exceptions::PyValueError::new_err(format!(
                 "failed to deserialize preconditioner: {}",
                 e
             ))
         })?;
-        Ok(Self { inner })
+        Ok(Self {
+            inner,
+            build_time_secs,
+        })
     }
 
     #[getter]
@@ -42,19 +51,26 @@ impl PyPreconditioner {
         self.inner.variant_name()
     }
 
+    /// Wall-clock time spent building this preconditioner, in seconds.
+    #[getter]
+    fn build_time_secs(&self) -> f64 {
+        self.build_time_secs
+    }
+
     fn __repr__(&self) -> String {
         format!(
-            "Preconditioner(variant={}, nrows={}, ncols={})",
+            "Preconditioner(variant={}, nrows={}, ncols={}, build_time_secs={:.6})",
             self.inner.variant_name(),
             self.inner.nrows(),
-            self.inner.ncols()
+            self.inner.ncols(),
+            self.build_time_secs
         )
     }
 
     fn __reduce__<'py>(
         &self,
         py: Python<'py>,
-    ) -> PyResult<(Bound<'py, PyAny>, (Bound<'py, PyBytes>,))> {
+    ) -> PyResult<(Bound<'py, PyAny>, (Bound<'py, PyBytes>, f64))> {
         let bytes = postcard::to_stdvec(&self.inner).map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!(
                 "failed to serialize preconditioner: {}",
@@ -63,7 +79,7 @@ impl PyPreconditioner {
         })?;
         let cls = py.get_type::<Self>();
         let py_bytes = PyBytes::new(py, &bytes);
-        Ok((cls.into_any(), (py_bytes,)))
+        Ok((cls.into_any(), (py_bytes, self.build_time_secs)))
     }
 }
 
@@ -125,7 +141,7 @@ fn demean_within_impl(
     maxiter: usize,
     local_size: Option<usize>,
     preconditioner: PrecondInput,
-) -> Result<(Array2<f64>, bool, Option<within::Preconditioner>), within::WithinError> {
+) -> Result<(Array2<f64>, bool, Option<(within::Preconditioner, f64)>), within::WithinError> {
     let n_obs = x.nrows();
     let n_rhs = x.ncols();
 
@@ -139,6 +155,10 @@ fn demean_within_impl(
         local_size,
     };
 
+    // Time the preconditioner build. `Solver::new` is where `within`
+    // constructs (or reuses) the preconditioner, so the wall-clock around
+    // this call is the build cost we want to expose.
+    let build_start = std::time::Instant::now();
     let solver = match preconditioner {
         PrecondInput::Prebuilt(pre) => {
             within::Solver::new(flist.view(), weights_vec, pre)?
@@ -147,9 +167,13 @@ fn demean_within_impl(
             within::Solver::new(flist.view(), weights_vec, cfg.as_ref())?
         }
     };
+    let build_time_secs = build_start.elapsed().as_secs_f64();
 
     let result = solver.solve_batch(&x_slices, &options)?;
-    let preconditioner = solver.preconditioner().cloned();
+    let preconditioner = solver
+        .preconditioner()
+        .cloned()
+        .map(|pre| (pre, build_time_secs));
 
     let all_converged = result.converged.iter().all(|&c| c);
     let out = Array2::from_shape_vec((n_obs, n_rhs).f(), result.demeaned)
@@ -207,7 +231,13 @@ pub fn _demean_within_rs(
 
     let pyarray = PyArray2::from_owned_array(py, out);
     let py_preconditioner = match built {
-        Some(inner) => Some(Py::new(py, PyPreconditioner { inner })?),
+        Some((inner, build_time_secs)) => Some(Py::new(
+            py,
+            PyPreconditioner {
+                inner,
+                build_time_secs,
+            },
+        )?),
         None => None,
     };
     Ok((pyarray.into(), success, py_preconditioner))
