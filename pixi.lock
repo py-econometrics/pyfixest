@@ -28716,12 +28716,13 @@ packages:
 - pypi: ./
   name: pyfixest
   version: 0.50.1
-  sha256: df76142ac9eab73c28f2734020de1be6f3517451ed288a93b72467c26467a7a0
+  sha256: 1005b5c616ff159a3971381efb51c4240f9792e1f2a95cbd021dde12afd7415a
   requires_dist:
   - formulaic>=1.1.0
   - joblib>=1.4.2
   - maketables>=0.1.0
   - narwhals>=1.13.3
+  - numba>=0.58.0
   - numpy>=1.25.2
   - pandas>=1.1.0
   - scipy>=1.6
@@ -28732,9 +28733,7 @@ packages:
   - pyarrow ; extra == 'benchmarks'
   - statsmodels ; extra == 'benchmarks'
   - jax>=0.4.15 ; extra == 'jax'
-  - numba>=0.58.0 ; extra == 'numba'
   - lets-plot>=4.0.0 ; extra == 'plots'
-  - torch>=2.0 ; extra == 'torch'
   requires_python: '>=3.10'
 - conda: https://conda.anaconda.org/conda-forge/noarch/pygments-2.19.2-pyhd8ed1ab_0.conda
   sha256: 5577623b9f6685ece2697c6eb7511b4c9ac5fb607c9babc2646c811b428fd46a

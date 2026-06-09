@@ -56,6 +56,10 @@ readme.ipynb
 
 # Benchmarks (generated data and results)
 benchmarks/data/
+benchmarks/correia-benchmark-data/
+benchmarks/results/correia-benchmarks*.csv
+benchmarks/results/correia-benchmarks*.html
+benchmarks/results/correia-benchmarks*.png
 
 # Local dev files
 .claude/

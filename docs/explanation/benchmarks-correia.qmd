@@ -1,0 +1,270 @@
+---
+title: "Benchmarking Fixed Effects Implementations and Solvers"
+description: "Runtime comparison of PyFixest, fixest, and FixedEffectModels.jl on real-world and synthetic HDFE datasets."
+categories: [performance, fixed effects, benchmarks]
+jupyter: python3
+format:
+  html:
+    html-table-processing: none
+toc: true
+toc-title: "On this page"
+toc-location: left
+---
+
+## Overview
+
+High-dimensional fixed effects solvers behave very differently depending on the structure of the fixed effects graph: some graphs converge in a handful of iterations, while others are notoriously slow to converge. To get a realistic picture of where different solvers in the open source ecosystem shine, and where each solver struggles, we lean on two complementary sources of benchmark data:
+
+- [**Sergio Correia's HDFE benchmark suite**](https://www.scorreia.com/data/hdfe/index.html), the most extensive collection of public HDFE benchmark datasets we are aware of. It bundles real-world datasets (credit, soccer, enron, patents, …) that stress a wide range of graph topologies.
+- A set of **synthetic DGPs** distributed with Correia's suite and with [**fixest**](https://lrberge.github.io/fixest/), which let us probe specific regimes (uniform vs. assortative matching) in a controlled way.
+
+::: {.callout}
+For an explanation why different fixed effects / graph structures lead to differences in solver performance, please take a look at the [When Are Fixed Effects Estimations Difficult?](difficult-fixed-effects.md) vignette.
+:::
+
+We benchmark the following software packages and their solvers:
+
+- [**fixest**](https://lrberge.github.io/fixest/) (R), the reference HDFE implementation (and the package after which PyFixest is modeled), uses a MAP-style solver with Irons-Tuck acceleration and other optimizations.
+- [**FixedEffectModels.jl**](https://github.com/FixedEffects/FixedEffectModels.jl) (Julia), which solves the demeaning problem via LSMR with diagonal preconditioning.
+- **PyFixest**, which can run either a MAP solver (analogous to `fixest`'s, without any accelerations) or a conjugate-gradient solver on the within transformation.
+
+All benchmarks are run on Alex' local machine (Mac mini, Apple M4, 10 cores, 16 GB RAM, macOS 15.3.1).
+
+We fit fixed effects regressions using each package's defaults. The Correia datasets are fit with two-way fixed effects, while the fixest DGPs are fit with three-way fixed effects (where the "difficult" DGP is actually difficult). We run each benchmark with and without singleton dropping. We use a tolerance of `1e-8`. Note that convergence criteria differ across implementations, so the tolerance is only a common stopping threshold and does not guarantee identical convergence rules and behavior.
+
+::: {.callout-note}
+Benchmark timings for [**reghdfe**](https://scorreia.com/software/reghdfe/) (Stata) can be found on [Sergio Correia's website](https://www.scorreia.com/data/hdfe/index.html). Note, however, that those numbers were collected roughly nine years ago on older hardware, so Python, R, and Julia implementations have a substantial hardware advantage in any direct comparison.
+:::
+
+## Benchmarks
+
+::: {.column-page style="text-align: center;"}
+
+```{python}
+# | echo: false
+# | fig-width: 16
+# | fig-height: 8
+# | fig-dpi: 130
+from __future__ import annotations
+
+from pathlib import Path
+
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+import matplotlib.ticker as mticker
+from matplotlib.transforms import blended_transform_factory
+import pandas as pd
+
+# Save figures at exact figsize × dpi (no bbox trimming) so both figures have
+# identical pixel dimensions and the centered fenced-div wrapper aligns them.
+mpl.rcParams["savefig.bbox"] = "standard"
+mpl.rcParams["savefig.pad_inches"] = 0.05
+
+RESULTS_DIR = Path("../../benchmarks/results")
+
+# Colors / markers from benchmarks/modular/plotting.py
+ALGO_META: dict[str, dict] = {
+    "pyfixest-map":     {"label": "PyFixest MAP",             "color": "#047857", "marker": "o", "jitter": -0.22, "zorder": 5, "size": 80},
+    "pyfixest-within":  {"label": "PyFixest CG",              "color": "#16A34A", "marker": "s", "jitter": -0.07, "zorder": 5, "size": 80},
+    "fixest":           {"label": "fixest (R, baseline)",     "color": "#2563EB", "marker": "^", "jitter": +0.07, "zorder": 4, "size": 90},
+    "FixedEffectModels":{"label": "FEM.jl (Julia)",           "color": "#EAB308", "marker": "D", "jitter": +0.22, "zorder": 5, "size": 80},
+}
+
+BASELINE_ALGO = "fixest"
+
+CORREIA_DATASETS = [
+    "credit2", "credit", "soccer", "synthetic-complete",
+    "synthetic-uniform-easy", "synthetic-uniform-hard",
+    "synthetic-uniform-harder", "synthetic-assortative",
+    "synthetic-zigzag", "enron", "github", "patents",
+    "workers", "schools", "directors",
+]
+REAL_DATASETS = {d for d in CORREIA_DATASETS if not d.startswith("synthetic")}
+SYNTH_CORREIA = {d for d in CORREIA_DATASETS if d.startswith("synthetic")}
+FIXEST_DGPS   = {"fixest-simple", "fixest-difficult"}
+
+CORREIA_ALGO_MAP = {
+    "pyfixest-map": "pyfixest-map", "pyfixest-within": "pyfixest-within",
+    "fixest": "fixest", "FixedEffectModels": "FixedEffectModels",
+}
+MAIN_BACKEND_MAP = {
+    "pyfixest (rust-map)": "pyfixest-map", "pyfixest (rust-cg)": "pyfixest-within",
+    "fixest-map": "fixest", "FEM.jl (lsmr)": "FixedEffectModels",
+}
+
+GAP = 1.5
+
+
+def _fmt(t: float) -> str:
+    return f"{t:.1f}s"
+
+
+def _load_correia() -> pd.DataFrame:
+    df = pd.read_csv(RESULTS_DIR / "correia-benchmarks.csv")
+    df = df[df["dataset"].isin(CORREIA_DATASETS) & df["success"].astype(bool) & df["time"].notna()].copy()
+    df["algo"] = df["algo"].map(CORREIA_ALGO_MAP)
+    return df[["dataset", "algo", "singleton_drop", "time"]]
+
+
+def _load_main() -> pd.DataFrame:
+    frames = [pd.read_csv(p) for p in RESULTS_DIR.glob("feols_bench__*.csv")]
+    if not frames:
+        return pd.DataFrame(columns=["dataset", "algo", "singleton_drop", "time"])
+    df = pd.concat(frames, ignore_index=True)
+    # fixest DGPs are designed for 3-way FE — that's where "difficult" is actually hard.
+    df = df[
+        (df["n_fe"] == 3) & (df["model_k"] == 1) & (df["n_obs"] == 10_000_000)
+        & df["backend"].isin(MAIN_BACKEND_MAP) & df["success"].astype(bool) & df["time"].notna()
+    ].copy()
+    df["algo"] = df["backend"].map(MAIN_BACKEND_MAP)
+    df["dataset"] = "fixest-" + df["dgp"]
+    df["singleton_drop"] = True  # fixest DGPs drop singletons
+    return df[["dataset", "algo", "singleton_drop", "time"]]
+
+
+def _sorted_by_baseline(agg: pd.DataFrame, datasets: set[str], singleton: bool) -> list[str]:
+    # Only include datasets where the baseline has valid timing; datasets where
+    # the baseline failed (e.g. synthetic-zigzag) would just produce empty ticks.
+    base = (
+        agg[(agg["algo"] == BASELINE_ALGO) & (agg["singleton_drop"] == singleton) & agg["dataset"].isin(datasets)]
+        .sort_values("time")
+    )
+    return base["dataset"].tolist()
+
+
+def _make_figure(agg: pd.DataFrame, singleton: bool, real_order: list[str], synth_order: list[str]) -> plt.Figure:
+    real_xs = {ds: float(i) for i, ds in enumerate(real_order)}
+    s0 = len(real_order) + GAP
+    synth_xs = {ds: s0 + i for i, ds in enumerate(synth_order)}
+    ds_xs = {**real_xs, **synth_xs}
+    all_ds = real_order + synth_order
+
+    fig, ax = plt.subplots(figsize=(16, 8))
+
+    sub_all  = agg[agg["singleton_drop"] == singleton].copy()
+    baseline = (
+        sub_all[sub_all["algo"] == BASELINE_ALGO][["dataset", "time"]]
+        .rename(columns={"time": "base_time"})
+    )
+
+    for algo, meta in ALGO_META.items():
+        sub = (
+            sub_all[sub_all["algo"] == algo]
+            .merge(baseline, on="dataset", how="inner")
+            .copy()
+        )
+        sub = sub[sub["dataset"].isin(all_ds)]
+        if sub.empty:
+            continue
+        sub["ratio"] = sub["time"] / sub["base_time"]
+        sub["x"] = sub["dataset"].map(ds_xs) + meta["jitter"]
+
+        if algo == BASELINE_ALGO:
+            sub["ratio"] = 1.0
+            ax.scatter(sub["x"], sub["ratio"], color=meta["color"], marker=meta["marker"],
+                       s=meta["size"], zorder=meta["zorder"], label=meta["label"],
+                       edgecolors="white", linewidths=0.5)
+            for _, row in sub.iterrows():
+                ax.annotate(_fmt(row["base_time"]), xy=(row["x"], 1.0), xytext=(0, 6),
+                            textcoords="offset points", ha="center", va="bottom",
+                            fontsize=8, color=meta["color"])
+        else:
+            valid = sub[sub["ratio"].notna()]
+            ax.scatter(valid["x"], valid["ratio"], color=meta["color"], marker=meta["marker"],
+                       s=meta["size"], zorder=meta["zorder"], label=meta["label"],
+                       edgecolors="white", linewidths=0.5)
+            for _, row in valid.iterrows():
+                actual = row["ratio"] * row["base_time"]
+                above = row["ratio"] >= 1.0
+                ax.annotate(_fmt(actual), xy=(row["x"], row["ratio"]),
+                            xytext=(0, 6 if above else -8),
+                            textcoords="offset points", ha="center",
+                            va="bottom" if above else "top",
+                            fontsize=8, color=meta["color"])
+
+    sep_x = len(real_order) - 0.5 + GAP / 2
+    ax.axvline(sep_x, color="#CBD5E1", lw=1.2, ls="--", zorder=0)
+    trans = blended_transform_factory(ax.transData, ax.transAxes)
+    real_mid  = (len(real_order) - 1) / 2
+    synth_mid = s0 + (len(synth_order) - 1) / 2
+    for x_mid, lbl in [(real_mid, "Real datasets"), (synth_mid, "Synthetic datasets")]:
+        ax.text(x_mid, 1.01, lbl, ha="center", va="bottom", fontsize=10,
+                color="#475569", fontstyle="italic", transform=trans, clip_on=False)
+
+    ax.axhline(1.0, color="#94A3B8", lw=0.8, ls="--", zorder=1)
+    ax.set_yscale("log")
+    ax.yaxis.set_major_formatter(mticker.FuncFormatter(lambda y, _: f"{y:g}×"))
+
+    def _xlabel(ds: str) -> str:
+        if ds.startswith("fixest-"):
+            return ds.replace("fixest-", "") + "\n(fixest DGP, 3-way FE, N=10M)"
+        return ds.replace("synthetic-", "synth-")
+
+    ax.set_xticks([ds_xs[ds] for ds in all_ds])
+    ax.set_xticklabels([_xlabel(ds) for ds in all_ds], rotation=45, ha="right", fontsize=8)
+    ax.set_ylabel("Runtime ratio vs fixest (R) (log scale)", fontsize=10)
+    ax.grid(True, which="both", axis="y", alpha=0.25, ls=":", color="#64748B")
+    ax.set_axisbelow(True)
+    ax.spines[["top", "right"]].set_visible(False)
+
+    suffix = "with singleton dropping" if singleton else "without singleton dropping"
+    spec_line = (
+        "Correia datasets: 2-way FE. fixest DGPs: 3-way FE, N=10M."
+        if singleton else
+        "Correia datasets: 2-way FE."
+    )
+    ax.set_title(
+        f"Runtime relative to fixest (R) ({suffix}, tol=1e-8)\n"
+        f"{spec_line}\n"
+        "Datasets sorted by increasing fixest runtime within each group",
+        fontsize=10, pad=20,
+    )
+    handles, labels = ax.get_legend_handles_labels()
+    fig.legend(handles, labels, loc="lower center", bbox_to_anchor=(0.5, 0.02),
+               ncol=4, fontsize=9, framealpha=0.95, edgecolor="#CBD5E1",
+               handletextpad=0.5, columnspacing=1.2)
+    # Use fixed margins (not tight_layout) so both figures have identical dimensions
+    # regardless of y-axis tick label widths or title content.
+    fig.subplots_adjust(left=0.05, right=0.99, top=0.85, bottom=0.22)
+    return fig
+
+
+raw = pd.concat([_load_correia(), _load_main()], ignore_index=True)
+agg = raw.groupby(["dataset", "algo", "singleton_drop"], observed=True)["time"].median().reset_index()
+
+# Build the x-axis order ONCE from singleton=True data so both figures are horizontally parallel.
+# fixest DGPs only have data with singleton dropping, so they appear as empty positions in
+# the no-singleton figure.
+REAL_ORDER  = _sorted_by_baseline(agg, REAL_DATASETS, singleton=True)
+SYNTH_ORDER = _sorted_by_baseline(agg, SYNTH_CORREIA, singleton=True)
+SYNTH_ORDER += _sorted_by_baseline(agg, FIXEST_DGPS, singleton=True)
+
+fig1 = _make_figure(agg, singleton=True, real_order=REAL_ORDER, synth_order=SYNTH_ORDER)
+plt.show()
+```
+
+:::
+
+::: {.column-page style="text-align: center;"}
+
+```{python}
+# | echo: false
+# | fig-width: 16
+# | fig-height: 8
+# | fig-dpi: 130
+fig2 = _make_figure(agg, singleton=False, real_order=REAL_ORDER, synth_order=SYNTH_ORDER)
+plt.show()
+```
+
+:::
+
+## Reproducing these numbers
+
+To run the benchmarks yourself, you can use the `pixi` tasks below, which will automatically install all required (open source) dependencies, create synthetic data sets and run the benchmarks. You will have to download the Correia datasets from [Correia's website](https://www.scorreia.com/data/hdfe/index.html) and place them in the `benchmarks/modular/data/correia` directory.
+
+```bash
+# benchmark fixest-dgp's
+pixi run benchmark
+# benchmark R, Julia, Python on the Correia datasets
+pixi run benchmark-correia
+```

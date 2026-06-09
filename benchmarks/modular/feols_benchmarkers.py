@@ -9,7 +9,7 @@ import sys
 import tempfile
 import time
 import warnings
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
@@ -24,11 +24,11 @@ except ImportError:
 _MIN_DGP_WIDTH = 16
 
 
-def _trim_process_memory(demeaner_backend: str) -> None:
+def _trim_process_memory(demeaner_backend: str | None) -> None:
     """Return unused Python and native allocator memory after large benchmark cases."""
     gc.collect()
 
-    if demeaner_backend.startswith("torch"):
+    if demeaner_backend is not None and demeaner_backend.startswith("torch"):
         try:
             import torch
         except ImportError:
@@ -172,10 +172,16 @@ def _normalize_vcov(vcov: str | dict[str, str]) -> str:
     return vcov
 
 
+def _read_data_columns(data_path: Path, columns: list[str]) -> pd.DataFrame:
+    if data_path.suffix.lower() == ".csv":
+        return pd.read_csv(data_path, usecols=columns)
+    return pd.read_parquet(data_path, columns=columns)
+
+
 class PyFeolsBenchmarkerFullApi:
     """Benchmark pf.feols() end-to-end using one configured demeaner backend."""
 
-    def __init__(self, name: str, demeaner_backend: str, **feols_kwargs):
+    def __init__(self, name: str, demeaner_backend: str | None = None, **feols_kwargs):
         self._name = name
         self._demeaner_backend = demeaner_backend
         self._feols_kwargs = feols_kwargs
@@ -207,7 +213,7 @@ class PyFeolsBenchmarkerFullApi:
             n_obs_for_result = dataset.n_obs
             df = None
             try:
-                df = pd.read_parquet(dataset.data_path, columns=all_cols)
+                df = _read_data_columns(dataset.data_path, columns=all_cols)
                 n_obs_for_result = len(df)
 
                 t0 = time.perf_counter()
@@ -217,15 +223,17 @@ class PyFeolsBenchmarkerFullApi:
                         message=r"\d+ singleton fixed effect\(s\) dropped from the model\.",
                         category=UserWarning,
                     )
-                    pf.feols(
-                        fml=spec.formula,
-                        data=df,
-                        vcov=spec.vcov,
-                        copy_data=False,
-                        store_data=False,
-                        demeaner_backend=self._demeaner_backend,
+                    feols_kwargs = {
+                        "fml": spec.formula,
+                        "data": df,
+                        "vcov": spec.vcov,
+                        "copy_data": False,
+                        "store_data": False,
                         **self._feols_kwargs,
-                    )
+                    }
+                    if self._demeaner_backend is not None:
+                        feols_kwargs["demeaner_backend"] = self._demeaner_backend
+                    pf.feols(**feols_kwargs)
                 elapsed = time.perf_counter() - t0
 
                 result = _result_from_dataset(
@@ -278,6 +286,7 @@ def _parse_subprocess_output(
     backend: str,
     completed_process: subprocess.CompletedProcess[str],
 ) -> list[FeolsResult]:
+    parsed_by_key: dict[tuple[str, int | None], dict] = {}
     parsed_by_id: dict[str, dict] = {}
 
     for line in completed_process.stdout.splitlines():
@@ -290,13 +299,16 @@ def _parse_subprocess_output(
             continue
         dataset_id = entry.get("dataset_id")
         if isinstance(dataset_id, str):
+            iter_num = _safe_cast(entry.get("iter_num"), int)
+            parsed_by_key[(dataset_id, iter_num)] = entry
             parsed_by_id[dataset_id] = entry
 
     # A4: partial-result warning
-    n_missing = len(datasets) - len(parsed_by_id)
+    n_emitted = len(parsed_by_key) if parsed_by_key else len(parsed_by_id)
+    n_missing = len(datasets) - n_emitted
     if n_missing > 0 and completed_process.returncode == 0:
         warnings.warn(
-            f"Subprocess emitted results for {len(parsed_by_id)}/{len(datasets)} datasets"
+            f"Subprocess emitted results for {n_emitted}/{len(datasets)} datasets"
         )
 
     stderr_text = (completed_process.stderr or "").strip()
@@ -309,7 +321,9 @@ def _parse_subprocess_output(
     results: list[FeolsResult] = []
 
     for dataset in datasets:
-        entry = parsed_by_id.get(dataset.dataset_id)
+        entry = parsed_by_key.get((dataset.dataset_id, dataset.iter_num))
+        if entry is None:
+            entry = parsed_by_id.get(dataset.dataset_id)
         if entry is None:
             missing_error = default_error or "No result emitted by subprocess backend."
             results.append(
@@ -351,10 +365,12 @@ class SubprocessFeolsBenchmarker:
         name: str,
         command_prefix: Sequence[str],
         script_path: Path,
+        extra_config: Mapping[str, object] | None = None,
     ):
         self._name = name
         self._command_prefix = tuple(command_prefix)
         self._script_path = script_path.resolve()
+        self._extra_config = dict(extra_config or {})
 
     @property
     def name(self) -> str:
@@ -387,6 +403,7 @@ class SubprocessFeolsBenchmarker:
                         "fe_cols": spec.fe_cols,
                         "vcov": spec.vcov,
                         "vcov_type": _normalize_vcov(spec.vcov),
+                        **self._extra_config,
                     }
                 ),
                 encoding="utf-8",
@@ -446,7 +463,12 @@ _SCRIPT_DIR = Path(__file__).parent
 
 
 class FixestFeolsBenchmarker(SubprocessFeolsBenchmarker):
-    def __init__(self, name: str | Path | None = None, script_path: Path | None = None):
+    def __init__(
+        self,
+        name: str | Path | None = None,
+        script_path: Path | None = None,
+        extra_config: Mapping[str, object] | None = None,
+    ):
         if isinstance(name, Path):
             if script_path is not None:
                 raise TypeError(
@@ -458,11 +480,17 @@ class FixestFeolsBenchmarker(SubprocessFeolsBenchmarker):
             name=name or "r.fixest",
             command_prefix=["Rscript"],
             script_path=(script_path or _SCRIPT_DIR / "feols_r.R"),
+            extra_config=extra_config,
         )
 
 
 class JuliaFeolsBenchmarker(SubprocessFeolsBenchmarker):
-    def __init__(self, name: str | Path | None = None, script_path: Path | None = None):
+    def __init__(
+        self,
+        name: str | Path | None = None,
+        script_path: Path | None = None,
+        extra_config: Mapping[str, object] | None = None,
+    ):
         if isinstance(name, Path):
             if script_path is not None:
                 raise TypeError(
@@ -474,4 +502,5 @@ class JuliaFeolsBenchmarker(SubprocessFeolsBenchmarker):
             name=name or "julia.FixedEffectModels",
             command_prefix=["julia"],
             script_path=(script_path or _SCRIPT_DIR / "feols_julia.jl"),
+            extra_config=extra_config,
         )
