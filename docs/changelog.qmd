@@ -157,6 +157,12 @@ For large-dataset use cases, the
 general out-of-memory solution. See
 [#1302](https://github.com/py-econometrics/pyfixest/issues/1302) for context.
 
+### Deprecated Formula Helpers Removal
+
+The deprecated `FixestFormulaParser` and `model_matrix_fixest()` helpers have
+been removed. Use `Formula.parse()` and `create_model_matrix()` from the
+formula module instead.
+
 ### Offsets in `fepois()`
 
 `pf.fepois()` now supports offsets via the new `offset` argument. This is useful
