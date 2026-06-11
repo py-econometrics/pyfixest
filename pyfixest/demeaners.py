@@ -7,7 +7,7 @@ from typing import ClassVar, Literal, get_args
 from pyfixest.core.demean import Preconditioner
 
 MapBackend = Literal["numba", "rust"]
-LsmrBackend = Literal["within", "torch"]
+LsmrBackend = Literal["within", "cupy", "torch"]
 LsmrPrecision = Literal["float32", "float64"]
 TorchDevice = Literal["auto", "cpu", "mps", "cuda"]
 LsmrPreconditioner = Literal["auto", "off", "additive", "diagonal"]

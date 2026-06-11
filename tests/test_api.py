@@ -113,6 +113,56 @@ def test_map_demeaner_defaults_to_rust():
     assert fit._demeaner.backend == "rust"
 
 
+def _run_with_deprecated_kwargs(estimator_name, **kwargs):
+    if estimator_name == "feols":
+        return pf.feols("Y ~ X1 | f1", data=pf.get_data(), **kwargs)
+    if estimator_name == "fepois":
+        return pf.fepois("Y ~ X1 | f1", data=pf.get_data(model="Fepois"), **kwargs)
+    if estimator_name == "feglm":
+        return pf.feglm("Y ~ X1 | f1", data=pf.get_data(), family="gaussian", **kwargs)
+    raise ValueError(estimator_name)
+
+
+_DEPRECATION_ESTIMATORS = ["feols", "fepois", "feglm"]
+
+
+def test_demeaner_backend_cupy_emits_deprecation_warning():
+    from pyfixest.estimation.internals.demeaner_options import (
+        _warn_if_deprecated_demeaner_backend,
+    )
+
+    with pytest.warns(DeprecationWarning, match=r"`cupy` LSMR demeaner backend") as rec:
+        _warn_if_deprecated_demeaner_backend(pf.LsmrDemeaner(backend="cupy"))
+    assert any("torch', device='cuda" in str(r.message) for r in rec)
+    assert any("default within backend" in str(r.message) for r in rec)
+
+
+def test_demeaner_backend_cupy_cuda_emits_gpu_replacement_warning():
+    from pyfixest.estimation.internals.demeaner_options import (
+        _warn_if_deprecated_demeaner_backend,
+    )
+
+    with pytest.warns(DeprecationWarning, match=r"`cupy` LSMR demeaner backend") as rec:
+        _warn_if_deprecated_demeaner_backend(
+            pf.LsmrDemeaner(backend="cupy", device="cuda")
+        )
+    assert any("torch', device='cuda" in str(r.message) for r in rec)
+
+
+def test_demeaner_backend_scipy_emits_deprecation_warning():
+    from pyfixest.estimation.internals.demeaner_options import (
+        _warn_if_deprecated_demeaner_backend,
+    )
+
+    with pytest.warns(
+        DeprecationWarning, match=r"`scipy` LSMR demeaner backend"
+    ) as rec:
+        _warn_if_deprecated_demeaner_backend(
+            pf.LsmrDemeaner(backend="cupy", device="cpu")
+        )
+    assert any("default within backend" in str(r.message) for r in rec)
+
+
 @pytest.mark.parametrize(
     "builder, invalid_name",
     [
