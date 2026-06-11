@@ -145,17 +145,17 @@ We recommend the following replacements:
 - **JAX MAP on GPU** or **`LsmrDemeaner(backend="cupy", device="cuda")`** → `LsmrDemeaner(backend="torch", device="cuda")`.
 - **Scipy or Cupy LSMR on CPU** → `LsmrDemeaner()` (the default `within` backend).
 
-### Regression Compression Deprecation
+### Regression Compression Removal
 
-The `use_compression` argument to `feols()` is deprecated and will be removed in
-a future release. This feature implemented the in-memory regression compression
-approach from [Wong et al. (2021)](https://arxiv.org/abs/2102.11297) via a
-Mundlak/sufficient-statistics transform. For large-dataset use cases, the
+The in-memory regression compression implementation has been removed. The
+`use_compression` and `reps` arguments to `feols()` are still accepted for this
+release, but `use_compression=True` now raises a `NotImplementedError`. These
+arguments will be removed from the API in a future release.
+
+For large-dataset use cases, the
 [`duckreg`](https://github.com/py-econometrics/duckreg) package provides a more
 general out-of-memory solution. See
 [#1302](https://github.com/py-econometrics/pyfixest/issues/1302) for context.
-
-Passing `use_compression=True` now raises a `DeprecationWarning`.
 
 ### Offsets in `fepois()`
 

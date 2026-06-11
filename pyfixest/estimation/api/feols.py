@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import warnings
 from collections.abc import Mapping
 from typing import Any
 
@@ -41,7 +40,7 @@ def feols(
     solver: SolverOptions = "scipy.linalg.solve",
     demeaner: AnyDemeaner | None = None,
     use_compression: bool = False,
-    reps: int = 100,
+    reps: int | None = None,
     context: int | Mapping[str, Any] | None = None,
     seed: int | None = None,
     split: str | None = None,
@@ -155,26 +154,14 @@ def feols(
 
     use_compression: bool
         .. deprecated::
-            ``use_compression`` is deprecated and will be removed in a future release.
-            For out-of-memory regression on large datasets, consider using the
+            ``use_compression`` is no longer supported and will be removed in a
+            future release. For out-of-memory regression on large datasets,
+            consider using the
             `duckreg <https://github.com/py-econometrics/duckreg>`_ package instead.
 
-        Whether to use sufficient statistics to losslessly fit the regression model
-        on compressed data. False by default. If True, the model is estimated on
-        compressed data, which can lead to a significant speed-up for large data sets.
-        See the paper by Wong et al (2021) for more details https://arxiv.org/abs/2102.11297.
-        Note that if `use_compression = True`, inference is lossless. If standard errors are
-        clustered, a wild cluster bootstrap is employed. Parameters for the wild bootstrap
-        can be specified via the `reps` and `seed` arguments. Additionally, note that for one-way
-        fixed effects, the estimation method uses a Mundlak transform to "control" for the
-        fixed effects. For two-way fixed effects, a two-way Mundlak transform is employed.
-        For two-way fixed effects, the Mundlak transform is only identical to a two-way
-        fixed effects model if the data set is a panel. We do not provide any checks for the
-        panel status of the data set.
-
     reps: int
-        Number of bootstrap repetitions. Only relevant for boostrap inference applied to
-        compute cluster robust errors when `use_compression = True`.
+        Deprecated compression-only argument. Ignored unless
+        ``use_compression=True``, which now raises an error.
 
     context : int or Mapping[str, Any]
         A dictionary containing additional context variables to be used by
@@ -183,8 +170,7 @@ def feols(
         variables that need to be available in the formula environment.
 
     seed: Optional[int]
-        Seed for the random number generator. Only relevant for boostrap inference applied to
-        compute cluster robust errors when `use_compression = True`.
+        Seed for the random number generator.
 
     split: Optional[str]
         A character string, i.e. 'split = var'. If provided, the sample is split according to the
@@ -502,17 +488,21 @@ def feols(
     _warn_if_experimental_torch_demeaner(demeaner)
     _warn_if_deprecated_demeaner_backend(demeaner)
 
+    if not isinstance(use_compression, bool):
+        raise TypeError("The function argument `use_compression` must be of type bool.")
     if use_compression:
-        warnings.warn(
-            (
-                "The `use_compression` argument is deprecated and will be removed in a future release. "
-                "For out-of-memory regression on large datasets, consider using the "
-                "`duckreg` package (https://github.com/py-econometrics/duckreg) instead. "
-                "See https://github.com/py-econometrics/pyfixest/issues/1302 for context."
-            ),
-            DeprecationWarning,
-            stacklevel=2,
+        raise NotImplementedError(
+            "The `use_compression` argument is no longer supported and will be "
+            "removed in a future release. For out-of-memory regression on large "
+            "datasets, consider using the `duckreg` package "
+            "(https://github.com/py-econometrics/duckreg) instead. "
+            "See https://github.com/py-econometrics/pyfixest/issues/1302 for context."
         )
+    if reps is not None:
+        if not isinstance(reps, int):
+            raise TypeError("The function argument `reps` must be of type int.")
+        if reps <= 0:
+            raise ValueError("The function argument `reps` must be strictly positive.")
 
     _estimation_input_checks(
         fml=fml,
@@ -527,8 +517,6 @@ def feols(
         store_data=store_data,
         lean=lean,
         weights_type=weights_type,
-        use_compression=use_compression,
-        reps=reps,
         seed=seed,
         split=split,
         fsplit=fsplit,
@@ -540,18 +528,14 @@ def feols(
         store_data=store_data,
         lean=lean,
         weights_type=weights_type,
-        use_compression=use_compression,
-        reps=reps,
         seed=seed,
         split=split,
         fsplit=fsplit,
         context=context,
     )
 
-    estimation = "feols" if not use_compression else "compression"
-
     fixest._prepare_estimation(
-        estimation=estimation,
+        estimation="feols",
         fml=fml,
         vcov=vcov,
         vcov_kwargs=vcov_kwargs,

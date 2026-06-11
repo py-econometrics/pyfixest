@@ -539,49 +539,22 @@ def test_IV_Diag_unsupported_statistics():
 def test_errors_compressed():
     data = pf.get_data()
 
-    # no more than two fixed effects
-    with pytest.raises(NotImplementedError):
-        pf.feols("Y ~ X1 | f1 + f2 + f3", data=data, use_compression=True)
+    pf.feols("Y ~ X1", data=data, use_compression=False, reps=10)
 
-    # cluster variables not in model
-    with pytest.raises(NotImplementedError):
-        pf.feols("Y ~ X1", vcov={"CRV1": "f1"}, data=data, use_compression=True)
+    with pytest.raises(NotImplementedError, match="no longer supported"):
+        pf.feols("Y ~ X1", data=data, use_compression=True)
 
-    with pytest.raises(NotImplementedError):
-        pf.feols("Y ~ C(f1)", vcov={"CRV1": "f1"}, data=data, use_compression=True)
-
-    with pytest.raises(NotImplementedError):
-        pf.feols("Y ~ X1 | f1", data=data, use_compression=True, vcov={"CRV1": "f1+f2"})
-
-    # only CVR supported for Mundlak
-    with pytest.raises(NotImplementedError):
-        pf.feols("Y ~ X1 | f1", data=data, use_compression=True, vcov="iid")
-
-    # crv3 inference:
-    with pytest.raises(NotImplementedError):
-        pf.feols("Y ~ X1 | f1", vcov={"CRV3": "f1"}, data=data, use_compression=True)
-
-    # prediction:
-    with pytest.raises(NotImplementedError):
-        pf.feols("Y ~ X1 | f1", data=data, use_compression=True).predict()
-
-    # argument errors
     with pytest.raises(TypeError):
-        pf.feols("Y ~ X1", data=data, use_compression=True, vcov="iid", reps=1.2)
+        pf.feols("Y ~ X1", data=data, use_compression=1)
+
+    with pytest.raises(TypeError):
+        pf.feols("Y ~ X1", data=data, vcov="iid", reps=1.2)
 
     with pytest.raises(ValueError):
-        pf.feols("Y ~ X1", data=data, use_compression=True, vcov="iid", reps=-1)
+        pf.feols("Y ~ X1", data=data, vcov="iid", reps=-1)
 
     with pytest.raises(TypeError):
-        pf.feols("Y ~ X1", data=data, use_compression=True, vcov="iid", seed=1.2)
-
-    # no support for IV
-    with pytest.raises(NotImplementedError):
-        pf.feols("Y ~ 1 | X1 ~ Z1", data=data, use_compression=True)
-
-    # no support for WLS
-    with pytest.raises(NotImplementedError):
-        pf.feols("Y ~ X1", data=data, weights="weights", use_compression=True)
+        pf.feols("Y ~ X1", data=data, vcov="iid", seed=1.2)
 
 
 def test_errors_panelview():

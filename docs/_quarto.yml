@@ -150,7 +150,6 @@ quartodoc:
         - estimation.models.felogit_.Felogit
         - estimation.models.feprobit_.Feprobit
         - estimation.models.fegaussian_.Fegaussian
-        - estimation.models.feols_compressed_.FeolsCompressed
         - estimation.FixestMulti_.FixestMulti
         - estimation.quantreg.quantreg_.Quantreg
         #- did.did.DID
