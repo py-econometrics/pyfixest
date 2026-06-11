@@ -9,7 +9,6 @@ SolverOptions = Literal[
     "np.linalg.solve",
     "scipy.linalg.solve",
     "scipy.sparse.linalg.lsqr",
-    "jax",
 ]
 PredictionErrorOptions = Literal["prediction"]
 QuantregMethodOptions = Literal["fn", "pfn"]

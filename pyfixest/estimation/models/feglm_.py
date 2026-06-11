@@ -48,7 +48,6 @@ class Feglm(Feols, ABC):
             "np.linalg.solve",
             "scipy.linalg.solve",
             "scipy.sparse.linalg.lsqr",
-            "jax",
         ],
         demeaner: AnyDemeaner | None = None,
         store_data: bool = True,

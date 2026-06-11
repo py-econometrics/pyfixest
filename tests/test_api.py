@@ -126,23 +126,6 @@ def _run_with_deprecated_kwargs(estimator_name, **kwargs):
 _DEPRECATION_ESTIMATORS = ["feols", "fepois", "feglm"]
 
 
-@pytest.mark.parametrize("estimator_name", _DEPRECATION_ESTIMATORS)
-def test_solver_jax_emits_deprecation_warning(estimator_name):
-    with pytest.warns(DeprecationWarning, match=r"solver='jax'"):
-        _run_with_deprecated_kwargs(estimator_name, solver="jax")
-
-
-@pytest.mark.parametrize("estimator_name", _DEPRECATION_ESTIMATORS)
-def test_demeaner_backend_jax_emits_deprecation_warning(estimator_name):
-    with pytest.warns(DeprecationWarning, match=r"`jax` MAP demeaner backend") as rec:
-        _run_with_deprecated_kwargs(
-            estimator_name, demeaner=pf.MapDemeaner(backend="jax")
-        )
-    messages = [str(r.message) for r in rec]
-    assert any("rust MAP" in m for m in messages)
-    assert any("torch', device='cuda" in m for m in messages)
-
-
 def test_demeaner_backend_cupy_emits_deprecation_warning():
     from pyfixest.estimation.internals.demeaner_options import (
         _warn_if_deprecated_demeaner_backend,

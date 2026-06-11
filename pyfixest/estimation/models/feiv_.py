@@ -43,7 +43,7 @@ class Feiv(Feols):
     collin_tol : float
         Tolerance for collinearity check.
     solver: Literal["np.linalg.lstsq", "np.linalg.solve", "scipy.linalg.solve",
-        "scipy.sparse.linalg.lsqr", "jax"],
+        "scipy.sparse.linalg.lsqr"],
         default is "scipy.linalg.solve". Solver to use for the estimation.
     demeaner : Optional[AnyDemeaner]
         Resolved typed demeaner configuration.
@@ -150,7 +150,6 @@ class Feiv(Feols):
             "np.linalg.solve",
             "scipy.linalg.solve",
             "scipy.sparse.linalg.lsqr",
-            "jax",
         ] = "scipy.linalg.solve",
         demeaner: AnyDemeaner | None = None,
         store_data: bool = True,

@@ -377,10 +377,6 @@ def dispatch_demean(
             from pyfixest.core.demean import demean as demean_rs
 
             demean_func = demean_rs
-        elif backend == "jax":
-            from pyfixest.estimation.jax.demean_jax_ import demean_jax
-
-            demean_func = demean_jax
         else:
             raise ValueError(f"Unknown MapDemeaner backend: {backend!r}")
 

@@ -65,7 +65,7 @@ class Fepois(Feols):
         Tolerance level for the convergence of the IRLS algorithm.
     solver : str, optional.
         The solver to use for the regression. Can be "np.linalg.lstsq",
-        "np.linalg.solve", "scipy.linalg.solve", "scipy.sparse.linalg.lsqr" and "jax".
+        "np.linalg.solve", "scipy.linalg.solve" and "scipy.sparse.linalg.lsqr".
         Defaults to "scipy.linalg.solve".
     demeaner : Optional[AnyDemeaner]
         Resolved typed demeaner configuration.
