@@ -6,7 +6,6 @@ from typing import cast, get_args
 
 import numpy as np
 import pandas as pd
-import scipy.sparse as sp
 
 from pyfixest.core.demean import (
     Preconditioner,
@@ -24,7 +23,6 @@ from pyfixest.demeaners import (
 _PRECONDITIONER_SUPPORT: dict[LsmrBackend, tuple[set[str], str]] = {
     "within": (set(get_args(WithinPreconditionerName)), "additive"),
     "torch": ({"diagonal"}, "diagonal"),
-    "cupy": ({"off", "diagonal"}, "diagonal"),
 }
 
 
@@ -339,35 +337,7 @@ def dispatch_demean(
             )
             return result, success, None
 
-        cupy_resolved = _resolve_preconditioner(
-            "cupy", cast(LsmrPreconditioner, demeaner.preconditioner)
-        )
-        cupy_demean_module = import_module("pyfixest.estimation.cupy.demean_cupy_")
-        fe_df = pd.DataFrame(
-            flist_uint,
-            columns=[f"f{i + 1}" for i in range(flist_uint.shape[1])],
-            copy=False,
-        )
-        fe_sparse_matrix = cast(
-            sp.spmatrix,
-            cupy_demean_module.create_fe_sparse_matrix(fe_df),
-        )
-        cupy_demeaner = cupy_demean_module.CupyFWLDemeaner(
-            device=demeaner.device,
-            fixef_atol=demeaner.fixef_atol,
-            fixef_btol=demeaner.fixef_btol,
-            fixef_maxiter=demeaner.fixef_maxiter,
-            warn_on_cpu_fallback=demeaner.warn_on_cpu_fallback,
-            dtype=np.float32 if demeaner.precision == "float32" else np.float64,
-            preconditioner=cupy_resolved,
-        )
-        result, success = cupy_demeaner.demean(
-            x=x,
-            flist=flist_uint,
-            weights=weights,
-            fe_sparse_matrix=fe_sparse_matrix,
-        )
-        return result, success, None
+        raise ValueError(f"Unknown LsmrDemeaner backend: {demeaner.backend!r}")
 
     if isinstance(demeaner, MapDemeaner):
         backend = demeaner.backend

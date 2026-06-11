@@ -8,7 +8,6 @@ from pyfixest.estimation.api.utils import _estimation_input_checks
 from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.internals.demeaner_options import (
     _resolve_demeaner,
-    _warn_if_deprecated_demeaner_backend,
     _warn_if_experimental_torch_demeaner,
 )
 from pyfixest.estimation.internals.literals import (
@@ -137,15 +136,6 @@ def fepois(
         torch-based LSMR backends - see the
         [Demeaner Backends vignette](../../how-to/demeaner-backends.qmd).
 
-        .. deprecated::
-            The ``cupy`` / ``scipy`` LSMR backends are deprecated and will
-            be removed in a future release. Replacements:
-
-            - cupy LSMR on GPU →
-              ``LsmrDemeaner(backend="torch", device="cuda")``.
-            - Scipy / cupy LSMR on CPU → ``LsmrDemeaner()``
-              (the default within backend).
-
     drop_intercept : bool, optional
         Whether to drop the intercept from the model, by default False.
 
@@ -251,7 +241,6 @@ def fepois(
     context = {} if context is None else capture_context(context)
     demeaner = _resolve_demeaner(demeaner)
     _warn_if_experimental_torch_demeaner(demeaner)
-    _warn_if_deprecated_demeaner_backend(demeaner)
 
     _estimation_input_checks(
         fml=fml,

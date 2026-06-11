@@ -7,7 +7,7 @@ from typing import ClassVar, Literal, get_args
 from pyfixest.core.demean import Preconditioner
 
 MapBackend = Literal["numba", "rust"]
-LsmrBackend = Literal["within", "cupy", "torch"]
+LsmrBackend = Literal["within", "torch"]
 LsmrPrecision = Literal["float32", "float64"]
 TorchDevice = Literal["auto", "cpu", "mps", "cuda"]
 LsmrPreconditioner = Literal["auto", "off", "additive", "diagonal"]
@@ -66,28 +66,27 @@ class LsmrDemeaner(BaseDemeaner):
     -----
     The ``within`` backend takes a single tolerance, so ``fixef_atol`` and
     ``fixef_btol`` are collapsed to ``max(fixef_atol, fixef_btol)`` for that
-    backend. The ``cupy`` and ``torch`` backends use both tolerances
-    independently (SciPy LSMR convention).
+    backend. The ``torch`` backend uses both tolerances independently
+    (SciPy LSMR convention).
 
     The ``local_size`` field only applies to ``backend="within"``; the
-    ``cupy`` and ``torch`` backends ignore it.
+    ``torch`` backend ignores it.
 
     The ``precision``, ``device``, and ``warn_on_cpu_fallback`` fields are
-    only relevant for the ``torch`` backend (and the deprecated ``cupy``
-    backend). The ``within`` backend always runs on CPU in float64 and
-    ignores these fields.
+    only relevant for the ``torch`` backend. The ``within`` backend always
+    runs on CPU in float64 and ignores these fields.
 
     ``preconditioner`` selects the preconditioner. Supported values:
 
     - ``"auto"`` (default): selects different preconditioners for different
       backend implementations: ``"additive"`` for ``within``; ``"diagonal"``
-      for ``torch`` / ``cupy``.
-    - ``"off"``: disables preconditioning. Supported by ``within`` and
-      ``cupy``; not supported by ``torch``.
+      for ``torch``.
+    - ``"off"``: disables preconditioning. Supported by ``within``; not
+      supported by ``torch``.
     - ``"additive"``: additive Schwarz preconditioner. Only supported by the
       ``within`` backend.
     - ``"diagonal"``: diagonal (Jacobi) preconditioner. Supported by
-      ``within``, ``torch``, and ``cupy``.
+      ``within`` and ``torch``.
     - A :class:`pyfixest.Preconditioner` instance: a previously built
       preconditioner (typically obtained via ``fit.preconditioner`` or
       pickled across sessions). Only supported by ``backend='within'``;
@@ -150,9 +149,6 @@ class LsmrDemeaner(BaseDemeaner):
 
         if self.local_size is not None:
             _validate_positive_int(self.local_size, "local_size")
-
-        if self.backend == "cupy" and self.device == "mps":
-            raise ValueError("The CuPy backend does not support MPS devices.")
 
         if (
             self.backend == "torch"

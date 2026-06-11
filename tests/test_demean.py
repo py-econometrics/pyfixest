@@ -9,7 +9,6 @@ import pyfixest as pf
 from pyfixest.core import demean as demean_rs
 from pyfixest.core.demean import demean_within
 from pyfixest.demeaners import LsmrDemeaner, MapDemeaner
-from pyfixest.estimation.cupy.demean_cupy_ import demean_cupy32, demean_cupy64
 from pyfixest.estimation.internals.demean_ import (
     _resolve_preconditioner,
     demean_model,
@@ -21,8 +20,6 @@ from tests._torch_test_utils import HAS_TORCH, torch_param
 GENERIC_DEMEAN_FUNCS = [
     pytest.param(demean_numba, id="demean_numba"),
     pytest.param(demean_rs, id="demean_rs"),
-    pytest.param(demean_cupy32, id="demean_cupy32"),
-    pytest.param(demean_cupy64, id="demean_cupy64"),
 ]
 
 if HAS_TORCH:
@@ -35,7 +32,6 @@ MODEL_DEMEANERS = [
     pytest.param(MapDemeaner(backend="numba"), id="numba"),
     pytest.param(MapDemeaner(backend="rust"), id="rust"),
     pytest.param(LsmrDemeaner(), id="within"),
-    pytest.param(LsmrDemeaner(backend="cupy", device="cpu"), id="lsmr_scipy"),
 ]
 
 if HAS_TORCH:
@@ -564,10 +560,6 @@ def test_lsmr_within_reports_no_preconditioner_when_unused(demean_data):
         # torch: supports diagonal; auto -> diagonal
         ("torch", "auto", "diagonal"),
         ("torch", "diagonal", "diagonal"),
-        # cupy: supports diagonal, off; auto -> diagonal
-        ("cupy", "auto", "diagonal"),
-        ("cupy", "diagonal", "diagonal"),
-        ("cupy", "off", "off"),
     ],
 )
 def test_resolve_preconditioner_compatible_silent(backend, requested, expected):
@@ -584,7 +576,6 @@ def test_resolve_preconditioner_compatible_silent(backend, requested, expected):
     [
         ("torch", "additive", "diagonal"),
         ("torch", "off", "diagonal"),
-        ("cupy", "additive", "diagonal"),
     ],
 )
 def test_resolve_preconditioner_incompatible_warns(backend, requested, fallback):
@@ -808,10 +799,6 @@ def test_demean_model_caching(benchmark, demeaner):
     [
         pytest.param(MapDemeaner(backend="numba", fixef_maxiter=1), id="numba"),
         pytest.param(MapDemeaner(backend="rust", fixef_maxiter=1), id="rust"),
-        pytest.param(
-            LsmrDemeaner(backend="cupy", device="cpu", fixef_maxiter=1),
-            id="lsmr_scipy",
-        ),
         pytest.param(
             LsmrDemeaner(backend="torch", device="cpu", fixef_maxiter=1),
             id="lsmr_torch_cpu",
