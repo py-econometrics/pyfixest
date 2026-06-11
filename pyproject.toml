@@ -329,7 +329,6 @@ cuda = "12.8"
 
 [tool.pixi.feature.benchmark.target.linux-64.dependencies]
 cuda-version = "12.8.*"
-cupy = "*"
 
 [tool.pixi.feature.benchmark.target.linux-64.pypi-dependencies]
 torch = { version = ">=2.7.0", index = "https://download.pytorch.org/whl/cu128" }

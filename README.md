@@ -92,11 +92,6 @@ pf.feols(
 )
 ```
 
-> **Note:** The `cupy` / `scipy` LSMR backends and the `jax` MAP backend are
-> deprecated and will be removed in a future release. Use `pf.LsmrDemeaner()`
-> for the default Rust `within` LSMR backend on CPU, or the torch-based backend
-> for GPU acceleration.
-
 </details>
 ## Quickstart
 

@@ -100,7 +100,7 @@ The `MapDemeaner` accepts `fixef_tol` and `fixef_maxiter` arguments to control
 convergence. `LsmrDemeaner` uses `fixef_atol` and `fixef_btol`. For the
 `within` backend the two tolerances are collapsed to
 `max(fixef_atol, fixef_btol)` (the solver takes a single tolerance);
-`torch` and `cupy` use both independently (SciPy LSMR convention).
+`torch` uses both independently (SciPy LSMR convention).
 
 ```{python}
 fit = pf.feols(
