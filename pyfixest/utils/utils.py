@@ -1,4 +1,3 @@
-import warnings
 from collections.abc import Mapping
 from typing import Any
 
@@ -15,8 +14,6 @@ def ssc(
     k_fixef: str = "nonnested",
     G_adj: bool = True,
     G_df: str = "min",
-    *args: Any,
-    **kwargs: Any,
 ) -> dict[str, str | bool]:
     """
     Set the small sample correction factor applied in `get_ssc()`.
@@ -89,30 +86,6 @@ def ssc(
     dict
         A dictionary with encoded info on how to form small sample corrections
     """
-    deprecated_mapping = {
-        "adj": "k_adj",
-        "fixef_k": "k_fixef",
-        "cluster_df": "G_df",
-        "cluster_adj": "G_adj",
-    }
-
-    for old_name, new_name in deprecated_mapping.items():
-        if old_name in kwargs:
-            warnings.warn(
-                f"The '{old_name}' argument is deprecated. Use '{new_name}' instead.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            # Update parameter values if new name not already provided
-            if new_name == "k_adj" and "k_adj" not in kwargs:
-                k_adj = kwargs[old_name]
-            elif new_name == "k_fixef" and "k_fixef" not in kwargs:
-                k_fixef = kwargs[old_name]
-            elif new_name == "G_df" and "G_df" not in kwargs:
-                G_df = kwargs[old_name]
-            elif new_name == "G_adj" and "G_adj" not in kwargs:
-                G_adj = kwargs[old_name]
-
     if not isinstance(k_adj, bool):
         raise TypeError("k_adj must be True or False.")
     if k_fixef not in ["none", "full", "nonnested"]:

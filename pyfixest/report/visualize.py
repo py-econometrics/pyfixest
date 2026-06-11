@@ -1,4 +1,5 @@
 import math
+import re
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -35,7 +36,6 @@ from pyfixest.estimation.quantreg.quantreg_ import Quantreg
 from pyfixest.report.utils import (
     _check_label_keys_in_covars,
     _post_processing_input_checks,
-    _relabel_expvar,
 )
 from pyfixest.utils.dev_utils import _select_order_coefs
 
@@ -44,6 +44,48 @@ ModelInputType = FixestMulti | Feols | Fepois | Feiv | list[Feols | Fepois | Fei
 # Only setup lets-plot if it's available
 if _HAS_LETS_PLOT:
     LetsPlot.setup_html()
+
+
+def _rename_categorical_coef(
+    col_name: str, template: str, labels: dict[str, str]
+) -> str:
+    if col_name.startswith("C("):
+        pattern = r"C\(([^,]+)(?:,[^]]+)?\)\[(?:T\.)?([^]]+)\]"
+    else:
+        pattern = r"([^[]+)\[(?:T\.)?([^]]+)\]"
+
+    match = re.search(pattern, col_name)
+    if match is None:
+        return col_name
+
+    variable = labels.get(match.group(1), match.group(1))
+    value_raw = match.group(2)
+    value_int: str | int | float = value_raw
+    try:
+        numeric_val = float(value_raw)
+        value_int = int(numeric_val) if numeric_val.is_integer() else numeric_val
+    except ValueError:
+        pass
+
+    return template.format(variable=variable, value=value_raw, value_int=value_int)
+
+
+def _format_coefficient_name(
+    varname: str,
+    labels: dict[str, str],
+    interaction_symbol: str,
+    cat_template: str,
+) -> str:
+    if not labels and cat_template and ("C(" in varname or "[" in varname):
+        formatted = _rename_categorical_coef(
+            varname,
+            template=cat_template,
+            labels=labels,
+        )
+    else:
+        formatted = labels.get(varname, varname)
+
+    return formatted.replace(interaction_symbol, ":")
 
 
 def set_figsize(figsize: tuple[int, int] | None, plot_backend: str) -> tuple[int, int]:
@@ -169,17 +211,16 @@ def iplot(
     --------
     ```{python}
     import pyfixest as pf
-    from pyfixest.report.utils import rename_categoricals
 
     df = pf.get_data()
     fit1 = pf.feols("Y ~ i(f1)", data = df)
     fit2 = pf.feols("Y ~ i(f1) + X2", data = df)
     fit3 = pf.feols("Y ~ i(f1) + X2 | f2", data = df)
 
-    pf.iplot([fit1, fit2, fit3], labels = rename_categoricals(fit1._coefnames))
+    pf.iplot([fit1, fit2, fit3], cat_template = "{variable}::{value_int}")
     pf.iplot(
         models = [fit1, fit2, fit3],
-        labels = rename_categoricals(fit1._coefnames)
+        cat_template = "{variable}::{value_int}",
     )
     pf.iplot(
         models = [fit1, fit2, fit3],
@@ -567,7 +608,7 @@ def _coefplot_lets_plot(
     if not labels_dict or cat_template is not None:
         interactionSymbol = ":"
         df["Coefficient"] = df["Coefficient"].apply(
-            lambda x: _relabel_expvar(
+            lambda x: _format_coefficient_name(
                 x,
                 labels_dict,
                 interactionSymbol,
@@ -661,7 +702,7 @@ def _coefplot_matplotlib(
     if not labels_dict or cat_template is not None:
         interactionSymbol = ":"
         df["Coefficient"] = df["Coefficient"].apply(
-            lambda x: _relabel_expvar(
+            lambda x: _format_coefficient_name(
                 x,
                 labels_dict,
                 interactionSymbol,

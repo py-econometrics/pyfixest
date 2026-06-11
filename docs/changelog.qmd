@@ -6,7 +6,6 @@ freeze: auto
 
 ```{python}
 import pyfixest as pf
-from pyfixest.report.utils import rename_categoricals
 
 df = pf.get_data()
 
@@ -162,6 +161,14 @@ general out-of-memory solution. See
 The deprecated `FixestFormulaParser` and `model_matrix_fixest()` helpers have
 been removed. Use `Formula.parse()` and `create_model_matrix()` from the
 formula module instead.
+
+### Deprecated Utility Arguments Removal
+
+The old `ssc()` keyword aliases `adj`, `fixef_k`, `cluster_adj`, and
+`cluster_df` have been removed. Use `k_adj`, `k_fixef`, `G_adj`, and `G_df`.
+The deprecated report relabel helpers `rename_categoricals()` and
+`rename_event_study_coefs()` have also been removed; use `labels` and
+`cat_template` in plotting/table calls instead.
 
 ### Offsets in `fepois()`
 

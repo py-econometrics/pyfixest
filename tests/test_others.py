@@ -3,10 +3,6 @@ import pandas as pd
 import polars as pl
 
 from pyfixest.estimation import feols, fepois
-from pyfixest.report.utils import (
-    rename_categoricals,
-    rename_event_study_coefs,
-)
 from pyfixest.utils.utils import capture_context, get_data, ssc
 
 
@@ -112,103 +108,6 @@ def test_coef_update_inplace():
         .values
     )
     np.testing.assert_allclose(m.coef().values, full_coefs)
-
-
-def test_rename_categoricals():
-    coefnames = ["C(var)[T.1]", "C(var)[T.2]", "C(var2)[T.1]", "C(var2)[T.2]"]
-    renamed = rename_categoricals(coefnames)
-    assert renamed == {
-        "C(var)[T.1]": "var::1",
-        "C(var)[T.2]": "var::2",
-        "C(var2)[T.1]": "var2::1",
-        "C(var2)[T.2]": "var2::2",
-    }
-
-    # with strings:
-    coefnames = ["Intercept", "C(f4)[T.B]", "C(f4)[T.C]"]
-    renamed = rename_categoricals(coefnames)
-    assert renamed == {
-        "Intercept": "Intercept",
-        "C(f4)[T.B]": "f4::B",
-        "C(f4)[T.C]": "f4::C",
-    }
-
-    # with reference levels:
-    coefnames = [
-        "Intercept",
-        "C(f4, contr.treatment(base='A'))[T.B]",
-        "C(f4, contr.treatment(base='A'))[T.C]",
-    ]
-    renamed = rename_categoricals(coefnames)
-    assert renamed == {
-        "Intercept": "Intercept",
-        "C(f4, contr.treatment(base='A'))[T.B]": "f4::B",
-        "C(f4, contr.treatment(base='A'))[T.C]": "f4::C",
-    }
-
-    # without 'T.' in the categorical notation:
-    coefnames = [
-        "C(f4)[B]",
-        "C(f4)[C]",
-    ]
-    renamed = rename_categoricals(coefnames)
-    assert renamed == {
-        "C(f4)[B]": "f4::B",
-        "C(f4)[C]": "f4::C",
-    }
-
-    # without C() and no 'T.' notation
-    coefnames = [
-        "f4[B]",
-        "f4[C]",
-    ]
-    renamed = rename_categoricals(coefnames)
-    assert renamed == {
-        "f4[B]": "f4::B",
-        "f4[C]": "f4::C",
-    }
-
-    # with categoricals:
-    coefnames = ["Intercept", "variable1[T.value1]", "variable1[T.value2]"]
-    renamed = rename_categoricals(coefnames)
-    assert renamed == {
-        "Intercept": "Intercept",
-        "variable1[T.value1]": "variable1::value1",
-        "variable1[T.value2]": "variable1::value2",
-    }
-
-    # Test with labels
-    coefnames = ["C(variable1)[T.value1]", "variable2[T.value2]"]
-    labels = {"variable1": "var1", "variable2": "var2"}
-    renamed = rename_categoricals(coefnames, labels=labels)
-    assert renamed == {
-        "C(variable1)[T.value1]": "var1::value1",
-        "variable2[T.value2]": "var2::value2",
-    }
-
-    # Test with custom template
-    coefnames = ["C(variable1)[T.value1]", "variable2[T.value2]"]
-    template = "{variable}--{value}"
-    renamed = rename_categoricals(coefnames, template=template)
-    assert renamed == {
-        "C(variable1)[T.value1]": "variable1--value1",
-        "variable2[T.value2]": "variable2--value2",
-    }
-
-
-def test_rename_event_study_coefs():
-    coefnames = [
-        "C(rel_year, contr.treatment(base=-1.0))[T.-20.0]",
-        "C(rel_year, contr.treatment(base=-1.0))[T.-19.0]",
-        "Intercept",
-    ]
-
-    renamed = rename_event_study_coefs(coefnames)
-    assert renamed == {
-        "C(rel_year, contr.treatment(base=-1.0))[T.-20.0]": "rel_year::-20.0",
-        "C(rel_year, contr.treatment(base=-1.0))[T.-19.0]": "rel_year::-19.0",
-        "Intercept": "Intercept",
-    }
 
 
 def _foo():
