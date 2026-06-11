@@ -515,22 +515,16 @@ def test_IV_Diag_unsupported_statistics():
         feiv_instance.IV_Diag(statistics=unsupported_statistics)
 
 
-def test_errors_compressed():
+def test_removed_compression_arguments():
     data = pf.get_data()
 
-    pf.feols("Y ~ X1", data=data, use_compression=False, reps=10)
-
-    with pytest.raises(NotImplementedError, match="no longer supported"):
+    with pytest.raises(
+        TypeError, match="unexpected keyword argument 'use_compression'"
+    ):
         pf.feols("Y ~ X1", data=data, use_compression=True)
 
-    with pytest.raises(TypeError):
-        pf.feols("Y ~ X1", data=data, use_compression=1)
-
-    with pytest.raises(TypeError):
-        pf.feols("Y ~ X1", data=data, vcov="iid", reps=1.2)
-
-    with pytest.raises(ValueError):
-        pf.feols("Y ~ X1", data=data, vcov="iid", reps=-1)
+    with pytest.raises(TypeError, match="unexpected keyword argument 'reps'"):
+        pf.feols("Y ~ X1", data=data, vcov="iid", reps=10)
 
     with pytest.raises(TypeError):
         pf.feols("Y ~ X1", data=data, vcov="iid", seed=1.2)

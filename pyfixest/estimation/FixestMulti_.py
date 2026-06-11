@@ -69,7 +69,8 @@ class FixestMulti:
             frequency weights (`fweights`).
         seed : Optional[int]
             Option to provide a random seed. Default is None.
-            Used by estimators with stochastic internals, such as quantile regression.
+            Used by the stochastic quantile-regression preprocessing method
+            ``"pfn"``.
         separation_check: list[str], optional
             Only used in "fepois". Methods to identify and drop separated observations.
             Either "fe" or "ir". Executes both by default.

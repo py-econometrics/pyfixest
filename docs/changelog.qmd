@@ -147,9 +147,8 @@ We recommend the following replacements:
 ### Regression Compression Removal
 
 The in-memory regression compression implementation has been removed. The
-`use_compression` and `reps` arguments to `feols()` are still accepted for this
-release, but `use_compression=True` now raises a `NotImplementedError`. These
-arguments will be removed from the API in a future release.
+`use_compression` and `reps` arguments have also been removed from `feols()`;
+passing either keyword now raises a `TypeError`.
 
 For large-dataset use cases, the
 [`duckreg`](https://github.com/py-econometrics/duckreg) package provides a more

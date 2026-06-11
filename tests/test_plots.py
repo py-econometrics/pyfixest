@@ -6,7 +6,13 @@ import pytest
 
 import pyfixest as pf
 from pyfixest.estimation import feols
-from pyfixest.report.visualize import _HAS_LETS_PLOT, coefplot, iplot, set_figsize
+from pyfixest.report.visualize import (
+    _HAS_LETS_PLOT,
+    _format_coefficient_name,
+    coefplot,
+    iplot,
+    set_figsize,
+)
 from pyfixest.utils.utils import get_data
 
 matplotlib.use("Agg")  # Use a non-interactive backend
@@ -37,6 +43,29 @@ def fit3(data):
 @pytest.fixture
 def fit4(data):
     return feols(fml="Y ~ i(f2)", data=data, vcov="iid")
+
+
+def test_format_coefficient_name_cat_template():
+    labels = {"f1": "FE 1"}
+
+    assert (
+        _format_coefficient_name(
+            "C(f1, contr.treatment(base=1.0))[T.2.0]",
+            labels=labels,
+            interaction_symbol=":",
+            cat_template="{variable}::{value_int}",
+        )
+        == "FE 1::2"
+    )
+    assert (
+        _format_coefficient_name(
+            "C(f1)[T.2.0]:X1",
+            labels=labels | {"X1": "Treatment"},
+            interaction_symbol=":",
+            cat_template="{variable}::{value_int}",
+        )
+        == "FE 1::2:Treatment"
+    )
 
 
 @pytest.fixture

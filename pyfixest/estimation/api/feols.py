@@ -39,8 +39,6 @@ def feols(
     weights_type: WeightsTypeOptions = "aweights",
     solver: SolverOptions = "scipy.linalg.solve",
     demeaner: AnyDemeaner | None = None,
-    use_compression: bool = False,
-    reps: int | None = None,
     context: int | Mapping[str, Any] | None = None,
     seed: int | None = None,
     split: str | None = None,
@@ -151,17 +149,6 @@ def feols(
               ``LsmrDemeaner(backend="torch", device="cuda")``.
             - Scipy / cupy LSMR on CPU → ``LsmrDemeaner()``
               (the default within backend).
-
-    use_compression: bool
-        .. deprecated::
-            ``use_compression`` is no longer supported and will be removed in a
-            future release. For out-of-memory regression on large datasets,
-            consider using the
-            `duckreg <https://github.com/py-econometrics/duckreg>`_ package instead.
-
-    reps: int
-        Deprecated compression-only argument. Ignored unless
-        ``use_compression=True``, which now raises an error.
 
     context : int or Mapping[str, Any]
         A dictionary containing additional context variables to be used by
@@ -487,22 +474,6 @@ def feols(
     demeaner = _resolve_demeaner(demeaner)
     _warn_if_experimental_torch_demeaner(demeaner)
     _warn_if_deprecated_demeaner_backend(demeaner)
-
-    if not isinstance(use_compression, bool):
-        raise TypeError("The function argument `use_compression` must be of type bool.")
-    if use_compression:
-        raise NotImplementedError(
-            "The `use_compression` argument is no longer supported and will be "
-            "removed in a future release. For out-of-memory regression on large "
-            "datasets, consider using the `duckreg` package "
-            "(https://github.com/py-econometrics/duckreg) instead. "
-            "See https://github.com/py-econometrics/pyfixest/issues/1302 for context."
-        )
-    if reps is not None:
-        if not isinstance(reps, int):
-            raise TypeError("The function argument `reps` must be of type int.")
-        if reps <= 0:
-            raise ValueError("The function argument `reps` must be strictly positive.")
 
     _estimation_input_checks(
         fml=fml,

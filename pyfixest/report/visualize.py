@@ -46,46 +46,43 @@ if _HAS_LETS_PLOT:
     LetsPlot.setup_html()
 
 
-def _rename_categorical_coef(
-    col_name: str, template: str, labels: dict[str, str]
-) -> str:
-    if col_name.startswith("C("):
-        pattern = r"C\(([^,]+)(?:,[^]]+)?\)\[(?:T\.)?([^]]+)\]"
-    else:
-        pattern = r"([^[]+)\[(?:T\.)?([^]]+)\]"
-
-    match = re.search(pattern, col_name)
-    if match is None:
-        return col_name
-
-    variable = labels.get(match.group(1), match.group(1))
-    value_raw = match.group(2)
-    value_int: str | int | float = value_raw
-    try:
-        numeric_val = float(value_raw)
-        value_int = int(numeric_val) if numeric_val.is_integer() else numeric_val
-    except ValueError:
-        pass
-
-    return template.format(variable=variable, value=value_raw, value_int=value_int)
-
-
 def _format_coefficient_name(
     varname: str,
     labels: dict[str, str],
     interaction_symbol: str,
     cat_template: str,
 ) -> str:
-    if not labels and cat_template and ("C(" in varname or "[" in varname):
-        formatted = _rename_categorical_coef(
-            varname,
-            template=cat_template,
-            labels=labels,
-        )
-    else:
-        formatted = labels.get(varname, varname)
+    parts = varname.split(interaction_symbol)
+    for idx, part in enumerate(parts):
+        if cat_template and ("C(" in part or "[" in part):
+            if part.startswith("C("):
+                pattern = r"C\(([^,]+)(?:,[^]]+)?\)\[(?:T\.)?([^]]+)\]"
+            else:
+                pattern = r"([^[]+)\[(?:T\.)?([^]]+)\]"
 
-    return formatted.replace(interaction_symbol, ":")
+            match = re.search(pattern, part)
+            if match is not None:
+                variable = labels.get(match.group(1), match.group(1))
+                value_raw = match.group(2)
+                value_int: str | int | float = value_raw
+                try:
+                    numeric_val = float(value_raw)
+                    value_int = (
+                        int(numeric_val) if numeric_val.is_integer() else numeric_val
+                    )
+                except ValueError:
+                    pass
+
+                parts[idx] = cat_template.format(
+                    variable=variable,
+                    value=value_raw,
+                    value_int=value_int,
+                )
+                continue
+
+        parts[idx] = labels.get(part, part)
+
+    return interaction_symbol.join(parts)
 
 
 def set_figsize(figsize: tuple[int, int] | None, plot_backend: str) -> tuple[int, int]:
@@ -605,7 +602,7 @@ def _coefplot_lets_plot(
 
     labels_dict = {} if labels is None else labels
 
-    if not labels_dict or cat_template is not None:
+    if labels_dict or cat_template is not None:
         interactionSymbol = ":"
         df["Coefficient"] = df["Coefficient"].apply(
             lambda x: _format_coefficient_name(
@@ -699,7 +696,7 @@ def _coefplot_matplotlib(
     """
     labels_dict = {} if labels is None else labels
 
-    if not labels_dict or cat_template is not None:
+    if labels_dict or cat_template is not None:
         interactionSymbol = ":"
         df["Coefficient"] = df["Coefficient"].apply(
             lambda x: _format_coefficient_name(
