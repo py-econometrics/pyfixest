@@ -161,14 +161,13 @@ fit2 = pf.feols("Y ~ X1 + X2", data = df)
 fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 ```
 
-## PyFixest 0.60.0 (In Development)
+## PyFixest 0.60.0
 
-### Diagonal Preconditioner for the `within` LSMR Backend
-
-Bumped the bundled `within` Rust solver to 0.2.0, which adds a diagonal
-(Jacobi) preconditioner. It is now exposed on `LsmrDemeaner(backend="within")`
-via `preconditioner="diagonal"`, alongside the existing `"additive"` (default) and
-`"off"` options.
+This release focuses on the fixed-effects demeaning stack. The main changes are
+a typed demeaner API, switching from `numba` to Rust for the default MAP demeaning algorithm, reusable `within` preconditioners,
+PyTorch-backed LSMR demeaning on CPU and GPU, and a few deprecations for older
+backend options. It also adds `fepois()` offsets, Typst output for `etable()`,
+and several `panelview()` fixes.
 
 ### Rust MAP Default and Optional Numba
 
@@ -179,7 +178,11 @@ an optional dependency installed with `pip install pyfixest[numba]`.
 
 ### Typed Demeaner API
 
-A new typed demeaner API replaces the old `demeaner_backend`, `fixef_tol`, and `fixef_maxiter` arguments to `feols()`, `fepois()`, and related functions. Instead of passing loose keyword arguments, we now ask you to pass a typed configuration object. The new API is no longer "stringly typed" but "strongly typed" with strong type hints and clearer code organisation.
+A new typed demeaner API replaces the old `demeaner_backend`, `fixef_tol`, and
+`fixef_maxiter` arguments to `feols()`, `fepois()`, and related functions.
+Instead of passing a set of loosely related keyword arguments, you can now pass a
+configuration object that makes the chosen algorithm, tolerance, iteration limit,
+and device explicit.
 
 ```python
 import pyfixest as pf
@@ -194,17 +197,38 @@ fit = pf.feols("Y ~ X1 | f1", data=df, demeaner=LsmrDemeaner(backend="within", f
 fit = pf.feols("Y ~ X1 | f1", data=df, demeaner=LsmrDemeaner(backend="torch", device="cuda"))
 ```
 
-**Deprecations:** The `demeaner_backend`, `fixef_tol`, and `fixef_maxiter` arguments to `feols()` and related functions are deprecated and will be removed in a future release. Likewise, the `_fixef_tol` and `_fixef_maxiter` attributes on fitted model objects are deprecated — going forward, this information is collected from the typed `fit._demeaner` via `fit._demeaner.fixef_tol` and `fit._demeaner.fixef_maxiter` instead.
+**Deprecations:** The `demeaner_backend`, `fixef_tol`, and `fixef_maxiter`
+arguments to `feols()` and related functions are deprecated and will be removed
+in a future release. The `_fixef_tol` and `_fixef_maxiter` attributes on fitted
+model objects are also deprecated; going forward, this information is collected
+from the typed `fit._demeaner` via `fit._demeaner.fixef_tol` and
+`fit._demeaner.fixef_maxiter`.
 
-**Default change:** `LsmrDemeaner()` now defaults to `fixef_maxiter=1_000` (previously inherited `10_000` from `BaseDemeaner`). LSMR typically converges in far fewer than 1,000 iterations, but if you hit `"Demeaning failed after 1000 iterations"` on a difficult problem, pass `LsmrDemeaner(fixef_maxiter=10_000)` (or higher) explicitly.
+**Default change:** `LsmrDemeaner()` now defaults to `fixef_maxiter=1_000`
+(previously inherited `10_000` from `BaseDemeaner`). LSMR typically converges in
+far fewer than 1,000 iterations, but if you hit `"Demeaning failed after 1000
+iterations"` on a difficult problem, pass `LsmrDemeaner(fixef_maxiter=10_000)`
+(or higher) explicitly.
 
-The lower-level `pyfixest.core.demean.demean_within(...)` helper also tightened its default `tol` from `1e-6` to `1e-8`. Calls through `LsmrDemeaner` already pass `max(fixef_atol, fixef_btol)` (default `1e-8`), so the new default just matches what the typed API was already using; only direct callers of `demean_within(...)` with no `tol` argument see a behaviour change.
+The lower-level `pyfixest.core.demean.demean_within(...)` helper also tightened
+its default `tol` from `1e-6` to `1e-8`. Calls through `LsmrDemeaner` already
+pass `max(fixef_atol, fixef_btol)` (default `1e-8`), so the new default matches
+what the typed API was already using. Only direct callers of
+`demean_within(...)` with no `tol` argument see a behaviour change.
+
+### Diagonal Preconditioner for the `within` LSMR Backend
+
+PyFixest now bundles version 0.2.0 of the `within` Rust solver, which adds a
+diagonal (Jacobi) preconditioner. You can use it with
+`LsmrDemeaner(backend="within", preconditioner="diagonal")`, alongside the
+existing `"additive"` (default) and `"off"` options.
+
 
 ### Reusing Preconditioners
 
 The `within` LSMR backend now exposes its additive Schwarz preconditioner so the
-(potentially) expensive setup phase can be amortised when users explicitly reuse it across
-regressions based on the same fixed-effect design.
+(potentially) expensive setup phase can be amortised when users explicitly reuse
+it across regressions based on the same fixed-effect design.
 
 ```python
 import pyfixest as pf
@@ -227,33 +251,71 @@ fit_fast = pf.feols(
 
 For `fepois()` and `feglm()`, the first IWLS iteration builds the
 preconditioner and every subsequent iteration reuses it under the changing
-working weights. As a  result, the reused preconditioner turns "stale" - it was built under the initial iteration's weights - but LSMR still converges to the correct demeaned
-values; it may just take a few extra iterations per IWLS step. The setup phase
-is paid once instead of once per IWLS iteration.
+working weights. That means the reused preconditioner is "stale" because it was
+built under the initial iteration's weights. LSMR still converges to the correct
+demeaned values, but it may take a few extra iterations per IWLS step. The setup
+phase is paid once instead of once per IWLS iteration.
 
-`Preconditioner` instances are pickleable, so the setup phase can also
-be amortised across Python sessions. See
+Each `Preconditioner` also reports its original setup time via
+`preconditioner.build_time_seconds`, which can be useful when profiling large
+fixed-effect problems. `Preconditioner` instances are pickleable, so the setup
+phase can also be amortised across Python sessions. See
 [Choosing a Demeaner Backend](how-to/demeaner-backends.qmd) for details.
 
+### PyTorch LSMR Backend
+
+PyFixest now includes an experimental PyTorch-backed LSMR demeaner. It supports
+CPU execution, CUDA GPUs, and Apple Silicon MPS:
+
+```python
+fit = pf.feols(
+    "Y ~ X1 | f1 + f2",
+    data=df,
+    demeaner=pf.LsmrDemeaner(backend="torch", device="cuda"),
+)
+```
+
+Install the optional dependency with `pip install pyfixest[torch]`. For CUDA,
+you may need to install a CUDA-enabled PyTorch build separately, following the
+PyTorch installation instructions.
 
 ### JAX, CuPy, and SciPy Backend Deprecations
 
-The `jax` MAP demeaner backend, the `cupy` / `scipy` LSMR demeaner backends, and the `solver="jax"` OLS solver option are deprecated and will be removed in a future release. Passing any of them now raises a `DeprecationWarning`.
+The `jax` MAP demeaner backend, the `cupy` / `scipy` LSMR demeaner backends, and
+the `solver="jax"` OLS solver option are deprecated and will be removed in a
+future release. Passing any of them now raises a `DeprecationWarning`.
 
 We recommend the following replacements:
 
 - **JAX MAP on CPU** → `MapDemeaner()` (the default rust MAP).
 - **JAX MAP on GPU** or **`LsmrDemeaner(backend="cupy", device="cuda")`** → `LsmrDemeaner(backend="torch", device="cuda")`.
 - **Scipy or Cupy LSMR on CPU** → `LsmrDemeaner()` (the default `within` backend).
+
 ### Regression Compression Deprecation
 
-The `use_compression` argument to `feols()` is deprecated and will be removed in a future release. This feature implemented the in-memory regression compression approach from [Wong et al. (2021)](https://arxiv.org/abs/2102.11297) via a Mundlak/sufficient-statistics transform. For large-dataset use cases, the [`duckreg`](https://github.com/py-econometrics/duckreg) package provides a more general out-of-memory solution. See [#1302](https://github.com/py-econometrics/pyfixest/issues/1302) for context.
+The `use_compression` argument to `feols()` is deprecated and will be removed in
+a future release. This feature implemented the in-memory regression compression
+approach from [Wong et al. (2021)](https://arxiv.org/abs/2102.11297) via a
+Mundlak/sufficient-statistics transform. For large-dataset use cases, the
+[`duckreg`](https://github.com/py-econometrics/duckreg) package provides a more
+general out-of-memory solution. See
+[#1302](https://github.com/py-econometrics/pyfixest/issues/1302) for context.
 
 Passing `use_compression=True` now raises a `DeprecationWarning`.
 
-- Adds experimental GPU acceleration via PyTorch on CUDA and MPS, plus a PyTorch-based CPU LSMR demeaning backend.
+### Offsets in `fepois()`
 
-- Adds support for `offset`s in `pf.fepois()`, thanks to @bradhackinen and @marie-gar.
+`pf.fepois()` now supports offsets via the new `offset` argument. This is useful
+for Poisson models with an exposure term, such as `offset="log_population"`.
+Thanks to @bradhackinen and @marie-gar for the contribution.
+
+### `etable()` Typst Output and Formatting
+
+`pf.etable()` now supports `type="typst"` output. Its default `coef_fmt` is also
+inherited from `maketables`, which keeps PyFixest closer to the table engine it
+uses internally. As before, significance stars are controlled by the coefficient
+format string: include `*` on a statistic token, for example `b:.3f*`, when you
+want stars in the rendered table.
 
 ### panelview Bug Fixes
 
