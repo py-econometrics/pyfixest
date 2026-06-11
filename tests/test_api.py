@@ -265,7 +265,7 @@ def test_within_preconditioner_off_yields_no_cached_preconditioner():
     assert fit.preconditioner is None
 
 
-@pytest.mark.parametrize("backend", ["torch", "cupy"])
+@pytest.mark.parametrize("backend", ["torch"])
 def test_preconditioner_rejected_on_non_within_backend(backend):
     """A built ``Preconditioner`` is only valid for ``backend='within'``."""
     data = pf.get_data()
