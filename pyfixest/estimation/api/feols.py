@@ -41,9 +41,6 @@ def feols(
     weights_type: WeightsTypeOptions = "aweights",
     solver: SolverOptions = "scipy.linalg.solve",
     demeaner: AnyDemeaner | None = None,
-    demeaner_backend: str | None = None,
-    fixef_tol: float | None = None,
-    fixef_maxiter: int | None = None,
     use_compression: bool = False,
     reps: int = 100,
     context: int | Mapping[str, Any] | None = None,
@@ -509,12 +506,7 @@ def feols(
     if ssc is None:
         ssc = ssc_func()
     context = {} if context is None else capture_context(context)
-    demeaner = _resolve_demeaner(
-        demeaner=demeaner,
-        demeaner_backend=demeaner_backend,
-        fixef_tol=fixef_tol,
-        fixef_maxiter=fixef_maxiter,
-    )
+    demeaner = _resolve_demeaner(demeaner)
     _warn_if_experimental_torch_demeaner(demeaner)
     _warn_if_deprecated_demeaner_backend(demeaner)
     _warn_if_deprecated_solver(solver)
