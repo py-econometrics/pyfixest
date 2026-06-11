@@ -365,9 +365,6 @@ Optional dependencies
 <span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>    data<span class="op">=</span>data,</span>
 <span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>    demeaner<span class="op">=</span>pf.LsmrDemeaner(backend<span class="op">=</span><span class="st">"torch"</span>, device<span class="op">=</span><span class="st">"cuda"</span>),</span>
 <span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<blockquote class="blockquote">
-<p><strong>Note:</strong> The <code>cupy</code> / <code>scipy</code> LSMR backends and the <code>jax</code> MAP backend are deprecated and will be removed in a future release. Use <code>pf.LsmrDemeaner()</code> for the default Rust <code>within</code> LSMR backend on CPU, or the torch-based backend for GPU acceleration.</p>
-</blockquote>
 </details>
 </section>
 <section id="quickstart" class="level2">

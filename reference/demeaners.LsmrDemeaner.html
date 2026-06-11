@@ -610,15 +610,15 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>Sparse LSMR demeaner.</p>
 <section id="notes" class="level2 doc-section doc-section-notes">
 <h2 class="doc-section doc-section-notes anchored" data-anchor-id="notes">Notes</h2>
-<p>The <code>within</code> backend takes a single tolerance, so <code>fixef_atol</code> and <code>fixef_btol</code> are collapsed to <code>max(fixef_atol, fixef_btol)</code> for that backend. The <code>cupy</code> and <code>torch</code> backends use both tolerances independently (SciPy LSMR convention).</p>
-<p>The <code>local_size</code> field only applies to <code>backend="within"</code>; the <code>cupy</code> and <code>torch</code> backends ignore it.</p>
-<p>The <code>precision</code>, <code>device</code>, and <code>warn_on_cpu_fallback</code> fields are only relevant for the <code>torch</code> backend (and the deprecated <code>cupy</code> backend). The <code>within</code> backend always runs on CPU in float64 and ignores these fields.</p>
+<p>The <code>within</code> backend takes a single tolerance, so <code>fixef_atol</code> and <code>fixef_btol</code> are collapsed to <code>max(fixef_atol, fixef_btol)</code> for that backend. The <code>torch</code> backend uses both tolerances independently (SciPy LSMR convention).</p>
+<p>The <code>local_size</code> field only applies to <code>backend="within"</code>; the <code>torch</code> backend ignores it.</p>
+<p>The <code>precision</code>, <code>device</code>, and <code>warn_on_cpu_fallback</code> fields are only relevant for the <code>torch</code> backend. The <code>within</code> backend always runs on CPU in float64 and ignores these fields.</p>
 <p><code>preconditioner</code> selects the preconditioner. Supported values:</p>
 <ul>
-<li><code>"auto"</code> (default): selects different preconditioners for different backend implementations: <code>"additive"</code> for <code>within</code>; <code>"diagonal"</code> for <code>torch</code> / <code>cupy</code>.</li>
-<li><code>"off"</code>: disables preconditioning. Supported by <code>within</code> and <code>cupy</code>; not supported by <code>torch</code>.</li>
+<li><code>"auto"</code> (default): selects different preconditioners for different backend implementations: <code>"additive"</code> for <code>within</code>; <code>"diagonal"</code> for <code>torch</code>.</li>
+<li><code>"off"</code>: disables preconditioning. Supported by <code>within</code>; not supported by <code>torch</code>.</li>
 <li><code>"additive"</code>: additive Schwarz preconditioner. Only supported by the <code>within</code> backend.</li>
-<li><code>"diagonal"</code>: diagonal (Jacobi) preconditioner. Supported by <code>within</code>, <code>torch</code>, and <code>cupy</code>.</li>
+<li><code>"diagonal"</code>: diagonal (Jacobi) preconditioner. Supported by <code>within</code> and <code>torch</code>.</li>
 <li>A :class:<code>pyfixest.Preconditioner</code> instance: a previously built preconditioner (typically obtained via <code>fit.preconditioner</code> or pickled across sessions). Only supported by <code>backend='within'</code>; preconditioners are only computed and applied for two or more fixed-effect factors because single-factor problems run MAP as the within algo provides no benefits. Passing a preconditioner to any other backend raises <code>ValueError</code> at construction time.</li>
 </ul>
 <p>If a <em>string</em> value is incompatible with the chosen backend, a <code>UserWarning</code> is emitted at solve time and the backend’s default is used. A <code>Preconditioner</code> paired with a non-<code>within</code> backend is rejected eagerly with <code>ValueError</code> because there is no sensible fallback for a prebuilt object.</p>
