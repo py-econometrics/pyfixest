@@ -727,13 +727,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tr class="even">
 <td>solver</td>
 <td>SolverOptions, optional.</td>
-<td>The solver to use for the regression. Can be “np.linalg.lstsq”, “np.linalg.solve”, “scipy.linalg.solve”, “scipy.sparse.linalg.lsqr” and “jax”. Defaults to “scipy.linalg.solve”. .. deprecated:: <code>solver="jax"</code> is deprecated and will be removed in a future release. Use one of the NumPy/SciPy solvers instead; for GPU acceleration, see <code>LsmrDemeaner(backend="torch", device="cuda")</code>.</td>
+<td>The solver to use for the regression. Can be “np.linalg.lstsq”, “np.linalg.solve”, “scipy.linalg.solve” and “scipy.sparse.linalg.lsqr”. Defaults to “scipy.linalg.solve”.</td>
 <td><code>'scipy.linalg.solve'</code></td>
 </tr>
 <tr class="odd">
 <td>demeaner</td>
 <td>AnyDemeaner | None</td>
-<td>Typed demeaner configuration. Controls the fixed-effects demeaning backend, tolerance, and iteration limits. Accepts a <code>MapDemeaner</code> or <code>LsmrDemeaner</code> instance. Defaults to <code>MapDemeaner()</code> (Rust MAP algorithm, tol=1e-6, maxiter=10_000). For other options - including the optional Numba backend and the torch-based LSMR backends - see the <a href="../../how-to/demeaner-backends.qmd">Demeaner Backends vignette</a>. .. deprecated:: The <code>jax</code> MAP backend and the <code>cupy</code> / <code>scipy</code> LSMR backends are deprecated and will be removed in a future release. Replacements: - JAX MAP on CPU → <code>MapDemeaner()</code> (the default rust MAP). - JAX MAP / cupy LSMR on GPU → <code>LsmrDemeaner(backend="torch", device="cuda")</code>. - Scipy / cupy LSMR on CPU → <code>LsmrDemeaner()</code> (the default within backend).</td>
+<td>Typed demeaner configuration. Controls the fixed-effects demeaning backend, tolerance, and iteration limits. Accepts a <code>MapDemeaner</code> or <code>LsmrDemeaner</code> instance. Defaults to <code>MapDemeaner()</code> (Rust MAP algorithm, tol=1e-6, maxiter=10_000). For other options - including the optional Numba backend and the torch-based LSMR backends - see the <a href="../../how-to/demeaner-backends.qmd">Demeaner Backends vignette</a>. .. deprecated:: The <code>cupy</code> / <code>scipy</code> LSMR backends are deprecated and will be removed in a future release. Replacements: - cupy LSMR on GPU → <code>LsmrDemeaner(backend="torch", device="cuda")</code>. - Scipy / cupy LSMR on CPU → <code>LsmrDemeaner()</code> (the default within backend).</td>
 <td><code>None</code></td>
 </tr>
 <tr class="even">
@@ -809,7 +809,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="examples" class="level2 doc-section doc-section-examples">
 <h2 class="doc-section doc-section-examples anchored" data-anchor-id="examples">Examples</h2>
 <p>The example below fits a logit model with fixed effects. As in <code>feols()</code>, fixed effects are specified after the <code>|</code> symbol.</p>
-<div id="99f521a0" class="cell" data-execution_count="1">
+<div id="87ed57ab" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -820,7 +820,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>fit_logit.summary()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 
-        <div id="bZ7cu5"></div>
+        <div id="GwyBIh"></div>
         <script type="text/javascript" data-lets-plot-script="library">
             if(!window.letsPlotCallQueue) {
                 window.letsPlotCallQueue = [];
@@ -831,7 +831,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
             (function() {
                 var script = document.createElement("script");
                 script.type = "text/javascript";
-                script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.8.2/js-package/distr/lets-plot.min.js";
+                script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.10.1/js-package/distr/lets-plot.min.js";
                 script.onload = function() {
                     window.letsPlotCall = function(f) {f();};
                     window.letsPlotCallQueue.forEach(function(f) {f();});
@@ -844,9 +844,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                     var div = document.createElement("div");
                     div.style.color = 'darkred';
                     div.textContent = 'Error loading Lets-Plot JS';
-                    document.getElementById("bZ7cu5").appendChild(div);
+                    document.getElementById("GwyBIh").appendChild(div);
                 };
-                var e = document.getElementById("bZ7cu5");
+                var e = document.getElementById("GwyBIh");
                 e.appendChild(script);
             })()
         </script>
@@ -854,7 +854,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <div class="cell-output cell-output-display">
 
-        <div id="51Wd85"></div>
+        <div id="IhBZLs"></div>
         <script type="text/javascript" data-lets-plot-script="library">
             if(!window.letsPlotCallQueue) {
                 window.letsPlotCallQueue = [];
@@ -865,7 +865,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
             (function() {
                 var script = document.createElement("script");
                 script.type = "text/javascript";
-                script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.8.2/js-package/distr/lets-plot.min.js";
+                script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.10.1/js-package/distr/lets-plot.min.js";
                 script.onload = function() {
                     window.letsPlotCall = function(f) {f();};
                     window.letsPlotCallQueue.forEach(function(f) {f();});
@@ -878,9 +878,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                     var div = document.createElement("div");
                     div.style.color = 'darkred';
                     div.textContent = 'Error loading Lets-Plot JS';
-                    document.getElementById("51Wd85").appendChild(div);
+                    document.getElementById("IhBZLs").appendChild(div);
                 };
-                var e = document.getElementById("51Wd85");
+                var e = document.getElementById("IhBZLs");
                 e.appendChild(script);
             })()
         </script>
@@ -904,60 +904,60 @@ Deviance: 961.445 </code></pre>
 </div>
 </div>
 <p>To compare families with the same specification:</p>
-<div id="0c307abe" class="cell" data-execution_count="2">
+<div id="bc8d708f" class="cell" data-execution_count="2">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>fit_probit <span class="op">=</span> pf.feglm(<span class="st">"Y_bin ~ X1 + X2 | f1"</span>, data, family<span class="op">=</span><span class="st">"probit"</span>)</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>fit_gaussian <span class="op">=</span> pf.feglm(<span class="st">"Y_bin ~ X1 + X2 | f1"</span>, data, family<span class="op">=</span><span class="st">"gaussian"</span>)</span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>pf.etable([fit_logit, fit_probit, fit_gaussian])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="2">
-<div id="izaltcnbtq" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<div id="yceuxjykbd" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
 <style>
-#izaltcnbtq table {
+#yceuxjykbd table {
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
           -webkit-font-smoothing: antialiased;
           -moz-osx-font-smoothing: grayscale;
         }
 
-#izaltcnbtq thead, tbody, tfoot, tr, td, th { border-style: none; }
+#yceuxjykbd thead, tbody, tfoot, tr, td, th { border-style: none; }
  tr { background-color: transparent; }
-#izaltcnbtq p { margin: 0; padding: 0; }
- #izaltcnbtq .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: solid; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
- #izaltcnbtq .gt_caption { padding-top: 4px; padding-bottom: 4px; }
- #izaltcnbtq .gt_title { color: #333333; font-size: 16px; font-weight: initial; padding-top: 6px; padding-bottom: 6px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
- #izaltcnbtq .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 5px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
- #izaltcnbtq .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
- #izaltcnbtq .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
- #izaltcnbtq .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
- #izaltcnbtq .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 2px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
- #izaltcnbtq .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
- #izaltcnbtq .gt_column_spanner_outer:first-child { padding-left: 0; }
- #izaltcnbtq .gt_column_spanner_outer:last-child { padding-right: 0; }
- #izaltcnbtq .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: bottom; padding-top: 2px; padding-bottom: 2px; overflow-x: hidden; display: inline-block; width: 100%; }
- #izaltcnbtq .gt_spanner_row { border-bottom-style: hidden; }
- #izaltcnbtq .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
- #izaltcnbtq .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: middle; }
- #izaltcnbtq .gt_from_md> :first-child { margin-top: 0; }
- #izaltcnbtq .gt_from_md> :last-child { margin-bottom: 0; }
- #izaltcnbtq .gt_row { padding-top: 2px; padding-bottom: 2px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
- #izaltcnbtq .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
- #izaltcnbtq .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
- #izaltcnbtq .gt_row_group_first td { border-top-width: 0.25px; }
- #izaltcnbtq .gt_row_group_first th { border-top-width: 0.25px; }
- #izaltcnbtq .gt_striped { color: #333333; background-color: #F4F4F4; }
- #izaltcnbtq .gt_table_body { border-top-style: solid; border-top-width: 0px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
- #izaltcnbtq .gt_grand_summary_row { color: #333333; background-color: #FFFFFF; text-transform: inherit; padding-top: 8px; padding-bottom: 8px; padding-left: 5px; padding-right: 5px; }
- #izaltcnbtq .gt_first_grand_summary_row_bottom { border-top-style: double; border-top-width: 6px; border-top-color: #D3D3D3; }
- #izaltcnbtq .gt_last_grand_summary_row_top { border-bottom-style: double; border-bottom-width: 6px; border-bottom-color: #D3D3D3; }
- #izaltcnbtq .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
- #izaltcnbtq .gt_sourcenote { font-size: 10px; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
- #izaltcnbtq .gt_left { text-align: left; }
- #izaltcnbtq .gt_center { text-align: center; }
- #izaltcnbtq .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
- #izaltcnbtq .gt_font_normal { font-weight: normal; }
- #izaltcnbtq .gt_font_bold { font-weight: bold; }
- #izaltcnbtq .gt_font_italic { font-style: italic; }
- #izaltcnbtq .gt_super { font-size: 65%; }
- #izaltcnbtq .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
- #izaltcnbtq .gt_asterisk { font-size: 100%; vertical-align: 0; }
+#yceuxjykbd p { margin: 0; padding: 0; }
+ #yceuxjykbd .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: solid; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
+ #yceuxjykbd .gt_caption { padding-top: 4px; padding-bottom: 4px; }
+ #yceuxjykbd .gt_title { color: #333333; font-size: 16px; font-weight: initial; padding-top: 6px; padding-bottom: 6px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
+ #yceuxjykbd .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 5px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
+ #yceuxjykbd .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #yceuxjykbd .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
+ #yceuxjykbd .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #yceuxjykbd .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 2px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
+ #yceuxjykbd .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
+ #yceuxjykbd .gt_column_spanner_outer:first-child { padding-left: 0; }
+ #yceuxjykbd .gt_column_spanner_outer:last-child { padding-right: 0; }
+ #yceuxjykbd .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: bottom; padding-top: 2px; padding-bottom: 2px; overflow-x: hidden; display: inline-block; width: 100%; }
+ #yceuxjykbd .gt_spanner_row { border-bottom-style: hidden; }
+ #yceuxjykbd .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
+ #yceuxjykbd .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: middle; }
+ #yceuxjykbd .gt_from_md> :first-child { margin-top: 0; }
+ #yceuxjykbd .gt_from_md> :last-child { margin-bottom: 0; }
+ #yceuxjykbd .gt_row { padding-top: 2px; padding-bottom: 2px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
+ #yceuxjykbd .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
+ #yceuxjykbd .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
+ #yceuxjykbd .gt_row_group_first td { border-top-width: 0.25px; }
+ #yceuxjykbd .gt_row_group_first th { border-top-width: 0.25px; }
+ #yceuxjykbd .gt_striped { color: #333333; background-color: #F4F4F4; }
+ #yceuxjykbd .gt_table_body { border-top-style: solid; border-top-width: 0px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
+ #yceuxjykbd .gt_grand_summary_row { color: #333333; background-color: #FFFFFF; text-transform: inherit; padding-top: 8px; padding-bottom: 8px; padding-left: 5px; padding-right: 5px; }
+ #yceuxjykbd .gt_first_grand_summary_row_bottom { border-top-style: double; border-top-width: 6px; border-top-color: #D3D3D3; }
+ #yceuxjykbd .gt_last_grand_summary_row_top { border-bottom-style: double; border-bottom-width: 6px; border-bottom-color: #D3D3D3; }
+ #yceuxjykbd .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
+ #yceuxjykbd .gt_sourcenote { font-size: 10px; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
+ #yceuxjykbd .gt_left { text-align: left; }
+ #yceuxjykbd .gt_center { text-align: center; }
+ #yceuxjykbd .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
+ #yceuxjykbd .gt_font_normal { font-weight: normal; }
+ #yceuxjykbd .gt_font_bold { font-weight: bold; }
+ #yceuxjykbd .gt_font_italic { font-style: italic; }
+ #yceuxjykbd .gt_super { font-size: 65%; }
+ #yceuxjykbd .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
+ #yceuxjykbd .gt_asterisk { font-size: 100%; vertical-align: 0; }
  
 </style>
 
@@ -1038,7 +1038,7 @@ Deviance: 961.445 </code></pre>
 </div>
 </div>
 <p><code>PyFixest</code> also integrates with the <a href="https://marginaleffects.com/bonus/python.html">marginaleffects</a> package. To compute average marginal effects for the logit model above:</p>
-<div id="ea956c07" class="cell" data-execution_count="3">
+<div id="fc96a1b4" class="cell" data-execution_count="3">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> marginaleffects <span class="im">import</span> avg_slopes</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>avg_slopes(fit_logit, variables<span class="op">=</span><span class="st">"X1"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="3">
@@ -1075,7 +1075,7 @@ Deviance: 961.445 </code></pre>
 </div>
 </div>
 <p>We can also compute marginal effects by group (group average marginal effects):</p>
-<div id="04d56b7f" class="cell" data-execution_count="4">
+<div id="ec79e7fc" class="cell" data-execution_count="4">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>avg_slopes(fit_logit, variables<span class="op">=</span><span class="st">"X1"</span>, by<span class="op">=</span><span class="st">"f1"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="4">
 <div><style>

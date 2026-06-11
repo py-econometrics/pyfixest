@@ -697,7 +697,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tr class="even">
 <td>solver</td>
 <td>str, optional.</td>
-<td>The solver to use for the regression. Can be “np.linalg.lstsq”, “np.linalg.solve”, “scipy.linalg.solve”, “scipy.sparse.linalg.lsqr” and “jax”. Defaults to “scipy.linalg.solve”.</td>
+<td>The solver to use for the regression. Can be “np.linalg.lstsq”, “np.linalg.solve”, “scipy.linalg.solve” and “scipy.sparse.linalg.lsqr”. Defaults to “scipy.linalg.solve”.</td>
 <td><code>'np.linalg.solve'</code></td>
 </tr>
 <tr class="odd">
@@ -988,7 +988,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tr class="odd">
 <td>_solver</td>
 <td>Literal["np.linalg.lstsq", "np.linalg.solve", "scipy.linalg.solve",</td>
-<td>“scipy.sparse.linalg.lsqr”, “jax”], default is “scipy.linalg.solve”. Solver to use for the estimation.</td>
+<td>“scipy.sparse.linalg.lsqr”], default is “scipy.linalg.solve”. Solver to use for the estimation.</td>
 </tr>
 <tr class="even">
 <td>_data</td>
@@ -1339,7 +1339,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="examples" class="level4 doc-section doc-section-examples">
 <h4 class="doc-section doc-section-examples anchored" data-anchor-id="examples">Examples</h4>
-<div id="8a4261d0" class="cell" data-execution_count="1">
+<div id="29fa9c6b" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -1350,7 +1350,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>fit.ccv(treatment<span class="op">=</span><span class="st">"D"</span>, pk<span class="op">=</span><span class="fl">0.05</span>, qk<span class="op">=</span><span class="fl">0.5</span>, n_splits<span class="op">=</span><span class="dv">8</span>, seed<span class="op">=</span><span class="dv">123</span>).head()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 
-        <div id="Cl61Cp"></div>
+        <div id="DM1qBE"></div>
         <script type="text/javascript" data-lets-plot-script="library">
             if(!window.letsPlotCallQueue) {
                 window.letsPlotCallQueue = [];
@@ -1361,7 +1361,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
             (function() {
                 var script = document.createElement("script");
                 script.type = "text/javascript";
-                script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.8.2/js-package/distr/lets-plot.min.js";
+                script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.10.1/js-package/distr/lets-plot.min.js";
                 script.onload = function() {
                     window.letsPlotCall = function(f) {f();};
                     window.letsPlotCallQueue.forEach(function(f) {f();});
@@ -1374,9 +1374,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                     var div = document.createElement("div");
                     div.style.color = 'darkred';
                     div.textContent = 'Error loading Lets-Plot JS';
-                    document.getElementById("Cl61Cp").appendChild(div);
+                    document.getElementById("DM1qBE").appendChild(div);
                 };
-                var e = document.getElementById("Cl61Cp");
+                var e = document.getElementById("DM1qBE");
                 e.appendChild(script);
             })()
         </script>
@@ -1384,7 +1384,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <div class="cell-output cell-output-display">
 
-        <div id="mn4JoR"></div>
+        <div id="zk28WE"></div>
         <script type="text/javascript" data-lets-plot-script="library">
             if(!window.letsPlotCallQueue) {
                 window.letsPlotCallQueue = [];
@@ -1395,7 +1395,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
             (function() {
                 var script = document.createElement("script");
                 script.type = "text/javascript";
-                script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.8.2/js-package/distr/lets-plot.min.js";
+                script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.10.1/js-package/distr/lets-plot.min.js";
                 script.onload = function() {
                     window.letsPlotCall = function(f) {f();};
                     window.letsPlotCallQueue.forEach(function(f) {f();});
@@ -1408,9 +1408,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                     var div = document.createElement("div");
                     div.style.color = 'darkred';
                     div.textContent = 'Error loading Lets-Plot JS';
-                    document.getElementById("mn4JoR").appendChild(div);
+                    document.getElementById("zk28WE").appendChild(div);
                 };
-                var e = document.getElementById("mn4JoR");
+                var e = document.getElementById("zk28WE");
                 e.appendChild(script);
             })()
         </script>
@@ -1435,21 +1435,21 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tbody>
 <tr class="odd">
 <th data-quarto-table-cell-role="th">CCV</th>
-<td>0.02556963692423516</td>
-<td>0.226461</td>
-<td>0.11291</td>
-<td>0.911352</td>
-<td>-0.450207</td>
-<td>0.501347</td>
+<td>0.20331196086910625</td>
+<td>0.192655</td>
+<td>1.055314</td>
+<td>0.305241</td>
+<td>-0.201442</td>
+<td>0.608066</td>
 </tr>
 <tr class="even">
 <th data-quarto-table-cell-role="th">CRV1</th>
-<td>0.02557</td>
-<td>0.167399</td>
-<td>0.152747</td>
-<td>0.880297</td>
-<td>-0.326123</td>
-<td>0.377262</td>
+<td>0.203312</td>
+<td>0.134034</td>
+<td>1.516863</td>
+<td>0.146668</td>
+<td>-0.078284</td>
+<td>0.484908</td>
 </tr>
 </tbody>
 </table>
@@ -1598,7 +1598,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="examples-1" class="level4 doc-section doc-section-examples">
 <h4 class="doc-section doc-section-examples anchored" data-anchor-id="examples-1">Examples</h4>
-<div id="4db210dc" class="cell" data-execution_count="2">
+<div id="c1068e22" class="cell" data-execution_count="2">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> re</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.utils.dgps <span class="im">import</span> gelbach_data</span>
@@ -2018,7 +2018,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="examples-2" class="level4 doc-section doc-section-examples">
 <h4 class="doc-section doc-section-examples anchored" data-anchor-id="examples-2">Examples</h4>
-<div id="d8681f69" class="cell" data-results="asis" data-execution_count="3">
+<div id="5581bea3" class="cell" data-results="asis" data-execution_count="3">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
 <span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> pf.get_data()</span>
 <span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 + X2"</span>, data<span class="op">=</span>data)</span>
@@ -2208,7 +2208,7 @@ dtype: object</code></pre>
 </section>
 <section id="examples-3" class="level4 doc-section doc-section-examples">
 <h4 class="doc-section doc-section-examples anchored" data-anchor-id="examples-3">Examples</h4>
-<div id="080bbded" class="cell" data-execution_count="4">
+<div id="bb8bbc92" class="cell" data-execution_count="4">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
 <span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
@@ -2368,7 +2368,7 @@ Python p_stat: 2.505309282813844e-29</code></pre>
 </section>
 <section id="examples-4" class="level4 doc-section doc-section-examples">
 <h4 class="doc-section doc-section-examples anchored" data-anchor-id="examples-4">Examples</h4>
-<div id="54237a9d" class="cell" data-results="asis" data-execution_count="5">
+<div id="393f51d4" class="cell" data-results="asis" data-execution_count="5">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb24"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> re</span>
 <span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
 <span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a></span>
