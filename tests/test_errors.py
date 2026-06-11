@@ -166,15 +166,6 @@ def test_feols_errors():
     with pytest.raises(TypeError):
         pf.feols(fml="Y ~ X1", data=data, lean=1)
 
-    with pytest.raises(TypeError):
-        pf.feols(fml="Y ~ X1", data=data, fixef_tol="a")
-
-    with pytest.raises(ValueError):
-        pf.feols(fml="Y ~ X1", data=data, fixef_tol=1.0)
-
-    with pytest.raises(ValueError):
-        pf.feols(fml="Y ~ X1", data=data, fixef_tol=0.0)
-
     with pytest.raises(ValueError):
         pf.feols(fml="Y ~ X1", data=data, weights_type="qweights", weights="weights")
 

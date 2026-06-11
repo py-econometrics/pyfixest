@@ -172,6 +172,26 @@ def _normalize_vcov(vcov: str | dict[str, str]) -> str:
     return vcov
 
 
+def _demeaner_from_backend(backend: str, fixef_maxiter: int | None = None):
+    """Map a benchmark backend name to a typed demeaner configuration."""
+    import pyfixest as pf
+
+    kwargs = {} if fixef_maxiter is None else {"fixef_maxiter": fixef_maxiter}
+    if backend == "rust":
+        return pf.MapDemeaner(**kwargs)
+    if backend == "within":
+        return pf.LsmrDemeaner(**kwargs)
+    if backend == "torch_cpu":
+        return pf.LsmrDemeaner(backend="torch", device="cpu", **kwargs)
+    if backend == "torch_mps":
+        return pf.LsmrDemeaner(
+            backend="torch", device="mps", precision="float32", **kwargs
+        )
+    if backend == "torch_cuda":
+        return pf.LsmrDemeaner(backend="torch", device="cuda", **kwargs)
+    raise ValueError(f"Unknown demeaner backend: {backend!r}")
+
+
 class PyFeolsBenchmarkerFullApi:
     """Benchmark pf.feols() end-to-end using one configured demeaner backend."""
 
@@ -188,6 +208,11 @@ class PyFeolsBenchmarkerFullApi:
         self, datasets: list[BenchmarkDataset], spec: FeolsSpec
     ) -> list[FeolsResult]:
         import pyfixest as pf
+
+        feols_kwargs = dict(self._feols_kwargs)
+        demeaner = _demeaner_from_backend(
+            self._demeaner_backend, feols_kwargs.pop("fixef_maxiter", None)
+        )
 
         results: list[FeolsResult] = []
 
@@ -223,8 +248,8 @@ class PyFeolsBenchmarkerFullApi:
                         vcov=spec.vcov,
                         copy_data=False,
                         store_data=False,
-                        demeaner_backend=self._demeaner_backend,
-                        **self._feols_kwargs,
+                        demeaner=demeaner,
+                        **feols_kwargs,
                     )
                 elapsed = time.perf_counter() - t0
 
