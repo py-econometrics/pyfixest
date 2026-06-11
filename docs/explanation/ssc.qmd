@@ -135,7 +135,7 @@ For multi-way clustering:
 - **Two-way**: `df_t = min(G_1 - 1, G_2 - 1)`
 - **Three-way**: `df_t = min(G_1 - 1, G_2 - 1, G_3 - 1)` *(not currently supported)*
 
-See [this implementation](https://github.com/py-econometrics/pyfixest/blob/864da9c0d1797aff70e3f5b420e4c73f7256642d/pyfixest/estimation/feols_.py#L851) for details.
+See [this implementation](https://github.com/py-econometrics/pyfixest/blob/864da9c0d1797aff70e3f5b420e4c73f7256642d/pyfixest/estimation/models/feols_.py#L851) for details.
 
 # In Code
 
