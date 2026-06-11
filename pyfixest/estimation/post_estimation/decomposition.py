@@ -97,6 +97,18 @@ class GelbachResults:
 
 
 @dataclass
+class GelbachComputation:
+    """Intermediate Gelbach quantities shared by point estimates and inference."""
+
+    beta_short: np.ndarray
+    beta_full: np.ndarray
+    beta2: np.ndarray
+    x1_inv: np.ndarray | None
+    gamma_matrix: np.ndarray | None
+    results: GelbachResults
+
+
+@dataclass
 class GelbachDecomposition:
     """
     Gelbach Decomposition (equivalent to a Linear Mediation Model).
@@ -132,7 +144,7 @@ class GelbachDecomposition:
     agg_first : bool, optional
         Whether to use aggregate-first algorithm for high-dimensional mediators, by default False.
     only_coef : bool, optional
-        If True, skip inference and only compute point estimates, by default True.
+        If True, skip inference and only compute point estimates, by default False.
     inference : str, optional
         Inference method. One of "analytic" or "bootstrap", by default "analytic".
     atol : float, optional
@@ -162,7 +174,7 @@ class GelbachDecomposition:
     cluster_df: pd.Series | None = None
     combine_covariates: dict[str, list[str]] | None = None
     agg_first: bool | None = False
-    only_coef: bool = True
+    only_coef: bool = False
     inference: str = "analytic"
     atol: float | None = None
     btol: float | None = None
@@ -317,20 +329,31 @@ class GelbachDecomposition:
             self.decomp_var_in_X1_idx = self.names_X1.index(self.decomp_var)
             self.decomp_var_in_X_idx = self.names_X.index(self.decomp_var)
 
+            compute_internals = not self.only_coef and self.inference == "analytic"
             results = self.compute_gelbach(
                 X1=self.X1,
                 X2=self.X2,
                 Y=self.Y,
                 X=self.X,
                 agg_first=self.agg_first,
+                compute_internals=compute_internals,
             )
 
             (
-                self.direct_effect,
+                self.beta_short,
                 self.beta_full,
                 self.beta2,
+                self.x1_inv,
+                self.gamma_matrix,
                 self.results,
-            ) = results
+            ) = (
+                results.beta_short,
+                results.beta_full,
+                results.beta2,
+                results.x1_inv,
+                results.gamma_matrix,
+                results.results,
+            )
 
             if not self.only_coef and self.inference == "analytic":
                 self._compute_analytic_inference()
@@ -363,16 +386,10 @@ class GelbachDecomposition:
                 Y=Y,
                 X=X,
                 agg_first=self.agg_first,
+                compute_internals=False,
             )
 
-            (
-                _,
-                _,
-                _,
-                bootstrap_results,
-            ) = results
-
-            return bootstrap_results
+            return results.results
 
     def bootstrap(self, rng: np.random.Generator, B: int = 1_000, alpha: float = 0.05):
         "Bootstrap Confidence Intervals for Total, Mediated and Direct Effects."
@@ -431,53 +448,56 @@ class GelbachDecomposition:
         )
         return ci_df.astype(float)
 
-    def _to_dense_array(self, matrix: spmatrix | np.ndarray) -> np.ndarray:
-        """Convert sparse or dense inputs to a 2D numpy array."""
-        if hasattr(matrix, "toarray"):
-            return np.asarray(matrix.toarray(), dtype=float)
-        return np.asarray(matrix, dtype=float)
-
-    def _solve_crossprod_inverse(self, X: np.ndarray) -> np.ndarray:
-        """Compute a stable generalized inverse of X'X for analytic inference."""
-        return np.linalg.pinv(X.T @ X)
-
     def _compute_analytic_inference(self) -> None:
         """Compute HC1 delta-method influence functions for Gelbach effects."""
-        X1 = self._to_dense_array(self.X1)
-        X2 = self._to_dense_array(self.X2)
-        X = self._to_dense_array(self.X)
+        if self.x1_inv is None or self.gamma_matrix is None:
+            raise RuntimeError("Analytic inference internals were not computed.")
+
         Y = np.asarray(self.Y, dtype=float).reshape(-1)
-        nobs = X.shape[0]
+        nobs = self.X.shape[0]
 
-        x1_inv = self._solve_crossprod_inverse(X1)
-        x_inv = self._solve_crossprod_inverse(X)
+        x_crossprod = self.X.T @ self.X
+        if hasattr(x_crossprod, "toarray"):
+            x_crossprod = x_crossprod.toarray()
+        x_inv = np.linalg.pinv(np.asarray(x_crossprod, dtype=float))
 
-        beta_short = lsqr(self.X1, self.Y, atol=self.atol, btol=self.btol)[0]
+        beta_short = np.asarray(self.beta_short, dtype=float)
         beta_full = np.asarray(self.beta_full, dtype=float)
         beta2 = np.asarray(self.beta2, dtype=float)
-        gamma_matrix = x1_inv @ X1.T @ X2
-        gamma = gamma_matrix[self.decomp_var_in_X1_idx, :]
+        gamma = self.gamma_matrix[self.decomp_var_in_X1_idx, :]
 
-        short_resid = Y - X1 @ beta_short
-        full_resid = Y - X @ beta_full
-        auxiliary_resid = X2 - X1 @ gamma_matrix
+        short_resid = Y - np.asarray(self.X1 @ beta_short).reshape(-1)
+        full_resid = Y - np.asarray(self.X @ beta_full).reshape(-1)
 
-        short_weight = X1 @ x1_inv[:, self.decomp_var_in_X1_idx]
+        short_weight = np.asarray(
+            self.X1 @ self.x1_inv[:, self.decomp_var_in_X1_idx]
+        ).reshape(-1)
         direct_if = short_weight * short_resid
 
-        full_weight = X @ x_inv[:, self.decomp_var_in_X_idx]
+        full_weight = np.asarray(self.X @ x_inv[:, self.decomp_var_in_X_idx]).reshape(
+            -1
+        )
         full_if = full_weight * full_resid
 
         beta2_indices = np.flatnonzero(self.mask)
-        beta2_weights = X @ x_inv[:, beta2_indices]
-        beta2_if = beta2_weights * full_resid[:, None]
-        gamma_if = short_weight[:, None] * auxiliary_resid
-        mediator_if = gamma[None, :] * beta2_if + beta2[None, :] * gamma_if
 
         mediator_group_if = {}
         for name, covariates in self.combine_covariates_dict.items():
             variable_idx = [self.mediator_names.index(cov) for cov in covariates]
-            mediator_group_if[name] = np.sum(mediator_if[:, variable_idx], axis=1)
+            group_gamma = gamma[variable_idx]
+            group_beta2 = beta2[variable_idx]
+
+            group_beta2_weight = x_inv[:, beta2_indices[variable_idx]] @ group_gamma
+            beta2_if = np.asarray(self.X @ group_beta2_weight).reshape(-1) * full_resid
+
+            group_auxiliary_fit = self.gamma_matrix[:, variable_idx] @ group_beta2
+            group_h = np.asarray(self.X2[:, variable_idx] @ group_beta2).reshape(-1)
+            group_auxiliary_resid = group_h - np.asarray(
+                self.X1 @ group_auxiliary_fit
+            ).reshape(-1)
+            gamma_if = short_weight * group_auxiliary_resid
+
+            mediator_group_if[name] = beta2_if + gamma_if
 
         explained_if = (
             np.sum(np.column_stack(list(mediator_group_if.values())), axis=1)
@@ -505,7 +525,7 @@ class GelbachDecomposition:
             denominator_name="direct_effect",
         )
 
-        rank = np.linalg.matrix_rank(X)
+        rank = np.linalg.matrix_rank(np.asarray(x_crossprod, dtype=float))
         self._analytic_df = max(nobs - rank, 1)
         self._analytic_hc1_factor = nobs / self._analytic_df
 
@@ -600,35 +620,45 @@ class GelbachDecomposition:
         Y: np.ndarray,
         X: spmatrix,
         agg_first: bool | None,
-    ) -> tuple[
-        np.ndarray,
-        np.ndarray,
-        np.ndarray,
-        GelbachResults,
-    ]:
+        compute_internals: bool = False,
+    ) -> GelbachComputation:
         "Run the Gelbach decomposition."
-        N = X1.shape[0]
-
         # Compute direct effect
-        direct_effect = lsqr(X1, Y, atol=self.atol, btol=self.btol)[0]
-        direct_effect_array = np.array([direct_effect[self.decomp_var_in_X1_idx]])
+        beta_short = lsqr(X1, Y, atol=self.atol, btol=self.btol)[0]
 
         # Compute beta_full and beta2
         beta_full = lsqr(X, Y, atol=self.atol, btol=self.btol)[0]
         beta2 = beta_full[self.mask]
 
         mediator_effects = {}
+        x1_inv = None
+        gamma_matrix = None
 
-        if agg_first:
-            # Compute H and Hg
-            H = X2.multiply(beta2).tocsc()  # csc better for slicing columns than csr
+        if compute_internals:
+            x1_crossprod = X1.T @ X1
+            if hasattr(x1_crossprod, "toarray"):
+                x1_crossprod = x1_crossprod.toarray()
+            x1_inv = np.linalg.pinv(np.asarray(x1_crossprod, dtype=float))
+
+            x1_x2 = X1.T @ X2
+            if hasattr(x1_x2, "toarray"):
+                x1_x2 = x1_x2.toarray()
+            gamma_matrix = x1_inv @ np.asarray(x1_x2, dtype=float)
+            gamma = gamma_matrix[self.decomp_var_in_X1_idx, :]
+
+            delta = gamma * beta2
+            for name, covariates in self.combine_covariates_dict.items():
+                variable_idx = [self.mediator_names.index(cov) for cov in covariates]
+                mediator_effects[name] = float(np.sum(delta[variable_idx]))
+        elif agg_first:
+            N = X1.shape[0]
+            H = X2.multiply(beta2).tocsc()
             Hg = np.zeros((N, len(self.combine_covariates_dict)))
 
             for i, (_, covariates) in enumerate(self.combine_covariates_dict.items()):
                 variable_idx = [self.mediator_names.index(cov) for cov in covariates]
                 Hg[:, i] = np.sum(H[:, variable_idx], axis=1).flatten()
 
-            # Compute delta
             delta = np.array(
                 [
                     lsqr(X1, Hg[:, j])[0][self.decomp_var_in_X1_idx]
@@ -652,7 +682,7 @@ class GelbachDecomposition:
                 variable_idx = [self.mediator_names.index(cov) for cov in covariates]
                 mediator_effects[name] = float(np.sum(delta[variable_idx]))
 
-        direct_effect = float(direct_effect_array[0])
+        direct_effect = float(beta_short[self.decomp_var_in_X1_idx])
         full_effect = float(beta_full[self.decomp_var_in_X_idx])
         explained_effect = sum(mediator_effects.values())
         unexplained_effect = direct_effect - explained_effect
@@ -665,11 +695,13 @@ class GelbachDecomposition:
             mediator_effects=mediator_effects,
         )
 
-        results = (
-            direct_effect_array,
-            beta_full,
-            beta2,
-            gelbach_results,
+        results = GelbachComputation(
+            beta_short=beta_short,
+            beta_full=beta_full,
+            beta2=beta2,
+            x1_inv=x1_inv,
+            gamma_matrix=gamma_matrix,
+            results=gelbach_results,
         )
 
         return results
