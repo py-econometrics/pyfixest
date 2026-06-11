@@ -41,15 +41,11 @@ if you want to use `MapDemeaner(backend="numba")` or the fast `ritest` path.
 The torch-based LSMR backends require `pytorch`, which you can install manually or via `pip install pyfixest[torch]`. For GPU acceleration on CUDA, you additionally need a CUDA-enabled PyTorch wheel from the [PyTorch installation guide](https://pytorch.org/get-started/locally/).
 
 ::: {.callout-warning}
-The `jax` MAP demeaner backend and the `cupy` / `scipy` LSMR demeaner backends
-are deprecated and will be removed in a future release. Switch to the
-recommendations above:
+The `cupy` / `scipy` LSMR demeaner backends are deprecated and will be
+removed in a future release. Switch to the recommendations above:
 
-- Users running `MapDemeaner(backend="jax")` on CPU should use the default
-  `MapDemeaner()` (rust MAP).
-- Users running `MapDemeaner(backend="jax")` or
-  `LsmrDemeaner(backend="cupy", device="cuda")` on GPU should use
-  `LsmrDemeaner(backend="torch", device="cuda")`.
+- Users running `LsmrDemeaner(backend="cupy", device="cuda")` on GPU should
+  use `LsmrDemeaner(backend="torch", device="cuda")`.
 - Users running the legacy `scipy` LSMR backend (which corresponds to
   `LsmrDemeaner(backend="cupy", device="cpu")`) should use
   `LsmrDemeaner()` (the default `within` backend).

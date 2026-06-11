@@ -30,7 +30,6 @@ class Fegaussian(Feglm):
             "np.linalg.solve",
             "scipy.linalg.solve",
             "scipy.sparse.linalg.lsqr",
-            "jax",
         ],
         store_data: bool = True,
         copy_data: bool = True,

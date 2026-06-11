@@ -26,36 +26,9 @@ def _warn_if_experimental_torch_demeaner(demeaner: object) -> None:
         )
 
 
-def _warn_if_deprecated_solver(solver: str) -> None:
-    """Warn when the user requests the deprecated `jax` OLS solver."""
-    if solver == "jax":
-        warnings.warn(
-            (
-                "The `solver='jax'` option is deprecated and will be removed "
-                "in a future release. Use one of the NumPy/SciPy solvers "
-                "(`scipy.linalg.solve`, `np.linalg.solve`, `np.linalg.lstsq`, "
-                "or `scipy.sparse.linalg.lsqr`) instead. "
-            ),
-            DeprecationWarning,
-            stacklevel=3,
-        )
-
-
 def _warn_if_deprecated_demeaner_backend(demeaner: object) -> None:
-    """Warn when the resolved demeaner uses a deprecated jax/cupy/scipy backend."""
-    if isinstance(demeaner, MapDemeaner) and demeaner.backend == "jax":
-        warnings.warn(
-            (
-                "The `jax` MAP demeaner backend is deprecated and will be "
-                "removed in a future release. If you were running JAX MAP on "
-                "CPU, switch to the default `MapDemeaner()` (rust MAP). If "
-                "you were running JAX MAP on GPU, switch to "
-                "`LsmrDemeaner(backend='torch', device='cuda')`."
-            ),
-            DeprecationWarning,
-            stacklevel=3,
-        )
-    elif isinstance(demeaner, LsmrDemeaner) and demeaner.backend == "cupy":
+    """Warn when the resolved demeaner uses a deprecated cupy/scipy backend."""
+    if isinstance(demeaner, LsmrDemeaner) and demeaner.backend == "cupy":
         if demeaner.device == "cpu":
             warnings.warn(
                 (

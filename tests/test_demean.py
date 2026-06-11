@@ -15,13 +15,11 @@ from pyfixest.estimation.internals.demean_ import (
     demean_model,
     dispatch_demean,
 )
-from pyfixest.estimation.jax.demean_jax_ import demean_jax
 from pyfixest.estimation.numba.demean_nb import demean as demean_numba
 from tests._torch_test_utils import HAS_TORCH, torch_param
 
 GENERIC_DEMEAN_FUNCS = [
     pytest.param(demean_numba, id="demean_numba"),
-    pytest.param(demean_jax, id="demean_jax"),
     pytest.param(demean_rs, id="demean_rs"),
     pytest.param(demean_cupy32, id="demean_cupy32"),
     pytest.param(demean_cupy64, id="demean_cupy64"),
@@ -35,7 +33,6 @@ if HAS_TORCH:
 
 MODEL_DEMEANERS = [
     pytest.param(MapDemeaner(backend="numba"), id="numba"),
-    pytest.param(MapDemeaner(backend="jax"), id="jax"),
     pytest.param(MapDemeaner(backend="rust"), id="rust"),
     pytest.param(LsmrDemeaner(), id="within"),
     pytest.param(LsmrDemeaner(backend="cupy", device="cpu"), id="lsmr_scipy"),
@@ -810,7 +807,6 @@ def test_demean_model_caching(benchmark, demeaner):
     "demeaner",
     [
         pytest.param(MapDemeaner(backend="numba", fixef_maxiter=1), id="numba"),
-        pytest.param(MapDemeaner(backend="jax", fixef_maxiter=1), id="jax"),
         pytest.param(MapDemeaner(backend="rust", fixef_maxiter=1), id="rust"),
         pytest.param(
             LsmrDemeaner(backend="cupy", device="cpu", fixef_maxiter=1),

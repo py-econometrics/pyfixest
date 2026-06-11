@@ -9,7 +9,6 @@ from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.internals.demeaner_options import (
     _resolve_demeaner,
     _warn_if_deprecated_demeaner_backend,
-    _warn_if_deprecated_solver,
     _warn_if_experimental_torch_demeaner,
 )
 from pyfixest.estimation.internals.literals import (
@@ -126,13 +125,8 @@ def fepois(
 
     solver : SolverOptions, optional.
         The solver to use for the regression. Can be "np.linalg.lstsq",
-        "np.linalg.solve", "scipy.linalg.solve", "scipy.sparse.linalg.lsqr" and "jax".
+        "np.linalg.solve", "scipy.linalg.solve" and "scipy.sparse.linalg.lsqr".
         Defaults to "scipy.linalg.solve".
-
-        .. deprecated::
-            ``solver="jax"`` is deprecated and will be removed in a future
-            release. Use one of the NumPy/SciPy solvers instead; for GPU
-            acceleration, see ``LsmrDemeaner(backend="torch", device="cuda")``.
 
     demeaner : AnyDemeaner | None, optional
         Typed demeaner configuration. Controls the fixed-effects demeaning
@@ -144,12 +138,10 @@ def fepois(
         [Demeaner Backends vignette](../../how-to/demeaner-backends.qmd).
 
         .. deprecated::
-            The ``jax`` MAP backend and the ``cupy`` / ``scipy`` LSMR
-            backends are deprecated and will be removed in a future release.
-            Replacements:
+            The ``cupy`` / ``scipy`` LSMR backends are deprecated and will
+            be removed in a future release. Replacements:
 
-            - JAX MAP on CPU → ``MapDemeaner()`` (the default rust MAP).
-            - JAX MAP / cupy LSMR on GPU →
+            - cupy LSMR on GPU →
               ``LsmrDemeaner(backend="torch", device="cuda")``.
             - Scipy / cupy LSMR on CPU → ``LsmrDemeaner()``
               (the default within backend).
@@ -260,7 +252,6 @@ def fepois(
     demeaner = _resolve_demeaner(demeaner)
     _warn_if_experimental_torch_demeaner(demeaner)
     _warn_if_deprecated_demeaner_backend(demeaner)
-    _warn_if_deprecated_solver(solver)
 
     _estimation_input_checks(
         fml=fml,

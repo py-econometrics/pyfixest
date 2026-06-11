@@ -102,7 +102,7 @@ class Feols(ResultAccessorMixin):
         "fweights" for frequency weights.
     solver : str, optional.
         The solver to use for the regression. Can be "np.linalg.lstsq",
-        "np.linalg.solve", "scipy.linalg.solve", "scipy.sparse.linalg.lsqr" and "jax".
+        "np.linalg.solve", "scipy.linalg.solve" and "scipy.sparse.linalg.lsqr".
         Defaults to "scipy.linalg.solve".
     context : int or Mapping[str, Any]
         A dictionary containing additional context variables to be used by
@@ -218,7 +218,7 @@ class Feols(ResultAccessorMixin):
     _adj_r2_within : float
         Adjusted R-squared value computed on demeaned dependent variable.
     _solver: Literal["np.linalg.lstsq", "np.linalg.solve", "scipy.linalg.solve",
-        "scipy.sparse.linalg.lsqr", "jax"],
+        "scipy.sparse.linalg.lsqr"],
         default is "scipy.linalg.solve". Solver to use for the estimation.
     _data: pd.DataFrame
         The data frame used in the estimation. None if arguments `lean = True` or
