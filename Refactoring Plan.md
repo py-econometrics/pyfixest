@@ -448,6 +448,14 @@ tidy/etable/coefplot/vcov... (delegating)
 
 pure and unit-testable without fitting anything.
 
+*(Update: implemented in `estimation/plan_.py` — `ModelSpec`, `MODEL_REGISTRY`,
+`expand_specs` (absorbs the triple loop incl. split expansion and demean-cache
+block boundaries via `ModelSpec.cache_key`), and `fit_one` (single pipeline).
+`_prepare_estimation` deliberately kept as the thin "parse formula + store
+options" step since all four api modules call it; folding it into
+`expand_specs` is the remaining item 4 below, best done together with the
+api-layer rewrite.)*
+
 2. A **model registry** (`method -> (model class, extra-kwargs builder)`) replaces
 
 the five `if self._method in {...}` blocks. Quantreg/QuantregMulti register like

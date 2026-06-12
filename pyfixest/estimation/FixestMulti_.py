@@ -8,26 +8,20 @@ from typing import Any
 import pandas as pd
 
 from pyfixest.demeaners import AnyDemeaner
-from pyfixest.estimation.api.utils import _ALL_SAMPLE, _AllSampleSentinel
 from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.internals.literals import (
     QuantregMethodOptions,
     QuantregMultiOptions,
     SolverOptions,
 )
-from pyfixest.estimation.internals.vcov_utils import _get_vcov_type
-from pyfixest.estimation.models.fegaussian_ import Fegaussian
 from pyfixest.estimation.models.feiv_ import Feiv
-from pyfixest.estimation.models.felogit_ import Felogit
 from pyfixest.estimation.models.feols_ import (
     Feols,
     _check_vcov_input,
     _deparse_vcov_input,
 )
-from pyfixest.estimation.models.feols_compressed_ import FeolsCompressed
 from pyfixest.estimation.models.fepois_ import Fepois
-from pyfixest.estimation.models.feprobit_ import Feprobit
-from pyfixest.estimation.quantreg.quantreg_ import Quantreg
+from pyfixest.estimation.plan_ import expand_specs, fit_one
 from pyfixest.estimation.quantreg.QuantregMulti import QuantregMulti
 from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
 from pyfixest.utils.utils import capture_context
@@ -294,185 +288,63 @@ class FixestMulti:
         -------
             None
         """
-        FixestFormulaDict = self.FixestFormulaDict
-        _fixef_keys = list(FixestFormulaDict.keys())
+        specs = expand_specs(
+            formula_dict=self.FixestFormulaDict,
+            method=self._method,
+            is_iv=self._is_iv,
+            data=self._data,
+            splitvar=self._splitvar,
+            run_full=self._run_full,
+            run_split=self._run_split,
+            ssc_dict=self._ssc_dict,
+            drop_singletons=self._drop_singletons,
+            drop_intercept=self._drop_intercept,
+            weights=self._weights,
+            weights_type=self._weights_type,
+            solver=solver,
+            collin_tol=collin_tol,
+            store_data=self._store_data,
+            copy_data=self._copy_data,
+            lean=self._lean,
+            context=self._context,
+            demeaner=demeaner,
+            iwls_tol=iwls_tol,
+            iwls_maxiter=iwls_maxiter,
+            separation_check=separation_check,
+            offset=self._offset,
+            accelerate=accelerate,
+            quantile=self._quantile,
+            quantreg_method=self._quantreg_method,
+            quantile_tol=self._quantile_tol,
+            quantile_maxiter=self._quantile_maxiter,
+            quantreg_multi_method=self._quantreg_multi_method,
+            reps=self._reps,
+            seed=self._seed,
+        )
 
-        all_splits: list[str | int | float | _AllSampleSentinel] = []
-        if self._run_full:
-            all_splits.append(_ALL_SAMPLE)
-        if self._run_split:
-            all_splits.extend(
-                self._data[self._splitvar]
-                .dropna()
-                .drop_duplicates()
-                .sort_values()
-                .tolist()
+        # one demeaning cache per (sample split, fixef key) block; specs are
+        # ordered so a fresh block starts whenever the cache key changes
+        previous_cache_key: object = None
+        lookup_demeaned_data: dict[frozenset[int], pd.DataFrame] = {}
+
+        for spec in specs:
+            if spec.cache_key != previous_cache_key:
+                lookup_demeaned_data = {}
+                previous_cache_key = spec.cache_key
+
+            FIT = fit_one(
+                spec,
+                data=self._data,
+                lookup_demeaned_data=lookup_demeaned_data,
+                vcov=vcov,
+                vcov_kwargs=vcov_kwargs,
             )
 
-        for sample_split_value in all_splits:
-            for _, fval in enumerate(_fixef_keys):
-                fixef_key_models = FixestFormulaDict.get(fval)
-
-                # dictionary to cache demeaned data keyed by na_index,
-                # only relevant for `.feols()`
-                lookup_demeaned_data: dict[frozenset[int], pd.DataFrame] = {}
-
-                for FixestFormula in fixef_key_models:  # type: ignore
-                    # loop over both dictfe and dictfe_iv (if the latter is not None)
-                    # get Y, X, Z, fe, NA indices for model
-
-                    FIT: (
-                        Feols
-                        | Feiv
-                        | Fepois
-                        | Fegaussian
-                        | Felogit
-                        | Feprobit
-                        | FeolsCompressed
-                        | Quantreg
-                        | QuantregMulti
-                    )
-
-                    model_kwargs = {
-                        "FixestFormula": FixestFormula,
-                        "data": self._data,
-                        "ssc_dict": self._ssc_dict,
-                        "drop_singletons": self._drop_singletons,
-                        "drop_intercept": self._drop_intercept,
-                        "weights": self._weights,
-                        "weights_type": self._weights_type,
-                        "solver": solver,
-                        "collin_tol": collin_tol,
-                        "store_data": self._store_data,
-                        "copy_data": self._copy_data,
-                        "lean": self._lean,
-                        "context": self._context,
-                        "sample_split_value": sample_split_value,
-                        "sample_split_var": self._splitvar,
-                        "lookup_demeaned_data": lookup_demeaned_data,
-                    }
-
-                    if self._method in {
-                        "feols",
-                        "fepois",
-                        "feglm-logit",
-                        "feglm-probit",
-                        "feglm-gaussian",
-                    }:
-                        model_kwargs.update(
-                            {
-                                "demeaner": demeaner,
-                            }
-                        )
-
-                    if self._method in {
-                        "fepois",
-                        "feglm-logit",
-                        "feglm-probit",
-                        "feglm-gaussian",
-                    }:
-                        model_kwargs.update(
-                            {
-                                "separation_check": separation_check,
-                                "tol": iwls_tol,
-                                "maxiter": iwls_maxiter,
-                            }
-                        )
-
-                    if self._method == "fepois":
-                        model_kwargs.update(
-                            {
-                                "offset": self._offset,
-                            }
-                        )
-
-                    if self._method in {
-                        "feglm-logit",
-                        "feglm-probit",
-                        "feglm-gaussian",
-                    }:
-                        model_kwargs.update(
-                            {
-                                "accelerate": accelerate,
-                            }
-                        )
-
-                    if self._method in ["quantreg", "quantreg_multi"]:
-                        model_kwargs.update(
-                            {
-                                "quantile": self._quantile,
-                                "method": self._quantreg_method,
-                                "quantile_tol": self._quantile_tol,
-                                "quantile_maxiter": self._quantile_maxiter,
-                                "seed": self._seed,
-                            }
-                        )
-                    if self._method == "quantreg_multi":
-                        model_kwargs.update(
-                            {
-                                "multi_method": self._quantreg_multi_method,
-                            }
-                        )
-
-                    model_map = {
-                        ("feols", False): Feols,
-                        ("feols", True): Feiv,
-                        ("fepois", None): Fepois,
-                        ("feglm-logit", None): Felogit,
-                        ("feglm-probit", None): Feprobit,
-                        ("feglm-gaussian", None): Fegaussian,
-                        ("compression", None): FeolsCompressed,
-                        ("quantreg", None): Quantreg,
-                        ("quantreg_multi", None): QuantregMulti,
-                    }
-
-                    if self._method == "compression":
-                        model_kwargs.update(
-                            {
-                                "reps": self._reps,
-                                "seed": self._seed,
-                            }
-                        )
-
-                    model_key = (
-                        (self._method, self._is_iv)
-                        if self._method == "feols"
-                        else (self._method, None)
-                    )
-                    ModelClass = model_map[model_key]  # type: ignore
-                    FIT = ModelClass(**model_kwargs)
-
-                    FIT.prepare_model_matrix()
-                    if isinstance(FIT, (Felogit, Feprobit, Fegaussian)):
-                        FIT._check_dependent_variable()
-                    FIT.get_fit()
-                    # if X is empty: no inference (empty X only as shorthand for demeaning)
-                    if not FIT._X_is_empty:
-                        # inference
-                        vcov_type = _get_vcov_type(vcov)
-                        FIT.vcov(
-                            vcov=vcov_type,
-                            vcov_kwargs=vcov_kwargs,
-                            data=FIT._data
-                            if not isinstance(FIT, QuantregMulti)
-                            else FIT.all_quantregs[FIT.quantiles[0]]._data,
-                        )  #  a little hacky, but works
-
-                        FIT.get_inference()
-                        if self._method == "feols" and not FIT._is_iv:
-                            FIT.get_performance()
-                            if isinstance(FIT, Feols):
-                                FIT.wald_test()
-                        if isinstance(FIT, Feiv):
-                            FIT.first_stage()
-                    # delete large attributes
-                    FIT._clear_attributes()
-
-                    if isinstance(FIT, QuantregMulti):
-                        for q_model in FIT.all_quantregs.values():
-                            self.all_fitted_models[q_model._model_name] = q_model
-                    else:
-                        self.all_fitted_models[FIT._model_name] = FIT
+            if isinstance(FIT, QuantregMulti):
+                for q_model in FIT.all_quantregs.values():
+                    self.all_fitted_models[q_model._model_name] = q_model
+            else:
+                self.all_fitted_models[FIT._model_name] = FIT
 
     def to_list(self) -> list[Feols | Fepois | Feiv]:
         """
