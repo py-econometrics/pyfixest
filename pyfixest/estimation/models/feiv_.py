@@ -9,8 +9,11 @@ import pandas as pd
 
 from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
-from pyfixest.estimation.internals.fit_ import fit_iv
-from pyfixest.estimation.models.feols_ import Feols, _drop_multicollinear_variables
+from pyfixest.estimation.internals.fit_ import (
+    _drop_multicollinear_variables,
+    fit_iv,
+)
+from pyfixest.estimation.models.feols_ import Feols
 
 
 class Feiv(Feols):

@@ -8,16 +8,12 @@ import numpy as np
 import pandas as pd
 
 from pyfixest.demeaners import AnyDemeaner
-from pyfixest.errors import (
-    NonConvergenceError,
-)
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
-from pyfixest.estimation.internals.solvers import solve_ols
+from pyfixest.estimation.internals.fit_ import fit_iwls_glm
 from pyfixest.estimation.models.feols_ import (
     Feols,
     PredictionErrorOptions,
     PredictionType,
-    _drop_multicollinear_variables,
 )
 from pyfixest.estimation.models.fepois_ import _check_for_separation
 from pyfixest.utils.dev_utils import DataFrameType
@@ -152,115 +148,40 @@ class Feglm(Feols, ABC):
         """
         self.to_array()
 
-        _mean = np.mean(self._Y)
-        if self._method in ("feglm-logit", "feglm-probit"):
-            mu = np.full_like(self._Y.flatten(), 0.5, dtype=float)
-        else:
-            mu = np.full_like(self._Y.flatten(), _mean, dtype=float)
+        def _residualize(
+            v: np.ndarray, X: np.ndarray, weights: np.ndarray, tol: float
+        ) -> tuple[np.ndarray, np.ndarray]:
+            return self.residualize(v=v, X=X, flist=self._fe, weights=weights, tol=tol)
 
-        eta = self._get_link(mu)
-        deviance = self._get_deviance(self._Y.flatten(), mu)
-        deviance_old = deviance + 1.0
+        glm_fit = fit_iwls_glm(
+            Y=self._Y,
+            X=self._X,
+            family=self,
+            method=self._method,
+            coefnames=self._coefnames,
+            collin_tol=self._collin_tol,
+            solver=self._solver,
+            tol=self.tol,
+            maxiter=self.maxiter,
+            accelerate=self._accelerate and self._fe is not None,
+            fixef_tol=self._fixef_tol,
+            residualize=_residualize,
+        )
 
-        # Warm-start (for ppmlhdfe accelerations)
-        z_prev = None
-        z_tilde_prev = None
-        X_tilde_prev = None
-        accelerate = self._accelerate and self._fe is not None
-        inner_tol = self._fixef_tol
+        # collinearity info from the first IWLS iteration
+        self._coefnames = glm_fit.coefnames
+        self._collin_vars = glm_fit.collin_vars
+        self._collin_index = glm_fit.collin_index
+        self._X = glm_fit.X
+        self._X_is_empty = self._X.shape[1] == 0
+        self._k = self._X.shape[1]
+        self.convergence = glm_fit.convergence
 
-        for r in range(self.maxiter):
-            if r > 0:
-                rel_deviance_change = self._get_relative_deviance_change(
-                    deviance, deviance_old
-                )
-                converged = self._check_convergence(
-                    rel_deviance_change=rel_deviance_change,
-                    tol=self.tol,
-                    r=r,
-                    maxiter=self.maxiter,
-                    model=self._method,
-                )
-                if converged:
-                    self.convergence = True
-                    break
+        eta = glm_fit.eta
+        mu = glm_fit.mu
+        W = glm_fit.irls_weights
 
-                # Adaptive tolerance as in ppmlhdfe
-                if accelerate and rel_deviance_change < 10 * inner_tol:
-                    inner_tol = inner_tol / 10
-
-            gprime = self._get_gprime(mu=mu)
-            W = self._update_W(mu=mu)
-            sqrt_W = np.sqrt(W)
-
-            z = eta + (self._Y.flatten() - mu) * gprime
-
-            if accelerate and r > 0:
-                z_input = z_tilde_prev + (z - z_prev)
-                X_input = X_tilde_prev
-            else:
-                z_input = z
-                X_input = self._X
-
-            z_tilde, X_tilde = self.residualize(
-                v=z_input,
-                X=X_input,
-                flist=self._fe,
-                weights=W.flatten(),
-                tol=inner_tol,
-            )
-
-            if r == 0:
-                # Check multicollinearity
-                # We do this here after the first demeaning to also catch collinearity with fixed effects
-                X_tilde, self._coefnames, self._collin_vars, self._collin_index = (
-                    _drop_multicollinear_variables(
-                        X_tilde,
-                        self._coefnames,
-                        self._collin_tol,
-                    )
-                )
-                if self._collin_index:
-                    # Drop covariates collinear with fixed effects
-                    self._X = self._X[:, ~np.array(self._collin_index)]
-                    # Update the number of coefficients
-                self._X_is_empty = self._X.shape[1] == 0
-                self._k = self._X.shape[1]
-
-            WX = sqrt_W.flatten()[:, None] * X_tilde
-            WZ = sqrt_W.flatten() * z_tilde
-
-            tXX = WX.T @ WX
-            tXz = WX.T @ WZ
-            beta_new = solve_ols(tXX, tXz, self._solver)
-
-            # Residual from demeaned regression (not weighted)
-            e_new = z_tilde - X_tilde @ beta_new
-            eta_new = z - e_new
-
-            mu_new = self._get_mu(eta=eta_new)
-            deviance_new = self._get_deviance(self._Y.flatten(), mu_new)
-
-            # Step-halving if deviance did not decrease
-            eta_new, mu_new, deviance_new = self._step_halving(
-                eta, eta_new, mu_new, deviance, deviance_new
-            )
-
-            z_prev = z
-            z_tilde_prev = z_tilde
-            X_tilde_prev = X_tilde
-
-            deviance_old = deviance
-            eta = eta_new
-            mu = mu_new
-            deviance = deviance_new
-
-            z_tilde_final = z_tilde
-            X_tilde_final = X_tilde
-            sqrt_W_final = sqrt_W
-            beta_final = beta_new
-
-        self._beta_hat = beta_final
+        self._beta_hat = glm_fit.beta
         self._Y_hat_response = mu.flatten()
         self._Y_hat_link = eta.flatten()
 
@@ -271,7 +192,7 @@ class Feglm(Feols, ABC):
             self._weights = self._weights.reshape((self._N, 1))
 
         self._u_hat_response = (self._Y.flatten() - mu).flatten()
-        e_final = z_tilde_final - X_tilde_final @ self._beta_hat
+        e_final = glm_fit.z_tilde - glm_fit.X_tilde @ self._beta_hat
         self._u_hat_working = (
             self._u_hat_response
             if self._method == "feglm-gaussian"
@@ -281,9 +202,9 @@ class Feglm(Feols, ABC):
         self._scores_response = self._u_hat_response[:, None] * self._X
         self._scores_working = self._u_hat_working[:, None] * self._X
 
-        sqrt_W_vec = sqrt_W_final.flatten()
-        X_wls = sqrt_W_vec[:, None] * X_tilde_final
-        z_wls = sqrt_W_vec * z_tilde_final
+        sqrt_W_vec = glm_fit.sqrt_W.flatten()
+        X_wls = sqrt_W_vec[:, None] * glm_fit.X_tilde
+        z_wls = sqrt_W_vec * glm_fit.z_tilde
 
         self._u_hat = (z_wls - X_wls @ self._beta_hat).flatten()
         self._Y = z_wls
@@ -297,98 +218,13 @@ class Feglm(Feols, ABC):
         self._Xbeta = eta
 
         self._hessian = X_wls.T @ X_wls
-        self.deviance = deviance
+        self.deviance = glm_fit.deviance
 
         if self.convergence:
             self._convergence = True
 
     def _vcov_iid(self):
         return self._bread
-
-    def _update_v(
-        self, y: np.ndarray, mu: np.ndarray, gprime: np.ndarray
-    ) -> np.ndarray:
-        "Get (running) dependent variable v for the GLM family."
-        return (y - mu) * gprime
-
-    def _update_W(self, mu: np.ndarray) -> np.ndarray:
-        "Compute IRLS weights: w = 1 / (g'(μ)² · V(μ))."
-        return 1 / (self._get_gprime(mu=mu) ** 2 * self._get_V(mu=mu))
-
-    def _update_v_tilde(
-        self, y: np.ndarray, mu: np.ndarray, sqrt_W: np.ndarray, gprime: np.ndarray
-    ) -> np.ndarray:
-        "Get sqrt(W) * v for weighted least squares transformation."
-        return sqrt_W * ((y - mu) * gprime)
-
-    def _update_X_tilde(self, sqrt_W: np.ndarray, X: np.ndarray) -> np.ndarray:
-        "Get sqrt(W) * X for weighted least squares transformation."
-        return sqrt_W.reshape(-1, 1) * X
-
-    def _update_beta_diff(
-        self, X_dotdot: np.ndarray, v_dotdot: np.ndarray
-    ) -> np.ndarray:
-        "Get the beta _update difference (formula 3.5) via WLS fit."
-        beta_diff = np.linalg.lstsq(X_dotdot, v_dotdot.reshape(-1, 1), rcond=None)[
-            0
-        ].flatten()
-        return beta_diff
-
-    def _update_eta(
-        self,
-        sqrt_W: np.ndarray,
-        z: np.ndarray,
-        z_tilde: np.ndarray,
-        X_tilde: np.ndarray,
-        beta_diff: np.ndarray,
-        eta: np.ndarray,
-    ) -> np.ndarray:
-        e = z_tilde - X_tilde @ beta_diff
-        e_unweighted = e / sqrt_W
-        return z - e_unweighted
-
-    def _get_gradient(self, Z: np.ndarray, W: np.ndarray, v: np.ndarray) -> np.ndarray:
-        return Z.T @ W @ v
-
-    def _get_relative_deviance_change(
-        self, deviance: np.ndarray, deviance_old: np.ndarray
-    ) -> np.ndarray:
-        "Compute relative change in deviance for convergence check."
-        return np.abs(deviance - deviance_old) / (0.1 + np.abs(deviance_old))
-
-    def _step_halving(
-        self,
-        eta: np.ndarray,
-        eta_new: np.ndarray,
-        mu_new: np.ndarray,
-        deviance: np.ndarray,
-        deviance_new: np.ndarray,
-        step_halving_tol: float = 1e-12,
-    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """
-        Apply step-halving if deviance did not decrease.
-
-        Returns updated (eta_new, mu_new, deviance_new).
-        """
-        if deviance_new < deviance:
-            return eta_new, mu_new, deviance_new
-
-        alpha = 1.0
-        while alpha > step_halving_tol:
-            alpha /= 2.0
-            eta_try = eta + alpha * (eta_new - eta)
-            mu_try = self._get_mu(eta=eta_try)
-            deviance_try = self._get_deviance(self._Y.flatten(), mu_try)
-            if deviance_try < deviance:
-                return eta_try, mu_try, deviance_try
-
-        # Step-halving exhausted - check if change is within tolerance
-        if self._get_relative_deviance_change(deviance_new, deviance) < self.tol:
-            return eta_new, mu_new, deviance_new
-
-        raise RuntimeError(
-            f"Step-halving failed. Deviance: {deviance_new:.6f} vs {deviance:.6f}"
-        )
 
     def residualize(
         self,
@@ -410,74 +246,6 @@ class Feglm(Feols, ABC):
             demeaner=effective_demeaner,
         )
         return vX_tilde[:, 0], vX_tilde[:, 1:]
-
-    def _check_convergence(
-        self,
-        rel_deviance_change: float,
-        tol: float,
-        r: int,
-        maxiter: int,
-        model: str,
-    ) -> bool:
-        if model == "feglm-gaussian":
-            converged = True
-        else:
-            converged = rel_deviance_change < tol
-            if r == maxiter:
-                raise NonConvergenceError(
-                    f"""
-                    The IRLS algorithm did not converge with {maxiter}
-                    iterations. Try to increase the maximum number of iterations.
-                    """
-                )
-
-        return converged
-
-    def _update_eta_step_halfing(
-        self,
-        Y: np.ndarray,
-        beta: np.ndarray,
-        eta: np.ndarray,
-        mu: np.ndarray,
-        deviance: np.ndarray,
-        beta_update_diff: np.ndarray,
-        sqrt_W: np.ndarray,
-        z: np.ndarray,
-        z_tilde: np.ndarray,
-        X_tilde: np.ndarray,
-        deviance_old: np.ndarray,
-        step_halfing_tolerance: float,
-    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-        "Update parameters, potentially using step halfing."
-        alpha = 1.0
-        step_accepted = False
-
-        while alpha > step_halfing_tolerance:
-            beta_try = beta + alpha * beta_update_diff
-            eta_try = self._update_eta(
-                sqrt_W=sqrt_W.flatten(),
-                z=z,
-                z_tilde=z_tilde,
-                X_tilde=X_tilde,
-                beta_diff=alpha * beta_update_diff,
-                eta=eta,
-            )
-            mu_try = self._get_mu(eta=eta_try)
-            deviance_try = self._get_deviance(Y.flatten(), mu_try)
-            if deviance_try < deviance_old:
-                beta = beta_try
-                eta = eta_try
-                mu = mu_try
-                deviance = deviance_try
-                step_accepted = True
-                break
-            else:
-                alpha /= 2.0
-
-        if not step_accepted:
-            raise RuntimeError("Step-halving failed to find improvement.")
-
-        return beta, eta, mu, deviance
 
     def predict(
         self,
