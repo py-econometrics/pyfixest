@@ -52,6 +52,8 @@ def feols(
 
     Returns an object of type [Feols](/reference/estimation.models.feols_.Feols.qmd) or
     [Feiv](/reference/estimation.models.feiv_.Feiv.qmd) (when using instrumental variables).
+    The Feols reference documents the available result methods and attributes, including
+    model-level statistics such as adjusted R-squared (``._adj_r2``).
 
     Parameters
     ----------
