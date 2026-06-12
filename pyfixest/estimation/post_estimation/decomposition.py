@@ -1,13 +1,15 @@
 import itertools
+import re
 import warnings
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
+from formulaic import Formula
 from joblib import Parallel, delayed
 from numpy.typing import NDArray
-from scipy.sparse import diags, hstack, spmatrix, vstack
+from scipy.sparse import csc_matrix, diags, hstack, spmatrix, vstack
 from scipy.sparse.linalg import lsqr
 from tqdm import tqdm
 
@@ -1057,3 +1059,151 @@ def _decompose_arg_check(
         )
 
     return None
+
+
+def _model_matrix_one_hot(
+    model, output="numpy"
+) -> tuple[np.ndarray, np.ndarray | spmatrix, list[str]]:
+    """
+    Transform a model matrix with fixed effects into a one-hot encoded matrix.
+
+    Parameters
+    ----------
+    model : Feols
+        The fitted model.
+    output : str, optional
+        The type of output. Defaults to "numpy", in which case the returned matrices
+        Y and X are numpy arrays. If set to "sparse", the returned design matrix X will
+        be sparse.
+
+    Returns
+    -------
+    Tuple[np.ndarray, np.ndarray, list[str]]
+        A tuple with the dependent variable, the model matrix, and the column names.
+    """
+    if model._has_fixef:
+        fml_linear, fixef = model._fml.split("|")
+        fixef_vars = fixef.split("+")
+        fixef_vars_C = [f"C({x})" for x in fixef_vars]
+        fixef_fml = "+".join(fixef_vars_C)
+        fml_dummies = f"{fml_linear} + {fixef_fml}"
+        # output = "pandas" as Y, X need to be np.arrays for parallel processing
+        # if output = "numpy", type of Y, X is not np.ndarray but a formulaic object
+        # which cannot be pickled by joblib
+
+        Y, X = Formula(fml_dummies).get_model_matrix(model._data, output=output)
+        xnames = X.model_spec.column_names
+        Y = Y.toarray().flatten() if output == "sparse" else Y.flatten()
+        X = csc_matrix(X) if output == "sparse" else X
+
+    else:
+        Y = model._Y_demeaned.flatten()
+        X = model._X_demeaned
+        xnames = model._coefnames
+
+    X = csc_matrix(X) if output == "sparse" else X
+
+    return Y, X, xnames
+
+
+def _decompose_impl(
+    model,
+    param: str | None = None,
+    x1_vars: list[str] | str | None = None,
+    decomp_var: str | None = None,
+    type: str = "gelbach",
+    cluster: str | None = None,
+    combine_covariates: dict[str, list[str]] | None = None,
+    reps: int = 1000,
+    seed: int | None = None,
+    nthreads: int | None = None,
+    agg_first: bool | None = None,
+    only_coef: bool = False,
+    digits=4,
+) -> GelbachDecomposition:
+    "Implementation of Feols.decompose; see the method docstring for details."
+    has_param = param is not None
+    has_decomp = decomp_var is not None
+
+    if not has_param and not has_decomp:
+        raise ValueError("Either 'param' or 'decomp_var' must be provided.")
+
+    if has_param and has_decomp:
+        raise ValueError(
+            "The 'param' and 'decomp_var' arguments cannot be provided at the same time."
+        )
+
+    if has_param:
+        warnings.warn(
+            "The 'param' argument is deprecated. Please use 'decomp_var' instead.",
+            UserWarning,
+        )
+        decomp_var = param
+
+    if x1_vars is not None:
+        if isinstance(x1_vars, str):
+            x1_vars = [x.strip() for x in x1_vars.split("+")]
+        else:
+            x1_vars = list(x1_vars)
+
+    _decompose_arg_check(
+        type=type,
+        has_weights=model._has_weights,
+        weights_type=model._weights_type,
+        is_iv=model._is_iv,
+        method=model._method,
+        only_coef=only_coef,
+    )
+
+    nthreads_int = -1 if nthreads is None else nthreads
+
+    rng = np.random.default_rng(seed) if seed is not None else np.random.default_rng()
+
+    if agg_first is None:
+        agg_first = combine_covariates is not None
+
+    cluster_df: pd.Series | None = None
+    if cluster is not None:
+        cluster_df = model._data[cluster]
+    elif model._is_clustered:
+        cluster_df = model._data[model._clustervar[0]]
+    else:
+        cluster_df = None
+
+    Y, X, xnames = _model_matrix_one_hot(model, output="sparse")
+
+    if combine_covariates is not None:
+        for key, value in combine_covariates.items():
+            if isinstance(value, re.Pattern):
+                matched = [x for x in xnames if value.search(x)]
+                if len(matched) == 0:
+                    raise ValueError(f"No covariates match the regex {value}.")
+                combine_covariates[key] = matched
+
+    med = GelbachDecomposition(
+        decomp_var=cast(str, decomp_var),
+        x1_vars=x1_vars,
+        coefnames=xnames,
+        depvarname=model._depvar,
+        cluster_df=cluster_df,
+        nthreads=nthreads_int,
+        combine_covariates=combine_covariates,
+        agg_first=agg_first,
+        only_coef=only_coef,
+        atol=1e-12,
+        btol=1e-12,
+    )
+
+    med.fit(
+        X=X,
+        Y=Y,
+        weights=model._weights,
+        store=True,
+    )
+
+    if not only_coef:
+        med.bootstrap(rng=rng, B=reps)
+
+    model.GelbachDecompositionResults = med
+
+    return med

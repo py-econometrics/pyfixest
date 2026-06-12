@@ -1,17 +1,12 @@
 from __future__ import annotations
 
-import re
 import warnings
 from collections.abc import Mapping
 from importlib import import_module
-from typing import Any, Literal, cast
+from typing import Any, Literal
 
 import numpy as np
 import pandas as pd
-from formulaic import Formula
-from scipy.sparse import csc_matrix, diags, spmatrix
-from scipy.sparse.linalg import lsqr
-from scipy.stats import chi2, f, t
 
 from pyfixest.core.demean import Preconditioner
 from pyfixest.core.nested_fixed_effects import count_fixef_fully_nested_all
@@ -29,7 +24,6 @@ from pyfixest.estimation.internals.literals import (
     PredictionErrorOptions,
     PredictionType,
     SolverOptions,
-    _validate_literal_argument,
 )
 from pyfixest.estimation.internals.vcov_ import (
     _jackknife_vcov,
@@ -47,26 +41,21 @@ from pyfixest.estimation.internals.vcov_utils import (
     _prepare_twoway_clustering,
 )
 from pyfixest.estimation.models._result_accessor_mixin import ResultAccessorMixin
+from pyfixest.estimation.post_estimation.ccv import _ccv_impl
 from pyfixest.estimation.post_estimation.decomposition import (
     GelbachDecomposition,
-    _decompose_arg_check,
+    _decompose_impl,
 )
-from pyfixest.estimation.post_estimation.prediction import (
-    _compute_prediction_error,
-    _get_fixed_effects_prediction_component,
-    get_design_matrix_and_yhat,
-)
+from pyfixest.estimation.post_estimation.fixef import _fixef_impl
+from pyfixest.estimation.post_estimation.prediction import _predict_impl
 from pyfixest.estimation.post_estimation.ritest import (
-    _HAS_NUMBA,
-    _decode_resampvar,
-    _get_ritest_pvalue,
-    _get_ritest_stats_fast,
-    _get_ritest_stats_slow,
-    _plot_ritest_pvalue,
+    _plot_ritest_impl,
+    _ritest_impl,
 )
+from pyfixest.estimation.post_estimation.wald import _wald_test_impl
+from pyfixest.estimation.post_estimation.wild_bootstrap import _wildboottest_impl
 from pyfixest.utils.dev_utils import (
     DataFrameType,
-    _extract_variable_level,
     _narwhals_to_pandas,
 )
 from pyfixest.utils.utils import (
@@ -1122,70 +1111,7 @@ class Feols(ResultAccessorMixin):
         print(f"Python p_stat: {p_stat}")
         ```
         """
-        k_fe = np.sum(self._k_fe.values) if self._has_fixef else 0
-
-        # If R is None, default to the identity matrix
-        if R is None:
-            R = np.eye(self._k)
-
-        # Ensure R is two-dimensional
-        if R.ndim == 1:
-            R = R.reshape((1, len(R)))
-
-        if R.shape[1] != self._k:
-            raise ValueError(
-                "The number of columns of R must be equal to the number of coefficients."
-            )
-
-        # If q is None, default to a vector of zeros
-        if q is None:
-            q = np.zeros(R.shape[0])
-        else:
-            if not isinstance(q, (int, float, np.ndarray)):
-                raise ValueError("q must be a numeric scalar or array.")
-            if isinstance(q, np.ndarray):
-                if q.ndim != 1:
-                    raise ValueError("q must be a one-dimensional array or a scalar.")
-                if q.shape[0] != R.shape[0]:
-                    raise ValueError("q must have the same number of rows as R.")
-
-        n_restriction = R.shape[0]
-        self._dfn = n_restriction
-
-        if self._is_clustered:
-            self._dfd = np.min(np.array(self._G)) - 1
-        else:
-            self._dfd = self._N - self._k - k_fe
-
-        bread = R @ self._beta_hat - q
-        meat = np.linalg.pinv(R @ self._vcov @ R.T)
-        W = bread.T @ meat @ bread
-        self._wald_statistic = W
-
-        # Check if distribution is "F" and R is not identity matrix
-        # or q is not zero vector
-        if distribution == "F" and (
-            not np.array_equal(R, np.eye(self._k)) or not np.all(q == 0)
-        ):
-            warnings.warn(
-                "Distribution changed to chi2, as R is not an identity matrix and q is not a zero vector."
-            )
-            distribution = "chi2"
-
-        if distribution == "F":
-            self._f_statistic = W / self._dfn
-            self._p_value = 1 - f.cdf(self._f_statistic, dfn=self._dfn, dfd=self._dfd)
-            res = pd.Series({"statistic": self._f_statistic, "pvalue": self._p_value})
-        elif distribution == "chi2":
-            self._f_statistic = W / self._dfn
-            self._p_value = chi2.sf(self._wald_statistic, self._dfn)
-            res = pd.Series(
-                {"statistic": self._wald_statistic, "pvalue": self._p_value}
-            )
-        else:
-            raise ValueError("Distribution must be F or chi2")
-
-        return res
+        return _wald_test_impl(model=self, R=R, q=q, distribution=distribution)
 
     def wildboottest(
         self,
@@ -1278,136 +1204,20 @@ class Feols(ResultAccessorMixin):
 
         ```
         """
-        if param is not None and param not in self._coefnames:
-            raise ValueError(
-                f"Parameter {param} not found in the model's coefficients."
-            )
-
-        if not self._supports_wildboottest:
-            if self._is_iv:
-                raise NotImplementedError(
-                    "Wild cluster bootstrap is not supported for IV estimation."
-                )
-            if self._has_weights:
-                raise NotImplementedError(
-                    "Wild cluster bootstrap is not supported for WLS estimation."
-                )
-
-        cluster_list = []
-
-        if cluster is not None and isinstance(cluster, str):
-            cluster_list = [cluster]
-        if cluster is not None and isinstance(cluster, list):
-            cluster_list = cluster
-
-        if cluster is None and self._clustervar is not None:
-            if isinstance(self._clustervar, str):
-                cluster_list = [self._clustervar]
-            else:
-                cluster_list = self._clustervar
-
-        run_heteroskedastic = not cluster_list
-
-        if not run_heteroskedastic and not len(cluster_list) == 1:
-            raise NotImplementedError(
-                "Multiway clustering is currently not supported with the wild cluster bootstrap."
-            )
-
-        if not run_heteroskedastic and cluster_list[0] not in self._data.columns:
-            raise ValueError(
-                f"Cluster variable {cluster_list[0]} not found in the data."
-            )
-
-        try:
-            from wildboottest.wildboottest import WildboottestCL, WildboottestHC
-        except ImportError:
-            print(
-                "Module 'wildboottest' not found. Please install 'wildboottest', e.g. via `PyPi`."
-            )
-
-        if self._is_iv:
-            raise NotImplementedError(
-                "Wild cluster bootstrap is not supported with IV estimation."
-            )
-
-        if self._method == "fepois":
-            raise NotImplementedError(
-                "Wild cluster bootstrap is not supported for Poisson regression."
-            )
-
-        _Y, _X, _xnames = self._model_matrix_one_hot()
-
-        # later: allow r <> 0 and custom R
-        R = np.zeros(len(_xnames))
-        if param is not None:
-            R[_xnames.index(param)] = 1
-        r = 0
-
-        if run_heteroskedastic:
-            inference = "HC"
-
-            boot = WildboottestHC(X=_X, Y=_Y, R=R, r=r, B=reps, seed=seed)
-            boot.get_adjustments(bootstrap_type=bootstrap_type)
-            boot.get_uhat(impose_null=impose_null)
-            boot.get_tboot(weights_type=weights_type)
-            boot.get_tstat()
-            boot.get_pvalue(pval_type="two-tailed")
-            full_enumeration_warn = False
-
-        else:
-            inference = f"CRV({cluster_list[0]})"
-
-            cluster_array = self._data[cluster_list[0]].to_numpy().flatten()
-
-            boot = WildboottestCL(
-                X=_X,
-                Y=_Y,
-                cluster=cluster_array,
-                R=R,
-                B=reps,
-                seed=seed,
-                parallel=parallel,
-            )
-            boot.get_scores(
-                bootstrap_type=bootstrap_type,
-                impose_null=impose_null,
-                adj=k_adj,
-                cluster_adj=G_adj,
-            )
-            _, _, full_enumeration_warn = boot.get_weights(weights_type=weights_type)
-            boot.get_numer()
-            boot.get_denom()
-            boot.get_tboot()
-            boot.get_vcov()
-            boot.get_tstat()
-            boot.get_pvalue(pval_type="two-tailed")
-
-            if full_enumeration_warn:
-                warnings.warn(
-                    "2^G < the number of boot iterations, setting full_enumeration to True."
-                )
-
-        if np.isscalar(boot.t_stat):
-            boot.t_stat = np.asarray(boot.t_stat)
-        else:
-            boot.t_stat = boot.t_stat[0]
-
-        res = {
-            "param": param,
-            "t value": boot.t_stat.astype(np.float64),
-            "Pr(>|t|)": np.asarray(boot.pvalue).astype(np.float64),
-            "bootstrap_type": bootstrap_type,
-            "inference": inference,
-            "impose_null": impose_null,
-            "ssc": boot.small_sample_correction if run_heteroskedastic else boot.ssc,
-        }
-
-        res_df = pd.Series(res)
-
-        if return_bootstrapped_t_stats:
-            return res_df, boot.t_boot
-        else:
-            return res_df
+        return _wildboottest_impl(
+            model=self,
+            reps=reps,
+            cluster=cluster,
+            param=param,
+            weights_type=weights_type,
+            impose_null=impose_null,
+            bootstrap_type=bootstrap_type,
+            seed=seed,
+            k_adj=k_adj,
+            G_adj=G_adj,
+            parallel=parallel,
+            return_bootstrapped_t_stats=return_bootstrapped_t_stats,
+        )
 
     def ccv(
         self,
@@ -1459,184 +1269,15 @@ class Feols(ResultAccessorMixin):
         fit.ccv(treatment="D", pk=0.05, qk=0.5, n_splits=8, seed=123).head()
         ```
         """
-        assert self._supports_cluster_causal_variance, (
-            "The model does not support the causal cluster variance estimator."
-        )
-        assert isinstance(treatment, str), "treatment must be a string."
-        assert isinstance(cluster, str) or cluster is None, (
-            "cluster must be a string or None."
-        )
-        assert isinstance(seed, int) or seed is None, "seed must be an integer or None."
-        assert isinstance(n_splits, int), "n_splits must be an integer."
-        assert isinstance(pk, (int, float)) and 0 <= pk <= 1
-        assert isinstance(qk, (int, float)) and 0 <= qk <= 1
-
-        if self._has_fixef:
-            raise NotImplementedError(
-                "The causal cluster variance estimator is currently not supported for models with fixed effects."
-            )
-
-        if treatment not in self._coefnames:
-            raise ValueError(
-                f"Variable {treatment} not found in the model's coefficients."
-            )
-
-        if cluster is None:
-            if self._clustervar is None:
-                raise ValueError("No cluster variable found in the model fit.")
-            elif len(self._clustervar) > 1:
-                raise ValueError(
-                    "Multiway clustering is currently not supported with the causal cluster variance estimator."
-                )
-            else:
-                cluster = self._clustervar[0]
-
-        # check that cluster is in data
-        if cluster not in self._data.columns:
-            raise ValueError(
-                f"Cluster variable {cluster} not found in the data used for the model fit."
-            )
-
-        if not self._is_clustered:
-            warnings.warn(
-                "The initial model was not clustered. CRV1 inference is computed and stored in the model object."
-            )
-            self.vcov({"CRV1": cluster})
-
-        if seed is None:
-            seed = np.random.randint(1, 100_000_000)
-        rng = np.random.default_rng(seed)
-
-        depvar = self._depvar
-        fml = self._fml
-        xfml_list = fml.split("~")[1].split("+")
-        xfml_list = [x for x in xfml_list if x != treatment]
-        xfml = "" if not xfml_list else "+".join(xfml_list)
-
-        data = self._data
-        Y = self._Y_wls.flatten()
-        W = data[treatment].to_numpy()
-        assert np.all(np.isin(W, [0, 1])), (
-            "Treatment variable must be binary with values 0 and 1"
-        )
-        X = self._X_wls
-        cluster_vec = data[cluster].to_numpy()
-        unique_clusters = np.unique(cluster_vec)
-
-        tau_full = np.array(self.coef().xs(treatment))
-
-        N = self._N
-        G = len(unique_clusters)
-
-        ccv_module = import_module("pyfixest.estimation.post_estimation.ccv")
-        _compute_CCV = ccv_module._compute_CCV
-
-        vcov_splits = 0.0
-        for _ in range(n_splits):
-            vcov_ccv = _compute_CCV(
-                fml=fml,
-                Y=Y,
-                X=X,
-                W=W,
-                rng=rng,
-                data=data,
-                treatment=treatment,
-                cluster_vec=cluster_vec,
-                pk=pk,
-                tau_full=tau_full,
-            )
-            vcov_splits += vcov_ccv
-
-        vcov_splits /= n_splits
-        vcov_splits /= N
-
-        crv1_idx = self._coefnames.index(treatment)
-        vcov_crv1 = self._vcov[crv1_idx, crv1_idx]
-        vcov_ccv = qk * vcov_splits + (1 - qk) * vcov_crv1
-
-        se = np.sqrt(vcov_ccv)
-        tstat = tau_full / se
-        df = G - 1
-        pvalue = 2 * (1 - t.cdf(np.abs(tstat), df))
-        alpha = 0.95
-        z = np.abs(t.ppf((1 - alpha) / 2, df))
-        z_se = z * se
-        conf_int = np.array([tau_full - z_se, tau_full + z_se])
-
-        res_ccv_dict: dict[str, float | np.ndarray] = {
-            "Estimate": tau_full,
-            "Std. Error": se,
-            "t value": tstat,
-            "Pr(>|t|)": pvalue,
-            "2.5%": conf_int[0],
-            "97.5%": conf_int[1],
-        }
-
-        res_ccv = pd.Series(res_ccv_dict)
-
-        res_ccv.name = "CCV"
-
-        res_crv1 = cast(pd.Series, self.tidy().xs(treatment))
-        res_crv1.name = "CRV1"
-
-        return pd.concat([res_ccv, res_crv1], axis=1).T
-
-        ccv_module = import_module("pyfixest.estimation.post_estimation.ccv")
-        _ccv = ccv_module._ccv
-
-        return _ccv(
-            data=data,
-            depvar=depvar,
+        return _ccv_impl(
+            model=self,
             treatment=treatment,
             cluster=cluster,
-            xfml=xfml,
             seed=seed,
+            n_splits=n_splits,
             pk=pk,
             qk=qk,
-            n_splits=n_splits,
         )
-
-    def _model_matrix_one_hot(
-        self, output="numpy"
-    ) -> tuple[np.ndarray, np.ndarray | spmatrix, list[str]]:
-        """
-        Transform a model matrix with fixed effects into a one-hot encoded matrix.
-
-        Parameters
-        ----------
-        output : str, optional
-            The type of output. Defaults to "numpy", in which case the returned matrices
-            Y and X are numpy arrays. If set to "sparse", the returned design matrix X will
-            be sparse.
-
-        Returns
-        -------
-        Tuple[np.ndarray, np.ndarray, list[str]]
-            A tuple with the dependent variable, the model matrix, and the column names.
-        """
-        if self._has_fixef:
-            fml_linear, fixef = self._fml.split("|")
-            fixef_vars = fixef.split("+")
-            fixef_vars_C = [f"C({x})" for x in fixef_vars]
-            fixef_fml = "+".join(fixef_vars_C)
-            fml_dummies = f"{fml_linear} + {fixef_fml}"
-            # output = "pandas" as Y, X need to be np.arrays for parallel processing
-            # if output = "numpy", type of Y, X is not np.ndarray but a formulaic object
-            # which cannot be pickled by joblib
-
-            Y, X = Formula(fml_dummies).get_model_matrix(self._data, output=output)
-            xnames = X.model_spec.column_names
-            Y = Y.toarray().flatten() if output == "sparse" else Y.flatten()
-            X = csc_matrix(X) if output == "sparse" else X
-
-        else:
-            Y = self._Y_demeaned.flatten()
-            X = self._X_demeaned
-            xnames = self._coefnames
-
-        X = csc_matrix(X) if output == "sparse" else X
-
-        return Y, X, xnames
 
     def decompose(
         self,
@@ -1739,93 +1380,21 @@ class Feols(ResultAccessorMixin):
         res = fit.decompose(decomp_var="x1", combine_covariates={"g1": re.compile("x2[1-2]"), "g2": re.compile("x23")})
         ```
         """
-        has_param = param is not None
-        has_decomp = decomp_var is not None
-
-        if not has_param and not has_decomp:
-            raise ValueError("Either 'param' or 'decomp_var' must be provided.")
-
-        if has_param and has_decomp:
-            raise ValueError(
-                "The 'param' and 'decomp_var' arguments cannot be provided at the same time."
-            )
-
-        if has_param:
-            warnings.warn(
-                "The 'param' argument is deprecated. Please use 'decomp_var' instead.",
-                UserWarning,
-            )
-            decomp_var = param
-
-        if x1_vars is not None:
-            if isinstance(x1_vars, str):
-                x1_vars = [x.strip() for x in x1_vars.split("+")]
-            else:
-                x1_vars = list(x1_vars)
-
-        _decompose_arg_check(
-            type=type,
-            has_weights=self._has_weights,
-            weights_type=self._weights_type,
-            is_iv=self._is_iv,
-            method=self._method,
-            only_coef=only_coef,
-        )
-
-        nthreads_int = -1 if nthreads is None else nthreads
-
-        rng = (
-            np.random.default_rng(seed) if seed is not None else np.random.default_rng()
-        )
-
-        if agg_first is None:
-            agg_first = combine_covariates is not None
-
-        cluster_df: pd.Series | None = None
-        if cluster is not None:
-            cluster_df = self._data[cluster]
-        elif self._is_clustered:
-            cluster_df = self._data[self._clustervar[0]]
-        else:
-            cluster_df = None
-
-        Y, X, xnames = self._model_matrix_one_hot(output="sparse")
-
-        if combine_covariates is not None:
-            for key, value in combine_covariates.items():
-                if isinstance(value, re.Pattern):
-                    matched = [x for x in xnames if value.search(x)]
-                    if len(matched) == 0:
-                        raise ValueError(f"No covariates match the regex {value}.")
-                    combine_covariates[key] = matched
-
-        med = GelbachDecomposition(
-            decomp_var=cast(str, decomp_var),
+        return _decompose_impl(
+            model=self,
+            param=param,
             x1_vars=x1_vars,
-            coefnames=xnames,
-            depvarname=self._depvar,
-            cluster_df=cluster_df,
-            nthreads=nthreads_int,
+            decomp_var=decomp_var,
+            type=type,
+            cluster=cluster,
             combine_covariates=combine_covariates,
+            reps=reps,
+            seed=seed,
+            nthreads=nthreads,
             agg_first=agg_first,
             only_coef=only_coef,
-            atol=1e-12,
-            btol=1e-12,
+            digits=digits,
         )
-
-        med.fit(
-            X=X,
-            Y=Y,
-            weights=self._weights,
-            store=True,
-        )
-
-        if not only_coef:
-            med.bootstrap(rng=rng, B=reps)
-
-        self.GelbachDecompositionResults = med
-
-        return med
 
     def fixef(
         self, atol: float = 1e-06, btol: float = 1e-06
@@ -1854,77 +1423,7 @@ class Feols(ResultAccessorMixin):
         dict[str, dict[str, float]]
             A dictionary with the estimated fixed effects.
         """
-        weights_sqrt = np.sqrt(self._weights).flatten()
-
-        blocked_transforms = ["i(", "^", "poly("]
-        for bt in blocked_transforms:
-            if bt in self._fml:
-                raise NotImplementedError(
-                    f"The fixef() method is currently not supported for models with '{bt}' transformations."
-                )
-
-        if not self._has_fixef:
-            raise ValueError("The regression model does not have fixed effects.")
-
-        if self._is_iv:
-            raise NotImplementedError(
-                "The fixef() method is currently not supported for IV models."
-            )
-
-        depvars, rhs = self._fml.split("~")
-        covars, fixef_vars = rhs.split("|")
-
-        fixef_vars_list = fixef_vars.split("+")
-        fixef_vars_C = [f"C({x})" for x in fixef_vars_list]
-        fixef_fml = "+".join(fixef_vars_C)
-
-        Y, X = Formula(f"{depvars} ~ {covars}").get_model_matrix(
-            self._data, output="pandas", context=self._context
-        )
-        Y = Y.to_numpy().flatten().astype(np.float64)
-        if self._X_is_empty:
-            uhat = Y.flatten()
-        else:
-            # drop intercept, potentially multicollinear vars
-            X = X[self._coefnames].to_numpy()
-            if self._method == "fepois" or self._method.startswith("feglm"):
-                # determine residuals from estimated linear predictor
-                # equation (5.2) in Stammann (2018) http://arxiv.org/abs/1707.01815
-                Y = self._Y_hat_link
-                # _Y_hat_link contains the offset as part of eta; subtract it so
-                # that _sumFE represents the pure FE contribution and predict()
-                # can add the offset back from newdata without double-counting.
-                if self._offset_name is not None:
-                    assert self._offset is not None
-                    Y = Y - self._offset.flatten()
-            uhat = (Y - X @ self._beta_hat).flatten()
-        D2 = Formula("-1+" + fixef_fml).get_model_matrix(self._data, output="sparse")
-        cols = D2.model_spec.column_names
-
-        if self._has_weights:
-            uhat *= weights_sqrt
-            weights_diag = diags(weights_sqrt, 0)
-            D2 = weights_diag.dot(D2)
-
-        alpha = lsqr(D2, uhat, atol=atol, btol=btol)[0]
-
-        res: dict[str, dict[str, float]] = {}
-        for i, col in enumerate(cols):
-            variable, level = _extract_variable_level(col)
-            # check if res already has a key variable
-            if variable not in res:
-                res[variable] = dict()
-                res[variable][level] = alpha[i]
-                continue
-            else:
-                if level not in res[variable]:
-                    res[variable][level] = alpha[i]
-
-        self._fixef_dict = res
-        self._alpha = alpha
-        self._sumFE = D2.dot(alpha)
-
-        return self._fixef_dict
+        return _fixef_impl(model=self, atol=atol, btol=btol)
 
     def predict(
         self,
@@ -1980,82 +1479,16 @@ class Feols(ResultAccessorMixin):
             Otherwise, returns a np.ndarray with the predicted values of the model or the prediction
             standard errors if argument "se_fit=True".
         """
-        if self._is_iv:
-            raise NotImplementedError(
-                "The predict() method is currently not supported for IV models."
-            )
-
-        if interval == "prediction" or se_fit:
-            if self._has_fixef:
-                raise NotImplementedError(
-                    "Prediction errors are currently not supported for models with fixed effects."
-                )
-
-            if self._has_weights:
-                raise NotImplementedError(
-                    "Prediction errors are currently not supported for models with weights."
-                )
-
-        _validate_literal_argument(type, PredictionType)
-        if interval is not None:
-            _validate_literal_argument(interval, PredictionErrorOptions)
-
-        if newdata is None:
-            # X is only consumed by the prediction-error path below, which is
-            # supported for plain OLS only (GLMs raise on se_fit in their
-            # predict() overrides; fixed effects and weights raise above).
-            # GLM models do not store a demeaned design matrix, hence getattr.
-            X = getattr(self, "_X_demeaned", None)
-            X_index = np.arange(self._N)
-            y_hat = (
-                self._Y_hat_link
-                if type == "link" or self._method == "feols"
-                else self._Y_hat_response
-            )
-            n_observations = self._N
-        else:
-            newdata = _narwhals_to_pandas(newdata)
-            y_hat, X, X_index = get_design_matrix_and_yhat(
-                model=self,
-                newdata=newdata,
-                context=self._context,
-            )
-            y_hat += _get_fixed_effects_prediction_component(
-                model=self, newdata=newdata, atol=atol, btol=btol
-            )
-            if self._offset_name is not None:
-                if self._offset_name not in newdata.columns:
-                    raise ValueError(
-                        f"Offset variable '{self._offset_name}' not found in newdata."
-                    )
-                offset = pd.to_numeric(
-                    newdata[self._offset_name], errors="coerce"
-                ).to_numpy()
-                if np.isnan(offset).any():
-                    raise ValueError(
-                        f"Offset column '{self._offset_name}' in newdata contains "
-                        "NaN or non-numeric values."
-                    )
-                y_hat = y_hat + offset
-            n_observations = newdata.shape[0]
-            if type == "response" and self._method == "fepois":
-                y_hat = np.exp(y_hat)
-
-        if se_fit or interval == "prediction":
-            prediction_df = _compute_prediction_error(
-                model=self,
-                nobs=n_observations,
-                yhat=y_hat,
-                X=X,
-                X_index=X_index,
-                alpha=alpha,
-            )
-            if interval == "prediction":
-                return prediction_df
-            else:
-                return prediction_df["se_fit"].to_numpy()
-        else:
-            return y_hat
+        return _predict_impl(
+            model=self,
+            newdata=newdata,
+            atol=atol,
+            btol=btol,
+            type=type,
+            se_fit=se_fit,
+            interval=interval,
+            alpha=alpha,
+        )
 
     def ritest(
         self,
@@ -2134,146 +1567,17 @@ class Feols(ResultAccessorMixin):
         fit.ritest("X1", reps=1000, store_ritest_statistics=True)
         ```
         """
-        resampvar = resampvar.replace(" ", "")
-        resampvar_, h0_value, hypothesis, test_type = _decode_resampvar(resampvar)
-
-        if self._is_iv:
-            raise NotImplementedError(
-                "Randomization Inference is not supported for IV models."
-            )
-
-        # check that resampvar in _coefnames
-        if resampvar_ not in self._coefnames:
-            raise ValueError(f"{resampvar_} not found in the model's coefficients.")
-
-        if cluster is not None and cluster not in self._data:
-            raise ValueError(f"The variable {cluster} is not found in the data.")
-
-        clustervar_arr = (
-            self._data[cluster].to_numpy().reshape(-1, 1) if cluster else None
-        )
-
-        if clustervar_arr is not None and np.any(np.isnan(clustervar_arr)):
-            raise ValueError(
-                """
-            The cluster variable contains missing values. This is not allowed
-            for randomization inference via `ritest()`.
-            """
-            )
-
-        # update vcov if cluster provided but not in model
-        if cluster is not None and not self._is_clustered:
-            warnings.warn(
-                "The initial model was not clustered. CRV1 inference is computed and stored in the model object."
-            )
-            self.vcov({"CRV1": cluster})
-
-        rng = np.random.default_rng() if rng is None else rng
-
-        sample_coef = np.array(self.coef().xs(resampvar_))
-        sample_tstat = np.array(self.tstat().xs(resampvar_))
-        sample_stat = sample_tstat if type == "randomization-t" else sample_coef
-
-        if type not in ["randomization-t", "randomization-c"]:
-            raise ValueError("type must be 'randomization-t' or 'randomization-c.")
-
-        # always run slow algorithm for randomization-t
-        choose_algorithm = "slow" if type == "randomization-t" else choose_algorithm
-
-        if choose_algorithm == "auto":
-            choose_algorithm = "fast" if _HAS_NUMBA else "slow"
-
-        assert isinstance(reps, int) and reps > 0, "reps must be a positive integer."
-
-        if self._has_weights:
-            raise NotImplementedError(
-                """
-                Regression Weights are not supported with Randomization Inference.
-                """
-            )
-
-        if choose_algorithm == "slow" or self._method == "fepois":
-            vcov_input: str | dict[str, str]
-            if cluster is not None:
-                vcov_input = {"CRV1": cluster}
-            else:
-                # "iid" for models without controls, else HC1
-                vcov_input = (
-                    "hetero"
-                    if (self._has_fixef and len(self._coefnames) > 1)
-                    or len(self._coefnames) > 2
-                    else "iid"
-                )
-
-            # for performance reasons
-            if type == "randomization-c":
-                vcov_input = "iid"
-
-            ri_stats = _get_ritest_stats_slow(
-                data=self._data,
-                resampvar=resampvar_,
-                clustervar_arr=clustervar_arr,
-                fml=self._fml,
-                reps=reps,
-                vcov=vcov_input,
-                type=type,
-                rng=rng,
-                model=self._method,
-            )
-
-        else:
-            weights = self._weights.flatten()
-            fval_df = (
-                self._data[self._fixef.split("+")] if self._fixef is not None else None
-            )
-            D = self._data[resampvar_].to_numpy()
-
-            ri_stats = _get_ritest_stats_fast(
-                Y=self._Y_wls,
-                X=self._X_wls,
-                D=D,
-                coefnames=self._coefnames,
-                resampvar=resampvar_,
-                clustervar_arr=clustervar_arr,
-                reps=reps,
-                rng=rng,
-                fval_df=fval_df,
-                weights=weights,
-            )
-
-        ri_pvalue, se_pvalue, ci_pvalue = _get_ritest_pvalue(
-            sample_stat=sample_stat,
-            ri_stats=ri_stats[1:],
-            method=test_type,
-            h0_value=h0_value,
+        return _ritest_impl(
+            model=self,
+            resampvar=resampvar,
+            cluster=cluster,
+            reps=reps,
+            type=type,
+            rng=rng,
+            choose_algorithm=choose_algorithm,
+            store_ritest_statistics=store_ritest_statistics,
             level=level,
         )
-
-        if store_ritest_statistics:
-            self._ritest_statistics = ri_stats
-            self._ritest_pvalue = ri_pvalue
-            self._ritest_sample_stat = sample_stat - h0_value
-
-        res = pd.Series(
-            {
-                "H0": hypothesis,
-                "ri-type": type,
-                "Estimate": sample_coef,
-                "Pr(>|t|)": ri_pvalue,
-                "Std. Error (Pr(>|t|))": se_pvalue,
-            }
-        )
-
-        alpha = 1 - level
-        ci_lower_name = str(f"{alpha / 2 * 100:.1f}% (Pr(>|t|))")
-        ci_upper_name = str(f"{(1 - alpha / 2) * 100:.1f}% (Pr(>|t|))")
-        res[ci_lower_name] = ci_pvalue[0]
-        res[ci_upper_name] = ci_pvalue[1]
-
-        if cluster is not None:
-            res["Cluster"] = cluster
-
-        return res
 
     def plot_ritest(self, plot_backend="lets_plot"):
         """
@@ -2290,21 +1594,7 @@ class Feols(ResultAccessorMixin):
         A lets_plot or matplotlib figure with the distribution of the Randomization
         Inference Statistics.
         """
-        if not hasattr(self, "_ritest_statistics"):
-            raise ValueError(
-                """
-                            The randomization inference statistics have not been stored
-                            in the model object. Please set `store_ritest_statistics=True`
-                            when calling `ritest()`
-                            """
-            )
-
-        ri_stats = self._ritest_statistics
-        sample_stat = self._ritest_sample_stat
-
-        return _plot_ritest_pvalue(
-            ri_stats=ri_stats, sample_stat=sample_stat, plot_backend=plot_backend
-        )
+        return _plot_ritest_impl(model=self, plot_backend=plot_backend)
 
     def update(
         self, X_new: np.ndarray, y_new: np.ndarray, inplace: bool = False

@@ -1,3 +1,4 @@
+import warnings
 from importlib import import_module
 
 import matplotlib.pyplot as plt
@@ -393,6 +394,179 @@ def _get_ritest_pvalue(
     ci_pval = p_value + np.array([-ci_margin, ci_margin])[ci_sides]
 
     return p_value, se_pval, ci_pval
+
+
+def _ritest_impl(
+    model,
+    resampvar: str,
+    cluster: str | None = None,
+    reps: int = 100,
+    type: str = "randomization-c",
+    rng: np.random.Generator | None = None,
+    choose_algorithm: str = "auto",
+    store_ritest_statistics: bool = False,
+    level: float = 0.95,
+) -> pd.Series:
+    "Implementation of Feols.ritest; see the method docstring for details."
+    resampvar = resampvar.replace(" ", "")
+    resampvar_, h0_value, hypothesis, test_type = _decode_resampvar(resampvar)
+
+    if model._is_iv:
+        raise NotImplementedError(
+            "Randomization Inference is not supported for IV models."
+        )
+
+    # check that resampvar in _coefnames
+    if resampvar_ not in model._coefnames:
+        raise ValueError(f"{resampvar_} not found in the model's coefficients.")
+
+    if cluster is not None and cluster not in model._data:
+        raise ValueError(f"The variable {cluster} is not found in the data.")
+
+    clustervar_arr = (
+        model._data[cluster].to_numpy().reshape(-1, 1) if cluster else None
+    )
+
+    if clustervar_arr is not None and np.any(np.isnan(clustervar_arr)):
+        raise ValueError(
+            """
+        The cluster variable contains missing values. This is not allowed
+        for randomization inference via `ritest()`.
+        """
+        )
+
+    # update vcov if cluster provided but not in model
+    if cluster is not None and not model._is_clustered:
+        warnings.warn(
+            "The initial model was not clustered. CRV1 inference is computed and stored in the model object."
+        )
+        model.vcov({"CRV1": cluster})
+
+    rng = np.random.default_rng() if rng is None else rng
+
+    sample_coef = np.array(model.coef().xs(resampvar_))
+    sample_tstat = np.array(model.tstat().xs(resampvar_))
+    sample_stat = sample_tstat if type == "randomization-t" else sample_coef
+
+    if type not in ["randomization-t", "randomization-c"]:
+        raise ValueError("type must be 'randomization-t' or 'randomization-c.")
+
+    # always run slow algorithm for randomization-t
+    choose_algorithm = "slow" if type == "randomization-t" else choose_algorithm
+
+    if choose_algorithm == "auto":
+        choose_algorithm = "fast" if _HAS_NUMBA else "slow"
+
+    assert isinstance(reps, int) and reps > 0, "reps must be a positive integer."
+
+    if model._has_weights:
+        raise NotImplementedError(
+            """
+            Regression Weights are not supported with Randomization Inference.
+            """
+        )
+
+    if choose_algorithm == "slow" or model._method == "fepois":
+        vcov_input: str | dict[str, str]
+        if cluster is not None:
+            vcov_input = {"CRV1": cluster}
+        else:
+            # "iid" for models without controls, else HC1
+            vcov_input = (
+                "hetero"
+                if (model._has_fixef and len(model._coefnames) > 1)
+                or len(model._coefnames) > 2
+                else "iid"
+            )
+
+        # for performance reasons
+        if type == "randomization-c":
+            vcov_input = "iid"
+
+        ri_stats = _get_ritest_stats_slow(
+            data=model._data,
+            resampvar=resampvar_,
+            clustervar_arr=clustervar_arr,
+            fml=model._fml,
+            reps=reps,
+            vcov=vcov_input,
+            type=type,
+            rng=rng,
+            model=model._method,
+        )
+
+    else:
+        weights = model._weights.flatten()
+        fval_df = (
+            model._data[model._fixef.split("+")] if model._fixef is not None else None
+        )
+        D = model._data[resampvar_].to_numpy()
+
+        ri_stats = _get_ritest_stats_fast(
+            Y=model._Y_wls,
+            X=model._X_wls,
+            D=D,
+            coefnames=model._coefnames,
+            resampvar=resampvar_,
+            clustervar_arr=clustervar_arr,
+            reps=reps,
+            rng=rng,
+            fval_df=fval_df,
+            weights=weights,
+        )
+
+    ri_pvalue, se_pvalue, ci_pvalue = _get_ritest_pvalue(
+        sample_stat=sample_stat,
+        ri_stats=ri_stats[1:],
+        method=test_type,
+        h0_value=h0_value,
+        level=level,
+    )
+
+    if store_ritest_statistics:
+        model._ritest_statistics = ri_stats
+        model._ritest_pvalue = ri_pvalue
+        model._ritest_sample_stat = sample_stat - h0_value
+
+    res = pd.Series(
+        {
+            "H0": hypothesis,
+            "ri-type": type,
+            "Estimate": sample_coef,
+            "Pr(>|t|)": ri_pvalue,
+            "Std. Error (Pr(>|t|))": se_pvalue,
+        }
+    )
+
+    alpha = 1 - level
+    ci_lower_name = str(f"{alpha / 2 * 100:.1f}% (Pr(>|t|))")
+    ci_upper_name = str(f"{(1 - alpha / 2) * 100:.1f}% (Pr(>|t|))")
+    res[ci_lower_name] = ci_pvalue[0]
+    res[ci_upper_name] = ci_pvalue[1]
+
+    if cluster is not None:
+        res["Cluster"] = cluster
+
+    return res
+
+
+def _plot_ritest_impl(model, plot_backend="lets_plot"):
+    "Implementation of Feols.plot_ritest; see the method docstring for details."
+    if not hasattr(model, "_ritest_statistics"):
+        raise ValueError(
+            """
+                        The randomization inference statistics have not been stored
+                        in the model object. Please set `store_ritest_statistics=True`
+                        when calling `ritest()`
+                        """
+        )
+
+    ri_stats = model._ritest_statistics
+    sample_stat = model._ritest_sample_stat
+
+    return _plot_ritest_pvalue(
+        ri_stats=ri_stats, sample_stat=sample_stat, plot_backend=plot_backend
+    )
 
 
 def _plot_ritest_pvalue(

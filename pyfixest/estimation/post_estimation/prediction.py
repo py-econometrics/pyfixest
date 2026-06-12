@@ -10,10 +10,104 @@ import pandas as pd
 from formulaic import Formula
 from scipy.stats import t
 
+from pyfixest.estimation.internals.literals import (
+    PredictionErrorOptions,
+    PredictionType,
+    _validate_literal_argument,
+)
 from pyfixest.utils.dev_utils import (
     DataFrameType,
     _narwhals_to_pandas,
 )
+
+
+def _predict_impl(
+    model,
+    newdata: DataFrameType | None = None,
+    atol: float = 1e-6,
+    btol: float = 1e-6,
+    type: PredictionType = "link",
+    se_fit: bool | None = False,
+    interval: PredictionErrorOptions | None = None,
+    alpha: float = 0.05,
+) -> np.ndarray | pd.DataFrame:
+    "Implementation of Feols.predict; see the method docstring for details."
+    if model._is_iv:
+        raise NotImplementedError(
+            "The predict() method is currently not supported for IV models."
+        )
+
+    if interval == "prediction" or se_fit:
+        if model._has_fixef:
+            raise NotImplementedError(
+                "Prediction errors are currently not supported for models with fixed effects."
+            )
+
+        if model._has_weights:
+            raise NotImplementedError(
+                "Prediction errors are currently not supported for models with weights."
+            )
+
+    _validate_literal_argument(type, PredictionType)
+    if interval is not None:
+        _validate_literal_argument(interval, PredictionErrorOptions)
+
+    if newdata is None:
+        # X is only consumed by the prediction-error path below, which is
+        # supported for plain OLS only (GLMs raise on se_fit in their
+        # predict() overrides; fixed effects and weights raise above).
+        # GLM models do not store a demeaned design matrix, hence getattr.
+        X = getattr(model, "_X_demeaned", None)
+        X_index = np.arange(model._N)
+        y_hat = (
+            model._Y_hat_link
+            if type == "link" or model._method == "feols"
+            else model._Y_hat_response
+        )
+        n_observations = model._N
+    else:
+        newdata = _narwhals_to_pandas(newdata)
+        y_hat, X, X_index = get_design_matrix_and_yhat(
+            model=model,
+            newdata=newdata,
+            context=model._context,
+        )
+        y_hat += _get_fixed_effects_prediction_component(
+            model=model, newdata=newdata, atol=atol, btol=btol
+        )
+        if model._offset_name is not None:
+            if model._offset_name not in newdata.columns:
+                raise ValueError(
+                    f"Offset variable '{model._offset_name}' not found in newdata."
+                )
+            offset = pd.to_numeric(
+                newdata[model._offset_name], errors="coerce"
+            ).to_numpy()
+            if np.isnan(offset).any():
+                raise ValueError(
+                    f"Offset column '{model._offset_name}' in newdata contains "
+                    "NaN or non-numeric values."
+                )
+            y_hat = y_hat + offset
+        n_observations = newdata.shape[0]
+        if type == "response" and model._method == "fepois":
+            y_hat = np.exp(y_hat)
+
+    if se_fit or interval == "prediction":
+        prediction_df = _compute_prediction_error(
+            model=model,
+            nobs=n_observations,
+            yhat=y_hat,
+            X=X,
+            X_index=X_index,
+            alpha=alpha,
+        )
+        if interval == "prediction":
+            return prediction_df
+        else:
+            return prediction_df["se_fit"].to_numpy()
+    else:
+        return y_hat
 
 
 def get_design_matrix_and_yhat(
