@@ -7,8 +7,6 @@ estimation.FixestMulti_.FixestMulti(
     store_data,
     lean,
     weights_type,
-    use_compression,
-    reps,
     seed,
     split,
     fsplit,
