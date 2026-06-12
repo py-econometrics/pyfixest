@@ -312,7 +312,6 @@ class Feols(ResultAccessorMixin):
         self._store_data = store_data
         self._copy_data = copy_data
         self._lean = lean
-        self._use_mundlak = False
         self._context = capture_context(context)
 
         self._support_crv3_inference = True

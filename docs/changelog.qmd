@@ -147,15 +147,16 @@ We recommend the following replacements:
 
 ### Regression Compression Deprecation
 
-The `use_compression` argument to `feols()` is deprecated and will be removed in
-a future release. This feature implemented the in-memory regression compression
+The `use_compression` argument to `feols()` is deprecated and no longer
+supported. This feature implemented the in-memory regression compression
 approach from [Wong et al. (2021)](https://arxiv.org/abs/2102.11297) via a
-Mundlak/sufficient-statistics transform. For large-dataset use cases, the
+Mundlak/sufficient-statistics transform, and the implementation has now been
+removed. For large-dataset use cases, the
 [`duckreg`](https://github.com/py-econometrics/duckreg) package provides a more
 general out-of-memory solution. See
 [#1302](https://github.com/py-econometrics/pyfixest/issues/1302) for context.
 
-Passing `use_compression=True` now raises a `DeprecationWarning`.
+Passing `use_compression=True` now raises a `NotImplementedError`.
 
 ### Offsets in `fepois()`
 
