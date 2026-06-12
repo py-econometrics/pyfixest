@@ -64,6 +64,20 @@ def test_cluster_but_no_data():
         fit.vcov({"CRV1": "f2"})
 
 
+def test_vcov_with_explicit_data_when_model_data_not_stored():
+    """Post-estimation vcov can use explicit data when model data was dropped."""
+    data = get_data()
+    fit = feols("Y ~ X1", data=data, store_data=False)
+
+    fit.vcov("hetero")
+    fit_ref = feols("Y ~ X1", data=data, vcov="hetero")
+    np.testing.assert_allclose(fit.se(), fit_ref.se())
+
+    fit.vcov({"CRV1": "f2"}, data=data)
+    fit_ref = feols("Y ~ X1", data=data, vcov={"CRV1": "f2"})
+    np.testing.assert_allclose(fit.se(), fit_ref.se())
+
+
 def test_error_hc23_fe():
     """
     Test if HC2 & HC3 inference with fixed effects regressions raises an error.

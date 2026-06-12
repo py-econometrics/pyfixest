@@ -556,6 +556,26 @@ class Feols(ResultAccessorMixin):
         self._Y_hat_link = self._Y_df.to_numpy().flatten() - self.resid()
         self._Y_hat_response = self._Y_hat_link
 
+    def _align_vcov_data(self, data: pd.DataFrame) -> pd.DataFrame:
+        """Align caller-provided vcov data to the estimation sample."""
+        if self._sample_split_var is not None:
+            if self._sample_split_value is _ALL_SAMPLE:
+                data = data.loc[data[self._sample_split_var].notnull()]
+            else:
+                data = data.loc[
+                    data[self._sample_split_var] == self._sample_split_value
+                ]
+            data = data.reset_index(drop=True)
+
+        dropped_rows = set(getattr(self, "_na_index", frozenset()))
+        separation_rows = getattr(self, "na_index", np.array([]))
+        if len(separation_rows) > 0:
+            dropped_rows.update(int(row) for row in separation_rows)
+        if dropped_rows:
+            data = data.drop(index=list(dropped_rows), errors="ignore")
+
+        return data
+
     @property
     def _solve_weights(self) -> np.ndarray:
         """Weights of the final least-squares solve.
@@ -637,18 +657,20 @@ class Feols(ResultAccessorMixin):
         """
         # Assuming `data` is the DataFrame in question
 
-        data_to_check = data if data is not None else self._data
-        try:
-            data_to_check = _narwhals_to_pandas(data_to_check)
-        except TypeError as e:
-            raise TypeError(
-                f"The data set must be a DataFrame type. Received: {type(data)}"
-            ) from e
+        if data is not None:
+            try:
+                data_for_vcov = self._align_vcov_data(_narwhals_to_pandas(data))
+            except TypeError as e:
+                raise TypeError(
+                    f"The data set must be a DataFrame type. Received: {type(data)}"
+                ) from e
+        else:
+            data_for_vcov = getattr(self, "_data", pd.DataFrame())
 
         # assign estimated fixed effects, and fixed effects nested within cluster.
 
         # deparse vcov input
-        _check_vcov_input(vcov=vcov, vcov_kwargs=vcov_kwargs, data=self._data)
+        _check_vcov_input(vcov=vcov, vcov_kwargs=vcov_kwargs, data=data_for_vcov)
 
         (
             self._vcov_type,
@@ -717,7 +739,7 @@ class Feols(ResultAccessorMixin):
                 "n_fe_fully_nested": 0,  # nesting ignored / irrelevant for HAC SEs
                 "vcov_sign": 1,
                 "vcov_type": "HAC",
-                "G": np.unique(self._data[self._time_id]).shape[
+                "G": np.unique(data_for_vcov[self._time_id]).shape[
                     0
                 ],  # number of unique time periods T used
             }
@@ -725,7 +747,7 @@ class Feols(ResultAccessorMixin):
             all_kwargs = {**ssc_kwargs, **ssc_kwargs_hac}
             self._ssc, self._df_k, self._df_t = get_ssc(**all_kwargs)
 
-            self._vcov = self._ssc * self._vcov_hac()
+            self._vcov = self._ssc * self._vcov_hac(data=data_for_vcov)
 
         elif self._vcov_type == "nid":
             ssc_kwargs_hetero = {
@@ -741,19 +763,11 @@ class Feols(ResultAccessorMixin):
             self._vcov = self._ssc * self._vcov_nid()
 
         elif self._vcov_type == "CRV":
-            if data is not None:
-                # use input data set
-                self._cluster_df = _get_cluster_df(
-                    data=data,
-                    clustervar=self._clustervar,
-                )
-                _check_cluster_df(cluster_df=self._cluster_df, data=data)
-            else:
-                # use stored data
-                self._cluster_df = _get_cluster_df(
-                    data=self._data, clustervar=self._clustervar
-                )
-                _check_cluster_df(cluster_df=self._cluster_df, data=self._data)
+            self._cluster_df = _get_cluster_df(
+                data=data_for_vcov,
+                clustervar=self._clustervar,
+            )
+            _check_cluster_df(cluster_df=self._cluster_df, data=data_for_vcov)
 
             if self._cluster_df.shape[1] > 1:
                 self._cluster_df = _prepare_twoway_clustering(
@@ -867,7 +881,7 @@ class Feols(ResultAccessorMixin):
             tZZinv=self._tZZinv,
         )
 
-    def _vcov_hac(self):
+    def _vcov_hac(self, data: pd.DataFrame):
         if not self._support_hac_inference:
             raise NotImplementedError(
                 "HAC inference is not supported for this model type."
@@ -875,18 +889,16 @@ class Feols(ResultAccessorMixin):
 
         # some data checks on input pandas df
         # time needs to be numeric or date else we cannot sort by time
-        if not np.issubdtype(
-            self._data[self._time_id], np.number
-        ) and not np.issubdtype(self._data[self._time_id], np.datetime64):
+        if not np.issubdtype(data[self._time_id], np.number) and not np.issubdtype(
+            data[self._time_id], np.datetime64
+        ):
             raise ValueError(
                 "The time variable must be numeric or date, else we cannot sort by time."
             )
 
-        time_arr = self._data[self._time_id].to_numpy()
+        time_arr = data[self._time_id].to_numpy()
         panel_arr = (
-            self._data[self._panel_id].to_numpy()
-            if self._panel_id is not None
-            else None
+            data[self._panel_id].to_numpy() if self._panel_id is not None else None
         )
 
         return vcov_hac(
