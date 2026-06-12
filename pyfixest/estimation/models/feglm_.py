@@ -12,10 +12,6 @@ from pyfixest.errors import (
     NonConvergenceError,
 )
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
-from pyfixest.estimation.internals.demean_ import (
-    _override_demeaner_tol,
-    dispatch_demean,
-)
 from pyfixest.estimation.internals.solvers import solve_ols
 from pyfixest.estimation.models.feols_ import (
     Feols,
@@ -406,20 +402,13 @@ class Feglm(Feols, ABC):
         if flist is None:
             return v, X
 
-        effective_demeaner = _override_demeaner_tol(self._demeaner, tol=tol)
-        vX_tilde, success, used_pre = dispatch_demean(
+        effective_demeaner = self._demeaner.with_tol(tol)
+        vX_tilde = self._demean_cache.demean_array(
             x=np.c_[v, X],
             flist=flist,
             weights=weights.flatten(),
             demeaner=effective_demeaner,
-            cached_preconditioner=self._preconditioner,
         )
-        self._seed_preconditioner(used_pre)
-
-        if success is False:
-            raise ValueError(
-                f"Demeaning failed after {effective_demeaner.fixef_maxiter} iterations."
-            )
         return vX_tilde[:, 0], vX_tilde[:, 1:]
 
     def _check_convergence(
