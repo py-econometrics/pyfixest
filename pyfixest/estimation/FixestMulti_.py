@@ -24,7 +24,6 @@ from pyfixest.estimation.models.feols_ import (
     _check_vcov_input,
     _deparse_vcov_input,
 )
-from pyfixest.estimation.models.feols_compressed_ import FeolsCompressed
 from pyfixest.estimation.models.fepois_ import Fepois
 from pyfixest.estimation.models.feprobit_ import Feprobit
 from pyfixest.estimation.quantreg.quantreg_ import Quantreg
@@ -43,8 +42,6 @@ class FixestMulti:
         store_data: bool,
         lean: bool,
         weights_type: str,
-        use_compression: bool,
-        reps: int | None,
         seed: int | None,
         split: str | None,
         fsplit: str | None,
@@ -70,15 +67,8 @@ class FixestMulti:
             The type of weights employed in the estimation. Either analytical /
             precision weights are employed (`aweights`) or
             frequency weights (`fweights`).
-        use_compression: bool
-            Whether to use sufficient statistics to losslessly fit the regression model
-            on compressed data. False by default.
-        reps : int
-            The number of bootstrap iterations to run. Only relevant for wild cluster
-            bootstrap for use_compression=True.
         seed : Optional[int]
             Option to provide a random seed. Default is None.
-            Only relevant for wild cluster bootstrap for use_compression=True.
         separation_check: list[str], optional
             Only used in "fepois". Methods to identify and drop separated observations.
             Either "fe" or "ir". Executes both by default.
@@ -100,8 +90,6 @@ class FixestMulti:
         self._store_data = store_data
         self._lean = lean
         self._weights_type = weights_type
-        self._use_compression = use_compression
-        self._reps = reps
         self._seed = seed
         self._separation_check = separation_check
         self._context = capture_context(context)
@@ -277,7 +265,7 @@ class FixestMulti:
             Solver to use for the estimation.
         demeaner: Optional[AnyDemeaner]
             The typed demeaning strategy to use for the estimation. Not relevant
-            for the "compression" estimator and quantile regression.
+            for quantile regression.
         collin_tol : float, optional
             The tolerance level for the multicollinearity check. Default is 1e-6.
         iwls_maxiter : int, optional
@@ -328,7 +316,6 @@ class FixestMulti:
                         | Fegaussian
                         | Felogit
                         | Feprobit
-                        | FeolsCompressed
                         | Quantreg
                         | QuantregMulti
                     )
@@ -421,18 +408,9 @@ class FixestMulti:
                         ("feglm-logit", None): Felogit,
                         ("feglm-probit", None): Feprobit,
                         ("feglm-gaussian", None): Fegaussian,
-                        ("compression", None): FeolsCompressed,
                         ("quantreg", None): Quantreg,
                         ("quantreg_multi", None): QuantregMulti,
                     }
-
-                    if self._method == "compression":
-                        model_kwargs.update(
-                            {
-                                "reps": self._reps,
-                                "seed": self._seed,
-                            }
-                        )
 
                     model_key = (
                         (self._method, self._is_iv)

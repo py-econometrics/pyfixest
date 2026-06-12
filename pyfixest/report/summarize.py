@@ -324,10 +324,7 @@ def summary(models: ModelInputType, digits: int = 3) -> None:
         print("Estimation: ", estimation_method)
         depvar_fixef = f"Dep. var.: {depvar}"
         if fxst._fixef is not None:
-            if not fxst._use_mundlak:
-                depvar_fixef += f", Fixed effects: {fxst._fixef}"
-            else:
-                depvar_fixef += f", Mundlak: by {fxst._fixef}"
+            depvar_fixef += f", Fixed effects: {fxst._fixef}"
         print(depvar_fixef)
         if fxst._sample_split_value != "all":
             split = f"sample: {fxst._sample_split_var} = {fxst._sample_split_value}"
