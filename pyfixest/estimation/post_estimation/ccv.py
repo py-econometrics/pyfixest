@@ -147,9 +147,7 @@ def _ccv_impl(
         )
 
     if treatment not in model._coefnames:
-        raise ValueError(
-            f"Variable {treatment} not found in the model's coefficients."
-        )
+        raise ValueError(f"Variable {treatment} not found in the model's coefficients.")
 
     if cluster is None:
         if model._clustervar is None:

@@ -423,9 +423,7 @@ def _ritest_impl(
     if cluster is not None and cluster not in model._data:
         raise ValueError(f"The variable {cluster} is not found in the data.")
 
-    clustervar_arr = (
-        model._data[cluster].to_numpy().reshape(-1, 1) if cluster else None
-    )
+    clustervar_arr = model._data[cluster].to_numpy().reshape(-1, 1) if cluster else None
 
     if clustervar_arr is not None and np.any(np.isnan(clustervar_arr)):
         raise ValueError(
