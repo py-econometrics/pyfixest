@@ -40,10 +40,11 @@ class Fepois(Feols):
 
     Attributes
     ----------
-    _Y : np.ndarray
-        The demeaned dependent variable, a two-dimensional numpy array.
-    _X : np.ndarray
-        The demeaned independent variables, a two-dimensional numpy array.
+    _Y_wls : np.ndarray
+        The weighted, demeaned working dependent variable from the final
+        IWLS iteration.
+    _X_wls : np.ndarray
+        The weighted, demeaned design matrix from the final IWLS iteration.
     _fe : np.ndarray
         Fixed effects, a two-dimensional numpy array or None.
     weights : np.ndarray
@@ -151,11 +152,11 @@ class Fepois(Feols):
         "Prepare model inputs for estimation."
         super().prepare_model_matrix()
 
-        # check that self._Y is a pandas Series or DataFrame
-        self._Y = _check_series_or_dataframe(self._Y)
+        # check that self._Y_df is a pandas Series or DataFrame
+        self._Y_df = _check_series_or_dataframe(self._Y_df)
 
-        # check that self._Y is a weakly positive number
-        if np.any(self._Y < 0):
+        # check that the dependent variable is a weakly positive number
+        if np.any(self._Y_df < 0):
             raise ValueError("The dependent variable must be a weakly positive number.")
 
         # check for separation
@@ -166,8 +167,8 @@ class Fepois(Feols):
             and self.separation_check  # not an empty list
         ):
             na_separation = _check_for_separation(
-                Y=self._Y,
-                X=self._X,
+                Y=self._Y_df,
+                X=self._X_df,
                 fe=self._fe,
                 fml=self._fml,
                 data=self._data,
@@ -175,15 +176,15 @@ class Fepois(Feols):
             )
 
         if na_separation:
-            self._Y.drop(na_separation, axis=0, inplace=True)
-            self._X.drop(na_separation, axis=0, inplace=True)
+            self._Y_df.drop(na_separation, axis=0, inplace=True)
+            self._X_df.drop(na_separation, axis=0, inplace=True)
             self._fe.drop(na_separation, axis=0, inplace=True)
             self._data.drop(na_separation, axis=0, inplace=True)
             if self._weights_df is not None:
                 self._weights_df.drop(na_separation, axis=0, inplace=True)
             if self._offset_df is not None:
                 self._offset_df.drop(na_separation, axis=0, inplace=True)
-            self._N = self._Y.shape[0]
+            self._N = self._Y_df.shape[0]
             self._N_rows = self._N
             # Re-set weights after dropping rows (handles both weighted and unweighted)
             self._weights = self._set_weights()
@@ -194,13 +195,10 @@ class Fepois(Feols):
             self._k_fe = self._fe.nunique(axis=0) if self._has_fixef else None
             self._n_fe = np.sum(self._k_fe > 1) if self._has_fixef else 0
 
-    def to_array(self):
-        "Turn estimation DataFrames to np arrays."
-        self._Y, self._X, self._Z = (
-            self._Y.to_numpy(),
-            self._X.to_numpy(),
-            self._X.to_numpy(),
-        )
+    def to_array(self) -> tuple[np.ndarray, np.ndarray]:
+        "Return dependent variable and design matrix as np arrays."
+        Y_arr = self._Y_df.to_numpy()
+        X_arr = self._X_df.to_numpy()
         if self._fe is not None:
             self._fe = self._fe.to_numpy()
             if self._fe.ndim == 1:
@@ -209,6 +207,7 @@ class Fepois(Feols):
             self._offset = self._offset_df.to_numpy().reshape((-1, 1))
         else:
             self._offset = np.zeros((self._N, 1))
+        return Y_arr, X_arr
 
     def get_fit(self) -> None:
         """
@@ -238,7 +237,7 @@ class Fepois(Feols):
             Demeaned dependent variable (from the last iteration of the IRLS
             algorithm).
         """
-        self.to_array()
+        Y_arr, X_arr = self.to_array()
 
         demean = None
         if self._fe is not None:
@@ -252,8 +251,8 @@ class Fepois(Feols):
                 )
 
         pois_fit = fit_iwls_poisson(
-            Y=self._Y,
-            X=self._X,
+            Y=Y_arr,
+            X=X_arr,
             weights=self._weights,
             offset=self._offset,
             coefnames=self._coefnames,
@@ -268,9 +267,9 @@ class Fepois(Feols):
         self._coefnames = pois_fit.coefnames
         self._collin_vars = pois_fit.collin_vars
         self._collin_index = pois_fit.collin_index
-        self._X = pois_fit.X
-        self._X_is_empty = self._X.shape[1] == 0
-        self._k = self._X.shape[1]
+        X_arr = pois_fit.X
+        self._X_is_empty = X_arr.shape[1] == 0
+        self._k = X_arr.shape[1]
         self.convergence = pois_fit.convergence
 
         delta_new = pois_fit.beta
@@ -288,13 +287,13 @@ class Fepois(Feols):
 
         # update for inference
         user_weights = self._weights.flatten()
-        self._irls_weights = combined_weights.flatten()
+        self._weights_irls = combined_weights
 
-        self._u_hat = (WZ - WX @ delta_new).flatten()
+        self._u_hat_wls = (WZ - WX @ delta_new).flatten()
         self._u_hat_working = pois_fit.residuals_working
-        self._u_hat_response = self._Y - np.exp(eta)
+        self._u_hat_response = Y_arr - np.exp(eta)
 
-        y = self._Y.flatten()
+        y = Y_arr.flatten()
         self._y_hat_null = np.full_like(
             y, np.average(y, weights=user_weights), dtype=float
         )
@@ -318,18 +317,16 @@ class Fepois(Feols):
             user_weights * (y - self._Y_hat_response) ** 2 / self._Y_hat_response
         )
 
-        self._weights = combined_weights
         self.deviance = poisson_deviance(y, mu, user_weights)
 
-        self._Y = WZ
-        self._X = WX
-        self._Z = self._X
+        self._Y_wls = WZ
+        self._X_wls = WX
 
-        self._tZX = np.transpose(self._Z) @ self._X
+        self._tZX = np.transpose(self._X_wls) @ self._X_wls
         self._tZXinv = np.linalg.inv(self._tZX)
         self._Xbeta = eta
 
-        self._scores = self._u_hat[:, None] * self._X
+        self._scores = self._u_hat_wls[:, None] * self._X_wls
         self._hessian = pois_fit.hessian
 
         if self.convergence:

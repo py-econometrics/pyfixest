@@ -122,10 +122,18 @@ class Feols(ResultAccessorMixin):
     _is_iv : bool
         Indicates whether instrumental variables are used, initialized as False.
 
-    _Y : np.ndarray
-        The demeaned dependent variable, a two-dimensional numpy array.
-    _X : np.ndarray
-        The demeaned independent variables, a two-dimensional numpy array.
+    _Y_df : pd.DataFrame
+        The dependent variable model matrix (raw, never mutated).
+    _X_df : pd.DataFrame
+        The independent variable model matrix (raw, never mutated).
+    _Y_demeaned : np.ndarray
+        The demeaned dependent variable, unweighted, set in demean().
+    _X_demeaned : np.ndarray
+        The demeaned, collinearity-pruned independent variables, unweighted.
+    _Y_wls : np.ndarray
+        sqrt(weights)-scaled demeaned dependent variable of the final solve.
+    _X_wls : np.ndarray
+        sqrt(weights)-scaled demeaned design matrix of the final solve.
     _X_is_empty : bool
         Indicates whether the X array is empty.
     _collin_tol : float
@@ -136,12 +144,12 @@ class Feols(ResultAccessorMixin):
         Variables identified as collinear.
     _collin_index : list
         Indices of collinear variables.
-    _Z : np.ndarray
-        Alias for the _X array, used for calculations.
     _solver: str
         The solver used for the regression.
     _weights : np.ndarray
-        Array of weights for each observation.
+        Array of user weights for each observation; never overwritten.
+    _weights_irls : np.ndarray or None
+        Final IRLS weights, set by GLM models only; None for OLS/IV.
     _N : int
         Number of observations.
     _k : int
@@ -175,7 +183,10 @@ class Feols(ResultAccessorMixin):
     _Y_hat_response : np.ndarray
         Prediction at the level of the response variable, i.e., the expected predictor E(Y|X).
     _u_hat : np.ndarray
-        Residuals of the regression model.
+        Response-scale residuals of the regression model.
+    _u_hat_wls : np.ndarray
+        Solve-scale residuals (sqrt(weights)-scaled); equal to _u_hat
+        for unweighted models.
     _scores : np.ndarray
         Scores used in the regression analysis.
     _hessian : np.ndarray
@@ -347,9 +358,12 @@ class Feols(ResultAccessorMixin):
         self._Y_hat_link = np.array([])
         self._Y_hat_response = np.array([])
         self._u_hat = np.array([])
+        self._u_hat_wls = np.array([])
         self._scores = np.array([])
         self._hessian = np.array([])
         self._bread = np.array([])
+        # final IRLS weights; set by GLM models, None for OLS/IV
+        self._weights_irls: np.ndarray | None = None
 
         # set in vcov()
         self._vcov_type = ""
@@ -416,30 +430,33 @@ class Feols(ResultAccessorMixin):
             context=self._context,
         )
 
-        self._Y = model_matrix.dependent
-        self._Y_untransformed = model_matrix.dependent.copy()
-        self._X = model_matrix.independent
+        self._Y_df = model_matrix.dependent
+        self._X_df = model_matrix.independent
         self._fe = model_matrix.fixed_effects
-        self._endogvar = model_matrix.endogenous
-        self._Z = model_matrix.instruments
+        self._endogvar_df = model_matrix.endogenous
+        self._Z_df = model_matrix.instruments
         self._weights_df = model_matrix.weights
         self._offset_df = model_matrix.offset
         self._na_index = model_matrix.na_index
         # TODO: set dynamically based on naming set in pyfixest.estimation.formula.factor_interaction._encode_i
         is_icovar = (
-            self._X.columns.str.contains(r"^.+::.+$") if not self._X.empty else None
+            self._X_df.columns.str.contains(r"^.+::.+$")
+            if not self._X_df.empty
+            else None
         )
         self._icovars = (
-            self._X.columns[is_icovar].tolist()
+            self._X_df.columns[is_icovar].tolist()
             if is_icovar is not None and is_icovar.any()
             else None
         )
         self._X_is_empty = not model_matrix.independent.shape[0] > 0
         self._model_spec = model_matrix.model_spec
 
-        self._coefnames = self._X.columns.tolist()
-        self._coefnames_z = self._Z.columns.tolist() if self._Z is not None else None
-        self._depvar = self._Y.columns[0]
+        self._coefnames = self._X_df.columns.tolist()
+        self._coefnames_z = (
+            self._Z_df.columns.tolist() if self._Z_df is not None else None
+        )
+        self._depvar = self._Y_df.columns[0]
 
         self._has_fixef = self._fe is not None
         self._fixef = self.FixestFormula.fixed_effects
@@ -466,7 +483,7 @@ class Feols(ResultAccessorMixin):
             A tuple containing the total number of observations and the number of rows
             in the dependent variable array.
         """
-        N_rows = len(self._Y)
+        N_rows = len(self._Y_df)
         if self._weights_type == "aweights":
             N = N_rows
         elif self._weights_type == "fweights":
@@ -485,7 +502,7 @@ class Feols(ResultAccessorMixin):
             If no weights are used, returns an array of ones
             with the same length as the dependent variable array.
         """
-        N = len(self._Y)
+        N = len(self._Y_df)
 
         if self._weights_df is not None:
             _weights = self._weights_df.to_numpy()
@@ -495,18 +512,26 @@ class Feols(ResultAccessorMixin):
         return _weights.reshape((N, 1))
 
     def demean(self):
-        "Demean the dependent variable and covariates by the fixed effect(s)."
+        """Demean the dependent variable and covariates by the fixed effect(s).
+
+        Sets ``_Y_demeaned`` / ``_X_demeaned``: unweighted numpy arrays. When
+        the model has no fixed effects, these are plain array versions of
+        ``_Y_df`` / ``_X_df``.
+        """
         if self._has_fixef:
-            self._Yd, self._Xd, _ = self._demean_cache.demean_yx(
-                self._Y,
-                self._X,
+            Yd, Xd, _ = self._demean_cache.demean_yx(
+                self._Y_df,
+                self._X_df,
                 self._fe,
                 self._weights.flatten(),
                 self._na_index,
                 self._demeaner,
             )
         else:
-            self._Yd, self._Xd = self._Y, self._X
+            Yd, Xd = self._Y_df, self._X_df
+
+        self._Y_demeaned = Yd.to_numpy()
+        self._X_demeaned = Xd.to_numpy()
 
     @property
     def preconditioner(self) -> Preconditioner | None:
@@ -521,41 +546,34 @@ class Feols(ResultAccessorMixin):
         """
         return self._demean_cache.preconditioner
 
-    def to_array(self):
-        "Convert estimation data frames to np arrays."
-        self._Y, self._X = (
-            self._Yd.to_numpy(),
-            self._Xd.to_numpy(),
-        )
-
-    def wls_transform(self):
-        "Transform model matrices for WLS Estimation."
-        self._X_untransformed = self._X.copy()
-        if self._has_weights:
-            w = np.sqrt(self._weights)
-            self._Y = self._Y * w
-            self._X = self._X * w
-
     def drop_multicol_vars(self):
         "Detect and drop multicollinear variables."
-        if self._X.shape[1] > 0:
+        if self._X_demeaned.shape[1] > 0:
             (
-                self._X,
+                self._X_demeaned,
                 self._coefnames,
                 self._collin_vars,
                 self._collin_index,
             ) = _drop_multicollinear_variables(
-                self._X,
+                self._X_demeaned,
                 self._coefnames,
                 self._collin_tol,
             )
         # update X_is_empty
-        self._X_is_empty = self._X.shape[1] == 0
-        self._k = self._X.shape[1] if not self._X_is_empty else 0
+        self._X_is_empty = self._X_demeaned.shape[1] == 0
+        self._k = self._X_demeaned.shape[1] if not self._X_is_empty else 0
 
     def _get_predictors(self) -> None:
-        self._Y_hat_link = self._Y_untransformed.to_numpy().flatten() - self.resid()
+        self._Y_hat_link = self._Y_df.to_numpy().flatten() - self.resid()
         self._Y_hat_response = self._Y_hat_link
+
+    @property
+    def _solve_weights(self) -> np.ndarray:
+        """Weights of the final least-squares solve.
+
+        User weights for OLS/IV; final IRLS weights for GLM models.
+        """
+        return self._weights if self._weights_irls is None else self._weights_irls
 
     def get_fit(self) -> None:
         """
@@ -566,20 +584,28 @@ class Feols(ResultAccessorMixin):
         None
         """
         self.demean()
-        self.to_array()
         self.drop_multicol_vars()
-        self.wls_transform()
 
         if self._X_is_empty:
-            self._u_hat = self._Y
+            self._Y_wls = np.sqrt(self._weights) * self._Y_demeaned
+            self._X_wls = self._X_demeaned
+            self._u_hat = self._Y_demeaned
+            self._u_hat_wls = self._Y_wls
         else:
-            fit = fit_ols(X=self._X, Y=self._Y, solver=self._solver)
+            fit = fit_ols(
+                X=self._X_demeaned,
+                Y=self._Y_demeaned,
+                weights=self._weights,
+                solver=self._solver,
+            )
 
-            self._Z = self._X
+            self._X_wls = fit.X_wls
+            self._Y_wls = fit.Y_wls
             self._tZX = fit.tZX
             self._tZy = fit.tZy
             self._beta_hat = fit.beta
             self._u_hat = fit.residuals
+            self._u_hat_wls = fit.residuals_wls
             self._scores = fit.scores
             self._hessian = fit.hessian
 
@@ -836,14 +862,14 @@ class Feols(ResultAccessorMixin):
         return self
 
     def _vcov_iid(self):
-        return vcov_iid(residuals=self._u_hat, bread=self._bread, N=self._N)
+        return vcov_iid(residuals_wls=self._u_hat_wls, bread=self._bread, N=self._N)
 
     def _vcov_hetero(self):
         return vcov_hetero(
             scores=self._scores,
-            X=self._X,
+            X_wls=self._X_wls,
             tZX=self._tZX,
-            weights=self._weights,
+            weights=self._solve_weights,
             weights_type=self._weights_type,
             vcov_type_detail=self._vcov_type_detail,
             bread=self._bread,
@@ -906,8 +932,8 @@ class Feols(ResultAccessorMixin):
 
     def _vcov_crv3_fast(self, clustid, cluster_col):
         return vcov_crv3_fast(
-            X=self._X,
-            Y=self._Y,
+            X=self._X_wls,
+            Y=self._Y_wls,
             beta_hat=self._beta_hat,
             clustid=clustid,
             cluster_col=cluster_col,
@@ -982,7 +1008,7 @@ class Feols(ResultAccessorMixin):
         # some bookkeeping
         self._fml = self.FixestFormula.formula
         self._depvar = depvar
-        self._Y_untransformed = Y
+        self._Y_df = Y
         self._data = pd.DataFrame()
 
         if store_data:
@@ -1005,23 +1031,29 @@ class Feols(ResultAccessorMixin):
         if self._lean:
             attributes += [
                 "_data",
-                "_X",
-                "_Y",
-                "_Z",
-                "_Xd",
-                "_Yd",
-                "_Zd",
+                "_X_df",
+                "_Y_df",
+                "_Z_df",
+                "_endogvar_df",
+                "_X_demeaned",
+                "_Y_demeaned",
+                "_Z_demeaned",
+                "_endogvar_demeaned",
+                "_X_wls",
+                "_Y_wls",
+                "_Z_wls",
                 "_cluster_df",
                 "_tXZ",
                 "_tZy",
                 "_tZX",
                 "_weights",
+                "_weights_irls",
                 "_scores",
                 "_tZZinv",
                 "_u_hat",
+                "_u_hat_wls",
                 "_Y_hat_link",
                 "_Y_hat_response",
-                "_Y_untransformed",
             ]
 
         for attr in attributes:
@@ -1482,12 +1514,12 @@ class Feols(ResultAccessorMixin):
         xfml = "" if not xfml_list else "+".join(xfml_list)
 
         data = self._data
-        Y = self._Y.flatten()
+        Y = self._Y_wls.flatten()
         W = data[treatment].to_numpy()
         assert np.all(np.isin(W, [0, 1])), (
             "Treatment variable must be binary with values 0 and 1"
         )
-        X = self._X
+        X = self._X_wls
         cluster_vec = data[cluster].to_numpy()
         unique_clusters = np.unique(cluster_vec)
 
@@ -1598,8 +1630,8 @@ class Feols(ResultAccessorMixin):
             X = csc_matrix(X) if output == "sparse" else X
 
         else:
-            Y = self._Y.flatten() / np.sqrt(self._weights.flatten())
-            X = self._X / np.sqrt(self._weights)
+            Y = self._Y_demeaned.flatten()
+            X = self._X_demeaned
             xnames = self._coefnames
 
         X = csc_matrix(X) if output == "sparse" else X
@@ -1969,10 +2001,11 @@ class Feols(ResultAccessorMixin):
             _validate_literal_argument(interval, PredictionErrorOptions)
 
         if newdata is None:
-            # note: no need to worry about fixed effects, as not supported with
-            # prediction errors; will throw error later;
-            # divide by sqrt(weights) as self._X is "weighted"
-            X = self._X
+            # X is only consumed by the prediction-error path below, which is
+            # supported for plain OLS only (GLMs raise on se_fit in their
+            # predict() overrides; fixed effects and weights raise above).
+            # GLM models do not store a demeaned design matrix, hence getattr.
+            X = getattr(self, "_X_demeaned", None)
             X_index = np.arange(self._N)
             y_hat = (
                 self._Y_hat_link
@@ -2196,8 +2229,8 @@ class Feols(ResultAccessorMixin):
             D = self._data[resampvar_].to_numpy()
 
             ri_stats = _get_ritest_stats_fast(
-                Y=self._Y,
-                X=self._X,
+                Y=self._Y_wls,
+                X=self._X_wls,
                 D=D,
                 coefnames=self._coefnames,
                 resampvar=resampvar_,
@@ -2300,15 +2333,16 @@ class Feols(ResultAccessorMixin):
             )
         if not np.all(X_new[:, 0] == 1):
             X_new = np.column_stack((np.ones(len(X_new)), X_new))
-        X_n_plus_1 = np.vstack((self._X, X_new))
+        X_n_plus_1 = np.vstack((self._X_wls, X_new))
         epsi_n_plus_1 = y_new - X_new @ self._beta_hat
         gamma_n_plus_1 = np.linalg.inv(X_n_plus_1.T @ X_n_plus_1) @ X_new.T
         beta_n_plus_1 = self._beta_hat + gamma_n_plus_1 @ epsi_n_plus_1
         if inplace:
-            self._X = X_n_plus_1
-            self._Y = np.append(self._Y, y_new)
+            self._X_wls = X_n_plus_1
+            self._Y_wls = np.append(self._Y_wls, y_new)
             self._beta_hat = beta_n_plus_1
-            self._u_hat = self._Y - self._X @ self._beta_hat
+            self._u_hat = self._Y_wls - self._X_wls @ self._beta_hat
+            self._u_hat_wls = self._u_hat
             self._N += X_new.shape[0]
 
         return beta_n_plus_1

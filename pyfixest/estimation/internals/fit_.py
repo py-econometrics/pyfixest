@@ -32,23 +32,31 @@ class OlsFit:
     beta : np.ndarray
         Coefficient estimates, shape (k,).
     residuals : np.ndarray
-        Residuals Y - X @ beta, shape (N,).
+        Response-scale residuals Y - X @ beta, shape (N,).
+    residuals_wls : np.ndarray
+        Solve-scale residuals sqrt(w)(Y - X @ beta), shape (N,). Equal to
+        ``residuals`` when weights are all one.
     scores : np.ndarray
-        Score matrix X * residuals, shape (N, k).
+        Score matrix X_wls * residuals_wls (= w * X * residuals), shape (N, k).
     hessian : np.ndarray
-        Hessian X'X, shape (k, k).
+        Hessian X'WX, shape (k, k).
     tZX : np.ndarray
-        Z'X (= X'X for OLS), shape (k, k).
+        Z'WX (= X'WX for OLS), shape (k, k).
     tZy : np.ndarray
-        Z'Y (= X'Y for OLS), shape (k, 1).
+        Z'WY (= X'WY for OLS), shape (k, 1).
+    X_wls, Y_wls : np.ndarray
+        sqrt(w)-scaled design matrix / dependent variable of the solve.
     """
 
     beta: np.ndarray
     residuals: np.ndarray
+    residuals_wls: np.ndarray
     scores: np.ndarray
     hessian: np.ndarray
     tZX: np.ndarray
     tZy: np.ndarray
+    X_wls: np.ndarray
+    Y_wls: np.ndarray
 
 
 @dataclass(frozen=True, slots=True)
@@ -60,25 +68,30 @@ class IvFit:
     beta : np.ndarray
         Coefficient estimates, shape (k,).
     residuals : np.ndarray
-        Second-stage residuals Y - X @ beta, shape (N,).
+        Response-scale second-stage residuals Y - X @ beta, shape (N,).
+    residuals_wls : np.ndarray
+        Solve-scale residuals sqrt(w)(Y - X @ beta), shape (N,).
     scores : np.ndarray
-        Score matrix Z * residuals, shape (N, k_z).
+        Score matrix Z_wls * residuals_wls, shape (N, k_z).
     hessian : np.ndarray
-        Z'Z, shape (k_z, k_z).
+        Z'WZ, shape (k_z, k_z).
     tZX : np.ndarray
-        Z'X, shape (k_z, k).
+        Z'WX, shape (k_z, k).
     tXZ : np.ndarray
-        X'Z, shape (k, k_z).
+        X'WZ, shape (k, k_z).
     tZy : np.ndarray
-        Z'Y, shape (k_z, 1).
+        Z'WY, shape (k_z, 1).
     tZZinv : np.ndarray
-        (Z'Z)^{-1}, shape (k_z, k_z).
+        (Z'WZ)^{-1}, shape (k_z, k_z).
     bread : np.ndarray
         Bread matrix of the sandwich estimator, shape (k, k).
+    X_wls, Z_wls, Y_wls : np.ndarray
+        sqrt(w)-scaled design matrix / instruments / dependent variable.
     """
 
     beta: np.ndarray
     residuals: np.ndarray
+    residuals_wls: np.ndarray
     scores: np.ndarray
     hessian: np.ndarray
     tZX: np.ndarray
@@ -86,37 +99,55 @@ class IvFit:
     tZy: np.ndarray
     tZZinv: np.ndarray
     bread: np.ndarray
+    X_wls: np.ndarray
+    Z_wls: np.ndarray
+    Y_wls: np.ndarray
 
 
 def fit_ols(
     X: np.ndarray,
     Y: np.ndarray,
+    weights: np.ndarray,
     solver: SolverOptions = "np.linalg.solve",
 ) -> OlsFit:
-    """Fit a least-squares model on prepared arrays.
+    """Fit a (weighted) least-squares model on demeaned arrays.
+
+    Weighting happens here — inputs are *not* pre-multiplied by
+    sqrt(weights).
 
     Parameters
     ----------
     X : np.ndarray
-        Design matrix, shape (N, k). Demeaned and WLS-transformed.
+        Design matrix, shape (N, k). Demeaned, collinearity-pruned,
+        unweighted.
     Y : np.ndarray
-        Dependent variable, shape (N, 1). Demeaned and WLS-transformed.
+        Dependent variable, shape (N, 1). Demeaned, unweighted.
+    weights : np.ndarray
+        Weights, shape (N, 1).
     solver : SolverOptions
         Solver passed through to ``solve_ols``.
     """
-    tZX = X.T @ X
-    tZy = X.T @ Y
+    w_sqrt = np.sqrt(weights)
+    X_wls = w_sqrt * X
+    Y_wls = w_sqrt * Y
+
+    tZX = X_wls.T @ X_wls
+    tZy = X_wls.T @ Y_wls
     beta = solve_ols(tZX, tZy, solver)
+    residuals_wls = Y_wls.flatten() - (X_wls @ beta).flatten()
     residuals = Y.flatten() - (X @ beta).flatten()
-    scores = X * residuals[:, None]
+    scores = X_wls * residuals_wls[:, None]
     hessian = tZX.copy()
     return OlsFit(
         beta=beta,
         residuals=residuals,
+        residuals_wls=residuals_wls,
         scores=scores,
         hessian=hessian,
         tZX=tZX,
         tZy=tZy,
+        X_wls=X_wls,
+        Y_wls=Y_wls,
     )
 
 
@@ -124,26 +155,37 @@ def fit_iv(
     X: np.ndarray,
     Z: np.ndarray,
     Y: np.ndarray,
+    weights: np.ndarray,
     solver: SolverOptions = "np.linalg.solve",
 ) -> IvFit:
-    """Fit a 2SLS model on prepared arrays.
+    """Fit a (weighted) 2SLS model on demeaned arrays.
+
+    Weighting happens here — inputs are *not* pre-multiplied by
+    sqrt(weights).
 
     Parameters
     ----------
     X : np.ndarray
         Design matrix (incl. endogenous regressors), shape (N, k).
-        Demeaned and WLS-transformed.
+        Demeaned, collinearity-pruned, unweighted.
     Z : np.ndarray
-        Instrument matrix, shape (N, k_z). Demeaned and WLS-transformed.
+        Instrument matrix, shape (N, k_z). Demeaned, pruned, unweighted.
     Y : np.ndarray
-        Dependent variable, shape (N, 1). Demeaned and WLS-transformed.
+        Dependent variable, shape (N, 1). Demeaned, unweighted.
+    weights : np.ndarray
+        Weights, shape (N, 1).
     solver : SolverOptions
         Solver passed through to ``solve_ols``.
     """
-    tZX = Z.T @ X
-    tXZ = X.T @ Z
-    tZy = Z.T @ Y
-    tZZ = Z.T @ Z
+    w_sqrt = np.sqrt(weights)
+    X_wls = w_sqrt * X
+    Z_wls = w_sqrt * Z
+    Y_wls = w_sqrt * Y
+
+    tZX = Z_wls.T @ X_wls
+    tXZ = X_wls.T @ Z_wls
+    tZy = Z_wls.T @ Y_wls
+    tZZ = Z_wls.T @ Z_wls
     tZZinv = np.linalg.inv(tZZ)
 
     H = tXZ @ tZZinv
@@ -151,8 +193,9 @@ def fit_iv(
     B = H @ tZy
     beta = solve_ols(A, B, solver)
 
+    residuals_wls = Y_wls.flatten() - (X_wls @ beta).flatten()
     residuals = Y.flatten() - (X @ beta).flatten()
-    scores = Z * residuals[:, None]
+    scores = Z_wls * residuals_wls[:, None]
     hessian = tZZ
 
     D = np.linalg.inv(tXZ @ tZZinv @ tZX)
@@ -161,6 +204,7 @@ def fit_iv(
     return IvFit(
         beta=beta,
         residuals=residuals,
+        residuals_wls=residuals_wls,
         scores=scores,
         hessian=hessian,
         tZX=tZX,
@@ -168,6 +212,9 @@ def fit_iv(
         tZy=tZy,
         tZZinv=tZZinv,
         bread=bread,
+        X_wls=X_wls,
+        Z_wls=Z_wls,
+        Y_wls=Y_wls,
     )
 
 

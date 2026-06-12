@@ -41,7 +41,7 @@ def get_design_matrix_and_yhat(
         The index of rows used in X (if needed).
     """
     if newdata is None:
-        y_hat = model._Y_untransformed.to_numpy().flatten() - model.resid()
+        y_hat = model._Y_df.to_numpy().flatten() - model.resid()
         xfml = model._fml.split("|")[0].split("~")[1]
         X = Formula(xfml).get_model_matrix(model._data)
         X_index = X.index

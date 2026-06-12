@@ -69,7 +69,7 @@ class Felogit(Feglm):
 
     def _check_dependent_variable(self) -> None:
         "Check if the dependent variable is binary with values 0 and 1."
-        Y_unique = np.unique(self._Y)
+        Y_unique = np.unique(self._Y_df)
         if len(Y_unique) != 2:
             raise ValueError("The dependent variable must have two unique values.")
         if np.any(~np.isin(Y_unique, [0, 1])):

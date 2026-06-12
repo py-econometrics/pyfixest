@@ -643,7 +643,7 @@ def test_single_fit_fepois(
     py_nobs = mod._N
     py_deviance = mod.deviance
     py_resid = mod.resid()
-    py_irls_weights = mod._irls_weights.flatten()
+    py_irls_weights = mod._weights_irls.flatten()
     py_df_k = int(mod._df_k)
     py_df_t = int(mod._df_t)
     py_n_coefs = mod.coef().values.size
@@ -913,7 +913,7 @@ def test_glm_vs_fixest(N, seed, dropna, fml, inference, family):
         )
 
         # Compare IRLS weights
-        py_irls_weights = fit_py._irls_weights.flatten()
+        py_irls_weights = fit_py._weights_irls.flatten()
         r_irls_weights = fit_r.rx2("irls_weights")
         check_absolute_diff(
             py_irls_weights[0:5],

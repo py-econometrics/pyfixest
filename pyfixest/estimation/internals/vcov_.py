@@ -32,15 +32,19 @@ def _sandwich(
     return bread @ meat @ bread
 
 
-def vcov_iid(residuals: np.ndarray, bread: np.ndarray, N: int) -> np.ndarray:
-    "Unscaled iid vcov: bread * sigma^2."
-    sigma2 = np.sum(residuals.flatten() ** 2) / (N - 1)
+def vcov_iid(residuals_wls: np.ndarray, bread: np.ndarray, N: int) -> np.ndarray:
+    """Unscaled iid vcov: bread * sigma^2.
+
+    ``residuals_wls`` are solve-scale residuals (sqrt(w)-scaled for WLS), so
+    sigma^2 is the weighted mean squared error.
+    """
+    sigma2 = np.sum(residuals_wls.flatten() ** 2) / (N - 1)
     return bread * sigma2
 
 
 def vcov_hetero(
     scores: np.ndarray,
-    X: np.ndarray,
+    X_wls: np.ndarray,
     tZX: np.ndarray,
     weights: np.ndarray,
     weights_type: str,
@@ -50,11 +54,16 @@ def vcov_hetero(
     tXZ: np.ndarray,
     tZZinv: np.ndarray,
 ) -> np.ndarray:
-    "Unscaled heteroskedasticity-robust vcov (HC1/HC2/HC3)."
+    """Unscaled heteroskedasticity-robust vcov (HC1/HC2/HC3).
+
+    ``X_wls`` is the sqrt(w)-scaled design matrix of the final solve;
+    ``weights`` are the weights of that solve (user weights for OLS/IV,
+    IRLS weights for GLMs).
+    """
     if vcov_type_detail in ["hetero", "HC1"]:
         transformed_scores = scores
     elif vcov_type_detail in ["HC2", "HC3"]:
-        leverage = np.sum(X * (X @ np.linalg.inv(tZX)), axis=1)
+        leverage = np.sum(X_wls * (X_wls @ np.linalg.inv(tZX)), axis=1)
         if weights_type == "fweights":
             leverage = leverage / weights.flatten()
         transformed_scores = (
@@ -167,7 +176,10 @@ def vcov_crv3_fast(
     clustid: np.ndarray,
     cluster_col: np.ndarray,
 ) -> np.ndarray:
-    "Unscaled CRV3 vcov via the closed-form cluster jackknife (no fixed effects)."
+    """Unscaled CRV3 vcov via the closed-form cluster jackknife (no fixed effects).
+
+    ``X``/``Y`` are the arrays of the final solve (sqrt(w)-scaled for WLS).
+    """
     k = X.shape[1]
     beta_jack = np.zeros((len(clustid), k))
 

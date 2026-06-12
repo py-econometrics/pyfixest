@@ -24,7 +24,7 @@ class ResultAccessorMixin:
     _u_hat: np.ndarray
     _weights: np.ndarray
     _Y: np.ndarray
-    _Y_untransformed: pd.Series
+    _Y_df: pd.Series
     _coefnames: list[str]
     _method: str
     _drop_intercept: bool
@@ -116,8 +116,11 @@ class ResultAccessorMixin:
         - adj_r2_within (float): Adjusted R-squared of the regression model,
         computed on demeaned dependent variable.
         """
-        Y_within = self._Y
-        Y = self._Y_untransformed.to_numpy()
+        Y_within = self._Y_wls
+        Y = self._Y_df.to_numpy()
+        # weights of the final solve: user weights for OLS/IV, IRLS weights
+        # for GLM models
+        weights = self._solve_weights
 
         has_intercept = not self._drop_intercept
 
@@ -128,8 +131,8 @@ class ResultAccessorMixin:
         else:
             adj_factor = (self._N - has_intercept) / (self._N - self._k)
 
-        ssu = np.sum(self._u_hat**2)
-        ssy = np.sum(self._weights * (Y - np.average(Y, weights=self._weights)) ** 2)
+        ssu = np.sum(self._u_hat_wls**2)
+        ssy = np.sum(weights * (Y - np.average(Y, weights=weights)) ** 2)
         self._rmse = np.sqrt(ssu / self._N)
         self._r2 = 1 - (ssu / ssy)
         self._adj_r2 = 1 - (ssu / ssy) * adj_factor
@@ -358,4 +361,4 @@ class ResultAccessorMixin:
         np.ndarray
             A np.ndarray with the residuals of the estimated regression model.
         """
-        return self._u_hat.flatten() / np.sqrt(self._weights.flatten())
+        return self._u_hat.flatten()

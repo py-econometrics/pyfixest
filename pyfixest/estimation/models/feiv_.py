@@ -57,8 +57,10 @@ class Feiv(Feols):
 
     Attributes
     ----------
-    _Z : np.ndarray
-        Processed instruments after handling multicollinearity.
+    _Z_demeaned : np.ndarray
+        Demeaned, collinearity-pruned instruments (unweighted).
+    _Z_wls : np.ndarray
+        sqrt(weights)-scaled demeaned instruments of the final solve.
     _weights_type_feiv : str
         Type of the weights variable defined in Feiv class.
         Either "aweights" for analytic weights or "fweights"
@@ -187,46 +189,34 @@ class Feiv(Feols):
         self._supports_cluster_causal_variance = False
         self._support_decomposition = False
 
-    def wls_transform(self) -> None:
-        "Transform variables for WLS estimation."
-        super().wls_transform()
-        if self._has_weights:
-            w = np.sqrt(self._weights)
-            self._endogvar = self._endogvar * w
-            self._Z = self._Z * w
-
-    def to_array(self) -> None:
-        "Transform estimation DataFrames to arrays."
-        super().to_array()
-        self._Z = self._Zd.to_numpy()
-        self._endogvar = self._endogvar.to_numpy()
-
     def demean(self) -> None:
         "Demean instruments and endogeneous variable."
         super().demean()
         if self._has_fixef:
-            self._endogvard, self._Zd, _ = self._demean_cache.demean_yx(
-                self._endogvar,
-                self._Z,
+            endogvard, Zd, _ = self._demean_cache.demean_yx(
+                self._endogvar_df,
+                self._Z_df,
                 self._fe,
                 self._weights.flatten(),
                 self._na_index,
                 self._demeaner,
             )
         else:
-            self._endogvard = self._endogvar
-            self._Zd = self._Z
+            endogvard, Zd = self._endogvar_df, self._Z_df
+
+        self._endogvar_demeaned = endogvard.to_numpy()
+        self._Z_demeaned = Zd.to_numpy()
 
     def drop_multicol_vars(self) -> None:
         "Drop multicollinear variables in matrix of instruments Z."
         super().drop_multicol_vars()
         (
-            self._Z,
+            self._Z_demeaned,
             self._coefnames_z,
             self._collin_vars_z,
             self._collin_index_z,
         ) = _drop_multicollinear_variables(
-            self._Z,
+            self._Z_demeaned,
             self._coefnames_z,
             self._collin_tol,
         )
@@ -234,19 +224,27 @@ class Feiv(Feols):
     def get_fit(self) -> None:
         """Fit a IV model using a 2SLS estimator."""
         self.demean()
-        self.to_array()
         self.drop_multicol_vars()
-        self.wls_transform()
 
-        # Second stage (2SLS) on prepared arrays
-        fit = fit_iv(X=self._X, Z=self._Z, Y=self._Y, solver=self._solver)
+        # Second stage (2SLS); weighting happens inside fit_iv
+        fit = fit_iv(
+            X=self._X_demeaned,
+            Z=self._Z_demeaned,
+            Y=self._Y_demeaned,
+            weights=self._weights,
+            solver=self._solver,
+        )
 
+        self._X_wls = fit.X_wls
+        self._Z_wls = fit.Z_wls
+        self._Y_wls = fit.Y_wls
         self._tZX = fit.tZX
         self._tXZ = fit.tXZ
         self._tZy = fit.tZy
         self._tZZinv = fit.tZZinv
         self._beta_hat = fit.beta
         self._u_hat = fit.residuals
+        self._u_hat_wls = fit.residuals_wls
         self._get_predictors()
         self._scores = fit.scores
         self._hessian = fit.hessian
@@ -299,11 +297,11 @@ class Feiv(Feols):
 
             # Use fitted values from the first stage
             self._X_hat = (
-                model1._X @ model1._beta_hat
-            )  # note that model1._X is demeaned
+                model1._X_wls @ model1._beta_hat
+            )  # note that model1._X_wls is demeaned (and sqrt(w)-scaled)
 
-            # Residuals from the first stage
-            self._v_hat = model1._u_hat
+            # Residuals from the first stage (solve scale, as before)
+            self._v_hat = model1._u_hat_wls
 
             # Store 1st stage model for further use
             self._model_1st_stage = model1

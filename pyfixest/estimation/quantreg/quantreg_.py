@@ -144,11 +144,10 @@ class Quantreg(Feols):
 
     def to_array(self):
         "Turn estimation DataFrames to np arrays."
-        self._Y, self._X, self._Z = (
-            self._Y.to_numpy(),
-            self._X.to_numpy(),
-            self._X.to_numpy(),
-        )
+        # quantreg does not support fixed effects, so the 'demeaned' stage
+        # is simply the raw model matrices as arrays
+        self._Y_demeaned = self._Y_df.to_numpy()
+        self._X_demeaned = self._X_df.to_numpy()
 
     def prepare_model_matrix(self):
         "Prepare model inputs for estimation."
@@ -164,7 +163,7 @@ class Quantreg(Feols):
         self.to_array()
         self.drop_multicol_vars()
 
-        res = self._fit(X=self._X, Y=self._Y)
+        res = self._fit(X=self._X_demeaned, Y=self._Y_demeaned)
 
         self._beta_hat = res[0]
         self._has_converged = res[1]
@@ -175,11 +174,15 @@ class Quantreg(Feols):
         self._w_final = res[6]
         self._y_final = res[7]
 
-        self._Y_hat_link = self._X @ self._beta_hat
+        self._Y_hat_link = self._X_demeaned @ self._beta_hat
         self._Y_hat_response = self._Y_hat_link
 
-        self._u_hat = self._Y.flatten() - self._X @ self._beta_hat
-        self._hessian = self._X.T @ self._X
+        self._u_hat = self._Y_demeaned.flatten() - self._X_demeaned @ self._beta_hat
+        # quantile regression is unweighted: solve scale == response scale
+        self._u_hat_wls = self._u_hat
+        self._Y_wls = self._Y_demeaned
+        self._X_wls = self._X_demeaned
+        self._hessian = self._X_demeaned.T @ self._X_demeaned
         self._bread = np.linalg.inv(self._hessian)
 
     def fit_qreg_fn(
@@ -361,8 +364,8 @@ class Quantreg(Feols):
         "Implement the kernel-based sandwich estimator from Powell (1991)."
         q = self._quantile
         N = self._N
-        X = self._X
-        Y = self._Y
+        X = self._X_demeaned
+        Y = self._Y_demeaned
         u_hat = self._u_hat
 
         h = get_hall_sheather_bandwidth(q=q, N=N)
@@ -384,8 +387,8 @@ class Quantreg(Feols):
         "Implement the kernel-based sandwich estimator from Powell (1991) for heteroskedasticity robust inference."
         q = self._quantile
         N = self._N
-        X = self._X
-        Y = self._Y
+        X = self._X_demeaned
+        Y = self._Y_demeaned
         u_hat = self._u_hat
 
         h = get_hall_sheather_bandwidth(q=q, N=N)
@@ -413,19 +416,19 @@ class Quantreg(Feols):
         """
         q = self._quantile
         N = self._N
-        X = self._X
+        X = self._X_demeaned
 
         h = get_hall_sheather_bandwidth(q=q, N=N)
 
         beta_hat_plus = self._fit(
-            X=self._X,
-            Y=self._Y,
+            X=self._X_demeaned,
+            Y=self._Y_demeaned,
             q=self._quantile + h,
             beta_init=self._beta_hat if self._method == "pfn" else None,
         )[0]
         beta_hat_minus = self._fit(
-            X=self._X,
-            Y=self._Y,
+            X=self._X_demeaned,
+            Y=self._Y_demeaned,
             q=self._quantile - h,
             beta_init=self._beta_hat if self._method == "pfn" else None,
         )[0]
@@ -456,7 +459,7 @@ class Quantreg(Feols):
                 "Multiway clustering is not (yet) supported for quantile regression."
             )
 
-        X = self._X
+        X = self._X_demeaned
         N, _ = X.shape
         q = self._quantile
         u_hat = self._u_hat

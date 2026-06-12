@@ -91,8 +91,8 @@ class QuantregMulti:
         q_median = q[q_median_idx]
 
         # data fixed across qregs, just need take from first one
-        X = self.all_quantregs[q[q_median_idx]]._X
-        Y = self.all_quantregs[q[q_median_idx]]._Y
+        X = self.all_quantregs[q[q_median_idx]]._X_demeaned
+        Y = self.all_quantregs[q[q_median_idx]]._Y_demeaned
         hessian = X.T @ X
         N = self.all_quantregs[q[q_median_idx]]._N
         rng = np.random.default_rng(self.all_quantregs[q[q_median_idx]]._seed)
@@ -164,8 +164,8 @@ class QuantregMulti:
 
                 self.all_quantregs[q[i]]._beta_hat = beta_new
                 self.all_quantregs[q[i]]._u_hat = (
-                    self.all_quantregs[q[i]]._Y.flatten()
-                    - self.all_quantregs[q[i]]._X @ beta_new
+                    self.all_quantregs[q[i]]._Y_demeaned.flatten()
+                    - self.all_quantregs[q[i]]._X_demeaned @ beta_new
                 )
                 self.all_quantregs[q[i]]._hessian = hessian
 
@@ -210,16 +210,8 @@ class QuantregMulti:
         "Prepare model matrix. Placeholder, only needed due to structure of execution of FixestMulti class."
         pass
 
-    def to_array(self):
-        "Covert to array. Placeholder, only needed due to structure of execution of FixestMulti class."
-        pass
-
     def drop_multicol_vars(self):
         "Drop multicollinear variables. Placeholder, only needed due to structure of execution of FixestMulti class."
-        pass
-
-    def wls_transform(self):
-        "Apply the WLS transform. Placeholder, only needed due to structure of execution of FixestMulti class."
         pass
 
     def demean(self):
@@ -234,7 +226,7 @@ class QuantregMulti:
     def _clear_attributes(self):
         "Clear all large non-necessary attributes to free memory."
         [QuantReg._clear_attributes() for QuantReg in self.all_quantregs.values()]
-        del_attributes = ["_X", "_Y"]
+        del_attributes = ["_X_demeaned", "_Y_demeaned"]
         for QuantReg in self.all_quantregs.values():
             for attr in del_attributes:
                 if hasattr(QuantReg, attr):

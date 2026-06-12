@@ -159,18 +159,18 @@ class FeolsCompressed(Feols):
         super().prepare_model_matrix()
 
         # now run compression algos
-        depvars = self._Y.columns.tolist()
-        covars = self._X.columns.tolist()
+        depvars = self._Y_df.columns.tolist()
+        covars = self._X_df.columns.tolist()
 
         if polars_installed:
-            Y_nw = nw.from_native(pl.from_pandas(self._Y))
-            X_nw = nw.from_native(pl.from_pandas(self._X))
+            Y_nw = nw.from_native(pl.from_pandas(self._Y_df))
+            X_nw = nw.from_native(pl.from_pandas(self._X_df))
         else:
             logging.info(
                 "Polars is not installed. Falling back to pandas. You can likely speed up the compression drastically by installing polars."
             )
-            Y_nw = nw.from_native(self._Y)
-            X_nw = nw.from_native(self._X)
+            Y_nw = nw.from_native(self._Y_df)
+            X_nw = nw.from_native(self._X_df)
 
         fevars = []
         if self._has_fixef:
@@ -223,12 +223,10 @@ class FeolsCompressed(Feols):
         self._depvar = depvar_string
         self._fml = self._fml.replace(self._depvar, f"mean_{self._depvar}")
 
-        # overwrite Y, X, _data
+        # replace Y, X, _data with their compressed counterparts
         self._data_long = data_long_mundlak if self._use_mundlak else data_long
-        self._Yd = compressed_dict.Y.to_pandas()
-        # store compressed dependent variable before demeaning
-        self._Y_untransformed = self._Yd.copy()
-        self._Xd = compressed_dict.X.to_pandas()
+        self._Y_df = compressed_dict.Y.to_pandas()
+        self._X_df = compressed_dict.X.to_pandas()
         self._fe = compressed_dict.fe.to_pandas()
         # covars = X.columns
         self._compression_count = compressed_dict.compression_count.to_pandas()
@@ -239,7 +237,8 @@ class FeolsCompressed(Feols):
 
     def demean(self):
         "Compression 'handles demeaning' via Mundlak transform."
-        pass
+        self._Y_demeaned = self._Y_df.to_numpy()
+        self._X_demeaned = self._X_df.to_numpy()
 
     def vcov(
         self,
@@ -271,7 +270,7 @@ class FeolsCompressed(Feols):
         weights = self._compression_count.to_numpy()
         yprime = self._Yprime.to_numpy()
         yprimeprime = self._Yprimeprime.to_numpy()
-        X = self._X / np.sqrt(weights)
+        X = self._X_demeaned
         yhat = (X @ self._beta_hat).reshape(-1, 1)
         rss_g = (yhat**2) * weights - 2 * yhat * yprime + yprimeprime
         sigma2 = np.sum(rss_g) / (self._N - 1)
@@ -287,7 +286,7 @@ class FeolsCompressed(Feols):
         yprime = self._Yprime.to_numpy()
         yprimeprime = self._Yprimeprime.to_numpy()
         weights = self._compression_count.to_numpy()
-        X = self._X / np.sqrt(weights)
+        X = self._X_demeaned
         yhat = (X @ self._beta_hat).reshape(-1, 1)
         rss_g = (yhat**2) * weights - 2 * yhat * yprime + yprimeprime
 

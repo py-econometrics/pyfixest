@@ -107,8 +107,8 @@ class Feglm(Feols, ABC):
             and self.separation_check  # not an empty list
         ):
             na_separation = _check_for_separation(
-                Y=self._Y,
-                X=self._X,
+                Y=self._Y_df,
+                X=self._X_df,
                 fe=self._fe,
                 fml=self._fml,
                 data=self._data,
@@ -116,26 +116,24 @@ class Feglm(Feols, ABC):
             )
 
         if na_separation:
-            self._Y.drop(na_separation, axis=0, inplace=True)
-            self._X.drop(na_separation, axis=0, inplace=True)
+            self._Y_df.drop(na_separation, axis=0, inplace=True)
+            self._X_df.drop(na_separation, axis=0, inplace=True)
             self._fe.drop(na_separation, axis=0, inplace=True)
             self._data.drop(na_separation, axis=0, inplace=True)
-            self._N = self._Y.shape[0]
+            self._N = self._Y_df.shape[0]
 
             self.na_index = np.concatenate([self.na_index, np.array(na_separation)])
             self.n_separation_na = len(na_separation)
 
-    def to_array(self):
-        "Turn estimation DataFrames to np arrays."
-        self._Y, self._X, self._Z = (
-            self._Y.to_numpy(),
-            self._X.to_numpy(),
-            self._X.to_numpy(),
-        )
+    def to_array(self) -> tuple[np.ndarray, np.ndarray]:
+        "Return dependent variable and design matrix as np arrays."
+        Y_arr = self._Y_df.to_numpy()
+        X_arr = self._X_df.to_numpy()
         if self._fe is not None:
             self._fe = self._fe.to_numpy()
             if self._fe.ndim == 1:
                 self._fe = self._fe.reshape((self._N, 1))
+        return Y_arr, X_arr
 
     def get_fit(self):
         """
@@ -146,7 +144,7 @@ class Feglm(Feols, ABC):
         - Correia, Guimaraes, Zylkin (2019): https://journals.sagepub.com/doi/pdf/10.1177/1536867X20909691
         - Stamann (2018): https://arxiv.org/pdf/1707.01815
         """
-        self.to_array()
+        Y_arr, X_arr = self.to_array()
 
         def _residualize(
             v: np.ndarray, X: np.ndarray, weights: np.ndarray, tol: float
@@ -154,8 +152,8 @@ class Feglm(Feols, ABC):
             return self.residualize(v=v, X=X, flist=self._fe, weights=weights, tol=tol)
 
         glm_fit = fit_iwls_glm(
-            Y=self._Y,
-            X=self._X,
+            Y=Y_arr,
+            X=X_arr,
             family=self,
             method=self._method,
             coefnames=self._coefnames,
@@ -172,9 +170,9 @@ class Feglm(Feols, ABC):
         self._coefnames = glm_fit.coefnames
         self._collin_vars = glm_fit.collin_vars
         self._collin_index = glm_fit.collin_index
-        self._X = glm_fit.X
-        self._X_is_empty = self._X.shape[1] == 0
-        self._k = self._X.shape[1]
+        X_arr = glm_fit.X
+        self._X_is_empty = X_arr.shape[1] == 0
+        self._k = X_arr.shape[1]
         self.convergence = glm_fit.convergence
 
         eta = glm_fit.eta
@@ -185,13 +183,10 @@ class Feglm(Feols, ABC):
         self._Y_hat_response = mu.flatten()
         self._Y_hat_link = eta.flatten()
 
-        # Update weights for inference
-        self._weights = W
-        self._irls_weights = W
-        if self._weights.ndim == 1:
-            self._weights = self._weights.reshape((self._N, 1))
+        # Final IRLS weights for inference; user weights stay untouched
+        self._weights_irls = W.reshape((self._N, 1)) if W.ndim == 1 else W
 
-        self._u_hat_response = (self._Y.flatten() - mu).flatten()
+        self._u_hat_response = (Y_arr.flatten() - mu).flatten()
         e_final = glm_fit.z_tilde - glm_fit.X_tilde @ self._beta_hat
         self._u_hat_working = (
             self._u_hat_response
@@ -199,21 +194,20 @@ class Feglm(Feols, ABC):
             else e_final.flatten()
         )
 
-        self._scores_response = self._u_hat_response[:, None] * self._X
-        self._scores_working = self._u_hat_working[:, None] * self._X
+        self._scores_response = self._u_hat_response[:, None] * X_arr
+        self._scores_working = self._u_hat_working[:, None] * X_arr
 
         sqrt_W_vec = glm_fit.sqrt_W.flatten()
         X_wls = sqrt_W_vec[:, None] * glm_fit.X_tilde
         z_wls = sqrt_W_vec * glm_fit.z_tilde
 
-        self._u_hat = (z_wls - X_wls @ self._beta_hat).flatten()
-        self._Y = z_wls
-        self._X = X_wls
-        self._Z = self._X
+        self._u_hat_wls = (z_wls - X_wls @ self._beta_hat).flatten()
+        self._Y_wls = z_wls
+        self._X_wls = X_wls
 
-        self._scores = self._u_hat[:, None] * self._X
+        self._scores = self._u_hat_wls[:, None] * self._X_wls
 
-        self._tZX = self._Z.T @ self._X
+        self._tZX = self._X_wls.T @ self._X_wls
         self._tZXinv = np.linalg.inv(self._tZX)
         self._Xbeta = eta
 
@@ -222,6 +216,17 @@ class Feglm(Feols, ABC):
 
         if self.convergence:
             self._convergence = True
+
+    def resid(self) -> np.ndarray:
+        """
+        Return working residuals from the GLM model.
+
+        Returns
+        -------
+        np.ndarray
+            A flat array with the working residuals of the GLM model.
+        """
+        return self._u_hat_wls.flatten() / np.sqrt(self._weights_irls.flatten())
 
     def _vcov_iid(self):
         return self._bread
