@@ -7,6 +7,7 @@ from typing import Any, Literal
 import numpy as np
 import pandas as pd
 
+from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.fit_ import fit_iv
@@ -151,6 +152,7 @@ class Feiv(Feols):
             "scipy.sparse.linalg.lsqr",
         ] = "scipy.linalg.solve",
         demeaner: AnyDemeaner | None = None,
+        preconditioner_lookup: dict[frozenset[int], Preconditioner] | None = None,
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
@@ -176,6 +178,7 @@ class Feiv(Feols):
             sample_split_value=sample_split_value,
             context=context,
             demeaner=demeaner,
+            preconditioner_lookup=preconditioner_lookup,
         )
 
         self._is_iv = True
@@ -272,7 +275,7 @@ class Feiv(Feols):
             vcov_detail = self._vcov_type_detail
 
         demeaner = self._demeaner
-        cached_pre = self._demean_cache.preconditioner
+        cached_pre = self._demean_cache.preconditioner_lookup.get(self._na_index)
         if isinstance(demeaner, LsmrDemeaner) and cached_pre is not None:
             demeaner = replace(demeaner, preconditioner=cached_pre)
 

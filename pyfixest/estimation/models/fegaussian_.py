@@ -4,6 +4,7 @@ from typing import Any, Literal
 import numpy as np
 import pandas as pd
 
+from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.models.feglm_ import Feglm
@@ -39,6 +40,7 @@ class Fegaussian(Feglm):
         separation_check: list[str] | None = None,
         context: int | Mapping[str, Any] = 0,
         demeaner: AnyDemeaner | None = None,
+        preconditioner_lookup: dict[frozenset[int], Preconditioner] | None = None,
         accelerate: bool = True,
     ):
         super().__init__(
@@ -62,6 +64,7 @@ class Fegaussian(Feglm):
             separation_check=separation_check,
             context=context,
             demeaner=demeaner,
+            preconditioner_lookup=preconditioner_lookup,
             accelerate=accelerate,
         )
 

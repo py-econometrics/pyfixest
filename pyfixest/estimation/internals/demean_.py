@@ -8,63 +8,64 @@ from pyfixest.demeaners import AnyDemeaner
 class DemeanCache:
     """Model-side helper around the demeaner strategies, with two caches.
 
-    The two cached objects have *different lifetimes*:
+    Both caches are keyed by ``na_index`` (the frozenset of dropped rows)
+    and shared across all sibling models of a ``FixestMulti`` formula
+    block. The block holds the FE structure and weights fixed, so models
+    with the same ``na_index`` see the same within operator and can reuse:
 
-    - `shared_lookup` is reused *across models*. It is a dictionary
-      keyed by `na_index` (the set of dropped rows) whose values are the
-      already-demeaned columns for that row sample. `FixestMulti` builds
-      it once per formula block and passes the same dict to every model in
-      the block (e.g. stepwise `sw`/`csw` siblings), so a column
-      demeaned for one model is picked up by any later model that has the
-      same `na_index`.
-    - `preconditioner` is reused *within a single model*. It is a
-      single slot (not a dict): the first within-solve stores its
-      preconditioner here, and every subsequent solve on the same model
-      reuses it. This matters for IWLS (Poisson, GLM), where `demean` is
-      called once per iteration on changing working data but always against
-      the same fixed-effect design. It is scoped per model because there is
-      no key — a fresh `DemeanCache` (or at least a fresh
-      `preconditioner` slot) is needed whenever the FE design or row
-      sample changes.
+    - ``demeaned_lookup``: already-demeaned columns, reused at the column
+      level across siblings.
+    - ``preconditioner_lookup``: the LSMR within-preconditioner from the
+      first solve at each ``na_index``, reused as a warm start by every
+      later solve at the same ``na_index`` (including IWLS iterations and
+      sibling IWLS models). Working weights drift across iterations, but
+      preconditioner reuse is still safe because it only affects
+      convergence speed, not correctness.
 
-    Model classes hold one `DemeanCache` and call :meth:`demean_array`
-    (IWLS paths) or :meth:`demean_yx` (OLS/IV paths) instead of dispatching
-    to the demeaner backends directly.
+    Model classes call :meth:`demean_array` (IWLS) or :meth:`demean_yx`
+    (OLS/IV) instead of dispatching to the demeaner backends directly.
     """
 
     def __init__(
-        self, shared_lookup: dict[frozenset[int], pd.DataFrame] | None = None
+        self,
+        demeaned_lookup: dict[frozenset[int], pd.DataFrame] | None = None,
+        preconditioner_lookup: dict[frozenset[int], Preconditioner] | None = None,
     ) -> None:
-        self.shared_lookup: dict[frozenset[int], pd.DataFrame] = (
-            {} if shared_lookup is None else shared_lookup
+        self.demeaned_lookup: dict[frozenset[int], pd.DataFrame] = (
+            {} if demeaned_lookup is None else demeaned_lookup
         )
-        self.preconditioner: Preconditioner | None = None
+        self.preconditioner_lookup: dict[frozenset[int], Preconditioner] = (
+            {} if preconditioner_lookup is None else preconditioner_lookup
+        )
 
-    def seed_preconditioner(self, used: Preconditioner | None) -> None:
-        """Store only the first preconditioner returned by a demean solve.
+    def seed_preconditioner(
+        self, na_index: frozenset[int], used: Preconditioner | None
+    ) -> None:
+        """Store the first preconditioner observed for ``na_index``.
 
         For IWLS (Poisson, GLM) the demeaner is called once per iteration
         and returns a preconditioner each time; we keep the one from the
-        first call and ignore the rest. ``used`` is ``None`` when no
+        first call and ignore later ones. ``used`` is ``None`` when no
         preconditioner participated in the solve (MAP fallback,
         ``preconditioner='off'``, non-within backend), in which case there
         is nothing to store.
         """
-        if self.preconditioner is None and used is not None:
-            self.preconditioner = used
+        if used is not None and na_index not in self.preconditioner_lookup:
+            self.preconditioner_lookup[na_index] = used
 
     def demean_array(
         self,
         x: np.ndarray,
         flist: np.ndarray,
         weights: np.ndarray | None,
+        na_index: frozenset[int],
         demeaner: AnyDemeaner,
     ) -> np.ndarray:
-        """Demean ``x``, reusing and seeding the cached preconditioner.
+        """Demean ``x``, reusing and seeding the cached preconditioner for ``na_index``.
 
         Raises ``ValueError`` if the demeaning algorithm does not converge.
         """
-        result, _ = self._run_or_raise(x, flist, weights, demeaner)
+        result, _ = self._run_or_raise(x, flist, weights, na_index, demeaner)
         return result
 
     def _run_or_raise(
@@ -72,12 +73,14 @@ class DemeanCache:
         x: np.ndarray,
         flist: np.ndarray,
         weights: np.ndarray | None,
+        na_index: frozenset[int],
         demeaner: AnyDemeaner,
     ) -> tuple[np.ndarray, Preconditioner | None]:
+        cached = self.preconditioner_lookup.get(na_index)
         result, success, used = demeaner.demean(
-            x, flist, weights, cached_preconditioner=self.preconditioner
+            x, flist, weights, cached_preconditioner=cached
         )
-        self.seed_preconditioner(used)
+        self.seed_preconditioner(na_index, used)
         if not success:
             raise ValueError(
                 f"Demeaning failed after {demeaner.fixef_maxiter} iterations."
@@ -96,7 +99,7 @@ class DemeanCache:
         """Demean a regression model: check cache, demean what's missing, update cache.
 
         Prior to demeaning, checks whether some of the variables have already
-        been demeaned and reuses values from ``self.shared_lookup`` if
+        been demeaned and reuses values from ``self.demeaned_lookup`` if
         possible. If the model has no fixed effects, the data is returned
         undemeaned.
 
@@ -120,9 +123,11 @@ class DemeanCache:
             return YX_demeaned[Y.columns], YX_demeaned[X.columns], None
 
         fe_array = fe.to_numpy()
-        cached = self.shared_lookup.get(na_index)
+        cached = self.demeaned_lookup.get(na_index)
         if cached is None:
-            arr, used = self._run_or_raise(YX_array, fe_array, weights, demeaner)
+            arr, used = self._run_or_raise(
+                YX_array, fe_array, weights, na_index, demeaner
+            )
             YX_demeaned = pd.DataFrame(arr, columns=yx_names)
         else:
             # demean only the not-yet-demeaned columns
@@ -131,7 +136,7 @@ class DemeanCache:
                 yx_names_list = list(yx_names)
                 new_index = [yx_names_list.index(name) for name in new_names]
                 arr, used = self._run_or_raise(
-                    YX_array[:, new_index], fe_array, weights, demeaner
+                    YX_array[:, new_index], fe_array, weights, na_index, demeaner
                 )
                 YX_demeaned = pd.DataFrame(
                     np.concatenate([cached, arr], axis=1),
@@ -141,5 +146,5 @@ class DemeanCache:
                 # all variables already demeaned
                 YX_demeaned = cached[yx_names]
 
-        self.shared_lookup[na_index] = YX_demeaned
+        self.demeaned_lookup[na_index] = YX_demeaned
         return YX_demeaned[Y.columns], YX_demeaned[X.columns], used

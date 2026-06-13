@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 from scipy.special import gammaln
 
+from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner
 from pyfixest.errors import (
     NonConvergenceError,
@@ -99,6 +100,7 @@ class Fepois(Feols):
         maxiter: int,
         solver: SolverOptions = "np.linalg.solve",
         demeaner: AnyDemeaner | None = None,
+        preconditioner_lookup: dict[frozenset[int], Preconditioner] | None = None,
         context: int | Mapping[str, Any] = 0,
         store_data: bool = True,
         copy_data: bool = True,
@@ -126,6 +128,7 @@ class Fepois(Feols):
             sample_split_value=sample_split_value,
             context=context,
             demeaner=demeaner,
+            preconditioner_lookup=preconditioner_lookup,
         )
 
         # input checks
@@ -318,6 +321,7 @@ class Fepois(Feols):
                     x=ZX,
                     flist=self._fe,
                     weights=combined_weights.flatten(),
+                    na_index=self._na_index,
                     demeaner=self._demeaner,
                 )
 

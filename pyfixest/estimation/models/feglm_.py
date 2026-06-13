@@ -7,6 +7,7 @@ from typing import Any, Literal
 import numpy as np
 import pandas as pd
 
+from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner
 from pyfixest.errors import (
     NonConvergenceError,
@@ -46,6 +47,7 @@ class Feglm(Feols, ABC):
             "scipy.sparse.linalg.lsqr",
         ],
         demeaner: AnyDemeaner | None = None,
+        preconditioner_lookup: dict[frozenset[int], Preconditioner] | None = None,
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
@@ -73,6 +75,7 @@ class Feglm(Feols, ABC):
             sample_split_value=sample_split_value,
             context=context,
             demeaner=demeaner,
+            preconditioner_lookup=preconditioner_lookup,
         )
 
         _glm_input_checks(
@@ -407,6 +410,7 @@ class Feglm(Feols, ABC):
             x=np.c_[v, X],
             flist=flist,
             weights=weights.flatten(),
+            na_index=self._na_index,
             demeaner=effective_demeaner,
         )
         return vX_tilde[:, 0], vX_tilde[:, 1:]

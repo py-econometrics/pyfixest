@@ -260,6 +260,7 @@ class Feols(ResultAccessorMixin):
         lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
         solver: SolverOptions = "np.linalg.solve",
         demeaner: AnyDemeaner | None = None,
+        preconditioner_lookup: dict[frozenset[int], Preconditioner] | None = None,
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
@@ -307,7 +308,7 @@ class Feols(ResultAccessorMixin):
         else:
             self._fixef_tol = demeaner.fixef_tol
         self._fixef_maxiter = demeaner.fixef_maxiter
-        self._demean_cache = DemeanCache(lookup_demeaned_data)
+        self._demean_cache = DemeanCache(lookup_demeaned_data, preconditioner_lookup)
         self._store_data = store_data
         self._copy_data = copy_data
         self._lean = lean
@@ -508,12 +509,12 @@ class Feols(ResultAccessorMixin):
 
         ``None`` when no preconditioner participated in the solve —
         ``preconditioner='off'``, single-FE designs (MAP fallback), or any
-        non-within backend. Otherwise the instance built on the first solve.
-        Pass it back via
+        non-within backend. Otherwise the instance built on the first solve
+        for this model's row sample. Pass it back via
         ``LsmrDemeaner(backend='within', preconditioner=...)`` to skip the
         setup phase on a later fit over the same design.
         """
-        return self._demean_cache.preconditioner
+        return self._demean_cache.preconditioner_lookup.get(self._na_index)
 
     def to_array(self):
         "Convert estimation data frames to np arrays."
