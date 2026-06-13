@@ -14,9 +14,7 @@ from scipy.sparse.linalg import lsqr
 from scipy.stats import chi2, f, t
 
 from pyfixest.core.collinear import find_collinear_variables
-from pyfixest.core.crv1 import crv1_meat_loop
 from pyfixest.core.demean import Preconditioner
-from pyfixest.core.nested_fixed_effects import count_fixef_fully_nested_all
 from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner, MapDemeaner
 from pyfixest.errors import VcovTypeNotSupportedError
 from pyfixest.estimation.api.utils import _ALL_SAMPLE, _AllSampleSentinel
@@ -30,16 +28,17 @@ from pyfixest.estimation.internals.literals import (
     SolverOptions,
     _validate_literal_argument,
 )
+from pyfixest.estimation.internals.vcov_ import (
+    vcov_crv1,
+    vcov_crv3_fast,
+    vcov_hac,
+    vcov_hetero,
+    vcov_iid_ols,
+)
 from pyfixest.estimation.internals.vcov_utils import (
-    _check_cluster_df,
     _compute_bread,
-    _count_G_for_ssc_correction,
-    _dk_meat_panel,
-    _get_cluster_df,
-    _get_panel_idx,
-    _nw_meat_panel,
-    _nw_meat_time,
-    _prepare_twoway_clustering,
+    prepare_cluster_state,
+    run_crv_loop,
 )
 from pyfixest.estimation.models._result_accessor_mixin import ResultAccessorMixin
 from pyfixest.estimation.post_estimation.decomposition import (
@@ -641,238 +640,118 @@ class Feols(ResultAccessorMixin):
             self._is_iv, self._tXZ, self._tZZinv, self._tZX, self._hessian
         )
 
-        # HAC attributes
-        self._lag = vcov_kwargs.get("lag", None) if vcov_kwargs is not None else None
-        self._time_id = (
-            vcov_kwargs.get("time_id", None) if vcov_kwargs is not None else None
-        )
-        self._panel_id = (
-            vcov_kwargs.get("panel_id", None) if vcov_kwargs is not None else None
-        )
-        self._is_sorted = (
-            vcov_kwargs.get("is_sorted", None) if vcov_kwargs is not None else None
-        )
-
-        ssc_kwargs = {
-            "ssc_dict": self._ssc_dict,
-            "N": self._N,
-            "k": self._k,
-            "k_fe": self._k_fe.sum() if self._has_fixef else 0,
-            "n_fe": self._n_fe,
-        }
-
         if self._vcov_type == "iid":
-            ssc_kwargs_iid = {
-                "k_fe_nested": 0,
-                "n_fe_fully_nested": 0,
-                "vcov_sign": 1,
-                "vcov_type": "iid",
-                "G": 1,
-            }
-
-            all_kwargs = {**ssc_kwargs, **ssc_kwargs_iid}
-            self._ssc, self._df_k, self._df_t = get_ssc(**all_kwargs)
-
+            self._ssc, self._df_k, self._df_t = get_ssc(
+                **self._make_ssc_kwargs(vcov_type="iid", G=1)
+            )
             self._vcov = self._ssc * self._vcov_iid()
 
         elif self._vcov_type == "hetero":
-            # this is what fixest does internally: see fixest:::vcov_hetero_internal:
-            # adj = ifelse(ssc$cluster.adj, n/(n - 1), 1)
-
-            ssc_kwargs_hetero = {
-                "k_fe_nested": 0,
-                "n_fe_fully_nested": 0,
-                "vcov_sign": 1,
-                "vcov_type": "hetero",
-                "G": self._N,
-            }
-
-            all_kwargs = {**ssc_kwargs, **ssc_kwargs_hetero}
-            self._ssc, self._df_k, self._df_t = get_ssc(**all_kwargs)
+            # fixest:::vcov_hetero_internal: adj = ifelse(ssc$cluster.adj, n/(n - 1), 1)
+            self._ssc, self._df_k, self._df_t = get_ssc(
+                **self._make_ssc_kwargs(vcov_type="hetero", G=self._N)
+            )
             self._vcov = self._ssc * self._vcov_hetero()
 
         elif self._vcov_type == "HAC":
-            ssc_kwargs_hac = {
-                "k_fe_nested": 0,  # nesting ignored / irrelevant for HAC SEs
-                "n_fe_fully_nested": 0,  # nesting ignored / irrelevant for HAC SEs
-                "vcov_sign": 1,
-                "vcov_type": "HAC",
-                "G": np.unique(self._data[self._time_id]).shape[
-                    0
-                ],  # number of unique time periods T used
-            }
-
-            all_kwargs = {**ssc_kwargs, **ssc_kwargs_hac}
-            self._ssc, self._df_k, self._df_t = get_ssc(**all_kwargs)
-
+            kw = vcov_kwargs or {}
+            self._lag = kw.get("lag")
+            self._time_id = kw.get("time_id")
+            self._panel_id = kw.get("panel_id")
+            self._ssc, self._df_k, self._df_t = get_ssc(
+                **self._make_ssc_kwargs(
+                    vcov_type="HAC",
+                    G=np.unique(self._data[self._time_id]).shape[0],
+                )  # number of unique time periods T used
+            )
             self._vcov = self._ssc * self._vcov_hac()
 
         elif self._vcov_type == "nid":
-            ssc_kwargs_hetero = {
-                "k_fe_nested": 0,
-                "n_fe_fully_nested": 0,
-                "vcov_sign": 1,
-                "vcov_type": "hetero",
-                "G": self._N,
-            }
-
-            all_kwargs = {**ssc_kwargs, **ssc_kwargs_hetero}
-            self._ssc, self._df_k, self._df_t = get_ssc(**all_kwargs)
+            self._ssc, self._df_k, self._df_t = get_ssc(
+                **self._make_ssc_kwargs(vcov_type="hetero", G=self._N)
+            )
             self._vcov = self._ssc * self._vcov_nid()
 
         elif self._vcov_type == "CRV":
-            if data is not None:
-                # use input data set
-                self._cluster_df = _get_cluster_df(
-                    data=data,
-                    clustervar=self._clustervar,
-                )
-                _check_cluster_df(cluster_df=self._cluster_df, data=data)
-            else:
-                # use stored data
-                self._cluster_df = _get_cluster_df(
-                    data=self._data, clustervar=self._clustervar
-                )
-                _check_cluster_df(cluster_df=self._cluster_df, data=self._data)
-
-            if self._cluster_df.shape[1] > 1:
-                self._cluster_df = _prepare_twoway_clustering(
-                    clustervar=self._clustervar, cluster_df=self._cluster_df
-                )
-
-            self._G = _count_G_for_ssc_correction(
-                cluster_df=self._cluster_df, ssc_dict=self._ssc_dict
+            prep = prepare_cluster_state(
+                data=data if data is not None else self._data,
+                clustervar=self._clustervar,
+                ssc_dict=self._ssc_dict,
+                fixef=self._fixef,
+                fe=self._fe,
+                k_fe=self._k_fe,
             )
-
-            # loop over columns of cluster_df
-            vcov_sign_list = [1, 1, -1]
-            df_t_full = np.zeros(self._cluster_df.shape[1])
-
-            cluster_arr_int = np.column_stack(
-                [
-                    pd.factorize(self._cluster_df[col])[0]
-                    for col in self._cluster_df.columns
-                ]
+            self._cluster_df = prep.cluster_df
+            self._G = prep.G
+            self._vcov, self._ssc, self._df_k, self._df_t = run_crv_loop(
+                prep=prep,
+                k=self._k,
+                make_ssc_kwargs=self._make_ssc_kwargs,
+                cluster_vcov=self._vcov_crv_cluster,
             )
-
-            k_fe_nested = 0
-            n_fe_fully_nested = 0
-            if self._fixef is not None and self._ssc_dict["k_fixef"] == "nonnested":
-                k_fe_nested_flag, n_fe_fully_nested = count_fixef_fully_nested_all(
-                    all_fixef_array=np.array(
-                        self._fixef.replace("^", "_").split("+"), dtype=str
-                    ),
-                    cluster_colnames=np.array(self._cluster_df.columns, dtype=str),
-                    cluster_data=cluster_arr_int.astype(np.uintp),
-                    fe_data=self._fe.to_numpy().astype(np.uintp)
-                    if isinstance(self._fe, pd.DataFrame)
-                    else self._fe.astype(np.uintp),
-                )
-
-                k_fe_nested = (
-                    np.sum(self._k_fe[k_fe_nested_flag]) if n_fe_fully_nested > 0 else 0
-                )
-
-            self._vcov = np.zeros((self._k, self._k))
-
-            for x, _ in enumerate(self._cluster_df.columns):
-                cluster_col = cluster_arr_int[:, x]
-                clustid = np.unique(cluster_col)
-
-                ssc_kwargs_crv = {
-                    "k_fe_nested": k_fe_nested,
-                    "n_fe_fully_nested": n_fe_fully_nested,
-                    "G": self._G[x],
-                    "vcov_sign": vcov_sign_list[x],
-                    "vcov_type": "CRV",
-                }
-
-                all_kwargs = {**ssc_kwargs, **ssc_kwargs_crv}
-                ssc, df_k, df_t = get_ssc(**all_kwargs)
-
-                self._ssc = np.array([ssc]) if x == 0 else np.append(self._ssc, ssc)
-                self._df_k = df_k  # the same across all vcov's
-
-                # update. take min(df_t) ad the end of loop
-                df_t_full[x] = df_t
-
-                if self._vcov_type_detail == "CRV1":
-                    self._vcov += self._ssc[x] * self._vcov_crv1(
-                        clustid=clustid, cluster_col=cluster_col
-                    )
-
-                elif self._vcov_type_detail == "CRV3":
-                    # check: is fixed effect cluster fixed effect?
-                    # if not, either error or turn fixefs into dummies
-                    # for now: don't allow for use with fixed effects
-
-                    if not self._support_crv3_inference:
-                        raise VcovTypeNotSupportedError(
-                            f"CRV3 inference is not for models of type '{self._method}'."
-                        )
-
-                    if (
-                        (self._has_fixef is False)
-                        and (self._method == "feols")
-                        and (self._is_iv is False)
-                    ):
-                        self._vcov += self._ssc[x] * self._vcov_crv3_fast(
-                            clustid=clustid, cluster_col=cluster_col
-                        )
-                    else:
-                        self._vcov += self._ssc[x] * self._vcov_crv3_slow(
-                            clustid=clustid, cluster_col=cluster_col
-                        )
-            # take minimum cluster for dof for multiway clustering
-            self._df_t = np.min(df_t_full)
         # update p-value, t-stat, standard error, confint
         self.get_inference()
 
         return self
 
+    def _make_ssc_kwargs(
+        self,
+        *,
+        vcov_type: str,
+        G: int | list[int],
+        vcov_sign: int = 1,
+        k_fe_nested: int = 0,
+        n_fe_fully_nested: int = 0,
+    ) -> dict:
+        "Bundle model-level and vcov-type-specific args for get_ssc()."
+        return {
+            "ssc_dict": self._ssc_dict,
+            "N": self._N,
+            "k": self._k,
+            "k_fe": self._k_fe.sum() if self._has_fixef else 0,
+            "n_fe": self._n_fe,
+            "vcov_type": vcov_type,
+            "G": G,
+            "vcov_sign": vcov_sign,
+            "k_fe_nested": k_fe_nested,
+            "n_fe_fully_nested": n_fe_fully_nested,
+        }
+
+    def _vcov_crv_cluster(
+        self, clustid: np.ndarray, cluster_col: np.ndarray
+    ) -> np.ndarray:
+        "Pick CRV1 / CRV3-fast / CRV3-slow for one cluster column."
+        if self._vcov_type_detail == "CRV1":
+            return self._vcov_crv1(clustid=clustid, cluster_col=cluster_col)
+
+        if not self._support_crv3_inference:
+            raise VcovTypeNotSupportedError(
+                f"CRV3 inference is not for models of type '{self._method}'."
+            )
+        use_fast = not self._has_fixef and self._method == "feols" and not self._is_iv
+        crv3 = self._vcov_crv3_fast if use_fast else self._vcov_crv3_slow
+        return crv3(clustid=clustid, cluster_col=cluster_col)
+
     def _vcov_iid(self):
-        sigma2 = np.sum(self._u_hat.flatten() ** 2) / (self._N - 1)
-        return self._bread * sigma2
+        return vcov_iid_ols(residuals=self._u_hat, bread=self._bread, N=self._N)
 
     def _vcov_hetero(self):
-        if self._vcov_type_detail in ["hetero", "HC1"]:
-            transformed_scores = self._scores
-        elif self._vcov_type_detail in ["HC2", "HC3"]:
-            leverage = np.sum(self._X * (self._X @ np.linalg.inv(self._tZX)), axis=1)
-            if self._weights_type == "fweights":
-                leverage = leverage / self._weights.flatten()
-            transformed_scores = (
-                self._scores / np.sqrt(1 - leverage)[:, None]
-                if self._vcov_type_detail == "HC2"
-                else self._scores / (1 - leverage)[:, None]
-            )
-
-        # for fweights, need to divide by sqrt(weights)
-        if self._weights_type == "fweights":
-            transformed_scores = transformed_scores / np.sqrt(self._weights)
-
-        Omega = transformed_scores.T @ transformed_scores
-
-        meat = (
-            self._tXZ @ self._tZZinv @ Omega @ self._tZZinv @ self._tZX
-            if self._is_iv
-            else Omega
+        return vcov_hetero(
+            scores=self._scores,
+            X=self._X,
+            tZX=self._tZX,
+            weights=self._weights,
+            weights_type=self._weights_type,
+            vcov_type_detail=self._vcov_type_detail,
+            bread=self._bread,
+            is_iv=self._is_iv,
+            tXZ=self._tXZ,
+            tZZinv=self._tZZinv,
         )
-        vcov = self._bread @ meat @ self._bread
-
-        return vcov
 
     def _vcov_hac(self):
-        _scores = self._scores
-        _bread = self._bread
-        _tXZ = self._tXZ
-        _tZZinv = self._tZZinv
-        _tZX = self._tZX
-        _is_iv = self._is_iv
-        _vcov_type_detail = self._vcov_type_detail
         _time_id = self._time_id
         _panel_id = self._panel_id
-        _lag = self._lag
         _data = self._data
 
         if not self._support_hac_inference:
@@ -892,55 +771,18 @@ class Feols(ResultAccessorMixin):
         _time_arr = _data[_time_id].to_numpy()
         _panel_arr = _data[_panel_id].to_numpy() if _panel_id is not None else None
 
-        if _vcov_type_detail == "NW":
-            # Newey-West
-            if _panel_id is None:
-                if _lag is None:
-                    raise ValueError(
-                        "We have not yet implemented the default Newey-West HAC lag. Please provide a lag value via the `vcov_kwargs`."
-                    )
-                if len(np.unique(_time_arr)) != len(_time_arr):
-                    raise ValueError(
-                        "There are duplicate time periods in the data. This is not supported for HAC SEs."
-                    )
-                hac_meat = _nw_meat_time(scores=_scores, time_arr=_time_arr, lag=_lag)
-            else:
-                # order the data by (panel, time)
-                order, _, starts, counts, panel_arr_sorted, time_arr_sorted = (
-                    _get_panel_idx(panel_arr=_panel_arr, time_arr=_time_arr)
-                )
-
-                hac_meat = _nw_meat_panel(
-                    scores=_scores[order],
-                    time_arr=time_arr_sorted,
-                    panel_arr=panel_arr_sorted,
-                    starts=starts,
-                    counts=counts,
-                    lag=_lag,
-                )
-
-        elif _vcov_type_detail == "DK":
-            # Driscoll-Kraay
-
-            order, _, starts, counts, time_arr_sorted, panel_arr_sorted = (
-                _get_panel_idx(
-                    # hack: sort first by time, than panel
-                    # we need the data sorted by time, but sort by
-                    # panel too to check for duplicate time periods
-                    # per panel
-                    panel_arr=_time_arr,
-                    time_arr=_panel_arr,
-                )
-            )
-            scores_sorted = _scores[order]
-            hac_meat = _dk_meat_panel(
-                scores=scores_sorted, time_arr=time_arr_sorted, idx=starts, lag=_lag
-            )
-
-        _meat = _tXZ @ _tZZinv @ hac_meat @ _tZZinv @ _tZX if _is_iv else hac_meat
-        _vcov = _bread @ _meat @ _bread
-
-        return _vcov
+        return vcov_hac(
+            scores=self._scores,
+            time_arr=_time_arr,
+            panel_arr=_panel_arr,
+            lag=self._lag,
+            vcov_type_detail=self._vcov_type_detail,
+            bread=self._bread,
+            is_iv=self._is_iv,
+            tXZ=self._tXZ,
+            tZZinv=self._tZZinv,
+            tZX=self._tZX,
+        )
 
     def _vcov_nid(self):
         raise NotImplementedError(
@@ -948,55 +790,25 @@ class Feols(ResultAccessorMixin):
         )
 
     def _vcov_crv1(self, clustid: np.ndarray, cluster_col: np.ndarray):
-        k = self._scores.shape[1]
-        meat = np.zeros((k, k))
-
-        meat = crv1_meat_loop(
-            scores=self._scores.astype(np.float64),
-            clustid=clustid.astype(np.uintp),
-            cluster_col=cluster_col.astype(np.uintp),
+        return vcov_crv1(
+            scores=self._scores,
+            clustid=clustid,
+            cluster_col=cluster_col,
+            bread=self._bread,
+            is_iv=self._is_iv,
+            tXZ=self._tXZ,
+            tZZinv=self._tZZinv,
+            tZX=self._tZX,
         )
-
-        meat = (
-            self._tXZ @ self._tZZinv @ meat @ self._tZZinv @ self._tZX
-            if self._is_iv
-            else meat
-        )
-        vcov = self._bread @ meat @ self._bread
-
-        return vcov
 
     def _vcov_crv3_fast(self, clustid, cluster_col):
-        beta_jack = np.zeros((len(clustid), self._k))
-
-        # inverse hessian precomputed?
-        tXX = np.transpose(self._X) @ self._X
-        tXy = np.transpose(self._X) @ self._Y
-
-        # compute leave-one-out regression coefficients (aka clusterjacks')
-        for ixg, g in enumerate(clustid):
-            Xg = self._X[np.equal(g, cluster_col)]
-            Yg = self._Y[np.equal(g, cluster_col)]
-            tXgXg = np.transpose(Xg) @ Xg
-            # jackknife regression coefficient
-            beta_jack[ixg, :] = (
-                np.linalg.pinv(tXX - tXgXg) @ (tXy - np.transpose(Xg) @ Yg)
-            ).flatten()
-
-        # optional: beta_bar in MNW (2022)
-        # center = "estimate"
-        # if center == 'estimate':
-        #    beta_center = beta_hat
-        # else:
-        #    beta_center = np.mean(beta_jack, axis = 0)
-        beta_center = self._beta_hat
-
-        vcov_mat = np.zeros((self._k, self._k))
-        for ixg, _ in enumerate(clustid):
-            beta_centered = beta_jack[ixg, :] - beta_center
-            vcov_mat += np.outer(beta_centered, beta_centered)
-
-        return vcov_mat
+        return vcov_crv3_fast(
+            X=self._X,
+            Y=self._Y,
+            beta_hat=self._beta_hat,
+            clustid=clustid,
+            cluster_col=cluster_col,
+        )
 
     def _vcov_crv3_slow(self, clustid, cluster_col):
         beta_jack = np.zeros((len(clustid), self._k))
