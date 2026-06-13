@@ -36,9 +36,9 @@ from pyfixest.estimation.internals.vcov_ import (
     vcov_iid_ols,
 )
 from pyfixest.estimation.internals.vcov_utils import (
-    ClusterPrep,
     _compute_bread,
     prepare_cluster_state,
+    run_crv_loop,
 )
 from pyfixest.estimation.models._result_accessor_mixin import ResultAccessorMixin
 from pyfixest.estimation.post_estimation.decomposition import (
@@ -683,7 +683,12 @@ class Feols(ResultAccessorMixin):
             )
             self._cluster_df = prep.cluster_df
             self._G = prep.G
-            self._vcov, self._ssc, self._df_k, self._df_t = self._run_crv_loop(prep)
+            self._vcov, self._ssc, self._df_k, self._df_t = run_crv_loop(
+                prep=prep,
+                k=self._k,
+                make_ssc_kwargs=self._make_ssc_kwargs,
+                cluster_vcov=self._vcov_crv_cluster,
+            )
         # update p-value, t-stat, standard error, confint
         self.get_inference()
 
@@ -726,39 +731,6 @@ class Feols(ResultAccessorMixin):
         use_fast = not self._has_fixef and self._method == "feols" and not self._is_iv
         crv3 = self._vcov_crv3_fast if use_fast else self._vcov_crv3_slow
         return crv3(clustid=clustid, cluster_col=cluster_col)
-
-    def _run_crv_loop(
-        self, prep: ClusterPrep
-    ) -> tuple[np.ndarray, np.ndarray, int, int]:
-        "Accumulate the per-cluster CRV vcov, ssc weights, df_k, and df_t."
-        vcov_sign_list = [1, 1, -1]
-        n_clusters = prep.cluster_df.shape[1]
-
-        vcov = np.zeros((self._k, self._k))
-        ssc_arr: np.ndarray | None = None
-        df_t_full = np.zeros(n_clusters)
-        df_k = 0
-
-        for x in range(n_clusters):
-            cluster_col = prep.cluster_arr_int[:, x]
-            clustid = np.unique(cluster_col)
-
-            ssc, df_k, df_t = get_ssc(
-                **self._make_ssc_kwargs(
-                    vcov_type="CRV",
-                    G=prep.G[x],
-                    vcov_sign=vcov_sign_list[x],
-                    k_fe_nested=prep.k_fe_nested,
-                    n_fe_fully_nested=prep.n_fe_fully_nested,
-                )
-            )
-            ssc_arr = np.array([ssc]) if ssc_arr is None else np.append(ssc_arr, ssc)
-            df_t_full[x] = df_t
-
-            vcov += ssc_arr[x] * self._vcov_crv_cluster(clustid, cluster_col)
-
-        assert ssc_arr is not None  # n_clusters >= 1 in the CRV branch
-        return vcov, ssc_arr, df_k, int(np.min(df_t_full))
 
     def _vcov_iid(self):
         return vcov_iid_ols(residuals=self._u_hat, bread=self._bread, N=self._N)

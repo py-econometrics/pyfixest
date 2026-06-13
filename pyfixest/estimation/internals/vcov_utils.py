@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from dataclasses import dataclass
 
 import numpy as np
@@ -15,6 +16,7 @@ from pyfixest.core.nw import (
 )
 from pyfixest.errors import NanInClusterVarError
 from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
+from pyfixest.utils.utils import get_ssc
 
 
 @dataclass
@@ -74,6 +76,43 @@ def prepare_cluster_state(
         k_fe_nested=k_fe_nested,
         n_fe_fully_nested=n_fe_fully_nested,
     )
+
+
+def run_crv_loop(
+    *,
+    prep: ClusterPrep,
+    k: int,
+    make_ssc_kwargs: Callable[..., dict],
+    cluster_vcov: Callable[[np.ndarray, np.ndarray], np.ndarray],
+) -> tuple[np.ndarray, np.ndarray, int, int]:
+    "Accumulate per-cluster CRV vcov, ssc weights, df_k, and df_t."
+    vcov_sign_list = [1, 1, -1]
+    n_clusters = prep.cluster_df.shape[1]
+
+    vcov = np.zeros((k, k))
+    ssc_arr: np.ndarray | None = None
+    df_t_full = np.zeros(n_clusters)
+    df_k = 0
+
+    for x in range(n_clusters):
+        cluster_col = prep.cluster_arr_int[:, x]
+        clustid = np.unique(cluster_col)
+
+        ssc, df_k, df_t = get_ssc(
+            **make_ssc_kwargs(
+                vcov_type="CRV",
+                G=prep.G[x],
+                vcov_sign=vcov_sign_list[x],
+                k_fe_nested=prep.k_fe_nested,
+                n_fe_fully_nested=prep.n_fe_fully_nested,
+            )
+        )
+        ssc_arr = np.array([ssc]) if ssc_arr is None else np.append(ssc_arr, ssc)
+        df_t_full[x] = df_t
+        vcov += ssc_arr[x] * cluster_vcov(clustid, cluster_col)
+
+    assert ssc_arr is not None  # n_clusters >= 1 in the CRV branch
+    return vcov, ssc_arr, df_k, int(np.min(df_t_full))
 
 
 def _compute_bread(
