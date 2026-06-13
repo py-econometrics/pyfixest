@@ -36,6 +36,7 @@ from pyfixest.estimation.internals.vcov_ import (
     vcov_iid_ols,
 )
 from pyfixest.estimation.internals.vcov_utils import (
+    ClusterPrep,
     _compute_bread,
     prepare_cluster_state,
 )
@@ -680,60 +681,7 @@ class Feols(ResultAccessorMixin):
             )
             self._cluster_df = prep.cluster_df
             self._G = prep.G
-
-            vcov_sign_list = [1, 1, -1]
-            df_t_full = np.zeros(prep.cluster_df.shape[1])
-            self._vcov = np.zeros((self._k, self._k))
-
-            for x, _ in enumerate(prep.cluster_df.columns):
-                cluster_col = prep.cluster_arr_int[:, x]
-                clustid = np.unique(cluster_col)
-
-                ssc, df_k, df_t = get_ssc(
-                    **self._make_ssc_kwargs(
-                        vcov_type="CRV",
-                        G=prep.G[x],
-                        vcov_sign=vcov_sign_list[x],
-                        k_fe_nested=prep.k_fe_nested,
-                        n_fe_fully_nested=prep.n_fe_fully_nested,
-                    )
-                )
-
-                self._ssc = np.array([ssc]) if x == 0 else np.append(self._ssc, ssc)
-                self._df_k = df_k  # the same across all vcov's
-
-                # update. take min(df_t) ad the end of loop
-                df_t_full[x] = df_t
-
-                if self._vcov_type_detail == "CRV1":
-                    self._vcov += self._ssc[x] * self._vcov_crv1(
-                        clustid=clustid, cluster_col=cluster_col
-                    )
-
-                elif self._vcov_type_detail == "CRV3":
-                    # check: is fixed effect cluster fixed effect?
-                    # if not, either error or turn fixefs into dummies
-                    # for now: don't allow for use with fixed effects
-
-                    if not self._support_crv3_inference:
-                        raise VcovTypeNotSupportedError(
-                            f"CRV3 inference is not for models of type '{self._method}'."
-                        )
-
-                    if (
-                        (self._has_fixef is False)
-                        and (self._method == "feols")
-                        and (self._is_iv is False)
-                    ):
-                        self._vcov += self._ssc[x] * self._vcov_crv3_fast(
-                            clustid=clustid, cluster_col=cluster_col
-                        )
-                    else:
-                        self._vcov += self._ssc[x] * self._vcov_crv3_slow(
-                            clustid=clustid, cluster_col=cluster_col
-                        )
-            # take minimum cluster for dof for multiway clustering
-            self._df_t = int(np.min(df_t_full))
+            self._vcov, self._ssc, self._df_k, self._df_t = self._run_crv_loop(prep)
         # update p-value, t-stat, standard error, confint
         self.get_inference()
 
@@ -761,6 +709,54 @@ class Feols(ResultAccessorMixin):
             "k_fe_nested": k_fe_nested,
             "n_fe_fully_nested": n_fe_fully_nested,
         }
+
+    def _vcov_crv_cluster(
+        self, clustid: np.ndarray, cluster_col: np.ndarray
+    ) -> np.ndarray:
+        "Pick CRV1 / CRV3-fast / CRV3-slow for one cluster column."
+        if self._vcov_type_detail == "CRV1":
+            return self._vcov_crv1(clustid=clustid, cluster_col=cluster_col)
+
+        if not self._support_crv3_inference:
+            raise VcovTypeNotSupportedError(
+                f"CRV3 inference is not for models of type '{self._method}'."
+            )
+        use_fast = not self._has_fixef and self._method == "feols" and not self._is_iv
+        crv3 = self._vcov_crv3_fast if use_fast else self._vcov_crv3_slow
+        return crv3(clustid=clustid, cluster_col=cluster_col)
+
+    def _run_crv_loop(
+        self, prep: ClusterPrep
+    ) -> tuple[np.ndarray, np.ndarray, int, int]:
+        "Accumulate the per-cluster CRV vcov, ssc weights, df_k, and df_t."
+        vcov_sign_list = [1, 1, -1]
+        n_clusters = prep.cluster_df.shape[1]
+
+        vcov = np.zeros((self._k, self._k))
+        ssc_arr: np.ndarray | None = None
+        df_t_full = np.zeros(n_clusters)
+        df_k = 0
+
+        for x in range(n_clusters):
+            cluster_col = prep.cluster_arr_int[:, x]
+            clustid = np.unique(cluster_col)
+
+            ssc, df_k, df_t = get_ssc(
+                **self._make_ssc_kwargs(
+                    vcov_type="CRV",
+                    G=prep.G[x],
+                    vcov_sign=vcov_sign_list[x],
+                    k_fe_nested=prep.k_fe_nested,
+                    n_fe_fully_nested=prep.n_fe_fully_nested,
+                )
+            )
+            ssc_arr = np.array([ssc]) if ssc_arr is None else np.append(ssc_arr, ssc)
+            df_t_full[x] = df_t
+
+            vcov += ssc_arr[x] * self._vcov_crv_cluster(clustid, cluster_col)
+
+        assert ssc_arr is not None  # n_clusters >= 1 in the CRV branch
+        return vcov, ssc_arr, df_k, int(np.min(df_t_full))
 
     def _apply_vcov_kwargs(self, vcov_kwargs: dict | None) -> None:
         "Pull HAC-related options off vcov_kwargs onto self (None when absent)."
