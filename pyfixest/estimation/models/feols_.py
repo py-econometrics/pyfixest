@@ -643,83 +643,34 @@ class Feols(ResultAccessorMixin):
             self._is_iv, self._tXZ, self._tZZinv, self._tZX, self._hessian
         )
 
-        # HAC attributes
-        self._lag = vcov_kwargs.get("lag", None) if vcov_kwargs is not None else None
-        self._time_id = (
-            vcov_kwargs.get("time_id", None) if vcov_kwargs is not None else None
-        )
-        self._panel_id = (
-            vcov_kwargs.get("panel_id", None) if vcov_kwargs is not None else None
-        )
-        self._is_sorted = (
-            vcov_kwargs.get("is_sorted", None) if vcov_kwargs is not None else None
-        )
-
-        ssc_kwargs = {
-            "ssc_dict": self._ssc_dict,
-            "N": self._N,
-            "k": self._k,
-            "k_fe": self._k_fe.sum() if self._has_fixef else 0,
-            "n_fe": self._n_fe,
-        }
+        self._apply_vcov_kwargs(vcov_kwargs)
 
         if self._vcov_type == "iid":
-            ssc_kwargs_iid = {
-                "k_fe_nested": 0,
-                "n_fe_fully_nested": 0,
-                "vcov_sign": 1,
-                "vcov_type": "iid",
-                "G": 1,
-            }
-
-            all_kwargs = {**ssc_kwargs, **ssc_kwargs_iid}
-            self._ssc, self._df_k, self._df_t = get_ssc(**all_kwargs)
-
+            self._ssc, self._df_k, self._df_t = get_ssc(
+                **self._make_ssc_kwargs(vcov_type="iid", G=1)
+            )
             self._vcov = self._ssc * self._vcov_iid()
 
         elif self._vcov_type == "hetero":
-            # this is what fixest does internally: see fixest:::vcov_hetero_internal:
-            # adj = ifelse(ssc$cluster.adj, n/(n - 1), 1)
-
-            ssc_kwargs_hetero = {
-                "k_fe_nested": 0,
-                "n_fe_fully_nested": 0,
-                "vcov_sign": 1,
-                "vcov_type": "hetero",
-                "G": self._N,
-            }
-
-            all_kwargs = {**ssc_kwargs, **ssc_kwargs_hetero}
-            self._ssc, self._df_k, self._df_t = get_ssc(**all_kwargs)
+            # fixest:::vcov_hetero_internal: adj = ifelse(ssc$cluster.adj, n/(n - 1), 1)
+            self._ssc, self._df_k, self._df_t = get_ssc(
+                **self._make_ssc_kwargs(vcov_type="hetero", G=self._N)
+            )
             self._vcov = self._ssc * self._vcov_hetero()
 
         elif self._vcov_type == "HAC":
-            ssc_kwargs_hac = {
-                "k_fe_nested": 0,  # nesting ignored / irrelevant for HAC SEs
-                "n_fe_fully_nested": 0,  # nesting ignored / irrelevant for HAC SEs
-                "vcov_sign": 1,
-                "vcov_type": "HAC",
-                "G": np.unique(self._data[self._time_id]).shape[
-                    0
-                ],  # number of unique time periods T used
-            }
-
-            all_kwargs = {**ssc_kwargs, **ssc_kwargs_hac}
-            self._ssc, self._df_k, self._df_t = get_ssc(**all_kwargs)
-
+            self._ssc, self._df_k, self._df_t = get_ssc(
+                **self._make_ssc_kwargs(
+                    vcov_type="HAC",
+                    G=np.unique(self._data[self._time_id]).shape[0],
+                )  # number of unique time periods T used
+            )
             self._vcov = self._ssc * self._vcov_hac()
 
         elif self._vcov_type == "nid":
-            ssc_kwargs_hetero = {
-                "k_fe_nested": 0,
-                "n_fe_fully_nested": 0,
-                "vcov_sign": 1,
-                "vcov_type": "hetero",
-                "G": self._N,
-            }
-
-            all_kwargs = {**ssc_kwargs, **ssc_kwargs_hetero}
-            self._ssc, self._df_k, self._df_t = get_ssc(**all_kwargs)
+            self._ssc, self._df_k, self._df_t = get_ssc(
+                **self._make_ssc_kwargs(vcov_type="hetero", G=self._N)
+            )
             self._vcov = self._ssc * self._vcov_nid()
 
         elif self._vcov_type == "CRV":
@@ -781,16 +732,15 @@ class Feols(ResultAccessorMixin):
                 cluster_col = cluster_arr_int[:, x]
                 clustid = np.unique(cluster_col)
 
-                ssc_kwargs_crv = {
-                    "k_fe_nested": k_fe_nested,
-                    "n_fe_fully_nested": n_fe_fully_nested,
-                    "G": self._G[x],
-                    "vcov_sign": vcov_sign_list[x],
-                    "vcov_type": "CRV",
-                }
-
-                all_kwargs = {**ssc_kwargs, **ssc_kwargs_crv}
-                ssc, df_k, df_t = get_ssc(**all_kwargs)
+                ssc, df_k, df_t = get_ssc(
+                    **self._make_ssc_kwargs(
+                        vcov_type="CRV",
+                        G=self._G[x],
+                        vcov_sign=vcov_sign_list[x],
+                        k_fe_nested=k_fe_nested,
+                        n_fe_fully_nested=n_fe_fully_nested,
+                    )
+                )
 
                 self._ssc = np.array([ssc]) if x == 0 else np.append(self._ssc, ssc)
                 self._df_k = df_k  # the same across all vcov's
@@ -831,6 +781,37 @@ class Feols(ResultAccessorMixin):
         self.get_inference()
 
         return self
+
+    def _make_ssc_kwargs(
+        self,
+        *,
+        vcov_type: str,
+        G: int | list[int],
+        vcov_sign: int = 1,
+        k_fe_nested: int = 0,
+        n_fe_fully_nested: int = 0,
+    ) -> dict:
+        "Bundle model-level and vcov-type-specific args for get_ssc()."
+        return {
+            "ssc_dict": self._ssc_dict,
+            "N": self._N,
+            "k": self._k,
+            "k_fe": self._k_fe.sum() if self._has_fixef else 0,
+            "n_fe": self._n_fe,
+            "vcov_type": vcov_type,
+            "G": G,
+            "vcov_sign": vcov_sign,
+            "k_fe_nested": k_fe_nested,
+            "n_fe_fully_nested": n_fe_fully_nested,
+        }
+
+    def _apply_vcov_kwargs(self, vcov_kwargs: dict | None) -> None:
+        "Pull HAC-related options off vcov_kwargs onto self (None when absent)."
+        kw = vcov_kwargs or {}
+        self._lag = kw.get("lag")
+        self._time_id = kw.get("time_id")
+        self._panel_id = kw.get("panel_id")
+        self._is_sorted = kw.get("is_sorted")
 
     def _vcov_iid(self):
         return vcov_iid_ols(residuals=self._u_hat, bread=self._bread, N=self._N)
