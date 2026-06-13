@@ -254,6 +254,38 @@ def test_within_preconditioner_reuse_across_estimators(data_fn, fit_fn):
     assert fit_reused.preconditioner.nrows == pre.nrows
 
 
+def test_fixest_multi_shares_preconditioners_by_na_index():
+    data = pf.get_data().copy()
+    data["X3"] = data["X2"] ** 2 + 0.1 * data["X1"]
+    complete = data[["Y", "X1", "X2", "X3", "f1", "f2"]].notna().all(axis=1)
+    extra_na_index = data.index[complete][0]
+    data.loc[extra_na_index, "X3"] = np.nan
+
+    fit = pf.feols(
+        "Y ~ csw(X1, X2, X3) | f1 + f2",
+        data=data,
+        demeaner=pf.LsmrDemeaner(backend="within"),
+    )
+    models = list(fit.all_fitted_models.values())
+
+    assert len(models) == 3
+    assert len({id(model._demean_cache.preconditioner_lookup) for model in models}) == 1
+
+    first, second, third = models
+    assert first._na_index == second._na_index
+    assert extra_na_index not in first._na_index
+    assert extra_na_index in third._na_index
+
+    assert isinstance(first.preconditioner, pf.Preconditioner)
+    assert first.preconditioner is second.preconditioner
+    assert isinstance(third.preconditioner, pf.Preconditioner)
+    assert third.preconditioner is not first.preconditioner
+    assert set(first._demean_cache.preconditioner_lookup) == {
+        first._na_index,
+        third._na_index,
+    }
+
+
 def test_within_preconditioner_off_yields_no_cached_preconditioner():
     """``preconditioner='off'`` disables Schwarz, so ``fit.preconditioner`` is None."""
     data = pf.get_data()
