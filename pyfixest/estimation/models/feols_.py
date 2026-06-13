@@ -15,7 +15,6 @@ from scipy.stats import chi2, f, t
 
 from pyfixest.core.collinear import find_collinear_variables
 from pyfixest.core.demean import Preconditioner
-from pyfixest.core.nested_fixed_effects import count_fixef_fully_nested_all
 from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner, MapDemeaner
 from pyfixest.errors import VcovTypeNotSupportedError
 from pyfixest.estimation.api.utils import _ALL_SAMPLE, _AllSampleSentinel
@@ -37,11 +36,8 @@ from pyfixest.estimation.internals.vcov_ import (
     vcov_iid_ols,
 )
 from pyfixest.estimation.internals.vcov_utils import (
-    _check_cluster_df,
     _compute_bread,
-    _count_G_for_ssc_correction,
-    _get_cluster_df,
-    _prepare_twoway_clustering,
+    prepare_cluster_state,
 )
 from pyfixest.estimation.models._result_accessor_mixin import ResultAccessorMixin
 from pyfixest.estimation.post_estimation.decomposition import (
@@ -674,71 +670,32 @@ class Feols(ResultAccessorMixin):
             self._vcov = self._ssc * self._vcov_nid()
 
         elif self._vcov_type == "CRV":
-            if data is not None:
-                # use input data set
-                self._cluster_df = _get_cluster_df(
-                    data=data,
-                    clustervar=self._clustervar,
-                )
-                _check_cluster_df(cluster_df=self._cluster_df, data=data)
-            else:
-                # use stored data
-                self._cluster_df = _get_cluster_df(
-                    data=self._data, clustervar=self._clustervar
-                )
-                _check_cluster_df(cluster_df=self._cluster_df, data=self._data)
-
-            if self._cluster_df.shape[1] > 1:
-                self._cluster_df = _prepare_twoway_clustering(
-                    clustervar=self._clustervar, cluster_df=self._cluster_df
-                )
-
-            self._G = _count_G_for_ssc_correction(
-                cluster_df=self._cluster_df, ssc_dict=self._ssc_dict
+            prep = prepare_cluster_state(
+                data=data if data is not None else self._data,
+                clustervar=self._clustervar,
+                ssc_dict=self._ssc_dict,
+                fixef=self._fixef,
+                fe=self._fe,
+                k_fe=self._k_fe,
             )
+            self._cluster_df = prep.cluster_df
+            self._G = prep.G
 
-            # loop over columns of cluster_df
             vcov_sign_list = [1, 1, -1]
-            df_t_full = np.zeros(self._cluster_df.shape[1])
-
-            cluster_arr_int = np.column_stack(
-                [
-                    pd.factorize(self._cluster_df[col])[0]
-                    for col in self._cluster_df.columns
-                ]
-            )
-
-            k_fe_nested = 0
-            n_fe_fully_nested = 0
-            if self._fixef is not None and self._ssc_dict["k_fixef"] == "nonnested":
-                k_fe_nested_flag, n_fe_fully_nested = count_fixef_fully_nested_all(
-                    all_fixef_array=np.array(
-                        self._fixef.replace("^", "_").split("+"), dtype=str
-                    ),
-                    cluster_colnames=np.array(self._cluster_df.columns, dtype=str),
-                    cluster_data=cluster_arr_int.astype(np.uintp),
-                    fe_data=self._fe.to_numpy().astype(np.uintp)
-                    if isinstance(self._fe, pd.DataFrame)
-                    else self._fe.astype(np.uintp),
-                )
-
-                k_fe_nested = (
-                    np.sum(self._k_fe[k_fe_nested_flag]) if n_fe_fully_nested > 0 else 0
-                )
-
+            df_t_full = np.zeros(prep.cluster_df.shape[1])
             self._vcov = np.zeros((self._k, self._k))
 
-            for x, _ in enumerate(self._cluster_df.columns):
-                cluster_col = cluster_arr_int[:, x]
+            for x, _ in enumerate(prep.cluster_df.columns):
+                cluster_col = prep.cluster_arr_int[:, x]
                 clustid = np.unique(cluster_col)
 
                 ssc, df_k, df_t = get_ssc(
                     **self._make_ssc_kwargs(
                         vcov_type="CRV",
-                        G=self._G[x],
+                        G=prep.G[x],
                         vcov_sign=vcov_sign_list[x],
-                        k_fe_nested=k_fe_nested,
-                        n_fe_fully_nested=n_fe_fully_nested,
+                        k_fe_nested=prep.k_fe_nested,
+                        n_fe_fully_nested=prep.n_fe_fully_nested,
                     )
                 )
 
@@ -776,7 +733,7 @@ class Feols(ResultAccessorMixin):
                             clustid=clustid, cluster_col=cluster_col
                         )
             # take minimum cluster for dof for multiway clustering
-            self._df_t = np.min(df_t_full)
+            self._df_t = int(np.min(df_t_full))
         # update p-value, t-stat, standard error, confint
         self.get_inference()
 

@@ -1,6 +1,9 @@
+from dataclasses import dataclass
+
 import numpy as np
 import pandas as pd
 
+from pyfixest.core.nested_fixed_effects import count_fixef_fully_nested_all
 from pyfixest.core.nw import (
     dk_meat_panel as _dk_meat_panel_rs,
 )
@@ -11,7 +14,66 @@ from pyfixest.core.nw import (
     nw_meat_time as _nw_meat_time_rs,
 )
 from pyfixest.errors import NanInClusterVarError
-from pyfixest.utils.dev_utils import _narwhals_to_pandas
+from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
+
+
+@dataclass
+class ClusterPrep:
+    "Precomputed cluster state shared across the CRV per-cluster loop."
+
+    cluster_df: pd.DataFrame
+    cluster_arr_int: np.ndarray  # (N, n_cluster_cols), int-factorized
+    G: list[int]  # cluster counts per column, post ssc_dict["G_df"] adjustment
+    k_fe_nested: int
+    n_fe_fully_nested: int
+
+
+def prepare_cluster_state(
+    *,
+    data: DataFrameType,
+    clustervar: list[str],
+    ssc_dict: dict,
+    fixef: str | None,
+    fe: pd.DataFrame | np.ndarray | None,
+    k_fe: np.ndarray | pd.Series,
+) -> ClusterPrep:
+    "Build cluster_df, int-factorized cluster array, G, and nested-FE counts."
+    cluster_df = _get_cluster_df(data=data, clustervar=clustervar)
+    _check_cluster_df(cluster_df=cluster_df, data=data)
+
+    if cluster_df.shape[1] > 1:
+        cluster_df = _prepare_twoway_clustering(
+            clustervar=clustervar, cluster_df=cluster_df
+        )
+
+    G = _count_G_for_ssc_correction(cluster_df=cluster_df, ssc_dict=ssc_dict)
+
+    cluster_arr_int = np.column_stack(
+        [pd.factorize(cluster_df[col])[0] for col in cluster_df.columns]
+    )
+
+    k_fe_nested = 0
+    n_fe_fully_nested = 0
+    if fixef is not None and ssc_dict["k_fixef"] == "nonnested":
+        if fe is None:
+            raise ValueError("`fe` must not be None when `fixef` is specified.")
+        k_fe_nested_flag, n_fe_fully_nested = count_fixef_fully_nested_all(
+            all_fixef_array=np.array(fixef.replace("^", "_").split("+"), dtype=str),
+            cluster_colnames=np.array(cluster_df.columns, dtype=str),
+            cluster_data=cluster_arr_int.astype(np.uintp),
+            fe_data=fe.to_numpy().astype(np.uintp)
+            if isinstance(fe, pd.DataFrame)
+            else fe.astype(np.uintp),
+        )
+        k_fe_nested = np.sum(k_fe[k_fe_nested_flag]) if n_fe_fully_nested > 0 else 0
+
+    return ClusterPrep(
+        cluster_df=cluster_df,
+        cluster_arr_int=cluster_arr_int,
+        G=G,
+        k_fe_nested=k_fe_nested,
+        n_fe_fully_nested=n_fe_fully_nested,
+    )
 
 
 def _compute_bread(
