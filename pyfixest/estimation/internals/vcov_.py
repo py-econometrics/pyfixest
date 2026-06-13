@@ -124,8 +124,10 @@ def vcov_hac(
             raise ValueError("Missing required 'panel_id' for DK vcov")
 
         order, _, starts, _, time_arr_sorted, _ = _get_panel_idx(
-            # Sort first by time, then panel. The helper still checks duplicate
-            # time periods per panel via the paired arrays.
+            # hack: sort first by time, than panel
+            # we need the data sorted by time, but sort by
+            # panel too to check for duplicate time periods
+            # per panel
             panel_arr=time_arr,
             time_arr=panel_arr,
         )
