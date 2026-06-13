@@ -13,13 +13,13 @@ from pyfixest.errors import (
     NonConvergenceError,
 )
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
+from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
 from pyfixest.estimation.internals.solvers import solve_ols
 from pyfixest.estimation.internals.vcov_ import vcov_iid_glm
 from pyfixest.estimation.models.feols_ import (
     Feols,
     PredictionErrorOptions,
     PredictionType,
-    _drop_multicollinear_variables,
 )
 from pyfixest.estimation.models.fepois_ import _check_for_separation
 from pyfixest.utils.dev_utils import DataFrameType
@@ -218,7 +218,7 @@ class Feglm(Feols, ABC):
                 # Check multicollinearity
                 # We do this here after the first demeaning to also catch collinearity with fixed effects
                 X_tilde, self._coefnames, self._collin_vars, self._collin_index = (
-                    _drop_multicollinear_variables(
+                    drop_multicollinear_variables(
                         X_tilde,
                         self._coefnames,
                         self._collin_tol,
