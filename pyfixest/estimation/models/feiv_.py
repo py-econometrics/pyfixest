@@ -152,7 +152,7 @@ class Feiv(Feols):
             "scipy.sparse.linalg.lsqr",
         ] = "scipy.linalg.solve",
         demeaner: AnyDemeaner | None = None,
-        preconditioner_lookup: dict[frozenset[int], Preconditioner] | None = None,
+        lookup_preconditioner: dict[frozenset[int], Preconditioner] | None = None,
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
@@ -178,7 +178,7 @@ class Feiv(Feols):
             sample_split_value=sample_split_value,
             context=context,
             demeaner=demeaner,
-            preconditioner_lookup=preconditioner_lookup,
+            lookup_preconditioner=lookup_preconditioner,
         )
 
         self._is_iv = True
@@ -275,7 +275,7 @@ class Feiv(Feols):
             vcov_detail = self._vcov_type_detail
 
         demeaner = self._demeaner
-        cached_pre = self._demean_cache.preconditioner_lookup.get(self._na_index)
+        cached_pre = self._demean_cache.lookup_preconditioner.get(self._na_index)
         if isinstance(demeaner, LsmrDemeaner) and cached_pre is not None:
             demeaner = replace(demeaner, preconditioner=cached_pre)
 

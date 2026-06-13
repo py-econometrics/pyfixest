@@ -260,7 +260,7 @@ class Feols(ResultAccessorMixin):
         lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
         solver: SolverOptions = "np.linalg.solve",
         demeaner: AnyDemeaner | None = None,
-        preconditioner_lookup: dict[frozenset[int], Preconditioner] | None = None,
+        lookup_preconditioner: dict[frozenset[int], Preconditioner] | None = None,
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
@@ -308,7 +308,7 @@ class Feols(ResultAccessorMixin):
         else:
             self._fixef_tol = demeaner.fixef_tol
         self._fixef_maxiter = demeaner.fixef_maxiter
-        self._demean_cache = DemeanCache(lookup_demeaned_data, preconditioner_lookup)
+        self._demean_cache = DemeanCache(lookup_demeaned_data, lookup_preconditioner)
         self._store_data = store_data
         self._copy_data = copy_data
         self._lean = lean
@@ -514,7 +514,7 @@ class Feols(ResultAccessorMixin):
         ``LsmrDemeaner(backend='within', preconditioner=...)`` to skip the
         setup phase on a later fit over the same design.
         """
-        return self._demean_cache.preconditioner_lookup.get(self._na_index)
+        return self._demean_cache.lookup_preconditioner.get(self._na_index)
 
     def to_array(self):
         "Convert estimation data frames to np arrays."

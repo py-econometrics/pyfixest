@@ -306,7 +306,7 @@ class FixestMulti:
                 # preconditioners keyed by na_index, shared across all
                 # models in this formula block (not used by `.quantreg()`).
                 lookup_demeaned_data: dict[frozenset[int], pd.DataFrame] = {}
-                preconditioner_lookup: dict[frozenset[int], Preconditioner] = {}
+                lookup_preconditioner: dict[frozenset[int], Preconditioner] = {}
 
                 for FixestFormula in fixef_key_models:  # type: ignore
                     # loop over both dictfe and dictfe_iv (if the latter is not None)
@@ -352,7 +352,7 @@ class FixestMulti:
                         model_kwargs.update(
                             {
                                 "demeaner": demeaner,
-                                "preconditioner_lookup": preconditioner_lookup,
+                                "lookup_preconditioner": lookup_preconditioner,
                             }
                         )
 

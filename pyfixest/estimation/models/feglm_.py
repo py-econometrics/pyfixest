@@ -47,7 +47,7 @@ class Feglm(Feols, ABC):
             "scipy.sparse.linalg.lsqr",
         ],
         demeaner: AnyDemeaner | None = None,
-        preconditioner_lookup: dict[frozenset[int], Preconditioner] | None = None,
+        lookup_preconditioner: dict[frozenset[int], Preconditioner] | None = None,
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
@@ -75,7 +75,7 @@ class Feglm(Feols, ABC):
             sample_split_value=sample_split_value,
             context=context,
             demeaner=demeaner,
-            preconditioner_lookup=preconditioner_lookup,
+            lookup_preconditioner=lookup_preconditioner,
         )
 
         _glm_input_checks(

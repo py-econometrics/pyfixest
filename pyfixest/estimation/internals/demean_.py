@@ -13,9 +13,9 @@ class DemeanCache:
     block. The block holds the FE structure and weights fixed, so models
     with the same ``na_index`` see the same within operator and can reuse:
 
-    - ``demeaned_lookup``: already-demeaned columns, reused at the column
+    - ``lookup_demeaned_data``: already-demeaned columns, reused at the column
       level across siblings.
-    - ``preconditioner_lookup``: the LSMR within-preconditioner from the
+    - ``lookup_preconditioner``: the LSMR within-preconditioner from the
       first solve at each ``na_index``, reused as a warm start by every
       later solve at the same ``na_index`` (including IWLS iterations and
       sibling IWLS models). Working weights drift across iterations, but
@@ -28,14 +28,14 @@ class DemeanCache:
 
     def __init__(
         self,
-        demeaned_lookup: dict[frozenset[int], pd.DataFrame] | None = None,
-        preconditioner_lookup: dict[frozenset[int], Preconditioner] | None = None,
+        lookup_demeaned_data: dict[frozenset[int], pd.DataFrame] | None = None,
+        lookup_preconditioner: dict[frozenset[int], Preconditioner] | None = None,
     ) -> None:
-        self.demeaned_lookup: dict[frozenset[int], pd.DataFrame] = (
-            {} if demeaned_lookup is None else demeaned_lookup
+        self.lookup_demeaned_data: dict[frozenset[int], pd.DataFrame] = (
+            {} if lookup_demeaned_data is None else lookup_demeaned_data
         )
-        self.preconditioner_lookup: dict[frozenset[int], Preconditioner] = (
-            {} if preconditioner_lookup is None else preconditioner_lookup
+        self.lookup_preconditioner: dict[frozenset[int], Preconditioner] = (
+            {} if lookup_preconditioner is None else lookup_preconditioner
         )
 
     def seed_preconditioner(
@@ -50,8 +50,8 @@ class DemeanCache:
         ``preconditioner='off'``, non-within backend), in which case there
         is nothing to store.
         """
-        if used is not None and na_index not in self.preconditioner_lookup:
-            self.preconditioner_lookup[na_index] = used
+        if used is not None and na_index not in self.lookup_preconditioner:
+            self.lookup_preconditioner[na_index] = used
 
     def demean_array(
         self,
@@ -76,7 +76,7 @@ class DemeanCache:
         na_index: frozenset[int],
         demeaner: AnyDemeaner,
     ) -> tuple[np.ndarray, Preconditioner | None]:
-        cached = self.preconditioner_lookup.get(na_index)
+        cached = self.lookup_preconditioner.get(na_index)
         result, success, used = demeaner.demean(
             x, flist, weights, cached_preconditioner=cached
         )
@@ -99,7 +99,7 @@ class DemeanCache:
         """Demean a regression model: check cache, demean what's missing, update cache.
 
         Prior to demeaning, checks whether some of the variables have already
-        been demeaned and reuses values from ``self.demeaned_lookup`` if
+        been demeaned and reuses values from ``self.lookup_demeaned_data`` if
         possible. If the model has no fixed effects, the data is returned
         undemeaned.
 
@@ -123,7 +123,7 @@ class DemeanCache:
             return YX_demeaned[Y.columns], YX_demeaned[X.columns], None
 
         fe_array = fe.to_numpy()
-        cached = self.demeaned_lookup.get(na_index)
+        cached = self.lookup_demeaned_data.get(na_index)
         if cached is None:
             arr, used = self._run_or_raise(
                 YX_array, fe_array, weights, na_index, demeaner
@@ -146,5 +146,5 @@ class DemeanCache:
                 # all variables already demeaned
                 YX_demeaned = cached[yx_names]
 
-        self.demeaned_lookup[na_index] = YX_demeaned
+        self.lookup_demeaned_data[na_index] = YX_demeaned
         return YX_demeaned[Y.columns], YX_demeaned[X.columns], used

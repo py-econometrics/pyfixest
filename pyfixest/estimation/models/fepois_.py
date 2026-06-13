@@ -100,7 +100,7 @@ class Fepois(Feols):
         maxiter: int,
         solver: SolverOptions = "np.linalg.solve",
         demeaner: AnyDemeaner | None = None,
-        preconditioner_lookup: dict[frozenset[int], Preconditioner] | None = None,
+        lookup_preconditioner: dict[frozenset[int], Preconditioner] | None = None,
         context: int | Mapping[str, Any] = 0,
         store_data: bool = True,
         copy_data: bool = True,
@@ -128,7 +128,7 @@ class Fepois(Feols):
             sample_split_value=sample_split_value,
             context=context,
             demeaner=demeaner,
-            preconditioner_lookup=preconditioner_lookup,
+            lookup_preconditioner=lookup_preconditioner,
         )
 
         # input checks
