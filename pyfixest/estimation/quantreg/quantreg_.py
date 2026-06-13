@@ -20,7 +20,7 @@ from pyfixest.estimation.quantreg.frisch_newton_ip import (
     frisch_newton_solver,
 )
 from pyfixest.estimation.quantreg.utils import get_hall_sheather_bandwidth
-from pyfixest.estimation.quantreg.vcov_ import vcov_iid_qreg
+from pyfixest.estimation.quantreg.vcov_ import vcov_iid_qreg, vcov_hetero_qreg
 
 
 class Quantreg(Feols):

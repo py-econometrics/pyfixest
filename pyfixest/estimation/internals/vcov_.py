@@ -1,6 +1,12 @@
 from __future__ import annotations
 
+from typing import Literal
+
 import numpy as np
+
+from pyfixest.estimation.internals.literals import WeightsTypeOptions
+
+HeteroVcovTypeOptions = Literal["hetero", "HC1", "HC2", "HC3"]
 
 
 def _sandwich(
@@ -31,15 +37,40 @@ def vcov_hetero(
     X: np.ndarray,
     tZX: np.ndarray,
     weights: np.ndarray,
-    weights_type: str,
-    vcov_type_detail: str,
+    weights_type: WeightsTypeOptions | None,
+    vcov_type_detail: HeteroVcovTypeOptions,
     bread: np.ndarray,
     is_iv: bool,
     tXZ: np.ndarray,
     tZZinv: np.ndarray,
 ) -> np.ndarray:
     "Unscaled heteroskedasticity-robust vcov (HC1/HC2/HC3)."
-    pass
+    if vcov_type_detail in ["hetero", "HC1"]:
+        transformed_scores = scores
+    elif vcov_type_detail in ["HC2", "HC3"]:
+        leverage = np.sum(X * (X @ np.linalg.inv(tZX)), axis=1)
+        if weights_type == "fweights":
+            leverage = leverage / weights.flatten()
+        transformed_scores = (
+            scores / np.sqrt(1 - leverage)[:, None]
+            if vcov_type_detail == "HC2"
+            else scores / (1 - leverage)[:, None]
+        )
+    else:
+        raise ValueError(
+            f"vcov_type_detail must be one of {HeteroVcovTypeOptions}, got {vcov_type_detail}."
+        )
+
+    # for fweights, need to divide by sqrt(weights)
+    if weights_type == "fweights":
+        transformed_scores = transformed_scores / np.sqrt(weights)
+
+    Omega = transformed_scores.T @ transformed_scores
+
+    meat = tXZ @ tZZinv @ Omega @ tZZinv @ tZX if is_iv else Omega
+    vcov = bread @ meat @ bread
+
+    return vcov
 
 
 def vcov_hac(

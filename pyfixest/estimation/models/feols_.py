@@ -30,7 +30,7 @@ from pyfixest.estimation.internals.literals import (
     SolverOptions,
     _validate_literal_argument,
 )
-from pyfixest.estimation.internals.vcov_ import vcov_iid_ols
+from pyfixest.estimation.internals.vcov_ import vcov_hetero, vcov_iid_ols
 from pyfixest.estimation.internals.vcov_utils import (
     _check_cluster_df,
     _compute_bread,
@@ -835,32 +835,18 @@ class Feols(ResultAccessorMixin):
         return vcov_iid_ols(residuals=self._u_hat, bread=self._bread, N=self._N)
 
     def _vcov_hetero(self):
-        if self._vcov_type_detail in ["hetero", "HC1"]:
-            transformed_scores = self._scores
-        elif self._vcov_type_detail in ["HC2", "HC3"]:
-            leverage = np.sum(self._X * (self._X @ np.linalg.inv(self._tZX)), axis=1)
-            if self._weights_type == "fweights":
-                leverage = leverage / self._weights.flatten()
-            transformed_scores = (
-                self._scores / np.sqrt(1 - leverage)[:, None]
-                if self._vcov_type_detail == "HC2"
-                else self._scores / (1 - leverage)[:, None]
-            )
-
-        # for fweights, need to divide by sqrt(weights)
-        if self._weights_type == "fweights":
-            transformed_scores = transformed_scores / np.sqrt(self._weights)
-
-        Omega = transformed_scores.T @ transformed_scores
-
-        meat = (
-            self._tXZ @ self._tZZinv @ Omega @ self._tZZinv @ self._tZX
-            if self._is_iv
-            else Omega
+        return vcov_hetero(
+            scores=self._scores,
+            X=self._X,
+            tZX=self._tZX,
+            weights=self._weights,
+            weights_type=self._weights_type,
+            vcov_type_detail=self._vcov_type_detail,
+            bread=self._bread,
+            is_iv=self._is_iv,
+            tXZ=self._tXZ,
+            tZZinv=self._tZZinv,
         )
-        vcov = self._bread @ meat @ self._bread
-
-        return vcov
 
     def _vcov_hac(self):
         _scores = self._scores
