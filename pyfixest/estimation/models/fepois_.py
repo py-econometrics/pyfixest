@@ -12,15 +12,14 @@ from scipy.special import gammaln
 
 from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner
-from pyfixest.errors import (
-    NonConvergenceError,
-)
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
-from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
+from pyfixest.estimation.internals.fit_pois_ import (
+    fit_pois_irls,
+    pois_deviance,
+)
 from pyfixest.estimation.internals.literals import (
     SolverOptions,
 )
-from pyfixest.estimation.internals.solvers import solve_ols
 from pyfixest.estimation.internals.vcov_ import vcov_iid_glm
 from pyfixest.estimation.models.feols_ import (
     Feols,
@@ -152,7 +151,7 @@ class Fepois(Feols):
         self._support_decomposition = False
 
         self._Y_hat_response = np.array([])
-        self.deviance = None
+        self.deviance: float | None = None
         self._Xbeta = np.array([])
 
     def prepare_model_matrix(self):
@@ -218,168 +217,56 @@ class Fepois(Feols):
         else:
             self._offset = np.zeros((self._N, 1))
 
-    def _compute_deviance(
-        self, Y: np.ndarray, mu: np.ndarray, weights: np.ndarray | None = None
-    ):
-        """
-        Deviance is defined as twice the difference in log likelihood between the
-        saturated model and the model being fit.
-
-        deviance = 2 * (log_likelihood_saturated - log_likelihood_fitted)
-
-        See [1] chapter 5.6 for more details.
-        [1] Dobson, Annette J., and Adrian G. Barnett. An introduction to generalized linear models. Chapman and Hall/CRC, 2018.
-        """
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            if weights is None:
-                weights = np.ones_like(Y)
-            weights = weights.flatten()
-            Y_flat = Y.flatten()
-            mu_flat = mu.flatten()
-            deviance = np.float64(
-                2
-                * np.sum(
-                    weights
-                    * (
-                        np.where(Y_flat == 0, 0, Y_flat * np.log(Y_flat / mu_flat))
-                        - (Y_flat - mu_flat)
-                    )
-                )
-            )
-        return deviance
-
     def get_fit(self) -> None:
-        """
-        Fit a Poisson Regression Model via Iterated Weighted Least Squares (IWLS).
-
-        Returns
-        -------
-        None
-
-        Attributes
-        ----------
-        beta_hat : np.ndarray
-            Estimated coefficients.
-        Y_hat : np.ndarray
-            Estimated dependent variable.
-        u_hat : np.ndarray
-            Estimated residuals.
-        weights : np.ndarray
-            Weights (from the last iteration of the IRLS algorithm).
-        X : np.ndarray
-            Demeaned independent variables (from the last iteration of the IRLS
-            algorithm).
-        Z : np.ndarray
-            Demeaned independent variables (from the last iteration of the IRLS
-            algorithm).
-        Y : np.ndarray
-            Demeaned dependent variable (from the last iteration of the IRLS
-            algorithm).
-        """
+        "Fit a fixed-effects Poisson model via IRLS and write results onto self.*."
         self.to_array()
+        assert self._offset is not None  # set in prepare_model_matrix
 
-        stop_iterating = False
-        crit = 1
-
-        for i in range(self.maxiter):
-            if stop_iterating:
-                self.convergence = True
-                break
-            if i == self.maxiter:
-                raise NonConvergenceError(
-                    f"""
-                    The IRLS algorithm did not converge with {self.maxiter}
-                    iterations. Try to increase the maximum number of iterations.
-                    """
-                )
-
-            if i == 0:
-                _mean = np.mean(self._Y)
-                mu = (self._Y + _mean) / 2
-                eta = np.log(mu)
-                Z = eta - self._offset + self._Y / mu - 1
-                reg_Z = Z.copy()
-                last = self._compute_deviance(self._Y, mu)
-            else:
-                # update w and Z
-                Z = eta - self._offset + self._Y / mu - 1  # eq (8)
-                reg_Z = Z.copy()  # eq (9)
-
-            # tighten HDFE tolerance - currently not possible with PyHDFE
-            # if crit < 10 * inner_tol:
-            #    inner_tol = inner_tol / 10
-
-            # Step 1: weighted demeaning
-            ZX = np.concatenate([reg_Z, self._X], axis=1)
-
-            combined_weights = self._weights * mu
-
+        def _demean(x: np.ndarray, w: np.ndarray) -> np.ndarray:
             if self._fe is None:
-                ZX_resid = ZX
-            else:
-                ZX_resid = self._demean_cache.demean_array(
-                    x=ZX,
-                    flist=self._fe,
-                    weights=combined_weights.flatten(),
-                    na_index=self._na_index,
-                    demeaner=self._demeaner,
-                )
+                return x
+            return self._demean_cache.demean_array(
+                x=x,
+                flist=self._fe,
+                weights=w,
+                na_index=self._na_index,
+                demeaner=self._demeaner,
+            )
 
-            Z_resid = ZX_resid[:, 0].reshape((self._N, 1))  # z_resid
-            X_resid = ZX_resid[:, 1:]  # x_resid
+        fit = fit_pois_irls(
+            X=self._X,
+            Y=self._Y,
+            offset=self._offset,
+            weights=self._weights,
+            demean=_demean,
+            coefnames=self._coefnames,
+            collin_tol=self._collin_tol,
+            solver=self._solver,
+            maxiter=self.maxiter,
+            tol=self.tol,
+        )
 
-            if i == 0:
-                # Check multicollinearity
-                # We do this here after the first demeaning to also catch collinearity with fixed effects
-                X_resid, self._coefnames, self._collin_vars, self._collin_index = (
-                    drop_multicollinear_variables(
-                        X_resid,
-                        self._coefnames,
-                        self._collin_tol,
-                    )
-                )
-                if self._collin_index:
-                    # Drop covariates collinear with fixed effects
-                    self._X = self._X[:, ~np.array(self._collin_index)]
-                self._X_is_empty = self._X.shape[1] == 0
-                self._k = self._X.shape[1]
-            WX = np.sqrt(combined_weights) * X_resid
-            WZ = np.sqrt(combined_weights) * Z_resid
+        self._coefnames = fit.coefnames
+        self._collin_vars = fit.collin_vars
+        self._collin_index = fit.collin_index
+        self._X = fit.X
+        self._X_is_empty = self._X.shape[1] == 0
+        self._k = self._X.shape[1]
 
-            XWX = WX.transpose() @ WX
-            XWZ = WX.transpose() @ WZ
+        self._beta_hat = fit.beta
+        self._Y_hat_response = fit.mu.flatten()
+        self._Y_hat_link = fit.eta.flatten()
 
-            delta_new = solve_ols(XWX, XWZ, self._solver).reshape(
-                (-1, 1)
-            )  # eq (10), delta_new -> reg_z
-            resid = Z_resid - X_resid @ delta_new
-
-            # more updating
-            eta = Z - resid + self._offset
-            mu = np.exp(eta)
-
-            # same criterion as fixest
-            # https://github.com/lrberge/fixest/blob/6b852fa277b947cea0bad8630986225ddb2d6f1b/R/ESTIMATION_FUNS.R#L2746
-            deviance = self._compute_deviance(self._Y, mu)
-            crit = np.abs(deviance - last) / (0.1 + np.abs(last))
-            last = deviance
-
-            stop_iterating = crit < self.tol
-
-        self._beta_hat = delta_new.flatten()
-        self._Y_hat_response = mu.flatten()
-        self._Y_hat_link = eta.flatten()
-        # (Y - self._Y_hat)
-        # needed for the calculation of the vcov
-
-        # update for inference
         user_weights = self._weights.flatten()
-        self._irls_weights = combined_weights.flatten()
+        self._irls_weights = fit.W.flatten()
 
-        self._u_hat = (WZ - WX @ delta_new).flatten()
-        self._u_hat_working = resid
-        self._u_hat_response = self._Y - np.exp(eta)
+        WX = fit.sqrt_W * fit.X_tilde
+        WZ = fit.sqrt_W * fit.z_tilde
+        beta_col = self._beta_hat.reshape((-1, 1))
+
+        self._u_hat = (WZ - WX @ beta_col).flatten()
+        self._u_hat_working = fit.z_tilde - fit.X_tilde @ beta_col
+        self._u_hat_response = self._Y - fit.mu
 
         y = self._Y.flatten()
         self._y_hat_null = np.full_like(
@@ -405,20 +292,21 @@ class Fepois(Feols):
             user_weights * (y - self._Y_hat_response) ** 2 / self._Y_hat_response
         )
 
-        self._weights = combined_weights
-        self.deviance = self._compute_deviance(y, mu, user_weights)
+        self._weights = fit.W
+        self.deviance = pois_deviance(y, fit.mu, user_weights)
 
         self._Y = WZ
         self._X = WX
         self._Z = self._X
 
-        self._tZX = np.transpose(self._Z) @ self._X
+        self._tZX = self._Z.T @ self._X
         self._tZXinv = np.linalg.inv(self._tZX)
-        self._Xbeta = eta
+        self._Xbeta = fit.eta
 
         self._scores = self._u_hat[:, None] * self._X
-        self._hessian = XWX
+        self._hessian = WX.T @ WX
 
+        self.convergence = fit.converged
         if self.convergence:
             self._convergence = True
 

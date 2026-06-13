@@ -374,8 +374,8 @@ class Feols(ResultAccessorMixin):
         self._adj_r2 = np.nan
         self._adj_r2_within = np.nan
 
-        # special for poisson
-        self.deviance = None
+        # special for poisson / glm
+        self.deviance: float | None = None
 
         # special for did
         self._res_cohort_eventtime_dict: dict[str, Any] | None = None
