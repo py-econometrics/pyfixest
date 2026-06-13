@@ -20,6 +20,7 @@ from pyfixest.estimation.internals.literals import (
     SolverOptions,
 )
 from pyfixest.estimation.internals.solvers import solve_ols
+from pyfixest.estimation.internals.vcov_ import vcov_iid_glm
 from pyfixest.estimation.models.feols_ import (
     Feols,
     PredictionErrorOptions,
@@ -444,7 +445,7 @@ class Fepois(Feols):
             raise ValueError("type must be one of 'response' or 'working'.")
 
     def _vcov_iid(self):
-        return self._bread
+        return vcov_iid_glm(bread=self._bread)
 
     def predict(
         self,

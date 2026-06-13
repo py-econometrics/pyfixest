@@ -14,6 +14,7 @@ from pyfixest.errors import (
 )
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.solvers import solve_ols
+from pyfixest.estimation.internals.vcov_ import vcov_iid_glm
 from pyfixest.estimation.models.feols_ import (
     Feols,
     PredictionErrorOptions,
@@ -306,7 +307,7 @@ class Feglm(Feols, ABC):
             self._convergence = True
 
     def _vcov_iid(self):
-        return self._bread
+        return vcov_iid_glm(bread=self._bread)
 
     def _update_v(
         self, y: np.ndarray, mu: np.ndarray, gprime: np.ndarray
