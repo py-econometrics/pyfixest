@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 from scipy.stats import norm
 
+from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.models.feglm_ import Feglm
@@ -34,6 +35,7 @@ class Feprobit(Feglm):
             "scipy.sparse.linalg.lsqr",
         ],
         demeaner: AnyDemeaner | None = None,
+        lookup_preconditioner: dict[frozenset[int], Preconditioner] | None = None,
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
@@ -57,6 +59,7 @@ class Feprobit(Feglm):
             maxiter=maxiter,
             solver=solver,
             demeaner=demeaner,
+            lookup_preconditioner=lookup_preconditioner,
             store_data=store_data,
             copy_data=copy_data,
             lean=lean,

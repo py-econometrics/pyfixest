@@ -8,12 +8,8 @@ import pytest
 import pyfixest as pf
 from pyfixest.core import demean as demean_rs
 from pyfixest.core.demean import demean_within
-from pyfixest.demeaners import LsmrDemeaner, MapDemeaner
-from pyfixest.estimation.internals.demean_ import (
-    _resolve_preconditioner,
-    demean_model,
-    dispatch_demean,
-)
+from pyfixest.demeaners import LsmrDemeaner, MapDemeaner, _resolve_preconditioner
+from pyfixest.estimation.internals.demean_ import DemeanCache
 from pyfixest.estimation.numba.demean_nb import demean as demean_numba
 from tests._torch_test_utils import HAS_TORCH, torch_param
 
@@ -146,11 +142,10 @@ def test_within_solver_variants_match_pyhdfe(demeaner, rtol, atol, demean_data):
 
     algorithm = pyhdfe.create(flist)
     expected_unweighted = algorithm.residualize(x)
-    result_unweighted, success, _ = dispatch_demean(
+    result_unweighted, success, _ = demeaner.demean(
         x=x,
         flist=flist,
         weights=np.ones(x.shape[0]),
-        demeaner=demeaner,
     )
     assert success
     np.testing.assert_allclose(
@@ -158,11 +153,10 @@ def test_within_solver_variants_match_pyhdfe(demeaner, rtol, atol, demean_data):
     )
 
     expected_weighted = algorithm.residualize(x, weights.reshape((x.shape[0], 1)))
-    result_weighted, success, _ = dispatch_demean(
+    result_weighted, success, _ = demeaner.demean(
         x=x,
         flist=flist,
         weights=weights,
-        demeaner=demeaner,
     )
     assert success
     np.testing.assert_allclose(result_weighted, expected_weighted, rtol=rtol, atol=atol)
@@ -350,38 +344,38 @@ def test_demean_within_rejects_mismatched_preconditioner(demean_data):
 def test_lsmr_within_reuses_cached_preconditioner(
     preconditioner, expected_variant, demean_data
 ):
-    """End-to-end coverage of ``dispatch_demean``'s preconditioner-reuse policy.
+    """End-to-end coverage of ``LsmrDemeaner.demean``'s preconditioner-reuse policy.
 
     Context
     -------
-    ``dispatch_demean`` is the orchestration layer that the model classes
-    (``Feols``, ``Fepois``, ``Feglm``) call to demean their working data on
-    each iteration. The ``cached_preconditioner`` argument is the
-    callsite-supplied factorization that turns IWLS's "build the
-    factorization once, reuse it across iterations" claim into reality. The
-    dispatcher returns the preconditioner actually used so callers can hold
-    onto it for the next solve. This test exercises that contract directly,
-    bypassing the model classes so failures point at the reuse logic instead
-    of the IWLS loop.
+    `LsmrDemeaner.demean`` is the strategy entry point that the model-side
+    `DemeanCache` calls to demean working data on each iteration. The
+    `cached_preconditioner` argument is the callsite-supplied
+    factorization that turns IWLS's "build the factorization once, reuse it
+    across iterations" claim into reality. The method returns the
+    preconditioner actually used so the cache can hold onto it for the next
+    solve. This test exercises that contract directly, bypassing the model
+    classes and the cache so failures point at the reuse logic instead of
+    the IWLS loop.
 
     Three behaviours are pinned down:
 
     Leg 1 — first call reports the freshly built preconditioner
-        With no ``cached_preconditioner``, ``LsmrDemeaner(backend="within")``
-        builds the requested factorization. The dispatcher must return it as
+        With no `cached_preconditioner`, `LsmrDemeaner(backend="within")`
+        builds the requested factorization. The method must return it as
         the third tuple element so the caller can hold onto it.
 
     Leg 2 — subsequent calls reuse the supplied preconditioner under changed
     weights (the IWLS hot path)
-        IWLS changes the working weights at every iteration (``W := W * mu``).
+        IWLS changes the working weights at every iteration (`W := W * mu`).
         A pure implementation would rebuild the preconditioner each time,
         which is the expensive step. Passing the first-iteration factorization
-        back in via ``cached_preconditioner`` lets us reuse it even though
+        back in via `cached_preconditioner` lets us reuse it even though
         the weights — and therefore the true normal-equations operator — have
         changed. The factorization is "stale" in that sense, but LSMR still
         converges to the correct demeaned values, just possibly in a few more
         iterations. We simulate a weight change with ``weights + 0.25``, then
-        check both that the dispatcher returns the *same* Python object (no
+        check both that the method returns the *same* Python object (no
         rebuild) and that the demeaned output still matches an independent
         ground truth.
 
@@ -416,11 +410,10 @@ def test_lsmr_within_reuses_cached_preconditioner(
     )
 
     # ----- Leg 1: no cache → build a fresh preconditioner and return it.
-    result, success, built = dispatch_demean(
+    result, success, built = demeaner.demean(
         x=x,
         flist=flist,
         weights=weights,
-        demeaner=demeaner,
     )
     assert success
     assert isinstance(built, pf.Preconditioner), (
@@ -429,16 +422,15 @@ def test_lsmr_within_reuses_cached_preconditioner(
     assert built.variant == expected_variant
 
     # ----- Leg 2: changed weights, cached preconditioner supplied. Mimics
-    # an IWLS iteration where only the working weights moved. The dispatcher
+    # an IWLS iteration where only the working weights moved. The method
     # must reuse the cached factorization (same variant + DOF count; pyo3
     # produces a fresh wrapper, identity semantics match upstream ``within``)
     # and the result must still be numerically correct under the *new* weights.
     adjusted_weights = weights + 0.25
-    result_reused, success, reused = dispatch_demean(
+    result_reused, success, reused = demeaner.demean(
         x=x,
         flist=flist,
         weights=adjusted_weights,
-        demeaner=demeaner,
         cached_preconditioner=built,
     )
     assert success
@@ -467,17 +459,17 @@ def test_lsmr_within_reuses_cached_preconditioner(
     # pickled+restored copy) and pass it through
     # ``LsmrDemeaner(preconditioner=...)``. With the original weights, the
     # result must reproduce leg 1 down to floating-point noise.
-    result_explicit, success, _ = dispatch_demean(
+    explicit_demeaner = LsmrDemeaner(
+        backend="within",
+        preconditioner=built,
+        fixef_atol=1e-10,
+        fixef_btol=1e-10,
+        fixef_maxiter=10_000,
+    )
+    result_explicit, success, _ = explicit_demeaner.demean(
         x=x,
         flist=flist,
         weights=weights,
-        demeaner=LsmrDemeaner(
-            backend="within",
-            preconditioner=built,
-            fixef_atol=1e-10,
-            fixef_btol=1e-10,
-            fixef_maxiter=10_000,
-        ),
     )
     assert success
     np.testing.assert_allclose(
@@ -490,28 +482,28 @@ def test_lsmr_within_reuses_cached_preconditioner(
 
 
 def test_lsmr_within_reports_no_preconditioner_when_unused(demean_data):
-    """The dispatcher reports ``None`` whenever no preconditioner ran.
+    """`LsmrDemeaner.demean` reports `None` whenever no preconditioner ran.
 
     Two routes produce that outcome, both pinned here:
 
-    1. ``preconditioner="off"`` — preconditioning is explicitly disabled, so
-       ``demean_within`` never builds one.
-    2. Single-FE design with an explicit ``Preconditioner`` —
-       ``demean_within`` special-cases single-FE designs to the MAP fallback,
+    1. `preconditioner="off"` — preconditioning is explicitly disabled, so
+       `demean_within` never builds one.
+    2. Single-FE design with an explicit `Preconditioner` —
+       `demean_within` special-cases single-FE designs to the MAP fallback,
        which ignores the user-supplied object entirely.
 
-    In both, ``demean_within``'s third return is ``None`` and the dispatcher
-    must propagate that. ``fit.preconditioner`` is supposed to reflect
-    factorizations that actually participated in a solve; reporting an
-    unused one would mislead any code that inspects or pickles it.
+    In both, `demean_within`'s third return is `None` and
+    `LsmrDemeaner.demean` must propagate that. `fit.preconditioner` is
+    supposed to reflect factorizations that actually participated in a solve;
+    reporting an unused one would mislead any code that inspects or pickles it.
 
     Why this is the only regression test for that guard
     ---------------------------------------------------
-    The dispatcher's "used" computation is gated on ``built is not None``.
-    Every other code path has ``built is not None`` (multi-FE Schwarz ran,
+    The "used" computation is gated on `built is not None`.
+    Every other code path has `built is not None` (multi-FE Schwarz ran,
     reporting is correct) or has no explicit preconditioner to mishandle in
     the first place. Without these two cases, a refactor that drops the
-    ``built is not None`` check would silently regress the contract.
+    `built is not None` check would silently regress the contract.
     """
     x, flist, weights = demean_data
 
@@ -539,11 +531,10 @@ def test_lsmr_within_reports_no_preconditioner_when_unused(demean_data):
     )
     assert full_pre is not None
 
-    _, success, used = dispatch_demean(
+    _, success, used = LsmrDemeaner(backend="within", preconditioner=full_pre).demean(
         x=x,
         flist=flist[:, :1],
         weights=weights,
-        demeaner=LsmrDemeaner(backend="within", preconditioner=full_pre),
     )
     assert success
     assert used is None, "unused explicit preconditioner must not be reported as used"
@@ -628,22 +619,21 @@ def test_feols_warns_for_experimental_torch_demeaner():
 
 @pytest.mark.parametrize("demeaner", MODEL_DEMEANERS)
 def test_demean_model_no_fixed_effects(benchmark, demeaner):
-    """Test demean_model when there are no fixed effects."""
+    """Test DemeanCache.demean_yx when there are no fixed effects."""
     # Create sample data
     N = 1000
     Y = pd.DataFrame({"y": np.random.randn(N)})
     X = pd.DataFrame({"x1": np.random.randn(N), "x2": np.random.randn(N)})
     weights = np.ones(N)
-    lookup_dict = {}
+    cache = DemeanCache()
 
     # Test without fixed effects
     Yd, Xd, _ = benchmark(
-        demean_model,
+        cache.demean_yx,
         Y=Y,
         X=X,
         fe=None,
         weights=weights,
-        lookup_demeaned_data=lookup_dict,
         na_index=frozenset(),
         demeaner=demeaner,
     )
@@ -657,7 +647,7 @@ def test_demean_model_no_fixed_effects(benchmark, demeaner):
 
 @pytest.mark.parametrize("demeaner", MODEL_DEMEANERS)
 def test_demean_model_with_fixed_effects(benchmark, demeaner):
-    """Test demean_model with fixed effects."""
+    """Test DemeanCache.demean_yx with fixed effects."""
     # Create sample data
     N = 1000
     rng = np.random.default_rng(42)
@@ -667,15 +657,15 @@ def test_demean_model_with_fixed_effects(benchmark, demeaner):
     fe = pd.DataFrame({"fe1": rng.integers(0, 10, N), "fe2": rng.integers(0, 5, N)})
     weights = np.ones(N)
     lookup_dict = {}
+    cache = DemeanCache(lookup_dict)
 
-    # Run demean_model
+    # Run demean_yx
     Yd, Xd, _ = benchmark(
-        demean_model,
+        cache.demean_yx,
         Y=Y,
         X=X,
         fe=fe,
         weights=weights,
-        lookup_demeaned_data=lookup_dict,
         na_index=frozenset(),
         demeaner=demeaner,
     )
@@ -697,7 +687,7 @@ def test_demean_model_with_fixed_effects(benchmark, demeaner):
 
 @pytest.mark.parametrize("demeaner", MODEL_DEMEANERS)
 def test_demean_model_with_weights(benchmark, demeaner):
-    """Test demean_model with weights."""
+    """Test DemeanCache.demean_yx with weights."""
     N = 1000
     rng = np.random.default_rng(42)
 
@@ -705,27 +695,25 @@ def test_demean_model_with_weights(benchmark, demeaner):
     X = pd.DataFrame({"x1": rng.normal(0, 1, N), "x2": rng.normal(0, 1, N)})
     fe = pd.DataFrame({"fe1": rng.integers(0, 10, N)})
     weights = rng.uniform(0.5, 1.5, N)
-    lookup_dict = {}
+    cache = DemeanCache()
 
     # Run with weights
     Yd, Xd, _ = benchmark(
-        demean_model,
+        cache.demean_yx,
         Y=Y,
         X=X,
         fe=fe,
         weights=weights,
-        lookup_demeaned_data=lookup_dict,
         na_index=frozenset(),
         demeaner=demeaner,
     )
 
-    # Run without weights for comparison (fresh lookup dict to avoid cache hit)
-    Yd_unweighted, Xd_unweighted, _ = demean_model(
+    # Run without weights for comparison (fresh cache to avoid cache hit)
+    Yd_unweighted, Xd_unweighted, _ = DemeanCache().demean_yx(
         Y=Y,
         X=X,
         fe=fe,
         weights=np.ones(N),
-        lookup_demeaned_data={},
         na_index=frozenset(),
         demeaner=demeaner,
     )
@@ -737,7 +725,7 @@ def test_demean_model_with_weights(benchmark, demeaner):
 
 @pytest.mark.parametrize("demeaner", MODEL_DEMEANERS)
 def test_demean_model_caching(benchmark, demeaner):
-    """Test the caching behavior of demean_model."""
+    """Test the caching behavior of DemeanCache.demean_yx."""
     N = 1000
     rng = np.random.default_rng(42)
 
@@ -748,24 +736,22 @@ def test_demean_model_caching(benchmark, demeaner):
     lookup_dict = {}
 
     # First run - should compute and cache
-    Yd1, Xd1, _ = demean_model(
+    Yd1, Xd1, _ = DemeanCache(lookup_dict).demean_yx(
         Y=Y,
         X=X,
         fe=fe,
         weights=weights,
-        lookup_demeaned_data=lookup_dict,
         na_index=frozenset(),
         demeaner=demeaner,
     )
 
-    # Second run - should use cache
+    # Second run - should use cache (shared lookup, fresh per-model cache)
     Yd2, Xd2, _ = benchmark(
-        demean_model,
+        DemeanCache(lookup_dict).demean_yx,
         Y=Y,
         X=X,
         fe=fe,
         weights=weights,
-        lookup_demeaned_data=lookup_dict,
         na_index=frozenset(),
         demeaner=demeaner,
     )
@@ -778,12 +764,11 @@ def test_demean_model_caching(benchmark, demeaner):
     X_new = X.copy()
     X_new["x3"] = rng.normal(0, 1, N)
 
-    _, Xd3, _ = demean_model(
+    _, Xd3, _ = DemeanCache(lookup_dict).demean_yx(
         Y=Y,
         X=X_new,
         fe=fe,
         weights=weights,
-        lookup_demeaned_data=lookup_dict,
         na_index=frozenset(),
         demeaner=demeaner,
     )
@@ -806,7 +791,7 @@ def test_demean_model_caching(benchmark, demeaner):
     ],
 )
 def test_demean_model_maxiter_convergence_failure(demeaner):
-    """Test that demean_model fails when maxiter is too small."""
+    """Test that DemeanCache.demean_yx fails when maxiter is too small."""
     N = 100
     rng = np.random.default_rng(42)
 
@@ -817,16 +802,14 @@ def test_demean_model_maxiter_convergence_failure(demeaner):
         {"fe1": rng.choice(N // 10, N), "fe2": rng.choice(N // 10, N)}
     )  # Each obs is its own FE
     weights = np.ones(N)
-    lookup_dict = {}
 
     # Should fail with very small maxiter
     with pytest.raises(ValueError, match="Demeaning failed after 1 iterations"):
-        demean_model(
+        DemeanCache().demean_yx(
             Y=Y,
             X=X,
             fe=fe,
             weights=weights,
-            lookup_demeaned_data=lookup_dict,
             na_index=frozenset(),
             demeaner=demeaner,
         )
@@ -863,8 +846,8 @@ def test_demean_complex_fixed_effects(benchmark, demeaner):
     X, flist, weights = generate_complex_fixed_effects_data()
 
     X_demeaned, success, _ = benchmark.pedantic(
-        dispatch_demean,
-        args=(X, flist, weights, demeaner),
+        demeaner.demean,
+        args=(X, flist, weights),
         iterations=1,
         rounds=1,
         warmup_rounds=0,
