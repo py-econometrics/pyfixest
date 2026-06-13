@@ -30,6 +30,7 @@ from pyfixest.estimation.internals.literals import (
     SolverOptions,
     _validate_literal_argument,
 )
+from pyfixest.estimation.internals.vcov_ import vcov_iid_ols
 from pyfixest.estimation.internals.vcov_utils import (
     _check_cluster_df,
     _compute_bread,
@@ -831,8 +832,7 @@ class Feols(ResultAccessorMixin):
         return self
 
     def _vcov_iid(self):
-        sigma2 = np.sum(self._u_hat.flatten() ** 2) / (self._N - 1)
-        return self._bread * sigma2
+        return vcov_iid_ols(residuals=self._u_hat, bread=self._bread, N=self._N)
 
     def _vcov_hetero(self):
         if self._vcov_type_detail in ["hetero", "HC1"]:
