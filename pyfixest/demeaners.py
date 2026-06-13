@@ -28,10 +28,11 @@ _PRECONDITIONER_SUPPORT: dict[LsmrBackend, tuple[set[str], str]] = {
 
 
 def _resolve_preconditioner(backend: LsmrBackend, requested: LsmrPreconditioner) -> str:
-    """Resolve ``preconditioner`` against the backend's supported set.
+    """Resolve `preconditioner` against the supported set of Preconditioners for the
+    specified backend.
 
-    ``"auto"`` always resolves silently to the backend's natural default.
-    An explicit but unsupported value emits a ``UserWarning`` and is replaced
+    `"auto"` always resolves silently to the backend's default.
+    An explicit but unsupported value emits a `UserWarning` and is replaced
     with the natural default.
     """
     supported, default = _PRECONDITIONER_SUPPORT[backend]
@@ -106,7 +107,7 @@ class MapDemeaner(BaseDemeaner):
             raise ValueError(f"`backend` must be one of {get_args(MapBackend)}.")
 
     def with_tol(self, tol: float | None) -> MapDemeaner:
-        """Return a copy with ``fixef_tol`` overridden (used for IWLS acceleration)."""
+        """Override the `fixef_tol`, used for IWLS acceleration."""
         if tol is None or tol == self.fixef_tol:
             return self
         return replace(self, fixef_tol=tol)
@@ -118,11 +119,11 @@ class MapDemeaner(BaseDemeaner):
         weights: np.ndarray | None = None,
         cached_preconditioner: Preconditioner | None = None,
     ) -> tuple[np.ndarray, bool, Preconditioner | None]:
-        """Demean ``x`` by the fixed effects in ``flist`` via MAP.
+        """Demean `x` by the fixed effects in `flist` via MAP.
 
-        ``cached_preconditioner`` is accepted for interface uniformity with
+        `cached_preconditioner` is accepted for interface uniformity with
         :meth:`LsmrDemeaner.demean` and ignored: MAP does not use a
-        preconditioner, so the third return value is always ``None``.
+        preconditioner, so the third return value is always `None`.
         """
         if weights is None:
             weights = np.ones(x.shape[0], dtype=np.float64)
@@ -152,41 +153,41 @@ class LsmrDemeaner(BaseDemeaner):
 
     Notes
     -----
-    The ``within`` backend takes a single tolerance, so ``fixef_atol`` and
-    ``fixef_btol`` are collapsed to ``max(fixef_atol, fixef_btol)`` for that
-    backend. The ``torch`` backend uses both tolerances independently
+    The `within`` backend takes a single tolerance, so `fixef_atol` and
+    `fixef_btol` are collapsed to `max(fixef_atol, fixef_btol)` for that
+    backend. The `torch` backend uses both tolerances independently
     (SciPy LSMR convention).
 
-    The ``local_size`` field only applies to ``backend="within"``; the
-    ``torch`` backend ignores it.
+    The `local_size` field only applies to `backend="within"`; the
+    `torch` backend ignores it.
 
-    The ``precision``, ``device``, and ``warn_on_cpu_fallback`` fields are
-    only relevant for the ``torch`` backend. The ``within`` backend always
+    The `precision``, `device``, and `warn_on_cpu_fallback`` fields are
+    only relevant for the `torch` backend. The `within` backend always
     runs on CPU in float64 and ignores these fields.
 
-    ``preconditioner`` selects the preconditioner. Supported values:
+    `preconditioner` selects the preconditioner. Supported values:
 
-    - ``"auto"`` (default): selects different preconditioners for different
-      backend implementations: ``"additive"`` for ``within``; ``"diagonal"``
-      for ``torch``.
-    - ``"off"``: disables preconditioning. Supported by ``within``; not
-      supported by ``torch``.
-    - ``"additive"``: additive Schwarz preconditioner. Only supported by the
-      ``within`` backend.
-    - ``"diagonal"``: diagonal (Jacobi) preconditioner. Supported by
-      ``within`` and ``torch``.
+    - `"auto"` (default): selects different preconditioners for different
+      backend implementations: `"additive"` for `"within"`; `"diagonal"`
+      for `"torch"`.
+    - `"off"`: disables preconditioning. Supported by `"within"`; not
+      supported by `"torch"`.
+    - `"additive"`: additive Schwarz preconditioner. Only supported by the
+      `"within"` backend.
+    - `"diagonal"`: diagonal (Jacobi) preconditioner. Supported by
+      `"within"` and `"torch"`.
     - A :class:`pyfixest.Preconditioner` instance: a previously built
-      preconditioner (typically obtained via ``fit.preconditioner`` or
-      pickled across sessions). Only supported by ``backend='within'``;
+      preconditioner (typically obtained via `fit.preconditioner` or
+      pickled across sessions). Only supported by `backend='within'`;
       preconditioners are only computed and applied for two or more
       fixed-effect factors because single-factor problems run MAP as the within algo
-      provides no benefits. Passing a preconditioner to any other backend raises ``ValueError``
+      provides no benefits. Passing a preconditioner to any other backend raises `ValueError`
       at construction time.
 
     If a *string* value is incompatible with the chosen backend, a
-    ``UserWarning`` is emitted at solve time and the backend's default is
-    used. A ``Preconditioner`` paired with a non-``within`` backend is
-    rejected eagerly with ``ValueError`` because there is no sensible
+    `UserWarning` is emitted at solve time and the backend's default is
+    used. A `Preconditioner` paired with a non-`within` backend is
+    rejected eagerly with `ValueError` because there is no sensible
     fallback for a prebuilt object.
     """
 
@@ -246,7 +247,7 @@ class LsmrDemeaner(BaseDemeaner):
             raise ValueError("The MPS torch backend requires `precision='float32'`.")
 
     def with_tol(self, tol: float | None) -> LsmrDemeaner:
-        """Return a copy with both LSMR tolerances overridden (used for IWLS acceleration)."""
+        """Overwrite LSMR tolerances (used for IWLS acceleration)."""
         if tol is None or (tol == self.fixef_atol and tol == self.fixef_btol):
             return self
         return replace(self, fixef_atol=tol, fixef_btol=tol)
@@ -294,13 +295,6 @@ class LsmrDemeaner(BaseDemeaner):
                     WithinPreconditionerName,
                     _resolve_preconditioner("within", self.preconditioner),
                 )
-
-            # If the user requested a preconditioner by string, we would
-            # normally pass that string to Rust and let within build a fresh
-            # factorization. When the caller already has a cached
-            # preconditioner of the same variant, pass the object instead so
-            # Rust takes the reuse path. We do not replace an explicit
-            # user-supplied preconditioner.
 
             if (
                 cached_preconditioner is not None

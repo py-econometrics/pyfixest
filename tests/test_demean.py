@@ -348,9 +348,9 @@ def test_lsmr_within_reuses_cached_preconditioner(
 
     Context
     -------
-    ``LsmrDemeaner.demean`` is the strategy entry point that the model-side
-    ``DemeanCache`` calls to demean working data on each iteration. The
-    ``cached_preconditioner`` argument is the callsite-supplied
+    `LsmrDemeaner.demean`` is the strategy entry point that the model-side
+    `DemeanCache` calls to demean working data on each iteration. The
+    `cached_preconditioner` argument is the callsite-supplied
     factorization that turns IWLS's "build the factorization once, reuse it
     across iterations" claim into reality. The method returns the
     preconditioner actually used so the cache can hold onto it for the next
@@ -361,16 +361,16 @@ def test_lsmr_within_reuses_cached_preconditioner(
     Three behaviours are pinned down:
 
     Leg 1 — first call reports the freshly built preconditioner
-        With no ``cached_preconditioner``, ``LsmrDemeaner(backend="within")``
+        With no `cached_preconditioner`, `LsmrDemeaner(backend="within")`
         builds the requested factorization. The method must return it as
         the third tuple element so the caller can hold onto it.
 
     Leg 2 — subsequent calls reuse the supplied preconditioner under changed
     weights (the IWLS hot path)
-        IWLS changes the working weights at every iteration (``W := W * mu``).
+        IWLS changes the working weights at every iteration (`W := W * mu`).
         A pure implementation would rebuild the preconditioner each time,
         which is the expensive step. Passing the first-iteration factorization
-        back in via ``cached_preconditioner`` lets us reuse it even though
+        back in via `cached_preconditioner` lets us reuse it even though
         the weights — and therefore the true normal-equations operator — have
         changed. The factorization is "stale" in that sense, but LSMR still
         converges to the correct demeaned values, just possibly in a few more
@@ -482,28 +482,28 @@ def test_lsmr_within_reuses_cached_preconditioner(
 
 
 def test_lsmr_within_reports_no_preconditioner_when_unused(demean_data):
-    """``LsmrDemeaner.demean`` reports ``None`` whenever no preconditioner ran.
+    """`LsmrDemeaner.demean` reports `None` whenever no preconditioner ran.
 
     Two routes produce that outcome, both pinned here:
 
-    1. ``preconditioner="off"`` — preconditioning is explicitly disabled, so
-       ``demean_within`` never builds one.
-    2. Single-FE design with an explicit ``Preconditioner`` —
-       ``demean_within`` special-cases single-FE designs to the MAP fallback,
+    1. `preconditioner="off"` — preconditioning is explicitly disabled, so
+       `demean_within` never builds one.
+    2. Single-FE design with an explicit `Preconditioner` —
+       `demean_within` special-cases single-FE designs to the MAP fallback,
        which ignores the user-supplied object entirely.
 
-    In both, ``demean_within``'s third return is ``None`` and
-    ``LsmrDemeaner.demean`` must propagate that. ``fit.preconditioner`` is
+    In both, `demean_within`'s third return is `None` and
+    `LsmrDemeaner.demean` must propagate that. `fit.preconditioner` is
     supposed to reflect factorizations that actually participated in a solve;
     reporting an unused one would mislead any code that inspects or pickles it.
 
     Why this is the only regression test for that guard
     ---------------------------------------------------
-    The "used" computation is gated on ``built is not None``.
-    Every other code path has ``built is not None`` (multi-FE Schwarz ran,
+    The "used" computation is gated on `built is not None`.
+    Every other code path has `built is not None` (multi-FE Schwarz ran,
     reporting is correct) or has no explicit preconditioner to mishandle in
     the first place. Without these two cases, a refactor that drops the
-    ``built is not None`` check would silently regress the contract.
+    `built is not None` check would silently regress the contract.
     """
     x, flist, weights = demean_data
 

@@ -1,13 +1,3 @@
-"""Pure, array-based estimation core.
-
-Pure functions on numpy arrays returning small frozen dataclasses — no
-DataFrames, no self-mutation. Model classes delegate their math here
-(`Feols.get_fit` -> `fit_ols`, `Feiv.get_fit` -> `fit_iv`).
-
-Inputs are expected to be fully prepared: demeaned, multicollinearity-pruned,
-and WLS-transformed (i.e. already multiplied by sqrt-weights where relevant).
-"""
-
 from __future__ import annotations
 
 from dataclasses import dataclass
