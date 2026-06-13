@@ -13,6 +13,7 @@ estimation.models.feols_.Feols(
     lookup_demeaned_data,
     solver='np.linalg.solve',
     demeaner=None,
+    lookup_preconditioner=None,
     store_data=True,
     copy_data=True,
     lean=False,

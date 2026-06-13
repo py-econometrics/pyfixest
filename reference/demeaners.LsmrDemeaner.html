@@ -604,20 +604,107 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>Sparse LSMR demeaner.</p>
 <section id="notes" class="level2 doc-section doc-section-notes">
 <h2 class="doc-section doc-section-notes anchored" data-anchor-id="notes">Notes</h2>
-<p>The <code>within</code> backend takes a single tolerance, so <code>fixef_atol</code> and <code>fixef_btol</code> are collapsed to <code>max(fixef_atol, fixef_btol)</code> for that backend. The <code>torch</code> backend uses both tolerances independently (SciPy LSMR convention).</p>
+<p>The <code>within`` backend takes a single tolerance, so</code>fixef_atol<code>and</code>fixef_btol<code>are collapsed to</code>max(fixef_atol, fixef_btol)<code>for that backend. The</code>torch` backend uses both tolerances independently (SciPy LSMR convention).</p>
 <p>The <code>local_size</code> field only applies to <code>backend="within"</code>; the <code>torch</code> backend ignores it.</p>
-<p>The <code>precision</code>, <code>device</code>, and <code>warn_on_cpu_fallback</code> fields are only relevant for the <code>torch</code> backend. The <code>within</code> backend always runs on CPU in float64 and ignores these fields.</p>
+<p>The <code>precision``,</code>device<code>, and `warn_on_cpu_fallback</code> fields are only relevant for the <code>torch</code> backend. The <code>within</code> backend always runs on CPU in float64 and ignores these fields.</p>
 <p><code>preconditioner</code> selects the preconditioner. Supported values:</p>
 <ul>
-<li><code>"auto"</code> (default): selects different preconditioners for different backend implementations: <code>"additive"</code> for <code>within</code>; <code>"diagonal"</code> for <code>torch</code>.</li>
-<li><code>"off"</code>: disables preconditioning. Supported by <code>within</code>; not supported by <code>torch</code>.</li>
-<li><code>"additive"</code>: additive Schwarz preconditioner. Only supported by the <code>within</code> backend.</li>
-<li><code>"diagonal"</code>: diagonal (Jacobi) preconditioner. Supported by <code>within</code> and <code>torch</code>.</li>
+<li><code>"auto"</code> (default): selects different preconditioners for different backend implementations: <code>"additive"</code> for <code>"within"</code>; <code>"diagonal"</code> for <code>"torch"</code>.</li>
+<li><code>"off"</code>: disables preconditioning. Supported by <code>"within"</code>; not supported by <code>"torch"</code>.</li>
+<li><code>"additive"</code>: additive Schwarz preconditioner. Only supported by the <code>"within"</code> backend.</li>
+<li><code>"diagonal"</code>: diagonal (Jacobi) preconditioner. Supported by <code>"within"</code> and <code>"torch"</code>.</li>
 <li>A :class:<code>pyfixest.Preconditioner</code> instance: a previously built preconditioner (typically obtained via <code>fit.preconditioner</code> or pickled across sessions). Only supported by <code>backend='within'</code>; preconditioners are only computed and applied for two or more fixed-effect factors because single-factor problems run MAP as the within algo provides no benefits. Passing a preconditioner to any other backend raises <code>ValueError</code> at construction time.</li>
 </ul>
 <p>If a <em>string</em> value is incompatible with the chosen backend, a <code>UserWarning</code> is emitted at solve time and the backend’s default is used. A <code>Preconditioner</code> paired with a non-<code>within</code> backend is rejected eagerly with <code>ValueError</code> because there is no sensible fallback for a prebuilt object.</p>
+</section>
+<section id="methods" class="level2">
+<h2 class="anchored" data-anchor-id="methods">Methods</h2>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><a href="#pyfixest.demeaners.LsmrDemeaner.demean">demean</a></td>
+<td>Demean <code>x</code> by the fixed effects in <code>flist</code> via LSMR.</td>
+</tr>
+<tr class="even">
+<td><a href="#pyfixest.demeaners.LsmrDemeaner.with_tol">with_tol</a></td>
+<td>Overwrite LSMR tolerances (used for IWLS acceleration).</td>
+</tr>
+</tbody>
+</table>
+<section id="pyfixest.demeaners.LsmrDemeaner.demean" class="level3">
+<h3 class="anchored" data-anchor-id="pyfixest.demeaners.LsmrDemeaner.demean">demean</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>demeaners.LsmrDemeaner.demean(</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    x,</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    flist,</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    weights<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    cached_preconditioner<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Demean <code>x</code> by the fixed effects in <code>flist</code> via LSMR.</p>
+<section id="parameters" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters">Parameters</h4>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 3%">
+<col style="width: 3%">
+<col style="width: 90%">
+<col style="width: 1%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>cached_preconditioner</td>
+<td>Preconditioner or None</td>
+<td>A preconditioner saved by the caller from an earlier within solve on the same fixed-effect design. This is separate from <code>self.preconditioner</code>: the latter is the user’s requested configuration, while <code>cached_preconditioner</code> is the model’s internal “reuse this if it still matches” handle. The cache is used only when the current request is a string preconditioner with the same variant (<code>"additive"</code> or <code>"diagonal"</code>). If the user explicitly supplied a <code>Preconditioner</code> on the demeaner, that object is passed through and the model cache is ignored.</td>
+<td><code>None</code></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="returns" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns">Returns</h4>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 1%">
+<col style="width: 9%">
+<col style="width: 88%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td></td>
+<td>tuple[np.ndarray, bool, Preconditioner | None]</td>
+<td>The demeaned array, a convergence flag, and the within preconditioner actually used during the solve. The third element is <code>None</code> for non-within backends, when <code>preconditioner='off'</code> was requested, or when the single-FE MAP fallback path was taken inside <code>demean_within</code> — in those cases no preconditioner participated in the solve. Callers (e.g.&nbsp;the <code>DemeanCache</code>) can cache the returned instance to amortise setup across subsequent solves on the same design.</td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="pyfixest.demeaners.LsmrDemeaner.with_tol" class="level3">
+<h3 class="anchored" data-anchor-id="pyfixest.demeaners.LsmrDemeaner.with_tol">with_tol</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>demeaners.LsmrDemeaner.with_tol(tol)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Overwrite LSMR tolerances (used for IWLS acceleration).</p>
 
 
+</section>
 </section>
 </section>
 

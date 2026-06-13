@@ -105,13 +105,14 @@ fit = pf.feols(
 
 ## Caching and Pickling the `within` Preconditioner
 
-The `within` LSMR backend builds an additive Schwarz preconditioner from the
-fixed-effect design before the iterative solve for two or more fixed-effect
-factors. For single fixed effects, PyFixest falls back to closed form demeaning
-(via the MAP algo, which converges in one iteration) and no
-preconditioner is computed or applied. For large multi-way FE problems, setting up
-the preconditioner can be a meaningful fraction of total runtime, so it is worth
-reusing the preconditioner across solves on the same design.
+The `within` LSMR backend can build a preconditioner from the fixed-effect
+design before the iterative solve for two or more fixed-effect factors. The
+default is additive Schwarz; `preconditioner="diagonal"` uses a cheaper Jacobi
+preconditioner. For single fixed effects, PyFixest falls back to closed form
+demeaning (via the MAP algo, which converges in one iteration) and no
+preconditioner is computed or applied. For large multi-way FE problems, setting
+up the preconditioner can be a meaningful fraction of total runtime, so it is
+worth reusing the preconditioner across solves on the same design.
 
 ### Within a session
 
@@ -124,7 +125,8 @@ pre = fit.preconditioner
 print(pre)
 ```
 
-The `preconditioner` instance reuturns the preconditioner for reuse, along with some metadata, including the time it took to build the preconditioner.
+The `preconditioner` instance returns the reusable preconditioner, along with
+metadata such as how long it took to build.
 
 After creating a preconditioner, you can pass that instance back through `LsmrDemeaner(preconditioner=...)` on a later
 fit to skip the setup phase:
@@ -139,7 +141,22 @@ fit_reused = pf.feols(
 pf.etable([fit, fit_reused], digits = 6)
 ```
 
-For GLMs that rely on iterated weighted least squares (IWLS, in `fepois`, `feglm`), either the user-provided preconditioner or the preconditioner built in the first iteration is used across all IWLS iterations. Because the working weights change across iterations, the preconditioner is "stale" with respect to the changing problem. Reusing the preconditioner does not change the target solution — when LSMR converges, it converges to the correct demeaned values — but it can take more iterations per IWLS step, and on poorly conditioned problems may fail to converge within `fixef_maxiter`. The tradeoff is paying that potential extra iteration cost in exchange for skipping the costly setup phase on every IWLS iteration.
+When you use multiple-estimation syntax, `FixestMulti` also shares compatible
+`within` preconditioners across sibling models that are fit on the same sample with
+identical fixed-effect structure. This happens automatically; you only need to
+use `LsmrDemeaner(backend="within")` or a `within` preconditioner option such as
+`preconditioner="diagonal"`.
+
+For GLMs that rely on iterated weighted least squares (IWLS, in `fepois`,
+`feglm`), either the user-provided preconditioner or the preconditioner built in
+the first iteration is used across all IWLS iterations. Because the working
+weights change across iterations, the preconditioner is "stale" with respect to
+the changing problem. Reusing the preconditioner does not change the target
+solution — when LSMR converges, it converges to the correct demeaned values —
+but it can take more iterations per IWLS step, and on poorly conditioned
+problems may fail to converge within `fixef_maxiter`. The tradeoff is paying
+that potential extra iteration cost in exchange for skipping the costly setup
+phase on every IWLS iteration.
 
 ### Across sessions
 
@@ -170,5 +187,5 @@ pf.etable([fit, fit2], digits = 6)
 ```
 
 ::: {.callout-warning}
-`Preconditioner` instances are tied to specific fixed effect structures. The `within` crate validates that the preconditioner's DOF count matches the new design- a dimension mismatch raises `ValueError`. It does *not* check whether the FE *structure* matches when the dimensions happen to coincide; reusing on a different-but-same-size FE design will still run but may converge more slowly or fail to converge. It is the user's responsibility to ensure that the preconditioner is reused on the same FE structure.
+`Preconditioner` instances are tied to specific fixed effect structures. The `within` crate validates that the preconditioner's DOF count matches the new design; a dimension mismatch raises `ValueError`. It does *not* check whether the FE *structure* matches when the dimensions happen to coincide; reusing on a different-but-same-size FE design will still run but may converge more slowly or fail to converge. It is the user's responsibility to ensure that the preconditioner is reused on the same FE structure.
 :::

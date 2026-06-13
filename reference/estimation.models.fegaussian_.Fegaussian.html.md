@@ -22,6 +22,7 @@ estimation.models.fegaussian_.Fegaussian(
     separation_check=None,
     context=0,
     demeaner=None,
+    lookup_preconditioner=None,
     accelerate=True,
 )
 ```

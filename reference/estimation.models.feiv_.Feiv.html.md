@@ -13,6 +13,7 @@ estimation.models.feiv_.Feiv(
     lookup_demeaned_data,
     solver='scipy.linalg.solve',
     demeaner=None,
+    lookup_preconditioner=None,
     store_data=True,
     copy_data=True,
     lean=False,

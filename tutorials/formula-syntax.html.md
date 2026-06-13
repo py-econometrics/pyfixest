@@ -128,7 +128,7 @@ fit_bin.summary()
 
 ## Multiple Estimation Syntax
 
-Last, `PyFixest` provides syntactic sugar to fit multiple estimations in one go. This is not only economizes on lines-of-code, but allows for performance optimizations via caching - if you fit many regression models on a fixed set of fixed effects and many overlapping covariates or dependent variables, and performance is poor, we highly recommend you to try out multiple estimations.
+Last, `PyFixest` provides syntactic sugar to fit multiple estimations in one go. This not only economizes on lines-of-code, but also allows for performance optimizations via caching. When several models are fit on the same sample and share the same fixed-effect structure, `PyFixest` can reuse already-demeaned columns across models. For the LSMR demeaner backend, it can also reuse the fixed-effect preconditioner across models with the same structure. If you fit many regression models on a fixed set of fixed effects and many overlapping covariates or dependent variables, and performance is poor, we highly recommend you to try out multiple estimations.
 
 For multiple estimations, we provide 5 custom operators: `sw`, `csw`, `sw0`, `csw0` and `mvsw`. In addition, it is possible to specify multiple dependent variables.
 
@@ -194,6 +194,143 @@ Multiple estimation operators can be combined. For example, `y ~ csw(x1, x2) + s
 fit_combo = pf.feols("Y ~ csw(X1, X2) + sw(Z1, X1:Z1)", data=data)
 pf.etable(fit_combo)
 ```
+
+### Multiple Estimation, caching and performance
+
+The speedup from multiple-estimation syntax is most visible when models have the
+same fixed effects and overlapping covariates. Below, we therefore benchmark
+
+```text
+y ~ csw(x1, x2, ..., x16) | indiv_id + firm_id + year
+```
+
+to demonstrate the speed gains possible with multiple estimation and caching.
+
+In the specified multiple estimation formula, we fit sixteen models via one`csw()` call. Those sixteen models fit can be sped up by caching already demeaned variables. The idea is very simple - after the first fit, `y` and `x1` are already demeaned, so we do not have to do it
+again in fit 2. After fit 2, `x2` is demeaned, so we do not need to do it again in fit 3, and so on.
+
+In contrast, if you fit the sixteen models one by one, you have to demean `y` and `x1` in all 16 specifications and set up the preconditioner for every fit.
+
+How much faster could the caching of already-demeaned variables potentially make the estimation?
+
+For simplicity, let's assume that the demeaning step takes 100% of the runtime of a call to `pf.feols()`, and that the runtime of demeaning scales perfectly linearly in the number of columns that are demeaned.
+
+In the 16 separate regression fits, in total we would have to demean `y` and
+`x1` 16 times, `x2` 15 times, ..., and `x16` once. So in total, we would have to
+demean `16 + 16 + 15 + 14 + ... + 1 = 152` columns across the sixteen separate
+fits. In contrast, in the multiple-estimation path, we only have to demean each
+of the 17 unique columns (`y`, `x1`, ..., `x16`) once. If demeaning were 100% of
+the algorithm runtime and scaled perfectly linearly in the number of columns, the
+upper bound on the speedup from caching already-demeaned variables would be
+`152 / 17 = 8.9x`.
+
+In practice, the realized speedup is lower because each model still pays for
+formula and model-matrix construction, sample handling, fitting the OLS model,
+inference, and post-processing.
+
+Note that in addition to caching already-demeaned variables, all model fits can also share preconditioners. As building a preconditioner can be costly (in particular the "additive" preconditioner), this can lead to large speedups when fitting many models on the same sample with the same fixed effects.
+
+To demonstrate realistic speed gains, we compare the multiple-estimation call specified above with
+fitting the same sixteen formulas one by one using the `fixest` benchmark DGPs
+described in [When Are Fixed Effects Estimations Difficult?](../explanation/difficult-fixed-effects.md).
+
+```{python}
+#| code-fold: true
+#| code-summary: "Show benchmark code"
+#| warning: false
+import time
+import sys
+from pathlib import Path
+import pandas as pd
+
+
+repo_root = next(
+    path
+    for path in [Path.cwd(), *Path.cwd().parents]
+    if (path / "benchmarks/modular/dgp_functions.py").exists()
+)
+sys.path.insert(0, str(repo_root))
+from benchmarks.modular.dgp_functions import base_dgp
+
+
+model_k = 16
+rhs_terms = [f"x{i}" for i in range(1, model_k + 1)]
+multi_formula = (
+    f"y ~ csw({', '.join(rhs_terms)}) | indiv_id + firm_id + year"
+)
+single_formulas = [
+    f"y ~ {' + '.join(f'x{j}' for j in range(1, i + 1))} | indiv_id + firm_id + year"
+    for i in range(1, model_k + 1)
+]
+demeaners = {
+    "MAP (rust)": pf.MapDemeaner(backend="rust"),
+    "LSMR diagonal": pf.LsmrDemeaner(
+        backend="within",
+        preconditioner="diagonal",
+        fixef_maxiter=10_000,
+    ),
+    "LSMR additive": pf.LsmrDemeaner(
+        backend="within",
+        preconditioner="additive",
+        fixef_maxiter=10_000,
+    ),
+}
+
+
+def _time_once(fn):
+    start = time.perf_counter()
+    fn()
+    return time.perf_counter() - start
+
+
+rows = []
+for dgp_name in ["simple", "difficult"]:
+    bench_data = base_dgp(
+        n=100_000,
+        type_=dgp_name,
+        k=model_k,
+        max_k=model_k,
+        seed=929,
+    )
+    for demeaner_name, demeaner in demeaners.items():
+        pf.feols(single_formulas[0], data=bench_data, demeaner=demeaner, lean=True)
+        multi_seconds = _time_once(
+            lambda: pf.feols(
+                multi_formula,
+                data=bench_data,
+                demeaner=demeaner,
+                lean=True,
+            )
+        )
+        separate_seconds = _time_once(
+            lambda: [
+                pf.feols(fml, data=bench_data, demeaner=demeaner, lean=True)
+                for fml in single_formulas
+            ]
+        )
+        rows.append(
+            {
+                "DGP": dgp_name,
+                "Demeaner": demeaner_name,
+                "Separate fits (s)": separate_seconds,
+                "Multiple estimation (s)": multi_seconds,
+                "Speedup": separate_seconds / multi_seconds,
+            }
+        )
+
+(
+    pd.DataFrame(rows)
+    .assign(
+        **{
+            "Separate fits (s)": lambda x: x["Separate fits (s)"].round(3),
+            "Multiple estimation (s)": lambda x: x["Multiple estimation (s)"].round(3),
+            "Speedup": lambda x: x["Speedup"].map(lambda value: f"{value:.2f}x"),
+        }
+    )
+)
+```
+
+Absolute timings depend on your machine, but the direction is the important part: multiple estimation avoids recomputing the same within-transform work for every formula.
 
 ## Regressions on Multiple Samples
 

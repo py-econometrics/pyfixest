@@ -15,6 +15,7 @@ estimation.models.fepois_.Fepois(
     maxiter,
     solver='np.linalg.solve',
     demeaner=None,
+    lookup_preconditioner=None,
     context=0,
     store_data=True,
     copy_data=True,
