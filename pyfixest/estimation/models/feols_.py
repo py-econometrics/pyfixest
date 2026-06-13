@@ -22,14 +22,14 @@ from pyfixest.errors import VcovTypeNotSupportedError
 from pyfixest.estimation.api.utils import _ALL_SAMPLE, _AllSampleSentinel
 from pyfixest.estimation.formula import model_matrix as model_matrix_fixest
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
-from pyfixest.estimation.internals.demean_ import demean_model
+from pyfixest.estimation.internals.demean_ import DemeanCache
+from pyfixest.estimation.internals.fit_ import fit_ols
 from pyfixest.estimation.internals.literals import (
     PredictionErrorOptions,
     PredictionType,
     SolverOptions,
     _validate_literal_argument,
 )
-from pyfixest.estimation.internals.solvers import solve_ols
 from pyfixest.estimation.internals.vcov_utils import (
     _check_cluster_df,
     _compute_bread,
@@ -307,8 +307,7 @@ class Feols(ResultAccessorMixin):
         else:
             self._fixef_tol = demeaner.fixef_tol
         self._fixef_maxiter = demeaner.fixef_maxiter
-        self._lookup_demeaned_data = lookup_demeaned_data
-        self._preconditioner: Preconditioner | None = None
+        self._demean_cache = DemeanCache(lookup_demeaned_data)
         self._store_data = store_data
         self._copy_data = copy_data
         self._lean = lean
@@ -492,32 +491,16 @@ class Feols(ResultAccessorMixin):
     def demean(self):
         "Demean the dependent variable and covariates by the fixed effect(s)."
         if self._has_fixef:
-            self._Yd, self._Xd, used_pre = demean_model(
+            self._Yd, self._Xd, _ = self._demean_cache.demean_yx(
                 self._Y,
                 self._X,
                 self._fe,
                 self._weights.flatten(),
-                self._lookup_demeaned_data,
                 self._na_index,
                 self._demeaner,
-                cached_preconditioner=self._preconditioner,
             )
-            self._seed_preconditioner(used_pre)
         else:
             self._Yd, self._Xd = self._Y, self._X
-
-    def _seed_preconditioner(self, used_pre: Preconditioner | None) -> None:
-        """Store only the first preconditioner returned by demean dispatch.
-
-        For IWLS (Poisson, GLM) the dispatcher is called once per iteration
-        and returns a preconditioner each time; we keep the one from the
-        first call and ignore the rest. ``used_pre`` is ``None`` when no
-        preconditioner participated in the solve (MAP fallback,
-        ``preconditioner='off'``, non-within backend), in which case there
-        is nothing to store.
-        """
-        if self._preconditioner is None and used_pre is not None:
-            self._preconditioner = used_pre
 
     @property
     def preconditioner(self) -> Preconditioner | None:
@@ -530,7 +513,7 @@ class Feols(ResultAccessorMixin):
         ``LsmrDemeaner(backend='within', preconditioner=...)`` to skip the
         setup phase on a later fit over the same design.
         """
-        return self._preconditioner
+        return self._demean_cache.preconditioner
 
     def to_array(self):
         "Convert estimation data frames to np arrays."
@@ -584,16 +567,15 @@ class Feols(ResultAccessorMixin):
         if self._X_is_empty:
             self._u_hat = self._Y
         else:
+            fit = fit_ols(X=self._X, Y=self._Y, solver=self._solver)
+
             self._Z = self._X
-            self._tZX = self._Z.T @ self._X
-            self._tZy = self._Z.T @ self._Y
-
-            self._beta_hat = solve_ols(self._tZX, self._tZy, self._solver)
-
-            self._u_hat = self._Y.flatten() - (self._X @ self._beta_hat).flatten()
-
-            self._scores = self._X * self._u_hat[:, None]
-            self._hessian = self._tZX.copy()
+            self._tZX = fit.tZX
+            self._tZy = fit.tZy
+            self._beta_hat = fit.beta
+            self._u_hat = fit.residuals
+            self._scores = fit.scores
+            self._hessian = fit.hessian
 
             # IV attributes, set to None for OLS, Poisson
             self._tXZ = np.array([])

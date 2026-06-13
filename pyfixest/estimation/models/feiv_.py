@@ -9,8 +9,7 @@ import pandas as pd
 
 from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
-from pyfixest.estimation.internals.demean_ import demean_model
-from pyfixest.estimation.internals.solvers import solve_ols
+from pyfixest.estimation.internals.fit_ import fit_iv
 from pyfixest.estimation.models.feols_ import Feols, _drop_multicollinear_variables
 
 
@@ -203,17 +202,14 @@ class Feiv(Feols):
         "Demean instruments and endogeneous variable."
         super().demean()
         if self._has_fixef:
-            self._endogvard, self._Zd, used_pre = demean_model(
+            self._endogvard, self._Zd, _ = self._demean_cache.demean_yx(
                 self._endogvar,
                 self._Z,
                 self._fe,
                 self._weights.flatten(),
-                self._lookup_demeaned_data,
                 self._na_index,
                 self._demeaner,
-                cached_preconditioner=self._preconditioner,
             )
-            self._seed_preconditioner(used_pre)
         else:
             self._endogvard = self._endogvar
             self._Zd = self._Z
@@ -239,28 +235,18 @@ class Feiv(Feols):
         self.drop_multicol_vars()
         self.wls_transform()
 
-        # Start Second Stage
-        self._tZX = self._Z.T @ self._X
-        self._tXZ = self._X.T @ self._Z
-        self._tZy = self._Z.T @ self._Y
-        self._tZZinv = np.linalg.inv(self._Z.T @ self._Z)
+        # Second stage (2SLS) on prepared arrays
+        fit = fit_iv(X=self._X, Z=self._Z, Y=self._Y, solver=self._solver)
 
-        H = self._tXZ @ self._tZZinv
-        A = H @ self._tZX
-        B = H @ self._tZy
-        self._beta_hat = solve_ols(A, B, self._solver)
-
-        # residuals
-        self._u_hat = self._Y.flatten() - (self._X @ self._beta_hat).flatten()
+        self._tZX = fit.tZX
+        self._tXZ = fit.tXZ
+        self._tZy = fit.tZy
+        self._tZZinv = fit.tZZinv
+        self._beta_hat = fit.beta
+        self._u_hat = fit.residuals
         self._get_predictors()
-
-        # Compute scores and hessian
-        self._scores = self._Z * self._u_hat[:, None]
-        self._hessian = self._Z.T @ self._Z
-
-        # Compute bread matrix
-        D = np.linalg.inv(self._tXZ @ self._tZZinv @ self._tZX)
-        self._bread = H.T @ D @ H
+        self._scores = fit.scores
+        self._hessian = fit.hessian
 
     def first_stage(self) -> None:
         """Implement First stage regression."""
@@ -286,8 +272,9 @@ class Feiv(Feols):
             vcov_detail = self._vcov_type_detail
 
         demeaner = self._demeaner
-        if isinstance(demeaner, LsmrDemeaner) and self._preconditioner is not None:
-            demeaner = replace(demeaner, preconditioner=self._preconditioner)
+        cached_pre = self._demean_cache.preconditioner
+        if isinstance(demeaner, LsmrDemeaner) and cached_pre is not None:
+            demeaner = replace(demeaner, preconditioner=cached_pre)
 
         # Do first stage regression
         model1 = fit_(

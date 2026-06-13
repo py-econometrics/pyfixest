@@ -15,7 +15,6 @@ from pyfixest.errors import (
     NonConvergenceError,
 )
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
-from pyfixest.estimation.internals.demean_ import dispatch_demean
 from pyfixest.estimation.internals.literals import (
     SolverOptions,
 )
@@ -315,19 +314,12 @@ class Fepois(Feols):
             if self._fe is None:
                 ZX_resid = ZX
             else:
-                ZX_resid, success, used_pre = dispatch_demean(
+                ZX_resid = self._demean_cache.demean_array(
                     x=ZX,
                     flist=self._fe,
                     weights=combined_weights.flatten(),
                     demeaner=self._demeaner,
-                    cached_preconditioner=self._preconditioner,
                 )
-                self._seed_preconditioner(used_pre)
-                if not success:
-                    raise ValueError(
-                        "Demeaning failed after "
-                        f"{self._demeaner.fixef_maxiter} iterations."
-                    )
 
             Z_resid = ZX_resid[:, 0].reshape((self._N, 1))  # z_resid
             X_resid = ZX_resid[:, 1:]  # x_resid
