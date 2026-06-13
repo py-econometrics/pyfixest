@@ -14,7 +14,6 @@ from scipy.sparse.linalg import lsqr
 from scipy.stats import chi2, f, t
 
 from pyfixest.core.collinear import find_collinear_variables
-from pyfixest.core.crv1 import crv1_meat_loop
 from pyfixest.core.demean import Preconditioner
 from pyfixest.core.nested_fixed_effects import count_fixef_fully_nested_all
 from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner, MapDemeaner
@@ -30,16 +29,18 @@ from pyfixest.estimation.internals.literals import (
     SolverOptions,
     _validate_literal_argument,
 )
-from pyfixest.estimation.internals.vcov_ import vcov_hetero, vcov_iid_ols
+from pyfixest.estimation.internals.vcov_ import (
+    vcov_crv1,
+    vcov_crv3_fast,
+    vcov_hac,
+    vcov_hetero,
+    vcov_iid_ols,
+)
 from pyfixest.estimation.internals.vcov_utils import (
     _check_cluster_df,
     _compute_bread,
     _count_G_for_ssc_correction,
-    _dk_meat_panel,
     _get_cluster_df,
-    _get_panel_idx,
-    _nw_meat_panel,
-    _nw_meat_time,
     _prepare_twoway_clustering,
 )
 from pyfixest.estimation.models._result_accessor_mixin import ResultAccessorMixin
@@ -849,16 +850,8 @@ class Feols(ResultAccessorMixin):
         )
 
     def _vcov_hac(self):
-        _scores = self._scores
-        _bread = self._bread
-        _tXZ = self._tXZ
-        _tZZinv = self._tZZinv
-        _tZX = self._tZX
-        _is_iv = self._is_iv
-        _vcov_type_detail = self._vcov_type_detail
         _time_id = self._time_id
         _panel_id = self._panel_id
-        _lag = self._lag
         _data = self._data
 
         if not self._support_hac_inference:
@@ -878,55 +871,18 @@ class Feols(ResultAccessorMixin):
         _time_arr = _data[_time_id].to_numpy()
         _panel_arr = _data[_panel_id].to_numpy() if _panel_id is not None else None
 
-        if _vcov_type_detail == "NW":
-            # Newey-West
-            if _panel_id is None:
-                if _lag is None:
-                    raise ValueError(
-                        "We have not yet implemented the default Newey-West HAC lag. Please provide a lag value via the `vcov_kwargs`."
-                    )
-                if len(np.unique(_time_arr)) != len(_time_arr):
-                    raise ValueError(
-                        "There are duplicate time periods in the data. This is not supported for HAC SEs."
-                    )
-                hac_meat = _nw_meat_time(scores=_scores, time_arr=_time_arr, lag=_lag)
-            else:
-                # order the data by (panel, time)
-                order, _, starts, counts, panel_arr_sorted, time_arr_sorted = (
-                    _get_panel_idx(panel_arr=_panel_arr, time_arr=_time_arr)
-                )
-
-                hac_meat = _nw_meat_panel(
-                    scores=_scores[order],
-                    time_arr=time_arr_sorted,
-                    panel_arr=panel_arr_sorted,
-                    starts=starts,
-                    counts=counts,
-                    lag=_lag,
-                )
-
-        elif _vcov_type_detail == "DK":
-            # Driscoll-Kraay
-
-            order, _, starts, counts, time_arr_sorted, panel_arr_sorted = (
-                _get_panel_idx(
-                    # hack: sort first by time, than panel
-                    # we need the data sorted by time, but sort by
-                    # panel too to check for duplicate time periods
-                    # per panel
-                    panel_arr=_time_arr,
-                    time_arr=_panel_arr,
-                )
-            )
-            scores_sorted = _scores[order]
-            hac_meat = _dk_meat_panel(
-                scores=scores_sorted, time_arr=time_arr_sorted, idx=starts, lag=_lag
-            )
-
-        _meat = _tXZ @ _tZZinv @ hac_meat @ _tZZinv @ _tZX if _is_iv else hac_meat
-        _vcov = _bread @ _meat @ _bread
-
-        return _vcov
+        return vcov_hac(
+            scores=self._scores,
+            time_arr=_time_arr,
+            panel_arr=_panel_arr,
+            lag=self._lag,
+            vcov_type_detail=self._vcov_type_detail,
+            bread=self._bread,
+            is_iv=self._is_iv,
+            tXZ=self._tXZ,
+            tZZinv=self._tZZinv,
+            tZX=self._tZX,
+        )
 
     def _vcov_nid(self):
         raise NotImplementedError(
@@ -934,55 +890,25 @@ class Feols(ResultAccessorMixin):
         )
 
     def _vcov_crv1(self, clustid: np.ndarray, cluster_col: np.ndarray):
-        k = self._scores.shape[1]
-        meat = np.zeros((k, k))
-
-        meat = crv1_meat_loop(
-            scores=self._scores.astype(np.float64),
-            clustid=clustid.astype(np.uintp),
-            cluster_col=cluster_col.astype(np.uintp),
+        return vcov_crv1(
+            scores=self._scores,
+            clustid=clustid,
+            cluster_col=cluster_col,
+            bread=self._bread,
+            is_iv=self._is_iv,
+            tXZ=self._tXZ,
+            tZZinv=self._tZZinv,
+            tZX=self._tZX,
         )
-
-        meat = (
-            self._tXZ @ self._tZZinv @ meat @ self._tZZinv @ self._tZX
-            if self._is_iv
-            else meat
-        )
-        vcov = self._bread @ meat @ self._bread
-
-        return vcov
 
     def _vcov_crv3_fast(self, clustid, cluster_col):
-        beta_jack = np.zeros((len(clustid), self._k))
-
-        # inverse hessian precomputed?
-        tXX = np.transpose(self._X) @ self._X
-        tXy = np.transpose(self._X) @ self._Y
-
-        # compute leave-one-out regression coefficients (aka clusterjacks')
-        for ixg, g in enumerate(clustid):
-            Xg = self._X[np.equal(g, cluster_col)]
-            Yg = self._Y[np.equal(g, cluster_col)]
-            tXgXg = np.transpose(Xg) @ Xg
-            # jackknife regression coefficient
-            beta_jack[ixg, :] = (
-                np.linalg.pinv(tXX - tXgXg) @ (tXy - np.transpose(Xg) @ Yg)
-            ).flatten()
-
-        # optional: beta_bar in MNW (2022)
-        # center = "estimate"
-        # if center == 'estimate':
-        #    beta_center = beta_hat
-        # else:
-        #    beta_center = np.mean(beta_jack, axis = 0)
-        beta_center = self._beta_hat
-
-        vcov_mat = np.zeros((self._k, self._k))
-        for ixg, _ in enumerate(clustid):
-            beta_centered = beta_jack[ixg, :] - beta_center
-            vcov_mat += np.outer(beta_centered, beta_centered)
-
-        return vcov_mat
+        return vcov_crv3_fast(
+            X=self._X,
+            Y=self._Y,
+            beta_hat=self._beta_hat,
+            clustid=clustid,
+            cluster_col=cluster_col,
+        )
 
     def _vcov_crv3_slow(self, clustid, cluster_col):
         beta_jack = np.zeros((len(clustid), self._k))
