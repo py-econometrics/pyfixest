@@ -640,8 +640,6 @@ class Feols(ResultAccessorMixin):
             self._is_iv, self._tXZ, self._tZZinv, self._tZX, self._hessian
         )
 
-        self._apply_vcov_kwargs(vcov_kwargs)
-
         if self._vcov_type == "iid":
             self._ssc, self._df_k, self._df_t = get_ssc(
                 **self._make_ssc_kwargs(vcov_type="iid", G=1)
@@ -656,6 +654,10 @@ class Feols(ResultAccessorMixin):
             self._vcov = self._ssc * self._vcov_hetero()
 
         elif self._vcov_type == "HAC":
+            kw = vcov_kwargs or {}
+            self._lag = kw.get("lag")
+            self._time_id = kw.get("time_id")
+            self._panel_id = kw.get("panel_id")
             self._ssc, self._df_k, self._df_t = get_ssc(
                 **self._make_ssc_kwargs(
                     vcov_type="HAC",
@@ -757,14 +759,6 @@ class Feols(ResultAccessorMixin):
 
         assert ssc_arr is not None  # n_clusters >= 1 in the CRV branch
         return vcov, ssc_arr, df_k, int(np.min(df_t_full))
-
-    def _apply_vcov_kwargs(self, vcov_kwargs: dict | None) -> None:
-        "Pull HAC-related options off vcov_kwargs onto self (None when absent)."
-        kw = vcov_kwargs or {}
-        self._lag = kw.get("lag")
-        self._time_id = kw.get("time_id")
-        self._panel_id = kw.get("panel_id")
-        self._is_sorted = kw.get("is_sorted")
 
     def _vcov_iid(self):
         return vcov_iid_ols(residuals=self._u_hat, bread=self._bread, N=self._N)
