@@ -193,6 +193,7 @@ def _get_vcov_diag(py_model, r_model, coefname, is_iv=False):
 test_counter_feols = 0
 test_counter_fepois = 0
 test_counter_feiv = 0
+test_counter_feglm = 0
 
 # What is being tested in all tests:
 # - pyfixest vs fixest
@@ -731,22 +732,38 @@ def test_single_fit_fepois(
 
 
 @pytest.mark.against_r_core
-@pytest.mark.parametrize("family", ["logit", "probit", "gaussian"])
+@pytest.mark.parametrize("family", ["logit", "probit", "gaussian", "poisson"])
+@pytest.mark.parametrize("dropna", [False])
+@pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
+@pytest.mark.parametrize("f3_type", ["str"])
+@pytest.mark.parametrize("fml", ols_fmls)
+@pytest.mark.parametrize("k_adj", [True])
+@pytest.mark.parametrize("G_adj", [True])
 @pytest.mark.parametrize("weights", [None, "weights"])
-@pytest.mark.parametrize("inference", ["iid", "hetero"])
-@pytest.mark.parametrize("fml", ["Y ~ X1", "Y ~ X1 | f1"])
-def test_single_fit_feglm(data_fepois, family, weights, inference, fml):
+def test_single_fit_feglm(
+    data_fepois, dropna, inference, f3_type, fml, k_adj, G_adj, weights, family
+):
     """Verify weighted/unweighted feglm against R fixest.feglm.
 
-    Leaner grid than test_single_fit_fepois: drops the offset parametrize
-    (offset is Poisson-only after the API extension) and skips dropna /
-    f3_type / k_adj / G_adj / CRV inference combinations. Covers
-    family x weights x fml x {iid, hetero} for logit/probit/gaussian.
+    Mirrors ``test_single_fit_fepois`` (same parametrize grid; same artifacts
+    checked) for the three other GLM families. Poisson-only artifacts
+    (loglik, loglik_null, pseudo_r2, pearson_chi2) are not defined for
+    logit/probit/gaussian and are therefore skipped.
     """
-    ssc_ = ssc(k_adj=True, G_adj=True)
+    global test_counter_feglm
+    test_counter_feglm += 1
+
+    _skip_f3_checks(fml, f3_type)
+    _skip_dropna(test_counter_feglm, dropna)
+
+    ssc_ = ssc(k_adj=k_adj, G_adj=G_adj)
 
     data = data_fepois.copy()
+    if dropna:
+        data.dropna(inplace=True)
     data.where(data != "nan", np.nan, inplace=True)
+    data = _convert_f3(data, f3_type)
+
     # Binary outcome for logit/probit; original Y for gaussian.
     data["Y_bin"] = (data["Y"] > 0).astype(int)
     py_fml = fml.replace("Y", "Y_bin", 1) if family in ("logit", "probit") else fml
@@ -769,12 +786,13 @@ def test_single_fit_feglm(data_fepois, family, weights, inference, fml):
         "logit": stats.binomial(link="logit"),
         "probit": stats.binomial(link="probit"),
         "gaussian": stats.gaussian(),
+        "poisson": stats.poisson(),
     }[family]
 
     r_kwargs = {
         "vcov": r_inference,
         "data": data_r,
-        "ssc": fixest.ssc(True, "nonnested", False, True, "min", "min"),
+        "ssc": fixest.ssc(k_adj, "nonnested", False, G_adj, "min", "min"),
         "glm_tol": 1e-10,
         "glm_maxiter": 100,
         "family": r_family,
@@ -791,6 +809,11 @@ def test_single_fit_feglm(data_fepois, family, weights, inference, fml):
     py_confint = mod.confint().xs("X1").values
     py_nobs = mod._N
     py_deviance = mod.deviance
+    py_resid = mod.resid()
+    py_irls_weights = mod._irls_weights.flatten()
+    py_df_k = int(mod._df_k)
+    py_df_t = int(mod._df_t)
+    py_n_coefs = mod.coef().values.size
 
     df_X1 = _get_r_df(r_fixest)
     ro.globalenv["r_fixest"] = r_fixest
@@ -803,20 +826,56 @@ def test_single_fit_feglm(data_fepois, family, weights, inference, fml):
     r_confint = df_X1[["conf.low", "conf.high"]].values.astype(np.float64)
     r_nobs = int(stats.nobs(r_fixest)[0])
     r_deviance = r_fixest.rx2("deviance")
+    r_resid = stats.residuals(r_fixest)
+    r_irls_weights = r_fixest.rx2("irls_weights")
+    r_df_k = int(ro.r('attr(r_fixest$cov.scaled, "df.K")')[0])
+    r_df_t = int(ro.r('attr(r_fixest$cov.scaled, "df.t")')[0])
+    r_n_coefs = int(df_X1["n_coef"])
 
-    if inference == "iid":
+    if inference == "iid" and k_adj and G_adj:
         check_absolute_diff(py_nobs, r_nobs, 1e-08, "py_nobs != r_nobs")
-        check_absolute_diff(py_coef, r_coef, 1e-07, "py_coef != r_coef")
+        check_absolute_diff(py_coef, r_coef, 1e-08, "py_coef != r_coef")
+        check_absolute_diff(py_resid[0:5], r_resid[0:5], 1e-07, "py_resid != r_resid")
+        # irls_weights can be loose at certain indices; matching the Poisson
+        # test's tolerance for the same kind of probe.
+        check_absolute_diff(
+            py_irls_weights[10:12],
+            r_irls_weights[10:12],
+            1e-02,
+            "py_irls_weights != r_irls_weights",
+        )
+        check_absolute_diff(py_n_coefs, r_n_coefs, 1e-08, "py_n_coefs != r_n_coefs")
 
     # order of precision:
     # coef, se, vcov -> important
     # pval, tstat, confint -> less important as they are derived from the above
+    check_absolute_diff(py_df_k, r_df_k, 1e-12, "py_df_k != r_df_k")
+    check_absolute_diff(py_df_t, r_df_t, 1e-12, "py_df_t != r_df_t")
     check_absolute_diff(py_vcov, r_vcov, 1e-06, "py_vcov != r_vcov")
     check_absolute_diff(py_se, r_se, 1e-06, "py_se != r_se")
     check_absolute_diff(py_pval, r_pval, 1e-06, "py_pval != r_pval")
-    check_absolute_diff(py_tstat, r_tstat, 1e-05, "py_tstat != r_tstat")
+    check_absolute_diff(
+        py_tstat, r_tstat, 1e-06 if weights is None else 1e-05, "py_tstat != r_tstat"
+    )
     check_absolute_diff(py_confint, r_confint, 1e-06, "py_confint != r_confint")
-    check_absolute_diff(py_deviance, r_deviance, 1e-07, "py_deviance != r_deviance")
+    check_absolute_diff(py_deviance, r_deviance, 1e-08, "py_deviance != r_deviance")
+
+    py_predict_response = mod.predict(type="response")
+    py_predict_link = mod.predict(type="link")
+    r_predict_response = stats.predict(r_fixest, type="response")
+    r_predict_link = stats.predict(r_fixest, type="link")
+    check_absolute_diff(
+        py_predict_response[0:5],
+        r_predict_response[0:5],
+        1e-05,
+        "py_predict_response != r_predict_response",
+    )
+    check_absolute_diff(
+        py_predict_link[0:5],
+        r_predict_link[0:5],
+        1e-06,
+        "py_predict_link != r_predict_link",
+    )
 
 
 @pytest.mark.against_r_core
