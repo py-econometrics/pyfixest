@@ -12,10 +12,12 @@ from pyfixest.estimation.internals.demeaner_options import (
     _warn_if_experimental_torch_demeaner,
 )
 from pyfixest.estimation.internals.literals import (
+    FamilyOptions,
     FixedRmOptions,
     SolverOptions,
     VcovTypeOptions,
     WeightsTypeOptions,
+    _validate_literal_argument,
 )
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.models.fepois_ import Fepois
@@ -27,7 +29,7 @@ from pyfixest.utils.utils import ssc as ssc_func
 def feglm(
     fml: str,
     data: DataFrameType,  # type: ignore
-    family: str,
+    family: FamilyOptions,
     vcov: VcovTypeOptions | dict[str, str] | None = None,
     vcov_kwargs: dict[str, str | int] | None = None,
     weights: str | None = None,
@@ -266,11 +268,7 @@ def feglm(
     for a compact post-estimation workflow.
 
     """
-    if family not in ["logit", "probit", "gaussian", "poisson"]:
-        raise ValueError(
-            f"Only families 'gaussian', 'logit', 'probit', and 'poisson' are "
-            f"supported but you asked for {family!r}."
-        )
+    _validate_literal_argument(family, FamilyOptions)
     if offset is not None and family != "poisson":
         raise ValueError(
             "The `offset` argument is only supported with `family='poisson'`."
