@@ -10,8 +10,9 @@ import pandas as pd
 from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
+from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
 from pyfixest.estimation.internals.fit_ import fit_iv
-from pyfixest.estimation.models.feols_ import Feols, _drop_multicollinear_variables
+from pyfixest.estimation.models.feols_ import Feols
 
 
 class Feiv(Feols):
@@ -225,7 +226,7 @@ class Feiv(Feols):
             self._coefnames_z,
             self._collin_vars_z,
             self._collin_index_z,
-        ) = _drop_multicollinear_variables(
+        ) = drop_multicollinear_variables(
             self._Z,
             self._coefnames_z,
             self._collin_tol,

@@ -16,6 +16,7 @@ from pyfixest.errors import (
     NonConvergenceError,
 )
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
+from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
 from pyfixest.estimation.internals.literals import (
     SolverOptions,
 )
@@ -25,7 +26,6 @@ from pyfixest.estimation.models.feols_ import (
     Feols,
     PredictionErrorOptions,
     PredictionType,
-    _drop_multicollinear_variables,
 )
 from pyfixest.utils.dev_utils import DataFrameType, _check_series_or_dataframe
 
@@ -333,7 +333,7 @@ class Fepois(Feols):
                 # Check multicollinearity
                 # We do this here after the first demeaning to also catch collinearity with fixed effects
                 X_resid, self._coefnames, self._collin_vars, self._collin_index = (
-                    _drop_multicollinear_variables(
+                    drop_multicollinear_variables(
                         X_resid,
                         self._coefnames,
                         self._collin_tol,
