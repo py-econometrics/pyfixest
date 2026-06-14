@@ -31,7 +31,7 @@ Details on Methods and Attributes
 | [estimation.models.feols_.Feols](estimation.models.feols_.Feols.qmd#pyfixest.estimation.models.feols_.Feols) | Non user-facing class to estimate a linear regression via OLS. |
 | [estimation.models.fepois_.Fepois](estimation.models.fepois_.Fepois.qmd#pyfixest.estimation.models.fepois_.Fepois) | Estimate a Poisson regression model. |
 | [estimation.models.feiv_.Feiv](estimation.models.feiv_.Feiv.qmd#pyfixest.estimation.models.feiv_.Feiv) | Non user-facing class to estimate an IV model using a 2SLS estimator. |
-| [estimation.models.feglm_.Feglm](estimation.models.feglm_.Feglm.qmd#pyfixest.estimation.models.feglm_.Feglm) | Abstract base class for the estimation of a fixed-effects GLM model. |
+| [estimation.models.feglm_.Feglm](estimation.models.feglm_.Feglm.qmd#pyfixest.estimation.models.feglm_.Feglm) | Base class for the estimation of a fixed-effects GLM model. |
 | [estimation.models.felogit_.Felogit](estimation.models.felogit_.Felogit.qmd#pyfixest.estimation.models.felogit_.Felogit) | Class for the estimation of a fixed-effects logit model. |
 | [estimation.models.feprobit_.Feprobit](estimation.models.feprobit_.Feprobit.qmd#pyfixest.estimation.models.feprobit_.Feprobit) | Class for the estimation of a fixed-effects probit model. |
 | [estimation.models.fegaussian_.Fegaussian](estimation.models.fegaussian_.Fegaussian.qmd#pyfixest.estimation.models.fegaussian_.Fegaussian) | Class for the estimation of a fixed-effects GLM with normal errors. |

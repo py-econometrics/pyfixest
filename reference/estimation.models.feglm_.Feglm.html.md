@@ -27,7 +27,7 @@ estimation.models.feglm_.Feglm(
 )
 ```
 
-Abstract base class for the estimation of a fixed-effects GLM model.
+Base class for the estimation of a fixed-effects GLM model.
 
 ## Methods
 
