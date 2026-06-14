@@ -11,13 +11,13 @@ from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.families import GlmFamily
 from pyfixest.estimation.internals.fit_glm_ import fit_glm_irls
+from pyfixest.estimation.internals.separation import check_for_separation
 from pyfixest.estimation.internals.vcov_ import vcov_iid_glm
 from pyfixest.estimation.models.feols_ import (
     Feols,
     PredictionErrorOptions,
     PredictionType,
 )
-from pyfixest.estimation.models.fepois_ import _check_for_separation
 from pyfixest.utils.dev_utils import DataFrameType
 
 
@@ -111,7 +111,7 @@ class Feglm(Feols):
             and self.separation_check is not None
             and self.separation_check  # not an empty list
         ):
-            na_separation = _check_for_separation(
+            na_separation = check_for_separation(
                 Y=self._Y,
                 X=self._X,
                 fe=self._fe,
