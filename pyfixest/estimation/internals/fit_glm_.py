@@ -105,9 +105,9 @@ def _step_halving(
     tol: float,
     weights: np.ndarray | None,
     step_halving_tol: float = 1e-12,
-) -> tuple[np.ndarray, np.ndarray, float]:
+) -> tuple[np.ndarray, np.ndarray, float, bool]:
     if deviance_new < deviance:
-        return eta_new, mu_new, deviance_new
+        return eta_new, mu_new, deviance_new, False
 
     alpha = 1.0
     while alpha > step_halving_tol:
@@ -116,10 +116,10 @@ def _step_halving(
         mu_try = family.inv_link(eta_try)
         deviance_try = family.deviance(y_flat, mu_try, weights)
         if deviance_try < deviance:
-            return eta_try, mu_try, deviance_try
+            return eta_try, mu_try, deviance_try, True
 
     if _rel_dev_change(deviance_new, deviance) < tol:
-        return eta_new, mu_new, deviance_new
+        return eta_new, mu_new, deviance_new, False
 
     raise RuntimeError(
         f"Step-halving failed. Deviance: {deviance_new:.6f} vs {deviance:.6f}"
@@ -195,6 +195,7 @@ def fit_glm_irls(
     collin_vars: list[str] = []
     collin_index: list[bool] = []
     converged = False
+    step_halved_prev = False
 
     # Buffers populated each iteration; used after the loop.
     beta_final: np.ndarray
@@ -207,15 +208,20 @@ def fit_glm_irls(
     for r in range(maxiter):
         if r > 0:
             rel_dev_change = _rel_dev_change(deviance, deviance_old)
-            converged = _check_convergence(
-                rel_dev_change=rel_dev_change,
-                tol=tol,
-                r=r,
-                maxiter=maxiter,
-                is_gaussian=family.name == "gaussian",
-            )
-            if converged:
-                break
+            # Only check convergence when the previous update was a full IWLS step.
+            # After step-halving, eta/mu reflect the shortened step, but beta and
+            # the final WLS objects still reflect the unhalved solve; one more
+            # IWLS pass is needed to bring the returned state back into alignment.
+            if not step_halved_prev:
+                converged = _check_convergence(
+                    rel_dev_change=rel_dev_change,
+                    tol=tol,
+                    r=r,
+                    maxiter=maxiter,
+                    is_gaussian=family.name == "gaussian",
+                )
+                if converged:
+                    break
 
             if accelerate and rel_dev_change < 10 * inner_tol:
                 inner_tol = inner_tol / 10
@@ -255,8 +261,9 @@ def fit_glm_irls(
         mu_new = family.inv_link(eta_new)
         deviance_new = family.deviance(Y_flat, mu_new, weights)
 
+        step_halved = False
         if r > 0:
-            eta_new, mu_new, deviance_new = _step_halving(
+            eta_new, mu_new, deviance_new, step_halved = _step_halving(
                 family=family,
                 y_flat=Y_flat,
                 eta=eta,
@@ -271,6 +278,7 @@ def fit_glm_irls(
         z_prev = z
         z_tilde_prev = z_tilde
         X_tilde_prev = X_tilde
+        step_halved_prev = step_halved
 
         deviance_old = deviance
         eta = eta_new

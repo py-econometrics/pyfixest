@@ -2,6 +2,8 @@ import numpy as np
 import pytest
 
 import pyfixest as pf
+from pyfixest.estimation.internals import fit_glm_ as fit_glm_module
+from pyfixest.estimation.internals.families import POISSON
 
 
 def check_absolute_diff(x1, x2, tol, msg=None):
@@ -93,3 +95,90 @@ def test_glm_fe_vs_onehot(fml, family):
             1e-08,
             f"SE {coef_name} mismatch for fml={fml} and family={family}",
         )
+
+
+def test_step_halving_forces_follow_up_wls(monkeypatch):
+    """Do not declare convergence immediately after accepting a shortened step."""
+    x = np.linspace(-1.0, 1.0, 30)
+    X = np.column_stack([np.ones_like(x), x])
+    Y = np.array(
+        [
+            0,
+            1,
+            0,
+            2,
+            1,
+            3,
+            0,
+            2,
+            1,
+            4,
+            2,
+            3,
+            1,
+            2,
+            4,
+            5,
+            3,
+            4,
+            2,
+            6,
+            4,
+            5,
+            3,
+            7,
+            4,
+            6,
+            5,
+            8,
+            6,
+            9,
+        ],
+        dtype=float,
+    )
+
+    demean_calls = 0
+
+    def _identity_demean(v, X, weights, tol):
+        nonlocal demean_calls
+        demean_calls += 1
+        return v, X
+
+    step_calls = 0
+
+    def _fake_step_halving(
+        family,
+        y_flat,
+        eta,
+        eta_new,
+        mu_new,
+        deviance,
+        deviance_new,
+        tol,
+        weights,
+        step_halving_tol=1e-12,
+    ):
+        nonlocal step_calls
+        step_calls += 1
+        if step_calls == 1:
+            eta_accepted = eta + 0.5 * (eta_new - eta)
+            mu_accepted = family.inv_link(eta_accepted)
+            return eta_accepted, mu_accepted, deviance - 1e-12, True
+        return eta_new, mu_new, min(deviance_new, deviance - 1e-12), False
+
+    monkeypatch.setattr(fit_glm_module, "_step_halving", _fake_step_halving)
+
+    fit_glm_module.fit_glm_irls(
+        X=X,
+        Y=Y,
+        family=POISSON,
+        demean=_identity_demean,
+        coefnames=["Intercept", "X"],
+        collin_tol=1e-9,
+        accelerate=False,
+        maxiter=3,
+        tol=1e-8,
+    )
+
+    assert step_calls == 2
+    assert demean_calls == 3
