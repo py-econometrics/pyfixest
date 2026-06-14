@@ -14,15 +14,13 @@ from pyfixest.estimation.internals.families import POISSON, pois_deviance_weight
 from pyfixest.estimation.internals.literals import (
     SolverOptions,
 )
-from pyfixest.estimation.internals.separation import check_for_separation
 from pyfixest.estimation.internals.vcov_ import vcov_iid_glm
 from pyfixest.estimation.models.feglm_ import Feglm
 from pyfixest.estimation.models.feols_ import (
-    Feols,
     PredictionErrorOptions,
     PredictionType,
 )
-from pyfixest.utils.dev_utils import DataFrameType, _check_series_or_dataframe
+from pyfixest.utils.dev_utils import DataFrameType
 
 
 class Fepois(Feglm):
@@ -136,54 +134,6 @@ class Fepois(Feglm):
         self._offset_name = offset
         self._supports_cluster_causal_variance = False
         self._support_decomposition = False
-
-    def prepare_model_matrix(self):
-        "Prepare model inputs for estimation."
-        # Skip Feglm.prepare_model_matrix's separation handling; Fepois does its
-        # own below with additional drops (offset_df, weights_df).
-        Feols.prepare_model_matrix(self)
-
-        # check that self._Y is a pandas Series or DataFrame
-        self._Y = _check_series_or_dataframe(self._Y)
-
-        # Y >= 0 enforcement is delegated to POISSON.check_y, invoked by
-        # Feglm._check_dependent_variable after prepare_model_matrix.
-
-        # check for separation
-        na_separation: list[int] = []
-        if (
-            self._fe is not None
-            and self.separation_check is not None
-            and self.separation_check  # not an empty list
-        ):
-            na_separation = check_for_separation(
-                Y=self._Y,
-                X=self._X,
-                fe=self._fe,
-                fml=self._fml,
-                data=self._data,
-                methods=self.separation_check,
-            )
-
-        if na_separation:
-            self._Y.drop(na_separation, axis=0, inplace=True)
-            self._X.drop(na_separation, axis=0, inplace=True)
-            self._fe.drop(na_separation, axis=0, inplace=True)
-            self._data.drop(na_separation, axis=0, inplace=True)
-            if self._weights_df is not None:
-                self._weights_df.drop(na_separation, axis=0, inplace=True)
-            if self._offset_df is not None:
-                self._offset_df.drop(na_separation, axis=0, inplace=True)
-            self._N = self._Y.shape[0]
-            self._N_rows = self._N
-            # Re-set weights after dropping rows (handles both weighted and unweighted)
-            self._weights = self._set_weights()
-
-            self.na_index = np.concatenate([self.na_index, np.array(na_separation)])
-            self.n_separation_na = len(na_separation)
-            # possible to have dropped fixed effects level due to separation
-            self._k_fe = self._fe.nunique(axis=0) if self._has_fixef else None
-            self._n_fe = np.sum(self._k_fe > 1) if self._has_fixef else 0
 
     def to_array(self):
         "Turn estimation DataFrames to np arrays and resolve the offset."

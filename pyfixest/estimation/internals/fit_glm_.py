@@ -103,6 +103,7 @@ def _step_halving(
     deviance: float,
     deviance_new: float,
     tol: float,
+    weights: np.ndarray | None,
     step_halving_tol: float = 1e-12,
 ) -> tuple[np.ndarray, np.ndarray, float]:
     if deviance_new < deviance:
@@ -113,7 +114,7 @@ def _step_halving(
         alpha /= 2.0
         eta_try = eta + alpha * (eta_new - eta)
         mu_try = family.inv_link(eta_try)
-        deviance_try = family.deviance(y_flat, mu_try)
+        deviance_try = family.deviance(y_flat, mu_try, weights)
         if deviance_try < deviance:
             return eta_try, mu_try, deviance_try
 
@@ -183,7 +184,7 @@ def fit_glm_irls(
 
     mu = family.mu_start(Y)
     eta = family.link(mu)
-    deviance = family.deviance(Y_flat, mu)
+    deviance = family.deviance(Y_flat, mu, weights)
     deviance_old = deviance + 1.0
 
     z_prev: np.ndarray | None = None
@@ -253,7 +254,7 @@ def fit_glm_irls(
         eta_new = (z - e_new) + offset_flat
 
         mu_new = family.inv_link(eta_new)
-        deviance_new = family.deviance(Y_flat, mu_new)
+        deviance_new = family.deviance(Y_flat, mu_new, weights)
 
         # Skip step-halving on the first iteration: the initial mu is a crude
         # heuristic (e.g. (Y + mean(Y))/2 for Poisson), and IRLS often overshoots
@@ -269,6 +270,7 @@ def fit_glm_irls(
                 deviance=deviance,
                 deviance_new=deviance_new,
                 tol=tol,
+                weights=weights,
             )
 
         z_prev = z

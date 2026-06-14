@@ -21,7 +21,7 @@ class GlmFamily:
     inv_link: Callable[[np.ndarray], np.ndarray]
     gprime: Callable[[np.ndarray], np.ndarray]
     variance: Callable[[np.ndarray], np.ndarray]
-    deviance: Callable[[np.ndarray, np.ndarray], float]
+    deviance: Callable[[np.ndarray, np.ndarray, np.ndarray | None], float]
     mu_start: Callable[[np.ndarray], np.ndarray]
     check_y: Callable[[np.ndarray], None]
 
@@ -43,31 +43,45 @@ def _mu_start_binary(Y: np.ndarray) -> np.ndarray:
 
 
 def _mu_start_mean(Y: np.ndarray) -> np.ndarray:
-    return np.full_like(Y.flatten(), float(np.mean(Y)), dtype=float)
+    return np.full_like(Y.flatten(), np.mean(Y), dtype=float)
 
 
-def _logit_deviance(y: np.ndarray, mu: np.ndarray) -> float:
-    return float(-2 * np.sum(y * np.log(mu) + (1 - y) * np.log(1 - mu)))
+def _flatten_weights(weights: np.ndarray | None) -> np.ndarray | float:
+    return weights.flatten() if weights is not None else 1.0
 
 
-def _probit_deviance(y: np.ndarray, mu: np.ndarray) -> float:
-    ll_fitted = np.sum(y * np.log(mu) + (1 - y) * np.log(1 - mu))
+def _logit_deviance(y: np.ndarray, mu: np.ndarray, weights: np.ndarray | None) -> float:
+    w = _flatten_weights(weights)
+    return float(-2 * np.sum(w * (y * np.log(mu) + (1 - y) * np.log(1 - mu))))
+
+
+def _probit_deviance(
+    y: np.ndarray, mu: np.ndarray, weights: np.ndarray | None
+) -> float:
+    w = _flatten_weights(weights)
+    ll_fitted = np.sum(w * (y * np.log(mu) + (1 - y) * np.log(1 - mu)))
     # divide by zero warnings because of the log(0) terms
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         ll_saturated = np.sum(
-            np.where(y == 0, 0, y * np.log(y))
-            + np.where(y == 1, 0, (1 - y) * np.log(1 - y))
+            w
+            * (
+                np.where(y == 0, 0, y * np.log(y))
+                + np.where(y == 1, 0, (1 - y) * np.log(1 - y))
+            )
         )
     return float(-2.0 * (ll_fitted - ll_saturated))
 
 
-def _gaussian_deviance(y: np.ndarray, mu: np.ndarray) -> float:
-    return float(np.sum((y - mu) ** 2))
+def _gaussian_deviance(
+    y: np.ndarray, mu: np.ndarray, weights: np.ndarray | None
+) -> float:
+    w = _flatten_weights(weights)
+    return float(np.sum(w * (y - mu) ** 2))
 
 
-def _pois_deviance(y: np.ndarray, mu: np.ndarray) -> float:
-    return pois_deviance_weighted(y, mu, None)
+def _pois_deviance(y: np.ndarray, mu: np.ndarray, weights: np.ndarray | None) -> float:
+    return pois_deviance_weighted(y, mu, weights)
 
 
 def pois_deviance_weighted(
@@ -76,10 +90,7 @@ def pois_deviance_weighted(
     "Poisson deviance, optionally weighted. Defined as 2·(LL_saturated - LL_fitted)."
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        if weights is None:
-            w: np.ndarray | float = 1.0
-        else:
-            w = weights.flatten()
+        w = _flatten_weights(weights)
         y_flat = y.flatten()
         mu_flat = mu.flatten()
         return float(
@@ -100,8 +111,8 @@ def _check_y_nonneg(Y: np.ndarray) -> None:
 
 
 def _mu_start_pois(Y: np.ndarray) -> np.ndarray:
-    y_flat = Y.flatten()
-    return ((y_flat + float(np.mean(y_flat))) / 2).astype(float)
+    y = Y.flatten().astype(float)
+    return (y + y.mean()) / 2
 
 
 LOGIT = GlmFamily(
