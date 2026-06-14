@@ -331,5 +331,3 @@ class Fepois(Feglm):
             )
 
         return super().predict(newdata=newdata, type=type, atol=atol, btol=btol)
-
-
