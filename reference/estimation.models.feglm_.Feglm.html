@@ -627,7 +627,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tbody>
 <tr class="odd">
 <td><a href="#pyfixest.estimation.models.feglm_.Feglm.get_fit">get_fit</a></td>
-<td>Fit the GLM model via iterated weighted least squares.</td>
+<td>Fit the GLM via IRLS and write results onto self.* attributes.</td>
 </tr>
 <tr class="even">
 <td><a href="#pyfixest.estimation.models.feglm_.Feglm.predict">predict</a></td>
@@ -650,8 +650,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="pyfixest.estimation.models.feglm_.Feglm.get_fit" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.models.feglm_.Feglm.get_fit">get_fit</h3>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>estimation.models.feglm_.Feglm.get_fit()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>Fit the GLM model via iterated weighted least squares.</p>
-<p>The implementation follows ideas developed in - Bergé (2018): https://ideas.repec.org/p/luc/wpaper/18-13.html - Correia, Guimaraes, Zylkin (2019): https://journals.sagepub.com/doi/pdf/10.1177/1536867X20909691 - Stamann (2018): https://arxiv.org/pdf/1707.01815</p>
+<p>Fit the GLM via IRLS and write results onto self.* attributes.</p>
 </section>
 <section id="pyfixest.estimation.models.feglm_.Feglm.predict" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.models.feglm_.Feglm.predict">predict</h3>
