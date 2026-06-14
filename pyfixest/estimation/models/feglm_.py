@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
 from collections.abc import Mapping
 from typing import Any, Literal
 
@@ -26,8 +25,8 @@ from pyfixest.estimation.models.fepois_ import _check_for_separation
 from pyfixest.utils.dev_utils import DataFrameType
 
 
-class Feglm(Feols, ABC):
-    "Abstract base class for the estimation of a fixed-effects GLM model."
+class Feglm(Feols):
+    "Base class for the estimation of a fixed-effects GLM model."
 
     def __init__(
         self,
@@ -557,27 +556,6 @@ class Feglm(Feols, ABC):
     def _check_dependent_variable(self) -> None:
         "Validate the dependent variable according to the family's constraints."
         self._family.check_y(self._Y)
-
-    @abstractmethod
-    def _get_score(
-        self, y: np.ndarray, X: np.ndarray, mu: np.ndarray, eta: np.ndarray
-    ) -> np.ndarray:
-        pass
-
-    @abstractmethod
-    def _get_dispersion_phi(self, theta: np.ndarray) -> float:
-        "Get the dispersion parameter phi for the GLM family."
-        pass
-
-    @abstractmethod
-    def _get_b(self, theta: np.ndarray) -> np.ndarray:
-        "Get the cumulant function b(theta) for the GLM family."
-        pass
-
-    @abstractmethod
-    def _get_theta(self, mu: np.ndarray) -> np.ndarray:
-        "Get the mechanical link theta(mu) for the GLM family."
-        pass
 
 
 def _glm_input_checks(drop_singletons: bool, tol: float, maxiter: int):

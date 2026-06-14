@@ -1,7 +1,6 @@
 from collections.abc import Mapping
 from typing import Any, Literal
 
-import numpy as np
 import pandas as pd
 
 from pyfixest.core.demean import Preconditioner
@@ -71,17 +70,3 @@ class Felogit(Feglm):
 
         self._method = "feglm-logit"
         self._family = LOGIT
-
-    def _get_dispersion_phi(self, theta: np.ndarray) -> float:
-        return 1.0
-
-    def _get_b(self, theta: np.ndarray) -> np.ndarray:
-        return np.log(1 + np.exp(theta))
-
-    def _get_theta(self, mu: np.ndarray) -> np.ndarray:
-        return np.log(mu / (1 - mu))
-
-    def _get_score(
-        self, y: np.ndarray, X: np.ndarray, mu: np.ndarray, eta: np.ndarray
-    ) -> np.ndarray:
-        return (y - mu)[:, None] * X

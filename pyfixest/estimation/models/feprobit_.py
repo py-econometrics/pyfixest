@@ -1,9 +1,7 @@
 from collections.abc import Mapping
 from typing import Any, Literal
 
-import numpy as np
 import pandas as pd
-from scipy.stats import norm
 
 from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner
@@ -72,19 +70,3 @@ class Feprobit(Feglm):
 
         self._method = "feglm-probit"
         self._family = PROBIT
-
-    def _get_dispersion_phi(self, theta: np.ndarray) -> float:
-        return 1.0
-
-    def _get_b(self, theta: np.ndarray) -> np.ndarray:
-        raise ValueError("The function _get_b is not implemented for the probit model.")
-        return None
-
-    def _get_theta(self, mu: np.ndarray) -> np.ndarray:
-        return norm.ppf(mu)
-
-    def _get_score(
-        self, y: np.ndarray, X: np.ndarray, mu: np.ndarray, eta: np.ndarray
-    ) -> np.ndarray:
-        residual = (y - mu) / (mu * (1 - mu)) * norm.pdf(eta)
-        return residual[:, None] * X
