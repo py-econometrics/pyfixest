@@ -216,47 +216,6 @@ class Feglm(Feols):
     def _vcov_iid(self):
         return vcov_iid_glm(bread=self._bread)
 
-    def _update_v(
-        self, y: np.ndarray, mu: np.ndarray, gprime: np.ndarray
-    ) -> np.ndarray:
-        "Get (running) dependent variable v for the GLM family."
-        return (y - mu) * gprime
-
-    def _update_v_tilde(
-        self, y: np.ndarray, mu: np.ndarray, sqrt_W: np.ndarray, gprime: np.ndarray
-    ) -> np.ndarray:
-        "Get sqrt(W) * v for weighted least squares transformation."
-        return sqrt_W * ((y - mu) * gprime)
-
-    def _update_X_tilde(self, sqrt_W: np.ndarray, X: np.ndarray) -> np.ndarray:
-        "Get sqrt(W) * X for weighted least squares transformation."
-        return sqrt_W.reshape(-1, 1) * X
-
-    def _update_beta_diff(
-        self, X_dotdot: np.ndarray, v_dotdot: np.ndarray
-    ) -> np.ndarray:
-        "Get the beta _update difference (formula 3.5) via WLS fit."
-        beta_diff = np.linalg.lstsq(X_dotdot, v_dotdot.reshape(-1, 1), rcond=None)[
-            0
-        ].flatten()
-        return beta_diff
-
-    def _update_eta(
-        self,
-        sqrt_W: np.ndarray,
-        z: np.ndarray,
-        z_tilde: np.ndarray,
-        X_tilde: np.ndarray,
-        beta_diff: np.ndarray,
-        eta: np.ndarray,
-    ) -> np.ndarray:
-        e = z_tilde - X_tilde @ beta_diff
-        e_unweighted = e / sqrt_W
-        return z - e_unweighted
-
-    def _get_gradient(self, Z: np.ndarray, W: np.ndarray, v: np.ndarray) -> np.ndarray:
-        return Z.T @ W @ v
-
     def residualize(
         self,
         v: np.ndarray,
@@ -278,52 +237,6 @@ class Feglm(Feols):
             demeaner=effective_demeaner,
         )
         return vX_tilde[:, 0], vX_tilde[:, 1:]
-
-    def _update_eta_step_halfing(
-        self,
-        Y: np.ndarray,
-        beta: np.ndarray,
-        eta: np.ndarray,
-        mu: np.ndarray,
-        deviance: float,
-        beta_update_diff: np.ndarray,
-        sqrt_W: np.ndarray,
-        z: np.ndarray,
-        z_tilde: np.ndarray,
-        X_tilde: np.ndarray,
-        deviance_old: float,
-        step_halfing_tolerance: float,
-    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, float]:
-        "Update parameters, potentially using step halfing."
-        alpha = 1.0
-        step_accepted = False
-
-        while alpha > step_halfing_tolerance:
-            beta_try = beta + alpha * beta_update_diff
-            eta_try = self._update_eta(
-                sqrt_W=sqrt_W.flatten(),
-                z=z,
-                z_tilde=z_tilde,
-                X_tilde=X_tilde,
-                beta_diff=alpha * beta_update_diff,
-                eta=eta,
-            )
-            mu_try = self._family.inv_link(eta_try)
-            deviance_try = self._family.deviance(Y.flatten(), mu_try)
-            if deviance_try < deviance_old:
-                beta = beta_try
-                eta = eta_try
-                mu = mu_try
-                deviance = deviance_try
-                step_accepted = True
-                break
-            else:
-                alpha /= 2.0
-
-        if not step_accepted:
-            raise RuntimeError("Step-halving failed to find improvement.")
-
-        return beta, eta, mu, deviance
 
     def predict(
         self,
