@@ -806,6 +806,22 @@ def test_glm_errors():
         pf.feglm("Y ~ X1", data=data, family="logit")
 
 
+def test_feglm_offset_requires_poisson():
+    "Test that passing `offset` to feglm() with a non-Poisson family raises."
+    data = pf.get_data()
+    data["Y_bin"] = np.where(data["Y"] > 0, 1, 0)
+    data["off"] = 0.1
+
+    msg = r"The `offset` argument is only supported with `family='poisson'`\."
+    for family in ("logit", "probit", "gaussian"):
+        with pytest.raises(ValueError, match=msg):
+            pf.feglm("Y_bin ~ X1", data=data, family=family, offset="off")
+
+    # offset with poisson must work (does not raise).
+    data["Y_p"] = np.where(data["Y"] > 0, 1, 0)
+    pf.feglm("Y_p ~ X1", data=data.dropna(), family="poisson", offset="off")
+
+
 def test_prediction_errors_glm():
     "Test that the prediction errors not supported for GLM models."
     data = pf.get_data()

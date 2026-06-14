@@ -14,7 +14,6 @@ from pyfixest.estimation.internals.families import POISSON
 from pyfixest.estimation.internals.literals import (
     SolverOptions,
 )
-from pyfixest.estimation.internals.vcov_ import vcov_iid_glm
 from pyfixest.estimation.models.feglm_ import Feglm
 from pyfixest.estimation.models.feols_ import (
     PredictionErrorOptions,
@@ -176,31 +175,6 @@ class Fepois(Feglm):
         self.deviance = self._family.deviance(
             y_orig, self._Y_hat_response, user_weights
         )
-
-    def resid(self, type: str = "response") -> np.ndarray:
-        """
-        Return residuals from regression model.
-
-        Parameters
-        ----------
-        type : str, optional
-            The type of residuals to be computed.
-            Can be either "response" (default) or "working".
-
-        Returns
-        -------
-        np.ndarray
-            A flat array with the residuals of the regression model.
-        """
-        if type == "response":
-            return self._u_hat_response.flatten()
-        elif type == "working":
-            return self._u_hat_working.flatten()
-        else:
-            raise ValueError("type must be one of 'response' or 'working'.")
-
-    def _vcov_iid(self):
-        return vcov_iid_glm(bread=self._bread)
 
     def predict(
         self,

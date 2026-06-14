@@ -230,6 +230,27 @@ class Feglm(Feols):
     def _vcov_iid(self):
         return vcov_iid_glm(bread=self._bread)
 
+    def resid(self, type: str = "response") -> np.ndarray:
+        """
+        Return residuals from a fitted GLM.
+
+        Parameters
+        ----------
+        type : str, optional
+            The type of residuals to return. Either "response" (default) or
+            "working".
+
+        Returns
+        -------
+        np.ndarray
+            A flat array with the requested residuals.
+        """
+        if type == "response":
+            return self._u_hat_response.flatten()
+        if type == "working":
+            return self._u_hat_working.flatten()
+        raise ValueError("type must be one of 'response' or 'working'.")
+
     def residualize(
         self,
         v: np.ndarray,
