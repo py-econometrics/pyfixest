@@ -137,9 +137,6 @@ class Fepois(Feglm):
 
     def get_fit(self) -> None:
         "Fit via Feglm IRLS, then add Poisson-specific post-fit summary stats."
-        # Stash original Y and user weights before super().get_fit() overwrites
-        # self._Y / self._weights with the WLS-transformed versions used for
-        # inference.
         y_orig = np.asarray(self._Y).flatten()
         user_weights = self._weights.flatten().copy()
 

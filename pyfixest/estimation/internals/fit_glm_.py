@@ -255,10 +255,6 @@ def fit_glm_irls(
         mu_new = family.inv_link(eta_new)
         deviance_new = family.deviance(Y_flat, mu_new, weights)
 
-        # Skip step-halving on the first iteration: the initial mu is a crude
-        # heuristic (e.g. (Y + mean(Y))/2 for Poisson), and IRLS often overshoots
-        # the initial deviance on the first step before settling. From iter 1
-        # onward, step-halving guards against divergence as expected.
         if r > 0:
             eta_new, mu_new, deviance_new = _step_halving(
                 family=family,
