@@ -4,13 +4,8 @@ from collections.abc import Mapping
 from typing import Any
 
 from pyfixest.demeaners import AnyDemeaner
-from pyfixest.estimation.api.utils import _estimation_input_checks
+from pyfixest.estimation.api.feglm import feglm
 from pyfixest.estimation.FixestMulti_ import FixestMulti
-from pyfixest.estimation.internals.demeaner_options import (
-    _resolve_demeaner,
-    _warn_if_deprecated_demeaner_backend,
-    _warn_if_experimental_torch_demeaner,
-)
 from pyfixest.estimation.internals.literals import (
     FixedRmOptions,
     SolverOptions,
@@ -20,8 +15,6 @@ from pyfixest.estimation.internals.literals import (
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.models.fepois_ import Fepois
 from pyfixest.utils.dev_utils import DataFrameType
-from pyfixest.utils.utils import capture_context
-from pyfixest.utils.utils import ssc as ssc_func
 
 
 def fepois(
@@ -244,75 +237,29 @@ def fepois(
     are documented in the [feols() reference](/reference/estimation.api.feols.feols.html).
     For applied examples, see the [Poisson & GLMs tutorial](/tutorials/poisson-glm.html).
     """
-    if separation_check is None:
-        separation_check = ["fe"]
-    if ssc is None:
-        ssc = ssc_func()
-    context = {} if context is None else capture_context(context)
-    demeaner = _resolve_demeaner(demeaner)
-    _warn_if_experimental_torch_demeaner(demeaner)
-    _warn_if_deprecated_demeaner_backend(demeaner)
-
-    _estimation_input_checks(
+    # Thin wrapper: fepois is exactly feglm(family="poisson").
+    return feglm(
         fml=fml,
         data=data,
+        family="poisson",
         vcov=vcov,
         vcov_kwargs=vcov_kwargs,
         weights=weights,
-        ssc=ssc,
-        fixef_rm=fixef_rm,
-        collin_tol=collin_tol,
-        copy_data=copy_data,
-        store_data=store_data,
-        lean=lean,
         weights_type=weights_type,
-        reps=None,
-        seed=None,
-        split=split,
-        fsplit=fsplit,
-        separation_check=separation_check,
-    )
-
-    fixest = FixestMulti(
-        data=data,
-        copy_data=copy_data,
-        store_data=store_data,
-        lean=lean,
-        weights_type=weights_type,
-        seed=None,
-        split=split,
-        fsplit=fsplit,
-        context=context,
-    )
-
-    fixest._prepare_estimation(
-        estimation="fepois",
-        fml=fml,
-        vcov=vcov,
-        vcov_kwargs=vcov_kwargs,
-        weights=weights,
-        ssc=ssc,
-        fixef_rm=fixef_rm,
-        drop_intercept=drop_intercept,
         offset=offset,
-    )
-    if fixest._is_iv:
-        raise NotImplementedError(
-            "IV Estimation is not supported for Poisson Regression"
-        )
-
-    fixest._estimate_all_models(
-        vcov=vcov,
-        solver=solver,
-        vcov_kwargs=vcov_kwargs,
+        ssc=ssc,
+        fixef_rm=fixef_rm,
         iwls_tol=iwls_tol,
         iwls_maxiter=iwls_maxiter,
         collin_tol=collin_tol,
         separation_check=separation_check,
+        solver=solver,
         demeaner=demeaner,
+        drop_intercept=drop_intercept,
+        copy_data=copy_data,
+        store_data=store_data,
+        lean=lean,
+        context=context,
+        split=split,
+        fsplit=fsplit,
     )
-
-    if fixest._is_multiple_estimation:
-        return fixest
-    else:
-        return fixest.fetch_model(0, print_fml=False)
