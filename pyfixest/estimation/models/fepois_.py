@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import warnings
 from collections.abc import Mapping
 from typing import Any
 
@@ -10,17 +9,14 @@ from scipy.special import gammaln
 
 from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner
-from pyfixest.errors import (
-    NonConvergenceError,
-)
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
-from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
+from pyfixest.estimation.internals.families import POISSON, pois_deviance_weighted
 from pyfixest.estimation.internals.literals import (
     SolverOptions,
 )
 from pyfixest.estimation.internals.separation import check_for_separation
-from pyfixest.estimation.internals.solvers import solve_ols
 from pyfixest.estimation.internals.vcov_ import vcov_iid_glm
+from pyfixest.estimation.models.feglm_ import Feglm
 from pyfixest.estimation.models.feols_ import (
     Feols,
     PredictionErrorOptions,
@@ -29,14 +25,14 @@ from pyfixest.estimation.models.feols_ import (
 from pyfixest.utils.dev_utils import DataFrameType, _check_series_or_dataframe
 
 
-class Fepois(Feols):
+class Fepois(Feglm):
     """
     Estimate a Poisson regression model.
 
     Non user-facing class to estimate a Poisson regression model via Iterated
     Weighted Least Squares (IWLS).
 
-    Inherits from the Feols class. Users should not directly instantiate this class,
+    Inherits from the Feglm class. Users should not directly instantiate this class,
     but rather use the [fepois()](/reference/estimation.api.fepois.fepois.qmd) function.
     Note that no demeaning is performed in this class: demeaning is performed in the
     FixestMulti class (to allow for caching of demeaned variables for multiple estimation).
@@ -120,50 +116,38 @@ class Fepois(Feols):
             weights_type=weights_type,
             collin_tol=collin_tol,
             lookup_demeaned_data=lookup_demeaned_data,
+            tol=tol,
+            maxiter=maxiter,
             solver=solver,
             store_data=store_data,
             copy_data=copy_data,
             lean=lean,
             sample_split_var=sample_split_var,
             sample_split_value=sample_split_value,
+            separation_check=separation_check,
             context=context,
             demeaner=demeaner,
             lookup_preconditioner=lookup_preconditioner,
         )
 
-        # input checks
-        _fepois_input_checks(
-            drop_singletons=drop_singletons,
-            tol=tol,
-            maxiter=maxiter,
-        )
-
-        self.maxiter = maxiter
-        self.tol = tol
+        # Poisson-specific overrides on top of the Feglm-set defaults.
         self._method = "fepois"
-        self.convergence = False
-        self.separation_check = separation_check
+        self._family = POISSON
         self._offset_name = offset
-
-        self._support_crv3_inference = True
-        self._support_iid_inference = True
         self._supports_cluster_causal_variance = False
         self._support_decomposition = False
 
-        self._Y_hat_response = np.array([])
-        self.deviance = None
-        self._Xbeta = np.array([])
-
     def prepare_model_matrix(self):
         "Prepare model inputs for estimation."
-        super().prepare_model_matrix()
+        # Skip Feglm.prepare_model_matrix's separation handling; Fepois does its
+        # own below with additional drops (offset_df, weights_df).
+        Feols.prepare_model_matrix(self)
 
         # check that self._Y is a pandas Series or DataFrame
         self._Y = _check_series_or_dataframe(self._Y)
 
-        # check that self._Y is a weakly positive number
-        if np.any(self._Y < 0):
-            raise ValueError("The dependent variable must be a weakly positive number.")
+        # Y >= 0 enforcement is delegated to POISSON.check_y, invoked by
+        # Feglm._check_dependent_variable after prepare_model_matrix.
 
         # check for separation
         na_separation: list[int] = []
@@ -202,192 +186,34 @@ class Fepois(Feols):
             self._n_fe = np.sum(self._k_fe > 1) if self._has_fixef else 0
 
     def to_array(self):
-        "Turn estimation DataFrames to np arrays."
-        self._Y, self._X, self._Z = (
-            self._Y.to_numpy(),
-            self._X.to_numpy(),
-            self._X.to_numpy(),
-        )
-        if self._fe is not None:
-            self._fe = self._fe.to_numpy()
-            if self._fe.ndim == 1:
-                self._fe = self._fe.reshape((self._N, 1))
+        "Turn estimation DataFrames to np arrays and resolve the offset."
+        super().to_array()
         if self._offset_df is not None:
             self._offset = self._offset_df.to_numpy().reshape((-1, 1))
         else:
             self._offset = np.zeros((self._N, 1))
 
-    def _compute_deviance(
-        self, Y: np.ndarray, mu: np.ndarray, weights: np.ndarray | None = None
-    ):
-        """
-        Deviance is defined as twice the difference in log likelihood between the
-        saturated model and the model being fit.
-
-        deviance = 2 * (log_likelihood_saturated - log_likelihood_fitted)
-
-        See [1] chapter 5.6 for more details.
-        [1] Dobson, Annette J., and Adrian G. Barnett. An introduction to generalized linear models. Chapman and Hall/CRC, 2018.
-        """
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            if weights is None:
-                weights = np.ones_like(Y)
-            weights = weights.flatten()
-            Y_flat = Y.flatten()
-            mu_flat = mu.flatten()
-            deviance = np.float64(
-                2
-                * np.sum(
-                    weights
-                    * (
-                        np.where(Y_flat == 0, 0, Y_flat * np.log(Y_flat / mu_flat))
-                        - (Y_flat - mu_flat)
-                    )
-                )
-            )
-        return deviance
-
     def get_fit(self) -> None:
-        """
-        Fit a Poisson Regression Model via Iterated Weighted Least Squares (IWLS).
+        "Fit via Feglm IRLS, then add Poisson-specific post-fit summary stats."
+        # Stash original Y and user weights before super().get_fit() overwrites
+        # self._Y / self._weights with the WLS-transformed versions used for
+        # inference.
+        y_orig = np.asarray(self._Y).flatten()
+        user_weights = self._weights.flatten().copy()
 
-        Returns
-        -------
-        None
+        super().get_fit()
 
-        Attributes
-        ----------
-        beta_hat : np.ndarray
-            Estimated coefficients.
-        Y_hat : np.ndarray
-            Estimated dependent variable.
-        u_hat : np.ndarray
-            Estimated residuals.
-        weights : np.ndarray
-            Weights (from the last iteration of the IRLS algorithm).
-        X : np.ndarray
-            Demeaned independent variables (from the last iteration of the IRLS
-            algorithm).
-        Z : np.ndarray
-            Demeaned independent variables (from the last iteration of the IRLS
-            algorithm).
-        Y : np.ndarray
-            Demeaned dependent variable (from the last iteration of the IRLS
-            algorithm).
-        """
-        self.to_array()
-
-        stop_iterating = False
-        crit = 1
-
-        for i in range(self.maxiter):
-            if stop_iterating:
-                self.convergence = True
-                break
-            if i == self.maxiter:
-                raise NonConvergenceError(
-                    f"""
-                    The IRLS algorithm did not converge with {self.maxiter}
-                    iterations. Try to increase the maximum number of iterations.
-                    """
-                )
-
-            if i == 0:
-                _mean = np.mean(self._Y)
-                mu = (self._Y + _mean) / 2
-                eta = np.log(mu)
-                Z = eta - self._offset + self._Y / mu - 1
-                reg_Z = Z.copy()
-                last = self._compute_deviance(self._Y, mu)
-            else:
-                # update w and Z
-                Z = eta - self._offset + self._Y / mu - 1  # eq (8)
-                reg_Z = Z.copy()  # eq (9)
-
-            # tighten HDFE tolerance - currently not possible with PyHDFE
-            # if crit < 10 * inner_tol:
-            #    inner_tol = inner_tol / 10
-
-            # Step 1: weighted demeaning
-            ZX = np.concatenate([reg_Z, self._X], axis=1)
-
-            combined_weights = self._weights * mu
-
-            if self._fe is None:
-                ZX_resid = ZX
-            else:
-                ZX_resid = self._demean_cache.demean_array(
-                    x=ZX,
-                    flist=self._fe,
-                    weights=combined_weights.flatten(),
-                    na_index=self._na_index,
-                    demeaner=self._demeaner,
-                )
-
-            Z_resid = ZX_resid[:, 0].reshape((self._N, 1))  # z_resid
-            X_resid = ZX_resid[:, 1:]  # x_resid
-
-            if i == 0:
-                # Check multicollinearity
-                # We do this here after the first demeaning to also catch collinearity with fixed effects
-                X_resid, self._coefnames, self._collin_vars, self._collin_index = (
-                    drop_multicollinear_variables(
-                        X_resid,
-                        self._coefnames,
-                        self._collin_tol,
-                    )
-                )
-                if self._collin_index:
-                    # Drop covariates collinear with fixed effects
-                    self._X = self._X[:, ~np.array(self._collin_index)]
-                self._X_is_empty = self._X.shape[1] == 0
-                self._k = self._X.shape[1]
-            WX = np.sqrt(combined_weights) * X_resid
-            WZ = np.sqrt(combined_weights) * Z_resid
-
-            XWX = WX.transpose() @ WX
-            XWZ = WX.transpose() @ WZ
-
-            delta_new = solve_ols(XWX, XWZ, self._solver).reshape(
-                (-1, 1)
-            )  # eq (10), delta_new -> reg_z
-            resid = Z_resid - X_resid @ delta_new
-
-            # more updating
-            eta = Z - resid + self._offset
-            mu = np.exp(eta)
-
-            # same criterion as fixest
-            # https://github.com/lrberge/fixest/blob/6b852fa277b947cea0bad8630986225ddb2d6f1b/R/ESTIMATION_FUNS.R#L2746
-            deviance = self._compute_deviance(self._Y, mu)
-            crit = np.abs(deviance - last) / (0.1 + np.abs(last))
-            last = deviance
-
-            stop_iterating = crit < self.tol
-
-        self._beta_hat = delta_new.flatten()
-        self._Y_hat_response = mu.flatten()
-        self._Y_hat_link = eta.flatten()
-        # (Y - self._Y_hat)
-        # needed for the calculation of the vcov
-
-        # update for inference
-        user_weights = self._weights.flatten()
-        self._irls_weights = combined_weights.flatten()
-
-        self._u_hat = (WZ - WX @ delta_new).flatten()
-        self._u_hat_working = resid
-        self._u_hat_response = self._Y - np.exp(eta)
-
-        y = self._Y.flatten()
         self._y_hat_null = np.full_like(
-            y, np.average(y, weights=user_weights), dtype=float
+            y_orig, np.average(y_orig, weights=user_weights), dtype=float
         )
 
         self._loglik = np.sum(
             user_weights
-            * (y * np.log(self._Y_hat_response) - self._Y_hat_response - gammaln(y + 1))
+            * (
+                y_orig * np.log(self._Y_hat_response)
+                - self._Y_hat_response
+                - gammaln(y_orig + 1)
+            )
         )
 
         # cant replicate fixest atm
@@ -397,29 +223,22 @@ class Fepois(Feols):
         else:
             self._loglik_null = np.sum(
                 user_weights
-                * (y * np.log(self._y_hat_null) - self._y_hat_null - gammaln(y + 1))
+                * (
+                    y_orig * np.log(self._y_hat_null)
+                    - self._y_hat_null
+                    - gammaln(y_orig + 1)
+                )
             )
             self._pseudo_r2 = 1 - (self._loglik / self._loglik_null)
         self._pearson_chi2 = np.sum(
-            user_weights * (y - self._Y_hat_response) ** 2 / self._Y_hat_response
+            user_weights * (y_orig - self._Y_hat_response) ** 2 / self._Y_hat_response
         )
 
-        self._weights = combined_weights
-        self.deviance = self._compute_deviance(y, mu, user_weights)
-
-        self._Y = WZ
-        self._X = WX
-        self._Z = self._X
-
-        self._tZX = np.transpose(self._Z) @ self._X
-        self._tZXinv = np.linalg.inv(self._tZX)
-        self._Xbeta = eta
-
-        self._scores = self._u_hat[:, None] * self._X
-        self._hessian = XWX
-
-        if self.convergence:
-            self._convergence = True
+        # The in-loop deviance set by Feglm is unweighted; Fepois reports the
+        # user-weighted version.
+        self.deviance = pois_deviance_weighted(
+            y_orig, self._Y_hat_response, user_weights
+        )
 
     def resid(self, type: str = "response") -> np.ndarray:
         """
@@ -514,14 +333,3 @@ class Fepois(Feols):
         return super().predict(newdata=newdata, type=type, atol=atol, btol=btol)
 
 
-def _fepois_input_checks(drop_singletons: bool, tol: float, maxiter: int):
-    if not isinstance(drop_singletons, bool):
-        raise TypeError("drop_singletons must be logical.")
-    if not isinstance(tol, (int, float)):
-        raise TypeError("tol must be numeric.")
-    if tol <= 0 or tol >= 1:
-        raise AssertionError("tol must be between 0 and 1.")
-    if not isinstance(maxiter, int):
-        raise TypeError("maxiter must be integer.")
-    if maxiter <= 0:
-        raise AssertionError("maxiter must be greater than 0.")

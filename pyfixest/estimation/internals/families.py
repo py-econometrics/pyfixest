@@ -66,6 +66,44 @@ def _gaussian_deviance(y: np.ndarray, mu: np.ndarray) -> float:
     return float(np.sum((y - mu) ** 2))
 
 
+def _pois_deviance(y: np.ndarray, mu: np.ndarray) -> float:
+    return pois_deviance_weighted(y, mu, None)
+
+
+def pois_deviance_weighted(
+    y: np.ndarray, mu: np.ndarray, weights: np.ndarray | None
+) -> float:
+    "Poisson deviance, optionally weighted. Defined as 2·(LL_saturated - LL_fitted)."
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        if weights is None:
+            w: np.ndarray | float = 1.0
+        else:
+            w = weights.flatten()
+        y_flat = y.flatten()
+        mu_flat = mu.flatten()
+        return float(
+            2
+            * np.sum(
+                w
+                * (
+                    np.where(y_flat == 0, 0, y_flat * np.log(y_flat / mu_flat))
+                    - (y_flat - mu_flat)
+                )
+            )
+        )
+
+
+def _check_y_nonneg(Y: np.ndarray) -> None:
+    if np.any(Y < 0):
+        raise ValueError("The dependent variable must be weakly positive.")
+
+
+def _mu_start_pois(Y: np.ndarray) -> np.ndarray:
+    y_flat = Y.flatten()
+    return ((y_flat + float(np.mean(y_flat))) / 2).astype(float)
+
+
 LOGIT = GlmFamily(
     name="logit",
     link=lambda mu: np.log(mu / (1 - mu)),
@@ -97,4 +135,15 @@ GAUSSIAN = GlmFamily(
     deviance=_gaussian_deviance,
     mu_start=_mu_start_mean,
     check_y=_check_y_noop,
+)
+
+POISSON = GlmFamily(
+    name="poisson",
+    link=np.log,
+    inv_link=np.exp,
+    gprime=lambda mu: 1 / mu,
+    variance=lambda mu: mu,
+    deviance=_pois_deviance,
+    mu_start=_mu_start_pois,
+    check_y=_check_y_nonneg,
 )

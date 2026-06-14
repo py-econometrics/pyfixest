@@ -159,6 +159,8 @@ class Feglm(Feols):
             coefnames=self._coefnames,
             collin_tol=self._collin_tol,
             accelerate=self._accelerate and self._fe is not None,
+            offset=self._offset,
+            weights=self._weights if self._has_weights else None,
             solver=self._solver,
             maxiter=self.maxiter,
             tol=self.tol,

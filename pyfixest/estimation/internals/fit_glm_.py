@@ -134,6 +134,8 @@ def fit_glm_irls(
     coefnames: list[str],
     collin_tol: float,
     accelerate: bool,
+    offset: np.ndarray | None = None,
+    weights: np.ndarray | None = None,
     solver: SolverOptions = "np.linalg.solve",
     maxiter: int = 25,
     tol: float = 1e-8,
@@ -166,9 +168,19 @@ def fit_glm_irls(
     accelerate : bool
         Enable ppmlhdfe-style warm-start acceleration. Only meaningful when
         ``demean`` is non-trivial (i.e., there are fixed effects).
+    offset : np.ndarray, optional
+        Additive offset on the link scale, shape (N,) or (N, 1). ``None``
+        (default) is equivalent to a zero offset.
+    weights : np.ndarray, optional
+        User-supplied observation weights, shape (N,) or (N, 1). ``None``
+        (default) is equivalent to unit weights.
     solver, maxiter, tol, fixef_tol : see Feglm docs.
     """
     Y_flat = Y.flatten()
+    N = Y_flat.shape[0]
+    offset_flat = offset.flatten() if offset is not None else np.zeros(N)
+    weights_flat = weights.flatten() if weights is not None else np.ones(N)
+
     mu = family.mu_start(Y)
     eta = family.link(mu)
     deviance = family.deviance(Y_flat, mu)
@@ -209,10 +221,10 @@ def fit_glm_irls(
                 inner_tol = inner_tol / 10
 
         gprime = family.gprime(mu)
-        W = 1 / (gprime**2 * family.variance(mu))
+        W = weights_flat / (gprime**2 * family.variance(mu))
         sqrt_W = np.sqrt(W)
 
-        z = eta + (Y_flat - mu) * gprime
+        z = (eta - offset_flat) + (Y_flat - mu) * gprime
 
         if accelerate and r > 0:
             assert z_tilde_prev is not None and z_prev is not None
@@ -238,21 +250,26 @@ def fit_glm_irls(
         beta = solve_ols(WX.T @ WX, WX.T @ WZ, solver)
 
         e_new = z_tilde - X_tilde @ beta
-        eta_new = z - e_new
+        eta_new = (z - e_new) + offset_flat
 
         mu_new = family.inv_link(eta_new)
         deviance_new = family.deviance(Y_flat, mu_new)
 
-        eta_new, mu_new, deviance_new = _step_halving(
-            family=family,
-            y_flat=Y_flat,
-            eta=eta,
-            eta_new=eta_new,
-            mu_new=mu_new,
-            deviance=deviance,
-            deviance_new=deviance_new,
-            tol=tol,
-        )
+        # Skip step-halving on the first iteration: the initial mu is a crude
+        # heuristic (e.g. (Y + mean(Y))/2 for Poisson), and IRLS often overshoots
+        # the initial deviance on the first step before settling. From iter 1
+        # onward, step-halving guards against divergence as expected.
+        if r > 0:
+            eta_new, mu_new, deviance_new = _step_halving(
+                family=family,
+                y_flat=Y_flat,
+                eta=eta,
+                eta_new=eta_new,
+                mu_new=mu_new,
+                deviance=deviance,
+                deviance_new=deviance_new,
+                tol=tol,
+            )
 
         z_prev = z
         z_tilde_prev = z_tilde
