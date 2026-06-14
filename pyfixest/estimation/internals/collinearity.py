@@ -11,7 +11,7 @@ def drop_multicollinear_variables(
     X: np.ndarray,
     names: list[str],
     collin_tol: float,
-) -> tuple[np.ndarray, list[str], list[str], list[int]]:
+) -> tuple[np.ndarray, list[str], list[str], list[bool]]:
     """
     Check for multicollinearity in the design matrices X and Z.
 
@@ -32,8 +32,9 @@ def drop_multicollinear_variables(
         The names of the coefficients, excluding those identified as collinear.
     collin_vars : list[str]
         The collinear variables identified during the check.
-    collin_index : numpy.ndarray
-        Logical array, where True indicates that the variable is collinear.
+    collin_index : list[bool]
+        Boolean mask over X's input columns: True marks a dropped column.
+        Empty list when no columns were dropped.
     """
     # TODO: avoid doing this computation twice, e.g. compute tXXinv here as fixest does
 
