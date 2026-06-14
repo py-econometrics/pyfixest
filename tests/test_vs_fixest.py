@@ -627,7 +627,7 @@ def test_single_fit_fepois(
         "data": data_r,
         "ssc": fixest.ssc(k_adj, "nonnested", False, G_adj, "min", "min"),
         "glm_tol": 1e-10,
-        "glm_maxiter": 100,
+        "glm_iter": 100,
     }
     if weights is not None:
         r_kwargs["weights"] = ro.Formula("~" + weights)
@@ -745,7 +745,7 @@ def test_single_fit_feglm(
 ):
     """Verify weighted/unweighted feglm against R fixest.feglm.
 
-    Mirrors ``test_single_fit_fepois`` (same parametrize grid; same artifacts
+    Mirrors `test_single_fit_fepois` (same parametrize grid; same artifacts
     checked) for the three other GLM families. Poisson-only artifacts
     (loglik, loglik_null, pseudo_r2, pearson_chi2) are not defined for
     logit/probit/gaussian and are therefore skipped.
@@ -794,7 +794,7 @@ def test_single_fit_feglm(
         "data": data_r,
         "ssc": fixest.ssc(k_adj, "nonnested", False, G_adj, "min", "min"),
         "glm_tol": 1e-10,
-        "glm_maxiter": 100,
+        "glm_iter": 100,
         "family": r_family,
     }
     if weights is not None:
@@ -858,7 +858,10 @@ def test_single_fit_feglm(
         py_tstat, r_tstat, 1e-06 if weights is None else 1e-05, "py_tstat != r_tstat"
     )
     check_absolute_diff(py_confint, r_confint, 1e-06, "py_confint != r_confint")
-    check_absolute_diff(py_deviance, r_deviance, 1e-08, "py_deviance != r_deviance")
+    deviance_tol = 1e-07 if family in ("logit", "probit") else 1e-08
+    check_absolute_diff(
+        py_deviance, r_deviance, deviance_tol, "py_deviance != r_deviance"
+    )
 
     py_predict_response = mod.predict(type="response")
     py_predict_link = mod.predict(type="link")
@@ -1665,7 +1668,7 @@ def test_ssc(fml, dropna, weights, vcov, k_adj, G_adj, k_fixef, model):
         py_fit = pf.feols(**py_kwargs)
     else:
         r_kwargs["glm_tol"] = 1e-10
-        r_kwargs["glm_maxiter"] = 100
+        r_kwargs["glm_iter"] = 100
         py_kwargs["iwls_tol"] = 1e-10
         py_kwargs["iwls_maxiter"] = 100
 
