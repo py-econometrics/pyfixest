@@ -18,6 +18,7 @@ from pyfixest.estimation.internals.literals import (
 )
 from pyfixest.estimation.internals.vcov_utils import _get_vcov_type
 from pyfixest.estimation.models.fegaussian_ import Fegaussian
+from pyfixest.estimation.models.feglm_ import Feglm
 from pyfixest.estimation.models.feiv_ import Feiv
 from pyfixest.estimation.models.felogit_ import Felogit
 from pyfixest.estimation.models.feols_ import (
@@ -425,7 +426,7 @@ class FixestMulti:
                     FIT = ModelClass(**model_kwargs)
 
                     FIT.prepare_model_matrix()
-                    if isinstance(FIT, (Felogit, Feprobit, Fegaussian)):
+                    if isinstance(FIT, Feglm):
                         FIT._check_dependent_variable()
                     FIT.get_fit()
                     # if X is empty: no inference (empty X only as shorthand for demeaning)

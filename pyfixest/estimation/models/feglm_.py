@@ -125,10 +125,20 @@ class Feglm(Feols):
             self._X.drop(na_separation, axis=0, inplace=True)
             self._fe.drop(na_separation, axis=0, inplace=True)
             self._data.drop(na_separation, axis=0, inplace=True)
+            if self._weights_df is not None:
+                self._weights_df.drop(na_separation, axis=0, inplace=True)
+            if self._offset_df is not None:
+                self._offset_df.drop(na_separation, axis=0, inplace=True)
             self._N = self._Y.shape[0]
+            self._N_rows = self._N
+            # Re-set weights after dropping rows (handles both weighted and unweighted)
+            self._weights = self._set_weights()
 
             self.na_index = np.concatenate([self.na_index, np.array(na_separation)])
             self.n_separation_na = len(na_separation)
+            # possible to have dropped fixed effects level due to separation
+            self._k_fe = self._fe.nunique(axis=0) if self._has_fixef else None
+            self._n_fe = np.sum(self._k_fe > 1) if self._has_fixef else 0
 
     def to_array(self):
         "Turn estimation DataFrames to np arrays."
@@ -137,6 +147,8 @@ class Feglm(Feols):
             self._X.to_numpy(),
             self._X.to_numpy(),
         )
+        if self._offset_df is not None:
+            self._offset = self._offset_df.to_numpy().reshape((-1, 1))
         if self._fe is not None:
             self._fe = self._fe.to_numpy()
             if self._fe.ndim == 1:
@@ -159,6 +171,8 @@ class Feglm(Feols):
             coefnames=self._coefnames,
             collin_tol=self._collin_tol,
             accelerate=self._accelerate and self._fe is not None,
+            offset=self._offset,
+            weights=self._weights if self._has_weights else None,
             solver=self._solver,
             maxiter=self.maxiter,
             tol=self.tol,
@@ -205,7 +219,7 @@ class Feglm(Feols):
 
         self._tZX = self._Z.T @ self._X
         self._tZXinv = np.linalg.inv(self._tZX)
-        self._Xbeta = fit.eta
+        self._Xbeta = fit.eta.reshape(-1, 1)
 
         self._hessian = X_wls.T @ X_wls
         self.deviance = fit.deviance
