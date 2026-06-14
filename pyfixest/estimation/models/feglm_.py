@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
 from collections.abc import Mapping
 from typing import Any, Literal
 
@@ -14,6 +13,7 @@ from pyfixest.errors import (
 )
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
+from pyfixest.estimation.internals.families import GlmFamily
 from pyfixest.estimation.internals.solvers import solve_ols
 from pyfixest.estimation.internals.vcov_ import vcov_iid_glm
 from pyfixest.estimation.models.feols_ import (
@@ -25,8 +25,8 @@ from pyfixest.estimation.models.fepois_ import _check_for_separation
 from pyfixest.utils.dev_utils import DataFrameType
 
 
-class Feglm(Feols, ABC):
-    "Abstract base class for the estimation of a fixed-effects GLM model."
+class Feglm(Feols):
+    "Base class for the estimation of a fixed-effects GLM model."
 
     def __init__(
         self,
@@ -102,6 +102,7 @@ class Feglm(Feols, ABC):
         self._Xbeta = np.empty(0)
 
         self._method = "feglm"
+        self._family: GlmFamily
 
     def prepare_model_matrix(self):
         "Prepare model inputs for estimation."
@@ -156,14 +157,9 @@ class Feglm(Feols, ABC):
         """
         self.to_array()
 
-        _mean = np.mean(self._Y)
-        if self._method in ("feglm-logit", "feglm-probit"):
-            mu = np.full_like(self._Y.flatten(), 0.5, dtype=float)
-        else:
-            mu = np.full_like(self._Y.flatten(), _mean, dtype=float)
-
-        eta = self._get_link(mu)
-        deviance = self._get_deviance(self._Y.flatten(), mu)
+        mu = self._family.mu_start(self._Y)
+        eta = self._family.link(mu)
+        deviance = self._family.deviance(self._Y.flatten(), mu)
         deviance_old = deviance + 1.0
 
         # Warm-start (for ppmlhdfe accelerations)
@@ -193,7 +189,7 @@ class Feglm(Feols, ABC):
                 if accelerate and rel_deviance_change < 10 * inner_tol:
                     inner_tol = inner_tol / 10
 
-            gprime = self._get_gprime(mu=mu)
+            gprime = self._family.gprime(mu)
             W = self._update_W(mu=mu)
             sqrt_W = np.sqrt(W)
 
@@ -242,8 +238,8 @@ class Feglm(Feols, ABC):
             e_new = z_tilde - X_tilde @ beta_new
             eta_new = z - e_new
 
-            mu_new = self._get_mu(eta=eta_new)
-            deviance_new = self._get_deviance(self._Y.flatten(), mu_new)
+            mu_new = self._family.inv_link(eta_new)
+            deviance_new = self._family.deviance(self._Y.flatten(), mu_new)
 
             # Step-halving if deviance did not decrease
             eta_new, mu_new, deviance_new = self._step_halving(
@@ -317,7 +313,7 @@ class Feglm(Feols, ABC):
 
     def _update_W(self, mu: np.ndarray) -> np.ndarray:
         "Compute IRLS weights: w = 1 / (g'(μ)² · V(μ))."
-        return 1 / (self._get_gprime(mu=mu) ** 2 * self._get_V(mu=mu))
+        return 1 / (self._family.gprime(mu) ** 2 * self._family.variance(mu))
 
     def _update_v_tilde(
         self, y: np.ndarray, mu: np.ndarray, sqrt_W: np.ndarray, gprime: np.ndarray
@@ -355,20 +351,20 @@ class Feglm(Feols, ABC):
         return Z.T @ W @ v
 
     def _get_relative_deviance_change(
-        self, deviance: np.ndarray, deviance_old: np.ndarray
-    ) -> np.ndarray:
+        self, deviance: float, deviance_old: float
+    ) -> float:
         "Compute relative change in deviance for convergence check."
-        return np.abs(deviance - deviance_old) / (0.1 + np.abs(deviance_old))
+        return float(np.abs(deviance - deviance_old) / (0.1 + np.abs(deviance_old)))
 
     def _step_halving(
         self,
         eta: np.ndarray,
         eta_new: np.ndarray,
         mu_new: np.ndarray,
-        deviance: np.ndarray,
-        deviance_new: np.ndarray,
+        deviance: float,
+        deviance_new: float,
         step_halving_tol: float = 1e-12,
-    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray, float]:
         """
         Apply step-halving if deviance did not decrease.
 
@@ -381,8 +377,8 @@ class Feglm(Feols, ABC):
         while alpha > step_halving_tol:
             alpha /= 2.0
             eta_try = eta + alpha * (eta_new - eta)
-            mu_try = self._get_mu(eta=eta_try)
-            deviance_try = self._get_deviance(self._Y.flatten(), mu_try)
+            mu_try = self._family.inv_link(eta_try)
+            deviance_try = self._family.deviance(self._Y.flatten(), mu_try)
             if deviance_try < deviance:
                 return eta_try, mu_try, deviance_try
 
@@ -444,15 +440,15 @@ class Feglm(Feols, ABC):
         beta: np.ndarray,
         eta: np.ndarray,
         mu: np.ndarray,
-        deviance: np.ndarray,
+        deviance: float,
         beta_update_diff: np.ndarray,
         sqrt_W: np.ndarray,
         z: np.ndarray,
         z_tilde: np.ndarray,
         X_tilde: np.ndarray,
-        deviance_old: np.ndarray,
+        deviance_old: float,
         step_halfing_tolerance: float,
-    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, float]:
         "Update parameters, potentially using step halfing."
         alpha = 1.0
         step_accepted = False
@@ -467,8 +463,8 @@ class Feglm(Feols, ABC):
                 beta_diff=alpha * beta_update_diff,
                 eta=eta,
             )
-            mu_try = self._get_mu(eta=eta_try)
-            deviance_try = self._get_deviance(Y.flatten(), mu_try)
+            mu_try = self._family.inv_link(eta_try)
+            deviance_try = self._family.deviance(Y.flatten(), mu_try)
             if deviance_try < deviance_old:
                 beta = beta_try
                 eta = eta_try
@@ -551,61 +547,15 @@ class Feglm(Feols, ABC):
 
         yhat = super().predict(newdata=newdata, type="link", atol=atol, btol=btol)
         if type == "response":
-            return self._get_mu(
-                eta=yhat.to_numpy() if isinstance(yhat, pd.DataFrame) else yhat
+            return self._family.inv_link(
+                yhat.to_numpy() if isinstance(yhat, pd.DataFrame) else yhat
             )
         else:
             return yhat
 
-    @abstractmethod
-    def _check_dependent_variable(self):
-        pass
-
-    @abstractmethod
-    def _get_score(
-        self, y: np.ndarray, X: np.ndarray, mu: np.ndarray, eta: np.ndarray
-    ) -> np.ndarray:
-        pass
-
-    @abstractmethod
-    def _get_deviance(self, y: np.ndarray, mu: np.ndarray) -> np.ndarray:
-        "Compute the deviance for the GLM family."
-        pass
-
-    @abstractmethod
-    def _get_dispersion_phi(self, theta: np.ndarray) -> float:
-        "Get the dispersion parameter phi for the GLM family."
-        pass
-
-    @abstractmethod
-    def _get_b(self, theta: np.ndarray) -> np.ndarray:
-        "Get the cumulant function b(theta) for the GLM family."
-        pass
-
-    @abstractmethod
-    def _get_mu(self, eta: np.ndarray) -> np.ndarray:
-        "Apply inverse link function: μ = g⁻¹(η)."
-        pass
-
-    @abstractmethod
-    def _get_link(self, mu: np.ndarray) -> np.ndarray:
-        "Apply link function: η = g(μ)."
-        pass
-
-    @abstractmethod
-    def _get_gprime(self, mu: np.ndarray) -> np.ndarray:
-        "Get the derivative of the link function g'(μ) = dη/dμ."
-        pass
-
-    @abstractmethod
-    def _get_theta(self, mu: np.ndarray) -> np.ndarray:
-        "Get the mechanical link theta(mu) for the GLM family."
-        pass
-
-    @abstractmethod
-    def _get_V(self, mu: np.ndarray) -> np.ndarray:
-        "Get the variance function V(mu) for the GLM family."
-        pass
+    def _check_dependent_variable(self) -> None:
+        "Validate the dependent variable according to the family's constraints."
+        self._family.check_y(self._Y)
 
 
 def _glm_input_checks(drop_singletons: bool, tol: float, maxiter: int):

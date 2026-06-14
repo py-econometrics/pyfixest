@@ -1,12 +1,12 @@
 from collections.abc import Mapping
 from typing import Any, Literal
 
-import numpy as np
 import pandas as pd
 
 from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
+from pyfixest.estimation.internals.families import LOGIT
 from pyfixest.estimation.models.feglm_ import Feglm
 
 
@@ -69,40 +69,4 @@ class Felogit(Feglm):
         )
 
         self._method = "feglm-logit"
-
-    def _check_dependent_variable(self) -> None:
-        "Check if the dependent variable is binary with values 0 and 1."
-        Y_unique = np.unique(self._Y)
-        if len(Y_unique) != 2:
-            raise ValueError("The dependent variable must have two unique values.")
-        if np.any(~np.isin(Y_unique, [0, 1])):
-            raise ValueError("The dependent variable must be binary (0 or 1).")
-
-    def _get_deviance(self, y: np.ndarray, mu: np.ndarray) -> np.ndarray:
-        return -2 * np.sum(y * np.log(mu) + (1 - y) * np.log(1 - mu))
-
-    def _get_dispersion_phi(self, theta: np.ndarray) -> float:
-        return 1.0
-
-    def _get_b(self, theta: np.ndarray) -> np.ndarray:
-        return np.log(1 + np.exp(theta))
-
-    def _get_mu(self, eta: np.ndarray) -> np.ndarray:
-        return np.exp(eta) / (1 + np.exp(eta))
-
-    def _get_link(self, mu: np.ndarray) -> np.ndarray:
-        return np.log(mu / (1 - mu))
-
-    def _get_gprime(self, mu: np.ndarray) -> np.ndarray:
-        return 1 / (mu * (1 - mu))
-
-    def _get_theta(self, mu: np.ndarray) -> np.ndarray:
-        return np.log(mu / (1 - mu))
-
-    def _get_V(self, mu: np.ndarray) -> np.ndarray:
-        return mu * (1 - mu)
-
-    def _get_score(
-        self, y: np.ndarray, X: np.ndarray, mu: np.ndarray, eta: np.ndarray
-    ) -> np.ndarray:
-        return (y - mu)[:, None] * X
+        self._family = LOGIT

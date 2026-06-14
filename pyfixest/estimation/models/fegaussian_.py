@@ -1,12 +1,12 @@
 from collections.abc import Mapping
 from typing import Any, Literal
 
-import numpy as np
 import pandas as pd
 
 from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
+from pyfixest.estimation.internals.families import GAUSSIAN
 from pyfixest.estimation.models.feglm_ import Feglm
 
 
@@ -69,35 +69,4 @@ class Fegaussian(Feglm):
         )
 
         self._method = "feglm-gaussian"
-
-    def _check_dependent_variable(self) -> None:
-        pass
-
-    def _get_deviance(self, y: np.ndarray, mu: np.ndarray) -> np.ndarray:
-        return np.sum((y - mu) ** 2)
-
-    def _get_dispersion_phi(self, theta: np.ndarray) -> float:
-        return np.var(theta)
-
-    def _get_b(self, theta: np.ndarray) -> np.ndarray:
-        return theta**2 / 2
-
-    def _get_mu(self, eta: np.ndarray) -> np.ndarray:
-        return eta
-
-    def _get_link(self, mu: np.ndarray) -> np.ndarray:
-        return mu
-
-    def _get_gprime(self, mu: np.ndarray) -> np.ndarray:
-        return np.ones_like(mu)
-
-    def _get_theta(self, mu: np.ndarray) -> np.ndarray:
-        return mu
-
-    def _get_V(self, mu: np.ndarray) -> np.ndarray:
-        return np.ones_like(mu)
-
-    def _get_score(
-        self, y: np.ndarray, X: np.ndarray, mu: np.ndarray, eta: np.ndarray
-    ) -> np.ndarray:
-        return (y - mu)[:, None] * X
+        self._family = GAUSSIAN
