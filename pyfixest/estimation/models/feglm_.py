@@ -147,6 +147,8 @@ class Feglm(Feols):
             self._X.to_numpy(),
             self._X.to_numpy(),
         )
+        if self._offset_df is not None:
+            self._offset = self._offset_df.to_numpy().reshape((-1, 1))
         if self._fe is not None:
             self._fe = self._fe.to_numpy()
             if self._fe.ndim == 1:

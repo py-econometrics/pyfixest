@@ -135,14 +135,6 @@ class Fepois(Feglm):
         self._supports_cluster_causal_variance = False
         self._support_decomposition = False
 
-    def to_array(self):
-        "Turn estimation DataFrames to np arrays and resolve the offset."
-        super().to_array()
-        if self._offset_df is not None:
-            self._offset = self._offset_df.to_numpy().reshape((-1, 1))
-        else:
-            self._offset = np.zeros((self._N, 1))
-
     def get_fit(self) -> None:
         "Fit via Feglm IRLS, then add Poisson-specific post-fit summary stats."
         # Stash original Y and user weights before super().get_fit() overwrites

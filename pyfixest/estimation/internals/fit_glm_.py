@@ -167,13 +167,12 @@ def fit_glm_irls(
     collin_tol : float
         Tolerance for the collinearity drop.
     accelerate : bool
-        Enable ppmlhdfe-style warm-start acceleration. Only meaningful when
-        ``demean`` is non-trivial (i.e., there are fixed effects).
+        Enable ppmlhdfe-style warm-start acceleration.
     offset : np.ndarray, optional
-        Additive offset on the link scale, shape (N,) or (N, 1). ``None``
+        Additive offset on the link scale, shape (N,) or (N, 1). `None`
         (default) is equivalent to a zero offset.
     weights : np.ndarray, optional
-        User-supplied observation weights, shape (N,) or (N, 1). ``None``
+        User-supplied regression weights, shape (N,) or (N, 1). `None`
         (default) is equivalent to unit weights.
     solver, maxiter, tol, fixef_tol : see Feglm docs.
     """
