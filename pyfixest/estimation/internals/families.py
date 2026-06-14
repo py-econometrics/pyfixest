@@ -12,10 +12,8 @@ from scipy.stats import norm
 class GlmFamily:
     """Family-specific operations for a fixed-effects GLM.
 
-    Bundles the link, inverse link, derivative of the link, variance function,
-    deviance, initial mu, and dependent-variable validation into a single value
-    object. Replaces the per-subclass abstract-method pattern previously spread
-    across ``Felogit`` / ``Feprobit`` / ``Fegaussian``.
+    Bundles the link function, inverse link, derivative of the link, variance function,
+    deviance, initial mu, and dependent-variable validation into a single object.
     """
 
     name: str
@@ -54,7 +52,7 @@ def _logit_deviance(y: np.ndarray, mu: np.ndarray) -> float:
 
 def _probit_deviance(y: np.ndarray, mu: np.ndarray) -> float:
     ll_fitted = np.sum(y * np.log(mu) + (1 - y) * np.log(1 - mu))
-    # divide-by-zero warnings from log(0) in the saturated likelihood
+    # divide by zero warnings because of the log(0) terms
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         ll_saturated = np.sum(
