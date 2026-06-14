@@ -77,21 +77,20 @@ def _rel_dev_change(deviance: float, deviance_old: float) -> float:
 def _check_convergence(
     rel_dev_change: float,
     tol: float,
-    r: int,
-    maxiter: int,
     is_gaussian: bool,
 ) -> bool:
     if is_gaussian:
         return True
-    converged = rel_dev_change < tol
-    if r == maxiter:
-        raise NonConvergenceError(
-            f"""
-            The IRLS algorithm did not converge with {maxiter}
-            iterations. Try to increase the maximum number of iterations.
-            """
-        )
-    return converged
+    return rel_dev_change < tol
+
+
+def _raise_non_convergence(maxiter: int) -> None:
+    raise NonConvergenceError(
+        f"""
+        The IRLS algorithm did not converge with {maxiter}
+        iterations. Try to increase the maximum number of iterations.
+        """
+    )
 
 
 def _step_halving(
@@ -216,8 +215,6 @@ def fit_glm_irls(
                 converged = _check_convergence(
                     rel_dev_change=rel_dev_change,
                     tol=tol,
-                    r=r,
-                    maxiter=maxiter,
                     is_gaussian=family.name == "gaussian",
                 )
                 if converged:
@@ -290,6 +287,17 @@ def fit_glm_irls(
         X_tilde_final = X_tilde
         W_final = W
         sqrt_W_final = sqrt_W
+
+    if not converged:
+        if not step_halved_prev:
+            rel_dev_change = _rel_dev_change(deviance, deviance_old)
+            converged = _check_convergence(
+                rel_dev_change=rel_dev_change,
+                tol=tol,
+                is_gaussian=family.name == "gaussian",
+            )
+        if not converged:
+            _raise_non_convergence(maxiter)
 
     return GlmFit(
         beta=beta_final,

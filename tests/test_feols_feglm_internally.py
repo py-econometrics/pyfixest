@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 
 import pyfixest as pf
+from pyfixest.errors import NonConvergenceError
 from pyfixest.estimation.internals import fit_glm_ as fit_glm_module
 from pyfixest.estimation.internals.families import POISSON
 
@@ -164,7 +165,7 @@ def test_step_halving_forces_follow_up_wls(monkeypatch):
             eta_accepted = eta + 0.5 * (eta_new - eta)
             mu_accepted = family.inv_link(eta_accepted)
             return eta_accepted, mu_accepted, deviance - 1e-12, True
-        return eta_new, mu_new, min(deviance_new, deviance - 1e-12), False
+        return eta_new, mu_new, deviance - 1e-12, False
 
     monkeypatch.setattr(fit_glm_module, "_step_halving", _fake_step_halving)
 
@@ -182,3 +183,60 @@ def test_step_halving_forces_follow_up_wls(monkeypatch):
 
     assert step_calls == 2
     assert demean_calls == 3
+
+
+def test_glm_raises_after_iwls_maxiter_without_convergence():
+    """Exhausting maxiter should not return a silently unconverged fit."""
+    x = np.linspace(-1.0, 1.0, 30)
+    X = np.column_stack([np.ones_like(x), x])
+    Y = np.array(
+        [
+            0,
+            1,
+            0,
+            2,
+            1,
+            3,
+            0,
+            2,
+            1,
+            4,
+            2,
+            3,
+            1,
+            2,
+            4,
+            5,
+            3,
+            4,
+            2,
+            6,
+            4,
+            5,
+            3,
+            7,
+            4,
+            6,
+            5,
+            8,
+            6,
+            9,
+        ],
+        dtype=float,
+    )
+
+    def _identity_demean(v, X, weights, tol):
+        return v, X
+
+    with pytest.raises(NonConvergenceError, match="did not converge"):
+        fit_glm_module.fit_glm_irls(
+            X=X,
+            Y=Y,
+            family=POISSON,
+            demean=_identity_demean,
+            coefnames=["Intercept", "X"],
+            collin_tol=1e-9,
+            accelerate=False,
+            maxiter=1,
+            tol=1e-14,
+        )
