@@ -10,7 +10,7 @@ from scipy.special import gammaln
 from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
-from pyfixest.estimation.internals.families import POISSON, pois_deviance_weighted
+from pyfixest.estimation.internals.families import POISSON
 from pyfixest.estimation.internals.literals import (
     SolverOptions,
 )
@@ -184,9 +184,7 @@ class Fepois(Feglm):
             user_weights * (y_orig - self._Y_hat_response) ** 2 / self._Y_hat_response
         )
 
-        # The in-loop deviance set by Feglm is unweighted; Fepois reports the
-        # user-weighted version.
-        self.deviance = pois_deviance_weighted(
+        self.deviance = self._family.deviance(
             y_orig, self._Y_hat_response, user_weights
         )
 

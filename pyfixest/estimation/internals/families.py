@@ -81,12 +81,6 @@ def _gaussian_deviance(
 
 
 def _pois_deviance(y: np.ndarray, mu: np.ndarray, weights: np.ndarray | None) -> float:
-    return pois_deviance_weighted(y, mu, weights)
-
-
-def pois_deviance_weighted(
-    y: np.ndarray, mu: np.ndarray, weights: np.ndarray | None
-) -> float:
     "Poisson deviance, optionally weighted. Defined as 2·(LL_saturated - LL_fitted)."
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
