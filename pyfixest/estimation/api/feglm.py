@@ -15,6 +15,7 @@ from pyfixest.estimation.internals.literals import (
     FixedRmOptions,
     SolverOptions,
     VcovTypeOptions,
+    WeightsTypeOptions,
 )
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.models.fepois_ import Fepois
@@ -29,6 +30,9 @@ def feglm(
     family: str,
     vcov: VcovTypeOptions | dict[str, str] | None = None,
     vcov_kwargs: dict[str, str | int] | None = None,
+    weights: str | None = None,
+    weights_type: WeightsTypeOptions = "aweights",
+    offset: str | None = None,
     ssc: dict[str, str | bool] | None = None,
     fixef_rm: FixedRmOptions = "singleton",
     iwls_tol: float = 1e-08,
@@ -51,7 +55,8 @@ def feglm(
 
     Supported families: [logit](/reference/estimation.models.felogit_.Felogit.qmd),
     [probit](/reference/estimation.models.feprobit_.Feprobit.qmd),
-    [gaussian](/reference/estimation.models.fegaussian_.Fegaussian.qmd).
+    [gaussian](/reference/estimation.models.fegaussian_.Fegaussian.qmd),
+    and [poisson](/reference/estimation.models.fepois_.Fepois.qmd).
 
     References
     ----------
@@ -83,7 +88,9 @@ def feglm(
         A pandas or polars dataframe containing the variables in the formula.
 
     family : str
-        The family of the GLM model. Options include "gaussian", "logit" and "probit".
+        The family of the GLM model. Options include "gaussian", "logit", "probit",
+        and "poisson". Passing "poisson" produces the same result as calling
+        `pyfixest.fepois()`.
 
     vcov : Union[VcovTypeOptions, dict[str, str]]
         Type of variance-covariance matrix for inference. Options include "iid",
@@ -99,6 +106,19 @@ def feglm(
         "time_id" for the time ID used for NW and DK standard errors, and "panel_id" for the panel
          identifier used for NW and DK standard errors. Currently, the the time difference between consecutive time
          periods is always treated as 1. More flexible time-step selection is work in progress.
+
+    weights : Union[None, str], optional
+        Default is None. Name of the column in `data` to be used as observation
+        weights. When supplied, IRLS minimizes the weighted deviance.
+
+    weights_type : WeightsTypeOptions, optional
+        Type of weights variable. Either "aweights" (analytic / precision
+        weights) or "fweights" (frequency weights). Defaults to "aweights".
+
+    offset : Union[None, str], optional
+        Default is None. Name of a numeric column in `data` to use as an offset
+        on the link scale. Only supported with `family='poisson'`. For exposure
+        adjustments, pass the exposure on the log scale.
 
     ssc : str
         A ssc object specifying the small sample correction for inference.
@@ -246,18 +266,20 @@ def feglm(
     for a compact post-estimation workflow.
 
     """
-    if family not in ["logit", "probit", "gaussian"]:
+    if family not in ["logit", "probit", "gaussian", "poisson"]:
         raise ValueError(
-            f"Only families 'gaussian', 'logit' and 'probit'are supported but you asked for {family}."
+            f"Only families 'gaussian', 'logit', 'probit', and 'poisson' are "
+            f"supported but you asked for {family!r}."
+        )
+    if offset is not None and family != "poisson":
+        raise ValueError(
+            "The `offset` argument is only supported with `family='poisson'`."
         )
 
     if separation_check is None:
         separation_check = ["fe"]
     if ssc is None:
         ssc = ssc_func()
-    # WLS currently not supported for GLM regression
-    weights = None
-    weights_type = "aweights"
 
     context = {} if context is None else capture_context(context)
     demeaner = _resolve_demeaner(demeaner)
@@ -296,21 +318,24 @@ def feglm(
         context=context,
     )
 
-    # same checks as for Poisson regression
-    fixest._prepare_estimation(
-        estimation=f"feglm-{family}",
-        fml=fml,
-        vcov=vcov,
-        vcov_kwargs=vcov_kwargs,
-        weights=weights,
-        ssc=ssc,
-        fixef_rm=fixef_rm,
-        drop_intercept=drop_intercept,
-    )
+    # Poisson goes through the Fepois model class (which is a Feglm subclass);
+    # other families dispatch to their dedicated feglm-{family} model class.
+    estimation = "fepois" if family == "poisson" else f"feglm-{family}"
+    prepare_kwargs: dict[str, Any] = {
+        "estimation": estimation,
+        "fml": fml,
+        "vcov": vcov,
+        "vcov_kwargs": vcov_kwargs,
+        "weights": weights,
+        "ssc": ssc,
+        "fixef_rm": fixef_rm,
+        "drop_intercept": drop_intercept,
+    }
+    if family == "poisson":
+        prepare_kwargs["offset"] = offset
+    fixest._prepare_estimation(**prepare_kwargs)
     if fixest._is_iv:
-        raise NotImplementedError(
-            "IV Estimation is not supported for Poisson Regression"
-        )
+        raise NotImplementedError("IV estimation is not supported for GLMs.")
 
     fixest._estimate_all_models(
         vcov=vcov,

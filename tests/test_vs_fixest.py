@@ -731,6 +731,95 @@ def test_single_fit_fepois(
 
 
 @pytest.mark.against_r_core
+@pytest.mark.parametrize("family", ["logit", "probit", "gaussian"])
+@pytest.mark.parametrize("weights", [None, "weights"])
+@pytest.mark.parametrize("inference", ["iid", "hetero"])
+@pytest.mark.parametrize("fml", ["Y ~ X1", "Y ~ X1 | f1"])
+def test_single_fit_feglm(data_fepois, family, weights, inference, fml):
+    """Verify weighted/unweighted feglm against R fixest.feglm.
+
+    Leaner grid than test_single_fit_fepois: drops the offset parametrize
+    (offset is Poisson-only after the API extension) and skips dropna /
+    f3_type / k_adj / G_adj / CRV inference combinations. Covers
+    family x weights x fml x {iid, hetero} for logit/probit/gaussian.
+    """
+    ssc_ = ssc(k_adj=True, G_adj=True)
+
+    data = data_fepois.copy()
+    data.where(data != "nan", np.nan, inplace=True)
+    # Binary outcome for logit/probit; original Y for gaussian.
+    data["Y_bin"] = (data["Y"] > 0).astype(int)
+    py_fml = fml.replace("Y", "Y_bin", 1) if family in ("logit", "probit") else fml
+    r_fml = _c_to_as_factor(py_fml)
+    r_inference = _get_r_inference(inference)
+    data_r = get_data_r(py_fml, data)
+
+    mod = pf.feglm(
+        fml=py_fml,
+        data=data,
+        family=family,
+        vcov=inference,
+        ssc=ssc_,
+        iwls_tol=1e-10,
+        iwls_maxiter=100,
+        weights=weights,
+    )
+
+    r_family = {
+        "logit": stats.binomial(link="logit"),
+        "probit": stats.binomial(link="probit"),
+        "gaussian": stats.gaussian(),
+    }[family]
+
+    r_kwargs = {
+        "vcov": r_inference,
+        "data": data_r,
+        "ssc": fixest.ssc(True, "nonnested", False, True, "min", "min"),
+        "glm_tol": 1e-10,
+        "glm_maxiter": 100,
+        "family": r_family,
+    }
+    if weights is not None:
+        r_kwargs["weights"] = ro.Formula("~" + weights)
+
+    r_fixest = fixest.feglm(ro.Formula(r_fml), **r_kwargs)
+
+    py_coef = mod.coef().xs("X1")
+    py_se = mod.se().xs("X1")
+    py_pval = mod.pvalue().xs("X1")
+    py_tstat = mod.tstat().xs("X1")
+    py_confint = mod.confint().xs("X1").values
+    py_nobs = mod._N
+    py_deviance = mod.deviance
+
+    df_X1 = _get_r_df(r_fixest)
+    ro.globalenv["r_fixest"] = r_fixest
+
+    py_vcov, r_vcov = _get_vcov_diag(mod, r_fixest, "X1")
+    r_coef = df_X1["estimate"]
+    r_se = df_X1["std.error"]
+    r_pval = df_X1["p.value"]
+    r_tstat = df_X1["statistic"]
+    r_confint = df_X1[["conf.low", "conf.high"]].values.astype(np.float64)
+    r_nobs = int(stats.nobs(r_fixest)[0])
+    r_deviance = r_fixest.rx2("deviance")
+
+    if inference == "iid":
+        check_absolute_diff(py_nobs, r_nobs, 1e-08, "py_nobs != r_nobs")
+        check_absolute_diff(py_coef, r_coef, 1e-07, "py_coef != r_coef")
+
+    # order of precision:
+    # coef, se, vcov -> important
+    # pval, tstat, confint -> less important as they are derived from the above
+    check_absolute_diff(py_vcov, r_vcov, 1e-06, "py_vcov != r_vcov")
+    check_absolute_diff(py_se, r_se, 1e-06, "py_se != r_se")
+    check_absolute_diff(py_pval, r_pval, 1e-06, "py_pval != r_pval")
+    check_absolute_diff(py_tstat, r_tstat, 1e-05, "py_tstat != r_tstat")
+    check_absolute_diff(py_confint, r_confint, 1e-06, "py_confint != r_confint")
+    check_absolute_diff(py_deviance, r_deviance, 1e-07, "py_deviance != r_deviance")
+
+
+@pytest.mark.against_r_core
 @pytest.mark.parametrize("dropna", [False])
 @pytest.mark.parametrize("weights", [None, "weights"])
 @pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
