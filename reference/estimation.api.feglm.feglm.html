@@ -613,25 +613,28 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    family,</span>
 <span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span><span class="va">None</span>,</span>
 <span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    vcov_kwargs<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    ssc<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    fixef_rm<span class="op">=</span><span class="st">'singleton'</span>,</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    iwls_tol<span class="op">=</span><span class="fl">1e-08</span>,</span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    iwls_maxiter<span class="op">=</span><span class="dv">25</span>,</span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    collin_tol<span class="op">=</span><span class="fl">1e-09</span>,</span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    separation_check<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    solver<span class="op">=</span><span class="st">'scipy.linalg.solve'</span>,</span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    demeaner<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    drop_intercept<span class="op">=</span><span class="va">False</span>,</span>
-<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    copy_data<span class="op">=</span><span class="va">True</span>,</span>
-<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    store_data<span class="op">=</span><span class="va">True</span>,</span>
-<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    lean<span class="op">=</span><span class="va">False</span>,</span>
-<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    context<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    split<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>    fsplit<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>    accelerate<span class="op">=</span><span class="va">True</span>,</span>
-<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    weights<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    weights_type<span class="op">=</span><span class="st">'aweights'</span>,</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    offset<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    ssc<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    fixef_rm<span class="op">=</span><span class="st">'singleton'</span>,</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    iwls_tol<span class="op">=</span><span class="fl">1e-08</span>,</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    iwls_maxiter<span class="op">=</span><span class="dv">25</span>,</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    collin_tol<span class="op">=</span><span class="fl">1e-09</span>,</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    separation_check<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    solver<span class="op">=</span><span class="st">'scipy.linalg.solve'</span>,</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    demeaner<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    drop_intercept<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    copy_data<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    store_data<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>    lean<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>    context<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>    split<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>    fsplit<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>    accelerate<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Estimate GLM regression models with fixed effects.</p>
-<p>Supported families: <a href="../reference/estimation.models.felogit_.Felogit.html">logit</a>, <a href="../reference/estimation.models.feprobit_.Feprobit.html">probit</a>, <a href="../reference/estimation.models.fegaussian_.Fegaussian.html">gaussian</a>.</p>
+<p>Supported families: <a href="../reference/estimation.models.felogit_.Felogit.html">logit</a>, <a href="../reference/estimation.models.feprobit_.Feprobit.html">probit</a>, <a href="../reference/estimation.models.fegaussian_.Fegaussian.html">gaussian</a>, and <a href="../reference/estimation.models.fepois_.Fepois.html">poisson</a>.</p>
 <section id="references" class="level2 doc-section doc-section-references">
 <h2 class="doc-section doc-section-references anchored" data-anchor-id="references">References</h2>
 <ul>
@@ -667,7 +670,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tr class="odd">
 <td>family</td>
 <td>str</td>
-<td>The family of the GLM model. Options include “gaussian”, “logit” and “probit”.</td>
+<td>The family of the GLM model. Options include “gaussian”, “logit”, “probit”, and “poisson”. Passing “poisson” produces the same result as calling <code>pyfixest.fepois()</code>.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
@@ -683,96 +686,114 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td><code>None</code></td>
 </tr>
 <tr class="even">
+<td>weights</td>
+<td>Union[None, str]</td>
+<td>Default is None. Name of the column in <code>data</code> to be used as observation weights. When supplied, IRLS minimizes the weighted deviance.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="odd">
+<td>weights_type</td>
+<td>WeightsTypeOptions</td>
+<td>Type of weights variable. Either “aweights” (analytic / precision weights) or “fweights” (frequency weights). Defaults to “aweights”.</td>
+<td><code>'aweights'</code></td>
+</tr>
+<tr class="even">
+<td>offset</td>
+<td>Union[None, str]</td>
+<td>Default is None. Name of a numeric column in <code>data</code> to use as an offset on the link scale. Only supported with <code>family='poisson'</code>. For exposure adjustments, pass the exposure on the log scale.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="odd">
 <td>ssc</td>
 <td>str</td>
 <td>A ssc object specifying the small sample correction for inference.</td>
 <td><code>None</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>fixef_rm</td>
 <td>FixedRmOptions</td>
 <td>Specifies whether to drop singleton fixed effects. Can be equal to “singleton” (default), or “none”. “singletons” will drop singleton fixed effects. This will not impact point estimates but it will impact standard errors.</td>
 <td><code>'singleton'</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>iwls_tol</td>
 <td>Optional[float]</td>
 <td>Tolerance for IWLS convergence, by default 1e-08.</td>
 <td><code>1e-08</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>iwls_maxiter</td>
 <td>Optional[float]</td>
 <td>Maximum number of iterations for IWLS convergence, by default 25.</td>
 <td><code>25</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>collin_tol</td>
 <td>float</td>
 <td>Tolerance for collinearity check, by default 1e-10.</td>
 <td><code>1e-09</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>separation_check</td>
 <td>list[str] | None</td>
 <td>Methods to identify and drop separated observations. Either “fe” or “ir”. Executes “fe” by default (when None).</td>
 <td><code>None</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>solver</td>
 <td>SolverOptions, optional.</td>
 <td>The solver to use for the regression. Can be “np.linalg.lstsq”, “np.linalg.solve”, “scipy.linalg.solve” and “scipy.sparse.linalg.lsqr”. Defaults to “scipy.linalg.solve”.</td>
 <td><code>'scipy.linalg.solve'</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>demeaner</td>
 <td>AnyDemeaner | None</td>
 <td>Typed demeaner configuration. Controls the fixed-effects demeaning backend, tolerance, and iteration limits. Accepts a <code>MapDemeaner</code> or <code>LsmrDemeaner</code> instance. Defaults to <code>MapDemeaner()</code> (Rust MAP algorithm, tol=1e-6, maxiter=10_000). For other options - including the optional Numba backend and the torch-based LSMR backends - see the <a href="../../how-to/demeaner-backends.qmd">Demeaner Backends vignette</a>. .. deprecated:: The <code>cupy</code> / <code>scipy</code> LSMR backends are deprecated and will be removed in a future release. Replacements: - cupy LSMR on GPU → <code>LsmrDemeaner(backend="torch", device="cuda")</code>. - Scipy / cupy LSMR on CPU → <code>LsmrDemeaner()</code> (the default within backend).</td>
 <td><code>None</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>drop_intercept</td>
 <td>bool</td>
 <td>Whether to drop the intercept from the model, by default False.</td>
 <td><code>False</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>copy_data</td>
 <td>bool</td>
 <td>Whether to copy the data before estimation, by default True. If set to False, the data is not copied, which can save memory but may lead to unintended changes in the input data outside of <code>fepois</code>. For example, the input data set is re-index within the function. As far as I know, the only other relevant case is when using interacted fixed effects, in which case you’ll find a column with interacted fixed effects in the data set.</td>
 <td><code>True</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>store_data</td>
 <td>bool</td>
 <td>Whether to store the data in the model object, by default True. If set to False, the data is not stored in the model object, which can improve performance and save memory. However, it will no longer be possible to access the data via the <code>data</code> attribute of the model object. This has impact on post-estimation capabilities that rely on the data, e.g.&nbsp;<code>predict()</code> or <code>vcov()</code>.</td>
 <td><code>True</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>lean</td>
 <td>bool</td>
 <td>False by default. If True, then all large objects are removed from the returned result: this will save memory but will block the possibility to use many methods. It is recommended to use the argument vcov to obtain the appropriate standard-errors at estimation time, since obtaining different SEs won’t be possible afterwards.</td>
 <td><code>False</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>context</td>
 <td>int or Mapping[str, Any]</td>
 <td>A dictionary containing additional context variables to be used by formulaic during the creation of the model matrix. This can include custom factorization functions, transformations, or any other variables that need to be available in the formula environment.</td>
 <td><code>None</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>split</td>
 <td>str | None</td>
 <td>A character string, i.e.&nbsp;‘split = var’. If provided, the sample is split according to the variable and one estimation is performed for each value of that variable. If you also want to include the estimation for the full sample, use the argument fsplit instead.</td>
 <td><code>None</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>fsplit</td>
 <td>str | None</td>
 <td>This argument is the same as split but also includes the full sample as the first estimation.</td>
 <td><code>None</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>accelerate</td>
 <td>bool</td>
 <td>Whether to use acceleration tricks developed in the ppmlhdfe paper (warm start and adaptive fixed effects tolerance) for models with fixed effects. Produces numerically identical results faster, so we recommend to always set it to True.</td>
@@ -803,7 +824,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="examples" class="level2 doc-section doc-section-examples">
 <h2 class="doc-section doc-section-examples anchored" data-anchor-id="examples">Examples</h2>
 <p>The example below fits a logit model with fixed effects. As in <code>feols()</code>, fixed effects are specified after the <code>|</code> symbol.</p>
-<div id="e212e2de" class="cell" data-execution_count="1">
+<div id="26416c25" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -814,7 +835,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>fit_logit.summary()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 
-        <div id="5vzOX2"></div>
+        <div id="exLdNa"></div>
         <script type="text/javascript" data-lets-plot-script="library">
             if(!window.letsPlotCallQueue) {
                 window.letsPlotCallQueue = [];
@@ -838,9 +859,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                     var div = document.createElement("div");
                     div.style.color = 'darkred';
                     div.textContent = 'Error loading Lets-Plot JS';
-                    document.getElementById("5vzOX2").appendChild(div);
+                    document.getElementById("exLdNa").appendChild(div);
                 };
-                var e = document.getElementById("5vzOX2");
+                var e = document.getElementById("exLdNa");
                 e.appendChild(script);
             })()
         </script>
@@ -848,7 +869,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <div class="cell-output cell-output-display">
 
-        <div id="nuLVYd"></div>
+        <div id="HRXuSU"></div>
         <script type="text/javascript" data-lets-plot-script="library">
             if(!window.letsPlotCallQueue) {
                 window.letsPlotCallQueue = [];
@@ -872,9 +893,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                     var div = document.createElement("div");
                     div.style.color = 'darkred';
                     div.textContent = 'Error loading Lets-Plot JS';
-                    document.getElementById("nuLVYd").appendChild(div);
+                    document.getElementById("HRXuSU").appendChild(div);
                 };
-                var e = document.getElementById("nuLVYd");
+                var e = document.getElementById("HRXuSU");
                 e.appendChild(script);
             })()
         </script>
@@ -898,60 +919,60 @@ Deviance: 961.445 </code></pre>
 </div>
 </div>
 <p>To compare families with the same specification:</p>
-<div id="3cf41c1a" class="cell" data-execution_count="2">
+<div id="77f5cfe3" class="cell" data-execution_count="2">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>fit_probit <span class="op">=</span> pf.feglm(<span class="st">"Y_bin ~ X1 + X2 | f1"</span>, data, family<span class="op">=</span><span class="st">"probit"</span>)</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>fit_gaussian <span class="op">=</span> pf.feglm(<span class="st">"Y_bin ~ X1 + X2 | f1"</span>, data, family<span class="op">=</span><span class="st">"gaussian"</span>)</span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>pf.etable([fit_logit, fit_probit, fit_gaussian])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="2">
-<div id="tknaiqboia" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<div id="krzrpwweiw" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
 <style>
-#tknaiqboia table {
+#krzrpwweiw table {
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
           -webkit-font-smoothing: antialiased;
           -moz-osx-font-smoothing: grayscale;
         }
 
-#tknaiqboia thead, tbody, tfoot, tr, td, th { border-style: none; }
+#krzrpwweiw thead, tbody, tfoot, tr, td, th { border-style: none; }
  tr { background-color: transparent; }
-#tknaiqboia p { margin: 0; padding: 0; }
- #tknaiqboia .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: solid; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
- #tknaiqboia .gt_caption { padding-top: 4px; padding-bottom: 4px; }
- #tknaiqboia .gt_title { color: #333333; font-size: 16px; font-weight: initial; padding-top: 6px; padding-bottom: 6px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
- #tknaiqboia .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 5px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
- #tknaiqboia .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
- #tknaiqboia .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
- #tknaiqboia .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
- #tknaiqboia .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 2px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
- #tknaiqboia .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
- #tknaiqboia .gt_column_spanner_outer:first-child { padding-left: 0; }
- #tknaiqboia .gt_column_spanner_outer:last-child { padding-right: 0; }
- #tknaiqboia .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: bottom; padding-top: 2px; padding-bottom: 2px; overflow-x: hidden; display: inline-block; width: 100%; }
- #tknaiqboia .gt_spanner_row { border-bottom-style: hidden; }
- #tknaiqboia .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
- #tknaiqboia .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: middle; }
- #tknaiqboia .gt_from_md> :first-child { margin-top: 0; }
- #tknaiqboia .gt_from_md> :last-child { margin-bottom: 0; }
- #tknaiqboia .gt_row { padding-top: 2px; padding-bottom: 2px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
- #tknaiqboia .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
- #tknaiqboia .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
- #tknaiqboia .gt_row_group_first td { border-top-width: 0.25px; }
- #tknaiqboia .gt_row_group_first th { border-top-width: 0.25px; }
- #tknaiqboia .gt_striped { color: #333333; background-color: #F4F4F4; }
- #tknaiqboia .gt_table_body { border-top-style: solid; border-top-width: 0px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
- #tknaiqboia .gt_grand_summary_row { color: #333333; background-color: #FFFFFF; text-transform: inherit; padding-top: 8px; padding-bottom: 8px; padding-left: 5px; padding-right: 5px; }
- #tknaiqboia .gt_first_grand_summary_row_bottom { border-top-style: double; border-top-width: 6px; border-top-color: #D3D3D3; }
- #tknaiqboia .gt_last_grand_summary_row_top { border-bottom-style: double; border-bottom-width: 6px; border-bottom-color: #D3D3D3; }
- #tknaiqboia .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
- #tknaiqboia .gt_sourcenote { font-size: 10px; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
- #tknaiqboia .gt_left { text-align: left; }
- #tknaiqboia .gt_center { text-align: center; }
- #tknaiqboia .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
- #tknaiqboia .gt_font_normal { font-weight: normal; }
- #tknaiqboia .gt_font_bold { font-weight: bold; }
- #tknaiqboia .gt_font_italic { font-style: italic; }
- #tknaiqboia .gt_super { font-size: 65%; }
- #tknaiqboia .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
- #tknaiqboia .gt_asterisk { font-size: 100%; vertical-align: 0; }
+#krzrpwweiw p { margin: 0; padding: 0; }
+ #krzrpwweiw .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: solid; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
+ #krzrpwweiw .gt_caption { padding-top: 4px; padding-bottom: 4px; }
+ #krzrpwweiw .gt_title { color: #333333; font-size: 16px; font-weight: initial; padding-top: 6px; padding-bottom: 6px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
+ #krzrpwweiw .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 5px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
+ #krzrpwweiw .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #krzrpwweiw .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
+ #krzrpwweiw .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #krzrpwweiw .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 2px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
+ #krzrpwweiw .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
+ #krzrpwweiw .gt_column_spanner_outer:first-child { padding-left: 0; }
+ #krzrpwweiw .gt_column_spanner_outer:last-child { padding-right: 0; }
+ #krzrpwweiw .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: bottom; padding-top: 2px; padding-bottom: 2px; overflow-x: hidden; display: inline-block; width: 100%; }
+ #krzrpwweiw .gt_spanner_row { border-bottom-style: hidden; }
+ #krzrpwweiw .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
+ #krzrpwweiw .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: middle; }
+ #krzrpwweiw .gt_from_md> :first-child { margin-top: 0; }
+ #krzrpwweiw .gt_from_md> :last-child { margin-bottom: 0; }
+ #krzrpwweiw .gt_row { padding-top: 2px; padding-bottom: 2px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
+ #krzrpwweiw .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
+ #krzrpwweiw .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
+ #krzrpwweiw .gt_row_group_first td { border-top-width: 0.25px; }
+ #krzrpwweiw .gt_row_group_first th { border-top-width: 0.25px; }
+ #krzrpwweiw .gt_striped { color: #333333; background-color: #F4F4F4; }
+ #krzrpwweiw .gt_table_body { border-top-style: solid; border-top-width: 0px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
+ #krzrpwweiw .gt_grand_summary_row { color: #333333; background-color: #FFFFFF; text-transform: inherit; padding-top: 8px; padding-bottom: 8px; padding-left: 5px; padding-right: 5px; }
+ #krzrpwweiw .gt_first_grand_summary_row_bottom { border-top-style: double; border-top-width: 6px; border-top-color: #D3D3D3; }
+ #krzrpwweiw .gt_last_grand_summary_row_top { border-bottom-style: double; border-bottom-width: 6px; border-bottom-color: #D3D3D3; }
+ #krzrpwweiw .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
+ #krzrpwweiw .gt_sourcenote { font-size: 10px; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
+ #krzrpwweiw .gt_left { text-align: left; }
+ #krzrpwweiw .gt_center { text-align: center; }
+ #krzrpwweiw .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
+ #krzrpwweiw .gt_font_normal { font-weight: normal; }
+ #krzrpwweiw .gt_font_bold { font-weight: bold; }
+ #krzrpwweiw .gt_font_italic { font-style: italic; }
+ #krzrpwweiw .gt_super { font-size: 65%; }
+ #krzrpwweiw .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
+ #krzrpwweiw .gt_asterisk { font-size: 100%; vertical-align: 0; }
  
 </style>
 
@@ -1032,7 +1053,7 @@ Deviance: 961.445 </code></pre>
 </div>
 </div>
 <p><code>PyFixest</code> also integrates with the <a href="https://marginaleffects.com/bonus/python.html">marginaleffects</a> package. To compute average marginal effects for the logit model above:</p>
-<div id="68bbc9c6" class="cell" data-execution_count="3">
+<div id="30e6d424" class="cell" data-execution_count="3">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> marginaleffects <span class="im">import</span> avg_slopes</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>avg_slopes(fit_logit, variables<span class="op">=</span><span class="st">"X1"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="3">
@@ -1069,7 +1090,7 @@ Deviance: 961.445 </code></pre>
 </div>
 </div>
 <p>We can also compute marginal effects by group (group average marginal effects):</p>
-<div id="9ad5caf0" class="cell" data-execution_count="4">
+<div id="286bc403" class="cell" data-execution_count="4">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>avg_slopes(fit_logit, variables<span class="op">=</span><span class="st">"X1"</span>, by<span class="op">=</span><span class="st">"f1"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="4">
 <div><style>

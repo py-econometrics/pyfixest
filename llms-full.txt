@@ -5979,6 +5979,9 @@ estimation.api.feglm.feglm(
     family,
     vcov=None,
     vcov_kwargs=None,
+    weights=None,
+    weights_type='aweights',
+    offset=None,
     ssc=None,
     fixef_rm='singleton',
     iwls_tol=1e-08,
@@ -6002,7 +6005,8 @@ Estimate GLM regression models with fixed effects.
 
 Supported families: [logit](/reference/estimation.models.felogit_.Felogit.qmd),
 [probit](/reference/estimation.models.feprobit_.Feprobit.qmd),
-[gaussian](/reference/estimation.models.fegaussian_.Fegaussian.qmd).
+[gaussian](/reference/estimation.models.fegaussian_.Fegaussian.qmd),
+and [poisson](/reference/estimation.models.fepois_.Fepois.qmd).
 
 ## References {.doc-section .doc-section-references}
 
@@ -6022,9 +6026,12 @@ Supported families: [logit](/reference/estimation.models.felogit_.Felogit.qmd),
 |------------------|--------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------|
 | fml              | str                                        | A two-sided formula string using fixest formula syntax. Syntax: "Y ~ X1 + X2 \| FE1 + FE2". "\|" separates left-hand side and fixed effects. Special syntax includes: - Stepwise regressions (sw, sw0) - Cumulative stepwise regression (csw, csw0) - Multiple dependent variables (Y1 + Y2 ~ X) - Interaction of variables (i(X1,X2)) - Interacted fixed effects (fe1^fe2) Compatible with formula parsing via the formulaic module.                                                                                                                                                                                                                                                                                               | _required_             |
 | data             | DataFrameType                              | A pandas or polars dataframe containing the variables in the formula.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | _required_             |
-| family           | str                                        | The family of the GLM model. Options include "gaussian", "logit" and "probit".                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | _required_             |
+| family           | str                                        | The family of the GLM model. Options include "gaussian", "logit", "probit", and "poisson". Passing "poisson" produces the same result as calling `pyfixest.fepois()`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | _required_             |
 | vcov             | Union\[VcovTypeOptions, dict\[str, str\]\] | Type of variance-covariance matrix for inference. Options include "iid",   "hetero", "HC1", "HC2", "HC3", "NW" for Newey-West HAC standard errors, "DK" for Driscoll-Kraay HAC standard errors, or a dictionary for CRV1/CRV3 inference. Note that NW and DK require to pass additional keyword arguments via the `vcov_kwargs` argument. For time-series HAC, you need to pass the 'time_id' column. For panel-HAC, you need to add pass both 'time_id' and 'panel_id'. See `vcov_kwargs` for details.                                                                                                                                                                                                                             | `None`                 |
 | vcov_kwargs      | Optional\[dict\[str, any\]\]               | Additional keyword arguments to pass to the vcov function. These keywoards include "lag" for the number of lag to use in the Newey-West (NW) and Driscoll-Kraay (DK) HAC standard errors. "time_id" for the time ID used for NW and DK standard errors, and "panel_id" for the panel  identifier used for NW and DK standard errors. Currently, the the time difference between consecutive time  periods is always treated as 1. More flexible time-step selection is work in progress.                                                                                                                                                                                                                                            | `None`                 |
+| weights          | Union\[None, str\]                         | Default is None. Name of the column in `data` to be used as observation weights. When supplied, IRLS minimizes the weighted deviance.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | `None`                 |
+| weights_type     | WeightsTypeOptions                         | Type of weights variable. Either "aweights" (analytic / precision weights) or "fweights" (frequency weights). Defaults to "aweights".                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | `'aweights'`           |
+| offset           | Union\[None, str\]                         | Default is None. Name of a numeric column in `data` to use as an offset on the link scale. Only supported with `family='poisson'`. For exposure adjustments, pass the exposure on the log scale.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | `None`                 |
 | ssc              | str                                        | A ssc object specifying the small sample correction for inference.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | `None`                 |
 | fixef_rm         | FixedRmOptions                             | Specifies whether to drop singleton fixed effects. Can be equal to "singleton" (default), or "none". "singletons" will drop singleton fixed effects. This will not impact point estimates but it will impact standard errors.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | `'singleton'`          |
 | iwls_tol         | Optional\[float\]                          | Tolerance for IWLS convergence, by default 1e-08.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | `1e-08`                |
@@ -6981,6 +6988,7 @@ Base class for the estimation of a fixed-effects GLM model.
 | [get_fit](#pyfixest.estimation.models.feglm_.Feglm.get_fit) | Fit the GLM via IRLS and write results onto self.* attributes. |
 | [predict](#pyfixest.estimation.models.feglm_.Feglm.predict) | Return predicted values from regression model. |
 | [prepare_model_matrix](#pyfixest.estimation.models.feglm_.Feglm.prepare_model_matrix) | Prepare model inputs for estimation. |
+| [resid](#pyfixest.estimation.models.feglm_.Feglm.resid) | Return residuals from a fitted GLM. |
 | [residualize](#pyfixest.estimation.models.feglm_.Feglm.residualize) | Residualize v and X by flist using weights. |
 | [to_array](#pyfixest.estimation.models.feglm_.Feglm.to_array) | Turn estimation DataFrames to np arrays. |
 
@@ -7040,6 +7048,26 @@ estimation.models.feglm_.Feglm.prepare_model_matrix()
 ```
 
 Prepare model inputs for estimation.
+
+### resid { #pyfixest.estimation.models.feglm_.Feglm.resid }
+
+```python
+estimation.models.feglm_.Feglm.resid(type='response')
+```
+
+Return residuals from a fitted GLM.
+
+#### Parameters {.doc-section .doc-section-parameters}
+
+| Name   | Type   | Description                                                                | Default      |
+|--------|--------|----------------------------------------------------------------------------|--------------|
+| type   | str    | The type of residuals to return. Either "response" (default) or "working". | `'response'` |
+
+#### Returns {.doc-section .doc-section-returns}
+
+| Name   | Type       | Description                                |
+|--------|------------|--------------------------------------------|
+|        | np.ndarray | A flat array with the requested residuals. |
 
 ### residualize { #pyfixest.estimation.models.feglm_.Feglm.residualize }
 
@@ -8123,7 +8151,6 @@ The method implements the algorithm from Stata's `ppmlhdfe` module.
 | --- | --- |
 | [get_fit](#pyfixest.estimation.models.fepois_.Fepois.get_fit) | Fit via Feglm IRLS, then add Poisson-specific post-fit summary stats. |
 | [predict](#pyfixest.estimation.models.fepois_.Fepois.predict) | Return predicted values from regression model. |
-| [resid](#pyfixest.estimation.models.fepois_.Fepois.resid) | Return residuals from regression model. |
 
 ### get_fit { #pyfixest.estimation.models.fepois_.Fepois.get_fit }
 
@@ -8173,26 +8200,6 @@ will be set to NaN.
 | Name   | Type                              | Description                                                                                                                                                                                                                        |
 |--------|-----------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 |        | Union\[np.ndarray, pd.DataFrame\] | Returns a pd.Dataframe with columns "fit", "se_fit" and CIs if argument "interval=prediction". Otherwise, returns a np.ndarray with the predicted values of the model or the prediction standard errors if argument "se_fit=True". |
-
-### resid { #pyfixest.estimation.models.fepois_.Fepois.resid }
-
-```python
-estimation.models.fepois_.Fepois.resid(type='response')
-```
-
-Return residuals from regression model.
-
-#### Parameters {.doc-section .doc-section-parameters}
-
-| Name   | Type   | Description                                                                            | Default      |
-|--------|--------|----------------------------------------------------------------------------------------|--------------|
-| type   | str    | The type of residuals to be computed. Can be either "response" (default) or "working". | `'response'` |
-
-#### Returns {.doc-section .doc-section-returns}
-
-| Name   | Type       | Description                                              |
-|--------|------------|----------------------------------------------------------|
-|        | np.ndarray | A flat array with the residuals of the regression model. |
 
 ---
 

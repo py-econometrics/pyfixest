@@ -36,6 +36,7 @@ Base class for the estimation of a fixed-effects GLM model.
 | [get_fit](#pyfixest.estimation.models.feglm_.Feglm.get_fit) | Fit the GLM via IRLS and write results onto self.* attributes. |
 | [predict](#pyfixest.estimation.models.feglm_.Feglm.predict) | Return predicted values from regression model. |
 | [prepare_model_matrix](#pyfixest.estimation.models.feglm_.Feglm.prepare_model_matrix) | Prepare model inputs for estimation. |
+| [resid](#pyfixest.estimation.models.feglm_.Feglm.resid) | Return residuals from a fitted GLM. |
 | [residualize](#pyfixest.estimation.models.feglm_.Feglm.residualize) | Residualize v and X by flist using weights. |
 | [to_array](#pyfixest.estimation.models.feglm_.Feglm.to_array) | Turn estimation DataFrames to np arrays. |
 
@@ -95,6 +96,26 @@ estimation.models.feglm_.Feglm.prepare_model_matrix()
 ```
 
 Prepare model inputs for estimation.
+
+### resid { #pyfixest.estimation.models.feglm_.Feglm.resid }
+
+```python
+estimation.models.feglm_.Feglm.resid(type='response')
+```
+
+Return residuals from a fitted GLM.
+
+#### Parameters {.doc-section .doc-section-parameters}
+
+| Name   | Type   | Description                                                                | Default      |
+|--------|--------|----------------------------------------------------------------------------|--------------|
+| type   | str    | The type of residuals to return. Either "response" (default) or "working". | `'response'` |
+
+#### Returns {.doc-section .doc-section-returns}
+
+| Name   | Type       | Description                                |
+|--------|------------|--------------------------------------------|
+|        | np.ndarray | A flat array with the requested residuals. |
 
 ### residualize { #pyfixest.estimation.models.feglm_.Feglm.residualize }
 

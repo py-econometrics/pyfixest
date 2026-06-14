@@ -66,7 +66,6 @@ The method implements the algorithm from Stata's `ppmlhdfe` module.
 | --- | --- |
 | [get_fit](#pyfixest.estimation.models.fepois_.Fepois.get_fit) | Fit via Feglm IRLS, then add Poisson-specific post-fit summary stats. |
 | [predict](#pyfixest.estimation.models.fepois_.Fepois.predict) | Return predicted values from regression model. |
-| [resid](#pyfixest.estimation.models.fepois_.Fepois.resid) | Return residuals from regression model. |
 
 ### get_fit { #pyfixest.estimation.models.fepois_.Fepois.get_fit }
 
@@ -116,23 +115,3 @@ will be set to NaN.
 | Name   | Type                              | Description                                                                                                                                                                                                                        |
 |--------|-----------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 |        | Union\[np.ndarray, pd.DataFrame\] | Returns a pd.Dataframe with columns "fit", "se_fit" and CIs if argument "interval=prediction". Otherwise, returns a np.ndarray with the predicted values of the model or the prediction standard errors if argument "se_fit=True". |
-
-### resid { #pyfixest.estimation.models.fepois_.Fepois.resid }
-
-```python
-estimation.models.fepois_.Fepois.resid(type='response')
-```
-
-Return residuals from regression model.
-
-#### Parameters {.doc-section .doc-section-parameters}
-
-| Name   | Type   | Description                                                                            | Default      |
-|--------|--------|----------------------------------------------------------------------------------------|--------------|
-| type   | str    | The type of residuals to be computed. Can be either "response" (default) or "working". | `'response'` |
-
-#### Returns {.doc-section .doc-section-returns}
-
-| Name   | Type       | Description                                              |
-|--------|------------|----------------------------------------------------------|
-|        | np.ndarray | A flat array with the residuals of the regression model. |
