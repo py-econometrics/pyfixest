@@ -5,7 +5,31 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 import numpy as np
-from scipy.stats import norm
+from scipy.stats import norm, t
+
+
+@dataclass(frozen=True, slots=True)
+class InferenceDist:
+    """Reference distribution used to compute Wald p-values and CI critical values.
+
+    `pvalue(tstat, df_t)` returns two-sided p-values.
+    `crit_val(alpha, df_t)` returns |q(alpha/2)| for confidence intervals.
+    The `df_t` argument is ignored for the normal distribution.
+    """
+
+    pvalue: Callable[[np.ndarray, int], np.ndarray]
+    crit_val: Callable[[float, int], float]
+
+
+T_DIST = InferenceDist(
+    pvalue=lambda tstat, df_t: 2 * (1 - t.cdf(np.abs(tstat), df_t)),
+    crit_val=lambda alpha, df_t: float(np.abs(t.ppf(alpha / 2, df_t))),
+)
+
+NORMAL_DIST = InferenceDist(
+    pvalue=lambda tstat, df_t: 2 * (1 - norm.cdf(np.abs(tstat))),
+    crit_val=lambda alpha, df_t: float(np.abs(norm.ppf(alpha / 2))),
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -22,8 +46,9 @@ class GlmFamily:
     gprime: Callable[[np.ndarray], np.ndarray]
     variance: Callable[[np.ndarray], np.ndarray]
     deviance: Callable[[np.ndarray, np.ndarray, np.ndarray | None], float]
-    mu_start: Callable[[np.ndarray], np.ndarray]
+    mu_start: Callable[[np.ndarray, np.ndarray | None], np.ndarray]
     check_y: Callable[[np.ndarray], None]
+    inference_dist: InferenceDist = NORMAL_DIST
 
 
 def _check_y_binary(Y: np.ndarray) -> None:
@@ -38,11 +63,13 @@ def _check_y_noop(Y: np.ndarray) -> None:
     return None
 
 
-def _mu_start_binary(Y: np.ndarray) -> np.ndarray:
-    return np.full_like(Y.flatten(), 0.5, dtype=float)
+def _mu_start_binary(Y: np.ndarray, weights: np.ndarray | None) -> np.ndarray:
+    y = Y.flatten().astype(float)
+    w = weights.flatten() if weights is not None else np.ones_like(y)
+    return (w * y + 0.5) / (w + 1.0)
 
 
-def _mu_start_mean(Y: np.ndarray) -> np.ndarray:
+def _mu_start_mean(Y: np.ndarray, weights: np.ndarray | None) -> np.ndarray:
     return np.full_like(Y.flatten(), np.mean(Y), dtype=float)
 
 
@@ -104,7 +131,7 @@ def _check_y_nonneg(Y: np.ndarray) -> None:
         raise ValueError("The dependent variable must be weakly positive.")
 
 
-def _mu_start_pois(Y: np.ndarray) -> np.ndarray:
+def _mu_start_pois(Y: np.ndarray, weights: np.ndarray | None) -> np.ndarray:
     y = Y.flatten().astype(float)
     return (y + y.mean()) / 2
 
@@ -140,6 +167,7 @@ GAUSSIAN = GlmFamily(
     deviance=_gaussian_deviance,
     mu_start=_mu_start_mean,
     check_y=_check_y_noop,
+    inference_dist=T_DIST,
 )
 
 POISSON = GlmFamily(

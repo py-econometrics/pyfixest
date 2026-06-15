@@ -733,16 +733,10 @@ def test_single_fit_fepois(
 
 @pytest.mark.against_r_core
 @pytest.mark.parametrize("family", ["logit", "probit", "gaussian", "poisson"])
-@pytest.mark.parametrize("dropna", [False])
 @pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
-@pytest.mark.parametrize("f3_type", ["str"])
 @pytest.mark.parametrize("fml", ols_fmls)
-@pytest.mark.parametrize("k_adj", [True])
-@pytest.mark.parametrize("G_adj", [True])
 @pytest.mark.parametrize("weights", [None, "weights"])
-def test_single_fit_feglm(
-    data_fepois, dropna, inference, f3_type, fml, k_adj, G_adj, weights, family
-):
+def test_single_fit_feglm(data_fepois, inference, fml, weights, family):
     """Verify weighted/unweighted feglm against R fixest.feglm.
 
     Mirrors `test_single_fit_fepois` (same parametrize grid; same artifacts
@@ -753,16 +747,13 @@ def test_single_fit_feglm(
     global test_counter_feglm
     test_counter_feglm += 1
 
-    _skip_f3_checks(fml, f3_type)
-    _skip_dropna(test_counter_feglm, dropna)
+    _skip_f3_checks(fml, "str")
 
-    ssc_ = ssc(k_adj=k_adj, G_adj=G_adj)
+    ssc_ = ssc(k_adj=True, G_adj=True)
 
     data = data_fepois.copy()
-    if dropna:
-        data.dropna(inplace=True)
     data.where(data != "nan", np.nan, inplace=True)
-    data = _convert_f3(data, f3_type)
+    data = _convert_f3(data, "str")
 
     # Binary outcome for logit/probit; original Y for gaussian.
     data["Y_bin"] = (data["Y"] > 0).astype(int)
@@ -782,6 +773,18 @@ def test_single_fit_feglm(
         weights=weights,
     )
 
+    # Gaussian GLM with identity link == OLS; compare against pf.feols directly
+    if family == "gaussian":
+        ref = pf.feols(fml=py_fml, data=data, vcov=inference, ssc=ssc_, weights=weights)
+        assert (mod._N, int(mod._df_k), int(mod._df_t)) == (
+            ref._N,
+            int(ref._df_k),
+            int(ref._df_t),
+        )
+        pd.testing.assert_frame_equal(mod.tidy(), ref.tidy(), atol=1e-10, rtol=0)
+        np.testing.assert_allclose(mod._vcov, ref._vcov, atol=1e-10, rtol=0)
+        return
+
     r_family = {
         "logit": stats.binomial(link="logit"),
         "probit": stats.binomial(link="probit"),
@@ -792,7 +795,7 @@ def test_single_fit_feglm(
     r_kwargs = {
         "vcov": r_inference,
         "data": data_r,
-        "ssc": fixest.ssc(k_adj, "nonnested", False, G_adj, "min", "min"),
+        "ssc": fixest.ssc(True, "nonnested", False, True, "min", "min"),
         "glm_tol": 1e-10,
         "glm_iter": 100,
         "family": r_family,
@@ -832,7 +835,7 @@ def test_single_fit_feglm(
     r_df_t = int(ro.r('attr(r_fixest$cov.scaled, "df.t")')[0])
     r_n_coefs = int(df_X1["n_coef"])
 
-    if inference == "iid" and k_adj and G_adj:
+    if inference == "iid":
         check_absolute_diff(py_nobs, r_nobs, 1e-08, "py_nobs != r_nobs")
         check_absolute_diff(py_coef, r_coef, 1e-08, "py_coef != r_coef")
         check_absolute_diff(py_resid[0:5], r_resid[0:5], 1e-07, "py_resid != r_resid")

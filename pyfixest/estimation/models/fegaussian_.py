@@ -7,6 +7,7 @@ from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.families import GAUSSIAN
+from pyfixest.estimation.internals.vcov_ import vcov_iid_ols
 from pyfixest.estimation.models.feglm_ import Feglm
 
 
@@ -66,7 +67,11 @@ class Fegaussian(Feglm):
             demeaner=demeaner,
             lookup_preconditioner=lookup_preconditioner,
             accelerate=accelerate,
+            family=GAUSSIAN,
         )
 
         self._method = "feglm-gaussian"
-        self._family = GAUSSIAN
+
+    def _vcov_iid(self):
+        # we set gaussian glms to match pf.feols exactly
+        return vcov_iid_ols(residuals=self._u_hat, bread=self._bread, N=self._N)

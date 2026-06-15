@@ -66,7 +66,7 @@ class Felogit(Feglm):
             sample_split_value=sample_split_value,
             separation_check=separation_check,
             accelerate=accelerate,
+            family=LOGIT,
         )
 
         self._method = "feglm-logit"
-        self._family = LOGIT

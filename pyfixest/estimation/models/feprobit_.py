@@ -66,7 +66,7 @@ class Feprobit(Feglm):
             separation_check=separation_check,
             context=context,
             accelerate=accelerate,
+            family=PROBIT,
         )
 
         self._method = "feglm-probit"
-        self._family = PROBIT
