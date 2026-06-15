@@ -11,6 +11,31 @@ fit2 = pf.feols("Y ~ X1 + X2", data = df)
 fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 ```
 
+## PyFixest 0.70.0 (In Development)
+
+### GLM API and Behavior
+
+- `feglm()` now accepts `weights`, `weights_type`, and `offset`, and supports
+  `family="poisson"`. Previously `weights` was silently ignored and `offset`
+  was unavailable; Poisson required calling `fepois()` directly.
+- `pf.fepois` gains step-halving, inner-tolerance tightening, and ppmlhdfe-style
+  warm-start acceleration. As a result, it should converge faster.
+- `fepois()` is now a thin wrapper around `feglm(family="poisson")`. It's public API is unchanged.
+- `feglm(family="gaussian")` now matches `pf.feols()` (and base R `lm`/`glm`)
+  exactly. We slightly deviate from `fixest::feglm(family="gaussian")`, which uses slightly different small sample corrections between OLS and GLM with Gaussian link.
+- Logit and probit IRLS initialise at new values for better numerical stability.
+
+### Deprecations and Removals
+
+As previously announced, we removed:
+
+- Removed the deprecated `demeaner_backend`, `fixef_tol`, and `fixef_maxiter`
+  keyword arguments (use the typed `Demeaner` API introduced in 0.60.0).
+- Removed the JAX demeaner backend and JAX solver.
+- Deprecated the SciPy and CuPy demeaner backends.
+- Deprecated `FeolsCompressed`.
+
+
 ## PyFixest 0.60.0
 
 This release focuses on the fixed-effects demeaning stack. The main changes are
