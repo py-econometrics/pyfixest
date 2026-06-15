@@ -180,7 +180,7 @@ def fit_glm_irls(
     offset_flat = offset.flatten() if offset is not None else np.zeros(N)
     weights_flat = weights.flatten() if weights is not None else np.ones(N)
 
-    mu = family.mu_start(Y)
+    mu = family.mu_start(Y, weights)
     eta = family.link(mu)
     deviance = family.deviance(Y_flat, mu, weights)
     deviance_old = deviance + 1.0

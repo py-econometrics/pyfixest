@@ -43,6 +43,7 @@ class Feglm(Feols):
             "scipy.linalg.solve",
             "scipy.sparse.linalg.lsqr",
         ],
+        family: GlmFamily,
         demeaner: AnyDemeaner | None = None,
         lookup_preconditioner: dict[frozenset[int], Preconditioner] | None = None,
         store_data: bool = True,
@@ -98,7 +99,8 @@ class Feglm(Feols):
         self._Xbeta = np.empty(0)
 
         self._method = "feglm"
-        self._family: GlmFamily
+        self._family = family
+        self._inference_dist = family.inference_dist
 
     def prepare_model_matrix(self):
         "Prepare model inputs for estimation."

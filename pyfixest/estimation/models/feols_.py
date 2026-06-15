@@ -21,6 +21,7 @@ from pyfixest.estimation.formula import model_matrix as model_matrix_fixest
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
 from pyfixest.estimation.internals.demean_ import DemeanCache
+from pyfixest.estimation.internals.families import T_DIST, InferenceDist
 from pyfixest.estimation.internals.fit_ import fit_ols
 from pyfixest.estimation.internals.literals import (
     PredictionErrorOptions,
@@ -277,6 +278,7 @@ class Feols(ResultAccessorMixin):
         self._model_name_plot = self._model_name
         self._method = "feols"
         self._is_iv = False
+        self._inference_dist: InferenceDist = T_DIST
         self.FixestFormula = FixestFormula
 
         if self._sample_split_var is None:

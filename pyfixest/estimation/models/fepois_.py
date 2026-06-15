@@ -125,11 +125,11 @@ class Fepois(Feglm):
             context=context,
             demeaner=demeaner,
             lookup_preconditioner=lookup_preconditioner,
+            family=POISSON,
         )
 
         # Poisson-specific overrides on top of the Feglm-set defaults.
         self._method = "fepois"
-        self._family = POISSON
         self._offset_name = offset
         self._supports_cluster_causal_variance = False
         self._support_decomposition = False
