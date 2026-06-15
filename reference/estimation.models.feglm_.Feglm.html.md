@@ -14,6 +14,7 @@ estimation.models.feglm_.Feglm(
     tol,
     maxiter,
     solver,
+    family,
     demeaner=None,
     lookup_preconditioner=None,
     store_data=True,
