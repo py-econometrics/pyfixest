@@ -5776,20 +5776,7 @@ pf.panelview(
 # estimation.FixestMulti_.FixestMulti { #pyfixest.estimation.FixestMulti_.FixestMulti }
 
 ```python
-estimation.FixestMulti_.FixestMulti(
-    data,
-    copy_data,
-    store_data,
-    lean,
-    weights_type,
-    seed,
-    split,
-    fsplit,
-    separation_check=None,
-    context=0,
-    quantreg_method='fn',
-    quantreg_multi_method='cfm1',
-)
+estimation.FixestMulti_.FixestMulti(config)
 ```
 
 A class to estimate multiple regression models with fixed effects.
