@@ -37,7 +37,7 @@ class FixestMulti:
         ----------
         config : EstimationConfig
             Immutable record of all options the public API requested.
-            See ``pyfixest.estimation.config.EstimationConfig``.
+            See `pyfixest.estimation.config.EstimationConfig`.
         """
         self._config = config
 
@@ -96,10 +96,10 @@ class FixestMulti:
     def _prepare_estimation(self) -> None:
         """Parse the formula string and derive estimation state.
 
-        Reads from ``self._config`` and populates the legacy mutable
+        Reads from `self._config` and populates legacy mutable
         attributes that downstream estimation code consumes
-        (``self._method``, ``self._is_iv``, ``self.FixestFormulaDict``,
-        ``self._is_multiple_estimation``, ``self._ssc_dict``, ...).
+        (`self._method`, `self._is_iv`, `self.FixestFormulaDict`,
+        `self._is_multiple_estimation`, `self._ssc_dict`, ...).
         """
         cfg = self._config
 
@@ -130,11 +130,11 @@ class FixestMulti:
         )
 
     def _estimate_all_models(self) -> None:
-        """Estimate every model enumerated by ``_prepare_estimation``.
+        """Estimate every model enumerated by `_prepare_estimation`.
 
-        Reads all fit knobs (``vcov``, ``solver``, ``demeaner``,
-        ``collin_tol``, ``iwls_*``, ``separation_check``, ``accelerate``)
-        from ``self._config``.
+        Reads all spec details (`vcov`, `solver`, `demeaner`,
+        `collin_tol`, `iwls_*`, `separation_check`, `accelerate`)
+        from `self._config`.
         """
         cfg = self._config
         vcov = cfg.vcov

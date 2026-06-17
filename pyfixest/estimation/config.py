@@ -16,19 +16,15 @@ from pyfixest.estimation.internals.literals import (
 class EstimationConfig:
     """Immutable record of what an estimation call requests.
 
-    A single flat container for every knob the public API exposes
-    (`feols`, `fepois`, `feglm`, `quantreg`) plus the dispatch
-    method string. The orchestrator and planner consume this object;
-    method-specific fields (GLM, quantreg) carry inert defaults when
-    they don't apply, so non-applicable methods can safely ignore them.
+    A single flat container for every function argument of the
+    public `feols`, `feglm`, `fepois`, `quantreg` APIs plus info
+    on which model is to be fitted / to which method we dispatch.
     """
 
     # --- dispatch ---
     method: str
 
     # --- data ---
-    # IntoDataFrame (pandas / polars / narwhals); typed as Any so dataclass
-    # field generation doesn't trip over the Protocol-like alias.
     data: Any
 
     # --- formula ---
@@ -40,7 +36,7 @@ class EstimationConfig:
     lean: bool = False
 
     # --- formula extras ---
-    fixef_rm: str = "none"
+    fixef_rm: str = "singleton"
     drop_intercept: bool = False
 
     # --- vcov ---
@@ -51,7 +47,7 @@ class EstimationConfig:
     # --- fit knobs ---
     solver: SolverOptions = "scipy.linalg.solve"
     demeaner: AnyDemeaner | None = None
-    collin_tol: float = 1e-6
+    collin_tol: float = 1e-9
     context: Mapping[str, Any] = field(default_factory=dict)
 
     # --- weights ---
