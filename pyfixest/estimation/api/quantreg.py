@@ -4,6 +4,7 @@ from collections.abc import Mapping
 from typing import Any
 
 from pyfixest.estimation.api.utils import _estimation_input_checks
+from pyfixest.estimation.config import EstimationConfig
 from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.internals.literals import (
     QuantregMethodOptions,
@@ -205,10 +206,6 @@ def quantreg(
 
     context = {} if context is None else capture_context(context)
 
-    fixef_rm = "none"
-    iwls_tol = 1e-08
-    iwls_maxiter = 25
-
     if isinstance(vcov, str) and vcov in ["HC1", "HC2", "HC3"]:
         vcov = "hetero"
 
@@ -221,7 +218,7 @@ def quantreg(
         vcov_kwargs=None,
         weights=weights,
         ssc=ssc,
-        fixef_rm=fixef_rm,
+        fixef_rm="none",  # arbitrary, not supported
         collin_tol=collin_tol,
         copy_data=copy_data,
         store_data=store_data,
@@ -234,48 +231,41 @@ def quantreg(
         separation_check=separation_check,
     )
 
-    fixest = FixestMulti(
+    estimation = "quantreg" if not isinstance(quantile, list) else "quantreg_multi"
+    config = EstimationConfig(
+        method=estimation,
         data=data,
+        fml=fml,
         copy_data=copy_data,
         store_data=store_data,
         lean=lean,
+        drop_intercept=drop_intercept,
+        vcov=vcov,
+        vcov_kwargs=None,
+        ssc_dict=ssc,
+        solver=solver,
+        collin_tol=collin_tol,
+        context=context,
+        weights=weights,
         weights_type=weights_type,
-        seed=seed,
         split=split,
         fsplit=fsplit,
-        context=context,
+        seed=seed,
+        quantile=quantile,
         quantreg_method=method,
+        quantile_tol=tol,
+        quantile_maxiter=maxiter,
         quantreg_multi_method=multi_method,
     )
 
-    # same checks as for Poisson regression
-    fixest._prepare_estimation(
-        estimation="quantreg" if not isinstance(quantile, list) else "quantreg_multi",
-        fml=fml,
-        vcov=vcov,
-        vcov_kwargs=None,
-        weights=weights,
-        ssc=ssc,
-        fixef_rm=fixef_rm,
-        drop_intercept=drop_intercept,
-        quantile=quantile,
-        quantile_tol=tol,
-        quantile_maxiter=maxiter,
-    )
+    fixest = FixestMulti(config)
+    fixest._prepare_estimation()
     if fixest._is_iv:
         raise NotImplementedError(
             "IV Estimation is not supported for Quantile Regression"
         )
 
-    fixest._estimate_all_models(
-        vcov=vcov,
-        solver=solver,
-        vcov_kwargs=None,
-        iwls_tol=iwls_tol,
-        iwls_maxiter=iwls_maxiter,
-        collin_tol=collin_tol,
-        separation_check=separation_check,
-    )
+    fixest._estimate_all_models()
 
     if fixest._is_multiple_estimation:
         return fixest

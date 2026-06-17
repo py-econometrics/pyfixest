@@ -5,6 +5,7 @@ from typing import Any
 
 from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.api.utils import _estimation_input_checks
+from pyfixest.estimation.config import EstimationConfig
 from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.internals.demeaner_options import (
     _resolve_demeaner,
@@ -517,37 +518,31 @@ def feols(
             "`duckreg` package (https://github.com/py-econometrics/duckreg) instead."
         )
 
-    fixest = FixestMulti(
+    config = EstimationConfig(
+        method="feols",
         data=data,
+        fml=fml,
         copy_data=copy_data,
         store_data=store_data,
         lean=lean,
-        weights_type=weights_type,
-        seed=seed,
-        split=split,
-        fsplit=fsplit,
-        context=context,
-    )
-
-    fixest._prepare_estimation(
-        estimation="feols",
-        fml=fml,
-        vcov=vcov,
-        vcov_kwargs=vcov_kwargs,
-        weights=weights,
-        ssc=ssc,
         fixef_rm=fixef_rm,
         drop_intercept=drop_intercept,
+        vcov=vcov,
+        vcov_kwargs=vcov_kwargs,
+        ssc_dict=ssc,
+        solver=solver,
+        demeaner=demeaner,
+        collin_tol=collin_tol,
+        context=context,
+        weights=weights,
+        weights_type=weights_type,
+        split=split,
+        fsplit=fsplit,
     )
 
-    # demean all models: based on fixed effects x split x missing value combinations
-    fixest._estimate_all_models(
-        vcov=vcov,
-        solver=solver,
-        vcov_kwargs=vcov_kwargs,
-        collin_tol=collin_tol,
-        demeaner=demeaner,
-    )
+    fixest = FixestMulti(config)
+    fixest._prepare_estimation()
+    fixest._estimate_all_models()
 
     if fixest._is_multiple_estimation:
         return fixest
