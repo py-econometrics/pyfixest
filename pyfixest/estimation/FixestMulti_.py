@@ -1,21 +1,14 @@
 from __future__ import annotations
 
 import functools
-from collections.abc import Mapping
 from importlib import import_module
-from typing import Any
 
 import pandas as pd
 
 from pyfixest.core.demean import Preconditioner
-from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.api.utils import _ALL_SAMPLE, _AllSampleSentinel
+from pyfixest.estimation.config import EstimationConfig
 from pyfixest.estimation.formula.parse import Formula
-from pyfixest.estimation.internals.literals import (
-    QuantregMethodOptions,
-    QuantregMultiOptions,
-    SolverOptions,
-)
 from pyfixest.estimation.internals.vcov_utils import _get_vcov_type
 from pyfixest.estimation.models.fegaussian_ import Fegaussian
 from pyfixest.estimation.models.feglm_ import Feglm
@@ -30,74 +23,38 @@ from pyfixest.estimation.models.fepois_ import Fepois
 from pyfixest.estimation.models.feprobit_ import Feprobit
 from pyfixest.estimation.quantreg.quantreg_ import Quantreg
 from pyfixest.estimation.quantreg.QuantregMulti import QuantregMulti
-from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
+from pyfixest.utils.dev_utils import _narwhals_to_pandas
 from pyfixest.utils.utils import capture_context
 
 
 class FixestMulti:
     """A class to estimate multiple regression models with fixed effects."""
 
-    def __init__(
-        self,
-        data: DataFrameType,
-        copy_data: bool,
-        store_data: bool,
-        lean: bool,
-        weights_type: str,
-        seed: int | None,
-        split: str | None,
-        fsplit: str | None,
-        separation_check: list[str] | None = None,
-        context: int | Mapping[str, Any] = 0,
-        quantreg_method: QuantregMethodOptions = "fn",
-        quantreg_multi_method: QuantregMultiOptions = "cfm1",
-    ) -> None:
-        """
-        Initialize a class for multiple fixed effect estimations.
+    def __init__(self, config: EstimationConfig) -> None:
+        """Initialize a class for multiple fixed effect estimations.
 
         Parameters
         ----------
-        data : panda.DataFrame
-            The input DataFrame for the object.
-        copy_data : bool
-            Whether to copy the data or not.
-        store_data : bool
-            Whether to store the data in the resulting model object or not.
-        lean: bool
-            Whether to store large-memory objects in the resulting model object or not.
-        weights_type: str
-            The type of weights employed in the estimation. Either analytical /
-            precision weights are employed (`aweights`) or
-            frequency weights (`fweights`).
-        seed : Optional[int]
-            Option to provide a random seed. Default is None.
-        separation_check: list[str], optional
-            Only used in "fepois". Methods to identify and drop separated observations.
-            Either "fe" or "ir". Executes both by default.
-        context : int or Mapping[str, Any]
-            A dictionary containing additional context variables to be used by
-            formulaic during the creation of the model matrix. This can include
-            custom factorization functions, transformations, or any other
-            variables that need to be available in the formula environment.
-        quantreg_method: QuantregMethodOptions, optional
-            The method to use for the quantile regression. Currently, only "fn" is
-            supported, which implements the Frisch-Newton Interior Point solver.
-            See `quantreg` for more details.
-
-        Returns
-        -------
-            None
+        config : EstimationConfig
+            Immutable record of all options the public API requested.
+            See ``pyfixest.estimation.config.EstimationConfig``.
         """
-        self._copy_data = copy_data
-        self._store_data = store_data
-        self._lean = lean
-        self._weights_type = weights_type
-        self._seed = seed
-        self._separation_check = separation_check
-        self._context = capture_context(context)
-        self._quantreg_method = quantreg_method
-        self._quantreg_multi_method = quantreg_multi_method
+        self._config = config
 
+        # legacy attributes mirror config fields so downstream code
+        # (and tests) can keep reading them
+        self._copy_data = config.copy_data
+        self._store_data = config.store_data
+        self._lean = config.lean
+        self._weights_type = config.weights_type
+        self._seed = config.seed
+        self._separation_check = config.separation_check
+        self._context = capture_context(config.context)
+        self._quantreg_method = config.quantreg_method
+        self._quantreg_multi_method = config.quantreg_multi_method
+
+        split = config.split
+        fsplit = config.fsplit
         self._run_split = split is not None or fsplit is not None
         self._run_full = not (split and not fsplit)
 
@@ -110,7 +67,7 @@ class FixestMulti:
         else:
             self._splitvar = None
 
-        data = _narwhals_to_pandas(data)
+        data = _narwhals_to_pandas(config.data)
 
         if self._copy_data:
             self._data = data.copy()
@@ -136,154 +93,60 @@ class FixestMulti:
         self.etable = functools.partial(_tmp, models=self.all_fitted_models.values())
         self.etable.__doc__ = _tmp.__doc__
 
-    def _prepare_estimation(
-        self,
-        estimation: str,
-        fml: str,
-        vcov: None | str | dict[str, str] = None,
-        vcov_kwargs: dict[str, Any] | None = None,
-        weights: None | str = None,
-        ssc: dict[str, str | bool] | None = None,
-        fixef_rm: str = "none",
-        drop_intercept: bool = False,
-        quantile: float | None = None,
-        quantile_tol: float = 1e-06,
-        quantile_maxiter: int | None = None,
-        offset: str | None = None,
-    ) -> None:
+    def _prepare_estimation(self) -> None:
+        """Parse the formula string and derive estimation state.
+
+        Reads from ``self._config`` and populates the legacy mutable
+        attributes that downstream estimation code consumes
+        (``self._method``, ``self._is_iv``, ``self.FixestFormulaDict``,
+        ``self._is_multiple_estimation``, ``self._ssc_dict``, ...).
         """
-        Prepare model for estimation.
+        cfg = self._config
 
-        Utility function to prepare estimation via the `feols()` or `fepois()` methods.
-        The function is called by both methods. Mostly deparses the fml string.
-
-        Parameters
-        ----------
-        estimation : str
-            Type of estimation. Either "feols" or "fepois".
-        fml : str
-            A three-sided formula string using fixest formula syntax.
-            Supported syntax includes: see `feols()` or `fepois()`.
-        vcov : Union[None, str, dict[str, str]], optional
-            A string or dictionary specifying the type of variance-covariance
-            matrix to use for inference.
-            See `feols()` or `fepois()`.
-        vcov_kwargs : dict[str, Any], optional
-            Additional keyword arguments for the variance-covariance matrix.
-             See `feols()` or `fepois()`.
-        weights : Union[None, np.ndarray], optional
-            An array of weights.
-            Either None or a 1D array of length N. Default is None.
-        offset : Union[None, str], optional
-            Default is None. Name of a numeric column in `data` to use as an offset
-            in Poisson regression. The offset is added to the linear predictor
-            with its coefficient fixed at 1. For exposure adjustments, pass the
-            exposure on the log scale.
-        ssc : dict[str, str], optional
-            A dictionary specifying the type of standard errors to use for inference.
-            See `feols()` or `fepois()`.
-        fixef_rm : bool, optional
-            A string specifying whether singleton fixed effects should be dropped.
-            Options are "none" (default) and "singleton". If "singleton",
-            singleton fixed effects are dropped.
-        drop_intercept : bool, optional
-            Whether to drop the intercept. Default is False.
-        quantile: Optional[float]
-            The quantile to use for quantile regression. Default is None.
-        quantile_tol: float, optional
-            The tolerance for the quantile regression FN algorithm.
-            Default is 1e-06.
-        quantile_maxiter: int, optional
-            The maximum number of iterations for the quantile regression FN algorithm.
-            If None, maxiter = the number of observations in the model
-            (as in R's quantreg package via nit(3) = n).
-
-        Returns
-        -------
-            None
-        """
-        self._method = None
-        self._is_iv = False
+        self._method = cfg.method
+        self._weights = cfg.weights
+        self._offset = cfg.offset
+        self._has_weights = cfg.weights is not None
+        self._drop_intercept = cfg.drop_intercept
+        self._quantile = cfg.quantile
+        self._quantile_tol = cfg.quantile_tol
+        self._quantile_maxiter = cfg.quantile_maxiter
+        self._ssc_dict = dict(cfg.ssc_dict) if cfg.ssc_dict else {}
+        self._drop_singletons = _drop_singletons(cfg.fixef_rm)
         self._fml_dict = None
         self._fml_dict_iv = None
-        self._ssc_dict: dict[str, str | bool] = {}
-        self._drop_singletons = False
-        self._is_multiple_estimation = False
-        self._weights = weights
-        self._offset = offset
-        self._has_weights = False
-        if weights is not None:
-            self._has_weights = True
 
-        self._drop_intercept = drop_intercept
-        self._quantile = quantile
-        self._quantile_tol = quantile_tol
-        self._quantile_maxiter = quantile_maxiter
-
-        formula_dictionary = Formula.parse_to_dict(fml)
+        formula_dictionary = Formula.parse_to_dict(cfg.fml)
+        self.FixestFormulaDict = formula_dictionary
         self._is_multiple_estimation = (
             sum(len(v) for v in formula_dictionary.values()) > 1
             or self._run_split
-            or (isinstance(quantile, list) and len(quantile) > 1)
+            or (isinstance(cfg.quantile, list) and len(cfg.quantile) > 1)
         )
-        self.FixestFormulaDict = formula_dictionary
-        self._method = estimation
         self._is_iv = any(
             formula.first_stage is not None
             for _, formulas in formula_dictionary.items()
             for formula in formulas
         )
-        # self._fml_dict = fxst_fml.condensed_fml_dict
-        # self._fml_dict_iv = fxst_fml.condensed_fml_dict_iv
-        self._ssc_dict = ssc if ssc is not None else {}
-        self._drop_singletons = _drop_singletons(fixef_rm)
 
-    def _estimate_all_models(
-        self,
-        vcov: str | dict[str, str] | None,
-        solver: SolverOptions,
-        vcov_kwargs: dict[str, Any] | None = None,
-        demeaner: AnyDemeaner | None = None,
-        collin_tol: float = 1e-6,
-        iwls_maxiter: int = 25,
-        iwls_tol: float = 1e-08,
-        separation_check: list[str] | None = None,
-        accelerate: bool = True,
-    ) -> None:
+    def _estimate_all_models(self) -> None:
+        """Estimate every model enumerated by ``_prepare_estimation``.
+
+        Reads all fit knobs (``vcov``, ``solver``, ``demeaner``,
+        ``collin_tol``, ``iwls_*``, ``separation_check``, ``accelerate``)
+        from ``self._config``.
         """
-        Estimate multiple regression models.
+        cfg = self._config
+        vcov = cfg.vcov
+        vcov_kwargs = cfg.vcov_kwargs
+        solver = cfg.solver
+        demeaner = cfg.demeaner
+        collin_tol = cfg.collin_tol
+        iwls_maxiter = cfg.iwls_maxiter
+        iwls_tol = cfg.iwls_tol
+        separation_check = cfg.separation_check
+        accelerate = cfg.accelerate
 
-        Parameters
-        ----------
-        vcov : Union[str, dict[str, str]]
-            A string or dictionary specifying the type of variance-covariance
-            matrix to use for inference.
-            - If a string, can be one of "iid", "hetero", "HC1", "HC2", "HC3", "NW", "DK".
-            - If a dictionary, it should have the format {"CRV1": "clustervar"}
-            for CRV1 inference or {"CRV3": "clustervar"} for CRV3 inference.
-        vcov_kwargs : Optional[dict[str, Any]], optional
-             Additional keyword arguments for the variance-covariance matrix. Defaults to None.
-        solver: SolverOptions
-            Solver to use for the estimation.
-        demeaner: Optional[AnyDemeaner]
-            The typed demeaning strategy to use for the estimation. Not relevant
-            for quantile regression.
-        collin_tol : float, optional
-            The tolerance level for the multicollinearity check. Default is 1e-6.
-        iwls_maxiter : int, optional
-            The maximum number of iterations for the IWLS algorithm. Default is 25.
-            Only relevant for non-linear estimation strategies.
-        iwls_tol : float, optional
-            The tolerance level for the IWLS algorithm. Default is 1e-8.
-            Only relevant for non-linear estimation strategies.
-        separation_check: list[str], optional
-            Only used in "fepois". Methods to identify and drop separated observations.
-            Either "fe" or "ir". Executes both by default.
-
-        Returns
-        -------
-            None
-        """
         FixestFormulaDict = self.FixestFormulaDict
         _fixef_keys = list(FixestFormulaDict.keys())
 
