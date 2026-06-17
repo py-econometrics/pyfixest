@@ -26,7 +26,7 @@ For questions on `PyFixest`, head over to our [GitHub discussions](https://githu
 
 - **Estimation**
   - **OLS**, **WLS**, **IV**, and **GLMs** (Poisson, logit, probit, gaussian) with high-dimensional fixed effects
-  - Different **demeaning backends** (MAP, [within](https://github.com/py-econometrics/within), LSMR) on CPU and GPU
+  - Different **demeaning backends** (MAP, [within](https://github.com/py-econometrics/within) LSMR, torch LSMR) on CPU and GPU
   - Fast **quantile regression** via an interior-point solver
   - **Difference-in-differences** estimators, including TWFE, `Did2s`, local projections, and Sun-Abraham event studies
   - Regression **decomposition** following [Gelbach (2016)](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=1425737)
@@ -66,21 +66,29 @@ python -m pip install pyfixest[plots]
 
 `matplotlib` is included by default, so plotting works without this extra.
 
-For GPU-accelerated fixed-effects demeaning via CuPy, install the build matching your CUDA version:
+To run the LSMR demeaner via `PyTorch` (CPU and GPU), you need to install `PyTorch`, which you can do via
 
 ```bash
-pip install cupy-cuda11x
-pip install cupy-cuda12x
-pip install cupy-cuda13x
+python -m pip install pyfixest[torch]
 ```
 
-Then use the typed `demeaner` API for GPU execution:
+For GPU acceleration on CUDA, you additionally need to install a CUDA-enabled torch build. See the [PyTorch installation guide](https://pytorch.org/get-started/locally/) for details.
+
+Then use the typed `demeaner` API:
 
 ```python
+# CPU
 pf.feols(
     "Y ~ X1 | f1 + f2",
     data=data,
-    demeaner=pf.LsmrDemeaner(backend="cupy", precision="float32"),
+    demeaner=pf.LsmrDemeaner(backend="torch", device="cpu"),
+)
+
+# CUDA GPU
+pf.feols(
+    "Y ~ X1 | f1 + f2",
+    data=data,
+    demeaner=pf.LsmrDemeaner(backend="torch", device="cuda"),
 )
 ```
 

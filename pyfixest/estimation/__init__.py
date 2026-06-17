@@ -1,3 +1,7 @@
+from pyfixest.core.demean import (
+    Preconditioner,
+    demean,
+)
 from pyfixest.core.detect_singletons import (
     detect_singletons,
 )
@@ -5,7 +9,6 @@ from pyfixest.demeaners import (
     BaseDemeaner,
     LsmrDemeaner,
     MapDemeaner,
-    WithinDemeaner,
 )
 from pyfixest.estimation.api import (
     feglm,
@@ -20,9 +23,6 @@ from pyfixest.estimation.FixestMulti_ import (
     FixestMulti,
 )
 from pyfixest.estimation.internals import literals
-from pyfixest.estimation.internals.demean_ import (
-    demean,
-)
 from pyfixest.estimation.models.fegaussian_ import Fegaussian
 from pyfixest.estimation.models.feiv_ import (
     Feiv,
@@ -53,8 +53,8 @@ __all__ = [
     "FixestMulti",
     "LsmrDemeaner",
     "MapDemeaner",
+    "Preconditioner",
     "Quantreg",
-    "WithinDemeaner",
     "bonferroni",
     "demean",
     "detect_singletons",

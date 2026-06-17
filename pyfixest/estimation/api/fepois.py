@@ -4,14 +4,8 @@ from collections.abc import Mapping
 from typing import Any
 
 from pyfixest.demeaners import AnyDemeaner
-from pyfixest.estimation.api.utils import _estimation_input_checks
+from pyfixest.estimation.api.feglm import feglm
 from pyfixest.estimation.FixestMulti_ import FixestMulti
-from pyfixest.estimation.internals.demeaner_options import (
-    _resolve_demeaner,
-    _warn_if_deprecated_demeaner_backend,
-    _warn_if_deprecated_solver,
-    _warn_if_experimental_torch_demeaner,
-)
 from pyfixest.estimation.internals.literals import (
     FixedRmOptions,
     SolverOptions,
@@ -21,8 +15,6 @@ from pyfixest.estimation.internals.literals import (
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.models.fepois_ import Fepois
 from pyfixest.utils.dev_utils import DataFrameType
-from pyfixest.utils.utils import capture_context
-from pyfixest.utils.utils import ssc as ssc_func
 
 
 def fepois(
@@ -41,9 +33,6 @@ def fepois(
     separation_check: list[str] | None = None,
     solver: SolverOptions = "scipy.linalg.solve",
     demeaner: AnyDemeaner | None = None,
-    demeaner_backend: str | None = None,
-    fixef_tol: float | None = None,
-    fixef_maxiter: int | None = None,
     drop_intercept: bool = False,
     copy_data: bool = True,
     store_data: bool = True,
@@ -129,28 +118,26 @@ def fepois(
 
     solver : SolverOptions, optional.
         The solver to use for the regression. Can be "np.linalg.lstsq",
-        "np.linalg.solve", "scipy.linalg.solve", "scipy.sparse.linalg.lsqr" and "jax".
+        "np.linalg.solve", "scipy.linalg.solve" and "scipy.sparse.linalg.lsqr".
         Defaults to "scipy.linalg.solve".
-
-        .. deprecated::
-            ``solver="jax"`` is deprecated and will be removed in a future
-            release. Use one of the NumPy/SciPy solvers instead; for GPU
-            acceleration, see ``LsmrDemeaner(backend="torch", device="cuda")``.
 
     demeaner : AnyDemeaner | None, optional
         Typed demeaner configuration. Controls the fixed-effects demeaning
-        backend, tolerance, and iteration limits. Accepts a `MapDemeaner`,
-        `WithinDemeaner`, or `LsmrDemeaner` instance. Defaults to
-        `MapDemeaner()` (numba MAP algorithm, tol=1e-6, maxiter=10_000).
+        backend, tolerance, and iteration limits. Accepts a `MapDemeaner`
+        or `LsmrDemeaner` instance. Defaults to
+        `MapDemeaner()` (Rust MAP algorithm, tol=1e-6, maxiter=10_000).
+        For other options - including the optional Numba backend and the
+        torch-based LSMR backends - see the
+        [Demeaner Backends vignette](../../how-to/demeaner-backends.qmd).
 
         .. deprecated::
-            The ``jax`` MAP backend and the ``cupy``/``scipy`` LSMR backends
-            are deprecated and will be removed in a future release. Use
-            ``MapDemeaner()`` for dense fixed-effects problems,
-            ``WithinDemeaner()`` (additive Schwarz with conjugate gradient)
-            for difficult/sparse problems, and
-            ``LsmrDemeaner(backend="torch", device="cuda")`` for GPU
-            acceleration.
+            The ``cupy`` / ``scipy`` LSMR backends are deprecated and will
+            be removed in a future release. Replacements:
+
+            - cupy LSMR on GPU →
+              ``LsmrDemeaner(backend="torch", device="cuda")``.
+            - Scipy / cupy LSMR on CPU → ``LsmrDemeaner()``
+              (the default within backend).
 
     drop_intercept : bool, optional
         Whether to drop the intercept from the model, by default False.
@@ -250,84 +237,29 @@ def fepois(
     are documented in the [feols() reference](/reference/estimation.api.feols.feols.html).
     For applied examples, see the [Poisson & GLMs tutorial](/tutorials/poisson-glm.html).
     """
-    if separation_check is None:
-        separation_check = ["fe"]
-    if ssc is None:
-        ssc = ssc_func()
-    context = {} if context is None else capture_context(context)
-    demeaner = _resolve_demeaner(
-        demeaner=demeaner,
-        demeaner_backend=demeaner_backend,
-        fixef_tol=fixef_tol,
-        fixef_maxiter=fixef_maxiter,
-    )
-    _warn_if_experimental_torch_demeaner(demeaner)
-    _warn_if_deprecated_demeaner_backend(demeaner)
-    _warn_if_deprecated_solver(solver)
-
-    _estimation_input_checks(
+    # Thin wrapper: fepois is exactly feglm(family="poisson").
+    return feglm(
         fml=fml,
         data=data,
+        family="poisson",
         vcov=vcov,
         vcov_kwargs=vcov_kwargs,
         weights=weights,
-        ssc=ssc,
-        fixef_rm=fixef_rm,
-        collin_tol=collin_tol,
-        copy_data=copy_data,
-        store_data=store_data,
-        lean=lean,
         weights_type=weights_type,
-        use_compression=False,
-        reps=None,
-        seed=None,
-        split=split,
-        fsplit=fsplit,
-        separation_check=separation_check,
-    )
-
-    fixest = FixestMulti(
-        data=data,
-        copy_data=copy_data,
-        store_data=store_data,
-        lean=lean,
-        weights_type=weights_type,
-        use_compression=False,
-        reps=None,
-        seed=None,
-        split=split,
-        fsplit=fsplit,
-        context=context,
-    )
-
-    fixest._prepare_estimation(
-        estimation="fepois",
-        fml=fml,
-        vcov=vcov,
-        vcov_kwargs=vcov_kwargs,
-        weights=weights,
-        ssc=ssc,
-        fixef_rm=fixef_rm,
-        drop_intercept=drop_intercept,
         offset=offset,
-    )
-    if fixest._is_iv:
-        raise NotImplementedError(
-            "IV Estimation is not supported for Poisson Regression"
-        )
-
-    fixest._estimate_all_models(
-        vcov=vcov,
-        solver=solver,
-        vcov_kwargs=vcov_kwargs,
+        ssc=ssc,
+        fixef_rm=fixef_rm,
         iwls_tol=iwls_tol,
         iwls_maxiter=iwls_maxiter,
         collin_tol=collin_tol,
         separation_check=separation_check,
+        solver=solver,
         demeaner=demeaner,
+        drop_intercept=drop_intercept,
+        copy_data=copy_data,
+        store_data=store_data,
+        lean=lean,
+        context=context,
+        split=split,
+        fsplit=fsplit,
     )
-
-    if fixest._is_multiple_estimation:
-        return fixest
-    else:
-        return fixest.fetch_model(0, print_fml=False)

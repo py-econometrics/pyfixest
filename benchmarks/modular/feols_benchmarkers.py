@@ -52,22 +52,6 @@ class TorchRuntimeAvailability:
     has_cuda: bool
 
 
-@dataclass(frozen=True)
-class CupyRuntimeAvailability:
-    """Runtime availability of optional cupy benchmark targets."""
-
-    has_cupy: bool
-    has_cuda: bool
-
-
-@dataclass(frozen=True)
-class JaxRuntimeAvailability:
-    """Runtime availability of optional jax benchmark targets."""
-
-    has_jax: bool
-    has_gpu: bool
-
-
 def detect_torch_runtime_availability() -> TorchRuntimeAvailability:
     """Detect whether torch and optional accelerator backends are available."""
     try:
@@ -84,52 +68,6 @@ def detect_torch_runtime_availability() -> TorchRuntimeAvailability:
     return TorchRuntimeAvailability(
         has_torch=True,
         has_mps=has_mps,
-        has_cuda=has_cuda,
-    )
-
-
-def detect_jax_runtime_availability() -> JaxRuntimeAvailability:
-    """Detect whether jax and a GPU runtime are available."""
-    try:
-        import jax
-    except ImportError:
-        return JaxRuntimeAvailability(
-            has_jax=False,
-            has_gpu=False,
-        )
-
-    try:
-        gpu_platforms = {"gpu", "cuda", "rocm", "metal"}
-        has_gpu = any(
-            getattr(device, "platform", "").lower() in gpu_platforms
-            for device in jax.devices()
-        )
-    except Exception:
-        has_gpu = False
-
-    return JaxRuntimeAvailability(
-        has_jax=True,
-        has_gpu=has_gpu,
-    )
-
-
-def detect_cupy_runtime_availability() -> CupyRuntimeAvailability:
-    """Detect whether cupy and a CUDA runtime are available."""
-    try:
-        import cupy
-    except ImportError:
-        return CupyRuntimeAvailability(
-            has_cupy=False,
-            has_cuda=False,
-        )
-
-    try:
-        has_cuda = bool(cupy.cuda.runtime.getDeviceCount() > 0)
-    except Exception:
-        has_cuda = False
-
-    return CupyRuntimeAvailability(
-        has_cupy=True,
         has_cuda=has_cuda,
     )
 
@@ -234,6 +172,26 @@ def _normalize_vcov(vcov: str | dict[str, str]) -> str:
     return vcov
 
 
+def _demeaner_from_backend(backend: str, fixef_maxiter: int | None = None):
+    """Map a benchmark backend name to a typed demeaner configuration."""
+    import pyfixest as pf
+
+    kwargs = {} if fixef_maxiter is None else {"fixef_maxiter": fixef_maxiter}
+    if backend == "rust":
+        return pf.MapDemeaner(**kwargs)
+    if backend == "within":
+        return pf.LsmrDemeaner(**kwargs)
+    if backend == "torch_cpu":
+        return pf.LsmrDemeaner(backend="torch", device="cpu", **kwargs)
+    if backend == "torch_mps":
+        return pf.LsmrDemeaner(
+            backend="torch", device="mps", precision="float32", **kwargs
+        )
+    if backend == "torch_cuda":
+        return pf.LsmrDemeaner(backend="torch", device="cuda", **kwargs)
+    raise ValueError(f"Unknown demeaner backend: {backend!r}")
+
+
 class PyFeolsBenchmarkerFullApi:
     """Benchmark pf.feols() end-to-end using one configured demeaner backend."""
 
@@ -250,6 +208,11 @@ class PyFeolsBenchmarkerFullApi:
         self, datasets: list[BenchmarkDataset], spec: FeolsSpec
     ) -> list[FeolsResult]:
         import pyfixest as pf
+
+        feols_kwargs = dict(self._feols_kwargs)
+        demeaner = _demeaner_from_backend(
+            self._demeaner_backend, feols_kwargs.pop("fixef_maxiter", None)
+        )
 
         results: list[FeolsResult] = []
 
@@ -285,8 +248,8 @@ class PyFeolsBenchmarkerFullApi:
                         vcov=spec.vcov,
                         copy_data=False,
                         store_data=False,
-                        demeaner_backend=self._demeaner_backend,
-                        **self._feols_kwargs,
+                        demeaner=demeaner,
+                        **feols_kwargs,
                     )
                 elapsed = time.perf_counter() - t0
 

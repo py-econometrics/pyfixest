@@ -1,7 +1,18 @@
+from typing import Literal, get_args
+
 import numpy as np
 from numpy.typing import NDArray
 
-from ._core_impl import _demean_rs, _demean_within_rs
+from ._core_impl import Preconditioner, _demean_rs, _demean_within_rs
+
+WithinPreconditionerName = Literal["additive", "off", "diagonal"]
+
+__all__ = [
+    "Preconditioner",
+    "WithinPreconditionerName",
+    "demean",
+    "demean_within",
+]
 
 
 def demean(
@@ -27,9 +38,9 @@ def demean(
     weights : numpy.ndarray
         Array of shape (n_samples,) specifying the weights.
     tol : float, optional
-        Tolerance criterion for convergence. Defaults to 1e-08.
+        Tolerance criterion for convergence. Defaults to 1e-06.
     maxiter : int, optional
-        Maximum number of iterations. Defaults to 100_000.
+        Maximum number of iterations. Defaults to 10_000.
 
     Returns
     -------
@@ -43,7 +54,7 @@ def demean(
     import numpy as np
     import pyfixest as pf
     from pyfixest.utils.dgps import get_blw
-    from pyfixest.estimation.internals.demean_ import demean
+    from pyfixest.estimation import demean
     from formulaic import model_matrix
 
     fml = "y ~ treat | state + year"
@@ -82,22 +93,21 @@ def demean(
 def demean_within(
     x: NDArray[np.float64],
     flist: NDArray[np.uint32],
-    weights: NDArray[np.float64],
-    tol: float = 1e-06,
+    weights: NDArray[np.float64] | None = None,
+    tol: float = 1e-08,
     maxiter: int = 1_000,
-    krylov: str = "cg",
-    preconditioner: str = "additive",
-    gmres_restart: int = 30,
-) -> tuple[NDArray, bool]:
+    local_size: int | None = None,
+    preconditioner: WithinPreconditionerName | Preconditioner = "additive",
+) -> tuple[NDArray, bool, Preconditioner | None]:
     """
-    Demean an array using Krylov solvers and Schwarz preconditioning via `within`.
+    Demean an array using modified LSMR via `within`.
 
-    Uses Krylov-based solvers with Schwarz preconditioning. Converges faster
-    than alternating projections on weakly-connected or block-diagonal
-    fixed-effect structures.
+    Uses `within`'s modified LSMR solver with additive Schwarz preconditioning.
+    This backend is designed to be fast for sparse / poorly connected fixed effect
+    structures, where the method of alternating projections (MAP) can struggle.
 
     For single fixed effects, falls back to alternating projections (``_demean_rs``)
-    because the CG/Schwarz preconditioner is designed for multi-way FE problems.
+    because the sparse iterative solver is designed for multi-way FE problems.
 
     Parameters
     ----------
@@ -106,41 +116,81 @@ def demean_within(
     flist : numpy.ndarray
         Array of shape (n_samples, n_factors) specifying the fixed effects
         (integer-encoded).
-    weights : numpy.ndarray
-        Array of shape (n_samples,) specifying the weights.
+    weights : numpy.ndarray or None, optional
+        Array of shape (n_samples,) specifying observation weights.
     tol : float, optional
-        Convergence tolerance. Defaults to 1e-06.
+        Convergence tolerance. Defaults to 1e-08.
     maxiter : int, optional
-        Maximum number of Krylov iterations. Defaults to 1_000.
-    krylov : {"cg", "gmres"}, optional
-        Krylov solver used for multi-way fixed effects. Defaults to ``"cg"``.
-    preconditioner : {"additive", "multiplicative", "off"}, optional
-        Schwarz preconditioner used for multi-way fixed effects. ``"off"``
-        disables preconditioning.
-        Defaults to ``"additive"``.
-    gmres_restart : int, optional
-        Restart dimension when ``krylov="gmres"``. Ignored for CG.
+        Maximum number of LSMR iterations. Defaults to 1_000.
+    local_size : int or None, optional
+        Numerical-stability knob for the LSMR solver. ``None`` (default) is
+        usually fine and is the fastest setting. Try a small integer
+        (typically ``5`` to ``20``) if the solver fails to converge on a
+        numerically difficult problem — for example, fixed effects with
+        very unequal group sizes, near-collinear factors, or extreme
+        weights. Larger values are more numerically robust but use more
+        memory: the solver keeps ``local_size`` extra working vectors,
+        each the length of the total fixed-effect coefficient count,
+        and twice that many when a preconditioner is active. Under the
+        hood this enables windowed Gram-Schmidt reorthogonalization
+        inside LSMR's bidiagonalization.
+    preconditioner : {"additive", "off", "diagonal"} or Preconditioner, optional
+        Preconditioner choice for `within`'s LSMR solver. ``"additive"``
+        (default) uses additive Schwarz preconditioning; ``"off"`` disables
+        preconditioning; ``"diagonal"`` uses a diagonal (Jacobi) preconditioner.
+        Preconditioners are only computed and applied
+        for two or more fixed-effect factors; single-factor problems use
+        MAP and do not use a preconditioner. Alternatively, you can
+        pass a previously-built :class:`Preconditioner` and reuse it for
+        the current problem.
+        If the computation of the pre-conditioner takes a long time, this can
+        speed up subsequent calls to ``demean_within`` with the same fixed effect structure.
 
     Returns
     -------
-    tuple[numpy.ndarray, bool]
-        Demeaned array and convergence flag.
+    tuple[numpy.ndarray, bool, Preconditioner | None]
+        The demeaned array, a convergence flag, and the preconditioner used
+        during the solve (additive Schwarz for ``preconditioner="additive"``,
+        diagonal for ``"diagonal"``, or an equivalent object for a
+        user-supplied preconditioner). This low-level helper does not
+        preserve Python object identity for user-supplied preconditioners.
+        The preconditioner is ``None`` when none was constructed or applied —
+        i.e. when ``preconditioner="off"`` or the single-factor MAP fallback
+        path was taken.
     """
+    _valid_names = get_args(WithinPreconditionerName)
+    _valid_str = ", ".join(repr(n) for n in _valid_names)
+    if isinstance(preconditioner, Preconditioner):
+        pass
+    elif not isinstance(preconditioner, str):
+        raise TypeError(
+            f"`preconditioner` must be {_valid_str}, or a Preconditioner instance."
+        )
+    elif preconditioner not in _valid_names:
+        raise ValueError(
+            f"preconditioner={preconditioner!r} is not supported by the 'within' "
+            f"LSMR backend; use {_valid_str}, or a Preconditioner instance."
+        )
+
     if flist.ndim == 1 or flist.shape[1] == 1:
-        return _demean_rs(
+        flist_2d = flist.reshape(-1, 1) if flist.ndim == 1 else flist
+        demeaned, success = _demean_rs(
             x.astype(np.float64, copy=False),
-            flist.astype(np.uint64, copy=False),
-            weights.astype(np.float64, copy=False),
+            flist_2d.astype(np.uint64, copy=False),
+            weights.astype(np.float64, copy=False)
+            if weights is not None
+            else np.ones(x.shape[0], dtype=np.float64),
             tol,
             maxiter,
         )
+        return demeaned, success, None
+
     return _demean_within_rs(
         x.astype(np.float64, copy=False),
         np.asfortranarray(flist, dtype=np.uint32),
-        weights.astype(np.float64, copy=False).reshape(-1),
+        weights.astype(np.float64, copy=False) if weights is not None else None,
         tol,
         maxiter,
-        krylov,
+        local_size,
         preconditioner,
-        gmres_restart,
     )

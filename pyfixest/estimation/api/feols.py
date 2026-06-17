@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import warnings
 from collections.abc import Mapping
 from typing import Any
 
@@ -10,7 +9,6 @@ from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.internals.demeaner_options import (
     _resolve_demeaner,
     _warn_if_deprecated_demeaner_backend,
-    _warn_if_deprecated_solver,
     _warn_if_experimental_torch_demeaner,
 )
 from pyfixest.estimation.internals.literals import (
@@ -41,9 +39,6 @@ def feols(
     weights_type: WeightsTypeOptions = "aweights",
     solver: SolverOptions = "scipy.linalg.solve",
     demeaner: AnyDemeaner | None = None,
-    demeaner_backend: str | None = None,
-    fixef_tol: float | None = None,
-    fixef_maxiter: int | None = None,
     use_compression: bool = False,
     reps: int = 100,
     context: int | Mapping[str, Any] | None = None,
@@ -136,51 +131,36 @@ def feols(
 
     solver : SolverOptions, optional.
         The solver to use for the regression. Can be "np.linalg.lstsq",
-        "np.linalg.solve", "scipy.linalg.solve", "scipy.sparse.linalg.lsqr" and "jax".
+        "np.linalg.solve", "scipy.linalg.solve" and "scipy.sparse.linalg.lsqr".
         Defaults to "scipy.linalg.solve".
-
-        .. deprecated::
-            ``solver="jax"`` is deprecated and will be removed in a future
-            release. Use one of the NumPy/SciPy solvers instead; for GPU
-            acceleration, see ``LsmrDemeaner(backend="torch", device="cuda")``.
 
     demeaner : AnyDemeaner | None, optional
         Typed demeaner configuration. Controls the fixed-effects demeaning
-        backend, tolerance, and iteration limits. Accepts a `MapDemeaner`,
-        `WithinDemeaner`, or `LsmrDemeaner` instance. Defaults to
-        `MapDemeaner()` (numba MAP algorithm, tol=1e-6, maxiter=10_000).
+        backend, tolerance, and iteration limits. Accepts a `MapDemeaner`
+        or `LsmrDemeaner` instance. Defaults to
+        `MapDemeaner()` (Rust MAP algorithm, tol=1e-6, maxiter=10_000).
+        For other options - including the optional Numba backend and the
+        torch-based LSMR backends - see the
+        [Demeaner Backends vignette](../../how-to/demeaner-backends.qmd).
 
         .. deprecated::
-            The ``jax`` MAP backend and the ``cupy``/``scipy`` LSMR backends
-            are deprecated and will be removed in a future release. Use
-            ``MapDemeaner()`` for dense fixed-effects problems,
-            ``WithinDemeaner()`` (additive Schwarz with conjugate gradient)
-            for difficult/sparse problems, and
-            ``LsmrDemeaner(backend="torch", device="cuda")`` for GPU
-            acceleration.
+            The ``cupy`` / ``scipy`` LSMR backends are deprecated and will
+            be removed in a future release. Replacements:
+
+            - cupy LSMR on GPU →
+              ``LsmrDemeaner(backend="torch", device="cuda")``.
+            - Scipy / cupy LSMR on CPU → ``LsmrDemeaner()``
+              (the default within backend).
 
     use_compression: bool
         .. deprecated::
-            ``use_compression`` is deprecated and will be removed in a future release.
-            For out-of-memory regression on large datasets, consider using the
+            ``use_compression`` is deprecated and no longer supported. Passing
+            ``use_compression=True`` raises a ``NotImplementedError``. For
+            out-of-memory regression on large datasets, consider using the
             `duckreg <https://github.com/py-econometrics/duckreg>`_ package instead.
 
-        Whether to use sufficient statistics to losslessly fit the regression model
-        on compressed data. False by default. If True, the model is estimated on
-        compressed data, which can lead to a significant speed-up for large data sets.
-        See the paper by Wong et al (2021) for more details https://arxiv.org/abs/2102.11297.
-        Note that if `use_compression = True`, inference is lossless. If standard errors are
-        clustered, a wild cluster bootstrap is employed. Parameters for the wild bootstrap
-        can be specified via the `reps` and `seed` arguments. Additionally, note that for one-way
-        fixed effects, the estimation method uses a Mundlak transform to "control" for the
-        fixed effects. For two-way fixed effects, a two-way Mundlak transform is employed.
-        For two-way fixed effects, the Mundlak transform is only identical to a two-way
-        fixed effects model if the data set is a panel. We do not provide any checks for the
-        panel status of the data set.
-
     reps: int
-        Number of bootstrap repetitions. Only relevant for boostrap inference applied to
-        compute cluster robust errors when `use_compression = True`.
+        Deprecated legacy argument for compressed regression bootstrap inference.
 
     context : int or Mapping[str, Any]
         A dictionary containing additional context variables to be used by
@@ -189,8 +169,7 @@ def feols(
         variables that need to be available in the formula environment.
 
     seed: Optional[int]
-        Seed for the random number generator. Only relevant for boostrap inference applied to
-        compute cluster robust errors when `use_compression = True`.
+        Deprecated legacy argument for compressed regression bootstrap inference.
 
     split: Optional[str]
         A character string, i.e. 'split = var'. If provided, the sample is split according to the
@@ -508,27 +487,12 @@ def feols(
     if ssc is None:
         ssc = ssc_func()
     context = {} if context is None else capture_context(context)
-    demeaner = _resolve_demeaner(
-        demeaner=demeaner,
-        demeaner_backend=demeaner_backend,
-        fixef_tol=fixef_tol,
-        fixef_maxiter=fixef_maxiter,
-    )
+    demeaner = _resolve_demeaner(demeaner)
     _warn_if_experimental_torch_demeaner(demeaner)
     _warn_if_deprecated_demeaner_backend(demeaner)
-    _warn_if_deprecated_solver(solver)
 
-    if use_compression:
-        warnings.warn(
-            (
-                "The `use_compression` argument is deprecated and will be removed in a future release. "
-                "For out-of-memory regression on large datasets, consider using the "
-                "`duckreg` package (https://github.com/py-econometrics/duckreg) instead. "
-                "See https://github.com/py-econometrics/pyfixest/issues/1302 for context."
-            ),
-            DeprecationWarning,
-            stacklevel=2,
-        )
+    if not isinstance(use_compression, bool):
+        raise TypeError("The function argument `use_compression` must be of type bool.")
 
     _estimation_input_checks(
         fml=fml,
@@ -543,12 +507,19 @@ def feols(
         store_data=store_data,
         lean=lean,
         weights_type=weights_type,
-        use_compression=use_compression,
         reps=reps,
         seed=seed,
         split=split,
         fsplit=fsplit,
     )
+
+    if use_compression:
+        raise NotImplementedError(
+            "The `use_compression` argument is deprecated and no longer supported. "
+            "The compressed regression and Mundlak implementation has been removed. "
+            "For out-of-memory regression on large datasets, consider using the "
+            "`duckreg` package (https://github.com/py-econometrics/duckreg) instead."
+        )
 
     fixest = FixestMulti(
         data=data,
@@ -556,18 +527,14 @@ def feols(
         store_data=store_data,
         lean=lean,
         weights_type=weights_type,
-        use_compression=use_compression,
-        reps=reps,
         seed=seed,
         split=split,
         fsplit=fsplit,
         context=context,
     )
 
-    estimation = "feols" if not use_compression else "compression"
-
     fixest._prepare_estimation(
-        estimation=estimation,
+        estimation="feols",
         fml=fml,
         vcov=vcov,
         vcov_kwargs=vcov_kwargs,

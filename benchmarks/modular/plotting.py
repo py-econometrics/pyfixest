@@ -95,35 +95,35 @@ _AKM_SWEEP_TICK_LABELS = {
 }
 _README_BACKENDS = (
     "pyfixest (rust-map)",
-    "pyfixest (rust-cg)",
+    "pyfixest (within)",
     "pyfixest (torch-cuda)",
     "fixest-map",
     "FEM.jl (lsmr)",
 )
 _README_BACKEND_LABELS = {
     "pyfixest (rust-map)": "PyFixest MAP",
-    "pyfixest (rust-cg)": "PyFixest within",
+    "pyfixest (within)": "PyFixest within",
     "pyfixest (torch-cuda)": "PyFixest torch GPU",
     "fixest-map": "fixest",
     "FEM.jl (lsmr)": "FixedEffectModels.jl",
 }
 _README_DIRECT_LABELS = {
     "pyfixest (rust-map)": "MAP",
-    "pyfixest (rust-cg)": "within",
+    "pyfixest (within)": "within",
     "pyfixest (torch-cuda)": "torch GPU",
     "fixest-map": "fixest",
     "FEM.jl (lsmr)": "FEM.jl",
 }
 _README_DIRECT_LABEL_YOFFSETS = {
     "pyfixest (rust-map)": 1.0,
-    "pyfixest (rust-cg)": 0.66,
+    "pyfixest (within)": 0.66,
     "pyfixest (torch-cuda)": 1.12,
     "fixest-map": 0.82,
     "FEM.jl (lsmr)": 1.24,
 }
 _README_BACKEND_STYLES = {
     "pyfixest (rust-map)": {"color": "#047857", "marker": "o"},
-    "pyfixest (rust-cg)": {"color": "#16A34A", "marker": "s"},
+    "pyfixest (within)": {"color": "#16A34A", "marker": "s"},
     "pyfixest (torch-cuda)": {"color": "#65A30D", "marker": "P"},
     "fixest-map": {"color": "#2563EB", "marker": "^"},
     "FEM.jl (lsmr)": {"color": "#EAB308", "marker": "D"},

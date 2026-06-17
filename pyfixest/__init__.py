@@ -11,8 +11,8 @@ __all__ = [
     "BaseDemeaner",
     "LsmrDemeaner",
     "MapDemeaner",
+    "Preconditioner",
     "SaturatedEventStudy",
-    "WithinDemeaner",
     "bonferroni",
     "coefplot",
     "did",
@@ -60,8 +60,8 @@ _lazy_imports = {
     # demeaner configs
     "BaseDemeaner": "pyfixest.demeaners",
     "MapDemeaner": "pyfixest.demeaners",
-    "WithinDemeaner": "pyfixest.demeaners",
     "LsmrDemeaner": "pyfixest.demeaners",
+    "Preconditioner": "pyfixest.core.demean",
     # estimation - other functions (still use parent module + getattr)
     "bonferroni": "pyfixest.estimation",
     "rwolf": "pyfixest.estimation",

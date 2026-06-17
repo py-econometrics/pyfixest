@@ -9,13 +9,15 @@ from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.internals.demeaner_options import (
     _resolve_demeaner,
     _warn_if_deprecated_demeaner_backend,
-    _warn_if_deprecated_solver,
     _warn_if_experimental_torch_demeaner,
 )
 from pyfixest.estimation.internals.literals import (
+    FamilyOptions,
     FixedRmOptions,
     SolverOptions,
     VcovTypeOptions,
+    WeightsTypeOptions,
+    _validate_literal_argument,
 )
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.models.fepois_ import Fepois
@@ -27,9 +29,12 @@ from pyfixest.utils.utils import ssc as ssc_func
 def feglm(
     fml: str,
     data: DataFrameType,  # type: ignore
-    family: str,
+    family: FamilyOptions,
     vcov: VcovTypeOptions | dict[str, str] | None = None,
     vcov_kwargs: dict[str, str | int] | None = None,
+    weights: str | None = None,
+    weights_type: WeightsTypeOptions = "aweights",
+    offset: str | None = None,
     ssc: dict[str, str | bool] | None = None,
     fixef_rm: FixedRmOptions = "singleton",
     iwls_tol: float = 1e-08,
@@ -38,9 +43,6 @@ def feglm(
     separation_check: list[str] | None = None,
     solver: SolverOptions = "scipy.linalg.solve",
     demeaner: AnyDemeaner | None = None,
-    demeaner_backend: str | None = None,
-    fixef_tol: float | None = None,
-    fixef_maxiter: int | None = None,
     drop_intercept: bool = False,
     copy_data: bool = True,
     store_data: bool = True,
@@ -55,7 +57,8 @@ def feglm(
 
     Supported families: [logit](/reference/estimation.models.felogit_.Felogit.qmd),
     [probit](/reference/estimation.models.feprobit_.Feprobit.qmd),
-    [gaussian](/reference/estimation.models.fegaussian_.Fegaussian.qmd).
+    [gaussian](/reference/estimation.models.fegaussian_.Fegaussian.qmd),
+    and [poisson](/reference/estimation.models.fepois_.Fepois.qmd).
 
     References
     ----------
@@ -87,7 +90,9 @@ def feglm(
         A pandas or polars dataframe containing the variables in the formula.
 
     family : str
-        The family of the GLM model. Options include "gaussian", "logit" and "probit".
+        The family of the GLM model. Options include "gaussian", "logit", "probit",
+        and "poisson". Passing "poisson" produces the same result as calling
+        `pyfixest.fepois()`.
 
     vcov : Union[VcovTypeOptions, dict[str, str]]
         Type of variance-covariance matrix for inference. Options include "iid",
@@ -103,6 +108,19 @@ def feglm(
         "time_id" for the time ID used for NW and DK standard errors, and "panel_id" for the panel
          identifier used for NW and DK standard errors. Currently, the the time difference between consecutive time
          periods is always treated as 1. More flexible time-step selection is work in progress.
+
+    weights : Union[None, str], optional
+        Default is None. Name of the column in `data` to be used as observation
+        weights. When supplied, IRLS minimizes the weighted deviance.
+
+    weights_type : WeightsTypeOptions, optional
+        Type of weights variable. Either "aweights" (analytic / precision
+        weights) or "fweights" (frequency weights). Defaults to "aweights".
+
+    offset : Union[None, str], optional
+        Default is None. Name of a numeric column in `data` to use as an offset
+        on the link scale. Only supported with `family='poisson'`. For exposure
+        adjustments, pass the exposure on the log scale.
 
     ssc : str
         A ssc object specifying the small sample correction for inference.
@@ -129,28 +147,26 @@ def feglm(
 
     solver : SolverOptions, optional.
         The solver to use for the regression. Can be "np.linalg.lstsq",
-        "np.linalg.solve", "scipy.linalg.solve", "scipy.sparse.linalg.lsqr" and "jax".
+        "np.linalg.solve", "scipy.linalg.solve" and "scipy.sparse.linalg.lsqr".
         Defaults to "scipy.linalg.solve".
-
-        .. deprecated::
-            ``solver="jax"`` is deprecated and will be removed in a future
-            release. Use one of the NumPy/SciPy solvers instead; for GPU
-            acceleration, see ``LsmrDemeaner(backend="torch", device="cuda")``.
 
     demeaner : AnyDemeaner | None, optional
         Typed demeaner configuration. Controls the fixed-effects demeaning
-        backend, tolerance, and iteration limits. Accepts a `MapDemeaner`,
-        `WithinDemeaner`, or `LsmrDemeaner` instance. Defaults to
-        `MapDemeaner()` (numba MAP algorithm, tol=1e-6, maxiter=10_000).
+        backend, tolerance, and iteration limits. Accepts a `MapDemeaner`
+        or `LsmrDemeaner` instance. Defaults to
+        `MapDemeaner()` (Rust MAP algorithm, tol=1e-6, maxiter=10_000).
+        For other options - including the optional Numba backend and the
+        torch-based LSMR backends - see the
+        [Demeaner Backends vignette](../../how-to/demeaner-backends.qmd).
 
         .. deprecated::
-            The ``jax`` MAP backend and the ``cupy``/``scipy`` LSMR backends
-            are deprecated and will be removed in a future release. Use
-            ``MapDemeaner()`` for dense fixed-effects problems,
-            ``WithinDemeaner()`` (additive Schwarz with conjugate gradient)
-            for difficult/sparse problems, and
-            ``LsmrDemeaner(backend="torch", device="cuda")`` for GPU
-            acceleration.
+            The ``cupy`` / ``scipy`` LSMR backends are deprecated and will
+            be removed in a future release. Replacements:
+
+            - cupy LSMR on GPU →
+              ``LsmrDemeaner(backend="torch", device="cuda")``.
+            - Scipy / cupy LSMR on CPU → ``LsmrDemeaner()``
+              (the default within backend).
 
     drop_intercept : bool, optional
         Whether to drop the intercept from the model, by default False.
@@ -252,29 +268,21 @@ def feglm(
     for a compact post-estimation workflow.
 
     """
-    if family not in ["logit", "probit", "gaussian"]:
+    _validate_literal_argument(family, FamilyOptions)
+    if offset is not None and family != "poisson":
         raise ValueError(
-            f"Only families 'gaussian', 'logit' and 'probit'are supported but you asked for {family}."
+            "The `offset` argument is only supported with `family='poisson'`."
         )
 
     if separation_check is None:
         separation_check = ["fe"]
     if ssc is None:
         ssc = ssc_func()
-    # WLS currently not supported for GLM regression
-    weights = None
-    weights_type = "aweights"
 
     context = {} if context is None else capture_context(context)
-    demeaner = _resolve_demeaner(
-        demeaner=demeaner,
-        demeaner_backend=demeaner_backend,
-        fixef_tol=fixef_tol,
-        fixef_maxiter=fixef_maxiter,
-    )
+    demeaner = _resolve_demeaner(demeaner)
     _warn_if_experimental_torch_demeaner(demeaner)
     _warn_if_deprecated_demeaner_backend(demeaner)
-    _warn_if_deprecated_solver(solver)
 
     _estimation_input_checks(
         fml=fml,
@@ -289,7 +297,6 @@ def feglm(
         store_data=store_data,
         lean=lean,
         weights_type=weights_type,
-        use_compression=False,
         reps=None,
         seed=None,
         split=split,
@@ -303,29 +310,30 @@ def feglm(
         store_data=store_data,
         lean=lean,
         weights_type=weights_type,
-        use_compression=False,
-        reps=None,
         seed=None,
         split=split,
         fsplit=fsplit,
         context=context,
     )
 
-    # same checks as for Poisson regression
-    fixest._prepare_estimation(
-        estimation=f"feglm-{family}",
-        fml=fml,
-        vcov=vcov,
-        vcov_kwargs=vcov_kwargs,
-        weights=weights,
-        ssc=ssc,
-        fixef_rm=fixef_rm,
-        drop_intercept=drop_intercept,
-    )
+    # Poisson goes through the Fepois model class (which is a Feglm subclass);
+    # other families dispatch to their dedicated feglm-{family} model class.
+    estimation = "fepois" if family == "poisson" else f"feglm-{family}"
+    prepare_kwargs: dict[str, Any] = {
+        "estimation": estimation,
+        "fml": fml,
+        "vcov": vcov,
+        "vcov_kwargs": vcov_kwargs,
+        "weights": weights,
+        "ssc": ssc,
+        "fixef_rm": fixef_rm,
+        "drop_intercept": drop_intercept,
+    }
+    if family == "poisson":
+        prepare_kwargs["offset"] = offset
+    fixest._prepare_estimation(**prepare_kwargs)
     if fixest._is_iv:
-        raise NotImplementedError(
-            "IV Estimation is not supported for Poisson Regression"
-        )
+        raise NotImplementedError("IV estimation is not supported for GLMs.")
 
     fixest._estimate_all_models(
         vcov=vcov,

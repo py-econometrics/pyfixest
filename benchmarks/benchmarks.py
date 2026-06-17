@@ -16,27 +16,6 @@ from pathlib import Path
 
 import pandas as pd
 
-
-def _detect_jax_gpu_availability() -> bool:
-    """Detect whether jax is installed and a GPU backend is usable."""
-    try:
-        import jax
-    except ImportError:
-        return False
-
-    try:
-        gpu_platforms = {"gpu", "cuda", "rocm", "metal"}
-        return any(
-            getattr(device, "platform", "").lower() in gpu_platforms
-            for device in jax.devices()
-        )
-    except Exception:
-        return False
-
-
-# Optional JAX GPU availability detection
-HAS_JAX = _detect_jax_gpu_availability()
-
 # Optional torch availability detection
 try:
     import torch
@@ -49,27 +28,15 @@ except ImportError:
     HAS_MPS = False
     HAS_CUDA = False
 
-# Optional CuPy availability detection
-try:
-    import cupy
-
-    HAS_CUPY = cupy.cuda.runtime.getDeviceCount() > 0
-except (ImportError, Exception):
-    HAS_CUPY = False
-
 # Backends that accept a backend= argument when called through pyfixest runners
 _PYFIXEST_BACKENDS = {
-    "scipy",
     "numba",
     "rust",
-    "jax",
+    "within",
     "torch_cpu",
     "torch_mps",
     "torch_cuda",
     "torch_cuda32",
-    "cupy",
-    "cupy32",
-    "cupy64",
 }
 
 # =============================================================================
@@ -80,8 +47,6 @@ _PYFIXEST_BACKENDS = {
 def _append_optional_backends(estimators, label_prefix, runner_func, func_name):
     """Append optional accelerator backend estimators based on runtime availability."""
     optional = []
-    if HAS_JAX:
-        optional.append(("jax", "jax"))
     if HAS_TORCH:
         optional.append(("torch_cpu", "torch_cpu"))
     if HAS_MPS:
@@ -89,9 +54,6 @@ def _append_optional_backends(estimators, label_prefix, runner_func, func_name):
     if HAS_CUDA:
         optional.append(("torch_cuda", "torch_cuda"))
         optional.append(("torch_cuda32", "torch_cuda32"))
-    if HAS_CUPY:
-        optional.append(("cupy64", "cupy64"))
-        optional.append(("cupy32", "cupy32"))
     for suffix, backend in optional:
         estimators.append(
             (f"{label_prefix} ({suffix})", backend, runner_func, False, func_name)
@@ -107,14 +69,10 @@ def _make_demeaner(backend: str):
     """Create a typed demeaner from a backend name string."""
     import pyfixest as pf
 
-    if backend in {"numba", "rust", "jax"}:
+    if backend in {"numba", "rust"}:
         return pf.MapDemeaner(backend=backend)
-    if backend in {"rust-cg", "within"}:
-        return pf.WithinDemeaner()
-    if backend == "cupy":
-        return pf.LsmrDemeaner(backend="cupy", device="cuda")
-    if backend == "scipy":
-        return pf.LsmrDemeaner(backend="cupy", device="cpu")
+    if backend == "within":
+        return pf.LsmrDemeaner()
     raise ValueError(f"Unknown backend {backend!r}")
 
 
@@ -297,13 +255,6 @@ def get_estimators(
     if benchmark_type == "ols":
         estimators = [
             (
-                "pyfixest.feols (scipy)",
-                "scipy",
-                run_pyfixest_feols,
-                False,
-                "pyfixest_feols",
-            ),
-            (
                 "pyfixest.feols (numba)",
                 "numba",
                 run_pyfixest_feols,
@@ -313,6 +264,13 @@ def get_estimators(
             (
                 "pyfixest.feols (rust)",
                 "rust",
+                run_pyfixest_feols,
+                False,
+                "pyfixest_feols",
+            ),
+            (
+                "pyfixest.feols (within)",
+                "within",
                 run_pyfixest_feols,
                 False,
                 "pyfixest_feols",
@@ -344,13 +302,6 @@ def get_estimators(
     elif benchmark_type == "poisson":
         estimators = [
             (
-                "pyfixest.fepois (scipy)",
-                "scipy",
-                run_pyfixest_fepois,
-                False,
-                "pyfixest_fepois",
-            ),
-            (
                 "pyfixest.fepois (numba)",
                 "numba",
                 run_pyfixest_fepois,
@@ -360,6 +311,13 @@ def get_estimators(
             (
                 "pyfixest.fepois (rust)",
                 "rust",
+                run_pyfixest_fepois,
+                False,
+                "pyfixest_fepois",
+            ),
+            (
+                "pyfixest.fepois (within)",
+                "within",
                 run_pyfixest_fepois,
                 False,
                 "pyfixest_fepois",
@@ -375,13 +333,6 @@ def get_estimators(
     elif benchmark_type == "logit":
         estimators = [
             (
-                "pyfixest.feglm_logit (scipy)",
-                "scipy",
-                run_pyfixest_feglm_logit,
-                False,
-                "pyfixest_feglm_logit",
-            ),
-            (
                 "pyfixest.feglm_logit (numba)",
                 "numba",
                 run_pyfixest_feglm_logit,
@@ -391,6 +342,13 @@ def get_estimators(
             (
                 "pyfixest.feglm_logit (rust)",
                 "rust",
+                run_pyfixest_feglm_logit,
+                False,
+                "pyfixest_feglm_logit",
+            ),
+            (
+                "pyfixest.feglm_logit (within)",
+                "within",
                 run_pyfixest_feglm_logit,
                 False,
                 "pyfixest_feglm_logit",
@@ -654,7 +612,7 @@ def main():
         "--backends",
         type=str,
         default=None,
-        help="Comma-separated list of backends to run (e.g., 'torch_cuda,torch_cuda32,cupy64,cupy32')",
+        help="Comma-separated list of backends to run (e.g., 'torch_cuda,torch_cuda32')",
     )
     args = parser.parse_args()
 

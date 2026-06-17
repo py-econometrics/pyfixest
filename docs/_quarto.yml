@@ -1,6 +1,8 @@
 project:
   type: website
   output-dir: _site
+  resources:
+    - CNAME
   render:
     - "*.qmd"
     - "*.ipynb"
@@ -140,7 +142,6 @@ quartodoc:
       contents:
         - demeaners.BaseDemeaner
         - demeaners.MapDemeaner
-        - demeaners.WithinDemeaner
         - demeaners.LsmrDemeaner
         - estimation.models.feols_.Feols
         - estimation.models.fepois_.Fepois
@@ -149,7 +150,6 @@ quartodoc:
         - estimation.models.felogit_.Felogit
         - estimation.models.feprobit_.Feprobit
         - estimation.models.fegaussian_.Fegaussian
-        - estimation.models.feols_compressed_.FeolsCompressed
         - estimation.FixestMulti_.FixestMulti
         - estimation.quantreg.quantreg_.Quantreg
         #- did.did.DID
@@ -177,7 +177,7 @@ quartodoc:
       desc: |
         PyFixest internals and utilities
       contents:
-        - estimation.internals.demean_.demean
+        - estimation.demean
         - core.detect_singletons.detect_singletons
         - utils.utils.ssc
         - utils.utils.get_ssc

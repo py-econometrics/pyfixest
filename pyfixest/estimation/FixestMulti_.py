@@ -7,6 +7,7 @@ from typing import Any
 
 import pandas as pd
 
+from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.api.utils import _ALL_SAMPLE, _AllSampleSentinel
 from pyfixest.estimation.formula.parse import Formula
@@ -17,6 +18,7 @@ from pyfixest.estimation.internals.literals import (
 )
 from pyfixest.estimation.internals.vcov_utils import _get_vcov_type
 from pyfixest.estimation.models.fegaussian_ import Fegaussian
+from pyfixest.estimation.models.feglm_ import Feglm
 from pyfixest.estimation.models.feiv_ import Feiv
 from pyfixest.estimation.models.felogit_ import Felogit
 from pyfixest.estimation.models.feols_ import (
@@ -24,7 +26,6 @@ from pyfixest.estimation.models.feols_ import (
     _check_vcov_input,
     _deparse_vcov_input,
 )
-from pyfixest.estimation.models.feols_compressed_ import FeolsCompressed
 from pyfixest.estimation.models.fepois_ import Fepois
 from pyfixest.estimation.models.feprobit_ import Feprobit
 from pyfixest.estimation.quantreg.quantreg_ import Quantreg
@@ -43,8 +44,6 @@ class FixestMulti:
         store_data: bool,
         lean: bool,
         weights_type: str,
-        use_compression: bool,
-        reps: int | None,
         seed: int | None,
         split: str | None,
         fsplit: str | None,
@@ -70,15 +69,8 @@ class FixestMulti:
             The type of weights employed in the estimation. Either analytical /
             precision weights are employed (`aweights`) or
             frequency weights (`fweights`).
-        use_compression: bool
-            Whether to use sufficient statistics to losslessly fit the regression model
-            on compressed data. False by default.
-        reps : int
-            The number of bootstrap iterations to run. Only relevant for wild cluster
-            bootstrap for use_compression=True.
         seed : Optional[int]
             Option to provide a random seed. Default is None.
-            Only relevant for wild cluster bootstrap for use_compression=True.
         separation_check: list[str], optional
             Only used in "fepois". Methods to identify and drop separated observations.
             Either "fe" or "ir". Executes both by default.
@@ -100,8 +92,6 @@ class FixestMulti:
         self._store_data = store_data
         self._lean = lean
         self._weights_type = weights_type
-        self._use_compression = use_compression
-        self._reps = reps
         self._seed = seed
         self._separation_check = separation_check
         self._context = capture_context(context)
@@ -277,7 +267,7 @@ class FixestMulti:
             Solver to use for the estimation.
         demeaner: Optional[AnyDemeaner]
             The typed demeaning strategy to use for the estimation. Not relevant
-            for the "compression" estimator and quantile regression.
+            for quantile regression.
         collin_tol : float, optional
             The tolerance level for the multicollinearity check. Default is 1e-6.
         iwls_maxiter : int, optional
@@ -313,9 +303,11 @@ class FixestMulti:
             for _, fval in enumerate(_fixef_keys):
                 fixef_key_models = FixestFormulaDict.get(fval)
 
-                # dictionary to cache demeaned data keyed by na_index,
-                # only relevant for `.feols()`
+                # dictionaries to cache demeaned data and within-LSMR
+                # preconditioners keyed by na_index, shared across all
+                # models in this formula block (not used by `.quantreg()`).
                 lookup_demeaned_data: dict[frozenset[int], pd.DataFrame] = {}
+                lookup_preconditioner: dict[frozenset[int], Preconditioner] = {}
 
                 for FixestFormula in fixef_key_models:  # type: ignore
                     # loop over both dictfe and dictfe_iv (if the latter is not None)
@@ -328,7 +320,6 @@ class FixestMulti:
                         | Fegaussian
                         | Felogit
                         | Feprobit
-                        | FeolsCompressed
                         | Quantreg
                         | QuantregMulti
                     )
@@ -362,6 +353,7 @@ class FixestMulti:
                         model_kwargs.update(
                             {
                                 "demeaner": demeaner,
+                                "lookup_preconditioner": lookup_preconditioner,
                             }
                         )
 
@@ -421,18 +413,9 @@ class FixestMulti:
                         ("feglm-logit", None): Felogit,
                         ("feglm-probit", None): Feprobit,
                         ("feglm-gaussian", None): Fegaussian,
-                        ("compression", None): FeolsCompressed,
                         ("quantreg", None): Quantreg,
                         ("quantreg_multi", None): QuantregMulti,
                     }
-
-                    if self._method == "compression":
-                        model_kwargs.update(
-                            {
-                                "reps": self._reps,
-                                "seed": self._seed,
-                            }
-                        )
 
                     model_key = (
                         (self._method, self._is_iv)
@@ -443,7 +426,7 @@ class FixestMulti:
                     FIT = ModelClass(**model_kwargs)
 
                     FIT.prepare_model_matrix()
-                    if isinstance(FIT, (Felogit, Feprobit, Fegaussian)):
+                    if isinstance(FIT, Feglm):
                         FIT._check_dependent_variable()
                     FIT.get_fit()
                     # if X is empty: no inference (empty X only as shorthand for demeaning)
