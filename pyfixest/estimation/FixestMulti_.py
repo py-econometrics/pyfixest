@@ -9,8 +9,6 @@ import pandas as pd
 from pyfixest.core.demean import Preconditioner
 from pyfixest.estimation.config import EstimationConfig
 from pyfixest.estimation.formula.parse import Formula
-from pyfixest.estimation.internals.vcov_utils import _get_vcov_type
-from pyfixest.estimation.models.feglm_ import Feglm
 from pyfixest.estimation.models.feiv_ import Feiv
 from pyfixest.estimation.models.feols_ import (
     Feols,
@@ -19,10 +17,10 @@ from pyfixest.estimation.models.feols_ import (
 )
 from pyfixest.estimation.models.fepois_ import Fepois
 from pyfixest.estimation.plan_ import (
-    MODEL_REGISTRY,
     _drop_singletons,
     build_all_splits,
     expand_specs,
+    fit_one,
 )
 from pyfixest.estimation.quantreg.QuantregMulti import QuantregMulti
 from pyfixest.utils.dev_utils import _narwhals_to_pandas
@@ -135,13 +133,10 @@ class FixestMulti:
     def _estimate_all_models(self) -> None:
         """Fit every model the user's call expands into.
 
-        We ask the planner for the full list of models to fit, then
-        loop over them and run construction, fitting, vcov, and
-        inference for each one. Adjacent models that share the same
-        sample split and fixed-effect keys reuse the demean and
-        preconditioner caches; when the cache key changes we just
-        start fresh. `vcov` and `vcov_kwargs` live on the config
-        because they're only needed once the model exists.
+        Thin orchestration: walks `expand_specs` output, resets the
+        demean / preconditioner caches on every cache-block change,
+        delegates each spec's fit to `fit_one`, and stores results
+        (fanning out `QuantregMulti` to its per-quantile models).
         """
         cfg = self._config
 
@@ -162,14 +157,6 @@ class FixestMulti:
             captured_context=self._context,
         )
 
-        vcov = cfg.vcov
-        vcov_kwargs = cfg.vcov_kwargs
-
-        # Cache-block tracking: lookup_demeaned_data and
-        # lookup_preconditioner are reused across every spec that
-        # shares a (sample_split_value, fixef_key). The planner
-        # emits specs in that order so transitions are detected by
-        # a simple identity check.
         _NO_CACHE_KEY: Any = object()
         prev_cache_key: Any = _NO_CACHE_KEY
         lookup_demeaned_data: dict[frozenset[int], pd.DataFrame] = {}
@@ -181,37 +168,13 @@ class FixestMulti:
                 lookup_preconditioner = {}
                 prev_cache_key = spec.cache_key
 
-            model_kwargs = dict(spec.model_kwargs)
-            model_kwargs["lookup_demeaned_data"] = lookup_demeaned_data
-            if "demeaner" in MODEL_REGISTRY[spec.method].needs:
-                model_kwargs["lookup_preconditioner"] = lookup_preconditioner
-
-            FIT = spec.model_cls(**model_kwargs)
-
-            FIT.prepare_model_matrix()
-            if isinstance(FIT, Feglm):
-                FIT._check_dependent_variable()
-            FIT.get_fit()
-            # if X is empty: no inference (empty X only as shorthand for demeaning)
-            if not FIT._X_is_empty:
-                vcov_type = _get_vcov_type(vcov)
-                FIT.vcov(
-                    vcov=vcov_type,
-                    vcov_kwargs=vcov_kwargs,
-                    data=FIT._data
-                    if not isinstance(FIT, QuantregMulti)
-                    else FIT.all_quantregs[FIT.quantiles[0]]._data,
-                )  # a little hacky, but works
-
-                FIT.get_inference()
-                if spec.method == "feols" and not FIT._is_iv:
-                    FIT.get_performance()
-                    if isinstance(FIT, Feols):
-                        FIT.wald_test()
-                if isinstance(FIT, Feiv):
-                    FIT.first_stage()
-            # delete large attributes
-            FIT._clear_attributes()
+            FIT = fit_one(
+                spec,
+                lookup_demeaned_data=lookup_demeaned_data,
+                lookup_preconditioner=lookup_preconditioner,
+                vcov=cfg.vcov,
+                vcov_kwargs=cfg.vcov_kwargs,
+            )
 
             if isinstance(FIT, QuantregMulti):
                 for q_model in FIT.all_quantregs.values():

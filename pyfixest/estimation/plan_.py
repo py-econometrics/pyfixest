@@ -6,10 +6,13 @@ from typing import Any
 
 import pandas as pd
 
+from pyfixest.core.demean import Preconditioner
 from pyfixest.estimation.api.utils import _ALL_SAMPLE, _AllSampleSentinel
 from pyfixest.estimation.config import EstimationConfig
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
+from pyfixest.estimation.internals.vcov_utils import _get_vcov_type
 from pyfixest.estimation.models.fegaussian_ import Fegaussian
+from pyfixest.estimation.models.feglm_ import Feglm
 from pyfixest.estimation.models.feiv_ import Feiv
 from pyfixest.estimation.models.felogit_ import Felogit
 from pyfixest.estimation.models.feols_ import Feols
@@ -241,3 +244,61 @@ def _build_model_kwargs(
         kwargs["multi_method"] = config.quantreg_multi_method
 
     return kwargs
+
+
+FittedModel = (
+    Feols | Feiv | Fepois | Fegaussian | Felogit | Feprobit | Quantreg | QuantregMulti
+)
+
+
+def fit_one(
+    spec: ModelSpec,
+    *,
+    lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
+    lookup_preconditioner: dict[frozenset[int], Preconditioner],
+    vcov: str | dict[str, str] | None,
+    vcov_kwargs: dict[str, str | int] | None,
+) -> FittedModel:
+    """Run the full fit pipeline for one model spec.
+
+    Constructs the model class, runs prepare → fit → vcov → inference,
+    and clears large attributes. The two per-cache-block dicts are
+    injected here so they're shared across every spec in the block.
+
+    Returns the fitted model. The orchestrator owns the
+    `all_fitted_models` dict and is responsible for the
+    QuantregMulti fan-out (one entry per quantile).
+    """
+    model_kwargs = dict(spec.model_kwargs)
+    model_kwargs["lookup_demeaned_data"] = lookup_demeaned_data
+    if "demeaner" in MODEL_REGISTRY[spec.method].needs:
+        model_kwargs["lookup_preconditioner"] = lookup_preconditioner
+
+    FIT: FittedModel = spec.model_cls(**model_kwargs)
+
+    FIT.prepare_model_matrix()
+    if isinstance(FIT, Feglm):
+        FIT._check_dependent_variable()
+    FIT.get_fit()
+    # if X is empty: no inference (empty X only as shorthand for demeaning)
+    if not FIT._X_is_empty:
+        vcov_type = _get_vcov_type(vcov)
+        FIT.vcov(
+            vcov=vcov_type,
+            vcov_kwargs=vcov_kwargs,
+            data=FIT._data
+            if not isinstance(FIT, QuantregMulti)
+            else FIT.all_quantregs[FIT.quantiles[0]]._data,
+        )  # a little hacky, but works
+
+        FIT.get_inference()
+        if spec.method == "feols" and not FIT._is_iv:
+            FIT.get_performance()
+            if isinstance(FIT, Feols):
+                FIT.wald_test()
+        if isinstance(FIT, Feiv):
+            FIT.first_stage()
+    # delete large attributes
+    FIT._clear_attributes()
+
+    return FIT
