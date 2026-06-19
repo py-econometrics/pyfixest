@@ -265,9 +265,7 @@ def fit_one(
     and clears large attributes. The two per-cache-block dicts are
     injected here so they're shared across every spec in the block.
 
-    Returns the fitted model. The orchestrator owns the
-    `all_fitted_models` dict and is responsible for the
-    QuantregMulti fan-out (one entry per quantile).
+    Returns the fitted model.
     """
     model_kwargs = dict(spec.model_kwargs)
     model_kwargs["lookup_demeaned_data"] = lookup_demeaned_data
