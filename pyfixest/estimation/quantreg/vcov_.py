@@ -6,7 +6,7 @@ from typing import Any
 import numpy as np
 from scipy.stats import norm
 
-from pyfixest.core.crv1 import crv1_vcov_qreg_loop
+from pyfixest.core import crv1_vcov_qreg_loop
 from pyfixest.estimation.internals.literals import QuantregMethodOptions
 from pyfixest.estimation.quantreg.utils import get_hall_sheather_bandwidth
 
