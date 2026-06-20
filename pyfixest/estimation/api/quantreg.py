@@ -12,6 +12,7 @@ from pyfixest.estimation.internals.literals import (
     SolverOptions,
     VcovTypeOptions,
 )
+from pyfixest.estimation.plan_ import parse_formula
 from pyfixest.utils.dev_utils import DataFrameType
 from pyfixest.utils.utils import capture_context
 from pyfixest.utils.utils import ssc as ssc_func
@@ -206,10 +207,6 @@ def quantreg(
 
     context = {} if context is None else capture_context(context)
 
-    fixef_rm = "none"
-    iwls_tol = 1e-08
-    iwls_maxiter = 25
-
     if isinstance(vcov, str) and vcov in ["HC1", "HC2", "HC3"]:
         vcov = "hetero"
 
@@ -222,7 +219,7 @@ def quantreg(
         vcov_kwargs=None,
         weights=weights,
         ssc=ssc,
-        fixef_rm=fixef_rm,
+        fixef_rm="none",  # arbitrary, not supported
         collin_tol=collin_tol,
         copy_data=copy_data,
         store_data=store_data,
@@ -243,7 +240,6 @@ def quantreg(
         copy_data=copy_data,
         store_data=store_data,
         lean=lean,
-        fixef_rm=fixef_rm,
         drop_intercept=drop_intercept,
         vcov=vcov,
         vcov_kwargs=None,
@@ -256,9 +252,6 @@ def quantreg(
         split=split,
         fsplit=fsplit,
         seed=seed,
-        iwls_tol=iwls_tol,
-        iwls_maxiter=iwls_maxiter,
-        separation_check=separation_check,
         quantile=quantile,
         quantreg_method=method,
         quantile_tol=tol,
@@ -266,16 +259,15 @@ def quantreg(
         quantreg_multi_method=multi_method,
     )
 
-    fixest = FixestMulti(config)
-    fixest._prepare_estimation()
-    if fixest._is_iv:
+    parsed = parse_formula(config)
+    if parsed.is_iv:
         raise NotImplementedError(
             "IV Estimation is not supported for Quantile Regression"
         )
 
+    fixest = FixestMulti(config, parsed)
     fixest._estimate_all_models()
 
-    if fixest._is_multiple_estimation:
+    if parsed.is_multiple_estimation:
         return fixest
-    else:
-        return fixest.fetch_model(0, print_fml=False)
+    return fixest.fetch_model(0, print_fml=False)

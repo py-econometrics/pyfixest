@@ -2,26 +2,25 @@ from __future__ import annotations
 
 import functools
 from importlib import import_module
+from typing import Any
 
 import pandas as pd
 
 from pyfixest.core.demean import Preconditioner
-from pyfixest.estimation.api.utils import _ALL_SAMPLE, _AllSampleSentinel
 from pyfixest.estimation.config import EstimationConfig
-from pyfixest.estimation.formula.parse import Formula
-from pyfixest.estimation.internals.vcov_utils import _get_vcov_type
-from pyfixest.estimation.models.fegaussian_ import Fegaussian
-from pyfixest.estimation.models.feglm_ import Feglm
 from pyfixest.estimation.models.feiv_ import Feiv
-from pyfixest.estimation.models.felogit_ import Felogit
 from pyfixest.estimation.models.feols_ import (
     Feols,
     _check_vcov_input,
     _deparse_vcov_input,
 )
 from pyfixest.estimation.models.fepois_ import Fepois
-from pyfixest.estimation.models.feprobit_ import Feprobit
-from pyfixest.estimation.quantreg.quantreg_ import Quantreg
+from pyfixest.estimation.plan_ import (
+    ParsedFormula,
+    build_all_splits,
+    expand_specs,
+    fit_one,
+)
 from pyfixest.estimation.quantreg.QuantregMulti import QuantregMulti
 from pyfixest.utils.dev_utils import _narwhals_to_pandas
 from pyfixest.utils.utils import capture_context
@@ -30,52 +29,41 @@ from pyfixest.utils.utils import capture_context
 class FixestMulti:
     """A class to estimate multiple regression models with fixed effects."""
 
-    def __init__(self, config: EstimationConfig) -> None:
-        """Initialize a class for multiple fixed effect estimations.
+    def __init__(self, config: EstimationConfig, parsed: ParsedFormula) -> None:
+        """Initialize a fully-built orchestrator.
 
         Parameters
         ----------
         config : EstimationConfig
-            Immutable record of all options the public API requested.
-            See ``pyfixest.estimation.config.EstimationConfig``.
+            Immutable record of every option the public API requested.
+        parsed : ParsedFormula
+            Result of `plan_.parse_formula(config)`. Carries the
+            expanded formula dict, IV flag, and multi-estimation flag.
         """
         self._config = config
+        self._parsed = parsed
 
-        # legacy attributes mirror config fields so downstream code
-        # (and tests) can keep reading them
-        self._copy_data = config.copy_data
-        self._store_data = config.store_data
-        self._lean = config.lean
-        self._weights_type = config.weights_type
-        self._seed = config.seed
-        self._separation_check = config.separation_check
+        # frequently-read parsed bits exposed for the API layer and
+        # for `_estimate_all_models`; mirrors of ParsedFormula.
+        self._is_iv = parsed.is_iv
+        self._is_multiple_estimation = parsed.is_multiple_estimation
+        self.FixestFormulaDict = parsed.formula_dict
+
+        # config-derived cached fields
         self._context = capture_context(config.context)
-        self._quantreg_method = config.quantreg_method
-        self._quantreg_multi_method = config.quantreg_multi_method
 
         split = config.split
         fsplit = config.fsplit
         self._run_split = split is not None or fsplit is not None
         self._run_full = not (split and not fsplit)
-
-        self._splitvar: str | None = None
-        if self._run_split:
-            if split:
-                self._splitvar = split
-            else:
-                self._splitvar = fsplit
-        else:
-            self._splitvar = None
+        self._splitvar: str | None = split or fsplit if self._run_split else None
 
         data = _narwhals_to_pandas(config.data)
-
-        if self._copy_data:
-            self._data = data.copy()
-        else:
-            self._data = data
+        self._data = data.copy() if config.copy_data else data
         # reindex: else, potential errors when pd.DataFrame.dropna()
         # -> drops indices, but formulaic model_matrix starts from 0:N...
         self._data.reset_index(drop=True, inplace=True)
+
         self.all_fitted_models: dict[str, Feols | Fepois | Feiv] = {}
 
         # set functions inherited from other modules
@@ -93,232 +81,57 @@ class FixestMulti:
         self.etable = functools.partial(_tmp, models=self.all_fitted_models.values())
         self.etable.__doc__ = _tmp.__doc__
 
-    def _prepare_estimation(self) -> None:
-        """Parse the formula string and derive estimation state.
-
-        Reads from ``self._config`` and populates the legacy mutable
-        attributes that downstream estimation code consumes
-        (``self._method``, ``self._is_iv``, ``self.FixestFormulaDict``,
-        ``self._is_multiple_estimation``, ``self._ssc_dict``, ...).
-        """
-        cfg = self._config
-
-        self._method = cfg.method
-        self._weights = cfg.weights
-        self._offset = cfg.offset
-        self._has_weights = cfg.weights is not None
-        self._drop_intercept = cfg.drop_intercept
-        self._quantile = cfg.quantile
-        self._quantile_tol = cfg.quantile_tol
-        self._quantile_maxiter = cfg.quantile_maxiter
-        self._ssc_dict = dict(cfg.ssc_dict) if cfg.ssc_dict else {}
-        self._drop_singletons = _drop_singletons(cfg.fixef_rm)
-        self._fml_dict = None
-        self._fml_dict_iv = None
-
-        formula_dictionary = Formula.parse_to_dict(cfg.fml)
-        self.FixestFormulaDict = formula_dictionary
-        self._is_multiple_estimation = (
-            sum(len(v) for v in formula_dictionary.values()) > 1
-            or self._run_split
-            or (isinstance(cfg.quantile, list) and len(cfg.quantile) > 1)
-        )
-        self._is_iv = any(
-            formula.first_stage is not None
-            for _, formulas in formula_dictionary.items()
-            for formula in formulas
-        )
-
     def _estimate_all_models(self) -> None:
-        """Estimate every model enumerated by ``_prepare_estimation``.
+        """Fit every model the user's call expands into.
 
-        Reads all fit knobs (``vcov``, ``solver``, ``demeaner``,
-        ``collin_tol``, ``iwls_*``, ``separation_check``, ``accelerate``)
-        from ``self._config``.
+        Thin orchestration: walks `expand_specs` output, resets the
+        demean / preconditioner caches on every cache-block change,
+        delegates each spec's fit to `fit_one`, and stores results
+        (fanning out `QuantregMulti` to its per-quantile models).
         """
         cfg = self._config
-        vcov = cfg.vcov
-        vcov_kwargs = cfg.vcov_kwargs
-        solver = cfg.solver
-        demeaner = cfg.demeaner
-        collin_tol = cfg.collin_tol
-        iwls_maxiter = cfg.iwls_maxiter
-        iwls_tol = cfg.iwls_tol
-        separation_check = cfg.separation_check
-        accelerate = cfg.accelerate
 
-        FixestFormulaDict = self.FixestFormulaDict
-        _fixef_keys = list(FixestFormulaDict.keys())
+        all_splits = build_all_splits(
+            run_full=self._run_full,
+            run_split=self._run_split,
+            splitvar=self._splitvar,
+            data=self._data,
+        )
 
-        all_splits: list[str | int | float | _AllSampleSentinel] = []
-        if self._run_full:
-            all_splits.append(_ALL_SAMPLE)
-        if self._run_split:
-            all_splits.extend(
-                self._data[self._splitvar]
-                .dropna()
-                .drop_duplicates()
-                .sort_values()
-                .tolist()
+        specs = expand_specs(
+            config=cfg,
+            formula_dict=self.FixestFormulaDict,
+            data=self._data,
+            splits=all_splits,
+            is_iv=self._is_iv,
+            splitvar=self._splitvar,
+            captured_context=self._context,
+        )
+
+        _NO_CACHE_KEY: Any = object()
+        prev_cache_key: Any = _NO_CACHE_KEY
+        lookup_demeaned_data: dict[frozenset[int], pd.DataFrame] = {}
+        lookup_preconditioner: dict[frozenset[int], Preconditioner] = {}
+
+        for spec in specs:
+            if spec.cache_key != prev_cache_key:
+                lookup_demeaned_data = {}
+                lookup_preconditioner = {}
+                prev_cache_key = spec.cache_key
+
+            FIT = fit_one(
+                spec,
+                lookup_demeaned_data=lookup_demeaned_data,
+                lookup_preconditioner=lookup_preconditioner,
+                vcov=cfg.vcov,
+                vcov_kwargs=cfg.vcov_kwargs,
             )
 
-        for sample_split_value in all_splits:
-            for _, fval in enumerate(_fixef_keys):
-                fixef_key_models = FixestFormulaDict.get(fval)
-
-                # dictionaries to cache demeaned data and within-LSMR
-                # preconditioners keyed by na_index, shared across all
-                # models in this formula block (not used by `.quantreg()`).
-                lookup_demeaned_data: dict[frozenset[int], pd.DataFrame] = {}
-                lookup_preconditioner: dict[frozenset[int], Preconditioner] = {}
-
-                for FixestFormula in fixef_key_models:  # type: ignore
-                    # loop over both dictfe and dictfe_iv (if the latter is not None)
-                    # get Y, X, Z, fe, NA indices for model
-
-                    FIT: (
-                        Feols
-                        | Feiv
-                        | Fepois
-                        | Fegaussian
-                        | Felogit
-                        | Feprobit
-                        | Quantreg
-                        | QuantregMulti
-                    )
-
-                    model_kwargs = {
-                        "FixestFormula": FixestFormula,
-                        "data": self._data,
-                        "ssc_dict": self._ssc_dict,
-                        "drop_singletons": self._drop_singletons,
-                        "drop_intercept": self._drop_intercept,
-                        "weights": self._weights,
-                        "weights_type": self._weights_type,
-                        "solver": solver,
-                        "collin_tol": collin_tol,
-                        "store_data": self._store_data,
-                        "copy_data": self._copy_data,
-                        "lean": self._lean,
-                        "context": self._context,
-                        "sample_split_value": sample_split_value,
-                        "sample_split_var": self._splitvar,
-                        "lookup_demeaned_data": lookup_demeaned_data,
-                    }
-
-                    if self._method in {
-                        "feols",
-                        "fepois",
-                        "feglm-logit",
-                        "feglm-probit",
-                        "feglm-gaussian",
-                    }:
-                        model_kwargs.update(
-                            {
-                                "demeaner": demeaner,
-                                "lookup_preconditioner": lookup_preconditioner,
-                            }
-                        )
-
-                    if self._method in {
-                        "fepois",
-                        "feglm-logit",
-                        "feglm-probit",
-                        "feglm-gaussian",
-                    }:
-                        model_kwargs.update(
-                            {
-                                "separation_check": separation_check,
-                                "tol": iwls_tol,
-                                "maxiter": iwls_maxiter,
-                            }
-                        )
-
-                    if self._method == "fepois":
-                        model_kwargs.update(
-                            {
-                                "offset": self._offset,
-                            }
-                        )
-
-                    if self._method in {
-                        "feglm-logit",
-                        "feglm-probit",
-                        "feglm-gaussian",
-                    }:
-                        model_kwargs.update(
-                            {
-                                "accelerate": accelerate,
-                            }
-                        )
-
-                    if self._method in ["quantreg", "quantreg_multi"]:
-                        model_kwargs.update(
-                            {
-                                "quantile": self._quantile,
-                                "method": self._quantreg_method,
-                                "quantile_tol": self._quantile_tol,
-                                "quantile_maxiter": self._quantile_maxiter,
-                                "seed": self._seed,
-                            }
-                        )
-                    if self._method == "quantreg_multi":
-                        model_kwargs.update(
-                            {
-                                "multi_method": self._quantreg_multi_method,
-                            }
-                        )
-
-                    model_map = {
-                        ("feols", False): Feols,
-                        ("feols", True): Feiv,
-                        ("fepois", None): Fepois,
-                        ("feglm-logit", None): Felogit,
-                        ("feglm-probit", None): Feprobit,
-                        ("feglm-gaussian", None): Fegaussian,
-                        ("quantreg", None): Quantreg,
-                        ("quantreg_multi", None): QuantregMulti,
-                    }
-
-                    model_key = (
-                        (self._method, self._is_iv)
-                        if self._method == "feols"
-                        else (self._method, None)
-                    )
-                    ModelClass = model_map[model_key]  # type: ignore
-                    FIT = ModelClass(**model_kwargs)
-
-                    FIT.prepare_model_matrix()
-                    if isinstance(FIT, Feglm):
-                        FIT._check_dependent_variable()
-                    FIT.get_fit()
-                    # if X is empty: no inference (empty X only as shorthand for demeaning)
-                    if not FIT._X_is_empty:
-                        # inference
-                        vcov_type = _get_vcov_type(vcov)
-                        FIT.vcov(
-                            vcov=vcov_type,
-                            vcov_kwargs=vcov_kwargs,
-                            data=FIT._data
-                            if not isinstance(FIT, QuantregMulti)
-                            else FIT.all_quantregs[FIT.quantiles[0]]._data,
-                        )  #  a little hacky, but works
-
-                        FIT.get_inference()
-                        if self._method == "feols" and not FIT._is_iv:
-                            FIT.get_performance()
-                            if isinstance(FIT, Feols):
-                                FIT.wald_test()
-                        if isinstance(FIT, Feiv):
-                            FIT.first_stage()
-                    # delete large attributes
-                    FIT._clear_attributes()
-
-                    if isinstance(FIT, QuantregMulti):
-                        for q_model in FIT.all_quantregs.values():
-                            self.all_fitted_models[q_model._model_name] = q_model
-                    else:
-                        self.all_fitted_models[FIT._model_name] = FIT
+            if isinstance(FIT, QuantregMulti):
+                for q_model in FIT.all_quantregs.values():
+                    self.all_fitted_models[q_model._model_name] = q_model
+            else:
+                self.all_fitted_models[FIT._model_name] = FIT
 
     def to_list(self) -> list[Feols | Fepois | Feiv]:
         """
@@ -582,23 +395,3 @@ class FixestMulti:
             print("Model: ", key)
         model = self.all_fitted_models[key]
         return model
-
-
-def _drop_singletons(fixef_rm: str) -> bool:
-    """
-    Drop singleton fixed effects.
-
-    Checks if the fixef_rm argument is set to "singleton".
-    If so, returns True,else False.
-
-    Parameters
-    ----------
-    fixef_rm : str
-        The fixef_rm argument. Either "none" or "singleton".
-
-    Returns
-    -------
-    bool
-        drop_singletons (bool) : Whether to drop singletons.
-    """
-    return fixef_rm in ["singleton"]
