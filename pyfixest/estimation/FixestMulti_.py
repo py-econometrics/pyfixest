@@ -8,7 +8,6 @@ import pandas as pd
 
 from pyfixest.core.demean import Preconditioner
 from pyfixest.estimation.config import EstimationConfig
-from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.models.feiv_ import Feiv
 from pyfixest.estimation.models.feols_ import (
     Feols,
@@ -17,7 +16,7 @@ from pyfixest.estimation.models.feols_ import (
 )
 from pyfixest.estimation.models.fepois_ import Fepois
 from pyfixest.estimation.plan_ import (
-    _drop_singletons,
+    ParsedFormula,
     build_all_splits,
     expand_specs,
     fit_one,
@@ -30,52 +29,41 @@ from pyfixest.utils.utils import capture_context
 class FixestMulti:
     """A class to estimate multiple regression models with fixed effects."""
 
-    def __init__(self, config: EstimationConfig) -> None:
-        """Initialize a class for multiple fixed effect estimations.
+    def __init__(self, config: EstimationConfig, parsed: ParsedFormula) -> None:
+        """Initialize a fully-built orchestrator.
 
         Parameters
         ----------
         config : EstimationConfig
-            Immutable record of all options the public API requested.
-            See `pyfixest.estimation.config.EstimationConfig`.
+            Immutable record of every option the public API requested.
+        parsed : ParsedFormula
+            Result of `plan_.parse_formula(config)`. Carries the
+            expanded formula dict, IV flag, and multi-estimation flag.
         """
         self._config = config
+        self._parsed = parsed
 
-        # legacy attributes mirror config fields so downstream code
-        # (and tests) can keep reading them
-        self._copy_data = config.copy_data
-        self._store_data = config.store_data
-        self._lean = config.lean
-        self._weights_type = config.weights_type
-        self._seed = config.seed
-        self._separation_check = config.separation_check
+        # frequently-read parsed bits exposed for the API layer and
+        # for `_estimate_all_models`; mirrors of ParsedFormula.
+        self._is_iv = parsed.is_iv
+        self._is_multiple_estimation = parsed.is_multiple_estimation
+        self.FixestFormulaDict = parsed.formula_dict
+
+        # config-derived cached fields
         self._context = capture_context(config.context)
-        self._quantreg_method = config.quantreg_method
-        self._quantreg_multi_method = config.quantreg_multi_method
 
         split = config.split
         fsplit = config.fsplit
         self._run_split = split is not None or fsplit is not None
         self._run_full = not (split and not fsplit)
-
-        self._splitvar: str | None = None
-        if self._run_split:
-            if split:
-                self._splitvar = split
-            else:
-                self._splitvar = fsplit
-        else:
-            self._splitvar = None
+        self._splitvar: str | None = split or fsplit if self._run_split else None
 
         data = _narwhals_to_pandas(config.data)
-
-        if self._copy_data:
-            self._data = data.copy()
-        else:
-            self._data = data
+        self._data = data.copy() if config.copy_data else data
         # reindex: else, potential errors when pd.DataFrame.dropna()
         # -> drops indices, but formulaic model_matrix starts from 0:N...
         self._data.reset_index(drop=True, inplace=True)
+
         self.all_fitted_models: dict[str, Feols | Fepois | Feiv] = {}
 
         # set functions inherited from other modules
@@ -92,43 +80,6 @@ class FixestMulti:
         _tmp = _module.etable
         self.etable = functools.partial(_tmp, models=self.all_fitted_models.values())
         self.etable.__doc__ = _tmp.__doc__
-
-    def _prepare_estimation(self) -> None:
-        """Parse the formula and unpack the config into legacy attributes.
-
-        Most downstream code still reads from `self._method`,
-        `self._is_iv`, `self.FixestFormulaDict` and friends, so
-        we copy the relevant config fields onto `self` and parse
-        the formula string once here. `_is_multiple_estimation` is
-        also computed here since it depends on the parsed formula.
-        """
-        cfg = self._config
-
-        self._method = cfg.method
-        self._weights = cfg.weights
-        self._offset = cfg.offset
-        self._has_weights = cfg.weights is not None
-        self._drop_intercept = cfg.drop_intercept
-        self._quantile = cfg.quantile
-        self._quantile_tol = cfg.quantile_tol
-        self._quantile_maxiter = cfg.quantile_maxiter
-        self._ssc_dict = dict(cfg.ssc_dict) if cfg.ssc_dict else {}
-        self._drop_singletons = _drop_singletons(cfg.fixef_rm)
-        self._fml_dict = None
-        self._fml_dict_iv = None
-
-        formula_dictionary = Formula.parse_to_dict(cfg.fml)
-        self.FixestFormulaDict = formula_dictionary
-        self._is_multiple_estimation = (
-            sum(len(v) for v in formula_dictionary.values()) > 1
-            or self._run_split
-            or (isinstance(cfg.quantile, list) and len(cfg.quantile) > 1)
-        )
-        self._is_iv = any(
-            formula.first_stage is not None
-            for _, formulas in formula_dictionary.items()
-            for formula in formulas
-        )
 
     def _estimate_all_models(self) -> None:
         """Fit every model the user's call expands into.

@@ -75,6 +75,49 @@ def _resolve_model_class(method: str, is_iv: bool) -> type:
     return MODEL_REGISTRY[method].model_cls
 
 
+@dataclass(frozen=True)
+class ParsedFormula:
+    """Stores the results from formula parsing = everything the runner needs to know.
+
+    `formula_dict` keys by the fixed-effects formula string (or
+    `None` when no FE) and maps to the list of `FixestFormula`
+    objects for that block.
+    `is_iv` is true when any formula has a
+    first stage.
+    `is_multiple_estimation` if multiple estimation syntax is used.
+    """
+
+    formula_dict: dict[str | None, list[FixestFormula]]
+    is_iv: bool
+    is_multiple_estimation: bool
+
+
+def parse_formula(config: EstimationConfig) -> ParsedFormula:
+    """Parse the config's `fml` string into a `ParsedFormula`.
+
+    Pure: same `(fml, split, fsplit, quantile)` always produce the
+    same parse. `is_multiple_estimation` reflects formula
+    expansion *and* sample-split / multi-quantile fan-out.
+    """
+    run_split = config.split is not None or config.fsplit is not None
+    formula_dictionary = FixestFormula.parse_to_dict(config.fml)
+    is_multiple_estimation = (
+        sum(len(v) for v in formula_dictionary.values()) > 1
+        or run_split
+        or (isinstance(config.quantile, list) and len(config.quantile) > 1)
+    )
+    is_iv = any(
+        f.first_stage is not None
+        for formulas in formula_dictionary.values()
+        for f in formulas
+    )
+    return ParsedFormula(
+        formula_dict=formula_dictionary,
+        is_iv=is_iv,
+        is_multiple_estimation=is_multiple_estimation,
+    )
+
+
 def _drop_singletons(fixef_rm: str) -> bool:
     return fixef_rm == "singleton"
 

@@ -12,6 +12,7 @@ from pyfixest.estimation.internals.literals import (
     SolverOptions,
     VcovTypeOptions,
 )
+from pyfixest.estimation.plan_ import parse_formula
 from pyfixest.utils.dev_utils import DataFrameType
 from pyfixest.utils.utils import capture_context
 from pyfixest.utils.utils import ssc as ssc_func
@@ -258,16 +259,15 @@ def quantreg(
         quantreg_multi_method=multi_method,
     )
 
-    fixest = FixestMulti(config)
-    fixest._prepare_estimation()
-    if fixest._is_iv:
+    parsed = parse_formula(config)
+    if parsed.is_iv:
         raise NotImplementedError(
             "IV Estimation is not supported for Quantile Regression"
         )
 
+    fixest = FixestMulti(config, parsed)
     fixest._estimate_all_models()
 
-    if fixest._is_multiple_estimation:
+    if parsed.is_multiple_estimation:
         return fixest
-    else:
-        return fixest.fetch_model(0, print_fml=False)
+    return fixest.fetch_model(0, print_fml=False)
