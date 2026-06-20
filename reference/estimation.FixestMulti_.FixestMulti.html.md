@@ -1,7 +1,7 @@
 # estimation.FixestMulti_.FixestMulti { #pyfixest.estimation.FixestMulti_.FixestMulti }
 
 ```python
-estimation.FixestMulti_.FixestMulti(config)
+estimation.FixestMulti_.FixestMulti(config, parsed)
 ```
 
 A class to estimate multiple regression models with fixed effects.
