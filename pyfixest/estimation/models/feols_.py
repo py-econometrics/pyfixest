@@ -19,7 +19,7 @@ from pyfixest.errors import VcovTypeNotSupportedError
 from pyfixest.estimation.api.utils import _ALL_SAMPLE, _AllSampleSentinel
 from pyfixest.estimation.formula import model_matrix as model_matrix_fixest
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
-from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
+from pyfixest.estimation.internals.collinearity import CollinearityHandler
 from pyfixest.estimation.internals.demean_ import DemeanCache
 from pyfixest.estimation.internals.families import T_DIST, InferenceDist
 from pyfixest.estimation.internals.fit_ import fit_ols
@@ -535,16 +535,13 @@ class Feols(ResultAccessorMixin):
     def drop_multicol_vars(self):
         "Detect and drop multicollinear variables."
         if self._X.shape[1] > 0:
-            (
-                self._X,
-                self._coefnames,
-                self._collin_vars,
-                self._collin_index,
-            ) = drop_multicollinear_variables(
-                self._X,
-                self._coefnames,
-                self._collin_tol,
+            result = CollinearityHandler(self._collin_tol).drop(
+                self._X, self._coefnames
             )
+            self._X = result.X
+            self._coefnames = result.names
+            self._collin_vars = result.collin_vars
+            self._collin_index = result.collin_index
         # update X_is_empty
         self._X_is_empty = self._X.shape[1] == 0
         self._k = self._X.shape[1] if not self._X_is_empty else 0

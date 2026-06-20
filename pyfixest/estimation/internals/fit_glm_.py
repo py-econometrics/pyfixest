@@ -6,7 +6,7 @@ from dataclasses import dataclass
 import numpy as np
 
 from pyfixest.errors import NonConvergenceError
-from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
+from pyfixest.estimation.internals.collinearity import CollinearityHandler
 from pyfixest.estimation.internals.families import GlmFamily
 from pyfixest.estimation.internals.literals import SolverOptions
 from pyfixest.estimation.internals.solvers import solve_ols
@@ -241,9 +241,11 @@ def fit_glm_irls(
         z_tilde, X_tilde = demean(z_input, X_input, W.flatten(), inner_tol)
 
         if r == 0:
-            X_tilde, coefnames, collin_vars, collin_index = (
-                drop_multicollinear_variables(X_tilde, coefnames, collin_tol)
-            )
+            collin = CollinearityHandler(collin_tol).drop(X_tilde, coefnames)
+            X_tilde = collin.X
+            coefnames = collin.names
+            collin_vars = collin.collin_vars
+            collin_index = collin.collin_index
             if collin_index:
                 X_eff = X_eff[:, ~np.array(collin_index)]
 

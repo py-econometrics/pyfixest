@@ -10,7 +10,7 @@ import pandas as pd
 from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
-from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
+from pyfixest.estimation.internals.collinearity import CollinearityHandler
 from pyfixest.estimation.internals.fit_ import fit_iv
 from pyfixest.estimation.models.feols_ import Feols
 
@@ -221,16 +221,11 @@ class Feiv(Feols):
     def drop_multicol_vars(self) -> None:
         "Drop multicollinear variables in matrix of instruments Z."
         super().drop_multicol_vars()
-        (
-            self._Z,
-            self._coefnames_z,
-            self._collin_vars_z,
-            self._collin_index_z,
-        ) = drop_multicollinear_variables(
-            self._Z,
-            self._coefnames_z,
-            self._collin_tol,
-        )
+        result = CollinearityHandler(self._collin_tol).drop(self._Z, self._coefnames_z)
+        self._Z = result.X
+        self._coefnames_z = result.names
+        self._collin_vars_z = result.collin_vars
+        self._collin_index_z = result.collin_index
 
     def get_fit(self) -> None:
         """Fit a IV model using a 2SLS estimator."""
