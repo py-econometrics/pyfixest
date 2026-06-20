@@ -181,4 +181,3 @@ quartodoc:
         - core.detect_singletons.detect_singletons
         - utils.utils.ssc
         - utils.utils.get_ssc
-        - estimation.deprecated.model_matrix_fixest_.model_matrix_fixest

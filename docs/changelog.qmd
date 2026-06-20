@@ -38,6 +38,13 @@ As previously announced, we removed:
 - Removed the JAX demeaner backend and JAX solver.
 - Deprecated the SciPy and CuPy demeaner backends.
 - Deprecated `FeolsCompressed`.
+- Removed the deprecated `FixestFormulaParser` class and the
+  `pyfixest.estimation.deprecated` module. Use
+  `pyfixest.estimation.formula.parse.Formula.parse()` instead.
+- Removed the deprecated `model_matrix_fixest()` function (previously re-exported
+  from `pyfixest.estimation`). Use
+  `pyfixest.estimation.formula.model_matrix.create_model_matrix()` with a
+  `Formula` object instead.
 
 
 ## PyFixest 0.60.0
