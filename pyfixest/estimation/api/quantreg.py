@@ -5,7 +5,6 @@ from typing import Any
 
 from pyfixest.estimation.api.utils import _estimation_input_checks
 from pyfixest.estimation.config import EstimationConfig
-from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.internals.literals import (
     QuantregMethodOptions,
     QuantregMultiOptions,
@@ -13,6 +12,7 @@ from pyfixest.estimation.internals.literals import (
     VcovTypeOptions,
 )
 from pyfixest.estimation.plan_ import parse_formula
+from pyfixest.estimation.runner import run_estimation
 from pyfixest.utils.dev_utils import DataFrameType
 from pyfixest.utils.utils import capture_context
 from pyfixest.utils.utils import ssc as ssc_func
@@ -265,9 +265,4 @@ def quantreg(
             "IV Estimation is not supported for Quantile Regression"
         )
 
-    fixest = FixestMulti(config, parsed)
-    fixest._estimate_all_models()
-
-    if parsed.is_multiple_estimation:
-        return fixest
-    return fixest.fetch_model(0, print_fml=False)
+    return run_estimation(config, parsed)

@@ -2,11 +2,9 @@ from __future__ import annotations
 
 import functools
 from importlib import import_module
-from typing import Any
 
 import pandas as pd
 
-from pyfixest.core.demean import Preconditioner
 from pyfixest.estimation.config import EstimationConfig
 from pyfixest.estimation.models.feiv_ import Feiv
 from pyfixest.estimation.models.feols_ import (
@@ -15,13 +13,7 @@ from pyfixest.estimation.models.feols_ import (
     _deparse_vcov_input,
 )
 from pyfixest.estimation.models.fepois_ import Fepois
-from pyfixest.estimation.plan_ import (
-    ParsedFormula,
-    build_all_splits,
-    expand_specs,
-    fit_one,
-)
-from pyfixest.estimation.quantreg.QuantregMulti import QuantregMulti
+from pyfixest.estimation.plan_ import ParsedFormula
 from pyfixest.utils.dev_utils import _narwhals_to_pandas
 from pyfixest.utils.utils import capture_context
 
@@ -43,8 +35,7 @@ class FixestMulti:
         self._config = config
         self._parsed = parsed
 
-        # frequently-read parsed bits exposed for the API layer and
-        # for `_estimate_all_models`; mirrors of ParsedFormula.
+        # mirrors of ParsedFormula, exposed for the API/runner layer.
         self._is_iv = parsed.is_iv
         self._is_multiple_estimation = parsed.is_multiple_estimation
         self.FixestFormulaDict = parsed.formula_dict
@@ -80,58 +71,6 @@ class FixestMulti:
         _tmp = _module.etable
         self.etable = functools.partial(_tmp, models=self.all_fitted_models.values())
         self.etable.__doc__ = _tmp.__doc__
-
-    def _estimate_all_models(self) -> None:
-        """Fit every model the user's call expands into.
-
-        Thin orchestration: walks `expand_specs` output, resets the
-        demean / preconditioner caches on every cache-block change,
-        delegates each spec's fit to `fit_one`, and stores results
-        (fanning out `QuantregMulti` to its per-quantile models).
-        """
-        cfg = self._config
-
-        all_splits = build_all_splits(
-            run_full=self._run_full,
-            run_split=self._run_split,
-            splitvar=self._splitvar,
-            data=self._data,
-        )
-
-        specs = expand_specs(
-            config=cfg,
-            formula_dict=self.FixestFormulaDict,
-            data=self._data,
-            splits=all_splits,
-            is_iv=self._is_iv,
-            splitvar=self._splitvar,
-            captured_context=self._context,
-        )
-
-        _NO_CACHE_KEY: Any = object()
-        prev_cache_key: Any = _NO_CACHE_KEY
-        lookup_demeaned_data: dict[frozenset[int], pd.DataFrame] = {}
-        lookup_preconditioner: dict[frozenset[int], Preconditioner] = {}
-
-        for spec in specs:
-            if spec.cache_key != prev_cache_key:
-                lookup_demeaned_data = {}
-                lookup_preconditioner = {}
-                prev_cache_key = spec.cache_key
-
-            FIT = fit_one(
-                spec,
-                lookup_demeaned_data=lookup_demeaned_data,
-                lookup_preconditioner=lookup_preconditioner,
-                vcov=cfg.vcov,
-                vcov_kwargs=cfg.vcov_kwargs,
-            )
-
-            if isinstance(FIT, QuantregMulti):
-                for q_model in FIT.all_quantregs.values():
-                    self.all_fitted_models[q_model._model_name] = q_model
-            else:
-                self.all_fitted_models[FIT._model_name] = FIT
 
     def to_list(self) -> list[Feols | Fepois | Feiv]:
         """

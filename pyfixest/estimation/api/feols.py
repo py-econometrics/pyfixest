@@ -20,6 +20,7 @@ from pyfixest.estimation.internals.literals import (
 )
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.plan_ import parse_formula
+from pyfixest.estimation.runner import run_estimation
 from pyfixest.utils.dev_utils import DataFrameType
 from pyfixest.utils.utils import capture_context
 from pyfixest.utils.utils import ssc as ssc_func
@@ -542,9 +543,4 @@ def feols(
     )
 
     parsed = parse_formula(config)
-    fixest = FixestMulti(config, parsed)
-    fixest._estimate_all_models()
-
-    if parsed.is_multiple_estimation:
-        return fixest
-    return fixest.fetch_model(0, print_fml=False)
+    return run_estimation(config, parsed)
