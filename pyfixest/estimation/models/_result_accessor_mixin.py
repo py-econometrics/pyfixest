@@ -14,7 +14,31 @@ from pyfixest.utils.dev_utils import _select_order_coefs
 from pyfixest.utils.utils import simultaneous_crit_val
 
 
-class ResultAccessorMixin:
+class TidyColumnAccessors:
+    """Mixin: derive `coef/se/tstat/pvalue` from `tidy()` data frame."""
+
+    def tidy(self, *args, **kwargs) -> pd.DataFrame:
+        """Tidy DataFrame of results. Implemented by the host class."""
+        raise NotImplementedError
+
+    def coef(self) -> pd.Series:
+        """Estimated coefficients as a pandas Series."""
+        return self.tidy()["Estimate"]
+
+    def se(self) -> pd.Series:
+        """Coefficient standard errors as a pandas Series."""
+        return self.tidy()["Std. Error"]
+
+    def tstat(self) -> pd.Series:
+        """Coefficient t-statistics as a pandas Series."""
+        return self.tidy()["t value"]
+
+    def pvalue(self) -> pd.Series:
+        """Coefficient p-values as a pandas Series."""
+        return self.tidy()["Pr(>|t|)"]
+
+
+class ResultAccessorMixin(TidyColumnAccessors):
     """Mixin providing result-accessor methods for fitted models."""
 
     # Type declarations for attributes provided by the host class (Feols).
@@ -185,50 +209,6 @@ class ResultAccessorMixin:
         ):
             data["Sample"] = sample
         return pd.DataFrame(data).set_index("Coefficient")
-
-    def coef(self) -> pd.Series:
-        """
-        Fitted model coefficents.
-
-        Returns
-        -------
-        pd.Series
-            A pd.Series with the estimated coefficients of the regression model.
-        """
-        return self.tidy()["Estimate"]
-
-    def se(self) -> pd.Series:
-        """
-        Fitted model standard errors.
-
-        Returns
-        -------
-        pd.Series
-            A pd.Series with the standard errors of the estimated regression model.
-        """
-        return self.tidy()["Std. Error"]
-
-    def tstat(self) -> pd.Series:
-        """
-        Fitted model t-statistics.
-
-        Returns
-        -------
-        pd.Series
-            A pd.Series with t-statistics of the estimated regression model.
-        """
-        return self.tidy()["t value"]
-
-    def pvalue(self) -> pd.Series:
-        """
-        Fitted model p-values.
-
-        Returns
-        -------
-        pd.Series
-            A pd.Series with p-values of the estimated regression model.
-        """
-        return self.tidy()["Pr(>|t|)"]
 
     def confint(
         self,

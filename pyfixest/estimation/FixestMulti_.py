@@ -8,6 +8,7 @@ from typing import Any
 import pandas as pd
 
 from pyfixest.estimation.config import EstimationConfig
+from pyfixest.estimation.models._result_accessor_mixin import TidyColumnAccessors
 from pyfixest.estimation.models.feiv_ import Feiv
 from pyfixest.estimation.models.feols_ import (
     Feols,
@@ -18,7 +19,7 @@ from pyfixest.estimation.models.fepois_ import Fepois
 from pyfixest.estimation.plan_ import ParsedFormula
 
 
-class FixestMulti:
+class FixestMulti(TidyColumnAccessors):
     """Results container holding every model fitted by one public-API call."""
 
     def __init__(
@@ -29,7 +30,7 @@ class FixestMulti:
         data: pd.DataFrame,
         context: Mapping[str, Any],
     ) -> None:
-        """
+        """.
 
         Parameters
         ----------
@@ -168,56 +169,6 @@ class FixestMulti:
         res_df.set_index(["fml", "Coefficient"], inplace=True)
 
         return res_df
-
-    def coef(self) -> pd.Series:
-        """
-        Obtain the coefficients of the fitted models.
-
-        Returns
-        -------
-        pandas.Series
-            A pd.Series with coefficient names and Estimates. The key indicates
-            which models the estimated statistic derives from.
-        """
-        return self.tidy()["Estimate"]
-
-    def se(self) -> pd.Series:
-        """
-        Obtain the standard errors of the fitted models.
-
-        Returns
-        -------
-        pandas.Series
-            A pd.Series with coefficient names and standard error estimates.
-            The key indicates which models the estimated statistic derives from.
-
-        """
-        return self.tidy()["Std. Error"]
-
-    def tstat(self) -> pd.Series:
-        """
-        Obtain the t-statistics of the fitted models.
-
-        Returns
-        -------
-            A pd.Series with coefficient names and estimated t-statistics.
-            The key indicates which models the estimated statistic derives from.
-
-        """
-        return self.tidy()["t value"]
-
-    def pvalue(self) -> pd.Series:
-        """
-        Obtain the p-values of the fitted models.
-
-        Returns
-        -------
-        pandas.Series
-            A pd.Series with coefficient names and p-values.
-            The key indicates which models the estimated statistic derives from.
-
-        """
-        return self.tidy()["Pr(>|t|)"]
 
     def confint(self) -> pd.DataFrame:
         """
