@@ -35,7 +35,7 @@ Details on Methods and Attributes
 | [estimation.models.felogit_.Felogit](estimation.models.felogit_.Felogit.qmd#pyfixest.estimation.models.felogit_.Felogit) | Class for the estimation of a fixed-effects logit model. |
 | [estimation.models.feprobit_.Feprobit](estimation.models.feprobit_.Feprobit.qmd#pyfixest.estimation.models.feprobit_.Feprobit) | Class for the estimation of a fixed-effects probit model. |
 | [estimation.models.fegaussian_.Fegaussian](estimation.models.fegaussian_.Fegaussian.qmd#pyfixest.estimation.models.fegaussian_.Fegaussian) | Class for the estimation of a fixed-effects GLM with normal errors. |
-| [estimation.FixestMulti_.FixestMulti](estimation.FixestMulti_.FixestMulti.qmd#pyfixest.estimation.FixestMulti_.FixestMulti) | A class to estimate multiple regression models with fixed effects. |
+| [estimation.FixestMulti_.FixestMulti](estimation.FixestMulti_.FixestMulti.qmd#pyfixest.estimation.FixestMulti_.FixestMulti) | Results container holding every model fitted by one public-API call. |
 | [estimation.quantreg.quantreg_.Quantreg](estimation.quantreg.quantreg_.Quantreg.qmd#pyfixest.estimation.quantreg.quantreg_.Quantreg) | Quantile regression model. |
 
 ## Summarize and Visualize

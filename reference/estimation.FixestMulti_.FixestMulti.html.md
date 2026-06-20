@@ -1,39 +1,27 @@
 # estimation.FixestMulti_.FixestMulti { #pyfixest.estimation.FixestMulti_.FixestMulti }
 
 ```python
-estimation.FixestMulti_.FixestMulti(config, parsed)
+estimation.FixestMulti_.FixestMulti(config, parsed, data, context)
 ```
 
-A class to estimate multiple regression models with fixed effects.
+Results container holding every model fitted by one public-API call.
+
+## Attributes
+
+| Name | Description |
+| --- | --- |
+| [FixestFormulaDict](#pyfixest.estimation.FixestMulti_.FixestMulti.FixestFormulaDict) | Parsed formula dict keyed by fixed-effects spec. |
 
 ## Methods
 
 | Name | Description |
 | --- | --- |
-| [coef](#pyfixest.estimation.FixestMulti_.FixestMulti.coef) | Obtain the coefficients of the fitted models. |
 | [confint](#pyfixest.estimation.FixestMulti_.FixestMulti.confint) | Obtain confidence intervals for the fitted models. |
 | [fetch_model](#pyfixest.estimation.FixestMulti_.FixestMulti.fetch_model) | Fetch a model of class Feols from the Fixest class. |
-| [pvalue](#pyfixest.estimation.FixestMulti_.FixestMulti.pvalue) | Obtain the p-values of the fitted models. |
-| [se](#pyfixest.estimation.FixestMulti_.FixestMulti.se) | Obtain the standard errors of the fitted models. |
 | [tidy](#pyfixest.estimation.FixestMulti_.FixestMulti.tidy) | Return the results of an estimation using `feols()` as a tidy Pandas DataFrame. |
 | [to_list](#pyfixest.estimation.FixestMulti_.FixestMulti.to_list) | Return a list of all fitted models. |
-| [tstat](#pyfixest.estimation.FixestMulti_.FixestMulti.tstat) | Obtain the t-statistics of the fitted models. |
 | [vcov](#pyfixest.estimation.FixestMulti_.FixestMulti.vcov) | Update regression inference "on the fly". |
 | [wildboottest](#pyfixest.estimation.FixestMulti_.FixestMulti.wildboottest) | Run a wild cluster bootstrap for all regressions in the Fixest object. |
-
-### coef { #pyfixest.estimation.FixestMulti_.FixestMulti.coef }
-
-```python
-estimation.FixestMulti_.FixestMulti.coef()
-```
-
-Obtain the coefficients of the fitted models.
-
-#### Returns {.doc-section .doc-section-returns}
-
-| Name   | Type          | Description                                                                                                            |
-|--------|---------------|------------------------------------------------------------------------------------------------------------------------|
-|        | pandas.Series | A pd.Series with coefficient names and Estimates. The key indicates which models the estimated statistic derives from. |
 
 ### confint { #pyfixest.estimation.FixestMulti_.FixestMulti.confint }
 
@@ -70,34 +58,6 @@ Fetch a model of class Feols from the Fixest class.
 |--------|-----------------|---------------|
 |        | A Feols object. |               |
 
-### pvalue { #pyfixest.estimation.FixestMulti_.FixestMulti.pvalue }
-
-```python
-estimation.FixestMulti_.FixestMulti.pvalue()
-```
-
-Obtain the p-values of the fitted models.
-
-#### Returns {.doc-section .doc-section-returns}
-
-| Name   | Type          | Description                                                                                                           |
-|--------|---------------|-----------------------------------------------------------------------------------------------------------------------|
-|        | pandas.Series | A pd.Series with coefficient names and p-values. The key indicates which models the estimated statistic derives from. |
-
-### se { #pyfixest.estimation.FixestMulti_.FixestMulti.se }
-
-```python
-estimation.FixestMulti_.FixestMulti.se()
-```
-
-Obtain the standard errors of the fitted models.
-
-#### Returns {.doc-section .doc-section-returns}
-
-| Name   | Type          | Description                                                                                                                           |
-|--------|---------------|---------------------------------------------------------------------------------------------------------------------------------------|
-|        | pandas.Series | A pd.Series with coefficient names and standard error estimates. The key indicates which models the estimated statistic derives from. |
-
 ### tidy { #pyfixest.estimation.FixestMulti_.FixestMulti.tidy }
 
 ```python
@@ -125,20 +85,6 @@ Return a list of all fitted models.
 | Name   | Type                                                  | Description   |
 |--------|-------------------------------------------------------|---------------|
 |        | A list of all fitted models of types Feols or Fepois. |               |
-
-### tstat { #pyfixest.estimation.FixestMulti_.FixestMulti.tstat }
-
-```python
-estimation.FixestMulti_.FixestMulti.tstat()
-```
-
-Obtain the t-statistics of the fitted models.
-
-#### Returns {.doc-section .doc-section-returns}
-
-| Name   | Type                                                           | Description                                                          |
-|--------|----------------------------------------------------------------|----------------------------------------------------------------------|
-|        | A pd.Series with coefficient names and estimated t-statistics. | The key indicates which models the estimated statistic derives from. |
 
 ### vcov { #pyfixest.estimation.FixestMulti_.FixestMulti.vcov }
 
