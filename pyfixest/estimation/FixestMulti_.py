@@ -10,11 +10,7 @@ import pandas as pd
 from pyfixest.estimation.config import EstimationConfig
 from pyfixest.estimation.models._result_accessor_mixin import TidyColumnAccessors
 from pyfixest.estimation.models.feiv_ import Feiv
-from pyfixest.estimation.models.feols_ import (
-    Feols,
-    _check_vcov_input,
-    _deparse_vcov_input,
-)
+from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.models.fepois_ import Fepois
 from pyfixest.estimation.plan_ import ParsedFormula
 
@@ -122,21 +118,8 @@ class FixestMulti(TidyColumnAccessors):
         -------
             An instance of the "Fixest" class with updated inference.
         """
-        for model in list(self.all_fitted_models.keys()):
-            fxst = self.all_fitted_models[model]
-            _data = fxst._data
-
-            _check_vcov_input(vcov=vcov, vcov_kwargs=vcov_kwargs, data=_data)
-            (
-                fxst._vcov_type,
-                fxst._vcov_type_detail,
-                _,
-                _,
-            ) = _deparse_vcov_input(vcov, False, False)
-
+        for fxst in self.all_fitted_models.values():
             fxst.vcov(vcov=vcov, vcov_kwargs=vcov_kwargs)
-            fxst.get_inference()
-
         return self
 
     def tidy(self) -> pd.DataFrame:
