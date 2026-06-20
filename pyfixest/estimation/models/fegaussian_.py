@@ -6,7 +6,7 @@ import pandas as pd
 from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
-from pyfixest.estimation.internals.families import GAUSSIAN
+from pyfixest.estimation.internals.families import FAMILY_REGISTRY
 from pyfixest.estimation.internals.vcov_ import vcov_iid_ols
 from pyfixest.estimation.models.feglm_ import Feglm
 
@@ -67,7 +67,7 @@ class Fegaussian(Feglm):
             demeaner=demeaner,
             lookup_preconditioner=lookup_preconditioner,
             accelerate=accelerate,
-            family=GAUSSIAN,
+            family=FAMILY_REGISTRY["gaussian"],
         )
 
         self._method = "feglm-gaussian"

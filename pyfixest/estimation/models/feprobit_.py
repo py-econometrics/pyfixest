@@ -6,7 +6,7 @@ import pandas as pd
 from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
-from pyfixest.estimation.internals.families import PROBIT
+from pyfixest.estimation.internals.families import FAMILY_REGISTRY
 from pyfixest.estimation.models.feglm_ import Feglm
 
 
@@ -66,7 +66,7 @@ class Feprobit(Feglm):
             separation_check=separation_check,
             context=context,
             accelerate=accelerate,
-            family=PROBIT,
+            family=FAMILY_REGISTRY["probit"],
         )
 
         self._method = "feglm-probit"

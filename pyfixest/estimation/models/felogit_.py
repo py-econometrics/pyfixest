@@ -6,7 +6,7 @@ import pandas as pd
 from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
-from pyfixest.estimation.internals.families import LOGIT
+from pyfixest.estimation.internals.families import FAMILY_REGISTRY
 from pyfixest.estimation.models.feglm_ import Feglm
 
 
@@ -66,7 +66,7 @@ class Felogit(Feglm):
             sample_split_value=sample_split_value,
             separation_check=separation_check,
             accelerate=accelerate,
-            family=LOGIT,
+            family=FAMILY_REGISTRY["logit"],
         )
 
         self._method = "feglm-logit"

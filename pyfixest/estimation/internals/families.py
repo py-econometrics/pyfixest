@@ -180,3 +180,11 @@ POISSON = GlmFamily(
     mu_start=_mu_start_pois,
     check_y=_check_y_nonneg,
 )
+
+
+FAMILY_REGISTRY: dict[str, GlmFamily] = {
+    "logit": LOGIT,
+    "probit": PROBIT,
+    "gaussian": GAUSSIAN,
+    "poisson": POISSON,
+}

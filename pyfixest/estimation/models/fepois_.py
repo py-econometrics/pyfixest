@@ -10,7 +10,7 @@ from scipy.special import gammaln
 from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
-from pyfixest.estimation.internals.families import POISSON
+from pyfixest.estimation.internals.families import FAMILY_REGISTRY
 from pyfixest.estimation.internals.literals import (
     SolverOptions,
 )
@@ -125,7 +125,7 @@ class Fepois(Feglm):
             context=context,
             demeaner=demeaner,
             lookup_preconditioner=lookup_preconditioner,
-            family=POISSON,
+            family=FAMILY_REGISTRY["poisson"],
         )
 
         # Poisson-specific overrides on top of the Feglm-set defaults.
