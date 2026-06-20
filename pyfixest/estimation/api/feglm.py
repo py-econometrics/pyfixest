@@ -5,6 +5,7 @@ from typing import Any
 
 from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.api.utils import _estimation_input_checks
+from pyfixest.estimation.config import EstimationConfig
 from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.internals.demeaner_options import (
     _resolve_demeaner,
@@ -304,48 +305,42 @@ def feglm(
         separation_check=separation_check,
     )
 
-    fixest = FixestMulti(
-        data=data,
-        copy_data=copy_data,
-        store_data=store_data,
-        lean=lean,
-        weights_type=weights_type,
-        seed=None,
-        split=split,
-        fsplit=fsplit,
-        context=context,
-    )
-
     # Poisson goes through the Fepois model class (which is a Feglm subclass);
     # other families dispatch to their dedicated feglm-{family} model class.
     estimation = "fepois" if family == "poisson" else f"feglm-{family}"
-    prepare_kwargs: dict[str, Any] = {
-        "estimation": estimation,
-        "fml": fml,
-        "vcov": vcov,
-        "vcov_kwargs": vcov_kwargs,
-        "weights": weights,
-        "ssc": ssc,
-        "fixef_rm": fixef_rm,
-        "drop_intercept": drop_intercept,
-    }
-    if family == "poisson":
-        prepare_kwargs["offset"] = offset
-    fixest._prepare_estimation(**prepare_kwargs)
+    config = EstimationConfig(
+        method=estimation,
+        data=data,
+        fml=fml,
+        copy_data=copy_data,
+        store_data=store_data,
+        lean=lean,
+        fixef_rm=fixef_rm,
+        drop_intercept=drop_intercept,
+        vcov=vcov,
+        vcov_kwargs=vcov_kwargs,
+        ssc_dict=ssc,
+        solver=solver,
+        demeaner=demeaner,
+        collin_tol=collin_tol,
+        context=context,
+        weights=weights,
+        weights_type=weights_type,
+        split=split,
+        fsplit=fsplit,
+        iwls_tol=iwls_tol,
+        iwls_maxiter=iwls_maxiter,
+        separation_check=separation_check,
+        offset=offset if family == "poisson" else None,
+        accelerate=accelerate,
+    )
+
+    fixest = FixestMulti(config)
+    fixest._prepare_estimation()
     if fixest._is_iv:
         raise NotImplementedError("IV estimation is not supported for GLMs.")
 
-    fixest._estimate_all_models(
-        vcov=vcov,
-        solver=solver,
-        vcov_kwargs=vcov_kwargs,
-        iwls_tol=iwls_tol,
-        iwls_maxiter=iwls_maxiter,
-        collin_tol=collin_tol,
-        separation_check=separation_check,
-        demeaner=demeaner,
-        accelerate=accelerate,
-    )
+    fixest._estimate_all_models()
 
     if fixest._is_multiple_estimation:
         return fixest
