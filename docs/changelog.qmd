@@ -45,6 +45,13 @@ As previously announced, we removed:
   from `pyfixest.estimation`). Use
   `pyfixest.estimation.formula.model_matrix.create_model_matrix()` with a
   `Formula` object instead.
+- Tightened the `pyfixest.estimation` public surface: `literals`, `demean`,
+  `detect_singletons`, `Preconditioner`, `BaseDemeaner`, `LsmrDemeaner`,
+  `MapDemeaner`, `bonferroni`, `rwolf`, and `wyoung` are no longer re-exported
+  from `pyfixest.estimation`. Import them from their source modules instead
+  (e.g. `from pyfixest.demeaners import LsmrDemeaner`,
+  `from pyfixest.core.demean import demean`). The top-level `pf.bonferroni`,
+  `pf.rwolf`, `pf.wyoung`, `pf.LsmrDemeaner`, etc. are unaffected.
 
 
 ## PyFixest 0.60.0

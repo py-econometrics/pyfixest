@@ -54,7 +54,7 @@ def demean(
     import numpy as np
     import pyfixest as pf
     from pyfixest.utils.dgps import get_blw
-    from pyfixest.estimation import demean
+    from pyfixest.core.demean import demean
     from formulaic import model_matrix
 
     fml = "y ~ treat | state + year"
