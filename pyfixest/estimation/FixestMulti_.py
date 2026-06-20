@@ -1,59 +1,49 @@
 from __future__ import annotations
 
 import functools
+from collections.abc import Mapping
 from importlib import import_module
+from typing import Any
 
 import pandas as pd
 
 from pyfixest.estimation.config import EstimationConfig
+from pyfixest.estimation.models._result_accessor_mixin import TidyColumnAccessors
 from pyfixest.estimation.models.feiv_ import Feiv
-from pyfixest.estimation.models.feols_ import (
-    Feols,
-    _check_vcov_input,
-    _deparse_vcov_input,
-)
+from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.models.fepois_ import Fepois
 from pyfixest.estimation.plan_ import ParsedFormula
-from pyfixest.utils.dev_utils import _narwhals_to_pandas
-from pyfixest.utils.utils import capture_context
 
 
-class FixestMulti:
-    """A class to estimate multiple regression models with fixed effects."""
+class FixestMulti(TidyColumnAccessors):
+    """Results container holding every model fitted by one public-API call."""
 
-    def __init__(self, config: EstimationConfig, parsed: ParsedFormula) -> None:
-        """Initialize a fully-built orchestrator.
+    def __init__(
+        self,
+        *,
+        config: EstimationConfig,
+        parsed: ParsedFormula,
+        data: pd.DataFrame,
+        context: Mapping[str, Any],
+    ) -> None:
+        """.
 
         Parameters
         ----------
         config : EstimationConfig
             Immutable record of every option the public API requested.
         parsed : ParsedFormula
-            Result of `plan_.parse_formula(config)`. Carries the
-            expanded formula dict, IV flag, and multi-estimation flag.
+            Result of `plan_.parse_formula(config)`.
+        data : pandas.DataFrame
+            The input data after narwhals→pandas conversion, optional copy,
+            and index reset.
+        context : Mapping[str, Any]
+            Captured evaluation scope (from `capture_context`).
         """
         self._config = config
         self._parsed = parsed
-
-        # mirrors of ParsedFormula, exposed for the API/runner layer.
-        self._is_iv = parsed.is_iv
-        self._is_multiple_estimation = parsed.is_multiple_estimation
-        self.FixestFormulaDict = parsed.formula_dict
-
-        # config-derived cached fields
-        self._context = capture_context(config.context)
-
-        split = config.split
-        fsplit = config.fsplit
-        self._run_split = split is not None or fsplit is not None
-        self._run_full = not (split and not fsplit)
-        self._splitvar: str | None = split or fsplit if self._run_split else None
-
-        data = _narwhals_to_pandas(config.data)
-        self._data = data.copy() if config.copy_data else data
-        # reindex: else, potential errors when pd.DataFrame.dropna()
-        # -> drops indices, but formulaic model_matrix starts from 0:N...
-        self._data.reset_index(drop=True, inplace=True)
+        self._data = data
+        self._context = context
 
         self.all_fitted_models: dict[str, Feols | Fepois | Feiv] = {}
 
@@ -71,6 +61,21 @@ class FixestMulti:
         _tmp = _module.etable
         self.etable = functools.partial(_tmp, models=self.all_fitted_models.values())
         self.etable.__doc__ = _tmp.__doc__
+
+    @property
+    def _is_iv(self) -> bool:
+        """Whether the call expanded into an IV model."""
+        return self._parsed.is_iv
+
+    @property
+    def _is_multiple_estimation(self) -> bool:
+        """Whether the call expanded into more than one model."""
+        return self._parsed.is_multiple_estimation
+
+    @property
+    def FixestFormulaDict(self):
+        """Parsed formula dict keyed by fixed-effects spec."""
+        return self._parsed.formula_dict
 
     def to_list(self) -> list[Feols | Fepois | Feiv]:
         """
@@ -113,21 +118,8 @@ class FixestMulti:
         -------
             An instance of the "Fixest" class with updated inference.
         """
-        for model in list(self.all_fitted_models.keys()):
-            fxst = self.all_fitted_models[model]
-            _data = fxst._data
-
-            _check_vcov_input(vcov=vcov, vcov_kwargs=vcov_kwargs, data=_data)
-            (
-                fxst._vcov_type,
-                fxst._vcov_type_detail,
-                _,
-                _,
-            ) = _deparse_vcov_input(vcov, False, False)
-
+        for fxst in self.all_fitted_models.values():
             fxst.vcov(vcov=vcov, vcov_kwargs=vcov_kwargs)
-            fxst.get_inference()
-
         return self
 
     def tidy(self) -> pd.DataFrame:
@@ -160,56 +152,6 @@ class FixestMulti:
         res_df.set_index(["fml", "Coefficient"], inplace=True)
 
         return res_df
-
-    def coef(self) -> pd.Series:
-        """
-        Obtain the coefficients of the fitted models.
-
-        Returns
-        -------
-        pandas.Series
-            A pd.Series with coefficient names and Estimates. The key indicates
-            which models the estimated statistic derives from.
-        """
-        return self.tidy()["Estimate"]
-
-    def se(self) -> pd.Series:
-        """
-        Obtain the standard errors of the fitted models.
-
-        Returns
-        -------
-        pandas.Series
-            A pd.Series with coefficient names and standard error estimates.
-            The key indicates which models the estimated statistic derives from.
-
-        """
-        return self.tidy()["Std. Error"]
-
-    def tstat(self) -> pd.Series:
-        """
-        Obtain the t-statistics of the fitted models.
-
-        Returns
-        -------
-            A pd.Series with coefficient names and estimated t-statistics.
-            The key indicates which models the estimated statistic derives from.
-
-        """
-        return self.tidy()["t value"]
-
-    def pvalue(self) -> pd.Series:
-        """
-        Obtain the p-values of the fitted models.
-
-        Returns
-        -------
-        pandas.Series
-            A pd.Series with coefficient names and p-values.
-            The key indicates which models the estimated statistic derives from.
-
-        """
-        return self.tidy()["Pr(>|t|)"]
 
     def confint(self) -> pd.DataFrame:
         """
