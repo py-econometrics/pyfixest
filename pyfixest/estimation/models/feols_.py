@@ -9,7 +9,7 @@ from typing import Any, Literal, cast
 import formulaic
 import numpy as np
 import pandas as pd
-from formulaic import Formula
+from formulaic.parser import DefaultFormulaParser
 from scipy.sparse import csc_matrix, diags, spmatrix
 from scipy.sparse.linalg import lsqr
 from scipy.stats import chi2, f, t
@@ -18,7 +18,9 @@ from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner, MapDemeaner
 from pyfixest.errors import VcovTypeNotSupportedError
 from pyfixest.estimation.api.utils import _ALL_SAMPLE, _AllSampleSentinel
+from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
 from pyfixest.estimation.formula import model_matrix as model_matrix_fixest
+from pyfixest.estimation.formula.model_matrix import _ModelMatrixKey
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
 from pyfixest.estimation.internals.demean_ import DemeanCache
@@ -49,8 +51,7 @@ from pyfixest.estimation.post_estimation.decomposition import (
 )
 from pyfixest.estimation.post_estimation.prediction import (
     _compute_prediction_error,
-    _get_fixed_effects_prediction_component,
-    get_design_matrix_and_yhat,
+    _rows_with_unseen_categories,
 )
 from pyfixest.estimation.post_estimation.ritest import (
     _HAS_NUMBA,
@@ -1773,6 +1774,8 @@ class Feols(ResultAccessorMixin):
         dict[str, dict[str, float]]
             A dictionary with the estimated fixed effects.
         """
+        weights_sqrt = np.sqrt(self._weights).flatten()
+
         blocked_transforms = ["i(", "^", "poly("]
         for bt in blocked_transforms:
             if bt in self._fml:
@@ -1788,15 +1791,10 @@ class Feols(ResultAccessorMixin):
                 "The fixef() method is currently not supported for IV models."
             )
 
-        depvars, rhs = self._fml.split("~")
-        covars, fixef_vars = rhs.split("|")
-
-        fixef_vars_list = fixef_vars.split("+")
-        fixef_vars_C = [f"C({x})" for x in fixef_vars_list]
-        fixef_fml = "+".join(fixef_vars_C)
-
-        Y, X = Formula(f"{depvars} ~ {covars}").get_model_matrix(
-            self._data, output="pandas", context=self._context
+        Y, X = self._model_spec["second_stage"].get_model_matrix(
+            self._data,
+            output="pandas",
+            context=FORMULAIC_TRANSFORMS | {**self._context},
         )
         Y = Y.to_numpy().flatten().astype(np.float64)
         if self._X_is_empty:
@@ -1815,8 +1813,20 @@ class Feols(ResultAccessorMixin):
                     assert self._offset is not None
                     Y = Y - self._offset.flatten()
             uhat = (Y - X @ self._beta_hat).flatten()
-        D2 = Formula("-1+" + fixef_fml).get_model_matrix(self._data, output="sparse")
-        cols = D2.model_spec.column_names
+        # one-hot encoding of fixed effects (treatment coding: reference level dropped)
+        D2 = formulaic.Formula(
+            [f"C({fe})" for fe in self.FixestFormula.fixed_effects_wrapped],
+            _parser=DefaultFormulaParser(include_intercept=False),
+        ).get_model_matrix(
+            self._data,
+            output="sparse",
+            ensure_full_rank=False,
+            context=FORMULAIC_TRANSFORMS,
+            transform_state=self._model_spec[
+                _ModelMatrixKey.fixed_effects
+            ].transform_state,
+        )
+        one_hot_encoded_fixed_effects = D2.model_spec.column_names
 
         solve_weights = self._fixef_solve_weights()
         if solve_weights is not None:
@@ -1827,7 +1837,7 @@ class Feols(ResultAccessorMixin):
         alpha = lsqr(D2, uhat, atol=atol, btol=btol)[0]
 
         res: dict[str, dict[str, float]] = {}
-        for i, col in enumerate(cols):
+        for i, col in enumerate(one_hot_encoded_fixed_effects):
             variable, level = _extract_variable_level(col)
             # check if res already has a key variable
             if variable not in res:
@@ -1932,7 +1942,6 @@ class Feols(ResultAccessorMixin):
             # supported with prediction errors, and X is only consumed on the
             # prediction-error path below.
             X = self._X
-            X_index = np.arange(self._N)
             y_hat = (
                 self._Y_hat_link
                 if type == "link" or self._method == "feols"
@@ -1940,15 +1949,61 @@ class Feols(ResultAccessorMixin):
             )
             n_observations = self._N
         else:
-            newdata = _narwhals_to_pandas(newdata)
-            y_hat, X, X_index = get_design_matrix_and_yhat(
-                model=self,
-                newdata=newdata,
-                context=self._context,
+            newdata = _narwhals_to_pandas(newdata).reset_index(drop=True)
+            n_observations = newdata.shape[0]
+            context = FORMULAIC_TRANSFORMS | {**self._context}
+            # Use na_action="drop" on each sub-spec separately because dependent variable
+            # may not be available in newdata, then intersect indices so a NaN in *any* variable
+            # (covariate or FE) marks the whole row as NaN in the output.
+            X_mm = self._model_spec[_ModelMatrixKey.main].rhs.get_model_matrix(
+                newdata, context=context, na_action="drop"
             )
-            y_hat += _get_fixed_effects_prediction_component(
-                model=self, newdata=newdata, atol=atol, btol=btol
+            valid_idx = X_mm.index.to_numpy()
+            # rows with a categorical level unseen during fitting (in C()/i()) would
+            # be silently encoded as the reference level -> drop them to NaN instead,
+            # matching how unseen fixed-effect levels are handled below.
+            unseen = _rows_with_unseen_categories(
+                self._model_spec[_ModelMatrixKey.main].rhs, newdata
             )
+            valid_idx = valid_idx[~unseen[valid_idx]]
+            if self._has_fixef:
+                fe_mm = self._model_spec[
+                    _ModelMatrixKey.fixed_effects
+                ].get_model_matrix(newdata, context=context, na_action="drop")
+                valid_idx = np.intersect1d(valid_idx, fe_mm.index.to_numpy())
+
+                if self._sumFE is None:
+                    self.fixef(atol, btol)
+                fe_hat = (
+                    pd.concat(
+                        [
+                            fe_mm.loc[valid_idx, column].map(
+                                {
+                                    float(level): coefficient
+                                    for level, coefficient in self._fixef_dict[
+                                        column
+                                    ].items()
+                                }
+                            )
+                            for column in fe_mm.columns
+                        ],
+                        axis=1,
+                    )
+                    .sum(axis=1, skipna=False)
+                    .to_numpy()
+                )
+                # fixed effects estimates are nan if singletons or unseen levels
+                valid_idx = valid_idx[~np.isnan(fe_hat)]
+                fe_hat = fe_hat[~np.isnan(fe_hat)]
+
+            X_coef = X_mm.loc[valid_idx, self._coefnames].to_numpy()
+            y_hat = np.full(n_observations, np.nan)
+            y_hat[valid_idx] = X_coef @ self._beta_hat
+            if self._has_fixef:
+                y_hat[valid_idx] += fe_hat
+            # Pad X to full size; NaN rows yield NaN SE/CI via einsum propagation.
+            X = np.full((n_observations, X_coef.shape[1]), np.nan)
+            X[valid_idx] = X_coef
             if self._offset_name is not None:
                 if self._offset_name not in newdata.columns:
                     raise ValueError(
@@ -1963,7 +2018,6 @@ class Feols(ResultAccessorMixin):
                         "NaN or non-numeric values."
                     )
                 y_hat = y_hat + offset
-            n_observations = newdata.shape[0]
             if type == "response" and self._method == "fepois":
                 y_hat = np.exp(y_hat)
 
@@ -1973,7 +2027,6 @@ class Feols(ResultAccessorMixin):
                 nobs=n_observations,
                 yhat=y_hat,
                 X=X,
-                X_index=X_index,
                 alpha=alpha,
             )
             if interval == "prediction":
