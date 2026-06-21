@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import polars as pl
+import pytest
 
 from pyfixest.estimation import feols, fepois
 from pyfixest.report.utils import (
@@ -214,6 +215,96 @@ def test_rename_event_study_coefs():
 def _foo():
     "Simulate a callable for testing context capture behavior."
     ...
+
+
+@pytest.mark.parametrize(
+    "fml",
+    [
+        "Y ~ i(f1) | f2",
+        "Y ~ i(f1, ref=1.0) | f2",
+        "Y ~ i(f1, X1) | f2",
+        "Y ~ i(f1, X1) + X2 | f2",
+    ],
+)
+def test_predict_newdata_i_transform(fml):
+    """Test predict(newdata=...) works for models using the i() transform."""
+    data = get_data(N=500, seed=42).dropna()
+    newdata = data.iloc[:100]
+
+    fit = feols(fml, data=data)
+    pred_full = fit.predict()
+    pred_new = fit.predict(newdata=newdata)
+
+    assert pred_full.shape[0] == fit._N
+    assert pred_new.shape[0] == len(newdata)
+
+
+@pytest.mark.parametrize(
+    "fml",
+    [
+        "Y ~ poly(X1, 2)",
+        "Y ~ poly(X1, 2) | f1",
+        "Y ~ poly(X1, 2) + X2 | f1 + f2",
+    ],
+)
+def test_predict_newdata_poly_transform(fml):
+    """Test predict(newdata=...) works for models using poly()."""
+    data = get_data(N=500, seed=42).dropna()
+    newdata = data.iloc[:100]
+
+    fit = feols(fml, data=data)
+    pred_full = fit.predict()
+    pred_new = fit.predict(newdata=newdata)
+
+    assert pred_full.shape[0] == fit._N
+    assert pred_new.shape[0] == len(newdata)
+
+
+@pytest.mark.parametrize(
+    "fml",
+    [
+        "Y ~ X1 | f1^f2",
+        "Y ~ X1 + X2 | f1^f2",
+    ],
+)
+def test_predict_newdata_fe_interaction(fml):
+    """Test predict(newdata=...) works for models with fixed-effect interactions (^)."""
+    data = get_data(N=500, seed=42).dropna()
+    newdata = data.iloc[:100]
+
+    fit = feols(fml, data=data)
+    pred_full = fit.predict()
+    pred_new = fit.predict(newdata=newdata)
+
+    assert pred_full.shape[0] == fit._N
+    assert pred_new.shape[0] == len(newdata)
+
+
+@pytest.mark.parametrize(
+    "fml",
+    [
+        "Y ~ X1 + C(f1)",
+        "Y ~ X1 + i(f1)",
+        "Y ~ X1 + i(f1, X2)",
+        "Y ~ X1 + C(f1) | f2",
+    ],
+)
+def test_predict_newdata_unseen_category(fml):
+    """
+    Rows whose categorical level was not seen during fitting must predict NaN.
+
+    Otherwise formulaic/i() silently encode the unseen level as the reference
+    level, yielding a finite-but-wrong prediction.
+    """
+    data = get_data(N=500, seed=42).dropna()
+    newdata = data.iloc[:100].copy()
+    newdata.iloc[0, newdata.columns.get_loc("f1")] = 999999.0  # unseen level
+
+    fit = feols(fml, data=data)
+    pred_new = fit.predict(newdata=newdata)
+
+    assert np.isnan(pred_new[0]), "unseen categorical level should predict NaN"
+    assert np.all(np.isfinite(pred_new[1:])), "seen rows should remain finite"
 
 
 def test_context_capture():
