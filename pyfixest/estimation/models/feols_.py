@@ -351,7 +351,7 @@ class Feols(ResultAccessorMixin):
         self._fml = FixestFormula.formula
         self._has_fixef = False
         self._fixef = (
-            str(FixestFormula.fixed_effects).replace(" ", "")
+            str(FixestFormula.fixed_effects).replace(" ", "").replace(":", "^")
             if FixestFormula.is_fixed_effects
             else None
         )
@@ -464,7 +464,7 @@ class Feols(ResultAccessorMixin):
 
         self._has_fixef = self._fe is not None
         self._fixef = (
-            str(self.FixestFormula.fixed_effects).replace(" ", "")
+            str(self.FixestFormula.fixed_effects).replace(" ", "").replace(":", "^")
             if self.FixestFormula.is_fixed_effects
             else None
         )
