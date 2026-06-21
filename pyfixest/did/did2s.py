@@ -1,5 +1,6 @@
 from typing import cast
 
+import formulaic
 import numpy as np
 import pandas as pd
 from scipy.sparse import csr_matrix
@@ -317,14 +318,16 @@ def _did2s_vcov(
     # fixed-effect levels). Removing `- 1` would cause formulaic to drop
     # reference levels, changing the GMM vcov standard errors.
     FML1 = Formula(
-        _second_stage=f"{yname} ~ {first_stage_fml.replace('~', '').strip()} - 1",
+        _formula=formulaic.Formula(
+            f"{yname} ~ {first_stage_fml.replace('~', '').strip()} - 1"
+        )
     )
     # Second stage: do NOT use `- 1`. Formulaic needs the intercept present
     # for full-rank encoding (dropping a reference level for factors like
     # i(treat)). The intercept column is then removed by drop_intercept=True
     # below, matching what feols does in _did2s_estimate.
     FML2 = Formula(
-        _second_stage=f"{yname} ~ {second_stage.replace('~', '').strip()}",
+        _formula=formulaic.Formula(f"{yname} ~ {second_stage.replace('~', '').strip()}")
     )
 
     mm_first_stage = model_matrix.create_model_matrix(
