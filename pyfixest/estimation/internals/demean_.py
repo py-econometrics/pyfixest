@@ -2,7 +2,32 @@ import numpy as np
 import pandas as pd
 
 from pyfixest.core.demean import Preconditioner
-from pyfixest.demeaners import AnyDemeaner
+from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner, MapDemeaner
+
+
+class DemeanStrategy:
+    """Resolved demeaner plus per-model fixef parameters and cache.
+
+    Extracts the logic that was previously inlined in ``Feols.__init__``
+    (default demeaner, fixef tolerance/maxiter, cache wiring) into one
+    place so it can be shared by OLS, IV, and GLM model classes.
+    """
+
+    def __init__(
+        self,
+        demeaner: AnyDemeaner | None,
+        lookup_demeaned_data: dict[frozenset[int], pd.DataFrame] | None,
+        lookup_preconditioner: dict[frozenset[int], Preconditioner] | None,
+    ):
+        if demeaner is None:
+            demeaner = MapDemeaner()
+        self.demeaner = demeaner
+        if isinstance(demeaner, LsmrDemeaner):
+            self.fixef_tol = max(demeaner.fixef_atol, demeaner.fixef_btol)
+        else:
+            self.fixef_tol = demeaner.fixef_tol
+        self.fixef_maxiter = demeaner.fixef_maxiter
+        self.cache = DemeanCache(lookup_demeaned_data, lookup_preconditioner)
 
 
 class DemeanCache:

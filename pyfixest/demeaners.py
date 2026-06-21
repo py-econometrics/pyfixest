@@ -27,6 +27,19 @@ _PRECONDITIONER_SUPPORT: dict[LsmrBackend, tuple[set[str], str]] = {
 }
 
 
+_FLIST_DTYPE: dict[str, type] = {
+    "within": np.uint32,
+    "numba": np.uintp,
+    "rust": np.uintp,
+    "torch": np.uint64,
+}
+
+
+def _flist_dtype(backend: str) -> type:
+    """Return the integer dtype required by a backend for fixed-effects arrays."""
+    return _FLIST_DTYPE[backend]
+
+
 def _resolve_preconditioner(backend: LsmrBackend, requested: LsmrPreconditioner) -> str:
     """Resolve `preconditioner` against the supported set of Preconditioners for the
     specified backend.
@@ -139,7 +152,7 @@ class MapDemeaner(BaseDemeaner):
 
         result, success = demean_func(
             x=x,
-            flist=flist.astype(np.uintp, copy=False),
+            flist=flist.astype(_flist_dtype(self.backend), copy=False),
             weights=weights,
             tol=self.fixef_tol,
             maxiter=self.fixef_maxiter,
@@ -305,7 +318,7 @@ class LsmrDemeaner(BaseDemeaner):
 
             return demean_within(
                 x=x,
-                flist=flist.astype(np.uint32, copy=False),
+                flist=flist.astype(_flist_dtype(self.backend), copy=False),
                 weights=weights,
                 tol=max(self.fixef_atol, self.fixef_btol),
                 maxiter=self.fixef_maxiter,
@@ -335,7 +348,7 @@ class LsmrDemeaner(BaseDemeaner):
 
                 result, success = demean_rs(
                     x=x,
-                    flist=flist.astype(np.uintp, copy=False),
+                    flist=flist.astype(_flist_dtype(self.backend), copy=False),
                     weights=weights,
                     tol=max(self.fixef_atol, self.fixef_btol),
                     maxiter=self.fixef_maxiter,
@@ -344,7 +357,9 @@ class LsmrDemeaner(BaseDemeaner):
 
             dtype = torch.float32 if self.precision == "float32" else torch.float64
             tol = max(self.fixef_atol, self.fixef_btol)
-            flist_uint64 = flist.astype(np.uint64, copy=False)
+            flist_uint: np.ndarray = flist.astype(
+                _flist_dtype(self.backend), copy=False
+            )
 
             if self.device == "auto":
                 demean_torch = cast(
@@ -353,7 +368,7 @@ class LsmrDemeaner(BaseDemeaner):
                 )
                 result, success = demean_torch(
                     x=x,
-                    flist=flist_uint64,
+                    flist=flist_uint,
                     weights=weights,
                     tol=tol,
                     maxiter=self.fixef_maxiter,
@@ -367,7 +382,7 @@ class LsmrDemeaner(BaseDemeaner):
             )
             result, success = demean_torch_on_device(
                 x=x,
-                flist=flist_uint64,
+                flist=flist_uint,
                 weights=weights,
                 tol=tol,
                 maxiter=self.fixef_maxiter,
