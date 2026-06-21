@@ -93,6 +93,9 @@ class ModelMatrix:
         self._offset = self._get_columns(model_matrix, _ModelMatrixKey.offset)
 
     def _collect_data(self, model_matrix: formulaic.ModelMatrix) -> None:
+        # formulaic internal: `_flatten()` is private and its iteration order is
+        # documented as unstable. We don't depend on order - columns are accessed by
+        # name and duplicates are value-identical (deduped below).
         datas: list[pd.DataFrame] = list(model_matrix._flatten())
         if not all(datas[0].index.identical(other.index) for other in datas[1:]):
             raise ValueError("All design matrix data must have the same index.")
