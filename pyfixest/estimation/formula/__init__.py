@@ -10,7 +10,7 @@ from pyfixest.estimation.formula.transforms.fixed_effects_encoding import (
 from pyfixest.estimation.formula.transforms.misc import log
 
 FORMULAIC_FEATURE_FLAG: Final[DefaultFormulaParser.FeatureFlags] = (
-    DefaultFormulaParser.FeatureFlags.DEFAULT
+    DefaultFormulaParser.FeatureFlags.ALL
 )
 
 FORMULAIC_TRANSFORMS: Final[dict[str, Callable]] = {
