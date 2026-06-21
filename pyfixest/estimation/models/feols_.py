@@ -331,7 +331,9 @@ class Feols(ResultAccessorMixin):
         self._fml = FixestFormula.formula
         self._has_fixef = False
         self._fixef = (
-            FixestFormula.fixed_effects if FixestFormula.is_fixed_effects else None
+            str(FixestFormula.fixed_effects).replace(" ", "")
+            if FixestFormula.is_fixed_effects
+            else None
         )
         # self._coefnames = None
         self._icovars = None
@@ -442,7 +444,7 @@ class Feols(ResultAccessorMixin):
 
         self._has_fixef = self._fe is not None
         self._fixef = (
-            str(self.FixestFormula.fixed_effects)
+            str(self.FixestFormula.fixed_effects).replace(" ", "")
             if self.FixestFormula.is_fixed_effects
             else None
         )
@@ -1943,6 +1945,20 @@ class Feols(ResultAccessorMixin):
             # Pad X to full size; NaN rows yield NaN SE/CI via einsum propagation.
             X = np.full((n_observations, X_coef.shape[1]), np.nan)
             X[valid_idx] = X_coef
+            if self._offset_name is not None:
+                if self._offset_name not in newdata.columns:
+                    raise ValueError(
+                        f"Offset variable '{self._offset_name}' not found in newdata."
+                    )
+                offset = pd.to_numeric(
+                    newdata[self._offset_name], errors="coerce"
+                ).to_numpy()
+                if np.isnan(offset).any():
+                    raise ValueError(
+                        f"Offset column '{self._offset_name}' in newdata contains "
+                        "NaN or non-numeric values."
+                    )
+                y_hat = y_hat + offset
             if type == "response" and self._method == "fepois":
                 y_hat = np.exp(y_hat)
 
