@@ -6,6 +6,7 @@ from collections.abc import Mapping
 from importlib import import_module
 from typing import Any, Literal, cast
 
+import formulaic
 import numpy as np
 import pandas as pd
 from formulaic import Formula
@@ -330,7 +331,11 @@ class Feols(ResultAccessorMixin):
         # not really optimal code change later
         self._fml = FixestFormula.formula
         self._has_fixef = False
-        self._fixef = FixestFormula.fixed_effects
+        self._fixef = (
+            str(FixestFormula.fixed_effects).replace(" ", "")
+            if FixestFormula.is_fixed_effects
+            else None
+        )
         # self._coefnames = None
         self._icovars = None
 
@@ -439,7 +444,11 @@ class Feols(ResultAccessorMixin):
         self._depvar = self._Y.columns[0]
 
         self._has_fixef = self._fe is not None
-        self._fixef = self.FixestFormula.fixed_effects
+        self._fixef = (
+            str(self.FixestFormula.fixed_effects).replace(" ", "")
+            if self.FixestFormula.is_fixed_effects
+            else None
+        )
 
         self._k_fe = self._fe.nunique(axis=0) if self._has_fixef else None
         self._n_fe = len(self._k_fe) if self._has_fixef else 0
@@ -1498,7 +1507,9 @@ class Feols(ResultAccessorMixin):
             # if output = "numpy", type of Y, X is not np.ndarray but a formulaic object
             # which cannot be pickled by joblib
 
-            Y, X = Formula(fml_dummies).get_model_matrix(self._data, output=output)
+            Y, X = formulaic.Formula(fml_dummies).get_model_matrix(
+                self._data, output=output
+            )
             xnames = X.model_spec.column_names
             Y = Y.toarray().flatten() if output == "sparse" else Y.flatten()
             X = csc_matrix(X) if output == "sparse" else X
