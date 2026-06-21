@@ -1,14 +1,18 @@
+from __future__ import annotations
+
 from collections.abc import Mapping
 from typing import Any
 
 from pyfixest.estimation.api.utils import _estimation_input_checks
-from pyfixest.estimation.FixestMulti_ import FixestMulti
+from pyfixest.estimation.config import EstimationConfig
 from pyfixest.estimation.internals.literals import (
     QuantregMethodOptions,
     QuantregMultiOptions,
     SolverOptions,
     VcovTypeOptions,
 )
+from pyfixest.estimation.plan_ import parse_formula
+from pyfixest.estimation.runner import run_estimation
 from pyfixest.utils.dev_utils import DataFrameType
 from pyfixest.utils.utils import capture_context
 from pyfixest.utils.utils import ssc as ssc_func
@@ -113,7 +117,8 @@ def quantreg(
     ssc : dict[str, Union[str, bool]], optional
         A dictionary specifying the small sample correction for inference.
         If None, uses default settings from `ssc_func()`. Note that by default, R's quantreg and Stata's qreg2 do not use
-        small sample corrections. To match their behavior, set `ssc = pf.ssc(adj = False, cluster_adj = False)`.
+        small sample corrections. To match their behavior, set
+        `ssc = pf.ssc(k_adj=False, G_adj=False)`.
 
     collin_tol : float, optional
         Tolerance for collinearity check, by default 1e-10.
@@ -172,8 +177,6 @@ def quantreg(
 
     ```{python}
     import pyfixest as pf
-    import pandas as pd
-    import numpy as np
 
     data = pf.get_data()
 
@@ -181,8 +184,18 @@ def quantreg(
     fit.summary()
     ```
 
-    For details around inference, estimation techniques, (fast) fitting and visualizing the full quantile regression
-    process, please take a look at the dedicated [vignette](https://pyfixest.org/quantile-regression.html).
+    To fit multiple quantiles in one call:
+
+    ```{python}
+    fits = pf.quantreg("Y ~ X1 + X2", data, quantile=[0.1, 0.5, 0.9])
+    pf.qplot(fits)
+    ```
+
+    Arguments such as `split`, `fsplit`, `context`, `lean`, and `copy_data`
+    behave as in `feols()`, but quantile regression does not support fixed-effects
+    formula syntax. For details around inference, fast fitting, and visualization
+    of the full quantile regression process, see the
+    [quantile regression tutorial](/tutorials/quantile-regression.html).
     """
     # WLS currently not supported for quantile regression
     weights = None
@@ -193,12 +206,6 @@ def quantreg(
         ssc = ssc_func()
 
     context = {} if context is None else capture_context(context)
-
-    fixef_rm = "none"
-    fixef_tol = 1e-06
-    fixef_maxiter = 100_000
-    iwls_tol = 1e-08
-    iwls_maxiter = 25
 
     if isinstance(vcov, str) and vcov in ["HC1", "HC2", "HC3"]:
         vcov = "hetero"
@@ -212,15 +219,12 @@ def quantreg(
         vcov_kwargs=None,
         weights=weights,
         ssc=ssc,
-        fixef_rm=fixef_rm,
-        fixef_maxiter=fixef_maxiter,
+        fixef_rm="none",  # arbitrary, not supported
         collin_tol=collin_tol,
         copy_data=copy_data,
         store_data=store_data,
         lean=lean,
-        fixef_tol=fixef_tol,
         weights_type=weights_type,
-        use_compression=False,
         reps=None,
         seed=None,
         split=split,
@@ -228,54 +232,37 @@ def quantreg(
         separation_check=separation_check,
     )
 
-    fixest = FixestMulti(
+    estimation = "quantreg" if not isinstance(quantile, list) else "quantreg_multi"
+    config = EstimationConfig(
+        method=estimation,
         data=data,
+        fml=fml,
         copy_data=copy_data,
         store_data=store_data,
         lean=lean,
-        fixef_tol=fixef_tol,
-        fixef_maxiter=fixef_maxiter,
+        drop_intercept=drop_intercept,
+        vcov=vcov,
+        vcov_kwargs=None,
+        ssc_dict=ssc,
+        solver=solver,
+        collin_tol=collin_tol,
+        context=context,
+        weights=weights,
         weights_type=weights_type,
-        use_compression=False,
-        reps=None,
-        seed=seed,
         split=split,
         fsplit=fsplit,
-        context=context,
+        seed=seed,
+        quantile=quantile,
         quantreg_method=method,
+        quantile_tol=tol,
+        quantile_maxiter=maxiter,
         quantreg_multi_method=multi_method,
     )
 
-    # same checks as for Poisson regression
-    fixest._prepare_estimation(
-        estimation="quantreg" if not isinstance(quantile, list) else "quantreg_multi",
-        fml=fml,
-        vcov=vcov,
-        vcov_kwargs=None,
-        weights=weights,
-        ssc=ssc,
-        fixef_rm=fixef_rm,
-        drop_intercept=drop_intercept,
-        quantile=quantile,
-        quantile_tol=tol,
-        quantile_maxiter=maxiter,
-    )
-    if fixest._is_iv:
+    parsed = parse_formula(config)
+    if parsed.is_iv:
         raise NotImplementedError(
             "IV Estimation is not supported for Quantile Regression"
         )
 
-    fixest._estimate_all_models(
-        vcov=vcov,
-        solver=solver,
-        vcov_kwargs=None,
-        iwls_tol=iwls_tol,
-        iwls_maxiter=iwls_maxiter,
-        collin_tol=collin_tol,
-        separation_check=separation_check,
-    )
-
-    if fixest._is_multiple_estimation:
-        return fixest
-    else:
-        return fixest.fetch_model(0, print_fml=False)
+    return run_estimation(config, parsed)

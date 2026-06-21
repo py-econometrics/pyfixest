@@ -37,7 +37,7 @@ def etable(
     models: ModelInputType,
     type: str = "gt",
     signif_code: list | None = None,
-    coef_fmt: str = "b \n (se)",
+    coef_fmt: str | None = None,
     custom_stats: dict | None = None,
     custom_model_stats: dict | None = None,
     keep: list | str | None = None,
@@ -69,14 +69,18 @@ def etable(
         The models to be summarized in the table.
     type : str, optional
         Type of output. Either "df" for pandas DataFrame, "md" for markdown,
-        "gt" for great_tables, or "tex" for LaTeX table. Default is "gt".
+        "gt" for great_tables, "tex" for LaTeX table, or "typst" for Typst table. Default is "gt".
     signif_code : list, optional
-        Significance levels for the stars. Default is None, which sets [0.001, 0.01, 0.05].
-        If None, no stars are printed.
+        Significance levels for the stars. Default is None, which sets
+        [0.001, 0.01, 0.05]. Note that stars are only rendered if `coef_fmt`
+        includes `*` on a statistic token, for example `b*` or `b:.3f*`.
     coef_fmt : str, optional
         The format of the coefficient (b), standard error (se), t-stats (t), and
-        p-value (p). Default is `"b \n (se)"`.
+        p-value (p). Default is inherited from maketables.
+        To render significance stars, include `*` on the relevant token, following
+        maketables syntax, for example `"b:.3f* \n (se:.3f)"` with 3 decimal places.
         Spaces ` `, parentheses `()`, brackets `[]`, newlines `\n` are supported.
+        For further available formatting rules, see `maketables.ETable`.
     custom_stats: dict, optional
         A dictionary of custom statistics that can be used in the coef_fmt string to be displayed
         in the coefficuent cells analogously to "b", "se" etc. The keys are the names of the custom
@@ -192,10 +196,11 @@ def etable(
 
     assert type in [
         "df",
-        "tex",
         "md",
         "html",
         "gt",
+        "tex",
+        "typst",
     ], "type must be either 'df', 'md', 'html', 'gt' or 'tex'"
 
     models_list = _post_processing_input_checks(models)
@@ -217,7 +222,7 @@ def etable(
         assert isinstance(custom_model_stats, dict), "custom_model_stats must be a dict"
         for stat, values in custom_model_stats.items():
             assert isinstance(stat, str), "custom_model_stats keys must be strings"
-            assert isinstance(values, list), "custom_model_stats values must lists"
+            assert isinstance(values, list), "custom_model_stats values must be lists"
             assert len(values) == len(models_list), (
                 "lists in custom_model_stats values must have the same length as models"
             )
@@ -262,6 +267,12 @@ def etable(
         if file_name is not None:
             with open(file_name, "w") as f:
                 f.write(result.as_raw_html())
+        return result
+    elif type == "typst":
+        result = table.make(type="typst")
+        if file_name is not None:
+            with open(file_name, "w") as f:
+                f.write(result)
         return result
 
     return None
@@ -313,10 +324,7 @@ def summary(models: ModelInputType, digits: int = 3) -> None:
         print("Estimation: ", estimation_method)
         depvar_fixef = f"Dep. var.: {depvar}"
         if fxst._fixef is not None:
-            if not fxst._use_mundlak:
-                depvar_fixef += f", Fixed effects: {fxst._fixef}"
-            else:
-                depvar_fixef += f", Mundlak: by {fxst._fixef}"
+            depvar_fixef += f", Fixed effects: {fxst._fixef}"
         print(depvar_fixef)
         if fxst._sample_split_value != "all":
             split = f"sample: {fxst._sample_split_var} = {fxst._sample_split_value}"

@@ -4,7 +4,6 @@ import numpy as np
 import pandas as pd
 import pytest
 import rpy2.robjects as ro
-from rpy2.robjects import pandas2ri
 
 # rpy2 imports
 from rpy2.robjects.packages import importr
@@ -13,8 +12,7 @@ import pyfixest as pf
 from pyfixest.estimation import feols
 from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.utils.utils import get_data, ssc
-
-pandas2ri.activate()
+from tests._torch_test_utils import torch_param
 
 fixest = importr("fixest")
 stats = importr("stats")
@@ -152,10 +150,10 @@ rng = np.random.default_rng(8760985)
 
 def check_absolute_diff(x1, x2, tol, msg=None):
     "Check for absolute differences."
-    if isinstance(x1, (int, float)):
-        x1 = np.array([x1])
-    if isinstance(x2, (int, float)):
-        x2 = np.array([x2])
+    if np.ndim(x1) == 0:
+        x1 = np.asarray([x1], dtype=np.float64)
+    if np.ndim(x2) == 0:
+        x2 = np.asarray([x2], dtype=np.float64)
         msg = "" if msg is None else msg
 
     # handle nan values
@@ -195,6 +193,7 @@ def _get_vcov_diag(py_model, r_model, coefname, is_iv=False):
 test_counter_feols = 0
 test_counter_fepois = 0
 test_counter_feiv = 0
+test_counter_feglm = 0
 
 # What is being tested in all tests:
 # - pyfixest vs fixest
@@ -210,14 +209,70 @@ test_counter_feiv = 0
 
 ALL_F3 = ["str", "object", "int", "categorical", "float"]
 SINGLE_F3 = ALL_F3[0]
+
+
 BACKEND_F3 = [
-    *[("numba", t) for t in ALL_F3],
-    *[(b, SINGLE_F3) for b in ("rust-cg", "jax", "rust", "cupy", "scipy")],
+    *[
+        pytest.param(name, pf.MapDemeaner(backend="numba"), t, id=name)
+        for name in ("numba",)
+        for t in ALL_F3
+    ],
+    pytest.param(
+        "within",
+        pf.LsmrDemeaner(preconditioner="additive"),
+        SINGLE_F3,
+        id="within_additive",
+    ),
+    pytest.param(
+        "within_diag",
+        pf.LsmrDemeaner(preconditioner="diagonal"),
+        SINGLE_F3,
+        id="within_diagonal",
+    ),
+    *[
+        pytest.param(name, pf.MapDemeaner(backend=name), SINGLE_F3, id=name)
+        for name in ("rust",)
+    ],
+    torch_param(
+        ("torch", pf.LsmrDemeaner(backend="torch", device="auto"), SINGLE_F3),
+        id="torch",
+    ),
+    torch_param(
+        ("torch_cpu", pf.LsmrDemeaner(backend="torch", device="cpu"), SINGLE_F3),
+        id="torch_cpu",
+    ),
+    torch_param(
+        (
+            "torch_mps",
+            pf.LsmrDemeaner(backend="torch", precision="float32", device="mps"),
+            SINGLE_F3,
+        ),
+        id="torch_mps",
+        require="mps",
+    ),
+    torch_param(
+        (
+            "torch_cuda",
+            pf.LsmrDemeaner(backend="torch", device="cuda"),
+            SINGLE_F3,
+        ),
+        id="torch_cuda",
+        require="cuda",
+    ),
+    torch_param(
+        (
+            "torch_cuda32",
+            pf.LsmrDemeaner(backend="torch", precision="float32", device="cuda"),
+            SINGLE_F3,
+        ),
+        id="torch_cuda32",
+        require="cuda",
+    ),
 ]
 
 
 @pytest.mark.against_r_core
-@pytest.mark.parametrize("demeaner_backend,f3_type", BACKEND_F3)
+@pytest.mark.parametrize("backend_name,demeaner,f3_type", BACKEND_F3)
 @pytest.mark.parametrize("dropna", [False, True])
 @pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
 @pytest.mark.parametrize("weights", [None, "weights"])
@@ -233,7 +288,8 @@ def test_single_fit_feols(
     fml,
     k_adj,
     G_adj,
-    demeaner_backend,
+    backend_name,
+    demeaner,
 ):
     global test_counter_feols
     test_counter_feols += 1
@@ -267,7 +323,7 @@ def test_single_fit_feols(
         vcov=inference,
         weights=weights,
         ssc=ssc_,
-        demeaner_backend=demeaner_backend,
+        demeaner=demeaner,
     )
     if weights is not None:
         r_fixest = fixest.feols(
@@ -314,15 +370,18 @@ def test_single_fit_feols(
     r_df_k = int(ro.r('attr(r_fixest$cov.scaled, "df.K")')[0])
     r_df_t = int(ro.r('attr(r_fixest$cov.scaled, "df.t")')[0])
 
-    if demeaner_backend in ("cupy", "scipy"):
+    if backend_name in ("torch", "torch_cpu", "torch_cuda"):
         coef_tol = 1e-08
-        predict_tol = 2e-06
-        resid_tol = 2e-06
-        inference_tol = 5e-07
-        tstat_tol = 1e-06
-        if "^" in fml and weights is not None:
-            predict_tol = 6e-06
-            resid_tol = 6e-06
+        predict_tol = 5e-05
+        resid_tol = 5e-05
+        inference_tol = 1e-06
+        tstat_tol = 1e-05
+    elif backend_name in ("torch_mps", "torch_cuda32"):
+        coef_tol = 5e-06
+        predict_tol = 2e-04
+        resid_tol = 2e-04
+        inference_tol = 1e-05
+        tstat_tol = 1e-05
     else:
         coef_tol = 1e-08
         predict_tol = 1e-06
@@ -511,8 +570,9 @@ def test_single_fit_feols_empty(
 @pytest.mark.parametrize("k_adj", [True])
 @pytest.mark.parametrize("G_adj", [True])
 @pytest.mark.parametrize("weights", [None, "weights"])
+@pytest.mark.parametrize("offset", [False, True])
 def test_single_fit_fepois(
-    data_fepois, dropna, inference, f3_type, fml, k_adj, G_adj, weights
+    data_fepois, dropna, inference, f3_type, fml, k_adj, G_adj, weights, offset
 ):
     global test_counter_fepois
     test_counter_fepois += 1
@@ -523,6 +583,13 @@ def test_single_fit_fepois(
     ssc_ = ssc(k_adj=k_adj, G_adj=G_adj)
 
     data_fepois = data_fepois.copy()
+    if offset:
+        rng = np.random.default_rng(20260511)
+        data_fepois["offset_var"] = np.log(rng.uniform(0.5, 3.0, data_fepois.shape[0]))
+        data_fepois.iloc[10, data_fepois.columns.get_loc("offset_var")] = np.nan
+        offset_var = "offset_var"
+    else:
+        offset_var = None
     if dropna:
         data_fepois.dropna(inplace=True)
     # long story, but categories need to be strings to be converted to R factors,
@@ -543,27 +610,22 @@ def test_single_fit_fepois(
         iwls_tol=1e-10,
         iwls_maxiter=100,
         weights=weights,
+        offset=offset_var if offset else None,
     )
 
+    r_kwargs = {
+        "vcov": r_inference,
+        "data": data_r,
+        "ssc": fixest.ssc(k_adj, "nonnested", False, G_adj, "min", "min"),
+        "glm_tol": 1e-10,
+        "glm_iter": 100,
+    }
     if weights is not None:
-        r_fixest = fixest.fepois(
-            ro.Formula(r_fml),
-            vcov=r_inference,
-            data=data_r,
-            ssc=fixest.ssc(k_adj, "nonnested", False, G_adj, "min", "min"),
-            glm_tol=1e-10,
-            glm_maxiter=100,
-            weights=ro.Formula("~" + weights),
-        )
-    else:
-        r_fixest = fixest.fepois(
-            ro.Formula(r_fml),
-            vcov=r_inference,
-            data=data_r,
-            ssc=fixest.ssc(k_adj, "nonnested", False, G_adj, "min", "min"),
-            glm_tol=1e-10,
-            glm_maxiter=100,
-        )
+        r_kwargs["weights"] = ro.Formula("~" + weights)
+    if offset:
+        r_kwargs["offset"] = ro.Formula("~" + offset_var)
+
+    r_fixest = fixest.fepois(ro.Formula(r_fml), **r_kwargs)
 
     py_coef = mod.coef().xs("X1")
     py_se = mod.se().xs("X1")
@@ -629,8 +691,9 @@ def test_single_fit_fepois(
         py_tstat, r_tstat, 1e-06 if weights is None else 1e-05, "py_tstat != r_tstat"
     )
     check_absolute_diff(py_confint, r_confint, 1e-06, "py_confint != r_confint")
-    check_absolute_diff(py_deviance, r_deviance, 1e-08, "py_deviance != r_deviance")
-    check_absolute_diff(py_loglik, r_loglik, 1e-08, "py_ll != r_loglik")
+    _dev_tol = 1e-07 if offset else 1e-08
+    check_absolute_diff(py_deviance, r_deviance, _dev_tol, "py_deviance != r_deviance")
+    check_absolute_diff(py_loglik, r_loglik, _dev_tol, "py_ll != r_loglik")
 
     # cant match fixest yet
     if weights is None:
@@ -640,6 +703,159 @@ def test_single_fit_fepois(
         check_absolute_diff(
             py_pseudo_r2, r_pseudo_r2, 1e-08, "py_pseudo_r2 != r_pseudo_r2"
         )
+
+    py_predict_response = mod.predict(type="response")
+    py_predict_link = mod.predict(type="link")
+    r_predict_response = stats.predict(r_fixest, type="response")
+    r_predict_link = stats.predict(r_fixest, type="link")
+    check_absolute_diff(
+        py_predict_response[0:5],
+        r_predict_response[0:5],
+        1e-05,
+        "py_predict_response != r_predict_response",
+    )
+    check_absolute_diff(
+        py_predict_link[0:5],
+        r_predict_link[0:5],
+        1e-06,
+        "py_predict_link != r_predict_link",
+    )
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize("family", ["logit", "probit", "gaussian", "poisson"])
+@pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
+@pytest.mark.parametrize("fml", ols_fmls)
+@pytest.mark.parametrize("weights", [None, "weights"])
+def test_single_fit_feglm(data_fepois, inference, fml, weights, family):
+    """Verify weighted/unweighted feglm against R fixest.feglm.
+
+    Mirrors `test_single_fit_fepois` (same parametrize grid; same artifacts
+    checked) for the three other GLM families. Poisson-only artifacts
+    (loglik, loglik_null, pseudo_r2, pearson_chi2) are not defined for
+    logit/probit/gaussian and are therefore skipped.
+    """
+    global test_counter_feglm
+    test_counter_feglm += 1
+
+    _skip_f3_checks(fml, "str")
+
+    ssc_ = ssc(k_adj=True, G_adj=True)
+
+    data = data_fepois.copy()
+    data.where(data != "nan", np.nan, inplace=True)
+    data = _convert_f3(data, "str")
+
+    # Binary outcome for logit/probit; original Y for gaussian.
+    data["Y_bin"] = (data["Y"] > 0).astype(int)
+    py_fml = fml.replace("Y", "Y_bin", 1) if family in ("logit", "probit") else fml
+    r_fml = _c_to_as_factor(py_fml)
+    r_inference = _get_r_inference(inference)
+    data_r = get_data_r(py_fml, data)
+
+    mod = pf.feglm(
+        fml=py_fml,
+        data=data,
+        family=family,
+        vcov=inference,
+        ssc=ssc_,
+        iwls_tol=1e-10,
+        iwls_maxiter=100,
+        weights=weights,
+    )
+
+    # Gaussian GLM with identity link == OLS; compare against pf.feols directly
+    if family == "gaussian":
+        ref = pf.feols(fml=py_fml, data=data, vcov=inference, ssc=ssc_, weights=weights)
+        assert (mod._N, int(mod._df_k), int(mod._df_t)) == (
+            ref._N,
+            int(ref._df_k),
+            int(ref._df_t),
+        )
+        pd.testing.assert_frame_equal(mod.tidy(), ref.tidy(), atol=1e-10, rtol=0)
+        np.testing.assert_allclose(mod._vcov, ref._vcov, atol=1e-10, rtol=0)
+        return
+
+    r_family = {
+        "logit": stats.binomial(link="logit"),
+        "probit": stats.binomial(link="probit"),
+        "gaussian": stats.gaussian(),
+        "poisson": stats.poisson(),
+    }[family]
+
+    r_kwargs = {
+        "vcov": r_inference,
+        "data": data_r,
+        "ssc": fixest.ssc(True, "nonnested", False, True, "min", "min"),
+        "glm_tol": 1e-10,
+        "glm_iter": 100,
+        "family": r_family,
+    }
+    if weights is not None:
+        r_kwargs["weights"] = ro.Formula("~" + weights)
+
+    r_fixest = fixest.feglm(ro.Formula(r_fml), **r_kwargs)
+
+    py_coef = mod.coef().xs("X1")
+    py_se = mod.se().xs("X1")
+    py_pval = mod.pvalue().xs("X1")
+    py_tstat = mod.tstat().xs("X1")
+    py_confint = mod.confint().xs("X1").values
+    py_nobs = mod._N
+    py_deviance = mod.deviance
+    py_resid = mod.resid()
+    py_irls_weights = mod._irls_weights.flatten()
+    py_df_k = int(mod._df_k)
+    py_df_t = int(mod._df_t)
+    py_n_coefs = mod.coef().values.size
+
+    df_X1 = _get_r_df(r_fixest)
+    ro.globalenv["r_fixest"] = r_fixest
+
+    py_vcov, r_vcov = _get_vcov_diag(mod, r_fixest, "X1")
+    r_coef = df_X1["estimate"]
+    r_se = df_X1["std.error"]
+    r_pval = df_X1["p.value"]
+    r_tstat = df_X1["statistic"]
+    r_confint = df_X1[["conf.low", "conf.high"]].values.astype(np.float64)
+    r_nobs = int(stats.nobs(r_fixest)[0])
+    r_deviance = r_fixest.rx2("deviance")
+    r_resid = stats.residuals(r_fixest)
+    r_irls_weights = r_fixest.rx2("irls_weights")
+    r_df_k = int(ro.r('attr(r_fixest$cov.scaled, "df.K")')[0])
+    r_df_t = int(ro.r('attr(r_fixest$cov.scaled, "df.t")')[0])
+    r_n_coefs = int(df_X1["n_coef"])
+
+    if inference == "iid":
+        check_absolute_diff(py_nobs, r_nobs, 1e-08, "py_nobs != r_nobs")
+        check_absolute_diff(py_coef, r_coef, 1e-08, "py_coef != r_coef")
+        check_absolute_diff(py_resid[0:5], r_resid[0:5], 1e-07, "py_resid != r_resid")
+        # irls_weights can be loose at certain indices; matching the Poisson
+        # test's tolerance for the same kind of probe.
+        check_absolute_diff(
+            py_irls_weights[10:12],
+            r_irls_weights[10:12],
+            1e-02,
+            "py_irls_weights != r_irls_weights",
+        )
+        check_absolute_diff(py_n_coefs, r_n_coefs, 1e-08, "py_n_coefs != r_n_coefs")
+
+    # order of precision:
+    # coef, se, vcov -> important
+    # pval, tstat, confint -> less important as they are derived from the above
+    check_absolute_diff(py_df_k, r_df_k, 1e-12, "py_df_k != r_df_k")
+    check_absolute_diff(py_df_t, r_df_t, 1e-12, "py_df_t != r_df_t")
+    check_absolute_diff(py_vcov, r_vcov, 1e-06, "py_vcov != r_vcov")
+    check_absolute_diff(py_se, r_se, 1e-06, "py_se != r_se")
+    check_absolute_diff(py_pval, r_pval, 1e-06, "py_pval != r_pval")
+    check_absolute_diff(
+        py_tstat, r_tstat, 1e-06 if weights is None else 1e-05, "py_tstat != r_tstat"
+    )
+    check_absolute_diff(py_confint, r_confint, 1e-06, "py_confint != r_confint")
+    deviance_tol = 1e-07 if family in ("logit", "probit") else 1e-08
+    check_absolute_diff(
+        py_deviance, r_deviance, deviance_tol, "py_deviance != r_deviance"
+    )
 
     py_predict_response = mod.predict(type="response")
     py_predict_link = mod.predict(type="link")
@@ -954,31 +1170,12 @@ def test_glm_vs_fixest(N, seed, dropna, fml, inference, family):
         ("Y + Y2 ~ X1 | csw0(f1,f2)"),
         ("Y + log(Y2) ~ sw(X1, X2) | csw0(f1,f2,f3)"),
         ("Y ~ C(f2):X2 + sw0(X1, f3)"),
-        # TODO: enable once fixest bug is fixed, see https://github.com/lrberge/fixest/issues/631
-        pytest.param(
-            "Y ~ X1 | sw0(f1, f1+f2)",
-            marks=pytest.mark.skip(reason="fixest nparams bug (#631)"),
-        ),
-        pytest.param(
-            "Y ~ X1 | csw0(f1, f1+f2)",
-            marks=pytest.mark.skip(reason="fixest nparams bug (#631)"),
-        ),
-        pytest.param(
-            "Y ~ X1 | sw(f1, f1+f2)",
-            marks=pytest.mark.skip(reason="fixest nparams bug (#631)"),
-        ),
-        pytest.param(
-            "Y ~ X1 | sw0(f1, f1+f2, f1+f2+f3)",
-            marks=pytest.mark.skip(reason="fixest nparams bug (#631)"),
-        ),
-        pytest.param(
-            "Y ~ X1 | csw0(f1, f1+f2, f1+f2+f3)",
-            marks=pytest.mark.skip(reason="fixest nparams bug (#631)"),
-        ),
-        pytest.param(
-            "Y ~ X1 | mvsw(f1, f2)",
-            marks=pytest.mark.skip(reason="fixest nparams bug (#631)"),
-        ),
+        ("Y ~ X1 | sw0(f1, f1+f2)"),
+        ("Y ~ X1 | csw0(f1, f1+f2)"),
+        ("Y ~ X1 | sw(f1, f1+f2)"),
+        ("Y ~ X1 | sw0(f1, f1+f2, f1+f2+f3)"),
+        ("Y ~ X1 | csw0(f1, f1+f2, f1+f2+f3)"),
+        ("Y ~ X1 | mvsw(f1, f2)"),
         ("Y ~ X1 | csw(f1, f1+f2)"),
         ("Y ~ sw0(X1, X1+X2)"),
         ("Y ~ csw0(X1, X1+X2)"),
@@ -1466,7 +1663,7 @@ def test_ssc(fml, dropna, weights, vcov, k_adj, G_adj, k_fixef, model):
         py_fit = pf.feols(**py_kwargs)
     else:
         r_kwargs["glm_tol"] = 1e-10
-        r_kwargs["glm_maxiter"] = 100
+        r_kwargs["glm_iter"] = 100
         py_kwargs["iwls_tol"] = 1e-10
         py_kwargs["iwls_maxiter"] = 100
 

@@ -1,14 +1,9 @@
 import numpy as np
-import pytest
 
-from pyfixest.core.crv1 import crv1_vcov_qreg_loop as crv1_vcov_loop_rs
-from pyfixest.estimation.internals.vcov_utils import (
-    _crv1_vcov_loop as crv1_vcov_loop_nb,
-)
+from pyfixest.core.crv1 import crv1_vcov_qreg_loop
 
 
-@pytest.mark.parametrize("func", [crv1_vcov_loop_nb, crv1_vcov_loop_rs])
-def test_crv1_vcov_loop(benchmark, func):
+def test_crv1_vcov_loop(benchmark):
     # Input data: 6 observations, 2 clusters, 2 regressors
     X = np.array(
         [
@@ -26,15 +21,15 @@ def test_crv1_vcov_loop(benchmark, func):
     q = 0.5
     delta = 0.5
 
-    # Precomputed expected A and B matrices (from numba reference)
+    # Precomputed expected A and B matrices.
     expected_A = np.array([[3.125, 0.475], [0.475, 0.085]])
     expected_B = np.array([[4.5, 3.7], [3.7, 5.89]])
 
     A, B = benchmark(
-        func,
+        crv1_vcov_qreg_loop,
         X,
-        clustid.astype(np.uintp),
-        cluster_col.astype(np.uintp),
+        clustid.astype(np.uint64),
+        cluster_col.astype(np.uint64),
         q,
         u_hat,
         delta,

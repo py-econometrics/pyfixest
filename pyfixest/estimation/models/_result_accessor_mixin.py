@@ -1,17 +1,44 @@
 import functools
 import warnings
 from importlib import import_module
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
-from scipy.stats import norm, t
 
 from pyfixest.errors import EmptyVcovError
+
+if TYPE_CHECKING:
+    from pyfixest.estimation.internals.families import InferenceDist
 from pyfixest.utils.dev_utils import _select_order_coefs
 from pyfixest.utils.utils import simultaneous_crit_val
 
 
-class ResultAccessorMixin:
+class TidyColumnAccessors:
+    """Mixin: derive `coef/se/tstat/pvalue` from `tidy()` data frame."""
+
+    def tidy(self, *args, **kwargs) -> pd.DataFrame:
+        """Tidy DataFrame of results. Implemented by the host class."""
+        raise NotImplementedError
+
+    def coef(self) -> pd.Series:
+        """Estimated coefficients as a pandas Series."""
+        return self.tidy()["Estimate"]
+
+    def se(self) -> pd.Series:
+        """Coefficient standard errors as a pandas Series."""
+        return self.tidy()["Std. Error"]
+
+    def tstat(self) -> pd.Series:
+        """Coefficient t-statistics as a pandas Series."""
+        return self.tidy()["t value"]
+
+    def pvalue(self) -> pd.Series:
+        """Coefficient p-values as a pandas Series."""
+        return self.tidy()["Pr(>|t|)"]
+
+
+class ResultAccessorMixin(TidyColumnAccessors):
     """Mixin providing result-accessor methods for fitted models."""
 
     # Type declarations for attributes provided by the host class (Feols).
@@ -33,6 +60,7 @@ class ResultAccessorMixin:
     _N: int
     _k: int
     _df_t: int
+    _inference_dist: "InferenceDist"
     _rmse: float
     _r2: float
     _adj_r2: float
@@ -84,13 +112,8 @@ class ResultAccessorMixin:
 
         self._se = np.sqrt(np.diagonal(self._vcov))
         self._tstat = self._beta_hat / self._se
-        # use t-dist for linear models, but normal for non-linear models
-        if self._method in ["fepois", "feglm-probit", "feglm-logit", "feglm-gaussian"]:
-            self._pvalue = 2 * (1 - norm.cdf(np.abs(self._tstat)))
-            z = np.abs(norm.ppf(alpha / 2))
-        else:
-            self._pvalue = 2 * (1 - t.cdf(np.abs(self._tstat), self._df_t))
-            z = np.abs(t.ppf(alpha / 2, self._df_t))
+        self._pvalue = self._inference_dist.pvalue(self._tstat, self._df_t)
+        z = self._inference_dist.crit_val(alpha, self._df_t)
 
         z_se = z * self._se
         self._conf_int = np.array([self._beta_hat - z_se, self._beta_hat + z_se])
@@ -170,64 +193,22 @@ class ResultAccessorMixin:
                 UserWarning,
             )
 
-        tidy_df = pd.DataFrame(
-            {
-                "Coefficient": self._coefnames,
-                "Estimate": self._beta_hat,
-                "Std. Error": self._se,
-                "t value": self._tstat,
-                "Pr(>|t|)": self._pvalue,
-                # use slice because self._conf_int might be empty
-                f"{lb * 100:.1f}%": self._conf_int[:1].flatten(),
-                f"{ub * 100:.1f}%": self._conf_int[1:2].flatten(),
-            }
-        )
-
-        return tidy_df.set_index("Coefficient")
-
-    def coef(self) -> pd.Series:
-        """
-        Fitted model coefficents.
-
-        Returns
-        -------
-        pd.Series
-            A pd.Series with the estimated coefficients of the regression model.
-        """
-        return self.tidy()["Estimate"]
-
-    def se(self) -> pd.Series:
-        """
-        Fitted model standard errors.
-
-        Returns
-        -------
-        pd.Series
-            A pd.Series with the standard errors of the estimated regression model.
-        """
-        return self.tidy()["Std. Error"]
-
-    def tstat(self) -> pd.Series:
-        """
-        Fitted model t-statistics.
-
-        Returns
-        -------
-        pd.Series
-            A pd.Series with t-statistics of the estimated regression model.
-        """
-        return self.tidy()["t value"]
-
-    def pvalue(self) -> pd.Series:
-        """
-        Fitted model p-values.
-
-        Returns
-        -------
-        pd.Series
-            A pd.Series with p-values of the estimated regression model.
-        """
-        return self.tidy()["Pr(>|t|)"]
+        data = {
+            "Coefficient": self._coefnames,
+            "Estimate": self._beta_hat,
+            "Std. Error": self._se,
+            "t value": self._tstat,
+            "Pr(>|t|)": self._pvalue,
+            # use slice because self._conf_int might be empty
+            f"{lb * 100:.1f}%": self._conf_int[:1].flatten(),
+            f"{ub * 100:.1f}%": self._conf_int[1:2].flatten(),
+        }
+        if (
+            getattr(self, "_sample_split_var", None) is not None
+            and (sample := getattr(self, "_sample_split_value", None)) is not None
+        ):
+            data["Sample"] = sample
+        return pd.DataFrame(data).set_index("Coefficient")
 
     def confint(
         self,
@@ -319,10 +300,7 @@ class ResultAccessorMixin:
             raise ValueError("No coefficients match the keep/drop patterns.")
 
         if not joint:
-            if self._method == "feols":
-                crit_val = np.abs(t.ppf(alpha / 2, self._df_t))
-            else:
-                crit_val = np.abs(norm.ppf(alpha / 2))
+            crit_val = self._inference_dist.crit_val(alpha, self._df_t)
         else:
             D_inv = 1 / self._se[joint_indices]
             V = self._vcov[np.ix_(joint_indices, joint_indices)]

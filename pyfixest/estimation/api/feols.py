@@ -1,16 +1,26 @@
+from __future__ import annotations
+
 from collections.abc import Mapping
 from typing import Any
 
+from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.api.utils import _estimation_input_checks
+from pyfixest.estimation.config import EstimationConfig
 from pyfixest.estimation.FixestMulti_ import FixestMulti
+from pyfixest.estimation.internals.demeaner_options import (
+    _resolve_demeaner,
+    _warn_if_deprecated_demeaner_backend,
+    _warn_if_experimental_torch_demeaner,
+)
 from pyfixest.estimation.internals.literals import (
-    DemeanerBackendOptions,
     FixedRmOptions,
     SolverOptions,
     VcovTypeOptions,
     WeightsTypeOptions,
 )
 from pyfixest.estimation.models.feols_ import Feols
+from pyfixest.estimation.plan_ import parse_formula
+from pyfixest.estimation.runner import run_estimation
 from pyfixest.utils.dev_utils import DataFrameType
 from pyfixest.utils.utils import capture_context
 from pyfixest.utils.utils import ssc as ssc_func
@@ -24,8 +34,6 @@ def feols(
     weights: None | str = None,
     ssc: dict[str, str | bool] | None = None,
     fixef_rm: FixedRmOptions = "singleton",
-    fixef_tol=1e-06,
-    fixef_maxiter: int = 10_000,
     collin_tol: float = 1e-09,
     drop_intercept: bool = False,
     copy_data: bool = True,
@@ -33,7 +41,7 @@ def feols(
     lean: bool = False,
     weights_type: WeightsTypeOptions = "aweights",
     solver: SolverOptions = "scipy.linalg.solve",
-    demeaner_backend: DemeanerBackendOptions = "numba",
+    demeaner: AnyDemeaner | None = None,
     use_compression: bool = False,
     reps: int = 100,
     context: int | Mapping[str, Any] | None = None,
@@ -92,12 +100,6 @@ def feols(
     collin_tol : float, optional
         Tolerance for collinearity check, by default 1e-10.
 
-    fixef_tol: float, optional
-        Tolerance for the fixed effects demeaning algorithm. Defaults to 1e-06.
-
-    fixef_maxiter: int, optional
-         Maximum number of iterations for the demeaning algorithm. Defaults to 100,000.
-
     drop_intercept : bool, optional
         Whether to drop the intercept from the model, by default False.
 
@@ -132,44 +134,36 @@ def feols(
 
     solver : SolverOptions, optional.
         The solver to use for the regression. Can be "np.linalg.lstsq",
-        "np.linalg.solve", "scipy.linalg.solve", "scipy.sparse.linalg.lsqr" and "jax".
+        "np.linalg.solve", "scipy.linalg.solve" and "scipy.sparse.linalg.lsqr".
         Defaults to "scipy.linalg.solve".
 
-    demeaner_backend: DemeanerBackendOptions, optional
-        The backend to use for demeaning. Options include:
-        - "numba" (default): CPU-based demeaning using Numba JIT via the Alternating Projections Algorithm.
-        - "rust-cg": Implements the conjugate-gradient-schwarz algorithm from the
-          [`within`](https://github.com/py-econometrics/within) rust package.
-          Particularly effective for sparse fixed effects structures. See the
-          [difficult fixed effects vignette](https://pyfixest.org/explanation/difficult-fixed-effects.html)
-          for benchmarks.
-        - "rust": CPU-based demeaning implemented in Rust via the Alternating Projections Algorithm.
-        - "jax": CPU or GPU-accelerated using JAX (requires jax/jaxlib) via the Alternating Projections Algorithm.
-        - "cupy" or "cupy64": GPU-accelerated using CuPy with float64 precision via direct application of the Frisch-Waugh-Lovell Theorem on sparse
-          matrices (requires cupy & GPU, defaults to scipy/CPU if no GPU available)
-        - "cupy32": GPU-accelerated using CuPy with float32 precision via direct application of the Frisch-Waugh-Lovell Theorem on sparse
-          matrices (requires cupy & GPU, defaults to scipy/CPU and float64 if no GPU available)
-        - "scipy": Direct application of the Frisch-Waugh-Lovell Theorem on sparse matrice.
-          Forces to use a scipy-sparse backend even when cupy is installed and GPU is available.
-        Defaults to "numba".
+    demeaner : AnyDemeaner | None, optional
+        Typed demeaner configuration. Controls the fixed-effects demeaning
+        backend, tolerance, and iteration limits. Accepts a `MapDemeaner`
+        or `LsmrDemeaner` instance. Defaults to
+        `MapDemeaner()` (Rust MAP algorithm, tol=1e-6, maxiter=10_000).
+        For other options - including the optional Numba backend and the
+        torch-based LSMR backends - see the
+        [Demeaner Backends vignette](../../how-to/demeaner-backends.qmd).
+
+        .. deprecated::
+            The ``cupy`` / ``scipy`` LSMR backends are deprecated and will
+            be removed in a future release. Replacements:
+
+            - cupy LSMR on GPU →
+              ``LsmrDemeaner(backend="torch", device="cuda")``.
+            - Scipy / cupy LSMR on CPU → ``LsmrDemeaner()``
+              (the default within backend).
 
     use_compression: bool
-        Whether to use sufficient statistics to losslessly fit the regression model
-        on compressed data. False by default. If True, the model is estimated on
-        compressed data, which can lead to a significant speed-up for large data sets.
-        See the paper by Wong et al (2021) for more details https://arxiv.org/abs/2102.11297.
-        Note that if `use_compression = True`, inference is lossless. If standard errors are
-        clustered, a wild cluster bootstrap is employed. Parameters for the wild bootstrap
-        can be specified via the `reps` and `seed` arguments. Additionally, note that for one-way
-        fixed effects, the estimation method uses a Mundlak transform to "control" for the
-        fixed effects. For two-way fixed effects, a two-way Mundlak transform is employed.
-        For two-way fixed effects, the Mundlak transform is only identical to a two-way
-        fixed effects model if the data set is a panel. We do not provide any checks for the
-        panel status of the data set.
+        .. deprecated::
+            ``use_compression`` is deprecated and no longer supported. Passing
+            ``use_compression=True`` raises a ``NotImplementedError``. For
+            out-of-memory regression on large datasets, consider using the
+            `duckreg <https://github.com/py-econometrics/duckreg>`_ package instead.
 
     reps: int
-        Number of bootstrap repetitions. Only relevant for boostrap inference applied to
-        compute cluster robust errors when `use_compression = True`.
+        Deprecated legacy argument for compressed regression bootstrap inference.
 
     context : int or Mapping[str, Any]
         A dictionary containing additional context variables to be used by
@@ -178,8 +172,7 @@ def feols(
         variables that need to be available in the formula environment.
 
     seed: Optional[int]
-        Seed for the random number generator. Only relevant for boostrap inference applied to
-        compute cluster robust errors when `use_compression = True`.
+        Deprecated legacy argument for compressed regression bootstrap inference.
 
     split: Optional[str]
         A character string, i.e. 'split = var'. If provided, the sample is split according to the
@@ -225,9 +218,9 @@ def feols(
     fit.tidy()
     ```
 
-    You can also access all elements in the tidy data frame by dedicated methods,
+    You can also access common outputs via dedicated methods,
     e.g. `fit.coef()` for the coefficients, `fit.se()` for the standard errors,
-    `fit.tstat()` for the t-statistics, and `fit.pval()` for the p-values, and
+    `fit.tstat()` for the t-statistics, `fit.pvalue()` for the p-values, and
     `fit.confint()` for the confidence intervals.
 
     The employed type of inference can be specified via the `vcov` argument. For compatibility
@@ -373,7 +366,8 @@ def feols(
     ```
 
     Last, `feols()` supports interaction of variables via the `i()` syntax.
-    Documentation on this is tba.
+    For a compact overview of formula features including `i()`, see the
+    [formula syntax tutorial](/tutorials/formula-syntax.html).
 
     You can pass custom transforms via the `context` argument. If you set `context = 0`, all
     functions from the level of the call to `feols()` will be available:
@@ -492,6 +486,12 @@ def feols(
     if ssc is None:
         ssc = ssc_func()
     context = {} if context is None else capture_context(context)
+    demeaner = _resolve_demeaner(demeaner)
+    _warn_if_experimental_torch_demeaner(demeaner)
+    _warn_if_deprecated_demeaner_backend(demeaner)
+
+    if not isinstance(use_compression, bool):
+        raise TypeError("The function argument `use_compression` must be of type bool.")
 
     _estimation_input_checks(
         fml=fml,
@@ -505,55 +505,42 @@ def feols(
         copy_data=copy_data,
         store_data=store_data,
         lean=lean,
-        fixef_tol=fixef_tol,
-        fixef_maxiter=fixef_maxiter,
         weights_type=weights_type,
-        use_compression=use_compression,
         reps=reps,
         seed=seed,
         split=split,
         fsplit=fsplit,
     )
 
-    fixest = FixestMulti(
+    if use_compression:
+        raise NotImplementedError(
+            "The `use_compression` argument is deprecated and no longer supported. "
+            "The compressed regression and Mundlak implementation has been removed. "
+            "For out-of-memory regression on large datasets, consider using the "
+            "`duckreg` package (https://github.com/py-econometrics/duckreg) instead."
+        )
+
+    config = EstimationConfig(
+        method="feols",
         data=data,
+        fml=fml,
         copy_data=copy_data,
         store_data=store_data,
         lean=lean,
-        fixef_tol=fixef_tol,
-        fixef_maxiter=fixef_maxiter,
-        weights_type=weights_type,
-        use_compression=use_compression,
-        reps=reps,
-        seed=seed,
-        split=split,
-        fsplit=fsplit,
-        context=context,
-    )
-
-    estimation = "feols" if not use_compression else "compression"
-
-    fixest._prepare_estimation(
-        estimation=estimation,
-        fml=fml,
-        vcov=vcov,
-        vcov_kwargs=vcov_kwargs,
-        weights=weights,
-        ssc=ssc,
         fixef_rm=fixef_rm,
         drop_intercept=drop_intercept,
-    )
-
-    # demean all models: based on fixed effects x split x missing value combinations
-    fixest._estimate_all_models(
         vcov=vcov,
-        solver=solver,
         vcov_kwargs=vcov_kwargs,
+        ssc_dict=ssc,
+        solver=solver,
+        demeaner=demeaner,
         collin_tol=collin_tol,
-        demeaner_backend=demeaner_backend,
+        context=context,
+        weights=weights,
+        weights_type=weights_type,
+        split=split,
+        fsplit=fsplit,
     )
 
-    if fixest._is_multiple_estimation:
-        return fixest
-    else:
-        return fixest.fetch_model(0, print_fml=False)
+    parsed = parse_formula(config)
+    return run_estimation(config, parsed)

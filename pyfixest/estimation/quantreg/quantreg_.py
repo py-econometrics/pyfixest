@@ -1,14 +1,13 @@
 import warnings
 from collections.abc import Callable, Mapping
 from functools import partial
-from typing import Any, Literal, cast
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
 from scipy.linalg import cho_factor, solve_triangular
-from scipy.stats import norm
 
-from pyfixest.core.crv1 import crv1_vcov_qreg_loop
+from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.literals import (
     QuantregMethodOptions,
@@ -18,7 +17,12 @@ from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.quantreg.frisch_newton_ip import (
     frisch_newton_solver,
 )
-from pyfixest.estimation.quantreg.utils import get_hall_sheather_bandwidth
+from pyfixest.estimation.quantreg.vcov_ import (
+    vcov_crv1_qreg,
+    vcov_hetero_qreg,
+    vcov_iid_qreg,
+    vcov_nid_qreg,
+)
 
 
 class Quantreg(Feols):
@@ -34,11 +38,9 @@ class Quantreg(Feols):
         weights: str | None,
         weights_type: str | None,
         collin_tol: float,
-        fixef_tol: float,
-        fixef_maxiter: int,
         lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
         solver: SolverOptions = "np.linalg.solve",
-        demeaner_backend: Literal["numba", "jax"] = "numba",
+        demeaner: AnyDemeaner | None = None,
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
@@ -60,8 +62,6 @@ class Quantreg(Feols):
             weights=weights,
             weights_type=weights_type,
             collin_tol=collin_tol,
-            fixef_tol=fixef_tol,
-            fixef_maxiter=fixef_maxiter,
             lookup_demeaned_data=lookup_demeaned_data,
             solver=solver,
             store_data=store_data,
@@ -70,7 +70,7 @@ class Quantreg(Feols):
             sample_split_var=sample_split_var,
             sample_split_value=sample_split_value,
             context=context,
-            demeaner_backend=demeaner_backend,
+            demeaner=demeaner,
         )
 
         warnings.warn(
@@ -361,50 +361,14 @@ class Quantreg(Feols):
         return fn_res
 
     def _vcov_iid(self):
-        "Implement the kernel-based sandwich estimator from Powell (1991)."
-        q = self._quantile
-        N = self._N
-        X = self._X
-        Y = self._Y
-        u_hat = self._u_hat
-
-        h = get_hall_sheather_bandwidth(q=q, N=N)
-        # interquartile range of u_hat - this is what both quantreg and statsmodels use
-        # (all three logical lines below in fact)
-        rq = np.quantile(np.abs(u_hat), 0.75) - np.quantile(np.abs(u_hat), 0.25)
-        sigma = np.std(Y)
-        hk = np.minimum(sigma, rq / 1.34) * (norm.ppf(q + h) - norm.ppf(q - h))
-
-        # uniform kernel
-        f = 1 / (2 * N * hk) * np.sum(np.abs(u_hat) < hk)
-
-        D = X.T @ X
-        Dinv = np.linalg.inv(D)
-
-        return 1 / (f**2) * q * (1 - q) * Dinv
+        return vcov_iid_qreg(
+            X=self._X, Y=self._Y, u_hat=self._u_hat, q=self._quantile, N=self._N
+        )
 
     def _vcov_hetero(self):
-        "Implement the kernel-based sandwich estimator from Powell (1991) for heteroskedasticity robust inference."
-        q = self._quantile
-        N = self._N
-        X = self._X
-        Y = self._Y
-        u_hat = self._u_hat
-
-        h = get_hall_sheather_bandwidth(q=q, N=N)
-        # interquartile range of u_hat
-        rq = np.quantile(np.abs(u_hat), 0.75) - np.quantile(np.abs(u_hat), 0.25)
-        sigma = np.std(Y)
-        hk = np.minimum(sigma, rq / 1.34) * (norm.ppf(q + h) - norm.ppf(q - h))
-
-        # uniform kernel
-        f = 1 / (2 * N * hk) * np.sum(np.abs(u_hat) < hk)
-
-        D = X.T @ X
-        C = f * D
-        Cinv = np.linalg.inv(C)
-
-        return q * (1 - q) * Cinv @ D @ Cinv
+        return vcov_hetero_qreg(
+            X=self._X, Y=self._Y, u_hat=self._u_hat, q=self._quantile, N=self._N
+        )
 
     def _vcov_nid(self) -> np.ndarray:
         """
@@ -414,40 +378,15 @@ class Quantreg(Feols):
         'nid' stands for 'non-iid'.
         For details, see page 80 in Koenker's "Quantile Regression" (2005) book.
         """
-        q = self._quantile
-        N = self._N
-        X = self._X
-
-        h = get_hall_sheather_bandwidth(q=q, N=N)
-
-        beta_hat_plus = self._fit(
+        return vcov_nid_qreg(
             X=self._X,
             Y=self._Y,
-            q=self._quantile + h,
-            beta_init=self._beta_hat if self._method == "pfn" else None,
-        )[0]
-        beta_hat_minus = self._fit(
-            X=self._X,
-            Y=self._Y,
-            q=self._quantile - h,
-            beta_init=self._beta_hat if self._method == "pfn" else None,
-        )[0]
-
-        # eps: small tolerance parameter to avoid division by zero
-        # when di = 0; set to sqrt of machine epsilon in quantreg
-        eps = np.finfo(float).eps ** 0.5
-        # equation (2)
-        di = X @ (beta_hat_plus - beta_hat_minus)
-        # equation (3)
-        Fplus = np.maximum(0, (2 * h) / (di - eps))
-
-        # general Huber structure, see page 74 in Koenker.
-        J = X.T @ X
-        XFplus = X * np.sqrt(Fplus[:, np.newaxis])
-        H = XFplus.T @ XFplus
-        Hinv = np.linalg.inv(H)
-
-        return q * (1 - q) * Hinv @ J @ Hinv
+            beta_hat=self._beta_hat,
+            q=self._quantile,
+            N=self._N,
+            method=cast(QuantregMethodOptions, self._method),
+            fit=self._fit,
+        )
 
     def _vcov_crv1(self, clustid: np.ndarray, cluster_col: np.ndarray):
         """
@@ -459,23 +398,13 @@ class Quantreg(Feols):
                 "Multiway clustering is not (yet) supported for quantile regression."
             )
 
-        X = self._X
-        N, _ = X.shape
-        q = self._quantile
-        u_hat = self._u_hat
-
-        # kappa: median absolute deviation of the a-th quantile regression residuals
-        kappa = np.median(np.abs(u_hat - np.median(u_hat)))
-        h_G = get_hall_sheather_bandwidth(q=q, N=N)
-        delta = kappa * (norm.ppf(q + h_G) - norm.ppf(q - h_G))
-
-        A, B = crv1_vcov_qreg_loop(
-            X, clustid.astype(np.uintp), cluster_col.astype(np.uintp), q, u_hat, delta
+        return vcov_crv1_qreg(
+            X=self._X,
+            u_hat=self._u_hat,
+            q=self._quantile,
+            clustid=clustid,
+            cluster_col=cluster_col,
         )
-        B_inv = np.linalg.inv(B)
-        vcov = B_inv @ A @ B_inv
-
-        return vcov
 
     @property
     def objective_value(self):

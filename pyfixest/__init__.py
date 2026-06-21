@@ -8,6 +8,10 @@ except PackageNotFoundError:
     __version__ = "unknown"
 
 __all__ = [
+    "BaseDemeaner",
+    "LsmrDemeaner",
+    "MapDemeaner",
+    "Preconditioner",
     "SaturatedEventStudy",
     "bonferroni",
     "coefplot",
@@ -21,7 +25,10 @@ __all__ = [
     "feglm",
     "feols",
     "fepois",
+    "get_bartik_data",
     "get_data",
+    "get_encouragement_data",
+    "get_ivf_data",
     "get_motherhood_event_study_data",
     "get_ssc",
     "get_twin_data",
@@ -50,6 +57,11 @@ _lazy_imports = {
     "fepois": "pyfixest.estimation.api",
     "feglm": "pyfixest.estimation.api",
     "quantreg": "pyfixest.estimation.api",
+    # demeaner configs
+    "BaseDemeaner": "pyfixest.demeaners",
+    "MapDemeaner": "pyfixest.demeaners",
+    "LsmrDemeaner": "pyfixest.demeaners",
+    "Preconditioner": "pyfixest.core.demean",
     # estimation - other functions (still use parent module + getattr)
     "bonferroni": "pyfixest.estimation",
     "rwolf": "pyfixest.estimation",
@@ -69,7 +81,10 @@ _lazy_imports = {
     "qplot": "pyfixest.report",
     "make_table": "pyfixest.report",
     # utils
+    "get_bartik_data": "pyfixest.utils",
     "get_data": "pyfixest.utils",
+    "get_encouragement_data": "pyfixest.utils",
+    "get_ivf_data": "pyfixest.utils",
     "get_motherhood_event_study_data": "pyfixest.utils",
     "get_twin_data": "pyfixest.utils",
     "get_worker_panel": "pyfixest.utils",

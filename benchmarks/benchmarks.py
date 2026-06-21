@@ -16,9 +16,64 @@ from pathlib import Path
 
 import pandas as pd
 
+# Optional torch availability detection
+try:
+    import torch
+
+    HAS_TORCH = True
+    HAS_MPS = hasattr(torch.backends, "mps") and torch.backends.mps.is_available()
+    HAS_CUDA = torch.cuda.is_available()
+except ImportError:
+    HAS_TORCH = False
+    HAS_MPS = False
+    HAS_CUDA = False
+
+# Backends that accept a backend= argument when called through pyfixest runners
+_PYFIXEST_BACKENDS = {
+    "numba",
+    "rust",
+    "within",
+    "torch_cpu",
+    "torch_mps",
+    "torch_cuda",
+    "torch_cuda32",
+}
+
+# =============================================================================
+# Helpers
+# =============================================================================
+
+
+def _append_optional_backends(estimators, label_prefix, runner_func, func_name):
+    """Append optional accelerator backend estimators based on runtime availability."""
+    optional = []
+    if HAS_TORCH:
+        optional.append(("torch_cpu", "torch_cpu"))
+    if HAS_MPS:
+        optional.append(("torch_mps", "torch_mps"))
+    if HAS_CUDA:
+        optional.append(("torch_cuda", "torch_cuda"))
+        optional.append(("torch_cuda32", "torch_cuda32"))
+    for suffix, backend in optional:
+        estimators.append(
+            (f"{label_prefix} ({suffix})", backend, runner_func, False, func_name)
+        )
+
+
 # =============================================================================
 # Estimator functions (run in main process for JIT caching)
 # =============================================================================
+
+
+def _make_demeaner(backend: str):
+    """Create a typed demeaner from a backend name string."""
+    import pyfixest as pf
+
+    if backend in {"numba", "rust"}:
+        return pf.MapDemeaner(backend=backend)
+    if backend == "within":
+        return pf.LsmrDemeaner()
+    raise ValueError(f"Unknown backend {backend!r}")
 
 
 def run_pyfixest_feols(data: pd.DataFrame, formula: str, backend: str) -> float:
@@ -26,7 +81,7 @@ def run_pyfixest_feols(data: pd.DataFrame, formula: str, backend: str) -> float:
     import pyfixest as pf
 
     start = time.perf_counter()
-    _ = pf.feols(formula, data, demeaner_backend=backend)
+    _ = pf.feols(formula, data, demeaner=_make_demeaner(backend))
     return time.perf_counter() - start
 
 
@@ -35,7 +90,7 @@ def run_pyfixest_fepois(data: pd.DataFrame, formula: str, backend: str) -> float
     import pyfixest as pf
 
     start = time.perf_counter()
-    _ = pf.fepois(formula, data, demeaner_backend=backend)
+    _ = pf.fepois(formula, data, demeaner=_make_demeaner(backend))
     return time.perf_counter() - start
 
 
@@ -44,7 +99,7 @@ def run_pyfixest_feglm_logit(data: pd.DataFrame, formula: str, backend: str) -> 
     import pyfixest as pf
 
     start = time.perf_counter()
-    _ = pf.feglm(formula, data, family="logit", demeaner_backend=backend)
+    _ = pf.feglm(formula, data, family="logit", demeaner=_make_demeaner(backend))
     return time.perf_counter() - start
 
 
@@ -200,13 +255,6 @@ def get_estimators(
     if benchmark_type == "ols":
         estimators = [
             (
-                "pyfixest.feols (scipy)",
-                "scipy",
-                run_pyfixest_feols,
-                False,
-                "pyfixest_feols",
-            ),
-            (
                 "pyfixest.feols (numba)",
                 "numba",
                 run_pyfixest_feols,
@@ -220,6 +268,18 @@ def get_estimators(
                 False,
                 "pyfixest_feols",
             ),
+            (
+                "pyfixest.feols (within)",
+                "within",
+                run_pyfixest_feols,
+                False,
+                "pyfixest_feols",
+            ),
+        ]
+        _append_optional_backends(
+            estimators, "pyfixest.feols", run_pyfixest_feols, "pyfixest_feols"
+        )
+        estimators += [
             (
                 "linearmodels.AbsorbingLS",
                 "absorbingls",
@@ -242,13 +302,6 @@ def get_estimators(
     elif benchmark_type == "poisson":
         estimators = [
             (
-                "pyfixest.fepois (scipy)",
-                "scipy",
-                run_pyfixest_fepois,
-                False,
-                "pyfixest_fepois",
-            ),
-            (
                 "pyfixest.fepois (numba)",
                 "numba",
                 run_pyfixest_fepois,
@@ -262,20 +315,23 @@ def get_estimators(
                 False,
                 "pyfixest_fepois",
             ),
+            (
+                "pyfixest.fepois (within)",
+                "within",
+                run_pyfixest_fepois,
+                False,
+                "pyfixest_fepois",
+            ),
         ]
+        _append_optional_backends(
+            estimators, "pyfixest.fepois", run_pyfixest_fepois, "pyfixest_fepois"
+        )
         formulas = {
             2: "negbin_y ~ x1 | indiv_id + year",
             3: "negbin_y ~ x1 | indiv_id + year + firm_id",
         }
     elif benchmark_type == "logit":
         estimators = [
-            (
-                "pyfixest.feglm_logit (scipy)",
-                "scipy",
-                run_pyfixest_feglm_logit,
-                False,
-                "pyfixest_feglm_logit",
-            ),
             (
                 "pyfixest.feglm_logit (numba)",
                 "numba",
@@ -290,7 +346,20 @@ def get_estimators(
                 False,
                 "pyfixest_feglm_logit",
             ),
+            (
+                "pyfixest.feglm_logit (within)",
+                "within",
+                run_pyfixest_feglm_logit,
+                False,
+                "pyfixest_feglm_logit",
+            ),
         ]
+        _append_optional_backends(
+            estimators,
+            "pyfixest.feglm_logit",
+            run_pyfixest_feglm_logit,
+            "pyfixest_feglm_logit",
+        )
         formulas = {
             2: "binary_y ~ x1 | indiv_id + year",
             3: "binary_y ~ x1 | indiv_id + year + firm_id",
@@ -310,6 +379,7 @@ def parse_dataset_name(name: str) -> tuple[str, int]:
         "500k": 500_000,
         "1m": 1_000_000,
         "2m": 2_000_000,
+        "3m": 3_000_000,
         "5m": 5_000_000,
     }
     parts = name.rsplit("_", 1)
@@ -333,11 +403,17 @@ def run_benchmark(
     timeout_estimators: set[str] | None = None,
     formulas_override: dict[int, str] | None = None,
     allowed_datasets: set[str] | None = None,
+    pyfixest_only: bool = False,
+    backend_filter: set[str] | None = None,
 ) -> None:
     """Run benchmarks on all datasets in data_dir."""
     if timeout_estimators is None:
         timeout_estimators = set()
     estimators, formulas = get_estimators(benchmark_type, timeout_estimators)
+    if pyfixest_only:
+        estimators = [e for e in estimators if e[1] in _PYFIXEST_BACKENDS]
+    if backend_filter:
+        estimators = [e for e in estimators if e[1] in backend_filter]
     if formulas_override:
         formulas = formulas_override
 
@@ -420,7 +496,7 @@ def run_benchmark(
                                 print(f"{elapsed:.3f}s")
                         else:
                             # Run in main process
-                            if backend_or_func in ("scipy", "numba", "rust"):
+                            if backend_or_func in _PYFIXEST_BACKENDS:
                                 elapsed = func(data, formula, backend_or_func)
                             else:
                                 elapsed = func(data, formula)
@@ -527,6 +603,17 @@ def main():
         default=None,
         help="Filter datasets by name (e.g., 'simple' to exclude 'difficult')",
     )
+    parser.add_argument(
+        "--pyfixest-only",
+        action="store_true",
+        help="Skip non-pyfixest estimators (linearmodels, statsmodels)",
+    )
+    parser.add_argument(
+        "--backends",
+        type=str,
+        default=None,
+        help="Comma-separated list of backends to run (e.g., 'torch_cuda,torch_cuda32')",
+    )
     args = parser.parse_args()
 
     config = load_config("bench.json")
@@ -537,6 +624,10 @@ def main():
     formulas_override = get_formulas_from_config(config, args.type)
     allowed_datasets = get_allowed_datasets(config, args.type)
 
+    backend_filter = None
+    if args.backends:
+        backend_filter = set(b.strip() for b in args.backends.split(","))
+
     run_benchmark(
         args.data_dir,
         args.output,
@@ -546,6 +637,8 @@ def main():
         timeout_estimators,
         formulas_override,
         allowed_datasets,
+        pyfixest_only=args.pyfixest_only,
+        backend_filter=backend_filter,
     )
 
 

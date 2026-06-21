@@ -61,15 +61,16 @@ In practice, however, panels are almost never balanced. Workers are observed onl
 Several algorithms have been proposed for this multi-fixed effect demeaning
 problem:
 
-- **Method of Alternating Projections (MAP).** Introduced by Guimarães & Portugal (2010) as the "Zig-Zag" and Gaure (2013), this is the workhorse algorithm in most FE packages (`reghdfe`, `lfe`, `fixest`). It sequentially sweeps through each fixed effect and demeans the target variable by the current fixed effects's group means. Usually, this approach is implemented with accelerations. For example, R's `fixest` uses MAP with Irons-Tuck acceleration and other optimization strategies. In PyFixest, the `"rust"` backend implements MAP without acceleration and is therefore quite a lot slower than `fixest`'s algorithm in cases where the accelerations pay off.
+- **Method of Alternating Projections (MAP).** Introduced by Guimarães & Portugal (2010) as the "Zig-Zag" and Gaure (2013), this is the workhorse algorithm in most FE packages (`reghdfe`, `lfe`, `fixest`). It sequentially sweeps through each fixed effect and demeans the target variable by the current fixed effects's group means. Usually, this approach is implemented with accelerations. For example, R's `fixest` uses MAP with Irons-Tuck acceleration and other optimization strategies. In PyFixest, `pf.MapDemeaner(backend="rust")` implements MAP without acceleration and is therefore quite a lot slower than `fixest`'s algorithm in cases where the accelerations pay off.
 
-- **LSMR.** The solver powering `FixedEffectsModels.jl`. It can be accessed in `pyfixest` via the `scipy` and `cupy` demeaner backends.
+- **LSMR.** The solver powering `FixedEffectsModels.jl`. It can be accessed in `pyfixest` via `pf.LsmrDemeaner(...)`.
 
-- **CG-Schwarz (Conjugate Gradients with Additive Schwarz Preconditioner).**
+- **Modified LSMR with Schwarz preconditioning via `within`.**
 The [`within`](https://github.com/py-econometrics/within) crate, used by
-PyFixest's `"rust-cg"` backend, takes a different approach: it
+PyFixest's `pf.LsmrDemeaner(backend="within")`, takes a different approach: it
 explicitly builds and exploits the block structure of the normal
-equations to form a high-quality preconditioner for the linear problem. We explain this structure below.
+equations to form a high-quality preconditioner for the linear problem.
+PyFixest defaults to modified LSMR with additive Schwarz preconditioning.
 
 ## The Normal Equations and Their Block Structure
 
@@ -164,31 +165,24 @@ In the case of balanced panels, this transmission is perfect: every worker is ob
 
 If a worker never changes firms, demeaning by worker uses only data from that one firm. The resulting residual therefore gives the next firm-demeaning step almost no information about how that firm differs from other firms. Symmetrically, demeaning by firm may give the next worker-demeaning step almost no information about workers connected to other firms. Hence each iteration changes the estimates only a little, which is why convergence is slow.
 
-## How the `CGS` algorithm in `within` works
+## How the `within` LSMR Algorithm Works
 
 The [`within`](https://github.com/py-econometrics/within) crate takes a
 different route. Rather than repeatedly demeaning by one fixed effect at
 a time, it treats residualization as the sparse linear-algebra problem
 introduced above. For each target vector $\mu$ - the dependent variable
-$y$ or one of the covariates to be partialled out - it solves
+$y$ or one of the covariates to be partialled out - the fixed-effect
+coefficients satisfy
 
 $$
 G \, \hat{\alpha} = D^\top \mu.
 $$
 
-This is especially appealing in the FWL setting because the matrix $G$
-is the same for $y$ and for every column of $X$; only the right-hand
-side changes. The key computational question is therefore not whether we
-can write down the system, but how to solve it quickly.
-
-This sparse linear system can be solved with different solvers, e.g. the **conjugate gradient (CG)** method.
-
 The main idea behind `within` is to build a good **preconditioner**
 $M$ for this large sparse system. The matrix $M$ is chosen so that it
 is cheap to invert and so that the preconditioned system
 $M^{-1} G x = M^{-1} b$ is much better conditioned than the original
-one. A good preconditioner therefore reduces the number of iterations
-needed by CG.
+one. A good preconditioner therefore reduces the number of LSMR iterations.
 
 For a three-way fixed effects model with worker, firm, and year effects,
 `within` decomposes the problem into the three pairwise interactions:
@@ -203,40 +197,39 @@ entry $(i,j)$ counts how often worker $i$ is observed at firm $j$.
 This special bipartite structure allows `within` to use fast approximate
 solvers for the pairwise graph problems. These local solves are then
 assembled into a **Schwarz preconditioner** for the full
-system. Finally, `within` applies a standard Krylov method - by default,
-CG - to the original normal equations, but now
-with this preconditioner.
+system. Finally, `within` solves the normal equations with modified LSMR,
+using this preconditioner.
 
-Compared with MAP, the important difference is that CG-Schwarz uses the
+Compared with MAP, the important difference is that `within` LSMR uses the
 block structure of the full Gramian $G$ directly, rather than waiting
 for information to trickle indirectly through many demeaning sweeps.
 This is why it is much less sensitive to sparse mobility patterns, as we will show in the benchmarks below.
 
 You can find a detailed exposition of the algorithm [here](https://github.com/py-econometrics/within/tree/main/docs).
 
-## When do MAP and CGS look good / bad?
+## When do MAP and `within` LSMR look good / bad?
 
 Here is some first-order intuition:
 
 **MAP** looks good on **dense graphs**. When the graph is well-connected with
 many movers and no fragmentation, the vanilla MAP algorithm converges in a handful of iterations.
 Each sweep is extremely cheap because it only computes group means / only has to invert diagonal matrices, so
-the total cost per MAP iteration is low. The CG algorithm instead has overhead from forming the preconditioner, which might not amortize for dense graphs.
+the total cost per MAP iteration is low. The `within` LSMR backend instead has overhead from forming the preconditioner, which might not amortize for dense graphs.
 
-**CG-Schwarz** looks good on sparse graphs. When the graph has few movers,
+**`within` LSMR** looks good on sparse graphs. When the graph has few movers,
 MAP's convergence stalls because it cannot propagate information across
-thin bridges. CG uses the cross-tabulation blocks directly, so it does
+thin bridges. The `within` backend uses the cross-tabulation blocks directly, so it does
 not suffer from this bottleneck. The overhead of building $G$ is repaid by needing fewer iterations.
 
-An important "failing" case for the CGS algorithm is when the problem has a pair of fixed effects that is "dense" and where both fixed effects have high cardinality - for example, worker and firm fixed effects where each worker works in each firm once or large $N$ and large $T$ panels. One example with benchmark for a dgp that is difficult for CGS is provided at the very end.
+An important "failing" case for the `within` LSMR backend is when the problem has a pair of fixed effects that is "dense" and where both fixed effects have high cardinality - for example, worker and firm fixed effects where each worker works in each firm once or large $N$ and large $T$ panels. One example with benchmark for a dgp that is difficult for this backend is provided at the very end.
 
 The intuition above is deliberately simplified. In practice, fixed-point accelerations
 can significantly speed up MAP convergence, narrowing the gap on moderately sparse graphs.
 
 The following benchmarks test two PyFixest backends:
 
-- `pyfixest (rust-map)` implements MAP without acceleration,
-- `pyfixest (rust-cg)` implements the CG-Schwarz strategy via `within`'s solver.
+- `pyfixest (MapDemeaner(backend="rust"))` implements MAP without acceleration,
+- `pyfixest (LsmrDemeaner())` implements the modified LSMR strategy via `within`'s solver.
 
 All benchmarks time the full PyFixest estimation call.
 
@@ -271,7 +264,7 @@ In this initial scenario, we hold the graph structure fixed at the defaults and 
 
 *Benchmark: scale sweep. Runtime as a function of dataset size on a well-connected graph with default parameters.*
 
-On this easy problem, the standard worker + firm + year specification is solved routinely well by both algorithms because each sweep already removes most of the variation. The `rust-map` backend will not look this good in any other of the benchmarks to follow, which all reduce the level of connectivity between workers and firms.
+On this easy problem, the standard worker + firm + year specification is solved routinely well by both algorithms because each sweep already removes most of the variation. `MapDemeaner(backend="rust")` will not look this good in any other of the benchmarks to follow, which all reduce the level of connectivity between workers and firms.
 
 ## Complex Fixed Effects Structures
 
@@ -302,7 +295,7 @@ collinear.
   <img src="figures/akm-benchmarks/bench_mobility.png" width="85%">
 </p>
 
-*Benchmark: mobility sweep. The rust-map solver degrades sharply as mobility decreases, while CG-Schwarz (rust-cg) remains stable.*
+*Benchmark: mobility sweep. `MapDemeaner(backend="rust")` degrades sharply as mobility decreases, while `LsmrDemeaner()` with the `within` backend remains stable.*
 
 ### (b) Progressive freezing
 
@@ -318,7 +311,7 @@ $\delta = 0.005$.
 
 *Benchmark: progressive freezing. As more industries switch from the
 baseline mobility rate ($\delta = 0.1$) to the frozen regime
-($\delta = 0.005$), MAP runtimes rise progressively, while CG-Schwarz
+($\delta = 0.005$), MAP runtimes rise progressively, while `within` LSMR
 remains stable throughout.*
 
 ### (c) Strong assortative matching $\rho$
@@ -344,7 +337,7 @@ nearly collinear.
   <img src="figures/akm-benchmarks/bench_sorting.png" width="85%">
 </p>
 
-*Benchmark: sorting sweep. Increasing sorting ($\rho$) increases MAP runtime while CGS runtime remains stable.*
+*Benchmark: sorting sweep. Increasing sorting ($\rho$) increases MAP runtime while `within` LSMR runtime remains stable.*
 
 
 ### (d) 99 Problems
@@ -470,18 +463,18 @@ The practical recommendation is straightforward: for well-connected
 graphs (high mobility, low sorting, cross-cutting factors), (accelerated)
 MAP is often hard to beat. For sparse
 graphs - low mobility, strong sorting, nested structures, or any
-combination thereof - vanilla MAP as in `rust-map` reveals poor convergence properties. Within PyFixest, the CG-Schwarz backend (`rust-cg` via the `within` crate) is the more robust choice on these sparse graphs.
+combination thereof - vanilla MAP as in `MapDemeaner(backend="rust")` reveals poor convergence properties. Within PyFixest, `LsmrDemeaner()` via the `within` crate is the more robust choice on these sparse graphs.
 
-We conclude by showing two benchmarks from the `fixest` package that are designed to be simple and very challenging for the MAP algorithm. On the "simple" problem, the graph is dense and both PyFixest backends perform well; here, CG-Schwarz tends to lose because its setup overhead does not amortize. On the "difficult" sparse problem, vanilla MAP degrades sharply, while CG-Schwarz performs much better. In the checked-in results, `rust-cg` is substantially faster than `rust-map` on the hard three-way specification.
+We conclude by showing two benchmarks from the `fixest` package that are designed to be simple and very challenging for the MAP algorithm. On the "simple" problem, the graph is dense and both PyFixest demeaners perform well; here, `within` LSMR tends to lose because its setup overhead does not amortize. On the "difficult" sparse problem, vanilla MAP degrades sharply, while `within` LSMR performs much better. In the checked-in results, `LsmrDemeaner()` is substantially faster than `MapDemeaner(backend="rust")` on the hard three-way specification.
 
 <p align="center">
   <img src="figures/base-benchmarks/bench_simple.png" width="85%">
 </p>
 
-*Benchmark: "simple" DGP. A well-connected graph where both PyFixest solvers perform well, except CG-Schwarz whose preconditioner setup cost does not amortize.*
+*Benchmark: "simple" DGP. A well-connected graph where both PyFixest solvers perform well, except `within` LSMR whose preconditioner setup cost does not amortize.*
 
 <p align="center">
   <img src="figures/base-benchmarks/bench_difficult.png" width="85%">
 </p>
 
-*Benchmark: "difficult" DGP. A sparse graph where vanilla MAP degrades dramatically, while CG-Schwarz remains fast.*
+*Benchmark: "difficult" DGP. A sparse graph where vanilla MAP degrades dramatically, while `within` LSMR remains fast.*

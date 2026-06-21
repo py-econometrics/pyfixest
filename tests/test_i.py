@@ -17,12 +17,9 @@ import numpy as np
 import pandas as pd
 import pytest
 import rpy2.robjects as ro
-from rpy2.robjects import pandas2ri
 from rpy2.robjects.packages import importr
 
 from pyfixest.estimation import feols
-
-pandas2ri.activate()
 
 fixest = importr("fixest")
 stats = importr("stats")

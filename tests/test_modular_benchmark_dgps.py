@@ -6,7 +6,9 @@ from benchmarks.modular.akm_dgp import (
     simulate_akm_panel,
     summarize_akm_panel,
 )
+from benchmarks.modular.dgp_functions import base_dgp
 from benchmarks.modular.dgps import (
+    BaseDGP,
     get_akm_occupation_scenarios,
     get_akm_sweep_scenarios,
 )
@@ -110,6 +112,25 @@ def test_simulate_akm_panel_with_occupation_returns_occ_column():
 
     assert list(df.columns) == ["indiv_id", "firm_id", "year", "x1", "y", "occ_id"]
     assert len(df) == 200
+
+
+def test_base_dgp_returns_x1_through_x10():
+    df = base_dgp(n=1_000, k=5, seed=7)
+
+    assert [f"x{i}" for i in range(1, 11)] == [
+        col for col in df.columns if col.startswith("x")
+    ]
+
+
+def test_base_dgp_generates_one_wide_dataset_for_all_requested_k(tmp_path: Path):
+    dgp = BaseDGP(tmp_path, "simple", k_values=(1, 5))
+
+    datasets = dgp.generate(n=1_000, n_iters=1, burn_in=0)
+
+    assert len(datasets) == 1
+    assert datasets[0].k == 5
+    assert "k5" in datasets[0].dataset_id
+    assert datasets[0].data_path.exists()
 
 
 def test_high_sorting_increases_worker_firm_fe_alignment():

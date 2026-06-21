@@ -166,15 +166,6 @@ def test_feols_errors():
     with pytest.raises(TypeError):
         pf.feols(fml="Y ~ X1", data=data, lean=1)
 
-    with pytest.raises(TypeError):
-        pf.feols(fml="Y ~ X1", data=data, fixef_tol="a")
-
-    with pytest.raises(ValueError):
-        pf.feols(fml="Y ~ X1", data=data, fixef_tol=1.0)
-
-    with pytest.raises(ValueError):
-        pf.feols(fml="Y ~ X1", data=data, fixef_tol=0.0)
-
     with pytest.raises(ValueError):
         pf.feols(fml="Y ~ X1", data=data, weights_type="qweights", weights="weights")
 
@@ -184,6 +175,33 @@ def test_poisson_errors():
     # iv not supported
     with pytest.raises(NotImplementedError):
         pf.fepois("Y ~ 1 | X1 ~ Z1", data=data)
+
+
+def test_poisson_offset_errors():
+    data = pf.get_data(model="Fepois").dropna()
+
+    # offset column does not exist in the data
+    with pytest.raises(ValueError, match="not found in data"):
+        pf.fepois("Y ~ X1", data=data, offset="does_not_exist")
+
+    # offset column is not numeric
+    data_str = data.copy()
+    data_str["offset_str"] = "a"
+    with pytest.raises(ValueError, match="must be numeric"):
+        pf.fepois("Y ~ X1", data=data_str, offset="offset_str")
+
+    # predict(newdata=...) with offset column missing in newdata
+    data = data.copy()
+    data["off"] = np.log(np.random.default_rng(0).uniform(0.5, 3.0, len(data)))
+    mod = pf.fepois("Y ~ X1", data=data, offset="off")
+    with pytest.raises(ValueError, match="not found in newdata"):
+        mod.predict(newdata=data.drop(columns=["off"]))
+
+    # predict(newdata=...) with NaN in offset column
+    nd_nan = data.copy()
+    nd_nan.loc[nd_nan.index[0], "off"] = np.nan
+    with pytest.raises(ValueError, match="NaN or non-numeric"):
+        mod.predict(newdata=nd_nan)
 
 
 def test_all_variables_multicollinear():
@@ -512,33 +530,22 @@ def test_IV_Diag_unsupported_statistics():
 def test_errors_compressed():
     data = pf.get_data()
 
-    # no more than two fixed effects
-    with pytest.raises(NotImplementedError):
-        pf.feols("Y ~ X1 | f1 + f2 + f3", data=data, use_compression=True)
+    with pytest.raises(
+        NotImplementedError,
+        match="`use_compression` argument is deprecated and no longer supported",
+    ):
+        pf.feols("Y ~ X1", data=data, use_compression=True)
 
-    # cluster variables not in model
-    with pytest.raises(NotImplementedError):
-        pf.feols("Y ~ X1", vcov={"CRV1": "f1"}, data=data, use_compression=True)
-
-    with pytest.raises(NotImplementedError):
-        pf.feols("Y ~ C(f1)", vcov={"CRV1": "f1"}, data=data, use_compression=True)
-
-    with pytest.raises(NotImplementedError):
-        pf.feols("Y ~ X1 | f1", data=data, use_compression=True, vcov={"CRV1": "f1+f2"})
-
-    # only CVR supported for Mundlak
-    with pytest.raises(NotImplementedError):
-        pf.feols("Y ~ X1 | f1", data=data, use_compression=True, vcov="iid")
-
-    # crv3 inference:
-    with pytest.raises(NotImplementedError):
-        pf.feols("Y ~ X1 | f1", vcov={"CRV3": "f1"}, data=data, use_compression=True)
-
-    # prediction:
-    with pytest.raises(NotImplementedError):
-        pf.feols("Y ~ X1 | f1", data=data, use_compression=True).predict()
+    with pytest.raises(
+        NotImplementedError,
+        match="`use_compression` argument is deprecated and no longer supported",
+    ):
+        pf.feols("Y ~ X1", data=data, weights="weights", use_compression=True)
 
     # argument errors
+    with pytest.raises(TypeError):
+        pf.feols("Y ~ X1", data=data, use_compression=1)  # type: ignore[arg-type]
+
     with pytest.raises(TypeError):
         pf.feols("Y ~ X1", data=data, use_compression=True, vcov="iid", reps=1.2)
 
@@ -547,14 +554,6 @@ def test_errors_compressed():
 
     with pytest.raises(TypeError):
         pf.feols("Y ~ X1", data=data, use_compression=True, vcov="iid", seed=1.2)
-
-    # no support for IV
-    with pytest.raises(NotImplementedError):
-        pf.feols("Y ~ 1 | X1 ~ Z1", data=data, use_compression=True)
-
-    # no support for WLS
-    with pytest.raises(NotImplementedError):
-        pf.feols("Y ~ X1", data=data, weights="weights", use_compression=True)
 
 
 def test_errors_panelview():
@@ -796,6 +795,22 @@ def test_glm_errors():
         ValueError, match=r"The dependent variable must be binary \(0 or 1\)."
     ):
         pf.feglm("Y ~ X1", data=data, family="logit")
+
+
+def test_feglm_offset_requires_poisson():
+    "Test that passing `offset` to feglm() with a non-Poisson family raises."
+    data = pf.get_data()
+    data["Y_bin"] = np.where(data["Y"] > 0, 1, 0)
+    data["off"] = 0.1
+
+    msg = r"The `offset` argument is only supported with `family='poisson'`\."
+    for family in ("logit", "probit", "gaussian"):
+        with pytest.raises(ValueError, match=msg):
+            pf.feglm("Y_bin ~ X1", data=data, family=family, offset="off")
+
+    # offset with poisson must work (does not raise).
+    data["Y_p"] = np.where(data["Y"] > 0, 1, 0)
+    pf.feglm("Y_p ~ X1", data=data.dropna(), family="poisson", offset="off")
 
 
 def test_prediction_errors_glm():

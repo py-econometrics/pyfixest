@@ -1,7 +1,10 @@
-import numba as nb
+from collections.abc import Callable
+from dataclasses import dataclass
+
 import numpy as np
 import pandas as pd
 
+from pyfixest.core.nested_fixed_effects import count_fixef_fully_nested_all
 from pyfixest.core.nw import (
     dk_meat_panel as _dk_meat_panel_rs,
 )
@@ -12,7 +15,104 @@ from pyfixest.core.nw import (
     nw_meat_time as _nw_meat_time_rs,
 )
 from pyfixest.errors import NanInClusterVarError
-from pyfixest.utils.dev_utils import _narwhals_to_pandas
+from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
+from pyfixest.utils.utils import get_ssc
+
+
+@dataclass
+class ClusterPrep:
+    "Precomputed cluster state shared across the CRV per-cluster loop."
+
+    cluster_df: pd.DataFrame
+    cluster_arr_int: np.ndarray  # (N, n_cluster_cols), int-factorized
+    G: list[int]  # cluster counts per column, post ssc_dict["G_df"] adjustment
+    k_fe_nested: int
+    n_fe_fully_nested: int
+
+
+def prepare_cluster_state(
+    *,
+    data: DataFrameType,
+    clustervar: list[str],
+    ssc_dict: dict,
+    fixef: str | None,
+    fe: pd.DataFrame | np.ndarray | None,
+    k_fe: np.ndarray | pd.Series,
+) -> ClusterPrep:
+    "Build cluster_df, int-factorized cluster array, G, and nested-FE counts."
+    cluster_df = _get_cluster_df(data=data, clustervar=clustervar)
+    _check_cluster_df(cluster_df=cluster_df, data=data)
+
+    if cluster_df.shape[1] > 1:
+        cluster_df = _prepare_twoway_clustering(
+            clustervar=clustervar, cluster_df=cluster_df
+        )
+
+    G = _count_G_for_ssc_correction(cluster_df=cluster_df, ssc_dict=ssc_dict)
+
+    cluster_arr_int = np.column_stack(
+        [pd.factorize(cluster_df[col])[0] for col in cluster_df.columns]
+    )
+
+    k_fe_nested = 0
+    n_fe_fully_nested = 0
+    if fixef is not None and ssc_dict["k_fixef"] == "nonnested":
+        if fe is None:
+            raise ValueError("`fe` must not be None when `fixef` is specified.")
+        k_fe_nested_flag, n_fe_fully_nested = count_fixef_fully_nested_all(
+            all_fixef_array=np.array(fixef.replace("^", "_").split("+"), dtype=str),
+            cluster_colnames=np.array(cluster_df.columns, dtype=str),
+            cluster_data=cluster_arr_int.astype(np.uintp),
+            fe_data=fe.to_numpy().astype(np.uintp)
+            if isinstance(fe, pd.DataFrame)
+            else fe.astype(np.uintp),
+        )
+        k_fe_nested = np.sum(k_fe[k_fe_nested_flag]) if n_fe_fully_nested > 0 else 0
+
+    return ClusterPrep(
+        cluster_df=cluster_df,
+        cluster_arr_int=cluster_arr_int,
+        G=G,
+        k_fe_nested=k_fe_nested,
+        n_fe_fully_nested=n_fe_fully_nested,
+    )
+
+
+def run_crv_loop(
+    *,
+    prep: ClusterPrep,
+    k: int,
+    make_ssc_kwargs: Callable[..., dict],
+    cluster_vcov: Callable[[np.ndarray, np.ndarray], np.ndarray],
+) -> tuple[np.ndarray, np.ndarray, int, int]:
+    "Accumulate per-cluster CRV vcov, ssc weights, df_k, and df_t."
+    vcov_sign_list = [1, 1, -1]
+    n_clusters = prep.cluster_df.shape[1]
+
+    vcov = np.zeros((k, k))
+    ssc_arr: np.ndarray | None = None
+    df_t_full = np.zeros(n_clusters)
+    df_k = 0
+
+    for x in range(n_clusters):
+        cluster_col = prep.cluster_arr_int[:, x]
+        clustid = np.unique(cluster_col)
+
+        ssc, df_k, df_t = get_ssc(
+            **make_ssc_kwargs(
+                vcov_type="CRV",
+                G=prep.G[x],
+                vcov_sign=vcov_sign_list[x],
+                k_fe_nested=prep.k_fe_nested,
+                n_fe_fully_nested=prep.n_fe_fully_nested,
+            )
+        )
+        ssc_arr = np.array([ssc]) if ssc_arr is None else np.append(ssc_arr, ssc)
+        df_t_full[x] = df_t
+        vcov += ssc_arr[x] * cluster_vcov(clustid, cluster_col)
+
+    assert ssc_arr is not None  # n_clusters >= 1 in the CRV branch
+    return vcov, ssc_arr, df_k, int(np.min(df_t_full))
 
 
 def _compute_bread(
@@ -186,121 +286,3 @@ def _prepare_twoway_clustering(clustervar: list, cluster_df: pd.DataFrame):
     )
 
     return cluster_df
-
-
-# CODE from Styfen Schaer (@styfenschaer)
-@nb.njit(parallel=False)
-def bucket_argsort(arr: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    """
-    Sorts the input array using the bucket sort algorithm.
-
-    Parameters
-    ----------
-    arr : array_like
-        An array_like object that needs to be sorted.
-
-    Returns
-    -------
-    array_like
-        A sorted copy of the input array.
-
-    Raises
-    ------
-    ValueError
-        If the input is not an array_like object.
-
-    Notes
-    -----
-    The bucket sort algorithm works by distributing the elements of an array
-    into a number of buckets. Each bucket is then sorted individually, either
-    using a different sorting algorithm, or by recursively applying the bucket
-    sorting algorithm.
-    """
-    counts = np.zeros(arr.max() + 1, dtype=np.uint32)
-    for i in range(arr.size):
-        counts[arr[i]] += 1
-
-    locs = np.empty(counts.size + 1, dtype=np.uint32)
-    locs[0] = 0
-    pos = np.empty(counts.size, dtype=np.uint32)
-    for i in range(counts.size):
-        locs[i + 1] = locs[i] + counts[i]
-        pos[i] = locs[i]
-
-    args = np.empty(arr.size, dtype=np.uint32)
-    for i in range(arr.size):
-        e = arr[i]
-        args[pos[e]] = i
-        pos[e] += 1
-
-    return args, locs
-
-
-# CODE from Styfen Schaer (@styfenschaer)
-@nb.njit(parallel=False)
-def _crv1_meat_loop(
-    scores: np.ndarray,
-    clustid: np.ndarray,
-    cluster_col: np.ndarray,
-) -> np.ndarray:
-    k = scores.shape[1]
-    dtype = scores.dtype
-    meat = np.zeros((k, k), dtype=dtype)
-
-    g_indices, g_locs = bucket_argsort(cluster_col)
-
-    score_g = np.empty((k, 1), dtype=dtype)
-    meat_i = np.empty((k, k), dtype=dtype)
-
-    for i in range(clustid.size):
-        g = clustid[i]
-        start = g_locs[g]
-        end = g_locs[g + 1]
-        g_index = g_indices[start:end]
-        score_g = scores[g_index, :].sum(axis=0)
-        np.outer(score_g, score_g, out=meat_i)
-        meat += meat_i
-
-    return meat
-
-
-@nb.njit(parallel=False)
-def _crv1_vcov_loop(
-    X: np.ndarray,
-    clustid: np.ndarray,
-    cluster_col: np.ndarray,
-    q: float,
-    u_hat: np.ndarray,
-    delta: float,
-) -> tuple[np.ndarray, np.ndarray]:
-    _, k = X.shape
-
-    A = np.zeros((k, k))
-    B = np.zeros((k, k))
-    g_indices, g_locs = bucket_argsort(cluster_col)
-
-    eps = 1e-7
-
-    for g in clustid:
-        start = g_locs[g]
-        end = g_locs[g + 1]
-        g_index = g_indices[start:end]
-
-        Xg = X[g_index, :]
-        ug = u_hat[g_index]
-
-        ng = g_index.size
-        for i in range(ng):
-            Xgi = Xg[i, :]
-            psi_i = q - 1.0 * (ug[i] <= eps)
-            for j in range(ng):
-                Xgj = Xg[j, :]
-                psi_j = q - 1.0 * (ug[j] <= eps)
-                A += np.outer(Xgi, Xgj) * psi_i * psi_j
-
-            mask_i = (np.abs(ug[i]) < delta) * 1.0
-            B += np.outer(Xgi, Xgi) * mask_i
-
-    B /= 2 * delta
-
-    return A, B

@@ -1,6 +1,5 @@
 import pandas as pd
-import pytest
-import statsmodels.formula.api as smf
+from great_tables import GT
 
 import pyfixest as pf
 from pyfixest.estimation import feols, fepois
@@ -135,11 +134,33 @@ def test_summary():
     etable(fit_qreg)
 
 
-@pytest.mark.skip("Pyfixest PR is not yet merged into stargazer.")
-def test_stargazer():
-    data = pf.get_data()
+def test_etable_significance_stars_follow_coef_fmt():
+    data = get_data()
+    fit1 = feols("Y ~ X1", data=data)
+    fit2 = feols("Y ~ X1 + X2 | f1", data=data)
 
-    fit = pf.feols("Y ~ X1", data=data)
-    fit_smf = smf.ols("Y ~ X1", data=data).fit()
+    default_table = etable([fit1, fit2], type="df")
+    assert any("*" in str(value) for value in default_table.to_numpy().ravel())
 
-    pf.Stargazer([fit, fit_smf])
+    custom_fmt_table = etable([fit1, fit2], type="df", coef_fmt="b (se)\nt [p]")
+    assert not any("*" in str(value) for value in custom_fmt_table.to_numpy().ravel())
+
+
+def test_etable_correct_output_type():
+    data = get_data()
+    fit = feols("Y ~ X1", data=data)
+
+    df_table = pf.etable(fit, type="df")
+    assert isinstance(df_table, pd.DataFrame)
+
+    md_table = pf.etable(fit, type="md")
+    assert md_table is None
+
+    gt_table = pf.etable(fit, type="gt")
+    assert isinstance(gt_table, GT)
+
+    tex_table = pf.etable(fit, type="tex")
+    assert isinstance(tex_table, str)
+
+    typst_table = pf.etable(fit, type="typst")
+    assert isinstance(typst_table, str)

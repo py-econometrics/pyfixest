@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import pandas as pd
 
 from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
@@ -15,10 +17,7 @@ def _estimation_input_checks(
     copy_data: bool,
     store_data: bool,
     lean: bool,
-    fixef_tol: float,
-    fixef_maxiter: int,
     weights_type: str,
-    use_compression: bool,
     reps: int | None,
     seed: int | None,
     split: str | None,
@@ -55,41 +54,6 @@ def _estimation_input_checks(
         if not isinstance(arg, bool):
             raise TypeError(f"The function argument {arg} must be of type bool.")
 
-    if not isinstance(fixef_tol, float):
-        raise TypeError(
-            """The function argument `fixef_tol` needs to be of
-            type float.
-            """
-        )
-    if fixef_tol <= 0:
-        raise ValueError(
-            """
-            The function argument `fixef_tol` needs to be of
-            strictly larger than 0.
-            """
-        )
-    if fixef_tol >= 1:
-        raise ValueError(
-            """
-            The function argument `fixef_tol` needs to be of
-            strictly smaller than 1.
-            """
-        )
-
-    if not isinstance(fixef_maxiter, int):
-        raise TypeError(
-            """The function argument `fixef_maxiter` needs to be of
-            type int.
-            """
-        )
-    if fixef_maxiter <= 0:
-        raise ValueError(
-            """
-            The function argument `fixef_maxiter` needs to be of
-            strictly larger than 0.
-            """
-        )
-
     if weights_type not in ["aweights", "fweights"]:
         raise ValueError(
             f"""
@@ -97,13 +61,6 @@ def _estimation_input_checks(
             (for analytical / precision weights) or `fweights`
             (for frequency weights) but it is {weights_type}.
             """
-        )
-
-    if not isinstance(use_compression, bool):
-        raise TypeError("The function argument `use_compression` must be of type bool.")
-    if use_compression and weights is not None:
-        raise NotImplementedError(
-            "Compressed regression is not supported with weights."
         )
 
     if reps is not None:

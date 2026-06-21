@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import ctypes
+import gc
 import json
 import statistics
 import subprocess
@@ -8,6 +10,8 @@ import tempfile
 import time
 import warnings
 from collections.abc import Sequence
+from contextlib import suppress
+from dataclasses import dataclass
 from pathlib import Path
 
 import pandas as pd
@@ -18,6 +22,54 @@ except ImportError:
     from interfaces import BenchmarkDataset, FeolsResult, FeolsSpec
 
 _MIN_DGP_WIDTH = 16
+
+
+def _trim_process_memory(demeaner_backend: str) -> None:
+    """Return unused Python and native allocator memory after large benchmark cases."""
+    gc.collect()
+
+    if demeaner_backend.startswith("torch"):
+        try:
+            import torch
+        except ImportError:
+            pass
+        else:
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+                torch.cuda.ipc_collect()
+
+    if sys.platform.startswith("linux"):
+        with suppress(Exception):
+            ctypes.CDLL("libc.so.6").malloc_trim(0)
+
+
+@dataclass(frozen=True)
+class TorchRuntimeAvailability:
+    """Runtime availability of optional torch benchmark targets."""
+
+    has_torch: bool
+    has_mps: bool
+    has_cuda: bool
+
+
+def detect_torch_runtime_availability() -> TorchRuntimeAvailability:
+    """Detect whether torch and optional accelerator backends are available."""
+    try:
+        import torch
+    except ImportError:
+        return TorchRuntimeAvailability(
+            has_torch=False,
+            has_mps=False,
+            has_cuda=False,
+        )
+
+    has_mps = bool(hasattr(torch.backends, "mps") and torch.backends.mps.is_available())
+    has_cuda = bool(torch.cuda.is_available())
+    return TorchRuntimeAvailability(
+        has_torch=True,
+        has_mps=has_mps,
+        has_cuda=has_cuda,
+    )
 
 
 def _fmt_time(t: float) -> str:
@@ -37,7 +89,10 @@ class _TablePrinter:
 
     def __init__(self, dgp_w: int):
         self._w = dgp_w
-        self._hdr = f"{'dgp':<{dgp_w}} {'n_obs':>12} {'n_fe':>4} {'min':>10} {'median':>10} {'max':>10}  status"
+        self._hdr = (
+            f"{'dgp':<{dgp_w}} {'k':>3} {'n_obs':>12} {'n_fe':>4} "
+            f"{'min':>10} {'median':>10} {'max':>10}  status"
+        )
         self._sep = "-" * len(self._hdr)
 
     def print_header(self, name: str) -> None:
@@ -47,7 +102,7 @@ class _TablePrinter:
         print(f"  {self._sep}", flush=True)
 
     def _row_prefix(self, r: FeolsResult) -> str:
-        return f"{r.dgp:<{self._w}} {r.n_obs:>12,} {r.n_fe:>4}"
+        return f"{r.dgp:<{self._w}} {r.model_k:>3} {r.n_obs:>12,} {r.n_fe:>4}"
 
     def print_row(self, results: list[FeolsResult]) -> None:
         columns, status = _time_columns(results)
@@ -66,8 +121,8 @@ def _time_columns(results: list[FeolsResult]) -> tuple[str, str]:
     return columns, status
 
 
-def _group_key(r: FeolsResult) -> tuple[str, int, int]:
-    return (r.dgp, r.n_obs, r.n_fe)
+def _group_key(r: FeolsResult) -> tuple[str, int, int, int]:
+    return (r.dgp, r.model_k, r.n_obs, r.n_fe)
 
 
 def _result_from_dataset(
@@ -82,10 +137,12 @@ def _result_from_dataset(
     n_obs_override: int | None = None,
 ) -> FeolsResult:
     return FeolsResult(
-        dataset_id=dataset.dataset_id,
+        source_dataset_id=dataset.dataset_id,
+        source_k=dataset.k,
         iter_type=dataset.iter_type,
         iter_num=dataset.iter_num,
         dgp=dataset.dgp,
+        model_k=spec.k,
         n_obs=n_obs_override if n_obs_override is not None else dataset.n_obs,
         n_fe=spec.n_fe,
         backend=backend,
@@ -115,6 +172,26 @@ def _normalize_vcov(vcov: str | dict[str, str]) -> str:
     return vcov
 
 
+def _demeaner_from_backend(backend: str, fixef_maxiter: int | None = None):
+    """Map a benchmark backend name to a typed demeaner configuration."""
+    import pyfixest as pf
+
+    kwargs = {} if fixef_maxiter is None else {"fixef_maxiter": fixef_maxiter}
+    if backend == "rust":
+        return pf.MapDemeaner(**kwargs)
+    if backend == "within":
+        return pf.LsmrDemeaner(**kwargs)
+    if backend == "torch_cpu":
+        return pf.LsmrDemeaner(backend="torch", device="cpu", **kwargs)
+    if backend == "torch_mps":
+        return pf.LsmrDemeaner(
+            backend="torch", device="mps", precision="float32", **kwargs
+        )
+    if backend == "torch_cuda":
+        return pf.LsmrDemeaner(backend="torch", device="cuda", **kwargs)
+    raise ValueError(f"Unknown demeaner backend: {backend!r}")
+
+
 class PyFeolsBenchmarkerFullApi:
     """Benchmark pf.feols() end-to-end using one configured demeaner backend."""
 
@@ -132,6 +209,11 @@ class PyFeolsBenchmarkerFullApi:
     ) -> list[FeolsResult]:
         import pyfixest as pf
 
+        feols_kwargs = dict(self._feols_kwargs)
+        demeaner = _demeaner_from_backend(
+            self._demeaner_backend, feols_kwargs.pop("fixef_maxiter", None)
+        )
+
         results: list[FeolsResult] = []
 
         all_cols = [spec.depvar, *spec.covariates, *spec.fe_cols]
@@ -148,6 +230,7 @@ class PyFeolsBenchmarkerFullApi:
 
         for dataset in datasets:
             n_obs_for_result = dataset.n_obs
+            df = None
             try:
                 df = pd.read_parquet(dataset.data_path, columns=all_cols)
                 n_obs_for_result = len(df)
@@ -163,8 +246,10 @@ class PyFeolsBenchmarkerFullApi:
                         fml=spec.formula,
                         data=df,
                         vcov=spec.vcov,
-                        demeaner_backend=self._demeaner_backend,
-                        **self._feols_kwargs,
+                        copy_data=False,
+                        store_data=False,
+                        demeaner=demeaner,
+                        **feols_kwargs,
                     )
                 elapsed = time.perf_counter() - t0
 
@@ -186,6 +271,9 @@ class PyFeolsBenchmarkerFullApi:
                     error=str(exc),
                     n_obs_override=n_obs_for_result,
                 )
+            finally:
+                del df
+                _trim_process_memory(self._demeaner_backend)
 
             results.append(result)
 

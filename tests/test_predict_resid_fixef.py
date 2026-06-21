@@ -2,14 +2,11 @@ import numpy as np
 import pandas as pd
 import pytest
 import rpy2.robjects as ro
-from rpy2.robjects import pandas2ri
 
 # rpy2 imports
 from rpy2.robjects.packages import importr
 
 import pyfixest as pf
-
-pandas2ri.activate()
 
 fixest = importr("fixest")
 stats = importr("stats")
@@ -169,6 +166,34 @@ def test_vs_fixest(data, fml):
     # test resid for Poisson
     if not np.allclose(fepois_mod.resid(), r_fixest_pois.rx2("residuals")):
         raise ValueError("Residuals for Poisson are not equal")
+
+    # test fepois predict on newdata with an offset
+    data_off = data.copy()
+    data_off["off"] = np.log(np.random.default_rng(0).uniform(0.5, 3.0, len(data_off)))
+    fepois_mod_off = pf.fepois(fml=fml, data=data_off, offset="off")
+    r_fixest_pois_off = fixest.fepois(
+        ro.Formula(fml), data=data_off, offset=ro.Formula("~off")
+    )
+    data2_off = data_off.copy()[1:500]
+    if not np.allclose(
+        fepois_mod_off.predict(newdata=data2_off, type="link")[11:16],
+        stats.predict(r_fixest_pois_off, newdata=data2_off, type="link")[11:16],
+        atol=1e-05,
+        equal_nan=True,
+    ):
+        raise ValueError(
+            "Predictions for Poisson with offset are not equal for type 'link'."
+        )
+
+    if not np.allclose(
+        fepois_mod_off.predict(newdata=data2_off, type="response")[11:16],
+        stats.predict(r_fixest_pois_off, newdata=data2_off, type="response")[11:16],
+        atol=1e-05,
+        equal_nan=True,
+    ):
+        raise ValueError(
+            "Predictions for Poisson with offset are not equal for type 'response'."
+        )
 
 
 @pytest.mark.against_r_core

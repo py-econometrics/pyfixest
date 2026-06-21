@@ -1,10 +1,12 @@
+from __future__ import annotations
+
 from collections.abc import Mapping
 from typing import Any
 
-from pyfixest.estimation.api.utils import _estimation_input_checks
+from pyfixest.demeaners import AnyDemeaner
+from pyfixest.estimation.api.feglm import feglm
 from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.internals.literals import (
-    DemeanerBackendOptions,
     FixedRmOptions,
     SolverOptions,
     VcovTypeOptions,
@@ -13,8 +15,6 @@ from pyfixest.estimation.internals.literals import (
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.models.fepois_ import Fepois
 from pyfixest.utils.dev_utils import DataFrameType
-from pyfixest.utils.utils import capture_context
-from pyfixest.utils.utils import ssc as ssc_func
 
 
 def fepois(
@@ -24,16 +24,15 @@ def fepois(
     vcov_kwargs: dict[str, str | int] | None = None,
     weights: None | str = None,
     weights_type: WeightsTypeOptions = "aweights",
+    offset: str | None = None,
     ssc: dict[str, str | bool] | None = None,
     fixef_rm: FixedRmOptions = "singleton",
-    fixef_tol: float = 1e-06,
-    fixef_maxiter: int = 10_000,
     iwls_tol: float = 1e-08,
     iwls_maxiter: int = 25,
     collin_tol: float = 1e-09,
     separation_check: list[str] | None = None,
     solver: SolverOptions = "scipy.linalg.solve",
-    demeaner_backend: DemeanerBackendOptions = "numba",
+    demeaner: AnyDemeaner | None = None,
     drop_intercept: bool = False,
     copy_data: bool = True,
     store_data: bool = True,
@@ -88,6 +87,13 @@ def fepois(
         are useful for compressed count data where identical observations are aggregated.
         For details see this blog post: https://notstatschat.rbind.io/2020/08/04/weights-in-statistics/.
 
+    offset : str, optional
+        Default is None. Name of a numeric column in `data` to use as an offset
+        in the Poisson regression. The offset is added to the linear predictor
+        with its coefficient fixed at 1. This is useful for modeling rates when
+        exposure differs across observations; pass the exposure on the log scale,
+        e.g. `offset="log_population"`.
+
     ssc : str
         A ssc object specifying the small sample correction for inference.
 
@@ -96,12 +102,6 @@ def fepois(
         Can be equal to "singletons" (default) or "none".
         "singletons" will drop singleton fixed effects. This will not impact point
         estimates but it will impact standard errors.
-
-    fixef_tol: float, optional
-        Tolerance for the fixed effects demeaning algorithm. Defaults to 1e-06.
-
-    fixef_maxiter: int, optional
-         Maximum number of iterations for the demeaning algorithm. Defaults to 100,000.
 
     iwls_tol : Optional[float], optional
         Tolerance for IWLS convergence, by default 1e-08.
@@ -118,26 +118,26 @@ def fepois(
 
     solver : SolverOptions, optional.
         The solver to use for the regression. Can be "np.linalg.lstsq",
-        "np.linalg.solve", "scipy.linalg.solve", "scipy.sparse.linalg.lsqr" and "jax".
+        "np.linalg.solve", "scipy.linalg.solve" and "scipy.sparse.linalg.lsqr".
         Defaults to "scipy.linalg.solve".
 
-    demeaner_backend: DemeanerBackendOptions, optional
-        The backend to use for demeaning. Options include:
-        - "numba" (default): CPU-based demeaning using Numba JIT via the Alternating Projections Algorithm.
-        - "rust-cg": Implements the conjugate-gradient-schwarz algorithm from the
-          [`within`](https://github.com/py-econometrics/within) rust package.
-          Particularly effective for sparse fixed effects structures. See the
-          [difficult fixed effects vignette](https://pyfixest.org/explanation/difficult-fixed-effects.html)
-          for benchmarks.
-        - "rust": CPU-based demeaning implemented in Rust via the Alternating Projections Algorithm.
-        - "jax": CPU or GPU-accelerated using JAX (requires jax/jaxlib) via the Alternating Projections Algorithm.
-        - "cupy" or "cupy64": GPU-accelerated using CuPy with float64 precision via direct application of the Frisch-Waugh-Lovell Theorem on sparse
-          matrices (requires cupy & GPU, defaults to scipy/CPU if no GPU available)
-        - "cupy32": GPU-accelerated using CuPy with float32 precision via direct application of the Frisch-Waugh-Lovell Theorem on sparse
-          matrices (requires cupy & GPU, defaults to scipy/CPU and float64 if no GPU available)
-        - "scipy": Direct application of the Frisch-Waugh-Lovell Theorem on sparse matrice.
-          Forces to use a scipy-sparse backend even when cupy is installed and GPU is available.
-        Defaults to "numba".
+    demeaner : AnyDemeaner | None, optional
+        Typed demeaner configuration. Controls the fixed-effects demeaning
+        backend, tolerance, and iteration limits. Accepts a `MapDemeaner`
+        or `LsmrDemeaner` instance. Defaults to
+        `MapDemeaner()` (Rust MAP algorithm, tol=1e-6, maxiter=10_000).
+        For other options - including the optional Numba backend and the
+        torch-based LSMR backends - see the
+        [Demeaner Backends vignette](../../how-to/demeaner-backends.qmd).
+
+        .. deprecated::
+            The ``cupy`` / ``scipy`` LSMR backends are deprecated and will
+            be removed in a future release. Replacements:
+
+            - cupy LSMR on GPU →
+              ``LsmrDemeaner(backend="torch", device="cuda")``.
+            - Scipy / cupy LSMR on CPU → ``LsmrDemeaner()``
+              (the default within backend).
 
     drop_intercept : bool, optional
         Whether to drop the intercept from the model, by default False.
@@ -188,93 +188,78 @@ def fepois(
 
     Examples
     --------
-    The `fepois()` function can be used to estimate a simple Poisson regression
-    model with fixed effects.
-    The following example regresses `Y` on `X1` and `X2` with fixed effects for
-    `f1` and `f2`: fixed effects are specified after the `|` symbol.
+    The `fepois()` function estimates Poisson models with the same formula interface
+    as `feols()`. Fixed effects are specified after the `|` symbol.
 
     ```{python}
     import pyfixest as pf
 
-    data = pf.get_data(model = "Fepois")
+    data = pf.get_data(model="Fepois")
     fit = pf.fepois("Y ~ X1 + X2 | f1 + f2", data)
     fit.summary()
     ```
 
-    For more examples on the use of other function arguments, please take a look at the documentation of the [feols()](https://pyfixest.org/reference/estimation.api.feols.html#pyfixest.estimation.api.feols) function.
+    Cluster-robust inference uses the same `vcov` syntax as `feols()`:
+
+    ```{python}
+    fit_crv = pf.fepois("Y ~ X1 + X2 | f1 + f2", data, vcov={"CRV1": "f1"})
+    fit_crv.tidy()
+    ```
+
+    To model rates, keep the dependent variable as a count and pass
+    `log(exposure)` as the `offset`. For example, with population as the
+    exposure:
+
+    ```{python}
+    import numpy as np
+
+    data["population"] = np.random.default_rng(123).integers(
+        50_000, 500_000, size=len(data)
+    )
+    data["log_population"] = np.log(data["population"])
+
+    fit_rate = pf.fepois(
+        "Y ~ X1 + X2 | f1 + f2",
+        data=data,
+        offset="log_population",
+    )
+    fit_rate.tidy()
+    ```
+
+    Multiple-estimation and sample-splitting features also work as in `feols()`:
+
+    ```{python}
+    fits = pf.fepois("Y ~ X1 | sw0(f1, f2)", data)
+    pf.etable(fits)
+    ```
+
+    Shared arguments such as `vcov`, `ssc`, `split`, `fsplit`, `context`, and typed demeaners
+    are documented in the [feols() reference](/reference/estimation.api.feols.feols.html).
+    For applied examples, see the [Poisson & GLMs tutorial](/tutorials/poisson-glm.html).
     """
-    if separation_check is None:
-        separation_check = ["fe"]
-    if ssc is None:
-        ssc = ssc_func()
-    context = {} if context is None else capture_context(context)
-
-    _estimation_input_checks(
+    # Thin wrapper: fepois is exactly feglm(family="poisson").
+    return feglm(
         fml=fml,
         data=data,
+        family="poisson",
         vcov=vcov,
         vcov_kwargs=vcov_kwargs,
         weights=weights,
+        weights_type=weights_type,
+        offset=offset,
         ssc=ssc,
         fixef_rm=fixef_rm,
-        collin_tol=collin_tol,
-        copy_data=copy_data,
-        store_data=store_data,
-        lean=lean,
-        fixef_tol=fixef_tol,
-        fixef_maxiter=fixef_maxiter,
-        weights_type=weights_type,
-        use_compression=False,
-        reps=None,
-        seed=None,
-        split=split,
-        fsplit=fsplit,
-        separation_check=separation_check,
-    )
-
-    fixest = FixestMulti(
-        data=data,
-        copy_data=copy_data,
-        store_data=store_data,
-        lean=lean,
-        fixef_tol=fixef_tol,
-        fixef_maxiter=fixef_maxiter,
-        weights_type=weights_type,
-        use_compression=False,
-        reps=None,
-        seed=None,
-        split=split,
-        fsplit=fsplit,
-        context=context,
-    )
-
-    fixest._prepare_estimation(
-        estimation="fepois",
-        fml=fml,
-        vcov=vcov,
-        vcov_kwargs=vcov_kwargs,
-        weights=weights,
-        ssc=ssc,
-        fixef_rm=fixef_rm,
-        drop_intercept=drop_intercept,
-    )
-    if fixest._is_iv:
-        raise NotImplementedError(
-            "IV Estimation is not supported for Poisson Regression"
-        )
-
-    fixest._estimate_all_models(
-        vcov=vcov,
-        solver=solver,
-        vcov_kwargs=vcov_kwargs,
         iwls_tol=iwls_tol,
         iwls_maxiter=iwls_maxiter,
         collin_tol=collin_tol,
         separation_check=separation_check,
-        demeaner_backend=demeaner_backend,
+        solver=solver,
+        demeaner=demeaner,
+        drop_intercept=drop_intercept,
+        copy_data=copy_data,
+        store_data=store_data,
+        lean=lean,
+        context=context,
+        split=split,
+        fsplit=fsplit,
     )
-
-    if fixest._is_multiple_estimation:
-        return fixest
-    else:
-        return fixest.fetch_model(0, print_fml=False)
