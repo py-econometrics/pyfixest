@@ -188,3 +188,10 @@ FAMILY_REGISTRY: dict[str, GlmFamily] = {
     "gaussian": GAUSSIAN,
     "poisson": POISSON,
 }
+
+FAMILY_FROM_METHOD: dict[str, GlmFamily] = {
+    "feglm-logit": LOGIT,
+    "feglm-probit": PROBIT,
+    "feglm-gaussian": GAUSSIAN,
+    "fepois": POISSON,
+}
