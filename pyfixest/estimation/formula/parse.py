@@ -139,7 +139,7 @@ class Formula:
         if self.is_instrumental_variable:
             formula = f"{formula} + [{self.endogenous} ~ {self.instruments}]"
         if self.is_fixed_effects:
-            formula = f"{formula} | {self.fixed_effects}"
+            formula = f"{formula} | {str(self.fixed_effects).replace(':', '^')}"
         return formula
 
     @property
