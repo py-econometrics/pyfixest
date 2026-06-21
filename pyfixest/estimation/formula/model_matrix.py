@@ -10,8 +10,10 @@ from formulaic.parser import DefaultFormulaParser
 
 from pyfixest.core.detect_singletons import detect_singletons
 from pyfixest.estimation.formula import FORMULAIC_FEATURE_FLAG
-from pyfixest.estimation.formula.factor_interaction import factor_interaction
 from pyfixest.estimation.formula.parse import Formula
+from pyfixest.estimation.formula.transforms.factor_interaction import (
+    factor_interaction,
+)
 from pyfixest.estimation.formula.utils import (
     _encode_fixed_effects,
     _factorize,
