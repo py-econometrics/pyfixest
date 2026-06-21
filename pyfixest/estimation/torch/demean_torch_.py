@@ -11,12 +11,14 @@ COO on MPS (Metal does not support sparse CSR).
 
 from __future__ import annotations
 
-import warnings
-
 import numpy as np
 import torch
 from numpy.typing import NDArray
 
+from pyfixest.estimation.torch._config import (
+    _get_device,
+    _should_use_batched_lsmr,
+)
 from pyfixest.estimation.torch._preconditioned_sparse import _PreconditionedSparse
 from pyfixest.estimation.torch._sparse_dummy import (
     _build_sparse_dummy,
@@ -24,52 +26,10 @@ from pyfixest.estimation.torch._sparse_dummy import (
 )
 from pyfixest.estimation.torch.lsmr_torch import lsmr_torch, lsmr_torch_batched
 
-# Minimum K (number of RHS columns) for batched SpMM to beat sequential SpMV.
-# Benchmarked breakeven is device-specific.
-_BATCHED_K_THRESHOLD_CUDA = 2
-_BATCHED_K_THRESHOLD_MPS = 5
-
 
 def _lsmr_istop_is_success(istop: int) -> bool:
     """Treat standard LSMR stopping codes 1-6 as successful termination."""
     return 1 <= int(istop) <= 6
-
-
-def _should_use_batched_lsmr(device: torch.device, K: int) -> bool:
-    """Use batched LSMR only when device-specific benchmarks show a benefit."""
-    if device.type == "cuda":
-        return K >= _BATCHED_K_THRESHOLD_CUDA
-    if device.type == "mps":
-        return K >= _BATCHED_K_THRESHOLD_MPS
-    return False
-
-
-def _get_device(dtype: torch.dtype = torch.float64) -> torch.device:
-    """Auto-detect best available device: CUDA > MPS > CPU.
-
-    MPS does not support float64, so we fall back to CPU when float64 is needed.
-    When MPS is available but dtype is float64, a hint is issued to use float32.
-    """
-    if torch.cuda.is_available():
-        return torch.device("cuda")
-    if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
-        if dtype != torch.float64:
-            return torch.device("mps")
-        warnings.warn(
-            "MPS GPU is available but requires float32. "
-            "Pass `dtype=torch.float32` to `demean_torch` for GPU acceleration. "
-            "Falling back to CPU.",
-            UserWarning,
-            stacklevel=3,
-        )
-        return torch.device("cpu")
-    warnings.warn(
-        "No GPU available — torch demeaning will run on CPU, which is slower "
-        "than the scipy backend. Consider using `demean_scipy` instead.",
-        UserWarning,
-        stacklevel=3,
-    )
-    return torch.device("cpu")
 
 
 @torch.no_grad()

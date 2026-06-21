@@ -266,6 +266,86 @@ class GelbachDecomposition:
                         f"Variables {overlap} are in both '{key1}' and '{key2}' groups."
                     )
 
+    def _setup_weighted_matrices(
+        self,
+        X: spmatrix,
+        Y: np.ndarray,
+        weights: np.ndarray | None,
+        store: bool,
+    ) -> tuple[spmatrix, spmatrix, spmatrix, np.ndarray]:
+        """Build X1, X2, weighted matrices, and set up coefficient names."""
+        if not store:
+            X1 = hstack([np.ones((X.shape[0], 1)), X[:, ~self.mask]])
+            X2 = X[:, self.mask]
+            return X, X1, X2, Y
+
+        self.X = X
+        self.Y = Y
+
+        self.X1 = self.X[:, ~self.mask]
+        self.X1 = hstack([np.ones((self.X1.shape[0], 1)), self.X1])
+        self.X2 = self.X[:, self.mask]
+
+        if weights is not None:
+            weights_sqrt = np.sqrt(weights.flatten())
+            S = diags(weights_sqrt, 0)
+            self.X = S @ self.X
+            self.X1 = S @ self.X1
+            self.X2 = S @ self.X2
+            self.Y = self.Y * weights_sqrt
+            N = np.sum(weights)
+            if N.is_integer():
+                self.N = int(N)
+            else:
+                raise ValueError(
+                    "The sum of weights is not an integer, "
+                    "which is not supported with frequency weights."
+                )
+        else:
+            self.N = X.shape[0]
+
+        self.names_X1 = ["Intercept", self.decomp_var]
+        if self.x1_vars is not None:
+            self.names_X1 += self.x1_vars
+        self.names_X = list(self.coefnames)
+        self.decomp_var_in_X1_idx = self.names_X1.index(self.decomp_var)
+        self.decomp_var_in_X_idx = self.names_X.index(self.decomp_var)
+
+        return self.X, self.X1, self.X2, self.Y
+
+    def _compute_point_estimates(
+        self,
+        X: spmatrix,
+        X1: spmatrix,
+        X2: spmatrix,
+        Y: np.ndarray,
+    ):
+        """Run the Gelbach decomposition and store results."""
+        results = self.compute_gelbach(
+            X1=X1,
+            X2=X2,
+            Y=Y,
+            X=X,
+            agg_first=self.agg_first,
+        )
+        (
+            self.direct_effect,
+            self.beta_full,
+            self.beta2,
+            self.results,
+        ) = results
+        return self.results
+
+    def _prepare_bootstrap_state(self) -> None:
+        """Set up cluster-level dicts for cluster-bootstrap."""
+        if self.unique_clusters is not None and not self.only_coef:
+            self.X_dict = {}
+            self.Y_dict = {}
+            for g in self.unique_clusters:
+                cluster_idx = np.where(self.cluster_df == g)[0]
+                self.X_dict[g] = self.X[cluster_idx]
+                self.Y_dict[g] = self.Y[cluster_idx]
+
     def fit(
         self,
         X: spmatrix,
@@ -275,86 +355,13 @@ class GelbachDecomposition:
     ):
         "Fit Linear Mediation Model."
         if store:
-            self.X = X
-            self.Y = Y
-
-            self.X1 = self.X[:, ~self.mask]
-            self.X1 = hstack([np.ones((self.X1.shape[0], 1)), self.X1])
-            self.X2 = self.X[:, self.mask]
-
-            if weights is not None:
-                weights_sqrt = np.sqrt(weights.flatten())
-                S = diags(weights_sqrt, 0)
-                self.X = S @ self.X
-                self.X1 = S @ self.X1
-                self.X2 = S @ self.X2
-                self.Y = self.Y * weights_sqrt
-                # treat weights as frequency weights
-                N = np.sum(weights)
-                if N.is_integer():
-                    self.N = int(N)
-                else:
-                    raise ValueError(
-                        "The sum of weights is not an integer, which is not supported with frequency weights."
-                    )
-            else:
-                self.N = X.shape[0]
-
-            self.names_X1 = ["Intercept", self.decomp_var]
-            if self.x1_vars is not None:
-                self.names_X1 += self.x1_vars
-            self.names_X = list(self.coefnames)
-            self.decomp_var_in_X1_idx = self.names_X1.index(self.decomp_var)
-            self.decomp_var_in_X_idx = self.names_X.index(self.decomp_var)
-
-            results = self.compute_gelbach(
-                X1=self.X1,
-                X2=self.X2,
-                Y=self.Y,
-                X=self.X,
-                agg_first=self.agg_first,
-            )
-
-            (
-                self.direct_effect,
-                self.beta_full,
-                self.beta2,
-                self.results,
-            ) = results
-
-            # Prepare cluster bootstrap if relevant
-            self.X_dict = {}
-            self.Y_dict = {}
-
-            if self.unique_clusters is not None and not self.only_coef:
-                for g in self.unique_clusters:
-                    cluster_idx = np.where(self.cluster_df == g)[0]
-                    self.X_dict[g] = self.X[cluster_idx]
-                    self.Y_dict[g] = self.Y[cluster_idx]
-
+            X, X1, X2, Y = self._setup_weighted_matrices(X, Y, weights, store=True)
+            self._compute_point_estimates(X, X1, X2, Y)
+            self._prepare_bootstrap_state()
             return self.results
-
         else:
-            # need to compute X1, X2 in bootstrap sample
-
-            X1 = hstack([np.ones((X.shape[0], 1)), X[:, ~self.mask]])
-            X2 = X[:, self.mask]
-
-            results = self.compute_gelbach(
-                X1=X1,
-                X2=X2,
-                Y=Y,
-                X=X,
-                agg_first=self.agg_first,
-            )
-
-            (
-                _,
-                _,
-                _,
-                bootstrap_results,
-            ) = results
-
+            _, X1, X2, Y = self._setup_weighted_matrices(X, Y, weights, store=False)
+            bootstrap_results = self._compute_point_estimates(X, X1, X2, Y)
             return bootstrap_results
 
     def bootstrap(self, rng: np.random.Generator, B: int = 1_000, alpha: float = 0.05):

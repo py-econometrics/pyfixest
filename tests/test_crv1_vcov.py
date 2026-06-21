@@ -1,6 +1,6 @@
 import numpy as np
 
-from pyfixest.core.crv1 import crv1_vcov_qreg_loop
+from pyfixest.core import crv1_vcov_qreg_loop
 
 
 def test_crv1_vcov_loop(benchmark):

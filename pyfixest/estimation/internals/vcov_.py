@@ -4,7 +4,7 @@ from typing import Literal
 
 import numpy as np
 
-from pyfixest.core.crv1 import crv1_meat_loop
+from pyfixest.core import crv1_meat_loop
 from pyfixest.estimation.internals.literals import WeightsTypeOptions
 from pyfixest.estimation.internals.vcov_utils import (
     _dk_meat_panel,
