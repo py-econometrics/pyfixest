@@ -5,6 +5,7 @@ from typing import Any
 
 from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.api.utils import _estimation_input_checks
+from pyfixest.estimation.config import EstimationConfig
 from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.internals.demeaner_options import (
     _resolve_demeaner,
@@ -21,6 +22,8 @@ from pyfixest.estimation.internals.literals import (
 )
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.models.fepois_ import Fepois
+from pyfixest.estimation.plan_ import parse_formula
+from pyfixest.estimation.runner import run_estimation
 from pyfixest.utils.dev_utils import DataFrameType
 from pyfixest.utils.utils import capture_context
 from pyfixest.utils.utils import ssc as ssc_func
@@ -304,50 +307,38 @@ def feglm(
         separation_check=separation_check,
     )
 
-    fixest = FixestMulti(
-        data=data,
-        copy_data=copy_data,
-        store_data=store_data,
-        lean=lean,
-        weights_type=weights_type,
-        seed=None,
-        split=split,
-        fsplit=fsplit,
-        context=context,
-    )
-
     # Poisson goes through the Fepois model class (which is a Feglm subclass);
     # other families dispatch to their dedicated feglm-{family} model class.
     estimation = "fepois" if family == "poisson" else f"feglm-{family}"
-    prepare_kwargs: dict[str, Any] = {
-        "estimation": estimation,
-        "fml": fml,
-        "vcov": vcov,
-        "vcov_kwargs": vcov_kwargs,
-        "weights": weights,
-        "ssc": ssc,
-        "fixef_rm": fixef_rm,
-        "drop_intercept": drop_intercept,
-    }
-    if family == "poisson":
-        prepare_kwargs["offset"] = offset
-    fixest._prepare_estimation(**prepare_kwargs)
-    if fixest._is_iv:
-        raise NotImplementedError("IV estimation is not supported for GLMs.")
-
-    fixest._estimate_all_models(
+    config = EstimationConfig(
+        method=estimation,
+        data=data,
+        fml=fml,
+        copy_data=copy_data,
+        store_data=store_data,
+        lean=lean,
+        fixef_rm=fixef_rm,
+        drop_intercept=drop_intercept,
         vcov=vcov,
-        solver=solver,
         vcov_kwargs=vcov_kwargs,
+        ssc_dict=ssc,
+        solver=solver,
+        demeaner=demeaner,
+        collin_tol=collin_tol,
+        context=context,
+        weights=weights,
+        weights_type=weights_type,
+        split=split,
+        fsplit=fsplit,
         iwls_tol=iwls_tol,
         iwls_maxiter=iwls_maxiter,
-        collin_tol=collin_tol,
         separation_check=separation_check,
-        demeaner=demeaner,
+        offset=offset if family == "poisson" else None,
         accelerate=accelerate,
     )
 
-    if fixest._is_multiple_estimation:
-        return fixest
-    else:
-        return fixest.fetch_model(0, print_fml=False)
+    parsed = parse_formula(config)
+    if parsed.is_iv:
+        raise NotImplementedError("IV estimation is not supported for GLMs.")
+
+    return run_estimation(config, parsed)
