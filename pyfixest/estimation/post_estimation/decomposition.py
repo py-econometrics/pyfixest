@@ -978,9 +978,7 @@ class GelbachDecomposition:
         # Clean up inference row names
         df.index = pd.Index(
             [
-                ""
-                if name.endswith("_ci") or name.endswith("_se")
-                else name
+                "" if name.endswith("_ci") or name.endswith("_se") else name
                 for name in df.index
             ]
         )
