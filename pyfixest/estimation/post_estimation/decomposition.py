@@ -183,6 +183,9 @@ class GelbachDecomposition:
     unique_clusters: np.ndarray | None = field(init=False, default=None)
     mask: np.ndarray = field(init=False)
     mediator_names: list[str] = field(init=False)
+    _combine_covariate_indices: dict[str, list[int]] = field(
+        init=False, default_factory=dict
+    )
     X_dict: dict[Any, Any] = field(init=False, default_factory=dict)
     Y_dict: dict[Any, Any] = field(init=False, default_factory=dict)
 
@@ -234,6 +237,10 @@ class GelbachDecomposition:
 
         self._check_covariates()
         self._check_combine_covariates()
+        self._combine_covariate_indices = {
+            name: [self.mediator_names.index(cov) for cov in covariates]
+            for name, covariates in self.combine_covariates_dict.items()
+        }
 
     def _check_covariates(self):
         if self.decomp_var not in self.coefnames:
@@ -329,14 +336,16 @@ class GelbachDecomposition:
             self.decomp_var_in_X1_idx = self.names_X1.index(self.decomp_var)
             self.decomp_var_in_X_idx = self.names_X.index(self.decomp_var)
 
-            compute_internals = not self.only_coef and self.inference == "analytic"
+            compute_analytic_internals = (
+                store and not self.only_coef and self.inference == "analytic"
+            )
             results = self.compute_gelbach(
                 X1=self.X1,
                 X2=self.X2,
                 Y=self.Y,
                 X=self.X,
                 agg_first=self.agg_first,
-                compute_internals=compute_internals,
+                compute_analytic_internals=compute_analytic_internals,
             )
 
             (
@@ -386,7 +395,7 @@ class GelbachDecomposition:
                 Y=Y,
                 X=X,
                 agg_first=self.agg_first,
-                compute_internals=False,
+                compute_analytic_internals=False,
             )
 
             return results.results
@@ -482,8 +491,7 @@ class GelbachDecomposition:
         beta2_indices = np.flatnonzero(self.mask)
 
         mediator_group_if = {}
-        for name, covariates in self.combine_covariates_dict.items():
-            variable_idx = [self.mediator_names.index(cov) for cov in covariates]
+        for name, variable_idx in self._combine_covariate_indices.items():
             group_gamma = gamma[variable_idx]
             group_beta2 = beta2[variable_idx]
 
@@ -620,7 +628,7 @@ class GelbachDecomposition:
         Y: np.ndarray,
         X: spmatrix,
         agg_first: bool | None,
-        compute_internals: bool = False,
+        compute_analytic_internals: bool = False,
     ) -> GelbachComputation:
         "Run the Gelbach decomposition."
         # Compute direct effect
@@ -630,11 +638,12 @@ class GelbachDecomposition:
         beta_full = lsqr(X, Y, atol=self.atol, btol=self.btol)[0]
         beta2 = beta_full[self.mask]
 
-        mediator_effects = {}
         x1_inv = None
         gamma_matrix = None
+        delta = None
+        group_delta = None
 
-        if compute_internals:
+        if compute_analytic_internals:
             x1_crossprod = X1.T @ X1
             if hasattr(x1_crossprod, "toarray"):
                 x1_crossprod = x1_crossprod.toarray()
@@ -647,27 +656,20 @@ class GelbachDecomposition:
             gamma = gamma_matrix[self.decomp_var_in_X1_idx, :]
 
             delta = gamma * beta2
-            for name, covariates in self.combine_covariates_dict.items():
-                variable_idx = [self.mediator_names.index(cov) for cov in covariates]
-                mediator_effects[name] = float(np.sum(delta[variable_idx]))
         elif agg_first:
             N = X1.shape[0]
             H = X2.multiply(beta2).tocsc()
-            Hg = np.zeros((N, len(self.combine_covariates_dict)))
+            Hg = np.zeros((N, len(self._combine_covariate_indices)))
 
-            for i, (_, covariates) in enumerate(self.combine_covariates_dict.items()):
-                variable_idx = [self.mediator_names.index(cov) for cov in covariates]
+            for i, variable_idx in enumerate(self._combine_covariate_indices.values()):
                 Hg[:, i] = np.sum(H[:, variable_idx], axis=1).flatten()
 
-            delta = np.array(
+            group_delta = np.array(
                 [
                     lsqr(X1, Hg[:, j])[0][self.decomp_var_in_X1_idx]
                     for j in range(Hg.shape[1])
                 ]
             )
-
-            for i, (name, _) in enumerate(self.combine_covariates_dict.items()):
-                mediator_effects[name] = float(delta[i])
         else:
             gamma = np.array(
                 [
@@ -678,9 +680,18 @@ class GelbachDecomposition:
 
             delta = gamma * beta2
 
-            for name, covariates in self.combine_covariates_dict.items():
-                variable_idx = [self.mediator_names.index(cov) for cov in covariates]
-                mediator_effects[name] = float(np.sum(delta[variable_idx]))
+        if group_delta is not None:
+            mediator_effects = {
+                name: float(group_delta[i])
+                for i, name in enumerate(self._combine_covariate_indices)
+            }
+        else:
+            if delta is None:
+                raise RuntimeError("Gelbach mediator deltas were not computed.")
+            mediator_effects = {
+                name: float(np.sum(delta[variable_idx]))
+                for name, variable_idx in self._combine_covariate_indices.items()
+            }
 
         direct_effect = float(beta_short[self.decomp_var_in_X1_idx])
         full_effect = float(beta_full[self.decomp_var_in_X_idx])
