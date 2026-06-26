@@ -1695,6 +1695,7 @@ class Feols(ResultAccessorMixin):
             agg_first=agg_first,
             only_coef=only_coef,
             inference=inference,
+            weights_type=self._weights_type if self._has_weights else None,
             atol=1e-12,
             btol=1e-12,
         )
@@ -1702,7 +1703,7 @@ class Feols(ResultAccessorMixin):
         med.fit(
             X=X,
             Y=Y,
-            weights=self._weights,
+            weights=self._weights if self._has_weights else None,
             store=True,
         )
 

@@ -3,6 +3,7 @@ import re
 import numpy as np
 import pandas as pd
 import pytest
+from scipy.stats import t
 
 import pyfixest as pf
 from pyfixest.utils.dgps import gelbach_data
@@ -26,6 +27,134 @@ def gelbach_decomposition():
     fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
     gb = fit.decompose(param="x1", seed=98765, reps=25)
     return gb
+
+
+def _aweighted_gelbach_data() -> pd.DataFrame:
+    rng = np.random.default_rng(20240626)
+    nobs = 80
+    x1 = rng.normal(size=nobs)
+    x21 = rng.normal(size=nobs)
+    x22 = rng.binomial(1, 0.4, size=nobs)
+    x23 = rng.normal(size=nobs)
+    weights = rng.uniform(0.6, 2.4, size=nobs)
+    y = (
+        1.0
+        + 0.75 * x1
+        + 0.35 * x21
+        - 0.25 * x22
+        + 0.2 * x23
+        + 0.15 * x1 * x21
+        + rng.normal(scale=0.25, size=nobs)
+    )
+    return pd.DataFrame(
+        {
+            "Y": y,
+            "x1": x1,
+            "x21": x21,
+            "x22": x22,
+            "x23": x23,
+            "f1": np.arange(nobs) % 8,
+            "w": weights,
+        }
+    )
+
+
+def _manual_aweighted_gelbach_levels(data: pd.DataFrame) -> pd.DataFrame:
+    names = ["Intercept", "x1", "x21", "x22", "x23"]
+    x_raw = np.column_stack(
+        [
+            np.ones(data.shape[0]),
+            data["x1"].to_numpy(),
+            data["x21"].to_numpy(),
+            data["x22"].to_numpy(),
+            data["x23"].to_numpy(),
+        ]
+    )
+    y_raw = data["Y"].to_numpy()
+    weights_sqrt = np.sqrt(data["w"].to_numpy())
+    x = x_raw * weights_sqrt[:, None]
+    y = y_raw * weights_sqrt
+
+    mask = np.array([name != "x1" for name in names])
+    x1 = x[:, ~mask]
+    x1 = np.column_stack([weights_sqrt, x1])
+    x2 = x[:, mask]
+    mediator_names = [name for name, keep in zip(names, mask, strict=True) if keep]
+    groups = {"g1": ["x21"], "g2": ["x22", "x23"]}
+    group_indices = {
+        name: [mediator_names.index(covariate) for covariate in covariates]
+        for name, covariates in groups.items()
+    }
+
+    beta_short = np.linalg.lstsq(x1, y, rcond=None)[0]
+    beta_full = np.linalg.lstsq(x, y, rcond=None)[0]
+    beta2 = beta_full[mask]
+    x1_inv = np.linalg.pinv(x1.T @ x1)
+    x_inv = np.linalg.pinv(x.T @ x)
+    gamma_matrix = x1_inv @ x1.T @ x2
+    gamma = gamma_matrix[1, :]
+
+    mediator_effects = {
+        name: float(np.sum(gamma[variable_idx] * beta2[variable_idx]))
+        for name, variable_idx in group_indices.items()
+    }
+    direct_effect = float(beta_short[1])
+    full_effect = float(beta_full[1])
+    explained_effect = sum(mediator_effects.values())
+    estimates = {
+        "direct_effect": direct_effect,
+        "full_effect": full_effect,
+        "explained_effect": explained_effect,
+        "unexplained_effect": direct_effect - explained_effect,
+        **mediator_effects,
+    }
+
+    short_resid = y - x1 @ beta_short
+    full_resid = y - x @ beta_full
+    short_weight = x1 @ x1_inv[:, 1]
+    full_weight = x @ x_inv[:, 1]
+    beta2_indices = np.flatnonzero(mask)
+
+    mediator_group_if = {}
+    for name, variable_idx in group_indices.items():
+        group_gamma = gamma[variable_idx]
+        group_beta2 = beta2[variable_idx]
+        group_beta2_weight = x_inv[:, beta2_indices[variable_idx]] @ group_gamma
+        beta2_if = (x @ group_beta2_weight) * full_resid
+        group_auxiliary_fit = gamma_matrix[:, variable_idx] @ group_beta2
+        group_h = x2[:, variable_idx] @ group_beta2
+        group_auxiliary_resid = group_h - x1 @ group_auxiliary_fit
+        gamma_if = short_weight * group_auxiliary_resid
+        mediator_group_if[name] = beta2_if + gamma_if
+
+    explained_if = np.sum(np.column_stack(list(mediator_group_if.values())), axis=1)
+    influence_df = pd.DataFrame(
+        {
+            "direct_effect": short_weight * short_resid,
+            "full_effect": full_weight * full_resid,
+            "explained_effect": explained_if,
+            "unexplained_effect": short_weight * short_resid - explained_if,
+            **mediator_group_if,
+        }
+    )
+
+    rank = np.linalg.matrix_rank(x.T @ x)
+    df = max(data.shape[0] - rank, 1)
+    hc1_factor = data.shape[0] / df
+    std_error = np.sqrt(hc1_factor * np.square(influence_df).sum(axis=0))
+    crit = np.abs(t.ppf(0.05 / 2, df))
+    estimates_series = pd.Series(estimates, dtype=float)
+
+    return pd.DataFrame(
+        {
+            "coefficients": estimates_series,
+            "std_error": std_error.reindex(estimates_series.index),
+            "ci_lower": estimates_series
+            - crit * std_error.reindex(estimates_series.index),
+            "ci_upper": estimates_series
+            + crit * std_error.reindex(estimates_series.index),
+        }
+    )
 
 
 @pytest.fixture
@@ -714,6 +843,72 @@ def test_weights(fml):
             tidy_orig.select_dtypes(include=[np.number]),
             tidy_agg.select_dtypes(include=[np.number]),
         )
+
+
+def test_analytic_weighted_point_estimates_match_manual_wls_reference():
+    data = _aweighted_gelbach_data()
+    assert not float(data["w"].sum()).is_integer()
+
+    fit = pf.feols(
+        fml="Y ~ x1 + x21 + x22 + x23",
+        data=data,
+        weights="w",
+        weights_type="aweights",
+    )
+    result = fit.decompose(
+        decomp_var="x1",
+        combine_covariates={"g1": ["x21"], "g2": ["x22", "x23"]},
+        only_coef=True,
+    ).tidy(panels="levels")
+
+    reference = _manual_aweighted_gelbach_levels(data)
+    np.testing.assert_allclose(
+        result["coefficients"],
+        reference["coefficients"],
+        rtol=1e-9,
+        atol=1e-10,
+    )
+
+
+def test_analytic_weighted_inference_matches_manual_wls_reference():
+    data = _aweighted_gelbach_data()
+
+    fit = pf.feols(
+        fml="Y ~ x1 + x21 + x22 + x23",
+        data=data,
+        weights="w",
+        weights_type="aweights",
+    )
+    result = fit.decompose(
+        decomp_var="x1",
+        combine_covariates={"g1": ["x21"], "g2": ["x22", "x23"]},
+    ).tidy(panels="levels")
+
+    reference = _manual_aweighted_gelbach_levels(data)
+    np.testing.assert_allclose(
+        result[["coefficients", "std_error", "ci_lower", "ci_upper"]],
+        reference[["coefficients", "std_error", "ci_lower", "ci_upper"]],
+        rtol=1e-9,
+        atol=1e-10,
+    )
+
+
+def test_analytic_weighted_inference_with_fixed_effects_returns_finite_results():
+    data = _aweighted_gelbach_data()
+
+    fit = pf.feols(
+        fml="Y ~ x1 + x21 + x22 | f1",
+        data=data,
+        weights="w",
+        weights_type="aweights",
+    )
+    result = fit.decompose(
+        decomp_var="x1",
+        combine_covariates={"g1": ["x21"], "g2": ["x22"]},
+    ).tidy(panels="levels")
+
+    numeric = result[["coefficients", "std_error", "ci_lower", "ci_upper"]]
+    assert np.isfinite(numeric.to_numpy()).all()
 
 
 @pytest.mark.parametrize(

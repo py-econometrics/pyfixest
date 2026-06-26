@@ -147,6 +147,8 @@ class GelbachDecomposition:
         If True, skip inference and only compute point estimates, by default False.
     inference : str, optional
         Inference method. One of "analytic" or "bootstrap", by default "analytic".
+    weights_type : str, optional
+        Type of weights from the parent model, by default None.
     atol : float, optional
         Absolute tolerance for linear solver, by default None.
     btol : float, optional
@@ -176,6 +178,7 @@ class GelbachDecomposition:
     agg_first: bool | None = False
     only_coef: bool = False
     inference: str = "analytic"
+    weights_type: str | None = None
     atol: float | None = None
     btol: float | None = None
 
@@ -318,14 +321,17 @@ class GelbachDecomposition:
                 self.X1 = S @ self.X1
                 self.X2 = S @ self.X2
                 self.Y = self.Y * self._weights_sqrt
-                # treat weights as frequency weights
-                N = np.sum(weights)
-                if N.is_integer():
-                    self.N = int(N)
+                if self.weights_type == "fweights":
+                    N = float(np.sum(weights))
+                    if N.is_integer():
+                        self.N = int(N)
+                    else:
+                        raise ValueError(
+                            "The sum of weights is not an integer, which is not "
+                            "supported with frequency weights."
+                        )
                 else:
-                    raise ValueError(
-                        "The sum of weights is not an integer, which is not supported with frequency weights."
-                    )
+                    self.N = X.shape[0]
             else:
                 self._weights_sqrt = np.ones(X.shape[0])
                 self.N = X.shape[0]
@@ -475,21 +481,26 @@ class GelbachDecomposition:
         beta_full = np.asarray(self.beta_full, dtype=float)
         beta2 = np.asarray(self.beta2, dtype=float)
         gamma = self.gamma_matrix[self.decomp_var_in_X1_idx, :]
-        weights_sqrt = np.asarray(self._weights_sqrt, dtype=float)
+        # Frequency weights represent replicated rows; analytical weights use
+        # the WLS score contributions directly.
+        influence_scale = (
+            np.asarray(self._weights_sqrt, dtype=float)
+            if self.weights_type == "fweights"
+            else np.ones(nobs)
+        )
 
-        # Match the sum of squared influence contributions from replicated rows.
         short_resid = Y - np.asarray(self.X1 @ beta_short).reshape(-1)
         full_resid = Y - np.asarray(self.X @ beta_full).reshape(-1)
 
         short_weight = np.asarray(
             self.X1 @ self.x1_inv[:, self.decomp_var_in_X1_idx]
         ).reshape(-1)
-        direct_if = short_weight * short_resid / weights_sqrt
+        direct_if = short_weight * short_resid / influence_scale
 
         full_weight = np.asarray(self.X @ x_inv[:, self.decomp_var_in_X_idx]).reshape(
             -1
         )
-        full_if = full_weight * full_resid / weights_sqrt
+        full_if = full_weight * full_resid / influence_scale
 
         beta2_indices = np.flatnonzero(self.mask)
 
@@ -508,7 +519,7 @@ class GelbachDecomposition:
             ).reshape(-1)
             gamma_if = short_weight * group_auxiliary_resid
 
-            mediator_group_if[name] = (beta2_if + gamma_if) / weights_sqrt
+            mediator_group_if[name] = (beta2_if + gamma_if) / influence_scale
 
         explained_if = (
             np.sum(np.column_stack(list(mediator_group_if.values())), axis=1)
@@ -1318,9 +1329,10 @@ def _decompose_arg_check(
             f"'inference' must be one of {SUPPORTED_INFERENCE}. Got '{inference}'."
         )
 
-    if has_weights and weights_type != "fweights":
+    if has_weights and weights_type not in {"aweights", "fweights"}:
         raise NotImplementedError(
-            "Decomposition is currently only supported for models with frequency weights."
+            "Decomposition is currently only supported for models with analytical "
+            "or frequency weights."
         )
     if has_weights and inference == "bootstrap" and not only_coef:
         raise NotImplementedError(
