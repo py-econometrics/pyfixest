@@ -787,16 +787,19 @@ def test_gelbach_errors():
         )
         fit.decompose(decomp_var="x1", combine_covariates={"g1": ["x21"]})
 
-    # error with fweights and only_coef=False
+    # error with fweights and bootstrap inference
     with pytest.raises(
         NotImplementedError,
-        match=r"Decomposition inference is currently not supported for weighted models.",
+        match=r"Bootstrap decomposition inference is currently not supported for weighted models.",
     ):
         fit = pf.feols(
             "y ~ x1 + x21", data=data, weights="weights", weights_type="fweights"
         )
         fit.decompose(
-            decomp_var="x1", combine_covariates={"g1": ["x21"]}, only_coef=False
+            decomp_var="x1",
+            combine_covariates={"g1": ["x21"]},
+            only_coef=False,
+            inference="bootstrap",
         )
 
 

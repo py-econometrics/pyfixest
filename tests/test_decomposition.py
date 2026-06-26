@@ -714,3 +714,62 @@ def test_weights(fml):
             tidy_orig.select_dtypes(include=[np.number]),
             tidy_agg.select_dtypes(include=[np.number]),
         )
+
+
+@pytest.mark.parametrize(
+    "fml", ["Y ~ x1 + x21 + x22 + x23", "Y ~ x1 + x21 + x22 | x23"]
+)
+def test_frequency_weighted_analytic_inference_matches_expanded_data(fml):
+    rng = np.random.default_rng(123)
+    nobs = 1000
+    data = pd.DataFrame(
+        {
+            "Y": rng.choice(range(10), nobs),
+            "x1": rng.choice(range(2), nobs),
+            "x21": rng.choice(range(2), nobs),
+            "x22": rng.choice(range(2), nobs),
+            "x23": rng.choice(range(5), nobs),
+        }
+    )
+    aggregate_columns = ["Y", "x1", "x21", "x22", "x23"]
+    compressed_data = data.groupby(aggregate_columns).size().reset_index(name="count")
+
+    def decompose(fit):
+        return fit.decompose(
+            decomp_var="x1",
+            combine_covariates={
+                "g1": ["x21", "x22"],
+                "g2": re.compile("x23"),
+            },
+        ).tidy()
+
+    expanded = (
+        decompose(pf.feols(fml=fml, data=data)).rename_axis("effect").reset_index()
+    )
+    compressed = (
+        decompose(
+            pf.feols(
+                fml=fml,
+                data=compressed_data,
+                weights="count",
+                weights_type="fweights",
+            )
+        )
+        .rename_axis("effect")
+        .reset_index()
+    )
+
+    sort_columns = ["panels", "effect"]
+    expanded = expanded.sort_values(sort_columns).reset_index(drop=True)
+    compressed = compressed.sort_values(sort_columns).reset_index(drop=True)
+
+    pd.testing.assert_frame_equal(
+        expanded[sort_columns],
+        compressed[sort_columns],
+    )
+    np.testing.assert_allclose(
+        expanded[["coefficients", "std_error", "ci_lower", "ci_upper"]],
+        compressed[["coefficients", "std_error", "ci_lower", "ci_upper"]],
+        rtol=1e-8,
+        atol=1e-9,
+    )

@@ -312,12 +312,12 @@ class GelbachDecomposition:
             self.X2 = self.X[:, self.mask]
 
             if weights is not None:
-                weights_sqrt = np.sqrt(weights.flatten())
-                S = diags(weights_sqrt, 0)
+                self._weights_sqrt = np.sqrt(weights.flatten())
+                S = diags(self._weights_sqrt, 0)
                 self.X = S @ self.X
                 self.X1 = S @ self.X1
                 self.X2 = S @ self.X2
-                self.Y = self.Y * weights_sqrt
+                self.Y = self.Y * self._weights_sqrt
                 # treat weights as frequency weights
                 N = np.sum(weights)
                 if N.is_integer():
@@ -327,6 +327,7 @@ class GelbachDecomposition:
                         "The sum of weights is not an integer, which is not supported with frequency weights."
                     )
             else:
+                self._weights_sqrt = np.ones(X.shape[0])
                 self.N = X.shape[0]
 
             self.names_X1 = ["Intercept", self.decomp_var]
@@ -474,19 +475,21 @@ class GelbachDecomposition:
         beta_full = np.asarray(self.beta_full, dtype=float)
         beta2 = np.asarray(self.beta2, dtype=float)
         gamma = self.gamma_matrix[self.decomp_var_in_X1_idx, :]
+        weights_sqrt = np.asarray(self._weights_sqrt, dtype=float)
 
+        # Match the sum of squared influence contributions from replicated rows.
         short_resid = Y - np.asarray(self.X1 @ beta_short).reshape(-1)
         full_resid = Y - np.asarray(self.X @ beta_full).reshape(-1)
 
         short_weight = np.asarray(
             self.X1 @ self.x1_inv[:, self.decomp_var_in_X1_idx]
         ).reshape(-1)
-        direct_if = short_weight * short_resid
+        direct_if = short_weight * short_resid / weights_sqrt
 
         full_weight = np.asarray(self.X @ x_inv[:, self.decomp_var_in_X_idx]).reshape(
             -1
         )
-        full_if = full_weight * full_resid
+        full_if = full_weight * full_resid / weights_sqrt
 
         beta2_indices = np.flatnonzero(self.mask)
 
@@ -505,7 +508,7 @@ class GelbachDecomposition:
             ).reshape(-1)
             gamma_if = short_weight * group_auxiliary_resid
 
-            mediator_group_if[name] = beta2_if + gamma_if
+            mediator_group_if[name] = (beta2_if + gamma_if) / weights_sqrt
 
         explained_if = (
             np.sum(np.column_stack(list(mediator_group_if.values())), axis=1)
@@ -534,8 +537,8 @@ class GelbachDecomposition:
         )
 
         rank = np.linalg.matrix_rank(np.asarray(x_crossprod, dtype=float))
-        self._analytic_df = max(nobs - rank, 1)
-        self._analytic_hc1_factor = nobs / self._analytic_df
+        self._analytic_df = max(self.N - rank, 1)
+        self._analytic_hc1_factor = self.N / self._analytic_df
 
     def _relative_influence_df(
         self,
@@ -1319,9 +1322,9 @@ def _decompose_arg_check(
         raise NotImplementedError(
             "Decomposition is currently only supported for models with frequency weights."
         )
-    if has_weights and not only_coef:
+    if has_weights and inference == "bootstrap" and not only_coef:
         raise NotImplementedError(
-            "Decomposition inference is currently not supported for weighted models."
+            "Bootstrap decomposition inference is currently not supported for weighted models."
         )
 
     if has_cluster and inference == "analytic" and not only_coef:
