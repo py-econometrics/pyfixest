@@ -49,6 +49,7 @@ wildboottest_numpy = _mod.wildboottest_numpy
 # Stub model — mimics the pyfixest Feols attributes wildboottest() reads.
 # ---------------------------------------------------------------------------
 
+
 class _StubModel:
     """Minimal stand-in for a fitted pyfixest Feols model."""
 
@@ -73,14 +74,13 @@ class _StubModel:
         G: int = 20,
         true_beta: float = 2.0,
         seed: int = 12345,
-    ) -> "_StubModel":
+    ) -> _StubModel:
         rng = np.random.default_rng(seed)
         cluster = np.repeat(np.arange(G), N // G)
         x = rng.standard_normal(N)
         y = true_beta * x + rng.standard_normal(N)
         X = np.column_stack([np.ones(N), x])
-        return cls(Y=y, X=X, cluster_ids=cluster,
-                   coefnames=["Intercept", "x"])
+        return cls(Y=y, X=X, cluster_ids=cluster, coefnames=["Intercept", "x"])
 
 
 def _stub() -> _StubModel:
@@ -96,7 +96,7 @@ def _null_stub() -> _StubModel:
 def _no_cluster_stub() -> _StubModel:
     """Stub where _clustervar is empty (simulates no-cluster model)."""
     m = _StubModel.from_dgp(true_beta=1.0, seed=0)
-    m._clustervar = []       # wildboottest should reject this
+    m._clustervar = []  # wildboottest should reject this
     m._cluster_df = None
     return m
 
@@ -104,6 +104,7 @@ def _no_cluster_stub() -> _StubModel:
 # ---------------------------------------------------------------------------
 # 1. Return structure
 # ---------------------------------------------------------------------------
+
 
 def test_wildboottest_returns_dict_with_expected_keys():
     result = wildboottest(_stub(), param="x", B=99, seed=0)
@@ -122,8 +123,7 @@ def test_wildboottest_B_in_result():
 
 
 def test_wildboottest_weights_type_in_result():
-    result = wildboottest(_stub(), param="x", B=99,
-                          weights_type="rademacher", seed=0)
+    result = wildboottest(_stub(), param="x", B=99, weights_type="rademacher", seed=0)
     assert result["weights_type"] == "rademacher"
 
 
@@ -131,20 +131,21 @@ def test_wildboottest_weights_type_in_result():
 # 2. p-value range
 # ---------------------------------------------------------------------------
 
+
 def test_wildboottest_pvalue_in_range():
     result = wildboottest(_stub(), param="x", B=199, seed=1)
     assert 0.0 <= result["p_value"] <= 1.0
 
 
 def test_wildboottest_mammen_pvalue_in_range():
-    result = wildboottest(_stub(), param="x", B=199,
-                          weights_type="mammen", seed=1)
+    result = wildboottest(_stub(), param="x", B=199, weights_type="mammen", seed=1)
     assert 0.0 <= result["p_value"] <= 1.0
 
 
 # ---------------------------------------------------------------------------
 # 3. Statistical power / size
 # ---------------------------------------------------------------------------
+
 
 def test_wildboottest_null_is_false():
     """Large true coefficient (beta=2) -> bootstrap p-value should be small."""
@@ -166,27 +167,26 @@ def test_wildboottest_null_is_true():
 # 4. Weight distribution variants
 # ---------------------------------------------------------------------------
 
+
 def test_wildboottest_rademacher_weights():
-    result = wildboottest(_stub(), param="x", B=99,
-                          weights_type="rademacher", seed=7)
+    result = wildboottest(_stub(), param="x", B=99, weights_type="rademacher", seed=7)
     assert isinstance(result["p_value"], float)
 
 
 def test_wildboottest_mammen_weights():
-    result = wildboottest(_stub(), param="x", B=99,
-                          weights_type="mammen", seed=7)
+    result = wildboottest(_stub(), param="x", B=99, weights_type="mammen", seed=7)
     assert isinstance(result["p_value"], float)
 
 
 def test_wildboottest_invalid_weights_type_raises():
     with pytest.raises(ValueError, match="weights_type"):
-        wildboottest(_stub(), param="x", B=99,
-                     weights_type="gaussian", seed=0)
+        wildboottest(_stub(), param="x", B=99, weights_type="gaussian", seed=0)
 
 
 # ---------------------------------------------------------------------------
 # 5. Reproducibility
 # ---------------------------------------------------------------------------
+
 
 def test_wildboottest_reproducible():
     r1 = wildboottest(_stub(), param="x", B=199, seed=123)
@@ -206,6 +206,7 @@ def test_wildboottest_different_seeds_both_valid():
 # 6. B iterations (pure-numpy API)
 # ---------------------------------------------------------------------------
 
+
 def test_wildboottest_B_iterations():
     rng = np.random.default_rng(0)
     N, G = 100, 10
@@ -214,8 +215,9 @@ def test_wildboottest_B_iterations():
     y = x + rng.standard_normal(N)
     X = np.column_stack([np.ones(N), x])
     for B in [49, 99, 199]:
-        result = wildboottest_numpy(Y=y, X=X, cluster_ids=cluster,
-                                    param_idx=1, B=B, seed=0)
+        result = wildboottest_numpy(
+            Y=y, X=X, cluster_ids=cluster, param_idx=1, B=B, seed=0
+        )
         assert result["B"] == B
 
 
@@ -223,14 +225,16 @@ def test_wildboottest_B_iterations():
 # 7. Pure-numpy API
 # ---------------------------------------------------------------------------
 
+
 def test_wildboottest_numpy_keys():
     rng = np.random.default_rng(0)
     N, G = 100, 10
     cluster = np.repeat(np.arange(G), N // G)
     X = np.column_stack([np.ones(N), rng.standard_normal(N)])
     y = 2.0 * X[:, 1] + rng.standard_normal(N)
-    result = wildboottest_numpy(Y=y, X=X, cluster_ids=cluster,
-                                param_idx=1, B=99, seed=0)
+    result = wildboottest_numpy(
+        Y=y, X=X, cluster_ids=cluster, param_idx=1, B=99, seed=0
+    )
     assert set(result.keys()) == {"param_idx", "t_stat", "p_value", "B", "weights_type"}
 
 
@@ -240,8 +244,9 @@ def test_wildboottest_numpy_pvalue_range():
     cluster = np.repeat(np.arange(G), N // G)
     X = np.column_stack([np.ones(N), rng.standard_normal(N)])
     y = rng.standard_normal(N)
-    result = wildboottest_numpy(Y=y, X=X, cluster_ids=cluster,
-                                param_idx=1, B=199, seed=42)
+    result = wildboottest_numpy(
+        Y=y, X=X, cluster_ids=cluster, param_idx=1, B=199, seed=42
+    )
     assert 0.0 <= result["p_value"] <= 1.0
 
 
@@ -253,8 +258,9 @@ def test_wildboottest_numpy_significant():
     x = rng.standard_normal(N)
     y = 5.0 * x + 0.1 * rng.standard_normal(N)
     X = np.column_stack([np.ones(N), x])
-    result = wildboottest_numpy(Y=y, X=X, cluster_ids=cluster,
-                                param_idx=1, B=499, seed=0)
+    result = wildboottest_numpy(
+        Y=y, X=X, cluster_ids=cluster, param_idx=1, B=499, seed=0
+    )
     assert result["p_value"] < 0.05
 
 
@@ -265,8 +271,7 @@ def test_wildboottest_numpy_out_of_bounds_param_idx():
     X = np.column_stack([np.ones(N), rng.standard_normal(N)])
     y = rng.standard_normal(N)
     with pytest.raises(IndexError):
-        wildboottest_numpy(Y=y, X=X, cluster_ids=cluster,
-                           param_idx=5, B=49, seed=0)
+        wildboottest_numpy(Y=y, X=X, cluster_ids=cluster, param_idx=5, B=49, seed=0)
 
 
 def test_wildboottest_numpy_mammen():
@@ -276,9 +281,9 @@ def test_wildboottest_numpy_mammen():
     x = rng.standard_normal(N)
     y = 2.0 * x + rng.standard_normal(N)
     X = np.column_stack([np.ones(N), x])
-    result = wildboottest_numpy(Y=y, X=X, cluster_ids=cluster,
-                                param_idx=1, B=99,
-                                weights_type="mammen", seed=7)
+    result = wildboottest_numpy(
+        Y=y, X=X, cluster_ids=cluster, param_idx=1, B=99, weights_type="mammen", seed=7
+    )
     assert 0.0 <= result["p_value"] <= 1.0
 
 
@@ -289,16 +294,15 @@ def test_wildboottest_numpy_reproducible():
     x = rng.standard_normal(N)
     y = x + rng.standard_normal(N)
     X = np.column_stack([np.ones(N), x])
-    r1 = wildboottest_numpy(Y=y, X=X, cluster_ids=cluster,
-                            param_idx=1, B=99, seed=55)
-    r2 = wildboottest_numpy(Y=y, X=X, cluster_ids=cluster,
-                            param_idx=1, B=99, seed=55)
+    r1 = wildboottest_numpy(Y=y, X=X, cluster_ids=cluster, param_idx=1, B=99, seed=55)
+    r2 = wildboottest_numpy(Y=y, X=X, cluster_ids=cluster, param_idx=1, B=99, seed=55)
     assert r1["p_value"] == r2["p_value"]
 
 
 # ---------------------------------------------------------------------------
 # 8. Model wrapper: error paths (use stubs, no real pyfixest needed)
 # ---------------------------------------------------------------------------
+
 
 def test_wildboottest_bad_param_raises():
     with pytest.raises(ValueError, match="not found"):
