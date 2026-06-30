@@ -437,8 +437,12 @@ def feols(
     data_gelbach = gelbach_data(nobs = 1000)
     fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data_gelbach)
 
-    # simple decomposition
+    # simple decomposition with analytical inference
     res = fit.decompose(param = "x1")
+    res.etable()
+
+    # bootstrap inference remains available
+    res = fit.decompose(param = "x1", inference = "bootstrap", reps = 999)
     res.etable()
 
     # group covariates via "combine_covariates" argument

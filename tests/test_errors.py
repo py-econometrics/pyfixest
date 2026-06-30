@@ -709,7 +709,7 @@ def test_gelbach_errors():
         fit.decompose(decomp_var="x1", x1_vars=["x1"])
 
     with pytest.raises(
-        ValueError, match=r"cannot be in both x1_vars and combine_covariates keys"
+        ValueError, match=r"cannot be in both x1_vars and combine_covariates values"
     ):
         fit.decompose(
             decomp_var="x1", x1_vars=["x21"], combine_covariates={"g1": ["x21"]}
@@ -724,7 +724,9 @@ def test_gelbach_errors():
             param="x1", combine_covariates={"g1": ["x21"]}
         )
 
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(
+        ValueError, match=r"The variable 'x21' is not in the mediator names."
+    ):
         pf.feols("y ~ x1", data=data, weights="weights").decompose(
             param="x1", combine_covariates={"g1": ["x21"]}
         )
@@ -754,33 +756,50 @@ def test_gelbach_errors():
 
     with pytest.warns(
         UserWarning,
-        match=r"You have provided combine_covariates, but agg_first is False. We recommend setting agg_first=True as this might massively decrease the computation time \(in particular when boostrapping CIs\)\.",
+        match=(
+            r"You have provided combine_covariates, but agg_first is False\. "
+            r"We recommend setting agg_first=True as this might massively "
+            r"decrease the computation time \(in particular when bootstrapping CIs\)\."
+        ),
     ):
         fit.decompose(
             decomp_var="x1", combine_covariates={"g1": ["x21"]}, agg_first=False
         )
 
-    # error for WLS and aweights
-    with pytest.raises(
-        NotImplementedError,
-        match=r"Decomposition is currently only supported for models with frequency weights.",
-    ):
-        fit = pf.feols(
-            "y ~ x1 + x21", data=data, weights="weights", weights_type="aweights"
-        )
-        fit.decompose(decomp_var="x1", combine_covariates={"g1": ["x21"]})
+    with pytest.raises(ValueError, match=r"'inference' must be one of"):
+        fit.decompose(decomp_var="x1", inference="none")
 
-    # error with fweights and only_coef=False
     with pytest.raises(
         NotImplementedError,
-        match=r"Decomposition is currently only supported for models with frequency weights when only_coef is False.",
+        match=r"Analytical decomposition inference is currently not supported with clustered models",
     ):
-        fit = pf.feols(
-            "y ~ x1 + x21", data=data, weights="weights", weights_type="fweights"
-        )
         fit.decompose(
-            decomp_var="x1", combine_covariates={"g1": ["x21"]}, only_coef=False
+            decomp_var="x1",
+            combine_covariates={"g1": ["x21"]},
+            cluster="f1",
         )
+
+    # aweights are supported with analytical inference
+    fit = pf.feols(
+        "y ~ x1 + x21", data=data, weights="weights", weights_type="aweights"
+    )
+    fit.decompose(decomp_var="x1", combine_covariates={"g1": ["x21"]})
+
+    # error with weighted bootstrap inference
+    for weights_type in ["aweights", "fweights"]:
+        fit = pf.feols(
+            "y ~ x1 + x21", data=data, weights="weights", weights_type=weights_type
+        )
+        with pytest.raises(
+            NotImplementedError,
+            match=r"Bootstrap decomposition inference is currently not supported for weighted models.",
+        ):
+            fit.decompose(
+                decomp_var="x1",
+                combine_covariates={"g1": ["x21"]},
+                only_coef=False,
+                inference="bootstrap",
+            )
 
 
 def test_glm_errors():
