@@ -307,6 +307,27 @@ def test_predict_newdata_unseen_category(fml):
     assert np.all(np.isfinite(pred_new[1:])), "seen rows should remain finite"
 
 
+def test_i_bin_bin2_separate_state():
+    """i(a, b, bin=..., bin2=...) must store separate bin mappings per variable.
+
+    Regression test: previously _apply_binning used a single "bin_mapping" key
+    in shared encoder state, so the second variable reused the first's mapping.
+    """
+    data = get_data(N=500, seed=42).dropna()
+    data["f1"] = data["f1"].astype(int).astype(str)
+    data["f2"] = data["f2"].astype(int).astype(str)
+
+    fit = feols(
+        "Y ~ i(f1, f2, bin={'low': ['0', '1']}, bin2={'hi': ['0', '1']})",
+        data=data,
+    )
+    coefnames = [str(c) for c in fit._coefnames]
+    f1_binned = any("low" in c for c in coefnames)
+    f2_binned = any("hi" in c for c in coefnames)
+    assert f1_binned, f"f1 should be binned to 'low', got: {coefnames}"
+    assert f2_binned, f"f2 should be binned to 'hi', got: {coefnames}"
+
+
 def test_context_capture():
     # `_foo` is in caller's stack frame, if should be captured
     # call with -1 to account for adding one more frame inside the function

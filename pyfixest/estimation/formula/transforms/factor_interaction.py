@@ -113,9 +113,11 @@ def _encode_i(
     var2 = unwrapped.get("__var2__") if var2_name is not None else None
     # Convert to pandas Series and drop specified rows
     data = pd.Series(data)
+    data.name = factor_name
     data.drop(index=data.index[drop_rows], inplace=True)
     if var2 is not None:
         var2 = pd.Series(var2)
+        var2.name = var2_name
         var2.drop(index=var2.index[drop_rows], inplace=True)
     dummies = _encode_factor(
         pd.Series(data),
@@ -266,12 +268,14 @@ def _apply_binning(series: pd.Series, bins: dict, state: dict) -> pd.Series:
     Apply binning: bin={'low': ['a','b'], 'high': ['c','d']}.
 
     Values not in the mapping are kept unchanged (matches R fixest behavior).
+    The bin mapping is namespaced per variable to avoid collisions when
+    both sides of an interaction are binned (``i(a, b, bin=..., bin2=...)``).
     """
-    if "bin_mapping" not in state:
+    bin_key = f"__bin_mapping_{series.name}__"
+    if bin_key not in state:
         mapping = {}
         for new_level, old_levels in bins.items():
             for old in old_levels:
                 mapping[old] = new_level
-        state["bin_mapping"] = mapping
-    # Use replace() instead of map() to keep unmapped values unchanged
-    return series.replace(state["bin_mapping"])
+        state[bin_key] = mapping
+    return series.replace(state[bin_key])
