@@ -138,7 +138,7 @@ def _check_for_separation_fe(
             null_column = ctab.xs(0)
             # sep_candidate if
             # fixed effect level has only observations with Y > 0
-            sep_candidate = (np.sum(ctab > 0, axis=0).values == 1) & (
+            sep_candidate = ((ctab > 0).sum(axis=0).to_numpy() == 1) & (
                 null_column > 0
             ).to_numpy().flatten()
             # droplist: list of levels to drop
