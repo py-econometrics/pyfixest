@@ -42,19 +42,15 @@ def _get_position_of_first_parenthesis_pair(string: str) -> tuple[int, int]:
         raise ValueError(f"No parenthesis in `{string}`")
     else:
         position_open += 1
-    position: int = position_open
     depth: int = 1
-    while position < len(string) and depth:
-        position += 1
-        if position >= len(string):
-            break
+    for position in range(position_open, len(string)):
         if string[position] == "(":
             depth += 1
         elif string[position] == ")":
             depth -= 1
-    if depth != 0:
-        raise ValueError(f"Unmatched '(' in `{string}`")
-    return position_open, position
+            if depth == 0:
+                return position_open, position
+    raise ValueError(f"Unmatched '(' in `{string}`")
 
 
 def _get_weights(data: pd.DataFrame, weights: str) -> pd.Series:
