@@ -106,17 +106,19 @@ def _decode_fixef_dict(
         if encoding_df is not None:
             # Build code -> original value mapping from the stored DataFrame.
             # The DataFrame has columns like ['f1', '__fixed_effect_encoding__']
-            # where the last column is always the ngroup code.
+            # where the last column is always the ngroup code. Rows whose FE
+            # value was NaN carry a NaN code (they were dropped from the
+            # estimation sample) and must not surface as a 'nan' level.
             code_col = encoding_df.columns[-1]
             value_cols = list(encoding_df.columns[:-1])
-            code_to_value: dict[str, str] = {}
-            for _, row in encoding_df.iterrows():
-                code = str(row[code_col])
-                if len(value_cols) == 1:
-                    code_to_value[code] = str(row[value_cols[0]])
-                else:
-                    # Interacted FE: join values with ","
-                    code_to_value[code] = ",".join(str(row[c]) for c in value_cols)
+            valid_rows = encoding_df.dropna(subset=[code_col])
+            codes = valid_rows[code_col].astype(str)
+            if len(value_cols) == 1:
+                values = valid_rows[value_cols[0]].astype(str)
+            else:
+                # Interacted FE: join values with ","
+                values = valid_rows[value_cols].astype(str).agg(",".join, axis=1)
+            code_to_value: dict[str, str] = dict(zip(codes, values, strict=True))
         else:
             code_to_value = {}
 
@@ -1870,7 +1872,9 @@ class Feols(ResultAccessorMixin):
             encoding_df = fe_state.get("__fixed_effect_encoding__")
             if encoding_df is not None:
                 code_col = encoding_df.columns[-1]
-                all_codes = set(str(c) for c in encoding_df[code_col])
+                # NaN codes belong to rows dropped from the estimation sample
+                # (NaN FE values) - they are not levels and get no coefficient.
+                all_codes = set(str(c) for c in encoding_df[code_col].dropna())
                 missing = all_codes - set(levels.keys())
                 for code in missing:
                     levels[code] = 0.0
