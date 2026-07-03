@@ -328,6 +328,46 @@ def test_i_bin_bin2_separate_state():
     assert f2_binned, f"f2 should be binned to 'hi', got: {coefnames}"
 
 
+def test_predict_decoy_column_not_flagged_unseen():
+    """A data column named like a contrast keyword arg must not cause NaN.
+
+    Regression test: _categorical_levels used regex to extract identifiers from
+    factor expressions, so a column named `base` (matching the keyword arg
+    `base='a'` in C(f, Treatment(base='a'))`) was checked against f's categories
+    and flagged every row as unseen -> all predictions NaN.
+    """
+    data = get_data(N=500, seed=42).dropna()
+    data["base"] = np.random.default_rng(99).normal(size=len(data))
+    fit = feols("Y ~ X1 + C(f1)", data=data)
+    pred = fit.predict(newdata=data.iloc[:100])
+    assert np.all(np.isfinite(pred)), "decoy column should not cause NaN predictions"
+
+
+def test_predict_binned_i_not_flagged_unseen():
+    """predict(newdata=...) with binned i() must not flag valid raw levels as unseen.
+
+    Regression test: _rows_with_unseen_categories checked raw newdata values
+    against post-binning categories, so a valid raw level like 'a' (binned to
+    'low') was flagged unseen -> NaN prediction.
+    """
+    data = pd.DataFrame(
+        {
+            "Y": np.random.default_rng(0).normal(size=200),
+            "f1": np.random.default_rng(2).choice(["a", "b", "c", "d"], size=200),
+        }
+    )
+    fit = feols("Y ~ i(f1, bin={'low': ['a', 'b']})", data=data)
+    pred = fit.predict(newdata=data.iloc[:50])
+    assert np.all(np.isfinite(pred)), "valid binned levels should not be NaN"
+
+    # Truly unseen level should still be NaN
+    newdata = data.iloc[:10].copy()
+    newdata.iloc[0, newdata.columns.get_loc("f1")] = "zzz"
+    pred_unseen = fit.predict(newdata=newdata)
+    assert np.isnan(pred_unseen[0]), "truly unseen level should predict NaN"
+    assert np.all(np.isfinite(pred_unseen[1:])), "seen rows should remain finite"
+
+
 def test_context_capture():
     # `_foo` is in caller's stack frame, if should be captured
     # call with -1 to account for adding one more frame inside the function
