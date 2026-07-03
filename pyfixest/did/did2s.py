@@ -225,33 +225,17 @@ def _did2s_estimate(
     )  # iid as it might be faster than CRV
 
     # obtain estimated fixed effects
-    fixef_dict = fit1.fixef()
+    fit1.fixef()
 
     # demean data
     Y_hat = fit1.predict(newdata=data)
     if np.isnan(Y_hat).any():
         # levels present in the full data but absent from the first stage fit
-        # (fit on not-yet-treated observations only) predict to NaN and would
-        # silently be dropped in the second stage, see #1244
-        missing_by_var = []
-        fixef_vars = [x.strip() for x in _first_stage.split("|")[1].split("+")]
-        for fixef_var in fixef_vars:
-            if fixef_var not in data.columns:
-                continue
-            estimated_levels = set(fixef_dict.get(f"C({fixef_var})", {}))
-            data_levels = set(data[fixef_var].astype(str))
-            missing = sorted(data_levels - estimated_levels)
-            if missing:
-                missing_by_var.append(f"{fixef_var}: {missing}")
-        details = "; ".join(missing_by_var) if missing_by_var else "unknown levels"
+        # (fit on not-yet-treated observations only) predict to NaN
         raise ValueError(
-            "The following fixed effect levels could not be estimated in the "
-            f"first stage regression, which is fit on not-yet-treated observations "
-            f"only: {details}. This happens when a level has no not-yet-treated "
-            "observations (e.g. an always-treated unit) or is collinear in the "
-            "first stage. First stage predictions for the affected observations "
-            "are NaN, hence did2s cannot proceed. Please drop the affected "
-            "observations before calling did2s()."
+            "First-stage predictions contain NaN values because some fixed effect "
+            "levels were not observed in the not-yet-treated first-stage sample. "
+            "Drop those observations before calling did2s()."
         )
     _first_u = data[f"{yname}"].to_numpy().flatten() - Y_hat
     data[f"{yname}_hat"] = _first_u

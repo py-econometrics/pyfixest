@@ -1095,7 +1095,9 @@ def test_did2s_unestimated_first_stage_fixef():
 
     with pytest.raises(
         ValueError,
-        match=r"could not be estimated in the first stage",
+        match=r"First-stage predictions contain NaN values because some fixed effect "
+        "levels were not observed in the not-yet-treated first-stage sample. "
+        "Drop those observations before calling did2s().",
     ):
         pf.did2s(
             data,
