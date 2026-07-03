@@ -332,13 +332,15 @@ def test_predict_decoy_column_not_flagged_unseen():
     """A data column named like a contrast keyword arg must not cause NaN.
 
     Regression test: _categorical_levels used regex to extract identifiers from
-    factor expressions, so a column named `base` (matching the keyword arg
-    `base='a'` in C(f, Treatment(base='a'))`) was checked against f's categories
-    and flagged every row as unseen -> all predictions NaN.
+    factor expressions, so with a formula like `C(f1, contr.treatment(base=1.0))`
+    the keyword-arg name `base` was treated as a model variable. A continuous
+    data column named `base` was then checked against f1's categories and
+    flagged every row as unseen -> all predictions NaN. The formula must
+    contain the keyword argument for this test to pin the bug.
     """
     data = get_data(N=500, seed=42).dropna()
     data["base"] = np.random.default_rng(99).normal(size=len(data))
-    fit = feols("Y ~ X1 + C(f1)", data=data)
+    fit = feols("Y ~ X1 + C(f1, contr.treatment(base=1.0))", data=data)
     pred = fit.predict(newdata=data.iloc[:100])
     assert np.all(np.isfinite(pred)), "decoy column should not cause NaN predictions"
 
