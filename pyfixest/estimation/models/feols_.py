@@ -75,6 +75,32 @@ decomposition_type = Literal["gelbach"]
 prediction_type = Literal["response", "link"]
 
 
+def _check_fe_dtype_compatibility(
+    fit_data: pd.DataFrame,
+    newdata: pd.DataFrame,
+    fe_columns: list[str],
+) -> None:
+    """Warn if FE column dtypes differ between fit data and newdata.
+
+    A dtype mismatch (e.g. int32 vs int64, or string vs numeric) causes the
+    left-merge in ``encode_fixed_effects`` to match nothing, yielding all-NaN
+    predictions without a clear explanation.
+    """
+    for col in fe_columns:
+        if col not in newdata.columns:
+            continue
+        fit_dtype = fit_data[col].dtype
+        new_dtype = newdata[col].dtype
+        if fit_dtype != new_dtype:
+            warnings.warn(
+                f"Fixed effect column '{col}' has dtype {new_dtype} in newdata "
+                f"but {fit_dtype} in the fitted data. This may cause all "
+                f"predictions to be NaN due to unmatched fixed-effect levels.",
+                UserWarning,
+                stacklevel=3,
+            )
+
+
 class Feols(ResultAccessorMixin):
     """
     Non user-facing class to estimate a linear regression via OLS.
@@ -1920,6 +1946,15 @@ class Feols(ResultAccessorMixin):
                     _ModelMatrixKey.fixed_effects
                 ].get_model_matrix(newdata, context=context, na_action="drop")
                 valid_idx = np.intersect1d(valid_idx, fe_mm.index.to_numpy())
+
+                # Warn if FE dtypes differ between fit data and newdata, as
+                # this causes the left-merge in encode_fixed_effects to match
+                # nothing -> all predictions silently NaN.
+                fe_var_names = [
+                    str(t).split(":")[0].strip()
+                    for t in self.FixestFormula.fixed_effects
+                ]
+                _check_fe_dtype_compatibility(self._data, newdata, fe_var_names)
 
                 if self._sumFE is None:
                     self.fixef(atol, btol)
