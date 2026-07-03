@@ -608,7 +608,7 @@ class TestEdgeCases:
         f_implicit = result_implicit[None][0]
         assert f_explicit.second_stage == f_implicit.second_stage
         assert not f_explicit.is_fixed_effects
-        assert f_implicit.is_fixed_effects is not None
+        assert not f_implicit.is_fixed_effects
         assert f_explicit.first_stage == f_implicit.first_stage
 
     def test_formula_roundtrip(self):
