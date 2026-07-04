@@ -147,11 +147,20 @@ def _get_fixed_effects_prediction_component(
     return fe_hat
 
 
-def _apply_fixef_numpy(df_fe_values, fixef_dicts):
+def _apply_fixef_numpy(df_fe_values, fixef_dicts, warn: bool = True):
     fixef_mat = np.zeros_like(df_fe_values, dtype=float)
-    for i, (_, subdict) in enumerate(fixef_dicts.items()):
+    for i, (fe_name, subdict) in enumerate(fixef_dicts.items()):
         unique_levels, inverse = np.unique(df_fe_values[:, i], return_inverse=True)
         mapping = np.array([subdict.get(level, np.nan) for level in unique_levels])
+        if warn and (missing_levels := np.isnan(mapping)).any():
+            # Unseen fixed effect levels are `np.nan` from `subdict.get(level, np.nan)`
+            missing = unique_levels[missing_levels]
+            warnings.warn(
+                f"Unseen levels for fixed effect {fe_name}; predictions for affected "
+                f"observations will be NaN. Unseen levels: {missing}",
+                UserWarning,
+                stacklevel=4,  # emit warning at `predict` caller
+            )
         fixef_mat[:, i] = mapping[inverse]
 
     return fixef_mat
