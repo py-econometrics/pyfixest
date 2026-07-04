@@ -35,6 +35,14 @@ As previously announced, we removed:
 - Deprecated the SciPy and CuPy demeaner backends.
 - Deprecated `FeolsCompressed`.
 
+### Bug Fixes
+
+- `did2s()` now raises an informative error when some fixed effect levels cannot be
+  estimated in the first stage regression (e.g. for always-treated units, which have
+  no not-yet-treated observations), instead of failing later with an opaque
+  broadcasting `ValueError` in the vcov computation
+  ([#1244](https://github.com/py-econometrics/pyfixest/issues/1244)).
+
 
 ## PyFixest 0.60.0
 
