@@ -1565,7 +1565,9 @@ class Feols(ResultAccessorMixin):
             # which cannot be pickled by joblib
 
             Y, X = formulaic.Formula(fml_dummies).get_model_matrix(
-                self._data, output=output
+                self._data,
+                output=output,
+                context=FORMULAIC_TRANSFORMS | {**self._context},
             )
             xnames = X.model_spec.column_names
             Y = Y.toarray().flatten() if output == "sparse" else Y.flatten()
@@ -1825,7 +1827,7 @@ class Feols(ResultAccessorMixin):
                 "The fixef() method is currently not supported for IV models."
             )
 
-        Y, X = self._model_spec["second_stage"].get_model_matrix(
+        Y, X = self._model_spec[_ModelMatrixKey.main].get_model_matrix(
             self._data,
             output="pandas",
             context=FORMULAIC_TRANSFORMS | {**self._context},

@@ -75,7 +75,7 @@ class Formula:
         ):
             raise FormulaSyntaxError(
                 f"Formula can have at most {self._max_parts} parts separated by '|'. "
-                f"Received {len(self._right_hand_side)}:\n"
+                f"Received {len(self._formula.rhs)}:\n"
                 f"{self._formula}"
             )
         if len(self.dependent.required_variables) > 1:
@@ -219,7 +219,7 @@ class Formula:
         """Instruments of an instrumental variable specification."""
         if not self.is_instrumental_variable:
             raise AttributeError(
-                "Endogenous variables are available only in instrumental variables specifications"
+                "Instruments are available only in instrumental variables specifications."
             )
         # formulaic internal: see `endogenous` - `.deps[0]` is the MULTISTAGE sub-formula.
         return self._right_hand_side.deps[0].rhs
