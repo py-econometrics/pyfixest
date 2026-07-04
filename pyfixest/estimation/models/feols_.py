@@ -1061,6 +1061,123 @@ class Feols(ResultAccessorMixin):
 
         return res
 
+    def dfm_test(self, treatment: str) -> "pd.Series":
+        """
+        Omnibus test for treatment effect heterogeneity (DFM 2019).
+
+        Tests whether the treatment effect varies systematically with
+        the covariates in the model. Under the null, the CATE does not
+        depend on X (homogeneous effect). Under the alternative, at
+        least one covariate modifies the treatment effect.
+
+        The method fits separate OLS in each arm, takes the coefficient
+        difference, and runs a joint chi-squared test on the slopes
+        using a sandwich variance.
+
+        Parameters
+        ----------
+        treatment : str
+            Name of the binary treatment variable (must be 0/1 and
+            present in the model's covariates).
+
+        Returns
+        -------
+        pd.Series
+            Series with keys "statistic" (chi-squared), "pvalue",
+            and "df" (degrees of freedom).
+
+        Raises
+        ------
+        NotImplementedError
+            If the model includes fixed effects.
+        ValueError
+            If treatment is not in the model, or is not binary 0/1.
+
+        References
+        ----------
+        Ding, P., A. Feller, and L. Miratrix (2019): "Decomposing Treatment
+        Effect Variation," Journal of the American Statistical Association,
+        114, 304-317.
+
+        Examples
+        --------
+        ```{python}
+        import numpy as np
+        import pyfixest as pf
+
+        np.random.seed(42)
+        n = 500
+        X1 = np.random.randn(n)
+        D = np.random.binomial(1, 0.5, n)
+        # heterogeneous effect: tau(X1) = 1 + 2*X1
+        Y = 1.0 + 0.5 * X1 + D * (1.0 + 2.0 * X1) + np.random.randn(n)
+
+        import pandas as pd
+        data = pd.DataFrame({"Y": Y, "D": D, "X1": X1})
+        fit = pf.feols("Y ~ D + X1", data=data)
+        fit.dfm_test(treatment="D")
+        ```
+        """
+        if self._has_fixef:
+            raise NotImplementedError(
+                "dfm_test() is not supported for models with fixed effects. "
+                "Fit a model without fixed effects to use this test."
+            )
+
+        if treatment not in self._coefnames:
+            raise ValueError(
+                f"Variable '{treatment}' not found in the model's coefficients. "
+                f"Available: {self._coefnames}"
+            )
+
+        if treatment not in self._data.columns:
+            raise ValueError(
+                f"Variable '{treatment}' not found in the model's data."
+            )
+
+        treat_vec = self._data[treatment].to_numpy().ravel()
+        unique_vals = np.unique(treat_vec)
+        if not (len(unique_vals) == 2 and set(unique_vals) <= {0, 1}):
+            raise ValueError(
+                f"Treatment variable '{treatment}' must be binary (0/1). "
+                f"Found values: {unique_vals}"
+            )
+
+        # We need the raw Y and X (not demeaned) for the separate regressions.
+        y = self._data[self._depvar].to_numpy().ravel()
+
+        # All covariates except the treatment. The intercept is added
+        # inside the standalone dfm_test function.
+        covar_names = [c for c in self._coefnames if c not in (treatment, "Intercept")]
+        if not covar_names:
+            raise ValueError(
+                "Need at least one covariate (besides the treatment and "
+                "intercept) to test for heterogeneity."
+            )
+
+        X_covars = self._data[covar_names].to_numpy()
+
+        from pyfixest.estimation.post_estimation.dfm_test import (
+            dfm_test as _dfm_test,
+        )
+
+        result = _dfm_test(y=y, treatment=treat_vec, X=X_covars)
+
+        # Store full results for users who want to inspect beta_hat etc.
+        self._dfm_statistic = result["statistic"]
+        self._dfm_pvalue = result["pvalue"]
+        self._dfm_df = result["df"]
+        self._dfm_beta_hat = result["beta_hat"]
+        self._dfm_cov_beta = result["cov_beta"]
+
+        return pd.Series(
+            {
+                "statistic": result["statistic"],
+                "pvalue": result["pvalue"],
+                "df": result["df"],
+            }
+        )
+
     def wildboottest(
         self,
         reps: int,
