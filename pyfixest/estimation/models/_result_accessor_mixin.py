@@ -51,7 +51,6 @@ class ResultAccessorMixin(TidyColumnAccessors):
     _u_hat: np.ndarray
     _weights: np.ndarray
     _Y: np.ndarray
-    _Y_wls: np.ndarray
     _Y_untransformed: pd.Series
     _coefnames: list[str]
     _method: str
@@ -140,9 +139,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
         - adj_r2_within (float): Adjusted R-squared of the regression model,
         computed on demeaned dependent variable.
         """
-        # WLS-domain: the within sums of squares are weighted, matching the
-        # weighted residual sum of squares in `_u_hat`.
-        Y_within = self._Y_wls
+        Y_within = self._Y
         Y = self._Y_untransformed.to_numpy()
 
         has_intercept = not self._drop_intercept
