@@ -76,6 +76,26 @@ decomposition_type = Literal["gelbach"]
 prediction_type = Literal["response", "link"]
 
 
+def _check_fe_dtype_compatibility(
+    fit_data: pd.DataFrame,
+    newdata: pd.DataFrame,
+    fe_columns: list[str],
+) -> None:
+    """Raise if FE columns in newdata cannot be matched against fitted data."""
+    for col in fe_columns:
+        if col not in newdata.columns or col not in fit_data.columns:
+            continue
+        fit_is_numeric = pd.api.types.is_numeric_dtype(fit_data[col])
+        new_is_numeric = pd.api.types.is_numeric_dtype(newdata[col])
+        if fit_is_numeric != new_is_numeric:
+            raise ValueError(
+                f"Fixed effect column '{col}' has dtype {newdata[col].dtype} in "
+                f"newdata but {fit_data[col].dtype} in the data used for fitting, "
+                "so its levels cannot be matched. Convert the column to a "
+                "matching type before calling predict()."
+            )
+
+
 def _decode_fixef_dict(
     internal: dict[str, dict[str, float]],
     transform_state: dict[str, Any],
