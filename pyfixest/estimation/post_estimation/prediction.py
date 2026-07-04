@@ -27,8 +27,6 @@ def _rows_with_unseen_categories(
     """
     mask = np.zeros(newdata.shape[0], dtype=bool)
     for factor_expr, value in rhs_spec.encoder_state.items():
-        # formulaic internal: encoder_state values are (Factor.Kind, state_dict)
-        # 2-tuples set by formulaic's materializer; this shape is undocumented.
         kind, state = value
         if kind is not Factor.Kind.CATEGORICAL:
             continue
@@ -55,9 +53,6 @@ def _categorical_levels(
             if variable in newdata.columns:
                 yield variable, set(state["categories"])
     else:
-        # formulaic internal: pyfixest's i() stores per-variable contrast state under
-        # "__contrasts_<var>__" keys inside formulaic's encoder_state dict (see
-        # transforms/factor_interaction.py); we read those keys back here.
         for key, substate in state.items():
             if key.startswith("__contrasts_") and key.endswith("__"):
                 variable = key[len("__contrasts_") : -len("__")]
