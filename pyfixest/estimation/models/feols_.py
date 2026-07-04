@@ -36,6 +36,9 @@ from pyfixest.estimation.internals.vcov_ import (
     vcov_hetero,
     vcov_iid_ols,
 )
+from pyfixest.estimation.post_estimation.conley_se import (
+    vcov_conley as _vcov_conley_fn,
+)
 from pyfixest.estimation.internals.vcov_utils import (
     _compute_bread,
     prepare_cluster_state,
@@ -668,6 +671,21 @@ class Feols(ResultAccessorMixin):
             )
             self._vcov = self._ssc * self._vcov_hac()
 
+        elif self._vcov_type == "conley":
+            kw = vcov_kwargs or {}
+            self._conley_lat = kw.get("lat")
+            self._conley_lon = kw.get("lon")
+            self._conley_cutoff = kw.get("cutoff")
+            self._conley_kernel = kw.get("kernel", "bartlett")
+            if not all([self._conley_lat, self._conley_lon, self._conley_cutoff]):
+                raise ValueError(
+                    "Conley SE requires vcov_kwargs with 'lat', 'lon', and 'cutoff'."
+                )
+            self._ssc, self._df_k, self._df_t = get_ssc(
+                **self._make_ssc_kwargs(vcov_type="hetero", G=self._N)
+            )
+            self._vcov = self._ssc * self._vcov_conley()
+
         elif self._vcov_type == "nid":
             self._ssc, self._df_k, self._df_t = get_ssc(
                 **self._make_ssc_kwargs(vcov_type="hetero", G=self._N)
@@ -779,6 +797,25 @@ class Feols(ResultAccessorMixin):
             panel_arr=_panel_arr,
             lag=self._lag,
             vcov_type_detail=self._vcov_type_detail,
+            bread=self._bread,
+            is_iv=self._is_iv,
+            tXZ=self._tXZ,
+            tZZinv=self._tZZinv,
+            tZX=self._tZX,
+        )
+
+    def _vcov_conley(self):
+        """Compute Conley spatial HAC vcov matrix."""
+        _data = self._data
+        lat_arr = _data[self._conley_lat].to_numpy().astype(np.float64)
+        lon_arr = _data[self._conley_lon].to_numpy().astype(np.float64)
+
+        return _vcov_conley_fn(
+            scores=self._scores,
+            lat=lat_arr,
+            lon=lon_arr,
+            cutoff=self._conley_cutoff,
+            kernel=self._conley_kernel,
             bread=self._bread,
             is_iv=self._is_iv,
             tXZ=self._tXZ,
@@ -2300,8 +2337,9 @@ def _check_vcov_input(
             "NW",
             "DK",
             "nid",
+            "conley",
         ], (
-            "vcov string must be iid, hetero, HC1, HC2, HC3, NW, or DK, or for quantile regression, 'nid'."
+            "vcov string must be iid, hetero, HC1, HC2, HC3, NW, DK, conley, or for quantile regression, 'nid'."
         )
 
         # check that time_id is provided if vcov is NW or DK
@@ -2371,6 +2409,10 @@ def _deparse_vcov_input(vcov: str | dict[str, str], has_fixef: bool, is_iv: bool
     elif vcov_type_detail in ["CRV1", "CRV3"]:
         vcov_type = "CRV"
         is_clustered = True
+
+    elif vcov_type_detail == "conley":
+        vcov_type = "conley"
+        is_clustered = False
 
     elif vcov_type_detail == "nid":
         vcov_type = "nid"
