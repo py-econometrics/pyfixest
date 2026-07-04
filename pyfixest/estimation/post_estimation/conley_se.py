@@ -15,6 +15,7 @@ import numpy as np
 
 try:
     import numba
+
     HAS_NUMBA = True
 except ImportError:
     HAS_NUMBA = False
@@ -22,12 +23,16 @@ except ImportError:
 
 # --- Haversine distance (vectorized for numpy, jitted for numba) ---
 
+
 def _haversine_scalar(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """Haversine distance in km between two points given in degrees."""
     R = 6371.0  # Earth radius in km
     dlat = np.radians(lat2 - lat1)
     dlon = np.radians(lon2 - lon1)
-    a = np.sin(dlat / 2) ** 2 + np.cos(np.radians(lat1)) * np.cos(np.radians(lat2)) * np.sin(dlon / 2) ** 2
+    a = (
+        np.sin(dlat / 2) ** 2
+        + np.cos(np.radians(lat1)) * np.cos(np.radians(lat2)) * np.sin(dlon / 2) ** 2
+    )
     return R * 2 * np.arctan2(np.sqrt(a), np.sqrt(1 - a))
 
 
@@ -74,7 +79,10 @@ def _conley_meat_numpy(
         # Vectorized distance from i to all j
         dlat = lat_rad - lat_rad[i]
         dlon = lon_rad - lon_rad[i]
-        a = np.sin(dlat / 2) ** 2 + np.cos(lat_rad[i]) * np.cos(lat_rad) * np.sin(dlon / 2) ** 2
+        a = (
+            np.sin(dlat / 2) ** 2
+            + np.cos(lat_rad[i]) * np.cos(lat_rad) * np.sin(dlon / 2) ** 2
+        )
         dist = R * 2 * np.arctan2(np.sqrt(a), np.sqrt(1 - a))
 
         # Apply kernel
@@ -93,6 +101,7 @@ def _conley_meat_numpy(
 
 
 if HAS_NUMBA:
+
     @numba.njit(cache=True)
     def _haversine_numba(lat1, lon1, lat2, lon2):
         """Haversine distance in km, numba-compiled."""
@@ -101,7 +110,10 @@ if HAS_NUMBA:
         dlon = (lon2 - lon1) * 0.017453292519943295
         lat1_r = lat1 * 0.017453292519943295
         lat2_r = lat2 * 0.017453292519943295
-        a = np.sin(dlat / 2) ** 2 + np.cos(lat1_r) * np.cos(lat2_r) * np.sin(dlon / 2) ** 2
+        a = (
+            np.sin(dlat / 2) ** 2
+            + np.cos(lat1_r) * np.cos(lat2_r) * np.sin(dlon / 2) ** 2
+        )
         return R * 2 * np.arctan2(np.sqrt(a), np.sqrt(1 - a))
 
     @numba.njit(parallel=True, cache=True)

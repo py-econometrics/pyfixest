@@ -4,6 +4,7 @@ Tests for Conley (1999) Spatial HAC Standard Errors.
 Tests the standalone function and (when pyfixest is importable) the
 Feols.vcov("conley", ...) integration.
 """
+
 import importlib.util
 
 import numpy as np
@@ -137,32 +138,64 @@ class TestVcovConley:
     def test_vcov_shape(self):
         """Vcov should be k x k."""
         vcov = vcov_conley(
-            self.scores, self.lat, self.lon, 100.0, "bartlett",
-            self.bread, False, np.array([]), np.array([]), np.array([])
+            self.scores,
+            self.lat,
+            self.lon,
+            100.0,
+            "bartlett",
+            self.bread,
+            False,
+            np.array([]),
+            np.array([]),
+            np.array([]),
         )
         assert vcov.shape == (2, 2)
 
     def test_vcov_symmetric(self):
         """Vcov should be symmetric."""
         vcov = vcov_conley(
-            self.scores, self.lat, self.lon, 100.0, "bartlett",
-            self.bread, False, np.array([]), np.array([]), np.array([])
+            self.scores,
+            self.lat,
+            self.lon,
+            100.0,
+            "bartlett",
+            self.bread,
+            False,
+            np.array([]),
+            np.array([]),
+            np.array([]),
         )
         assert np.allclose(vcov, vcov.T, atol=1e-14)
 
     def test_vcov_positive_diagonal(self):
         """Variances should be positive."""
         vcov = vcov_conley(
-            self.scores, self.lat, self.lon, 100.0, "bartlett",
-            self.bread, False, np.array([]), np.array([]), np.array([])
+            self.scores,
+            self.lat,
+            self.lon,
+            100.0,
+            "bartlett",
+            self.bread,
+            False,
+            np.array([]),
+            np.array([]),
+            np.array([]),
         )
         assert np.all(np.diag(vcov) > 0)
 
     def test_se_reasonable_magnitude(self):
         """SE should be in a reasonable range for this DGP."""
         vcov = vcov_conley(
-            self.scores, self.lat, self.lon, 100.0, "bartlett",
-            self.bread, False, np.array([]), np.array([]), np.array([])
+            self.scores,
+            self.lat,
+            self.lon,
+            100.0,
+            "bartlett",
+            self.bread,
+            False,
+            np.array([]),
+            np.array([]),
+            np.array([]),
         )
         se = np.sqrt(np.diag(vcov))
         # For n=50 with sigma=0.5, SE should be roughly 0.01-0.2
@@ -194,8 +227,16 @@ def test_size_control_iid_errors():
         bread = np.linalg.inv(X.T @ X)
 
         vcov = vcov_conley(
-            scores, lat, lon, 200.0, "bartlett", bread,
-            False, np.array([]), np.array([]), np.array([])
+            scores,
+            lat,
+            lon,
+            200.0,
+            "bartlett",
+            bread,
+            False,
+            np.array([]),
+            np.array([]),
+            np.array([]),
         )
         se = np.sqrt(vcov[1, 1])
         t_stat = beta[1] / se
@@ -239,8 +280,16 @@ def test_conley_detects_spatial_correlation():
     bread = np.linalg.inv(X.T @ X)
 
     vcov_c = vcov_conley(
-        scores, lat, lon, 50.0, "bartlett", bread,
-        False, np.array([]), np.array([]), np.array([])
+        scores,
+        lat,
+        lon,
+        50.0,
+        "bartlett",
+        bread,
+        False,
+        np.array([]),
+        np.array([]),
+        np.array([]),
     )
     se_conley = np.sqrt(np.diag(vcov_c))
 

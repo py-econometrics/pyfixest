@@ -36,15 +36,15 @@ from pyfixest.estimation.internals.vcov_ import (
     vcov_hetero,
     vcov_iid_ols,
 )
-from pyfixest.estimation.post_estimation.conley_se import (
-    vcov_conley as _vcov_conley_fn,
-)
 from pyfixest.estimation.internals.vcov_utils import (
     _compute_bread,
     prepare_cluster_state,
     run_crv_loop,
 )
 from pyfixest.estimation.models._result_accessor_mixin import ResultAccessorMixin
+from pyfixest.estimation.post_estimation.conley_se import (
+    vcov_conley as _vcov_conley_fn,
+)
 from pyfixest.estimation.post_estimation.decomposition import (
     GelbachDecomposition,
     _decompose_arg_check,
