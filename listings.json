@@ -1,15 +1,12 @@
 [
   {
-    "listing": "/tutorials/index.html",
+    "listing": "/how-to/index.html",
     "items": [
-      "/tutorials/ols-fixed-effects.html",
-      "/tutorials/formula-syntax.html",
-      "/tutorials/standard-errors.html",
-      "/tutorials/instrumental-variables.html",
-      "/tutorials/poisson-glm.html",
-      "/tutorials/difference-in-differences.html",
-      "/tutorials/quantile-regression.html",
-      "/tutorials/regression-tables.html"
+      "/how-to/marginaleffects.html",
+      "/how-to/regression_decomposition.html",
+      "/how-to/demeaner-backends.html",
+      "/how-to/stata-2-pyfixest.html",
+      "/how-to/panel_variance_reduction.html"
     ]
   },
   {
@@ -22,13 +19,16 @@
     ]
   },
   {
-    "listing": "/how-to/index.html",
+    "listing": "/tutorials/index.html",
     "items": [
-      "/how-to/marginaleffects.html",
-      "/how-to/regression_decomposition.html",
-      "/how-to/demeaner-backends.html",
-      "/how-to/stata-2-pyfixest.html",
-      "/how-to/panel_variance_reduction.html"
+      "/tutorials/ols-fixed-effects.html",
+      "/tutorials/formula-syntax.html",
+      "/tutorials/standard-errors.html",
+      "/tutorials/instrumental-variables.html",
+      "/tutorials/poisson-glm.html",
+      "/tutorials/difference-in-differences.html",
+      "/tutorials/quantile-regression.html",
+      "/tutorials/regression-tables.html"
     ]
   }
 ]
