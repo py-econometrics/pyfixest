@@ -76,31 +76,59 @@ decomposition_type = Literal["gelbach"]
 prediction_type = Literal["response", "link"]
 
 
-def _check_fe_dtype_compatibility(
-    fit_data: pd.DataFrame,
-    newdata: pd.DataFrame,
-    fe_columns: list[str],
-) -> None:
-    """Raise if FE columns in newdata cannot be matched against the fit data.
+def _decode_fixef_dict(
+    internal: dict[str, dict[str, float]],
+    transform_state: dict[str, Any],
+) -> dict[str, dict[str, float]]:
+    """Decode internal ngroup-coded fixef dict to user-facing format.
 
-    Mixing numeric and non-numeric dtypes (e.g. fitting on a float column and
-    predicting with strings) makes the left-merge in `encode_fixed_effects`
-    fail with a low-level pandas/formulaic error; raise a clear pyfixest-level
-    message instead. Numeric-numeric differences (e.g. int32 vs int64, int vs
-    float) merge fine and are not flagged.
+    The internal dict is keyed by ``__fixed_effect__(f1)`` column names with
+    ngroup code levels (e.g. ``"0"``, ``"1"``). This function maps each code
+    back to the original level value (e.g. ``"north"``) using the stored
+    ``__fixed_effect_encoding__`` transform state, and strips the
+    ``__fixed_effect__(...)`` wrapper to produce clean variable names (e.g.
+    ``"f1"``). For interacted FEs (``f1^f2``), the level is a
+    ``"val1,val2"`` pair decoded from the compound code.
     """
-    for col in fe_columns:
-        if col not in newdata.columns or col not in fit_data.columns:
-            continue
-        fit_is_numeric = pd.api.types.is_numeric_dtype(fit_data[col])
-        new_is_numeric = pd.api.types.is_numeric_dtype(newdata[col])
-        if fit_is_numeric != new_is_numeric:
-            raise ValueError(
-                f"Fixed effect column '{col}' has dtype {newdata[col].dtype} in "
-                f"newdata but {fit_data[col].dtype} in the data used for fitting, "
-                "so its levels cannot be matched. Convert the column to a "
-                "matching type before calling predict()."
-            )
+    res: dict[str, dict[str, float]] = {}
+    for col, levels in internal.items():
+        # Strip __fixed_effect__(...) wrapper to get the real FE name
+        # e.g. "__fixed_effect__(f1)" -> "f1", "__fixed_effect__(f1, f2)" -> "f1^f2"
+        var_name = col
+        if col.startswith("__fixed_effect__(") and col.endswith(")"):
+            inner = col[len("__fixed_effect__(") : -1]
+            # Replace ", " with "^" to match fixest convention for interacted FEs
+            var_name = inner.replace(", ", "^").replace(",", "^")
+
+        # Look up the encoding state for this FE column
+        fe_state = transform_state.get(col, {})
+        encoding_df = fe_state.get("__fixed_effect_encoding__")
+
+        if encoding_df is not None:
+            # Build code -> original value mapping from the stored DataFrame.
+            # The DataFrame has columns like ['f1', '__fixed_effect_encoding__']
+            # where the last column is always the ngroup code. Rows whose FE
+            # value was NaN carry a NaN code (they were dropped from the
+            # estimation sample) and must not surface as a 'nan' level.
+            code_col = encoding_df.columns[-1]
+            value_cols = list(encoding_df.columns[:-1])
+            valid_rows = encoding_df.dropna(subset=[code_col])
+            codes = valid_rows[code_col].astype(str)
+            if len(value_cols) == 1:
+                values = valid_rows[value_cols[0]].astype(str)
+            else:
+                # Interacted FE: join values with ","
+                values = valid_rows[value_cols].astype(str).agg(",".join, axis=1)
+            code_to_value: dict[str, str] = dict(zip(codes, values, strict=True))
+        else:
+            code_to_value = {}
+
+        res[var_name] = {}
+        for level, coef in levels.items():
+            decoded_level = code_to_value.get(level, level)
+            res[var_name][decoded_level] = coef
+
+    return res
 
 
 class Feols(ResultAccessorMixin):
@@ -400,6 +428,7 @@ class Feols(ResultAccessorMixin):
 
         # set in fixef()
         self._fixef_dict: dict[str, dict[str, float]] = {}
+        self._fixef_dict_internal: dict[str, dict[str, float]] = {}
         self._alpha = None
         self._sumFE = None
 
@@ -1818,15 +1847,16 @@ class Feols(ResultAccessorMixin):
                     assert self._offset is not None
                     Y = Y - self._offset.flatten()
             uhat = (Y - X @ self._beta_hat).flatten()
-        # one-hot encoding of fixed effects (treatment coding: reference level dropped)
+        # one-hot encoding of fixed effects (treatment coding: reference level
+        # dropped for the second and subsequent FEs via ensure_full_rank=True).
         D2 = formulaic.Formula(
             [f"C({fe})" for fe in self.FixestFormula.fixed_effects_wrapped],
             _parser=DefaultFormulaParser(include_intercept=False),
         ).get_model_matrix(
             self._data,
             output="sparse",
-            ensure_full_rank=False,
-            context=FORMULAIC_TRANSFORMS,
+            ensure_full_rank=True,
+            context=FORMULAIC_TRANSFORMS | {**self._context},
             transform_state=self._model_spec[
                 _ModelMatrixKey.fixed_effects
             ].transform_state,
@@ -1840,18 +1870,38 @@ class Feols(ResultAccessorMixin):
 
         alpha = lsqr(D2, uhat, atol=atol, btol=btol)[0]
 
-        res: dict[str, dict[str, float]] = {}
+        # Build internal dict keyed by FE column names with ngroup codes
+        # (used by predict() to map fe_mm values to coefficients).
+        internal: dict[str, dict[str, float]] = {}
         for i, col in enumerate(one_hot_encoded_fixed_effects):
             variable, level = _extract_variable_level(col)
-            # check if res already has a key variable
-            if variable not in res:
-                res[variable] = dict()
-                res[variable][level] = alpha[i]
-                continue
-            else:
-                if level not in res[variable]:
-                    res[variable][level] = alpha[i]
+            if variable not in internal:
+                internal[variable] = dict()
+            if level not in internal[variable]:
+                internal[variable][level] = alpha[i]
 
+        # Add reference levels (dropped by ensure_full_rank=True) with
+        # coefficient 0 so predict() can map all FE values including the
+        # reference level.
+        fe_transform_state = self._model_spec[
+            _ModelMatrixKey.fixed_effects
+        ].transform_state
+        for variable, levels in internal.items():
+            fe_state = fe_transform_state.get(variable, {})
+            encoding_df = fe_state.get("__fixed_effect_encoding__")
+            if encoding_df is not None:
+                code_col = encoding_df.columns[-1]
+                # NaN codes belong to rows dropped from the estimation sample
+                # (NaN FE values) - they are not levels and get no coefficient.
+                all_codes = set(str(c) for c in encoding_df[code_col].dropna())
+                missing = all_codes - set(levels.keys())
+                for code in missing:
+                    levels[code] = 0.0
+
+        # Decode to user-facing dict with real variable names and level labels
+        res = _decode_fixef_dict(internal, fe_transform_state)
+
+        self._fixef_dict_internal = internal
         self._fixef_dict = res
         self._alpha = alpha
         self._sumFE = D2.dot(alpha)
@@ -2014,7 +2064,7 @@ class Feols(ResultAccessorMixin):
                             fe_mm.loc[valid_idx, column].map(
                                 {
                                     float(level): coefficient
-                                    for level, coefficient in self._fixef_dict[
+                                    for level, coefficient in self._fixef_dict_internal[
                                         column
                                     ].items()
                                 }
