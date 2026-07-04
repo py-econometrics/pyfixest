@@ -53,13 +53,7 @@ def vcov_hetero(
     tXZ: np.ndarray,
     tZZinv: np.ndarray,
 ) -> np.ndarray:
-    """Unscaled heteroskedasticity-robust vcov (HC1/HC2/HC3).
-
-    `scores` and `X` are WLS-domain arrays; `weights` must be the *user*
-    weights (never IRLS working weights) - they are only used for the
-    frequency-weights corrections below, which undo the row duplication
-    that `fweights` encode.
-    """
+    "Unscaled heteroskedasticity-robust vcov (HC1/HC2/HC3)."
     if vcov_type_detail in ["hetero", "HC1"]:
         transformed_scores = scores
     elif vcov_type_detail in ["HC2", "HC3"]:

@@ -6,10 +6,9 @@ from collections.abc import Mapping
 from importlib import import_module
 from typing import Any, Literal, cast
 
-import formulaic
 import numpy as np
 import pandas as pd
-from formulaic.parser import DefaultFormulaParser
+from formulaic import Formula
 from scipy.sparse import csc_matrix, diags, spmatrix
 from scipy.sparse.linalg import lsqr
 from scipy.stats import chi2, f, t
@@ -18,9 +17,7 @@ from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner, MapDemeaner
 from pyfixest.errors import VcovTypeNotSupportedError
 from pyfixest.estimation.api.utils import _ALL_SAMPLE, _AllSampleSentinel
-from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
 from pyfixest.estimation.formula import model_matrix as model_matrix_fixest
-from pyfixest.estimation.formula.model_matrix import _ModelMatrixKey
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
 from pyfixest.estimation.internals.demean_ import DemeanCache
@@ -51,7 +48,8 @@ from pyfixest.estimation.post_estimation.decomposition import (
 )
 from pyfixest.estimation.post_estimation.prediction import (
     _compute_prediction_error,
-    _rows_with_unseen_categories,
+    _get_fixed_effects_prediction_component,
+    get_design_matrix_and_yhat,
 )
 from pyfixest.estimation.post_estimation.ritest import (
     _HAS_NUMBA,
@@ -75,33 +73,6 @@ decomposition_type = Literal["gelbach"]
 prediction_type = Literal["response", "link"]
 
 
-def _check_fe_dtype_compatibility(
-    fit_data: pd.DataFrame,
-    newdata: pd.DataFrame,
-    fe_columns: list[str],
-) -> None:
-    """Raise if FE columns in newdata cannot be matched against the fit data.
-
-    Mixing numeric and non-numeric dtypes (e.g. fitting on a float column and
-    predicting with strings) makes the left-merge in `encode_fixed_effects`
-    fail with a low-level pandas/formulaic error; raise a clear pyfixest-level
-    message instead. Numeric-numeric differences (e.g. int32 vs int64, int vs
-    float) merge fine and are not flagged.
-    """
-    for col in fe_columns:
-        if col not in newdata.columns or col not in fit_data.columns:
-            continue
-        fit_is_numeric = pd.api.types.is_numeric_dtype(fit_data[col])
-        new_is_numeric = pd.api.types.is_numeric_dtype(newdata[col])
-        if fit_is_numeric != new_is_numeric:
-            raise ValueError(
-                f"Fixed effect column '{col}' has dtype {newdata[col].dtype} in "
-                f"newdata but {fit_data[col].dtype} in the data used for fitting, "
-                "so its levels cannot be matched. Convert the column to a "
-                "matching type before calling predict()."
-            )
-
-
 class Feols(ResultAccessorMixin):
     """
     Non user-facing class to estimate a linear regression via OLS.
@@ -111,24 +82,6 @@ class Feols(ResultAccessorMixin):
     no demeaning is performed in this class: demeaning is performed in the
     FixestMulti class (to allow for caching of demeaned variables for multiple
     estimation).
-
-    Array domains
-    -------------
-    Weighted estimation runs on sqrt(weights)-scaled ("WLS-domain") arrays.
-    To keep the two representations apart, the following conventions hold
-    after ``get_fit()``:
-
-    - ``_weights`` always holds the *user* weights (ones if unweighted) and
-      is never reassigned. GLMs store their final IRLS working weights
-      separately under ``_irls_weights``.
-    - ``_Y`` / ``_X`` / ``_Z`` / ``_endogvar`` are in the raw domain:
-      demeaned (where applicable) but *unweighted*.
-    - ``_Y_wls`` / ``_X_wls`` / ``_Z_wls`` are the WLS-domain counterparts
-      (``sqrt(_weights) *`` raw for OLS/IV; ``sqrt(IRLS W) *`` working
-      response/design for GLMs). For unweighted OLS both names refer to the
-      same arrays.
-    - ``_u_hat`` and ``_scores`` are WLS-domain; ``resid()`` returns
-      raw-domain residuals.
 
     Parameters
     ----------
@@ -165,13 +118,9 @@ class Feols(ResultAccessorMixin):
         Indicates whether instrumental variables are used, initialized as False.
 
     _Y : np.ndarray
-        The demeaned (unweighted) dependent variable, a two-dimensional numpy array.
+        The demeaned dependent variable, a two-dimensional numpy array.
     _X : np.ndarray
-        The demeaned (unweighted) independent variables, a two-dimensional numpy array.
-    _Y_wls : np.ndarray
-        The WLS-domain dependent variable, i.e. sqrt(weights) * _Y.
-    _X_wls : np.ndarray
-        The WLS-domain design matrix, i.e. sqrt(weights) * _X.
+        The demeaned independent variables, a two-dimensional numpy array.
     _X_is_empty : bool
         Indicates whether the X array is empty.
     _collin_tol : float
@@ -187,8 +136,7 @@ class Feols(ResultAccessorMixin):
     _solver: str
         The solver used for the regression.
     _weights : np.ndarray
-        Array of user weights for each observation (ones if unweighted).
-        Never overwritten; GLMs store IRLS working weights in `_irls_weights`.
+        Array of weights for each observation.
     _N : int
         Number of observations.
     _k : int
@@ -369,19 +317,19 @@ class Feols(ResultAccessorMixin):
 
         self._support_crv3_inference = True
         self._support_hac_inference = True
-        self._supports_wildboottest = not (self._has_weights or self._is_iv)
+        if self._weights_name is not None:
+            self._supports_wildboottest = False
+        self._supports_wildboottest = True
         self._supports_cluster_causal_variance = True
+        if self._has_weights or self._is_iv:
+            self._supports_wildboottest = False
         self._support_decomposition = True
 
         # attributes that have to be enriched outside of the class -
         # not really optimal code change later
         self._fml = FixestFormula.formula
         self._has_fixef = False
-        self._fixef = (
-            str(FixestFormula.fixed_effects).replace(" ", "").replace(":", "^")
-            if FixestFormula.is_fixed_effects
-            else None
-        )
+        self._fixef = FixestFormula.fixed_effects
         # self._coefnames = None
         self._icovars = None
 
@@ -490,11 +438,7 @@ class Feols(ResultAccessorMixin):
         self._depvar = self._Y.columns[0]
 
         self._has_fixef = self._fe is not None
-        self._fixef = (
-            str(self.FixestFormula.fixed_effects).replace(" ", "").replace(":", "^")
-            if self.FixestFormula.is_fixed_effects
-            else None
-        )
+        self._fixef = self.FixestFormula.fixed_effects
 
         self._k_fe = self._fe.nunique(axis=0) if self._has_fixef else None
         self._n_fe = len(self._k_fe) if self._has_fixef else 0
@@ -581,19 +525,12 @@ class Feols(ResultAccessorMixin):
         )
 
     def wls_transform(self):
-        """Create the WLS-domain model matrices.
-
-        Stores the sqrt(weights)-scaled arrays under ``_Y_wls`` / ``_X_wls``.
-        ``_Y`` / ``_X`` keep their raw-domain meaning (demeaned, unweighted).
-        For unweighted models both names refer to the same arrays.
-        """
+        "Transform model matrices for WLS Estimation."
+        self._X_untransformed = self._X.copy()
         if self._has_weights:
             w = np.sqrt(self._weights)
-            self._Y_wls = self._Y * w
-            self._X_wls = self._X * w
-        else:
-            self._Y_wls = self._Y
-            self._X_wls = self._X
+            self._Y = self._Y * w
+            self._X = self._X * w
 
     def drop_multicol_vars(self):
         "Detect and drop multicollinear variables."
@@ -630,12 +567,11 @@ class Feols(ResultAccessorMixin):
         self.wls_transform()
 
         if self._X_is_empty:
-            self._u_hat = self._Y_wls
+            self._u_hat = self._Y
         else:
-            fit = fit_ols(X=self._X_wls, Y=self._Y_wls, solver=self._solver)
+            fit = fit_ols(X=self._X, Y=self._Y, solver=self._solver)
 
             self._Z = self._X
-            self._Z_wls = self._X_wls
             self._tZX = fit.tZX
             self._tZy = fit.tZy
             self._beta_hat = fit.beta
@@ -804,7 +740,7 @@ class Feols(ResultAccessorMixin):
     def _vcov_hetero(self):
         return vcov_hetero(
             scores=self._scores,
-            X=self._X_wls,
+            X=self._X,
             tZX=self._tZX,
             weights=self._weights,
             weights_type=self._weights_type,
@@ -869,8 +805,8 @@ class Feols(ResultAccessorMixin):
 
     def _vcov_crv3_fast(self, clustid, cluster_col):
         return vcov_crv3_fast(
-            X=self._X_wls,
-            Y=self._Y_wls,
+            X=self._X,
+            Y=self._Y,
             beta_hat=self._beta_hat,
             clustid=clustid,
             cluster_col=cluster_col,
@@ -978,20 +914,14 @@ class Feols(ResultAccessorMixin):
                 "_X",
                 "_Y",
                 "_Z",
-                "_X_wls",
-                "_Y_wls",
-                "_Z_wls",
                 "_Xd",
                 "_Yd",
                 "_Zd",
-                "_endogvar",
-                "_endogvard",
                 "_cluster_df",
                 "_tXZ",
                 "_tZy",
                 "_tZX",
                 "_weights",
-                "_irls_weights",
                 "_scores",
                 "_tZZinv",
                 "_u_hat",
@@ -1458,12 +1388,12 @@ class Feols(ResultAccessorMixin):
         xfml = "" if not xfml_list else "+".join(xfml_list)
 
         data = self._data
-        Y = self._Y_wls.flatten()
+        Y = self._Y.flatten()
         W = data[treatment].to_numpy()
         assert np.all(np.isin(W, [0, 1])), (
             "Treatment variable must be binary with values 0 and 1"
         )
-        X = self._X_wls
+        X = self._X
         cluster_vec = data[cluster].to_numpy()
         unique_clusters = np.unique(cluster_vec)
 
@@ -1568,17 +1498,14 @@ class Feols(ResultAccessorMixin):
             # if output = "numpy", type of Y, X is not np.ndarray but a formulaic object
             # which cannot be pickled by joblib
 
-            Y, X = formulaic.Formula(fml_dummies).get_model_matrix(
-                self._data, output=output
-            )
+            Y, X = Formula(fml_dummies).get_model_matrix(self._data, output=output)
             xnames = X.model_spec.column_names
             Y = Y.toarray().flatten() if output == "sparse" else Y.flatten()
             X = csc_matrix(X) if output == "sparse" else X
 
         else:
-            # `_Y` / `_X` are already in the raw (unweighted) domain.
-            Y = self._Y.flatten()
-            X = self._X
+            Y = self._Y.flatten() / np.sqrt(self._weights.flatten())
+            X = self._X / np.sqrt(self._weights)
             xnames = self._coefnames
 
         X = csc_matrix(X) if output == "sparse" else X
@@ -1818,10 +1745,15 @@ class Feols(ResultAccessorMixin):
                 "The fixef() method is currently not supported for IV models."
             )
 
-        Y, X = self._model_spec["second_stage"].get_model_matrix(
-            self._data,
-            output="pandas",
-            context=FORMULAIC_TRANSFORMS | {**self._context},
+        depvars, rhs = self._fml.split("~")
+        covars, fixef_vars = rhs.split("|")
+
+        fixef_vars_list = fixef_vars.split("+")
+        fixef_vars_C = [f"C({x})" for x in fixef_vars_list]
+        fixef_fml = "+".join(fixef_vars_C)
+
+        Y, X = Formula(f"{depvars} ~ {covars}").get_model_matrix(
+            self._data, output="pandas", context=self._context
         )
         Y = Y.to_numpy().flatten().astype(np.float64)
         if self._X_is_empty:
@@ -1840,31 +1772,18 @@ class Feols(ResultAccessorMixin):
                     assert self._offset is not None
                     Y = Y - self._offset.flatten()
             uhat = (Y - X @ self._beta_hat).flatten()
-        # one-hot encoding of fixed effects (treatment coding: reference level dropped)
-        D2 = formulaic.Formula(
-            [f"C({fe})" for fe in self.FixestFormula.fixed_effects_wrapped],
-            _parser=DefaultFormulaParser(include_intercept=False),
-        ).get_model_matrix(
-            self._data,
-            output="sparse",
-            ensure_full_rank=False,
-            context=FORMULAIC_TRANSFORMS,
-            transform_state=self._model_spec[
-                _ModelMatrixKey.fixed_effects
-            ].transform_state,
-        )
-        one_hot_encoded_fixed_effects = D2.model_spec.column_names
+        D2 = Formula("-1+" + fixef_fml).get_model_matrix(self._data, output="sparse")
+        cols = D2.model_spec.column_names
 
-        solve_weights = self._fixef_solve_weights()
-        if solve_weights is not None:
-            weights_sqrt = np.sqrt(solve_weights).flatten()
-            uhat = uhat * weights_sqrt
-            D2 = diags(weights_sqrt, 0).dot(D2)
+        if self._has_weights:
+            uhat *= weights_sqrt
+            weights_diag = diags(weights_sqrt, 0)
+            D2 = weights_diag.dot(D2)
 
         alpha = lsqr(D2, uhat, atol=atol, btol=btol)[0]
 
         res: dict[str, dict[str, float]] = {}
-        for i, col in enumerate(one_hot_encoded_fixed_effects):
+        for i, col in enumerate(cols):
             variable, level = _extract_variable_level(col)
             # check if res already has a key variable
             if variable not in res:
@@ -1880,15 +1799,6 @@ class Feols(ResultAccessorMixin):
         self._sumFE = D2.dot(alpha)
 
         return self._fixef_dict
-
-    def _fixef_solve_weights(self) -> np.ndarray | None:
-        """Weights for the fixed-effects recovery solve in `fixef()`.
-
-        For OLS/WLS these are the user weights (`None` when unweighted).
-        GLMs override this to return the final IRLS working weights,
-        following Stammann (2018).
-        """
-        return self._weights if self._has_weights else None
 
     def predict(
         self,
@@ -1965,10 +1875,11 @@ class Feols(ResultAccessorMixin):
             _validate_literal_argument(interval, PredictionErrorOptions)
 
         if newdata is None:
-            # note: no need to worry about fixed effects or weights: neither is
-            # supported with prediction errors, and X is only consumed on the
-            # prediction-error path below.
+            # note: no need to worry about fixed effects, as not supported with
+            # prediction errors; will throw error later;
+            # divide by sqrt(weights) as self._X is "weighted"
             X = self._X
+            X_index = np.arange(self._N)
             y_hat = (
                 self._Y_hat_link
                 if type == "link" or self._method == "feols"
@@ -1976,81 +1887,15 @@ class Feols(ResultAccessorMixin):
             )
             n_observations = self._N
         else:
-            newdata = _narwhals_to_pandas(newdata).reset_index(drop=True)
-            n_observations = newdata.shape[0]
-            context = FORMULAIC_TRANSFORMS | {**self._context}
-            # Use na_action="drop" on each sub-spec separately because dependent variable
-            # may not be available in newdata, then intersect indices so a NaN in *any* variable
-            # (covariate or FE) marks the whole row as NaN in the output.
-            X_mm = self._model_spec[_ModelMatrixKey.main].rhs.get_model_matrix(
-                newdata, context=context, na_action="drop"
+            newdata = _narwhals_to_pandas(newdata)
+            y_hat, X, X_index = get_design_matrix_and_yhat(
+                model=self,
+                newdata=newdata,
+                context=self._context,
             )
-            valid_idx = X_mm.index.to_numpy()
-            # rows with a categorical level unseen during fitting (in C()/i()) would
-            # be silently encoded as the reference level -> drop them to NaN instead,
-            # matching how unseen fixed-effect levels are handled below.
-            unseen = _rows_with_unseen_categories(
-                self._model_spec[_ModelMatrixKey.main].rhs, newdata
+            y_hat += _get_fixed_effects_prediction_component(
+                model=self, newdata=newdata, atol=atol, btol=btol
             )
-            valid_idx = valid_idx[~unseen[valid_idx]]
-            if self._has_fixef:
-                # Check dtype compatibility before materializing the FE matrix:
-                # a numeric-vs-non-numeric mismatch would otherwise surface as a
-                # cryptic FactorEvaluationError from the merge inside
-                # encode_fixed_effects.
-                fe_var_names = [
-                    str(factor)
-                    for term in self.FixestFormula.fixed_effects
-                    for factor in term.factors
-                ]
-                _check_fe_dtype_compatibility(self._data, newdata, fe_var_names)
-                fe_mm = self._model_spec[
-                    _ModelMatrixKey.fixed_effects
-                ].get_model_matrix(newdata, context=context, na_action="drop")
-                n_valid_before_fe = len(valid_idx)
-                valid_idx = np.intersect1d(valid_idx, fe_mm.index.to_numpy())
-                if n_valid_before_fe > 0 and len(valid_idx) == 0:
-                    warnings.warn(
-                        "No row in newdata matches a fixed-effect level seen "
-                        "during fitting; all predictions are NaN. If this is "
-                        "unexpected, check that the fixed-effect columns in "
-                        "newdata hold the same values as the fitted data.",
-                        UserWarning,
-                        stacklevel=2,
-                    )
-
-                if self._sumFE is None:
-                    self.fixef(atol, btol)
-                fe_hat = (
-                    pd.concat(
-                        [
-                            fe_mm.loc[valid_idx, column].map(
-                                {
-                                    float(level): coefficient
-                                    for level, coefficient in self._fixef_dict[
-                                        column
-                                    ].items()
-                                }
-                            )
-                            for column in fe_mm.columns
-                        ],
-                        axis=1,
-                    )
-                    .sum(axis=1, skipna=False)
-                    .to_numpy()
-                )
-                # fixed effects estimates are nan if singletons or unseen levels
-                valid_idx = valid_idx[~np.isnan(fe_hat)]
-                fe_hat = fe_hat[~np.isnan(fe_hat)]
-
-            X_coef = X_mm.loc[valid_idx, self._coefnames].to_numpy()
-            y_hat = np.full(n_observations, np.nan)
-            y_hat[valid_idx] = X_coef @ self._beta_hat
-            if self._has_fixef:
-                y_hat[valid_idx] += fe_hat
-            # Pad X to full size; NaN rows yield NaN SE/CI via einsum propagation.
-            X = np.full((n_observations, X_coef.shape[1]), np.nan)
-            X[valid_idx] = X_coef
             if self._offset_name is not None:
                 if self._offset_name not in newdata.columns:
                     raise ValueError(
@@ -2065,6 +1910,7 @@ class Feols(ResultAccessorMixin):
                         "NaN or non-numeric values."
                     )
                 y_hat = y_hat + offset
+            n_observations = newdata.shape[0]
             if type == "response" and self._method == "fepois":
                 y_hat = np.exp(y_hat)
 
@@ -2074,6 +1920,7 @@ class Feols(ResultAccessorMixin):
                 nobs=n_observations,
                 yhat=y_hat,
                 X=X,
+                X_index=X_index,
                 alpha=alpha,
             )
             if interval == "prediction":
@@ -2357,10 +2204,6 @@ class Feols(ResultAccessorMixin):
             raise NotImplementedError(
                 "The update() method is currently not supported for models with fixed effects."
             )
-        if self._has_weights:
-            raise NotImplementedError(
-                "The update() method is currently not supported for models with weights."
-            )
         if not np.all(X_new[:, 0] == 1):
             X_new = np.column_stack((np.ones(len(X_new)), X_new))
         X_n_plus_1 = np.vstack((self._X, X_new))
@@ -2370,10 +2213,6 @@ class Feols(ResultAccessorMixin):
         if inplace:
             self._X = X_n_plus_1
             self._Y = np.append(self._Y, y_new)
-            # unweighted model (guarded above), so the WLS-domain arrays
-            # are identical to the raw ones
-            self._X_wls = self._X
-            self._Y_wls = self._Y
             self._beta_hat = beta_n_plus_1
             self._u_hat = self._Y - self._X @ self._beta_hat
             self._N += X_new.shape[0]

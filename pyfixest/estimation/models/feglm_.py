@@ -131,11 +131,10 @@ class Feglm(Feols):
                 self._weights_df.drop(na_separation, axis=0, inplace=True)
             if self._offset_df is not None:
                 self._offset_df.drop(na_separation, axis=0, inplace=True)
-            # Re-set weights after dropping rows (handles both weighted and
-            # unweighted), then recompute N / N_rows so that frequency
-            # weights keep N = sum of weights.
+            self._N = self._Y.shape[0]
+            self._N_rows = self._N
+            # Re-set weights after dropping rows (handles both weighted and unweighted)
             self._weights = self._set_weights()
-            self._N, self._N_rows = self._set_nobs()
 
             self.na_index = np.concatenate([self.na_index, np.array(na_separation)])
             self.n_separation_na = len(na_separation)
@@ -155,7 +154,7 @@ class Feglm(Feols):
         if self._fe is not None:
             self._fe = self._fe.to_numpy()
             if self._fe.ndim == 1:
-                self._fe = self._fe.reshape((self._N_rows, 1))
+                self._fe = self._fe.reshape((self._N, 1))
 
     def get_fit(self):
         "Fit the GLM via IRLS and write results onto self.* attributes."
@@ -185,11 +184,7 @@ class Feglm(Feols):
         self._coefnames = fit.coefnames
         self._collin_vars = fit.collin_vars
         self._collin_index = fit.collin_index
-        # `_X` keeps its raw-domain meaning: the (un-demeaned) design matrix
-        # with collinear columns dropped. The WLS-domain working arrays are
-        # stored under `_X_wls` / `_Y_wls` below.
         self._X = fit.X
-        self._Z = fit.X
         self._X_is_empty = self._X.shape[1] == 0
         self._k = self._X.shape[1]
 
@@ -197,13 +192,10 @@ class Feglm(Feols):
         self._Y_hat_response = fit.mu.flatten()
         self._Y_hat_link = fit.eta.flatten()
 
-        # `_weights` stays the user weights (see the array-domain notes in
-        # the `Feols` docstring); the final IRLS working weights - which
-        # already incorporate the user weights - get their own attribute.
-        irls_weights = fit.W
-        if irls_weights.ndim == 1:
-            irls_weights = irls_weights.reshape((self._N_rows, 1))
-        self._irls_weights = irls_weights
+        self._weights = fit.W
+        self._irls_weights = fit.W
+        if self._weights.ndim == 1:
+            self._weights = self._weights.reshape((self._N, 1))
 
         self._u_hat_response = (self._Y.flatten() - fit.mu).flatten()
         e_final = fit.z_tilde - fit.X_tilde @ self._beta_hat
@@ -221,13 +213,13 @@ class Feglm(Feols):
         z_wls = sqrt_W_vec * fit.z_tilde
 
         self._u_hat = (z_wls - X_wls @ self._beta_hat).flatten()
-        self._Y_wls = z_wls
-        self._X_wls = X_wls
-        self._Z_wls = X_wls
+        self._Y = z_wls
+        self._X = X_wls
+        self._Z = self._X
 
-        self._scores = self._u_hat[:, None] * X_wls
+        self._scores = self._u_hat[:, None] * self._X
 
-        self._tZX = X_wls.T @ X_wls
+        self._tZX = self._Z.T @ self._X
         self._tZXinv = np.linalg.inv(self._tZX)
         self._Xbeta = fit.eta.reshape(-1, 1)
 
@@ -236,12 +228,6 @@ class Feglm(Feols):
         self.convergence = fit.converged
         if self.convergence:
             self._convergence = True
-
-    def _fixef_solve_weights(self) -> np.ndarray | None:
-        # Recover fixed effects from a weighted solve with the final IRLS
-        # working weights (Stammann 2018, eq. 5.2); these already include
-        # any user weights.
-        return self._irls_weights
 
     def _vcov_iid(self):
         return vcov_iid_glm(bread=self._bread)
