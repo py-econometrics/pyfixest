@@ -10,6 +10,7 @@ from formulaic.parser import DefaultFormulaParser
 
 from pyfixest.core.detect_singletons import detect_singletons
 from pyfixest.estimation.formula import FORMULAIC_FEATURE_FLAG, FORMULAIC_TRANSFORMS
+from pyfixest.estimation.formula.formulaic_compat import flatten_model_matrix
 from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.formula.utils import _get_weights
 from pyfixest.utils.utils import capture_context
@@ -100,10 +101,7 @@ class ModelMatrix:
         self._offset = self._get_columns(model_matrix, _ModelMatrixKey.offset)
 
     def _collect_data(self, model_matrix: formulaic.ModelMatrix) -> None:
-        # formulaic internal: `_flatten()` is private and its iteration order is
-        # documented as unstable. We don't depend on order - columns are accessed by
-        # name and duplicates are value-identical (deduped below).
-        datas: list[pd.DataFrame] = list(model_matrix._flatten())
+        datas = flatten_model_matrix(model_matrix)
         if not all(datas[0].index.identical(other.index) for other in datas[1:]):
             raise ValueError("All design matrix data must have the same index.")
         data = pd.concat(datas, ignore_index=False, axis=1)
