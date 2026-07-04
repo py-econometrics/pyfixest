@@ -75,6 +75,33 @@ decomposition_type = Literal["gelbach"]
 prediction_type = Literal["response", "link"]
 
 
+def _check_fe_dtype_compatibility(
+    fit_data: pd.DataFrame,
+    newdata: pd.DataFrame,
+    fe_columns: list[str],
+) -> None:
+    """Raise if FE columns in newdata cannot be matched against the fit data.
+
+    Mixing numeric and non-numeric dtypes (e.g. fitting on a float column and
+    predicting with strings) makes the left-merge in `encode_fixed_effects`
+    fail with a low-level pandas/formulaic error; raise a clear pyfixest-level
+    message instead. Numeric-numeric differences (e.g. int32 vs int64, int vs
+    float) merge fine and are not flagged.
+    """
+    for col in fe_columns:
+        if col not in newdata.columns or col not in fit_data.columns:
+            continue
+        fit_is_numeric = pd.api.types.is_numeric_dtype(fit_data[col])
+        new_is_numeric = pd.api.types.is_numeric_dtype(newdata[col])
+        if fit_is_numeric != new_is_numeric:
+            raise ValueError(
+                f"Fixed effect column '{col}' has dtype {newdata[col].dtype} in "
+                f"newdata but {fit_data[col].dtype} in the data used for fitting, "
+                "so its levels cannot be matched. Convert the column to a "
+                "matching type before calling predict()."
+            )
+
+
 class Feols(ResultAccessorMixin):
     """
     Non user-facing class to estimate a linear regression via OLS.
@@ -1916,10 +1943,30 @@ class Feols(ResultAccessorMixin):
             )
             valid_idx = valid_idx[~unseen[valid_idx]]
             if self._has_fixef:
+                # Check dtype compatibility before materializing the FE matrix:
+                # a numeric-vs-non-numeric mismatch would otherwise surface as a
+                # cryptic FactorEvaluationError from the merge inside
+                # encode_fixed_effects.
+                fe_var_names = [
+                    str(factor)
+                    for term in self.FixestFormula.fixed_effects
+                    for factor in term.factors
+                ]
+                _check_fe_dtype_compatibility(self._data, newdata, fe_var_names)
                 fe_mm = self._model_spec[
                     _ModelMatrixKey.fixed_effects
                 ].get_model_matrix(newdata, context=context, na_action="drop")
+                n_valid_before_fe = len(valid_idx)
                 valid_idx = np.intersect1d(valid_idx, fe_mm.index.to_numpy())
+                if n_valid_before_fe > 0 and len(valid_idx) == 0:
+                    warnings.warn(
+                        "No row in newdata matches a fixed-effect level seen "
+                        "during fitting; all predictions are NaN. If this is "
+                        "unexpected, check that the fixed-effect columns in "
+                        "newdata hold the same values as the fitted data.",
+                        UserWarning,
+                        stacklevel=2,
+                    )
 
                 if self._sumFE is None:
                     self.fixef(atol, btol)

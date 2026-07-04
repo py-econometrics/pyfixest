@@ -135,7 +135,9 @@ class Formula:
     @property
     def is_instrumental_variable(self) -> bool:
         """Boolean indicating whether the formula is an instrumental variable specification."""
-        # A MULTISTAGE formula is a formulaic.formula.StructuredFormula on the right hand side
+        # formulaic internal: MULTISTAGE encodes the first stage as a StructuredFormula
+        # (reached via its `.deps` substructure); both are undocumented and were
+        # experimental in formulaic 1.1.0 - may shift across releases.
         return isinstance(self._right_hand_side, formulaic.formula.StructuredFormula)
 
     @property
@@ -158,7 +160,9 @@ class Formula:
         exogenous = self._right_hand_side
         if self.is_instrumental_variable:
             # remove endogenous variables from exogenous
-            # formulaic deterministically renames endogenous variables in the second stage
+            # formulaic internal: the multistage parser renames endogenous vars to
+            # "<name>_hat" in the second stage; we reconstruct that suffix to drop them.
+            # If formulaic changes the suffix, this filter silently leaks the endog term.
             # https://github.com/matthewwardrop/formulaic/blob/1f04a0b6d1d55ec4e43bf9f81898f6738c1f839a/formulaic/parser/parser.py#L360
             endogenous = {f"{c}_hat" for c in self.endogenous.required_variables}
             exogenous = formulaic.formula.SimpleFormula(
@@ -182,6 +186,8 @@ class Formula:
             raise AttributeError(
                 "Endogenous variables are available only in instrumental variables specifications."
             )
+        # formulaic internal: `.deps[0]` is the parsed `[endog ~ instr]` sub-formula of a
+        # MULTISTAGE RHS (undocumented structure set by formulaic's parser).
         return self._right_hand_side.deps[0].lhs
 
     @property
@@ -191,6 +197,7 @@ class Formula:
             raise AttributeError(
                 "Endogenous variables are available only in instrumental variables specifications"
             )
+        # formulaic internal: see `endogenous` - `.deps[0]` is the MULTISTAGE sub-formula.
         return self._right_hand_side.deps[0].rhs
 
     @property
