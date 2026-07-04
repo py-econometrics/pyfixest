@@ -1993,10 +1993,30 @@ class Feols(ResultAccessorMixin):
             )
             valid_idx = valid_idx[~unseen[valid_idx]]
             if self._has_fixef:
+                # Check dtype compatibility before materializing the FE matrix:
+                # a numeric-vs-non-numeric mismatch would otherwise surface as a
+                # cryptic FactorEvaluationError from the merge inside
+                # encode_fixed_effects.
+                fe_var_names = [
+                    str(factor)
+                    for term in self.FixestFormula.fixed_effects
+                    for factor in term.factors
+                ]
+                _check_fe_dtype_compatibility(self._data, newdata, fe_var_names)
                 fe_mm = self._model_spec[
                     _ModelMatrixKey.fixed_effects
                 ].get_model_matrix(newdata, context=context, na_action="drop")
+                n_valid_before_fe = len(valid_idx)
                 valid_idx = np.intersect1d(valid_idx, fe_mm.index.to_numpy())
+                if n_valid_before_fe > 0 and len(valid_idx) == 0:
+                    warnings.warn(
+                        "No row in newdata matches a fixed-effect level seen "
+                        "during fitting; all predictions are NaN. If this is "
+                        "unexpected, check that the fixed-effect columns in "
+                        "newdata hold the same values as the fitted data.",
+                        UserWarning,
+                        stacklevel=2,
+                    )
 
                 if self._sumFE is None:
                     self.fixef(atol, btol)

@@ -270,6 +270,36 @@ def test_rwolf_error():
         pf.rwolf(fit.to_list(), "X1", reps=9999, seed=123)
 
 
+def test_predict_fe_dtype_mismatch():
+    """FE dtype handling in predict(newdata=...).
+
+    Numeric-vs-non-numeric mismatches raise a clear pyfixest error (instead of
+    a cryptic FactorEvaluationError from the merge inside encode_fixed_effects);
+    numeric-numeric differences predict fine; fully unmatched FE levels warn.
+    """
+    data = get_data()
+    fit = feols("Y ~ X1 | f1", data=data)
+
+    # numeric-numeric dtype difference (float fit vs int newdata): no complaint
+    newdata = data.dropna(subset=["f1"]).iloc[0:100].copy()
+    newdata["f1"] = newdata["f1"].astype(int)
+    pred = fit.predict(newdata=newdata)
+    assert np.isfinite(pred).any()
+
+    # numeric fit data vs string newdata: clear pyfixest error
+    newdata_str = data.dropna(subset=["f1"]).iloc[0:100].copy()
+    newdata_str["f1"] = newdata_str["f1"].astype(str)
+    with pytest.raises(ValueError, match="Fixed effect column 'f1'"):
+        fit.predict(newdata=newdata_str)
+
+    # no matching FE level at all: warning + all-NaN predictions
+    newdata_shift = data.dropna(subset=["f1"]).iloc[0:100].copy()
+    newdata_shift["f1"] = newdata_shift["f1"] + 1000
+    with pytest.warns(UserWarning, match="No row in newdata matches"):
+        pred_shift = fit.predict(newdata=newdata_shift)
+    assert np.all(np.isnan(pred_shift))
+
+
 def test_wildboottest_errors():
     data = get_data()
     fit = feols("Y ~ X1", data=data)
