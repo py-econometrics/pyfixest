@@ -189,18 +189,24 @@ class Feiv(Feols):
         self._support_decomposition = False
 
     def wls_transform(self) -> None:
-        "Transform variables for WLS estimation."
+        """Create the WLS-domain model matrices, incl. the instrument matrix.
+
+        `_Z` keeps its raw-domain (demeaned, unweighted) meaning; the
+        sqrt(weights)-scaled instruments live in `_Z_wls`. The endogenous
+        variable is not consumed by the 2SLS fit (it is part of `_X`) and
+        therefore stays in the raw domain.
+        """
         super().wls_transform()
         if self._has_weights:
-            w = np.sqrt(self._weights)
-            self._endogvar = self._endogvar * w
-            self._Z = self._Z * w
+            self._Z_wls = self._Z * np.sqrt(self._weights)
+        else:
+            self._Z_wls = self._Z
 
     def to_array(self) -> None:
         "Transform estimation DataFrames to arrays."
         super().to_array()
         self._Z = self._Zd.to_numpy()
-        self._endogvar = self._endogvar.to_numpy()
+        self._endogvar = self._endogvard.to_numpy()
 
     def demean(self) -> None:
         "Demean instruments and endogeneous variable."
@@ -239,8 +245,8 @@ class Feiv(Feols):
         self.drop_multicol_vars()
         self.wls_transform()
 
-        # Second stage (2SLS) on prepared arrays
-        fit = fit_iv(X=self._X, Z=self._Z, Y=self._Y, solver=self._solver)
+        # Second stage (2SLS) on prepared WLS-domain arrays
+        fit = fit_iv(X=self._X_wls, Z=self._Z_wls, Y=self._Y_wls, solver=self._solver)
 
         self._tZX = fit.tZX
         self._tXZ = fit.tXZ
@@ -297,10 +303,9 @@ class Feiv(Feols):
             # Store the first stage coefficients
             self._pi_hat = model1._beta_hat
 
-            # Use fitted values from the first stage
-            self._X_hat = (
-                model1._X @ model1._beta_hat
-            )  # note that model1._X is demeaned
+            # Use fitted values from the first stage (WLS domain,
+            # matching the second stage arrays)
+            self._X_hat = model1._X_wls @ model1._beta_hat
 
             # Residuals from the first stage
             self._v_hat = model1._u_hat
@@ -495,7 +500,7 @@ class Feiv(Feols):
             self._coefnames_z.index(instrument)
             for instrument in self._non_exo_instruments
         ]
-        Z = self._model_1st_stage._X[:, iv_positions]
+        Z = self._model_1st_stage._X_wls[:, iv_positions]
 
         # Calculate the cross-product of the instrument matrix
         Q_zz = Z.T @ Z

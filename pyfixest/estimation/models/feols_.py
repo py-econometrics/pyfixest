@@ -112,6 +112,24 @@ class Feols(ResultAccessorMixin):
     FixestMulti class (to allow for caching of demeaned variables for multiple
     estimation).
 
+    Array domains
+    -------------
+    Weighted estimation runs on sqrt(weights)-scaled ("WLS-domain") arrays.
+    To keep the two representations apart, the following conventions hold
+    after ``get_fit()``:
+
+    - ``_weights`` always holds the *user* weights (ones if unweighted) and
+      is never reassigned. GLMs store their final IRLS working weights
+      separately under ``_irls_weights``.
+    - ``_Y`` / ``_X`` / ``_Z`` / ``_endogvar`` are in the raw domain:
+      demeaned (where applicable) but *unweighted*.
+    - ``_Y_wls`` / ``_X_wls`` / ``_Z_wls`` are the WLS-domain counterparts
+      (``sqrt(_weights) *`` raw for OLS/IV; ``sqrt(IRLS W) *`` working
+      response/design for GLMs). For unweighted OLS both names refer to the
+      same arrays.
+    - ``_u_hat`` and ``_scores`` are WLS-domain; ``resid()`` returns
+      raw-domain residuals.
+
     Parameters
     ----------
     Y : np.ndarray
@@ -147,9 +165,13 @@ class Feols(ResultAccessorMixin):
         Indicates whether instrumental variables are used, initialized as False.
 
     _Y : np.ndarray
-        The demeaned dependent variable, a two-dimensional numpy array.
+        The demeaned (unweighted) dependent variable, a two-dimensional numpy array.
     _X : np.ndarray
-        The demeaned independent variables, a two-dimensional numpy array.
+        The demeaned (unweighted) independent variables, a two-dimensional numpy array.
+    _Y_wls : np.ndarray
+        The WLS-domain dependent variable, i.e. sqrt(weights) * _Y.
+    _X_wls : np.ndarray
+        The WLS-domain design matrix, i.e. sqrt(weights) * _X.
     _X_is_empty : bool
         Indicates whether the X array is empty.
     _collin_tol : float
@@ -165,7 +187,8 @@ class Feols(ResultAccessorMixin):
     _solver: str
         The solver used for the regression.
     _weights : np.ndarray
-        Array of weights for each observation.
+        Array of user weights for each observation (ones if unweighted).
+        Never overwritten; GLMs store IRLS working weights in `_irls_weights`.
     _N : int
         Number of observations.
     _k : int
@@ -346,12 +369,8 @@ class Feols(ResultAccessorMixin):
 
         self._support_crv3_inference = True
         self._support_hac_inference = True
-        if self._weights_name is not None:
-            self._supports_wildboottest = False
-        self._supports_wildboottest = True
+        self._supports_wildboottest = not (self._has_weights or self._is_iv)
         self._supports_cluster_causal_variance = True
-        if self._has_weights or self._is_iv:
-            self._supports_wildboottest = False
         self._support_decomposition = True
 
         # attributes that have to be enriched outside of the class -
@@ -562,12 +581,19 @@ class Feols(ResultAccessorMixin):
         )
 
     def wls_transform(self):
-        "Transform model matrices for WLS Estimation."
-        self._X_untransformed = self._X.copy()
+        """Create the WLS-domain model matrices.
+
+        Stores the sqrt(weights)-scaled arrays under ``_Y_wls`` / ``_X_wls``.
+        ``_Y`` / ``_X`` keep their raw-domain meaning (demeaned, unweighted).
+        For unweighted models both names refer to the same arrays.
+        """
         if self._has_weights:
             w = np.sqrt(self._weights)
-            self._Y = self._Y * w
-            self._X = self._X * w
+            self._Y_wls = self._Y * w
+            self._X_wls = self._X * w
+        else:
+            self._Y_wls = self._Y
+            self._X_wls = self._X
 
     def drop_multicol_vars(self):
         "Detect and drop multicollinear variables."
@@ -604,11 +630,12 @@ class Feols(ResultAccessorMixin):
         self.wls_transform()
 
         if self._X_is_empty:
-            self._u_hat = self._Y
+            self._u_hat = self._Y_wls
         else:
-            fit = fit_ols(X=self._X, Y=self._Y, solver=self._solver)
+            fit = fit_ols(X=self._X_wls, Y=self._Y_wls, solver=self._solver)
 
             self._Z = self._X
+            self._Z_wls = self._X_wls
             self._tZX = fit.tZX
             self._tZy = fit.tZy
             self._beta_hat = fit.beta
@@ -777,7 +804,7 @@ class Feols(ResultAccessorMixin):
     def _vcov_hetero(self):
         return vcov_hetero(
             scores=self._scores,
-            X=self._X,
+            X=self._X_wls,
             tZX=self._tZX,
             weights=self._weights,
             weights_type=self._weights_type,
@@ -842,8 +869,8 @@ class Feols(ResultAccessorMixin):
 
     def _vcov_crv3_fast(self, clustid, cluster_col):
         return vcov_crv3_fast(
-            X=self._X,
-            Y=self._Y,
+            X=self._X_wls,
+            Y=self._Y_wls,
             beta_hat=self._beta_hat,
             clustid=clustid,
             cluster_col=cluster_col,
@@ -951,14 +978,20 @@ class Feols(ResultAccessorMixin):
                 "_X",
                 "_Y",
                 "_Z",
+                "_X_wls",
+                "_Y_wls",
+                "_Z_wls",
                 "_Xd",
                 "_Yd",
                 "_Zd",
+                "_endogvar",
+                "_endogvard",
                 "_cluster_df",
                 "_tXZ",
                 "_tZy",
                 "_tZX",
                 "_weights",
+                "_irls_weights",
                 "_scores",
                 "_tZZinv",
                 "_u_hat",
@@ -1425,12 +1458,12 @@ class Feols(ResultAccessorMixin):
         xfml = "" if not xfml_list else "+".join(xfml_list)
 
         data = self._data
-        Y = self._Y.flatten()
+        Y = self._Y_wls.flatten()
         W = data[treatment].to_numpy()
         assert np.all(np.isin(W, [0, 1])), (
             "Treatment variable must be binary with values 0 and 1"
         )
-        X = self._X
+        X = self._X_wls
         cluster_vec = data[cluster].to_numpy()
         unique_clusters = np.unique(cluster_vec)
 
@@ -1543,8 +1576,9 @@ class Feols(ResultAccessorMixin):
             X = csc_matrix(X) if output == "sparse" else X
 
         else:
-            Y = self._Y.flatten() / np.sqrt(self._weights.flatten())
-            X = self._X / np.sqrt(self._weights)
+            # `_Y` / `_X` are already in the raw (unweighted) domain.
+            Y = self._Y.flatten()
+            X = self._X
             xnames = self._coefnames
 
         X = csc_matrix(X) if output == "sparse" else X
@@ -1767,8 +1801,6 @@ class Feols(ResultAccessorMixin):
         dict[str, dict[str, float]]
             A dictionary with the estimated fixed effects.
         """
-        weights_sqrt = np.sqrt(self._weights).flatten()
-
         if not self._has_fixef:
             raise ValueError("The regression model does not have fixed effects.")
 
@@ -1814,10 +1846,11 @@ class Feols(ResultAccessorMixin):
         )
         one_hot_encoded_fixed_effects = D2.model_spec.column_names
 
-        if self._has_weights:
-            uhat *= weights_sqrt
-            weights_diag = diags(weights_sqrt, 0)
-            D2 = weights_diag.dot(D2)
+        solve_weights = self._fixef_solve_weights()
+        if solve_weights is not None:
+            weights_sqrt = np.sqrt(solve_weights).flatten()
+            uhat = uhat * weights_sqrt
+            D2 = diags(weights_sqrt, 0).dot(D2)
 
         alpha = lsqr(D2, uhat, atol=atol, btol=btol)[0]
 
@@ -1838,6 +1871,15 @@ class Feols(ResultAccessorMixin):
         self._sumFE = D2.dot(alpha)
 
         return self._fixef_dict
+
+    def _fixef_solve_weights(self) -> np.ndarray | None:
+        """Weights for the fixed-effects recovery solve in `fixef()`.
+
+        For OLS/WLS these are the user weights (`None` when unweighted).
+        GLMs override this to return the final IRLS working weights,
+        following Stammann (2018).
+        """
+        return self._weights if self._has_weights else None
 
     def predict(
         self,
@@ -1914,9 +1956,9 @@ class Feols(ResultAccessorMixin):
             _validate_literal_argument(interval, PredictionErrorOptions)
 
         if newdata is None:
-            # note: no need to worry about fixed effects, as not supported with
-            # prediction errors; will throw error later;
-            # divide by sqrt(weights) as self._X is "weighted"
+            # note: no need to worry about fixed effects or weights: neither is
+            # supported with prediction errors, and X is only consumed on the
+            # prediction-error path below.
             X = self._X
             y_hat = (
                 self._Y_hat_link
@@ -2306,6 +2348,10 @@ class Feols(ResultAccessorMixin):
             raise NotImplementedError(
                 "The update() method is currently not supported for models with fixed effects."
             )
+        if self._has_weights:
+            raise NotImplementedError(
+                "The update() method is currently not supported for models with weights."
+            )
         if not np.all(X_new[:, 0] == 1):
             X_new = np.column_stack((np.ones(len(X_new)), X_new))
         X_n_plus_1 = np.vstack((self._X, X_new))
@@ -2315,6 +2361,10 @@ class Feols(ResultAccessorMixin):
         if inplace:
             self._X = X_n_plus_1
             self._Y = np.append(self._Y, y_new)
+            # unweighted model (guarded above), so the WLS-domain arrays
+            # are identical to the raw ones
+            self._X_wls = self._X
+            self._Y_wls = self._Y
             self._beta_hat = beta_n_plus_1
             self._u_hat = self._Y - self._X @ self._beta_hat
             self._N += X_new.shape[0]

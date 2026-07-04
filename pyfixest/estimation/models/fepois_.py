@@ -136,10 +136,13 @@ class Fepois(Feglm):
 
     def get_fit(self) -> None:
         "Fit via Feglm IRLS, then add Poisson-specific post-fit summary stats."
-        y_orig = np.asarray(self._Y).flatten()
-        user_weights = self._weights.flatten().copy()
-
         super().get_fit()
+
+        # `_Y` and `_weights` keep their raw-domain meaning throughout the
+        # fit (see the array-domain notes in the `Feols` docstring), so the
+        # Poisson summary statistics can read them directly.
+        y_orig = np.asarray(self._Y).flatten()
+        user_weights = self._weights.flatten()
 
         self._y_hat_null = np.full_like(
             y_orig, np.average(y_orig, weights=user_weights), dtype=float

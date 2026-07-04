@@ -106,7 +106,10 @@ def test_against_fixest(fml):
     fit_r = fixest.fepois(ro.Formula(fml), data=data, vcov=vcov, glm_tol=iwls_tol)
 
     np.testing.assert_allclose(
-        fit_r.rx2("irls_weights").reshape(-1, 1), fit._weights, atol=1e-08, rtol=1e-07
+        fit_r.rx2("irls_weights").reshape(-1, 1),
+        fit._irls_weights,
+        atol=1e-08,
+        rtol=1e-07,
     )
     np.testing.assert_allclose(
         fit_r.rx2("linear.predictors").reshape(-1, 1),
