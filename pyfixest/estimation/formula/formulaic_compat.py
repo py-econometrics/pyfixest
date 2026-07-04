@@ -12,7 +12,6 @@ from formulaic.materializers.types import FactorValues
 from formulaic.parser.types import Factor
 from formulaic.transforms.contrasts import TreatmentContrasts, encode_contrasts
 from formulaic.utils.sentinels import UNSET
-from formulaic.utils.variables import get_expression_variables
 
 if TYPE_CHECKING:
     from formulaic.model_spec import ModelSpec
@@ -149,23 +148,30 @@ def iter_model_spec_categorical_levels(
     rhs_spec: ModelSpec, newdata: pd.DataFrame
 ) -> Iterator[tuple[str, set[Any], dict[str, Any]]]:
     """Yield categorical variable levels encoded in a formulaic ModelSpec."""
-    for factor_expr, value in rhs_spec.encoder_state.items():
+    yield from _iter_documented_categorical_levels(rhs_spec, newdata)
+    yield from _iter_i_categorical_levels(rhs_spec, newdata)
+
+
+def _iter_documented_categorical_levels(
+    rhs_spec: ModelSpec, newdata: pd.DataFrame
+) -> Iterator[tuple[str, set[Any], dict[str, Any]]]:
+    for factor, contrast_state in rhs_spec.factor_contrasts.items():
+        levels = contrast_state.levels
+        for variable in rhs_spec.factor_variables.get(factor, set()):
+            variable_name = str(variable)
+            if variable_name in newdata.columns:
+                yield variable_name, set(levels), {}
+
+
+def _iter_i_categorical_levels(
+    rhs_spec: ModelSpec, newdata: pd.DataFrame
+) -> Iterator[tuple[str, set[Any], dict[str, Any]]]:
+    for _factor_expr, value in rhs_spec.encoder_state.items():
         # formulaic internal: encoder_state values are
         # (Factor.Kind, state_dict) tuples produced by formulaic materializers.
         kind, state = value
         if kind is not Factor.Kind.CATEGORICAL:
             continue
-        yield from _iter_categorical_levels(factor_expr, state, newdata)
-
-
-def _iter_categorical_levels(
-    factor_expr: str, state: dict[str, Any], newdata: pd.DataFrame
-) -> Iterator[tuple[str, set[Any], dict[str, Any]]]:
-    if "categories" in state:
-        for variable in (str(v) for v in get_expression_variables(factor_expr)):
-            if variable in newdata.columns:
-                yield variable, set(state["categories"]), state
-    else:
         for key, substate in state.items():
             if is_contrast_state_key(key):
                 variable = variable_from_contrast_state_key(key)
