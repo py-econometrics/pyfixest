@@ -1,10 +1,20 @@
 """Smoke tests for formulaic internals relied on by pyfixest."""
 
+from types import SimpleNamespace
+
+import formulaic
+import formulaic.formula
 import numpy as np
 import pandas as pd
 import pytest
 
 import pyfixest as pf
+from pyfixest.estimation.formula.formulaic_compat import (
+    FormulaicCompatibilityError,
+    filter_multistage_endogenous_terms,
+    get_first_multistage_lhs,
+    iter_model_spec_categorical_levels,
+)
 
 
 @pytest.fixture
@@ -47,6 +57,22 @@ def test_hat_suffix_filtering(data: pd.DataFrame) -> None:
     assert "X2_hat" not in exog_vars
 
 
+def test_multistage_access_guard_raises_loudly() -> None:
+    """Malformed formulaic MULTISTAGE shape must fail before silent IV leakage."""
+    malformed_rhs = formulaic.Formula("X1")
+
+    with pytest.raises(FormulaicCompatibilityError, match="MULTISTAGE structure"):
+        get_first_multistage_lhs(malformed_rhs)
+
+
+def test_hat_suffix_guard_raises_loudly() -> None:
+    """Missing formulaic _hat terms must fail before endogenous leakage."""
+    exogenous = SimpleNamespace(root=["1", "X1"])
+
+    with pytest.raises(FormulaicCompatibilityError, match="endogenous suffix"):
+        filter_multistage_endogenous_terms(exogenous, ["X2"])
+
+
 def test_encoder_state_tuple_shape(data: pd.DataFrame) -> None:
     """encoder_state values are (Factor.Kind, state_dict) 2-tuples."""
     fit = pf.feols("Y ~ X1 + C(f1)", data=data)
@@ -60,6 +86,22 @@ def test_encoder_state_tuple_shape(data: pd.DataFrame) -> None:
         kind, state = value
         assert isinstance(kind, Factor.Kind)
         assert isinstance(state, dict)
+
+
+def test_encoder_state_guard_raises_loudly() -> None:
+    """Unexpected encoder_state values must fail before unseen levels are skipped."""
+    malformed_spec = SimpleNamespace(
+        factor_contrasts={},
+        factor_variables={},
+        encoder_state={"i(f1)": object()},
+    )
+
+    with pytest.raises(FormulaicCompatibilityError, match="encoder_state structure"):
+        list(
+            iter_model_spec_categorical_levels(
+                malformed_spec, pd.DataFrame({"f1": [1]})
+            )
+        )
 
 
 def test_contrasts_state_key_format(data: pd.DataFrame) -> None:
