@@ -94,6 +94,8 @@ website:
           file: explanation/ssc.qmd
         - text: "Does PyFixest Match fixest?"
           file: explanation/compare-fixest-pyfixest.qmd
+        - text: "Case Studies & Blog Posts"
+          file: explanation/blog-posts.md
       - text: "Textbook Replications"
         menu:
         - text: "All Textbook Replications"
