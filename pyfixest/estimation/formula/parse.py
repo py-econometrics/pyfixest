@@ -15,6 +15,13 @@ from pyfixest.errors import (
     UnderDeterminedIVError,
 )
 from pyfixest.estimation.formula import FORMULAIC_FEATURE_FLAG
+from pyfixest.estimation.formula.formulaic_compat import (
+    count_multistage_blocks,
+    filter_multistage_endogenous_terms,
+    get_first_multistage_lhs,
+    get_first_multistage_rhs,
+    is_structured_formula,
+)
 from pyfixest.estimation.formula.transforms.fixed_effects_encoding import (
     _FixedEffectsOperatorResolver,
 )
@@ -87,14 +94,12 @@ class Formula:
             self._validate_instrumental_variable_specification()
 
     def _validate_instrumental_variable_specification(self) -> None:
-        if (
-            isinstance(self._right_hand_side.deps, tuple)
-            and len(self._right_hand_side.deps) > 1
-        ):
+        n_multistage_blocks = count_multistage_blocks(self._right_hand_side)
+        if n_multistage_blocks > 1:
             raise FormulaSyntaxError(
                 "Multiple instrumental variable specifications are not supported. "
                 "Use a single `[endogenous ~ instruments]` block. "
-                f"Received {len(self._right_hand_side.deps)} multistage blocks:\n "
+                f"Received {n_multistage_blocks} multistage blocks:\n "
                 f"{self._formula}"
             )
         if len(self.endogenous.required_variables) > 1:
@@ -159,10 +164,7 @@ class Formula:
     @property
     def is_instrumental_variable(self) -> bool:
         """Boolean indicating whether the formula is an instrumental variable specification."""
-        # formulaic internal: MULTISTAGE encodes the first stage as a StructuredFormula
-        # (reached via its `.deps` substructure); both are undocumented and were
-        # experimental in formulaic 1.1.0 - may shift across releases.
-        return isinstance(self._right_hand_side, formulaic.formula.StructuredFormula)
+        return is_structured_formula(self._right_hand_side)
 
     @property
     def is_fixed_effects(self) -> bool:
@@ -183,14 +185,8 @@ class Formula:
         """Exogenous aka covariates aka independent variables."""
         exogenous = self._right_hand_side
         if self.is_instrumental_variable:
-            # remove endogenous variables from exogenous
-            # formulaic internal: the multistage parser renames endogenous vars to
-            # "<name>_hat" in the second stage; we reconstruct that suffix to drop them.
-            # If formulaic changes the suffix, this filter silently leaks the endog term.
-            # https://github.com/matthewwardrop/formulaic/blob/1f04a0b6d1d55ec4e43bf9f81898f6738c1f839a/formulaic/parser/parser.py#L360
-            endogenous = {f"{c}_hat" for c in self.endogenous.required_variables}
-            exogenous = formulaic.formula.SimpleFormula(
-                [term for term in exogenous.root if term not in endogenous]
+            exogenous = filter_multistage_endogenous_terms(
+                exogenous, self.endogenous.required_variables
             )
 
         if self.is_fixed_effects and exogenous.required_variables:
@@ -210,9 +206,7 @@ class Formula:
             raise AttributeError(
                 "Endogenous variables are available only in instrumental variables specifications."
             )
-        # formulaic internal: `.deps[0]` is the parsed `[endog ~ instr]` sub-formula of a
-        # MULTISTAGE RHS (undocumented structure set by formulaic's parser).
-        return self._right_hand_side.deps[0].lhs
+        return get_first_multistage_lhs(self._right_hand_side)
 
     @property
     def instruments(self) -> formulaic.formula.Formula:
@@ -221,8 +215,7 @@ class Formula:
             raise AttributeError(
                 "Instruments are available only in instrumental variables specifications."
             )
-        # formulaic internal: see `endogenous` - `.deps[0]` is the MULTISTAGE sub-formula.
-        return self._right_hand_side.deps[0].rhs
+        return get_first_multistage_rhs(self._right_hand_side)
 
     @property
     def fixed_effects(self) -> formulaic.formula.Formula:

@@ -1,11 +1,18 @@
 from collections.abc import Hashable
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
 from formulaic.materializers.types import FactorValues
-from formulaic.transforms.contrasts import TreatmentContrasts, encode_contrasts
-from formulaic.utils.sentinels import UNSET
+
+from pyfixest.estimation.formula.formulaic_compat import (
+    bin_mapping_state_key,
+    encode_contrasts_with_state,
+    get_contrast_levels,
+    get_or_create_contrast_state,
+    set_contrast_levels,
+    unwrap_factor_values,
+)
 
 if TYPE_CHECKING:
     from formulaic.model_spec import ModelSpec
@@ -118,9 +125,7 @@ def _get_series_name(data: Any, default: str = "var") -> str:
     if data is None:
         return default
     if isinstance(data, FactorValues):
-        # formulaic internal: unwrap the wrapt proxy to the raw values
-        # (FactorValue unwrapping behavior changed in formulaic 1.2.0).
-        data = data.__wrapped__
+        data = unwrap_factor_values(data)
     if isinstance(data, pd.Series) and data.name is not None:
         return str(data.name)
     return default
@@ -146,8 +151,7 @@ def _encode_i(
     dummy encoding, then applies fixest-style naming and handles interactions.
     """
     # Extract values - may be wrapped in dict for null detection
-    # formulaic internal: `.__wrapped__` reaches through the FactorValues wrapt proxy.
-    unwrapped = values.__wrapped__ if isinstance(values, FactorValues) else values
+    unwrapped = unwrap_factor_values(values)
     data = unwrapped["__data__"] if var2_name is not None else unwrapped
     var2 = unwrapped.get("__var2__") if var2_name is not None else None
     # Convert to pandas Series and drop specified rows
@@ -201,6 +205,7 @@ def _encode_i(
         )
     else:
         # (iii) factor-factor interaction
+        assert var2_name is not None
         dummies2 = _encode_factor(
             data=var2,
             ref=ref2,
@@ -223,9 +228,9 @@ def _encode_i(
         )
         # Drop reference level
         if ref is None:
-            ref = encoder_state[f"__contrasts_{factor_name}__"]["levels"][0]
+            ref = get_contrast_levels(encoder_state, factor_name)[0]
         if ref2 is None:
-            ref2 = encoder_state[f"__contrasts_{var2_name}__"]["levels"][0]
+            ref2 = get_contrast_levels(encoder_state, var2_name)[0]
         interacted.drop(
             f"{factor_name}::{ref}:{var2_name}::{ref2}",
             axis=1,
@@ -252,35 +257,24 @@ def _encode_factor(
     # --- Binning (optional) ---
     if bins is not None:
         data = _apply_binning(data, bins, encoder_state)
-    # formulaic internal: we stash a per-variable contrast sub-state under our own
-    # "__contrasts_<var>__" key inside formulaic's encoder_state dict. post_estimation/
-    # prediction.py reads these keys back to detect unseen levels - keep both in sync.
-    contrasts_key: Final[str] = f"__contrasts_{data.name}__"
-    contrasts_state = encoder_state.get(contrasts_key)
-    if contrasts_state is None:
-        # Create a dedicated sub-state for encode_contrasts to avoid key collisions
-        contrasts_state = encoder_state.setdefault(contrasts_key, {})
+    contrasts_state = get_or_create_contrast_state(encoder_state, str(data.name))
     # Drop a level if: (1) model has intercept (reduced_rank=True), OR (2) ref is explicitly specified
     # This replicates the old monkey-patched behavior: drop=reduced_rank or ref is not None
-    # formulaic internal: encode_contrasts is called directly with the `_state`/`_spec`
-    # injection params normally supplied by the stateful_transform machinery.
-    encoded = encode_contrasts(
+    dummies = encode_contrasts_with_state(
         data,
-        contrasts=TreatmentContrasts(base=ref if ref is not None else UNSET),
+        ref=ref,
         levels=contrasts_state.get("levels"),
         reduced_rank=reduced_rank or ref is not None,
-        output="pandas",
-        _state=contrasts_state,
-        _spec=model_spec,
+        state=contrasts_state,
+        model_spec=model_spec,
     )
-    dummies = encoded.__wrapped__  # formulaic internal: unwrap wrapt proxy
     if "levels" not in contrasts_state:
         # Store the full category list (including the reference level dropped by
         # reduced_rank) so that during prediction encode_contrasts can correctly
         # identify and drop the same reference level rather than dropping the
         # first level of the already-reduced set.
         levels = contrasts_state.get("categories", dummies.columns.tolist())
-        encoder_state[f"__contrasts_{data.name}__"].update({"levels": levels})
+        set_contrast_levels(encoder_state, str(data.name), levels)
     return dummies
 
 
@@ -310,7 +304,7 @@ def _apply_binning(series: pd.Series, bins: dict, state: dict) -> pd.Series:
     The bin mapping is namespaced per variable to avoid collisions when
     both sides of an interaction are binned (``i(a, b, bin=..., bin2=...)``).
     """
-    bin_key = f"__bin_mapping_{series.name}__"
+    bin_key = bin_mapping_state_key(str(series.name))
     if bin_key not in state:
         mapping = {}
         for new_level, old_levels in bins.items():

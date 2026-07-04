@@ -20,6 +20,10 @@ from pyfixest.errors import VcovTypeNotSupportedError
 from pyfixest.estimation.api.utils import _ALL_SAMPLE, _AllSampleSentinel
 from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
 from pyfixest.estimation.formula import model_matrix as model_matrix_fixest
+from pyfixest.estimation.formula.formulaic_compat import (
+    decode_fixed_effect_dict,
+    get_fixed_effect_code_values,
+)
 from pyfixest.estimation.formula.model_matrix import _ModelMatrixKey
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
@@ -94,61 +98,6 @@ def _check_fe_dtype_compatibility(
                 "so its levels cannot be matched. Convert the column to a "
                 "matching type before calling predict()."
             )
-
-
-def _decode_fixef_dict(
-    internal: dict[str, dict[str, float]],
-    transform_state: dict[str, Any],
-) -> dict[str, dict[str, float]]:
-    """Decode internal ngroup-coded fixef dict to user-facing format.
-
-    The internal dict is keyed by ``__fixed_effect__(f1)`` column names with
-    ngroup code levels (e.g. ``"0"``, ``"1"``). This function maps each code
-    back to the original level value (e.g. ``"north"``) using the stored
-    ``__fixed_effect_encoding__`` transform state, and strips the
-    ``__fixed_effect__(...)`` wrapper to produce clean variable names (e.g.
-    ``"f1"``). For interacted FEs (``f1^f2``), the level is a
-    ``"val1,val2"`` pair decoded from the compound code.
-    """
-    res: dict[str, dict[str, float]] = {}
-    for col, levels in internal.items():
-        # Strip __fixed_effect__(...) wrapper to get the real FE name
-        # e.g. "__fixed_effect__(f1)" -> "f1", "__fixed_effect__(f1, f2)" -> "f1^f2"
-        var_name = col
-        if col.startswith("__fixed_effect__(") and col.endswith(")"):
-            inner = col[len("__fixed_effect__(") : -1]
-            # Replace ", " with "^" to match fixest convention for interacted FEs
-            var_name = inner.replace(", ", "^").replace(",", "^")
-
-        # Look up the encoding state for this FE column
-        fe_state = transform_state.get(col, {})
-        encoding_df = fe_state.get("__fixed_effect_encoding__")
-
-        if encoding_df is not None:
-            # Build code -> original value mapping from the stored DataFrame.
-            # The DataFrame has columns like ['f1', '__fixed_effect_encoding__']
-            # where the last column is always the ngroup code. Rows whose FE
-            # value was NaN carry a NaN code (they were dropped from the
-            # estimation sample) and must not surface as a 'nan' level.
-            code_col = encoding_df.columns[-1]
-            value_cols = list(encoding_df.columns[:-1])
-            valid_rows = encoding_df.dropna(subset=[code_col])
-            codes = valid_rows[code_col].astype(str)
-            if len(value_cols) == 1:
-                values = valid_rows[value_cols[0]].astype(str)
-            else:
-                # Interacted FE: join values with ","
-                values = valid_rows[value_cols].astype(str).agg(",".join, axis=1)
-            code_to_value: dict[str, str] = dict(zip(codes, values, strict=True))
-        else:
-            code_to_value = {}
-
-        res[var_name] = {}
-        for level, coef in levels.items():
-            decoded_level = code_to_value.get(level, level)
-            res[var_name][decoded_level] = coef
-
-    return res
 
 
 class Feols(ResultAccessorMixin):
@@ -1909,19 +1858,13 @@ class Feols(ResultAccessorMixin):
             _ModelMatrixKey.fixed_effects
         ].transform_state
         for variable, levels in internal.items():
-            fe_state = fe_transform_state.get(variable, {})
-            encoding_df = fe_state.get("__fixed_effect_encoding__")
-            if encoding_df is not None:
-                code_col = encoding_df.columns[-1]
-                # NaN codes belong to rows dropped from the estimation sample
-                # (NaN FE values) - they are not levels and get no coefficient.
-                all_codes = set(str(c) for c in encoding_df[code_col].dropna())
-                missing = all_codes - set(levels.keys())
-                for code in missing:
-                    levels[code] = 0.0
+            all_codes = get_fixed_effect_code_values(fe_transform_state, variable)
+            missing = all_codes - set(levels.keys())
+            for code in missing:
+                levels[code] = 0.0
 
         # Decode to user-facing dict with real variable names and level labels
-        res = _decode_fixef_dict(internal, fe_transform_state)
+        res = decode_fixed_effect_dict(internal, fe_transform_state)
 
         self._fixef_dict_internal = internal
         self._fixef_dict = res

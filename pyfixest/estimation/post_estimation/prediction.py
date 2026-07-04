@@ -1,11 +1,13 @@
-from collections.abc import Iterator
 from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
-from formulaic.parser.types import Factor
-from formulaic.utils.variables import get_expression_variables
 from scipy.stats import t
+
+from pyfixest.estimation.formula.formulaic_compat import (
+    bin_mapping_state_key,
+    iter_model_spec_categorical_levels,
+)
 
 if TYPE_CHECKING:
     import formulaic
@@ -29,56 +31,18 @@ def _rows_with_unseen_categories(
         Boolean mask of length `len(newdata)`; True where a row must be dropped.
     """
     mask = np.zeros(newdata.shape[0], dtype=bool)
-    for factor_expr, value in rhs_spec.encoder_state.items():
-        # formulaic internal: encoder_state values are (Factor.Kind, state_dict)
-        # 2-tuples set by formulaic's materializer; this shape is undocumented.
-        kind, state = value
-        if kind is not Factor.Kind.CATEGORICAL:
-            continue
-        for variable, levels in _categorical_levels(factor_expr, state, newdata):
-            column = newdata[variable]
-            # For binned i() terms, apply the stored bin mapping before checking
-            # so that valid raw levels (e.g. "a" -> "low") are not flagged unseen.
-            bin_key = f"__bin_mapping_{variable}__"
-            if bin_key in state:
-                column = column.replace(state[bin_key])
-            unseen = ~column.isin(levels) & column.notna()
-            mask |= unseen.to_numpy()
+    for variable, levels, state in iter_model_spec_categorical_levels(
+        rhs_spec, newdata
+    ):
+        column = newdata[variable]
+        # For binned i() terms, apply the stored bin mapping before checking
+        # so that valid raw levels (e.g. "a" -> "low") are not flagged unseen.
+        bin_key = bin_mapping_state_key(variable)
+        if bin_key in state:
+            column = column.replace(state[bin_key])
+        unseen = ~column.isin(levels) & column.notna()
+        mask |= unseen.to_numpy()
     return mask
-
-
-def _categorical_levels(
-    factor_expr: str, state: dict, newdata: pd.DataFrame
-) -> Iterator[tuple[str, set]]:
-    """
-    Yield `(variable_name, seen_levels)` pairs for one categorical factor.
-
-    Handles the two state layouts used in pyfixest: formulaic-native `C()` /
-    bare categoricals store `categories` at the top level (the source variable
-    is a data column referenced in the factor expression), while pyfixest's
-    `i()` stores per-variable contrast sub-states keyed `__contrasts_<var>__`.
-
-    Variable names for ``C(...)`` factors are extracted via
-    ``get_expression_variables`` rather than regex, so keyword-argument names
-    (e.g. ``base`` in ``C(f, Treatment(base='a'))``) are not mistaken for data
-    columns.
-    """
-    if "categories" in state:
-        # formulaic-native C() / bare categoricals: use structured variable
-        # extraction instead of regex to avoid false positives from keyword
-        # argument names that happen to match column names (e.g. `base`).
-        for variable in (str(v) for v in get_expression_variables(factor_expr)):
-            if variable in newdata.columns:
-                yield variable, set(state["categories"])
-    else:
-        # formulaic internal: pyfixest's i() stores per-variable contrast state under
-        # "__contrasts_<var>__" keys inside formulaic's encoder_state dict (see
-        # transforms/factor_interaction.py); we read those keys back here.
-        for key, substate in state.items():
-            if key.startswith("__contrasts_") and key.endswith("__"):
-                variable = key[len("__contrasts_") : -len("__")]
-                if variable in newdata.columns and "categories" in substate:
-                    yield variable, set(substate["categories"])
 
 
 def _get_prediction_se(model, X: np.ndarray) -> np.ndarray:
