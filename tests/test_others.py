@@ -309,6 +309,69 @@ def test_predict_newdata_unseen_category(fml):
     assert np.all(np.isfinite(pred_new[1:])), "seen rows should remain finite"
 
 
+def test_i_bin_bin2_separate_state():
+    """i(a, b, bin=..., bin2=...) must store separate bin mappings per variable.
+
+    Regression test: previously _apply_binning used a single "bin_mapping" key
+    in shared encoder state, so the second variable reused the first's mapping.
+    """
+    data = get_data(N=500, seed=42).dropna()
+    data["f1"] = data["f1"].astype(int).astype(str)
+    data["f2"] = data["f2"].astype(int).astype(str)
+
+    fit = feols(
+        "Y ~ i(f1, f2, bin={'low': ['0', '1']}, bin2={'hi': ['0', '1']})",
+        data=data,
+    )
+    coefnames = [str(c) for c in fit._coefnames]
+    f1_binned = any("low" in c for c in coefnames)
+    f2_binned = any("hi" in c for c in coefnames)
+    assert f1_binned, f"f1 should be binned to 'low', got: {coefnames}"
+    assert f2_binned, f"f2 should be binned to 'hi', got: {coefnames}"
+
+
+def test_predict_decoy_column_not_flagged_unseen():
+    """A data column named like a contrast keyword arg must not cause NaN.
+
+    Regression test: _categorical_levels used regex to extract identifiers from
+    factor expressions, so with a formula like `C(f1, contr.treatment(base=1.0))`
+    the keyword-arg name `base` was treated as a model variable. A continuous
+    data column named `base` was then checked against f1's categories and
+    flagged every row as unseen -> all predictions NaN. The formula must
+    contain the keyword argument for this test to pin the bug.
+    """
+    data = get_data(N=500, seed=42).dropna()
+    data["base"] = np.random.default_rng(99).normal(size=len(data))
+    fit = feols("Y ~ X1 + C(f1, contr.treatment(base=1.0))", data=data)
+    pred = fit.predict(newdata=data.iloc[:100])
+    assert np.all(np.isfinite(pred)), "decoy column should not cause NaN predictions"
+
+
+def test_predict_binned_i_not_flagged_unseen():
+    """predict(newdata=...) with binned i() must not flag valid raw levels as unseen.
+
+    Regression test: _rows_with_unseen_categories checked raw newdata values
+    against post-binning categories, so a valid raw level like 'a' (binned to
+    'low') was flagged unseen -> NaN prediction.
+    """
+    data = pd.DataFrame(
+        {
+            "Y": np.random.default_rng(0).normal(size=200),
+            "f1": np.random.default_rng(2).choice(["a", "b", "c", "d"], size=200),
+        }
+    )
+    fit = feols("Y ~ i(f1, bin={'low': ['a', 'b']})", data=data)
+    pred = fit.predict(newdata=data.iloc[:50])
+    assert np.all(np.isfinite(pred)), "valid binned levels should not be NaN"
+
+    # Truly unseen level should still be NaN
+    newdata = data.iloc[:10].copy()
+    newdata.iloc[0, newdata.columns.get_loc("f1")] = "zzz"
+    pred_unseen = fit.predict(newdata=newdata)
+    assert np.isnan(pred_unseen[0]), "truly unseen level should predict NaN"
+    assert np.all(np.isfinite(pred_unseen[1:])), "seen rows should remain finite"
+
+
 def test_context_capture():
     # `_foo` is in caller's stack frame, if should be captured
     # call with -1 to account for adding one more frame inside the function
