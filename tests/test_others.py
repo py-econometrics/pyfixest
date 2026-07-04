@@ -324,3 +324,70 @@ def test_context_capture():
 
     context = capture_context({"_foo": _foo})
     assert context == {"_foo": _foo}
+
+
+def _fixef_test_data(n=500, with_nan=False, seed=11):
+    rng = np.random.default_rng(seed)
+    df = pd.DataFrame(
+        {
+            "Y": rng.normal(size=n),
+            "X1": rng.normal(size=n),
+            "g": rng.choice(["north", "south", "east"], n),
+            "h": rng.choice(["u", "v", "w", "x"], n),
+        }
+    )
+    if with_nan:
+        df.loc[df.index[:10], "g"] = np.nan
+    return df
+
+
+def test_fixef_returns_decoded_labels():
+    """fixef() must return clean variable names and original level labels.
+
+    Regression test: the predict/fixef rewrite briefly returned internal
+    encodings (keys like `__fixed_effect__(g)` with ngroup codes as levels).
+    """
+    df = _fixef_test_data()
+    fit = feols("Y ~ X1 | g + h", data=df)
+    d = fit.fixef(atol=1e-12, btol=1e-12)
+
+    assert set(d.keys()) == {"g", "h"}
+    assert set(d["g"].keys()) == {"north", "south", "east"}
+    assert set(d["h"].keys()) == {"u", "v", "w", "x"}
+
+    # reference normalization: the second FE carries a zero reference level,
+    # the first FE (spanning the intercept) does not
+    assert any(v == 0.0 for v in d["h"].values())
+
+    # predict(newdata=fit data) must reproduce in-sample predictions,
+    # exercising the internal code-keyed dict used for FE mapping
+    np.testing.assert_allclose(
+        fit.predict(), fit.predict(newdata=df), rtol=1e-6, atol=1e-8
+    )
+
+
+def test_fixef_nan_fe_level_excluded():
+    """NaN FE values in the fit data must not surface as a 'nan' level."""
+    df = _fixef_test_data(with_nan=True)
+    fit = feols("Y ~ X1 | g", data=df)
+    d = fit.fixef()
+
+    assert set(d["g"].keys()) == {"north", "south", "east"}
+    assert not any("nan" in str(k).lower() for k in d["g"])
+
+
+def test_fixef_interacted_labels():
+    """Interacted FEs decode to `g^h` keys with `val1,val2` level labels."""
+    df = _fixef_test_data()
+    fit = feols("Y ~ X1 | g^h", data=df)
+    d = fit.fixef(atol=1e-12, btol=1e-12)
+
+    assert list(d.keys()) == ["g^h"]
+    levels = set(d["g^h"].keys())
+    assert all("," in level for level in levels)
+    observed = {f"{g},{h}" for g, h in zip(df["g"], df["h"], strict=True)}
+    assert levels == observed
+
+    np.testing.assert_allclose(
+        fit.predict(), fit.predict(newdata=df), rtol=1e-6, atol=1e-8
+    )
