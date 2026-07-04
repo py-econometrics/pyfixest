@@ -14,6 +14,7 @@ import pytest
 import pyfixest as pf
 from pyfixest.errors import FormulaSyntaxError
 from pyfixest.estimation.formula.parse import Formula, _expand_all_multiple_estimation
+from pyfixest.estimation.formula.utils import _get_position_of_first_parenthesis_pair
 
 # =============================================================================
 # Fixtures
@@ -267,6 +268,42 @@ class TestMultipleEstimationExpansion:
         """Test expansion of multiple estimation syntax."""
         result = list(_expand_all_multiple_estimation(formula))
         assert result == expected
+
+
+class TestParenthesisPair:
+    """Tests for _get_position_of_first_parenthesis_pair."""
+
+    def test_simple_pair(self):
+        string = "sw(X1, X2)"
+        start, end = _get_position_of_first_parenthesis_pair(string)
+        assert string[start:end] == "X1, X2"
+
+    def test_nested_pair_as_first_content_char(self):
+        """Content starting with '(' must not terminate at the inner ')'.
+
+        Regression test: the scan previously skipped the first content
+        character, so `sw((a+b), c)` returned `"(a+b"` instead of the full
+        content of the outer pair.
+        """
+        string = "sw((a+b), c)"
+        start, end = _get_position_of_first_parenthesis_pair(string)
+        assert string[start:end] == "(a+b), c"
+
+    def test_unmatched_parenthesis_raises_value_error(self):
+        """Unclosed '(' raises ValueError, not IndexError."""
+        with pytest.raises(ValueError, match="Unmatched"):
+            _get_position_of_first_parenthesis_pair("sw(a, b")
+        with pytest.raises(ValueError, match="Unmatched"):
+            _get_position_of_first_parenthesis_pair("sw(a, b( | f1)")
+
+    def test_no_parenthesis_raises_value_error(self):
+        with pytest.raises(ValueError, match="No parenthesis"):
+            _get_position_of_first_parenthesis_pair("sw")
+
+    def test_expansion_with_leading_nested_group(self):
+        """sw() arguments wrapped in parentheses expand correctly end to end."""
+        result = list(_expand_all_multiple_estimation("Y ~ sw((X1+X2), X3)"))
+        assert result == ["Y ~ (X1+X2)", "Y ~ X3"]
 
 
 class TestFormulaParse:
@@ -608,7 +645,7 @@ class TestEdgeCases:
         f_implicit = result_implicit[None][0]
         assert f_explicit.second_stage == f_implicit.second_stage
         assert not f_explicit.is_fixed_effects
-        assert f_implicit.is_fixed_effects is not None
+        assert not f_implicit.is_fixed_effects
         assert f_explicit.first_stage == f_implicit.first_stage
 
     def test_formula_roundtrip(self):

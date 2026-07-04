@@ -42,17 +42,15 @@ def _get_position_of_first_parenthesis_pair(string: str) -> tuple[int, int]:
         raise ValueError(f"No parenthesis in `{string}`")
     else:
         position_open += 1
-    position: int = position_open
     depth: int = 1
-    while position < len(string) and depth:
-        position += 1
+    for position in range(position_open, len(string)):
         if string[position] == "(":
             depth += 1
         elif string[position] == ")":
             depth -= 1
-    if depth != 0:
-        raise ValueError(f"Unmatched '(' in `{string}`")
-    return position_open, position
+            if depth == 0:
+                return position_open, position
+    raise ValueError(f"Unmatched '(' in `{string}`")
 
 
 def _get_weights(data: pd.DataFrame, weights: str) -> pd.Series:
@@ -96,7 +94,10 @@ def _preprocess_fixest_instrumental_variable(formula: str) -> str:
     main = parts.pop(0)
     instrumental_variables = [part for part in parts if "~" in part]
     if len(instrumental_variables) > 1:
-        raise FormulaSyntaxError()
+        raise FormulaSyntaxError(
+            "Only one instrumental variable block is supported. "
+            "Use a single `[endogenous ~ instruments]` block."
+        )
     elif instrumental_variables:
         parts = [part for part in parts if part not in instrumental_variables]
         formula_old = formula
@@ -104,7 +105,7 @@ def _preprocess_fixest_instrumental_variable(formula: str) -> str:
         if parts:
             formula = f"{formula} | {' | '.join(parts)}"
         warnings.warn(
-            "The fixest-style syntax for instrumental variable regressions is deprecated and will throw an error in a future version."
+            "The fixest-style syntax for instrumental variable regressions is deprecated and will throw an error in a future version. "
             f"Instead of `{formula_old}` use `{formula}`",
             DeprecationWarning,
             stacklevel=2,
@@ -117,14 +118,14 @@ def _preprocess_fixest_multiple_dependents(formula: str) -> str:
     Y + Y2 ~ X1 + X2 will be converted to sw(Y, Y2) ~ X1 + X2.
     """
     if "~" not in formula:
-        raise FormulaSyntaxError()
+        raise FormulaSyntaxError("Formula must contain '~'.")
     dependent, rest = re.split(r"\s*~\s*", formula, maxsplit=1)
     if "+" in dependent:
         # Multiple dependent variables
         formula_old = formula
         formula = f"{_MultipleEstimationType.sw.name}({', '.join(_str_split_by_sep(dependent, separator='+'))}) ~ {rest}"
         warnings.warn(
-            "Specifiying multiple dependent variables with `+` is deprecated and will throw an error in a future version."
+            "Specifiying multiple dependent variables with `+` is deprecated and will throw an error in a future version. "
             f"Instead of `{formula_old}` use `{formula}`",
             DeprecationWarning,
             stacklevel=2,
