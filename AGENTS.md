@@ -13,8 +13,10 @@ Two rules beat everything else:
 
 For the end-to-end workflow (implement a feature, clean up a contributor PR),
 follow **`.agents/feature-pr.md`**. This file is the tool-neutral entry point:
-Claude Code, Codex, and OpenCode read `AGENTS.md` natively; if a tool in your
-setup does not, point its rules/config file here instead of duplicating content.
+Claude Code (via `CLAUDE.md`), Codex, and OpenCode read `AGENTS.md` natively;
+if a tool in your setup does not, point its rules/config file here instead of
+duplicating content. `CLAUDE.md` is a thin redirect (`@AGENTS.md`) and is
+committed to the repo.
 Edit the workflow only in `.agents/feature-pr.md`.
 
 ## Repo map
