@@ -10,7 +10,6 @@ import pytest
 
 from pyfixest.estimation.post_estimation.dfm_test import dfm_test
 
-
 # ---------------------------------------------------------------------------
 # Standalone function tests
 # ---------------------------------------------------------------------------
@@ -96,8 +95,7 @@ class TestDfmTestStandalone:
         cov_E1 = np.cov(E1, rowvar=False)
         cov_E0 = np.cov(E0, rowvar=False)
         cov_beta = (
-            Sxx1_inv @ (cov_E1 / n1) @ Sxx1_inv
-            + Sxx0_inv @ (cov_E0 / n0) @ Sxx0_inv
+            Sxx1_inv @ (cov_E1 / n1) @ Sxx1_inv + Sxx0_inv @ (cov_E0 / n0) @ Sxx0_inv
         )
 
         beta_diff = beta1 - beta0
@@ -256,11 +254,13 @@ class TestDfmTestFeols:
 
         rng = np.random.default_rng(55)
         n = 200
-        data = pd.DataFrame({
-            "Y": rng.standard_normal(n),
-            "D": rng.choice([0, 1, 2], n),
-            "X1": rng.standard_normal(n),
-        })
+        data = pd.DataFrame(
+            {
+                "Y": rng.standard_normal(n),
+                "D": rng.choice([0, 1, 2], n),
+                "X1": rng.standard_normal(n),
+            }
+        )
         fit = pf.feols("Y ~ D + X1", data=data)
         with pytest.raises(ValueError, match="binary"):
             fit.dfm_test(treatment="D")
@@ -271,10 +271,12 @@ class TestDfmTestFeols:
 
         rng = np.random.default_rng(77)
         n = 200
-        data = pd.DataFrame({
-            "Y": rng.standard_normal(n),
-            "D": rng.binomial(1, 0.5, n),
-        })
+        data = pd.DataFrame(
+            {
+                "Y": rng.standard_normal(n),
+                "D": rng.binomial(1, 0.5, n),
+            }
+        )
         fit = pf.feols("Y ~ D", data=data)
         with pytest.raises(ValueError, match="at least one covariate"):
             fit.dfm_test(treatment="D")
@@ -298,3 +300,56 @@ class TestDfmTestFeols:
         np.testing.assert_allclose(
             res_method["pvalue"], res_standalone["pvalue"], rtol=1e-10
         )
+
+    def test_iv_model_raises(self):
+        """Raises NotImplementedError for IV models."""
+        import pyfixest as pf
+
+        rng = np.random.default_rng(88)
+        n = 200
+        data = pd.DataFrame(
+            {
+                "Y": rng.standard_normal(n),
+                "D": rng.binomial(1, 0.5, n),
+                "X1": rng.standard_normal(n),
+                "Z1": rng.standard_normal(n),
+            }
+        )
+        fit = pf.feols("Y ~ X1 | D ~ Z1", data=data)
+        with pytest.raises(NotImplementedError, match="only supported for OLS"):
+            fit.dfm_test(treatment="D")
+
+    def test_poisson_model_raises(self):
+        """Raises NotImplementedError for Poisson (GLM) models."""
+        import pyfixest as pf
+
+        rng = np.random.default_rng(66)
+        n = 200
+        data = pd.DataFrame(
+            {
+                "Y": rng.poisson(5, n),
+                "D": rng.binomial(1, 0.5, n),
+                "X1": rng.standard_normal(n),
+            }
+        )
+        fit = pf.fepois("Y ~ D + X1", data=data)
+        with pytest.raises(NotImplementedError, match="only supported for OLS"):
+            fit.dfm_test(treatment="D")
+
+
+# ---------------------------------------------------------------------------
+# Additional standalone edge-case tests for full coverage
+# ---------------------------------------------------------------------------
+
+
+class TestDfmTestStandaloneEdgeCases:
+    """Additional edge cases for the standalone dfm_test function."""
+
+    def test_x_row_mismatch_raises(self):
+        """X with different number of rows than y raises ValueError."""
+        rng = np.random.default_rng(303)
+        y = rng.standard_normal(100)
+        D = rng.binomial(1, 0.5, 100)
+        X = rng.standard_normal((50, 2))  # wrong number of rows
+        with pytest.raises(ValueError, match="same number of rows"):
+            dfm_test(y=y, treatment=D, X=X)

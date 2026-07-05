@@ -1061,7 +1061,7 @@ class Feols(ResultAccessorMixin):
 
         return res
 
-    def dfm_test(self, treatment: str) -> "pd.Series":
+    def dfm_test(self, treatment: str) -> pd.Series:
         """
         Omnibus test for treatment effect heterogeneity (DFM 2019).
 
@@ -1089,7 +1089,8 @@ class Feols(ResultAccessorMixin):
         Raises
         ------
         NotImplementedError
-            If the model includes fixed effects.
+            If the model is not OLS (e.g. IV, GLM, Poisson), or if it
+            includes fixed effects.
         ValueError
             If treatment is not in the model, or is not binary 0/1.
 
@@ -1118,6 +1119,12 @@ class Feols(ResultAccessorMixin):
         fit.dfm_test(treatment="D")
         ```
         """
+        if type(self) is not Feols:
+            raise NotImplementedError(
+                "dfm_test() is only supported for OLS models (Feols). "
+                "It is not valid for IV, GLM, or quantile regression."
+            )
+
         if self._has_fixef:
             raise NotImplementedError(
                 "dfm_test() is not supported for models with fixed effects. "
@@ -1131,9 +1138,7 @@ class Feols(ResultAccessorMixin):
             )
 
         if treatment not in self._data.columns:
-            raise ValueError(
-                f"Variable '{treatment}' not found in the model's data."
-            )
+            raise ValueError(f"Variable '{treatment}' not found in the model's data.")
 
         treat_vec = self._data[treatment].to_numpy().ravel()
         unique_vals = np.unique(treat_vec)
