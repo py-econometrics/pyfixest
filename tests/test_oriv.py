@@ -1,10 +1,20 @@
 """Tests for ORIV (Obviously Related Instrumental Variables) estimation."""
 
+import os
+
 import numpy as np
 import pandas as pd
 import pytest
 
+from pyfixest.estimation.api.feols import feols
 from pyfixest.estimation.api.oriv import oriv
+
+# Tolerances for numerical validation.
+# Coefficients match to 6+ significant figures across implementations;
+# rtol=1e-4 is conservative. SEs differ slightly between Stata and pyfixest
+# due to CRV1 finite-sample degrees-of-freedom corrections, so we allow 0.5%.
+COEF_RTOL = 1e-4
+SE_RTOL = 5e-3
 
 # ============================================================================
 # Fixtures
@@ -324,6 +334,206 @@ class TestEdgeCases:
         x_coef = result.coef()["x_hat"]
         # Should still be close to 3.0
         assert abs(x_coef - 3.0) < 1.0
+
+
+# ============================================================================
+# Reference validation: dsliwka/oriv Python notebook (seed=12345)
+# ============================================================================
+
+# Reference values from https://github.com/dsliwka/oriv ORIV.ipynb
+# DGP: np.random.seed(12345), n=5000
+# ORIV run via pyfixest with CRV1 clustered on obs ID
+REF_ORIV_TRAINING_COEF = 4975.958
+REF_ORIV_TRAINING_SE = 163.283
+REF_ORIV_ABILITY_COEF = 99.588
+REF_ORIV_ABILITY_SE = 5.814
+REF_ORIV_INTERCEPT = 40029.392
+REF_ORIV_INTERCEPT_SE = 529.451
+
+# IV reference values from the same notebook
+REF_IV1_TRAINING_COEF = 5014.413
+REF_IV1_ABILITY_COEF = 97.569
+REF_IV2_TRAINING_COEF = 4937.589
+REF_IV2_ABILITY_COEF = 101.608
+
+
+class TestAgainstDsliwkaReference:
+    """Validate against dsliwka/oriv notebook (Python, seed=12345, n=5000)."""
+
+    @pytest.fixture(scope="class")
+    @classmethod
+    def reference_data(cls):
+        """Replicate the exact DGP from dsliwka's ORIV.ipynb."""
+        np.random.seed(12345)
+        n = 5000
+        df = pd.DataFrame(index=range(n))
+        df["ability"] = np.random.normal(100, 15, n)
+        df["training"] = (df.ability + np.random.normal(0, 10, n) >= 100) * 1
+        df["sales"] = (
+            40000 + df.training * 5000 + df.ability * 100 + np.random.normal(0, 4000, n)
+        )
+        df["abilityTest1"] = df.ability + np.random.normal(0, 8, n)
+        df["abilityTest2"] = df.ability + np.random.normal(0, 8, n)
+        return df
+
+    def test_oriv_training_coefficient(self, reference_data):
+        result = oriv(
+            "sales ~ training",
+            ["abilityTest1", "abilityTest2"],
+            reference_data,
+            "abilityOriv",
+        )
+        np.testing.assert_allclose(
+            result.coef()["training"], REF_ORIV_TRAINING_COEF, rtol=COEF_RTOL
+        )
+
+    def test_oriv_ability_coefficient(self, reference_data):
+        result = oriv(
+            "sales ~ training",
+            ["abilityTest1", "abilityTest2"],
+            reference_data,
+            "abilityOriv",
+        )
+        np.testing.assert_allclose(
+            result.coef()["abilityOriv"], REF_ORIV_ABILITY_COEF, rtol=COEF_RTOL
+        )
+
+    def test_oriv_intercept(self, reference_data):
+        result = oriv(
+            "sales ~ training",
+            ["abilityTest1", "abilityTest2"],
+            reference_data,
+            "abilityOriv",
+        )
+        np.testing.assert_allclose(
+            result.coef()["Intercept"], REF_ORIV_INTERCEPT, rtol=COEF_RTOL
+        )
+
+    def test_oriv_training_se(self, reference_data):
+        result = oriv(
+            "sales ~ training",
+            ["abilityTest1", "abilityTest2"],
+            reference_data,
+            "abilityOriv",
+        )
+        np.testing.assert_allclose(
+            result.se()["training"], REF_ORIV_TRAINING_SE, rtol=COEF_RTOL
+        )
+
+    def test_oriv_ability_se(self, reference_data):
+        result = oriv(
+            "sales ~ training",
+            ["abilityTest1", "abilityTest2"],
+            reference_data,
+            "abilityOriv",
+        )
+        np.testing.assert_allclose(
+            result.se()["abilityOriv"], REF_ORIV_ABILITY_SE, rtol=COEF_RTOL
+        )
+
+    def test_oriv_nobs(self, reference_data):
+        """Stacked data should have 2x original observations."""
+        result = oriv(
+            "sales ~ training",
+            ["abilityTest1", "abilityTest2"],
+            reference_data,
+            "abilityOriv",
+        )
+        assert result._N == 10000
+
+    def test_iv_components_match_reference(self, reference_data):
+        """Individual IV regressions should match the notebook values."""
+        iv1 = feols(
+            "sales ~ training | abilityTest1 ~ abilityTest2", data=reference_data
+        )
+        iv2 = feols(
+            "sales ~ training | abilityTest2 ~ abilityTest1", data=reference_data
+        )
+        np.testing.assert_allclose(
+            iv1.coef()["training"], REF_IV1_TRAINING_COEF, rtol=COEF_RTOL
+        )
+        np.testing.assert_allclose(
+            iv1.coef()["abilityTest1"], REF_IV1_ABILITY_COEF, rtol=COEF_RTOL
+        )
+        np.testing.assert_allclose(
+            iv2.coef()["training"], REF_IV2_TRAINING_COEF, rtol=COEF_RTOL
+        )
+        np.testing.assert_allclose(
+            iv2.coef()["abilityTest2"], REF_IV2_ABILITY_COEF, rtol=COEF_RTOL
+        )
+
+
+# ============================================================================
+# Reference validation: Stata output from dsliwka/oriv StataOriv.ipynb
+# ============================================================================
+
+# Stata results from ivregress 2sls on the oriv.dta dataset.
+# The Stata command: ivregress 2sls sales training (mainVar = instrument)
+#   constant*, cluster(id) nocons
+# Source: https://github.com/dsliwka/oriv/blob/main/StataOriv.ipynb
+STATA_ORIV_TRAINING_COEF = 4854.621
+STATA_ORIV_MAINVAR_COEF = 100.175
+STATA_ORIV_TRAINING_SE = 164.811
+STATA_ORIV_MAINVAR_SE = 5.964
+
+
+class TestAgainstStataResults:
+    """Validate against Stata ivregress 2sls output on oriv.dta."""
+
+    @pytest.fixture(scope="class")
+    @classmethod
+    def stata_data(cls):
+        """Load the oriv.dta file used in the Stata notebook."""
+        dta_path = os.path.join(os.path.dirname(__file__), "data", "oriv_stata.dta")
+        if not os.path.exists(dta_path):
+            pytest.skip("oriv_stata.dta not found in tests/data/")
+        return pd.read_stata(dta_path)
+
+    def test_stata_training_coefficient(self, stata_data):
+        result = oriv(
+            "sales ~ training",
+            ["abilityTest1", "abilityTest2"],
+            stata_data,
+            "mainVar",
+        )
+        np.testing.assert_allclose(
+            result.coef()["training"], STATA_ORIV_TRAINING_COEF, rtol=COEF_RTOL
+        )
+
+    def test_stata_mainvar_coefficient(self, stata_data):
+        result = oriv(
+            "sales ~ training",
+            ["abilityTest1", "abilityTest2"],
+            stata_data,
+            "mainVar",
+        )
+        np.testing.assert_allclose(
+            result.coef()["mainVar"], STATA_ORIV_MAINVAR_COEF, rtol=COEF_RTOL
+        )
+
+    def test_stata_training_se(self, stata_data):
+        """SE tolerance is wider due to CRV1 df-correction differences."""
+        result = oriv(
+            "sales ~ training",
+            ["abilityTest1", "abilityTest2"],
+            stata_data,
+            "mainVar",
+        )
+        np.testing.assert_allclose(
+            result.se()["training"], STATA_ORIV_TRAINING_SE, rtol=SE_RTOL
+        )
+
+    def test_stata_mainvar_se(self, stata_data):
+        """SE tolerance is wider due to CRV1 df-correction differences."""
+        result = oriv(
+            "sales ~ training",
+            ["abilityTest1", "abilityTest2"],
+            stata_data,
+            "mainVar",
+        )
+        np.testing.assert_allclose(
+            result.se()["mainVar"], STATA_ORIV_MAINVAR_SE, rtol=SE_RTOL
+        )
 
 
 # ============================================================================
