@@ -1,14 +1,16 @@
 """
 Tests for the DFM heterogeneity test (Ding, Feller, Miratrix 2019).
 
-Covers the standalone function and the Feols.dfm_test() method.
+Covers the standalone function and the Feols.dfm_heterogeneity_test() method.
 """
+
+import os
 
 import numpy as np
 import pandas as pd
 import pytest
 
-from pyfixest.estimation.post_estimation.dfm_test import dfm_test
+from pyfixest.estimation.post_estimation.dfm_test import dfm_heterogeneity_test
 
 # ---------------------------------------------------------------------------
 # Standalone function tests
@@ -16,7 +18,7 @@ from pyfixest.estimation.post_estimation.dfm_test import dfm_test
 
 
 class TestDfmTestStandalone:
-    """Tests for the standalone dfm_test function."""
+    """Tests for the standalone dfm_heterogeneity_test function."""
 
     def test_no_heterogeneity_high_pvalue(self):
         """Under constant treatment effect, the test should not reject."""
@@ -27,7 +29,7 @@ class TestDfmTestStandalone:
         # constant effect = 1.0, no interaction with X
         Y = 1.0 + X @ np.array([0.5, -0.3]) + D * 1.0 + rng.standard_normal(n)
 
-        result = dfm_test(y=Y, treatment=D, X=X)
+        result = dfm_heterogeneity_test(y=Y, treatment=D, X=X)
         # p-value should be large (fail to reject null)
         assert result["pvalue"] > 0.05, (
             f"Expected high p-value under null, got {result['pvalue']:.4f}"
@@ -44,7 +46,7 @@ class TestDfmTestStandalone:
         tau = 1.0 + 3.0 * X[:, 0]
         Y = 1.0 + X @ np.array([0.5, -0.3]) + D * tau + rng.standard_normal(n)
 
-        result = dfm_test(y=Y, treatment=D, X=X)
+        result = dfm_heterogeneity_test(y=Y, treatment=D, X=X)
         # p-value should be very small
         assert result["pvalue"] < 0.001, (
             f"Expected low p-value under heterogeneity, got {result['pvalue']:.4f}"
@@ -60,7 +62,7 @@ class TestDfmTestStandalone:
         # heterogeneous effect: tau(x) = 2 + 4*x
         Y = 0.5 * X.ravel() + D * (2.0 + 4.0 * X.ravel()) + rng.standard_normal(n)
 
-        result = dfm_test(y=Y, treatment=D, X=X)
+        result = dfm_heterogeneity_test(y=Y, treatment=D, X=X)
         assert result["df"] == 1
         assert result["pvalue"] < 0.001
 
@@ -103,7 +105,7 @@ class TestDfmTestStandalone:
         cov_beta1 = cov_beta[1:, 1:]
         expected_stat = float(beta1_hat @ np.linalg.solve(cov_beta1, beta1_hat))
 
-        result = dfm_test(y=Y, treatment=D, X=X)
+        result = dfm_heterogeneity_test(y=Y, treatment=D, X=X)
         np.testing.assert_allclose(result["statistic"], expected_stat, rtol=1e-10)
 
     def test_unbalanced_treatment(self):
@@ -115,7 +117,7 @@ class TestDfmTestStandalone:
         tau = 1.0 + 2.5 * X[:, 1]
         Y = X @ np.array([1.0, 0.5]) + D * tau + rng.standard_normal(n)
 
-        result = dfm_test(y=Y, treatment=D, X=X)
+        result = dfm_heterogeneity_test(y=Y, treatment=D, X=X)
         # should still detect heterogeneity
         assert result["pvalue"] < 0.01
         assert result["df"] == 2
@@ -128,7 +130,7 @@ class TestDfmTestStandalone:
         D = rng.binomial(1, 0.5, n)
         Y = X + D * (1.0 + 3.0 * X) + rng.standard_normal(n)
 
-        result = dfm_test(y=Y, treatment=D, X=X)
+        result = dfm_heterogeneity_test(y=Y, treatment=D, X=X)
         assert result["df"] == 1
         assert result["pvalue"] < 0.01
 
@@ -140,7 +142,7 @@ class TestDfmTestStandalone:
         D = np.random.choice([0, 1, 2], 100)
         Y = np.random.randn(100)
         with pytest.raises(ValueError, match="binary"):
-            dfm_test(y=Y, treatment=D, X=X)
+            dfm_heterogeneity_test(y=Y, treatment=D, X=X)
 
     def test_length_mismatch_raises(self):
         """Mismatched lengths raise ValueError."""
@@ -148,7 +150,7 @@ class TestDfmTestStandalone:
         D = np.random.binomial(1, 0.5, 50)
         Y = np.random.randn(100)
         with pytest.raises(ValueError, match="same length"):
-            dfm_test(y=Y, treatment=D, X=X)
+            dfm_heterogeneity_test(y=Y, treatment=D, X=X)
 
     def test_too_few_obs_raises(self):
         """Too few observations in one arm raises ValueError."""
@@ -157,7 +159,7 @@ class TestDfmTestStandalone:
         D = np.array([1, 1, 0, 0, 0])
         Y = np.random.randn(5)
         with pytest.raises(ValueError, match="Not enough observations"):
-            dfm_test(y=Y, treatment=D, X=X)
+            dfm_heterogeneity_test(y=Y, treatment=D, X=X)
 
 
 # ---------------------------------------------------------------------------
@@ -166,7 +168,7 @@ class TestDfmTestStandalone:
 
 
 class TestDfmTestFeols:
-    """Tests for the Feols.dfm_test() method."""
+    """Tests for the Feols.dfm_heterogeneity_test() method."""
 
     @pytest.fixture
     def heterogeneous_data(self):
@@ -196,7 +198,7 @@ class TestDfmTestFeols:
         import pyfixest as pf
 
         fit = pf.feols("Y ~ D + X1 + X2", data=heterogeneous_data)
-        res = fit.dfm_test(treatment="D")
+        res = fit.dfm_heterogeneity_test(treatment="D")
 
         assert isinstance(res, pd.Series)
         assert "statistic" in res.index
@@ -210,7 +212,7 @@ class TestDfmTestFeols:
         import pyfixest as pf
 
         fit = pf.feols("Y ~ D + X1 + X2", data=homogeneous_data)
-        res = fit.dfm_test(treatment="D")
+        res = fit.dfm_heterogeneity_test(treatment="D")
 
         assert res["pvalue"] > 0.05
 
@@ -219,7 +221,7 @@ class TestDfmTestFeols:
         import pyfixest as pf
 
         fit = pf.feols("Y ~ D + X1 + X2", data=heterogeneous_data)
-        fit.dfm_test(treatment="D")
+        fit.dfm_heterogeneity_test(treatment="D")
 
         assert hasattr(fit, "_dfm_statistic")
         assert hasattr(fit, "_dfm_pvalue")
@@ -238,7 +240,7 @@ class TestDfmTestFeols:
         )
         fit = pf.feols("Y ~ D + X1 | group", data=heterogeneous_data)
         with pytest.raises(NotImplementedError, match="fixed effects"):
-            fit.dfm_test(treatment="D")
+            fit.dfm_heterogeneity_test(treatment="D")
 
     def test_missing_treatment_raises(self, heterogeneous_data):
         """Raises ValueError if treatment variable not in model."""
@@ -246,7 +248,7 @@ class TestDfmTestFeols:
 
         fit = pf.feols("Y ~ X1 + X2", data=heterogeneous_data)
         with pytest.raises(ValueError, match="not found"):
-            fit.dfm_test(treatment="D")
+            fit.dfm_heterogeneity_test(treatment="D")
 
     def test_non_binary_treatment_raises(self):
         """Raises ValueError if treatment is not 0/1."""
@@ -263,7 +265,7 @@ class TestDfmTestFeols:
         )
         fit = pf.feols("Y ~ D + X1", data=data)
         with pytest.raises(ValueError, match="binary"):
-            fit.dfm_test(treatment="D")
+            fit.dfm_heterogeneity_test(treatment="D")
 
     def test_no_covariates_raises(self):
         """Raises ValueError if model has no covariates besides treatment."""
@@ -279,20 +281,20 @@ class TestDfmTestFeols:
         )
         fit = pf.feols("Y ~ D", data=data)
         with pytest.raises(ValueError, match="at least one covariate"):
-            fit.dfm_test(treatment="D")
+            fit.dfm_heterogeneity_test(treatment="D")
 
     def test_consistent_with_standalone(self, heterogeneous_data):
         """Feols method gives same result as calling standalone directly."""
         import pyfixest as pf
 
         fit = pf.feols("Y ~ D + X1 + X2", data=heterogeneous_data)
-        res_method = fit.dfm_test(treatment="D")
+        res_method = fit.dfm_heterogeneity_test(treatment="D")
 
         # Call standalone directly with same data
         y = heterogeneous_data["Y"].to_numpy()
         D = heterogeneous_data["D"].to_numpy()
         X = heterogeneous_data[["X1", "X2"]].to_numpy()
-        res_standalone = dfm_test(y=y, treatment=D, X=X)
+        res_standalone = dfm_heterogeneity_test(y=y, treatment=D, X=X)
 
         np.testing.assert_allclose(
             res_method["statistic"], res_standalone["statistic"], rtol=1e-10
@@ -317,7 +319,7 @@ class TestDfmTestFeols:
         )
         fit = pf.feols("Y ~ X1 | D ~ Z1", data=data)
         with pytest.raises(NotImplementedError, match="only supported for OLS"):
-            fit.dfm_test(treatment="D")
+            fit.dfm_heterogeneity_test(treatment="D")
 
     def test_poisson_model_raises(self):
         """Raises NotImplementedError for Poisson (GLM) models."""
@@ -334,7 +336,7 @@ class TestDfmTestFeols:
         )
         fit = pf.fepois("Y ~ D + X1", data=data)
         with pytest.raises(NotImplementedError, match="only supported for OLS"):
-            fit.dfm_test(treatment="D")
+            fit.dfm_heterogeneity_test(treatment="D")
 
 
 # ---------------------------------------------------------------------------
@@ -343,7 +345,7 @@ class TestDfmTestFeols:
 
 
 class TestDfmTestStandaloneEdgeCases:
-    """Additional edge cases for the standalone dfm_test function."""
+    """Additional edge cases for the standalone dfm_heterogeneity_test function."""
 
     def test_x_row_mismatch_raises(self):
         """X with different number of rows than y raises ValueError."""
@@ -352,4 +354,69 @@ class TestDfmTestStandaloneEdgeCases:
         D = rng.binomial(1, 0.5, 100)
         X = rng.standard_normal((50, 2))  # wrong number of rows
         with pytest.raises(ValueError, match="same number of rows"):
-            dfm_test(y=y, treatment=D, X=X)
+            dfm_heterogeneity_test(y=y, treatment=D, X=X)
+
+
+# ---------------------------------------------------------------------------
+# Tests validated against the R reference implementation
+# (Netflix-Skunkworks/causaltransportr, MIT license)
+# Data generated in R with set.seed() and saved to CSV for reproducibility.
+# ---------------------------------------------------------------------------
+
+DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
+
+
+class TestAgainstRReference:
+    """
+    Validate against the Netflix-Skunkworks/causaltransportr R implementation.
+
+    Reference: https://github.com/Netflix-Skunkworks/causaltransportr/blob/main/R/dfmTest.R
+    Data generated in R (set.seed(42) for tests 1-3, set.seed(123) for test 4).
+    Hard-coded expected values obtained by running the R function on the same data.
+    """
+
+    def test_no_heterogeneity(self):
+        """R Test 1: y = 2 + 3*a + 0.5*x1 + 0.3*x2 + eps (constant effect)."""
+        df = pd.read_csv(os.path.join(DATA_DIR, "dfm_test1.csv"))
+        result = dfm_heterogeneity_test(
+            y=df["y"].values, treatment=df["a"].values, X=df[["x1", "x2"]].values
+        )
+        # R reference: chi2 = 1.0338927514, pvalue = 0.5963387650, df = 2
+        assert result["df"] == 2
+        np.testing.assert_allclose(result["statistic"], 1.0338927514, rtol=1e-6)
+        np.testing.assert_allclose(result["pvalue"], 0.5963387650, rtol=1e-4)
+
+    def test_strong_heterogeneity(self):
+        """R Test 2: y = 2 + 3*a + 2*a*x1 + 0.5*x1 + 0.3*x2 + eps (effect = 3+2*x1)."""
+        df = pd.read_csv(os.path.join(DATA_DIR, "dfm_test2.csv"))
+        result = dfm_heterogeneity_test(
+            y=df["y"].values, treatment=df["a"].values, X=df[["x1", "x2"]].values
+        )
+        # R reference: chi2 = 991.8428330324, pvalue ≈ 0, df = 2
+        assert result["df"] == 2
+        np.testing.assert_allclose(result["statistic"], 991.8428330324, rtol=1e-6)
+        assert result["pvalue"] < 1e-100
+
+    def test_single_covariate(self):
+        """R Test 3: y = 1 + 2*a + 1.5*a*x1 + x1 + eps (single covariate)."""
+        df = pd.read_csv(os.path.join(DATA_DIR, "dfm_test3.csv"))
+        result = dfm_heterogeneity_test(
+            y=df["y"].values, treatment=df["a"].values, X=df[["x1"]].values
+        )
+        # R reference: chi2 = 209.1776583599, pvalue ≈ 2.08e-47, df = 1
+        assert result["df"] == 1
+        np.testing.assert_allclose(result["statistic"], 209.1776583599, rtol=1e-6)
+        assert result["pvalue"] < 1e-40
+
+    def test_three_covariates(self):
+        """R Test 4: y = 1 + 2*a + 0.8*a*x1 + 0.5*a*x2 + ... (three covariates)."""
+        df = pd.read_csv(os.path.join(DATA_DIR, "dfm_test4.csv"))
+        result = dfm_heterogeneity_test(
+            y=df["y"].values,
+            treatment=df["a"].values,
+            X=df[["x1", "x2", "x3"]].values,
+        )
+        # R reference: chi2 = 478.2014919196, pvalue ≈ 2.53e-103, df = 3
+        assert result["df"] == 3
+        np.testing.assert_allclose(result["statistic"], 478.2014919196, rtol=1e-6)
+        assert result["pvalue"] < 1e-90

@@ -1061,7 +1061,7 @@ class Feols(ResultAccessorMixin):
 
         return res
 
-    def dfm_test(self, treatment: str) -> pd.Series:
+    def dfm_heterogeneity_test(self, treatment: str) -> pd.Series:
         """
         Omnibus test for treatment effect heterogeneity (DFM 2019).
 
@@ -1116,18 +1116,18 @@ class Feols(ResultAccessorMixin):
         import pandas as pd
         data = pd.DataFrame({"Y": Y, "D": D, "X1": X1})
         fit = pf.feols("Y ~ D + X1", data=data)
-        fit.dfm_test(treatment="D")
+        fit.dfm_heterogeneity_test(treatment="D")
         ```
         """
         if type(self) is not Feols:
             raise NotImplementedError(
-                "dfm_test() is only supported for OLS models (Feols). "
+                "dfm_heterogeneity_test() is only supported for OLS models (Feols). "
                 "It is not valid for IV, GLM, or quantile regression."
             )
 
         if self._has_fixef:
             raise NotImplementedError(
-                "dfm_test() is not supported for models with fixed effects. "
+                "dfm_heterogeneity_test() is not supported for models with fixed effects. "
                 "Fit a model without fixed effects to use this test."
             )
 
@@ -1152,7 +1152,7 @@ class Feols(ResultAccessorMixin):
         y = self._data[self._depvar].to_numpy().ravel()
 
         # All covariates except the treatment. The intercept is added
-        # inside the standalone dfm_test function.
+        # inside the standalone dfm_heterogeneity_test function.
         covar_names = [c for c in self._coefnames if c not in (treatment, "Intercept")]
         if not covar_names:
             raise ValueError(
@@ -1163,10 +1163,10 @@ class Feols(ResultAccessorMixin):
         X_covars = self._data[covar_names].to_numpy()
 
         from pyfixest.estimation.post_estimation.dfm_test import (
-            dfm_test as _dfm_test,
+            dfm_heterogeneity_test as _dfm_heterogeneity_test,
         )
 
-        result = _dfm_test(y=y, treatment=treat_vec, X=X_covars)
+        result = _dfm_heterogeneity_test(y=y, treatment=treat_vec, X=X_covars)
 
         # Store full results for users who want to inspect beta_hat etc.
         self._dfm_statistic = result["statistic"]

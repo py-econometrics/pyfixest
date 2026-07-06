@@ -16,7 +16,7 @@ import numpy as np
 from scipy.stats import chi2
 
 
-def dfm_test(
+def dfm_heterogeneity_test(
     y: np.ndarray,
     treatment: np.ndarray,
     X: np.ndarray,
