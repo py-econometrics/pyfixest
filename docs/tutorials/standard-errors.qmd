@@ -1,6 +1,6 @@
 ---
 title: "Standard Errors & Inference"
-description: "HC-robust, cluster-robust, wild bootstrap, randomization inference, and the causal cluster variance estimator."
+description: "HC-robust, cluster-robust, wild bootstrap, weighting bootstrap, randomization inference, and the causal cluster variance estimator."
 categories: [Core Estimation]
 format:
   html:
@@ -180,16 +180,54 @@ Interpretation target:
 - If `CRV1` reject rate is above nominal size (e.g. > 0.05), inference is too liberal.
 - If `WCB` is closer to nominal size, bootstrap improves finite-sample reliability.
 
-## 9. Concluding Inference Workflow
+## 9. Weighting Bootstrap
+
+The wild bootstrap perturbs residuals. The **weighting bootstrap** instead
+reweights observations directly: each iteration draws a new weight vector,
+re-fits the model under those weights, and collects the resulting
+coefficients. Standard errors and confidence intervals come from the
+resulting bootstrap distribution.
+
+Two weight-drawing schemes are available:
+
+- `method="bayesian"` — weights drawn from a Dirichlet distribution
+  (the Bayesian bootstrap of Rubin, 1981). Continuous weights, no ties.
+- `method="multinomial"` — weights drawn as integer counts from a
+  Multinomial distribution. Equivalent to the classical pairs/XY bootstrap
+  (resampling rows with replacement).
+
+```python
+wb_res = fit_crv1.weightingboottest(reps=999, method="bayesian", cluster="group_id")
+wb_res
+```
+
+When a `cluster` is set, weights are drawn once per cluster and broadcast to
+every observation in that cluster, so resampling respects the dependence
+structure. Unlike the wild cluster bootstrap, only one-way clustering is
+supported; a model with multiway clustering requires passing a single
+`cluster` column explicitly.
+
+The weighting bootstrap also supports IV (2SLS) and GLM (Poisson, logit,
+probit) models, where the wild cluster bootstrap does not:
+
+| | Wild cluster bootstrap | Weighting bootstrap |
+|---|---|---|
+| Perturbs | residuals | observation weights |
+| IV (2SLS) | not supported | supported |
+| WLS | not supported | supported |
+| Multiway clustering | not supported | not supported |
+| Best suited for | few/uneven clusters, OLS | IV, GLM, or as a wild-bootstrap alternative |
+
+## 10. Concluding Inference Workflow
 
 Suggested workflow:
 
 1. Start from design and dependence structure.
 2. Use robust/clustered vcov aligned with that structure.
-3. If clusters are few or very uneven, use wild cluster bootstrap.
+3. If clusters are few or very uneven, use wild cluster bootstrap (OLS) or the weighting bootstrap (IV, GLM, or as an alternative).
 4. If assignment is randomized, add randomization inference as a design-based check.
 
-## 10. Multiple Testing
+## 11. Multiple Testing
 
 When testing many hypotheses, single-test p-values are not enough.
 Multiple-testing corrections and workflow guidance are covered in a dedicated
