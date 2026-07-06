@@ -15,7 +15,7 @@ from scipy.stats import chi2, f, t
 
 from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner, MapDemeaner
-from pyfixest.errors import VcovTypeNotSupportedError
+from pyfixest.errors import NonConvergenceError, VcovTypeNotSupportedError
 from pyfixest.estimation.api.utils import _ALL_SAMPLE, _AllSampleSentinel
 from pyfixest.estimation.formula import model_matrix as model_matrix_fixest
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
@@ -29,6 +29,7 @@ from pyfixest.estimation.internals.literals import (
     SolverOptions,
     _validate_literal_argument,
 )
+from pyfixest.estimation.internals.solvers import solve_ols
 from pyfixest.estimation.internals.vcov_ import (
     vcov_crv1,
     vcov_crv3_fast,
@@ -415,9 +416,17 @@ class Feols(ResultAccessorMixin):
         self._Y = model_matrix.dependent
         self._Y_untransformed = model_matrix.dependent.copy()
         self._X = model_matrix.independent
+        self._X_untransformed_df = (
+            model_matrix.independent.copy()
+        )  # pre-demeaning DataFrame, for bootstrap
         self._fe = model_matrix.fixed_effects
         self._endogvar = model_matrix.endogenous
         self._Z = model_matrix.instruments
+        self._Z_untransformed_df = (
+            model_matrix.instruments.copy()
+            if model_matrix.instruments is not None
+            else None
+        )  # pre-demeaning instrument DataFrame; used by Feiv bootstrap
         self._weights_df = model_matrix.weights
         self._offset_df = model_matrix.offset
         self._na_index = model_matrix.na_index
@@ -928,6 +937,8 @@ class Feols(ResultAccessorMixin):
                 "_Y_hat_link",
                 "_Y_hat_response",
                 "_Y_untransformed",
+                "_X_untransformed_df",
+                "_Z_untransformed_df",
             ]
 
         for attr in attributes:
@@ -1061,6 +1072,33 @@ class Feols(ResultAccessorMixin):
 
         return res
 
+    def _resolve_cluster_var(self, cluster: str | None) -> str | None:
+        """
+        Resolve the cluster column to use for a resampling-based bootstrap.
+
+        An explicit `cluster` argument takes precedence; otherwise falls back
+        to the model's own `clustervar` set at estimation time. Returns None
+        for the heteroskedasticity-robust case (no cluster variable at all).
+        Shared by `wildboottest` and `weightingboottest`, neither of which
+        supports multiway clustering.
+        """
+        if cluster is not None:
+            cluster_var = cluster
+        elif self._clustervar:
+            if len(self._clustervar) > 1:
+                raise NotImplementedError(
+                    "Multiway clustering is not supported for this bootstrap "
+                    "method; pass a single `cluster` column explicitly."
+                )
+            cluster_var = self._clustervar[0]
+        else:
+            return None
+
+        if cluster_var not in self._data.columns:
+            raise ValueError(f"Cluster variable '{cluster_var}' not found in the data.")
+
+        return cluster_var
+
     def wildboottest(
         self,
         reps: int,
@@ -1167,30 +1205,8 @@ class Feols(ResultAccessorMixin):
                     "Wild cluster bootstrap is not supported for WLS estimation."
                 )
 
-        cluster_list = []
-
-        if cluster is not None and isinstance(cluster, str):
-            cluster_list = [cluster]
-        if cluster is not None and isinstance(cluster, list):
-            cluster_list = cluster
-
-        if cluster is None and self._clustervar is not None:
-            if isinstance(self._clustervar, str):
-                cluster_list = [self._clustervar]
-            else:
-                cluster_list = self._clustervar
-
-        run_heteroskedastic = not cluster_list
-
-        if not run_heteroskedastic and not len(cluster_list) == 1:
-            raise NotImplementedError(
-                "Multiway clustering is currently not supported with the wild cluster bootstrap."
-            )
-
-        if not run_heteroskedastic and cluster_list[0] not in self._data.columns:
-            raise ValueError(
-                f"Cluster variable {cluster_list[0]} not found in the data."
-            )
+        cluster_var = self._resolve_cluster_var(cluster)
+        run_heteroskedastic = cluster_var is None
 
         try:
             from wildboottest.wildboottest import WildboottestCL, WildboottestHC
@@ -1229,9 +1245,9 @@ class Feols(ResultAccessorMixin):
             full_enumeration_warn = False
 
         else:
-            inference = f"CRV({cluster_list[0]})"
+            inference = f"CRV({cluster_var})"
 
-            cluster_array = self._data[cluster_list[0]].to_numpy().flatten()
+            cluster_array = self._data[cluster_var].to_numpy().flatten()
 
             boot = WildboottestCL(
                 X=_X,
@@ -1282,6 +1298,244 @@ class Feols(ResultAccessorMixin):
             return res_df, boot.t_boot
         else:
             return res_df
+
+    def weightingboottest(
+        self,
+        reps: int,
+        method: Literal["bayesian", "multinomial"] = "bayesian",
+        concentration: float = 1.0,
+        cluster: str | None = None,
+        ci_level: float = 0.95,
+        seed: int | None = None,
+        return_draws: bool = False,
+    ) -> pd.DataFrame | tuple[pd.DataFrame, np.ndarray]:
+        """
+        Run a weighting bootstrap (Bayesian or Multinomial) for inference on
+        all regression coefficients.
+
+        Unlike the wild bootstrap, which perturbs residuals, the weighting
+        bootstrap reweights observations. Each iteration draws a new weight
+        vector, re-demeans (if fixed effects are present) with those weights,
+        fits a weighted OLS, and collects the coefficient estimates. Standard
+        errors and confidence intervals are derived directly from the bootstrap
+        distribution.
+
+        When a cluster variable is provided (or set via vcov at estimation
+        time), weights are drawn once per unit and broadcast to all observations
+        of that unit, correctly handling unbalanced panels.
+
+        Parameters
+        ----------
+        reps : int
+            Number of bootstrap iterations.
+        method : str, optional
+            Either ``"bayesian"`` (Dirichlet/Gamma weights) or
+            ``"multinomial"`` (integer counts). Defaults to ``"bayesian"``.
+        concentration : float, optional
+            Concentration parameter for the Dirichlet distribution.
+            Only used when ``method="bayesian"``. ``concentration=1`` is the
+            standard Bayesian bootstrap of Rubin (1981); larger values shrink
+            weights toward uniform (less variable draws). Defaults to 1.0.
+        cluster : str or None, optional
+            Column name in the data used to define sampling units for
+            panel-aware weighting. If None, falls back to the model's
+            ``clustervar`` if one was set at estimation time, otherwise
+            draws weights independently per observation.
+        ci_level : float, optional
+            Confidence level for percentile intervals. Defaults to 0.95.
+        seed : int or None, optional
+            Random seed for reproducibility. Defaults to None.
+        return_draws : bool, optional
+            If True, also returns the full ``(reps x k)`` matrix of bootstrap
+            coefficient draws. Defaults to False.
+
+        Returns
+        -------
+        pd.DataFrame
+            Indexed by coefficient name with columns:
+            ``Estimate``, ``Bootstrap SE``, ``CI lower``, ``CI upper``,
+            ``p-value``, ``method``.
+        tuple[pd.DataFrame, np.ndarray]
+            If ``return_draws=True``, returns a tuple of the DataFrame and
+            the ``(reps x k)`` bootstrap draws matrix.
+
+        Examples
+        --------
+        ```{python}
+        import pyfixest as pf
+
+        data = pf.get_data()
+        fit = pf.feols("Y ~ X1 + X2 | f1", data)
+
+        fit.weightingboottest(reps=500, method="bayesian", concentration=1.0, seed=42)
+        fit.weightingboottest(reps=500, method="multinomial", seed=42)
+        ```
+        """
+        if method not in ("bayesian", "multinomial"):
+            raise ValueError(
+                f"method must be 'bayesian' or 'multinomial', got '{method}'."
+            )
+        if method == "bayesian" and concentration <= 0:
+            raise ValueError(f"concentration must be positive, got {concentration}.")
+        if self._offset is not None:
+            raise NotImplementedError(
+                "weightingboottest is not supported for models fit with an offset."
+            )
+
+        rng = np.random.default_rng(seed)
+
+        cluster_var = self._resolve_cluster_var(cluster)
+
+        # --- unit-to-observation mapping for panel-aware weighting ---
+        # np.unique returns sorted unique values and inverse maps each
+        # observation back to its unit index — handles unbalanced panels
+        # because mapping is by value, not by position.
+        if cluster_var is not None:
+            cluster_arr = self._data[cluster_var].to_numpy()
+            _, inverse = np.unique(cluster_arr, return_inverse=True)
+            n_units = int(inverse.max()) + 1
+        else:
+            N_obs = len(self._Y)
+            n_units = N_obs
+            inverse = np.arange(N_obs)
+
+        # --- original estimate on already-fitted arrays ---
+        # self._X and self._Y are post-demean, post-wls-transform numpy arrays.
+        # self._coefnames tracks the coefficient names after collinearity drop.
+        beta_hat = self._beta_hat
+        coefnames = self._coefnames
+
+        # --- original analytic weights (ones if no WLS) ---
+        w_original = self._weights.flatten()  # shape (N_obs,)
+
+        # --- bootstrap loop ---
+        k = len(beta_hat)
+        beta_boots = np.empty((reps, k))
+
+        n_redraws = 0
+        attempt = 0
+        max_attempts = 10 * reps
+        for b in range(reps):
+            while True:
+                attempt += 1
+                if attempt > max_attempts:
+                    raise NonConvergenceError(
+                        f"weightingboottest: exceeded {max_attempts} attempts "
+                        f"collecting {reps} replicates ({n_redraws} failed). The "
+                        "model may be poorly identified on resampled data."
+                    )
+
+                # draw unit-level weights
+                if method == "multinomial":
+                    w_unit = rng.multinomial(
+                        n_units, np.ones(n_units) / n_units
+                    ).astype(float)
+                else:  # bayesian
+                    w_unit = rng.dirichlet(np.full(n_units, concentration)) * n_units
+
+                # broadcast to observations — handles unbalanced panels correctly
+                w_boot = w_unit[inverse]
+
+                # combine with original analytic weights if WLS
+                w_combined = w_original * w_boot
+
+                # With multinomial draws, whole FE groups can get zero total weight,
+                # causing division-by-zero in the demeaning kernel.  Filter them out;
+                # zero-weight rows contribute nothing to the WLS objective anyway.
+                nz = w_combined > 0
+                try:
+                    beta_boots[b] = self._bootstrap_one_rep(nz, w_combined)
+                    break
+                except (NonConvergenceError, ValueError):
+                    # a degenerate resample (non-convergent IRLS, or a whole FE
+                    # group zeroed out during demeaning) is redrawn rather than
+                    # silently kept — keeping it would bias the bootstrap
+                    # distribution without any signal to the user.
+                    n_redraws += 1
+                    continue
+
+        if n_redraws:
+            warnings.warn(
+                f"{n_redraws} of {attempt} weighting-bootstrap replicates failed "
+                "to converge or hit a degenerate demeaning step (e.g. an entire "
+                "fixed-effect group zeroed out by the resample) and were redrawn."
+            )
+
+        # --- inference from bootstrap distribution ---
+        boot_se = beta_boots.std(axis=0, ddof=1)
+        q_lo = (1 - ci_level) / 2
+        q_hi = 1 - q_lo
+        ci_lower = np.quantile(beta_boots, q_lo, axis=0)
+        ci_upper = np.quantile(beta_boots, q_hi, axis=0)
+        # symmetric p-value: fraction of draws at least as extreme as observed
+        p_values = np.mean(np.abs(beta_boots - beta_hat) >= np.abs(beta_hat), axis=0)
+
+        res_df = pd.DataFrame(
+            {
+                "Estimate": beta_hat,
+                "Bootstrap SE": boot_se,
+                f"CI {int(q_lo * 100)}%": ci_lower,
+                f"CI {int(q_hi * 100)}%": ci_upper,
+                "p-value": p_values,
+                "method": method,
+            },
+            index=coefnames,
+        )
+
+        if return_draws:
+            return res_df, beta_boots
+        return res_df
+
+    def _bootstrap_one_rep(self, nz: np.ndarray, w_combined: np.ndarray) -> np.ndarray:
+        """
+        Run one OLS/WLS bootstrap iteration.
+
+        Subclasses override this method to implement model-specific fitting
+        (e.g. 2SLS for Feiv, IRLS for Fepois/Feglm). The shared weight-drawing
+        and inference logic stays in ``weightingboottest()``.
+
+        Parameters
+        ----------
+        nz : np.ndarray
+            Boolean mask of observations with positive combined weight.
+        w_combined : np.ndarray
+            Combined weights (bootstrap * original analytic weights), length N.
+
+        Returns
+        -------
+        np.ndarray
+            Bootstrap coefficient vector of shape ``(k,)``.
+        """
+        w_f = w_combined[nz]
+        Y_f = self._Y_untransformed.iloc[nz].reset_index(drop=True)
+        X_f = (
+            self._X_untransformed_df[list(self._coefnames)]
+            .iloc[nz]
+            .reset_index(drop=True)
+        )
+        fe_f = (
+            self._fe.iloc[nz].reset_index(drop=True) if self._fe is not None else None
+        )
+
+        if self._has_fixef:
+            Yd, Xd, _ = DemeanCache().demean_yx(
+                Y=Y_f,  # type: ignore[arg-type]
+                X=X_f,
+                fe=fe_f,
+                weights=w_f,
+                na_index=self._na_index,
+                demeaner=self._demeaner,
+            )
+            _Y_b = Yd.to_numpy().flatten()
+            _X_b = Xd.to_numpy()
+        else:
+            _Y_b = Y_f.to_numpy().flatten()
+            _X_b = X_f.to_numpy()
+
+        sqrt_w = np.sqrt(w_f)
+        Xw = _X_b * sqrt_w[:, None]
+        Yw = _Y_b * sqrt_w
+        return solve_ols(Xw.T @ Xw, Xw.T @ Yw, self._solver)
 
     def ccv(
         self,

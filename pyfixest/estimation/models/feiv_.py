@@ -11,7 +11,9 @@ from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
+from pyfixest.estimation.internals.demean_ import DemeanCache
 from pyfixest.estimation.internals.fit_ import fit_iv
+from pyfixest.estimation.internals.solvers import solve_ols
 from pyfixest.estimation.models.feols_ import Feols
 
 
@@ -251,6 +253,69 @@ class Feiv(Feols):
         self._get_predictors()
         self._scores = fit.scores
         self._hessian = fit.hessian
+
+    def _bootstrap_one_rep(self, nz: np.ndarray, w_combined: np.ndarray) -> np.ndarray:
+        """
+        Run one 2SLS bootstrap iteration.
+
+        Demeans Y, X (exog + endog), and Z (instruments) with the bootstrap
+        weights, applies WLS scaling, then solves the 2SLS formula.
+        """
+        w_f = w_combined[nz]
+        Y_f = self._Y_untransformed.iloc[nz].reset_index(drop=True)
+        X_f = (
+            self._X_untransformed_df[list(self._coefnames)]
+            .iloc[nz]
+            .reset_index(drop=True)
+        )
+        Z_f = (
+            self._Z_untransformed_df[list(self._coefnames_z)]
+            .iloc[nz]
+            .reset_index(drop=True)
+        )
+        fe_f = (
+            self._fe.iloc[nz].reset_index(drop=True) if self._fe is not None else None
+        )
+
+        if self._has_fixef:
+            Yd, Xd, _ = DemeanCache().demean_yx(
+                Y=Y_f,  # type: ignore[arg-type]
+                X=X_f,
+                fe=fe_f,
+                weights=w_f,
+                na_index=self._na_index,
+                demeaner=self._demeaner,
+            )
+            # demean Z — pass Y_f as a placeholder Y (only Z columns matter)
+            _, Zd, _ = DemeanCache().demean_yx(
+                Y=Y_f,  # type: ignore[arg-type]
+                X=Z_f,
+                fe=fe_f,
+                weights=w_f,
+                na_index=self._na_index,
+                demeaner=self._demeaner,
+            )
+            _Y_b = Yd.to_numpy().flatten()
+            _X_b = Xd.to_numpy()
+            _Z_b = Zd.to_numpy()
+        else:
+            _Y_b = Y_f.to_numpy().flatten()
+            _X_b = X_f.to_numpy()
+            _Z_b = Z_f.to_numpy()
+
+        # WLS transform: scale by sqrt(w)
+        sqrt_w = np.sqrt(w_f)
+        Xw = _X_b * sqrt_w[:, None]
+        Yw = _Y_b * sqrt_w
+        Zw = _Z_b * sqrt_w[:, None]
+
+        # 2SLS formula: β = (X'Z (Z'Z)⁻¹ Z'X)⁻¹ (X'Z (Z'Z)⁻¹ Z'Y)
+        tZX = Zw.T @ Xw
+        tXZ = Xw.T @ Zw
+        tZy = Zw.T @ Yw
+        tZZinv = np.linalg.inv(Zw.T @ Zw)
+        H = tXZ @ tZZinv
+        return solve_ols(H @ tZX, H @ tZy, self._solver)
 
     def first_stage(self) -> None:
         """Implement First stage regression."""

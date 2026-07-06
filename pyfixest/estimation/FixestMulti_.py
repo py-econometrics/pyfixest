@@ -3,7 +3,7 @@ from __future__ import annotations
 import functools
 from collections.abc import Mapping
 from importlib import import_module
-from typing import Any
+from typing import Any, Literal, cast
 
 import pandas as pd
 
@@ -245,6 +245,68 @@ class FixestMulti(TidyColumnAccessors):
             res_df = pd.concat([res_df, pd.DataFrame(result_dict)], axis=1)
 
         res_df = res_df.T.set_index("fml")
+
+        return res_df
+
+    def weightingboottest(
+        self,
+        reps: int,
+        method: Literal["bayesian", "multinomial"] = "bayesian",
+        concentration: float = 1.0,
+        cluster: str | None = None,
+        ci_level: float = 0.95,
+        seed: int | None = None,
+    ) -> pd.DataFrame:
+        """
+        Run a weighting bootstrap for all regressions in the Fixest object.
+
+        Parameters
+        ----------
+        reps : int
+            Number of bootstrap iterations.
+        method : str, optional
+            Either ``"bayesian"`` (Dirichlet/Gamma weights) or
+            ``"multinomial"`` (integer counts). Defaults to ``"bayesian"``.
+        concentration : float, optional
+            Concentration parameter for the Dirichlet distribution.
+            Only used when ``method="bayesian"``. Defaults to 1.0.
+        cluster : str or None, optional
+            Column name in the data used to define sampling units for
+            panel-aware weighting. If None, falls back to each model's
+            ``clustervar`` if one was set at estimation time, otherwise
+            draws weights independently per observation.
+        ci_level : float, optional
+            Confidence level for percentile intervals. Defaults to 0.95.
+        seed : int or None, optional
+            Random seed for reproducibility. Defaults to None.
+
+        Returns
+        -------
+        pandas.DataFrame
+            A pd.DataFrame indexed by ``fml`` and coefficient name, with
+            columns ``Estimate``, ``Bootstrap SE``, ``CI lower``, ``CI upper``,
+            ``p-value``, ``method``. The index indicates which model each row
+            derives from.
+        """
+        res = []
+        for x in list(self.all_fitted_models.keys()):
+            fxst = self.all_fitted_models[x]
+            df = cast(
+                pd.DataFrame,
+                fxst.weightingboottest(
+                    reps=reps,
+                    method=method,
+                    concentration=concentration,
+                    cluster=cluster,
+                    ci_level=ci_level,
+                    seed=seed,
+                ),
+            ).reset_index(names="Coefficient")
+            df["fml"] = x
+            res.append(df)
+
+        res_df = pd.concat(res, axis=0)
+        res_df.set_index(["fml", "Coefficient"], inplace=True)
 
         return res_df
 

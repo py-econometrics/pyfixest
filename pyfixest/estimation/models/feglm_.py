@@ -9,6 +9,7 @@ import pandas as pd
 from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
+from pyfixest.estimation.internals.demean_ import DemeanCache
 from pyfixest.estimation.internals.families import GlmFamily
 from pyfixest.estimation.internals.fit_glm_ import fit_glm_irls
 from pyfixest.estimation.internals.separation import check_for_separation
@@ -142,6 +143,10 @@ class Feglm(Feols):
             self._k_fe = self._fe.nunique(axis=0) if self._has_fixef else None
             self._n_fe = np.sum(self._k_fe > 1) if self._has_fixef else 0
 
+        # save DataFrame versions before to_array() converts them to numpy
+        self._fe_df = self._fe.copy() if self._fe is not None else None
+        self._user_weights = self._weights.flatten().copy()
+
     def to_array(self):
         "Turn estimation DataFrames to np arrays."
         self._Y, self._X, self._Z = (
@@ -228,6 +233,66 @@ class Feglm(Feols):
         self.convergence = fit.converged
         if self.convergence:
             self._convergence = True
+
+    def _bootstrap_one_rep(self, nz: np.ndarray, w_combined: np.ndarray) -> np.ndarray:
+        """
+        Run one GLM bootstrap iteration by delegating to the shared IRLS kernel.
+
+        Subsets Y, X, and fe to the bootstrap sample, then re-fits via
+        `fit_glm_irls` using combined weights (bootstrap draw * user weights).
+        Uses a fresh, throwaway `DemeanCache` per replicate: `self._demean_cache`
+        is keyed by `self._na_index`, which is identical across every bootstrap
+        replicate of this model, so reusing it would silently return the
+        original full-sample demeaned data instead of re-demeaning this
+        reweighted subsample.
+        """
+        w_f = w_combined[nz]
+
+        Y_b = self._Y_untransformed.iloc[nz].reset_index(drop=True).to_numpy().flatten()
+        X_b = (
+            self._X_untransformed_df[list(self._coefnames)]
+            .iloc[nz]
+            .reset_index(drop=True)
+            .to_numpy()
+        )
+        fe_b = (
+            self._fe_df.iloc[nz].reset_index(drop=True).to_numpy()
+            if self._fe_df is not None
+            else None
+        )
+        if fe_b is not None and fe_b.ndim == 1:
+            fe_b = fe_b.reshape(-1, 1)
+
+        rep_cache = DemeanCache()
+
+        def _demean(
+            v: np.ndarray, X: np.ndarray, weights: np.ndarray, tol: float
+        ) -> tuple[np.ndarray, np.ndarray]:
+            if fe_b is None:
+                return v, X
+            vX_tilde = rep_cache.demean_array(
+                x=np.c_[v, X],
+                flist=fe_b,
+                weights=weights,
+                na_index=self._na_index,
+                demeaner=self._demeaner.with_tol(tol),
+            )
+            return vX_tilde[:, 0], vX_tilde[:, 1:]
+
+        fit = fit_glm_irls(
+            X=X_b,
+            Y=Y_b,
+            family=self._family,
+            demean=_demean,
+            coefnames=list(self._coefnames),
+            collin_tol=self._collin_tol,
+            accelerate=False,
+            weights=w_f,
+            solver=self._solver,
+            maxiter=self.maxiter,
+            tol=self.tol,
+        )
+        return fit.beta
 
     def _vcov_iid(self):
         return vcov_iid_glm(bread=self._bread)
