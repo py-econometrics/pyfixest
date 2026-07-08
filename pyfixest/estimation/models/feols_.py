@@ -23,6 +23,7 @@ from pyfixest.estimation.formula import model_matrix as model_matrix_fixest
 from pyfixest.estimation.formula.formulaic_compat import (
     decode_fixed_effect_dict,
     get_fixed_effect_code_values,
+    get_fixed_effect_columns,
 )
 from pyfixest.estimation.formula.model_matrix import _ModelMatrixKey
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
@@ -2006,20 +2007,28 @@ class Feols(ResultAccessorMixin):
                     for factor in term.factors
                 ]
                 _check_fe_dtype_compatibility(self._data, newdata, fe_var_names)
-                fe_mm = self._model_spec[
-                    _ModelMatrixKey.fixed_effects
-                ].get_model_matrix(newdata, context=context, na_action="drop")
-                n_valid_before_fe = len(valid_idx)
-                valid_idx = np.intersect1d(valid_idx, fe_mm.index.to_numpy())
-                if n_valid_before_fe > 0 and len(valid_idx) == 0:
-                    warnings.warn(
-                        "No row in newdata matches a fixed-effect level seen "
-                        "during fitting; all predictions are NaN. If this is "
-                        "unexpected, check that the fixed-effect columns in "
-                        "newdata hold the same values as the fitted data.",
-                        UserWarning,
-                        stacklevel=2,
+                fe_spec = self._model_spec[_ModelMatrixKey.fixed_effects]
+                # na_action="ignore" keeps unseen-level rows as NaN codes
+                fe_mm = fe_spec.get_model_matrix(
+                    newdata, context=context, na_action="ignore"
+                )
+                # check if there are fixed effect levels not seen during fitting
+                for column in fe_mm.columns:
+                    fixed_effects = get_fixed_effect_columns(fe_spec, column)
+                    unseen_levels = (
+                        fe_mm[column].isna().to_numpy()
+                        & newdata[fixed_effects].notna().all(axis=1).to_numpy()
                     )
+                    if unseen_levels.any():
+                        missing = newdata.loc[
+                            unseen_levels, fixed_effects
+                        ].drop_duplicates()
+                        warnings.warn(
+                            f"{missing.shape[0]} unseen level(s) for fixed effect `{'^'.join(fixed_effects)}`: {missing[:20]}\n"
+                            "Predictions for affected observations will be NaN",
+                            UserWarning,
+                            stacklevel=2,
+                        )
 
                 if self._sumFE is None:
                     self.fixef(atol, btol)

@@ -12,6 +12,7 @@ from formulaic.materializers.types import FactorValues
 from formulaic.parser.types import Factor
 from formulaic.transforms.contrasts import TreatmentContrasts, encode_contrasts
 from formulaic.utils.sentinels import UNSET
+from formulaic.utils.variables import Variable
 
 if TYPE_CHECKING:
     from formulaic.model_spec import ModelSpec
@@ -280,3 +281,9 @@ def _fixed_effect_variable_name(column: str) -> str:
         inner = column[len(_FIXED_EFFECT_PREFIX) : -len(_FIXED_EFFECT_SUFFIX)]
         return inner.replace(", ", "^").replace(",", "^")
     return column
+
+
+def get_fixed_effect_columns(fe_spec: ModelSpec, fixed_effect: str) -> list[str]:
+    """Return input columns for a given encoded fixed effect."""
+    variables = fe_spec.factor_variables[fixed_effect]
+    return [str(v) for v in variables if Variable.Role.VALUE in v.roles]
