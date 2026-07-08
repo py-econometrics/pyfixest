@@ -295,7 +295,10 @@ def test_predict_fe_dtype_mismatch():
     # no matching FE level at all: warning + all-NaN predictions
     newdata_shift = data.dropna(subset=["f1"]).iloc[0:100].copy()
     newdata_shift["f1"] = newdata_shift["f1"] + 1000
-    with pytest.warns(UserWarning, match="No row in newdata matches"):
+    with pytest.warns(
+        UserWarning,
+        match=f"{newdata_shift['f1'].dropna().nunique()} unseen level(s) for fixed effect",
+    ):
         pred_shift = fit.predict(newdata=newdata_shift)
     assert np.all(np.isnan(pred_shift))
 
