@@ -2024,7 +2024,7 @@ class Feols(ResultAccessorMixin):
                             unseen_levels, fixed_effects
                         ].drop_duplicates()
                         warnings.warn(
-                            f"{missing.shape[0]} unseen level(s) for fixed effect `{'^'.join(fixed_effects)}`: {missing[:20]}\n"
+                            f"{missing.shape[0]} unseen level(s) for fixed effect `{'^'.join(fixed_effects)}`: {missing.iloc[:20]}\n"
                             "Predictions for affected observations will be NaN",
                             UserWarning,
                             stacklevel=2,
