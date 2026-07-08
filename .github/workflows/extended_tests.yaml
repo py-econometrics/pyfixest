@@ -31,3 +31,15 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage.xml
           flags: tests-extended
+
+      - name: Run no-JIT tests (numba coverage)
+        run: pixi run -e py312 test-py-nojit
+        env:
+          PYTEST_XDIST_AUTO_NUM_WORKERS: 4
+
+      - name: Upload no-JIT coverage to Codecov
+        uses: codecov/codecov-action@v7
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage-nojit.xml
+          flags: tests-nojit
