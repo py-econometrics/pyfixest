@@ -133,22 +133,24 @@ if HAS_NUMBA:
         meat : np.ndarray (k, k)
         """
         n, k = scores.shape
-        # Each thread accumulates into its own local meat to avoid race conditions
-        meat = np.zeros((k, k))
+        # Each prange iteration writes to its own slice to avoid race conditions
+        meat_all = np.zeros((n, k, k))
 
         for i in numba.prange(n):
-            local_meat = np.zeros((k, k))
             for j in range(n):
                 d = _haversine_numba(lat[i], lon[i], lat[j], lon[j])
                 if d <= cutoff:
                     w = (1.0 - d / cutoff) if use_bartlett else 1.0
                     for p in range(k):
                         for q in range(k):
-                            local_meat[p, q] += w * scores[i, p] * scores[j, q]
-            # Accumulate (numba handles prange reduction)
+                            meat_all[i, p, q] += w * scores[i, p] * scores[j, q]
+
+        # Sum across observations (sequential, after prange completes)
+        meat = np.zeros((k, k))
+        for i in range(n):
             for p in range(k):
                 for q in range(k):
-                    meat[p, q] += local_meat[p, q]
+                    meat[p, q] += meat_all[i, p, q]
 
         return meat
 
