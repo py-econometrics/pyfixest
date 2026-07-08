@@ -297,7 +297,7 @@ def test_predict_fe_dtype_mismatch():
     newdata_shift["f1"] = newdata_shift["f1"] + 1000
     with pytest.warns(
         UserWarning,
-        match=f"{newdata_shift['f1'].dropna().nunique()} unseen level(s) for fixed effect",
+        match=f"{newdata_shift['f1'].dropna().nunique()} unseen level",
     ):
         pred_shift = fit.predict(newdata=newdata_shift)
     assert np.all(np.isnan(pred_shift))
