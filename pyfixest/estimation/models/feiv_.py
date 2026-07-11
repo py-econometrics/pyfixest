@@ -190,6 +190,21 @@ class Feiv(Feols):
         self._supports_cluster_causal_variance = False
         self._support_decomposition = False
 
+    @property
+    def first_stage_model(self) -> Feols:
+        """Return the fitted first-stage OLS model."""
+        return self._model_1st_stage
+
+    @property
+    def first_stage_f_statistic(self) -> float:
+        """Return the first-stage excluded-instruments F statistic."""
+        return float(self._f_stat_1st_stage)
+
+    @property
+    def effective_f_statistic(self) -> float:
+        """Return the Olea-Pflueger effective F statistic after `IV_Diag()`."""
+        return float(self._eff_F)
+
     def wls_transform(self) -> None:
         "Transform variables for WLS estimation."
         super().wls_transform()

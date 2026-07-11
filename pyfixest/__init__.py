@@ -4,12 +4,14 @@ import importlib as _importlib
 from importlib.metadata import PackageNotFoundError as _PackageNotFoundError
 from importlib.metadata import version as _version
 from typing import TYPE_CHECKING as _TYPE_CHECKING
+from typing import Any as _Any
 
 if _TYPE_CHECKING:
     from pyfixest import did as did
     from pyfixest import errors as errors
     from pyfixest import estimation as estimation
     from pyfixest import report as report
+    from pyfixest import typing as typing
     from pyfixest import utils as utils
     from pyfixest.core.demean import Preconditioner as Preconditioner
     from pyfixest.demeaners import BaseDemeaner as BaseDemeaner
@@ -86,12 +88,13 @@ __all__ = [
     "rwolf",
     "ssc",
     "summary",
+    "typing",
     "utils",
     "wyoung",
 ]
 
 # Submodules loaded lazily
-_submodules = ["did", "errors", "estimation", "report", "utils"]
+_submodules = ["did", "errors", "estimation", "report", "typing", "utils"]
 
 # Map function/class names to their module prefix
 # For direct module imports: import_module(f"{prefix}.{name}")
@@ -139,7 +142,7 @@ _lazy_imports = {
 _direct_module_imports = {"feols", "fepois", "feglm", "quantreg"}
 
 
-def __getattr__(name: str):
+def __getattr__(name: str) -> _Any:
     if name in _submodules:
         return _importlib.import_module(f"pyfixest.{name}")
     if name in _lazy_imports:

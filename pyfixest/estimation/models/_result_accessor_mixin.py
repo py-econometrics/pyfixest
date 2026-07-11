@@ -1,19 +1,25 @@
 """Share tidy result accessors across fitted-model classes."""
 
-import functools
+from __future__ import annotations
+
 import warnings
-from importlib import import_module
-from typing import TYPE_CHECKING
+from importlib.util import find_spec
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
 
 from pyfixest.errors import EmptyVcovError
+from pyfixest.typing import PlotBackend
 
 if TYPE_CHECKING:
     from pyfixest.estimation.internals.families import InferenceDist
 from pyfixest.utils.dev_utils import _select_order_coefs
 from pyfixest.utils.utils import simultaneous_crit_val
+
+_DEFAULT_PLOT_BACKEND: PlotBackend = (
+    "lets_plot" if find_spec("lets_plot") is not None else "matplotlib"
+)
 
 
 class TidyColumnAccessors:
@@ -40,7 +46,155 @@ class TidyColumnAccessors:
         return self.tidy()["Pr(>|t|)"]
 
 
-class ResultAccessorMixin(TidyColumnAccessors):
+class ReportAccessorMixin:
+    """Provide statically discoverable wrappers around lazy reporting imports."""
+
+    def _report_models(self) -> list[Any]:
+        """Return fitted models in the shape expected by reporting functions."""
+        return [self]
+
+    def summary(self, digits: int = 3) -> None:
+        """Print a summary of this fitted model."""
+        from pyfixest.report.summarize import summary
+
+        return summary(models=self._report_models(), digits=digits)
+
+    def etable(
+        self,
+        type: str = "gt",
+        signif_code: list | None = None,
+        coef_fmt: str | None = None,
+        custom_stats: dict | None = None,
+        custom_model_stats: dict | None = None,
+        keep: list | str | None = None,
+        drop: list | str | None = None,
+        exact_match: bool | None = False,
+        labels: dict | None = None,
+        cat_template: str | None = None,
+        show_fe: bool | None = True,
+        felabels: dict | None = None,
+        fe_present: str = "x",
+        fe_absent: str = "-",
+        notes: str = "",
+        model_heads: list | None = None,
+        head_order: str | None = "dh",
+        file_name: str | None = None,
+        **kwargs: Any,
+    ) -> Any:
+        """Create a regression table for this fitted model."""
+        from pyfixest.report.summarize import etable
+
+        return etable(
+            models=self._report_models(),
+            type=type,
+            signif_code=signif_code,
+            coef_fmt=coef_fmt,
+            custom_stats=custom_stats,
+            custom_model_stats=custom_model_stats,
+            keep=keep,
+            drop=drop,
+            exact_match=exact_match,
+            labels=labels,
+            cat_template=cat_template,
+            show_fe=show_fe,
+            felabels=felabels,
+            fe_present=fe_present,
+            fe_absent=fe_absent,
+            notes=notes,
+            model_heads=model_heads,
+            head_order=head_order,
+            file_name=file_name,
+            **kwargs,
+        )
+
+    def coefplot(
+        self,
+        alpha: float = 0.05,
+        figsize: tuple[int, int] | None = None,
+        yintercept: float = 0,
+        xintercept: float | None = None,
+        rotate_xticks: int = 0,
+        title: str | None = None,
+        coord_flip: bool = True,
+        keep: list | str | None = None,
+        drop: list | str | None = None,
+        exact_match: bool = False,
+        plot_backend: PlotBackend = _DEFAULT_PLOT_BACKEND,
+        labels: dict | None = None,
+        joint: str | bool | None = None,
+        seed: int | None = None,
+        ax: Any | None = None,
+        rename_models: dict[str, str] | None = None,
+    ) -> Any:
+        """Plot coefficients and confidence intervals for this fitted model."""
+        from pyfixest.report.visualize import coefplot
+
+        return coefplot(
+            models=self._report_models(),
+            alpha=alpha,
+            figsize=figsize,
+            yintercept=yintercept,
+            xintercept=xintercept,
+            rotate_xticks=rotate_xticks,
+            title=title,
+            coord_flip=coord_flip,
+            keep=keep,
+            drop=drop,
+            exact_match=exact_match,
+            plot_backend=plot_backend,
+            labels=labels,
+            joint=joint,
+            seed=seed,
+            ax=ax,
+            rename_models=rename_models,
+        )
+
+    def iplot(
+        self,
+        alpha: float = 0.05,
+        figsize: tuple[int, int] | None = None,
+        yintercept: int | str | None = None,
+        xintercept: int | str | None = None,
+        rotate_xticks: int = 0,
+        title: str | None = None,
+        coord_flip: bool = True,
+        keep: list | str | None = None,
+        drop: list | str | None = None,
+        exact_match: bool = False,
+        plot_backend: PlotBackend = _DEFAULT_PLOT_BACKEND,
+        labels: dict | None = None,
+        cat_template: str | None = None,
+        rename_models: dict[str, str] | None = None,
+        ax: Any | None = None,
+        joint: str | bool | None = None,
+        seed: int | None = None,
+    ) -> Any:
+        """Plot coefficients created by fixest-style `i()` terms."""
+        from pyfixest.report.visualize import iplot
+
+        return iplot(
+            models=self._report_models(),
+            alpha=alpha,
+            figsize=figsize,
+            yintercept=yintercept,
+            xintercept=xintercept,
+            rotate_xticks=rotate_xticks,
+            title=title,
+            coord_flip=coord_flip,
+            keep=keep,
+            drop=drop,
+            exact_match=exact_match,
+            plot_backend=plot_backend,
+            labels=labels,
+            cat_template=cat_template,
+            rename_models=rename_models,
+            ax=ax,
+            joint=joint,
+            seed=seed,
+        )
+
+
+class ResultAccessorMixin(ReportAccessorMixin, TidyColumnAccessors):
     """Mixin providing result-accessor methods for fitted models."""
 
     # Type declarations for attributes provided by the host class (Feols).
@@ -62,32 +216,12 @@ class ResultAccessorMixin(TidyColumnAccessors):
     _N: int
     _k: int
     _df_t: int
-    _inference_dist: "InferenceDist"
+    _inference_dist: InferenceDist
     _rmse: float
     _r2: float
     _adj_r2: float
     _r2_within: float
     _adj_r2_within: float
-
-    def _bind_report_methods(self):
-        """Bind summary, coefplot, iplot, and etable from pyfixest.report as instance methods."""
-        _module = import_module("pyfixest.report")
-
-        _tmp = _module.summary
-        self.summary = functools.partial(_tmp, models=[self])
-        self.summary.__doc__ = _tmp.__doc__
-
-        _tmp = _module.coefplot
-        self.coefplot = functools.partial(_tmp, models=[self])
-        self.coefplot.__doc__ = _tmp.__doc__
-
-        _tmp = _module.iplot
-        self.iplot = functools.partial(_tmp, models=[self])
-        self.iplot.__doc__ = _tmp.__doc__
-
-        _tmp = _module.etable
-        self.etable = functools.partial(_tmp, models=[self])
-        self.etable.__doc__ = _tmp.__doc__
 
     def get_inference(self, alpha: float = 0.05) -> None:
         """

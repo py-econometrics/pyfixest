@@ -11,23 +11,27 @@ from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.internals.literals import (
     FixedRmOptions,
     SolverOptions,
-    VcovTypeOptions,
-    WeightsTypeOptions,
 )
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.models.fepois_ import Fepois
-from pyfixest.utils.dev_utils import DataFrameType
+from pyfixest.typing import (
+    DataFrameType,
+    RegressionVcovType,
+    SscConfig,
+    VcovKwargs,
+    WeightsType,
+)
 
 
 def fepois(
     fml: str,
     data: DataFrameType,  # type: ignore
-    vcov: VcovTypeOptions | dict[str, str] | None = None,
-    vcov_kwargs: dict[str, str | int] | None = None,
+    vcov: RegressionVcovType | dict[str, str] | None = None,
+    vcov_kwargs: VcovKwargs | None = None,
     weights: None | str = None,
-    weights_type: WeightsTypeOptions = "aweights",
+    weights_type: WeightsType = "aweights",
     offset: str | None = None,
-    ssc: dict[str, str | bool] | None = None,
+    ssc: SscConfig | None = None,
     fixef_rm: FixedRmOptions = "singleton",
     iwls_tol: float = 1e-08,
     iwls_maxiter: int = 25,

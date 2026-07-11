@@ -9,8 +9,7 @@ from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.models.feiv_ import Feiv
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.models.fepois_ import Fepois
-
-ModelInputType = FixestMulti | Feols | Fepois | Feiv | list[Feols | Fepois | Feiv]
+from pyfixest.typing import ModelInput
 
 
 def _check_label_keys_in_covars(label_keys: list[str], covariate_names: list[str]):
@@ -213,7 +212,7 @@ def rename_event_study_coefs(coef_names_list: list):
 
 
 def _post_processing_input_checks(
-    models: ModelInputType,
+    models: ModelInput,
     check_duplicate_model_names: bool = False,
     rename_models: dict[str, str] | None = None,
 ) -> list[Feols | Fepois | Feiv]:

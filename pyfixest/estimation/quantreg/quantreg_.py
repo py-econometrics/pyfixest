@@ -1,5 +1,7 @@
 """Implement fitted quantile-regression model behavior."""
 
+from __future__ import annotations
+
 import warnings
 from collections.abc import Callable, Mapping
 from functools import partial
@@ -25,6 +27,7 @@ from pyfixest.estimation.quantreg.vcov_ import (
     vcov_iid_qreg,
     vcov_nid_qreg,
 )
+from pyfixest.typing import DataFrameType, QuantregVcovType, VcovKwargs
 
 
 class Quantreg(Feols):
@@ -146,6 +149,18 @@ class Quantreg(Feols):
         except KeyError as exc:
             valid = ", ".join(self._method_map)
             raise ValueError(f"`method` must be one of {{{valid}}}") from exc
+
+    def vcov(  # type: ignore[override]
+        self,
+        vcov: QuantregVcovType | dict[str, str],
+        vcov_kwargs: VcovKwargs | None = None,
+        data: DataFrameType | None = None,
+    ) -> Quantreg:
+        """Update quantile-regression inference with a covariance estimator."""
+        return cast(
+            Quantreg,
+            super().vcov(vcov=vcov, vcov_kwargs=vcov_kwargs, data=data),  # type: ignore[arg-type]
+        )
 
     def to_array(self):
         "Turn estimation DataFrames to np arrays."

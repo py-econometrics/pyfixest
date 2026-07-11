@@ -17,13 +17,17 @@ from pyfixest.estimation.internals.demeaner_options import (
 from pyfixest.estimation.internals.literals import (
     FixedRmOptions,
     SolverOptions,
-    VcovTypeOptions,
-    WeightsTypeOptions,
 )
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.plan_ import parse_formula
 from pyfixest.estimation.runner import run_estimation
-from pyfixest.utils.dev_utils import DataFrameType
+from pyfixest.typing import (
+    DataFrameType,
+    RegressionVcovType,
+    SscConfig,
+    VcovKwargs,
+    WeightsType,
+)
 from pyfixest.utils.utils import capture_context
 from pyfixest.utils.utils import ssc as ssc_func
 
@@ -31,17 +35,17 @@ from pyfixest.utils.utils import ssc as ssc_func
 def feols(
     fml: str,
     data: DataFrameType,  # type: ignore
-    vcov: VcovTypeOptions | dict[str, str] | None = None,
-    vcov_kwargs: dict[str, str | int] | None = None,
+    vcov: RegressionVcovType | dict[str, str] | None = None,
+    vcov_kwargs: VcovKwargs | None = None,
     weights: None | str = None,
-    ssc: dict[str, str | bool] | None = None,
+    ssc: SscConfig | None = None,
     fixef_rm: FixedRmOptions = "singleton",
     collin_tol: float = 1e-09,
     drop_intercept: bool = False,
     copy_data: bool = True,
     store_data: bool = True,
     lean: bool = False,
-    weights_type: WeightsTypeOptions = "aweights",
+    weights_type: WeightsType = "aweights",
     solver: SolverOptions = "scipy.linalg.solve",
     demeaner: AnyDemeaner | None = None,
     use_compression: bool = False,

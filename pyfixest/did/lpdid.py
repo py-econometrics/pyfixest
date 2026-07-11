@@ -1,15 +1,15 @@
 """Implement local-projection difference-in-differences estimation."""
 
-from typing import cast
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
 
 from pyfixest.did.did import DID
 from pyfixest.estimation import feols
-from pyfixest.estimation.internals.literals import VcovTypeOptions
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.report.visualize import _HAS_LETS_PLOT, _coefplot
+from pyfixest.typing import PlotBackend, RegressionVcovType
 
 
 class LPDID(DID):
@@ -51,14 +51,14 @@ class LPDID(DID):
         idname: str,
         tname: str,
         gname: str,
-        xfml: str,
+        xfml: str | None,
         att: bool,
         cluster: str,
-        vcov: VcovTypeOptions | dict[str, str] | None = None,
+        vcov: RegressionVcovType | dict[str, str] | None = None,
         pre_window: int | None = None,
         post_window: int | None = None,
         never_treated: int | None = 0,
-    ):
+    ) -> None:
         # if att:
         #    raise NotImplementedError("ATT is not yet supported.")
 
@@ -143,8 +143,8 @@ class LPDID(DID):
         rotate_xticks: int = 0,
         title: str = "LPDID Event Study Estimate",
         coord_flip: bool = False,
-        plot_backend: str = "lets_plot" if _HAS_LETS_PLOT else "matplotlib",
-    ):
+        plot_backend: PlotBackend = ("lets_plot" if _HAS_LETS_PLOT else "matplotlib"),
+    ) -> Any:
         """
         Create coefficient plots.
 
@@ -204,7 +204,7 @@ def _lpdid_estimate(
     pre_window: int,
     post_window: int,
     att: bool = True,
-    vcov: VcovTypeOptions | dict[str, str] | None = None,
+    vcov: RegressionVcovType | dict[str, str] | None = None,
     xfml: str | None = None,
 ) -> pd.DataFrame:
     """

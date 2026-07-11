@@ -3,24 +3,27 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, cast
 
 from pyfixest.estimation.api.utils import _estimation_input_checks
 from pyfixest.estimation.config import EstimationConfig
+from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.internals.literals import (
     QuantregMethodOptions,
     QuantregMultiOptions,
     SolverOptions,
-    VcovTypeOptions,
 )
 from pyfixest.estimation.plan_ import parse_formula
+from pyfixest.estimation.quantreg.quantreg_ import Quantreg
 from pyfixest.estimation.runner import run_estimation
-from pyfixest.utils.dev_utils import DataFrameType
+from pyfixest.typing import DataFrameType, QuantregVcovType, SscConfig, WeightsType
 from pyfixest.utils.utils import capture_context
 from pyfixest.utils.utils import ssc as ssc_func
 
 
-def _quantreg_input_checks(quantile: float, tol: float, maxiter: int | None):
+def _quantreg_input_checks(
+    quantile: float | list[float], tol: float, maxiter: int | None
+) -> None:
     "Run custom input checks for quantreg."
     if isinstance(quantile, list):
         if not all(isinstance(q, float) for q in quantile):
@@ -46,13 +49,13 @@ def _quantreg_input_checks(quantile: float, tol: float, maxiter: int | None):
 def quantreg(
     fml: str,
     data: DataFrameType,  # type: ignore
-    vcov: VcovTypeOptions | dict[str, str] | None = "nid",
-    quantile: float = 0.5,
+    vcov: QuantregVcovType | dict[str, str] | None = "nid",
+    quantile: float | list[float] = 0.5,
     method: QuantregMethodOptions = "fn",
     multi_method: QuantregMultiOptions = "cfm1",
     tol: float = 1e-06,
     maxiter: int | None = None,
-    ssc: dict[str, str | bool] | None = None,
+    ssc: SscConfig | None = None,
     collin_tol: float = 1e-09,
     separation_check: list[str] | None = None,
     drop_intercept: bool = False,
@@ -63,7 +66,7 @@ def quantreg(
     split: str | None = None,
     fsplit: str | None = None,
     seed: int | None = None,
-):
+) -> Quantreg | FixestMulti:
     """
     Fit a quantile regression model using the interior point algorithm from Portnoy and Koenker (1997).
     Note that the interior point algorithm assumes independent observations.
@@ -201,7 +204,7 @@ def quantreg(
     """
     # WLS currently not supported for quantile regression
     weights = None
-    weights_type = "aweights"
+    weights_type: WeightsType = "aweights"
     solver: SolverOptions = "np.linalg.solve"
 
     if ssc is None:
@@ -267,4 +270,4 @@ def quantreg(
             "IV Estimation is not supported for Quantile Regression"
         )
 
-    return run_estimation(config, parsed)
+    return cast(Quantreg | FixestMulti, run_estimation(config, parsed))

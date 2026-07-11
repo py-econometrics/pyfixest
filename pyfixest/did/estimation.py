@@ -1,12 +1,15 @@
 """Provide public entry points for event-study and difference-in-differences estimation."""
 
+from __future__ import annotations
+
 import pandas as pd
 
 from pyfixest.did.did2s import DID2S, _did2s_estimate, _did2s_vcov
 from pyfixest.did.lpdid import LPDID
 from pyfixest.did.saturated_twfe import SaturatedEventStudy
 from pyfixest.did.twfe import TWFE
-from pyfixest.estimation.internals.literals import VcovTypeOptions
+from pyfixest.estimation.models.feols_ import Feols
+from pyfixest.typing import EventStudyEstimator, RegressionVcovType
 
 
 def event_study(
@@ -17,9 +20,9 @@ def event_study(
     gname: str,
     xfml: str | None = None,
     cluster: str | None = None,
-    estimator: str | None = "twfe",
-    att: bool | None = True,
-):
+    estimator: EventStudyEstimator = "twfe",
+    att: bool = True,
+) -> Feols:
     """
     Estimate Event Study Model.
 
@@ -166,7 +169,7 @@ def event_study(
         fit._att = saturated._att
 
         fit._method = "saturated"
-        fit.iplot = saturated.iplot.__get__(fit, type(fit))
+        fit.iplot = saturated.iplot.__get__(fit, type(fit))  # type: ignore[method-assign]
         fit.test_treatment_heterogeneity = (
             saturated.test_treatment_heterogeneity.__get__(fit, type(fit))
         )
@@ -190,7 +193,7 @@ def did2s(
     treatment: str,
     cluster: str,
     weights: str | None = None,
-):
+) -> Feols:
     """
     Estimate a Difference-in-Differences model using Gardner's two-step DID2S estimator.
 
@@ -318,12 +321,12 @@ def lpdid(
     idname: str,
     tname: str,
     gname: str,
-    vcov: VcovTypeOptions | dict[str, str] | None = None,
+    vcov: RegressionVcovType | dict[str, str] | None = None,
     pre_window: int | None = None,
     post_window: int | None = None,
     never_treated: int = 0,
     att: bool = True,
-    xfml=None,
+    xfml: str | None = None,
 ) -> LPDID:
     """
     Local projections approach to estimation.

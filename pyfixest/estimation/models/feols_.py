@@ -61,8 +61,8 @@ from pyfixest.estimation.post_estimation.ritest import (
     _get_ritest_stats_slow,
     _plot_ritest_pvalue,
 )
+from pyfixest.typing import DataFrameType, RegressionVcovType, VcovKwargs
 from pyfixest.utils.dev_utils import (
-    DataFrameType,
     _extract_variable_level,
     _narwhals_to_pandas,
 )
@@ -389,9 +389,6 @@ class Feols(ResultAccessorMixin):
         self._idname: str | None = None
         self._att: bool | None = None
 
-        # set functions inherited from other modules
-        self._bind_report_methods()
-
         # DiD methods - assign placeholder functions
         def _not_implemented_did(*args, **kwargs):
             raise NotImplementedError(
@@ -589,8 +586,8 @@ class Feols(ResultAccessorMixin):
 
     def vcov(
         self,
-        vcov: str | dict[str, str],
-        vcov_kwargs: dict[str, str | int] | None = None,
+        vcov: RegressionVcovType | dict[str, str],
+        vcov_kwargs: VcovKwargs | None = None,
         data: DataFrameType | None = None,
     ) -> Feols:
         """

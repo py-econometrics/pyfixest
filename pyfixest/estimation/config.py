@@ -12,6 +12,13 @@ from pyfixest.estimation.internals.literals import (
     QuantregMultiOptions,
     SolverOptions,
 )
+from pyfixest.typing import (
+    QuantregVcovType,
+    RegressionVcovType,
+    SscConfig,
+    VcovKwargs,
+    WeightsType,
+)
 
 
 @dataclass(frozen=True)
@@ -42,9 +49,9 @@ class EstimationConfig:
     drop_intercept: bool = False
 
     # --- vcov ---
-    vcov: str | dict[str, str] | None = None
-    vcov_kwargs: dict[str, str | int] | None = None
-    ssc_dict: dict[str, str | bool] | None = None
+    vcov: RegressionVcovType | QuantregVcovType | dict[str, str] | None = None
+    vcov_kwargs: VcovKwargs | None = None
+    ssc_dict: SscConfig | None = None
 
     # --- fit knobs ---
     solver: SolverOptions = "scipy.linalg.solve"
@@ -54,7 +61,7 @@ class EstimationConfig:
 
     # --- weights ---
     weights: str | None = None
-    weights_type: str = "aweights"
+    weights_type: WeightsType = "aweights"
 
     # --- splits ---
     split: str | None = None

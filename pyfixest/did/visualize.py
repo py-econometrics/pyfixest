@@ -23,7 +23,7 @@ def panelview(
     ax: plt.Axes | None = None,
     xlim: tuple | None = None,
     ylim: tuple | None = None,
-) -> None:
+) -> plt.Axes:
     """
     Generate a panel view of the treatment variable over time for each unit.
 

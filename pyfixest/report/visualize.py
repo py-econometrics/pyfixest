@@ -1,6 +1,7 @@
 """Plot coefficients and quantile-regression processes."""
 
 import math
+from typing import Any
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -29,7 +30,6 @@ try:
 except ImportError:
     _HAS_LETS_PLOT = False
 
-from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.models.feiv_ import Feiv
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.models.fepois_ import Fepois
@@ -39,16 +39,17 @@ from pyfixest.report.utils import (
     _post_processing_input_checks,
     _relabel_expvar,
 )
+from pyfixest.typing import ModelInput, PlotBackend
 from pyfixest.utils.dev_utils import _select_order_coefs
-
-ModelInputType = FixestMulti | Feols | Fepois | Feiv | list[Feols | Fepois | Feiv]
 
 # Only setup lets-plot if it's available
 if _HAS_LETS_PLOT:
     LetsPlot.setup_html()
 
 
-def set_figsize(figsize: tuple[int, int] | None, plot_backend: str) -> tuple[int, int]:
+def set_figsize(
+    figsize: tuple[int, int] | None, plot_backend: PlotBackend
+) -> tuple[int, int]:
     """
     Set the figure size based on the plot backend.
 
@@ -81,7 +82,7 @@ def set_figsize(figsize: tuple[int, int] | None, plot_backend: str) -> tuple[int
 
 
 def iplot(
-    models: ModelInputType,
+    models: ModelInput,
     alpha: float = 0.05,
     figsize: tuple[int, int] | None = None,
     yintercept: int | str | None = None,
@@ -92,14 +93,14 @@ def iplot(
     keep: list | str | None = None,
     drop: list | str | None = None,
     exact_match: bool = False,
-    plot_backend: str = "lets_plot" if _HAS_LETS_PLOT else "matplotlib",
+    plot_backend: PlotBackend = "lets_plot" if _HAS_LETS_PLOT else "matplotlib",
     labels: dict | None = None,
     cat_template: str | None = None,
     rename_models: dict[str, str] | None = None,
     ax: plt.Axes | None = None,
     joint: str | bool | None = None,
     seed: int | None = None,
-):
+) -> Any:
     r"""
     Plot model coefficients for variables interacted via "i()" syntax, with
     confidence intervals.
@@ -271,7 +272,7 @@ def iplot(
 
 
 def coefplot(
-    models: ModelInputType,
+    models: ModelInput,
     alpha: float = 0.05,
     figsize: tuple[int, int] | None = None,
     yintercept: float = 0,
@@ -282,13 +283,13 @@ def coefplot(
     keep: list | str | None = None,
     drop: list | str | None = None,
     exact_match: bool = False,
-    plot_backend: str = "lets_plot" if _HAS_LETS_PLOT else "matplotlib",
+    plot_backend: PlotBackend = "lets_plot" if _HAS_LETS_PLOT else "matplotlib",
     labels: dict | None = None,
     joint: str | bool | None = None,
     seed: int | None = None,
     ax: plt.Axes | None = None,
     rename_models: dict[str, str] | None = None,
-):
+) -> Any:
     r"""
     Plot model coefficients with confidence intervals.
 
@@ -435,12 +436,12 @@ def coefplot(
 
 
 def qplot(
-    models: ModelInputType,
+    models: ModelInput,
     rename_models: dict | None = None,
     figsize: tuple | None = None,
     ncol: int | None = None,
     nrow: int | None = None,
-):
+) -> tuple[plt.Figure, np.ndarray]:
     """
     Plot regression quantiles.
 
@@ -495,7 +496,9 @@ def qplot(
     )
 
 
-def _coefplot(plot_backend, *, figsize, **plot_kwargs):
+def _coefplot(
+    plot_backend: PlotBackend, *, figsize: tuple[int, int] | None, **plot_kwargs: Any
+) -> Any:
     """Coefplot function that dispatches to the correct plotting backend."""
     figsize = set_figsize(figsize, plot_backend)
     if plot_backend == "lets_plot":

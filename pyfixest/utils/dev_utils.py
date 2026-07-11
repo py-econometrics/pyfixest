@@ -5,12 +5,11 @@ import re
 import narwhals.stable.v1 as nw
 import numpy as np
 import pandas as pd
-from narwhals.typing import IntoDataFrame
 
-DataFrameType = IntoDataFrame
+from pyfixest.typing import DataFrameType
 
 
-def _narwhals_to_pandas(data: IntoDataFrame) -> pd.DataFrame:  # type: ignore
+def _narwhals_to_pandas(data: DataFrameType) -> pd.DataFrame:  # type: ignore
     return nw.from_native(data, eager_or_interchange_only=True).to_pandas()
 
 

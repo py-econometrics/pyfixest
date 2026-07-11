@@ -4,28 +4,36 @@ from __future__ import annotations
 
 import pandas as pd
 
-from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
+from pyfixest.typing import (
+    DataFrameType,
+    QuantregVcovType,
+    RegressionVcovType,
+    SscConfig,
+    VcovKwargs,
+    WeightsType,
+)
+from pyfixest.utils.dev_utils import _narwhals_to_pandas
 
 
 def _estimation_input_checks(
     fml: str,
     data: DataFrameType,
-    vcov: str | dict[str, str] | None,
-    vcov_kwargs: dict[str, str | int] | None,
+    vcov: RegressionVcovType | QuantregVcovType | dict[str, str] | None,
+    vcov_kwargs: VcovKwargs | None,
     weights: None | str,
-    ssc: dict[str, str | bool],
+    ssc: SscConfig,
     fixef_rm: str,
     collin_tol: float,
     copy_data: bool,
     store_data: bool,
     lean: bool,
-    weights_type: str,
+    weights_type: WeightsType,
     reps: int | None,
     seed: int | None,
     split: str | None,
     fsplit: str | None,
     separation_check: list[str] | None = None,
-):
+) -> None:
     if not isinstance(fml, str):
         raise TypeError("fml must be a string")
     if not isinstance(data, pd.DataFrame):

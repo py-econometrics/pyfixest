@@ -1,3 +1,5 @@
+"""Provide public data and small-sample-correction utilities."""
+
 import warnings
 from collections.abc import Mapping
 from typing import Any
@@ -7,6 +9,7 @@ import pandas as pd
 from formulaic import Formula
 from formulaic.utils.context import capture_context as _capture_context
 
+from pyfixest.typing import SscConfig
 from pyfixest.utils.dev_utils import _create_rng
 
 
@@ -17,7 +20,7 @@ def ssc(
     G_df: str = "min",
     *args: Any,
     **kwargs: Any,
-) -> dict[str, str | bool]:
+) -> SscConfig:
     """
     Set the small sample correction factor applied in `get_ssc()`.
 
@@ -134,7 +137,7 @@ def ssc(
 
 def get_ssc(
     *,
-    ssc_dict: dict[str, str | (str | bool)],
+    ssc_dict: SscConfig,
     N: int,
     k: int,
     k_fe: int,

@@ -2,11 +2,13 @@
 
 from typing import Any, Literal, get_args
 
+from pyfixest.typing import GlmFamily, WeightsType
+
 PredictionType = Literal["response", "link"]
-VcovTypeOptions = Literal["iid", "hetero", "HC1", "HC2", "HC3", "nid"]
-WeightsTypeOptions = Literal["aweights", "fweights"]
+VcovTypeOptions = Literal["iid", "hetero", "HC1", "HC2", "HC3", "NW", "DK", "nid"]
+WeightsTypeOptions = WeightsType
 FixedRmOptions = Literal["singleton", "none"]
-FamilyOptions = Literal["logit", "probit", "gaussian", "poisson"]
+FamilyOptions = GlmFamily
 SolverOptions = Literal[
     "np.linalg.lstsq",
     "np.linalg.solve",

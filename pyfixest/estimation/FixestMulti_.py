@@ -2,22 +2,26 @@
 
 from __future__ import annotations
 
-import functools
 from collections.abc import Mapping
-from importlib import import_module
-from typing import Any
+from typing import Any, cast
 
 import pandas as pd
 
 from pyfixest.estimation.config import EstimationConfig
-from pyfixest.estimation.models._result_accessor_mixin import TidyColumnAccessors
-from pyfixest.estimation.models.feiv_ import Feiv
-from pyfixest.estimation.models.feols_ import Feols
-from pyfixest.estimation.models.fepois_ import Fepois
+from pyfixest.estimation.models._result_accessor_mixin import (
+    ReportAccessorMixin,
+    TidyColumnAccessors,
+)
 from pyfixest.estimation.plan_ import ParsedFormula
+from pyfixest.typing import (
+    ModelResult,
+    QuantregVcovType,
+    RegressionVcovType,
+    VcovKwargs,
+)
 
 
-class FixestMulti(TidyColumnAccessors):
+class FixestMulti(ReportAccessorMixin, TidyColumnAccessors):
     """Results container holding every model fitted by one public-API call."""
 
     def __init__(
@@ -47,22 +51,11 @@ class FixestMulti(TidyColumnAccessors):
         self._data = data
         self._context = context
 
-        self.all_fitted_models: dict[str, Feols | Fepois | Feiv] = {}
+        self.all_fitted_models: dict[str, ModelResult] = {}
 
-        # set functions inherited from other modules
-        _module = import_module("pyfixest.report")
-        _tmp = _module.coefplot
-        self.coefplot = functools.partial(_tmp, models=self.all_fitted_models.values())
-        self.coefplot.__doc__ = _tmp.__doc__
-        _tmp = _module.iplot
-        self.iplot = functools.partial(_tmp, models=self.all_fitted_models.values())
-        self.iplot.__doc__ = _tmp.__doc__
-        _tmp = _module.summary
-        self.summary = functools.partial(_tmp, models=self.all_fitted_models.values())
-        self.summary.__doc__ = _tmp.__doc__
-        _tmp = _module.etable
-        self.etable = functools.partial(_tmp, models=self.all_fitted_models.values())
-        self.etable.__doc__ = _tmp.__doc__
+    def _report_models(self) -> list[ModelResult]:
+        """Return every fitted model for the shared reporting wrappers."""
+        return list(self.all_fitted_models.values())
 
     @property
     def _is_iv(self) -> bool:
@@ -79,7 +72,7 @@ class FixestMulti(TidyColumnAccessors):
         """Parsed formula dict keyed by fixed-effects spec."""
         return self._parsed.formula_dict
 
-    def to_list(self) -> list[Feols | Fepois | Feiv]:
+    def to_list(self) -> list[ModelResult]:
         """
         Return a list of all fitted models.
 
@@ -95,9 +88,9 @@ class FixestMulti(TidyColumnAccessors):
 
     def vcov(
         self,
-        vcov: str | dict[str, str],
-        vcov_kwargs: dict[str, str | int] | None = None,
-    ):
+        vcov: RegressionVcovType | QuantregVcovType | dict[str, str],
+        vcov_kwargs: VcovKwargs | None = None,
+    ) -> FixestMulti:
         """
         Update regression inference "on the fly".
 
@@ -121,7 +114,7 @@ class FixestMulti(TidyColumnAccessors):
             An instance of the "Fixest" class with updated inference.
         """
         for fxst in self.all_fitted_models.values():
-            fxst.vcov(vcov=vcov, vcov_kwargs=vcov_kwargs)
+            cast(Any, fxst).vcov(vcov=vcov, vcov_kwargs=vcov_kwargs)
         return self
 
     def tidy(self) -> pd.DataFrame:
@@ -250,9 +243,7 @@ class FixestMulti(TidyColumnAccessors):
 
         return res_df
 
-    def fetch_model(
-        self, i: int | str, print_fml: bool | None = True
-    ) -> Feols | Fepois:
+    def fetch_model(self, i: int | str, print_fml: bool | None = True) -> ModelResult:
         """
         Fetch a model of class Feols from the Fixest class.
 

@@ -7,15 +7,11 @@ import pandas as pd
 from scipy.stats import t
 
 from pyfixest.estimation.FixestMulti_ import FixestMulti
-from pyfixest.estimation.models.feiv_ import Feiv
-from pyfixest.estimation.models.feols_ import Feols
-from pyfixest.estimation.models.fepois_ import Fepois
 from pyfixest.report.utils import _post_processing_input_checks
+from pyfixest.typing import ModelInput
 
-ModelInputType = FixestMulti | list[Feols | Fepois | Feiv]
 
-
-def bonferroni(models: ModelInputType, param: str) -> pd.DataFrame:
+def bonferroni(models: ModelInput, param: str) -> pd.DataFrame:
     """
     Compute Bonferroni adjusted p-values for multiple hypothesis testing.
 
@@ -69,7 +65,7 @@ def bonferroni(models: ModelInputType, param: str) -> pd.DataFrame:
 
 
 def rwolf(
-    models: ModelInputType,
+    models: ModelInput,
     param: str,
     reps: int,
     seed: int,
@@ -182,7 +178,7 @@ def _get_rwolf_pval(t_stats, boot_t_stats):
 
 
 def wyoung(
-    models: ModelInputType,
+    models: ModelInput,
     param: str,
     reps: int,
     seed: int,
@@ -277,7 +273,7 @@ def _get_wyoung_pval(p_vals, boot_p_vals):
 
 def _multcomp_resample(
     type: str,
-    models: ModelInputType,
+    models: ModelInput,
     param: str,
     reps: int,
     seed: int,

@@ -15,18 +15,22 @@ from pyfixest.estimation.internals.demeaner_options import (
     _warn_if_experimental_torch_demeaner,
 )
 from pyfixest.estimation.internals.literals import (
-    FamilyOptions,
     FixedRmOptions,
     SolverOptions,
-    VcovTypeOptions,
-    WeightsTypeOptions,
     _validate_literal_argument,
 )
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.models.fepois_ import Fepois
 from pyfixest.estimation.plan_ import parse_formula
 from pyfixest.estimation.runner import run_estimation
-from pyfixest.utils.dev_utils import DataFrameType
+from pyfixest.typing import (
+    DataFrameType,
+    GlmFamily,
+    RegressionVcovType,
+    SscConfig,
+    VcovKwargs,
+    WeightsType,
+)
 from pyfixest.utils.utils import capture_context
 from pyfixest.utils.utils import ssc as ssc_func
 
@@ -34,13 +38,13 @@ from pyfixest.utils.utils import ssc as ssc_func
 def feglm(
     fml: str,
     data: DataFrameType,  # type: ignore
-    family: FamilyOptions,
-    vcov: VcovTypeOptions | dict[str, str] | None = None,
-    vcov_kwargs: dict[str, str | int] | None = None,
+    family: GlmFamily,
+    vcov: RegressionVcovType | dict[str, str] | None = None,
+    vcov_kwargs: VcovKwargs | None = None,
     weights: str | None = None,
-    weights_type: WeightsTypeOptions = "aweights",
+    weights_type: WeightsType = "aweights",
     offset: str | None = None,
-    ssc: dict[str, str | bool] | None = None,
+    ssc: SscConfig | None = None,
     fixef_rm: FixedRmOptions = "singleton",
     iwls_tol: float = 1e-08,
     iwls_maxiter: int = 25,
@@ -273,7 +277,7 @@ def feglm(
     for a compact post-estimation workflow.
 
     """
-    _validate_literal_argument(family, FamilyOptions)
+    _validate_literal_argument(family, GlmFamily)
     if offset is not None and family != "poisson":
         raise ValueError(
             "The `offset` argument is only supported with `family='poisson'`."

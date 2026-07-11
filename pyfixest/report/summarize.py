@@ -6,13 +6,9 @@ import maketables
 import numpy as np
 import pandas as pd
 
-from pyfixest.estimation.FixestMulti_ import FixestMulti
-from pyfixest.estimation.models.feiv_ import Feiv
 from pyfixest.estimation.models.feols_ import Feols
-from pyfixest.estimation.models.fepois_ import Fepois
 from pyfixest.report.utils import _post_processing_input_checks
-
-ModelInputType = FixestMulti | Feols | Fepois | Feiv | list[Feols | Fepois | Feiv]
+from pyfixest.typing import ModelInput
 
 _METHOD_DISPLAY_NAMES: dict[str, str] = {
     "fepois": "Poisson",
@@ -36,7 +32,7 @@ def _get_estimation_method_name(fxst: Feols) -> str:
 
 
 def etable(
-    models: ModelInputType,
+    models: ModelInput,
     type: str = "gt",
     signif_code: list | None = None,
     coef_fmt: str | None = None,
@@ -280,7 +276,7 @@ def etable(
     return None
 
 
-def summary(models: ModelInputType, digits: int = 3) -> None:
+def summary(models: ModelInput, digits: int = 3) -> None:
     """
     Print a summary of estimation results for each estimated model.
 
