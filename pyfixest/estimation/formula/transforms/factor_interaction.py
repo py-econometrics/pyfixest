@@ -87,7 +87,7 @@ def factor_interaction(
         reduced_rank: bool,
         drop_rows: list[int],
         encoder_state: dict[str, Any],
-        model_spec: "ModelSpec",
+        model_spec: ModelSpec,
     ) -> FactorValues:
         """Run encoder callback during materialization."""
         return _encode_i(
@@ -138,7 +138,7 @@ def _encode_i(
     reduced_rank: bool,
     drop_rows: list[int],
     encoder_state: dict[str, Any],
-    model_spec: "ModelSpec",
+    model_spec: ModelSpec,
 ) -> FactorValues:
     """
     Actual encoding logic, called during materialization.
@@ -248,7 +248,7 @@ def _encode_factor(
     bins: dict | None,
     reduced_rank: bool,
     encoder_state: dict[str, Any],
-    model_spec: "ModelSpec",
+    model_spec: ModelSpec,
 ) -> pd.DataFrame:
     # --- Binning (optional) ---
     if bins is not None:
