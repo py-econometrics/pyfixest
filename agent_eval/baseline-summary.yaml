@@ -1,0 +1,74 @@
+schema_version: 2
+suite: pyfixest-agent-readiness
+
+# TEMPLATE ONLY: no baseline agent runs have been performed or scored here.
+# Change status only after every task has three validated, independent runs.
+status: not_run
+warning: >-
+  This file is a results placeholder and makes no claim about baseline PyFixest
+  performance. Do not use it for before/after comparisons until status is
+  complete and all expected run records are present.
+
+baseline:
+  planned_pyfixest_ref: 6ae0293b9639efa739650040d8f1539aa00ec345
+  planned_ref_note: >-
+    origin/master observed on 2026-07-11 before the agent-readability series;
+    this records the intended baseline only, not a completed run.
+  pyfixest_ref: null
+  pyfixest_version: null
+  source_access_mode: null
+  install_source: null
+  date_started: null
+  date_completed: null
+
+harness:
+  agent_provider: null
+  agent_harness: null
+  model: null
+  system_prompt_id: null
+  tools: []
+  platform: null
+  network: disabled
+
+protocol:
+  task_schema_version: 2
+  rubric_schema_version: 2
+  repeats_per_task: 3
+  task_count: 15
+  expected_run_count: 45
+  completed_run_count: 0
+
+run_record_template:
+  profile: null
+  task_id: null
+  run_number: null
+  elapsed_seconds: null
+  commands_or_searches_used: []
+  files_consulted: []
+  first_relevant_source: null
+  final_answer: null
+  score:
+    correctness: null
+    source_discovery: null
+    efficiency: null
+    evidence: null
+    epistemic_discipline: null
+    total: null
+  hard_failure: null
+  notes: null
+
+runs: []
+
+aggregate:
+  task_median_scores: null
+  profile_median_scores: null
+  aggregate_median_score: null
+  intended_first_source_rate: null
+  hard_failure_count_by_condition: null
+
+validation:
+  all_expected_runs_present: false
+  every_task_median_at_least_8: null
+  no_unsupported_api_failures: null
+  intended_first_source_rate_at_least_0_8: null
+  comparison_ready: false

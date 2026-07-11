@@ -1,0 +1,95 @@
+schema_version: 2
+suite: pyfixest-agent-readiness
+
+scoring:
+  max_points: 10
+  run_pass_threshold: 8
+  dimensions:
+    correctness:
+      max_points: 4
+      guidance:
+        - '4: Covers every required answer point accurately, with usable syntax or file routing and relevant limitations.'
+        - '3: Correct core answer but omits one required caveat, routing step, or useful syntax detail.'
+        - '2: Right direction, but two or more important points are missing or materially ambiguous.'
+        - '1: Contains one relevant PyFixest fact but would not safely complete the task.'
+        - '0: Wrong, nonresponsive, or recommends unsupported behavior.'
+    source_discovery:
+      max_points: 2
+      guidance:
+        - '2: The first relevant source is listed in the task preferred_first_sources or is its generated/packaged equivalent.'
+        - '1: Reaches an authoritative local source, but only after indirect implementation files or tests.'
+        - '0: Relies on guesses, tests as primary documentation, unrelated material, or no relevant source.'
+    efficiency:
+      max_points: 2
+      guidance:
+        - '2: Reaches the answer in at most 5 combined searches and file reads.'
+        - '1: Reaches the answer in 6 through 12 combined searches and file reads.'
+        - '0: Needs more than 12 operations, stalls, or does not expose an auditable trail.'
+    evidence:
+      max_points: 1
+      guidance:
+        - '1: Supplies all four required output fields with ordered, internally consistent evidence.'
+        - '0: Omits a field, reports evidence that contradicts the transcript, or does not identify the first relevant source.'
+    epistemic_discipline:
+      max_points: 1
+      guidance:
+        - '1: Distinguishes verified behavior from uncertainty and makes no claim beyond consulted evidence.'
+        - '0: Presents an unverified assumption as fact, invents a source, or conceals uncertainty.'
+
+hard_failure_conditions:
+  - Recommends unsupported PyFixest API syntax or a nonexistent extension point.
+  - Uses network access or web search in a local-only run.
+  - Mutates the checkout or installed package.
+  - Treats tests as the primary user-facing source when an authoritative local source is available.
+  - Claims that current `feols(..., vcov=None)` defaults to clustering on the first fixed effect.
+  - Omits the final answer or fabricates files, commands, package behavior, or run metadata.
+
+run_metadata:
+  required_fields:
+    - suite_version
+    - date
+    - profile
+    - task_id
+    - run_number
+    - pyfixest_ref
+    - pyfixest_version
+    - install_source
+    - network
+    - agent_provider
+    - agent_harness
+    - model
+    - system_prompt_id
+    - tools
+    - platform
+    - elapsed_seconds
+    - commands_or_searches_used
+    - files_consulted
+    - first_relevant_source
+    - final_answer
+    - score
+    - hard_failure
+  optional_fields:
+    - notes
+    - transcript_path
+
+aggregate_acceptance:
+  repeats_per_task: 3
+  requirements:
+    - Every task has exactly three complete, independent runs.
+    - Every task's median total score is at least 8 out of 10.
+    - No run has a hard failure caused by unsupported or invented API guidance.
+    - At least 80 percent of runs reach an intended local breadcrumb as the first relevant source.
+    - Candidate aggregate score does not regress relative to the frozen baseline.
+  report:
+    - task_median_scores
+    - profile_median_scores
+    - aggregate_median_score
+    - intended_first_source_rate
+    - hard_failure_count_by_condition
+    - deltas_from_baseline
+
+comparison_rules:
+  - Baseline and candidate must use the same task/rubric schema version and task contents.
+  - Baseline and candidate must use the same repeat count, source-access mode, prompt, tools, harness, and model version.
+  - Missing or aborted runs count as incomplete; never impute a score.
+  - Report all runs and prespecified aggregate metrics, not only representative transcripts.

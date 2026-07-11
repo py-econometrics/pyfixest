@@ -1,0 +1,388 @@
+schema_version: 2
+suite: pyfixest-agent-readiness
+description: >-
+  Frozen local-only tasks for evaluating PyFixest documentation discovery and
+  answer quality for both library consumers and code contributors.
+
+defaults:
+  network: disabled
+  memory: fresh_per_run
+  repeats: 3
+  mutation: forbidden
+  required_agent_output:
+    - final_answer
+    - files_consulted
+    - first_relevant_source
+    - commands_or_searches_used
+
+profiles:
+  consumer:
+    description: >-
+      Answer a user's PyFixest question from an installed package or a source
+      checkout without changing files.
+    preferred_source_kinds:
+      - packaged PyFixest documentation
+      - PyFixest skill references
+      - public API docstrings
+      - authored documentation pages
+  contributor:
+    description: >-
+      Explain where and how a code change belongs from a clean PyFixest source
+      checkout without implementing it.
+    preferred_source_kinds:
+      - ARCHITECTURE.md
+      - AGENTS.md and its linked workflow
+      - focused contributor documentation
+      - nearest existing implementation
+
+tasks:
+  - id: consumer-formula-sections
+    profile: consumer
+    topic: formulas
+    prompt: >-
+      Show the PyFixest formula syntax for (a) OLS with covariates X1 and X2
+      plus firm and year fixed effects, and (b) IV with X1 endogenous and Z1
+      as its instrument, while X2 remains exogenous. Explain what each pipe
+      section means.
+    expected_answer:
+      - '`pf.feols("Y ~ X1 + X2 | firm + year", data=df)` fits the FE OLS model.'
+      - >-
+        A valid IV example is
+        `pf.feols("Y ~ X2 | firm + year | X1 ~ Z1", data=df)`.
+      - >-
+        The sections are outcome/covariates, fixed effects, then endogenous
+        variables/instruments; the final section is present only for IV.
+    preferred_first_sources:
+      - pyfixest/docs/pages/tutorials/formula-syntax.md
+      - docs/tutorials/formula-syntax.qmd
+      - pyfixest/estimation/api/feols.py
+    relevant_queries:
+      - fixest formula pipe fixed effects instruments
+      - feols X1 Z1 IV formula
+
+  - id: consumer-inference-cluster
+    profile: consumer
+    topic: inference
+    prompt: >-
+      I need firm-clustered standard errors, and then two-way firm/year
+      clustered standard errors, for a PyFixest OLS model. Give the estimation
+      syntax and say how to update an already fitted model.
+    expected_answer:
+      - 'Use `vcov={"CRV1": "firm"}` for one-way clustering.'
+      - 'Use `vcov={"CRV1": "firm + year"}` for two-way clustering.'
+      - >-
+        A fitted model with retained data can be updated with
+        `fit.vcov({"CRV1": "firm"})` (or the two-way dictionary).
+      - Cluster variables must be columns in the estimation data.
+    preferred_first_sources:
+      - pyfixest/docs/pages/tutorials/standard-errors.md
+      - pyfixest/estimation/api/feols.py
+      - pyfixest/estimation/models/feols_.py
+    relevant_queries:
+      - CRV1 firm year vcov
+      - two-way clustered standard errors
+
+  - id: consumer-inference-panel-hac
+    profile: consumer
+    topic: inference
+    prompt: >-
+      How do I request Newey-West standard errors with lag 3 on panel data with
+      columns unit and year? Include the PyFixest arguments and distinguish the
+      identifiers.
+    expected_answer:
+      - 'Set `vcov="NW"`.'
+      - >-
+        Pass
+        `vcov_kwargs={"lag": 3, "time_id": "year", "panel_id": "unit"}`.
+      - >-
+        `time_id` orders periods and `panel_id` identifies observational units;
+        both names must be columns in the data.
+    preferred_first_sources:
+      - pyfixest/docs/pages/tutorials/standard-errors.md
+      - pyfixest/estimation/api/feols.py
+      - pyfixest/estimation/internals/vcov_utils.py
+    relevant_queries:
+      - Newey-West panel time_id panel_id lag
+      - vcov_kwargs NW
+
+  - id: consumer-multiple-estimation
+    profile: consumer
+    topic: multiple_estimation
+    prompt: >-
+      Fit cumulative models that add X1 and then X2 in one PyFixest call, and
+      explain the returned object and how to retrieve one model. Also say how
+      `split` differs from `fsplit`.
+    expected_answer:
+      - >-
+        Use cumulative stepwise syntax such as
+        `pf.feols("Y ~ csw(X1, X2) | firm", data=df)`.
+      - >-
+        Multiple expansion returns `FixestMulti`; use `fetch_model(index)` or
+        `to_list()` to retrieve fitted models.
+      - '`split="group"` fits each group only; `fsplit="group"` also fits the full sample first.'
+      - '`sw` is non-cumulative while `csw` is cumulative.'
+    preferred_first_sources:
+      - pyfixest/docs/pages/tutorials/formula-syntax.md
+      - pyfixest/estimation/api/feols.py
+      - pyfixest/estimation/FixestMulti_.py
+    relevant_queries:
+      - csw FixestMulti fetch_model
+      - split fsplit full sample
+
+  - id: consumer-reporting-table
+    profile: consumer
+    topic: reporting
+    prompt: >-
+      I have two fitted PyFixest models and need a regression table in Markdown
+      containing only coefficients whose names start with X. What should I
+      call? Mention the corresponding convenience call for a FixestMulti.
+    expected_answer:
+      - 'Use `pf.etable([fit1, fit2], type="md", keep=r"^X")`.'
+      - 'A `FixestMulti` can call its `etable(...)` convenience method.'
+      - '`keep` accepts regular-expression patterns; `type="md"` selects Markdown.'
+    preferred_first_sources:
+      - pyfixest/docs/pages/tutorials/regression-tables.md
+      - pyfixest/report/summarize.py
+      - pyfixest/estimation/FixestMulti_.py
+    relevant_queries:
+      - etable markdown keep regex
+      - FixestMulti etable
+
+  - id: consumer-glm-poisson
+    profile: consumer
+    topic: glm
+    prompt: >-
+      Which PyFixest entry points should I use for a Poisson fixed-effects
+      model and for a fixed-effects logit model? Give minimal formulas and note
+      whether IV formula sections are supported by these GLM calls.
+    expected_answer:
+      - 'Use `pf.fepois("Y ~ X1 | firm + year", data=df)` for Poisson.'
+      - 'Use `pf.feglm("Y ~ X1 | firm + year", data=df, family="logit")` for logit.'
+      - '`feglm(..., family="poisson")` dispatches to the Poisson model as well.'
+      - IV formula sections are not supported for GLMs.
+    preferred_first_sources:
+      - pyfixest/estimation/api/fepois.py
+      - pyfixest/estimation/api/feglm.py
+      - pyfixest/docs/pages/reference/estimation-functions.md
+    relevant_queries:
+      - fepois feglm family logit fixed effects
+      - GLM IV not supported
+
+  - id: consumer-quantile-regression
+    profile: consumer
+    topic: quantile_regression
+    prompt: >-
+      Fit the 0.25, 0.5, and 0.75 conditional quantiles in one PyFixest call.
+      State the returned container behavior and the current fixed-effect, IV,
+      weight, and clustered-inference limitations.
+    expected_answer:
+      - >-
+        Use
+        `pf.quantreg("Y ~ X1 + X2", data=df, quantile=[0.25, 0.5, 0.75])`.
+      - Multiple quantiles expand to models returned through `FixestMulti`.
+      - Fixed effects, IV formulas, and user weights are not currently supported.
+      - Cluster inference is CRV1 and one-way; CRV3 and HAC are not supported.
+    preferred_first_sources:
+      - pyfixest/docs/pages/tutorials/quantile-regression.md
+      - pyfixest/estimation/api/quantreg.py
+      - pyfixest/estimation/quantreg/quantreg_.py
+    relevant_queries:
+      - quantreg multiple quantiles restrictions
+      - quantreg fixed effects weights CRV1
+
+  - id: consumer-difference-in-differences
+    profile: consumer
+    topic: difference_in_differences
+    prompt: >-
+      I have outcome y, unit id, calendar time t, and first-treatment time g.
+      Which high-level PyFixest call selects TWFE, DID2S, or a saturated event
+      study, and what happens when I omit the cluster argument? Mention the
+      separate local-projections entry point.
+    expected_answer:
+      - >-
+        Use `pf.event_study(data=df, yname="y", idname="id", tname="t",
+        gname="g", estimator=...)`.
+      - '`estimator` accepts `"twfe"`, `"did2s"`, or `"saturated"`.'
+      - Omitting `cluster` defaults clustering to `idname`.
+      - '`pf.lpdid(...)` is the separate local-projections DID/event-study entry point.'
+    preferred_first_sources:
+      - pyfixest/docs/pages/tutorials/difference-in-differences.md
+      - pyfixest/did/estimation.py
+    relevant_queries:
+      - event_study estimator did2s saturated cluster
+      - lpdid local projections
+
+  - id: consumer-missing-stored-data
+    profile: consumer
+    topic: model_state
+    prompt: >-
+      I fit with `store_data=False` and now want to replace the model's
+      covariance with clustered standard errors. Why can this fail, and what
+      are the safe ways to avoid the problem? Also explain how `lean=True`
+      differs.
+    expected_answer:
+      - >-
+        Cluster/HAC covariance updates need estimation data; `store_data=False`
+        removes the model's retained `_data` after initial inference.
+      - >-
+        Request the final `vcov` during the original fit, or refit with
+        `store_data=True` before data-dependent post-estimation.
+      - >-
+        `lean=True` removes a broader set of working arrays and
+        residual-dependent state, so more post-estimation methods become unavailable.
+      - Reduced-state models still retain already-computed coefficient and inference summaries.
+    preferred_first_sources:
+      - pyfixest/docs/pages/reference/model-state.md
+      - pyfixest/estimation/api/feols.py
+      - pyfixest/estimation/models/feols_.py
+    relevant_queries:
+      - store_data false vcov clustered
+      - lean clear attributes
+
+  - id: contributor-post-estimation-feature
+    profile: contributor
+    topic: extension_points
+    prompt: >-
+      I am adding a substantial post-estimation procedure for fitted OLS
+      models. Where should the computation, model method, validation, docs,
+      and tests go? Name the nearest in-repository pattern.
+    expected_answer:
+      - Put substantial logic in a module under `pyfixest/estimation/post_estimation/`.
+      - Keep a thin validating/delegating method with the public docstring on `Feols`.
+      - Use `post_estimation/ritest.py` plus `Feols.ritest` as the nearest pattern.
+      - >-
+        Test through `feols` where practical, cover unsupported weights/FE/IV/state
+        paths, and add the public method's executable NumPy docstring/docs.
+    preferred_first_sources:
+      - ARCHITECTURE.md
+      - AGENTS.md
+      - .agents/feature-pr.md
+    relevant_queries:
+      - new post-estimation feature thin wrapper
+      - ritest Feols delegate
+
+  - id: contributor-vcov-feature
+    profile: contributor
+    topic: extension_points
+    prompt: >-
+      Map the code changes required to add a new covariance estimator to
+      PyFixest, including accepted literals, validation/dispatch, numerical
+      implementation, multi-model handling, SSC, and reference tests.
+    expected_answer:
+      - >-
+        Add the accepted value in `estimation/internals/literals.py` and validate/
+        deparse it at the model/API boundary.
+      - >-
+        Dispatch from `Feols.vcov()` through a small method and keep shared
+        meat/bread math in `estimation/internals/vcov_.py` or `vcov_utils.py`.
+      - Thread it through `FixestMulti.vcov`, SSC construction, and quantreg only if supported.
+      - Use the NW/DK path as the nearest pattern and compare to an external or brute-force reference.
+    preferred_first_sources:
+      - ARCHITECTURE.md
+      - AGENTS.md
+      - pyfixest/estimation/models/feols_.py
+    relevant_queries:
+      - new vcov type literals deparse dispatch
+      - NW DK vcov_utils ssc
+
+  - id: contributor-estimation-option
+    profile: contributor
+    topic: extension_points
+    prompt: >-
+      A new estimation-time option affects OLS and GLM construction. Trace the
+      exact layers it must cross from public signatures to model constructors,
+      and say where validation and typing belong.
+    expected_answer:
+      - >-
+        Add a `Literal` alias where appropriate and expose/document the option in
+        every relevant function under `estimation/api/`.
+      - Validate at the API boundary before creating the configuration.
+      - Add the immutable field to `EstimationConfig`.
+      - >-
+        Thread the field through `plan_._build_model_kwargs`, using
+        `MODEL_REGISTRY.needs` when only selected model families accept it.
+      - Add integration tests that exercise each supported public entry point.
+    preferred_first_sources:
+      - ARCHITECTURE.md
+      - AGENTS.md
+      - pyfixest/estimation/config.py
+      - pyfixest/estimation/plan_.py
+    relevant_queries:
+      - EstimationConfig build_model_kwargs needs
+      - new estimation option API validation
+
+  - id: contributor-public-function
+    profile: contributor
+    topic: extension_points
+    prompt: >-
+      I am adding a user-facing estimation function. Identify its owning module,
+      complete export chain, documentation registration, signature convention,
+      and minimum integration-test shape.
+    expected_answer:
+      - Create one module for it under `pyfixest/estimation/api/`.
+      - >-
+        Export it through `estimation/api/__init__.py` and the lazy top-level
+        `pyfixest/__init__.py` declarations.
+      - Register it in quartodoc's `docs/_quarto.yml` contents.
+      - Mirror sibling signature ordering and provide a complete executable NumPy docstring.
+      - Test it end-to-end through the new public symbol against a numerical reference.
+    preferred_first_sources:
+      - ARCHITECTURE.md
+      - AGENTS.md
+      - pyfixest/estimation/api/quantreg.py
+    relevant_queries:
+      - new public function lazy imports quartodoc
+      - estimation api signature order
+
+  - id: contributor-estimation-pipeline
+    profile: contributor
+    topic: architecture
+    prompt: >-
+      Trace one `feols` call from its public function through formula expansion,
+      model fitting, inference, and return-value unwrapping. Identify who owns
+      cross-model caches and when they reset.
+    expected_answer:
+      - '`feols` validates inputs, builds `EstimationConfig`, calls `parse_formula`, then `run_estimation`.'
+      - >-
+        The planner expands parsed formulas/splits into ordered `ModelSpec`
+        objects and resolves the model class from `MODEL_REGISTRY`.
+      - >-
+        `runner.run_estimation` owns the loop and per-cache-block dictionaries;
+        `fit_one` constructs a model, prepares matrices, fits, computes vcov and
+        inference, then clears configured state.
+      - >-
+        Caches are shared only while `(sample_split_value, fixef_key)` is unchanged
+        and are reset at the next cache key.
+      - A single expansion returns its model; multiple expansion returns `FixestMulti`.
+    preferred_first_sources:
+      - ARCHITECTURE.md
+      - pyfixest/estimation/runner.py
+      - pyfixest/estimation/plan_.py
+    relevant_queries:
+      - EstimationConfig parse_formula run_estimation fit_one
+      - cache_key lookup_demeaned_data
+
+  - id: contributor-python-rust-kernel
+    profile: contributor
+    topic: python_rust_boundary
+    prompt: >-
+      A per-cluster numerical loop is too slow in NumPy and needs a Rust kernel.
+      List every file-level boundary required to expose it safely to Python and
+      describe the reference-test strategy. Name an existing kernel path to copy.
+    expected_answer:
+      - Implement the hot loop in a focused `src/<topic>.rs` module.
+      - Register the PyO3 function in `src/lib.rs`.
+      - Add its typed declaration to `pyfixest/core/_core_impl.pyi`.
+      - Re-export a clean Python alias or validating wrapper from `pyfixest/core/<topic>.py`.
+      - >-
+        Keep a readable NumPy/brute-force reference for correctness tests and
+        test edge cases before benchmarking; `src/nw.rs` to `core/nw.py` or
+        `src/crv1.rs` to `core/crv1.py` are precedents.
+    preferred_first_sources:
+      - ARCHITECTURE.md
+      - AGENTS.md
+      - src/lib.rs
+      - pyfixest/core/_core_impl.pyi
+    relevant_queries:
+      - PyO3 kernel register pyi wrapper
+      - src nw core nw
