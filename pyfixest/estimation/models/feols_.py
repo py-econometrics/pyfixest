@@ -21,9 +21,7 @@ from pyfixest.estimation.api.utils import _ALL_SAMPLE, _AllSampleSentinel
 from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
 from pyfixest.estimation.formula import model_matrix as model_matrix_fixest
 from pyfixest.estimation.formula.formulaic_compat import (
-    decode_fixed_effect_dict,
-    get_fixed_effect_code_values,
-    get_fixed_effect_columns,
+    build_fixed_effect_coefficients,
 )
 from pyfixest.estimation.formula.model_matrix import _ModelMatrixKey
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
@@ -55,8 +53,11 @@ from pyfixest.estimation.post_estimation.decomposition import (
     _decompose_arg_check,
 )
 from pyfixest.estimation.post_estimation.prediction import (
+    _check_fe_dtype_compatibility,
     _compute_prediction_error,
+    _predict_fixed_effects,
     _rows_with_unseen_categories,
+    _warn_on_unseen_fixed_effects,
 )
 from pyfixest.estimation.post_estimation.ritest import (
     _HAS_NUMBA,
@@ -69,7 +70,6 @@ from pyfixest.estimation.post_estimation.ritest import (
 from pyfixest.estimation.post_estimation.wald import _wald_statistic
 from pyfixest.utils.dev_utils import (
     DataFrameType,
-    _extract_variable_level,
     _narwhals_to_pandas,
 )
 from pyfixest.utils.utils import (
@@ -79,26 +79,6 @@ from pyfixest.utils.utils import (
 
 decomposition_type = Literal["gelbach"]
 prediction_type = Literal["response", "link"]
-
-
-def _check_fe_dtype_compatibility(
-    fit_data: pd.DataFrame,
-    newdata: pd.DataFrame,
-    fe_columns: list[str],
-) -> None:
-    """Raise if FE columns in newdata cannot be matched against fitted data."""
-    for col in fe_columns:
-        if col not in newdata.columns or col not in fit_data.columns:
-            continue
-        fit_is_numeric = pd.api.types.is_numeric_dtype(fit_data[col])
-        new_is_numeric = pd.api.types.is_numeric_dtype(newdata[col])
-        if fit_is_numeric != new_is_numeric:
-            raise ValueError(
-                f"Fixed effect column '{col}' has dtype {newdata[col].dtype} in "
-                f"newdata but {fit_data[col].dtype} in the data used for fitting, "
-                "so its levels cannot be matched. Convert the column to a "
-                "matching type before calling predict()."
-            )
 
 
 class Feols(ResultAccessorMixin):
@@ -229,8 +209,8 @@ class Feols(ResultAccessorMixin):
         Confidence intervals for the estimated coefficients.
     _F_stat : Any
         F-statistic for the model, set in get_Ftest().
-    _fixef_dict : dict
-        dictionary containing fixed effects estimates.
+    _fixef_coefficients : pd.DataFrame
+        Tidy table containing fixed effects estimates.
     _alpha : pd.DataFrame
         A DataFrame with the estimated fixed effects.
     _sumFE : np.ndarray
@@ -397,8 +377,9 @@ class Feols(ResultAccessorMixin):
         self._conf_int = np.array([])
 
         # set in fixef()
-        self._fixef_dict: dict[str, dict[str, float]] = {}
-        self._fixef_dict_internal: dict[str, dict[str, float]] = {}
+        self._fixef_coefficients = pd.DataFrame(
+            columns=["fixed_effect", "variable", "code", "level", "coefficient"]
+        )
         self._alpha = None
         self._sumFE = None
 
@@ -1741,9 +1722,7 @@ class Feols(ResultAccessorMixin):
 
         return med
 
-    def fixef(
-        self, atol: float = 1e-06, btol: float = 1e-06
-    ) -> dict[str, dict[str, float]]:
+    def fixef(self, atol: float = 1e-06, btol: float = 1e-06) -> pd.DataFrame:
         """
         Compute the coefficients of (swept out) fixed effects for a regression model.
 
@@ -1765,8 +1744,9 @@ class Feols(ResultAccessorMixin):
 
         Returns
         -------
-        dict[str, dict[str, float]]
-            A dictionary with the estimated fixed effects.
+        pd.DataFrame
+            A tidy DataFrame with columns `variable`, `code`, `level`, and
+            `coefficient` containing the estimated fixed effects.
 
         Examples
         --------
@@ -1833,8 +1813,7 @@ class Feols(ResultAccessorMixin):
                 _ModelMatrixKey.fixed_effects
             ].transform_state,
         )
-        one_hot_encoded_fixed_effects = D2.model_spec.column_names
-
+        fe_model_spec = D2.model_spec
         if self._has_weights:
             uhat *= weights_sqrt
             weights_diag = diags(weights_sqrt, 0)
@@ -1842,37 +1821,20 @@ class Feols(ResultAccessorMixin):
 
         alpha = lsqr(D2, uhat, atol=atol, btol=btol)[0]
 
-        # Build internal dict keyed by FE column names with ngroup codes
-        # (used by predict() to map fe_mm values to coefficients).
-        internal: dict[str, dict[str, float]] = {}
-        for i, col in enumerate(one_hot_encoded_fixed_effects):
-            variable, level = _extract_variable_level(col)
-            if variable not in internal:
-                internal[variable] = dict()
-            if level not in internal[variable]:
-                internal[variable][level] = alpha[i]
-
-        # Add reference levels (dropped by ensure_full_rank=True) with
-        # coefficient 0 so predict() can map all FE values including the
-        # reference level.
-        fe_transform_state = self._model_spec[
-            _ModelMatrixKey.fixed_effects
-        ].transform_state
-        for variable, levels in internal.items():
-            all_codes = get_fixed_effect_code_values(fe_transform_state, variable)
-            missing = all_codes - set(levels.keys())
-            for code in missing:
-                levels[code] = 0.0
-
-        # Decode to user-facing dict with real variable names and level labels
-        res = decode_fixed_effect_dict(internal, fe_transform_state)
-
-        self._fixef_dict_internal = internal
-        self._fixef_dict = res
+        self._fixef_coefficients = build_fixed_effect_coefficients(
+            fixed_effects=self.FixestFormula.fixed_effects_wrapped,
+            fixed_effect_coefficients=alpha,
+            model_spec=fe_model_spec,
+            transform_state=self._model_spec[
+                _ModelMatrixKey.fixed_effects
+            ].transform_state,
+        )
         self._alpha = alpha
         self._sumFE = D2.dot(alpha)
 
-        return self._fixef_dict
+        return self._fixef_coefficients[
+            ["variable", "code", "level", "coefficient"]
+        ].copy()
 
     def predict(
         self,
@@ -1997,58 +1959,19 @@ class Feols(ResultAccessorMixin):
             )
             valid_idx = valid_idx[~unseen[valid_idx]]
             if self._has_fixef:
-                # Check dtype compatibility before materializing the FE matrix:
-                # a numeric-vs-non-numeric mismatch would otherwise surface as a
-                # cryptic FactorEvaluationError from the merge inside
-                # encode_fixed_effects.
-                fe_var_names = [
-                    str(factor)
-                    for term in self.FixestFormula.fixed_effects
-                    for factor in term.factors
-                ]
-                _check_fe_dtype_compatibility(self._data, newdata, fe_var_names)
                 fe_spec = self._model_spec[_ModelMatrixKey.fixed_effects]
+                _check_fe_dtype_compatibility(fe_spec, newdata)
                 # na_action="ignore" keeps unseen-level rows as NaN codes
                 fe_mm = fe_spec.get_model_matrix(
                     newdata, context=context, na_action="ignore"
                 )
-                # check if there are fixed effect levels not seen during fitting
-                for column in fe_mm.columns:
-                    fixed_effects = get_fixed_effect_columns(fe_spec, column)
-                    unseen_levels = (
-                        fe_mm[column].isna().to_numpy()
-                        & newdata[fixed_effects].notna().all(axis=1).to_numpy()
-                    )
-                    if unseen_levels.any():
-                        missing = newdata.loc[
-                            unseen_levels, fixed_effects
-                        ].drop_duplicates()
-                        warnings.warn(
-                            f"{missing.shape[0]} unseen level(s) for fixed effect `{'^'.join(fixed_effects)}`: {missing.iloc[:20]}\n"
-                            "Predictions for affected observations will be NaN",
-                            UserWarning,
-                            stacklevel=2,
-                        )
-
+                _warn_on_unseen_fixed_effects(fe_mm, fe_spec, newdata)
                 if self._sumFE is None:
                     self.fixef(atol, btol)
-                fe_hat = (
-                    pd.concat(
-                        [
-                            fe_mm.loc[valid_idx, column].map(
-                                {
-                                    float(level): coefficient
-                                    for level, coefficient in self._fixef_dict_internal[
-                                        column
-                                    ].items()
-                                }
-                            )
-                            for column in fe_mm.columns
-                        ],
-                        axis=1,
-                    )
-                    .sum(axis=1, skipna=False)
-                    .to_numpy()
+                fe_hat = _predict_fixed_effects(
+                    model_matrix=fe_mm,
+                    coefficients=self._fixef_coefficients,
+                    valid_idx=valid_idx,
                 )
                 # fixed effects estimates are nan if singletons or unseen levels
                 valid_idx = valid_idx[~np.isnan(fe_hat)]

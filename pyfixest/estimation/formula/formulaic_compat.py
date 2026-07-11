@@ -7,9 +7,9 @@ from typing import TYPE_CHECKING, Any
 
 import formulaic
 import formulaic.formula
+import numpy as np
 import pandas as pd
-from formulaic.parser.types import Factor
-from formulaic.utils.variables import Variable
+from formulaic.parser.types import Factor, Term
 
 from pyfixest.estimation.formula.transforms.factor_interaction import (
     is_contrast_state_key,
@@ -21,9 +21,6 @@ from pyfixest.estimation.formula.transforms.fixed_effects_encoding import (
 
 if TYPE_CHECKING:
     from formulaic.model_spec import ModelSpec
-
-_FIXED_EFFECT_PREFIX = "__fixed_effect__("
-_FIXED_EFFECT_SUFFIX = ")"
 
 
 class FormulaicCompatibilityError(RuntimeError):
@@ -122,70 +119,59 @@ def _iter_documented_categorical_levels(
 
 def get_fixed_effect_encoding(
     transform_state: Mapping[str, Any], column: str
-) -> pd.DataFrame | None:
-    """Return pyfixest's stored fixed-effect encoding DataFrame, if present."""
-    fe_state = transform_state.get(column, {})
-    return fe_state.get(FIXED_EFFECT_ENCODING)
+) -> pd.DataFrame:
+    """Return pyfixest's stored fixed-effect encoding DataFrame."""
+    try:
+        return transform_state[column][FIXED_EFFECT_ENCODING]
+    except KeyError as exc:
+        raise FormulaicCompatibilityError(
+            f"Fixed-effect encoding for `{column}` is missing from the "
+            "formulaic transform state."
+        ) from exc
 
 
-def get_fixed_effect_code_values(
-    transform_state: Mapping[str, Any], column: str
-) -> set[str]:
-    """Return the non-null fixed-effect ngroup codes seen during fitting."""
-    encoding_df = get_fixed_effect_encoding(transform_state, column)
-    if encoding_df is None:
-        return set()
-    code_col = encoding_df.columns[-1]
-    return set(str(code) for code in encoding_df[code_col].dropna())
-
-
-def decode_fixed_effect_dict(
-    internal: Mapping[str, Mapping[str, float]],
+def build_fixed_effect_coefficients(
+    fixed_effects: Iterable[Term],
+    fixed_effect_coefficients: np.ndarray,
+    model_spec: ModelSpec,
     transform_state: Mapping[str, Any],
-) -> dict[str, dict[str, float]]:
-    """Decode ngroup-coded fixed-effect estimates to user-facing labels."""
-    res: dict[str, dict[str, float]] = {}
-    for col, levels in internal.items():
-        code_to_value = _fixed_effect_code_to_value(transform_state, col)
-        var_name = _fixed_effect_variable_name(col)
-        res[var_name] = {}
-        for level, coefficient in levels.items():
-            decoded_level = code_to_value.get(level, level)
-            res[var_name][decoded_level] = coefficient
-    return res
+) -> pd.DataFrame:
+    """Return a tidy table of fixed-effect coefficients."""
+    fixed_effect_tables: list[pd.DataFrame] = []
+    for fixed_effect, term in zip(fixed_effects, model_spec.terms, strict=True):
+        fixed_effect_table = get_fixed_effect_encoding(
+            transform_state, str(fixed_effect)
+        ).rename(columns={FIXED_EFFECT_ENCODING: "code"})
+        value_columns = [
+            column for column in fixed_effect_table.columns if column != "code"
+        ]
+        fixed_effect_table["fixed_effect"] = str(fixed_effect)
+        fixed_effect_table["variable"] = "^".join(value_columns)
+        fixed_effect_table["level"] = (
+            fixed_effect_table[value_columns].astype(str).agg(",".join, axis=1)
+        )
+        (factor,) = term.factors
+        contrasts_state = model_spec.factor_contrasts[factor]
+        coefficient_indices = model_spec.term_indices[term]
+        coefficient_codes = contrasts_state.contrasts.get_coding_column_names(
+            contrasts_state.levels,
+            reduced_rank=len(coefficient_indices) < len(contrasts_state.levels),
+        )
+        coefficient_table = pd.DataFrame(
+            {
+                "code": coefficient_codes,
+                "coefficient": fixed_effect_coefficients[coefficient_indices],
+            }
+        )
+        fixed_effect_tables.append(
+            fixed_effect_table.merge(
+                coefficient_table, on="code", how="left", validate="one_to_one"
+            ).fillna({"coefficient": 0.0})[
+                ["fixed_effect", "variable", "code", "level", "coefficient"]
+            ]
+        )
 
-
-def _fixed_effect_code_to_value(
-    transform_state: Mapping[str, Any], column: str
-) -> dict[str, str]:
-    encoding_df = get_fixed_effect_encoding(transform_state, column)
-    if encoding_df is None:
-        return {}
-
-    code_col = encoding_df.columns[-1]
-    value_cols = list(encoding_df.columns[:-1])
-    valid_rows = encoding_df.dropna(subset=[code_col])
-    codes = valid_rows[code_col].astype(str)
-    if len(value_cols) == 1:
-        values = valid_rows[value_cols[0]].astype(str)
-    else:
-        values = valid_rows[value_cols].astype(str).agg(",".join, axis=1)
-    return dict(zip(codes, values, strict=True))
-
-
-def _fixed_effect_variable_name(column: str) -> str:
-    if column.startswith(_FIXED_EFFECT_PREFIX) and column.endswith(
-        _FIXED_EFFECT_SUFFIX
-    ):
-        inner = column[len(_FIXED_EFFECT_PREFIX) : -len(_FIXED_EFFECT_SUFFIX)]
-        return inner.replace(", ", "^").replace(",", "^")
-    return column
-
-
-def get_fixed_effect_columns(fe_spec: ModelSpec, fixed_effect: str) -> list[str]:
-    """Return input columns for a given encoded fixed effect."""
-    variables = fe_spec.factor_variables[fixed_effect]
-    return [str(v) for v in variables if Variable.Role.VALUE in v.roles]
+    return pd.concat(fixed_effect_tables, ignore_index=True)
 
 
 def _iter_i_categorical_levels(
