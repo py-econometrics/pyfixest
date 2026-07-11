@@ -404,26 +404,47 @@ def _fixef_test_data(n=500, with_nan=False, seed=11):
     return df
 
 
-def test_fixef_returns_decoded_labels():
-    """fixef() must return clean variable names and original level labels.
+def test_fixef_returns_tidy_coefficients():
+    """fixef() must return tidy coefficients with decoded labels.
 
     Regression test: the predict/fixef rewrite briefly returned internal
     encodings (keys like `__fixed_effect__(g)` with ngroup codes as levels).
     """
     df = _fixef_test_data()
     fit = feols("Y ~ X1 | g + h", data=df)
-    d = fit.fixef(atol=1e-12, btol=1e-12)
+    coefficients = fit.fixef(atol=1e-12, btol=1e-12)
 
-    assert set(d.keys()) == {"g", "h"}
-    assert set(d["g"].keys()) == {"north", "south", "east"}
-    assert set(d["h"].keys()) == {"u", "v", "w", "x"}
+    assert list(coefficients.columns) == [
+        "variable",
+        "code",
+        "level",
+        "coefficient",
+    ]
+    assert set(coefficients["variable"]) == {"g", "h"}
+    assert set(coefficients.loc[coefficients["variable"].eq("g"), "level"]) == {
+        "north",
+        "south",
+        "east",
+    }
+    assert set(coefficients.loc[coefficients["variable"].eq("h"), "level"]) == {
+        "u",
+        "v",
+        "w",
+        "x",
+    }
+    assert not coefficients["code"].isna().any()
 
     # reference normalization: the second FE carries a zero reference level,
     # the first FE (spanning the intercept) does not
-    assert any(v == 0.0 for v in d["h"].values())
+    assert (
+        coefficients.loc[coefficients["variable"].eq("h"), "coefficient"].eq(0.0).any()
+    )
+
+    # The returned table cannot be used to mutate prediction state.
+    coefficients.loc[:, "coefficient"] = np.nan
 
     # predict(newdata=fit data) must reproduce in-sample predictions,
-    # exercising the internal code-keyed dict used for FE mapping
+    # exercising the internal tidy table used for FE mapping
     np.testing.assert_allclose(
         fit.predict(), fit.predict(newdata=df), rtol=1e-6, atol=1e-8
     )
@@ -433,20 +454,20 @@ def test_fixef_nan_fe_level_excluded():
     """NaN FE values in the fit data must not surface as a 'nan' level."""
     df = _fixef_test_data(with_nan=True)
     fit = feols("Y ~ X1 | g", data=df)
-    d = fit.fixef()
+    coefficients = fit.fixef()
 
-    assert set(d["g"].keys()) == {"north", "south", "east"}
-    assert not any("nan" in str(k).lower() for k in d["g"])
+    assert set(coefficients["level"]) == {"north", "south", "east"}
+    assert not coefficients["level"].str.lower().eq("nan").any()
 
 
 def test_fixef_interacted_labels():
     """Interacted FEs decode to `g^h` keys with `val1,val2` level labels."""
     df = _fixef_test_data()
     fit = feols("Y ~ X1 | g^h", data=df)
-    d = fit.fixef(atol=1e-12, btol=1e-12)
+    coefficients = fit.fixef(atol=1e-12, btol=1e-12)
 
-    assert list(d.keys()) == ["g^h"]
-    levels = set(d["g^h"].keys())
+    assert coefficients["variable"].unique().tolist() == ["g^h"]
+    levels = set(coefficients["level"])
     assert all("," in level for level in levels)
     observed = {f"{g},{h}" for g, h in zip(df["g"], df["h"], strict=True)}
     assert levels == observed
