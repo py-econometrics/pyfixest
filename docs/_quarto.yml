@@ -111,6 +111,8 @@ website:
           file: textbook-replications/resources.qmd
       - text: "Changelog"
         file: changelog.qmd
+      - text: "Architecture"
+        file: architecture.qmd
       - text: "Contributing"
         file: contributing.qmd
       - text: "Acknowledgements"

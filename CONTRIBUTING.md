@@ -15,6 +15,10 @@ This will launch a github codespace (there is a free tier for 60h a month, thank
 
 Please refer to the [contributing section](https://pyfixest.org/contributing.html) of our documentation to get started with local development.
 
-For a comprehensive overview of the codebase architecture and internals, check out the [DeepWiki](https://deepwiki.com/py-econometrics/pyfixest). While not perfect and correct in all regards, we think it is a pretty good starting point to learn about the codebase!
+For a repository-maintained overview of dependency boundaries, the estimation
+pipeline, model capabilities, cache and state lifecycles, the Python/Rust
+boundary, and the numerical test map, read
+[`ARCHITECTURE.md`](ARCHITECTURE.md). The rendered version is available in the
+[architecture guide](https://pyfixest.org/architecture.html).
 
 We look forward to your contributions!

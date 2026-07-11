@@ -19,6 +19,11 @@ duplicating content. `CLAUDE.md` is a thin redirect (`@AGENTS.md`) and is
 committed to the repo.
 Edit the workflow only in `.agents/feature-pr.md`.
 
+Read `ARCHITECTURE.md` for the canonical dependency direction, estimation
+pipeline, model capability matrix, state and cache lifecycles, Python/Rust
+boundary, and numerical test map. Keep that document synchronized with any
+change to those architectural contracts.
+
 ## Repo map
 
 | Path | Contents |
