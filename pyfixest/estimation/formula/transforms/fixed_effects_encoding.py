@@ -7,20 +7,21 @@ from formulaic.parser import DefaultOperatorResolver
 from formulaic.parser.types import Operator, OrderedSet
 from formulaic.utils.stateful_transforms import stateful_transform
 
+FIXED_EFFECT_ENCODING: Final[str] = "__fixed_effect_encoding__"
+
 
 @stateful_transform
 def encode_fixed_effects(*args, _state=None, _metadata=None, _spec=None):
     """Encode fixed effect interactions for model matrix construction."""
     data = pd.concat(args, axis=1)
-    _encoding: Final[str] = "__fixed_effect_encoding__"
-    if _encoding not in _state:
-        data[_encoding] = data.groupby(data.columns.tolist()).ngroup()
-        _state[_encoding] = data.drop_duplicates()
-        return data[_encoding]
+    if FIXED_EFFECT_ENCODING not in _state:
+        data[FIXED_EFFECT_ENCODING] = data.groupby(data.columns.tolist()).ngroup()
+        _state[FIXED_EFFECT_ENCODING] = data.drop_duplicates()
+        return data[FIXED_EFFECT_ENCODING]
 
-    return data.merge(_state[_encoding], on=data.columns.tolist(), how="left")[
-        _encoding
-    ]
+    return data.merge(
+        _state[FIXED_EFFECT_ENCODING], on=data.columns.tolist(), how="left"
+    )[FIXED_EFFECT_ENCODING]
 
 
 class _FixedEffectsOperatorResolver(DefaultOperatorResolver):

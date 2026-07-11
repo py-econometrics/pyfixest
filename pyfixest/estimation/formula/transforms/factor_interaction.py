@@ -1,18 +1,14 @@
-from collections.abc import Hashable
-from typing import TYPE_CHECKING, Any
+from __future__ import annotations
+
+from collections.abc import Hashable, Iterable, Mapping
+from typing import TYPE_CHECKING, Any, Final
 
 import numpy as np
 import pandas as pd
-from formulaic.materializers.types import FactorValues
-
-from pyfixest.estimation.formula.formulaic_compat import (
-    bin_mapping_state_key,
-    encode_contrasts_with_state,
-    get_contrast_levels,
-    get_or_create_contrast_state,
-    set_contrast_levels,
-    unwrap_factor_values,
-)
+from formulaic import FactorValues
+from formulaic.transforms import encode_contrasts
+from formulaic.transforms.contrasts import TreatmentContrasts
+from formulaic.utils.sentinels import UNSET
 
 if TYPE_CHECKING:
     from formulaic.model_spec import ModelSpec
@@ -312,3 +308,79 @@ def _apply_binning(series: pd.Series, bins: dict, state: dict) -> pd.Series:
                 mapping[old] = new_level
         state[bin_key] = mapping
     return series.replace(state[bin_key])
+
+
+def get_or_create_contrast_state(
+    encoder_state: dict[str, Any], variable: str
+) -> dict[str, Any]:
+    """Return the nested formulaic encoder state used for one i() contrast."""
+    return encoder_state.setdefault(contrast_state_key(variable), {})
+
+
+def unwrap_factor_values(value: Any) -> Any:
+    """Return raw values from formulaic's FactorValues proxy."""
+    # formulaic internal: FactorValues is a wrapt proxy; `.__wrapped__` exposes
+    # the object consumed by pyfixest's custom encoders.
+    return value.__wrapped__ if isinstance(value, FactorValues) else value
+
+
+def contrast_state_key(variable: str) -> str:
+    """Return pyfixest's formulaic encoder-state key for i() contrasts."""
+    return f"{_CONTRASTS_PREFIX}{variable}{_CONTRASTS_SUFFIX}"
+
+
+def is_contrast_state_key(key: str) -> bool:
+    """Return whether a key stores pyfixest i() contrast state."""
+    return key.startswith(_CONTRASTS_PREFIX) and key.endswith(_CONTRASTS_SUFFIX)
+
+
+def variable_from_contrast_state_key(key: str) -> str:
+    """Extract the variable name from a pyfixest i() contrast state key."""
+    return key[len(_CONTRASTS_PREFIX) : -len(_CONTRASTS_SUFFIX)]
+
+
+def get_contrast_levels(encoder_state: Mapping[str, Any], variable: str) -> list[Any]:
+    """Return stored i() contrast levels for a variable."""
+    return encoder_state[contrast_state_key(variable)]["levels"]
+
+
+def set_contrast_levels(
+    encoder_state: Mapping[str, Any], variable: str, levels: list[Any]
+) -> None:
+    """Store i() contrast levels in pyfixest's nested formulaic encoder state."""
+    encoder_state[contrast_state_key(variable)].update({"levels": levels})
+
+
+def bin_mapping_state_key(variable: str) -> str:
+    """Return pyfixest's formulaic encoder-state key for binned i() levels."""
+    return f"{_BIN_MAPPING_PREFIX}{variable}{_BIN_MAPPING_SUFFIX}"
+
+
+def encode_contrasts_with_state(
+    data: pd.Series,
+    *,
+    ref: Hashable | None,
+    levels: Iterable[Any] | None,
+    reduced_rank: bool,
+    state: dict[str, Any],
+    model_spec: ModelSpec,
+) -> pd.DataFrame:
+    """Call formulaic encode_contrasts with explicit state injection."""
+    # formulaic internal: `_state`/`_spec` are normally supplied by formulaic's
+    # stateful_transform machinery; pyfixest calls the transform directly.
+    encoded = encode_contrasts(
+        data,
+        contrasts=TreatmentContrasts(base=ref if ref is not None else UNSET),
+        levels=levels,
+        reduced_rank=reduced_rank,
+        output="pandas",
+        _state=state,
+        _spec=model_spec,
+    )
+    return unwrap_factor_values(encoded)
+
+
+_CONTRASTS_PREFIX: Final[str] = "__contrasts_"
+_CONTRASTS_SUFFIX: Final[str] = "__"
+_BIN_MAPPING_PREFIX: Final[str] = "__bin_mapping_"
+_BIN_MAPPING_SUFFIX: Final[str] = "__"

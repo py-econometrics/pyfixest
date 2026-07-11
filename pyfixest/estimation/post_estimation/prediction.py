@@ -5,8 +5,10 @@ import pandas as pd
 from scipy.stats import t
 
 from pyfixest.estimation.formula.formulaic_compat import (
-    bin_mapping_state_key,
     iter_model_spec_categorical_levels,
+)
+from pyfixest.estimation.formula.transforms.factor_interaction import (
+    bin_mapping_state_key,
 )
 
 if TYPE_CHECKING:
