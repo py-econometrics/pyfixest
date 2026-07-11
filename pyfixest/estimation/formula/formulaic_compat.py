@@ -10,6 +10,7 @@ import formulaic.formula
 import numpy as np
 import pandas as pd
 from formulaic.parser.types import Factor, Term
+from numpy.typing import NDArray
 
 from pyfixest.estimation.formula.transforms.factor_interaction import (
     is_contrast_state_key,
@@ -130,48 +131,58 @@ def get_fixed_effect_encoding(
         ) from exc
 
 
-def build_fixed_effect_coefficients(
-    fixed_effects: Iterable[Term],
-    fixed_effect_coefficients: np.ndarray,
-    model_spec: ModelSpec,
+def get_fixed_effect_encoding_data(
+    fixed_effect_name: str,
     transform_state: Mapping[str, Any],
-) -> pd.DataFrame:
-    """Return a tidy table of fixed-effect coefficients."""
-    fixed_effect_tables: list[pd.DataFrame] = []
-    for fixed_effect, term in zip(fixed_effects, model_spec.terms, strict=True):
-        fixed_effect_table = get_fixed_effect_encoding(
-            transform_state, str(fixed_effect)
-        ).rename(columns={FIXED_EFFECT_ENCODING: "code"})
-        value_columns = [
-            column for column in fixed_effect_table.columns if column != "code"
-        ]
-        fixed_effect_table["fixed_effect"] = str(fixed_effect)
-        fixed_effect_table["variable"] = "^".join(value_columns)
-        fixed_effect_table["level"] = (
-            fixed_effect_table[value_columns].astype(str).agg(",".join, axis=1)
-        )
-        (factor,) = term.factors
-        contrasts_state = model_spec.factor_contrasts[factor]
-        coefficient_indices = model_spec.term_indices[term]
-        coefficient_codes = contrasts_state.contrasts.get_coding_column_names(
-            contrasts_state.levels,
-            reduced_rank=len(coefficient_indices) < len(contrasts_state.levels),
-        )
-        coefficient_table = pd.DataFrame(
-            {
-                "code": coefficient_codes,
-                "coefficient": fixed_effect_coefficients[coefficient_indices],
-            }
-        )
-        fixed_effect_tables.append(
-            fixed_effect_table.merge(
-                coefficient_table, on="code", how="left", validate="one_to_one"
-            ).fillna({"coefficient": 0.0})[
-                ["fixed_effect", "variable", "code", "level", "coefficient"]
-            ]
-        )
+) -> tuple[str, NDArray[np.int64], tuple[NDArray[Any], ...]]:
+    """Return normalized encoding data for one fixed effect."""
+    encoding = get_fixed_effect_encoding(transform_state, fixed_effect_name)
+    value_columns = [
+        column for column in encoding.columns if column != FIXED_EFFECT_ENCODING
+    ]
+    return (
+        "^".join(value_columns),
+        encoding[FIXED_EFFECT_ENCODING].to_numpy(dtype=np.int64),
+        tuple(encoding[column].to_numpy(copy=True) for column in value_columns),
+    )
 
-    return pd.concat(fixed_effect_tables, ignore_index=True)
+
+def get_fixed_effect_coefficient_positions(
+    term: Term,
+    model_spec: ModelSpec,
+) -> tuple[NDArray[np.int64], NDArray[np.int64]]:
+    """
+    Align one fixed-effect term's codes with positions in the coefficient vector.
+
+    Formulaic stores the coefficients for all fixed-effect terms in one model
+    matrix. The returned coefficient positions select the entries belonging to
+    `term`. The returned codes identify which encoded fixed-effect levels those
+    entries represent.
+
+    For a full-rank term, every encoded level has a coefficient. For a
+    reduced-rank term, formulaic omits the reference level, so its code is absent
+    from the returned codes. The caller can therefore initialize coefficients for
+    all codes to zero and fill only the returned code-position pairs.
+
+    Returns
+    -------
+    coefficient_codes : NDArray[np.int64]
+        Encoded fixed-effect levels represented in the coefficient vector.
+    coefficient_indices : NDArray[np.int64]
+        Positions of this term's coefficients in the complete fixed-effect
+        coefficient vector.
+    """
+    (factor,) = term.factors
+    contrasts_state = model_spec.factor_contrasts[factor]
+    coefficient_indices = model_spec.term_indices[term]
+    coefficient_codes = contrasts_state.contrasts.get_coding_column_names(
+        contrasts_state.levels,
+        reduced_rank=len(coefficient_indices) < len(contrasts_state.levels),
+    )
+    return (
+        np.asarray(coefficient_codes, dtype=np.int64),
+        np.asarray(coefficient_indices, dtype=np.int64),
+    )
 
 
 def _iter_i_categorical_levels(
