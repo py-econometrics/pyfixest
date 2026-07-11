@@ -1,3 +1,5 @@
+"""Define the internal base protocol for difference-in-differences estimators."""
+
 from abc import ABC, abstractmethod
 
 import numpy as np

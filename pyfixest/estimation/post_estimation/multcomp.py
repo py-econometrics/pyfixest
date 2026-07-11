@@ -1,3 +1,5 @@
+"""Implement simultaneous and multiple-testing corrections."""
+
 import warnings
 
 import numpy as np

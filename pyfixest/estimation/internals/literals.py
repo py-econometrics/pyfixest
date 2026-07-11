@@ -1,3 +1,5 @@
+"""Define and validate literal options shared by estimation APIs."""
+
 from typing import Any, Literal, get_args
 
 PredictionType = Literal["response", "link"]

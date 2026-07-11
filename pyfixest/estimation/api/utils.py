@@ -1,3 +1,5 @@
+"""Validate and normalize inputs shared by public estimation functions."""
+
 from __future__ import annotations
 
 import pandas as pd

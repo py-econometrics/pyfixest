@@ -1,3 +1,5 @@
+"""Implement Gardner's two-stage difference-in-differences estimator."""
+
 from typing import cast
 
 import numpy as np

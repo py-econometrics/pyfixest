@@ -1,3 +1,5 @@
+"""Visualize panel treatment timing and outcomes."""
+
 import matplotlib.pyplot as plt
 import pandas as pd
 

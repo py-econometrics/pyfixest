@@ -1,3 +1,5 @@
+"""Internal dataframe conversion, selection, and random-number helpers."""
+
 import re
 
 import narwhals.stable.v1 as nw

@@ -1,3 +1,5 @@
+"""Public fixed-effects demeaner configurations and backend dispatch."""
+
 from __future__ import annotations
 
 import warnings

@@ -1,3 +1,5 @@
+"""Plot coefficients and quantile-regression processes."""
+
 import math
 
 import matplotlib.pyplot as plt

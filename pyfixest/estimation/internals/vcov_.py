@@ -1,3 +1,5 @@
+"""Compute covariance estimators from prepared model state."""
+
 from __future__ import annotations
 
 from typing import Literal

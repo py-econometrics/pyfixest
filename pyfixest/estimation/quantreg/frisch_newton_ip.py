@@ -1,3 +1,5 @@
+"""Implement the Frisch-Newton interior-point quantile solver."""
+
 import numpy as np
 from scipy.linalg import lapack, solve_triangular
 

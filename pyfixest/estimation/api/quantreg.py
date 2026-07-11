@@ -1,3 +1,5 @@
+"""Fit one or more linear quantile regressions."""
+
 from __future__ import annotations
 
 from collections.abc import Mapping

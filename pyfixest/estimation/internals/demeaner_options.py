@@ -1,3 +1,5 @@
+"""Normalize legacy and typed demeaner options."""
+
 from __future__ import annotations
 
 import warnings

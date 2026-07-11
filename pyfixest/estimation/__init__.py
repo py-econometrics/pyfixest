@@ -1,3 +1,5 @@
+"""Estimation namespace for public functions, result classes, and numerical helpers."""
+
 from pyfixest.core.demean import (
     Preconditioner,
     demean,

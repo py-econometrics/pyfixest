@@ -1,3 +1,5 @@
+"""Provide quantile-regression bandwidth and density helpers."""
+
 from scipy.stats import norm
 
 

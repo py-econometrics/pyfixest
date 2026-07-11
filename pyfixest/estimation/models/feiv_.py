@@ -1,3 +1,5 @@
+"""Implement instrumental-variable result behavior and diagnostics."""
+
 import warnings
 from collections.abc import Mapping
 from dataclasses import replace

@@ -1,3 +1,5 @@
+"""Build model matrices through the deprecated compatibility interface."""
+
 import re
 import warnings
 from collections.abc import Mapping

@@ -1,3 +1,5 @@
+"""Generate model predictions and prediction intervals."""
+
 from __future__ import annotations
 
 import re

@@ -1,3 +1,5 @@
+"""Implement fitted quantile-regression model behavior."""
+
 import warnings
 from collections.abc import Callable, Mapping
 from functools import partial

@@ -1,3 +1,5 @@
+"""Fit Poisson models with high-dimensional fixed effects."""
+
 from __future__ import annotations
 
 from collections.abc import Mapping

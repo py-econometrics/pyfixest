@@ -1,3 +1,5 @@
+"""Public model summaries, tables, and coefficient plots."""
+
 from pyfixest.report.summarize import (
     dtable,
     etable,

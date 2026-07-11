@@ -1,3 +1,5 @@
+"""Create model summaries, regression tables, and descriptive tables."""
+
 import warnings
 
 import maketables

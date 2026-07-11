@@ -1,3 +1,5 @@
+"""Run single and multiple estimation from parsed plans."""
+
 from __future__ import annotations
 
 from collections.abc import Mapping

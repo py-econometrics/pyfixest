@@ -1,3 +1,5 @@
+"""Retain the deprecated formula parser for compatibility."""
+
 import re
 import warnings
 from itertools import product

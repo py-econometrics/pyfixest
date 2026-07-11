@@ -1,3 +1,5 @@
+"""Cache and coordinate fixed-effects demeaning."""
+
 import numpy as np
 import pandas as pd
 

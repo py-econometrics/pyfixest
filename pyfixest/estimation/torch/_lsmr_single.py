@@ -1,3 +1,5 @@
+"""Implement single-system Torch LSMR iterations."""
+
 from __future__ import annotations
 
 import math

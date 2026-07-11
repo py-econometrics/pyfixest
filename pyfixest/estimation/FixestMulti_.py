@@ -1,3 +1,5 @@
+"""Collect and post-process models produced by multiple estimation."""
+
 from __future__ import annotations
 
 import functools

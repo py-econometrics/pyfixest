@@ -1,3 +1,5 @@
+"""Prepare clustering state and covariance matrix building blocks."""
+
 from collections.abc import Callable
 from dataclasses import dataclass
 

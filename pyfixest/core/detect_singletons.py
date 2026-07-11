@@ -1,3 +1,5 @@
+"""Expose the Rust fixed-effect singleton detector."""
+
 import numpy as np
 from numpy.typing import NDArray
 

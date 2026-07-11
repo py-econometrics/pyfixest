@@ -1,3 +1,5 @@
+"""Adapt exception messages for developer-facing helper decorators."""
+
 import inspect
 import os
 

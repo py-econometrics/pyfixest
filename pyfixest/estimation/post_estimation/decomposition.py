@@ -1,3 +1,5 @@
+"""Implement Gelbach decomposition and its result presentation."""
+
 import itertools
 import warnings
 from dataclasses import dataclass, field

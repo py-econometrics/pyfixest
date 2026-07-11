@@ -1,3 +1,5 @@
+"""Implement shared generalized-linear-model result behavior."""
+
 from __future__ import annotations
 
 from collections.abc import Mapping

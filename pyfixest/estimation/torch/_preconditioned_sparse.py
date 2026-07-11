@@ -1,3 +1,5 @@
+"""Apply sparse preconditioning in the Torch demeaner."""
+
 from __future__ import annotations
 
 import torch

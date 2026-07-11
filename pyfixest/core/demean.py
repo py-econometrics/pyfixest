@@ -1,3 +1,5 @@
+"""Configure and call fixed-effects demeaning kernels."""
+
 from typing import Literal, get_args
 
 import numpy as np

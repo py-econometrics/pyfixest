@@ -1,3 +1,5 @@
+"""Define the immutable configuration passed through the estimation pipeline."""
+
 from __future__ import annotations
 
 from collections.abc import Mapping

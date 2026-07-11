@@ -1,3 +1,5 @@
+"""Support formula parsing and variable extraction."""
+
 import re
 import warnings
 from enum import Enum

@@ -1,3 +1,5 @@
+"""Share tidy result accessors across fitted-model classes."""
+
 import functools
 import warnings
 from importlib import import_module

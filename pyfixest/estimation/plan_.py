@@ -1,3 +1,5 @@
+"""Expand formulas and fit one model from an estimation configuration."""
+
 from __future__ import annotations
 
 from collections.abc import Mapping

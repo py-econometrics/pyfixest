@@ -1,3 +1,5 @@
+"""Provide the optional Numba nested-fixed-effect reference implementation."""
+
 import numba as nb
 import numpy as np
 

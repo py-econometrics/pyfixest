@@ -1,3 +1,5 @@
+"""Detect and remove multicollinear regressors."""
+
 from __future__ import annotations
 
 import warnings

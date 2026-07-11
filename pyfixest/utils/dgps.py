@@ -1,3 +1,5 @@
+"""Generate deterministic example datasets and econometric data-generating processes."""
+
 import numpy as np
 import pandas as pd
 

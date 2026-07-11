@@ -1,3 +1,5 @@
+"""Implement local-projection difference-in-differences estimation."""
+
 from typing import cast
 
 import numpy as np

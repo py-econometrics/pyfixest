@@ -1,3 +1,5 @@
+"""Implement OLS and weighted least-squares model results."""
+
 from __future__ import annotations
 
 import re

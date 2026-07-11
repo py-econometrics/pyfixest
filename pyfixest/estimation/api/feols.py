@@ -1,3 +1,5 @@
+"""Fit OLS, WLS, and instrumental-variable models with fixed effects."""
+
 from __future__ import annotations
 
 from collections.abc import Mapping

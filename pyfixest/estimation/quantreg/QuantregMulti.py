@@ -1,3 +1,5 @@
+"""Coordinate estimation across multiple quantiles."""
+
 from __future__ import annotations
 
 import gc

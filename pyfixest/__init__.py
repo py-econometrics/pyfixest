@@ -1,10 +1,54 @@
+"""Public lazy-loading namespace for pyfixest estimators, reporting, and data helpers."""
+
 import importlib as _importlib
-from importlib.metadata import PackageNotFoundError, version
+from importlib.metadata import PackageNotFoundError as _PackageNotFoundError
+from importlib.metadata import version as _version
+from typing import TYPE_CHECKING as _TYPE_CHECKING
+
+if _TYPE_CHECKING:
+    from pyfixest import did as did
+    from pyfixest import errors as errors
+    from pyfixest import estimation as estimation
+    from pyfixest import report as report
+    from pyfixest import utils as utils
+    from pyfixest.core.demean import Preconditioner as Preconditioner
+    from pyfixest.demeaners import BaseDemeaner as BaseDemeaner
+    from pyfixest.demeaners import LsmrDemeaner as LsmrDemeaner
+    from pyfixest.demeaners import MapDemeaner as MapDemeaner
+    from pyfixest.did import SaturatedEventStudy as SaturatedEventStudy
+    from pyfixest.did import did2s as did2s
+    from pyfixest.did import event_study as event_study
+    from pyfixest.did import lpdid as lpdid
+    from pyfixest.did import panelview as panelview
+    from pyfixest.estimation import bonferroni as bonferroni
+    from pyfixest.estimation import feglm as feglm
+    from pyfixest.estimation import feols as feols
+    from pyfixest.estimation import fepois as fepois
+    from pyfixest.estimation import quantreg as quantreg
+    from pyfixest.estimation import rwolf as rwolf
+    from pyfixest.estimation import wyoung as wyoung
+    from pyfixest.report import coefplot as coefplot
+    from pyfixest.report import dtable as dtable
+    from pyfixest.report import etable as etable
+    from pyfixest.report import iplot as iplot
+    from pyfixest.report import qplot as qplot
+    from pyfixest.report import summary as summary
+    from pyfixest.utils import get_bartik_data as get_bartik_data
+    from pyfixest.utils import get_data as get_data
+    from pyfixest.utils import get_encouragement_data as get_encouragement_data
+    from pyfixest.utils import get_ivf_data as get_ivf_data
+    from pyfixest.utils import (
+        get_motherhood_event_study_data as get_motherhood_event_study_data,
+    )
+    from pyfixest.utils import get_ssc as get_ssc
+    from pyfixest.utils import get_twin_data as get_twin_data
+    from pyfixest.utils import get_worker_panel as get_worker_panel
+    from pyfixest.utils import ssc as ssc
 
 # Version handling (keep eager - it's cheap)
 try:
-    __version__ = version("pyfixest")
-except PackageNotFoundError:
+    __version__ = _version("pyfixest")
+except _PackageNotFoundError:
     __version__ = "unknown"
 
 __all__ = [
@@ -79,7 +123,6 @@ _lazy_imports = {
     "coefplot": "pyfixest.report",
     "iplot": "pyfixest.report",
     "qplot": "pyfixest.report",
-    "make_table": "pyfixest.report",
     # utils
     "get_bartik_data": "pyfixest.utils",
     "get_data": "pyfixest.utils",
@@ -111,5 +154,6 @@ def __getattr__(name: str):
     raise AttributeError(f"module 'pyfixest' has no attribute {name!r}")
 
 
-def __dir__():
-    return __all__
+def __dir__() -> list[str]:
+    """List lazy public exports alongside normal module metadata."""
+    return sorted(set(__all__) | set(globals()))

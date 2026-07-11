@@ -1,3 +1,5 @@
+"""Implement the saturated cohort-by-event-time estimator."""
+
 import re
 import warnings
 

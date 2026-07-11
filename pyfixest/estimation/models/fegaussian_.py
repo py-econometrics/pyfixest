@@ -1,3 +1,5 @@
+"""Implement Gaussian GLM result behavior."""
+
 from collections.abc import Mapping
 from typing import Any, Literal
 

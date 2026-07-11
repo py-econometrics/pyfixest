@@ -1,3 +1,5 @@
+"""Provide the optional Numba collinearity reference implementation."""
+
 # ----------------------------------------------------------------------
 #
 # SPDX-License-Identifier: MIT

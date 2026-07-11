@@ -1,3 +1,5 @@
+"""Public difference-in-differences estimators and visualization helpers."""
+
 from pyfixest.did.estimation import (
     did2s,
     event_study,

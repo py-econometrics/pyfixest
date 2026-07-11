@@ -1,3 +1,5 @@
+"""Implement numerical OLS and IV fitting primitives."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

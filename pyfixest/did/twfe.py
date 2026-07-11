@@ -1,3 +1,5 @@
+"""Implement two-way fixed-effects event-study estimation."""
+
 from typing import cast
 
 import pandas as pd

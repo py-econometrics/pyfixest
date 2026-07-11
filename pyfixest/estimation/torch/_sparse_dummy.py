@@ -1,3 +1,5 @@
+"""Build sparse dummy matrices for Torch demeaning."""
+
 from __future__ import annotations
 
 import numpy as np

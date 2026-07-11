@@ -1,3 +1,5 @@
+"""Normalize fitted models and labels for reporting."""
+
 import re
 import warnings
 from collections import Counter

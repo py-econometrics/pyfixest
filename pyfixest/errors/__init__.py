@@ -1,3 +1,6 @@
+"""Public exception hierarchy for pyfixest."""
+
+
 class FixedEffectInteractionError(Exception):  # noqa: D101
     pass
 

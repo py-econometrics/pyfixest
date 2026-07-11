@@ -1,3 +1,5 @@
+"""Implement Poisson fixed-effects model results."""
+
 from __future__ import annotations
 
 from collections.abc import Mapping

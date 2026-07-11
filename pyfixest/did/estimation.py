@@ -1,3 +1,5 @@
+"""Provide public entry points for event-study and difference-in-differences estimation."""
+
 import pandas as pd
 
 from pyfixest.did.did2s import DID2S, _did2s_estimate, _did2s_vcov
