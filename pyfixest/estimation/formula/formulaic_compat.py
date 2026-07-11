@@ -2,26 +2,26 @@
 
 from __future__ import annotations
 
-from collections.abc import Hashable, Iterable, Iterator, Mapping
+from collections.abc import Iterable, Iterator, Mapping
 from typing import TYPE_CHECKING, Any
 
 import formulaic
 import formulaic.formula
 import pandas as pd
-from formulaic.materializers.types import FactorValues
 from formulaic.parser.types import Factor
-from formulaic.transforms.contrasts import TreatmentContrasts, encode_contrasts
-from formulaic.utils.sentinels import UNSET
 from formulaic.utils.variables import Variable
+
+from pyfixest.estimation.formula.transforms.factor_interaction import (
+    is_contrast_state_key,
+    variable_from_contrast_state_key,
+)
+from pyfixest.estimation.formula.transforms.fixed_effects_encoding import (
+    FIXED_EFFECT_ENCODING,
+)
 
 if TYPE_CHECKING:
     from formulaic.model_spec import ModelSpec
 
-_CONTRASTS_PREFIX = "__contrasts_"
-_CONTRASTS_SUFFIX = "__"
-_BIN_MAPPING_PREFIX = "__bin_mapping_"
-_BIN_MAPPING_SUFFIX = "__"
-_FIXED_EFFECT_ENCODING = "__fixed_effect_encoding__"
 _FIXED_EFFECT_PREFIX = "__fixed_effect__("
 _FIXED_EFFECT_SUFFIX = ")"
 
@@ -101,76 +101,6 @@ def flatten_model_matrix(model_matrix: formulaic.ModelMatrix) -> list[pd.DataFra
     return list(model_matrix._flatten())
 
 
-def unwrap_factor_values(value: Any) -> Any:
-    """Return raw values from formulaic's FactorValues proxy."""
-    # formulaic internal: FactorValues is a wrapt proxy; `.__wrapped__` exposes
-    # the object consumed by pyfixest's custom encoders.
-    return value.__wrapped__ if isinstance(value, FactorValues) else value
-
-
-def contrast_state_key(variable: str) -> str:
-    """Return pyfixest's formulaic encoder-state key for i() contrasts."""
-    return f"{_CONTRASTS_PREFIX}{variable}{_CONTRASTS_SUFFIX}"
-
-
-def is_contrast_state_key(key: str) -> bool:
-    """Return whether a key stores pyfixest i() contrast state."""
-    return key.startswith(_CONTRASTS_PREFIX) and key.endswith(_CONTRASTS_SUFFIX)
-
-
-def variable_from_contrast_state_key(key: str) -> str:
-    """Extract the variable name from a pyfixest i() contrast state key."""
-    return key[len(_CONTRASTS_PREFIX) : -len(_CONTRASTS_SUFFIX)]
-
-
-def get_or_create_contrast_state(
-    encoder_state: dict[str, Any], variable: str
-) -> dict[str, Any]:
-    """Return the nested formulaic encoder state used for one i() contrast."""
-    return encoder_state.setdefault(contrast_state_key(variable), {})
-
-
-def get_contrast_levels(encoder_state: Mapping[str, Any], variable: str) -> list[Any]:
-    """Return stored i() contrast levels for a variable."""
-    return encoder_state[contrast_state_key(variable)]["levels"]
-
-
-def set_contrast_levels(
-    encoder_state: Mapping[str, Any], variable: str, levels: list[Any]
-) -> None:
-    """Store i() contrast levels in pyfixest's nested formulaic encoder state."""
-    encoder_state[contrast_state_key(variable)].update({"levels": levels})
-
-
-def bin_mapping_state_key(variable: str) -> str:
-    """Return pyfixest's formulaic encoder-state key for binned i() levels."""
-    return f"{_BIN_MAPPING_PREFIX}{variable}{_BIN_MAPPING_SUFFIX}"
-
-
-def encode_contrasts_with_state(
-    data: pd.Series,
-    *,
-    ref: Hashable | None,
-    levels: Iterable[Any] | None,
-    reduced_rank: bool,
-    state: dict[str, Any],
-    model_spec: ModelSpec,
-) -> pd.DataFrame:
-    """Call formulaic encode_contrasts with explicit state injection."""
-    # formulaic internal: `_state`/`_spec` are normally supplied by formulaic's
-    # stateful_transform machinery; pyfixest calls the transform directly.
-    encoded = encode_contrasts(
-        data,
-        contrasts=TreatmentContrasts(base=ref if ref is not None else UNSET),
-        levels=levels,
-        reduced_rank=reduced_rank,
-        output="pandas",
-        _state=state,
-        _spec=model_spec,
-    )
-    return unwrap_factor_values(encoded)
-
-
 def iter_model_spec_categorical_levels(
     rhs_spec: ModelSpec, newdata: pd.DataFrame
 ) -> Iterator[tuple[str, set[Any], dict[str, Any]]]:
@@ -190,43 +120,12 @@ def _iter_documented_categorical_levels(
                 yield variable_name, set(levels), {}
 
 
-def _iter_i_categorical_levels(
-    rhs_spec: ModelSpec, newdata: pd.DataFrame
-) -> Iterator[tuple[str, set[Any], dict[str, Any]]]:
-    for _factor_expr, value in rhs_spec.encoder_state.items():
-        kind, state = _unpack_encoder_state(value)
-        if kind is not Factor.Kind.CATEGORICAL:
-            continue
-        for key, substate in state.items():
-            if is_contrast_state_key(key):
-                variable = variable_from_contrast_state_key(key)
-                if variable in newdata.columns and "categories" in substate:
-                    yield variable, set(substate["categories"]), state
-
-
-def _unpack_encoder_state(value: Any) -> tuple[Factor.Kind, dict[str, Any]]:
-    # formulaic internal: encoder_state values are
-    # (Factor.Kind, state_dict) tuples produced by formulaic materializers.
-    if not isinstance(value, tuple) or len(value) != 2:
-        raise FormulaicCompatibilityError(
-            "formulaic ModelSpec.encoder_state structure changed: expected each "
-            "value to be a two-tuple of (Factor.Kind, state_dict)."
-        )
-    kind, state = value
-    if not isinstance(kind, Factor.Kind) or not isinstance(state, dict):
-        raise FormulaicCompatibilityError(
-            "formulaic ModelSpec.encoder_state structure changed: expected each "
-            "value to be a two-tuple of (Factor.Kind, state_dict)."
-        )
-    return kind, state
-
-
 def get_fixed_effect_encoding(
     transform_state: Mapping[str, Any], column: str
 ) -> pd.DataFrame | None:
     """Return pyfixest's stored fixed-effect encoding DataFrame, if present."""
     fe_state = transform_state.get(column, {})
-    return fe_state.get(_FIXED_EFFECT_ENCODING)
+    return fe_state.get(FIXED_EFFECT_ENCODING)
 
 
 def get_fixed_effect_code_values(
@@ -287,3 +186,34 @@ def get_fixed_effect_columns(fe_spec: ModelSpec, fixed_effect: str) -> list[str]
     """Return input columns for a given encoded fixed effect."""
     variables = fe_spec.factor_variables[fixed_effect]
     return [str(v) for v in variables if Variable.Role.VALUE in v.roles]
+
+
+def _iter_i_categorical_levels(
+    rhs_spec: ModelSpec, newdata: pd.DataFrame
+) -> Iterator[tuple[str, set[Any], dict[str, Any]]]:
+    for _factor_expr, value in rhs_spec.encoder_state.items():
+        kind, state = _unpack_encoder_state(value)
+        if kind is not Factor.Kind.CATEGORICAL:
+            continue
+        for key, substate in state.items():
+            if is_contrast_state_key(key):
+                variable = variable_from_contrast_state_key(key)
+                if variable in newdata.columns and "categories" in substate:
+                    yield variable, set(substate["categories"]), state
+
+
+def _unpack_encoder_state(value: Any) -> tuple[Factor.Kind, dict[str, Any]]:
+    # formulaic internal: encoder_state values are
+    # (Factor.Kind, state_dict) tuples produced by formulaic materializers.
+    if not isinstance(value, tuple) or len(value) != 2:
+        raise FormulaicCompatibilityError(
+            "formulaic ModelSpec.encoder_state structure changed: expected each "
+            "value to be a two-tuple of (Factor.Kind, state_dict)."
+        )
+    kind, state = value
+    if not isinstance(kind, Factor.Kind) or not isinstance(state, dict):
+        raise FormulaicCompatibilityError(
+            "formulaic ModelSpec.encoder_state structure changed: expected each "
+            "value to be a two-tuple of (Factor.Kind, state_dict)."
+        )
+    return kind, state
