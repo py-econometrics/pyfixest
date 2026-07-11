@@ -20,9 +20,6 @@ from pyfixest.errors import VcovTypeNotSupportedError
 from pyfixest.estimation.api.utils import _ALL_SAMPLE, _AllSampleSentinel
 from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
 from pyfixest.estimation.formula import model_matrix as model_matrix_fixest
-from pyfixest.estimation.formula.formulaic_compat import (
-    build_fixed_effect_coefficients,
-)
 from pyfixest.estimation.formula.model_matrix import _ModelMatrixKey
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
@@ -52,12 +49,17 @@ from pyfixest.estimation.post_estimation.decomposition import (
     GelbachDecomposition,
     _decompose_arg_check,
 )
+from pyfixest.estimation.post_estimation.fixed_effects import (
+    FixedEffect,
+    build_fixed_effect_coefficients,
+    check_fe_dtype_compatibility,
+    fixed_effects_to_frame,
+    predict_fixed_effects,
+    warn_on_unseen_fixed_effects,
+)
 from pyfixest.estimation.post_estimation.prediction import (
-    _check_fe_dtype_compatibility,
     _compute_prediction_error,
-    _predict_fixed_effects,
     _rows_with_unseen_categories,
-    _warn_on_unseen_fixed_effects,
 )
 from pyfixest.estimation.post_estimation.ritest import (
     _HAS_NUMBA,
@@ -209,8 +211,8 @@ class Feols(ResultAccessorMixin):
         Confidence intervals for the estimated coefficients.
     _F_stat : Any
         F-statistic for the model, set in get_Ftest().
-    _fixef_coefficients : pd.DataFrame
-        Tidy table containing fixed effects estimates.
+    _fixef_coefficients : dict[str, FixedEffect]
+        Fixed effect estimates grouped by fixed effect.
     _alpha : pd.DataFrame
         A DataFrame with the estimated fixed effects.
     _sumFE : np.ndarray
@@ -377,9 +379,7 @@ class Feols(ResultAccessorMixin):
         self._conf_int = np.array([])
 
         # set in fixef()
-        self._fixef_coefficients = pd.DataFrame(
-            columns=["fixed_effect", "variable", "code", "level", "coefficient"]
-        )
+        self._fixef_coefficients: dict[str, FixedEffect] = {}
         self._alpha = None
         self._sumFE = None
 
@@ -1801,6 +1801,7 @@ class Feols(ResultAccessorMixin):
             uhat = (Y - X @ self._beta_hat).flatten()
         # one-hot encoding of fixed effects (treatment coding: reference level
         # dropped for the second and subsequent FEs via ensure_full_rank=True).
+        fe_spec = self._model_spec[_ModelMatrixKey.fixed_effects]
         D2 = formulaic.Formula(
             [f"C({fe})" for fe in self.FixestFormula.fixed_effects_wrapped],
             _parser=DefaultFormulaParser(include_intercept=False),
@@ -1809,9 +1810,7 @@ class Feols(ResultAccessorMixin):
             output="sparse",
             ensure_full_rank=True,
             context=FORMULAIC_TRANSFORMS | {**self._context},
-            transform_state=self._model_spec[
-                _ModelMatrixKey.fixed_effects
-            ].transform_state,
+            transform_state=fe_spec.transform_state,
         )
         fe_model_spec = D2.model_spec
         if self._has_weights:
@@ -1822,19 +1821,15 @@ class Feols(ResultAccessorMixin):
         alpha = lsqr(D2, uhat, atol=atol, btol=btol)[0]
 
         self._fixef_coefficients = build_fixed_effect_coefficients(
-            fixed_effects=self.FixestFormula.fixed_effects_wrapped,
+            fixed_effect_names=fe_spec.column_names,
             fixed_effect_coefficients=alpha,
             model_spec=fe_model_spec,
-            transform_state=self._model_spec[
-                _ModelMatrixKey.fixed_effects
-            ].transform_state,
+            transform_state=fe_spec.transform_state,
         )
         self._alpha = alpha
         self._sumFE = D2.dot(alpha)
 
-        return self._fixef_coefficients[
-            ["variable", "code", "level", "coefficient"]
-        ].copy()
+        return fixed_effects_to_frame(self._fixef_coefficients)
 
     def predict(
         self,
@@ -1960,15 +1955,15 @@ class Feols(ResultAccessorMixin):
             valid_idx = valid_idx[~unseen[valid_idx]]
             if self._has_fixef:
                 fe_spec = self._model_spec[_ModelMatrixKey.fixed_effects]
-                _check_fe_dtype_compatibility(fe_spec, newdata)
+                check_fe_dtype_compatibility(fe_spec, newdata)
                 # na_action="ignore" keeps unseen-level rows as NaN codes
                 fe_mm = fe_spec.get_model_matrix(
                     newdata, context=context, na_action="ignore"
                 )
-                _warn_on_unseen_fixed_effects(fe_mm, fe_spec, newdata)
+                warn_on_unseen_fixed_effects(fe_mm, fe_spec, newdata)
                 if self._sumFE is None:
                     self.fixef(atol, btol)
-                fe_hat = _predict_fixed_effects(
+                fe_hat = predict_fixed_effects(
                     model_matrix=fe_mm,
                     coefficients=self._fixef_coefficients,
                     valid_idx=valid_idx,
