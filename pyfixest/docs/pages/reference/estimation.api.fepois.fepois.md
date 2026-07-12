@@ -1,0 +1,116 @@
+<!-- Generated from docs/reference/estimation.api.fepois.fepois.qmd; do not edit. -->
+
+# estimation.api.fepois.fepois
+
+```python
+estimation.api.fepois.fepois(
+    fml,
+    data,
+    vcov=None,
+    vcov_kwargs=None,
+    weights=None,
+    weights_type='aweights',
+    offset=None,
+    ssc=None,
+    fixef_rm='singleton',
+    iwls_tol=1e-08,
+    iwls_maxiter=25,
+    collin_tol=1e-09,
+    separation_check=None,
+    solver='scipy.linalg.solve',
+    demeaner=None,
+    drop_intercept=False,
+    copy_data=True,
+    store_data=True,
+    lean=False,
+    context=None,
+    split=None,
+    fsplit=None,
+)
+```
+
+Estimate Poisson regression model with fixed effects using the `ppmlhdfe` algorithm.
+
+## Parameters
+
+| Name             | Type                                   | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | Default                |
+|------------------|----------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------|
+| fml              | str                                    | A two-sided formula string using fixest formula syntax. Syntax: "Y ~ X1 + X2 \| FE1 + FE2". "\|" separates left-hand side and fixed effects. Special syntax includes: - Stepwise regressions (sw, sw0) - Cumulative stepwise regression (csw, csw0) - Multiple dependent variables (Y1 + Y2 ~ X) - Interaction of variables (i(X1,X2)) - Interacted fixed effects (fe1^fe2) Compatible with formula parsing via the formulaic module.                                                                                                                                                                                                                                                                                               | _required_             |
+| data             | DataFrameType                          | A pandas or polars dataframe containing the variables in the formula.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | _required_             |
+| vcov             | RegressionVcovType or dict\[str, str\] | Variance-covariance estimator. `None` defaults to `"iid"`. String options are `"iid"`, `"hetero"`, `"HC1"`, `"HC2"`, `"HC3"`, `"NW"`, and `"DK"`. Clustered inference uses `{"CRV1": "cluster"}` or `{"CRV3": "cluster"}`. NW and DK require `vcov_kwargs`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | `None`                 |
+| vcov_kwargs      | VcovKwargs                             | HAC configuration. Pass `lag` and `time_id` for time-series NW; add `panel_id` for panel NW or DK.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | `None`                 |
+| weights          | Union\[None, str\], optional.          | Default is None. Weights for weighted Poisson regression. If None, all observations are weighted equally. If a string, the name of the column in `data` that contains the weights.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | `None`                 |
+| weights_type     | WeightsType                            | Options include `aweights` or `fweights`. `aweights` implement analytic or precision weights, while `fweights` implement frequency weights. Frequency weights are useful for compressed count data where identical observations are aggregated. For details see this blog post: https://notstatschat.rbind.io/2020/08/04/weights-in-statistics/.                                                                                                                                                                                                                                                                                                                                                                                    | `'aweights'`           |
+| offset           | str                                    | Default is None. Name of a numeric column in `data` to use as an offset in the Poisson regression. The offset is added to the linear predictor with its coefficient fixed at 1. This is useful for modeling rates when exposure differs across observations; pass the exposure on the log scale, e.g. `offset="log_population"`.                                                                                                                                                                                                                                                                                                                                                                                                    | `None`                 |
+| ssc              | SscConfig                              | Small-sample correction created by `ssc()`. `None` uses `ssc(k_adj=True, k_fixef="nonnested", G_adj=True, G_df="min")`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | `None`                 |
+| fixef_rm         | FixedRmOptions                         | Specifies whether to drop singleton fixed effects. Can be equal to `"singleton"` (default) or `"none"`. `"singleton"` drops singleton fixed effects. This does not affect point estimates but it will impact standard errors.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | `'singleton'`          |
+| iwls_tol         | Optional\[float\]                      | Tolerance for IWLS convergence, by default 1e-08.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | `1e-08`                |
+| iwls_maxiter     | Optional\[float\]                      | Maximum number of iterations for IWLS convergence, by default 25.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | `25`                   |
+| collin_tol       | float                                  | Tolerance for the collinearity check. Defaults to `1e-9`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | `1e-09`                |
+| separation_check | list\[str\] \| None                    | Methods to identify and drop separated observations. Either "fe" or "ir". Executes "fe" by default (when None).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | `None`                 |
+| solver           | SolverOptions, optional.               | The solver to use for the regression. Can be "np.linalg.lstsq", "np.linalg.solve", "scipy.linalg.solve" and "scipy.sparse.linalg.lsqr". Defaults to "scipy.linalg.solve".                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | `'scipy.linalg.solve'` |
+| demeaner         | AnyDemeaner \| None                    | Typed demeaner configuration. Controls the fixed-effects demeaning backend, tolerance, and iteration limits. Accepts a `MapDemeaner` or `LsmrDemeaner` instance. Defaults to `MapDemeaner()` (Rust MAP algorithm, tol=1e-6, maxiter=10_000). For other options - including the optional Numba backend and the torch-based LSMR backends - see the [Demeaner Backends vignette](../how-to/demeaner-backends.md).  .. deprecated::     The ``cupy`` / ``scipy`` LSMR backends are deprecated and will     be removed in a future release. Replacements:      - cupy LSMR on GPU →       ``LsmrDemeaner(backend="torch", device="cuda")``.     - Scipy / cupy LSMR on CPU → ``LsmrDemeaner()``       (the default within backend). | `None`                 |
+| drop_intercept   | bool                                   | Whether to drop the intercept from the model, by default False.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | `False`                |
+| copy_data        | bool                                   | Whether to copy the data before estimation, by default True. If set to False, the data is not copied, which can save memory but may lead to unintended changes in the input data outside of `fepois`. For example, the input data set is re-index within the function. As far as I know, the only other relevant case is when using interacted fixed effects, in which case you'll find a column with interacted fixed effects in the data set.                                                                                                                                                                                                                                                                                     | `True`                 |
+| store_data       | bool                                   | Whether to store the data in the model object, by default True. If set to False, the data is not stored in the model object, which can improve performance and save memory. However, it will no longer be possible to access the data via the `data` attribute of the model object. This has impact on post-estimation capabilities that rely on the data, e.g. `predict()` or `vcov()`.                                                                                                                                                                                                                                                                                                                                            | `True`                 |
+| lean             | bool                                   | False by default. If True, then all large objects are removed from the returned result: this will save memory but will block the possibility to use many methods. It is recommended to use the argument vcov to obtain the appropriate standard-errors at estimation time, since obtaining different SEs won't be possible afterwards.                                                                                                                                                                                                                                                                                                                                                                                              | `False`                |
+| context          | int or Mapping\[str, Any\]             | A dictionary containing additional context variables to be used by formulaic during the creation of the model matrix. This can include custom factorization functions, transformations, or any other variables that need to be available in the formula environment.                                                                                                                                                                                                                                                                                                                                                                                                                                                                | `None`                 |
+| split            | str \| None                            | A character string, i.e. 'split = var'. If provided, the sample is split according to the variable and one estimation is performed for each value of that variable. If you also want to include the estimation for the full sample, use the argument fsplit instead.                                                                                                                                                                                                                                                                                                                                                                                                                                                                | `None`                 |
+| fsplit           | str \| None                            | This argument is the same as split but also includes the full sample as the first estimation.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | `None`                 |
+
+## Returns
+
+| Name   | Type                  | Description                                                                                                                                                                                    |
+|--------|-----------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|        | Fepois or FixestMulti | A [Fepois](estimation.models.fepois_.Fepois.md), or [FixestMulti](estimation.FixestMulti_.FixestMulti.md) when the formula or split options expand to multiple models. |
+
+## Examples
+
+The `fepois()` function estimates Poisson models with the same formula interface
+as `feols()`. Fixed effects are specified after the `|` symbol.
+
+```python
+import pyfixest as pf
+
+data = pf.get_data(model="Fepois")
+fit = pf.fepois("Y ~ X1 + X2 | f1 + f2", data)
+fit.summary()
+```
+
+Cluster-robust inference uses the same `vcov` syntax as `feols()`:
+
+```python
+fit_crv = pf.fepois("Y ~ X1 + X2 | f1 + f2", data, vcov={"CRV1": "f1"})
+fit_crv.tidy()
+```
+
+To model rates, keep the dependent variable as a count and pass
+`log(exposure)` as the `offset`. For example, with population as the
+exposure:
+
+```python
+import numpy as np
+
+data["population"] = np.random.default_rng(123).integers(
+    50_000, 500_000, size=len(data)
+)
+data["log_population"] = np.log(data["population"])
+
+fit_rate = pf.fepois(
+    "Y ~ X1 + X2 | f1 + f2",
+    data=data,
+    offset="log_population",
+)
+fit_rate.tidy()
+```
+
+Multiple-estimation and sample-splitting features also work as in `feols()`:
+
+```python
+fits = pf.fepois("Y ~ X1 | sw0(f1, f2)", data)
+pf.etable(fits)
+```
+
+Shared arguments such as `vcov`, `ssc`, `split`, `fsplit`, `context`, and typed demeaners
+are documented in the [feols() reference](estimation.api.feols.feols.md).
+For applied examples, see the [Poisson & GLMs tutorial](../tutorials/poisson-glm.md).
