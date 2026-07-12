@@ -187,6 +187,10 @@ As previously announced, we removed:
 
 ### Bug Fixes
 
+- Fixes `confint()` when `keep` or `drop` requests coefficients in an order
+  different from the model order. Previously, intervals could be associated
+  with the wrong coefficient labels, including for simultaneous confidence
+  intervals.
 - `did2s()` now raises an informative error when some fixed effect levels cannot be
   estimated in the first stage regression (e.g. for always-treated units, which have
   no not-yet-treated observations), instead of failing later with an opaque
