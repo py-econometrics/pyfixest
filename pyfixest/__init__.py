@@ -1,4 +1,15 @@
-"""Public lazy-loading namespace for pyfixest estimators, reporting, and data helpers."""
+"""Public lazy-loading namespace for PyFixest estimators and reporting.
+
+Agents and downstream tools should read the version-matched Markdown bundled with
+the installed wheel before inferring API details: ``pyfixest/docs/index.md`` is
+the local entry point and ``skills/pyfixest/SKILL.md`` is the progressive user
+skill. On the web, start with https://pyfixest.org/llms.txt; source and
+contributor guidance live at https://github.com/py-econometrics/pyfixest.
+
+The public API is exposed lazily below. Estimation entry points and result classes
+are in :mod:`pyfixest.estimation`; public type aliases are in
+:mod:`pyfixest.typing`.
+"""
 
 import importlib as _importlib
 from importlib.metadata import PackageNotFoundError as _PackageNotFoundError

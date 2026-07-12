@@ -1,4 +1,10 @@
-"""Estimation namespace for public functions, result classes, and numerical helpers."""
+"""Public estimators, result classes, and numerical helpers.
+
+Start here for ``feols``, ``fepois``, ``feglm``, and ``quantreg``. For formula
+syntax, inference, result-state constraints, and the config-to-runner flow, read
+the installed ``pyfixest/docs/pages/reference/index.md`` and the focused pages it
+links to before using internal modules.
+"""
 
 from pyfixest.core.demean import (
     Preconditioner,
