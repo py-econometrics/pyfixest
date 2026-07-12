@@ -17,6 +17,12 @@ contracts, skills, and wheel contents belong in CI instead.
   answer points, and intended sources.
 - `rubric.yaml` defines the 10-point run-level rubric, hard failures, metadata,
   and aggregate acceptance thresholds.
+- `prompt-template.txt` is the provider-neutral prompt hashed into every run
+  manifest.
+- `cli.py` is a provider-neutral utility that validates the suite, creates inert
+  trials, validates manually scored JSON records, aggregates runs, and compares
+  a candidate with a protocol-compatible baseline. It uses PyYAML from the
+  repository tooling environment and adds no runtime package dependency.
 - `baseline-summary.yaml` is the committed result shape. It is currently a
   clearly marked **not-run template**, not evidence of baseline performance.
 
@@ -73,39 +79,67 @@ switch modes between baseline and candidate.
    medians, unsupported-API failures, intended-first-source rate, aggregate
    score, and deltas from baseline.
 
+## Deterministic helper
+
+The helper never imports a provider SDK, launches an agent, or makes a network
+request. Preparing a run only writes prompts, blank JSON records, and a manifest
+whose fingerprint covers the tasks, rubric, and prompt:
+
+```bash
+pixi run python -m agent_eval.cli validate-suite
+pixi run python -m agent_eval.cli prepare \
+  --output /tmp/pyfixest-agent-baseline \
+  --date 2026-07-11 \
+  --pyfixest-ref '<full commit SHA>' \
+  --pyfixest-version '<package version>' \
+  --source-access-mode source_checkout \
+  --install-source source \
+  --agent-provider '<provider or unknown>' \
+  --agent-harness '<harness and version or unknown>' \
+  --model '<model and version or unknown>' \
+  --system-prompt-id '<identifier or hash>' \
+  --tool shell --tool read \
+  --platform '<OS and architecture>'
+```
+
+Run each generated prompt independently, review and score its blank record, then
+aggregate only after all three repeats are complete:
+
+```bash
+pixi run python -m agent_eval.cli validate-results \
+  --results /tmp/pyfixest-agent-baseline/records
+pixi run python -m agent_eval.cli aggregate \
+  --manifest /tmp/pyfixest-agent-baseline/manifest.json \
+  --results /tmp/pyfixest-agent-baseline/records \
+  --output /tmp/pyfixest-agent-baseline-summary.json
+pixi run python -m agent_eval.cli compare \
+  --baseline /tmp/pyfixest-agent-baseline-summary.json \
+  --candidate /tmp/pyfixest-agent-candidate-summary.json
+```
+
+`compare` exits 0 only if all prespecified thresholds pass, 1 for a valid
+comparison that fails a threshold, and 2 for malformed or incomparable input.
+The CLI uses JSON for normalized records and summaries so it can remain
+standard-library-only; the YAML below documents the same fields for humans.
+
+An external launcher can explicitly feed a generated prompt to an agent. For
+example, a maintainer with an already-installed local model can use `codex exec
+--oss --local-provider ollama --ephemeral --ignore-user-config --sandbox
+read-only --cd <clean-checkout> -` and pipe one prompt on standard input. The
+launcher, not this repository, must enforce network isolation, start a fresh
+process for every prompt, capture the discovery trail, and normalize the final
+record. Do not add an implicit or CI-triggered provider adapter here.
+
 The recommended smoke tasks are `consumer-inference-cluster` and
 `contributor-python-rust-kernel`. Run the full suite before evaluating an
 agent-documentation release.
 
 ## Provider-neutral agent prompt
 
-Replace the braces with the task and profile from `tasks.yaml`. Do not add hints
-for an individual task.
-
-```text
-You are evaluating PyFixest's local documentation as a fresh {profile} agent.
-
-Rules:
-- Use only the local files and installed package made available to you.
-- Do not use the network or web search.
-- Prefer user documentation, packaged documentation, package docstrings,
-  architecture guidance, and explicit repository breadcrumbs over tests.
-- Do not modify files or run commands that change repository state.
-- Answer the task directly. Do not invent an API or a file you did not verify.
-- After the answer, emit the evidence fields below exactly once.
-
-Evidence:
-files_consulted:
-  - <ordered local path, or []>
-first_relevant_source: <local path or null>
-commands_or_searches_used:
-  - <ordered command/search, or []>
-final_answer: |
-  <the answer you would give the user>
-
-Task:
-{task_prompt}
-```
+`prompt-template.txt` is the single source of truth. The `prepare` command
+substitutes only the profile and task prompt, then hashes each generated prompt
+into the manifest. Do not copy the template into a provider-specific launcher
+or add hints for an individual task.
 
 ## Run record
 
@@ -115,6 +149,7 @@ to a PR or added to a results artifact with this shape:
 
 ```yaml
 suite_version: 2
+suite_fingerprint: "<manifest fingerprint>"
 date: YYYY-MM-DD
 profile: consumer
 task_id: consumer-formula-sections
@@ -122,6 +157,7 @@ run_number: 1
 pyfixest_ref: "<full git SHA>"
 pyfixest_version: "<installed version>"
 install_source: wheel
+source_access_mode: installed_package
 network: disabled
 agent_provider: "<provider or unknown>"
 agent_harness: "<harness and version or unknown>"
@@ -143,6 +179,7 @@ score:
   epistemic_discipline: 0
   total: 0
 hard_failure: null
+hard_failure_code: null
 notes: null
 ```
 

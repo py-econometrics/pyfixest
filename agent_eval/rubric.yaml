@@ -44,9 +44,21 @@ hard_failure_conditions:
   - Claims that current `feols(..., vcov=None)` defaults to clustering on the first fixed effect.
   - Omits the final answer or fabricates files, commands, package behavior, or run metadata.
 
+# Stable codes make aggregate checks deterministic; reviewers retain the prose
+# explanation in `hard_failure`.
+hard_failure_codes:
+  unsupported_api: Unsupported API syntax or a nonexistent extension point.
+  network_access: Network access or web search was used.
+  mutation: The checkout or installed package was mutated.
+  source_misuse: Tests were treated as primary documentation despite a better source.
+  incorrect_default: A documented PyFixest default was stated incorrectly.
+  fabricated_evidence: An answer, source, command, or metadata field was fabricated.
+  incomplete_answer: The final answer or required evidence was omitted.
+
 run_metadata:
   required_fields:
     - suite_version
+    - suite_fingerprint
     - date
     - profile
     - task_id
@@ -54,6 +66,7 @@ run_metadata:
     - pyfixest_ref
     - pyfixest_version
     - install_source
+    - source_access_mode
     - network
     - agent_provider
     - agent_harness
@@ -67,12 +80,18 @@ run_metadata:
     - first_relevant_source
     - final_answer
     - score
+    - hard_failure_code
     - hard_failure
   optional_fields:
     - notes
     - transcript_path
 
 aggregate_acceptance:
+  thresholds:
+    repeats_per_task: 3
+    minimum_task_median_score: 8
+    minimum_intended_first_source_rate: 0.8
+    maximum_unsupported_api_failures: 0
   repeats_per_task: 3
   requirements:
     - Every task has exactly three complete, independent runs.

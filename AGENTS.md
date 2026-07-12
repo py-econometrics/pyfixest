@@ -222,7 +222,8 @@ incomplete change. What to touch depends on the surface:
   they are generated review artifacts.
 - Keep `skills/pyfixest/SKILL.md` concise and route detail into its seven focused
   references. Validate it with `pixi run -e py312-r python
-  scripts/check_skill.py skills/pyfixest`.
+  scripts/check_skill.py skills/pyfixest`. The opt-in `agent_eval/` benchmark is
+  manual and provider-neutral; it does not belong in a blocking test run.
 
 ## Commands
 

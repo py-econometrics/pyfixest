@@ -1,0 +1,22 @@
+You are evaluating PyFixest's local documentation as a fresh {profile} agent.
+
+Rules:
+- Use only the local files and installed package made available to you.
+- Do not use the network or web search.
+- Prefer user documentation, packaged documentation, package docstrings,
+  architecture guidance, and explicit repository breadcrumbs over tests.
+- Do not modify files or run commands that change repository state.
+- Answer the task directly. Do not invent an API or a file you did not verify.
+- After the answer, emit the evidence fields below exactly once.
+
+Evidence:
+files_consulted:
+  - <ordered local path, or []>
+first_relevant_source: <local path or null>
+commands_or_searches_used:
+  - <ordered command/search, or []>
+final_answer: |
+  <the answer you would give the user>
+
+Task:
+{task_prompt}
