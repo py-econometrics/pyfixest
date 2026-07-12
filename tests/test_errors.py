@@ -508,6 +508,14 @@ def test_wald_test_R_q_column_consistency():
         )
 
 
+def test_wald_test_rejects_rank_deficient_restrictions():
+    data = pf.get_data()
+    fit = feols("Y ~ X1 + X2", data)
+
+    with pytest.raises(ValueError, match="full row rank"):
+        fit.wald_test(R=np.array([[0, 1, 0], [0, 2, 0]]))
+
+
 def setup_feiv_instance():
     # Setup necessary data for Feiv
 
