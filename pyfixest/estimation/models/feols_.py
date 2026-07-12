@@ -59,7 +59,7 @@ from pyfixest.estimation.post_estimation.ritest import (
     _get_ritest_stats_slow,
     _plot_ritest_pvalue,
 )
-from pyfixest.estimation.post_estimation.wald import _wald_statistic
+from pyfixest.estimation.post_estimation.wald import _normalize_q, _wald_statistic
 from pyfixest.utils.dev_utils import (
     DataFrameType,
     _extract_variable_level,
@@ -1001,12 +1001,13 @@ class Feols(ResultAccessorMixin):
 
         # If R is None, default to the identity matrix
         R = np.eye(self._k) if R is None else np.atleast_2d(np.asarray(R, dtype=float))
+        q_array = _normalize_q(q, R.shape[0])
 
         W, self._dfn = _wald_statistic(
             beta_hat=self._beta_hat,
             vcov=self._vcov,
             R=R,
-            q=q,
+            q=q_array,
         )
 
         if self._is_clustered:
@@ -1016,10 +1017,10 @@ class Feols(ResultAccessorMixin):
 
         self._wald_statistic = W
 
-        # Check if distribution is "F" and R is not identity matrix
-        # or q is not zero vector
+        # The F distribution is only used for the joint test that all
+        # coefficients are zero (R identity, q zero).
         if distribution == "F" and (
-            not np.array_equal(R, np.eye(self._k)) or not np.all(q == 0)
+            not np.array_equal(R, np.eye(self._k)) or np.any(q_array)
         ):
             warnings.warn(
                 "Distribution changed to chi2, as R is not an identity matrix and q is not a zero vector."

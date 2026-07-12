@@ -497,6 +497,9 @@ def test_wald_test_R_q_column_consistency():
     with pytest.raises(ValueError):
         fit.wald_test(R=np.array([[1, 0]]), q="invalid type q")
 
+    with pytest.raises(ValueError, match="q must be a numeric scalar or array"):
+        fit.wald_test(R=np.eye(2), q="0")
+
     # Test with q being a one-dimensional array or a scalar.
     with pytest.raises(ValueError):
         fit.wald_test(R=np.array([[1, 0], [0, 1]]), q=np.array([[0, 1]]))

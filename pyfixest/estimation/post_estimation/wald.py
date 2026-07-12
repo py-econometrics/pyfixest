@@ -5,6 +5,25 @@ from __future__ import annotations
 import numpy as np
 
 
+def _normalize_q(q: float | np.ndarray | None, n_restrictions: int) -> np.ndarray:
+    """Normalize the right-hand side of a Wald restriction."""
+    if q is None:
+        return np.zeros(n_restrictions)
+
+    q_array = np.asarray(q)
+    if q_array.dtype.kind not in {"i", "u", "f"}:
+        raise ValueError("q must be a numeric scalar or array.")
+    q_array = q_array.astype(float, copy=False)
+
+    if q_array.ndim == 0:
+        return np.full(n_restrictions, float(q_array))
+    if q_array.ndim != 1:
+        raise ValueError("q must be a one-dimensional array or a scalar.")
+    if q_array.shape[0] != n_restrictions:
+        raise ValueError("q must have the same number of rows as R.")
+    return q_array
+
+
 def _wald_statistic(
     beta_hat: np.ndarray,
     vcov: np.ndarray,
@@ -30,20 +49,7 @@ def _wald_statistic(
     if R.shape[0] == 0 or np.linalg.matrix_rank(R) != R.shape[0]:
         raise ValueError("R must have full row rank.")
 
-    if q is None:
-        q_array = np.zeros(R.shape[0])
-    else:
-        try:
-            q_array = np.asarray(q, dtype=float)
-        except (TypeError, ValueError) as exc:
-            raise ValueError("q must be a numeric scalar or array.") from exc
-
-        if q_array.ndim == 0:
-            q_array = np.full(R.shape[0], float(q_array))
-        elif q_array.ndim != 1:
-            raise ValueError("q must be a one-dimensional array or a scalar.")
-        elif q_array.shape[0] != R.shape[0]:
-            raise ValueError("q must have the same number of rows as R.")
+    q_array = _normalize_q(q, R.shape[0])
 
     bread = R @ beta_hat - q_array
     meat = np.linalg.pinv(R @ vcov @ R.T)
