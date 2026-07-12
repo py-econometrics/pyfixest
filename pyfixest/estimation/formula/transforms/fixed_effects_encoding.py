@@ -16,9 +16,8 @@ def encode_fixed_effects(*args, _state=None, _metadata=None, _spec=None):
     data = pd.concat(args, axis=1)
     if FIXED_EFFECT_ENCODING not in _state:
         data[FIXED_EFFECT_ENCODING] = data.groupby(data.columns.tolist()).ngroup()
-        _state[FIXED_EFFECT_ENCODING] = data.dropna(
-            subset=[FIXED_EFFECT_ENCODING]
-        ).drop_duplicates()
+        encoded_state = data.dropna(subset=[FIXED_EFFECT_ENCODING]).drop_duplicates()
+        _state[FIXED_EFFECT_ENCODING] = encoded_state
         return data[FIXED_EFFECT_ENCODING]
 
     return data.merge(

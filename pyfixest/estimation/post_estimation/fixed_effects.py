@@ -3,25 +3,24 @@ from __future__ import annotations
 import warnings
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import Any, cast
 
 import formulaic
 import numpy as np
 import pandas as pd
+import scipy.sparse
+from formulaic import ModelSpec
+from formulaic.parser import DefaultFormulaParser
 from formulaic.parser.types import Term
-from numpy.typing import NDArray
+from numpy._typing import NDArray
+from scipy.sparse import spmatrix
 
 from pyfixest.estimation.formula.formulaic_compat import (
-    get_fixed_effect_coefficient_positions,
-    get_fixed_effect_encoding,
-    get_fixed_effect_encoding_data,
+    FormulaicCompatibilityError,
 )
 from pyfixest.estimation.formula.transforms.fixed_effects_encoding import (
     FIXED_EFFECT_ENCODING,
 )
-
-if TYPE_CHECKING:
-    from formulaic.model_spec import ModelSpec
 
 
 @dataclass(kw_only=True, frozen=True, slots=True)
@@ -41,11 +40,10 @@ class FixedEffect:
         Integer codes identifying the observed fixed-effect levels.
     values : tuple[NDArray[Any], ...]
         Original level values, stored as one array per fixed-effect component.
-        A one-way fixed effect has one array; an interaction has one array for
-        each interacted variable. Every array is aligned with `codes`.
+        Every array is aligned with `codes`.
     coefficients : NDArray[np.float64]
-        Estimated coefficient for every encoded level, aligned with `codes`.
-        Omitted reference levels have coefficient zero.
+        Estimated coefficient indexed by fixed-effect code. Omitted reference
+        levels have coefficient zero.
     """
 
     fixed_effect: str
@@ -54,55 +52,70 @@ class FixedEffect:
     values: tuple[NDArray[Any], ...]
     coefficients: NDArray[np.float64]
 
+    def levels(self) -> pd.Series:
+        """Combine values of fixed effect levels into comma-separated string."""
+        value_columns = pd.DataFrame(dict(enumerate(self.values))).astype("string")
+        return value_columns.agg(",".join, axis="columns").astype("string")
 
-def build_fixed_effect_coefficients(
-    fixed_effect_names: Iterable[str],
+
+@dataclass(kw_only=True, frozen=True, slots=True)
+class FixedEffectContrastCoding:
+    """
+    Sparse dummy matrix and coefficient alignment for fixed effects.
+
+    Attributes
+    ----------
+    matrix : spmatrix
+        Sparse one-hot encoded fixed-effect matrix used to estimate coefficients.
+    coefficient_codes : Mapping[str, NDArray[np.int64]]
+        Retained encoded levels for each fixed effect.
+    coefficient_indices : Mapping[str, NDArray[np.int64]]
+        Positions in the complete coefficient vector for each fixed effect.
+    """
+
+    matrix: spmatrix
+    coefficient_codes: Mapping[str, NDArray[np.int64]]
+    coefficient_indices: Mapping[str, NDArray[np.int64]]
+
+
+def build_fixed_effects(
     fixed_effect_coefficients: np.ndarray,
-    model_spec: ModelSpec,
+    contrast_coding: FixedEffectContrastCoding,
     transform_state: Mapping[str, Any],
 ) -> dict[str, FixedEffect]:
     """Build fixed-effect coefficient records keyed by encoded name."""
-    results: dict[str, FixedEffect] = {}
-    for fixed_effect_name, term in zip(
-        fixed_effect_names, model_spec.terms, strict=True
-    ):
-        result = _build_fixed_effect(
-            fixed_effect_name=fixed_effect_name,
-            term=term,
-            fixed_effect_coefficients=fixed_effect_coefficients,
-            model_spec=model_spec,
+    fixed_effects: dict[str, FixedEffect] = {}
+    for fixed_effect_name in contrast_coding.coefficient_codes:
+        fixed_effect = _build_fixed_effect(
+            name=fixed_effect_name,
+            coefficients=fixed_effect_coefficients,
+            coefficient_codes=contrast_coding.coefficient_codes[fixed_effect_name],
+            coefficient_indices=contrast_coding.coefficient_indices[fixed_effect_name],
             transform_state=transform_state,
         )
-        results[result.fixed_effect] = result
+        fixed_effects[fixed_effect.fixed_effect] = fixed_effect
 
-    return results
+    return fixed_effects
 
 
 def _build_fixed_effect(
-    fixed_effect_name: str,
-    term: Term,
-    fixed_effect_coefficients: np.ndarray,
-    model_spec: ModelSpec,
+    name: str,
+    coefficients: np.ndarray,
+    coefficient_codes: np.ndarray,
+    coefficient_indices: np.ndarray,
     transform_state: Mapping[str, Any],
 ) -> FixedEffect:
     """Build the coefficient record for one fixed effect."""
-    variable, codes, values = get_fixed_effect_encoding_data(
-        fixed_effect_name, transform_state
-    )
-    coefficient_codes, coefficient_indices = get_fixed_effect_coefficient_positions(
-        term, model_spec
-    )
+    variable, codes, values = get_fixed_effect_encoding_data(name, transform_state)
+    # Map fixed effect codes to estimated coefficients
     coefficient_by_code = np.zeros(codes.max() + 1, dtype=np.float64)
-    coefficient_by_code[coefficient_codes] = fixed_effect_coefficients[
-        coefficient_indices
-    ]
-
+    coefficient_by_code[coefficient_codes] = coefficients[coefficient_indices]
     return FixedEffect(
-        fixed_effect=fixed_effect_name,
+        fixed_effect=name,
         variable=variable,
         codes=codes,
         values=values,
-        coefficients=coefficient_by_code[codes],
+        coefficients=coefficient_by_code,
     )
 
 
@@ -112,16 +125,13 @@ def fixed_effects_to_frame(
     """Convert fixed-effect coefficient records to a tidy DataFrame."""
     frames: list[pd.DataFrame] = []
     for fixed_effect in fixed_effects.values():
-        level = pd.Series(fixed_effect.values[0]).astype(str)
-        for values in fixed_effect.values[1:]:
-            level = level.str.cat(pd.Series(values).astype(str), sep=",")
         frames.append(
             pd.DataFrame(
                 {
                     "variable": fixed_effect.variable,
                     "code": fixed_effect.codes,
-                    "level": level,
-                    "coefficient": fixed_effect.coefficients,
+                    "level": fixed_effect.levels(),
+                    "coefficient": fixed_effect.coefficients[fixed_effect.codes],
                 }
             )
         )
@@ -158,34 +168,17 @@ def check_fe_dtype_compatibility(
 def predict_fixed_effects(
     model_matrix: pd.DataFrame,
     coefficients: Mapping[str, FixedEffect],
-    valid_idx: np.ndarray,
 ) -> np.ndarray:
-    """Return summed fixed-effect contributions for valid rows."""
-    contributions: list[np.ndarray] = []
+    """Return summed fixed-effect contributions for each row."""
+    contributions = np.zeros(len(model_matrix), dtype=np.float64)
     for fixed_effect in model_matrix.columns:
-        coefficient_record = coefficients[str(fixed_effect)]
-        coefficient_table = pd.DataFrame(
-            {
-                "code": coefficient_record.codes,
-                "coefficient": coefficient_record.coefficients,
-            }
-        )
-        contribution = (
-            model_matrix.loc[valid_idx, [fixed_effect]]
-            .merge(
-                coefficient_table.rename(columns={"code": fixed_effect}),
-                on=fixed_effect,
-                how="left",
-                sort=False,
-            )["coefficient"]
-            .to_numpy()
-        )
-        contributions.append(contribution)
+        codes = model_matrix[fixed_effect].to_numpy(dtype=np.int64)
+        contributions += coefficients[str(fixed_effect)].coefficients[codes]
 
-    return np.column_stack(contributions).sum(axis=1)
+    return contributions
 
 
-def warn_on_unseen_fixed_effects(
+def warn_on_unseen_fixed_effect_levels(
     model_matrix: pd.DataFrame,
     model_spec: formulaic.ModelSpec,
     newdata: pd.DataFrame,
@@ -210,3 +203,105 @@ def warn_on_unseen_fixed_effects(
                 UserWarning,
                 stacklevel=3,
             )
+
+
+def get_fixed_effect_encoding(
+    transform_state: Mapping[str, Any], column: str
+) -> pd.DataFrame:
+    """Return pyfixest's stored fixed-effect encoding DataFrame."""
+    try:
+        return transform_state[column][FIXED_EFFECT_ENCODING]
+    except KeyError as exc:
+        raise FormulaicCompatibilityError(
+            f"Fixed-effect encoding for `{column}` is missing from the "
+            "formulaic transform state."
+        ) from exc
+
+
+def get_fixed_effect_encoding_data(
+    fixed_effect_name: str,
+    transform_state: Mapping[str, Any],
+) -> tuple[str, NDArray[np.int64], tuple[NDArray[Any], ...]]:
+    """Return normalized encoding data for one fixed effect."""
+    encoding = get_fixed_effect_encoding(transform_state, fixed_effect_name)
+    value_columns = [
+        column for column in encoding.columns if column != FIXED_EFFECT_ENCODING
+    ]
+    return (
+        "^".join(value_columns),
+        encoding[FIXED_EFFECT_ENCODING].to_numpy(dtype=np.int64),
+        tuple(encoding[column].to_numpy(copy=True) for column in value_columns),
+    )
+
+
+def get_fixed_effect_coefficient_positions(
+    term: Term,
+    model_spec: ModelSpec,
+) -> tuple[NDArray[np.int64], NDArray[np.int64]]:
+    """
+    Align one fixed-effect term's codes with positions in the coefficient vector.
+
+    Formulaic stores the coefficients for all fixed-effect terms in one model
+    matrix. The returned coefficient positions select the entries belonging to
+    `term`. The returned codes identify which encoded fixed-effect levels those
+    entries represent.
+
+    For a full-rank term, every encoded level has a coefficient. For a
+    reduced-rank term, formulaic omits the reference level, so its code is absent
+    from the returned codes. The caller can therefore initialize coefficients for
+    all codes to zero and fill only the returned code-position pairs.
+
+    Returns
+    -------
+    coefficient_codes : NDArray[np.int64]
+        Encoded fixed-effect levels represented in the coefficient vector.
+    coefficient_indices : NDArray[np.int64]
+        Positions of this term's coefficients in the complete fixed-effect
+        coefficient vector.
+    """
+    (factor,) = term.factors
+    contrasts_state = model_spec.factor_contrasts[factor]
+    coefficient_indices = model_spec.term_indices[term]
+    coefficient_codes = contrasts_state.contrasts.get_coding_column_names(
+        contrasts_state.levels,
+        reduced_rank=len(coefficient_indices) < len(contrasts_state.levels),
+    )
+    return (
+        np.asarray(coefficient_codes, dtype=np.int64),
+        np.asarray(coefficient_indices, dtype=np.int64),
+    )
+
+
+def contrast_code_fixed_effects(
+    fixed_effects: Iterable[Term],
+    fixed_effect_names: Iterable[str],
+    data: pd.DataFrame,
+    context: Mapping[str, Any],
+    transform_state: Mapping[str, Any],
+) -> FixedEffectContrastCoding:
+    """Build the sparse FE dummy matrix and record its coefficient alignment."""
+    contrast_coding = formulaic.Formula(
+        [f"C({fixed_effect})" for fixed_effect in fixed_effects],
+        _parser=DefaultFormulaParser(include_intercept=False),
+    )
+    matrix = contrast_coding.get_model_matrix(
+        data,
+        output="sparse",
+        ensure_full_rank=True,
+        context=context,
+        transform_state=transform_state,
+    )
+    coefficient_codes: dict[str, NDArray[np.int64]] = {}
+    coefficient_indices: dict[str, NDArray[np.int64]] = {}
+    for fixed_effect_name, term in zip(
+        fixed_effect_names, matrix.model_spec.terms, strict=True
+    ):
+        codes, indices = get_fixed_effect_coefficient_positions(term, matrix.model_spec)
+        coefficient_codes[fixed_effect_name] = codes
+        coefficient_indices[fixed_effect_name] = indices
+
+    return FixedEffectContrastCoding(
+        matrix=cast(scipy.sparse.spmatrix, matrix),
+        coefficient_codes=coefficient_codes,
+        coefficient_indices=coefficient_indices,
+    )
