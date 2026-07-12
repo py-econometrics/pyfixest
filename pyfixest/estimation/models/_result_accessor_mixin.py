@@ -10,7 +10,7 @@ from pyfixest.errors import EmptyVcovError
 
 if TYPE_CHECKING:
     from pyfixest.estimation.internals.families import InferenceDist
-from pyfixest.utils.dev_utils import _select_order_coefs
+from pyfixest.utils.dev_utils import _select_coefnames_and_indices
 from pyfixest.utils.utils import simultaneous_crit_val
 
 
@@ -279,40 +279,21 @@ class ResultAccessorMixin(TidyColumnAccessors):
         fit.confint(alpha=0.10, joint=True, reps=9999).head()
         ```
         """
-        if keep is None:
-            keep = []
-        if drop is None:
-            drop = []
-
-        tidy_df = self.tidy()
-        if keep or drop:
-            if isinstance(keep, str):
-                keep = [keep]
-            if isinstance(drop, str):
-                drop = [drop]
-            idxs = _select_order_coefs(tidy_df.index.tolist(), keep, drop, exact_match)
-            coefnames = tidy_df.loc[idxs, :].index.tolist()
-        else:
-            coefnames = self._coefnames
-
-        joint_indices = [i for i, x in enumerate(self._coefnames) if x in coefnames]
-        if not joint_indices:
-            raise ValueError("No coefficients match the keep/drop patterns.")
+        coefnames, coef_indices = _select_coefnames_and_indices(
+            self._coefnames, keep, drop, exact_match
+        )
 
         if not joint:
             crit_val = self._inference_dist.crit_val(alpha, self._df_t)
         else:
+            joint_indices = sorted(coef_indices)
             D_inv = 1 / self._se[joint_indices]
             V = self._vcov[np.ix_(joint_indices, joint_indices)]
             C_coefs = (D_inv * V).T * D_inv
             crit_val = simultaneous_crit_val(C_coefs, reps, alpha=alpha, seed=seed)
 
-        ub = pd.Series(
-            self._beta_hat[joint_indices] + crit_val * self._se[joint_indices]
-        )
-        lb = pd.Series(
-            self._beta_hat[joint_indices] - crit_val * self._se[joint_indices]
-        )
+        ub = pd.Series(self._beta_hat[coef_indices] + crit_val * self._se[coef_indices])
+        lb = pd.Series(self._beta_hat[coef_indices] - crit_val * self._se[coef_indices])
 
         df = pd.DataFrame(
             {

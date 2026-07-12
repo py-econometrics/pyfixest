@@ -78,3 +78,21 @@ def test_against_doubleml():
     pyfixest_res = m.confint(keep="X_.$", reps=10_000, joint=True)
 
     assert np.all(np.abs(dml_res.values - pyfixest_res.values) < 1e-2)
+
+
+def test_confint_preserves_keep_order():
+    fit = feols("Y ~ X1 + X2 + C(f1)", get_data())
+    model_order = fit.coef().index[:5].tolist()
+    keep_order = model_order[::-1]
+
+    pointwise = fit.confint(keep=keep_order, exact_match=True)
+    expected = fit.confint().loc[keep_order]
+    pd.testing.assert_frame_equal(pointwise, expected)
+
+    joint_model_order = fit.confint(
+        keep=model_order, exact_match=True, joint=True, reps=1000, seed=42
+    )
+    joint_keep_order = fit.confint(
+        keep=keep_order, exact_match=True, joint=True, reps=1000, seed=42
+    )
+    pd.testing.assert_frame_equal(joint_keep_order, joint_model_order.loc[keep_order])
