@@ -104,7 +104,7 @@ def _select_order_coefs(
     return res
 
 
-def _get_coef_indices(
+def _select_coefnames_and_indices(
     coefnames_all: list,
     keep: list | str | None = None,
     drop: list | str | None = None,

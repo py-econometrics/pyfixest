@@ -10,7 +10,7 @@ from pyfixest.errors import EmptyVcovError
 
 if TYPE_CHECKING:
     from pyfixest.estimation.internals.families import InferenceDist
-from pyfixest.utils.dev_utils import _get_coef_indices
+from pyfixest.utils.dev_utils import _select_coefnames_and_indices
 from pyfixest.utils.utils import simultaneous_crit_val
 
 
@@ -279,7 +279,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
         fit.confint(alpha=0.10, joint=True, reps=9999).head()
         ```
         """
-        coefnames, coef_indices = _get_coef_indices(
+        coefnames, coef_indices = _select_coefnames_and_indices(
             self._coefnames, keep, drop, exact_match
         )
 
