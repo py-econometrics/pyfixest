@@ -92,6 +92,7 @@
 - [PyFixest architecture](https://pyfixest.org/architecture.html.md): Canonical guide to dependency direction, estimation flow, model capabilities, state, caches, Rust kernels, and numerical tests.
 - [Contributing](https://pyfixest.org/contributing.html.md): Set up a PyFixest development environment, find architectural guidance, and submit tested, documented changes.
 - [Changelog](https://pyfixest.org/changelog.html.md): Release-by-release changes to PyFixest APIs, estimators, inference, performance, and documentation.
+- [PyFixest agent skill](https://pyfixest.org/skills.html.md): Progressive-disclosure skill for agents using PyFixest.
 - [Acknowledgements](https://pyfixest.org/acknowledgements.html.md): Packages, papers, maintainers, and funders whose work shaped PyFixest.
 - [Surrogate Indices & Experimental Selection](https://pyfixest.org/how-to/surrogate-indices-experimental-selection.html.md): Outline for estimating long-run effects with surrogates and applying experimental selection correction in PyFixest.
 - [Textbook Replications](https://pyfixest.org/textbook-replications/index.html.md): PyFixest translations of examples from widely used causal-inference textbooks.

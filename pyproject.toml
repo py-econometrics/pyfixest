@@ -68,6 +68,7 @@ benchmarks = [
 module-name = "pyfixest.core._core_impl"
 features = ["pyo3/extension-module"]
 python-source = "."
+python-packages = ["pyfixest", "skills"]
 exclude = [
     "tests/**",
     "docs/**",
@@ -76,6 +77,10 @@ exclude = [
     "joss_paper/**",
     "scripts/**",
     ".github/**",
+]
+include = [
+    { path = "skills/pyfixest/SKILL.md", format = "wheel" },
+    { path = "skills/pyfixest/**", format = "wheel" },
 ]
 
 [tool.pytest.ini_options]

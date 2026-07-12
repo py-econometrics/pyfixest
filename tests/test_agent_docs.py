@@ -9,6 +9,7 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parents[1]
 GENERATOR_PATH = REPO_ROOT / "docs" / "_scripts" / "generate_llms_md.py"
 PACKAGE_DOCS = REPO_ROOT / "pyfixest" / "docs"
+SKILL_DIR = REPO_ROOT / "skills" / "pyfixest"
 
 
 @pytest.fixture(scope="module")
@@ -156,3 +157,24 @@ def test_inventory_rejects_missing_metadata(agent_docs_module, tmp_path, monkeyp
     monkeypatch.setattr(agent_docs_module, "REPO_ROOT", tmp_path)
     with pytest.raises(agent_docs_module.AgentDocsError, match="no description"):
         agent_docs_module.load_inventory(config)
+
+
+def test_canonical_skill_has_seven_references_and_generated_page(agent_docs_module):
+    """Keep the bundled skill small, valid, and the sole source of its web page."""
+    skill = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
+    frontmatter = skill.split("---", 2)[1].strip().splitlines()
+    assert {line.split(":", 1)[0] for line in frontmatter} == {
+        "name",
+        "description",
+    }
+    assert "name: pyfixest" in skill
+
+    references = sorted((SKILL_DIR / "references").glob("*.md"))
+    assert len(references) == 7
+    assert all(reference.parent == SKILL_DIR / "references" for reference in references)
+
+    metadata = (SKILL_DIR / "agents" / "openai.yaml").read_text(encoding="utf-8")
+    assert 'default_prompt: "Use $pyfixest' in metadata
+    assert (REPO_ROOT / "docs" / "skills.md").read_text(
+        encoding="utf-8"
+    ) == agent_docs_module.expected_skill_page()

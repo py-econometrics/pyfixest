@@ -1,7 +1,4 @@
----
-title: "PyFixest agent skill"
-description: "Progressive-disclosure skill for agents using PyFixest."
----
+<!-- Generated from docs/skills.md; do not edit. -->
 
 # PyFixest agent skill
 

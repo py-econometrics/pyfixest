@@ -104,6 +104,7 @@
     {"source": "ARCHITECTURE.md", "route": "architecture", "title": "PyFixest architecture", "description": "Canonical guide to dependency direction, estimation flow, model capabilities, state, caches, Rust kernels, and numerical tests."},
     {"source": "docs/contributing.qmd", "route": "contributing"},
     {"source": "docs/changelog.qmd", "route": "changelog"},
+    {"source": "docs/skills.md", "route": "skills"},
     {"source": "docs/acknowledgements.md", "route": "acknowledgements"},
     {"source": "docs/how-to/surrogate-indices-experimental-selection.qmd", "route": "how-to/surrogate-indices-experimental-selection"},
     {"source": "docs/textbook-replications/index.qmd", "route": "textbook-replications/index"},

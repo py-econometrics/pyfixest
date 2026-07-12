@@ -28,6 +28,17 @@ INVENTORY_PATH = DOCS_DIR / "_agent_docs.yml"
 PACKAGE_DOCS_DIR = REPO_ROOT / "pyfixest" / "docs"
 DEFAULT_SITE_DIR = DOCS_DIR / "_site"
 GENERATOR_LABEL = "docs/_scripts/generate_llms_md.py"
+SKILL_DIR = REPO_ROOT / "skills" / "pyfixest"
+SKILL_PAGE = DOCS_DIR / "skills.md"
+SKILL_REFERENCE_FILES = (
+    "core-api.md",
+    "formula-syntax.md",
+    "inference.md",
+    "reporting.md",
+    "specialized-estimators.md",
+    "demeaners.md",
+    "troubleshooting.md",
+)
 
 FRONTMATTER_RE = re.compile(r"\A---\s*\n(.*?)\n---\s*(?:\n|\Z)", re.DOTALL)
 MARKDOWN_LINK_RE = re.compile(r"(?<!!)\[([^\]]+)\]\(([^)]+)\)")
@@ -214,6 +225,44 @@ def load_inventory(path: Path = INVENTORY_PATH) -> Inventory:
 
 def _strip_frontmatter(text: str) -> str:
     return FRONTMATTER_RE.sub("", text, count=1)
+
+
+def _promote_heading(text: str) -> str:
+    """Promote a reference's initial heading one level for the website page."""
+    return re.sub(r"\A# ", "## ", text.strip(), count=1)
+
+
+def expected_skill_page() -> str:
+    """Render the website skill page solely from the canonical bundled skill."""
+    skill_path = SKILL_DIR / "SKILL.md"
+    if not skill_path.is_file():
+        raise AgentDocsError(f"Missing canonical skill: {skill_path}")
+    body = _strip_frontmatter(skill_path.read_text(encoding="utf-8")).strip()
+    body = re.sub(r"\A# PyFixest\s*\n+", "", body, count=1)
+    body = re.sub(r"\[([^\]]+)\]\(references/[^)]+\)", r"\1", body)
+
+    sections = [
+        "---",
+        'title: "PyFixest agent skill"',
+        'description: "Progressive-disclosure skill for agents using PyFixest."',
+        "---",
+        "",
+        "# PyFixest agent skill",
+        "",
+        "<!-- Generated from skills/pyfixest; do not edit. -->",
+        "",
+        "This page is generated from the skill bundled with the package. Installers",
+        "and downstream projects should copy the canonical skill directory, not this",
+        "rendered page.",
+        "",
+        body,
+    ]
+    for filename in SKILL_REFERENCE_FILES:
+        path = SKILL_DIR / "references" / filename
+        if not path.is_file():
+            raise AgentDocsError(f"Missing canonical skill reference: {path}")
+        sections.extend(["", _promote_heading(path.read_text(encoding="utf-8"))])
+    return "\n".join(sections).rstrip() + "\n"
 
 
 def _source_key(source: str) -> str:
@@ -562,8 +611,9 @@ def generate(
 ) -> list[str]:
     """Generate or check all package and optional site outputs."""
     inventory = load_inventory()
+    problems = _compare_or_write({SKILL_PAGE: expected_skill_page()}, check)
     package_outputs = expected_package_outputs(inventory)
-    problems = _validate_package_links(package_outputs)
+    problems.extend(_validate_package_links(package_outputs))
     problems.extend(_compare_or_write(package_outputs, check))
     problems.extend(_remove_or_report_stale_package_files(set(package_outputs), check))
 
@@ -614,6 +664,11 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
         default=DEFAULT_SITE_DIR,
         help="Rendered Quarto site root (default: docs/_site).",
     )
+    parser.add_argument(
+        "--skill-page",
+        action="store_true",
+        help="Generate or check only the website page derived from the canonical skill.",
+    )
     return parser.parse_args(argv)
 
 
@@ -622,7 +677,12 @@ def main(argv: list[str] | None = None) -> int:
     args = _parse_args(sys.argv[1:] if argv is None else argv)
     site_dir = None if args.no_site else args.site_dir.resolve()
     try:
-        problems = generate(args.check, site_dir)
+        if args.skill_page:
+            problems = _compare_or_write(
+                {SKILL_PAGE: expected_skill_page()}, args.check
+            )
+        else:
+            problems = generate(args.check, site_dir)
     except AgentDocsError as exc:
         print(f"agent docs: {exc}", file=sys.stderr)
         return 1

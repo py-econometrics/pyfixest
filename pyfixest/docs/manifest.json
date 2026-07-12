@@ -1,5 +1,5 @@
 {
-  "corpus_sha256": "66b534e9ed23e5abf5682fa6b40f80e3c09ff85662cf370a468dd5e0553daf71",
+  "corpus_sha256": "d8379ecf455f9fc1b8a14aa69a1f92cac10a22975433355486b4d3e539c8c78c",
   "generator": "docs/_scripts/generate_llms_md.py",
   "pages": [
     {
@@ -731,6 +731,16 @@
       "source": "docs/changelog.qmd",
       "source_sha256": "41a51feecc2c6575602ffcffcc79a4f1892cdb6c9f9891b89c9ea9df6bd17a41",
       "title": "Changelog"
+    },
+    {
+      "content_sha256": "5747eb3fee2f9fa20dfaa1abddd086d61bebcfa89ad4bc29d0d22ad0ba0efd7e",
+      "description": "Progressive-disclosure skill for agents using PyFixest.",
+      "optional": true,
+      "route": "skills",
+      "section": "Optional",
+      "source": "docs/skills.md",
+      "source_sha256": "7d1f5145398ea43059c49bd4f582b0fa567a726b8fa0f13abe08de11e82f555a",
+      "title": "PyFixest agent skill"
     },
     {
       "content_sha256": "feaf98c42ba91ebbf9010bde874c03ad54b6634b197bd0a137711252b986423e",
