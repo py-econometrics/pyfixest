@@ -1016,12 +1016,11 @@ class Feols(ResultAccessorMixin):
 
         self._wald_statistic = W
 
-        # The F distribution is only used for the joint test that all
-        # coefficients are zero (R identity, q zero).
-        tests_all_coefs_zero = np.array_equal(R, np.eye(self._k)) and (
-            q is None or not np.any(q)
-        )
-        if distribution == "F" and not tests_all_coefs_zero:
+        # Check if distribution is "F" and R is not identity matrix
+        # or q is not zero vector
+        if distribution == "F" and (
+            not np.array_equal(R, np.eye(self._k)) or not np.all(q == 0)
+        ):
             warnings.warn(
                 "Distribution changed to chi2, as R is not an identity matrix and q is not a zero vector."
             )
