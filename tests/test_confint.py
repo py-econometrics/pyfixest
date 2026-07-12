@@ -78,3 +78,12 @@ def test_against_doubleml():
     pyfixest_res = m.confint(keep="X_.$", reps=10_000, joint=True)
 
     assert np.all(np.abs(dml_res.values - pyfixest_res.values) < 1e-2)
+
+
+def test_confint_preserves_keep_order():
+    fit = feols("Y ~ X1 + X2", get_data())
+    ci = fit.confint(keep=["X2", "X1"], joint=True, reps=1000, seed=42)
+    assert list(ci.index) == ["X2", "X1"]
+
+    ci2 = fit.confint(keep=["X2", "X1"])
+    assert list(ci2.index) == ["X2", "X1"]
