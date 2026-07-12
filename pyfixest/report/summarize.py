@@ -1,16 +1,15 @@
+"""Create model summaries, regression tables, and descriptive tables."""
+
 import warnings
+from itertools import pairwise
 
 import maketables
 import numpy as np
 import pandas as pd
 
-from pyfixest.estimation.FixestMulti_ import FixestMulti
-from pyfixest.estimation.models.feiv_ import Feiv
 from pyfixest.estimation.models.feols_ import Feols
-from pyfixest.estimation.models.fepois_ import Fepois
 from pyfixest.report.utils import _post_processing_input_checks
-
-ModelInputType = FixestMulti | Feols | Fepois | Feiv | list[Feols | Fepois | Feiv]
+from pyfixest.typing import ModelInput
 
 _METHOD_DISPLAY_NAMES: dict[str, str] = {
     "fepois": "Poisson",
@@ -34,7 +33,7 @@ def _get_estimation_method_name(fxst: Feols) -> str:
 
 
 def etable(
-    models: ModelInputType,
+    models: ModelInput,
     type: str = "gt",
     signif_code: list | None = None,
     coef_fmt: str | None = None,
@@ -182,50 +181,95 @@ def etable(
     if signif_code is None:
         signif_code = [0.001, 0.01, 0.05]
 
-    assert isinstance(signif_code, list) and len(signif_code) == 3, (
-        "signif_code must be a list of length 3"
-    )
-    if signif_code:
-        assert all([0 < i < 1 for i in signif_code]), (
-            "All values of signif_code must be between 0 and 1"
+    if not isinstance(signif_code, list):
+        raise TypeError(
+            "`signif_code` must be a list of three probability thresholds; "
+            f"received {signif_code.__class__.__name__}: {signif_code!r}."
         )
-    if signif_code:
-        assert signif_code[0] < signif_code[1] < signif_code[2], (
-            "signif_code must be in increasing order"
+    if len(signif_code) != 3:
+        raise ValueError(
+            f"`signif_code` must contain exactly three values; received "
+            f"{len(signif_code)}: {signif_code!r}."
+        )
+    if not all(isinstance(value, (int, float)) for value in signif_code):
+        raise TypeError(
+            f"Every `signif_code` value must be numeric; received {signif_code!r}."
+        )
+    if not all(0 < value < 1 for value in signif_code):
+        raise ValueError(
+            "Every `signif_code` value must lie strictly between 0 and 1; "
+            f"received {signif_code!r}."
+        )
+    if not all(left < right for left, right in pairwise(signif_code)):
+        raise ValueError(
+            f"`signif_code` must be strictly increasing; received {signif_code!r}."
         )
 
-    assert type in [
+    valid_output_types = [
         "df",
         "md",
         "html",
         "gt",
         "tex",
         "typst",
-    ], "type must be either 'df', 'md', 'html', 'gt' or 'tex'"
+    ]
+    if type not in valid_output_types:
+        raise ValueError(
+            f"Invalid `type` value {type!r}; expected one of "
+            f"{valid_output_types!r}. See "
+            "`pyfixest/docs/pages/tutorials/regression-tables.md` or "
+            "https://pyfixest.org/table-layout.html."
+        )
 
     models_list = _post_processing_input_checks(models)
 
     if model_heads is not None:
-        assert len(model_heads) == len(models_list), (
-            "model_heads must have the same length as models"
-        )
+        if not isinstance(model_heads, list):
+            raise TypeError(
+                "`model_heads` must be a list or None; received "
+                f"{model_heads.__class__.__name__}: {model_heads!r}."
+            )
+        if len(model_heads) != len(models_list):
+            raise ValueError(
+                "`model_heads` must have one label per model; received "
+                f"{len(model_heads)} labels for {len(models_list)} models."
+            )
 
-    assert head_order in [
+    valid_head_orders = [
         "dh",
         "hd",
         "d",
         "h",
         "",
-    ], "head_order must be one of 'd', 'h', 'dh', 'hd', ''"
+    ]
+    if head_order not in valid_head_orders:
+        raise ValueError(
+            f"Invalid `head_order` value {head_order!r}; expected one of "
+            f"{valid_head_orders!r}."
+        )
 
     if custom_model_stats is not None:
-        assert isinstance(custom_model_stats, dict), "custom_model_stats must be a dict"
-        for stat, values in custom_model_stats.items():
-            assert isinstance(stat, str), "custom_model_stats keys must be strings"
-            assert isinstance(values, list), "custom_model_stats values must be lists"
-            assert len(values) == len(models_list), (
-                "lists in custom_model_stats values must have the same length as models"
+        if not isinstance(custom_model_stats, dict):
+            raise TypeError(
+                "`custom_model_stats` must be a dictionary or None; received "
+                f"{custom_model_stats.__class__.__name__}: {custom_model_stats!r}."
             )
+        for stat, values in custom_model_stats.items():
+            if not isinstance(stat, str):
+                raise TypeError(
+                    f"`custom_model_stats` keys must be strings; received key {stat!r}."
+                )
+            if not isinstance(values, list):
+                raise TypeError(
+                    f"`custom_model_stats[{stat!r}]` must be a list; received "
+                    f"{values.__class__.__name__}: {values!r}."
+                )
+            if len(values) != len(models_list):
+                raise ValueError(
+                    f"`custom_model_stats[{stat!r}]` must have one value per "
+                    f"model; received {len(values)} values for "
+                    f"{len(models_list)} models."
+                )
 
     table = maketables.ETable(
         models=models_list,
@@ -278,7 +322,7 @@ def etable(
     return None
 
 
-def summary(models: ModelInputType, digits: int = 3) -> None:
+def summary(models: ModelInput, digits: int = 3) -> None:
     """
     Print a summary of estimation results for each estimated model.
 

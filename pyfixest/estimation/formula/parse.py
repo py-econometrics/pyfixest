@@ -1,3 +1,5 @@
+"""Parse and expand fixest-style formulas."""
+
 import itertools
 import re
 from dataclasses import dataclass

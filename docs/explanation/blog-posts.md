@@ -1,3 +1,8 @@
+---
+title: "Case Studies and Blog Posts"
+description: "External case studies, tutorials, and practical examples that use PyFixest."
+---
+
 # Case Studies & Blog Posts
 
 A curated list of blog posts, tutorials, and case studies that show how pyfixest is used in practice.

@@ -1,10 +1,14 @@
+"""Define and validate literal options shared by estimation APIs."""
+
 from typing import Any, Literal, get_args
 
+from pyfixest.typing import GlmFamily, WeightsType
+
 PredictionType = Literal["response", "link"]
-VcovTypeOptions = Literal["iid", "hetero", "HC1", "HC2", "HC3", "nid"]
-WeightsTypeOptions = Literal["aweights", "fweights"]
+VcovTypeOptions = Literal["iid", "hetero", "HC1", "HC2", "HC3", "NW", "DK", "nid"]
+WeightsTypeOptions = WeightsType
 FixedRmOptions = Literal["singleton", "none"]
-FamilyOptions = Literal["logit", "probit", "gaussian", "poisson"]
+FamilyOptions = GlmFamily
 SolverOptions = Literal[
     "np.linalg.lstsq",
     "np.linalg.solve",
@@ -16,7 +20,12 @@ QuantregMethodOptions = Literal["fn", "pfn"]
 QuantregMultiOptions = Literal["cfm1", "cfm2"]
 
 
-def _validate_literal_argument(arg: Any, literal: Any) -> None:
+def _validate_literal_argument(
+    arg: Any,
+    literal: Any,
+    *,
+    argument_name: str,
+) -> None:
     """
     Validate if the given argument matches one of the allowed literal types.
 
@@ -30,6 +39,8 @@ def _validate_literal_argument(arg: Any, literal: Any) -> None:
         The argument to validate.
     literal : Any
         A Literal type that defines the allowed values for `arg`.
+    argument_name : str
+        Public argument name used in the error message.
 
     Raises
     ------
@@ -46,4 +57,7 @@ def _validate_literal_argument(arg: Any, literal: Any) -> None:
         )
 
     if arg not in valid_types:
-        raise ValueError(f"Invalid argument. Expecting one of {valid_types}. Got {arg}")
+        raise ValueError(
+            f"Invalid `{argument_name}` value {arg!r} "
+            f"({type(arg).__name__}); expected one of {valid_types!r}."
+        )

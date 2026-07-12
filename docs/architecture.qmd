@@ -1,0 +1,12 @@
+---
+title: "PyFixest architecture"
+description: "Canonical guide to PyFixest's dependency layers, estimation pipeline, model capabilities, state, caches, Rust kernels, and numerical tests."
+toc: true
+toc-title: "On this page"
+toc-location: left
+---
+
+This page is rendered from the canonical repository document
+[`ARCHITECTURE.md`](https://github.com/py-econometrics/pyfixest/blob/master/ARCHITECTURE.md).
+
+{{< include ../ARCHITECTURE.md >}}

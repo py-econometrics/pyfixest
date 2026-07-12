@@ -1,3 +1,5 @@
+"""Implement OLS and weighted least-squares model results."""
+
 from __future__ import annotations
 
 import re
@@ -15,7 +17,7 @@ from scipy.stats import chi2, f, t
 
 from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner, MapDemeaner
-from pyfixest.errors import VcovTypeNotSupportedError
+from pyfixest.errors import MissingStoredDataError, VcovTypeNotSupportedError
 from pyfixest.estimation.api.utils import _ALL_SAMPLE, _AllSampleSentinel
 from pyfixest.estimation.formula import model_matrix as model_matrix_fixest
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
@@ -59,8 +61,8 @@ from pyfixest.estimation.post_estimation.ritest import (
     _get_ritest_stats_slow,
     _plot_ritest_pvalue,
 )
+from pyfixest.typing import DataFrameType, RegressionVcovType, VcovKwargs
 from pyfixest.utils.dev_utils import (
-    DataFrameType,
     _extract_variable_level,
     _narwhals_to_pandas,
 )
@@ -75,13 +77,13 @@ prediction_type = Literal["response", "link"]
 
 class Feols(ResultAccessorMixin):
     """
-    Non user-facing class to estimate a linear regression via OLS.
+    Fitted OLS or weighted least-squares model.
 
-    Users should not directly instantiate this class,
-    but rather use the [feols()](/reference/estimation.api.feols.feols.qmd) function. Note that
-    no demeaning is performed in this class: demeaning is performed in the
-    FixestMulti class (to allow for caching of demeaned variables for multiple
-    estimation).
+    Construct models with [feols()](/reference/estimation.api.feols.feols.qmd),
+    not by instantiating this implementation class. The public call builds an
+    `EstimationConfig`, the planner expands its formula, and the runner invokes
+    this class's `prepare_model_matrix()`, `demean()`, and `get_fit()` steps. The
+    runner shares a `DemeanCache` across compatible specifications.
 
     Parameters
     ----------
@@ -92,7 +94,7 @@ class Feols(ResultAccessorMixin):
     weights : np.ndarray
         Weights, a one-dimensional numpy array.
     collin_tol : float
-        Tolerance level for collinearity checks.
+        Tolerance for collinearity checks. Public estimators default to `1e-9`.
     coefnames : list[str]
         Names of the coefficients (of the design matrix X).
     weights_name : Optional[str]
@@ -387,9 +389,6 @@ class Feols(ResultAccessorMixin):
         self._idname: str | None = None
         self._att: bool | None = None
 
-        # set functions inherited from other modules
-        self._bind_report_methods()
-
         # DiD methods - assign placeholder functions
         def _not_implemented_did(*args, **kwargs):
             raise NotImplementedError(
@@ -587,8 +586,8 @@ class Feols(ResultAccessorMixin):
 
     def vcov(
         self,
-        vcov: str | dict[str, str],
-        vcov_kwargs: dict[str, str | int] | None = None,
+        vcov: RegressionVcovType | dict[str, str],
+        vcov_kwargs: VcovKwargs | None = None,
         data: DataFrameType | None = None,
     ) -> Feols:
         """
@@ -596,19 +595,17 @@ class Feols(ResultAccessorMixin):
 
         Parameters
         ----------
-        vcov : Union[str, dict[str, str]]
-            A string or dictionary specifying the type of variance-covariance matrix
-            to use for inference.
-            If a string, it can be one of "iid", "hetero", "HC1", "HC2", "HC3", "NW", "DK".
-            If a dictionary, it should have the format {"CRV1": "clustervar"} for
-            CRV1 inference or {"CRV3": "clustervar"}
-            for CRV3 inference. Note that CRV3 inference is currently not supported
-            for IV estimation.
-        vcov_kwargs : Optional[dict[str, any]]
-             Additional keyword arguments for the variance-covariance matrix.
-        data: Optional[DataFrameType], optional
-            The data used for estimation. If None, tries to fetch the data from the
-            model object. Defaults to None.
+        vcov : RegressionVcovType or dict[str, str]
+            Covariance estimator. Use iid, hetero, HC1, HC2, HC3, NW, DK, or a
+            CRV1/CRV3 clustering dictionary. CRV3 is not supported for IV models.
+        vcov_kwargs : VcovKwargs, optional
+            HAC configuration. NW and DK require lag and time_id; DK also
+            requires panel_id.
+        data : DataFrameType, optional
+            Original input data or the estimation sample. Pass it when the model
+            was fitted with store_data=False and inference needs columns for new
+            clustering or HAC. Score-based iid and heteroskedastic inference do
+            not require retained data.
 
 
         Returns
@@ -616,20 +613,42 @@ class Feols(ResultAccessorMixin):
         Feols
             An instance of class [Feols](/reference/estimation.models.feols_.Feols.qmd) with updated inference.
         """
-        # Assuming `data` is the DataFrame in question
-
-        data_to_check = data if data is not None else self._data
+        stored_data = getattr(self, "_data", None)
+        data_to_check = data if data is not None else stored_data
+        vcov_needs_data = isinstance(vcov, (dict, list)) or vcov in {"NW", "DK"}
+        if data_to_check is None and vcov_needs_data:
+            raise MissingStoredDataError(
+                "Cannot compute this `vcov()` because the fitted model does not "
+                "retain its estimation data. Pass the original data with "
+                "`fit.vcov(..., data=data)` or refit with `store_data=True`. See "
+                "`pyfixest/docs/pages/troubleshooting.md` or "
+                "https://pyfixest.org/troubleshooting.html."
+            )
+        has_data = data_to_check is not None
+        if data_to_check is None:
+            data_to_check = pd.DataFrame()
         try:
             data_to_check = _narwhals_to_pandas(data_to_check)
         except TypeError as e:
             raise TypeError(
                 f"The data set must be a DataFrame type. Received: {type(data)}"
             ) from e
+        if has_data and data_to_check.shape[0] != self._N_rows:
+            dropped_rows = sorted(self._na_index)
+            if data_to_check.shape[0] - len(dropped_rows) == self._N_rows:
+                data_to_check = data_to_check.reset_index(drop=True).drop(dropped_rows)
+            else:
+                raise ValueError(
+                    "`data` must contain either the estimation sample or the "
+                    "original rows supplied when fitting the model. Received "
+                    f"{data_to_check.shape[0]} rows; expected {self._N_rows} "
+                    "estimation-sample rows."
+                )
 
         # assign estimated fixed effects, and fixed effects nested within cluster.
 
         # deparse vcov input
-        _check_vcov_input(vcov=vcov, vcov_kwargs=vcov_kwargs, data=self._data)
+        _check_vcov_input(vcov=vcov, vcov_kwargs=vcov_kwargs, data=data_to_check)
 
         (
             self._vcov_type,
@@ -663,10 +682,10 @@ class Feols(ResultAccessorMixin):
             self._ssc, self._df_k, self._df_t = get_ssc(
                 **self._make_ssc_kwargs(
                     vcov_type="HAC",
-                    G=np.unique(self._data[self._time_id]).shape[0],
+                    G=np.unique(data_to_check[self._time_id]).shape[0],
                 )  # number of unique time periods T used
             )
-            self._vcov = self._ssc * self._vcov_hac()
+            self._vcov = self._ssc * self._vcov_hac(data_to_check)
 
         elif self._vcov_type == "nid":
             self._ssc, self._df_k, self._df_t = get_ssc(
@@ -676,7 +695,7 @@ class Feols(ResultAccessorMixin):
 
         elif self._vcov_type == "CRV":
             prep = prepare_cluster_state(
-                data=data if data is not None else self._data,
+                data=data_to_check,
                 clustervar=self._clustervar,
                 ssc_dict=self._ssc_dict,
                 fixef=self._fixef,
@@ -751,10 +770,9 @@ class Feols(ResultAccessorMixin):
             tZZinv=self._tZZinv,
         )
 
-    def _vcov_hac(self):
+    def _vcov_hac(self, data: pd.DataFrame):
         _time_id = self._time_id
         _panel_id = self._panel_id
-        _data = self._data
 
         if not self._support_hac_inference:
             raise NotImplementedError(
@@ -763,22 +781,22 @@ class Feols(ResultAccessorMixin):
 
         # some data checks on input pandas df
         # time needs to be numeric or date else we cannot sort by time
-        if not np.issubdtype(_data[_time_id], np.number) and not np.issubdtype(
-            _data[_time_id], np.datetime64
+        if not np.issubdtype(data[_time_id], np.number) and not np.issubdtype(
+            data[_time_id], np.datetime64
         ):
             raise ValueError(
                 "The time variable must be numeric or date, else we cannot sort by time."
             )
 
-        _time_arr = _data[_time_id].to_numpy()
-        _panel_arr = _data[_panel_id].to_numpy() if _panel_id is not None else None
+        _time_arr = data[_time_id].to_numpy()
+        _panel_arr = data[_panel_id].to_numpy() if _panel_id is not None else None
 
         return vcov_hac(
             scores=self._scores,
             time_arr=_time_arr,
             panel_arr=_panel_arr,
-            lag=self._lag,
-            vcov_type_detail=self._vcov_type_detail,
+            lag=cast(int | None, self._lag),
+            vcov_type_detail=cast(Literal["NW", "DK"], self._vcov_type_detail),
             bread=self._bread,
             is_iv=self._is_iv,
             tXZ=self._tXZ,
@@ -1333,21 +1351,59 @@ class Feols(ResultAccessorMixin):
         fit.ccv(treatment="D", pk=0.05, qk=0.5, n_splits=8, seed=123).head()
         ```
         """
-        assert self._supports_cluster_causal_variance, (
-            "The model does not support the causal cluster variance estimator."
-        )
-        assert isinstance(treatment, str), "treatment must be a string."
-        assert isinstance(cluster, str) or cluster is None, (
-            "cluster must be a string or None."
-        )
-        assert isinstance(seed, int) or seed is None, "seed must be an integer or None."
-        assert isinstance(n_splits, int), "n_splits must be an integer."
-        assert isinstance(pk, (int, float)) and 0 <= pk <= 1
-        assert isinstance(qk, (int, float)) and 0 <= qk <= 1
+        if not self._supports_cluster_causal_variance:
+            raise NotImplementedError(
+                "`ccv()` is supported only for OLS models without IV or GLM "
+                f"structure; received model method {self._method!r}. See "
+                "`pyfixest/docs/pages/tutorials/standard-errors.md` or "
+                "https://pyfixest.org/standard-errors.html."
+            )
+        if not isinstance(treatment, str):
+            raise TypeError(
+                f"`treatment` must be a coefficient name; received "
+                f"{type(treatment).__name__}: {treatment!r}."
+            )
+        if cluster is not None and not isinstance(cluster, str):
+            raise TypeError(
+                f"`cluster` must be a column name or None; received "
+                f"{type(cluster).__name__}: {cluster!r}."
+            )
+        if not isinstance(seed, (int, type(None))):
+            raise TypeError(
+                f"`seed` must be an int or None; received {type(seed).__name__}: "
+                f"{seed!r}."
+            )
+        if not isinstance(n_splits, int):
+            raise TypeError(
+                f"`n_splits` must be an int; received "
+                f"{type(n_splits).__name__}: {n_splits!r}."
+            )
+        if n_splits <= 0:
+            raise ValueError(
+                f"`n_splits` must be strictly positive; received {n_splits!r}."
+            )
+        for name, value in {"pk": pk, "qk": qk}.items():
+            if not isinstance(value, (int, float)):
+                raise TypeError(
+                    f"`{name}` must be numeric; received "
+                    f"{type(value).__name__}: {value!r}."
+                )
+            if not 0 <= value <= 1:
+                raise ValueError(
+                    f"`{name}` must lie between 0 and 1; received {value!r}."
+                )
 
         if self._has_fixef:
             raise NotImplementedError(
                 "The causal cluster variance estimator is currently not supported for models with fixed effects."
+            )
+
+        if not hasattr(self, "_data"):
+            raise MissingStoredDataError(
+                "Cannot compute `ccv()` because the fitted model does not retain "
+                "its estimation data. Refit with `store_data=True` and call "
+                "`ccv()` again. See `pyfixest/docs/pages/troubleshooting.md` or "
+                "https://pyfixest.org/troubleshooting.html."
             )
 
         if treatment not in self._coefnames:
@@ -1390,9 +1446,10 @@ class Feols(ResultAccessorMixin):
         data = self._data
         Y = self._Y.flatten()
         W = data[treatment].to_numpy()
-        assert np.all(np.isin(W, [0, 1])), (
-            "Treatment variable must be binary with values 0 and 1"
-        )
+        if not np.all(np.isin(W, [0, 1])):
+            raise ValueError(
+                f"The treatment column {treatment!r} must contain only 0 and 1."
+            )
         X = self._X
         cluster_vec = data[cluster].to_numpy()
         unique_clusters = np.unique(cluster_vec)
@@ -1870,9 +1927,13 @@ class Feols(ResultAccessorMixin):
                     "Prediction errors are currently not supported for models with weights."
                 )
 
-        _validate_literal_argument(type, PredictionType)
+        _validate_literal_argument(type, PredictionType, argument_name="type")
         if interval is not None:
-            _validate_literal_argument(interval, PredictionErrorOptions)
+            _validate_literal_argument(
+                interval,
+                PredictionErrorOptions,
+                argument_name="interval",
+            )
 
         if newdata is None:
             # note: no need to worry about fixed effects, as not supported with
@@ -2007,6 +2068,59 @@ class Feols(ResultAccessorMixin):
         fit.ritest("X1", reps=1000, store_ritest_statistics=True)
         ```
         """
+        if not isinstance(resampvar, str):
+            raise TypeError(
+                f"`resampvar` must be a coefficient or hypothesis string; "
+                f"received {resampvar.__class__.__name__}: {resampvar!r}."
+            )
+        if cluster is not None and not isinstance(cluster, str):
+            raise TypeError(
+                f"`cluster` must be a column name or None; received "
+                f"{cluster.__class__.__name__}: {cluster!r}."
+            )
+        if not isinstance(reps, int):
+            raise TypeError(
+                f"`reps` must be an int; received {reps.__class__.__name__}: {reps!r}."
+            )
+        if reps <= 0:
+            raise ValueError(f"`reps` must be strictly positive; received {reps!r}.")
+        valid_ri_types = ["randomization-t", "randomization-c"]
+        if type not in valid_ri_types:
+            raise ValueError(
+                f"Invalid `type` value {type!r}; expected one of {valid_ri_types!r}."
+            )
+        valid_algorithms = ["auto", "fast", "slow"]
+        if choose_algorithm not in valid_algorithms:
+            raise ValueError(
+                f"Invalid `choose_algorithm` value {choose_algorithm!r}; "
+                f"expected one of {valid_algorithms!r}."
+            )
+        if rng is not None and not isinstance(rng, np.random.Generator):
+            raise TypeError(
+                "`rng` must be a numpy.random.Generator or None; received "
+                f"{rng.__class__.__name__}."
+            )
+        if not isinstance(store_ritest_statistics, bool):
+            raise TypeError(
+                "`store_ritest_statistics` must be a bool; received "
+                f"{store_ritest_statistics.__class__.__name__}: "
+                f"{store_ritest_statistics!r}."
+            )
+        if not isinstance(level, (int, float)):
+            raise TypeError(
+                f"`level` must be numeric; received {level.__class__.__name__}: "
+                f"{level!r}."
+            )
+        if not 0 < level < 1:
+            raise ValueError(f"`level` must lie in (0, 1); received {level!r}.")
+        if not hasattr(self, "_data"):
+            raise MissingStoredDataError(
+                "Cannot compute `ritest()` because the fitted model does not "
+                "retain its estimation data. Refit with `store_data=True` and "
+                "call `ritest()` again. See "
+                "`pyfixest/docs/pages/troubleshooting.md` or "
+                "https://pyfixest.org/troubleshooting.html."
+            )
         resampvar = resampvar.replace(" ", "")
         resampvar_, h0_value, hypothesis, test_type = _decode_resampvar(resampvar)
 
@@ -2047,16 +2161,11 @@ class Feols(ResultAccessorMixin):
         sample_tstat = np.array(self.tstat().xs(resampvar_))
         sample_stat = sample_tstat if type == "randomization-t" else sample_coef
 
-        if type not in ["randomization-t", "randomization-c"]:
-            raise ValueError("type must be 'randomization-t' or 'randomization-c.")
-
         # always run slow algorithm for randomization-t
         choose_algorithm = "slow" if type == "randomization-t" else choose_algorithm
 
         if choose_algorithm == "auto":
             choose_algorithm = "fast" if _HAS_NUMBA else "slow"
-
-        assert isinstance(reps, int) and reps > 0, "reps must be a positive integer."
 
         if self._has_weights:
             raise NotImplementedError(
@@ -2273,25 +2382,49 @@ def _check_vcov_input(
     -------
     None
     """
-    assert isinstance(vcov, (dict, str, list)), "vcov must be a dict, string or list"
+    if not isinstance(vcov, (dict, str)):
+        raise TypeError(
+            "`vcov` must be a string or a one-entry clustering dictionary; "
+            f"received {type(vcov).__name__}: {vcov!r}. See "
+            "`pyfixest/docs/pages/tutorials/standard-errors.md` or "
+            "https://pyfixest.org/standard-errors.html."
+        )
     if isinstance(vcov, dict):
-        assert next(iter(vcov.keys())) in [
-            "CRV1",
-            "CRV3",
-        ], "vcov dict key must be CRV1 or CRV3"
-        assert isinstance(next(iter(vcov.values())), str), (
-            "vcov dict value must be a string"
-        )
-        deparse_vcov = next(iter(vcov.values())).split("+")
-        assert len(deparse_vcov) <= 2, "not more than twoway clustering is supported"
-
-    if isinstance(vcov, list):
-        assert all(isinstance(v, str) for v in vcov), "vcov list must contain strings"
-        assert all(v in data.columns for v in vcov), (
-            "vcov list must contain columns in the data"
-        )
+        if len(vcov) != 1:
+            raise ValueError(
+                "A clustering `vcov` dictionary must contain exactly one entry, "
+                f"such as {{'CRV1': 'firm'}}; received {vcov!r}."
+            )
+        cluster_type, cluster_spec = next(iter(vcov.items()))
+        if cluster_type not in {"CRV1", "CRV3"}:
+            raise ValueError(
+                f"Invalid clustered `vcov` type {cluster_type!r}; expected "
+                "'CRV1' or 'CRV3'."
+            )
+        if not isinstance(cluster_spec, str):
+            raise TypeError(
+                "A clustering `vcov` value must be a '+'-separated column-name "
+                f"string; received {type(cluster_spec).__name__}: "
+                f"{cluster_spec!r}."
+            )
+        cluster_columns = [name.strip() for name in cluster_spec.split("+")]
+        if not all(cluster_columns):
+            raise ValueError(
+                f"Cluster column names cannot be empty; received {cluster_spec!r}."
+            )
+        if len(cluster_columns) > 2:
+            raise ValueError(
+                "PyFixest supports at most two-way clustering; received cluster "
+                f"columns {cluster_columns!r}."
+            )
+        missing_columns = [name for name in cluster_columns if name not in data.columns]
+        if missing_columns:
+            raise ValueError(
+                f"Cluster columns {missing_columns!r} were not found in `data`. "
+                "Pass existing column names in the clustering dictionary."
+            )
     if isinstance(vcov, str):
-        assert vcov in [
+        valid_vcov_types = [
             "iid",
             "hetero",
             "HC1",
@@ -2300,17 +2433,35 @@ def _check_vcov_input(
             "NW",
             "DK",
             "nid",
-        ], (
-            "vcov string must be iid, hetero, HC1, HC2, HC3, NW, or DK, or for quantile regression, 'nid'."
-        )
+        ]
+        if vcov not in valid_vcov_types:
+            raise ValueError(
+                f"Invalid `vcov` value {vcov!r}; expected one of "
+                f"{valid_vcov_types!r}, or a clustering dictionary such as "
+                "{'CRV1': 'firm'}. See "
+                "`pyfixest/docs/pages/tutorials/standard-errors.md` or "
+                "https://pyfixest.org/standard-errors.html."
+            )
 
-        # check that time_id is provided if vcov is NW or DK
-        if (
-            vcov in {"NW", "DK"}
-            and vcov_kwargs is not None
-            and "time_id" not in vcov_kwargs
-        ):
-            raise ValueError("Missing required 'time_id' for NW/DK vcov")
+        if vcov in {"NW", "DK"}:
+            hac_kwargs = vcov_kwargs or {}
+            if "time_id" not in hac_kwargs:
+                raise ValueError(
+                    f"`vcov={vcov!r}` requires `vcov_kwargs['time_id']`. Pass "
+                    "the name of the time column, plus an integer `lag`. See "
+                    "`pyfixest/docs/pages/tutorials/standard-errors.md` or "
+                    "https://pyfixest.org/standard-errors.html."
+                )
+            if "lag" not in hac_kwargs:
+                raise ValueError(
+                    f"`vcov={vcov!r}` requires an integer "
+                    "`vcov_kwargs['lag']`; no default HAC lag is implemented."
+                )
+            if vcov == "DK" and "panel_id" not in hac_kwargs:
+                raise ValueError(
+                    "`vcov='DK'` requires `vcov_kwargs['panel_id']` in addition "
+                    "to `time_id` and `lag`."
+                )
 
 
 def _deparse_vcov_input(vcov: str | dict[str, str], has_fixef: bool, is_iv: bool):

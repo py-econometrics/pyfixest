@@ -1,3 +1,5 @@
+"""Prepare clustering state and covariance matrix building blocks."""
+
 from collections.abc import Callable
 from dataclasses import dataclass
 
@@ -14,7 +16,7 @@ from pyfixest.core.nw import (
 from pyfixest.core.nw import (
     nw_meat_time as _nw_meat_time_rs,
 )
-from pyfixest.errors import NanInClusterVarError
+from pyfixest.errors import MissingStoredDataError, NanInClusterVarError
 from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
 from pyfixest.utils.utils import get_ssc
 
@@ -130,12 +132,13 @@ def _get_cluster_df(data: pd.DataFrame, clustervar: list[str]):
         data_pandas = _narwhals_to_pandas(data)
         cluster_df = data_pandas[clustervar].copy()
     else:
-        raise AttributeError(
-            """The input data set needs to be stored in the model object if
-            you call `vcov()` post estimation with a novel cluster variable.
-            Please set the function argument `store_data=True` when calling
-            the regression.
-            """
+        raise MissingStoredDataError(
+            "Cannot compute `vcov()` with a new cluster variable because the "
+            "fitted model does not retain its estimation data. Refit with "
+            "`store_data=True`, or provide clustering in the original estimator "
+            "call. See the installed troubleshooting guide at "
+            "`pyfixest/docs/pages/troubleshooting.md` or "
+            "https://pyfixest.org/troubleshooting.html."
         )
 
     return cluster_df

@@ -1,3 +1,5 @@
+"""Implement randomization inference for fitted models."""
+
 from importlib import import_module
 
 import matplotlib.pyplot as plt

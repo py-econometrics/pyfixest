@@ -1,3 +1,5 @@
+"""Implement Poisson fixed-effects model results."""
+
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -26,13 +28,13 @@ class Fepois(Feglm):
     """
     Estimate a Poisson regression model.
 
-    Non user-facing class to estimate a Poisson regression model via Iterated
-    Weighted Least Squares (IWLS).
+    Fitted Poisson model estimated by iteratively weighted least squares (IWLS).
 
-    Inherits from the Feglm class. Users should not directly instantiate this class,
-    but rather use the [fepois()](/reference/estimation.api.fepois.fepois.qmd) function.
-    Note that no demeaning is performed in this class: demeaning is performed in the
-    FixestMulti class (to allow for caching of demeaned variables for multiple estimation).
+    This class inherits from `Feglm`. Construct it with
+    [fepois()](/reference/estimation.api.fepois.fepois.qmd) or
+    `feglm(..., family="poisson")`, not by calling the constructor. The planner
+    and runner prepare the model, and the model performs fixed-effects demeaning
+    using the shared cache supplied by the runner.
 
     The method implements the algorithm from Stata's `ppmlhdfe` module.
 
@@ -51,7 +53,7 @@ class Fepois(Feglm):
     drop_singletons : bool
         Whether to drop singleton fixed effects.
     collin_tol : float
-        Tolerance level for the detection of collinearity.
+        Tolerance for detecting collinearity. Public estimators default to `1e-9`.
     maxiter : Optional[int], default=25
         Maximum number of iterations for the IRLS algorithm.
     tol : Optional[float], default=1e-08

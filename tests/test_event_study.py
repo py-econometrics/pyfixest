@@ -85,7 +85,7 @@ def test_event_study_did2s(data):
 
 # Test case for 'data' must be a pandas DataFrame
 def test_event_study_invalid_data_type(data):
-    with pytest.raises(AssertionError, match="data must be a pandas DataFrame"):
+    with pytest.raises(TypeError, match="`data` must be a pandas DataFrame"):
         event_study(
             data="invalid_data",  # Invalid data type, should be pd.DataFrame
             yname="dep_var",
@@ -98,7 +98,7 @@ def test_event_study_invalid_data_type(data):
 
 # Test case for 'yname' must be a string
 def test_event_study_invalid_yname_type(data):
-    with pytest.raises(AssertionError, match="yname must be a string"):
+    with pytest.raises(TypeError, match="`yname` must be a column name"):
         event_study(
             data=data,
             yname=123,  # Invalid yname type, should be str
@@ -111,7 +111,7 @@ def test_event_study_invalid_yname_type(data):
 
 # Test case for 'idname' must be a string
 def test_event_study_invalid_idname_type(data):
-    with pytest.raises(AssertionError, match="idname must be a string"):
+    with pytest.raises(TypeError, match="`idname` must be a column name"):
         event_study(
             data=data,
             yname="dep_var",
@@ -124,7 +124,7 @@ def test_event_study_invalid_idname_type(data):
 
 # Test case for 'tname' must be a string
 def test_event_study_invalid_tname_type(data):
-    with pytest.raises(AssertionError, match="tname must be a string"):
+    with pytest.raises(TypeError, match="`tname` must be a column name"):
         event_study(
             data=data,
             yname="dep_var",
@@ -137,7 +137,7 @@ def test_event_study_invalid_tname_type(data):
 
 # Test case for 'gname' must be a string
 def test_event_study_invalid_gname_type(data):
-    with pytest.raises(AssertionError, match="gname must be a string"):
+    with pytest.raises(TypeError, match="`gname` must be a column name"):
         event_study(
             data=data,
             yname="dep_var",
@@ -150,7 +150,7 @@ def test_event_study_invalid_gname_type(data):
 
 # Test case for 'xfml' must be a string or None
 def test_event_study_invalid_xfml_type(data):
-    with pytest.raises(AssertionError, match="xfml must be a string or None"):
+    with pytest.raises(TypeError, match="`xfml` must be a formula string or None"):
         event_study(
             data=data,
             yname="dep_var",
@@ -164,7 +164,7 @@ def test_event_study_invalid_xfml_type(data):
 
 # Test case for 'estimator' must be a string
 def test_event_study_invalid_estimator_type(data):
-    with pytest.raises(AssertionError, match="estimator must be a string"):
+    with pytest.raises(TypeError, match="`estimator` must be a string"):
         event_study(
             data=data,
             yname="dep_var",
@@ -177,7 +177,7 @@ def test_event_study_invalid_estimator_type(data):
 
 # Test case for 'att' must be a boolean
 def test_event_study_invalid_att_type(data):
-    with pytest.raises(AssertionError, match="att must be a boolean"):
+    with pytest.raises(TypeError, match="`att` must be a bool"):
         event_study(
             data=data,
             yname="dep_var",
@@ -191,7 +191,7 @@ def test_event_study_invalid_att_type(data):
 
 # Test case for 'cluster' must be a string
 def test_event_study_invalid_cluster_type(data):
-    with pytest.raises(AssertionError, match="cluster must be a string"):
+    with pytest.raises(TypeError, match="`cluster` must be a column name or None"):
         event_study(
             data=data,
             yname="dep_var",
@@ -203,9 +203,9 @@ def test_event_study_invalid_cluster_type(data):
         )
 
 
-# Test case for unsupported estimator (triggering NotImplementedError)
+# Test case for unsupported estimator
 def test_event_study_unsupported_estimator(data):
-    with pytest.raises(NotImplementedError, match="Estimator not supported"):
+    with pytest.raises(ValueError, match="Invalid `estimator` value 'unsupported'"):
         event_study(
             data=data,
             yname="dep_var",

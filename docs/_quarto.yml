@@ -10,6 +10,8 @@ project:
     - "!quarto_example/"
   post-render:
     - _scripts/generate_llms_md.py
+  pre-render:
+    - _scripts/generate_llms_md.py --skill-page
 
 execute:
   freeze: auto
@@ -111,6 +113,8 @@ website:
           file: textbook-replications/resources.qmd
       - text: "Changelog"
         file: changelog.qmd
+      - text: "Architecture"
+        file: architecture.qmd
       - text: "Contributing"
         file: contributing.qmd
       - text: "Acknowledgements"
@@ -145,6 +149,8 @@ quartodoc:
         - demeaners.BaseDemeaner
         - demeaners.MapDemeaner
         - demeaners.LsmrDemeaner
+        - core.demean.Preconditioner
+        - did.saturated_twfe.SaturatedEventStudy
         - estimation.models.feols_.Feols
         - estimation.models.fepois_.Fepois
         - estimation.models.feiv_.Feiv
@@ -168,6 +174,7 @@ quartodoc:
         - report.dtable
         - report.coefplot
         - report.iplot
+        - report.qplot
     - title: Formula Parsing & Model Matrix
       desc: |
         Internal APIs for formula parsing and model matrix construction
@@ -183,4 +190,11 @@ quartodoc:
         - core.detect_singletons.detect_singletons
         - utils.utils.ssc
         - utils.utils.get_ssc
+        - utils.utils.get_data
+        - utils.dgps.get_bartik_data
+        - utils.dgps.get_encouragement_data
+        - utils.dgps.get_ivf_data
+        - utils.dgps.get_motherhood_event_study_data
+        - utils.dgps.get_twin_data
+        - utils.dgps.get_worker_panel
         - estimation.deprecated.model_matrix_fixest_.model_matrix_fixest

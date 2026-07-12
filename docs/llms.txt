@@ -1,154 +1,102 @@
 # PyFixest
 
-> Fast high-dimensional fixed effects regression in Python, closely mirroring the syntax of the R package fixest.
+> Fast fixest-style high-dimensional fixed-effects estimation, inference, and reporting in Python.
 
-## Docs
+## Start here
 
-- [Getting Started](https://pyfixest.org/quickstart.html): [markdown](https://pyfixest.org/quickstart.html.md)
-- [API Reference](https://pyfixest.org/reference/): [markdown](https://pyfixest.org/reference/index.html.md)
-- [feols API](https://pyfixest.org/reference/estimation.api.feols.feols.html): [markdown](https://pyfixest.org/reference/estimation.api.feols.feols.html.md)
-- [Regression Tables (etable)](https://pyfixest.org/tutorials/regression-tables.html): [markdown](https://pyfixest.org/tutorials/regression-tables.html.md)
-- [Changelog](https://pyfixest.org/changelog.html): [markdown](https://pyfixest.org/changelog.html.md)
+- [PyFixest](https://pyfixest.org/pyfixest.html.md): Fast fixest-style high-dimensional fixed-effects estimation, inference, and reporting in Python.
+- [A first Regression with PyFixest](https://pyfixest.org/getting-started.html.md): Install PyFixest and fit, inspect, and plot a first fixed-effects regression.
+- [Getting Started with PyFixest](https://pyfixest.org/quickstart.html.md): A compact introduction to OLS, fixed effects, standard errors, and result access in PyFixest.
+- [Troubleshooting](https://pyfixest.org/troubleshooting.html.md): Recover from common formula, inference, stored-data, optional-dependency, and reporting errors in PyFixest.
 
-All documentation pages are available as clean markdown by appending `.md` to the HTML URL (e.g., `quickstart.html` -> `quickstart.html.md`).
+## Tutorials
 
-## Core API (4 functions)
+- [Tutorials](https://pyfixest.org/tutorials/index.html.md): End-to-end PyFixest tutorials for formulas, estimators, inference, and regression reporting.
+- [OLS with Fixed Effects](https://pyfixest.org/tutorials/ols-fixed-effects.html.md): Twin studies and 'AKM' regressions in worker-firm panels: two cases studies in controlling for unobserved heterogeneity with fixed effects.
+- [Formula Syntax](https://pyfixest.org/tutorials/formula-syntax.html.md): In this tutorial, we showcase all of PyFixest formulas syntax; including syntax for fitting models with fixed effects, interactions, and multiple-estimation operators.
+- [Instrumental Variables](https://pyfixest.org/tutorials/instrumental-variables.html.md): IV estimation with fixed effects, first-stage diagnostics, and the effective F-statistic.
+- [Poisson & GLMs](https://pyfixest.org/tutorials/poisson-glm.html.md): Poisson for nonnegative outcomes, DiD with counts, and logit/probit for propensity-score based AB testing.
+- [Quantile Regression](https://pyfixest.org/tutorials/quantile-regression.html.md): Quantile regression for modeling the full conditional distribution, not just the mean.
+- [Regression Tables](https://pyfixest.org/tutorials/regression-tables.html.md): Publication-ready tables with Great Tables or LaTeX booktabs — customize labels, significance stars, and output formats.
+- [Standard Errors & Inference](https://pyfixest.org/tutorials/standard-errors.html.md): HC-robust, cluster-robust, wild bootstrap, randomization inference, and the causal cluster variance estimator.
+- [Difference-in-Differences Estimation](https://pyfixest.org/tutorials/difference-in-differences.html.md): TWFE, Gardner's two-stage DID2S, local projections, and event study designs with heterogeneous treatment effects.
 
-- `pyfixest.feols(fml, data, vcov, weights, ssc, fixef_rm, ...)`: OLS/WLS/IV with fixed effects.
-- `pyfixest.fepois(fml, data, vcov, ...)`: Poisson regression with fixed effects.
-- `pyfixest.feglm(fml, data, family, vcov, ...)`: GLM regression (family: "logit", "probit", "gaussian") with fixed effects.
-- `pyfixest.quantreg(fml, data, quantile, ...)`: Quantile regression via interior point solver.
+## How-to guides
 
-## Formula Syntax
+- [Guides](https://pyfixest.org/how-to/index.html.md): Practical PyFixest recipes for inference, decomposition, demeaners, interoperability, and experimental workflows.
+- [Choosing a Demeaner Backend](https://pyfixest.org/how-to/demeaner-backends.html.md): How to pick the right fixed-effects demeaner for your problem.
+- [Marginal Effects and Hypothesis Tests via `marginaleffects`](https://pyfixest.org/how-to/marginaleffects.html.md): Compute marginal effects, predictions, and hypothesis tests from PyFixest models with marginaleffects.
+- [Variance Reduction in AB Tests](https://pyfixest.org/how-to/panel_variance_reduction.html.md): How to reduce the variance of estimators in AB tests and beyond using exogenous control variables via CUPED, linear regression, and fixed effects estimators.
+- [How much do Covariates Matter?](https://pyfixest.org/how-to/regression_decomposition.html.md): Decompose coefficient changes into covariate contributions with the Gelbach decomposition.
+- [Translating Stata to PyFixest](https://pyfixest.org/how-to/stata-2-pyfixest.html.md): Translate common Stata regression, fixed-effect, inference, and reporting workflows to PyFixest.
 
-Formulas follow fixest syntax and are split into 1-3 parts by `|`:
+## Explanation
 
-- One-part: `"Y ~ X1 + X2"` (no fixed effects, no IV)
-- Two-part: `"Y ~ X1 + X2 | FE1 + FE2"` (fixed effects)
-- Two-part IV: `"Y ~ X1 + X2 | X_endog ~ Z1 + Z2"` (IV without fixed effects)
-- Three-part IV: `"Y ~ X1 + X2 | FE1 + FE2 | X_endog ~ Z1 + Z2"` (IV with fixed effects)
+- [When Are Fixed Effects Estimations Difficult?](https://pyfixest.org/explanation/difficult-fixed-effects.html.md): Why fixed-effect graph structure controls convergence and how PyFixest demeaners perform on difficult designs.
+- [On Small Sample Corrections](https://pyfixest.org/explanation/ssc.html.md): How PyFixest applies fixest-compatible small-sample corrections for robust and clustered inference.
+- [Does `PyFixest` match `fixest`?](https://pyfixest.org/explanation/compare-fixest-pyfixest.html.md): Numerical comparisons between PyFixest and R fixest across estimation and inference features.
+- [Case Studies and Blog Posts](https://pyfixest.org/explanation/blog-posts.html.md): External case studies, tutorials, and practical examples that use PyFixest.
 
-IV behavior:
-- The IV part must be `endogenous ~ instruments`.
-- Exogenous variables from the second-stage RHS are automatically added to the first stage.
-- Endogenous variables are automatically added to the second stage.
-- Multiple endogenous variables are not supported.
+## API reference
 
-Other syntax:
-- Multiple depvars are expanded to multiple estimations: `"Y1 + Y2 ~ X1"` behaves like `"sw(Y1, Y2) ~ X1"`.
-- `i()` creates indicator expansions and interactions:
-  - `i(cat)` expands to dummies for each level of `cat` (one omitted).
-  - `i(cat, ref="Base")` sets the omitted reference level explicitly.
-  - `i(cat, x)` interacts `cat` with `x`. If `x` is numeric, this yields category-specific slopes. If `x` is categorical, this yields cat-by-x indicators.
-  - `i(cat1, cat2, ref2="Base")` interacts two categorical variables; `ref2` sets the omitted level of `cat2`.
-  - Example (cat x numeric): `Y ~ i(industry, exposure)` creates industry-specific slopes on `exposure`.
-  - Example (cat x cat): `Y ~ i(state, year, ref2=2000)` creates state-by-year indicators with 2000 as the base year.
-- Standard interactions work as well:
-  - `X1 * X2` expands to `X1 + X2 + X1:X2`.
-  - `X1:X2` is the interaction term only (no main effects).
-- Interacted FEs: `"Y ~ X1 | FE1 ^ FE2"` (creates a combined FE).
+- [PyFixest function reference](https://pyfixest.org/reference/index.html.md): Index of public estimators, result classes, reporting functions, formula helpers, and utilities.
+- [feols](https://pyfixest.org/reference/estimation.api.feols.feols.html.md): OLS, WLS, and instrumental-variables estimation with high-dimensional fixed effects.
+- [fepois](https://pyfixest.org/reference/estimation.api.fepois.fepois.html.md): Poisson regression with high-dimensional fixed effects.
+- [feglm](https://pyfixest.org/reference/estimation.api.feglm.feglm.html.md): Generalized linear models with high-dimensional fixed effects.
+- [quantreg](https://pyfixest.org/reference/estimation.api.quantreg.quantreg.html.md): Quantile regression for one or more conditional quantiles.
+- [did2s](https://pyfixest.org/reference/did.estimation.did2s.html.md): Gardner two-stage difference-in-differences estimation.
+- [lpdid](https://pyfixest.org/reference/did.estimation.lpdid.html.md): Local-projections difference-in-differences estimation.
+- [event_study](https://pyfixest.org/reference/did.estimation.event_study.html.md): Event-study estimation through supported difference-in-differences estimators.
+- [SaturatedEventStudy](https://pyfixest.org/reference/did.saturated_twfe.SaturatedEventStudy.html.md): Saturated cohort-specific event-study estimator.
+- [panelview](https://pyfixest.org/reference/did.visualize.panelview.html.md): Visualize panel treatment timing and outcomes.
+- [bonferroni](https://pyfixest.org/reference/estimation.post_estimation.multcomp.bonferroni.html.md): Bonferroni-adjusted p-values across fitted models.
+- [rwolf](https://pyfixest.org/reference/estimation.post_estimation.multcomp.rwolf.html.md): Romano-Wolf stepdown-adjusted p-values across fitted models.
+- [wyoung](https://pyfixest.org/reference/estimation.post_estimation.multcomp.wyoung.html.md): Westfall-Young adjusted p-values across fitted models.
+- [BaseDemeaner](https://pyfixest.org/reference/demeaners.BaseDemeaner.html.md): Protocol implemented by fixed-effects demeaning backends.
+- [MapDemeaner](https://pyfixest.org/reference/demeaners.MapDemeaner.html.md): Alternating-projections fixed-effects demeaner.
+- [LsmrDemeaner](https://pyfixest.org/reference/demeaners.LsmrDemeaner.html.md): Sparse LSMR fixed-effects demeaner.
+- [Preconditioner](https://pyfixest.org/reference/core.demean.Preconditioner.html.md): Reusable preconditioner for compatible within-LSMR fixed-effects designs.
+- [Feols](https://pyfixest.org/reference/estimation.models.feols_.Feols.html.md): Fitted OLS and WLS result contract and post-estimation methods.
+- [Feiv](https://pyfixest.org/reference/estimation.models.feiv_.Feiv.html.md): Fitted instrumental-variables result contract and diagnostic methods.
+- [Fepois](https://pyfixest.org/reference/estimation.models.fepois_.Fepois.html.md): Fitted Poisson fixed-effects result contract.
+- [Feglm](https://pyfixest.org/reference/estimation.models.feglm_.Feglm.html.md): Base fitted generalized-linear-model result contract.
+- [Felogit](https://pyfixest.org/reference/estimation.models.felogit_.Felogit.html.md): Fitted fixed-effects logit result contract.
+- [Feprobit](https://pyfixest.org/reference/estimation.models.feprobit_.Feprobit.html.md): Fitted fixed-effects probit result contract.
+- [Fegaussian](https://pyfixest.org/reference/estimation.models.fegaussian_.Fegaussian.html.md): Fitted Gaussian GLM result contract.
+- [FixestMulti](https://pyfixest.org/reference/estimation.FixestMulti_.FixestMulti.html.md): Container and post-estimation interface for multiple fitted models.
+- [Quantreg](https://pyfixest.org/reference/estimation.quantreg.quantreg_.Quantreg.html.md): Fitted quantile-regression result contract.
+- [summary](https://pyfixest.org/reference/report.summary.html.md): Print summaries for one or more fitted models.
+- [etable](https://pyfixest.org/reference/report.etable.html.md): Build regression tables from fitted models.
+- [dtable](https://pyfixest.org/reference/report.dtable.html.md): Build descriptive-statistics tables.
+- [coefplot](https://pyfixest.org/reference/report.coefplot.html.md): Plot coefficients and confidence intervals.
+- [iplot](https://pyfixest.org/reference/report.iplot.html.md): Plot coefficients created by formula interactions.
+- [qplot](https://pyfixest.org/reference/report.qplot.html.md): Plot coefficients over quantile-regression results.
+- [Formula](https://pyfixest.org/reference/estimation.formula.parse.Formula.html.md): Parsed fixest-style formula representation.
+- [ModelMatrix](https://pyfixest.org/reference/estimation.formula.model_matrix.ModelMatrix.html.md): Model-matrix representation used by the estimation planner.
+- [factor_interaction](https://pyfixest.org/reference/estimation.formula.factor_interaction.factor_interaction.html.md): Build factor interactions for the fixest-style i() formula operator.
+- [demean](https://pyfixest.org/reference/estimation.demean.html.md): Demean arrays by one or more high-dimensional fixed effects.
+- [model_matrix_fixest](https://pyfixest.org/reference/estimation.deprecated.model_matrix_fixest_.model_matrix_fixest.html.md): Deprecated compatibility entry point for constructing fixest-style model matrices.
+- [detect_singletons](https://pyfixest.org/reference/core.detect_singletons.detect_singletons.html.md): Detect singleton observations in fixed-effect groups.
+- [ssc](https://pyfixest.org/reference/utils.utils.ssc.html.md): Configure small-sample corrections for inference.
+- [get_ssc](https://pyfixest.org/reference/utils.utils.get_ssc.html.md): Inspect the active small-sample-correction configuration.
+- [get_data](https://pyfixest.org/reference/utils.utils.get_data.html.md): Load PyFixest's packaged example data.
+- [get_bartik_data](https://pyfixest.org/reference/utils.dgps.get_bartik_data.html.md): Generate a packaged shift-share instrumental-variables example.
+- [get_encouragement_data](https://pyfixest.org/reference/utils.dgps.get_encouragement_data.html.md): Generate a randomized encouragement-design example.
+- [get_ivf_data](https://pyfixest.org/reference/utils.dgps.get_ivf_data.html.md): Generate a synthetic IVF instrumental-variables example.
+- [get_motherhood_event_study_data](https://pyfixest.org/reference/utils.dgps.get_motherhood_event_study_data.html.md): Generate a motherhood event-study example.
+- [get_twin_data](https://pyfixest.org/reference/utils.dgps.get_twin_data.html.md): Generate a synthetic twin-based instrumental-variables example.
+- [get_worker_panel](https://pyfixest.org/reference/utils.dgps.get_worker_panel.html.md): Generate a worker-panel fixed-effects example.
 
-### Multiple Estimation Operators
+## Optional
 
-Operators can appear anywhere in the formula (RHS, fixed effects, IV parts). They can be combined; expansion is recursive and produces all combinations. Multiple estimation can be significantly faster than independent model calls due to internal caching of demeaned covariates.
-
-`sw` (sequential stepwise):
-- `y ~ x1 + sw(x2, x3)` -> `y ~ x1 + x2` and `y ~ x1 + x3`
-
-`sw0` (sequential stepwise with zero step):
-- `y ~ x1 + sw0(x2, x3)` -> `y ~ x1`, `y ~ x1 + x2`, `y ~ x1 + x3`
-
-`csw` (cumulative stepwise):
-- `y ~ x1 + csw(x2, x3)` -> `y ~ x1 + x2`, `y ~ x1 + x2 + x3`
-
-`csw0` (cumulative stepwise with zero step):
-- `y ~ x1 + csw0(x2, x3)` -> `y ~ x1`, `y ~ x1 + x2`, `y ~ x1 + x2 + x3`
-
-`mvsw` (multiverse stepwise):
-- `y ~ mvsw(x1, x2, x3)` -> all non-empty combinations plus the zero step:
-  `y ~ 1`, `y ~ x1`, `y ~ x2`, `y ~ x3`, `y ~ x1 + x2`, `y ~ x1 + x3`, `y ~ x2 + x3`, `y ~ x1 + x2 + x3`
-
-Combining operators example:
-- `y ~ csw(x1, x2) + sw(z1, z2)` expands to:
-  `y ~ x1 + z1`, `y ~ x1 + z2`, `y ~ x1 + x2 + z1`, `y ~ x1 + x2 + z2`
-
-You can run regressions for subsamples by using the `split` and `fsplit` arguments, where both split by the provided variable, but `fsplit` also provides a fit for the full sample.
-
-## Inference (vcov)
-
-Pass to `vcov`:
-
-- `"iid"` -- IID errors
-- `"hetero"` -- HC1 heteroskedasticity-robust (alias: `"HC1"`)
-- `"HC2"` -- HC2 robust (not supported with fixed effects or IV)
-- `"HC3"` -- HC3 robust (not supported with fixed effects or IV)
-- `{"CRV1": "cluster_var"}` -- Cluster-robust variance
-- `{"CRV3": "cluster_var"}` -- Leave-one-cluster-out jackknife
-- `"NW"` -- Newey-West HAC (requires `vcov_kwargs` with `time_id` and optionally `panel_id`, `lag`)
-- `"DK"` -- Driscoll-Kraay HAC (requires `vcov_kwargs` with `time_id` and optionally `panel_id`, `lag`)
-
-Two-way clustering: `{"CRV1": "var1 + var2"}`.
-
-Inference can be adjusted post-estimation: `fit.vcov("hetero").summary()`.
-
-## Post Processing
-
-Model objects support:
-
-- `.summary()` -- Print regression summary
-- `.tidy()` -- Tidy DataFrame of coefficients, SEs, t-stats, p-values, CIs
-- `.coef()` -- Coefficient values
-- `.se()` -- Standard errors
-- `.pvalue()` -- P-values
-- `.confint()` -- Confidence intervals
-- `.predict(newdata)` -- Predictions
-- `.resid()` -- Residuals
-- `.vcov()` -- Variance-covariance matrix
-- `.tstat()` -- t-statistics
-- `.fixef()` -- Extract fixed effect estimates
-- `.wildboottest(param, reps, seed)` -- Wild cluster bootstrap inference
-- `.ccv(treatment, pk, qk, ...)` -- Causal cluster variance estimator
-- `.ritest(resampvar, reps, ...)` -- Randomization inference
-- `.decompose(param, x1_vars, type, ...)` -- Gelbach (2016) decomposition
-- `.wald_test(R, q)` -- Linear hypothesis testing
-- `.first_stage()` -- First-stage results (IV only)
-- `.IV_Diag()` -- IV diagnostic tests (IV only)
-
-For IV models, show first and second stage together: `pf.etable([fit._model_1st_stage, fit])`.
-
-## DiD / Causal Inference
-
-- `pyfixest.did2s(data, yname, first_stage, second_stage, treatment, cluster)` -- Two-stage DID (Gardner 2022).
-- `pyfixest.event_study(data, yname, idname, tname, gname, estimator="twfe")` -- Event study with multiple estimators.
-- `pyfixest.lpdid(data, yname, idname, tname, gname)` -- Local projections DID.
-- `pyfixest.SaturatedEventStudy(data, yname, idname, tname, gname)` -- Saturated event study with cohort-specific effects.
-- `pyfixest.panelview(data, unit, time, treat)` -- Panel treatment visualization.
-
-## Visualization
-
-- `pyfixest.coefplot(models)` -- Plot coefficients with confidence intervals.
-- `pyfixest.iplot(models)` -- Plot coefficients from `i()` interactions (event-study style).
-- `pyfixest.qplot(models)` -- Plot quantile regression coefficients.
-
-## Multiple Testing
-
-- `pyfixest.bonferroni(models, param)` -- Bonferroni-adjusted p-values.
-- `pyfixest.rwolf(models, param, reps, seed)` -- Romano-Wolf adjusted p-values.
-- `pyfixest.wyoung(models, param, reps, seed)` -- Westfall-Young adjusted p-values.
-
-## Utilities
-
-- `pyfixest.get_data(N, seed)` -- Generate example dataset for testing.
-- `pyfixest.ssc(k_adj, k_fixef, G_adj, G_df)` -- Configure small sample corrections.
-
-## etable Basics
-
-For regression tables, use `pf.etable()`.
-
-- Build tables: `pf.etable([fit1, fit2, ...])` or `pf.etable(pf.feols("Y~csw(X1,X2)", data))`.
-- Output formats: `type="gt"` (default), `"md"`, `"tex"`, `"df"`.
-- Keep/drop variables: `keep="X1"` or `drop=["X2"]`.
-- Labels: `labels={"X1": "Age"}`, `felabels={"f1": "Industry FE"}`.
-- Coefficient format: `coef_fmt="b (se)\n[p]"` shows coefficient, SE in parentheses, p-value in brackets.
-- Title: `caption="Regression Results"`.
-- Column headers: `model_heads=[...]` and `head_order="hd"` or `"dh"` to control header order.
+- [PyFixest architecture](https://pyfixest.org/architecture.html.md): Canonical guide to dependency direction, estimation flow, model capabilities, state, caches, Rust kernels, and numerical tests.
+- [Contributing](https://pyfixest.org/contributing.html.md): Set up a PyFixest development environment, find architectural guidance, and submit tested, documented changes.
+- [Changelog](https://pyfixest.org/changelog.html.md): Release-by-release changes to PyFixest APIs, estimators, inference, performance, and documentation.
+- [PyFixest agent skill](https://pyfixest.org/skills.html.md): Progressive-disclosure skill for agents using PyFixest.
+- [Acknowledgements](https://pyfixest.org/acknowledgements.html.md): Packages, papers, maintainers, and funders whose work shaped PyFixest.
+- [Surrogate Indices & Experimental Selection](https://pyfixest.org/how-to/surrogate-indices-experimental-selection.html.md): Outline for estimating long-run effects with surrogates and applying experimental selection correction in PyFixest.
+- [Textbook Replications](https://pyfixest.org/textbook-replications/index.html.md): PyFixest translations of examples from widely used causal-inference textbooks.
+- [Causal Inference for the Brave and True](https://pyfixest.org/textbook-replications/brave_true.html.md): PyFixest replications of panel-data and fixed-effects examples from Causal Inference for the Brave and True.
+- [The Mixtape with PyFixest](https://pyfixest.org/textbook-replications/mixtape.html.md): PyFixest translations of selected examples from Causal Inference: The Mixtape.
+- [Replicating Examples from "The Effect"](https://pyfixest.org/textbook-replications/replicating-the-effect.html.md): PyFixest replications of causal-inference examples from The Effect.
+- [Learning Econometrics with PyFixest](https://pyfixest.org/textbook-replications/resources.html.md): Books, courses, and teaching resources for learning econometrics with PyFixest.

@@ -1,3 +1,5 @@
+"""Construct estimation-ready model matrices from parsed formulas."""
+
 import warnings
 from collections.abc import Mapping
 from dataclasses import dataclass

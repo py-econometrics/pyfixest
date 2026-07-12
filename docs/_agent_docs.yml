@@ -1,0 +1,116 @@
+{
+  "schema_version": 1,
+  "site_url": "https://pyfixest.org",
+  "package_name": "PyFixest",
+  "summary": "Fast fixest-style high-dimensional fixed-effects estimation, inference, and reporting in Python.",
+  "sections": [
+    {
+      "title": "Start here",
+      "pages": [
+        {"source": "docs/pyfixest.md", "route": "pyfixest"},
+        {"source": "docs/getting-started.qmd", "route": "getting-started"},
+        {"source": "docs/quickstart.qmd", "route": "quickstart"},
+        {"source": "docs/troubleshooting.md", "route": "troubleshooting"}
+      ]
+    },
+    {
+      "title": "Tutorials",
+      "pages": [
+        {"source": "docs/tutorials/index.qmd", "route": "tutorials/index"},
+        {"source": "docs/tutorials/ols-fixed-effects.qmd", "route": "tutorials/ols-fixed-effects"},
+        {"source": "docs/tutorials/formula-syntax.qmd", "route": "tutorials/formula-syntax"},
+        {"source": "docs/tutorials/instrumental-variables.qmd", "route": "tutorials/instrumental-variables"},
+        {"source": "docs/tutorials/poisson-glm.qmd", "route": "tutorials/poisson-glm"},
+        {"source": "docs/tutorials/quantile-regression.qmd", "route": "tutorials/quantile-regression"},
+        {"source": "docs/tutorials/regression-tables.qmd", "route": "tutorials/regression-tables"},
+        {"source": "docs/tutorials/standard-errors.qmd", "route": "tutorials/standard-errors"},
+        {"source": "docs/tutorials/difference-in-differences.qmd", "route": "tutorials/difference-in-differences"}
+      ]
+    },
+    {
+      "title": "How-to guides",
+      "pages": [
+        {"source": "docs/how-to/index.qmd", "route": "how-to/index"},
+        {"source": "docs/how-to/demeaner-backends.qmd", "route": "how-to/demeaner-backends"},
+        {"source": "docs/how-to/marginaleffects.qmd", "route": "how-to/marginaleffects"},
+        {"source": "docs/how-to/panel_variance_reduction.qmd", "route": "how-to/panel_variance_reduction"},
+        {"source": "docs/how-to/regression_decomposition.qmd", "route": "how-to/regression_decomposition"},
+        {"source": "docs/how-to/stata-2-pyfixest.qmd", "route": "how-to/stata-2-pyfixest"}
+      ]
+    },
+    {
+      "title": "Explanation",
+      "pages": [
+        {"source": "docs/explanation/difficult-fixed-effects.md", "route": "explanation/difficult-fixed-effects"},
+        {"source": "docs/explanation/ssc.qmd", "route": "explanation/ssc"},
+        {"source": "docs/explanation/compare-fixest-pyfixest.qmd", "route": "explanation/compare-fixest-pyfixest"},
+        {"source": "docs/explanation/blog-posts.md", "route": "explanation/blog-posts"}
+      ]
+    },
+    {
+      "title": "API reference",
+      "pages": [
+        {"source": "docs/reference/index.qmd", "route": "reference/index", "title": "PyFixest function reference", "description": "Index of public estimators, result classes, reporting functions, formula helpers, and utilities."},
+        {"source": "docs/reference/estimation.api.feols.feols.qmd", "route": "reference/estimation.api.feols.feols", "title": "feols", "description": "OLS, WLS, and instrumental-variables estimation with high-dimensional fixed effects."},
+        {"source": "docs/reference/estimation.api.fepois.fepois.qmd", "route": "reference/estimation.api.fepois.fepois", "title": "fepois", "description": "Poisson regression with high-dimensional fixed effects."},
+        {"source": "docs/reference/estimation.api.feglm.feglm.qmd", "route": "reference/estimation.api.feglm.feglm", "title": "feglm", "description": "Generalized linear models with high-dimensional fixed effects."},
+        {"source": "docs/reference/estimation.api.quantreg.quantreg.qmd", "route": "reference/estimation.api.quantreg.quantreg", "title": "quantreg", "description": "Quantile regression for one or more conditional quantiles."},
+        {"source": "docs/reference/did.estimation.did2s.qmd", "route": "reference/did.estimation.did2s", "title": "did2s", "description": "Gardner two-stage difference-in-differences estimation."},
+        {"source": "docs/reference/did.estimation.lpdid.qmd", "route": "reference/did.estimation.lpdid", "title": "lpdid", "description": "Local-projections difference-in-differences estimation."},
+        {"source": "docs/reference/did.estimation.event_study.qmd", "route": "reference/did.estimation.event_study", "title": "event_study", "description": "Event-study estimation through supported difference-in-differences estimators."},
+        {"source": "docs/reference/did.saturated_twfe.SaturatedEventStudy.qmd", "route": "reference/did.saturated_twfe.SaturatedEventStudy", "title": "SaturatedEventStudy", "description": "Saturated cohort-specific event-study estimator."},
+        {"source": "docs/reference/did.visualize.panelview.qmd", "route": "reference/did.visualize.panelview", "title": "panelview", "description": "Visualize panel treatment timing and outcomes."},
+        {"source": "docs/reference/estimation.post_estimation.multcomp.bonferroni.qmd", "route": "reference/estimation.post_estimation.multcomp.bonferroni", "title": "bonferroni", "description": "Bonferroni-adjusted p-values across fitted models."},
+        {"source": "docs/reference/estimation.post_estimation.multcomp.rwolf.qmd", "route": "reference/estimation.post_estimation.multcomp.rwolf", "title": "rwolf", "description": "Romano-Wolf stepdown-adjusted p-values across fitted models."},
+        {"source": "docs/reference/estimation.post_estimation.multcomp.wyoung.qmd", "route": "reference/estimation.post_estimation.multcomp.wyoung", "title": "wyoung", "description": "Westfall-Young adjusted p-values across fitted models."},
+        {"source": "docs/reference/demeaners.BaseDemeaner.qmd", "route": "reference/demeaners.BaseDemeaner", "title": "BaseDemeaner", "description": "Protocol implemented by fixed-effects demeaning backends."},
+        {"source": "docs/reference/demeaners.MapDemeaner.qmd", "route": "reference/demeaners.MapDemeaner", "title": "MapDemeaner", "description": "Alternating-projections fixed-effects demeaner."},
+        {"source": "docs/reference/demeaners.LsmrDemeaner.qmd", "route": "reference/demeaners.LsmrDemeaner", "title": "LsmrDemeaner", "description": "Sparse LSMR fixed-effects demeaner."},
+        {"source": "docs/reference/core.demean.Preconditioner.qmd", "route": "reference/core.demean.Preconditioner", "title": "Preconditioner", "description": "Reusable preconditioner for compatible within-LSMR fixed-effects designs."},
+        {"source": "docs/reference/estimation.models.feols_.Feols.qmd", "route": "reference/estimation.models.feols_.Feols", "title": "Feols", "description": "Fitted OLS and WLS result contract and post-estimation methods."},
+        {"source": "docs/reference/estimation.models.feiv_.Feiv.qmd", "route": "reference/estimation.models.feiv_.Feiv", "title": "Feiv", "description": "Fitted instrumental-variables result contract and diagnostic methods."},
+        {"source": "docs/reference/estimation.models.fepois_.Fepois.qmd", "route": "reference/estimation.models.fepois_.Fepois", "title": "Fepois", "description": "Fitted Poisson fixed-effects result contract."},
+        {"source": "docs/reference/estimation.models.feglm_.Feglm.qmd", "route": "reference/estimation.models.feglm_.Feglm", "title": "Feglm", "description": "Base fitted generalized-linear-model result contract."},
+        {"source": "docs/reference/estimation.models.felogit_.Felogit.qmd", "route": "reference/estimation.models.felogit_.Felogit", "title": "Felogit", "description": "Fitted fixed-effects logit result contract."},
+        {"source": "docs/reference/estimation.models.feprobit_.Feprobit.qmd", "route": "reference/estimation.models.feprobit_.Feprobit", "title": "Feprobit", "description": "Fitted fixed-effects probit result contract."},
+        {"source": "docs/reference/estimation.models.fegaussian_.Fegaussian.qmd", "route": "reference/estimation.models.fegaussian_.Fegaussian", "title": "Fegaussian", "description": "Fitted Gaussian GLM result contract."},
+        {"source": "docs/reference/estimation.FixestMulti_.FixestMulti.qmd", "route": "reference/estimation.FixestMulti_.FixestMulti", "title": "FixestMulti", "description": "Container and post-estimation interface for multiple fitted models."},
+        {"source": "docs/reference/estimation.quantreg.quantreg_.Quantreg.qmd", "route": "reference/estimation.quantreg.quantreg_.Quantreg", "title": "Quantreg", "description": "Fitted quantile-regression result contract."},
+        {"source": "docs/reference/report.summary.qmd", "route": "reference/report.summary", "title": "summary", "description": "Print summaries for one or more fitted models."},
+        {"source": "docs/reference/report.etable.qmd", "route": "reference/report.etable", "title": "etable", "description": "Build regression tables from fitted models."},
+        {"source": "docs/reference/report.dtable.qmd", "route": "reference/report.dtable", "title": "dtable", "description": "Build descriptive-statistics tables."},
+        {"source": "docs/reference/report.coefplot.qmd", "route": "reference/report.coefplot", "title": "coefplot", "description": "Plot coefficients and confidence intervals."},
+        {"source": "docs/reference/report.iplot.qmd", "route": "reference/report.iplot", "title": "iplot", "description": "Plot coefficients created by formula interactions."},
+        {"source": "docs/reference/report.qplot.qmd", "route": "reference/report.qplot", "title": "qplot", "description": "Plot coefficients over quantile-regression results."},
+        {"source": "docs/reference/estimation.formula.parse.Formula.qmd", "route": "reference/estimation.formula.parse.Formula", "title": "Formula", "description": "Parsed fixest-style formula representation."},
+        {"source": "docs/reference/estimation.formula.model_matrix.ModelMatrix.qmd", "route": "reference/estimation.formula.model_matrix.ModelMatrix", "title": "ModelMatrix", "description": "Model-matrix representation used by the estimation planner."},
+        {"source": "docs/reference/estimation.formula.factor_interaction.factor_interaction.qmd", "route": "reference/estimation.formula.factor_interaction.factor_interaction", "title": "factor_interaction", "description": "Build factor interactions for the fixest-style i() formula operator."},
+        {"source": "docs/reference/estimation.demean.qmd", "route": "reference/estimation.demean", "title": "demean", "description": "Demean arrays by one or more high-dimensional fixed effects."},
+        {"source": "docs/reference/estimation.deprecated.model_matrix_fixest_.model_matrix_fixest.qmd", "route": "reference/estimation.deprecated.model_matrix_fixest_.model_matrix_fixest", "title": "model_matrix_fixest", "description": "Deprecated compatibility entry point for constructing fixest-style model matrices."},
+        {"source": "docs/reference/core.detect_singletons.detect_singletons.qmd", "route": "reference/core.detect_singletons.detect_singletons", "title": "detect_singletons", "description": "Detect singleton observations in fixed-effect groups."},
+        {"source": "docs/reference/utils.utils.ssc.qmd", "route": "reference/utils.utils.ssc", "title": "ssc", "description": "Configure small-sample corrections for inference."},
+        {"source": "docs/reference/utils.utils.get_ssc.qmd", "route": "reference/utils.utils.get_ssc", "title": "get_ssc", "description": "Inspect the active small-sample-correction configuration."}
+        ,{"source": "docs/reference/utils.utils.get_data.qmd", "route": "reference/utils.utils.get_data", "title": "get_data", "description": "Load PyFixest's packaged example data."}
+        ,{"source": "docs/reference/utils.dgps.get_bartik_data.qmd", "route": "reference/utils.dgps.get_bartik_data", "title": "get_bartik_data", "description": "Generate a packaged shift-share instrumental-variables example."}
+        ,{"source": "docs/reference/utils.dgps.get_encouragement_data.qmd", "route": "reference/utils.dgps.get_encouragement_data", "title": "get_encouragement_data", "description": "Generate a randomized encouragement-design example."}
+        ,{"source": "docs/reference/utils.dgps.get_ivf_data.qmd", "route": "reference/utils.dgps.get_ivf_data", "title": "get_ivf_data", "description": "Generate a synthetic IVF instrumental-variables example."}
+        ,{"source": "docs/reference/utils.dgps.get_motherhood_event_study_data.qmd", "route": "reference/utils.dgps.get_motherhood_event_study_data", "title": "get_motherhood_event_study_data", "description": "Generate a motherhood event-study example."}
+        ,{"source": "docs/reference/utils.dgps.get_twin_data.qmd", "route": "reference/utils.dgps.get_twin_data", "title": "get_twin_data", "description": "Generate a synthetic twin-based instrumental-variables example."}
+        ,{"source": "docs/reference/utils.dgps.get_worker_panel.qmd", "route": "reference/utils.dgps.get_worker_panel", "title": "get_worker_panel", "description": "Generate a worker-panel fixed-effects example."}
+      ]
+    }
+  ],
+  "optional": [
+    {"source": "ARCHITECTURE.md", "route": "architecture", "title": "PyFixest architecture", "description": "Canonical guide to dependency direction, estimation flow, model capabilities, state, caches, Rust kernels, and numerical tests."},
+    {"source": "docs/contributing.qmd", "route": "contributing"},
+    {"source": "docs/changelog.qmd", "route": "changelog"},
+    {"source": "docs/skills.md", "route": "skills"},
+    {"source": "docs/acknowledgements.md", "route": "acknowledgements"},
+    {"source": "docs/how-to/surrogate-indices-experimental-selection.qmd", "route": "how-to/surrogate-indices-experimental-selection"},
+    {"source": "docs/textbook-replications/index.qmd", "route": "textbook-replications/index"},
+    {"source": "docs/textbook-replications/brave_true.qmd", "route": "textbook-replications/brave_true"},
+    {"source": "docs/textbook-replications/mixtape.qmd", "route": "textbook-replications/mixtape"},
+    {"source": "docs/textbook-replications/replicating-the-effect.qmd", "route": "textbook-replications/replicating-the-effect"},
+    {"source": "docs/textbook-replications/resources.qmd", "route": "textbook-replications/resources"}
+  ]
+}

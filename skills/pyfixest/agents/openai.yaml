@@ -1,0 +1,4 @@
+interface:
+  display_name: "PyFixest"
+  short_description: "Fixest-style econometrics in Python"
+  default_prompt: "Use $pyfixest to fit or explain a fixest-style econometric model in Python."

@@ -1,3 +1,5 @@
+"""Check optional R packages used by reference tests."""
+
 from rpy2.robjects.packages import importr
 
 

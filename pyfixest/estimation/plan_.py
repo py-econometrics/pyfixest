@@ -1,8 +1,10 @@
+"""Expand formulas and fit one model from an estimation configuration."""
+
 from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, cast
 
 import pandas as pd
 
@@ -324,7 +326,7 @@ def fit_one(
     # if X is empty: no inference (empty X only as shorthand for demeaning)
     if not FIT._X_is_empty:
         vcov_type = _get_vcov_type(vcov)
-        FIT.vcov(
+        cast(Any, FIT).vcov(
             vcov=vcov_type,
             vcov_kwargs=vcov_kwargs,
             data=FIT._data

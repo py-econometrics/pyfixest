@@ -1,3 +1,10 @@
+"""Public fixed-effects demeaner configurations and backend dispatch.
+
+Read ``pyfixest/docs/pages/how-to/demeaner-backends.md`` before selecting a
+non-default backend or reusing a preconditioner; backend availability and
+preconditioner compatibility are part of the public contract.
+"""
+
 from __future__ import annotations
 
 import warnings

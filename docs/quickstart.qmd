@@ -1,5 +1,6 @@
 ---
 title: "Getting Started with PyFixest"
+description: "A compact introduction to OLS, fixed effects, standard errors, and result access in PyFixest."
 format:
   html:
     html-table-processing: none
@@ -351,23 +352,23 @@ If the model does not contain any fixed effects, just drop the second part of th
 pf.feols(fml="Y ~ 1 | X1 ~ Z1 + Z2", data=data).summary()
 ```
 
-You can access the first stage regression object via the `._model_1st_stage` attribute:
+You can access the first-stage regression through the public `first_stage_model` property:
 
 ```{python}
-pf.etable([iv_fit._model_1st_stage, iv_fit])
+pf.etable([iv_fit.first_stage_model, iv_fit])
 ```
 
-You can access the F-Statistic of the first stage via the `_f_stat_1st_stage` attribute:
+After `first_stage()`, the public `first_stage_f_statistic` property gives the first-stage F statistic:
 
 ```{python}
-iv_fit._f_stat_1st_stage
+iv_fit.first_stage_f_statistic
 ```
 
 Via the `IV_Diag` method, you can compute additional IV Diagnostics, as the **effective F-statistic** following Olea & Pflueger (2013):
 
 ```{python}
 iv_fit.IV_Diag()
-iv_fit._eff_F
+iv_fit.effective_f_statistic
 ```
 
 IV estimation with multiple endogenous variables and multiple estimation syntax is currently not supported.
@@ -549,8 +550,9 @@ multi_fit.coefplot().show()
 `PyFixest` supports eventy study designs via two-way fixed effects, Gardner's 2-stage estimator, and the linear projections estimator.
 
 ```{python}
-url = "https://raw.githubusercontent.com/py-econometrics/pyfixest/master/pyfixest/did/data/df_het.csv"
-df_het = pd.read_csv(url)
+from importlib.resources import files
+
+df_het = pd.read_csv(files("pyfixest.did").joinpath("data/df_het.csv"))
 
 df_het.head()
 ```

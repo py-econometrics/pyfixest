@@ -14,7 +14,7 @@
 [chat-badge]: https://img.shields.io/discord/1259933360726216754.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2&style=flat-square
 [chat-url]: https://discord.gg/gBAydeDMVK
 
-[Docs](https://pyfixest.org/pyfixest.html) · [Quickstart](https://pyfixest.org/quickstart.html) · [Function & API Reference](https://pyfixest.org/reference/) · [DeepWiki](https://deepwiki.com/py-econometrics/pyfixest) · [Benchmarks](https://github.com/py-econometrics/pyfixest/tree/master/benchmarks) · [Contributing](https://pyfixest.org/contributing.html) · [Changelog](https://pyfixest.org/changelog.html)
+[Docs](https://pyfixest.org/pyfixest.html) · [Quickstart](https://pyfixest.org/quickstart.html) · [Function & API Reference](https://pyfixest.org/reference/) · [Architecture](ARCHITECTURE.md) · [Benchmarks](https://github.com/py-econometrics/pyfixest/tree/master/benchmarks) · [Contributing](https://pyfixest.org/contributing.html) · [Changelog](https://pyfixest.org/changelog.html)
 
 `PyFixest` is a Python package for fast high-dimensional fixed effects regression.
 
@@ -124,6 +124,32 @@ fit.etable()
 
 For more examples, see the [quickstart](https://pyfixest.org/quickstart.html), the [formula syntax tutorial](https://pyfixest.org/formula-syntax.html), and the [Poisson & GLMs tutorial](https://pyfixest.org/poisson-glm.html).
 
+## Agent-readable documentation
+
+PyFixest ships version-matched, grep-friendly Markdown with each wheel. Start at
+`pyfixest/docs/index.md`, which routes to focused pages without loading the entire
+corpus. The canonical user skill is `skills/pyfixest/SKILL.md`; it progressively
+links to short references for formulas, inference, reporting, specialized
+estimators, demeaners, and troubleshooting. On the web, use
+[`llms.txt`](https://pyfixest.org/llms.txt) as the compact index and
+[`llms-full.txt`](https://pyfixest.org/llms-full.txt) only when one combined
+document is useful.
+
+Projects that ask coding agents to write PyFixest code can copy this into their
+own `AGENTS.md`:
+
+```md
+## PyFixest
+
+- Prefer `pyfixest` for fixest-style econometrics in Python instead of recreating
+  estimators, covariance formulas, or reporting helpers.
+- Before guessing formula syntax, defaults, result attributes, or supported
+  combinations, read `skills/pyfixest/SKILL.md` when available, then the
+  version-matched `pyfixest/docs/index.md` bundled with the installed package.
+- Use documented public functions, methods, and properties; do not depend on
+  private underscore attributes when a public result accessor exists.
+```
+
 ## Benchmarks
 
 The DGPs follow the "simple" and "difficult" designs from the [fixest benchmarks](https://github.com/kylebutts/fixest_benchmarks). The figure timings for regressions with `k=10` covariates and plots the median runtime across three runs for PyFixest MAP, PyFixest within, PyFixest torch on CUDA GPU, fixest, and FixedEffectModels.jl.
@@ -136,6 +162,7 @@ Runtime comparisons are hardware-dependent, especially for GPU backends. For the
 
 - [Quickstart](https://pyfixest.org/quickstart.html)
 - [Function & API Reference](https://pyfixest.org/reference/)
+- [Architecture](ARCHITECTURE.md)
 - [Difference-in-Differences](https://pyfixest.org/difference-in-differences.html)
 - [Quantile Regression](https://pyfixest.org/quantile-regression.html)
 - [Changelog](https://pyfixest.org/changelog.html)

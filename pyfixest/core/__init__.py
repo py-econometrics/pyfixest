@@ -1,3 +1,5 @@
+"""Low-level Python interfaces to pyfixest numerical kernels."""
+
 from .collinear import find_collinear_variables
 from .crv1 import crv1_meat_loop
 from .demean import Preconditioner, demean

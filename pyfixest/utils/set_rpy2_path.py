@@ -1,3 +1,5 @@
+"""Configure rpy2 conversion for reference-test utilities."""
+
 import rpy2.robjects as robjects
 from rpy2.robjects.packages import importr
 

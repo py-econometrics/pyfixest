@@ -58,6 +58,8 @@ jobs:
           args: --release --out dist --find-interpreter
           sccache: ${{ !startsWith(github.ref, 'refs/tags/') }}
           manylinux: auto
+      - name: Check wheel contents
+        run: python scripts/check_wheel_contents.py dist
       - name: Upload wheels
         uses: actions/upload-artifact@v7
         with:
@@ -91,6 +93,8 @@ jobs:
           args: --release --out dist --find-interpreter
           sccache: ${{ !startsWith(github.ref, 'refs/tags/') }}
           manylinux: musllinux_1_2
+      - name: Check wheel contents
+        run: python scripts/check_wheel_contents.py dist
       - name: Upload wheels
         uses: actions/upload-artifact@v7
         with:
@@ -120,6 +124,8 @@ jobs:
           target: ${{ matrix.platform.target }}
           args: --release --out dist --find-interpreter
           sccache: ${{ !startsWith(github.ref, 'refs/tags/') }}
+      - name: Check wheel contents
+        run: python scripts/check_wheel_contents.py dist
       - name: Upload wheels
         uses: actions/upload-artifact@v7
         with:
@@ -148,6 +154,8 @@ jobs:
           target: ${{ matrix.platform.target }}
           args: --release --out dist --find-interpreter
           sccache: ${{ !startsWith(github.ref, 'refs/tags/') }}
+      - name: Check wheel contents
+        run: python scripts/check_wheel_contents.py dist
       - name: Upload wheels
         uses: actions/upload-artifact@v7
         with:

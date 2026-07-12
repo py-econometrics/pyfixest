@@ -1,3 +1,5 @@
+"""Implement instrumental-variable result behavior and diagnostics."""
+
 import warnings
 from collections.abc import Mapping
 from dataclasses import replace
@@ -17,13 +19,12 @@ from pyfixest.estimation.models.feols_ import Feols
 
 class Feiv(Feols):
     """
-    Non user-facing class to estimate an IV model using a 2SLS estimator.
+    Fitted instrumental-variable model estimated by two-stage least squares.
 
-    Inherits from the Feols class. Users should not directly instantiate this class,
-    but rather use the [feols()](/reference/estimation.api.feols.feols.qmd) function. Note that
-    no demeaning is performed in this class: demeaning is performed in the
-    FixestMulti class (to allow for caching of demeaned variables for multiple
-    estimation).
+    This class inherits from `Feols`. Construct it with a three-part formula in
+    [feols()](/reference/estimation.api.feols.feols.qmd), not by calling the
+    constructor. The planner and runner prepare the model, and this class performs
+    its own fixed-effects demeaning using the shared cache supplied by the runner.
 
     Parameters
     ----------
@@ -42,7 +43,7 @@ class Feiv(Feols):
     coefnames_z : list
         Names of the coefficients of Z.
     collin_tol : float
-        Tolerance for collinearity check.
+        Tolerance for the collinearity check. Public estimators default to `1e-9`.
     solver: Literal["np.linalg.lstsq", "np.linalg.solve", "scipy.linalg.solve",
         "scipy.sparse.linalg.lsqr"],
         default is "scipy.linalg.solve". Solver to use for the estimation.
@@ -56,6 +57,12 @@ class Feiv(Feols):
 
     Attributes
     ----------
+    first_stage_model : Feols
+        Fitted first-stage regression.
+    first_stage_f_statistic : float
+        F statistic for joint significance of the excluded instruments.
+    effective_f_statistic : float
+        Olea-Pflueger effective F statistic, available after `IV_Diag()`.
     _Z : np.ndarray
         Processed instruments after handling multicollinearity.
     _weights_type_feiv : str
@@ -187,6 +194,21 @@ class Feiv(Feols):
         self._support_iid_inference = True
         self._supports_cluster_causal_variance = False
         self._support_decomposition = False
+
+    @property
+    def first_stage_model(self) -> Feols:
+        """Return the fitted first-stage OLS model."""
+        return self._model_1st_stage
+
+    @property
+    def first_stage_f_statistic(self) -> float:
+        """Return the first-stage excluded-instruments F statistic."""
+        return float(self._f_stat_1st_stage)
+
+    @property
+    def effective_f_statistic(self) -> float:
+        """Return the Olea-Pflueger effective F statistic after `IV_Diag()`."""
+        return float(self._eff_F)
 
     def wls_transform(self) -> None:
         "Transform variables for WLS estimation."
@@ -337,30 +359,30 @@ class Feiv(Feols):
             import pandas as pd
             from pyfixest.estimation import feols
 
-            # Set random seed for reproducibility
-            np.random.seed(1)
+            # Use an isolated random generator for reproducibility
+            rng = np.random.default_rng(1)
 
             # Number of observations
             n = 1000
 
             # Simulate the data
             # Instrumental variable
-            z = np.random.binomial(1, 0.5, size=n)
-            z2 = np.random.binomial(1, 0.5, size=n)
+            z = rng.binomial(1, 0.5, size=n)
+            z2 = rng.binomial(1, 0.5, size=n)
 
             # Endogenous variable
-            d = 0.5 * z + 1.5 * z2 + np.random.normal(size=n)
+            d = 0.5 * z + 1.5 * z2 + rng.normal(size=n)
 
             # Control variables
-            c1 = np.random.normal(size=n)
-            c2 = np.random.normal(size=n)
+            c1 = rng.normal(size=n)
+            c2 = rng.normal(size=n)
 
             # Outcome variable
-            y = 1.0 + 1.5 * d + 0.8 * c1 + 0.5 * c2 + np.random.normal(size=n)
+            y = 1.0 + 1.5 * d + 0.8 * c1 + 0.5 * c2 + rng.normal(size=n)
 
             # Cluster variable
-            cluster = np.random.randint(1, 50, size=n)
-            weights = np.random.uniform(1, 3, size=n)
+            cluster = rng.integers(1, 50, size=n)
+            weights = rng.uniform(1, 3, size=n)
 
             # Create a DataFrame
             data = pd.DataFrame({
@@ -384,9 +406,9 @@ class Feiv(Feols):
                      vcov=vcov_detail,
                      weights="weights")
             fit_iv.first_stage()
-            F_stat_pf = fit_iv._f_stat_1st_stage
+            F_stat_pf = fit_iv.first_stage_f_statistic
             fit_iv.IV_Diag()
-            F_stat_eff_pf = fit_iv._eff_F
+            F_stat_eff_pf = fit_iv.effective_f_statistic
 
             print("(Unadjusted) F stat :", F_stat_pf)
             print("Effective F stat :", F_stat_eff_pf)
@@ -421,13 +443,13 @@ class Feiv(Feols):
         This method covers hetero-robust and clustered-robust F statistics.
         It produces two statistics:
 
-        - self._f_stat_1st_stage: F statistics of first stage regression
-        - self._eff_F: Effective F statistics (Olea and Pflueger 2013)
-                       of first stage regression
+        - `first_stage_f_statistic`: F statistic of the first-stage regression.
+        - `effective_f_statistic`: Effective F statistic (Olea and Pflueger
+          2013) of the first-stage regression.
 
         Notes
         -----
-        "self._f_stat_1st_stage" is adjusted to the specification of vcov.
+        `first_stage_f_statistic` is adjusted to the specification of vcov.
         If vcov_detail = "iid", F statistics is not adjusted,
         otherwise it is always adjusted.
 

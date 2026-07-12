@@ -1,3 +1,5 @@
+"""Internal formula parsing and model-matrix construction."""
+
 from typing import Final
 
 from formulaic.parser import DefaultFormulaParser

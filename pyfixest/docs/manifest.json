@@ -1,0 +1,818 @@
+{
+  "corpus_sha256": "d8379ecf455f9fc1b8a14aa69a1f92cac10a22975433355486b4d3e539c8c78c",
+  "generator": "docs/_scripts/generate_llms_md.py",
+  "pages": [
+    {
+      "content_sha256": "3b02ad6bcb0832edd5a1e38c92c9ffe58e91b1ad3e678645617446e9eeb0349f",
+      "description": "Fast fixest-style high-dimensional fixed-effects estimation, inference, and reporting in Python.",
+      "optional": false,
+      "route": "pyfixest",
+      "section": "Start here",
+      "source": "docs/pyfixest.md",
+      "source_sha256": "17d4c86aae610ccf9cd1f63894eeb3d3f01b9e843b6d2b460726a2df0e4a40c8",
+      "title": "PyFixest"
+    },
+    {
+      "content_sha256": "dc2d00a5aa530ace2d1cd2a82eab1260680a352e7ffd93828226a2c7e7f95bbc",
+      "description": "Install PyFixest and fit, inspect, and plot a first fixed-effects regression.",
+      "optional": false,
+      "route": "getting-started",
+      "section": "Start here",
+      "source": "docs/getting-started.qmd",
+      "source_sha256": "8242f90762e3d661a844a7a420c27a14f82b0eb08714e0102f542bc25a60a137",
+      "title": "A first Regression with PyFixest"
+    },
+    {
+      "content_sha256": "ba8af3004fbdcca78fca3e86b4a31b4ad1e46206b88ad5393c2b903916217948",
+      "description": "A compact introduction to OLS, fixed effects, standard errors, and result access in PyFixest.",
+      "optional": false,
+      "route": "quickstart",
+      "section": "Start here",
+      "source": "docs/quickstart.qmd",
+      "source_sha256": "6c3646c57ef77425c233744a3a53d34f14270d26e9122f0dde72056c6f958e00",
+      "title": "Getting Started with PyFixest"
+    },
+    {
+      "content_sha256": "9a81a5e557897e59046c1938febb83f1ca86f8d5cd970a559bed6806f5dfc2a9",
+      "description": "Recover from common formula, inference, stored-data, optional-dependency, and reporting errors in PyFixest.",
+      "optional": false,
+      "route": "troubleshooting",
+      "section": "Start here",
+      "source": "docs/troubleshooting.md",
+      "source_sha256": "9ce48c27e8ace336aff4e48034ebcc0f83b2bb830c1b324c68cb500b268c594f",
+      "title": "Troubleshooting"
+    },
+    {
+      "content_sha256": "5f30b9411969ca9a619cba10a179e673e3755fd9c688955c09245fff6dbc7939",
+      "description": "End-to-end PyFixest tutorials for formulas, estimators, inference, and regression reporting.",
+      "optional": false,
+      "route": "tutorials/index",
+      "section": "Tutorials",
+      "source": "docs/tutorials/index.qmd",
+      "source_sha256": "52775e600b2bfaf266c59561ec310dac58712c74ef49b5a5f8402c9baa86dfc3",
+      "title": "Tutorials"
+    },
+    {
+      "content_sha256": "1974758417e2726172278caecbdb44aa68eeba127f14969e53f21ee8d99b69da",
+      "description": "Twin studies and 'AKM' regressions in worker-firm panels: two cases studies in controlling for unobserved heterogeneity with fixed effects.",
+      "optional": false,
+      "route": "tutorials/ols-fixed-effects",
+      "section": "Tutorials",
+      "source": "docs/tutorials/ols-fixed-effects.qmd",
+      "source_sha256": "247605cd20cc4b93dfe95409fb49cf368b14cc36f90a1173580e9d89181c4cb1",
+      "title": "OLS with Fixed Effects"
+    },
+    {
+      "content_sha256": "c3409d1402951eeac3453f5644c52741842d04da18e07b2dc6e2935c5ade647e",
+      "description": "In this tutorial, we showcase all of PyFixest formulas syntax; including syntax for fitting models with fixed effects, interactions, and multiple-estimation operators.",
+      "optional": false,
+      "route": "tutorials/formula-syntax",
+      "section": "Tutorials",
+      "source": "docs/tutorials/formula-syntax.qmd",
+      "source_sha256": "668c799ed41194a00e83b996a202a1df125fbfae0e0e3779060a982161ec7c3b",
+      "title": "Formula Syntax"
+    },
+    {
+      "content_sha256": "be14204025058c892c933e627bca48c1852a80e146fafddf309f5095734d96f4",
+      "description": "IV estimation with fixed effects, first-stage diagnostics, and the effective F-statistic.",
+      "optional": false,
+      "route": "tutorials/instrumental-variables",
+      "section": "Tutorials",
+      "source": "docs/tutorials/instrumental-variables.qmd",
+      "source_sha256": "9f9fae6c570864c1feb51254ffac30f56d82212b17cbbe1c5f21126d86448b87",
+      "title": "Instrumental Variables"
+    },
+    {
+      "content_sha256": "a649ac6535949239d2a579ad816557668674f72b9824247860318688cc5b465e",
+      "description": "Poisson for nonnegative outcomes, DiD with counts, and logit/probit for propensity-score based AB testing.",
+      "optional": false,
+      "route": "tutorials/poisson-glm",
+      "section": "Tutorials",
+      "source": "docs/tutorials/poisson-glm.qmd",
+      "source_sha256": "d2288c22164c24acb191e5380b2dc3ad0565ad9158f4fefd21dfbdd66460107f",
+      "title": "Poisson & GLMs"
+    },
+    {
+      "content_sha256": "1e049fcc08136a5df16b62ecc28295a275ffa695938af07028579795b31d2dfc",
+      "description": "Quantile regression for modeling the full conditional distribution, not just the mean.",
+      "optional": false,
+      "route": "tutorials/quantile-regression",
+      "section": "Tutorials",
+      "source": "docs/tutorials/quantile-regression.qmd",
+      "source_sha256": "7f8fdfa8e383c40ec151dcf35c13e6180c36f624586e96d8a0ab4f658687bbf9",
+      "title": "Quantile Regression"
+    },
+    {
+      "content_sha256": "852b00cd1f55ef89c4590e26bdca22620d9f3f82e6e19d72bf7b84f7fb45d467",
+      "description": "Publication-ready tables with Great Tables or LaTeX booktabs — customize labels, significance stars, and output formats.",
+      "optional": false,
+      "route": "tutorials/regression-tables",
+      "section": "Tutorials",
+      "source": "docs/tutorials/regression-tables.qmd",
+      "source_sha256": "88eb62137a01a54c53bd4a61533087bf024aa0d0de1a80f3d771b7cd75c69343",
+      "title": "Regression Tables"
+    },
+    {
+      "content_sha256": "03417ce05f9cf8dff162407b6fb85ce93022ffdef6234e772742c578055ac3ae",
+      "description": "HC-robust, cluster-robust, wild bootstrap, randomization inference, and the causal cluster variance estimator.",
+      "optional": false,
+      "route": "tutorials/standard-errors",
+      "section": "Tutorials",
+      "source": "docs/tutorials/standard-errors.qmd",
+      "source_sha256": "e49d0901f75e28572cdd5fec8a4d6a29970304130f887cc0245460b1a1138182",
+      "title": "Standard Errors & Inference"
+    },
+    {
+      "content_sha256": "b5060ee05ffd228f2fdfa3c9991032fbc46af17747aa0539dadaac79cb7df1f0",
+      "description": "TWFE, Gardner's two-stage DID2S, local projections, and event study designs with heterogeneous treatment effects.",
+      "optional": false,
+      "route": "tutorials/difference-in-differences",
+      "section": "Tutorials",
+      "source": "docs/tutorials/difference-in-differences.qmd",
+      "source_sha256": "b912501f59e18473624fa6f5f187f19f32194986e8d91d25f166dcad75b17958",
+      "title": "Difference-in-Differences Estimation"
+    },
+    {
+      "content_sha256": "dbf42dc7f8bd869f346bc913207253a87f598c66ae4f6337e7c97b3c2eca1a0d",
+      "description": "Practical PyFixest recipes for inference, decomposition, demeaners, interoperability, and experimental workflows.",
+      "optional": false,
+      "route": "how-to/index",
+      "section": "How-to guides",
+      "source": "docs/how-to/index.qmd",
+      "source_sha256": "b628352962ab61b3cdd5c7edc03d4e0d297a806af37551de8e567b83985c9758",
+      "title": "Guides"
+    },
+    {
+      "content_sha256": "c99ee5032d51593034d501db387c87a8aeca975099cf2dffeaf063a2f3bab5f7",
+      "description": "How to pick the right fixed-effects demeaner for your problem.",
+      "optional": false,
+      "route": "how-to/demeaner-backends",
+      "section": "How-to guides",
+      "source": "docs/how-to/demeaner-backends.qmd",
+      "source_sha256": "f361d4f6edcd9f483e46190fec5c0992d0966b4de9a62e00f419aebee6f8c378",
+      "title": "Choosing a Demeaner Backend"
+    },
+    {
+      "content_sha256": "fc688b941a84b2b6805560d29919211b4d0d3b27e0e337be454af7f113f2fe14",
+      "description": "Compute marginal effects, predictions, and hypothesis tests from PyFixest models with marginaleffects.",
+      "optional": false,
+      "route": "how-to/marginaleffects",
+      "section": "How-to guides",
+      "source": "docs/how-to/marginaleffects.qmd",
+      "source_sha256": "f2d572bbdff2a3ab8854342ca07e0aa82f07b1440f72137c0e5829b850261e9e",
+      "title": "Marginal Effects and Hypothesis Tests via `marginaleffects`"
+    },
+    {
+      "content_sha256": "06ace5a0bd910c793ba6be95be76338c8c5e08c8c97e7a75aa0d8ba9c34bf21a",
+      "description": "How to reduce the variance of estimators in AB tests and beyond using exogenous control variables via CUPED, linear regression, and fixed effects estimators.",
+      "optional": false,
+      "route": "how-to/panel_variance_reduction",
+      "section": "How-to guides",
+      "source": "docs/how-to/panel_variance_reduction.qmd",
+      "source_sha256": "327e47dea3898ba786d3a170fb116573a9a61a5aa7b20b1d7ae59906bd83866f",
+      "title": "Variance Reduction in AB Tests"
+    },
+    {
+      "content_sha256": "bdfcb8551521790d56849dbbd11b507a2e1a1f9ac9f113becaa03b928a49b055",
+      "description": "Decompose coefficient changes into covariate contributions with the Gelbach decomposition.",
+      "optional": false,
+      "route": "how-to/regression_decomposition",
+      "section": "How-to guides",
+      "source": "docs/how-to/regression_decomposition.qmd",
+      "source_sha256": "f56e4dfd214075c29b04b25b2713ab479d03b66081d0f47375ca7293e144e029",
+      "title": "How much do Covariates Matter?"
+    },
+    {
+      "content_sha256": "36080e036e28780ceed2e9cbac7b22345c2e707f3e0526d5934359223ef71dcd",
+      "description": "Translate common Stata regression, fixed-effect, inference, and reporting workflows to PyFixest.",
+      "optional": false,
+      "route": "how-to/stata-2-pyfixest",
+      "section": "How-to guides",
+      "source": "docs/how-to/stata-2-pyfixest.qmd",
+      "source_sha256": "610eecd1e4a031b4edb5b3427fa9872c4d3fe1884d14076496f66f2e75d5c73a",
+      "title": "Translating Stata to PyFixest"
+    },
+    {
+      "content_sha256": "5aac20e471bafef48e81132e5e1820a2ba5c74e84eb555382208aa08d960f2f9",
+      "description": "Why fixed-effect graph structure controls convergence and how PyFixest demeaners perform on difficult designs.",
+      "optional": false,
+      "route": "explanation/difficult-fixed-effects",
+      "section": "Explanation",
+      "source": "docs/explanation/difficult-fixed-effects.md",
+      "source_sha256": "aa2b2ac8c6e7b31d153c8948b45e11ec550ac54d3c88d4f9e83e636e99022af4",
+      "title": "When Are Fixed Effects Estimations Difficult?"
+    },
+    {
+      "content_sha256": "cc9e49377c0e0a06600e95db6a346af9b238853e3199c03792240c0afbca6841",
+      "description": "How PyFixest applies fixest-compatible small-sample corrections for robust and clustered inference.",
+      "optional": false,
+      "route": "explanation/ssc",
+      "section": "Explanation",
+      "source": "docs/explanation/ssc.qmd",
+      "source_sha256": "2e37523e4649839e6832548261e6f076fb4f2ac7c9c2a5432d65fa38d3623804",
+      "title": "On Small Sample Corrections"
+    },
+    {
+      "content_sha256": "2667be97f7222bc6e638223269666962487a040dba3f21e6376570c8c34bc61f",
+      "description": "Numerical comparisons between PyFixest and R fixest across estimation and inference features.",
+      "optional": false,
+      "route": "explanation/compare-fixest-pyfixest",
+      "section": "Explanation",
+      "source": "docs/explanation/compare-fixest-pyfixest.qmd",
+      "source_sha256": "45a3e51a3d4fa804df3018a764a46f7dd308443bdcffa669c72b57b361c3bb72",
+      "title": "Does `PyFixest` match `fixest`?"
+    },
+    {
+      "content_sha256": "a3a937c9aee96fc2910a1741783bcbbcbcd5f5dce11c53b4e14f1732ca1bc41e",
+      "description": "External case studies, tutorials, and practical examples that use PyFixest.",
+      "optional": false,
+      "route": "explanation/blog-posts",
+      "section": "Explanation",
+      "source": "docs/explanation/blog-posts.md",
+      "source_sha256": "c1eeff7f49344e43fd2d49b56646048ad574e92a5d91125876fc114cdeb83809",
+      "title": "Case Studies and Blog Posts"
+    },
+    {
+      "content_sha256": "1c1b04fb63e4e3a019ae81d4efbe0518842ba7c1801840c8542caabd9b182311",
+      "description": "Index of public estimators, result classes, reporting functions, formula helpers, and utilities.",
+      "optional": false,
+      "route": "reference/index",
+      "section": "API reference",
+      "source": "docs/reference/index.qmd",
+      "source_sha256": "77b982eac596edaec4297753458ffbee79b647deae2bfa51fbff8f7dfbfa1ab7",
+      "title": "PyFixest function reference"
+    },
+    {
+      "content_sha256": "5301e90565b9a97cab47640f987cc736cabed41d022318d4c69b2bb5b3071acd",
+      "description": "OLS, WLS, and instrumental-variables estimation with high-dimensional fixed effects.",
+      "optional": false,
+      "route": "reference/estimation.api.feols.feols",
+      "section": "API reference",
+      "source": "docs/reference/estimation.api.feols.feols.qmd",
+      "source_sha256": "18ba0ad3b587ff63223c9b9b198f086bdfa1c1476a9129867407ef85ad60a00f",
+      "title": "feols"
+    },
+    {
+      "content_sha256": "ab93756d29dae74aeb0516d962889c496f97831015b83010be2e0c13dcfae781",
+      "description": "Poisson regression with high-dimensional fixed effects.",
+      "optional": false,
+      "route": "reference/estimation.api.fepois.fepois",
+      "section": "API reference",
+      "source": "docs/reference/estimation.api.fepois.fepois.qmd",
+      "source_sha256": "3c9d0ff8675e0bca132daa32cbe2d76ab17fdba0331d08ec146e15a12f75430b",
+      "title": "fepois"
+    },
+    {
+      "content_sha256": "50d75be7c8aabed2ede095ff78e9cd0ab019b731e5b0143126e105ff87403656",
+      "description": "Generalized linear models with high-dimensional fixed effects.",
+      "optional": false,
+      "route": "reference/estimation.api.feglm.feglm",
+      "section": "API reference",
+      "source": "docs/reference/estimation.api.feglm.feglm.qmd",
+      "source_sha256": "fe81576e6ed12037c761a488ae3a361e1bcfadffd8b7970192eb4e4792886f75",
+      "title": "feglm"
+    },
+    {
+      "content_sha256": "5069342044c29793a2a57cfd3bde22c5c362d346fd86b9f3f22102d6cf5637e5",
+      "description": "Quantile regression for one or more conditional quantiles.",
+      "optional": false,
+      "route": "reference/estimation.api.quantreg.quantreg",
+      "section": "API reference",
+      "source": "docs/reference/estimation.api.quantreg.quantreg.qmd",
+      "source_sha256": "03dc63af02eff3678666446f486c72152f8021016c0ae31154b687045223cf10",
+      "title": "quantreg"
+    },
+    {
+      "content_sha256": "56c301317758f1ce8230bedd44479d34cc2763b361106c9e42a7b503656734ee",
+      "description": "Gardner two-stage difference-in-differences estimation.",
+      "optional": false,
+      "route": "reference/did.estimation.did2s",
+      "section": "API reference",
+      "source": "docs/reference/did.estimation.did2s.qmd",
+      "source_sha256": "67ca5c9e2bed557f2d706c9cb5717971c914d6eb2aa12850ad9792c26c6df426",
+      "title": "did2s"
+    },
+    {
+      "content_sha256": "1eced1ae7b35e90f5d9362a9a0d0c063c2f62e3d944dcd461c70b416c2e0dd0d",
+      "description": "Local-projections difference-in-differences estimation.",
+      "optional": false,
+      "route": "reference/did.estimation.lpdid",
+      "section": "API reference",
+      "source": "docs/reference/did.estimation.lpdid.qmd",
+      "source_sha256": "6cd7a9785a2679da97db51c0215da853816f903ee58fa575bcd5187808caa73c",
+      "title": "lpdid"
+    },
+    {
+      "content_sha256": "742d5133d7eddbcef8b948e3ee961a038f991d83429edfc66a386fc051d1c6d3",
+      "description": "Event-study estimation through supported difference-in-differences estimators.",
+      "optional": false,
+      "route": "reference/did.estimation.event_study",
+      "section": "API reference",
+      "source": "docs/reference/did.estimation.event_study.qmd",
+      "source_sha256": "78c154a90ee16423443988dccc7286de11dc023d5dd8d81ac3c56763be904115",
+      "title": "event_study"
+    },
+    {
+      "content_sha256": "0a0a4be0d19bd9dae2c72e7166553f8e562fc3dd6a201310fe60198f8c81a60a",
+      "description": "Saturated cohort-specific event-study estimator.",
+      "optional": false,
+      "route": "reference/did.saturated_twfe.SaturatedEventStudy",
+      "section": "API reference",
+      "source": "docs/reference/did.saturated_twfe.SaturatedEventStudy.qmd",
+      "source_sha256": "4b5dd5cf2d7c66c802e678856f46b46b9c9fc0297b8a286e5fdc9124011ac742",
+      "title": "SaturatedEventStudy"
+    },
+    {
+      "content_sha256": "0635ae3accaf87ae94aa5d94f3ea2c93ed7a925baaceba254be64acefbb8947b",
+      "description": "Visualize panel treatment timing and outcomes.",
+      "optional": false,
+      "route": "reference/did.visualize.panelview",
+      "section": "API reference",
+      "source": "docs/reference/did.visualize.panelview.qmd",
+      "source_sha256": "028cf1c305204554e5ad5890992e1cc5b580bac8babbc72ae76783194665c767",
+      "title": "panelview"
+    },
+    {
+      "content_sha256": "3017b843c85c805cf6f0ca6564955e4d5e210aaf0adc60d8fe11690c39368762",
+      "description": "Bonferroni-adjusted p-values across fitted models.",
+      "optional": false,
+      "route": "reference/estimation.post_estimation.multcomp.bonferroni",
+      "section": "API reference",
+      "source": "docs/reference/estimation.post_estimation.multcomp.bonferroni.qmd",
+      "source_sha256": "4b9386b8f630ab0308fca77e14cc0cf6bddeb3e989ff3f6ff9eaf4d83aef24ba",
+      "title": "bonferroni"
+    },
+    {
+      "content_sha256": "2b28ea2320d34803d83583b578da089514bcf2090037dec75063a70ce6dee0a2",
+      "description": "Romano-Wolf stepdown-adjusted p-values across fitted models.",
+      "optional": false,
+      "route": "reference/estimation.post_estimation.multcomp.rwolf",
+      "section": "API reference",
+      "source": "docs/reference/estimation.post_estimation.multcomp.rwolf.qmd",
+      "source_sha256": "ee066454a5f374acd17da81cf3b66525eddbc75b4fcd01b6d0f710ca282c495a",
+      "title": "rwolf"
+    },
+    {
+      "content_sha256": "b8066ade9c5435607f953ba93933e9780a63031e83fb512be4eca59754967890",
+      "description": "Westfall-Young adjusted p-values across fitted models.",
+      "optional": false,
+      "route": "reference/estimation.post_estimation.multcomp.wyoung",
+      "section": "API reference",
+      "source": "docs/reference/estimation.post_estimation.multcomp.wyoung.qmd",
+      "source_sha256": "942986721cd9488854373c2e5db074588683ffe21666a072423e48784c7481d5",
+      "title": "wyoung"
+    },
+    {
+      "content_sha256": "c2d2daa7fe55cc73483630ba8c0bf7990de63b7a0216b0cf09994f2d45022b1c",
+      "description": "Protocol implemented by fixed-effects demeaning backends.",
+      "optional": false,
+      "route": "reference/demeaners.BaseDemeaner",
+      "section": "API reference",
+      "source": "docs/reference/demeaners.BaseDemeaner.qmd",
+      "source_sha256": "aef03a4a5e182a01935b1d2a374da48ecdbc9e0f24c29ffa9059d5a2ff9f34fc",
+      "title": "BaseDemeaner"
+    },
+    {
+      "content_sha256": "40f60ab622299e0d963d18da710a3078716d15f2e174671692a588fb232317e8",
+      "description": "Alternating-projections fixed-effects demeaner.",
+      "optional": false,
+      "route": "reference/demeaners.MapDemeaner",
+      "section": "API reference",
+      "source": "docs/reference/demeaners.MapDemeaner.qmd",
+      "source_sha256": "ede17064842fa35f9dc5e739db8584db2f30b7b27379fa5ad2bdfbd4fb69deda",
+      "title": "MapDemeaner"
+    },
+    {
+      "content_sha256": "457c61f534cac217ffc9f22fea197dad83cd079998029c1d5d4d9e847e372484",
+      "description": "Sparse LSMR fixed-effects demeaner.",
+      "optional": false,
+      "route": "reference/demeaners.LsmrDemeaner",
+      "section": "API reference",
+      "source": "docs/reference/demeaners.LsmrDemeaner.qmd",
+      "source_sha256": "acd4de1e936014ec95a2a3e61b9eafea466e8cb76acd62172ef593ef2627d36d",
+      "title": "LsmrDemeaner"
+    },
+    {
+      "content_sha256": "36628597c5a20a64a3ea1b51018c072063cbc2d1b3ffb74c3dc5f249d9f39790",
+      "description": "Reusable preconditioner for compatible within-LSMR fixed-effects designs.",
+      "optional": false,
+      "route": "reference/core.demean.Preconditioner",
+      "section": "API reference",
+      "source": "docs/reference/core.demean.Preconditioner.qmd",
+      "source_sha256": "3b38bb53fa3244e1b8efc3ab5bb5b8b626a1cff4997c8ff3a68d9ab0dcd09daa",
+      "title": "Preconditioner"
+    },
+    {
+      "content_sha256": "2d1f97d97168694a20b486983f8801aac35344ae021933d55471318644c879b5",
+      "description": "Fitted OLS and WLS result contract and post-estimation methods.",
+      "optional": false,
+      "route": "reference/estimation.models.feols_.Feols",
+      "section": "API reference",
+      "source": "docs/reference/estimation.models.feols_.Feols.qmd",
+      "source_sha256": "091566308bd7c4b23e5ba0bded7e25b319c8d02b1fb648d256c3b9ecdca82dc7",
+      "title": "Feols"
+    },
+    {
+      "content_sha256": "659c4bf5557a4cd48d7a52cfab3a69b991c554d64f8a8f5caac3a76a38dde7f0",
+      "description": "Fitted instrumental-variables result contract and diagnostic methods.",
+      "optional": false,
+      "route": "reference/estimation.models.feiv_.Feiv",
+      "section": "API reference",
+      "source": "docs/reference/estimation.models.feiv_.Feiv.qmd",
+      "source_sha256": "09b1dabdbc6b45d677f402be1d016172dc504eb62e56273eae96b14fac160ee3",
+      "title": "Feiv"
+    },
+    {
+      "content_sha256": "fb891c491ac0fdebe19bfd1740d3ebaf1059fe28385eb9bfc62b8bcdfda699a4",
+      "description": "Fitted Poisson fixed-effects result contract.",
+      "optional": false,
+      "route": "reference/estimation.models.fepois_.Fepois",
+      "section": "API reference",
+      "source": "docs/reference/estimation.models.fepois_.Fepois.qmd",
+      "source_sha256": "3cc641e1b5f67fe99551d719668e4b57c1d74adbd8d4d8563427ecb5b9c354e7",
+      "title": "Fepois"
+    },
+    {
+      "content_sha256": "c9235b166a2cba475f22829758f7d89be9f1ed4edd981def3ddd94c01a19514f",
+      "description": "Base fitted generalized-linear-model result contract.",
+      "optional": false,
+      "route": "reference/estimation.models.feglm_.Feglm",
+      "section": "API reference",
+      "source": "docs/reference/estimation.models.feglm_.Feglm.qmd",
+      "source_sha256": "b7acfdd100ad5e6bf9b867eaa6b4e020088933ebc4e9ab97b03e17ce3d319c22",
+      "title": "Feglm"
+    },
+    {
+      "content_sha256": "2745708232c93ae65417e8c7e91f4c41fe5872dc870be21c60fb6a58d58edfde",
+      "description": "Fitted fixed-effects logit result contract.",
+      "optional": false,
+      "route": "reference/estimation.models.felogit_.Felogit",
+      "section": "API reference",
+      "source": "docs/reference/estimation.models.felogit_.Felogit.qmd",
+      "source_sha256": "e4dabcc28596edccbcf10fa344a50337c18b1931a1be5d4fe05b967a2ad7e09b",
+      "title": "Felogit"
+    },
+    {
+      "content_sha256": "cb1273c59ce71b5652dbca489a2ddf3e100911d319403315f0c9b877988e8227",
+      "description": "Fitted fixed-effects probit result contract.",
+      "optional": false,
+      "route": "reference/estimation.models.feprobit_.Feprobit",
+      "section": "API reference",
+      "source": "docs/reference/estimation.models.feprobit_.Feprobit.qmd",
+      "source_sha256": "ff6b2554beaa0e334d83f5271b9d6f697ac6f30e0493ee1b693e3655bbbfb354",
+      "title": "Feprobit"
+    },
+    {
+      "content_sha256": "480f373735777afe31da3e139e82ae9a168fac808655a2001d61524012dabb82",
+      "description": "Fitted Gaussian GLM result contract.",
+      "optional": false,
+      "route": "reference/estimation.models.fegaussian_.Fegaussian",
+      "section": "API reference",
+      "source": "docs/reference/estimation.models.fegaussian_.Fegaussian.qmd",
+      "source_sha256": "066246532e08cdb60544d16f77eac50da76d778ef70ea5be7a353d22912bd4d7",
+      "title": "Fegaussian"
+    },
+    {
+      "content_sha256": "8dfdcd73078a3e7cdad8b4ba776a61a732f5beb3c1f4e9c62959a677aae02f27",
+      "description": "Container and post-estimation interface for multiple fitted models.",
+      "optional": false,
+      "route": "reference/estimation.FixestMulti_.FixestMulti",
+      "section": "API reference",
+      "source": "docs/reference/estimation.FixestMulti_.FixestMulti.qmd",
+      "source_sha256": "eeaa6c5ecbd395c384d0f0448fca0eca88d34da4ca63195771c92c4df0ecfd8c",
+      "title": "FixestMulti"
+    },
+    {
+      "content_sha256": "424f6f45d6034c8c555ae6b13c94b74ef8451f26305aea07483515ec97bf0c93",
+      "description": "Fitted quantile-regression result contract.",
+      "optional": false,
+      "route": "reference/estimation.quantreg.quantreg_.Quantreg",
+      "section": "API reference",
+      "source": "docs/reference/estimation.quantreg.quantreg_.Quantreg.qmd",
+      "source_sha256": "fe48528d0c8f2dacf37e5ceba49bdeb98642738608cd84df3f88fef06f328053",
+      "title": "Quantreg"
+    },
+    {
+      "content_sha256": "3a9a2473ed879311e8dd0544dbd582bff0e74414086e7d5399acbab4cf32247d",
+      "description": "Print summaries for one or more fitted models.",
+      "optional": false,
+      "route": "reference/report.summary",
+      "section": "API reference",
+      "source": "docs/reference/report.summary.qmd",
+      "source_sha256": "4b8c93c020a42ffa5bbecfd4ef094bd17b5360321600dec72469a5866b0a1da5",
+      "title": "summary"
+    },
+    {
+      "content_sha256": "a739286501bf1d1e8a44f81aa48a06e3eef80a8bd41844de83aa2fd36f47142b",
+      "description": "Build regression tables from fitted models.",
+      "optional": false,
+      "route": "reference/report.etable",
+      "section": "API reference",
+      "source": "docs/reference/report.etable.qmd",
+      "source_sha256": "a6ab9fd0a1078b4a69f22fa07d3aabdec37052a3fe4a98f44903eb496b40cbbb",
+      "title": "etable"
+    },
+    {
+      "content_sha256": "9c9c8fdae65481132b149893c359315b4e15b5a99155dfc20b62258547b8e3ac",
+      "description": "Build descriptive-statistics tables.",
+      "optional": false,
+      "route": "reference/report.dtable",
+      "section": "API reference",
+      "source": "docs/reference/report.dtable.qmd",
+      "source_sha256": "c64f3247a13569d4daaba489320f47564dfec7d7720cd13e9d2b667a51c711a3",
+      "title": "dtable"
+    },
+    {
+      "content_sha256": "8c80267b878a9d82f4c4fe027b90164114e567c7af5dd5380ea2a51886b3db98",
+      "description": "Plot coefficients and confidence intervals.",
+      "optional": false,
+      "route": "reference/report.coefplot",
+      "section": "API reference",
+      "source": "docs/reference/report.coefplot.qmd",
+      "source_sha256": "d80c2bcc118c65f9b707cf652bfe09625d1c3c9966fb68f139a5fc7415f6983a",
+      "title": "coefplot"
+    },
+    {
+      "content_sha256": "4413c7440182e2a9123d566ec1d3896b85f37a27362c50609e41da8cf646a79a",
+      "description": "Plot coefficients created by formula interactions.",
+      "optional": false,
+      "route": "reference/report.iplot",
+      "section": "API reference",
+      "source": "docs/reference/report.iplot.qmd",
+      "source_sha256": "d5ccb2beb785cf1a32a1193a4dc92f0657e58bcf0e8326dd1ef1383c19d5354c",
+      "title": "iplot"
+    },
+    {
+      "content_sha256": "84956c21e221bd98f938e25f5534a61c9d0b71740e6496a9252d4b39d89d50f4",
+      "description": "Plot coefficients over quantile-regression results.",
+      "optional": false,
+      "route": "reference/report.qplot",
+      "section": "API reference",
+      "source": "docs/reference/report.qplot.qmd",
+      "source_sha256": "053c7d197e5973aa88a87e697d2816371ce5845df1d4a3efb9097cf1053c5a59",
+      "title": "qplot"
+    },
+    {
+      "content_sha256": "9403c80cd33904e5ce6b4dbcaee27b6a06ea37e43c13704cbe250fda4aa172c1",
+      "description": "Parsed fixest-style formula representation.",
+      "optional": false,
+      "route": "reference/estimation.formula.parse.Formula",
+      "section": "API reference",
+      "source": "docs/reference/estimation.formula.parse.Formula.qmd",
+      "source_sha256": "4ae546b0c3474d74bd35551e99805a00ef50f3fa70cbdd32f49b8b75ea0a32ad",
+      "title": "Formula"
+    },
+    {
+      "content_sha256": "c64b6a06445235452724a796f63fea5d01fdbf5ebfe0182b17f71502432039ee",
+      "description": "Model-matrix representation used by the estimation planner.",
+      "optional": false,
+      "route": "reference/estimation.formula.model_matrix.ModelMatrix",
+      "section": "API reference",
+      "source": "docs/reference/estimation.formula.model_matrix.ModelMatrix.qmd",
+      "source_sha256": "341c9148e895db8100446d421749c30be704b349727295d9337da07c3ce281e2",
+      "title": "ModelMatrix"
+    },
+    {
+      "content_sha256": "40ce295f97c89ea1b6059995f5c33a5c4636cffd3a2abfbf46273dd5a88a2efd",
+      "description": "Build factor interactions for the fixest-style i() formula operator.",
+      "optional": false,
+      "route": "reference/estimation.formula.factor_interaction.factor_interaction",
+      "section": "API reference",
+      "source": "docs/reference/estimation.formula.factor_interaction.factor_interaction.qmd",
+      "source_sha256": "b2679182b1e1e597ec97472c29ec9844a7e914299b3f63ca301d50d8cc038381",
+      "title": "factor_interaction"
+    },
+    {
+      "content_sha256": "14f81553d7bd654484aebbf4242f875b4e23850ca6d100f49df1966e50f0611d",
+      "description": "Demean arrays by one or more high-dimensional fixed effects.",
+      "optional": false,
+      "route": "reference/estimation.demean",
+      "section": "API reference",
+      "source": "docs/reference/estimation.demean.qmd",
+      "source_sha256": "838343f1825d19ac5adc7eb9efebc1c00cb5dc672235e448138abf2714f69e1c",
+      "title": "demean"
+    },
+    {
+      "content_sha256": "d7168a26b3501d31c842e2ed44a13081b3998f69a61e793e7e02c0463d1b1a23",
+      "description": "Deprecated compatibility entry point for constructing fixest-style model matrices.",
+      "optional": false,
+      "route": "reference/estimation.deprecated.model_matrix_fixest_.model_matrix_fixest",
+      "section": "API reference",
+      "source": "docs/reference/estimation.deprecated.model_matrix_fixest_.model_matrix_fixest.qmd",
+      "source_sha256": "237527a07702f15604e0e1d2b06350fbaf12d8cb35c46ec362d34135aa6d1e87",
+      "title": "model_matrix_fixest"
+    },
+    {
+      "content_sha256": "3b89240465fa31636e4585e7054b4c490db846792eb0e98c9da81493162f4d0d",
+      "description": "Detect singleton observations in fixed-effect groups.",
+      "optional": false,
+      "route": "reference/core.detect_singletons.detect_singletons",
+      "section": "API reference",
+      "source": "docs/reference/core.detect_singletons.detect_singletons.qmd",
+      "source_sha256": "1afc270629d5c0dbfce794343529b33043e5d6cff2cd33bde019427d8e8947be",
+      "title": "detect_singletons"
+    },
+    {
+      "content_sha256": "8b6547e0be6f28a2b2dec5f15ff98ed6a88d996308426ed0db0bfedce2b085c6",
+      "description": "Configure small-sample corrections for inference.",
+      "optional": false,
+      "route": "reference/utils.utils.ssc",
+      "section": "API reference",
+      "source": "docs/reference/utils.utils.ssc.qmd",
+      "source_sha256": "2cca52450fd4fd5572307a13559934f2e2e35aa9b429ff02fe3d2350c3910fbc",
+      "title": "ssc"
+    },
+    {
+      "content_sha256": "5568bf65fabe3cdfc5cfbfaae3497219926b00e16a75e8f977e925275d49443e",
+      "description": "Inspect the active small-sample-correction configuration.",
+      "optional": false,
+      "route": "reference/utils.utils.get_ssc",
+      "section": "API reference",
+      "source": "docs/reference/utils.utils.get_ssc.qmd",
+      "source_sha256": "ed008d9cb1da8d4b24a95a3e2d8a29de9c2dd044861e9ba435d0cd1a683ad605",
+      "title": "get_ssc"
+    },
+    {
+      "content_sha256": "e1ea93c43e81fd603640cfe1a4038297549a110f1b0dd85ddfa4cae942e80ae2",
+      "description": "Load PyFixest's packaged example data.",
+      "optional": false,
+      "route": "reference/utils.utils.get_data",
+      "section": "API reference",
+      "source": "docs/reference/utils.utils.get_data.qmd",
+      "source_sha256": "c4858650c96d3e363a1958dafbfb1e943cc8e46ee53469c5aeeba88dab1db64f",
+      "title": "get_data"
+    },
+    {
+      "content_sha256": "73a2119899ec528c445d4dc6dcdd7142e15ef9095b4b71c5b49da89e5cc9a59b",
+      "description": "Generate a packaged shift-share instrumental-variables example.",
+      "optional": false,
+      "route": "reference/utils.dgps.get_bartik_data",
+      "section": "API reference",
+      "source": "docs/reference/utils.dgps.get_bartik_data.qmd",
+      "source_sha256": "2320e0b2e51bb7d08c6bfff4b0a07298b6506f64ab07f036bc41dc62f89e3204",
+      "title": "get_bartik_data"
+    },
+    {
+      "content_sha256": "84cb6ab62549f068b16763c82ce4299346d573dbcc96be49a1d20995e4210552",
+      "description": "Generate a randomized encouragement-design example.",
+      "optional": false,
+      "route": "reference/utils.dgps.get_encouragement_data",
+      "section": "API reference",
+      "source": "docs/reference/utils.dgps.get_encouragement_data.qmd",
+      "source_sha256": "3e6a87af25ae0d20c889b180731b35f5b5394b1f95e2499a2e1fd80b5b55b60e",
+      "title": "get_encouragement_data"
+    },
+    {
+      "content_sha256": "d61b77d4c67dcaf502782f8bc22835c713c378f61e99c7db1966371ab36d4e3a",
+      "description": "Generate a synthetic IVF instrumental-variables example.",
+      "optional": false,
+      "route": "reference/utils.dgps.get_ivf_data",
+      "section": "API reference",
+      "source": "docs/reference/utils.dgps.get_ivf_data.qmd",
+      "source_sha256": "906a4d53113afbf049334b02df2ae716f27875d8dd2609e8cc6ffb8f90d3d9ac",
+      "title": "get_ivf_data"
+    },
+    {
+      "content_sha256": "297dad7765309416004b3094d86d0c044602f9d0b42f9c5db51a9704c0d54200",
+      "description": "Generate a motherhood event-study example.",
+      "optional": false,
+      "route": "reference/utils.dgps.get_motherhood_event_study_data",
+      "section": "API reference",
+      "source": "docs/reference/utils.dgps.get_motherhood_event_study_data.qmd",
+      "source_sha256": "377fa566b09123c85d2fc95cc7185a1c11ee333ad32552aad76781d3b590429b",
+      "title": "get_motherhood_event_study_data"
+    },
+    {
+      "content_sha256": "21d21c02ba4e87d1be2fa8a2b77461fb624e633532e772c6b0daf9173aef5523",
+      "description": "Generate a synthetic twin-based instrumental-variables example.",
+      "optional": false,
+      "route": "reference/utils.dgps.get_twin_data",
+      "section": "API reference",
+      "source": "docs/reference/utils.dgps.get_twin_data.qmd",
+      "source_sha256": "141199482a9ebfe9e53245cc27d39bf4d171cac290420e649b5a3c8998affa16",
+      "title": "get_twin_data"
+    },
+    {
+      "content_sha256": "4407264b214bb887acc68911c3f38e0b84a22013ed5b4dee84172eb8f9647e8b",
+      "description": "Generate a worker-panel fixed-effects example.",
+      "optional": false,
+      "route": "reference/utils.dgps.get_worker_panel",
+      "section": "API reference",
+      "source": "docs/reference/utils.dgps.get_worker_panel.qmd",
+      "source_sha256": "1cdf6171340208b9a6d55e0d925c0b624f686aae18d79697f3244945b1e12530",
+      "title": "get_worker_panel"
+    },
+    {
+      "content_sha256": "12432bc0cda585fe4b42c29b3367549eac53812a35d30726c8f09f6c1a5271b0",
+      "description": "Canonical guide to dependency direction, estimation flow, model capabilities, state, caches, Rust kernels, and numerical tests.",
+      "optional": true,
+      "route": "architecture",
+      "section": "Optional",
+      "source": "ARCHITECTURE.md",
+      "source_sha256": "de56ab1009d0cf2d2ce98e699149df6af9c1838182eda836aca9a7f747fea4b2",
+      "title": "PyFixest architecture"
+    },
+    {
+      "content_sha256": "3b5a5d6bc8a66caf1d6adfd7d9ba9d778f796594a569cf6dceac2432be507f6f",
+      "description": "Set up a PyFixest development environment, find architectural guidance, and submit tested, documented changes.",
+      "optional": true,
+      "route": "contributing",
+      "section": "Optional",
+      "source": "docs/contributing.qmd",
+      "source_sha256": "ea0c865d0723ae431aeef604777999d6c5cd1010d755ba8cac6882aa01202262",
+      "title": "Contributing"
+    },
+    {
+      "content_sha256": "cf59c89aac95b3d62977bc979f1d7999c019591a9ceb0ac837f211ae1dc59b67",
+      "description": "Release-by-release changes to PyFixest APIs, estimators, inference, performance, and documentation.",
+      "optional": true,
+      "route": "changelog",
+      "section": "Optional",
+      "source": "docs/changelog.qmd",
+      "source_sha256": "41a51feecc2c6575602ffcffcc79a4f1892cdb6c9f9891b89c9ea9df6bd17a41",
+      "title": "Changelog"
+    },
+    {
+      "content_sha256": "5747eb3fee2f9fa20dfaa1abddd086d61bebcfa89ad4bc29d0d22ad0ba0efd7e",
+      "description": "Progressive-disclosure skill for agents using PyFixest.",
+      "optional": true,
+      "route": "skills",
+      "section": "Optional",
+      "source": "docs/skills.md",
+      "source_sha256": "7d1f5145398ea43059c49bd4f582b0fa567a726b8fa0f13abe08de11e82f555a",
+      "title": "PyFixest agent skill"
+    },
+    {
+      "content_sha256": "feaf98c42ba91ebbf9010bde874c03ad54b6634b197bd0a137711252b986423e",
+      "description": "Packages, papers, maintainers, and funders whose work shaped PyFixest.",
+      "optional": true,
+      "route": "acknowledgements",
+      "section": "Optional",
+      "source": "docs/acknowledgements.md",
+      "source_sha256": "80371e0e711bbc26a25dbed104a2406df03c2a5d75fc66a943536280480e1667",
+      "title": "Acknowledgements"
+    },
+    {
+      "content_sha256": "881ac66180cdd0f8973edaf926df94385fd74d8583d34df988facc5cafa9a363",
+      "description": "Outline for estimating long-run effects with surrogates and applying experimental selection correction in PyFixest.",
+      "optional": true,
+      "route": "how-to/surrogate-indices-experimental-selection",
+      "section": "Optional",
+      "source": "docs/how-to/surrogate-indices-experimental-selection.qmd",
+      "source_sha256": "327e0c1337c1e69b200b0558bef0c5d2ab10daaf7b9108009dd4d4d450c52f76",
+      "title": "Surrogate Indices & Experimental Selection"
+    },
+    {
+      "content_sha256": "19ecad2a847ca9b49ee6ac168031a7f29f9ae13fba4a2e54fe44c128efe103dd",
+      "description": "PyFixest translations of examples from widely used causal-inference textbooks.",
+      "optional": true,
+      "route": "textbook-replications/index",
+      "section": "Optional",
+      "source": "docs/textbook-replications/index.qmd",
+      "source_sha256": "c156a13ef4228399724c0219335f4dbc340355d6944793e3a7a764f6301389b2",
+      "title": "Textbook Replications"
+    },
+    {
+      "content_sha256": "b7c763740fed082318b184d4ac887cc3f6a29b0109eb2d713947a4e9dab43772",
+      "description": "PyFixest replications of panel-data and fixed-effects examples from Causal Inference for the Brave and True.",
+      "optional": true,
+      "route": "textbook-replications/brave_true",
+      "section": "Optional",
+      "source": "docs/textbook-replications/brave_true.qmd",
+      "source_sha256": "692190572355bb985e9e3da1f1cebff32bda2f93dbc81fbd699cf29ce2787fa5",
+      "title": "Causal Inference for the Brave and True"
+    },
+    {
+      "content_sha256": "790edc806ef82fecd51b15d79529375b936b73b466e8f9967a81bc3a5781bce2",
+      "description": "PyFixest translations of selected examples from Causal Inference: The Mixtape.",
+      "optional": true,
+      "route": "textbook-replications/mixtape",
+      "section": "Optional",
+      "source": "docs/textbook-replications/mixtape.qmd",
+      "source_sha256": "db8a17c60ef2dc448e24b88f737f8455d696e0e9475ed34e223b4b2d9b8c82d2",
+      "title": "The Mixtape with PyFixest"
+    },
+    {
+      "content_sha256": "931f384a733636282993931359eb61e7f47d28963258269910eba6b4d1becac3",
+      "description": "PyFixest replications of causal-inference examples from The Effect.",
+      "optional": true,
+      "route": "textbook-replications/replicating-the-effect",
+      "section": "Optional",
+      "source": "docs/textbook-replications/replicating-the-effect.qmd",
+      "source_sha256": "32bbf7a1bb179d0716e7818054d98c260ccae17f7eda5d2eb4ebff0dbf346305",
+      "title": "Replicating Examples from \"The Effect\""
+    },
+    {
+      "content_sha256": "b4a3e5575a429ef0f6a0e72f3d1ba07f3cb32c7971d574c0c28d84b72c4df0f6",
+      "description": "Books, courses, and teaching resources for learning econometrics with PyFixest.",
+      "optional": true,
+      "route": "textbook-replications/resources",
+      "section": "Optional",
+      "source": "docs/textbook-replications/resources.qmd",
+      "source_sha256": "e4d2dba727d2e9fc8a1ec1f4c31759c0c6b778971b6ea56fecf72cd1a91fec84",
+      "title": "Learning Econometrics with PyFixest"
+    }
+  ],
+  "schema_version": 1,
+  "site_url": "https://pyfixest.org"
+}

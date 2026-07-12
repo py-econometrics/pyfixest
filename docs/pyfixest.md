@@ -1,3 +1,8 @@
+---
+title: "PyFixest"
+description: "Fast fixest-style high-dimensional fixed-effects estimation, inference, and reporting in Python."
+---
+
 ![](figures/pyfixest-logo.png)
 
 # PyFixest: Fast High-Dimensional Fixed Effects Regression in Python

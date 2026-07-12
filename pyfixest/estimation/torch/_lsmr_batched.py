@@ -1,3 +1,5 @@
+"""Implement batched Torch LSMR iterations."""
+
 from __future__ import annotations
 
 import torch

@@ -1,3 +1,5 @@
+"""Implement iteratively reweighted least-squares fitting primitives."""
+
 from __future__ import annotations
 
 from collections.abc import Callable

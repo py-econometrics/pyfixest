@@ -1,0 +1,63 @@
+<!-- Generated from docs/how-to/marginaleffects.qmd; do not edit. -->
+
+`PyFixest` integrates with the excellent [marginaleffects](https://github.com/vincentarelbundock/pymarginaleffects) package.
+Among many other things, `marginaleffects` allows you to compute:
+
+- average marginal effects,
+- subgroup marginal effects,
+- linear and non-linear hypothesis tests.
+
+```python
+import numpy as np
+from marginaleffects import avg_slopes, hypotheses
+
+import pyfixest as pf
+
+data = pf.get_data()
+data["Y_bin"] = np.where(data["Y"] > 0, 1, 0)
+
+fit = pf.feglm("Y_bin ~ X1 + X2 | f1", data=data, family="logit")
+fit.tidy()
+```
+
+## Average marginal effects
+
+To compute the average marginal effect of `X1` on the response scale:
+
+```python
+avg_slopes(fit, variables="X1")
+```
+
+You can also report group-specific average marginal effects:
+
+```python
+avg_slopes(fit, variables="X1", by="f1")
+```
+
+## Linear hypothesis tests
+
+Suppose we want to test the linear restriction $X_1 = X_2$.
+The `hypotheses()` function uses the model's estimated covariance matrix, so it works naturally with `PyFixest` objects.
+
+```python
+hypotheses(fit, "X1 - X2 = 0")
+```
+
+## Non-linear hypothesis tests
+
+For non-linear transformations, `marginaleffects` applies the delta method automatically.
+This is useful for ratio-style summaries or uplift calculations.
+
+Here is a simple OLS example:
+
+```python
+fit_ols = pf.feols("Y ~ X1 + X2", data=data)
+```
+
+```python
+hypotheses(fit_ols, "(X1 / Intercept - 1) * 100 = 0")
+```
+
+## Notes
+
+For broader functionality / the full capability of `marginaleffects`, see the [marginaleffects book](https://marginaleffects.com/index.html).

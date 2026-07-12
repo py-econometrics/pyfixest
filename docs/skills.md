@@ -1,153 +1,166 @@
-# Skills
+---
+title: "PyFixest agent skill"
+description: "Progressive-disclosure skill for agents using PyFixest."
+---
 
-This page provides a ready-to-use skill file for analytics projects that use PyFixest. The goal is to make LLM-assisted analysis more reliable by giving the model a concise, authoritative reference for PyFixest usage.
+# PyFixest agent skill
 
-## How To Use
+<!-- Generated from skills/pyfixest; do not edit. -->
 
-1. Copy the skill content below into a file named `SKILL.md` or `Agent.md` (or a tool-specific skill file) in your analytics project.
-2. Ensure your LLM tool is configured to read project skills.
-3. Use the formula and inference guidelines below as the authoritative PyFixest reference for the model.
+This page is generated from the skill bundled with the package. Installers
+and downstream projects should copy the canonical skill directory, not this
+rendered page.
 
-## Skill File (PyFixest)
+Use the installed, version-matched documentation before relying on memory. Start
+with pyfixest/docs/llms.txt or pyfixest/docs/index.md; use public functions
+such as pyfixest.feols instead of internal modules.
 
-```markdown
-# PyFixest Skill
+## Workflow
 
-## Core API (4 functions)
+1. Identify the estimator and whether the request needs fixed effects, IV,
+   clustering/HAC, multiple estimation, or a specialized estimator.
+2. Read the matching reference below, then confirm details in the installed docs
+   page it names. Do not invent unsupported combinations.
+3. Write a minimal public-API example. Use a seeded np.random.default_rng for
+   synthetic data and retain the fitted result for post-estimation.
+4. For an error, quote its received value and follow its local documentation
+   pointer before changing the model specification.
 
-- `pyfixest.feols(fml, data, vcov, weights, ssc, fixef_rm, ...)`: OLS/WLS/IV with fixed effects.
-- `pyfixest.fepois(fml, data, vcov, ...)`: Poisson regression with fixed effects.
-- `pyfixest.feglm(fml, data, family, vcov, ...)`: GLM regression (family: "logit", "probit", "gaussian") with fixed effects.
-- `pyfixest.quantreg(fml, data, quantile, ...)`: Quantile regression via interior point solver.
+## References
 
-## Formula Syntax
+- Core APIs — estimator choice, result objects, and
+  multiple estimation.
+- Formula syntax — fixed effects, IV, i(), and
+  multiple-estimation operators.
+- Inference — vcov, clustering, HAC, weights, and SSC.
+- Reporting — tidy results, tables, plots, and IV
+  diagnostics.
+- Specialized estimators — GLM, quantile,
+  DiD/event-study, and multiple testing.
+- Demeaners — choose MAP or LSMR backend and reuse
+  preconditioners.
+- Troubleshooting — formula, stored-data,
+  optional-dependency, and unsupported-combination failures.
 
-Formulas follow fixest syntax and are split into 1–3 parts by `|`:
+## Core APIs
 
-- One-part: `"Y ~ X1 + X2"` (no fixed effects, no IV)
-- Two-part: `"Y ~ X1 + X2 | FE1 + FE2"` (fixed effects)
-- Two-part IV: `"Y ~ X1 + X2 | X_endog ~ Z1 + Z2"` (IV without fixed effects)
-- Three-part IV: `"Y ~ X1 + X2 | FE1 + FE2 | X_endog ~ Z1 + Z2"` (IV with fixed effects)
+Use import pyfixest as pf. Fit through these public entry points:
 
-IV behavior:
-- The IV part must be `endogenous ~ instruments`.
-- Exogenous variables from the second-stage RHS are automatically added to the first stage.
-- Endogenous variables are automatically added to the second stage.
-- Multiple endogenous variables are not supported.
+- pf.feols(fml, data, ...) for OLS, WLS, fixed effects, and IV.
+- pf.fepois(fml, data, ...) for Poisson fixed-effects models.
+- pf.feglm(fml, data, family=..., ...) for logit, probit, gaussian, or Poisson.
+- pf.quantreg(fml, data, quantile=..., ...) for quantile regression; it does
+  not support fixed-effects or IV formula parts.
 
-Other syntax:
-- Multiple depvars are expanded to multiple estimations: `"Y1 + Y2 ~ X1"` behaves like `"sw(Y1, Y2) ~ X1"`.
-- `i()` creates indicator expansions and interactions. It expands categorical variables into dummies and can interact a categorical variable with a numeric or another categorical variable.
-  Examples: `i(cat)`, `i(cat, ref="Base")`, `i(cat, x)` (numeric `x` gives varying slopes; categorical `x` gives cat-by-x indicators), `i(cat1, cat2, ref2="Base")`.
-  Example (cat × numeric): `Y ~ i(industry, exposure)` creates industry-specific slopes on `exposure`.
-  Example (cat × cat): `Y ~ i(state, year, ref2=2000)` creates state-by-year indicators with 2000 as the base year.
-- Standard interactions work as well. `X1 * X2` expands to `X1 + X2 + X1:X2`, while `X1:X2` is the interaction term only.
-- Interacted FEs: `"Y ~ X1 | FE1 ^ FE2"` (creates a combined FE).
+One fit returns a result (Feols, Feiv, Fepois, a GLM subclass, or Quantreg).
+Formula expansion, a quantile list, split, or fsplit returns FixestMulti. Use
+fit.to_list() or fit.fetch_model(i) to select models; fit.tidy() combines their
+coefficient tables.
 
-### Multiple Estimation Operators
+Prefer store_data=True when later operations need original columns; use lean=True
+only when the memory saving outweighs post-estimation features. Read
+pyfixest/docs/pages/reference/estimation.api.feols.feols.md for the shared
+estimation interface.
 
-Operators can appear anywhere in the formula (RHS, fixed effects, IV parts). They can be combined; expansion is recursive and produces all combinations. Note that multiple estimation can be significantly faster than independent model calls due to internal optimisations.
+## Formula syntax
 
-`sw` (sequential stepwise):
-- `y ~ x1 + sw(x2, x3)` → `y ~ x1 + x2` and `y ~ x1 + x3`
+Use y ~ x1 + x2 for OLS, y ~ x1 | firm + year for fixed effects, and
+y ~ x1 | firm + year | endogenous ~ instrument for IV. The IV part is
+endogenous ~ excluded_instruments; use the three-part form when fixed effects
+are present.
 
-`sw0` (sequential stepwise with zero step):
-- `y ~ x1 + sw0(x2, x3)` → `y ~ x1`, `y ~ x1 + x2`, `y ~ x1 + x3`
+Use i(category, ref=...) for indicator expansion or i(category, variable) for
+interactions. Use firm ^ year to create an interacted fixed effect.
 
-`csw` (cumulative stepwise):
-- `y ~ x1 + csw(x2, x3)` → `y ~ x1 + x2`, `y ~ x1 + x2 + x3`
+For multiple estimation, use sw, sw0, csw, csw0, or mvsw; combine them
+deliberately because they fan out to several models. Use split for one fit per
+group and fsplit to include the full sample too.
 
-`csw0` (cumulative stepwise with zero step):
-- `y ~ x1 + csw0(x2, x3)` → `y ~ x1`, `y ~ x1 + x2`, `y ~ x1 + x2 + x3`
+Read pyfixest/docs/pages/tutorials/formula-syntax.md before translating a
+complex R fixest formula.
 
-`mvsw` (multiverse stepwise):
-- `y ~ mvsw(x1, x2, x3)` → all non-empty combinations plus the zero step:
-  `y ~ 1`, `y ~ x1`, `y ~ x2`, `y ~ x3`, `y ~ x1 + x2`, `y ~ x1 + x3`, `y ~ x2 + x3`, `y ~ x1 + x2 + x3`
+## Inference
 
-Combining operators example:
-- `y ~ csw(x1, x2) + sw(z1, z2)` expands to:
-  `y ~ x1 + z1`, `y ~ x1 + z2`, `y ~ x1 + x2 + z1`, `y ~ x1 + x2 + z2`
+For regression models, choose vcov=iid, hetero, HC1, HC2, HC3, NW, DK, or a
+cluster dictionary such as {CRV1: firm}. CRV1 supports two-way clustering as
+{CRV1: firm + year}; CRV3 has model-specific support.
 
-You can run regressions for subsamples by using the `split` and `fsplit` arguments, where both split by the
-provided variable, but `fsplit` also provides a fit for the full sample.
+HAC requires explicit identifiers: NW and DK need vcov_kwargs with lag and
+time_id; DK also needs panel_id. Quantile regression supports iid, nid,
+heteroskedastic inference, HC aliases, and one-way CRV1, not HAC.
 
-## Inference (vcov)
+Use pf.ssc() for small-sample corrections. The default is k_adj=True,
+k_fixef=nonnested, G_adj=True, G_df=min. State whether weights are aweights or
+fweights and verify the estimator supports the combination.
 
-Pass to `vcov`:
+Read pyfixest/docs/pages/tutorials/standard-errors.md and
+pyfixest/docs/pages/explanation/ssc.md for the complete rules.
 
-- `"iid"` — IID errors
-- `"hetero"` — HC1 heteroskedasticity-robust (alias: `"HC1"`)
-- `"HC2"` — HC2 robust (not supported with fixed effects or IV)
-- `"HC3"` — HC3 robust (not supported with fixed effects or IV)
-- `{"CRV1": "cluster_var"}` — Cluster-robust variance
-- `{"CRV3": "cluster_var"}` — Leave-one-cluster-out jackknife
-- `"NW"` — Newey-West HAC (requires `vcov_kwargs` with `time_id`; optional `panel_id`, `lag`)
-- `"DK"` — Driscoll-Kraay HAC (requires `vcov_kwargs` with `time_id`; optional `panel_id`, `lag`)
+## Reporting and result APIs
 
-Two-way clustering: `{"CRV1": "var1 + var2"}`.
+Use fit.tidy(), fit.coef(), fit.se(), fit.tstat(), fit.pvalue(), and
+fit.confint() for machine-readable results. Use fit.summary(), pf.etable,
+pf.dtable, pf.coefplot, pf.iplot, and pf.qplot for presentation.
 
-Inference can be adjusted post-estimation: `fit.vcov("hetero").summary()`.
+The reporting wrappers are explicit methods on single results and FixestMulti:
+summary(), etable(), coefplot(), and iplot(). Pass type=df, md, tex, or another
+documented output type to etable as needed.
 
-## Post Processing
+For IV, call first_stage() before reading first_stage_model or
+first_stage_f_statistic; call IV_Diag() before effective_f_statistic. Do not
+rely on private underscore attributes.
 
-Model objects support:
+Read pyfixest/docs/pages/tutorials/regression-tables.md and the installed Feols
+or Feiv reference page for supported post-estimation methods.
 
-- `.summary()` — Print regression summary
-- `.tidy()` — Tidy DataFrame of coefficients, SEs, t-stats, p-values, CIs
-- `.coef()` — Coefficient values
-- `.se()` — Standard errors
-- `.pvalue()` — P-values
-- `.confint()` — Confidence intervals
-- `.predict(newdata)` — Predictions
-- `.resid()` — Residuals
-- `.vcov()` — Variance-covariance matrix
-- `.tstat()` — T-statistics
-- `.fixef()` — Extract fixed effect estimates
-- `.wildboottest(param, reps, seed)` — Wild cluster bootstrap inference
-- `.ccv(treatment, pk, qk, ...)` — Causal cluster variance estimator
-- `.ritest(resampvar, reps, ...)` — Randomization inference
-- `.decompose(param, x1_vars, type, ...)` — Gelbach (2016) decomposition
-- `.wald_test(R, q)` — Linear hypothesis testing
-- `.first_stage()` — First-stage results (IV only)
-- `.IV_Diag()` — IV diagnostic tests (IV only)
+## Specialized estimators
 
-For IV models, show first and second stage together: `pf.etable([fit._model_1st_stage, fit])`.
+Use fepois or feglm for fixed-effects count and GLM models. feglm accepts the
+documented families; offsets are supported only for Poisson. Validate
+separation, weights, and fixed-effects support before generalizing an OLS
+workflow.
 
-## DiD / Causal Inference
+Use quantreg with one quantile or a list of floats strictly between zero and
+one. A list returns FixestMulti; pf.qplot visualizes the process. Do not use
+fixed-effects or IV formula parts with quantile regression.
 
-- `pf.did2s(data, yname, first_stage, second_stage, treatment, cluster)` — Two-stage DID (Gardner 2022).
-- `pf.event_study(data, yname, idname, tname, gname, estimator="twfe")` — Event study with multiple estimators.
-- `pf.lpdid(data, yname, idname, tname, gname)` — Local projections DID.
-- `pf.SaturatedEventStudy(data, yname, idname, tname, gname)` — Saturated event study with cohort-specific effects.
-- `pf.panelview(data, unit, time, treat)` — Panel treatment visualization.
+For difference-in-differences, use pf.event_study, pf.did2s, or pf.lpdid. Use
+pf.panelview to inspect treatment timing. The packaged pyfixest.did/data/df_het.csv
+fixture supports offline examples through importlib.resources.files(pyfixest.did).
 
-## Visualization
+For family-wise adjustments, use pf.bonferroni, pf.rwolf, or pf.wyoung. Read the
+installed DiD, Poisson/GLM, and quantile tutorials before combining specialized
+estimators with nonstandard inference.
 
-- `pf.coefplot(models)` — Plot coefficients with confidence intervals.
-- `pf.iplot(models)` — Plot coefficients from `i()` interactions (event-study style).
-- `pf.qplot(models)` — Plot quantile regression coefficients.
+## Demeaners
 
-## Multiple Testing
+Use the default MapDemeaner() for typical high-dimensional fixed effects. Choose
+MapDemeaner(backend=numba) only when its optional dependency is available. Use
+LsmrDemeaner() for sparse or difficult fixed-effects designs; the optional torch
+backend needs the corresponding extra and device support.
 
-- `pf.bonferroni(models, param)` — Bonferroni-adjusted p-values.
-- `pf.rwolf(models, param, reps, seed)` — Romano-Wolf adjusted p-values.
-- `pf.wyoung(models, param, reps, seed)` — Westfall-Young adjusted p-values.
+Pass a typed demeaner= configuration rather than deprecated loose backend or
+tolerance arguments. The result exposes a reusable preconditioner for a later
+model with the same fixed-effect design; do not reuse it across a different
+design.
 
-## Utilities
+Read pyfixest/docs/pages/how-to/demeaner-backends.md for backend limits,
+tolerances, preconditioners, and optional-dependency setup.
 
-- `pf.get_data(N, seed)` — Generate example dataset for testing.
-- `pf.ssc(k_adj, k_fixef, G_adj, G_df)` — Configure small sample corrections.
+## Troubleshooting
 
-## etable Basics
+Start with the received value in a PyFixest error. Formula errors usually need a
+valid y ~ rhs | fixed_effects | endogenous ~ instruments form. Vcov errors
+usually need a supported name, existing cluster columns, or HAC identifiers.
 
-For regression tables, use `pf.etable()`.
+MissingStoredDataError means a post-estimation operation needs data removed by
+store_data=False or lean=True. Refit with store_data=True; for eligible vcov()
+calls, pass the original data explicitly.
 
-- Build tables: `pf.etable([fit1, fit2, ...])` or `pf.etable(pf.feols("Y~csw(X1,X2)", data))`.
-- Output formats: `type="gt"` (default), `"md"`, `"tex"`, `"df"`.
-- Keep/drop variables: `keep="X1"` or `drop=["X2"]`.
-- Labels and fixed effects labels: `labels={...}`, `felabels={...}`.
-- Show p-values or CIs: `coef_fmt="b (se) [p]"` shows the coefficient (b), standard error in parentheses, p-value in brackets.
-- Title/caption: `caption="Regression Results"`.
-- Rename variables: `labels={"X1": "Age", "X2": "Schooling"}`.
-- Column headers for dependent variables: `model_heads=[...]` and `head_order="hd"`/`"dh"` to control header order (headlines vs depvars).
-```
+Unsupported combinations are intentional: check fixed effects, IV, weights,
+multiple estimation, and the model family before retrying. Install optional
+dependencies only when selecting their paths, for example numba, lets-plot, or
+torch.
+
+Read pyfixest/docs/pages/troubleshooting.md first, then the formula, inference,
+or demeaner reference named by the error.

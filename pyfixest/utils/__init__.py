@@ -1,3 +1,5 @@
+"""Public datasets, data generators, and small-sample-correction helpers."""
+
 from pyfixest.utils.dgps import (
     get_bartik_data,
     get_encouragement_data,

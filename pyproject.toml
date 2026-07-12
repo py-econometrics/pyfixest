@@ -30,10 +30,12 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Mathematics",
 ]
 
-urls.Homepage = "https://pyfixest.com"
+urls.Homepage = "https://pyfixest.org"
 urls.Repository = "https://github.com/py-econometrics/pyfixest"
-urls.Documentation = "https://pyfixest.com"
+urls.Documentation = "https://pyfixest.org"
 urls.Tracker = "https://github.com/py-econometrics/pyfixest/issues"
+urls."LLM Documentation" = "https://pyfixest.org/llms.txt"
+urls."Agent Skill" = "https://pyfixest.org/skills.html"
 
 dependencies = [
     "formulaic>=1.1.0",
@@ -68,6 +70,7 @@ benchmarks = [
 module-name = "pyfixest.core._core_impl"
 features = ["pyo3/extension-module"]
 python-source = "."
+python-packages = ["pyfixest", "skills"]
 exclude = [
     "tests/**",
     "docs/**",
@@ -76,6 +79,10 @@ exclude = [
     "joss_paper/**",
     "scripts/**",
     ".github/**",
+]
+include = [
+    { path = "skills/pyfixest/SKILL.md", format = "wheel" },
+    { path = "skills/pyfixest/**", format = "wheel" },
 ]
 
 [tool.pytest.ini_options]
@@ -135,8 +142,6 @@ ignore = [
     "D300", # triple single quotes
     "E501", # line length regulated by formatter
     "D105", # missing docstring in magic method
-    "D100", # missing docstring in public module
-    "D104", # missing docstring in public package
     "SIM110", # Use all instead of `for` loop
     "TRY003", # Avoid specifying long messages outside the exception class
     "D205", # 1 blank line required between summary line and description
@@ -178,6 +183,18 @@ module = [
     "tqdm.*",
 ]
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = [
+    "pyfixest",
+    "pyfixest.typing",
+    "pyfixest.estimation.api.*",
+    "pyfixest.did.estimation",
+    "pyfixest.did.visualize",
+]
+check_untyped_defs = true
+disallow_untyped_defs = true
+no_implicit_optional = true
 
 # --------------------------------------------------------------------------------------
 # pixi configuration

@@ -1,10 +1,67 @@
+"""Public lazy-loading namespace for PyFixest estimators and reporting.
+
+Agents and downstream tools should read the version-matched Markdown bundled with
+the installed wheel before inferring API details: ``pyfixest/docs/index.md`` is
+the local entry point and ``skills/pyfixest/SKILL.md`` is the progressive user
+skill. On the web, start with https://pyfixest.org/llms.txt; source and
+contributor guidance live at https://github.com/py-econometrics/pyfixest.
+
+The public API is exposed lazily below. Estimation entry points and result classes
+are in :mod:`pyfixest.estimation`; public type aliases are in
+:mod:`pyfixest.typing`.
+"""
+
 import importlib as _importlib
-from importlib.metadata import PackageNotFoundError, version
+from importlib.metadata import PackageNotFoundError as _PackageNotFoundError
+from importlib.metadata import version as _version
+from typing import TYPE_CHECKING as _TYPE_CHECKING
+from typing import Any as _Any
+
+if _TYPE_CHECKING:
+    from pyfixest import did as did
+    from pyfixest import errors as errors
+    from pyfixest import estimation as estimation
+    from pyfixest import report as report
+    from pyfixest import typing as typing
+    from pyfixest import utils as utils
+    from pyfixest.core.demean import Preconditioner as Preconditioner
+    from pyfixest.demeaners import BaseDemeaner as BaseDemeaner
+    from pyfixest.demeaners import LsmrDemeaner as LsmrDemeaner
+    from pyfixest.demeaners import MapDemeaner as MapDemeaner
+    from pyfixest.did import SaturatedEventStudy as SaturatedEventStudy
+    from pyfixest.did import did2s as did2s
+    from pyfixest.did import event_study as event_study
+    from pyfixest.did import lpdid as lpdid
+    from pyfixest.did import panelview as panelview
+    from pyfixest.estimation import bonferroni as bonferroni
+    from pyfixest.estimation import feglm as feglm
+    from pyfixest.estimation import feols as feols
+    from pyfixest.estimation import fepois as fepois
+    from pyfixest.estimation import quantreg as quantreg
+    from pyfixest.estimation import rwolf as rwolf
+    from pyfixest.estimation import wyoung as wyoung
+    from pyfixest.report import coefplot as coefplot
+    from pyfixest.report import dtable as dtable
+    from pyfixest.report import etable as etable
+    from pyfixest.report import iplot as iplot
+    from pyfixest.report import qplot as qplot
+    from pyfixest.report import summary as summary
+    from pyfixest.utils import get_bartik_data as get_bartik_data
+    from pyfixest.utils import get_data as get_data
+    from pyfixest.utils import get_encouragement_data as get_encouragement_data
+    from pyfixest.utils import get_ivf_data as get_ivf_data
+    from pyfixest.utils import (
+        get_motherhood_event_study_data as get_motherhood_event_study_data,
+    )
+    from pyfixest.utils import get_ssc as get_ssc
+    from pyfixest.utils import get_twin_data as get_twin_data
+    from pyfixest.utils import get_worker_panel as get_worker_panel
+    from pyfixest.utils import ssc as ssc
 
 # Version handling (keep eager - it's cheap)
 try:
-    __version__ = version("pyfixest")
-except PackageNotFoundError:
+    __version__ = _version("pyfixest")
+except _PackageNotFoundError:
     __version__ = "unknown"
 
 __all__ = [
@@ -42,12 +99,13 @@ __all__ = [
     "rwolf",
     "ssc",
     "summary",
+    "typing",
     "utils",
     "wyoung",
 ]
 
 # Submodules loaded lazily
-_submodules = ["did", "errors", "estimation", "report", "utils"]
+_submodules = ["did", "errors", "estimation", "report", "typing", "utils"]
 
 # Map function/class names to their module prefix
 # For direct module imports: import_module(f"{prefix}.{name}")
@@ -79,7 +137,6 @@ _lazy_imports = {
     "coefplot": "pyfixest.report",
     "iplot": "pyfixest.report",
     "qplot": "pyfixest.report",
-    "make_table": "pyfixest.report",
     # utils
     "get_bartik_data": "pyfixest.utils",
     "get_data": "pyfixest.utils",
@@ -96,7 +153,7 @@ _lazy_imports = {
 _direct_module_imports = {"feols", "fepois", "feglm", "quantreg"}
 
 
-def __getattr__(name: str):
+def __getattr__(name: str) -> _Any:
     if name in _submodules:
         return _importlib.import_module(f"pyfixest.{name}")
     if name in _lazy_imports:
@@ -111,5 +168,6 @@ def __getattr__(name: str):
     raise AttributeError(f"module 'pyfixest' has no attribute {name!r}")
 
 
-def __dir__():
-    return __all__
+def __dir__() -> list[str]:
+    """List lazy public exports alongside normal module metadata."""
+    return sorted(set(__all__) | set(globals()))

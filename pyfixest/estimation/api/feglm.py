@@ -1,3 +1,5 @@
+"""Fit generalized linear models with high-dimensional fixed effects."""
+
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -13,18 +15,22 @@ from pyfixest.estimation.internals.demeaner_options import (
     _warn_if_experimental_torch_demeaner,
 )
 from pyfixest.estimation.internals.literals import (
-    FamilyOptions,
     FixedRmOptions,
     SolverOptions,
-    VcovTypeOptions,
-    WeightsTypeOptions,
     _validate_literal_argument,
 )
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.models.fepois_ import Fepois
 from pyfixest.estimation.plan_ import parse_formula
 from pyfixest.estimation.runner import run_estimation
-from pyfixest.utils.dev_utils import DataFrameType
+from pyfixest.typing import (
+    DataFrameType,
+    GlmFamily,
+    RegressionVcovType,
+    SscConfig,
+    VcovKwargs,
+    WeightsType,
+)
 from pyfixest.utils.utils import capture_context
 from pyfixest.utils.utils import ssc as ssc_func
 
@@ -32,13 +38,13 @@ from pyfixest.utils.utils import ssc as ssc_func
 def feglm(
     fml: str,
     data: DataFrameType,  # type: ignore
-    family: FamilyOptions,
-    vcov: VcovTypeOptions | dict[str, str] | None = None,
-    vcov_kwargs: dict[str, str | int] | None = None,
+    family: GlmFamily,
+    vcov: RegressionVcovType | dict[str, str] | None = None,
+    vcov_kwargs: VcovKwargs | None = None,
     weights: str | None = None,
-    weights_type: WeightsTypeOptions = "aweights",
+    weights_type: WeightsType = "aweights",
     offset: str | None = None,
-    ssc: dict[str, str | bool] | None = None,
+    ssc: SscConfig | None = None,
     fixef_rm: FixedRmOptions = "singleton",
     iwls_tol: float = 1e-08,
     iwls_maxiter: int = 25,
@@ -97,20 +103,15 @@ def feglm(
         and "poisson". Passing "poisson" produces the same result as calling
         `pyfixest.fepois()`.
 
-    vcov : Union[VcovTypeOptions, dict[str, str]]
-        Type of variance-covariance matrix for inference. Options include "iid",
-          "hetero", "HC1", "HC2", "HC3", "NW" for Newey-West HAC standard errors,
-        "DK" for Driscoll-Kraay HAC standard errors, or a dictionary for CRV1/CRV3 inference.
-        Note that NW and DK require to pass additional keyword arguments via the `vcov_kwargs` argument.
-        For time-series HAC, you need to pass the 'time_id' column. For panel-HAC, you need to add
-        pass both 'time_id' and 'panel_id'. See `vcov_kwargs` for details.
+    vcov : RegressionVcovType or dict[str, str], optional
+        Variance-covariance estimator. `None` defaults to `"iid"`. String options
+        are `"iid"`, `"hetero"`, `"HC1"`, `"HC2"`, `"HC3"`, `"NW"`, and
+        `"DK"`. Clustered inference uses `{"CRV1": "cluster"}` or
+        `{"CRV3": "cluster"}`. NW and DK require `vcov_kwargs`.
 
-    vcov_kwargs : Optional[dict[str, any]]
-         Additional keyword arguments to pass to the vcov function. These keywoards include
-        "lag" for the number of lag to use in the Newey-West (NW) and Driscoll-Kraay (DK) HAC standard errors.
-        "time_id" for the time ID used for NW and DK standard errors, and "panel_id" for the panel
-         identifier used for NW and DK standard errors. Currently, the the time difference between consecutive time
-         periods is always treated as 1. More flexible time-step selection is work in progress.
+    vcov_kwargs : VcovKwargs, optional
+        HAC configuration. Pass `lag` and `time_id` for time-series NW; add
+        `panel_id` for panel NW or DK.
 
     weights : Union[None, str], optional
         Default is None. Name of the column in `data` to be used as observation
@@ -125,14 +126,14 @@ def feglm(
         on the link scale. Only supported with `family='poisson'`. For exposure
         adjustments, pass the exposure on the log scale.
 
-    ssc : str
-        A ssc object specifying the small sample correction for inference.
+    ssc : SscConfig, optional
+        Small-sample correction created by `ssc()`. `None` uses
+        `ssc(k_adj=True, k_fixef="nonnested", G_adj=True, G_df="min")`.
 
     fixef_rm : FixedRmOptions
         Specifies whether to drop singleton fixed effects.
-        Can be equal to "singleton" (default),
-        or "none".
-        "singletons" will drop singleton fixed effects. This will not impact point
+        Can be equal to `"singleton"` (default) or `"none"`.
+        `"singleton"` drops singleton fixed effects. This does not affect point
         estimates but it will impact standard errors.
 
     iwls_tol : Optional[float], optional
@@ -142,7 +143,7 @@ def feglm(
         Maximum number of iterations for IWLS convergence, by default 25.
 
     collin_tol : float, optional
-        Tolerance for collinearity check, by default 1e-10.
+        Tolerance for the collinearity check. Defaults to `1e-9`.
 
     separation_check: list[str], optional
         Methods to identify and drop separated observations.
@@ -220,7 +221,7 @@ def feglm(
 
     Returns
     -------
-    object
+    Feols, Fepois, or FixestMulti
         An instance of the [Feglm](/reference/estimation.models.feglm_.Feglm.qmd) class
         (or one of its subclasses: [Felogit](/reference/estimation.models.felogit_.Felogit.qmd),
         [Feprobit](/reference/estimation.models.feprobit_.Feprobit.qmd),
@@ -271,7 +272,7 @@ def feglm(
     for a compact post-estimation workflow.
 
     """
-    _validate_literal_argument(family, FamilyOptions)
+    _validate_literal_argument(family, GlmFamily, argument_name="family")
     if offset is not None and family != "poisson":
         raise ValueError(
             "The `offset` argument is only supported with `family='poisson'`."

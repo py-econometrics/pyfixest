@@ -1,3 +1,5 @@
+"""Implement shared generalized-linear-model result behavior."""
+
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -22,7 +24,13 @@ from pyfixest.utils.dev_utils import DataFrameType
 
 
 class Feglm(Feols):
-    "Base class for the estimation of a fixed-effects GLM model."
+    """Base result class for fitted fixed-effects generalized linear models.
+
+    Construct a concrete model with feglm() or fepois(), not with this
+    implementation class. The public API builds an EstimationConfig, the planner
+    expands the formula, and the runner supplies the shared demeaning cache used
+    by each model.
+    """
 
     def __init__(
         self,

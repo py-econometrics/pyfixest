@@ -1,3 +1,5 @@
+"""Compute covariance estimators for quantile regression."""
+
 from __future__ import annotations
 
 from collections.abc import Callable

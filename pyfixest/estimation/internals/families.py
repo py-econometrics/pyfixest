@@ -1,3 +1,5 @@
+"""Define GLM families, links, and inference distributions."""
+
 from __future__ import annotations
 
 import warnings

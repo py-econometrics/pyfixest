@@ -1,3 +1,5 @@
+"""Dispatch dense and sparse linear-system solvers."""
+
 import numpy as np
 from scipy.linalg import solve
 from scipy.sparse.linalg import lsqr

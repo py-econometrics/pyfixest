@@ -1,3 +1,5 @@
+"""Optional Torch fixed-effects demeaning backend."""
+
 from pyfixest.estimation.torch.demean_torch_ import (
     demean_torch,
     demean_torch_cpu,
