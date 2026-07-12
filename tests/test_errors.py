@@ -9,6 +9,7 @@ from pyfixest.errors import (
     EndogVarsAsCovarsError,
     FormulaSyntaxError,
     InstrumentsAsCovarsError,
+    MissingStoredDataError,
     NanInClusterVarError,
     UnderDeterminedIVError,
     VcovTypeNotSupportedError,
@@ -57,11 +58,26 @@ def test_cluster_na():
 
 
 def test_cluster_but_no_data():
-    """Test if AttributeError if self._data is not stored."""
+    """Missing stored data raises an actionable, compatible exception."""
     data = get_data()
     fit = feols("Y ~ X1", data=data, store_data=False)
-    with pytest.raises(AttributeError):
+    with pytest.raises(
+        MissingStoredDataError,
+        match=r"refit with `store_data=True`.*troubleshooting",
+    ):
         fit.vcov({"CRV1": "f2"})
+
+    assert issubclass(MissingStoredDataError, AttributeError)
+
+    # Supplying the original data is the non-refit remediation path.
+    fit.vcov({"CRV1": "f2"}, data=data)
+
+
+def test_vcov_without_stored_data_when_data_is_not_required():
+    """Score-based inference remains available without retained input data."""
+    fit = feols("Y ~ X1", data=get_data(), store_data=False)
+
+    assert fit.vcov("HC1")._vcov_type_detail == "HC1"
 
 
 def test_error_hc23_fe():
@@ -170,6 +186,84 @@ def test_feols_errors():
         pf.feols(fml="Y ~ X1", data=data, weights_type="qweights", weights="weights")
 
 
+@pytest.mark.parametrize(
+    ("vcov", "error", "message"),
+    [
+        ({}, ValueError, "exactly one entry"),
+        ({"CRV1": "not_a_column"}, ValueError, "were not found in `data`"),
+        ({"CRV2": "f1"}, ValueError, "Invalid clustered `vcov` type"),
+        ({"CRV1": 1}, TypeError, r"must be a '\+'-separated column-name string"),
+        ({"CRV1": "f1 + f2 + group_id"}, ValueError, "at most two-way"),
+        ("HC7", ValueError, "Invalid `vcov` value 'HC7'"),
+    ],
+)
+def test_vcov_errors_name_received_value_and_remediation(vcov, error, message):
+    """Public vcov errors identify the bad input instead of asserting."""
+    with pytest.raises(error, match=message):
+        pf.feols("Y ~ X1", data=pf.get_data(), vcov=vcov)
+
+
+def test_hac_errors_name_required_identifiers():
+    """HAC errors identify missing workflow-specific arguments."""
+    data = pf.get_data()
+
+    with pytest.raises(ValueError, match=r"requires `vcov_kwargs\['time_id'\]`"):
+        pf.feols("Y ~ X1", data=data, vcov="NW")
+    with pytest.raises(ValueError, match=r"requires `vcov_kwargs\['panel_id'\]`"):
+        pf.feols(
+            "Y ~ X1",
+            data=data,
+            vcov="DK",
+            vcov_kwargs={"time_id": "f1", "lag": 1},
+        )
+
+
+def test_literal_and_ssc_errors_name_the_argument():
+    """Literal and SSC validation reports names, values, and alternatives."""
+    data = pf.get_data()
+
+    with pytest.raises(ValueError, match="Invalid `family` value 'gamma'"):
+        pf.feglm("Y ~ X1", data=data, family="gamma")
+    with pytest.raises(ValueError, match="Invalid `type` value 'mean'"):
+        pf.feols("Y ~ X1", data=data).predict(type="mean")
+    with pytest.raises(ValueError, match="Invalid `k_fixef` value 'nested'"):
+        pf.ssc(k_fixef="nested")
+    with pytest.raises(TypeError, match="`G_adj` must be a bool"):
+        pf.ssc(G_adj=1)
+
+
+def test_post_estimation_missing_data_errors_are_actionable():
+    """Data-dependent methods share the compatible missing-data exception."""
+    data = pf.get_data().dropna()
+    fit = pf.feols("Y ~ X1", data=data, store_data=False)
+
+    with pytest.raises(MissingStoredDataError, match=r"Refit with `store_data=True`"):
+        fit.ritest("X1")
+
+    data = data.copy()
+    data["D"] = (data["X1"] > data["X1"].median()).astype(int)
+    fit = pf.feols("Y ~ D", data=data, store_data=False)
+    with pytest.raises(MissingStoredDataError, match=r"Refit with `store_data=True`"):
+        fit.ccv("D")
+
+
+def test_did2s_formula_errors_include_valid_shape():
+    """DID2S rejects malformed stage formulas without an assertion."""
+    data = pd.DataFrame(
+        {
+            "y": [1.0, 2.0],
+            "unit": [1, 2],
+            "time": [1, 1],
+            "treat": [0, 1],
+        }
+    )
+
+    with pytest.raises(ValueError, match="`first_stage` must start with '~'"):
+        pf.did2s(data, "y", "unit + time", "~ treat", "treat", "unit")
+    with pytest.raises(ValueError, match="`second_stage` must start with '~'"):
+        pf.did2s(data, "y", "~ unit + time", "treat", "treat", "unit")
+
+
 def test_poisson_errors():
     data = pf.get_data(model="Fepois")
     # iv not supported
@@ -213,10 +307,10 @@ def test_all_variables_multicollinear():
 def test_wls_errors():
     data = get_data()
 
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError, match=r"weights.*was not found"):
         feols(fml="Y ~ X1", data=data, weights="weights2")
 
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         feols("Y ~ X1", data=data, weights=[1, 2])
 
     data.loc[0, "weights"] = np.nan
@@ -303,13 +397,13 @@ def test_errors_etable():
     fit1 = feols("Y ~ X1", data=data)
     fit2 = feols("Y ~ X1 + X2 | f1", data=data)
 
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError, match="exactly three values"):
         etable([fit1, fit2], signif_code=[0.01, 0.05])
 
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError, match="strictly increasing"):
         etable([fit1, fit2], signif_code=[0.2, 0.05, 0.1])
 
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError, match="strictly between 0 and 1"):
         etable([fit1, fit2], signif_code=[0.1, 0.5, 1.5])
 
     with pytest.raises(AssertionError):
@@ -356,7 +450,7 @@ def test_errors_ccv():
 
     # error when D is not binary
     fit = feols("Y ~ X1", data=data, vcov={"CRV1": "f1"})
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError, match="must contain only 0 and 1"):
         fit.ccv(treatment="X1", pk=0.05, qk=0.5, n_splits=10, seed=929)
 
     # error when fixed effects in estimation
@@ -387,12 +481,12 @@ def test_errors_ccv():
     pois_data = get_data(model="Fepois").dropna()
     pois_data["D"] = np.random.choice([0, 1], size=len(pois_data))
     fit = fepois("Y ~ D", data=pois_data)
-    with pytest.raises(AssertionError):
+    with pytest.raises(NotImplementedError, match=r"`ccv\(\)` is supported only"):
         fit.ccv(treatment="D", pk=0.05, qk=0.5, n_splits=10, seed=929)
 
     # same for IV
     fit = feols("Y ~ 1 | D ~ Z1", data=data)
-    with pytest.raises(AssertionError):
+    with pytest.raises(NotImplementedError, match=r"`ccv\(\)` is supported only"):
         fit.ccv(treatment="D", pk=0.05, qk=0.5, n_splits=10, seed=929)
 
 
@@ -441,12 +535,10 @@ def test_ritest_error(data):
     with pytest.raises(ValueError, match="CLUST is not found in the data"):
         fit.ritest(resampvar="X1", reps=1000, cluster="CLUST")
 
-    with pytest.raises(
-        ValueError, match=r"type must be 'randomization-t' or 'randomization-c\."
-    ):
+    with pytest.raises(ValueError, match="Invalid `type` value 'a'"):
         fit.ritest(resampvar="X1", reps=1000, type="a")
 
-    with pytest.raises(AssertionError):
+    with pytest.raises(TypeError, match="`reps` must be an int"):
         fit.ritest(resampvar="X1", reps=100.4)
 
     with pytest.raises(ValueError):
@@ -622,15 +714,15 @@ def test_errors_panelview():
     "split, fsplit, expected_exception, error_message",
     [
         # Test TypeError for non-string 'split'
-        (123, None, TypeError, "The function argument split needs to be of type str."),
+        (123, None, TypeError, r"`split` must be a column name or None"),
         # Test TypeError for non-string 'fsplit'
-        (None, 456, TypeError, "The function argument fsplit needs to be of type str."),
+        (None, 456, TypeError, r"`fsplit` must be a column name or None"),
         # Test ValueError for split and fsplit not being identical
         (
             "split_column",
             "different_column",
             ValueError,
-            r"Arguments split and fsplit are both specified, but not identical",
+            r"`split` and `fsplit` cannot name different columns",
         ),
         # Test KeyError for invalid 'split' column
         (
@@ -663,19 +755,19 @@ def test_separation_check_validations():
 
     with pytest.raises(
         ValueError,
-        match=r"The function argument `separation_check` must be a list of strings containing 'fe' and/or 'ir'\.",
+        match=r"Invalid `separation_check` value",
     ):
         pf.fepois("Y ~ X1", data=data, separation_check=["a"])
 
     with pytest.raises(
         TypeError,
-        match=r"The function argument `separation_check` must be of type list\.",
+        match=r"`separation_check` must be a list",
     ):
         pf.fepois("Y ~ X1", data=data, separation_check="fe")
 
     with pytest.raises(
         ValueError,
-        match=r"The function argument `separation_check` must be a list of strings containing 'fe' and/or 'ir'\.",
+        match=r"Invalid `separation_check` value",
     ):
         pf.fepois("Y ~ X1", data=data, separation_check=["fe", "invalid"])
 
@@ -892,21 +984,21 @@ def test_errors_vcov_kwargs():
     # Error 1: Invalid keys in vcov_kwargs
     with pytest.raises(
         ValueError,
-        match=r"must be a dictionary with keys 'lag', 'time_id', or 'panel_id'",
+        match=r"Invalid `vcov_kwargs` keys",
     ):
         pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs={"invalid_key": 5})
 
     # Error 2: Multiple invalid keys
     with pytest.raises(
         ValueError,
-        match="must be a dictionary with keys 'lag', 'time_id', or 'panel_id'",
+        match="Invalid `vcov_kwargs` keys",
     ):
         pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs={"wrong1": 1, "wrong2": 2})
 
     # Error 3: Mix of valid and invalid keys
     with pytest.raises(
         ValueError,
-        match=r"must be a dictionary with keys 'lag', 'time_id', or 'panel_id'",
+        match=r"Invalid `vcov_kwargs` keys",
     ):
         pf.feols(
             "Y ~ X1",
@@ -916,32 +1008,26 @@ def test_errors_vcov_kwargs():
         )
 
     # Error 4: lag value is not an integer (string)
-    with pytest.raises(
-        ValueError, match="must be a dictionary with integer values for 'lag'"
-    ):
+    with pytest.raises(TypeError, match=r"`vcov_kwargs\['lag'\]` must be an int"):
         pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs={"lag": "5"})
 
     # Error 5: lag value is not an integer (float)
-    with pytest.raises(
-        ValueError, match="must be a dictionary with integer values for 'lag'"
-    ):
+    with pytest.raises(TypeError, match=r"`vcov_kwargs\['lag'\]` must be an int"):
         pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs={"lag": 5.5})
 
     # Error 6: lag value is not an integer (None)
-    with pytest.raises(
-        ValueError, match="must be a dictionary with integer values for 'lag'"
-    ):
+    with pytest.raises(TypeError, match=r"`vcov_kwargs\['lag'\]` must be an int"):
         pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs={"lag": None})
 
     # Error 7: time_id value is not a string (integer)
     with pytest.raises(
-        ValueError, match="must be a dictionary with string values for 'time_id'"
+        TypeError, match=r"`vcov_kwargs\['time_id'\]` must be a column name"
     ):
         pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs={"time_id": 123})
 
     # Error 8: time_id value is not a string (None)
     with pytest.raises(
-        ValueError, match="must be a dictionary with string values for 'time_id'"
+        TypeError, match=r"`vcov_kwargs\['time_id'\]` must be a column name"
     ):
         pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs={"time_id": None})
 
@@ -958,13 +1044,13 @@ def test_errors_vcov_kwargs():
 
     # Error 10: panel_id value is not a string (integer)
     with pytest.raises(
-        ValueError, match="must be a dictionary with string values for 'panel_id'"
+        TypeError, match=r"`vcov_kwargs\['panel_id'\]` must be a column name"
     ):
         pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs={"panel_id": 456})
 
     # Error 11: panel_id value is not a string (list)
     with pytest.raises(
-        ValueError, match=r"The function argument `vcov_kwargs` must be a."
+        TypeError, match=r"`vcov_kwargs\['panel_id'\]` must be a column name"
     ):
         pf.feols(
             "Y ~ X1", data=data, vcov="NW", vcov_kwargs={"panel_id": ["col1", "col2"]}
@@ -998,7 +1084,7 @@ def test_errors_hac():
     )
 
     # Error 3: time_id is not provided if vcov is NW or DK
-    with pytest.raises(ValueError, match=r"Missing required 'time_id' for NW/DK vcov"):
+    with pytest.raises(ValueError, match=r"requires `vcov_kwargs\['time_id'\]`"):
         pf.feols(
             "Y ~ X1",
             data=data,
@@ -1009,7 +1095,7 @@ def test_errors_hac():
     # Error 4: lag is not provided if vcov is NW or DK
     with pytest.raises(
         ValueError,
-        match=r"We have not yet implemented the default Newey-West HAC lag. Please provide a lag value via the `vcov_kwargs`\.",
+        match=r"requires an integer `vcov_kwargs\['lag'\]`",
     ):
         pf.feols(
             "Y ~ X1",

@@ -95,17 +95,47 @@ def event_study(
     fit_twfe_saturated.iplot_aggregate()
     ```
     """
-    assert isinstance(data, pd.DataFrame), "data must be a pandas DataFrame"
-    assert isinstance(yname, str), "yname must be a string"
-    assert isinstance(idname, str), "idname must be a string"
-    assert isinstance(tname, str), "tname must be a string"
-    assert isinstance(gname, str), "gname must be a string"
-    assert isinstance(xfml, str) or xfml is None, "xfml must be a string or None"
-    assert isinstance(estimator, str), "estimator must be a string"
-    assert isinstance(att, bool), "att must be a boolean"
-    assert isinstance(cluster, str) or cluster is None, "cluster must be a string"
+    if not isinstance(data, pd.DataFrame):
+        raise TypeError(
+            f"`data` must be a pandas DataFrame; received {type(data).__name__}."
+        )
+    column_args = {
+        "yname": yname,
+        "idname": idname,
+        "tname": tname,
+        "gname": gname,
+    }
+    for name, value in column_args.items():
+        if not isinstance(value, str):
+            raise TypeError(
+                f"`{name}` must be a column name; received "
+                f"{type(value).__name__}: {value!r}."
+            )
+        if value not in data.columns:
+            raise ValueError(f"The `{name}` column {value!r} was not found in `data`.")
+    if not isinstance(xfml, (str, type(None))):
+        raise TypeError(
+            f"`xfml` must be a formula string or None; received "
+            f"{type(xfml).__name__}: {xfml!r}."
+        )
+    if not isinstance(estimator, str):
+        raise TypeError(
+            f"`estimator` must be a string; received {type(estimator).__name__}: "
+            f"{estimator!r}."
+        )
+    if not isinstance(att, bool):
+        raise TypeError(
+            f"`att` must be a bool; received {type(att).__name__}: {att!r}."
+        )
+    if not isinstance(cluster, (str, type(None))):
+        raise TypeError(
+            f"`cluster` must be a column name or None; received "
+            f"{type(cluster).__name__}: {cluster!r}."
+        )
 
     cluster = idname if cluster is None else cluster
+    if cluster not in data.columns:
+        raise ValueError(f"The `cluster` column {cluster!r} was not found in `data`.")
 
     if estimator == "did2s":
         did2s = DID2S(
@@ -178,7 +208,12 @@ def event_study(
         fit.iplot_aggregate = saturated.iplot_aggregate.__get__(fit, type(fit))
 
     else:
-        raise NotImplementedError("Estimator not supported")
+        raise ValueError(
+            f"Invalid `estimator` value {estimator!r}; expected 'twfe', 'did2s', "
+            "or 'saturated'. See "
+            "`pyfixest/docs/pages/tutorials/difference-in-differences.md` or "
+            "https://pyfixest.org/difference-in-differences.html."
+        )
 
     # update inference with vcov matrix
     fit.get_inference()
@@ -267,10 +302,30 @@ def did2s(
     fit.tidy().head()
     ```
     """
+    if not isinstance(first_stage, str):
+        raise TypeError(
+            f"`first_stage` must be a formula string; received "
+            f"{type(first_stage).__name__}: {first_stage!r}."
+        )
+    if not isinstance(second_stage, str):
+        raise TypeError(
+            f"`second_stage` must be a formula string; received "
+            f"{type(second_stage).__name__}: {second_stage!r}."
+        )
     first_stage = first_stage.replace(" ", "")
     second_stage = second_stage.replace(" ", "")
-    assert first_stage[0] == "~", "First stage must start with ~"
-    assert second_stage[0] == "~", "Second stage must start with ~"
+    if not first_stage.startswith("~"):
+        raise ValueError(
+            f"`first_stage` must start with '~'; received {first_stage!r}. See "
+            "`pyfixest/docs/pages/tutorials/difference-in-differences.md` or "
+            "https://pyfixest.org/difference-in-differences.html."
+        )
+    if not second_stage.startswith("~"):
+        raise ValueError(
+            f"`second_stage` must start with '~'; received {second_stage!r}. See "
+            "`pyfixest/docs/pages/tutorials/difference-in-differences.md` or "
+            "https://pyfixest.org/difference-in-differences.html."
+        )
 
     # assert that there is no 0, -1 or - 1 in the second stage formula
     if "0" in second_stage.split("+") or "-1" in second_stage.split("+"):

@@ -20,7 +20,12 @@ QuantregMethodOptions = Literal["fn", "pfn"]
 QuantregMultiOptions = Literal["cfm1", "cfm2"]
 
 
-def _validate_literal_argument(arg: Any, literal: Any) -> None:
+def _validate_literal_argument(
+    arg: Any,
+    literal: Any,
+    *,
+    argument_name: str,
+) -> None:
     """
     Validate if the given argument matches one of the allowed literal types.
 
@@ -34,6 +39,8 @@ def _validate_literal_argument(arg: Any, literal: Any) -> None:
         The argument to validate.
     literal : Any
         A Literal type that defines the allowed values for `arg`.
+    argument_name : str
+        Public argument name used in the error message.
 
     Raises
     ------
@@ -50,4 +57,7 @@ def _validate_literal_argument(arg: Any, literal: Any) -> None:
         )
 
     if arg not in valid_types:
-        raise ValueError(f"Invalid argument. Expecting one of {valid_types}. Got {arg}")
+        raise ValueError(
+            f"Invalid `{argument_name}` value {arg!r} "
+            f"({type(arg).__name__}); expected one of {valid_types!r}."
+        )

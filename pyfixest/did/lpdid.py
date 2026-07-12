@@ -72,7 +72,11 @@ class LPDID(DID):
             att=att,
             cluster=cluster,
         )
-        assert isinstance(xfml, str) or xfml is None, "xfml must be a string or None"
+        if not isinstance(xfml, (str, type(None))):
+            raise TypeError(
+                f"`xfml` must be a formula string or None; received "
+                f"{type(xfml).__name__}: {xfml!r}."
+            )
 
         data = data.copy()
         data.sort_values([idname, tname], inplace=True)

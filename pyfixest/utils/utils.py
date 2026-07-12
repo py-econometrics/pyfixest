@@ -117,15 +117,34 @@ def ssc(
                 G_adj = kwargs[old_name]
 
     if not isinstance(k_adj, bool):
-        raise TypeError("k_adj must be True or False.")
-    if k_fixef not in ["none", "full", "nonnested"]:
         raise TypeError(
-            f"k_fixef must be 'none', 'full', or 'nonnested' but it is {k_fixef}."
+            f"`k_adj` must be a bool; received {type(k_adj).__name__}: {k_adj!r}."
+        )
+    if not isinstance(k_fixef, str):
+        raise TypeError(
+            f"`k_fixef` must be a string; received {type(k_fixef).__name__}: "
+            f"{k_fixef!r}."
+        )
+    if k_fixef not in ["none", "full", "nonnested"]:
+        raise ValueError(
+            f"Invalid `k_fixef` value {k_fixef!r}; expected 'none', 'full', or "
+            "'nonnested'. See `pyfixest/docs/pages/explanation/ssc.md` or "
+            "https://pyfixest.org/ssc.html."
         )
     if not isinstance(G_adj, bool):
-        raise TypeError("G_adj must be True or False.")
+        raise TypeError(
+            f"`G_adj` must be a bool; received {type(G_adj).__name__}: {G_adj!r}."
+        )
+    if not isinstance(G_df, str):
+        raise TypeError(
+            f"`G_df` must be a string; received {type(G_df).__name__}: {G_df!r}."
+        )
     if G_df not in ["conventional", "min"]:
-        raise TypeError("G_df must be 'conventional' or 'min'.")
+        raise ValueError(
+            f"Invalid `G_df` value {G_df!r}; expected 'conventional' or 'min'. "
+            "See `pyfixest/docs/pages/explanation/ssc.md` or "
+            "https://pyfixest.org/ssc.html."
+        )
 
     return {
         "k_adj": k_adj,

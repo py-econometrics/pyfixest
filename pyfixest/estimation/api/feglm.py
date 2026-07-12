@@ -272,7 +272,7 @@ def feglm(
     for a compact post-estimation workflow.
 
     """
-    _validate_literal_argument(family, GlmFamily)
+    _validate_literal_argument(family, GlmFamily, argument_name="family")
     if offset is not None and family != "poisson":
         raise ValueError(
             "The `offset` argument is only supported with `family='poisson'`."

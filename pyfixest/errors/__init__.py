@@ -65,6 +65,10 @@ class FormulaSyntaxError(Exception):  # noqa: D101
     pass
 
 
+class MissingStoredDataError(AttributeError):
+    """Raised when post-estimation needs data omitted from a fitted model."""
+
+
 __all__ = [
     "CovariateInteractionError",
     "DepvarIsNotNumericError",
@@ -77,6 +81,7 @@ __all__ = [
     "FormulaSyntaxError",
     "InstrumentsAsCovarsError",
     "MatrixNotFullRankError",
+    "MissingStoredDataError",
     "NanInClusterVarError",
     "NonConvergenceError",
     "UnderDeterminedIVError",
