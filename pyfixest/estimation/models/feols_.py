@@ -9,7 +9,6 @@ from typing import Any, Literal, cast
 import formulaic
 import numpy as np
 import pandas as pd
-from formulaic.parser import DefaultFormulaParser
 from scipy.sparse import csc_matrix, diags, spmatrix
 from scipy.sparse.linalg import lsqr
 from scipy.stats import chi2, f, t
@@ -51,11 +50,12 @@ from pyfixest.estimation.post_estimation.decomposition import (
 )
 from pyfixest.estimation.post_estimation.fixed_effects import (
     FixedEffect,
-    build_fixed_effect_coefficients,
+    build_fixed_effects,
     check_fe_dtype_compatibility,
+    contrast_code_fixed_effects,
     fixed_effects_to_frame,
     predict_fixed_effects,
-    warn_on_unseen_fixed_effects,
+    warn_on_unseen_fixed_effect_levels,
 )
 from pyfixest.estimation.post_estimation.prediction import (
     _compute_prediction_error,
@@ -211,7 +211,7 @@ class Feols(ResultAccessorMixin):
         Confidence intervals for the estimated coefficients.
     _F_stat : Any
         F-statistic for the model, set in get_Ftest().
-    _fixef_coefficients : dict[str, FixedEffect]
+    _fixef_coefficients : dict[str, pyfixest.estimation.post_estimation.fixed_effects.FixedEffect]
         Fixed effect estimates grouped by fixed effect.
     _alpha : pd.DataFrame
         A DataFrame with the estimated fixed effects.
@@ -1801,18 +1801,18 @@ class Feols(ResultAccessorMixin):
             uhat = (Y - X @ self._beta_hat).flatten()
         # one-hot encoding of fixed effects (treatment coding: reference level
         # dropped for the second and subsequent FEs via ensure_full_rank=True).
-        fe_spec = self._model_spec[_ModelMatrixKey.fixed_effects]
-        D2 = formulaic.Formula(
-            [f"C({fe})" for fe in self.FixestFormula.fixed_effects_wrapped],
-            _parser=DefaultFormulaParser(include_intercept=False),
-        ).get_model_matrix(
-            self._data,
-            output="sparse",
-            ensure_full_rank=True,
+        contrast_coding = contrast_code_fixed_effects(
+            fixed_effects=self.FixestFormula.fixed_effects_wrapped,
+            fixed_effect_names=self._model_spec[
+                _ModelMatrixKey.fixed_effects
+            ].column_names,
+            data=self._data,
             context=FORMULAIC_TRANSFORMS | {**self._context},
-            transform_state=fe_spec.transform_state,
+            transform_state=self._model_spec[
+                _ModelMatrixKey.fixed_effects
+            ].transform_state,
         )
-        fe_model_spec = D2.model_spec
+        D2 = contrast_coding.matrix
         if self._has_weights:
             uhat *= weights_sqrt
             weights_diag = diags(weights_sqrt, 0)
@@ -1820,11 +1820,12 @@ class Feols(ResultAccessorMixin):
 
         alpha = lsqr(D2, uhat, atol=atol, btol=btol)[0]
 
-        self._fixef_coefficients = build_fixed_effect_coefficients(
-            fixed_effect_names=fe_spec.column_names,
+        self._fixef_coefficients = build_fixed_effects(
             fixed_effect_coefficients=alpha,
-            model_spec=fe_model_spec,
-            transform_state=fe_spec.transform_state,
+            contrast_coding=contrast_coding,
+            transform_state=self._model_spec[
+                _ModelMatrixKey.fixed_effects
+            ].transform_state,
         )
         self._alpha = alpha
         self._sumFE = D2.dot(alpha)
@@ -1960,17 +1961,15 @@ class Feols(ResultAccessorMixin):
                 fe_mm = fe_spec.get_model_matrix(
                     newdata, context=context, na_action="ignore"
                 )
-                warn_on_unseen_fixed_effects(fe_mm, fe_spec, newdata)
+                warn_on_unseen_fixed_effect_levels(fe_mm, fe_spec, newdata)
+                valid_fixed_effects = fe_mm.notna().all(axis="columns").to_numpy()
+                valid_idx = valid_idx[valid_fixed_effects[valid_idx]]
                 if self._sumFE is None:
                     self.fixef(atol, btol)
                 fe_hat = predict_fixed_effects(
-                    model_matrix=fe_mm,
+                    model_matrix=fe_mm.loc[valid_idx],
                     coefficients=self._fixef_coefficients,
-                    valid_idx=valid_idx,
                 )
-                # fixed effects estimates are nan if singletons or unseen levels
-                valid_idx = valid_idx[~np.isnan(fe_hat)]
-                fe_hat = fe_hat[~np.isnan(fe_hat)]
 
             X_coef = X_mm.loc[valid_idx, self._coefnames].to_numpy()
             y_hat = np.full(n_observations, np.nan)

@@ -2,22 +2,17 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Iterator, Mapping
+from collections.abc import Iterable, Iterator
 from typing import TYPE_CHECKING, Any
 
 import formulaic
 import formulaic.formula
-import numpy as np
 import pandas as pd
-from formulaic.parser.types import Factor, Term
-from numpy.typing import NDArray
+from formulaic.parser.types import Factor
 
 from pyfixest.estimation.formula.transforms.factor_interaction import (
     is_contrast_state_key,
     variable_from_contrast_state_key,
-)
-from pyfixest.estimation.formula.transforms.fixed_effects_encoding import (
-    FIXED_EFFECT_ENCODING,
 )
 
 if TYPE_CHECKING:
@@ -116,73 +111,6 @@ def _iter_documented_categorical_levels(
             variable_name = str(variable)
             if variable_name in newdata.columns:
                 yield variable_name, set(levels), {}
-
-
-def get_fixed_effect_encoding(
-    transform_state: Mapping[str, Any], column: str
-) -> pd.DataFrame:
-    """Return pyfixest's stored fixed-effect encoding DataFrame."""
-    try:
-        return transform_state[column][FIXED_EFFECT_ENCODING]
-    except KeyError as exc:
-        raise FormulaicCompatibilityError(
-            f"Fixed-effect encoding for `{column}` is missing from the "
-            "formulaic transform state."
-        ) from exc
-
-
-def get_fixed_effect_encoding_data(
-    fixed_effect_name: str,
-    transform_state: Mapping[str, Any],
-) -> tuple[str, NDArray[np.int64], tuple[NDArray[Any], ...]]:
-    """Return normalized encoding data for one fixed effect."""
-    encoding = get_fixed_effect_encoding(transform_state, fixed_effect_name)
-    value_columns = [
-        column for column in encoding.columns if column != FIXED_EFFECT_ENCODING
-    ]
-    return (
-        "^".join(value_columns),
-        encoding[FIXED_EFFECT_ENCODING].to_numpy(dtype=np.int64),
-        tuple(encoding[column].to_numpy(copy=True) for column in value_columns),
-    )
-
-
-def get_fixed_effect_coefficient_positions(
-    term: Term,
-    model_spec: ModelSpec,
-) -> tuple[NDArray[np.int64], NDArray[np.int64]]:
-    """
-    Align one fixed-effect term's codes with positions in the coefficient vector.
-
-    Formulaic stores the coefficients for all fixed-effect terms in one model
-    matrix. The returned coefficient positions select the entries belonging to
-    `term`. The returned codes identify which encoded fixed-effect levels those
-    entries represent.
-
-    For a full-rank term, every encoded level has a coefficient. For a
-    reduced-rank term, formulaic omits the reference level, so its code is absent
-    from the returned codes. The caller can therefore initialize coefficients for
-    all codes to zero and fill only the returned code-position pairs.
-
-    Returns
-    -------
-    coefficient_codes : NDArray[np.int64]
-        Encoded fixed-effect levels represented in the coefficient vector.
-    coefficient_indices : NDArray[np.int64]
-        Positions of this term's coefficients in the complete fixed-effect
-        coefficient vector.
-    """
-    (factor,) = term.factors
-    contrasts_state = model_spec.factor_contrasts[factor]
-    coefficient_indices = model_spec.term_indices[term]
-    coefficient_codes = contrasts_state.contrasts.get_coding_column_names(
-        contrasts_state.levels,
-        reduced_rank=len(coefficient_indices) < len(contrasts_state.levels),
-    )
-    return (
-        np.asarray(coefficient_codes, dtype=np.int64),
-        np.asarray(coefficient_indices, dtype=np.int64),
-    )
 
 
 def _iter_i_categorical_levels(
