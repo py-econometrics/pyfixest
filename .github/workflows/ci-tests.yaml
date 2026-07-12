@@ -112,6 +112,26 @@ jobs:
           name: docs-html
           path: docs/_site
 
+  agent-docs-contracts:
+    name: "Agent documentation contracts"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: prefix-dev/setup-pixi@v0.10.0
+        with:
+          pixi-version: v0.62.2
+          cache: true
+          cache-write: ${{ github.event_name == 'push' && github.ref_name == 'master' }}
+          frozen: true
+          environments: py312-r
+
+      - name: Check generated agent docs, skill, and public contracts
+        run: |
+          pixi run -e py312-r python docs/_scripts/generate_llms_md.py --check --no-site
+          pixi run -e py312-r python scripts/check_skill.py skills/pyfixest
+          pixi run -e py312-r pytest tests/test_public_api_contract.py tests/test_public_typing.py tests/test_agent_docs.py tests/test_wheel_contents.py -q --no-cov
+
   publish-docs:
     name: "Publish Docs"
     runs-on: ubuntu-latest

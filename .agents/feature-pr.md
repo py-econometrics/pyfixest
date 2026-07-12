@@ -160,6 +160,13 @@ for those. Review the full change against AGENTS.md:
    an option (they do not share docstrings); quartodoc `contents` in
    `docs/_quarto.yml` for a new class or function; and a `docs/how-to/*.qmd`
    vignette (navbar entry in `_quarto.yml`) when the feature warrants a guide.
+   For every public change, update canonical docstrings/authored docs first and
+   then regenerate `pyfixest/docs/` with
+   `pixi run -e py312-r python docs/_scripts/generate_llms_md.py --no-site`.
+   Never hand-edit generated package corpus files, `docs/skills.md`, or
+   `docs/llms.txt`. Update the canonical `skills/pyfixest/` skill whenever it
+   changes agent routing or a documented workflow, and validate it with
+   `scripts/check_skill.py`.
 5. Run in order: targeted tests → the three lint hooks on changed files, one at
    a time — `pixi run -e lint prek run ruff-format --files <changed>`, then the
    same command with `ruff-check`, then with `mypy` → `pixi run test-py` if
