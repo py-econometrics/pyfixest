@@ -77,13 +77,13 @@ prediction_type = Literal["response", "link"]
 
 class Feols(ResultAccessorMixin):
     """
-    Non user-facing class to estimate a linear regression via OLS.
+    Fitted OLS or weighted least-squares model.
 
-    Users should not directly instantiate this class,
-    but rather use the [feols()](/reference/estimation.api.feols.feols.qmd) function. Note that
-    no demeaning is performed in this class: demeaning is performed in the
-    FixestMulti class (to allow for caching of demeaned variables for multiple
-    estimation).
+    Construct models with [feols()](/reference/estimation.api.feols.feols.qmd),
+    not by instantiating this implementation class. The public call builds an
+    `EstimationConfig`, the planner expands its formula, and the runner invokes
+    this class's `prepare_model_matrix()`, `demean()`, and `get_fit()` steps. The
+    runner shares a `DemeanCache` across compatible specifications.
 
     Parameters
     ----------
@@ -94,7 +94,7 @@ class Feols(ResultAccessorMixin):
     weights : np.ndarray
         Weights, a one-dimensional numpy array.
     collin_tol : float
-        Tolerance level for collinearity checks.
+        Tolerance for collinearity checks. Public estimators default to `1e-9`.
     coefnames : list[str]
         Names of the coefficients (of the design matrix X).
     weights_name : Optional[str]
@@ -595,19 +595,17 @@ class Feols(ResultAccessorMixin):
 
         Parameters
         ----------
-        vcov : Union[str, dict[str, str]]
-            A string or dictionary specifying the type of variance-covariance matrix
-            to use for inference.
-            If a string, it can be one of "iid", "hetero", "HC1", "HC2", "HC3", "NW", "DK".
-            If a dictionary, it should have the format {"CRV1": "clustervar"} for
-            CRV1 inference or {"CRV3": "clustervar"}
-            for CRV3 inference. Note that CRV3 inference is currently not supported
-            for IV estimation.
-        vcov_kwargs : Optional[dict[str, any]]
-             Additional keyword arguments for the variance-covariance matrix.
-        data: Optional[DataFrameType], optional
-            The data used for estimation. If None, tries to fetch the data from the
-            model object. Defaults to None.
+        vcov : RegressionVcovType or dict[str, str]
+            Covariance estimator. Use iid, hetero, HC1, HC2, HC3, NW, DK, or a
+            CRV1/CRV3 clustering dictionary. CRV3 is not supported for IV models.
+        vcov_kwargs : VcovKwargs, optional
+            HAC configuration. NW and DK require lag and time_id; DK also
+            requires panel_id.
+        data : DataFrameType, optional
+            Original input data or the estimation sample. Pass it when the model
+            was fitted with store_data=False and inference needs columns for new
+            clustering or HAC. Score-based iid and heteroskedastic inference do
+            not require retained data.
 
 
         Returns

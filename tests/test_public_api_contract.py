@@ -10,18 +10,7 @@ import pyfixest as pf
 # These exports are intentionally public but do not yet have standalone reference
 # pages. Keeping the list explicit prevents accidental API growth; an export must be
 # registered in quartodoc or added here with a conscious review decision.
-_REFERENCE_ALLOWLIST = {
-    "Preconditioner",
-    "SaturatedEventStudy",
-    "get_bartik_data",
-    "get_data",
-    "get_encouragement_data",
-    "get_ivf_data",
-    "get_motherhood_event_study_data",
-    "get_twin_data",
-    "get_worker_panel",
-    "qplot",
-}
+_REFERENCE_ALLOWLIST: set[str] = set()
 
 
 def _quartodoc_leaf_names() -> set[str]:

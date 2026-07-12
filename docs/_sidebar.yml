@@ -18,6 +18,8 @@ website:
       - reference/demeaners.BaseDemeaner.qmd
       - reference/demeaners.MapDemeaner.qmd
       - reference/demeaners.LsmrDemeaner.qmd
+      - reference/core.demean.Preconditioner.qmd
+      - reference/did.saturated_twfe.SaturatedEventStudy.qmd
       - reference/estimation.models.feols_.Feols.qmd
       - reference/estimation.models.fepois_.Fepois.qmd
       - reference/estimation.models.feiv_.Feiv.qmd
@@ -35,6 +37,7 @@ website:
       - reference/report.dtable.qmd
       - reference/report.coefplot.qmd
       - reference/report.iplot.qmd
+      - reference/report.qplot.qmd
       section: Summarize and Visualize
     - contents:
       - reference/estimation.formula.parse.Formula.qmd
@@ -46,6 +49,13 @@ website:
       - reference/core.detect_singletons.detect_singletons.qmd
       - reference/utils.utils.ssc.qmd
       - reference/utils.utils.get_ssc.qmd
+      - reference/utils.utils.get_data.qmd
+      - reference/utils.dgps.get_bartik_data.qmd
+      - reference/utils.dgps.get_encouragement_data.qmd
+      - reference/utils.dgps.get_ivf_data.qmd
+      - reference/utils.dgps.get_motherhood_event_study_data.qmd
+      - reference/utils.dgps.get_twin_data.qmd
+      - reference/utils.dgps.get_worker_panel.qmd
       - reference/estimation.deprecated.model_matrix_fixest_.model_matrix_fixest.qmd
       section: Misc / Utilities
     id: reference

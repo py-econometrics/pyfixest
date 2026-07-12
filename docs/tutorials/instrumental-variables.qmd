@@ -182,19 +182,19 @@ The IV estimate is closer to the true effect of -0.15. The "naive" OLS estimate 
 
 In the section above, we have argued the IVF success is a credible instrument for fertility - the unconfoundedness assumption is plausible given the quasi-random nature of IVF success. But how do we know if the instrument is strong enough to yield reliable estimates? For this reason, applied econometricians routinely run diagnostic checks for "weak instruments", which aim to validate the "relevance" assumption.
 
-`PyFixest` provides two diagnostics for instrument strength: a standard first-stage F-statistic, and the more robust effective F-statistic from @oleapflueger2013 that remains valid under heteroskedasticity. Both can be accessed via the `._model_1st_stage` attribute.
+`PyFixest` provides two diagnostics for instrument strength: a standard first-stage F-statistic, and the more robust effective F-statistic from @oleapflueger2013 that remains valid under heteroskedasticity. Access them through the public `first_stage_model`, `first_stage_f_statistic`, and `effective_f_statistic` properties.
 
 ```{python}
 # first_stage() must be called before IV_Diag() — it fits the first-stage OLS
-# regression and stores the model in fit_iv._model_1st_stage, which IV_Diag() requires.
+# regression exposed as `first_stage_model`, which IV_Diag() requires.
 fit_iv.first_stage()
-fit_iv._model_1st_stage.summary()
+fit_iv.first_stage_model.summary()
 ```
 
 ```{python}
 fit_iv.IV_Diag()
-print(f"First-stage F-statistic : {fit_iv._f_stat_1st_stage:.2f}")
-print(f"Effective F-statistic   : {fit_iv._eff_F:.2f}")
+print(f"First-stage F-statistic : {fit_iv.first_stage_f_statistic:.2f}")
+print(f"Effective F-statistic   : {fit_iv.effective_f_statistic:.2f}")
 ```
 
 Both F-statistics are well above 10, which is the canonical threshold for a strong instrument. More recent work instead suggests that for reliable inference, the effective F-statistic should be significantly higher.
@@ -276,8 +276,8 @@ Since the instrument (`assigned_treatment`) is fully randomized, the first stage
 # first_stage() must be called before IV_Diag()
 fit_late.first_stage()
 fit_late.IV_Diag()
-print(f"First-stage F-statistic : {fit_late._f_stat_1st_stage:.2f}")
-print(f"Effective F-statistic   : {fit_late._eff_F:.2f}")
+print(f"First-stage F-statistic : {fit_late.first_stage_f_statistic:.2f}")
+print(f"Effective F-statistic   : {fit_late.effective_f_statistic:.2f}")
 ```
 
 
@@ -350,8 +350,8 @@ The `.first_stage()` method re-estimates the first-stage regression and computes
 fit_iv.vcov("iid")
 fit_iv.first_stage()
 
-# The F-stat is stored as an attribute after calling first_stage()
-print(f"First-stage F-statistic: {fit_iv._f_stat_1st_stage:.1f}")
+# The public property is available after calling first_stage().
+print(f"First-stage F-statistic: {fit_iv.first_stage_f_statistic:.1f}")
 print(f"First-stage p-value:     {fit_iv._p_value_1st_stage:.4f}")
 ```
 
@@ -372,8 +372,8 @@ The `.IV_Diag()` method computes both the standard F-statistic and the effective
 ```{python}
 fit_iv.IV_Diag()
 
-print(f"Standard F-statistic:  {fit_iv._f_stat_1st_stage:.1f}")
-print(f"Effective F-statistic: {fit_iv._eff_F:.1f}")
+print(f"Standard F-statistic:  {fit_iv.first_stage_f_statistic:.1f}")
+print(f"Effective F-statistic: {fit_iv.effective_f_statistic:.1f}")
 ```
 
 ::: {.callout-tip}

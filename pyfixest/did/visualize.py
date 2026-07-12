@@ -75,12 +75,13 @@ def panelview(
     Examples
     --------
     ```{python}
+    from importlib.resources import files
+
     import pandas as pd
     import numpy as np
     import pyfixest as pf
 
-    url = "https://raw.githubusercontent.com/py-econometrics/pyfixest/master/pyfixest/did/data/df_het.csv"
-    df_het = pd.read_csv(url)
+    df_het = pd.read_csv(files("pyfixest.did").joinpath("data/df_het.csv"))
 
     # Inspect treatment assignment
     pf.panelview(

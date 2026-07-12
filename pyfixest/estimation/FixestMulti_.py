@@ -22,7 +22,19 @@ from pyfixest.typing import (
 
 
 class FixestMulti(ReportAccessorMixin, TidyColumnAccessors):
-    """Results container holding every model fitted by one public-API call."""
+    """Container for models produced by one multiple-estimation call.
+
+    `feols()`, `fepois()`, `feglm()`, and `quantreg()` return this class when a
+    formula, quantile list, `split`, or `fsplit` expands into multiple models.
+    Public APIs first create an `EstimationConfig`; `parse_formula()` expands the
+    call, and `runner.run_estimation()` fits each planned model while sharing
+    compatible demeaning caches. `FixestMulti` is only the result container: it
+    does not parse formulas, demean data, or fit models itself.
+
+    Use `to_list()` to obtain every model or `fetch_model()` to select one. The
+    reporting methods `summary()`, `etable()`, `coefplot()`, and `iplot()` apply
+    to the complete collection.
+    """
 
     def __init__(
         self,
@@ -32,7 +44,7 @@ class FixestMulti(ReportAccessorMixin, TidyColumnAccessors):
         data: pd.DataFrame,
         context: Mapping[str, Any],
     ) -> None:
-        """.
+        """Initialize the result container used by the estimation runner.
 
         Parameters
         ----------
@@ -73,16 +85,12 @@ class FixestMulti(ReportAccessorMixin, TidyColumnAccessors):
         return self._parsed.formula_dict
 
     def to_list(self) -> list[ModelResult]:
-        """
-        Return a list of all fitted models.
-
-        Parameters
-        ----------
-            None
+        """Return all fitted models in estimation order.
 
         Returns
         -------
-            A list of all fitted models of types Feols or Fepois.
+        list[ModelResult]
+            Fitted OLS, IV, GLM, Poisson, or quantile-regression models.
         """
         return list(self.all_fitted_models.values())
 
@@ -92,26 +100,21 @@ class FixestMulti(ReportAccessorMixin, TidyColumnAccessors):
         vcov_kwargs: VcovKwargs | None = None,
     ) -> FixestMulti:
         """
-        Update regression inference "on the fly".
-
-        By calling vcov() on a "Fixest" object, all inference procedures applied
-        to the "Fixest" object are replaced with the variance-covariance matrix
-        specified via the method.
+        Update inference for every fitted model in place.
 
         Parameters
         ----------
-        vcov : Union[str, dict[str, str]])
-            A string or dictionary specifying the type of variance-covariance
-            matrix to use for inference.
-            - If a string, can be one of "iid", "hetero", "HC1", "HC2", "HC3".
-            - If a dictionary, it should have the format {"CRV1": "clustervar"}
-            for CRV1 inference or {"CRV3": "clustervar"} for CRV3 inference.
-        vcov_kwargs : Optional[dict[str, any]]
-             Additional keyword arguments for the variance-covariance matrix.
+        vcov : RegressionVcovType, QuantregVcovType, or dict[str, str]
+            Covariance estimator accepted by every contained model. Regression
+            models support iid, heteroskedastic, clustered, NW, and DK inference;
+            quantile models support iid, nid, heteroskedastic, or one-way CRV1.
+        vcov_kwargs : VcovKwargs, optional
+            HAC arguments such as `lag`, `time_id`, and `panel_id`.
 
         Returns
         -------
-            An instance of the "Fixest" class with updated inference.
+        FixestMulti
+            This container with updated inference.
         """
         for fxst in self.all_fitted_models.values():
             cast(Any, fxst).vcov(vcov=vcov, vcov_kwargs=vcov_kwargs)
@@ -119,22 +122,12 @@ class FixestMulti(ReportAccessorMixin, TidyColumnAccessors):
 
     def tidy(self) -> pd.DataFrame:
         """
-        Return the results of an estimation using `feols()` as a tidy Pandas DataFrame.
+        Combine every model's coefficient table into one tidy DataFrame.
 
         Returns
         -------
-        pandas.DataFrame or str
-                A tidy DataFrame with the following columns:
-                - fml: the formula used to generate the results
-                - Coefficient: the names of the coefficients
-                - Estimate: the estimated coefficients
-                - Std. Error: the standard errors of the estimated coefficients
-                - t value: the t-values of the estimated coefficients
-                - Pr(>|t|): the p-values of the estimated coefficients
-                - 2.5%: the lower bound of the 95% confidence interval
-                - 97.5%: the upper bound of the 95% confidence interval
-                If `type` is set to "markdown", the resulting DataFrame will be
-                returned as a markdown-formatted string with three decimal places.
+        pandas.DataFrame
+            Coefficient statistics indexed by formula and coefficient name.
         """
         res = []
         for x in list(self.all_fitted_models.keys()):
@@ -154,9 +147,8 @@ class FixestMulti(ReportAccessorMixin, TidyColumnAccessors):
 
         Returns
         -------
-        pandas.Series
-            A pd.Series with coefficient names and confidence intervals.
-            The key indicates which models the estimated statistic derives from.
+        pandas.DataFrame
+            Lower and upper confidence bounds indexed by formula and coefficient.
         """
         return self.tidy()[["2.5%", "97.5%"]]
 
@@ -177,7 +169,7 @@ class FixestMulti(ReportAccessorMixin, TidyColumnAccessors):
 
         Parameters
         ----------
-        B : int
+        reps : int
             The number of bootstrap iterations to run.
         param : Union[str, None], optional
             A string of length one, containing the test parameter of interest.
@@ -245,7 +237,7 @@ class FixestMulti(ReportAccessorMixin, TidyColumnAccessors):
 
     def fetch_model(self, i: int | str, print_fml: bool | None = True) -> ModelResult:
         """
-        Fetch a model of class Feols from the Fixest class.
+        Fetch one fitted model by its zero-based position.
 
         Parameters
         ----------
@@ -256,7 +248,8 @@ class FixestMulti(ReportAccessorMixin, TidyColumnAccessors):
 
         Returns
         -------
-            A Feols object.
+        ModelResult
+            The selected OLS, IV, GLM, Poisson, or quantile result.
         """
         if isinstance(i, str):
             i = int(i)

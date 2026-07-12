@@ -73,38 +73,35 @@ def feols(
     data : DataFrameType
         A pandas or polars dataframe containing the variables in the formula.
 
-    vcov : Union[VcovTypeOptions, dict[str, str]]
-        Type of variance-covariance matrix for inference. Options include "iid",
-          "hetero", "HC1", "HC2", "HC3", "NW" for Newey-West HAC standard errors,
-        "DK" for Driscoll-Kraay HAC standard errors, or a dictionary for CRV1/CRV3 inference.
-        Note that NW and DK require to pass additional keyword arguments via the `vcov_kwargs` argument.
-        For time-series HAC, you need to pass the 'time_id' column. For panel-HAC, you need to add
-        pass both 'time_id' and 'panel_id'. See `vcov_kwargs` for details.
+    vcov : RegressionVcovType or dict[str, str], optional
+        Variance-covariance estimator. `None` defaults to `"iid"`. String options
+        are `"iid"`, `"hetero"`, `"HC1"`, `"HC2"`, `"HC3"`, `"NW"`, and
+        `"DK"`. Clustered inference uses `{"CRV1": "cluster"}` or
+        `{"CRV3": "cluster"}`; join column names with `+` for multiway CRV1.
+        CRV3 is not supported for IV models. NW and DK require `vcov_kwargs`.
 
-    vcov_kwargs : Optional[dict[str, any]]
-         Additional keyword arguments to pass to the vcov function. These keywoards include
-        "lag" for the number of lag to use in the Newey-West (NW) and Driscoll-Kraay (DK) HAC standard errors.
-        "time_id" for the time ID used for NW and DK standard errors, and "panel_id" for the panel
-         identifier used for NW and DK standard errors. Currently, the the time difference between consecutive time
-         periods is always treated as 1. More flexible time-step selection is work in progress.
+    vcov_kwargs : VcovKwargs, optional
+        HAC configuration. Pass `lag` and `time_id` for time-series NW; add
+        `panel_id` for panel NW or DK. Consecutive time values are currently
+        treated as one period apart.
 
     weights : Union[None, str], optional.
         Default is None. Weights for WLS estimation. If None, all observations
         are weighted equally. If a string, the name of the column in `data` that
         contains the weights.
 
-    ssc : str
-        A ssc object specifying the small sample correction for inference.
+    ssc : SscConfig, optional
+        Small-sample correction created by `ssc()`. `None` uses
+        `ssc(k_adj=True, k_fixef="nonnested", G_adj=True, G_df="min")`.
 
     fixef_rm : FixedRmOptions
         Specifies whether to drop singleton fixed effects.
-        Can be equal to "singleton" (default),
-        or "none".
-        "singletons" will drop singleton fixed effects. This will not impact point
+        Can be equal to `"singleton"` (default) or `"none"`.
+        `"singleton"` drops singleton fixed effects. This does not affect point
         estimates but it will impact standard errors.
 
     collin_tol : float, optional
-        Tolerance for collinearity check, by default 1e-10.
+        Tolerance for the collinearity check. Defaults to `1e-9`.
 
     drop_intercept : bool, optional
         Whether to drop the intercept from the model, by default False.
@@ -112,7 +109,7 @@ def feols(
     copy_data : bool, optional
         Whether to copy the data before estimation, by default True.
         If set to False, the data is not copied, which can save memory but
-        may lead to unintended changes in the input data outside of `fepois`.
+        may lead to unintended changes in the input data outside of `feols`.
         For example, the input data set is re-index within the function.
         As far as I know, the only other relevant case is
         when using interacted fixed effects, in which case you'll find
@@ -190,10 +187,11 @@ def feols(
 
     Returns
     -------
-    object
-        An instance of the [Feols](/reference/estimation.models.feols_.Feols.qmd) class,
-        [Feiv](/reference/estimation.models.feiv_.Feiv.qmd) class (when using instrumental variables), or
-        [FixestMulti](/reference/estimation.FixestMulti_.FixestMulti.qmd) class for multiple models specified via `fml`.
+    Feols or FixestMulti
+        A [Feols](/reference/estimation.models.feols_.Feols.qmd), its
+        [Feiv](/reference/estimation.models.feiv_.Feiv.qmd) subclass for IV,
+        or [FixestMulti](/reference/estimation.FixestMulti_.FixestMulti.qmd)
+        when the formula or split options expand to multiple models.
 
     Examples
     --------
@@ -258,10 +256,8 @@ def feols(
     fit.vcov("iid").summary()
     ```
 
-    The `ssc` argument specifies the small sample correction for inference. In
-    general, `feols()` uses all of `fixest::feols()` defaults, but sets the
-    `fixef.K` argument to `"none"` whereas the `fixest::feols()` default is `"nested"`.
-    See here for more details: [link to github](https://github.com/py-econometrics/pyfixest/issues/260).
+    The `ssc` argument controls small-sample corrections. The default is
+    `pf.ssc(k_adj=True, k_fixef="nonnested", G_adj=True, G_df="min")`.
 
     `feols()` supports a range of multiple estimation syntax, i.e. you can estimate
     multiple models in one call. The following example estimates two models, one with
@@ -313,10 +309,10 @@ def feols(
     pf.etable(fit)
     ```
 
-    In general, using muliple estimation syntax can improve the estimation time
-    as covariates that are demeaned in one model and are used in another model do
-    not need to be demeaned again: `feols()` implements a caching mechanism that
-    stores the demeaned covariates.
+    Multiple estimation can reuse demeaning work. `feols()` records the call in an
+    `EstimationConfig`; `parse_formula()` expands it into model specifications, and
+    `runner.run_estimation()` supplies each model with a shared cache for compatible
+    specifications. `FixestMulti` only stores the fitted results.
 
     Additionally, you can fit models on different samples via the split and fsplit
     arguments. The split argument splits the sample according to the variable
@@ -359,15 +355,15 @@ def feols(
 
     ```{python}
     fit_iv.IV_Diag()
-    print("First-stage F-statistic:", round(fit_iv._f_stat_1st_stage, 3))
-    print("Effective F-statistic:", round(fit_iv._eff_F, 3))
+    print("First-stage F-statistic:", round(fit_iv.first_stage_f_statistic, 3))
+    print("Effective F-statistic:", round(fit_iv.effective_f_statistic, 3))
     ```
 
     You can also access the first-stage regression as a `Feols` object via
-    `_model_1st_stage` and display both stages with `etable()`:
+    `first_stage_model` and display both stages with `etable()`:
 
     ```{python}
-    first_stage = fit_iv._model_1st_stage
+    first_stage = fit_iv.first_stage_model
     pf.etable([first_stage, fit_iv])
     ```
 

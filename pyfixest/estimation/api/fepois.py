@@ -67,20 +67,15 @@ def fepois(
     data : DataFrameType
         A pandas or polars dataframe containing the variables in the formula.
 
-    vcov : Union[VcovTypeOptions, dict[str, str]]
-        Type of variance-covariance matrix for inference. Options include "iid",
-          "hetero", "HC1", "HC2", "HC3", "NW" for Newey-West HAC standard errors,
-        "DK" for Driscoll-Kraay HAC standard errors, or a dictionary for CRV1/CRV3 inference.
-        Note that NW and DK require to pass additional keyword arguments via the `vcov_kwargs` argument.
-        For time-series HAC, you need to pass the 'time_id' column. For panel-HAC, you need to add
-        pass both 'time_id' and 'panel_id'. See `vcov_kwargs` for details.
+    vcov : RegressionVcovType or dict[str, str], optional
+        Variance-covariance estimator. `None` defaults to `"iid"`. String options
+        are `"iid"`, `"hetero"`, `"HC1"`, `"HC2"`, `"HC3"`, `"NW"`, and
+        `"DK"`. Clustered inference uses `{"CRV1": "cluster"}` or
+        `{"CRV3": "cluster"}`. NW and DK require `vcov_kwargs`.
 
-    vcov_kwargs : Optional[dict[str, any]]
-         Additional keyword arguments to pass to the vcov function. These keywoards include
-        "lag" for the number of lag to use in the Newey-West (NW) and Driscoll-Kraay (DK) HAC standard errors.
-        "time_id" for the time ID used for NW and DK standard errors, and "panel_id" for the panel
-         identifier used for NW and DK standard errors. Currently, the the time difference between consecutive time
-         periods is always treated as 1. More flexible time-step selection is work in progress.
+    vcov_kwargs : VcovKwargs, optional
+        HAC configuration. Pass `lag` and `time_id` for time-series NW; add
+        `panel_id` for panel NW or DK.
 
     weights : Union[None, str], optional.
         Default is None. Weights for weighted Poisson regression. If None, all observations
@@ -100,13 +95,14 @@ def fepois(
         exposure differs across observations; pass the exposure on the log scale,
         e.g. `offset="log_population"`.
 
-    ssc : str
-        A ssc object specifying the small sample correction for inference.
+    ssc : SscConfig, optional
+        Small-sample correction created by `ssc()`. `None` uses
+        `ssc(k_adj=True, k_fixef="nonnested", G_adj=True, G_df="min")`.
 
     fixef_rm : FixedRmOptions
         Specifies whether to drop singleton fixed effects.
-        Can be equal to "singletons" (default) or "none".
-        "singletons" will drop singleton fixed effects. This will not impact point
+        Can be equal to `"singleton"` (default) or `"none"`.
+        `"singleton"` drops singleton fixed effects. This does not affect point
         estimates but it will impact standard errors.
 
     iwls_tol : Optional[float], optional
@@ -116,7 +112,7 @@ def fepois(
         Maximum number of iterations for IWLS convergence, by default 25.
 
     collin_tol : float, optional
-        Tolerance for collinearity check, by default 1e-10.
+        Tolerance for the collinearity check. Defaults to `1e-9`.
 
     separation_check: list[str], optional
         Methods to identify and drop separated observations.
@@ -188,9 +184,10 @@ def fepois(
 
     Returns
     -------
-    object
-        An instance of the [Fepois](/reference/estimation.models.fepois_.Fepois.qmd) class
-        or an instance of class [FixestMulti](/reference/estimation.FixestMulti_.FixestMulti.qmd) for multiple models specified via `fml`.
+    Fepois or FixestMulti
+        A [Fepois](/reference/estimation.models.fepois_.Fepois.qmd), or
+        [FixestMulti](/reference/estimation.FixestMulti_.FixestMulti.qmd) when
+        the formula or split options expand to multiple models.
 
     Examples
     --------

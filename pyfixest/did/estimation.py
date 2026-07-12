@@ -62,11 +62,12 @@ def event_study(
     Examples
     --------
     ```{python}
+    from importlib.resources import files
+
     import pandas as pd
     import pyfixest as pf
 
-    url = "https://raw.githubusercontent.com/py-econometrics/pyfixest/master/pyfixest/did/data/df_het.csv"
-    df_het = pd.read_csv(url)
+    df_het = pd.read_csv(files("pyfixest.did").joinpath("data/df_het.csv"))
 
     fit_twfe = pf.event_study(
         df_het,
@@ -220,12 +221,13 @@ def did2s(
     Examples
     --------
     ```{python}
+    from importlib.resources import files
+
     import pandas as pd
     import numpy as np
     import pyfixest as pf
 
-    url = "https://raw.githubusercontent.com/py-econometrics/pyfixest/master/pyfixest/did/data/df_het.csv"
-    df_het = pd.read_csv(url)
+    df_het = pd.read_csv(files("pyfixest.did").joinpath("data/df_het.csv"))
     df_het.head()
     ```
 
@@ -346,9 +348,10 @@ def lpdid(
         Variable name for calendar period.
     gname : str
         Unit-specific time of initial treatment.
-    vcov : str, dict, optional
-        The type of inference to employ. Defaults to {"CRV1": idname}.
-        Options include "iid", "hetero", or a dictionary like {"CRV1": idname}.
+    vcov : RegressionVcovType or dict[str, str], optional
+        Variance-covariance estimator. `None` uses CRV1 clustered by `idname`.
+        Options include iid, heteroskedastic, HC1--HC3, NW, DK, and a CRV1 or
+        CRV3 clustering dictionary.
     pre_window : int, optional
         The number of periods before the treatment to include in the estimation.
         Default is the minimum relative year in the data.
@@ -359,23 +362,24 @@ def lpdid(
         Value in gname indicating units never treated. Default is 0.
     att : bool, optional
         If True, estimates the pooled average treatment effect on the treated (ATT).
-        Default is False.
+        Default is True.
     xfml : str, optional
-        Formula for the covariates. Not yet supported.
+        Formula for additional covariates. `None` fits no additional covariates.
 
     Returns
     -------
-    DataFrame
-        A DataFrame with the estimated coefficients.
+    LPDID
+        Fitted local-projections DiD result. Use `tidy()` for its coefficients.
 
     Examples
     --------
     ```{python}
+    from importlib.resources import files
+
     import pandas as pd
     import pyfixest as pf
 
-    url = "https://raw.githubusercontent.com/py-econometrics/pyfixest/master/pyfixest/did/data/df_het.csv"
-    df_het = pd.read_csv(url)
+    df_het = pd.read_csv(files("pyfixest.did").joinpath("data/df_het.csv"))
 
     fit = pf.lpdid(
         df_het,

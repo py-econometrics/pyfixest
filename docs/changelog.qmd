@@ -992,7 +992,9 @@ from pyfixest.visualize import iplot
 import pandas as pd
 import numpy as np
 
-df_het = pd.read_csv("https://raw.githubusercontent.com/py-econometrics/pyfixest/master/pyfixest/did/data/df_het.csv")
+from importlib.resources import files
+
+df_het = pd.read_csv(files("pyfixest.did").joinpath("data/df_het.csv"))
 
 fit = did2s(
     df_het,

@@ -80,26 +80,28 @@ def quantreg(
     data : DataFrameType
         A pandas or polars dataframe containing the variables in the formula.
 
-    quantile : float
-        The quantile to estimate. Must be between 0 and 1.
+    vcov : QuantregVcovType or dict[str, str], optional
+        Variance-covariance estimator. Defaults to `"nid"`. String options are
+        `"iid"`, `"nid"`, `"hetero"`, `"HC1"`, `"HC2"`, and `"HC3"`;
+        HC1-HC3 are aliases for `"hetero"`. One-way clustering uses a dictionary
+        such as `{"CRV1": "cluster"}`. HAC estimators are not supported.
+
+    quantile : float or list[float], optional
+        Quantile or quantiles to estimate, strictly between zero and one. A list
+        returns a `FixestMulti` containing one `Quantreg` result per quantile.
+        Defaults to `0.5`.
 
     method : QuantregMethodOptions, optional
-        The method to use for the quantile regression. Currently, only "fn" is supported.
-        In the future, will be either "fn" or "pfn".
-        "fn" implements the Frisch-Newton interior point algorithm
+        Fitting algorithm. `"fn"` implements the Frisch-Newton interior-point algorithm
         described in Portnoy and Koenker (1997).
-        The "pfn" method implements a variant of the
-        algorithm proposed by Portnoy and Koenker (1997) including preprocessing steps, which
-        a) can speed up the algorithm if N is very large but b) assumes independent observations.
-        For details, you can either take a look at the Portnoy and Koenker paper, or "Fast Algorithms for the Quantile Regression Process"
-        by Chernozhukov, Fernández-Val, and Melly (2019).
+        `"pfn"` implements a variant with preprocessing steps from the same paper.
+        The preprocessing can accelerate large samples and uses `seed` for its
+        random number generator.
 
-    multi_method: QuantregMultiMethodOpitons, optional
-        Controls the algorithm for running the quantile regression process.
-        Only relevant if more than one quantile regression is fit in one `quantreg` call.
-        Options are 'cmf1', which is the default and implements algorithm 2 from Chernozhukov et al,
-        'cmf2', which implements their algorithm 3, and 'none', which just loops over separate model
-        calls.
+    multi_method : QuantregMultiOptions, optional
+        Algorithm for a list of quantiles. `"cfm1"` (default) implements
+        algorithm 2 and `"cfm2"` implements algorithm 3 from Chernozhukov,
+        Fernández-Val, and Melly (2019).
 
     tol : float, optional
         The tolerance for the algorithm. Defaults to 1e-06. As in R's quantreg package, the
@@ -109,24 +111,14 @@ def quantreg(
         The maximum number of iterations. If None, maxiter = the number of observations in the model
         (as in R's quantreg package via nit(3) = n).
 
-    vcov : Union[VcovTypeOptions, dict[str, str]]
-        Type of variance-covariance matrix for inference. Currently supported are
-        "iid", "nid", and cluster robust errors, "iid" by default.
-        All of "iid", "hetero"and "cluster" robust error are based on a kernel-based estimator as in Powell (1991).
-        The "nid" method implements the robust sandwich estimator proposed in Hendricks and Koenker (1993).
-        Any of "HC1 / HC2 / HC3 also works and is equivalent to "hetero".
-        Cluster robust inference
-        following Parente and Santos Silva (2016) can be specified via a dictionary with the keys "type" and "cluster".
-        Only one-way clustering is supported.
-
-    ssc : dict[str, Union[str, bool]], optional
-        A dictionary specifying the small sample correction for inference.
-        If None, uses default settings from `ssc_func()`. Note that by default, R's quantreg and Stata's qreg2 do not use
-        small sample corrections. To match their behavior, set
-        `ssc = pf.ssc(k_adj=False, G_adj=False)`.
+    ssc : SscConfig, optional
+        Small-sample correction created by `ssc()`. `None` uses
+        `ssc(k_adj=True, k_fixef="nonnested", G_adj=True, G_df="min")`. To
+        match software that applies no small-sample correction, use
+        `ssc(k_adj=False, G_adj=False)`.
 
     collin_tol : float, optional
-        Tolerance for collinearity check, by default 1e-10.
+        Tolerance for the collinearity check. Defaults to `1e-9`.
 
     separation_check : list[str], optional
         Methods to identify and drop separated observations. Not used in quantile regression.
@@ -173,8 +165,10 @@ def quantreg(
 
     Returns
     -------
-    object
-        An instance of the [Quantreg](/reference/estimation.quantreg.quantreg_.Quantreg.qmd) class or [FixestMulti](/reference/estimation.FixestMulti_.FixestMulti.qmd) class for multiple models specified via `fml`.
+    Quantreg or FixestMulti
+        A [Quantreg](/reference/estimation.quantreg.quantreg_.Quantreg.qmd), or
+        [FixestMulti](/reference/estimation.FixestMulti_.FixestMulti.qmd) when
+        quantiles, formula syntax, or split options produce multiple models.
 
     Examples
     --------
