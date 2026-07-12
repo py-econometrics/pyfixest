@@ -286,8 +286,9 @@ class ResultAccessorMixin(TidyColumnAccessors):
         if not joint:
             crit_val = self._inference_dist.crit_val(alpha, self._df_t)
         else:
-            D_inv = 1 / self._se[coef_indices]
-            V = self._vcov[np.ix_(coef_indices, coef_indices)]
+            joint_indices = sorted(coef_indices)
+            D_inv = 1 / self._se[joint_indices]
+            V = self._vcov[np.ix_(joint_indices, joint_indices)]
             C_coefs = (D_inv * V).T * D_inv
             crit_val = simultaneous_crit_val(C_coefs, reps, alpha=alpha, seed=seed)
 
