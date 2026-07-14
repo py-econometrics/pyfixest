@@ -19,10 +19,11 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ### Inference Types
 
-- `tidy()` and `confint()` gain an `inference_type` argument. For `confint()` it
-  takes `"regular"` (pointwise, the default) or `"simult"` (simultaneous / joint
-  intervals). The `confint(joint=True)` argument is deprecated: it still works
-  but now emits a `FutureWarning` and maps to `inference_type="simult"`.
+- `tidy()`, `confint()`, and `summary()` gain an `inference_type` argument. For
+  `confint()` it takes `"regular"` (pointwise, the default) or `"simult"`
+  (simultaneous / joint intervals). The `confint(joint=True)` argument is
+  deprecated: it still works but now emits a `FutureWarning` and maps to
+  `inference_type="simult"`.
 
   ```python
   fit.confint(inference_type="simult")   # replaces fit.confint(joint=True)
