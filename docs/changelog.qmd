@@ -17,6 +17,17 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ## PyFixest 0.70.0 (In Development)
 
+### Inference Types
+
+- `tidy()` and `confint()` gain an `inference_type` argument. For `confint()` it
+  takes `"regular"` (pointwise, the default) or `"simult"` (simultaneous / joint
+  intervals). The `confint(joint=True)` argument is deprecated: it still works
+  but now emits a `FutureWarning` and maps to `inference_type="simult"`.
+
+  ```python
+  fit.confint(inference_type="simult")   # replaces fit.confint(joint=True)
+  ```
+
 ### GLM API and Behavior
 
 - `feglm()` now accepts `weights`, `weights_type`, and `offset`, and supports
