@@ -16,6 +16,7 @@ from pyfixest.errors import (
 from pyfixest.estimation import feols, fepois
 from pyfixest.estimation.deprecated.FormulaParser import FixestFormulaParser
 from pyfixest.estimation.post_estimation.multcomp import rwolf
+from pyfixest.estimation.post_estimation.savi import optimal_mixture_precision
 from pyfixest.report.summarize import etable, summary
 from pyfixest.utils.dgps import gelbach_data
 from pyfixest.utils.utils import get_data, ssc
@@ -1118,3 +1119,156 @@ def test_did2s_unestimated_first_stage_fixef():
             treatment="treat",
             cluster="unit",
         )
+
+
+_SAVI_ACCESSORS = [
+    "tidy",
+    "confint",
+    "pvalue",
+    "summary",
+    "evalue",
+    "sequential_pvalue",
+]
+
+
+def _call_savi(fit, accessor):
+    if accessor in {"evalue", "sequential_pvalue"}:
+        return getattr(fit, accessor)()
+    return getattr(fit, accessor)(inference_type="savi")
+
+
+@pytest.fixture(params=["fepois", "feiv", "quantreg"])
+def unsupported_savi_model(request):
+    if request.param == "fepois":
+        return fepois("Y ~ X1 + X2", pf.get_data(model="Fepois"))
+    if request.param == "quantreg":
+        return pf.quantreg("Y ~ X1 + X2", data=pf.get_data(), quantile=0.5)
+    return feols("Y ~ 1 | X1 ~ Z1", data=pf.get_data())
+
+
+@pytest.fixture(scope="module", params=["fixef", "aweights", "fweights"])
+def unsupported_savi_design(request):
+    data = pf.get_data()
+    if request.param == "fixef":
+        return feols("Y ~ X1 | f1", data), "fixed effects"
+
+    data["savi_weights"] = np.ones(len(data), dtype=int)
+    fit = feols(
+        "Y ~ X1",
+        data,
+        weights="savi_weights",
+        weights_type=request.param,
+    )
+    return fit, "weighted feols"
+
+
+@pytest.fixture(scope="module", params=["hac", "crv", "multiway_crv"])
+def unsupported_savi_vcov(request):
+    if request.param == "hac":
+        rng = np.random.default_rng(123)
+        data = pd.DataFrame(
+            {
+                "time": np.arange(20),
+                "Y": rng.normal(0, 1, 20),
+                "X1": rng.normal(0, 1, 20),
+            }
+        )
+        fit = feols(
+            "Y ~ X1",
+            data=data,
+            vcov="NW",
+            vcov_kwargs={"time_id": "time", "lag": 3},
+        )
+        return fit, "HAC"
+
+    data = pf.get_data().dropna(subset=["Y", "X1", "X2", "group_id", "f1"])
+    cluster = "group_id + f1" if request.param == "multiway_crv" else "group_id"
+    fit = feols("Y ~ X1 + X2", data, vcov={"CRV1": cluster})
+    return fit, "does not support vcov type 'CRV'"
+
+
+def test_savi_rejects_unsupported_models(unsupported_savi_model):
+    with pytest.raises(NotImplementedError, match="supported only for feols"):
+        unsupported_savi_model.evalue()
+
+
+def test_savi_rejects_weights_and_fixed_effects(unsupported_savi_design):
+    fit, match = unsupported_savi_design
+    with pytest.raises(NotImplementedError, match=match):
+        fit.evalue()
+
+
+def test_savi_rejects_hac_and_crv(unsupported_savi_vcov):
+    fit, match = unsupported_savi_vcov
+    with pytest.raises(NotImplementedError, match=match):
+        fit.evalue()
+
+
+@pytest.mark.parametrize("accessor", _SAVI_ACCESSORS)
+def test_savi_public_methods_apply_support_validation(accessor):
+    data = pf.get_data()
+    data["savi_weights"] = 1
+    fit = feols("Y ~ X1", data, weights="savi_weights")
+
+    with pytest.raises(NotImplementedError, match="weighted feols"):
+        _call_savi(fit, accessor)
+
+
+def test_savi_rejects_rank_deficient_joint_restrictions():
+    fit = feols("Y ~ X1 + X2", pf.get_data())
+    restriction = np.array([[0, 1, 0], [0, 2, 0]])
+
+    with pytest.raises(ValueError, match="full row rank"):
+        fit.evalue(R=restriction)
+
+
+def test_savi_input_validation():
+    fit = feols("Y ~ X1 + X2", pf.get_data())
+    with pytest.raises(ValueError, match="mixture_precision must be positive"):
+        fit.evalue(mixture_precision=0)
+    with pytest.raises(ValueError, match="alpha must be between 0 and 1"):
+        fit.confint(alpha=0, inference_type="savi")
+
+
+def test_savi_inference_type_validation():
+    fit = feols("Y ~ X1 + X2", pf.get_data())
+    with pytest.raises(ValueError) as exc_info:
+        fit.tidy(inference_type="other")
+    assert str(exc_info.value) == (
+        "inference_type must be one of 'regular', 'joint', 'savi'; got 'other'."
+    )
+    with pytest.raises(ValueError, match="inference_type must be one of"):
+        fit.pvalue(inference_type="other")
+    with pytest.raises(ValueError, match="inference_type must be one of"):
+        fit.summary(inference_type="other")
+    with pytest.raises(ValueError, match=r"tidy\(\) only supports"):
+        fit.tidy(inference_type="joint")
+    with pytest.raises(ValueError, match=r"pvalue\(\) only supports"):
+        fit.pvalue(inference_type="joint")
+    with pytest.raises(ValueError, match=r"summary\(\) only supports"):
+        fit.summary(inference_type="joint")
+    with pytest.raises(ValueError, match=r"deprecated.*do not combine"):
+        fit.confint(joint=True, inference_type="savi")
+
+
+@pytest.mark.parametrize(
+    "nobs, number_of_coefficients, alpha, match",
+    [
+        (0, 5, 0.05, "nobs must be positive"),
+        (10, 10, 0.05, "nobs must be greater than number_of_coefficients"),
+        (100, 5, 0, "alpha must be between 0 and 1"),
+        (2, 1, 0.05, "No finite optimal mixture precision exists"),
+    ],
+)
+def test_optimal_mixture_precision_validation(
+    nobs, number_of_coefficients, alpha, match
+):
+    with pytest.raises(ValueError, match=match):
+        optimal_mixture_precision(nobs, number_of_coefficients, alpha)
+
+
+def test_fixest_multi_rejects_savi_tidy_argument():
+    fit = feols("Y + Y2 ~ X1 + X2", pf.get_data())
+
+    with pytest.raises(TypeError):
+        fit.tidy(inference_type="savi")

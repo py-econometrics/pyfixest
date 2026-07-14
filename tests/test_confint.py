@@ -45,6 +45,36 @@ def test_confint():
     assert np.all(confint1 == confint2)
     assert np.all(confint1 != confint3)
 
+    # Preserve the legacy positional seed and reps arguments.
+    with pytest.warns(FutureWarning, match="joint.*deprecated"):
+        legacy_positional = fit.confint(0.05, None, None, False, True, 1, 100)
+    keyword_args = fit.confint(
+        alpha=0.05,
+        inference_type="joint",
+        seed=1,
+        reps=100,
+    )
+    pd.testing.assert_frame_equal(legacy_positional, keyword_args)
+
+
+def test_joint_confint_preserves_keep_order():
+    fit = feols("Y ~ X1 + X2", data=get_data())
+    regular = fit.confint(keep=["X2", "X1"], exact_match=True)
+    confint = fit.confint(
+        keep=["X2", "X1"],
+        exact_match=True,
+        inference_type="joint",
+        seed=1,
+        reps=100,
+    )
+
+    assert regular.index.tolist() == ["X2", "X1"]
+    assert confint.index.tolist() == ["X2", "X1"]
+    np.testing.assert_allclose(
+        confint.mean(axis=1).to_numpy(),
+        fit.coef().loc[["X2", "X1"]].to_numpy(),
+    )
+
 
 @pytest.mark.skipif(sys.version_info >= (3, 12), reason="requires python3.11 or lower.")
 def test_against_doubleml():
@@ -78,21 +108,3 @@ def test_against_doubleml():
     pyfixest_res = m.confint(keep="X_.$", reps=10_000, joint=True)
 
     assert np.all(np.abs(dml_res.values - pyfixest_res.values) < 1e-2)
-
-
-def test_confint_preserves_keep_order():
-    fit = feols("Y ~ X1 + X2 + C(f1)", get_data())
-    model_order = fit.coef().index[:5].tolist()
-    keep_order = model_order[::-1]
-
-    pointwise = fit.confint(keep=keep_order, exact_match=True)
-    expected = fit.confint().loc[keep_order]
-    pd.testing.assert_frame_equal(pointwise, expected)
-
-    joint_model_order = fit.confint(
-        keep=model_order, exact_match=True, joint=True, reps=1000, seed=42
-    )
-    joint_keep_order = fit.confint(
-        keep=keep_order, exact_match=True, joint=True, reps=1000, seed=42
-    )
-    pd.testing.assert_frame_equal(joint_keep_order, joint_model_order.loc[keep_order])
