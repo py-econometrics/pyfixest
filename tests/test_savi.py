@@ -199,31 +199,6 @@ def test_savi_supports_iid_and_hc_vcov(vcov):
     fit.evalue()
 
 
-def test_savi_tidy_and_summary_replace_p_values(capsys):
-    fit = feols("Y ~ X1 + X2", pf.get_data())
-    tidy_regular = fit.tidy()
-    tidy_savi = fit.tidy(inference_type="savi", mixture_precision=2.5)
-
-    assert "Pr(>|t|)" in tidy_regular.columns
-    assert "Pr(>|t|)" not in tidy_savi.columns
-    assert "e_value" in tidy_savi.columns
-
-    fit.summary(inference_type="savi", mixture_precision=2.5)
-    out = capsys.readouterr().out
-    assert "e_value" in out
-    assert "Inference:  iid (savi)" in out
-
-
-def test_savi_tidy_preserves_sample_split_column():
-    fits = feols("Y ~ X1 + X2", pf.get_data(), split="f1")
-
-    for fit in fits.to_list():
-        regular = fit.tidy()
-        savi = fit.tidy(inference_type="savi")
-
-        pd.testing.assert_series_equal(savi["Sample"], regular["Sample"])
-
-
 def test_savi_matches_avlm_and_statsmodels_longley_iid():
     fit = feols("TOTEMP ~ GNP + UNEMP", _longley_data())
     mixture_precision = 2.5
@@ -255,7 +230,7 @@ def test_savi_matches_avlm_and_statsmodels_longley_iid():
         1 / avlm_pvalues,
     )
     np.testing.assert_allclose(
-        fit.pvalue(inference_type="savi", mixture_precision=mixture_precision),
+        fit.sequential_pvalue(mixture_precision=mixture_precision),
         avlm_pvalues,
     )
     pd.testing.assert_frame_equal(
@@ -335,7 +310,7 @@ def test_savi_hc0_coefficients_match_avlm_and_statsmodels_longley():
         1 / avlm_pvalues,
     )
     np.testing.assert_allclose(
-        fit.pvalue(inference_type="savi", mixture_precision=mixture_precision),
+        fit.sequential_pvalue(mixture_precision=mixture_precision),
         avlm_pvalues,
     )
     pd.testing.assert_frame_equal(

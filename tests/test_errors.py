@@ -1122,10 +1122,7 @@ def test_did2s_unestimated_first_stage_fixef():
 
 
 _SAVI_ACCESSORS = [
-    "tidy",
     "confint",
-    "pvalue",
-    "summary",
     "evalue",
     "sequential_pvalue",
 ]
@@ -1232,22 +1229,23 @@ def test_savi_input_validation():
 
 def test_savi_inference_type_validation():
     fit = feols("Y ~ X1 + X2", pf.get_data())
-    # Invalid inference types are rejected everywhere.
+    # Invalid inference types are rejected wherever the argument is accepted.
     with pytest.raises(ValueError, match=r"Invalid argument\. Expecting one of"):
         fit.tidy(inference_type="other")
-    with pytest.raises(ValueError, match=r"Invalid argument\. Expecting one of"):
-        fit.pvalue(inference_type="other")
     with pytest.raises(ValueError, match=r"Invalid argument\. Expecting one of"):
         fit.summary(inference_type="other")
     with pytest.raises(ValueError, match=r"Invalid argument\. Expecting one of"):
         fit.confint(inference_type="other")
-    # Simultaneous inference is only available through confint().
+    # Simultaneous inference is a confint()-only concept; summary() mirrors tidy().
     with pytest.raises(ValueError, match=r"tidy\(\) does not support"):
         fit.tidy(inference_type="simult")
-    with pytest.raises(ValueError, match=r"pvalue\(\) only supports"):
-        fit.pvalue(inference_type="simult")
-    with pytest.raises(ValueError, match=r"summary\(\) only supports"):
+    with pytest.raises(ValueError, match=r"tidy\(\) does not support"):
         fit.summary(inference_type="simult")
+    # SAVI is reachable through evalue()/sequential_pvalue()/confint() only.
+    with pytest.raises(NotImplementedError):
+        fit.tidy(inference_type="savi")
+    with pytest.raises(NotImplementedError):
+        fit.summary(inference_type="savi")
     # joint=True cannot be combined with a conflicting inference_type.
     with pytest.raises(ValueError, match="cannot be combined"):
         fit.confint(joint=True, inference_type="savi")
