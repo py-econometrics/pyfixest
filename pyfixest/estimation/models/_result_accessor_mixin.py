@@ -10,8 +10,11 @@ from pyfixest.errors import EmptyVcovError
 
 if TYPE_CHECKING:
     from pyfixest.estimation.internals.families import InferenceDist
+from pyfixest.estimation.internals.literals import InferenceType
 from pyfixest.utils.dev_utils import _select_coefnames_and_indices
 from pyfixest.utils.utils import simultaneous_crit_val
+
+_VALID_INFERENCE_TYPES = ("regular", "joint", "savi")
 
 
 class TidyColumnAccessors:
@@ -56,6 +59,8 @@ class ResultAccessorMixin(TidyColumnAccessors):
     _method: str
     _drop_intercept: bool
     _has_fixef: bool
+    _has_weights: bool
+    _is_iv: bool
     _k_fe: pd.Series
     _N: int
     _k: int
@@ -66,6 +71,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
     _adj_r2: float
     _r2_within: float
     _adj_r2_within: float
+    _vcov_type: str
 
     def _bind_report_methods(self):
         """Bind summary, coefplot, iplot, and etable from pyfixest.report as instance methods."""
@@ -86,6 +92,193 @@ class ResultAccessorMixin(TidyColumnAccessors):
         _tmp = _module.etable
         self.etable = functools.partial(_tmp, models=[self])
         self.etable.__doc__ = _tmp.__doc__
+
+    def evalue(
+        self,
+        R: np.ndarray | None = None,
+        q: float | np.ndarray | None = None,
+        mixture_precision: float = 1.0,
+    ) -> pd.Series | float:
+        """Compute coefficient-wise or joint SAVI e-values.
+
+        Parameters
+        ----------
+        R : np.ndarray, optional
+            Restriction matrix. If omitted, returns one e-value per coefficient.
+        q : float or np.ndarray, optional
+            Value of the restriction under the null. Defaults to zero.
+        mixture_precision : float, optional
+            Positive mixture precision fixed before sequential monitoring.
+            Defaults to 1. For coefficient-wise inference, use
+            `pyfixest.estimation.post_estimation.savi.optimal_mixture_precision()`
+            to minimize confidence-sequence width at a target sample size.
+
+        Returns
+        -------
+        pd.Series or float
+            Coefficient-wise e-values, or a scalar for a joint restriction.
+
+        Notes
+        -----
+        SAVI currently supports unweighted, non-IV `feols` models without
+        absorbed fixed effects. The covariance estimator must be iid or
+        heteroskedasticity robust (`hetero`, `HC1`, `HC2`, or `HC3`).
+
+        Examples
+        --------
+        ```{python}
+        import numpy as np
+        import pyfixest as pf
+
+        data = pf.get_data()
+        fit = pf.feols("Y ~ X1 + X2", data=data, vcov="hetero")
+        fit.evalue()
+
+        R = np.array([[0.0, 1.0, -1.0]])
+        fit.evalue(R=R)
+        ```
+        """
+        from pyfixest.estimation.post_estimation.savi import _evalue
+
+        return _evalue(
+            model=self,
+            R=R,
+            q=q,
+            mixture_precision=mixture_precision,
+        )
+
+    def sequential_pvalue(
+        self,
+        R: np.ndarray | None = None,
+        q: float | np.ndarray | None = None,
+        mixture_precision: float = 1.0,
+    ) -> pd.Series | float:
+        """Compute coefficient-wise or joint SAVI sequential p-values.
+
+        Parameters
+        ----------
+        R : np.ndarray, optional
+            Restriction matrix. If omitted, returns one p-value per coefficient.
+        q : float or np.ndarray, optional
+            Value of the restriction under the null. Defaults to zero.
+        mixture_precision : float, optional
+            Positive mixture precision fixed before sequential monitoring.
+            Defaults to 1. For coefficient-wise inference, use
+            `pyfixest.estimation.post_estimation.savi.optimal_mixture_precision()`
+            to minimize confidence-sequence width at a target sample size.
+
+        Returns
+        -------
+        pd.Series or float
+            Coefficient-wise sequential p-values, or a scalar for a joint
+            restriction.
+
+        Notes
+        -----
+        SAVI currently supports unweighted, non-IV `feols` models without
+        absorbed fixed effects. The covariance estimator must be iid or
+        heteroskedasticity robust (`hetero`, `HC1`, `HC2`, or `HC3`).
+
+        Examples
+        --------
+        ```{python}
+        import numpy as np
+        import pyfixest as pf
+
+        data = pf.get_data()
+        fit = pf.feols("Y ~ X1 + X2", data=data, vcov="HC1")
+        fit.sequential_pvalue()
+
+        R = np.array([[0.0, 1.0, -1.0]])
+        fit.sequential_pvalue(R=R)
+        ```
+        """
+        from pyfixest.estimation.post_estimation.savi import _sequential_pvalue
+
+        return _sequential_pvalue(
+            model=self,
+            R=R,
+            q=q,
+            mixture_precision=mixture_precision,
+        )
+
+    def _normalize_inference_type(
+        self, inference_type: InferenceType, joint: bool = False
+    ) -> InferenceType:
+        if inference_type not in _VALID_INFERENCE_TYPES:
+            valid_inference_types = ", ".join(
+                repr(value) for value in _VALID_INFERENCE_TYPES
+            )
+            raise ValueError(
+                f"inference_type must be one of {valid_inference_types}; "
+                f"got {inference_type!r}."
+            )
+
+        if joint:
+            if inference_type == "savi":
+                raise ValueError(
+                    "joint=True is deprecated. Use "
+                    "inference_type='joint' instead "
+                    "and do not combine it with "
+                    "inference_type='savi'."
+                )
+            warnings.warn(
+                "joint=True is deprecated. Use inference_type='joint' instead.",
+                FutureWarning,
+                stacklevel=3,
+            )
+            inference_type = "joint"
+
+        return inference_type
+
+    def pvalue(
+        self,
+        inference_type: InferenceType = "regular",
+        mixture_precision: float = 1.0,
+    ) -> pd.Series:
+        """Return coefficient p-values as a pandas Series.
+
+        Parameters
+        ----------
+        inference_type : {"regular", "savi"}, optional
+            Type of coefficient-wise inference. Defaults to "regular".
+        mixture_precision : float, optional
+            Positive mixture precision used when `inference_type="savi"`.
+            Fix this value before sequential monitoring. Defaults to 1.
+
+        For SAVI inference, use
+        `pyfixest.estimation.post_estimation.savi.optimal_mixture_precision()`
+        to minimize confidence-sequence width at a target sample size.
+
+        Returns
+        -------
+        pd.Series
+            Coefficient-wise regular or SAVI sequential p-values.
+
+        Notes
+        -----
+        SAVI currently supports unweighted, non-IV `feols` models without
+        absorbed fixed effects. The covariance estimator must be iid or
+        heteroskedasticity robust (`hetero`, `HC1`, `HC2`, or `HC3`).
+
+        Examples
+        --------
+        ```{python}
+        import pyfixest as pf
+
+        data = pf.get_data()
+        fit = pf.feols("Y ~ X1 + X2", data=data, vcov="HC2")
+        fit.pvalue(inference_type="savi")
+        ```
+        """
+        inference_type = self._normalize_inference_type(inference_type)
+        if inference_type == "joint":
+            raise ValueError("pvalue() only supports 'regular' and 'savi' inference.")
+        if inference_type == "savi":
+            from pyfixest.estimation.post_estimation.savi import _pvalue
+
+            return _pvalue(model=self, mixture_precision=mixture_precision)
+        return self.tidy()["Pr(>|t|)"]
 
     def get_inference(self, alpha: float = 0.05) -> None:
         """
@@ -165,6 +358,8 @@ class ResultAccessorMixin(TidyColumnAccessors):
     def tidy(
         self,
         alpha: float = 0.05,
+        inference_type: InferenceType = "regular",
+        mixture_precision: float = 1.0,
     ) -> pd.DataFrame:
         """
         Tidy model outputs.
@@ -177,13 +372,55 @@ class ResultAccessorMixin(TidyColumnAccessors):
         alpha: Optional[float]
             The significance level for the confidence intervals. If None,
             computes a 95% confidence interval (`alpha = 0.05`).
+        inference_type: {"regular", "savi"}, optional
+            Type of coefficient-wise inference to report. If "savi", p-values
+            are replaced by asymptotic SAVI e-values and intervals are
+            confidence sequences. Defaults to "regular".
+        mixture_precision: float, optional
+            When `inference_type="savi"`, controls the mixing weight of the
+            prior in the SAVI e-value. Larger values produce wider confidence
+            sequences early on but narrow faster as the sample grows. Must
+            remain fixed during sequential monitoring. Defaults to 1. Use
+            `pyfixest.estimation.post_estimation.savi.optimal_mixture_precision()`
+            to minimize confidence-sequence width at a target sample size.
 
         Returns
         -------
         tidy_df : pd.DataFrame
             A tidy pd.DataFrame containing the regression results, including point
             estimates, standard errors, t-statistics, and p-values.
+
+        Notes
+        -----
+        SAVI currently supports unweighted, non-IV `feols` models without
+        absorbed fixed effects. The covariance estimator must be iid or
+        heteroskedasticity robust (`hetero`, `HC1`, `HC2`, or `HC3`). Direct
+        `FixestMulti.tidy()` calls provide regular inference only.
+
+        Examples
+        --------
+        ```{python}
+        import pyfixest as pf
+
+        data = pf.get_data()
+        fit = pf.feols("Y ~ X1 + X2", data=data, vcov="HC3")
+        fit.tidy(inference_type="savi")
+        ```
         """
+        normalized_inference_type: InferenceType = self._normalize_inference_type(
+            inference_type
+        )
+        if normalized_inference_type == "joint":
+            raise ValueError("tidy() only supports 'regular' and 'savi' inference.")
+        if normalized_inference_type == "savi":
+            from pyfixest.estimation.post_estimation.savi import _tidy
+
+            return _tidy(
+                model=self,
+                alpha=alpha,
+                mixture_precision=mixture_precision,
+            )
+
         ub, lb = 1 - alpha / 2, alpha / 2
         try:
             self.get_inference(alpha=alpha)
@@ -219,6 +456,9 @@ class ResultAccessorMixin(TidyColumnAccessors):
         joint: bool = False,
         seed: int | None = None,
         reps: int = 10_000,
+        *,
+        inference_type: InferenceType = "regular",
+        mixture_precision: float = 1.0,
     ) -> pd.DataFrame:
         r"""
         Fitted model confidence intervals.
@@ -256,12 +496,34 @@ class ResultAccessorMixin(TidyColumnAccessors):
         seed : int, optional
             The seed for the random number generator. Defaults to None. Only used if
             `joint` is True.
+        inference_type: {"regular", "joint", "savi"}, optional
+            Type of confidence interval to compute. If "joint", computes
+            simultaneous confidence intervals. If "savi", computes
+            coefficient-wise asymptotic SAVI confidence sequences. Defaults to
+            "regular".
+            The `joint` argument is deprecated; use `inference_type="joint"`.
+            This argument is keyword-only.
+        mixture_precision: float, optional
+            When `inference_type="savi"`, controls the mixing weight of the
+            prior in the SAVI e-value. Larger values produce wider confidence
+            sequences early on but narrow faster as the sample grows. Must
+            remain fixed during sequential monitoring. Defaults to 1. This
+            argument is keyword-only. Use
+            `pyfixest.estimation.post_estimation.savi.optimal_mixture_precision()`
+            to minimize confidence-sequence width at a target sample size.
 
         Returns
         -------
         pd.DataFrame
             A pd.DataFrame with confidence intervals of the estimated regression model
             for the selected coefficients.
+
+        Notes
+        -----
+        SAVI currently supports unweighted, non-IV `feols` models without
+        absorbed fixed effects. The covariance estimator must be iid or
+        heteroskedasticity robust (`hetero`, `HC1`, `HC2`, or `HC3`). Direct
+        `FixestMulti.confint()` calls provide regular inference only.
 
         Examples
         --------
@@ -277,13 +539,29 @@ class ResultAccessorMixin(TidyColumnAccessors):
         fit = feols("Y ~ C(f1)", data=data)
         fit.confint(alpha=0.10).head()
         fit.confint(alpha=0.10, joint=True, reps=9999).head()
+
+        savi_fit = feols("Y ~ X1 + X2", data=data, vcov="hetero")
+        savi_fit.confint(alpha=0.10, inference_type="savi").head()
         ```
         """
+        inference_type = self._normalize_inference_type(inference_type, joint=joint)
+        if inference_type == "savi":
+            from pyfixest.estimation.post_estimation.savi import _confint
+
+            return _confint(
+                model=self,
+                alpha=alpha,
+                mixture_precision=mixture_precision,
+                keep=keep,
+                drop=drop,
+                exact_match=exact_match,
+            )
+
         coefnames, coef_indices = _select_coefnames_and_indices(
             self._coefnames, keep, drop, exact_match
         )
 
-        if not joint:
+        if inference_type == "regular":
             crit_val = self._inference_dist.crit_val(alpha, self._df_t)
         else:
             joint_indices = sorted(coef_indices)
