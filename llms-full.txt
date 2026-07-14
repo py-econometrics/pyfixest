@@ -163,6 +163,18 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ## PyFixest 0.70.0 (In Development)
 
+### Inference Types
+
+- `tidy()`, `confint()`, and `summary()` gain an `inference_type` argument. For
+  `confint()` it takes `"regular"` (pointwise, the default) or `"simult"`
+  (simultaneous / joint intervals). The `confint(joint=True)` argument is
+  deprecated: it still works but now emits a `FutureWarning` and maps to
+  `inference_type="simult"`.
+
+  ```python
+  fit.confint(inference_type="simult")   # replaces fit.confint(joint=True)
+  ```
+
 ### GLM API and Behavior
 
 - `feglm()` now accepts `weights`, `weights_type`, and `offset`, and supports
@@ -4975,7 +4987,7 @@ Simultaneous confidence bands for a vector of parameters can be computed via the
 
 ```{python}
 fit_ci = pf.feols("Y ~ X1+ C(f1)", data=data)
-fit_ci.confint(joint=True).head()
+fit_ci.confint(inference_type="simult").head()
 ```
 
 # Panel Data Example: Causal Inference for the Brave and True
@@ -9324,7 +9336,7 @@ pf.iplot([fit1], joint = "both")
 # report.summary { #pyfixest.report.summary }
 
 ```python
-report.summary(models, digits=3)
+report.summary(models, digits=3, inference_type='regular')
 ```
 
 Print a summary of estimation results for each estimated model.
@@ -9335,10 +9347,11 @@ errors, t-values, and p-values.
 
 ## Parameters {.doc-section .doc-section-parameters}
 
-| Name   | Type                                                                     | Description                                                                    | Default    |
-|--------|--------------------------------------------------------------------------|--------------------------------------------------------------------------------|------------|
-| models | A supported model object (Feols, Fepois, Feiv, FixestMulti) or a list of | Feols, Fepois & Feiv models.                                                   | _required_ |
-| digits | int                                                                      | The number of decimal places to round the summary statistics to. Default is 3. | `3`        |
+| Name           | Type                                                                     | Description                                                                                                                                          | Default     |
+|----------------|--------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------|-------------|
+| models         | A supported model object (Feols, Fepois, Feiv, FixestMulti) or a list of | Feols, Fepois & Feiv models.                                                                                                                         | _required_  |
+| digits         | int                                                                      | The number of decimal places to round the summary statistics to. Default is 3.                                                                       | `3`         |
+| inference_type | regular                                                                  | Type of coefficient-wise inference to report, handled the same way as in `tidy()`. Only `"regular"` is currently available. Defaults to `"regular"`. | `"regular"` |
 
 ## Returns {.doc-section .doc-section-returns}
 

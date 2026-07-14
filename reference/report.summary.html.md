@@ -1,7 +1,7 @@
 # report.summary { #pyfixest.report.summary }
 
 ```python
-report.summary(models, digits=3)
+report.summary(models, digits=3, inference_type='regular')
 ```
 
 Print a summary of estimation results for each estimated model.
@@ -12,10 +12,11 @@ errors, t-values, and p-values.
 
 ## Parameters {.doc-section .doc-section-parameters}
 
-| Name   | Type                                                                     | Description                                                                    | Default    |
-|--------|--------------------------------------------------------------------------|--------------------------------------------------------------------------------|------------|
-| models | A supported model object (Feols, Fepois, Feiv, FixestMulti) or a list of | Feols, Fepois & Feiv models.                                                   | _required_ |
-| digits | int                                                                      | The number of decimal places to round the summary statistics to. Default is 3. | `3`        |
+| Name           | Type                                                                     | Description                                                                                                                                          | Default     |
+|----------------|--------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------|-------------|
+| models         | A supported model object (Feols, Fepois, Feiv, FixestMulti) or a list of | Feols, Fepois & Feiv models.                                                                                                                         | _required_  |
+| digits         | int                                                                      | The number of decimal places to round the summary statistics to. Default is 3.                                                                       | `3`         |
+| inference_type | regular                                                                  | Type of coefficient-wise inference to report, handled the same way as in `tidy()`. Only `"regular"` is currently available. Defaults to `"regular"`. | `"regular"` |
 
 ## Returns {.doc-section .doc-section-returns}
 

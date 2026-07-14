@@ -295,7 +295,7 @@ Simultaneous confidence bands for a vector of parameters can be computed via the
 
 ```{python}
 fit_ci = pf.feols("Y ~ X1+ C(f1)", data=data)
-fit_ci.confint(joint=True).head()
+fit_ci.confint(inference_type="simult").head()
 ```
 
 # Panel Data Example: Causal Inference for the Brave and True

@@ -611,17 +611,17 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>report.summary(models, digits<span class="op">=</span><span class="dv">3</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>report.summary(models, digits<span class="op">=</span><span class="dv">3</span>, inference_type<span class="op">=</span><span class="st">'regular'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Print a summary of estimation results for each estimated model.</p>
 <p>For each model, this method prints a header indicating the fixed-effects and the dependent variable, followed by a table of coefficient estimates with standard errors, t-values, and p-values.</p>
 <section id="parameters" class="level2 doc-section doc-section-parameters">
 <h2 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters">Parameters</h2>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 4%">
-<col style="width: 42%">
-<col style="width: 45%">
 <col style="width: 6%">
+<col style="width: 29%">
+<col style="width: 59%">
+<col style="width: 5%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -643,6 +643,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td>int</td>
 <td>The number of decimal places to round the summary statistics to. Default is 3.</td>
 <td><code>3</code></td>
+</tr>
+<tr class="odd">
+<td>inference_type</td>
+<td>regular</td>
+<td>Type of coefficient-wise inference to report, handled the same way as in <code>tidy()</code>. Only <code>"regular"</code> is currently available. Defaults to <code>"regular"</code>.</td>
+<td><code>"regular"</code></td>
 </tr>
 </tbody>
 </table>
@@ -668,7 +674,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="examples" class="level2 doc-section doc-section-examples">
 <h2 class="doc-section doc-section-examples anchored" data-anchor-id="examples">Examples</h2>
-<div id="53ac93d5" class="cell" data-execution_count="1">
+<div id="dc250cca" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co"># load data</span></span>
@@ -680,7 +686,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>pf.summary([fit1, fit2, fit3])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 
-        <div id="JIRSsS"></div>
+        <div id="fAanOz"></div>
         <script type="text/javascript" data-lets-plot-script="library">
             if(!window.letsPlotCallQueue) {
                 window.letsPlotCallQueue = [];
@@ -704,9 +710,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                     var div = document.createElement("div");
                     div.style.color = 'darkred';
                     div.textContent = 'Error loading Lets-Plot JS';
-                    document.getElementById("JIRSsS").appendChild(div);
+                    document.getElementById("fAanOz").appendChild(div);
                 };
-                var e = document.getElementById("JIRSsS");
+                var e = document.getElementById("fAanOz");
                 e.appendChild(script);
             })()
         </script>
@@ -714,7 +720,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <div class="cell-output cell-output-display">
 
-        <div id="pMLJSB"></div>
+        <div id="kzuyjH"></div>
         <script type="text/javascript" data-lets-plot-script="library">
             if(!window.letsPlotCallQueue) {
                 window.letsPlotCallQueue = [];
@@ -738,9 +744,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                     var div = document.createElement("div");
                     div.style.color = 'darkred';
                     div.textContent = 'Error loading Lets-Plot JS';
-                    document.getElementById("pMLJSB").appendChild(div);
+                    document.getElementById("kzuyjH").appendChild(div);
                 };
-                var e = document.getElementById("pMLJSB");
+                var e = document.getElementById("kzuyjH");
                 e.appendChild(script);
             })()
         </script>
