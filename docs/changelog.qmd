@@ -17,6 +17,44 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ## PyFixest 0.70.0 (In Development)
 
+### Safe Anytime-Valid Inference (SAVI)
+
+We add support for SAVI inference for linear regression based on Lindon, Ham,
+Tingley, and Bojinov (2026), "Anytime-Valid Inference in Linear Models with
+Applications to Regression-Adjusted Causal Inference," *Journal of the American
+Statistical Association*. Classical p-values and confidence intervals are
+fixed-sample objects — they are not valid under optional stopping or continuous
+monitoring. SAVI converts regression test statistics into e-values, sequential
+p-values, and confidence sequences that remain valid as data accumulate.
+
+Coefficient-wise SAVI inference is available via `tidy()`, `pvalue()`,
+`summary()`, and `confint()` by passing `inference_type="savi"`:
+
+```{python}
+import numpy as np
+import pyfixest as pf
+
+df = pf.get_data()
+fit = pf.feols("Y ~ X1 + X2", data=df, vcov="iid")
+
+fit.evalue()                                     # coefficient-wise e-values
+fit.pvalue(inference_type="savi")                # coeff-wise sequential p-values
+fit.confint(inference_type="savi")               # coeff-wise confidence sequences
+```
+
+Joint linear restrictions are supported via `fit.evalue(R=R)` and
+`fit.sequential_pvalue(R=R)`:
+
+```{python}
+R = np.array([[0, 1, -1]])                       # tests X1 - X2 = 0
+fit.evalue(R=R)
+```
+
+This PR also introduces `inference_type={"regular", "joint", "savi"}` across
+`confint()`. The existing `joint=True` argument is deprecated and mapped to
+`inference_type="joint"`. SAVI is supported for non-IV `feols()` models with
+iid or heteroskedastic/HC covariance, without weights or fixed effects.
+
 ### GLM API and Behavior
 
 - `feglm()` now accepts `weights`, `weights_type`, and `offset`, and supports
