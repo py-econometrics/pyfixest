@@ -867,7 +867,7 @@ def _get_model_df(
 
     if joint in ["both", True]:
         lb, ub = f"{alpha / 2 * 100:.1f}%", f"{(1 - alpha / 2) * 100:.1f}%"
-        df_joint = fxst.confint(joint=True, alpha=alpha, seed=seed)
+        df_joint = fxst.confint(inference_type="simult", alpha=alpha, seed=seed)
         df_joint.reset_index(inplace=True)
         df_joint = df_joint.rename(columns={"index": "Coefficient"})
         df_joint_full = (

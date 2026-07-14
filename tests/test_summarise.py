@@ -164,3 +164,16 @@ def test_etable_correct_output_type():
 
     typst_table = pf.etable(fit, type="typst")
     assert isinstance(typst_table, str)
+
+
+def test_summary_inference_type_regular(capsys):
+    """summary(inference_type='regular') matches the default summary output."""
+    fit = feols("Y ~ X1 + X2 | f1", data=get_data())
+
+    summary(fit)
+    default_out = capsys.readouterr().out
+    summary(fit, inference_type="regular")
+    regular_out = capsys.readouterr().out
+
+    assert regular_out
+    assert regular_out == default_out
