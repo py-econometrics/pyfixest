@@ -1,6 +1,6 @@
 # note: R, fixest, sandwich, broom, reticulate, collapse are installed via conda
 install.packages(
-    c('did2s', 'ivDiag'),
+    c('avlm', 'did2s', 'ivDiag'),
     repos='https://cran.rstudio.com'
 );
 install.packages(
