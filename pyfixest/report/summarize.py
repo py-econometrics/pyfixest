@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 
 from pyfixest.estimation.FixestMulti_ import FixestMulti
+from pyfixest.estimation.internals.literals import InferenceType
 from pyfixest.estimation.models.feiv_ import Feiv
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.models.fepois_ import Fepois
@@ -278,7 +279,11 @@ def etable(
     return None
 
 
-def summary(models: ModelInputType, digits: int = 3) -> None:
+def summary(
+    models: ModelInputType,
+    digits: int = 3,
+    inference_type: InferenceType = "regular",
+) -> None:
     """
     Print a summary of estimation results for each estimated model.
 
@@ -292,6 +297,9 @@ def summary(models: ModelInputType, digits: int = 3) -> None:
             Feols, Fepois & Feiv models.
     digits : int, optional
         The number of decimal places to round the summary statistics to. Default is 3.
+    inference_type : {"regular"}, optional
+        Type of coefficient-wise inference to report, handled the same way as in
+        `tidy()`. Only `"regular"` is currently available. Defaults to `"regular"`.
 
     Returns
     -------
@@ -316,7 +324,7 @@ def summary(models: ModelInputType, digits: int = 3) -> None:
     for fxst in list(models):
         depvar = fxst._depvar
 
-        df = fxst.tidy().round(digits)
+        df = fxst.tidy(inference_type=inference_type).round(digits)
 
         estimation_method = _get_estimation_method_name(fxst)
         print("###")

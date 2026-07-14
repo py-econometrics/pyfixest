@@ -1118,3 +1118,38 @@ def test_did2s_unestimated_first_stage_fixef():
             treatment="treat",
             cluster="unit",
         )
+
+
+def test_inference_type_errors():
+    """Validate `inference_type` handling in `confint()`, `tidy()`, and `summary()`."""
+    fit = feols("Y ~ X1 + X2 + C(f1)", data=get_data())
+
+    # Invalid values are rejected everywhere.
+    with pytest.raises(ValueError):
+        fit.confint(inference_type="bogus")
+    with pytest.raises(ValueError):
+        fit.tidy(inference_type="bogus")
+    with pytest.raises(ValueError):
+        summary(fit, inference_type="bogus")
+
+    # SAVI is reserved but not wired up yet. summary() mirrors tidy().
+    with pytest.raises(NotImplementedError):
+        fit.confint(inference_type="savi")
+    with pytest.raises(NotImplementedError):
+        fit.tidy(inference_type="savi")
+    with pytest.raises(NotImplementedError):
+        summary(fit, inference_type="savi")
+
+    # Simultaneous inference is a confint()-only concept.
+    with pytest.raises(ValueError):
+        fit.tidy(inference_type="simult")
+    with pytest.raises(ValueError):
+        summary(fit, inference_type="simult")
+
+    # joint=True is deprecated and warns...
+    with pytest.warns(FutureWarning, match="joint.*deprecated"):
+        fit.confint(joint=True)
+
+    # ...and cannot be combined with a conflicting inference_type.
+    with pytest.raises(ValueError):
+        fit.confint(joint=True, inference_type="savi")
