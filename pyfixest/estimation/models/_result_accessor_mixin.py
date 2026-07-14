@@ -10,11 +10,12 @@ from pyfixest.errors import EmptyVcovError
 
 if TYPE_CHECKING:
     from pyfixest.estimation.internals.families import InferenceDist
-from pyfixest.estimation.internals.literals import InferenceType
+from pyfixest.estimation.internals.literals import (
+    InferenceType,
+    _validate_literal_argument,
+)
 from pyfixest.utils.dev_utils import _select_coefnames_and_indices
 from pyfixest.utils.utils import simultaneous_crit_val
-
-_VALID_INFERENCE_TYPES = ("regular", "joint", "savi")
 
 
 class TidyColumnAccessors:
@@ -202,35 +203,6 @@ class ResultAccessorMixin(TidyColumnAccessors):
             mixture_precision=mixture_precision,
         )
 
-    def _normalize_inference_type(
-        self, inference_type: InferenceType, joint: bool = False
-    ) -> InferenceType:
-        if inference_type not in _VALID_INFERENCE_TYPES:
-            valid_inference_types = ", ".join(
-                repr(value) for value in _VALID_INFERENCE_TYPES
-            )
-            raise ValueError(
-                f"inference_type must be one of {valid_inference_types}; "
-                f"got {inference_type!r}."
-            )
-
-        if joint:
-            if inference_type == "savi":
-                raise ValueError(
-                    "joint=True is deprecated. Use "
-                    "inference_type='joint' instead "
-                    "and do not combine it with "
-                    "inference_type='savi'."
-                )
-            warnings.warn(
-                "joint=True is deprecated. Use inference_type='joint' instead.",
-                FutureWarning,
-                stacklevel=3,
-            )
-            inference_type = "joint"
-
-        return inference_type
-
     def pvalue(
         self,
         inference_type: InferenceType = "regular",
@@ -272,7 +244,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
         ```
         """
         inference_type = self._normalize_inference_type(inference_type)
-        if inference_type == "joint":
+        if inference_type == "simult":
             raise ValueError("pvalue() only supports 'regular' and 'savi' inference.")
         if inference_type == "savi":
             from pyfixest.estimation.post_estimation.savi import _pvalue
@@ -375,7 +347,8 @@ class ResultAccessorMixin(TidyColumnAccessors):
         inference_type: {"regular", "savi"}, optional
             Type of coefficient-wise inference to report. If "savi", p-values
             are replaced by asymptotic SAVI e-values and intervals are
-            confidence sequences. Defaults to "regular".
+            confidence sequences. Defaults to "regular". Simultaneous inference
+            is available through `confint(inference_type="simult")`.
         mixture_precision: float, optional
             When `inference_type="savi"`, controls the mixing weight of the
             prior in the SAVI e-value. Larger values produce wider confidence
@@ -410,8 +383,11 @@ class ResultAccessorMixin(TidyColumnAccessors):
         normalized_inference_type: InferenceType = self._normalize_inference_type(
             inference_type
         )
-        if normalized_inference_type == "joint":
-            raise ValueError("tidy() only supports 'regular' and 'savi' inference.")
+        if normalized_inference_type == "simult":
+            raise ValueError(
+                "tidy() does not support inference_type='simult'. Use "
+                "confint(inference_type='simult') for simultaneous intervals."
+            )
         if normalized_inference_type == "savi":
             from pyfixest.estimation.post_estimation.savi import _tidy
 
@@ -447,6 +423,27 @@ class ResultAccessorMixin(TidyColumnAccessors):
             data["Sample"] = sample
         return pd.DataFrame(data).set_index("Coefficient")
 
+    def _normalize_inference_type(
+        self, inference_type: InferenceType, joint: bool = False
+    ) -> InferenceType:
+        """Validate `inference_type` and fold the deprecated `joint` flag into it."""
+        _validate_literal_argument(inference_type, InferenceType)
+
+        if joint:
+            warnings.warn(
+                "joint=True is deprecated. Use inference_type='simult' instead.",
+                FutureWarning,
+                stacklevel=3,
+            )
+            if inference_type not in ("regular", "simult"):
+                raise ValueError(
+                    "joint=True cannot be combined with "
+                    f"inference_type={inference_type!r}."
+                )
+            inference_type = "simult"
+
+        return inference_type
+
     def confint(
         self,
         alpha: float = 0.05,
@@ -469,8 +466,9 @@ class ResultAccessorMixin(TidyColumnAccessors):
             The significance level for confidence intervals. Defaults to 0.05.
             keep: str or list of str, optional
         joint : bool, optional
-            Whether to compute simultaneous confidence interval for joint null
-            of parameters selected by `keep` and `drop`. Defaults to False. See
+            Deprecated. Use `inference_type="simult"` instead. Whether to
+            compute simultaneous confidence intervals for the joint null of the
+            parameters selected by `keep` and `drop`. Defaults to False. See
             https://www.causalml-book.org/assets/chapters/CausalML_chap_4.pdf,
             Remark 4.4.1 for details.
         keep: str or list of str, optional
@@ -494,15 +492,14 @@ class ResultAccessorMixin(TidyColumnAccessors):
             The number of bootstrap iterations to run for joint confidence intervals.
             Defaults to 10_000. Only used if `joint` is True.
         seed : int, optional
-            The seed for the random number generator. Defaults to None. Only used if
-            `joint` is True.
-        inference_type: {"regular", "joint", "savi"}, optional
-            Type of confidence interval to compute. If "joint", computes
-            simultaneous confidence intervals. If "savi", computes
+            The seed for the random number generator. Defaults to None. Only used
+            when `inference_type="simult"`.
+        inference_type : {"regular", "simult", "savi"}, optional
+            Type of confidence interval to compute. "regular" returns pointwise
+            intervals; "simult" returns simultaneous (joint) intervals for the
+            coefficients selected by `keep` and `drop`; "savi" returns
             coefficient-wise asymptotic SAVI confidence sequences. Defaults to
-            "regular".
-            The `joint` argument is deprecated; use `inference_type="joint"`.
-            This argument is keyword-only.
+            "regular". Supersedes the deprecated `joint` argument. Keyword-only.
         mixture_precision: float, optional
             When `inference_type="savi"`, controls the mixing weight of the
             prior in the SAVI e-value. Larger values produce wider confidence
@@ -538,7 +535,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
         data = get_data()
         fit = feols("Y ~ C(f1)", data=data)
         fit.confint(alpha=0.10).head()
-        fit.confint(alpha=0.10, joint=True, reps=9999).head()
+        fit.confint(alpha=0.10, inference_type="simult", reps=9999).head()
 
         savi_fit = feols("Y ~ X1 + X2", data=data, vcov="hetero")
         savi_fit.confint(alpha=0.10, inference_type="savi").head()

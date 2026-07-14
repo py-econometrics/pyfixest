@@ -1232,22 +1232,24 @@ def test_savi_input_validation():
 
 def test_savi_inference_type_validation():
     fit = feols("Y ~ X1 + X2", pf.get_data())
-    with pytest.raises(ValueError) as exc_info:
+    # Invalid inference types are rejected everywhere.
+    with pytest.raises(ValueError, match=r"Invalid argument\. Expecting one of"):
         fit.tidy(inference_type="other")
-    assert str(exc_info.value) == (
-        "inference_type must be one of 'regular', 'joint', 'savi'; got 'other'."
-    )
-    with pytest.raises(ValueError, match="inference_type must be one of"):
+    with pytest.raises(ValueError, match=r"Invalid argument\. Expecting one of"):
         fit.pvalue(inference_type="other")
-    with pytest.raises(ValueError, match="inference_type must be one of"):
+    with pytest.raises(ValueError, match=r"Invalid argument\. Expecting one of"):
         fit.summary(inference_type="other")
-    with pytest.raises(ValueError, match=r"tidy\(\) only supports"):
-        fit.tidy(inference_type="joint")
+    with pytest.raises(ValueError, match=r"Invalid argument\. Expecting one of"):
+        fit.confint(inference_type="other")
+    # Simultaneous inference is only available through confint().
+    with pytest.raises(ValueError, match=r"tidy\(\) does not support"):
+        fit.tidy(inference_type="simult")
     with pytest.raises(ValueError, match=r"pvalue\(\) only supports"):
-        fit.pvalue(inference_type="joint")
+        fit.pvalue(inference_type="simult")
     with pytest.raises(ValueError, match=r"summary\(\) only supports"):
-        fit.summary(inference_type="joint")
-    with pytest.raises(ValueError, match=r"deprecated.*do not combine"):
+        fit.summary(inference_type="simult")
+    # joint=True cannot be combined with a conflicting inference_type.
+    with pytest.raises(ValueError, match="cannot be combined"):
         fit.confint(joint=True, inference_type="savi")
 
 

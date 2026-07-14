@@ -299,9 +299,9 @@ def summary(
     digits : int, optional
         The number of decimal places to round the summary statistics to. Default is 3.
     inference_type: {"regular", "savi"}, optional
-        Type of coefficient-wise inference to display. If "savi", p-values are
-        replaced by asymptotic SAVI e-values and intervals are confidence
-        sequences. Defaults to "regular".
+        Type of coefficient-wise inference to display, handled the same way as in
+        `tidy()`. If "savi", p-values are replaced by asymptotic SAVI e-values and
+        intervals are confidence sequences. Defaults to "regular".
     mixture_precision: float, optional
         Positive mixture precision used when `inference_type="savi"`. Fix
         this value before sequential monitoring. Defaults to 1. Use
@@ -337,7 +337,7 @@ def summary(
     pf.summary(savi_fit, inference_type="savi")
     ```
     """
-    if inference_type == "joint":
+    if inference_type == "simult":
         raise ValueError("summary() only supports 'regular' and 'savi' inference.")
 
     models = _post_processing_input_checks(models)

@@ -17,17 +17,24 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ## PyFixest 0.70.0 (In Development)
 
+### Inference Types
+
+- `tidy()`, `confint()`, and `summary()` gain an `inference_type` argument. For
+  `confint()` it takes `"regular"` (pointwise, the default), `"simult"`, or `"savi"`. For `tidy()` and `summary()`, it takes `"regular"` or `"savi"`. The
+  `"simult"` option is for simultaneous confidence intervals
+  (simultaneous / joint intervals). The `confint(joint=True)` argument is
+  deprecated: it still works but now emits a `FutureWarning` and maps to
+  `inference_type="simult"`.
+
+  ```python
+  fit.confint(inference_type="simult")   # replaces fit.confint(joint=True)
+  ```
+
 ### Safe Anytime-Valid Inference (SAVI)
 
-We add support for SAVI inference for linear regression based on Lindon, Ham,
-Tingley, and Bojinov (2026), "Anytime-Valid Inference in Linear Models with
-Applications to Regression-Adjusted Causal Inference," *Journal of the American
-Statistical Association*. Classical p-values and confidence intervals are
-fixed-sample objects — they are not valid under optional stopping or continuous
-monitoring. SAVI converts regression test statistics into e-values, sequential
-p-values, and confidence sequences that remain valid as data accumulate.
+We add support for safe any-time valid inference (SAVI) for linear regression based on following [Lindon et al (2026)](https://arxiv.org/abs/2210.08589).
 
-Coefficient-wise SAVI inference is available via `tidy()`, `pvalue()`,
+You can compute SAVI inference inference is available via `tidy()`, `pvalue()`,
 `summary()`, and `confint()` by passing `inference_type="savi"`:
 
 ```{python}
@@ -37,9 +44,9 @@ import pyfixest as pf
 df = pf.get_data()
 fit = pf.feols("Y ~ X1 + X2", data=df, vcov="iid")
 
-fit.evalue()                                     # coefficient-wise e-values
-fit.pvalue(inference_type="savi")                # coeff-wise sequential p-values
-fit.confint(inference_type="savi")               # coeff-wise confidence sequences
+fit.evalue()
+fit.pvalue(inference_type="savi")
+fit.confint(inference_type="savi")
 ```
 
 Joint linear restrictions are supported via `fit.evalue(R=R)` and
@@ -49,11 +56,6 @@ Joint linear restrictions are supported via `fit.evalue(R=R)` and
 R = np.array([[0, 1, -1]])                       # tests X1 - X2 = 0
 fit.evalue(R=R)
 ```
-
-This PR also introduces `inference_type={"regular", "joint", "savi"}` across
-`confint()`. The existing `joint=True` argument is deprecated and mapped to
-`inference_type="joint"`. SAVI is supported for non-IV `feols()` models with
-iid or heteroskedastic/HC covariance, without weights or fixed effects.
 
 ### GLM API and Behavior
 
