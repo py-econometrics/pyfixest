@@ -258,46 +258,6 @@ def _pvalue(
     return pd.Series(values, index=e_values.index, name="Pr(>|t|)")
 
 
-def _tidy(
-    model: ResultAccessorMixin,
-    alpha: float = 0.05,
-    mixture_precision: float = 1.0,
-) -> pd.DataFrame:
-    """Build a tidy table with SAVI coefficient inference."""
-    _validate_savi_model(model)
-    alpha = _validate_alpha(alpha)
-    mixture_precision = _validate_positive_float(mixture_precision, "mixture_precision")
-
-    critical_value = np.sqrt(
-        _savi_confidence_radius(
-            alpha=alpha,
-            mixture_precision=mixture_precision,
-            nobs=model._N,
-            dfd=model._df_t,
-        )
-    )
-    z_se = critical_value * model._se
-    conf_int = np.array([model._beta_hat - z_se, model._beta_hat + z_se])
-    e_values = _coefficient_evalues(model, mixture_precision)
-
-    ub, lb = 1 - alpha / 2, alpha / 2
-    data = {
-        "Coefficient": model._coefnames,
-        "Estimate": model._beta_hat,
-        "Std. Error": model._se,
-        "t value": model._tstat,
-        "e_value": e_values.to_numpy(),
-        f"{lb * 100:.1f}%": conf_int[:1].flatten(),
-        f"{ub * 100:.1f}%": conf_int[1:2].flatten(),
-    }
-    if (
-        getattr(model, "_sample_split_var", None) is not None
-        and (sample := getattr(model, "_sample_split_value", None)) is not None
-    ):
-        data["Sample"] = sample
-    return pd.DataFrame(data).set_index("Coefficient")
-
-
 def _confint(
     model: ResultAccessorMixin,
     alpha: float = 0.05,

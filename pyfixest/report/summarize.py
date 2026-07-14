@@ -283,7 +283,6 @@ def summary(
     models: ModelInputType,
     digits: int = 3,
     inference_type: InferenceType = "regular",
-    mixture_precision: float = 1.0,
 ) -> None:
     """
     Print a summary of estimation results for each estimated model.
@@ -298,27 +297,13 @@ def summary(
             Feols, Fepois & Feiv models.
     digits : int, optional
         The number of decimal places to round the summary statistics to. Default is 3.
-    inference_type: {"regular", "savi"}, optional
-        Type of coefficient-wise inference to display, handled the same way as in
-        `tidy()`. If "savi", p-values are replaced by asymptotic SAVI e-values and
-        intervals are confidence sequences. Defaults to "regular".
-    mixture_precision: float, optional
-        Positive mixture precision used when `inference_type="savi"`. Fix
-        this value before sequential monitoring. Defaults to 1. Use
-        `pyfixest.estimation.post_estimation.savi.optimal_mixture_precision()`
-        to minimize confidence-sequence width at a target sample size.
+    inference_type : {"regular"}, optional
+        Type of coefficient-wise inference to report, handled the same way as in
+        `tidy()`. Only `"regular"` is currently available. Defaults to `"regular"`.
 
     Returns
     -------
     None
-
-    Notes
-    -----
-    SAVI currently supports unweighted, non-IV `feols` models without absorbed
-    fixed effects. The covariance estimator must be iid or heteroskedasticity
-    robust (`hetero`, `HC1`, `HC2`, or `HC3`). A `FixestMulti` can be summarized
-    with SAVI when every contained model satisfies these restrictions, although
-    its direct `tidy()` and `confint()` methods provide regular inference only.
 
     Examples
     --------
@@ -332,23 +317,14 @@ def summary(
     fit3 = pf.feols("Y~X1 + X2 | f1 + f2 + f3", df)
 
     pf.summary([fit1, fit2, fit3])
-
-    savi_fit = pf.feols("Y ~ X1 + X2", df, vcov="hetero")
-    pf.summary(savi_fit, inference_type="savi")
     ```
     """
-    if inference_type == "simult":
-        raise ValueError("summary() only supports 'regular' and 'savi' inference.")
-
     models = _post_processing_input_checks(models)
 
     for fxst in list(models):
         depvar = fxst._depvar
 
-        df = fxst.tidy(
-            inference_type=inference_type,
-            mixture_precision=mixture_precision,
-        ).round(digits)
+        df = fxst.tidy(inference_type=inference_type).round(digits)
 
         estimation_method = _get_estimation_method_name(fxst)
         print("###")
@@ -361,10 +337,7 @@ def summary(
         if fxst._sample_split_value != "all":
             split = f"sample: {fxst._sample_split_var} = {fxst._sample_split_value}"
             print(split)
-        inference_label = fxst._vcov_type_detail
-        if inference_type == "savi":
-            inference_label = f"{inference_label} (savi)"
-        print("Inference: ", inference_label)
+        print("Inference: ", fxst._vcov_type_detail)
         print("Observations: ", fxst._N)
         print("")
         print(df.to_markdown(floatfmt=f".{digits}f"))

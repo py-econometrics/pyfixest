@@ -19,12 +19,11 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ### Inference Types
 
-- `tidy()`, `confint()`, and `summary()` gain an `inference_type` argument. For
-  `confint()` it takes `"regular"` (pointwise, the default), `"simult"`, or `"savi"`. For `tidy()` and `summary()`, it takes `"regular"` or `"savi"`. The
-  `"simult"` option is for simultaneous confidence intervals
-  (simultaneous / joint intervals). The `confint(joint=True)` argument is
-  deprecated: it still works but now emits a `FutureWarning` and maps to
-  `inference_type="simult"`.
+- `tidy()`, `confint()`, and `summary()` gain an `inference_type` argument.
+  `confint()` takes `"regular"` (pointwise, the default), `"simult"`
+  (simultaneous / joint intervals), or `"savi"`; `tidy()` and `summary()` take
+  `"regular"`. The `confint(joint=True)` argument is deprecated: it still works
+  but now emits a `FutureWarning` and maps to `inference_type="simult"`.
 
   ```python
   fit.confint(inference_type="simult")   # replaces fit.confint(joint=True)
@@ -32,10 +31,11 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ### Safe Anytime-Valid Inference (SAVI)
 
-We add support for safe any-time valid inference (SAVI) for linear regression based on following [Lindon et al (2026)](https://arxiv.org/abs/2210.08589).
+We add support for safe anytime-valid inference (SAVI) for linear regression,
+following [Lindon et al (2026)](https://arxiv.org/abs/2210.08589).
 
-You can compute SAVI inference inference is available via `tidy()`, `pvalue()`,
-`summary()`, and `confint()` by passing `inference_type="savi"`:
+SAVI e-values, sequential p-values, and confidence sequences are available via
+`evalue()`, `sequential_pvalue()`, and `confint(inference_type="savi")`:
 
 ```{python}
 import numpy as np
@@ -45,7 +45,7 @@ df = pf.get_data()
 fit = pf.feols("Y ~ X1 + X2", data=df, vcov="iid")
 
 fit.evalue()
-fit.pvalue(inference_type="savi")
+fit.sequential_pvalue()
 fit.confint(inference_type="savi")
 ```
 
