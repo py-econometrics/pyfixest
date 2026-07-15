@@ -5,13 +5,12 @@ from rpy2.robjects.packages import importr
 
 import pyfixest as pf
 from pyfixest.estimation import feols
-from pyfixest.estimation.post_estimation.wald import _wald_statistic
 from pyfixest.utils.check_r_install import check_r_install
+from pyfixest.utils.utils import ssc
 
 _HAS_AVLM = check_r_install("avlm", strict=False)
 if _HAS_AVLM:
     avlm = importr("avlm")
-    # avlm prints the overall F-test p-value but does not store it in summary().
     _R_AVLM_RESULTS = ro.r(
         """
         function(formula, data, g, vcov_estimator, alpha) {
@@ -26,24 +25,9 @@ if _HAS_AVLM:
                 )
             }
             av_summary <- summary(av_fit)
-            f_statistic <- unname(av_summary$fstatistic)
-            log_g_f <- getFromNamespace("log_G_f", "avlm")
-            p_g_f <- getFromNamespace("p_G_f", "avlm")
-            f_pvalue <- p_g_f(
-                log_g_f(
-                    f_statistic[1],
-                    f_statistic[2],
-                    f_statistic[3],
-                    stats::nobs(fit),
-                    g
-                )
-            )
-
             list(
                 pvalues = unname(av_summary$coefficients[, 4]),
-                confint = unname(confint(av_fit, level = 1 - alpha)),
-                f_statistic = f_statistic,
-                f_pvalue = unname(f_pvalue)
+                confint = unname(confint(av_fit, level = 1 - alpha))
             )
         }
         """
@@ -56,7 +40,7 @@ pytestmark = [
 ]
 
 _FORMULAS = ["Y ~ X1 + X2", "Y ~ X1 + X2 + Z1"]
-_VCOV_TYPES = ["iid", "HC1"]
+_VCOV_TYPES = ["iid", "HC1", "HC2", "HC3"]
 _MIXTURE_PRECISIONS = [1.0, 2.5, "optimal"]
 # Cross-language linear algebra agrees to near machine precision on this data.
 _INFERENCE_RTOL = 1e-10
@@ -82,7 +66,12 @@ def test_savi_coefficient_inference_matches_avlm(
     savi_data, formula, vcov, mixture_precision
 ):
     alpha = 0.05
-    fit = feols(formula, savi_data, vcov=vcov)
+    # avlm applies no small-sample correction to HC2/HC3, while pyfixest's
+    # default ssc scales the hetero meat by n / (n - k). Disable that correction
+    # so both implementations use identical variance estimators. HC1's
+    # n / (n - k) factor is baked into avlm's own HC1 weights, so it is left on.
+    fit_ssc = ssc(k_adj=False) if vcov in ("HC2", "HC3") else ssc()
+    fit = feols(formula, savi_data, vcov=vcov, ssc=fit_ssc)
     if mixture_precision == "optimal":
         mixture_precision = pf.optimal_mixture_precision(fit._N, fit._k, alpha)
 
@@ -111,32 +100,6 @@ def test_savi_coefficient_inference_matches_avlm(
         np.asarray(r_results.rx2("confint")),
         rtol=_INFERENCE_RTOL,
     )
-
-    if vcov == "iid":
-        restriction = np.eye(fit._k)[1:]
-        wald_statistic, dfn = _wald_statistic(
-            beta_hat=fit._beta_hat,
-            vcov=fit._vcov,
-            R=restriction,
-        )
-        f_statistic = wald_statistic / dfn
-        r_f_statistic = np.asarray(r_results.rx2("f_statistic"))
-
-        np.testing.assert_allclose(
-            f_statistic,
-            r_f_statistic[0],
-            rtol=_INFERENCE_RTOL,
-        )
-        assert dfn == r_f_statistic[1]
-        assert fit._df_t == r_f_statistic[2]
-        np.testing.assert_allclose(
-            fit.sequential_pvalue(
-                R=restriction,
-                mixture_precision=mixture_precision,
-            ),
-            np.asarray(r_results.rx2("f_pvalue")),
-            rtol=_INFERENCE_RTOL,
-        )
 
 
 @pytest.mark.parametrize(

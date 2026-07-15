@@ -96,96 +96,74 @@ class ResultAccessorMixin(TidyColumnAccessors):
 
     def evalue(
         self,
-        R: np.ndarray | None = None,
-        q: float | np.ndarray | None = None,
         mixture_precision: float = 1.0,
-    ) -> pd.Series | float:
-        """Compute coefficient-wise or joint SAVI e-values.
+    ) -> pd.Series:
+        """Compute coefficient-wise SAVI e-values.
 
         Parameters
         ----------
-        R : np.ndarray, optional
-            Restriction matrix. If omitted, returns one e-value per coefficient.
-        q : float or np.ndarray, optional
-            Value of the restriction under the null. Defaults to zero.
         mixture_precision : float, optional
             Positive mixture precision fixed before sequential monitoring.
-            Defaults to 1. For coefficient-wise inference, use
-            `pyfixest.optimal_mixture_precision()`
-            to minimize confidence-sequence width at a target sample size.
+            Defaults to 1. Use `pyfixest.optimal_mixture_precision()` to
+            minimize confidence-sequence width at a target sample size.
 
         Returns
         -------
-        pd.Series or float
-            Coefficient-wise e-values, or a scalar for a joint restriction.
+        pd.Series
+            One e-value per coefficient.
 
         Notes
         -----
         SAVI currently supports unweighted, non-IV `feols` models without
         absorbed fixed effects. The covariance estimator must be iid or
-        heteroskedasticity robust (`hetero`, `HC1`, `HC2`, or `HC3`).
+        heteroskedasticity robust (`hetero`, `HC1`, `HC2`, or `HC3`). With
+        `HC2`/`HC3`, pyfixest's default small-sample correction scales the
+        variance by `n / (n - k)`; pass `ssc(k_adj=False)` to reproduce avlm,
+        which applies no such correction. Inference is coefficient-wise; joint
+        linear restrictions are not yet supported.
 
         Examples
         --------
         ```{python}
-        import numpy as np
         import pyfixest as pf
 
         data = pf.get_data()
         fit = pf.feols("Y ~ X1 + X2", data=data, vcov="hetero")
         fit.evalue()
-
-        R = np.array([[0.0, 1.0, -1.0]])
-        fit.evalue(R=R)
         ```
         """
         from pyfixest.estimation.post_estimation.savi import _evalue
 
-        return _evalue(
-            model=self,
-            R=R,
-            q=q,
-            mixture_precision=mixture_precision,
-        )
+        return _evalue(model=self, mixture_precision=mixture_precision)
 
     def sequential_pvalue(
         self,
-        R: np.ndarray | None = None,
-        q: float | np.ndarray | None = None,
         mixture_precision: float = 1.0,
-    ) -> pd.Series | float:
-        """Compute coefficient-wise or joint SAVI sequential p-values.
+    ) -> pd.Series:
+        """Compute coefficient-wise SAVI sequential p-values.
 
         The sequential-p-value analogue of `evalue`, returning
-        `min(1, 1 / e_value)`. See `evalue` for the `R`, `q`, and
-        `mixture_precision` arguments and the supported-model restrictions.
+        `min(1, 1 / e_value)` per coefficient. See `evalue` for the
+        `mixture_precision` argument and the supported-model restrictions.
 
         Returns
         -------
-        pd.Series or float
-            Coefficient-wise sequential p-values, or a scalar for a joint
-            restriction.
+        pd.Series
+            One sequential p-value per coefficient.
 
         Examples
         --------
         ```{python}
-        import numpy as np
         import pyfixest as pf
 
         data = pf.get_data()
         fit = pf.feols("Y ~ X1 + X2", data=data, vcov="HC1")
         fit.sequential_pvalue()
-        fit.sequential_pvalue(R=np.array([[0.0, 1.0, -1.0]]))
         ```
         """
         from pyfixest.estimation.post_estimation.savi import _sequential_pvalue
 
-        return _sequential_pvalue(
-            model=self,
-            R=R,
-            q=q,
-            mixture_precision=mixture_precision,
-        )
+        return _sequential_pvalue(model=self, mixture_precision=mixture_precision)
 
     def get_inference(self, alpha: float = 0.05) -> None:
         """
@@ -421,8 +399,11 @@ class ResultAccessorMixin(TidyColumnAccessors):
         -----
         SAVI currently supports unweighted, non-IV `feols` models without
         absorbed fixed effects. The covariance estimator must be iid or
-        heteroskedasticity robust (`hetero`, `HC1`, `HC2`, or `HC3`). Direct
-        `FixestMulti.confint()` calls provide regular inference only.
+        heteroskedasticity robust (`hetero`, `HC1`, `HC2`, or `HC3`). With
+        `HC2`/`HC3`, pyfixest's default small-sample correction scales the
+        variance by `n / (n - k)`; pass `ssc(k_adj=False)` to reproduce avlm,
+        which applies no such correction. Direct `FixestMulti.confint()` calls
+        provide regular inference only.
 
         Examples
         --------

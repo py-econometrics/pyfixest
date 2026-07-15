@@ -25,7 +25,6 @@ import pandas as pd
 from scipy.optimize import minimize_scalar
 
 from pyfixest.errors import EmptyVcovError
-from pyfixest.estimation.post_estimation.wald import _wald_statistic
 from pyfixest.utils.dev_utils import _select_coefnames_and_indices
 
 if TYPE_CHECKING:
@@ -85,13 +84,19 @@ def _savi_confidence_radius(
     nobs: float,
     dfd: float,
 ) -> float:
-    """Compute the coefficient-wise SAVI confidence-sequence radius."""
+    """Compute the coefficient-wise SAVI confidence-sequence radius.
+
+    Returns the half-width of the confidence sequence in standard-error units
+    (avlm's `t_radius`): the multiple of the standard error added to and
+    subtracted from the point estimate. Returns infinity when no finite radius
+    exists for the given inputs.
+    """
     g_ratio = mixture_precision / (mixture_precision + nobs)
     boundary = (alpha**2 * g_ratio) ** (1 / (dfd + 1))
     denominator = boundary - g_ratio
     if denominator <= 0:
         return np.inf
-    return float(dfd * (1 - boundary) / denominator)
+    return float(np.sqrt(dfd * (1 - boundary) / denominator))
 
 
 def optimal_mixture_precision(
@@ -176,7 +181,7 @@ def _validate_savi_model(model: ResultAccessorMixin) -> None:
     if model._vcov_type not in _SAVI_SUPPORTED_VCOV_TYPES:
         raise NotImplementedError(
             f"SAVI inference does not support vcov type {model._vcov_type!r}. "
-            "Supported types are iid and HC."
+            "Supported types are iid, hetero, HC1, HC2, and HC3."
         )
     if len(model._vcov) == 0:
         raise EmptyVcovError()
@@ -198,54 +203,22 @@ def _coefficient_evalues(
 
 def _evalue(
     model: ResultAccessorMixin,
-    R: np.ndarray | None = None,
-    q: float | np.ndarray | None = None,
     mixture_precision: float = 1.0,
-) -> pd.Series | float:
-    """Compute coefficient-wise or joint SAVI e-values."""
-    if q is not None and R is None:
-        raise ValueError("q can only be specified when R is provided.")
-
+) -> pd.Series:
+    """Compute coefficient-wise SAVI e-values."""
     _validate_savi_model(model)
     mixture_precision = _validate_positive_float(mixture_precision, "mixture_precision")
-
-    if R is None:
-        return _coefficient_evalues(model, mixture_precision)
-
-    wald_statistic, dfn = _wald_statistic(
-        beta_hat=model._beta_hat,
-        vcov=model._vcov,
-        R=R,
-        q=q,
-    )
-    return float(
-        _savi_e_value(
-            wald_statistic / dfn,
-            dfn=dfn,
-            dfd=model._df_t,
-            nobs=model._N,
-            mixture_precision=mixture_precision,
-        )
-    )
+    return _coefficient_evalues(model, mixture_precision)
 
 
 def _sequential_pvalue(
     model: ResultAccessorMixin,
-    R: np.ndarray | None = None,
-    q: float | np.ndarray | None = None,
     mixture_precision: float = 1.0,
-) -> pd.Series | float:
-    """Compute coefficient-wise or joint SAVI sequential p-values."""
-    e_value = _evalue(
-        model=model,
-        R=R,
-        q=q,
-        mixture_precision=mixture_precision,
-    )
-    if isinstance(e_value, pd.Series):
-        values = np.minimum(1.0, 1.0 / e_value.to_numpy())
-        return pd.Series(values, index=e_value.index, name="Pr(>|t|)")
-    return float(min(1.0, 1.0 / e_value))
+) -> pd.Series:
+    """Compute coefficient-wise SAVI sequential p-values."""
+    e_values = _evalue(model=model, mixture_precision=mixture_precision)
+    values = np.minimum(1.0, 1.0 / e_values.to_numpy())
+    return pd.Series(values, index=e_values.index, name="Pr(>|t|)")
 
 
 def _confint(
@@ -264,13 +237,11 @@ def _confint(
     coefnames, coef_indices = _select_coefnames_and_indices(
         model._coefnames, keep, drop, exact_match
     )
-    critical_value = np.sqrt(
-        _savi_confidence_radius(
-            alpha=alpha,
-            mixture_precision=mixture_precision,
-            nobs=model._N,
-            dfd=model._df_t,
-        )
+    critical_value = _savi_confidence_radius(
+        alpha=alpha,
+        mixture_precision=mixture_precision,
+        nobs=model._N,
+        dfd=model._df_t,
     )
     standard_errors = model._se[coef_indices]
     estimates = model._beta_hat[coef_indices]

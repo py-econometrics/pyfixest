@@ -1210,28 +1210,12 @@ def test_savi_public_methods_apply_support_validation(accessor):
         _call_savi(fit, accessor)
 
 
-def test_savi_rejects_rank_deficient_joint_restrictions():
-    fit = feols("Y ~ X1 + X2", pf.get_data())
-    restriction = np.array([[0, 1, 0], [0, 2, 0]])
-
-    with pytest.raises(ValueError, match="full row rank"):
-        fit.evalue(R=restriction)
-
-
 def test_savi_input_validation():
     fit = feols("Y ~ X1 + X2", pf.get_data())
     with pytest.raises(ValueError, match="mixture_precision must be positive"):
         fit.evalue(mixture_precision=0)
     with pytest.raises(ValueError, match="alpha must be between 0 and 1"):
         fit.confint(alpha=0, inference_type="savi")
-
-
-@pytest.mark.parametrize("accessor", ["evalue", "sequential_pvalue"])
-def test_savi_q_requires_R(accessor):
-    fit = feols("Y ~ X1 + X2", pf.get_data())
-
-    with pytest.raises(ValueError, match="q can only be specified when R is provided"):
-        getattr(fit, accessor)(q=1.0)
 
 
 def test_savi_inference_type_validation():

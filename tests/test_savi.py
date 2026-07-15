@@ -5,7 +5,6 @@ import pytest
 import pyfixest as pf
 from pyfixest.estimation import feols
 from pyfixest.estimation.post_estimation.savi import _savi_e_value
-from pyfixest.estimation.post_estimation.wald import _wald_statistic
 from pyfixest.utils.utils import ssc
 
 
@@ -15,15 +14,6 @@ def _gaussian_e_value(qvalue, dfn, nobs, mixture_precision):
         dfn / 2 * np.log(g_ratio) + 0.5 * nobs / (mixture_precision + nobs) * qvalue
     )
     return np.exp(log_e_value)
-
-
-def _e_value_from_f_statistic(f_statistic, dfn, dfd, nobs, mixture_precision):
-    g_ratio = mixture_precision / (mixture_precision + nobs)
-    stat_ratio = dfn / dfd * f_statistic
-    return np.exp(
-        dfn / 2 * np.log(g_ratio)
-        + (dfd + dfn) / 2 * (np.log1p(stat_ratio) - np.log1p(g_ratio * stat_ratio))
-    )
 
 
 def _confidence_radius(alpha, mixture_precision, nobs, dfd):
@@ -115,48 +105,6 @@ def test_savi_e_values_converge_to_gaussian_e_process(dfn):
     np.testing.assert_allclose(e_value, gaussian_e_value, rtol=1e-5)
 
 
-def test_savi_default_f_test_matches_explicit_identity_restriction():
-    fit = feols("Y ~ X1 + X2", pf.get_data())
-    mixture_precision = 2.5
-
-    default_f_test = fit.wald_test()
-    default_e_value = _e_value_from_f_statistic(
-        default_f_test["statistic"],
-        dfn=fit._dfn,
-        dfd=fit._df_t,
-        nobs=fit._N,
-        mixture_precision=mixture_precision,
-    )
-
-    np.testing.assert_allclose(
-        fit.evalue(R=np.eye(fit._k), mixture_precision=mixture_precision),
-        default_e_value,
-    )
-
-
-def test_savi_joint_restriction_with_nonzero_q():
-    fit = feols("Y ~ X1 + X2", pf.get_data())
-    restriction = np.array([[0.0, 1.0, -1.0], [0.0, 0.0, 1.0]])
-    q = np.array([0.5, -0.25])
-    mixture_precision = 2.5
-
-    distance = restriction @ fit._beta_hat - q
-    restricted_vcov = restriction @ fit._vcov @ restriction.T
-    wald_statistic = distance.T @ np.linalg.pinv(restricted_vcov) @ distance
-    expected = _e_value_from_f_statistic(
-        wald_statistic / restriction.shape[0],
-        dfn=restriction.shape[0],
-        dfd=fit._df_t,
-        nobs=fit._N,
-        mixture_precision=mixture_precision,
-    )
-
-    np.testing.assert_allclose(
-        fit.evalue(R=restriction, q=q, mixture_precision=mixture_precision),
-        expected,
-    )
-
-
 @pytest.mark.parametrize("vcov", ["iid", "hetero"])
 @pytest.mark.parametrize("mixture_precision", [1.0, 2.5])
 def test_savi_confidence_sequences_contain_confidence_intervals(
@@ -196,7 +144,7 @@ def test_savi_supports_iid_and_hc_vcov(vcov):
     fit.evalue()
 
 
-def test_savi_matches_avlm_and_statsmodels_longley_iid():
+def test_savi_matches_avlm_longley_iid():
     fit = feols("TOTEMP ~ GNP + UNEMP", _longley_data())
     mixture_precision = 2.5
 
@@ -240,37 +188,7 @@ def test_savi_matches_avlm_and_statsmodels_longley_iid():
     )
 
 
-def test_savi_f_test_matches_avlm_longley_iid():
-    fit = feols("TOTEMP ~ GNP + UNEMP", _longley_data())
-    restriction = np.eye(fit._k)[1:]
-    mixture_precision = 2.5
-
-    wald_statistic, dfn = _wald_statistic(
-        beta_hat=fit._beta_hat,
-        vcov=fit._vcov,
-        R=restriction,
-    )
-    f_statistic = wald_statistic / dfn
-
-    # summary(avlm::av(lm(Employed ~ GNP + Unemployed, longley)))$fstatistic
-    avlm_f_statistic = 329.49763608456516
-    avlm_f_pvalue = 5.3726884577847966e-06
-    assert dfn == 2
-    np.testing.assert_allclose(f_statistic, avlm_f_statistic, rtol=1e-12)
-    np.testing.assert_allclose(
-        fit.evalue(R=restriction, mixture_precision=mixture_precision),
-        1 / avlm_f_pvalue,
-    )
-    np.testing.assert_allclose(
-        fit.sequential_pvalue(
-            R=restriction,
-            mixture_precision=mixture_precision,
-        ),
-        avlm_f_pvalue,
-    )
-
-
-def test_savi_hc0_coefficients_match_avlm_and_statsmodels_longley():
+def test_savi_hc0_coefficients_match_avlm_longley():
     fit = feols(
         "TOTEMP ~ GNP + UNEMP",
         _longley_data(),
