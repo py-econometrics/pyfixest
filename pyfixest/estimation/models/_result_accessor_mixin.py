@@ -111,7 +111,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
         mixture_precision : float, optional
             Positive mixture precision fixed before sequential monitoring.
             Defaults to 1. For coefficient-wise inference, use
-            `pyfixest.estimation.post_estimation.savi.optimal_mixture_precision()`
+            `pyfixest.optimal_mixture_precision()`
             to minimize confidence-sequence width at a target sample size.
 
         Returns
@@ -408,7 +408,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
             sequences early on but narrow faster as the sample grows. Must
             remain fixed during sequential monitoring. Defaults to 1. This
             argument is keyword-only. Use
-            `pyfixest.estimation.post_estimation.savi.optimal_mixture_precision()`
+            `pyfixest.optimal_mixture_precision()`
             to minimize confidence-sequence width at a target sample size.
 
         Returns

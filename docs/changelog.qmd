@@ -47,6 +47,13 @@ fit = pf.feols("Y ~ X1 + X2", data=df, vcov="iid")
 fit.evalue()
 fit.sequential_pvalue()
 fit.confint(inference_type="savi")
+
+mixture_precision = pf.optimal_mixture_precision(
+    nobs=1000,
+    number_of_coefficients=3,
+    alpha=0.05,
+)
+fit.confint(inference_type="savi", mixture_precision=mixture_precision)
 ```
 
 Joint linear restrictions are supported via `fit.evalue(R=R)` and

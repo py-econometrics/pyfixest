@@ -16,7 +16,6 @@ from pyfixest.errors import (
 from pyfixest.estimation import feols, fepois
 from pyfixest.estimation.deprecated.FormulaParser import FixestFormulaParser
 from pyfixest.estimation.post_estimation.multcomp import rwolf
-from pyfixest.estimation.post_estimation.savi import optimal_mixture_precision
 from pyfixest.report.summarize import etable, summary
 from pyfixest.utils.dgps import gelbach_data
 from pyfixest.utils.utils import get_data, ssc
@@ -1227,6 +1226,14 @@ def test_savi_input_validation():
         fit.confint(alpha=0, inference_type="savi")
 
 
+@pytest.mark.parametrize("accessor", ["evalue", "sequential_pvalue"])
+def test_savi_q_requires_R(accessor):
+    fit = feols("Y ~ X1 + X2", pf.get_data())
+
+    with pytest.raises(ValueError, match="q can only be specified when R is provided"):
+        getattr(fit, accessor)(q=1.0)
+
+
 def test_savi_inference_type_validation():
     fit = feols("Y ~ X1 + X2", pf.get_data())
     # Invalid inference types are rejected wherever the argument is accepted.
@@ -1264,7 +1271,7 @@ def test_optimal_mixture_precision_validation(
     nobs, number_of_coefficients, alpha, match
 ):
     with pytest.raises(ValueError, match=match):
-        optimal_mixture_precision(nobs, number_of_coefficients, alpha)
+        pf.optimal_mixture_precision(nobs, number_of_coefficients, alpha)
 
 
 def test_fixest_multi_rejects_savi_tidy_argument():

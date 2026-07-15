@@ -120,9 +120,9 @@ def optimal_mixture_precision(
     Examples
     --------
     ```{python}
-    from pyfixest.estimation.post_estimation.savi import optimal_mixture_precision
+    import pyfixest as pf
 
-    optimal_mixture_precision(
+    pf.optimal_mixture_precision(
         nobs=100,
         number_of_coefficients=3,
         alpha=0.05,
@@ -203,6 +203,9 @@ def _evalue(
     mixture_precision: float = 1.0,
 ) -> pd.Series | float:
     """Compute coefficient-wise or joint SAVI e-values."""
+    if q is not None and R is None:
+        raise ValueError("q can only be specified when R is provided.")
+
     _validate_savi_model(model)
     mixture_precision = _validate_positive_float(mixture_precision, "mixture_precision")
 
@@ -233,29 +236,16 @@ def _sequential_pvalue(
     mixture_precision: float = 1.0,
 ) -> pd.Series | float:
     """Compute coefficient-wise or joint SAVI sequential p-values."""
-    if R is None:
-        return _pvalue(model=model, mixture_precision=mixture_precision)
-
     e_value = _evalue(
         model=model,
         R=R,
         q=q,
         mixture_precision=mixture_precision,
     )
-    assert isinstance(e_value, float)
+    if isinstance(e_value, pd.Series):
+        values = np.minimum(1.0, 1.0 / e_value.to_numpy())
+        return pd.Series(values, index=e_value.index, name="Pr(>|t|)")
     return float(min(1.0, 1.0 / e_value))
-
-
-def _pvalue(
-    model: ResultAccessorMixin,
-    mixture_precision: float = 1.0,
-) -> pd.Series:
-    """Compute coefficient-wise SAVI sequential p-values."""
-    _validate_savi_model(model)
-    mixture_precision = _validate_positive_float(mixture_precision, "mixture_precision")
-    e_values = _coefficient_evalues(model, mixture_precision)
-    values = np.minimum(1.0, 1.0 / e_values.to_numpy())
-    return pd.Series(values, index=e_values.index, name="Pr(>|t|)")
 
 
 def _confint(

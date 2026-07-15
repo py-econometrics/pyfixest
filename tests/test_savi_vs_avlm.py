@@ -5,7 +5,6 @@ from rpy2.robjects.packages import importr
 
 import pyfixest as pf
 from pyfixest.estimation import feols
-from pyfixest.estimation.post_estimation.savi import optimal_mixture_precision
 from pyfixest.estimation.post_estimation.wald import _wald_statistic
 from pyfixest.utils.check_r_install import check_r_install
 
@@ -85,7 +84,7 @@ def test_savi_coefficient_inference_matches_avlm(
     alpha = 0.05
     fit = feols(formula, savi_data, vcov=vcov)
     if mixture_precision == "optimal":
-        mixture_precision = optimal_mixture_precision(fit._N, fit._k, alpha)
+        mixture_precision = pf.optimal_mixture_precision(fit._N, fit._k, alpha)
 
     r_vcov = ro.NULL if vcov == "iid" else vcov
     r_results = _R_AVLM_RESULTS(
@@ -97,8 +96,7 @@ def test_savi_coefficient_inference_matches_avlm(
     )
 
     np.testing.assert_allclose(
-        fit.pvalue(
-            inference_type="savi",
+        fit.sequential_pvalue(
             mixture_precision=mixture_precision,
         ),
         np.asarray(r_results.rx2("pvalues")),
@@ -146,7 +144,7 @@ def test_savi_coefficient_inference_matches_avlm(
     [(100, 3, 0.05), (1_000, 5, 0.10), (10_000, 10, 0.01)],
 )
 def test_optimal_mixture_precision_matches_avlm(nobs, number_of_coefficients, alpha):
-    pyfixest_result = optimal_mixture_precision(
+    pyfixest_result = pf.optimal_mixture_precision(
         nobs=nobs,
         number_of_coefficients=number_of_coefficients,
         alpha=alpha,

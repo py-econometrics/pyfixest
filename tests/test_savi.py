@@ -4,10 +4,7 @@ import pytest
 
 import pyfixest as pf
 from pyfixest.estimation import feols
-from pyfixest.estimation.post_estimation.savi import (
-    _savi_e_value,
-    optimal_mixture_precision,
-)
+from pyfixest.estimation.post_estimation.savi import _savi_e_value
 from pyfixest.estimation.post_estimation.wald import _wald_statistic
 from pyfixest.utils.utils import ssc
 
@@ -332,7 +329,7 @@ def test_optimal_mixture_precision_is_a_local_minimum_of_the_confidence_radius()
     def radius(g):
         return _confidence_radius(alpha=alpha, mixture_precision=g, nobs=nobs, dfd=dfd)
 
-    g_star = optimal_mixture_precision(nobs, number_of_coefficients, alpha)
+    g_star = pf.optimal_mixture_precision(nobs, number_of_coefficients, alpha)
     f_min = radius(g_star)
 
     delta = max(g_star * 0.01, 1e-4)
