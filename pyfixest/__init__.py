@@ -35,6 +35,7 @@ __all__ = [
     "get_worker_panel",
     "iplot",
     "lpdid",
+    "oriv",
     "panelview",
     "qplot",
     "quantreg",
@@ -56,6 +57,7 @@ _lazy_imports = {
     "feols": "pyfixest.estimation.api",
     "fepois": "pyfixest.estimation.api",
     "feglm": "pyfixest.estimation.api",
+    "oriv": "pyfixest.estimation.api",
     "quantreg": "pyfixest.estimation.api",
     # demeaner configs
     "BaseDemeaner": "pyfixest.demeaners",
@@ -93,7 +95,7 @@ _lazy_imports = {
 }
 
 # Functions that have their own dedicated module (can be imported directly)
-_direct_module_imports = {"feols", "fepois", "feglm", "quantreg"}
+_direct_module_imports = {"feols", "fepois", "feglm", "oriv", "quantreg"}
 
 
 def __getattr__(name: str):
