@@ -9,7 +9,7 @@ import pandas as pd
 from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
-from pyfixest.estimation.internals.families import GlmFamily
+from pyfixest.estimation.internals.families import FAMILY_FROM_METHOD, GlmFamily
 from pyfixest.estimation.internals.fit_glm_ import fit_glm_irls
 from pyfixest.estimation.internals.separation import check_for_separation
 from pyfixest.estimation.internals.vcov_ import vcov_iid_glm
@@ -43,7 +43,8 @@ class Feglm(Feols):
             "scipy.linalg.solve",
             "scipy.sparse.linalg.lsqr",
         ],
-        family: GlmFamily,
+        family: GlmFamily | None = None,
+        method: str = "feglm",
         demeaner: AnyDemeaner | None = None,
         lookup_preconditioner: dict[frozenset[int], Preconditioner] | None = None,
         store_data: bool = True,
@@ -98,9 +99,9 @@ class Feglm(Feols):
         self.deviance = None
         self._Xbeta = np.empty(0)
 
-        self._method = "feglm"
-        self._family = family
-        self._inference_dist = family.inference_dist
+        self._method = method
+        self._family = family if family is not None else FAMILY_FROM_METHOD[method]
+        self._inference_dist = self._family.inference_dist
 
     def prepare_model_matrix(self):
         "Prepare model inputs for estimation."

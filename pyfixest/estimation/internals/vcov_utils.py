@@ -4,16 +4,12 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 
+from pyfixest.core._core_impl import (
+    _dk_meat_panel_rs,
+    _nw_meat_panel_rs,
+    _nw_meat_time_rs,
+)
 from pyfixest.core.nested_fixed_effects import count_fixef_fully_nested_all
-from pyfixest.core.nw import (
-    dk_meat_panel as _dk_meat_panel_rs,
-)
-from pyfixest.core.nw import (
-    nw_meat_panel as _nw_meat_panel_rs,
-)
-from pyfixest.core.nw import (
-    nw_meat_time as _nw_meat_time_rs,
-)
 from pyfixest.errors import NanInClusterVarError
 from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
 from pyfixest.utils.utils import get_ssc

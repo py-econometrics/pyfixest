@@ -62,10 +62,10 @@ _lazy_imports = {
     "MapDemeaner": "pyfixest.demeaners",
     "LsmrDemeaner": "pyfixest.demeaners",
     "Preconditioner": "pyfixest.core.demean",
-    # estimation - other functions (still use parent module + getattr)
-    "bonferroni": "pyfixest.estimation",
-    "rwolf": "pyfixest.estimation",
-    "wyoung": "pyfixest.estimation",
+    # estimation - other functions
+    "bonferroni": "pyfixest.estimation.post_estimation.multcomp",
+    "rwolf": "pyfixest.estimation.post_estimation.multcomp",
+    "wyoung": "pyfixest.estimation.post_estimation.multcomp",
     # did
     "did2s": "pyfixest.did",
     "event_study": "pyfixest.did",
