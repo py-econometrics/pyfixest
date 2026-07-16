@@ -213,7 +213,7 @@ maturin = ">=1.8"
 [tool.pixi.tasks]
 test-py = { cmd = 'pytest tests -n auto -m "not (extended or against_r_core or against_r_extended or plots or hac)" --cov=pyfixest --cov-report=xml', depends-on = ["_setup"], description = "Quick Python tests (no R, extended, plots, or HAC)" }
 test-py-extended = { cmd = 'pytest tests -n auto -m "extended" --cov=pyfixest --cov-report=xml', depends-on = ["_setup"], description = "Extended Python tests" }
-test-py-nojit = { cmd = 'pytest tests/test_ses.py tests/test_demean.py -n auto --cov=pyfixest --cov-report=xml:coverage-nojit.xml', env = { NUMBA_DISABLE_JIT = "1" }, depends-on = ["_setup"], description = "Run numba-heavy tests with NUMBA_DISABLE_JIT=1 so codecov sees numba code paths (weekly extended suite)" }
+test-py-nojit = { cmd = 'pytest tests/test_ses.py tests/test_demean.py tests/test_collinearity.py tests/test_count_fixef_fully_nested.py -n auto --cov=pyfixest --cov-report=xml:coverage-nojit.xml', env = { NUMBA_DISABLE_JIT = "1" }, depends-on = ["_setup"], description = "Run numba-heavy tests with NUMBA_DISABLE_JIT=1 so codecov sees numba code paths (weekly extended suite)" }
 render-notebooks = { cmd = "python scripts/run_notebooks.py", description = "Run all notebooks" }
 
 [tool.pixi.tasks._setup]
