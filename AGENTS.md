@@ -11,13 +11,23 @@ Two rules beat everything else:
 2. **Mirror the nearest existing implementation.** Almost every kind of change has
    an in-repo precedent. Find it and copy its structure before writing new code.
 
-For the end-to-end workflow (implement a feature, clean up a contributor PR),
-follow **`.agents/feature-pr.md`**. This file is the tool-neutral entry point:
-Claude Code (via `CLAUDE.md`), Codex, and OpenCode read `AGENTS.md` natively;
-if a tool in your setup does not, point its rules/config file here instead of
-duplicating content. `CLAUDE.md` is a thin redirect (`@AGENTS.md`) and is
-committed to the repo.
-Edit the workflow only in `.agents/feature-pr.md`.
+Two workflows live in `.agents/`; pick by task:
+
+- **`.agents/feature-pr.md`** — implement a feature or build a PR end to end.
+- **`.agents/align-pr.md`** — audit an existing contributor PR against this
+  guide and either report the misalignments or fix them on a local branch.
+
+This file is the tool-neutral entry point: Claude Code (via `CLAUDE.md`),
+Codex, and OpenCode read `AGENTS.md` natively; if a tool in your setup does
+not, point its rules/config file here instead of duplicating content.
+`CLAUDE.md` is a thin redirect (`@AGENTS.md`) and is committed to the repo.
+Edit workflows only in `.agents/`.
+
+This guide is maintained by ratchet: when maintainer feedback states a
+preference this file does not encode (or contradicts), update AGENTS.md — and
+the Phase 1 table in `.agents/align-pr.md` if the rule is mechanically
+checkable — as part of the same change. Prefer a lint rule over prose where
+one exists.
 
 ## Repo map
 
@@ -94,6 +104,8 @@ the paper should recognize it in the code:
   has one. Matrix products use the `t` prefix for transpose: `tZX` is Z'X,
   `tZZinv` is (Z'Z)^-1. Cite the paper (with a link) in the docstring of the
   function that implements it, as `Feols.decompose` does for Gelbach (2016).
+  User-facing names spell out what they do even at the cost of length
+  (`dfm_heterogeneity_test`, not `dfm_test`).
 - Methods orchestrate; numbers happen in functions. A model method validates
   inputs, unpacks `self._` state into locals, calls a standalone module-level
   function that operates on arrays, and assigns the results back to `self._`
@@ -111,13 +123,18 @@ the paper should recognize it in the code:
   drop_multicol_vars → wls_transform`, each step a small named unit. Sanctioned
   exceptions to "short": a single solver iteration loop (IRLS, LSMR,
   Frisch–Newton — splitting it hurts readability and `torch.compile`) and
-  validation-heavy user-facing methods. Split logic, not loops.
+  validation-heavy user-facing methods. Split logic, not loops. The inverse
+  also holds: a public function that only forwards to a same-signature private
+  `_twin` is one function too many.
 - Performance-critical code — per-observation or per-cluster hot loops that
   NumPy cannot vectorize — is written and optimized in Rust under `src/` (the
   demean, CRV1-meat, and HAC-meat kernels are the pattern), not micro-optimized
   in Python. Everything else stays plain, readable NumPy: do not trade clarity
   for speed outside a measured hot loop, and keep a NumPy reference
-  implementation around for testing the kernel.
+  implementation around for testing the kernel. numba appears only in the
+  optional demean backend (`estimation/numba/`) and `ritest`; new features do
+  not add numba paths — a contributed numba kernel becomes a Rust kernel, with
+  the plain-NumPy version kept as the test reference.
 
 Naming and layout:
 - One public function per `api/` module; model-class modules end in `_`
@@ -135,12 +152,16 @@ Signatures and typing:
 - In docstring Parameters sections, spell types as in the signature
   (`str | None`, not `Optional[str]`). Older docstrings mix spellings — don't
   copy them.
+- Public estimation API: `fml` first, `data` second, typed `DataFrameType`
+  (accepts pandas/polars/duckdb) and converted once at the boundary via
+  `_narwhals_to_pandas` — never `pd.DataFrame` in an `api/` signature.
 - mypy runs on `pyfixest/` only; `NDArray[np.float64]` in the `.pyi` stubs.
 
 Docstrings (ruff enforces the NumPy convention):
 - Required on public functions/methods/classes; not required in `tests/`.
 - User-facing API docstrings carry full Parameters/Returns and an Examples
   section with executable ```{python} chunks — quartodoc renders and runs them.
+  Never doctest-style `>>>` examples.
 - Cross-link classes as `[Feols](/reference/estimation.models.feols_.Feols.qmd)`
   and vignettes as `[guide](/tutorials/standard-errors.qmd)` — always
   root-relative with a `.qmd` extension. A few older docstrings use relative
@@ -159,7 +180,11 @@ Errors, warnings, optional dependencies:
   (see `post_estimation/ritest.py`).
 
 Numerics and data:
-- RNG is always `np.random.default_rng(seed)`; never global seeding.
+- RNG is always `np.random.default_rng(seed)`; never `np.random.seed` or the
+  legacy global `np.random.*` samplers — in library code, tests, and docs
+  alike. ruff `NPY002` enforces this; the files grandfathered in
+  `pyproject.toml` per-file-ignores keep their legacy streams because stored
+  references depend on the exact draws — do not extend that list.
 - Never mutate user input data. `copy_data=False` is the only sanctioned
   exception, and its side effects are spelled out in the docstring.
 - `store_data=False` and `lean=True` strip attributes
@@ -196,16 +221,23 @@ note in `tests/conftest.py`, the lazy-numba note in `ritest.py`) — no narratio
   to the module-level list or a case to the matrix — rather than writing a new
   test function. `test_errors.py`'s one-function-per-error style predates this
   rule; don't copy it.
-- Style: module-level formula lists fed to `pytest.mark.parametrize`; seeded
-  DGP fixtures (module-scoped when expensive); explicit `rtol`/`atol` constants
-  at the top of the file with a comment justifying them.
+- Style: module-level `test_*` functions — no test classes, no `setup_method`,
+  no `# === section ===` banner comments; shared setup is a seeded DGP fixture
+  (module-scoped when expensive). Module-level formula lists fed to
+  `pytest.mark.parametrize`; explicit `rtol`/`atol` constants at the top of the
+  file with a comment justifying them. Import through the package
+  (`import pyfixest as pf`), never via `importlib` file loading — if the Rust
+  extension won't import, fix the environment (`pixi run`), not the import.
 - The bar for new econometrics is higher than "runs and has the right shape":
   exact known-value or brute-force cross-checks, edge cases (singleton
   clusters, collinearity, tiny samples), invalid-input tests, and at least one
   external reference — R `fixest`/`sandwich` via rpy2, stored Stata output
-  committed under `tests/data/` (with the `.do` script), or a simulation
-  property (empirical size/coverage). Code adapted from elsewhere gets a
-  provenance and license note in its docstring (see `tests/test_ccv.py`).
+  committed under `tests/data/`, or a simulation property (empirical
+  size/coverage). Every file under `tests/data/` ships with the script that
+  generated it (`.do`, `.R`, or `.py`) in the same directory; hard-coded
+  reference numbers in a test cite their generator the same way. Code adapted
+  from elsewhere gets a provenance and license note in its docstring (see
+  `tests/test_ccv.py`).
 - Reference packages and dependencies: if the reference implementation is on
   conda-forge, add it as a dependency (R packages → `[tool.pixi.feature.r.dependencies]`
   in `pyproject.toml`, test marked `against_r_core`) so CI runs the comparison
@@ -237,6 +269,9 @@ incomplete change. What to touch depends on the surface:
   feature only widens one (a new vcov type → the standard-errors guide,
   `docs/tutorials/standard-errors.qmd`). The Conley and decomposition features
   are the model.
+- Every user-facing change adds an entry to `docs/changelog.qmd` under the
+  current "(In Development)" release heading, in the style of the entries
+  already there.
 - Never hand-edit `docs/reference/**` — it is generated by quartodoc and
   gitignored. Reference display names are shortened by a custom renderer
   (`docs/_renderer.py`); the `docs-build` task runs quartodoc from `docs/` so it
