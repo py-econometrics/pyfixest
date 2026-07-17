@@ -10,8 +10,10 @@ checklists, house style, and commands this workflow assumes. This file defines t
 process. Stay inside its bounded loops — no unbounded retrying.
 
 Inputs: a feature issue, or an existing PR to clean (`gh pr checkout <n>`,
-`gh pr diff <n>`). Always work on a feature branch; a pre-commit hook blocks
-commits to `master`.
+`gh pr diff <n>`). To *audit* a contributor PR against the guide — review
+findings or targeted repairs rather than building the feature out — use
+`.agents/align-pr.md` instead. Always work on a feature branch; a pre-commit
+hook blocks commits to `master`.
 
 ## Phase 1 — Discovery (run once)
 
@@ -158,8 +160,10 @@ for those. Review the full change against AGENTS.md:
    AGENTS.md → "Docs"): `pyfixest/__init__.py` (`__all__`, `_lazy_imports`); the
    Parameters docstring in each of `feols`/`fepois`/`feglm`/`quantreg` that gained
    an option (they do not share docstrings); quartodoc `contents` in
-   `docs/_quarto.yml` for a new class or function; and a `docs/how-to/*.qmd`
-   vignette (navbar entry in `_quarto.yml`) when the feature warrants a guide.
+   `docs/_quarto.yml` for a new class or function; a changelog entry in
+   `docs/changelog.qmd` under the "(In Development)" heading; and a
+   `docs/how-to/*.qmd` vignette (navbar entry in `_quarto.yml`) when the
+   feature warrants a guide.
 5. Run in order: targeted tests → the three lint hooks on changed files, one at
    a time — `pixi run -e lint prek run ruff-format --files <changed>`, then the
    same command with `ruff-check`, then with `mypy` → `pixi run test-py` if
