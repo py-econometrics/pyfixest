@@ -120,6 +120,9 @@ select = [
     "SIM", # flake8-simplify
     "RUF", # ruff,
     "TRY", # tryceratops
+    "NPY", # numpy: NPY002 bans the legacy np.random.* API in favor of default_rng
+    # "N" (pep8-naming) is deliberately NOT enabled: econometric paper notation
+    # (X, tZX, IV_Diag, test_HC1_vs_CRV1) is house style, see AGENTS.md.
 ]
 
 ignore = [
@@ -150,6 +153,18 @@ ignore = [
 "pyfixest/visualize.py" = ["D103"]
 "scripts/*.py" = ["D103"]
 "benchmarks/modular/*.py" = ["D101", "D102", "D103"]
+# NPY002 grandfathering: these files predate the rule and their exact legacy
+# RNG streams are load-bearing (stored reference values, frozen doc output).
+# Do not extend this list — new code uses np.random.default_rng.
+"pyfixest/utils/dgps.py" = ["NPY002"]
+"tests/test_i.py" = ["NPY002"]
+"tests/test_wald_test.py" = ["NPY002"]
+"tests/test_iv.py" = ["NPY002"]
+"tests/test_demean.py" = ["NPY002"]
+"tests/test_errors.py" = ["NPY002"]
+"tests/test_poisson.py" = ["NPY002"]
+# Benchmarks time kernels; the RNG stream carries no correctness weight.
+"benchmarks/**" = ["NPY002"]
 
 [tool.ruff.lint.pycodestyle]
 max-doc-length = 88

@@ -1377,8 +1377,6 @@ class Feols(ResultAccessorMixin):
             )
             self.vcov({"CRV1": cluster})
 
-        if seed is None:
-            seed = np.random.randint(1, 100_000_000)
         rng = np.random.default_rng(seed)
 
         depvar = self._depvar

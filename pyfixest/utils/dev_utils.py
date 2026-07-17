@@ -26,8 +26,6 @@ def _create_rng(seed: int | None = None) -> np.random.Generator:
     numpy.random.Generator
         A random number generator.
     """
-    if seed is None:
-        seed = np.random.randint(100_000_000)
     return np.random.default_rng(seed)
 
 
