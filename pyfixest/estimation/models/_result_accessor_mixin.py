@@ -60,6 +60,8 @@ class ResultAccessorMixin(TidyColumnAccessors):
     _method: str
     _drop_intercept: bool
     _has_fixef: bool
+    _has_weights: bool
+    _is_iv: bool
     _k_fe: pd.Series
     _N: int
     _k: int
@@ -70,6 +72,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
     _adj_r2: float
     _r2_within: float
     _adj_r2_within: float
+    _vcov_type: str
 
     def _bind_report_methods(self):
         """Bind summary, coefplot, iplot, and etable from pyfixest.report as instance methods."""
@@ -90,6 +93,75 @@ class ResultAccessorMixin(TidyColumnAccessors):
         _tmp = _module.etable
         self.etable = functools.partial(_tmp, models=[self])
         self.etable.__doc__ = _tmp.__doc__
+
+    def evalue(
+        self,
+        mixture_precision: float = 1.0,
+    ) -> pd.Series:
+        """Compute coefficient-wise SAVI e-values.
+
+        Parameters
+        ----------
+        mixture_precision : float, optional
+            Positive mixture precision fixed before sequential monitoring.
+            Defaults to 1. Use `pyfixest.optimal_mixture_precision()` to
+            minimize confidence-sequence width at a target sample size.
+
+        Returns
+        -------
+        pd.Series
+            One e-value per coefficient.
+
+        Notes
+        -----
+        SAVI currently supports unweighted, non-IV `feols` models without
+        absorbed fixed effects. The covariance estimator must be iid or
+        heteroskedasticity robust (`hetero`, `HC1`, `HC2`, or `HC3`). Note that
+        for `HC2`/`HC3`, pyfixest's default small-sample correction scales the
+        variance by `n / (n - k)` while the R implementation in `avlm` does not.
+        Inference is pointwise / by coefficient.
+
+        Examples
+        --------
+        ```{python}
+        import pyfixest as pf
+
+        data = pf.get_data()
+        fit = pf.feols("Y ~ X1 + X2", data=data, vcov="hetero")
+        fit.evalue()
+        ```
+        """
+        from pyfixest.estimation.post_estimation.savi import _evalue
+
+        return _evalue(model=self, mixture_precision=mixture_precision)
+
+    def pvalue_savi(
+        self,
+        mixture_precision: float = 1.0,
+    ) -> pd.Series:
+        """Compute coefficient-wise SAVI sequential p-values.
+
+        The sequential-p-value analogue of `evalue`. See `evalue` for the
+        `mixture_precision` argument and the supported-model restrictions.
+
+        Returns
+        -------
+        pd.Series
+            One sequential p-value per coefficient.
+
+        Examples
+        --------
+        ```{python}
+        import pyfixest as pf
+
+        data = pf.get_data()
+        fit = pf.feols("Y ~ X1 + X2", data=data, vcov="HC1")
+        fit.pvalue_savi()
+        ```
+        """
+        from pyfixest.estimation.post_estimation.savi import _pvalue_savi
+
+        return _pvalue_savi(model=self, mixture_precision=mixture_precision)
 
     def get_inference(self, alpha: float = 0.05) -> None:
         """
@@ -261,6 +333,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
         reps: int = 10_000,
         *,
         inference_type: InferenceType = "regular",
+        mixture_precision: float = 1.0,
     ) -> pd.DataFrame:
         r"""
         Fitted model confidence intervals.
@@ -299,17 +372,33 @@ class ResultAccessorMixin(TidyColumnAccessors):
         seed : int, optional
             The seed for the random number generator. Defaults to None. Only used
             when `inference_type="simult"`.
-        inference_type : {"regular", "simult"}, optional
+        inference_type : {"regular", "simult", "savi"}, optional
             Type of confidence interval to compute. "regular" returns pointwise
             intervals; "simult" returns simultaneous (joint) intervals for the
-            coefficients selected by `keep` and `drop`. Defaults to "regular".
-            Supersedes the deprecated `joint` argument. Keyword-only.
+            coefficients selected by `keep` and `drop`; "savi" returns
+            coefficient-wise asymptotic SAVI confidence sequences. Defaults to
+            "regular". Supersedes the deprecated `joint` argument.
+        mixture_precision: float, optional
+            Only relevant for `inference_type="savi"`. Controls the mixing weight of the
+            prior in the SAVI e-value. Larger values produce wider confidence
+            sequences early on but narrow faster as the sample grows. Defaults to 1. Use
+            `pyfixest.optimal_mixture_precision()`
+            to minimize confidence-sequence width at a target sample size.
 
         Returns
         -------
         pd.DataFrame
             A pd.DataFrame with confidence intervals of the estimated regression model
             for the selected coefficients.
+
+        Notes
+        -----
+        SAVI currently supports unweighted, non-IV `feols` models without
+        absorbed fixed effects. The covariance estimator must be iid or
+        heteroskedasticity robust (`hetero`, `HC1`, `HC2`, or `HC3`). With
+        `HC2`/`HC3`, pyfixest's default small-sample correction scales the
+        variance by `n / (n - k)`. You need to pass `ssc(k_adj=False)` to reproduce `avlm`,
+        which applies no such correction.
 
         Examples
         --------
@@ -325,12 +414,22 @@ class ResultAccessorMixin(TidyColumnAccessors):
         fit = feols("Y ~ C(f1)", data=data)
         fit.confint(alpha=0.10).head()
         fit.confint(alpha=0.10, inference_type="simult", reps=9999).head()
+
+        savi_fit = feols("Y ~ X1 + X2", data=data, vcov="hetero")
+        savi_fit.confint(alpha=0.10, inference_type="savi").head()
         ```
         """
         inference_type = self._normalize_inference_type(inference_type, joint=joint)
         if inference_type == "savi":
-            raise NotImplementedError(
-                "inference_type='savi' is not available in confint() yet."
+            from pyfixest.estimation.post_estimation.savi import _confint
+
+            return _confint(
+                model=self,
+                alpha=alpha,
+                mixture_precision=mixture_precision,
+                keep=keep,
+                drop=drop,
+                exact_match=exact_match,
             )
 
         coefnames, coef_indices = _select_coefnames_and_indices(

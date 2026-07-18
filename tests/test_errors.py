@@ -1120,36 +1120,155 @@ def test_did2s_unestimated_first_stage_fixef():
         )
 
 
-def test_inference_type_errors():
-    """Validate `inference_type` handling in `confint()`, `tidy()`, and `summary()`."""
-    fit = feols("Y ~ X1 + X2 + C(f1)", data=get_data())
+@pytest.fixture(params=["fepois", "feiv", "quantreg"])
+def unsupported_savi_model(request):
+    if request.param == "fepois":
+        return fepois("Y ~ X1 + X2", pf.get_data(model="Fepois"))
+    if request.param == "quantreg":
+        return pf.quantreg("Y ~ X1 + X2", data=pf.get_data(), quantile=0.5)
+    return feols("Y ~ 1 | X1 ~ Z1", data=pf.get_data())
 
-    # Invalid values are rejected everywhere.
-    with pytest.raises(ValueError):
-        fit.confint(inference_type="bogus")
-    with pytest.raises(ValueError):
-        fit.tidy(inference_type="bogus")
-    with pytest.raises(ValueError):
-        summary(fit, inference_type="bogus")
 
-    # SAVI is reserved but not wired up yet. summary() mirrors tidy().
-    with pytest.raises(NotImplementedError):
+@pytest.fixture(scope="module", params=["fixef", "aweights", "fweights"])
+def unsupported_savi_design(request):
+    data = pf.get_data()
+    if request.param == "fixef":
+        return feols("Y ~ X1 | f1", data), "fixed effects"
+
+    data["savi_weights"] = np.ones(len(data), dtype=int)
+    fit = feols(
+        "Y ~ X1",
+        data,
+        weights="savi_weights",
+        weights_type=request.param,
+    )
+    return fit, "weighted feols"
+
+
+@pytest.fixture(scope="module", params=["hac", "crv", "multiway_crv"])
+def unsupported_savi_vcov(request):
+    if request.param == "hac":
+        rng = np.random.default_rng(123)
+        data = pd.DataFrame(
+            {
+                "time": np.arange(20),
+                "Y": rng.normal(0, 1, 20),
+                "X1": rng.normal(0, 1, 20),
+            }
+        )
+        fit = feols(
+            "Y ~ X1",
+            data=data,
+            vcov="NW",
+            vcov_kwargs={"time_id": "time", "lag": 3},
+        )
+        return fit, "HAC"
+
+    data = pf.get_data().dropna(subset=["Y", "X1", "X2", "group_id", "f1"])
+    cluster = "group_id + f1" if request.param == "multiway_crv" else "group_id"
+    fit = feols("Y ~ X1 + X2", data, vcov={"CRV1": cluster})
+    return fit, "does not support vcov type 'CRV'"
+
+
+def test_savi_rejects_unsupported_models(unsupported_savi_model):
+    with pytest.raises(NotImplementedError, match="supported only for feols"):
+        unsupported_savi_model.evalue()
+
+
+def test_savi_rejects_weights_and_fixed_effects(unsupported_savi_design):
+    fit, match = unsupported_savi_design
+    with pytest.raises(NotImplementedError, match=match):
+        fit.evalue()
+
+
+def test_savi_rejects_hac_and_crv(unsupported_savi_vcov):
+    fit, match = unsupported_savi_vcov
+    with pytest.raises(NotImplementedError, match=match):
+        fit.evalue()
+
+
+def test_savi_confint_rejects_weights_and_fixed_effects(unsupported_savi_design):
+    fit, match = unsupported_savi_design
+    with pytest.raises(NotImplementedError, match=match):
         fit.confint(inference_type="savi")
-    with pytest.raises(NotImplementedError):
+
+
+def test_savi_input_validation():
+    fit = feols("Y ~ X1 + X2", pf.get_data())
+    with pytest.raises(ValueError, match="mixture_precision must be positive"):
+        fit.evalue(mixture_precision=0)
+    with pytest.raises(ValueError, match="alpha must be between 0 and 1"):
+        fit.confint(alpha=0, inference_type="savi")
+
+
+@pytest.mark.parametrize(
+    ("method", "kwargs", "error", "match"),
+    [
+        (
+            "tidy",
+            {"inference_type": "other"},
+            ValueError,
+            r"Invalid argument\. Expecting one of",
+        ),
+        (
+            "summary",
+            {"inference_type": "other"},
+            ValueError,
+            r"Invalid argument\. Expecting one of",
+        ),
+        (
+            "confint",
+            {"inference_type": "other"},
+            ValueError,
+            r"Invalid argument\. Expecting one of",
+        ),
+        (
+            "tidy",
+            {"inference_type": "simult"},
+            ValueError,
+            r"tidy\(\) does not support",
+        ),
+        (
+            "summary",
+            {"inference_type": "simult"},
+            ValueError,
+            r"tidy\(\) does not support",
+        ),
+        ("tidy", {"inference_type": "savi"}, NotImplementedError, None),
+        ("summary", {"inference_type": "savi"}, NotImplementedError, None),
+        (
+            "confint",
+            {"joint": True, "inference_type": "savi"},
+            ValueError,
+            "cannot be combined",
+        ),
+    ],
+)
+def test_inference_type_validation(method, kwargs, error, match):
+    fit = feols("Y ~ X1 + X2", pf.get_data())
+
+    with pytest.raises(error, match=match):
+        getattr(fit, method)(**kwargs)
+
+
+@pytest.mark.parametrize(
+    "nobs, number_of_coefficients, alpha, match",
+    [
+        (0, 5, 0.05, "nobs must be positive"),
+        (10, 10, 0.05, "nobs must be greater than number_of_coefficients"),
+        (100, 5, 0, "alpha must be between 0 and 1"),
+        (2, 1, 0.05, "No finite optimal mixture precision exists"),
+    ],
+)
+def test_optimal_mixture_precision_validation(
+    nobs, number_of_coefficients, alpha, match
+):
+    with pytest.raises(ValueError, match=match):
+        pf.optimal_mixture_precision(nobs, number_of_coefficients, alpha)
+
+
+def test_fixest_multi_rejects_savi_tidy_argument():
+    fit = feols("Y + Y2 ~ X1 + X2", pf.get_data())
+
+    with pytest.raises(TypeError):
         fit.tidy(inference_type="savi")
-    with pytest.raises(NotImplementedError):
-        summary(fit, inference_type="savi")
-
-    # Simultaneous inference is a confint()-only concept.
-    with pytest.raises(ValueError):
-        fit.tidy(inference_type="simult")
-    with pytest.raises(ValueError):
-        summary(fit, inference_type="simult")
-
-    # joint=True is deprecated and warns...
-    with pytest.warns(FutureWarning, match="joint.*deprecated"):
-        fit.confint(joint=True)
-
-    # ...and cannot be combined with a conflicting inference_type.
-    with pytest.raises(ValueError):
-        fit.confint(joint=True, inference_type="savi")
