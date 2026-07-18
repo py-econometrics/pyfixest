@@ -15,6 +15,7 @@ from pyfixest.errors import (
 )
 from pyfixest.estimation import feols, fepois
 from pyfixest.estimation.deprecated.FormulaParser import FixestFormulaParser
+from pyfixest.estimation.post_estimation.dfm_test import _dfm_heterogeneity_test
 from pyfixest.estimation.post_estimation.multcomp import rwolf
 from pyfixest.report.summarize import etable, summary
 from pyfixest.utils.dgps import gelbach_data
@@ -1072,3 +1073,69 @@ def test_errors_hac():
                 vcov=vcov,
                 vcov_kwargs={"time_id": "time3", "panel_id": "panel", "lag": 5},
             )
+
+
+def test_dfm_heterogeneity_test_standalone_errors():
+    """Invalid inputs to the standalone DFM test raise ValueError."""
+    rng = np.random.default_rng(1234)
+    n = 200
+    X = rng.standard_normal((n, 2))
+    y = rng.standard_normal(n)
+
+    with pytest.raises(ValueError, match="binary"):
+        _dfm_heterogeneity_test(y=y, treatment=rng.choice([0, 1, 2], n), X=X)
+
+    with pytest.raises(ValueError, match="same length"):
+        _dfm_heterogeneity_test(y=y, treatment=rng.binomial(1, 0.5, n // 2), X=X)
+
+    with pytest.raises(ValueError, match="Not enough observations"):
+        _dfm_heterogeneity_test(
+            y=rng.standard_normal(5),
+            treatment=np.array([1, 1, 0, 0, 0]),
+            X=rng.standard_normal((5, 3)),
+        )
+
+
+def test_dfm_heterogeneity_test_method_errors():
+    """Unsupported models and bad arguments raise from Feols.dfm_heterogeneity_test."""
+    rng = np.random.default_rng(5678)
+    n = 400
+    df = pd.DataFrame(
+        {
+            "Y": rng.standard_normal(n),
+            "D": rng.binomial(1, 0.5, n),
+            "D3": rng.choice([0, 1, 2], n),
+            "X1": rng.standard_normal(n),
+            "X2": rng.standard_normal(n),
+            "Z1": rng.standard_normal(n),
+            "f1": rng.integers(0, 5, n),
+            "w": rng.uniform(0.5, 1.5, n),
+        }
+    )
+
+    # unsupported model types
+    with pytest.raises(NotImplementedError, match="fixed effects"):
+        feols("Y ~ D + X1 | f1", data=df).dfm_heterogeneity_test(treatment="D")
+
+    with pytest.raises(NotImplementedError, match="IV"):
+        feols("Y ~ D + X1 | X2 ~ Z1", data=df).dfm_heterogeneity_test(treatment="D")
+
+    with pytest.raises(NotImplementedError, match="weighted"):
+        feols("Y ~ D + X1 + X2", data=df, weights="w").dfm_heterogeneity_test(
+            treatment="D"
+        )
+
+    with pytest.raises(NotImplementedError, match="lean"):
+        feols("Y ~ D + X1 + X2", data=df, lean=True).dfm_heterogeneity_test(
+            treatment="D"
+        )
+
+    # bad arguments
+    with pytest.raises(ValueError, match="not found"):
+        feols("Y ~ X1 + X2", data=df).dfm_heterogeneity_test(treatment="D")
+
+    with pytest.raises(ValueError, match="binary"):
+        feols("Y ~ D3 + X1", data=df).dfm_heterogeneity_test(treatment="D3")
+
+    with pytest.raises(ValueError, match="at least one covariate"):
+        feols("Y ~ D", data=df).dfm_heterogeneity_test(treatment="D")

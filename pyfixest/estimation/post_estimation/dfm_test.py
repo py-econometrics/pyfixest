@@ -4,6 +4,12 @@ Omnibus test for systematic treatment effect heterogeneity.
 Implements the Ding, Feller, Miratrix (2019) decomposition test.
 The null is that the CATE does not vary linearly with covariates X.
 
+This is a NumPy port of the reference R implementation `dfmTest` in
+Netflix-Skunkworks/causaltransportr (`R/dfmTest.R`), which is MIT-licensed
+(Copyright 2022 Netflix, Inc.). The R source is vendored verbatim under
+`tests/vendored/causaltransportr/` (with its LICENSE) and `tests/test_dfm_test_vs_r.py`
+checks this port against it.
+
 Reference
 ---------
 Ding, P., A. Feller, and L. Miratrix (2019): "Decomposing Treatment Effect
@@ -16,7 +22,7 @@ import numpy as np
 from scipy.stats import chi2
 
 
-def dfm_heterogeneity_test(
+def _dfm_heterogeneity_test(
     y: np.ndarray,
     treatment: np.ndarray,
     X: np.ndarray,
@@ -97,9 +103,13 @@ def dfm_heterogeneity_test(
     E1 = resid1[:, None] * X1
     E0 = resid0[:, None] * X0
 
-    # Sandwich variance of the coefficient difference.
-    # Each arm contributes: (X'X/n)^{-1} * Cov(scores)/n * (X'X/n)^{-1}
-    # np.cov uses ddof=1 by default, same as R's cov().
+    # Sandwich variance of the coefficient difference, exactly as in DFM's
+    # reference R `dfmTest`. Each arm contributes
+    #   (X'X/n)^{-1} @ cov(scores)/n @ (X'X/n)^{-1}.
+    # np.cov uses ddof=1, matching R's cov(); combined with the /n this is a
+    # per-arm n/(n-1) scaling of the HC0 meat (not HC0 or HC1). The score
+    # columns are mean-zero for OLS with an intercept, so the centering that
+    # np.cov/cov() apply is a no-op and the port reproduces the R bit for bit.
     Sxx1_inv = np.linalg.inv(X1.T @ X1 / n1)
     Sxx0_inv = np.linalg.inv(X0.T @ X0 / n0)
 

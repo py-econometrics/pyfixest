@@ -29,6 +29,13 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   exactly. We slightly deviate from `fixest::feglm(family="gaussian")`, which uses slightly different small sample corrections between OLS and GLM with Gaussian link.
 - Logit and probit IRLS initialise at new values for better numerical stability.
 
+### New Features
+
+- `Feols.dfm_heterogeneity_test()` adds an omnibus test for systematic treatment
+  effect heterogeneity (Ding, Feller, Miratrix 2019): it fits separate OLS by
+  treatment arm and jointly tests whether the treatment effect varies with the
+  model's covariates.
+
 ### Deprecations and Removals
 
 As previously announced, we removed:
