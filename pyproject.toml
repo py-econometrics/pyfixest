@@ -284,7 +284,7 @@ jupytext = "==1.16.1"
 watermark = "==2.4.3"
 pylatex = ">=1.4.2"
 quartodoc = ">=0.11.0"
-quarto = ">=1.8.25"
+quarto = ">=1.9.0"
 griffe = "<2"
 
 [tool.pixi.feature.docs.pypi-dependencies]

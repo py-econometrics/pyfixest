@@ -8,8 +8,6 @@ project:
     - "*.ipynb"
     - "*.md"
     - "!quarto_example/"
-  post-render:
-    - _scripts/generate_llms_md.py
 
 execute:
   freeze: auto
@@ -26,6 +24,9 @@ metadata-files:
   - _sidebar.yml
 
 website:
+  title: "PyFixest"
+  description: "Fast high-dimensional fixed effects regression in Python, closely mirroring the syntax of the R package fixest."
+  llms-txt: true
   navbar:
     page_navigation: true
     favicon: "figures/pyfixest-logo.png"
