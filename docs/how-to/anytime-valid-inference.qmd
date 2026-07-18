@@ -1,6 +1,6 @@
 ---
 title: "When to Use Anytime-Valid Inference"
-description: "A practical guide to monitoring randomized experiments, stopping early, and avoiding false positives from peeking."
+description: "A practical guide to anytime valid inference in randomized experiments, stopping early, and avoiding false positives from peeking."
 aliases:
   - /anytime-valid-inference.html
 categories: [Inference, AB Testing]
@@ -9,86 +9,44 @@ toc-title: "On this page"
 toc-location: left
 ---
 
-::: {.callout-tip title="When SAVI is useful"}
-Use safe anytime-valid inference (SAVI) when an experiment result may change a
-decision before a fixed end date. That includes shipping a winning variant,
-rolling back a harmful release, or continuing an inconclusive test.
-
-If the team will wait for one agreed sample size and analyze the experiment
-once, ordinary fixed-horizon inference is simpler and usually more precise.
-SAVI buys flexibility, not extra power.
-:::
-
-## Start with the decision rule
-
-Looking at a dashboard does not invalidate a test. Acting on an ordinary
-p-value before the planned analysis can.
-
-| What the team may do | Ordinary fixed-horizon inference | SAVI |
-|---|---|---|
-| Look during the test, but wait for the planned final analysis | Valid | Valid |
-| Ship or roll back as soon as the evidence crosses a threshold | Not covered by the original test | Designed for this |
-| Keep running because the planned result is close but inconclusive | Not covered by the original test | Valid |
-| Analyze once at a fixed sample size | Usually the better fit | Valid, but typically more conservative |
-
-If a dashboard, alert, or experiment review can move the launch date, the
-analysis is sequential. That is the setting SAVI addresses.
-
 ## Why ordinary p-values fail when you peek
 
-Suppose a checkout experiment is scheduled to run for twenty days. The
-dashboard updates every morning. On day four, the p-value falls below 0.05 and
-the team considers shipping.
+Suppose your team has just finalised a new feature, and now you want to test it with an AB test. In a first step, you specify the KPIs that you want to move, a minimum detectable/relevant effect size, and a false positive rate for your statistical test (the alpha level). With this at hand, you do a power analysis and find that, in order to reliably detect your MDE of interest, you need to run the experiment for 20 days. You lock your runtime and launch the experiment.
 
-The p-value is not broken. It is calibrated for one analysis at a fixed sample
-size. It is not calibrated for the rule "check every day and stop the first
-time p < 0.05."
+In most tech companies, AB tests rollouts are tracked on a daily basis via an experimentation platform that is either built in-house, or provided by a third party as Eppo, Statsig, or Optimizely. These experimentation platforms show treatment effects and inferential statistics and usually update each morning.
 
-Repeated checks give noise more opportunities to cross the threshold. The
-checks are correlated, so this is not the same as running twenty independent
-tests, but the false-positive rate still rises above 5%. The same problem
-appears when a team stops early on a bad result or extends a test because
-p = 0.06 at the planned end.
+So we launch our experiment, and we can check our results every day. On day one, we find a positive treatment effect on our KPI of interest, with a p-value of 0.15. On day two, the treatment effect is still positive, and the p-value has shrunk further to 0.08. On day three, we finally reach significane. For days 3-8, the treatment effect is continuously positive with a p-value lower than 0.05.
 
-Stopping on an unusually favorable estimate also exaggerates the reported
-effect. The estimate often shrinks after launch. This is the winner's curse.
+Slowly, discussions start to emerge in the team; excitement abounds. It looks like we have a winner! So should we ship the feature now? Or should we wait for the planned runtime of the experiment to conclude?
+
+Using the standard playbook of inferential statistics of AB testing, taking discretionary decisions on test results based on interim results is not valid - repeated peaking with the intention to stop a test before its runtime concludes leads to inflated false positive rates.
+
+Why is this the case? In a nutshell, the false positive rate set at the beginnin of a test is only valid for a **single inferential decision**. If instead we "peak" and take decisions on test continuation multiple times, we are effectively running multiple tests.
+
+Suppose we had set the false positive rate to $\alpha = 0.05$. If we peek every day and are willing to stop the test the moment we find a p-value lower than 0.05, we are effectively running 20 tests. Assuming that all of these tests are independent (which is not the case for peeking, but let's assume if for the sake of the argument), the probability of at least one false positive is $1 - (1 - 0.05)^{20} \approx 0.64$. In other words, if our policy was to "monitor each day and ship as soon as p < 0.05", we would have a 64% chance of shipping a feature that actually does nothing. The false positive rate remains at 5% only if we make a single decision at the end of the experiment. We are bound to the pre-specified runtime.
+
+::: {.callout}
+Note that the problem with peeking is not that we are "looking at the data" every day - the issue only arises if we are taking discretionary decisions on test continuation based on the interm results.
+:::
+
+If we want to peek and take decisions on test continuation while the test runs, and control the false positive rate, we need to use a different inferential framework. This is where **anytime-valid inference** comes into play.
 
 ## What SAVI changes
 
-SAVI calibrates the evidence over the full path of the experiment. Under the
-method's assumptions, the probability that a null experiment ever crosses the
-5% decision boundary is asymptotically no more than 5%. The number and timing
-of the checks do not need to be fixed in advance.
+Safe anytime-valid inference (SAVI) lets you check an experiment and take discretionary decisions
+as often as you need. In the large randomized experiments considered here, a 5% SAVI test keeps the false positive rate at 5% or less, even when the team looks every day and follows a decision rule of "ship whenever p < 0.05". Even better, the number and timing of those checks do not have to be chosen before launch. If early on it becomes clear that an experiment is a clear winner, SAVI allows the team to ship the feature early - we do not have to wait for the planned runtime to conclude. If the experiment is a clear loser, SAVI allows us to roll back the feature early.
 
-That flexibility has a cost. SAVI asks for stronger evidence early on, and its
-confidence sequences are wider than ordinary confidence intervals. A
-fixed-horizon test will often detect a modest effect more often at its planned
-end date. SAVI is useful when the ability to act early or wait longer is worth
-that loss in precision.
+Like everything in life, there is no such thing as a free lunch. SAVI's flexibility comes with a cost. In general, SAVI's confidence sequences are wider than ordinary "fixed sample" confidence intervals. SAVI is useful when the ability to act early or to wait a little longer is worth the loss in precision.
 
-::: {.callout-note title="E-values: the decision scale"}
-An e-value uses 1 as its baseline and can rise or fall as data arrive. Large
-values count against "no effect." At a 5% level, the decision boundary is 20
-because $1 / 0.05 = 20$. An e-value of 20 does not mean that the alternative is
-twenty times more likely than the null. It means that the evidence has reached
-the boundary calibrated for the sequential decision rule.
+Below, we showcase four scenarios in which SAVI inference comes in handy: in **scenario 1**, we run a simple AA test in which we test if a backend service rewrite from Java to Kotlin does any harm. Because we have a strong engineering team, we assume that the Java service will behave identically to the Kotlin service. At the beginning of the test, we nevertheless observe very large but noisy effect estimates, and the team starts being concerned. We have to decide if we continue with the test, or not. Under fixed sample inference, we would have to keep the test running until its prespecified runtime concludes. In practice, no sane team follows this procedure - most would likely stop the test early. In the first example, the initial negative effects are a **false positive**. Under 'regular' fixed sample inference, we'd incorrectly stop the test early. As SAVI requires stronger evidence, we avoid the false positive.
 
-PyFixest also reports `min(1, 1 / e-value)` as a sequential p-value. The two
-scales carry the same information: e-value >= 20 and sequential p-value <= 0.05
-cross at the same time. A confidence sequence gives the same decision in effect
-size units. It excludes zero when the evidence boundary is crossed.
-:::
+In **scenario 2**, we run an AB test that produces a very large and positive treatment effect early on. We have a clear winner! Unfortunately, with fixed sample inference, we cannot ship the feature early and obtain correct inference. SAVI on the other hand allows us to ship the feature early, pocket its gains, and unblock further initiatives the team is working on.
 
-The examples below cover four decisions: avoid a false alarm, ship a winning
-variant, certify that an effect is too small to matter, and roll back a harmful
-canary. They also show how a pre-experiment covariate can narrow a confidence
-sequence. Use Play or the day slider in the single-experiment figures.
+In **scenario 3**, ...
 
-The main A/B test is planned for twenty days and treats a 2 percentage point
-lift as the minimum detectable effect (MDE). Its mixture precision is chosen
-before the simulation to make the confidence sequence narrowest at the planned
-end, then held fixed at every look. The operational examples use the same rule
-with their own planned monitoring windows.
+Last, in **scenarion 4** ...
+
+The SAVI method we implement for PyFixest is based on Lindon et al. (2026), who develop anytime valid inference methods for linear regression models, which unlocks variance reduction via regression adjustment. We therefore conclude by showcasing the benefits of combining regression adjustments with anytime valid inference. /footnote{Another strength of the Lindon et al. (2026) method is that it has a closed form solution, which makes it fast to compute.}
 
 ```{python}
 import numpy as np
