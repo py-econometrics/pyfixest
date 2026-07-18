@@ -1,4 +1,5 @@
 import pandas as pd
+import pytest
 from great_tables import GT
 
 import pyfixest as pf
@@ -164,6 +165,15 @@ def test_etable_correct_output_type():
 
     typst_table = pf.etable(fit, type="typst")
     assert isinstance(typst_table, str)
+
+
+def test_dtable_is_deprecated():
+    data = get_data()
+
+    with pytest.warns(FutureWarning, match=r"pf\.dtable\(\) is deprecated"):
+        table = pf.dtable(data, vars=["Y", "X1"], type="df")
+
+    assert isinstance(table, pd.DataFrame)
 
 
 def test_summary_inference_type_regular(capsys):
