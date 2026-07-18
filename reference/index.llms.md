@@ -46,7 +46,6 @@ Post-Processing of Estimation Results
 | [did.visualize.panelview](../reference/did.visualize.panelview.llms.md#pyfixest.did.visualize.panelview) | Generate a panel view of the treatment variable over time for each unit. |
 | [report.summary](../reference/report.summary.llms.md#pyfixest.report.summary) | Print a summary of estimation results for each estimated model. |
 | [report.etable](../reference/report.etable.llms.md#pyfixest.report.etable) | Generate a table summarizing the results of multiple regression models. |
-| [report.dtable](../reference/report.dtable.llms.md#pyfixest.report.dtable) | Generate descriptive statistics tables and create a booktab style table in |
 | [report.coefplot](../reference/report.coefplot.llms.md#pyfixest.report.coefplot) | Plot model coefficients with confidence intervals. |
 | [report.iplot](../reference/report.iplot.llms.md#pyfixest.report.iplot) | Plot model coefficients for variables interacted via “i()” syntax, with |
 

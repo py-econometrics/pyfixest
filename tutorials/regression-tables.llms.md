@@ -8,7 +8,7 @@ Publication-ready tables with Great Tables or LaTeX booktabs — customize label
 
 > **NOTE:**
 >
-> Starting with pyfixest 0.41.0 (currently in development), the table functionality is powered by [maketables](https://py-econometrics.github.io/maketables/). The `pf.etable()` API remains unchanged. `pf.dtable()` is deprecated (use `DTable()` directly) and `pf.make_table()` has been removed (use `maketables.MTable()` directly).
+> Starting with pyfixest 0.41.0 (currently in development), the table functionality is powered by [maketables](https://py-econometrics.github.io/maketables/). The `pf.etable()` API remains unchanged and `pf.make_table()` has been removed (use `maketables.MTable()` directly).
 
 Pyfixest comes with functions to generate publication-ready tables. Regression tables are generated with `pf.etable()`, which can output different formats, for instance using the [Great Tables](https://posit-dev.github.io/great-tables/articles/intro.html) package or generating formatted LaTex Tables using [booktabs](https://ctan.org/pkg/booktabs?lang=en). Descriptive statistics tables can be created with `DTable()` and custom tables with `maketables.MTable()`.
 
@@ -36,8 +36,6 @@ fit4 = pf.feols("Y2 ~ X1 + X2 | f1", data=data)
 fit5 = pf.feols("Y2 ~ X1 + X2 | f1 + f2", data=data)
 fit6 = pf.feols("Y2 ~ X1 *X2 | f1 + f2", data=data)
 ```
-
-    OMP: Info #276: omp_set_nested routine deprecated, please use omp_set_max_active_levels instead.
 
 # Regression Tables via `pf.etable()`
 
@@ -123,11 +121,12 @@ pf.etable(
 |  |  | Y |  |  | Y2 |  |  |
 |----|----|----|----|----|----|----|----|
 |  |  | \(1\) | \(2\) | \(3\) | \(4\) | \(5\) | \(6\) |
-| coef | X1 | -0.94953\*\*\* (0.06637) | -0.92405\*\*\* (0.05606) | -0.92417\*\*\* (0.05608) | -1.26655\*\*\* (0.21078) | -1.23153\*\*\* (0.21141) | -1.23100\*\*\* (0.21149) |
-|  | X2 | -0.17423\*\*\* (0.01760) | -0.17411\*\*\* (0.01486) | -0.18550\*\*\* (0.02502) | -0.13056\*\* (0.05592) | -0.11767\*\* (0.05610) | -0.07369 (0.09447) |
+| coef | X1 | -0.94953 (0.06637) | -0.92405 (0.05606) | -0.92417 (0.05608) | -1.26655 (0.21078) | -1.23153 (0.21141) | -1.23100 (0.21149) |
+|  | X2 | -0.17423 (0.01760) | -0.17411 (0.01486) | -0.18550 (0.02502) | -0.13056 (0.05592) | -0.11767 (0.05610) | -0.07369 (0.09447) |
 |  | X1 × X2 |  |  | 0.01057 (0.01868) |  |  | -0.04082 (0.07054) |
-| fe | f1 | x | x | x | x | x | x |
-|  | f2 | \- | x | x | \- | x | x |
+| fe | f2 | \- | x | x | \- | x | x |
+|  | f1 | x | \- | \- | x | \- | \- |
+|  | f1 | \- | x | x | \- | x | x |
 | stats | Observations | 997 | 997 | 997 | 998 | 998 | 998 |
 |  | R² | 0.489 | 0.659 | 0.659 | 0.12 | 0.172 | 0.172 |
 
@@ -143,14 +142,15 @@ pf.etable(
 
     |                           | ('Y', '(1)')   | ('Y', '(2)')   | ('Y', '(3)')   | ('Y2', '(4)')   | ('Y2', '(5)')   | ('Y2', '(6)')   |
     |:--------------------------|:---------------|:---------------|:---------------|:----------------|:----------------|:----------------|
-    | ('coef', 'X1')            | -0.94953***    | -0.92405***    | -0.92417***    | -1.26655***     | -1.23153***     | -1.23100***     |
-    |                           |  (0.06637)     |  (0.05606)     |  (0.05608)     |  (0.21078)      |  (0.21141)      |  (0.21149)      |
-    | ('coef', 'X2')            | -0.17423***    | -0.17411***    | -0.18550***    | -0.13056**      | -0.11767**      | -0.07369        |
-    |                           |  (0.01760)     |  (0.01486)     |  (0.02502)     |  (0.05592)      |  (0.05610)      |  (0.09447)      |
-    | ('coef', 'X1 × X2')       |                |                | 0.01057        |                 |                 | -0.04082        |
-    |                           |                |                |  (0.01868)     |                 |                 |  (0.07054)      |
-    | ('fe', 'f1')              | x              | x              | x              | x               | x               | x               |
-    | ('fe', 'f2')              | -              | x              | x              | -               | x               | x               |
+    | ('coef', 'X1')            | -0.950***      | -0.924***      | -0.924***      | -1.267***       | -1.232***       | -1.231***       |
+    |                           |  (0.066)       |  (0.056)       |  (0.056)       |  (0.211)        |  (0.211)        |  (0.211)        |
+    | ('coef', 'X2')            | -0.174***      | -0.174***      | -0.185***      | -0.131**        | -0.118**        | -0.074          |
+    |                           |  (0.018)       |  (0.015)       |  (0.025)       |  (0.056)        |  (0.056)        |  (0.094)        |
+    | ('coef', 'X1 × X2')       |                |                | 0.011          |                 |                 | -0.041          |
+    |                           |                |                |  (0.019)       |                 |                 |  (0.071)        |
+    | ('fe', ' f2')             | -              | x              | x              | -               | x               | x               |
+    | ('fe', 'f1')              | x              | -              | -              | x               | -               | -               |
+    | ('fe', 'f1 ')             | -              | x              | x              | -               | x               | x               |
     | ('stats', 'Observations') | 997            | 997            | 997            | 998             | 998             | 998             |
     | ('stats', 'R²')           | 0.489          | 0.659          | 0.659          | 0.12            | 0.172           | 0.172           |
 
@@ -279,10 +279,10 @@ fit9._coefnames
     [np.str_('Intercept'),
      np.str_('X1'),
      np.str_('X2'),
-     np.str_("C(job, contr.treatment(base='Managerial'))[T.Admin]"),
-     np.str_("C(job, contr.treatment(base='Managerial'))[T.Blue collar]"),
-     np.str_("C(job, contr.treatment(base='Managerial'))[T.Admin]:X2"),
-     np.str_("C(job, contr.treatment(base='Managerial'))[T.Blue collar]:X2")]
+     np.str_('job::Admin'),
+     np.str_('job::Blue collar'),
+     np.str_('job::Admin:X2'),
+     np.str_('job::Blue collar:X2')]
 
 ## Custom model headlines
 
@@ -400,10 +400,6 @@ When you render either a jupyter notebook or qmd file to html it is advisable to
 
 # Descriptive Statistics via `DTable()`
 
-> **WARNING:**
->
-> `pf.dtable()` will be deprecated in the future. Please use `DTable` from the `maketables` package.
-
 The function `DTable()` allows to display descriptive statistics for a set of variables in the same layout.
 
 ## Basic Usage of DTable
@@ -480,12 +476,12 @@ DTable(
 |  | Blue collar |  | White collar |  | Blue collar |  | White collar |  |
 |  | Mean | Std. Dev. | Mean | Std. Dev. | Mean | Std. Dev. | Mean | Std. Dev. |
 | stats |  |  |  |  |  |  |  |  |
-| Wage | -0.20 | 2.25 | -0.19 | 2.40 | 0.01 | 2.28 | -0.13 | 2.30 |
-| Wealth | -0.84 | 5.43 | 0.24 | 5.71 | -0.50 | 5.48 | -0.20 | 5.69 |
-| Age | 1.07 | 0.79 | 1.02 | 0.79 | 1.05 | 0.82 | 1.03 | 0.83 |
-| Years of Schooling | -0.31 | 3.22 | 0.15 | 2.98 | -0.13 | 2.96 | -0.22 | 3.04 |
+| Wage | -0.12 | 2.31 | -0.01 | 2.26 | -0.24 | 2.42 | -0.13 | 2.24 |
+| Wealth | -0.84 | 5.36 | 0.12 | 5.46 | 0.14 | 6.09 | -0.68 | 5.38 |
+| Age | 1.00 | 0.82 | 1.07 | 0.79 | 1.07 | 0.81 | 1.03 | 0.81 |
+| Years of Schooling | -0.14 | 3.04 | 0.02 | 3.07 | -0.39 | 3.09 | 0.01 | 2.99 |
 | nobs |  |  |  |  |  |  |  |  |
-| Number of observations | 233.00 |  | 247.00 |  | 254.00 |  | 263.00 |  |
+| Number of observations | 254.00 |  | 245.00 |  | 249.00 |  | 249.00 |  |
 |  |  |  |  |  |  |  |  |  |
 
 You can also use custom aggregation functions to compute further statistics or affect how statistics are presented. Pyfixest provides two such functions `mean_std` and `mean_newline_std` which compute the mean and standard deviation and display both the same cell (either with line break between them or not). This allows to have more compact tables when you want to show statistics for many characteristcs in the columns.
@@ -527,15 +523,15 @@ DTable(
 |                        | EU     |       |           | US     |       |           |
 |                        | N      | Mean  | Std. Dev. | N      | Mean  | Std. Dev. |
 | Blue collar            |        |       |           |        |       |           |
-| Wage                   | 233.00 | -0.20 | 2.25      | 254.00 | 0.01  | 2.28      |
-| Wealth                 | 233.00 | -0.84 | 5.43      | 254.00 | -0.50 | 5.48      |
-| Age                    | 233.00 | 1.07  | 0.79      | 254.00 | 1.05  | 0.82      |
-| Years of Schooling     | 233.00 | -0.31 | 3.22      | 254.00 | -0.13 | 2.96      |
+| Wage                   | 254.00 | -0.12 | 2.31      | 249.00 | -0.24 | 2.42      |
+| Wealth                 | 254.00 | -0.84 | 5.36      | 249.00 | 0.14  | 6.09      |
+| Age                    | 254.00 | 1.00  | 0.82      | 249.00 | 1.07  | 0.81      |
+| Years of Schooling     | 254.00 | -0.14 | 3.04      | 249.00 | -0.39 | 3.09      |
 | White collar           |        |       |           |        |       |           |
-| Wage                   | 247.00 | -0.19 | 2.40      | 263.00 | -0.13 | 2.30      |
-| Wealth                 | 247.00 | 0.24  | 5.71      | 263.00 | -0.20 | 5.69      |
-| Age                    | 247.00 | 1.02  | 0.79      | 263.00 | 1.03  | 0.83      |
-| Years of Schooling     | 247.00 | 0.15  | 2.98      | 263.00 | -0.22 | 3.04      |
+| Wage                   | 245.00 | -0.01 | 2.26      | 249.00 | -0.13 | 2.24      |
+| Wealth                 | 245.00 | 0.12  | 5.46      | 249.00 | -0.68 | 5.38      |
+| Age                    | 245.00 | 1.07  | 0.79      | 249.00 | 1.03  | 0.81      |
+| Years of Schooling     | 245.00 | 0.02  | 3.07      | 249.00 | 0.01  | 2.99      |
 |                        |        |       |           |        |       |           |
 
 And you can again export descriptive statistics tables also to LaTex:
