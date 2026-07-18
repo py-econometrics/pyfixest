@@ -227,6 +227,7 @@ def test_savi_hc0_coefficients_match_avlm_longley():
 
 
 def test_optimal_mixture_precision_is_a_local_minimum_of_the_confidence_radius():
+    """Check that the closed-form precision minimizes confidence-sequence width."""
     nobs = 10_000
     number_of_coefficients = 5
     alpha = 0.05
