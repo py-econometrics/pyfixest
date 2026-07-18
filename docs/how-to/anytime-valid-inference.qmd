@@ -13,20 +13,20 @@ toc-location: left
 
 Suppose your team has just finalised a new feature, and now you want to test it with an AB test. In a first step, you specify the KPIs that you want to move, a minimum detectable/relevant effect size, and a false positive rate for your statistical test (the alpha level). With this at hand, you do a power analysis and find that, in order to reliably detect your MDE of interest, you need to run the experiment for 20 days. You lock your runtime and launch the experiment.
 
-In most tech companies, AB tests rollouts are tracked on a daily basis via an experimentation platform that is either built in-house, or provided by a third party as Eppo, Statsig, or Optimizely. These experimentation platforms show treatment effects and inferential statistics and usually update each morning.
+In most tech companies, AB test rollouts are tracked on a daily basis via an experimentation platform that is either built in-house, or provided by a third party such as Eppo, Statsig, or Optimizely. These experimentation platforms show treatment effects and inferential statistics and usually update each morning.
 
-So we launch our experiment, and we can check our results every day. On day one, we find a positive treatment effect on our KPI of interest, with a p-value of 0.15. On day two, the treatment effect is still positive, and the p-value has shrunk further to 0.08. On day three, we finally reach significane. For days 3-8, the treatment effect is continuously positive with a p-value lower than 0.05.
+So we launch our experiment, and we can check our results every day. On day one, we find a positive treatment effect on our KPI of interest, with a p-value of 0.15. On day two, the treatment effect is still positive, and the p-value has shrunk further to 0.08. On day three, we finally reach significance. For days 3-8, the treatment effect is continuously positive with a p-value lower than 0.05.
 
 Slowly, discussions start to emerge in the team; excitement abounds. It looks like we have a winner! So should we ship the feature now? Or should we wait for the planned runtime of the experiment to conclude?
 
-Using the standard playbook of inferential statistics of AB testing, taking discretionary decisions on test results based on interim results is not valid - repeated peaking with the intention to stop a test before its runtime concludes leads to inflated false positive rates.
+Using the standard playbook of inferential statistics of AB testing, taking discretionary decisions on test results based on interim results is not valid - repeated peeking with the intention to stop a test before its runtime concludes leads to inflated false positive rates.
 
-Why is this the case? In a nutshell, the false positive rate set at the beginnin of a test is only valid for a **single inferential decision**. If instead we "peak" and take decisions on test continuation multiple times, we are effectively running multiple tests.
+Why is this the case? In a nutshell, the false positive rate set at the beginning of a test is only valid for a **single inferential decision**. If instead we "peek" and take decisions on test continuation multiple times, we are effectively running multiple tests.
 
-Suppose we had set the false positive rate to $\alpha = 0.05$. If we peek every day and are willing to stop the test the moment we find a p-value lower than 0.05, we are effectively running 20 tests. Assuming that all of these tests are independent (which is not the case for peeking, but let's assume if for the sake of the argument), the probability of at least one false positive is $1 - (1 - 0.05)^{20} \approx 0.64$. In other words, if our policy was to "monitor each day and ship as soon as p < 0.05", we would have a 64% chance of shipping a feature that actually does nothing. The false positive rate remains at 5% only if we make a single decision at the end of the experiment. We are bound to the pre-specified runtime.
+Suppose we had set the false positive rate to $\alpha = 0.05$. If we peek every day and are willing to stop the test the moment we find a p-value lower than 0.05, we are effectively running 20 tests. Assuming that all of these tests are independent (which is not the case for peeking, but let's assume it for the sake of the argument), the probability of at least one false positive is $1 - (1 - 0.05)^{20} \approx 0.64$. In other words, if our policy was to "monitor each day and ship as soon as p < 0.05", we would have a 64% chance of shipping a feature that actually does nothing. The false positive rate remains at 5% only if we make a single decision at the end of the experiment. We are bound to the pre-specified runtime.
 
 ::: {.callout}
-Note that the problem with peeking is not that we are "looking at the data" every day - the issue only arises if we are taking discretionary decisions on test continuation based on the interm results.
+Note that the problem with peeking is not that we are "looking at the data" every day - the issue only arises if we are taking discretionary decisions on test continuation based on the interim results.
 :::
 
 If we want to peek and take decisions on test continuation while the test runs, and control the false positive rate, we need to use a different inferential framework. This is where **anytime-valid inference** comes into play.
@@ -38,15 +38,36 @@ as often as you need. In the large randomized experiments considered here, a 5% 
 
 Like everything in life, there is no such thing as a free lunch. SAVI's flexibility comes with a cost. In general, SAVI's confidence sequences are wider than ordinary "fixed sample" confidence intervals. SAVI is useful when the ability to act early or to wait a little longer is worth the loss in precision.
 
-Below, we showcase four scenarios in which SAVI inference comes in handy: in **scenario 1**, we run a simple AA test in which we test if a backend service rewrite from Java to Kotlin does any harm. Because we have a strong engineering team, we assume that the Java service will behave identically to the Kotlin service. At the beginning of the test, we nevertheless observe very large but noisy effect estimates, and the team starts being concerned. We have to decide if we continue with the test, or not. Under fixed sample inference, we would have to keep the test running until its prespecified runtime concludes. In practice, no sane team follows this procedure - most would likely stop the test early. In the first example, the initial negative effects are a **false positive**. Under 'regular' fixed sample inference, we'd incorrectly stop the test early. As SAVI requires stronger evidence, we avoid the false positive.
+Below, we showcase five scenarios in which SAVI inference comes in handy: in **scenario 1**, we run a simple AA test in which we test if a backend service rewrite from Java to Kotlin does any harm. Because we have a strong engineering team, we assume that the Java service will behave identically to the Kotlin service. At the beginning of the test, we nevertheless observe very large but noisy effect estimates, and the team starts being concerned. We have to decide if we continue with the test, or not. Under fixed sample inference, we would have to keep the test running until its prespecified runtime concludes. In practice, no sane team follows this procedure - most would likely stop the test early. In the first example, the initial negative effects are a **false positive**. Under 'regular' fixed sample inference, we'd incorrectly stop the test early. As SAVI requires stronger evidence, we avoid the false positive.
 
 In **scenario 2**, we run an AB test that produces a very large and positive treatment effect early on. We have a clear winner! Unfortunately, with fixed sample inference, we cannot ship the feature early and obtain correct inference. SAVI on the other hand allows us to ship the feature early, pocket its gains, and unblock further initiatives the team is working on.
 
-In **scenario 3**, ...
+**Scenario 3** considers a checkout migration whose effect should be small. The
+team will accept a change of at most one percentage point in either direction.
+A non-significant fixed-sample test cannot establish that the two backends are
+equivalent. The SAVI test continues until its confidence sequence lies inside
+the ±1 percentage point tolerance. The team can then stop without having fixed
+the runtime in advance.
 
-Last, in **scenarion 4** ...
+**Scenario 4** is a long-term holdout. A small share of users does not receive a
+bundle of shipped features, allowing the team to estimate the cumulative effect
+of a product area. The holdout has no planned end date, and the result is
+reviewed repeatedly. Ordinary confidence intervals provide pointwise rather
+than simultaneous coverage across those reviews. A confidence sequence can be
+reported at each review without restricting the schedule.
 
-The SAVI method we implement for PyFixest is based on Lindon et al. (2026), who develop anytime valid inference methods for linear regression models, which unlocks variance reduction via regression adjustment. We therefore conclude by showcasing the benefits of combining regression adjustments with anytime valid inference. /footnote{Another strength of the Lindon et al. (2026) method is that it has a closed form solution, which makes it fast to compute.}
+**Scenario 5** uses an hourly guardrail for a canary release. Before launch, the
+team defines the largest acceptable loss in the guardrail metric. It rolls back
+when the confidence sequence lies entirely below that boundary and promotes
+once the sequence lies entirely above it. Hourly monitoring does not inflate
+the false positive rate when these decisions use anytime-valid inference.
+
+PyFixest implements the method of [Lindon et al.
+(2026)](https://doi.org/10.1080/01621459.2026.2692052) for linear regression.
+Because the method applies to regression coefficients, it can combine
+continuous monitoring with regression adjustment. The last simulation compares
+adjusted and unadjusted confidence sequences.^[The closed-form formulas also
+make the method fast to compute.]
 
 ```{python}
 import numpy as np
@@ -244,14 +265,18 @@ def _slider(days, active):
     ]
 ```
 
-## A/A tests: repeated peeking creates false alarms
+## Scenario 1: false positives under daily monitoring
 
-Start with 500 simulated A/A tests. Both arms have a 10% conversion rate, so
-every rejection is a false positive.
+The first simulation contains 500 A/A tests. Both arms have a 10% conversion
+rate, so every rejection is a false positive.
 
-The figure follows eighty of the experiments. Each circle is one A/A test. It
-changes to a cross on the first day its method reports p < 0.05. The experiment
-positions are the same in both panels, so the comparison uses the same data.
+A test analyzed once at $\alpha = 0.05$ should reject in roughly 5 out of 100
+null experiments. The figure shows the first 100 of the 500 simulations; all
+500 are used in the summary table below. Each circle represents one experiment
+and becomes a cross on the first day its method reports p < 0.05. If daily
+monitoring preserved the 5% false positive rate, each panel would finish with
+about five crosses. The experiments occupy the same positions in both panels,
+so the methods are evaluated on the same data.
 
 ```{python}
 #| code-fold: true
@@ -266,7 +291,7 @@ fpr_daily_savi = (mirage["savi_p"] <= ALPHA).any(axis=1).mean()
 ```{python}
 #| code-fold: true
 #| code-summary: "Show the figure code"
-N_SHOWN = 80
+N_SHOWN = 100
 EVIDENCE_BAR = -np.log10(ALPHA)
 
 show_reg = mirage["regular_p"][:N_SHOWN]
@@ -274,8 +299,8 @@ show_savi = mirage["savi_p"][:N_SHOWN]
 reg_stop = _stop_day(show_reg)
 savi_stop = _stop_day(show_savi)
 
-dot_x = np.tile(np.arange(1, 11), 8)
-dot_y = np.repeat(np.arange(8, 0, -1), 10)
+dot_x = np.tile(np.arange(1, 11), 10)
+dot_y = np.repeat(np.arange(10, 0, -1), 10)
 
 
 def _mirage_trace(stop, day, color):
@@ -289,7 +314,7 @@ def _mirage_trace(stop, day, color):
         y=dot_y,
         mode="markers",
         marker={
-            "size": 13,
+            "size": 11,
             "symbol": ["x" if value else "circle-open" for value in fired],
             "color": [
                 color if value else _rgba(NEUTRAL_GREY, 0.45) for value in fired
@@ -342,7 +367,7 @@ fig.frames = [
     for day in mirage_days
 ]
 fig.update_xaxes(visible=False, range=[0.3, 10.7])
-fig.update_yaxes(visible=False, range=[0.4, 8.6])
+fig.update_yaxes(visible=False, range=[0.4, 10.6])
 fig.add_annotation(
     x=0.5,
     y=-0.06,
@@ -356,7 +381,7 @@ fig.update_layout(
     title=_mirage_title(mirage_days[0]),
     title_font_size=16,
     template="plotly_white",
-    height=570,
+    height=640,
     updatemenus=PLAY_PAUSE,
     sliders=_slider(mirage_days, active=0),
     margin={"l": 45, "r": 30, "t": 120, "b": 155},
@@ -385,23 +410,102 @@ pd.DataFrame(
 )
 ```
 
-One ordinary analysis on day twenty rejects
+An ordinary analysis performed only on day twenty rejects
 `{python} f"{fpr_single_look:.1%}"` of the time, close to the intended 5%.
 Checking the ordinary p-value daily and stopping at the first rejection raises
-the rate to `{python} f"{fpr_daily_ordinary:.0%}"`. SAVI rejects
+the rate to `{python} f"{fpr_daily_ordinary:.0%}"`. This is below the 64%
+back-of-the-envelope number from the introduction, because twenty looks at the
+same accumulating data are far from independent. It is nevertheless several
+times the specified 5%. SAVI rejects
 `{python} f"{fpr_daily_savi:.1%}"` of the same null experiments.
 
 The SAVI rate in this simulation need not equal 5%. The guarantee covers the
 full monitoring path, including looks after day twenty, so rejection by the
 planned end can be conservative.
 
-## A positive effect: stop when the evidence is ready
+False alarms are one problem. The effect sizes selected by naive peeking are
+another. The next plot records, for each of the
+`{python} N_SIMULATIONS` A/A experiments, the estimated effect on the day the
+test first rejects:
 
-Now suppose the treatment raises conversion from 10% to 14%: twice the lift the
-experiment was planned around. This is the case where early stopping is most
-valuable. The displayed run is not a hand-picked fast result; among the
-simulations that stop within twenty days, its SAVI stopping day is closest to
-the median.
+```{python}
+#| code-fold: true
+#| code-summary: "Show the simulation code"
+naive_stop = _stop_day(mirage["regular_p"])
+savi_aa_stop = _stop_day(mirage["savi_p"])
+
+
+def _estimate_at_stop(stop):
+    idx = np.where(stop > 0)[0]
+    return np.array([mirage["estimate"][i, stop[i] - 1] for i in idx]) * 100
+
+
+naive_at_stop = _estimate_at_stop(naive_stop)
+savi_at_stop = _estimate_at_stop(savi_aa_stop)
+
+naive_fire_rate = (naive_stop > 0).mean()
+savi_fire_rate = (savi_aa_stop > 0).mean()
+naive_mean_abs = np.abs(naive_at_stop).mean()
+```
+
+```{python}
+#| code-fold: true
+#| code-summary: "Show the figure code"
+jitter = np.random.default_rng(1).uniform(-0.16, 0.16, size=N_SIMULATIONS)
+
+fig = go.Figure()
+for est, base, color, label in [
+    (naive_at_stop, 1, ORDINARY_ORANGE, "Naive daily peeking"),
+    (savi_at_stop, 0, SAVI_BLUE, "SAVI"),
+]:
+    fig.add_trace(
+        go.Scatter(
+            x=est,
+            y=base + jitter[: len(est)],
+            mode="markers",
+            marker={"color": _rgba(color, 0.5), "size": 7, "line": {"width": 0}},
+            name=f"{label} ({len(est)} of {N_SIMULATIONS} fired)",
+            hovertemplate="Reported effect: %{x:.2f} pp<extra></extra>",
+        )
+    )
+fig.add_vline(
+    x=0,
+    line_dash="dot",
+    line_color=NEUTRAL_GREY,
+    annotation_text="True effect: 0",
+    annotation_position="top",
+)
+fig.update_layout(
+    title="'Effects' reported at the first significant result<br>(true effect: 0)",
+    template="plotly_white",
+    height=380,
+    xaxis_title="Estimated effect at stop (pp)",
+    yaxis={
+        "tickmode": "array",
+        "tickvals": [0, 1],
+        "ticktext": ["SAVI", "Naive<br>peeking"],
+        "range": [-0.5, 1.5],
+    },
+    legend={"orientation": "h", "y": -0.3},
+    margin={"l": 80, "r": 30, "t": 90, "b": 105},
+)
+fig
+```
+
+The daily-peeking rule rejects in `{python} f"{naive_fire_rate:.0%}"` of these
+zero-effect experiments. The reported effects average
+`{python} f"{naive_mean_abs:.1f}"` pp in magnitude. There is a hole around zero
+because only extreme early estimates cross the boundary. This is the winner's
+curse in the null case: the stopping rule selects effects that look large even
+though the truth is zero. The SAVI rule rejects in
+`{python} f"{savi_fire_rate:.1%}"` of the same experiments.
+
+## Scenario 2: stop early for a large effect
+
+The treatment in this scenario raises conversion from 10% to 14%, twice the
+lift used to plan the experiment. Large effects offer the greatest opportunity
+to stop early. The displayed run is representative: among the simulations that
+stop within twenty days, its SAVI stopping day is closest to the median.
 
 The top panel shows the estimated lift. The ordinary 95% confidence interval is
 calibrated for one planned analysis; the 95% confidence sequence covers the
@@ -537,7 +641,7 @@ def _winner_traces(day):
             else [None],
             mode="markers+text",
             marker={"color": ORDINARY_ORANGE, "size": 10, "symbol": "diamond"},
-            text=["Ordinary crosses"] if ordinary_crossed else [None],
+            text=["Ordinary p < 0.05"] if ordinary_crossed else [None],
             textposition="bottom right",
             showlegend=False,
             hoverinfo="skip",
@@ -549,10 +653,32 @@ def _winner_traces(day):
             else [None],
             mode="markers+text",
             marker={"color": SAVI_BLUE, "size": 10, "symbol": "diamond"},
-            text=["SAVI: valid stop"] if savi_crossed else [None],
+            text=["SAVI p < 0.05"] if savi_crossed else [None],
             textposition="top right",
             showlegend=False,
             hoverinfo="skip",
+        ),
+        go.Scatter(
+            x=[peek_day, peek_day] if ordinary_crossed else [None, None],
+            y=[0, evidence_top + 0.8],
+            mode="lines",
+            line={"color": ORDINARY_ORANGE, "dash": "dot", "width": 1.5},
+            showlegend=False,
+            hovertemplate=(
+                f"Day {peek_day}: ordinary p-value below 0.05;"
+                " fixed-sample stop invalid<extra></extra>"
+            ),
+        ),
+        go.Scatter(
+            x=[savi_day, savi_day] if savi_crossed else [None, None],
+            y=[0, evidence_top + 0.8],
+            mode="lines",
+            line={"color": SAVI_BLUE, "dash": "dot", "width": 1.5},
+            showlegend=False,
+            hovertemplate=(
+                f"Day {savi_day}: SAVI p-value below 0.05;"
+                " stopping is valid<extra></extra>"
+            ),
         ),
     ]
 
@@ -580,7 +706,7 @@ for i, trace in enumerate(_winner_traces(winner_days[0])):
 fig.frames = [
     go.Frame(
         data=_winner_traces(day),
-        traces=list(range(11)),
+        traces=list(range(13)),
         name=str(day),
         layout={"title": {"text": _winner_title(day)}},
     )
@@ -599,6 +725,17 @@ fig.add_hline(
     line_dash="dash",
     line_color="black",
     annotation_text="Decision bar (p = 0.05)",
+    row=2,
+    col=1,
+)
+fig.add_vline(
+    x=N_DAYS,
+    line_dash="dash",
+    line_color=NEUTRAL_GREY,
+    opacity=0.7,
+    annotation_text="Planned end: first valid fixed-sample decision",
+    annotation_position="top left",
+    annotation_font_color=NEUTRAL_GREY,
     row=2,
     col=1,
 )
@@ -623,15 +760,20 @@ fig.update_xaxes(dtick=2)
 fig
 ```
 
-The ordinary p-value clears 0.05 on day `{python} peek_day`, at an estimated
-lift of `{python} peek_lift`. That is too early for the fixed-horizon test to
-support a 5%-level decision. SAVI clears its boundary on day
-`{python} savi_day`, after `{python} savi_users` users. The confidence sequence
-is `{python} savi_cs`, so the team can ship and release the remaining
-`{python} days_saved` planned days.
+The ordinary p-value falls below 0.05 on day `{python} peek_day`, when the
+estimated lift is `{python} peek_lift`. Because this is an unplanned interim
+analysis, the fixed-horizon test does not support a 5%-level decision on that
+day. The SAVI p-value falls below 0.05 on day `{python} savi_day`, after
+`{python} savi_users` users. Its confidence sequence is `{python} savi_cs`, so
+the team can ship with `{python} days_saved` days left in the planned runtime.
 
-This effect is larger than planned. The cost of sequential monitoring is
-easier to see at the planned 2 percentage point MDE:
+The confidence sequence should be reported with the stopping decision. A rule
+that stops when evidence is strong selects estimates that look favorable, so
+the point estimate on the stopping day tends to overstate the true lift. The
+confidence sequence retains its coverage at that stopping time.
+
+The example above uses a 4 percentage point effect. The next simulation uses
+the planned 2 percentage point MDE to compare power at the deadline:
 
 ```{python}
 #| code-fold: true
@@ -708,17 +850,686 @@ At day twenty, the fixed-horizon test detects the effect in
 `{python} f"{savi_detection[-1]:.0%}"` by day twenty. Among experiments that
 stop, the median stopping day is `{python} median_stop`.
 
-This is the trade: SAVI can act before day twenty, but by day twenty it has
-detected fewer of the modest effects. Choose it for flexible timing, not as a
-way to make significance arrive faster.
+SAVI permits decisions before day twenty, but it detects fewer of these modest
+effects by day twenty. It is useful when flexible timing matters; it does not
+make statistical significance arrive faster.
+
+## Scenario 3: rule out effects larger than a tolerance
+
+A checkout service is moved to a new backend. The change should not affect
+conversion, and the product decision allows a difference of at most one
+percentage point in either direction. That ±1 pp tolerance matters more than
+whether the effect is exactly zero.
+
+The A/A-style test sends 2,000 users per arm per day to the old and new
+backends. It stops once the confidence sequence fits inside the ±1 pp
+tolerance. The displayed run has the median certification day among one hundred
+simulations that certify within the thirty-day monitoring window.
+
+```{python}
+#| code-fold: true
+#| code-summary: "Show the animation code"
+DELTA = 0.01
+BACKEND_USERS = 2_000
+BACKEND_MAX_DAYS = 30
+BACKEND_FIRST_SEED = 50_000
+BACKEND_MIXTURE_PRECISION = pf.optimal_mixture_precision(
+    nobs=2 * BACKEND_USERS * BACKEND_MAX_DAYS,
+    number_of_coefficients=2,
+    alpha=ALPHA,
+)
+
+backend_cert_days = np.zeros(N_REPRESENTATIVE_PATHS, dtype=int)
+backend_ci_cert_days = np.zeros(N_REPRESENTATIVE_PATHS, dtype=int)
+for simulation in range(N_REPRESENTATIVE_PATHS):
+    candidate = _experiment_path(
+        p_control=0.10,
+        p_treatment=0.10,
+        seed=BACKEND_FIRST_SEED + simulation,
+        with_intervals=True,
+        n_days=BACKEND_MAX_DAYS,
+        users_per_day=BACKEND_USERS,
+        mixture_precision=BACKEND_MIXTURE_PRECISION,
+    )
+    candidate_certified = (
+        (candidate["cs_lower"] > -DELTA)
+        & (candidate["cs_upper"] < DELTA)
+    )
+    if candidate_certified.any():
+        backend_cert_days[simulation] = int(
+            candidate.loc[candidate_certified, "day"].iloc[0]
+        )
+    candidate_ci_certified = (
+        (candidate["ci_lower"] > -DELTA)
+        & (candidate["ci_upper"] < DELTA)
+    )
+    if candidate_ci_certified.any():
+        backend_ci_cert_days[simulation] = int(
+            candidate.loc[candidate_ci_certified, "day"].iloc[0]
+        )
+
+median_cs_cert = int(np.median(backend_cert_days[backend_cert_days > 0]))
+median_ci_cert = int(np.median(backend_ci_cert_days[backend_ci_cert_days > 0]))
+
+backend_seed = _representative_seed(
+    backend_cert_days,
+    BACKEND_FIRST_SEED,
+)
+
+backend_full = _experiment_path(
+    p_control=0.10,
+    p_treatment=0.10,
+    seed=backend_seed,
+    with_intervals=True,
+    n_days=BACKEND_MAX_DAYS,
+    users_per_day=BACKEND_USERS,
+    mixture_precision=BACKEND_MIXTURE_PRECISION,
+).set_index("day", drop=False)
+
+certified = (backend_full["cs_lower"] > -DELTA) & (backend_full["cs_upper"] < DELTA)
+cert_day = int(backend_full.loc[certified, "day"].iloc[0])
+cert_cs = (
+    f"[{backend_full.loc[cert_day, 'cs_lower']:.2%}, "
+    f"{backend_full.loc[cert_day, 'cs_upper']:.2%}]"
+)
+ci_certified = (backend_full["ci_lower"] > -DELTA) & (backend_full["ci_upper"] < DELTA)
+ci_cert_day = int(backend_full.loc[ci_certified, "day"].iloc[0])
+
+backend_path = backend_full.loc[backend_full["day"] <= cert_day]
+b_range = [
+    float(backend_path["cs_lower"].min()) - 0.005,
+    float(backend_path["cs_upper"].max()) + 0.005,
+]
+
+
+def _backend_traces(day):
+    seen = backend_path.loc[backend_path["day"] <= day]
+    current = backend_path.loc[day]
+    band = {"mode": "lines", "line": {"width": 0}, "hoverinfo": "skip"}
+    tolerance_met = day >= cert_day
+    return [
+        go.Scatter(x=seen["day"], y=seen["cs_upper"], showlegend=False, **band),
+        go.Scatter(
+            x=seen["day"],
+            y=seen["cs_lower"],
+            fill="tonexty",
+            fillcolor=_rgba(SAVI_BLUE, 0.15),
+            name="95% confidence sequence",
+            **band,
+        ),
+        go.Scatter(x=seen["day"], y=seen["ci_upper"], showlegend=False, **band),
+        go.Scatter(
+            x=seen["day"],
+            y=seen["ci_lower"],
+            fill="tonexty",
+            fillcolor=_rgba(ORDINARY_ORANGE, 0.18),
+            name="95% confidence interval",
+            **band,
+        ),
+        go.Scatter(
+            x=[day, day],
+            y=[current["cs_lower"], current["cs_upper"]],
+            mode="lines+markers",
+            line={"color": SAVI_BLUE, "width": 3},
+            marker={"color": SAVI_BLUE, "size": 5},
+            showlegend=False,
+            hovertemplate=(
+                f"Day {day}<br>Confidence sequence: "
+                f"[{current['cs_lower']:.2%}, {current['cs_upper']:.2%}]"
+                "<extra></extra>"
+            ),
+        ),
+        go.Scatter(
+            x=[day, day],
+            y=[current["ci_lower"], current["ci_upper"]],
+            mode="lines+markers",
+            line={"color": ORDINARY_ORANGE, "width": 2},
+            marker={"color": ORDINARY_ORANGE, "size": 4},
+            showlegend=False,
+            hovertemplate=(
+                f"Day {day}<br>Ordinary interval: "
+                f"[{current['ci_lower']:.2%}, {current['ci_upper']:.2%}]"
+                "<extra></extra>"
+            ),
+        ),
+        go.Scatter(
+            x=seen["day"],
+            y=seen["estimate"],
+            mode="lines+markers",
+            line_color=ESTIMATE_TEAL,
+            name="Estimated effect",
+            hovertemplate="Day %{x}<br>Effect: %{y:.1%}<extra></extra>",
+        ),
+        go.Scatter(
+            x=[cert_day] if tolerance_met else [None],
+            y=[backend_path.loc[cert_day, "estimate"]] if tolerance_met else [None],
+            mode="markers+text",
+            marker={"color": SAVI_BLUE, "size": 11, "symbol": "diamond"},
+            text=["Tolerance met"] if tolerance_met else [None],
+            textposition="bottom left",
+            showlegend=False,
+            hoverinfo="skip",
+        ),
+        go.Scatter(
+            x=[ci_cert_day, ci_cert_day] if day >= ci_cert_day else [None, None],
+            y=b_range,
+            mode="lines",
+            line={"color": ORDINARY_ORANGE, "dash": "dot", "width": 2},
+            showlegend=False,
+            hovertemplate=(
+                f"Day {ci_cert_day}: ordinary interval inside tolerance;"
+                " certification invalid<extra></extra>"
+            ),
+        ),
+        go.Scatter(
+            x=[cert_day, cert_day] if tolerance_met else [None, None],
+            y=b_range,
+            mode="lines",
+            line={"color": SAVI_BLUE, "dash": "dot", "width": 2},
+            showlegend=False,
+            hovertemplate=(
+                f"Day {cert_day}: confidence sequence inside tolerance;"
+                " certification valid<extra></extra>"
+            ),
+        ),
+    ]
+
+
+def _backend_title(day):
+    users = int(backend_path.loc[day, "users"])
+    if day == cert_day:
+        decision = "CS inside ±1 pp: tolerance met, test over"
+    elif day >= ci_cert_day:
+        decision = "Ordinary interval inside tolerance; continue"
+    else:
+        decision = "Tolerance not met; keep collecting"
+    return f"Day {day} · {users:,} users<br>{decision}"
+
+
+backend_days = list(range(1, cert_day + 1))
+fig = go.Figure(_backend_traces(1))
+fig.frames = [
+    go.Frame(
+        data=_backend_traces(day),
+        name=str(day),
+        layout={"title": {"text": _backend_title(day)}},
+    )
+    for day in backend_days
+]
+fig.add_hrect(
+    y0=-DELTA,
+    y1=DELTA,
+    fillcolor=_rgba(SAVI_BLUE, 0.07),
+    line_width=0,
+)
+fig.add_hline(
+    y=DELTA,
+    line_dash="dash",
+    line_color=NEUTRAL_GREY,
+    opacity=0.7,
+    annotation_text="Certification tube: ±1 pp",
+    annotation_position="top right",
+    annotation_font_color=NEUTRAL_GREY,
+)
+fig.add_hline(y=-DELTA, line_dash="dash", line_color=NEUTRAL_GREY, opacity=0.7)
+fig.add_hline(y=0, line_color="black", opacity=0.4)
+fig.update_layout(
+    title=_backend_title(1),
+    title_font_size=16,
+    template="plotly_white",
+    height=600,
+    xaxis_title="Day of A/A test",
+    xaxis_range=[0.5, cert_day + 0.5],
+    yaxis_title="Estimated effect",
+    yaxis_range=b_range,
+    yaxis_tickformat=".0%",
+    legend={"orientation": "h", "y": -0.48},
+    updatemenus=PLAY_PAUSE,
+    sliders=_slider(backend_days, active=0),
+    margin={"l": 70, "r": 35, "t": 105, "b": 245},
+)
+fig.update_xaxes(dtick=2)
+fig
+```
+
+On day `{python} cert_day`, the confidence sequence `{python} cert_cs` lies
+inside the ±1 pp tolerance. Its time-uniform asymptotic coverage allows the team
+to stop and rule out effects larger than the tolerance.
+
+In this run, the ordinary interval enters the tolerance on day
+`{python} ci_cert_day`, earlier than the confidence sequence on day
+`{python} cert_day`. The ordinary interval is narrower because it only needs to
+cover the true effect on one prespecified analysis day. The confidence sequence
+is constructed to cover the effect across every day of the experiment. If the
+rule instead stops when the ordinary interval first enters the tolerance, the
+analysis day becomes data-dependent and the ordinary interval no longer has
+95% coverage at that stopping time.
+
+To compare certification errors, we simulate the migration
+`{python} N_REPRESENTATIVE_PATHS` times when the new backend reduces conversion
+by exactly one percentage point, the boundary of the team's tolerance. A valid
+certification procedure should rarely classify this migration as harmless.
+
+```{python}
+#| code-fold: true
+#| code-summary: "Show the simulation code"
+BOUNDARY_FIRST_SEED = 70_000
+
+boundary_ci_certified = np.zeros(N_REPRESENTATIVE_PATHS, dtype=bool)
+boundary_cs_certified = np.zeros(N_REPRESENTATIVE_PATHS, dtype=bool)
+for simulation in range(N_REPRESENTATIVE_PATHS):
+    candidate = _experiment_path(
+        p_control=0.10,
+        p_treatment=0.10 - DELTA,
+        seed=BOUNDARY_FIRST_SEED + simulation,
+        with_intervals=True,
+        n_days=BACKEND_MAX_DAYS,
+        users_per_day=BACKEND_USERS,
+        mixture_precision=BACKEND_MIXTURE_PRECISION,
+    )
+    boundary_ci_certified[simulation] = bool(
+        ((candidate["ci_lower"] > -DELTA) & (candidate["ci_upper"] < DELTA)).any()
+    )
+    boundary_cs_certified[simulation] = bool(
+        ((candidate["cs_lower"] > -DELTA) & (candidate["cs_upper"] < DELTA)).any()
+    )
+
+false_cert_ci = boundary_ci_certified.mean()
+false_cert_cs = boundary_cs_certified.mean()
+```
+
+```{python}
+#| code-fold: true
+#| code-summary: "Show the table code"
+pd.DataFrame(
+    {
+        "Certification policy": [
+            "Stop when the ordinary 95% interval fits inside ±1 pp",
+            "Stop when the 95% confidence sequence fits inside ±1 pp",
+        ],
+        "Harmful migration certified": [
+            f"{false_cert_ci:.0%}",
+            f"{false_cert_cs:.0%}",
+        ],
+    }
+)
+```
+
+Applied as a stopping rule, the ordinary interval certifies the harmful
+migration in `{python} f"{false_cert_ci:.0%}"` of the runs; the confidence
+sequence does so in `{python} f"{false_cert_cs:.0%}"`. Among the harmless A/A
+migrations above, the median certification day is day
+`{python} median_ci_cert` under the ordinary policy and day
+`{python} median_cs_cert` under SAVI. The earlier ordinary certifications come
+with a much higher false certification rate.
+
+A non-significant p-value is not evidence of equivalence. Certification
+requires the confidence sequence to lie inside a prespecified tolerance.
+
+## Scenario 4: monitor a long-term holdout
+
+A long-term holdout has no planned end date. A small share of users does not
+receive the features shipped by a product area, and the difference between the
+holdout and exposed users estimates the area's cumulative effect. The
+experiment remains active so the team can report that effect at each business
+review.
+
+Each ordinary confidence interval has 95% pointwise coverage at a fixed review
+time, but the collection of weekly intervals does not have 95% simultaneous
+coverage. As the number of reviews grows, so does the probability that at least
+one interval misses the true effect. A 95% confidence sequence is constructed
+to contain the true effect at every review with 95% probability, regardless of
+the monitoring schedule.
+
+In the simulation below, the shipped features lift conversion from 10% to 11%.
+Each week adds 500 users per arm, and the team reviews the result weekly for a
+year. The `mixture_precision` is chosen to minimize sequence width near the
+one-year mark. This choice changes the width over time, not the coverage
+guarantee.
+
+```{python}
+#| code-fold: true
+#| code-summary: "Show the simulation code"
+HOLDOUT_WEEKS = 52
+HOLDOUT_USERS_PER_WEEK = 500
+HOLDOUT_LIFT = 0.01
+HOLDOUT_SIMULATIONS = 100
+HOLDOUT_FIRST_SEED = 60_000
+HOLDOUT_MIXTURE_PRECISION = pf.optimal_mixture_precision(
+    nobs=2 * HOLDOUT_USERS_PER_WEEK * HOLDOUT_WEEKS,
+    number_of_coefficients=2,
+    alpha=ALPHA,
+)
+
+holdout_bounds = {
+    key: np.empty((HOLDOUT_SIMULATIONS, HOLDOUT_WEEKS))
+    for key in ("estimate", "ci_lower", "ci_upper", "cs_lower", "cs_upper")
+}
+for simulation in range(HOLDOUT_SIMULATIONS):
+    path = _experiment_path(
+        p_control=0.10,
+        p_treatment=0.10 + HOLDOUT_LIFT,
+        seed=HOLDOUT_FIRST_SEED + simulation,
+        with_intervals=True,
+        n_days=HOLDOUT_WEEKS,
+        users_per_day=HOLDOUT_USERS_PER_WEEK,
+        mixture_precision=HOLDOUT_MIXTURE_PRECISION,
+    )
+    for key in holdout_bounds:
+        holdout_bounds[key][simulation] = path[key].to_numpy()
+
+ci_covers = (holdout_bounds["ci_lower"] <= HOLDOUT_LIFT) & (
+    holdout_bounds["ci_upper"] >= HOLDOUT_LIFT
+)
+cs_covers = (holdout_bounds["cs_lower"] <= HOLDOUT_LIFT) & (
+    holdout_bounds["cs_upper"] >= HOLDOUT_LIFT
+)
+ci_always_covered = np.logical_and.accumulate(ci_covers, axis=1).mean(axis=0)
+cs_always_covered = np.logical_and.accumulate(cs_covers, axis=1).mean(axis=0)
+
+holdout_weeks_axis = np.arange(1, HOLDOUT_WEEKS + 1)
+holdout_index = int(
+    np.argsort(holdout_bounds["estimate"][:, -1])[HOLDOUT_SIMULATIONS // 2]
+)
+holdout_path = pd.DataFrame(
+    {key: values[holdout_index] for key, values in holdout_bounds.items()}
+).assign(week=holdout_weeks_axis)
+holdout_final = holdout_path.iloc[-1]
+holdout_cs = f"[{holdout_final['cs_lower']:.2%}, {holdout_final['cs_upper']:.2%}]"
+holdout_ci = f"[{holdout_final['ci_lower']:.2%}, {holdout_final['ci_upper']:.2%}]"
+```
+
+```{python}
+#| code-fold: true
+#| code-summary: "Show the figure code"
+band = {"mode": "lines", "line": {"width": 0}, "hoverinfo": "skip"}
+fig = go.Figure()
+fig.add_trace(
+    go.Scatter(
+        x=holdout_path["week"],
+        y=holdout_path["cs_upper"],
+        showlegend=False,
+        **band,
+    )
+)
+fig.add_trace(
+    go.Scatter(
+        x=holdout_path["week"],
+        y=holdout_path["cs_lower"],
+        fill="tonexty",
+        fillcolor=_rgba(SAVI_BLUE, 0.15),
+        name="95% confidence sequence",
+        **band,
+    )
+)
+fig.add_trace(
+    go.Scatter(
+        x=holdout_path["week"],
+        y=holdout_path["ci_upper"],
+        showlegend=False,
+        **band,
+    )
+)
+fig.add_trace(
+    go.Scatter(
+        x=holdout_path["week"],
+        y=holdout_path["ci_lower"],
+        fill="tonexty",
+        fillcolor=_rgba(ORDINARY_ORANGE, 0.18),
+        name="95% confidence interval",
+        **band,
+    )
+)
+fig.add_trace(
+    go.Scatter(
+        x=holdout_path["week"],
+        y=holdout_path["estimate"],
+        mode="lines+markers",
+        line_color=ESTIMATE_TEAL,
+        name="Estimated lift",
+        hovertemplate="Week %{x}<br>Lift: %{y:.2%}<extra></extra>",
+    )
+)
+fig.add_hline(y=0, line_color="black", opacity=0.4)
+fig.add_hline(
+    y=HOLDOUT_LIFT,
+    line_dash="dot",
+    line_color=NEUTRAL_GREY,
+    annotation_text="True lift: 1 pp",
+    annotation_position="bottom right",
+)
+fig.update_layout(
+    title="A year of a long term holdout, read weekly",
+    template="plotly_white",
+    height=430,
+    xaxis_title="Week of holdout",
+    yaxis_title="Estimated lift",
+    yaxis_tickformat=".1%",
+    legend={"orientation": "h", "y": -0.3},
+    margin={"l": 70, "r": 35, "t": 70, "b": 120},
+)
+fig
+```
+
+After a year, this holdout reports a confidence sequence of
+`{python} holdout_cs` and an ordinary interval of `{python} holdout_ci`. The
+confidence sequence is wider because it provides simultaneous coverage across
+all 52 reviews; the ordinary interval provides pointwise coverage at a single
+review. This scenario has no stopping rule. The sequence itself is reported at
+each review.
+
+For each of the `{python} HOLDOUT_SIMULATIONS` simulated holdouts, the next
+calculation checks whether the reported interval contained the true lift at
+every review so far:
+
+```{python}
+#| code-fold: true
+#| code-summary: "Show the figure code"
+fig = go.Figure()
+fig.add_trace(
+    go.Scatter(
+        x=holdout_weeks_axis,
+        y=ci_always_covered,
+        mode="lines+markers",
+        line={"color": ORDINARY_ORANGE, "dash": "dot"},
+        name="Ordinary 95% confidence interval",
+        hovertemplate="Week %{x}<br>Covered at every read: %{y:.0%}<extra></extra>",
+    )
+)
+fig.add_trace(
+    go.Scatter(
+        x=holdout_weeks_axis,
+        y=cs_always_covered,
+        mode="lines+markers",
+        line_color=SAVI_BLUE,
+        name="95% confidence sequence",
+        hovertemplate="Week %{x}<br>Covered at every read: %{y:.0%}<extra></extra>",
+    )
+)
+fig.add_hline(
+    y=1 - ALPHA,
+    line_dash="dash",
+    line_color="black",
+    annotation_text="Simultaneous coverage target: 95%",
+    annotation_position="bottom left",
+)
+fig.update_layout(
+    title="Share of holdouts whose interval contained the truth at every read",
+    template="plotly_white",
+    height=430,
+    xaxis_title="Week of holdout",
+    yaxis_title="Covered at every read so far",
+    yaxis_tickformat=".0%",
+    yaxis_range=[0, 1.02],
+    hovermode="x unified",
+    legend={"orientation": "h", "y": -0.3},
+    margin={"l": 75, "r": 35, "t": 70, "b": 120},
+)
+fig
+```
+
+By week 52, the ordinary interval has missed the true lift at least once in
+`{python} f"{1 - ci_always_covered[-1]:.0%}"` of the simulated holdouts. The
+confidence sequence contained the true lift at every review in
+`{python} f"{cs_always_covered[-1]:.0%}"` of the holdouts, in line with its
+time-uniform 95% guarantee. With continued monitoring, the probability that an
+ordinary interval misses at least once continues to rise.
+
+The simulation makes two simplifying assumptions. First, the true lift remains
+constant for a year. Real holdout effects may drift as novelty fades or
+features compound. In that case, the treatment coefficient estimates a running
+average of the effect rather than the effect in a given week. Second, the
+simulation adds new users each week. In a real holdout, the same users may
+remain in their assigned group for the full year, so repeated observations from
+one user are dependent. Aggregate to one observation per user, or use inference
+that accounts for this dependence, before applying the method described here.
+See [What the guarantee assumes](#what-the-guarantee-assumes).
+
+## Scenario 5: monitor a canary release each hour
+
+Before launch, the team specifies the largest acceptable loss in conversion.
+Here that tolerance is 1 pp, so the decision boundary is -1 pp. At each hourly
+review:
+
+- **Roll back** when the confidence sequence lies entirely below -1 pp. The
+  data now support harm larger than the tolerance.
+- **Promote** when the confidence sequence lies entirely above -1 pp. Any harm
+  still compatible with the data is within the tolerance.
+- **Keep watching** while the sequence straddles -1 pp.
+
+Both decisions use the same boundary, so the rules cannot conflict. In this
+example, the canary lowers conversion from 10% to 7%, with 500 users per arm
+arriving every hour.
+
+```{python}
+#| code-fold: true
+#| code-summary: "Show the simulation code"
+CANARY_USERS_PER_HOUR = 500
+CANARY_MAX_HOURS = 48
+CANARY_HARM_TOLERANCE = 0.01
+CANARY_MIXTURE_PRECISION = pf.optimal_mixture_precision(
+    nobs=2 * CANARY_USERS_PER_HOUR * CANARY_MAX_HOURS,
+    number_of_coefficients=2,
+    alpha=ALPHA,
+)
+
+canary_full = _experiment_path(
+    p_control=0.10,
+    p_treatment=0.07,
+    seed=8,
+    with_intervals=True,
+    n_days=CANARY_MAX_HOURS,
+    users_per_day=CANARY_USERS_PER_HOUR,
+    mixture_precision=CANARY_MIXTURE_PRECISION,
+).set_index("day", drop=False)
+
+rollback_hour = int(
+    canary_full.loc[
+        canary_full["cs_upper"] < -CANARY_HARM_TOLERANCE,
+        "day",
+    ].iloc[0]
+)
+rollback_cs = (
+    f"[{canary_full.loc[rollback_hour, 'cs_lower']:.1%}, "
+    f"{canary_full.loc[rollback_hour, 'cs_upper']:.1%}]"
+)
+hours_saved = CANARY_MAX_HOURS - rollback_hour
+canary_path = canary_full.loc[canary_full["day"] <= rollback_hour]
+```
+
+```{python}
+#| code-fold: true
+#| code-summary: "Show the figure code"
+band = {"mode": "lines", "line": {"width": 0}, "hoverinfo": "skip"}
+fig = go.Figure()
+fig.add_trace(
+    go.Scatter(x=canary_path["day"], y=canary_path["cs_upper"], showlegend=False, **band)
+)
+fig.add_trace(
+    go.Scatter(
+        x=canary_path["day"],
+        y=canary_path["cs_lower"],
+        fill="tonexty",
+        fillcolor=_rgba(SAVI_BLUE, 0.15),
+        name="95% confidence sequence",
+        **band,
+    )
+)
+fig.add_trace(
+    go.Scatter(
+        x=canary_path["day"],
+        y=canary_path["estimate"],
+        mode="lines+markers",
+        line_color=ESTIMATE_TEAL,
+        name="Estimated effect",
+        hovertemplate="Hour %{x}<br>Effect: %{y:.1%}<extra></extra>",
+    )
+)
+fig.add_hline(y=0, line_color="black", opacity=0.4)
+fig.add_hline(
+    y=-CANARY_HARM_TOLERANCE,
+    line_dash="dash",
+    line_color=ORDINARY_ORANGE,
+    annotation_text="Decision boundary: −1 pp",
+    annotation_position="top left",
+)
+fig.add_hline(
+    y=-0.03,
+    line_dash="dot",
+    line_color=NEUTRAL_GREY,
+    annotation_text="True effect: −3 pp",
+    annotation_position="bottom left",
+)
+fig.add_vline(
+    x=rollback_hour,
+    line_dash="dash",
+    line_color=ORDINARY_ORANGE,
+    opacity=0.7,
+    annotation_text=f"Hour {rollback_hour}: roll back",
+    annotation_position="top left",
+    annotation_font_color=ORDINARY_ORANGE,
+)
+fig.add_vline(
+    x=CANARY_MAX_HOURS,
+    line_dash="dash",
+    line_color=NEUTRAL_GREY,
+    opacity=0.7,
+    annotation_text="Planned 2-day runtime: first valid fixed-sample decision",
+    annotation_position="top left",
+    annotation_font_color=NEUTRAL_GREY,
+)
+fig.update_layout(
+    title="A harmful canary release",
+    template="plotly_white",
+    height=430,
+    xaxis_title="Hour since release",
+    xaxis_range=[0.5, CANARY_MAX_HOURS + 0.5],
+    yaxis_title="Estimated effect on conversion",
+    yaxis_tickformat=".0%",
+    legend={"orientation": "h", "y": -0.3},
+    margin={"l": 70, "r": 35, "t": 70, "b": 120},
+)
+fig
+```
+
+The sequence starts wide because one hour of data provides little information.
+After `{python} rollback_hour` hours it lies entirely below the -1 pp boundary,
+at `{python} rollback_cs`, and the rule calls for a rollback. A fixed-horizon
+test with a planned two-day runtime would wait another
+`{python} hours_saved` hours before making its planned decision. For a harmless
+canary, the lower end of the sequence would eventually rise above -1 pp and
+trigger promotion. Netflix uses sequential tests to safeguard production
+releases; see [Lindon, Sanden,
+and Shirikian (2022), "Rapid Regression Detection in Software Deployments
+through Sequential Testing"](https://doi.org/10.1145/3534678.3539099).
 
 ## Regression adjustment narrows the sequence
 
-Regression adjustment is not unique to SAVI. What matters here is that the
-Lindon et al. method builds anytime-valid inference around a regression
-coefficient. A predictive pre-treatment covariate can therefore reduce residual
-variation, just as it does in an ordinary fixed-horizon analysis, while the
-treatment test remains valid under continuous monitoring.
+Regression adjustment is not unique to SAVI. The method of Lindon et al.
+applies anytime-valid inference to regression coefficients. A predictive
+pre-treatment covariate can therefore reduce residual variation, just as it
+does in an ordinary fixed-horizon analysis, while the treatment test remains
+valid under continuous monitoring.
 
 The simulation below deliberately breaks the working linear model. Treatment is
 randomized independently for each user. The untreated outcome depends
@@ -929,7 +1740,7 @@ fig
 By day twenty, the median confidence-sequence half-width falls from
 `{python} f"{median_width['unadjusted'][-1]:.3f}"` without adjustment to
 `{python} f"{median_width['adjusted'][-1]:.3f}"` with adjustment. The adjusted
-analysis has crossed the stopping boundary in
+analysis meets the stopping rule in
 `{python} f"{stopped_share['adjusted'][-1]:.0%}"` of experiments, compared with
 `{python} f"{stopped_share['unadjusted'][-1]:.0%}"` without the pre-experiment
 metric.
@@ -942,424 +1753,14 @@ twenty, the mean treatment estimates are
 `{python} f"{mean_estimate['adjusted']:.3f}"` with adjustment, against a true
 average effect of `{python} f"{ADJUSTMENT_EFFECT:.3f}"`.
 
-As a stress check, we reran the fully interacted analysis with an average
-treatment effect of zero. Across `{python} ADJUSTMENT_NULL_SIMULATIONS`
-experiments, the sequence crossed the 5% boundary by day twenty in
+A separate null simulation sets the average treatment effect to zero. Across
+`{python} ADJUSTMENT_NULL_SIMULATIONS`
+experiments, the SAVI p-value fell below 0.05 by day twenty in
 `{python} f"{adjustment_null_fire_rate:.1%}"` of runs. This finite-horizon rate
 can be below 5%; the guarantee covers the full sequence, not only twenty looks.
 
-Use only variables measured before treatment. Adjusting for a post-treatment
-variable can bias the treatment coefficient.
-
-## A negligible effect can also end the test
-
-A checkout service is moved to a new backend. The change should not affect
-conversion, and the product decision allows a difference of at most one
-percentage point in either direction. That ±1 pp tolerance matters more than
-whether the effect is exactly zero.
-
-The A/A-style test sends 2,000 users per arm per day to the old and new
-backends. It stops once the confidence sequence fits inside the ±1 pp
-tolerance. The displayed run has the median certification day among one hundred
-simulations that certify within the thirty-day monitoring window.
-
-```{python}
-#| code-fold: true
-#| code-summary: "Show the animation code"
-DELTA = 0.01
-BACKEND_USERS = 2_000
-BACKEND_MAX_DAYS = 30
-BACKEND_FIRST_SEED = 50_000
-BACKEND_MIXTURE_PRECISION = pf.optimal_mixture_precision(
-    nobs=2 * BACKEND_USERS * BACKEND_MAX_DAYS,
-    number_of_coefficients=2,
-    alpha=ALPHA,
-)
-
-backend_cert_days = np.zeros(N_REPRESENTATIVE_PATHS, dtype=int)
-for simulation in range(N_REPRESENTATIVE_PATHS):
-    candidate = _experiment_path(
-        p_control=0.10,
-        p_treatment=0.10,
-        seed=BACKEND_FIRST_SEED + simulation,
-        with_intervals=True,
-        n_days=BACKEND_MAX_DAYS,
-        users_per_day=BACKEND_USERS,
-        mixture_precision=BACKEND_MIXTURE_PRECISION,
-    )
-    candidate_certified = (
-        (candidate["cs_lower"] > -DELTA)
-        & (candidate["cs_upper"] < DELTA)
-    )
-    if candidate_certified.any():
-        backend_cert_days[simulation] = int(
-            candidate.loc[candidate_certified, "day"].iloc[0]
-        )
-
-backend_seed = _representative_seed(
-    backend_cert_days,
-    BACKEND_FIRST_SEED,
-)
-
-backend_full = _experiment_path(
-    p_control=0.10,
-    p_treatment=0.10,
-    seed=backend_seed,
-    with_intervals=True,
-    n_days=BACKEND_MAX_DAYS,
-    users_per_day=BACKEND_USERS,
-    mixture_precision=BACKEND_MIXTURE_PRECISION,
-).set_index("day", drop=False)
-
-certified = (backend_full["cs_lower"] > -DELTA) & (backend_full["cs_upper"] < DELTA)
-cert_day = int(backend_full.loc[certified, "day"].iloc[0])
-cert_cs = (
-    f"[{backend_full.loc[cert_day, 'cs_lower']:.2%}, "
-    f"{backend_full.loc[cert_day, 'cs_upper']:.2%}]"
-)
-
-backend_path = backend_full.loc[backend_full["day"] <= cert_day]
-b_range = [
-    float(backend_path["cs_lower"].min()) - 0.005,
-    float(backend_path["cs_upper"].max()) + 0.005,
-]
-
-
-def _backend_traces(day):
-    seen = backend_path.loc[backend_path["day"] <= day]
-    current = backend_path.loc[day]
-    band = {"mode": "lines", "line": {"width": 0}, "hoverinfo": "skip"}
-    tolerance_met = day >= cert_day
-    return [
-        go.Scatter(x=seen["day"], y=seen["cs_upper"], showlegend=False, **band),
-        go.Scatter(
-            x=seen["day"],
-            y=seen["cs_lower"],
-            fill="tonexty",
-            fillcolor=_rgba(SAVI_BLUE, 0.15),
-            name="95% confidence sequence",
-            **band,
-        ),
-        go.Scatter(x=seen["day"], y=seen["ci_upper"], showlegend=False, **band),
-        go.Scatter(
-            x=seen["day"],
-            y=seen["ci_lower"],
-            fill="tonexty",
-            fillcolor=_rgba(ORDINARY_ORANGE, 0.18),
-            name="95% confidence interval",
-            **band,
-        ),
-        go.Scatter(
-            x=[day, day],
-            y=[current["cs_lower"], current["cs_upper"]],
-            mode="lines+markers",
-            line={"color": SAVI_BLUE, "width": 3},
-            marker={"color": SAVI_BLUE, "size": 5},
-            showlegend=False,
-            hovertemplate=(
-                f"Day {day}<br>Confidence sequence: "
-                f"[{current['cs_lower']:.2%}, {current['cs_upper']:.2%}]"
-                "<extra></extra>"
-            ),
-        ),
-        go.Scatter(
-            x=[day, day],
-            y=[current["ci_lower"], current["ci_upper"]],
-            mode="lines+markers",
-            line={"color": ORDINARY_ORANGE, "width": 2},
-            marker={"color": ORDINARY_ORANGE, "size": 4},
-            showlegend=False,
-            hovertemplate=(
-                f"Day {day}<br>Ordinary interval: "
-                f"[{current['ci_lower']:.2%}, {current['ci_upper']:.2%}]"
-                "<extra></extra>"
-            ),
-        ),
-        go.Scatter(
-            x=seen["day"],
-            y=seen["estimate"],
-            mode="lines+markers",
-            line_color=ESTIMATE_TEAL,
-            name="Estimated effect",
-            hovertemplate="Day %{x}<br>Effect: %{y:.1%}<extra></extra>",
-        ),
-        go.Scatter(
-            x=[cert_day] if tolerance_met else [None],
-            y=[backend_path.loc[cert_day, "estimate"]] if tolerance_met else [None],
-            mode="markers+text",
-            marker={"color": SAVI_BLUE, "size": 11, "symbol": "diamond"},
-            text=["Tolerance met"] if tolerance_met else [None],
-            textposition="bottom left",
-            showlegend=False,
-            hoverinfo="skip",
-        ),
-    ]
-
-
-def _backend_title(day):
-    users = int(backend_path.loc[day, "users"])
-    if day == cert_day:
-        decision = "CS inside ±1 pp: tolerance met, test over"
-    else:
-        decision = "Tolerance not met; keep collecting"
-    return f"Day {day} · {users:,} users<br>{decision}"
-
-
-backend_days = list(range(1, cert_day + 1))
-fig = go.Figure(_backend_traces(1))
-fig.frames = [
-    go.Frame(
-        data=_backend_traces(day),
-        name=str(day),
-        layout={"title": {"text": _backend_title(day)}},
-    )
-    for day in backend_days
-]
-fig.add_hrect(
-    y0=-DELTA,
-    y1=DELTA,
-    fillcolor=_rgba(SAVI_BLUE, 0.07),
-    line_width=0,
-)
-fig.add_hline(
-    y=DELTA,
-    line_dash="dash",
-    line_color=NEUTRAL_GREY,
-    opacity=0.7,
-    annotation_text="Certification tube: ±1 pp",
-    annotation_position="top right",
-    annotation_font_color=NEUTRAL_GREY,
-)
-fig.add_hline(y=-DELTA, line_dash="dash", line_color=NEUTRAL_GREY, opacity=0.7)
-fig.add_hline(y=0, line_color="black", opacity=0.4)
-fig.update_layout(
-    title=_backend_title(1),
-    title_font_size=16,
-    template="plotly_white",
-    height=600,
-    xaxis_title="Day of A/A test",
-    xaxis_range=[0.5, cert_day + 0.5],
-    yaxis_title="Estimated effect",
-    yaxis_range=b_range,
-    yaxis_tickformat=".0%",
-    legend={"orientation": "h", "y": -0.48},
-    updatemenus=PLAY_PAUSE,
-    sliders=_slider(backend_days, active=0),
-    margin={"l": 70, "r": 35, "t": 105, "b": 245},
-)
-fig.update_xaxes(dtick=2)
-fig
-```
-
-On day `{python} cert_day`, the confidence sequence `{python} cert_cs` fits
-inside the ±1 pp tolerance. The team can stop and conclude, with the
-time-uniform asymptotic coverage of the sequence, that any effect is smaller
-than the amount it cares about.
-
-A non-significant p-value cannot establish that two versions are equivalent.
-A confidence sequence inside a prespecified tolerance can.
-
-The next plot returns to the `{python} N_SIMULATIONS` A/A experiments from the
-first section and records the estimated effect when each test first rejects:
-
-```{python}
-#| code-fold: true
-#| code-summary: "Show the simulation code"
-naive_stop = _stop_day(mirage["regular_p"])
-savi_aa_stop = _stop_day(mirage["savi_p"])
-
-
-def _estimate_at_stop(stop):
-    idx = np.where(stop > 0)[0]
-    return np.array([mirage["estimate"][i, stop[i] - 1] for i in idx]) * 100
-
-
-naive_at_stop = _estimate_at_stop(naive_stop)
-savi_at_stop = _estimate_at_stop(savi_aa_stop)
-
-naive_fire_rate = (naive_stop > 0).mean()
-savi_fire_rate = (savi_aa_stop > 0).mean()
-naive_mean_abs = np.abs(naive_at_stop).mean()
-```
-
-```{python}
-#| code-fold: true
-#| code-summary: "Show the figure code"
-jitter = np.random.default_rng(1).uniform(-0.16, 0.16, size=N_SIMULATIONS)
-
-fig = go.Figure()
-for est, base, color, label in [
-    (naive_at_stop, 1, ORDINARY_ORANGE, "Naive daily peeking"),
-    (savi_at_stop, 0, SAVI_BLUE, "SAVI"),
-]:
-    fig.add_trace(
-        go.Scatter(
-            x=est,
-            y=base + jitter[: len(est)],
-            mode="markers",
-            marker={"color": _rgba(color, 0.5), "size": 7, "line": {"width": 0}},
-            name=f"{label} ({len(est)} of {N_SIMULATIONS} fired)",
-            hovertemplate="Reported effect: %{x:.2f} pp<extra></extra>",
-        )
-    )
-fig.add_vline(
-    x=0,
-    line_dash="dot",
-    line_color=NEUTRAL_GREY,
-    annotation_text="True effect: 0",
-    annotation_position="top",
-)
-fig.update_layout(
-    title="'Effects' reported at the first significant result<br>(true effect: 0)",
-    template="plotly_white",
-    height=380,
-    xaxis_title="Estimated effect at stop (pp)",
-    yaxis={
-        "tickmode": "array",
-        "tickvals": [0, 1],
-        "ticktext": ["SAVI", "Naive<br>peeking"],
-        "range": [-0.5, 1.5],
-    },
-    legend={"orientation": "h", "y": -0.3},
-    margin={"l": 80, "r": 30, "t": 90, "b": 105},
-)
-fig
-```
-
-Daily peeking stops `{python} f"{naive_fire_rate:.0%}"` of these zero-effect
-experiments. The reported effects average
-`{python} f"{naive_mean_abs:.1f}"` pp in magnitude. There is a hole around zero
-because only extreme early estimates cross the boundary. This is the winner's
-curse in the null case: the stopping rule selects effects that look large even
-though the truth is zero. SAVI crosses its boundary in
-`{python} f"{savi_fire_rate:.1%}"` of the same experiments.
-
-## Canary releases: guardrails read every hour
-
-A canary needs one product judgment before launch: how much harm is small
-enough to accept? Suppose the team is willing to tolerate at most a 1 pp drop
-in conversion. The decision boundary is then -1 pp. At each hourly review:
-
-- **Roll back** when the confidence sequence lies entirely below -1 pp. The
-  data now support harm larger than the tolerance.
-- **Promote** when the confidence sequence lies entirely above -1 pp. Any harm
-  still compatible with the data is within the tolerance.
-- **Keep watching** while the sequence straddles -1 pp.
-
-Both decisions use the same boundary, so the rules cannot conflict. In this
-example, the canary lowers conversion from 10% to 7%, with 500 users per arm
-arriving every hour.
-
-```{python}
-#| code-fold: true
-#| code-summary: "Show the simulation code"
-CANARY_USERS_PER_HOUR = 500
-CANARY_MAX_HOURS = 48
-CANARY_HARM_TOLERANCE = 0.01
-CANARY_MIXTURE_PRECISION = pf.optimal_mixture_precision(
-    nobs=2 * CANARY_USERS_PER_HOUR * CANARY_MAX_HOURS,
-    number_of_coefficients=2,
-    alpha=ALPHA,
-)
-
-canary_full = _experiment_path(
-    p_control=0.10,
-    p_treatment=0.07,
-    seed=8,
-    with_intervals=True,
-    n_days=CANARY_MAX_HOURS,
-    users_per_day=CANARY_USERS_PER_HOUR,
-    mixture_precision=CANARY_MIXTURE_PRECISION,
-).set_index("day", drop=False)
-
-rollback_hour = int(
-    canary_full.loc[
-        canary_full["cs_upper"] < -CANARY_HARM_TOLERANCE,
-        "day",
-    ].iloc[0]
-)
-rollback_cs = (
-    f"[{canary_full.loc[rollback_hour, 'cs_lower']:.1%}, "
-    f"{canary_full.loc[rollback_hour, 'cs_upper']:.1%}]"
-)
-hours_saved = CANARY_MAX_HOURS - rollback_hour
-canary_path = canary_full.loc[canary_full["day"] <= rollback_hour]
-```
-
-```{python}
-#| code-fold: true
-#| code-summary: "Show the figure code"
-band = {"mode": "lines", "line": {"width": 0}, "hoverinfo": "skip"}
-fig = go.Figure()
-fig.add_trace(
-    go.Scatter(x=canary_path["day"], y=canary_path["cs_upper"], showlegend=False, **band)
-)
-fig.add_trace(
-    go.Scatter(
-        x=canary_path["day"],
-        y=canary_path["cs_lower"],
-        fill="tonexty",
-        fillcolor=_rgba(SAVI_BLUE, 0.15),
-        name="95% confidence sequence",
-        **band,
-    )
-)
-fig.add_trace(
-    go.Scatter(
-        x=canary_path["day"],
-        y=canary_path["estimate"],
-        mode="lines+markers",
-        line_color=ESTIMATE_TEAL,
-        name="Estimated effect",
-        hovertemplate="Hour %{x}<br>Effect: %{y:.1%}<extra></extra>",
-    )
-)
-fig.add_hline(y=0, line_color="black", opacity=0.4)
-fig.add_hline(
-    y=-CANARY_HARM_TOLERANCE,
-    line_dash="dash",
-    line_color=ORDINARY_ORANGE,
-    annotation_text="Decision boundary: −1 pp",
-    annotation_position="top left",
-)
-fig.add_hline(
-    y=-0.03,
-    line_dash="dot",
-    line_color=NEUTRAL_GREY,
-    annotation_text="True effect: −3 pp",
-    annotation_position="bottom left",
-)
-fig.add_vline(
-    x=rollback_hour,
-    line_dash="dash",
-    line_color=ORDINARY_ORANGE,
-    opacity=0.7,
-    annotation_text=f"Hour {rollback_hour}: roll back",
-    annotation_position="top left",
-    annotation_font_color=ORDINARY_ORANGE,
-)
-fig.update_layout(
-    title="A canary release gone wrong",
-    template="plotly_white",
-    height=430,
-    xaxis_title="Hour since release",
-    yaxis_title="Estimated effect on conversion",
-    yaxis_tickformat=".0%",
-    legend={"orientation": "h", "y": -0.3},
-    margin={"l": 70, "r": 35, "t": 70, "b": 120},
-)
-fig
-```
-
-The sequence starts wide because one hour of data proves little. After
-`{python} rollback_hour` hours it lies entirely below the -1 pp boundary, at
-`{python} rollback_cs`. The rule says to roll back. A fixed-horizon test with a
-planned two-day runtime could not make the planned statistical decision for
-another `{python} hours_saved` hours. For a harmless canary, the lower end of
-the sequence would eventually clear -1 pp and trigger promotion. Netflix uses
-sequential tests to safeguard production releases; see [Lindon, Sanden,
-and Shirikian (2022), "Rapid Regression Detection in Software Deployments
-through Sequential Testing"](https://doi.org/10.1145/3534678.3539099).
+Regression adjustment should use only variables measured before treatment.
+Conditioning on a post-treatment variable can bias the treatment coefficient.
 
 ## Apply SAVI in PyFixest
 
@@ -1433,10 +1834,10 @@ Randomization makes the treatment coefficient interpretable as a causal effect.
 SAVI protects that coefficient against repeated looks; it does not repair
 confounding in an observational comparison.
 
-Match the analysis unit to the randomization unit. If treatment is assigned by
-user, repeated page views from the same user are not independent users. Reduce
-the outcome to one user-level observation or use inference that accounts for
-the dependence.
+When treatment is assigned by user, the analysis should use independent
+user-level observations. Repeated page views from the same user are not
+independent users. Reduce the outcome to one observation per user or use
+inference that accounts for the dependence.
 
 PyFixest uses the asymptotic t-mixture version of SAVI. It is intended for
 large experiments where the usual regression standard-error approximation is
