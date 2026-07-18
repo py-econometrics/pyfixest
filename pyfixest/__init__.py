@@ -17,7 +17,6 @@ __all__ = [
     "coefplot",
     "did",
     "did2s",
-    "dtable",
     "errors",
     "estimation",
     "etable",
@@ -76,7 +75,6 @@ _lazy_imports = {
     "SaturatedEventStudy": "pyfixest.did",
     # report
     "etable": "pyfixest.report",
-    "dtable": "pyfixest.report",
     "summary": "pyfixest.report",
     "coefplot": "pyfixest.report",
     "iplot": "pyfixest.report",
