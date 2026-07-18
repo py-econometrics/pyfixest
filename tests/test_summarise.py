@@ -166,6 +166,13 @@ def test_etable_correct_output_type():
     assert isinstance(typst_table, str)
 
 
+def test_dtable_is_not_public():
+    assert "dtable" not in pf.__all__
+    assert not hasattr(pf, "dtable")
+    assert "dtable" not in pf.report.__all__
+    assert not hasattr(pf.report, "dtable")
+
+
 def test_summary_inference_type_regular(capsys):
     """summary(inference_type='regular') matches the default summary output."""
     fit = feols("Y ~ X1 + X2 | f1", data=get_data())

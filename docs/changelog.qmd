@@ -79,6 +79,10 @@ As previously announced, we removed:
 - Deprecated the SciPy and CuPy demeaner backends.
 - Deprecated `FeolsCompressed`.
 
+We also removed:
+
+- Removed `pf.dtable()`; use `maketables.DTable()` directly instead.
+
 ### Bug Fixes
 
 - Fixes `confint()` when `keep` or `drop` requests coefficients in an order
