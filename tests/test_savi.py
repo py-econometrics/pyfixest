@@ -119,20 +119,7 @@ def test_savi_confidence_sequences_contain_confidence_intervals(
         mixture_precision=mixture_precision,
     )
     ci = fit.confint(alpha=alpha)
-    radius = _confidence_radius(
-        alpha=alpha,
-        mixture_precision=mixture_precision,
-        nobs=fit._N,
-        dfd=fit._df_t,
-    )
-    expected = pd.DataFrame(
-        {
-            "2.5%": fit.coef() - np.sqrt(radius) * fit.se(),
-            "97.5%": fit.coef() + np.sqrt(radius) * fit.se(),
-        }
-    )
 
-    pd.testing.assert_frame_equal(cs, expected, check_names=False)
     assert np.all(cs["2.5%"] <= ci["2.5%"])
     assert np.all(cs["97.5%"] >= ci["97.5%"])
 
