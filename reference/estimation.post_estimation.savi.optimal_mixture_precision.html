@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>did.estimation.did2s</title>
+<title>estimation.post_estimation.savi.optimal_mixture_precision</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -109,7 +109,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script type="application/javascript">define('jquery', [],function() {return window.jQuery;})</script>
 
 
-<link rel="alternate" type="text/markdown" href="did.estimation.did2s.html.md">
+<link rel="alternate" type="text/markdown" href="estimation.post_estimation.savi.optimal_mixture_precision.html.md">
 </head>
 
 <body class="nav-sidebar floating nav-fixed fullcontent quarto-light">
@@ -294,7 +294,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/estimation.api.feols.feols.html">Estimation Functions</a></li><li class="breadcrumb-item"><a href="../reference/did.estimation.did2s.html">did.estimation.did2s</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/estimation.api.feols.feols.html">Estimation Functions</a></li><li class="breadcrumb-item"><a href="../reference/estimation.post_estimation.savi.optimal_mixture_precision.html">estimation.post_estimation.savi.optimal_mixture_precision</a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
     </div>
@@ -347,13 +347,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.post_estimation.savi.optimal_mixture_precision.html" class="sidebar-item-text sidebar-link">
+  <a href="../reference/estimation.post_estimation.savi.optimal_mixture_precision.html" class="sidebar-item-text sidebar-link active">
  <span class="menu-text">estimation.post_estimation.savi.optimal_mixture_precision</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/did.estimation.did2s.html" class="sidebar-item-text sidebar-link active">
+  <a href="../reference/did.estimation.did2s.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">did.estimation.did2s</span></a>
   </div>
 </li>
@@ -598,9 +598,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <!-- main -->
 <main class="content" id="quarto-document-content">
 
-<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/estimation.api.feols.feols.html">Estimation Functions</a></li><li class="breadcrumb-item"><a href="../reference/did.estimation.did2s.html">did.estimation.did2s</a></li></ol></nav>
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/estimation.api.feols.feols.html">Estimation Functions</a></li><li class="breadcrumb-item"><a href="../reference/estimation.post_estimation.savi.optimal_mixture_precision.html">estimation.post_estimation.savi.optimal_mixture_precision</a></li></ol></nav>
 <div class="quarto-title">
-<h1 class="title">did.estimation.did2s</h1>
+<h1 class="title">estimation.post_estimation.savi.optimal_mixture_precision</h1>
 </div>
 
 
@@ -617,24 +617,20 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>did.estimation.did2s(</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    data,</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    yname,</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    first_stage,</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    second_stage,</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    treatment,</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    cluster,</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    weights<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>Estimate a Difference-in-Differences model using Gardner’s two-step DID2S estimator.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>estimation.post_estimation.savi.optimal_mixture_precision(</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    nobs,</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    number_of_coefficients,</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    alpha,</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Compute the mixture precision that minimizes SAVI sequence width at a specified sample size <code>nobs</code>.</p>
 <section id="parameters" class="level2 doc-section doc-section-parameters">
 <h2 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters">Parameters</h2>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 14%">
-<col style="width: 14%">
+<col style="width: 23%">
+<col style="width: 7%">
 <col style="width: 57%">
-<col style="width: 12%">
+<col style="width: 11%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -646,39 +642,21 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </thead>
 <tbody>
 <tr class="odd">
-<td>data</td>
-<td>pd.DataFrame</td>
-<td>The DataFrame containing all variables.</td>
+<td>nobs</td>
+<td>float</td>
+<td>Target number of observations.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
-<td>yname</td>
-<td>str</td>
-<td>The name of the dependent variable.</td>
+<td>number_of_coefficients</td>
+<td>float</td>
+<td>Number of estimated coefficients, including the intercept.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="odd">
-<td>first_stage</td>
-<td>str</td>
-<td>The formula for the first stage, starting with ‘~’.</td>
-<td><em>required</em></td>
-</tr>
-<tr class="even">
-<td>second_stage</td>
-<td>str</td>
-<td>The formula for the second stage, starting with ‘~’.</td>
-<td><em>required</em></td>
-</tr>
-<tr class="odd">
-<td>treatment</td>
-<td>str</td>
-<td>The name of the treatment variable.</td>
-<td><em>required</em></td>
-</tr>
-<tr class="even">
-<td>cluster</td>
-<td>str</td>
-<td>The name of the cluster variable.</td>
+<td>alpha</td>
+<td>float</td>
+<td>Significance level between zero and one.</td>
 <td><em>required</em></td>
 </tr>
 </tbody>
@@ -687,6 +665,11 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="returns" class="level2 doc-section doc-section-returns">
 <h2 class="doc-section doc-section-returns anchored" data-anchor-id="returns">Returns</h2>
 <table class="caption-top table">
+<colgroup>
+<col style="width: 10%">
+<col style="width: 10%">
+<col style="width: 78%">
+</colgroup>
 <thead>
 <tr class="header">
 <th>Name</th>
@@ -697,517 +680,92 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tbody>
 <tr class="odd">
 <td></td>
-<td>object</td>
-<td>A fitted model object of class <a href="../reference/estimation.models.feols_.Feols.html">Feols</a>.</td>
+<td>float</td>
+<td>Mixture precision optimized for the target sample size.</td>
 </tr>
 </tbody>
 </table>
 </section>
 <section id="examples" class="level2 doc-section doc-section-examples">
 <h2 class="doc-section doc-section-examples anchored" data-anchor-id="examples">Examples</h2>
-<div id="f7760215" class="cell" data-execution_count="1">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>url <span class="op">=</span> <span class="st">"https://raw.githubusercontent.com/py-econometrics/pyfixest/master/pyfixest/did/data/df_het.csv"</span></span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>df_het <span class="op">=</span> pd.read_csv(url)</span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>df_het.head()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div id="250f0cff" class="cell" data-execution_count="1">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>pf.optimal_mixture_precision(</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    nobs<span class="op">=</span><span class="dv">100</span>,</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    number_of_coefficients<span class="op">=</span><span class="dv">3</span>,</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    alpha<span class="op">=</span><span class="fl">0.05</span>,</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+
+        <div id="e6xDMD"></div>
+        <script type="text/javascript" data-lets-plot-script="library">
+            if(!window.letsPlotCallQueue) {
+                window.letsPlotCallQueue = [];
+            };
+            window.letsPlotCall = function(f) {
+                window.letsPlotCallQueue.push(f);
+            };
+            (function() {
+                var script = document.createElement("script");
+                script.type = "text/javascript";
+                script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.8.2/js-package/distr/lets-plot.min.js";
+                script.onload = function() {
+                    window.letsPlotCall = function(f) {f();};
+                    window.letsPlotCallQueue.forEach(function(f) {f();});
+                    window.letsPlotCallQueue = [];
+                    
+                };
+                script.onerror = function(event) {
+                    window.letsPlotCall = function(f) {};    // noop
+                    window.letsPlotCallQueue = [];
+                    var div = document.createElement("div");
+                    div.style.color = 'darkred';
+                    div.textContent = 'Error loading Lets-Plot JS';
+                    document.getElementById("e6xDMD").appendChild(div);
+                };
+                var e = document.getElementById("e6xDMD");
+                e.appendChild(script);
+            })()
+        </script>
+        
+</div>
+<div class="cell-output cell-output-display">
+
+        <div id="b8d3Em"></div>
+        <script type="text/javascript" data-lets-plot-script="library">
+            if(!window.letsPlotCallQueue) {
+                window.letsPlotCallQueue = [];
+            };
+            window.letsPlotCall = function(f) {
+                window.letsPlotCallQueue.push(f);
+            };
+            (function() {
+                var script = document.createElement("script");
+                script.type = "text/javascript";
+                script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.8.2/js-package/distr/lets-plot.min.js";
+                script.onload = function() {
+                    window.letsPlotCall = function(f) {f();};
+                    window.letsPlotCallQueue.forEach(function(f) {f();});
+                    window.letsPlotCallQueue = [];
+                    
+                };
+                script.onerror = function(event) {
+                    window.letsPlotCall = function(f) {};    // noop
+                    window.letsPlotCallQueue = [];
+                    var div = document.createElement("div");
+                    div.style.color = 'darkred';
+                    div.textContent = 'Error loading Lets-Plot JS';
+                    document.getElementById("b8d3Em").appendChild(div);
+                };
+                var e = document.getElementById("b8d3Em");
+                e.appendChild(script);
+            })()
+        </script>
+        
+</div>
 <div class="cell-output cell-output-display" data-execution_count="1">
-<div>
-
-
-<table class="dataframe caption-top table table-sm table-striped small" data-border="1">
-<thead>
-<tr class="header">
-<th data-quarto-table-cell-role="th"></th>
-<th data-quarto-table-cell-role="th">unit</th>
-<th data-quarto-table-cell-role="th">state</th>
-<th data-quarto-table-cell-role="th">group</th>
-<th data-quarto-table-cell-role="th">unit_fe</th>
-<th data-quarto-table-cell-role="th">g</th>
-<th data-quarto-table-cell-role="th">year</th>
-<th data-quarto-table-cell-role="th">year_fe</th>
-<th data-quarto-table-cell-role="th">treat</th>
-<th data-quarto-table-cell-role="th">rel_year</th>
-<th data-quarto-table-cell-role="th">rel_year_binned</th>
-<th data-quarto-table-cell-role="th">error</th>
-<th data-quarto-table-cell-role="th">te</th>
-<th data-quarto-table-cell-role="th">te_dynamic</th>
-<th data-quarto-table-cell-role="th">dep_var</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<th data-quarto-table-cell-role="th">0</th>
-<td>1</td>
-<td>33</td>
-<td>Group 2</td>
-<td>7.043016</td>
-<td>2010</td>
-<td>1990</td>
-<td>0.066159</td>
-<td>False</td>
-<td>-20.0</td>
-<td>-6</td>
-<td>-0.086466</td>
-<td>0</td>
-<td>0.0</td>
-<td>7.022709</td>
-</tr>
-<tr class="even">
-<th data-quarto-table-cell-role="th">1</th>
-<td>1</td>
-<td>33</td>
-<td>Group 2</td>
-<td>7.043016</td>
-<td>2010</td>
-<td>1991</td>
-<td>-0.030980</td>
-<td>False</td>
-<td>-19.0</td>
-<td>-6</td>
-<td>0.766593</td>
-<td>0</td>
-<td>0.0</td>
-<td>7.778628</td>
-</tr>
-<tr class="odd">
-<th data-quarto-table-cell-role="th">2</th>
-<td>1</td>
-<td>33</td>
-<td>Group 2</td>
-<td>7.043016</td>
-<td>2010</td>
-<td>1992</td>
-<td>-0.119607</td>
-<td>False</td>
-<td>-18.0</td>
-<td>-6</td>
-<td>1.512968</td>
-<td>0</td>
-<td>0.0</td>
-<td>8.436377</td>
-</tr>
-<tr class="even">
-<th data-quarto-table-cell-role="th">3</th>
-<td>1</td>
-<td>33</td>
-<td>Group 2</td>
-<td>7.043016</td>
-<td>2010</td>
-<td>1993</td>
-<td>0.126321</td>
-<td>False</td>
-<td>-17.0</td>
-<td>-6</td>
-<td>0.021870</td>
-<td>0</td>
-<td>0.0</td>
-<td>7.191207</td>
-</tr>
-<tr class="odd">
-<th data-quarto-table-cell-role="th">4</th>
-<td>1</td>
-<td>33</td>
-<td>Group 2</td>
-<td>7.043016</td>
-<td>2010</td>
-<td>1994</td>
-<td>-0.106921</td>
-<td>False</td>
-<td>-16.0</td>
-<td>-6</td>
-<td>-0.017603</td>
-<td>0</td>
-<td>0.0</td>
-<td>6.918492</td>
-</tr>
-</tbody>
-</table>
-
-</div>
-</div>
-</div>
-<p>In a first step, we estimate a classical event study model:</p>
-<div id="0d09717b" class="cell" data-execution_count="2">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># estimate the model</span></span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.did2s(</span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    df_het,</span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    yname<span class="op">=</span><span class="st">"dep_var"</span>,</span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    first_stage<span class="op">=</span><span class="st">"~ 0 | unit + year"</span>,</span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    second_stage<span class="op">=</span><span class="st">"~i(rel_year, ref=-1.0)"</span>,</span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    treatment<span class="op">=</span><span class="st">"treat"</span>,</span>
-<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    cluster<span class="op">=</span><span class="st">"state"</span>,</span>
-<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>fit.tidy().head()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display">
-
-        <div id="rK40nE"></div>
-        <script type="text/javascript" data-lets-plot-script="library">
-            if(!window.letsPlotCallQueue) {
-                window.letsPlotCallQueue = [];
-            };
-            window.letsPlotCall = function(f) {
-                window.letsPlotCallQueue.push(f);
-            };
-            (function() {
-                var script = document.createElement("script");
-                script.type = "text/javascript";
-                script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.8.2/js-package/distr/lets-plot.min.js";
-                script.onload = function() {
-                    window.letsPlotCall = function(f) {f();};
-                    window.letsPlotCallQueue.forEach(function(f) {f();});
-                    window.letsPlotCallQueue = [];
-                    
-                };
-                script.onerror = function(event) {
-                    window.letsPlotCall = function(f) {};    // noop
-                    window.letsPlotCallQueue = [];
-                    var div = document.createElement("div");
-                    div.style.color = 'darkred';
-                    div.textContent = 'Error loading Lets-Plot JS';
-                    document.getElementById("rK40nE").appendChild(div);
-                };
-                var e = document.getElementById("rK40nE");
-                e.appendChild(script);
-            })()
-        </script>
-        
-</div>
-<div class="cell-output cell-output-display">
-
-        <div id="Rf20Ca"></div>
-        <script type="text/javascript" data-lets-plot-script="library">
-            if(!window.letsPlotCallQueue) {
-                window.letsPlotCallQueue = [];
-            };
-            window.letsPlotCall = function(f) {
-                window.letsPlotCallQueue.push(f);
-            };
-            (function() {
-                var script = document.createElement("script");
-                script.type = "text/javascript";
-                script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.8.2/js-package/distr/lets-plot.min.js";
-                script.onload = function() {
-                    window.letsPlotCall = function(f) {f();};
-                    window.letsPlotCallQueue.forEach(function(f) {f();});
-                    window.letsPlotCallQueue = [];
-                    
-                };
-                script.onerror = function(event) {
-                    window.letsPlotCall = function(f) {};    // noop
-                    window.letsPlotCallQueue = [];
-                    var div = document.createElement("div");
-                    div.style.color = 'darkred';
-                    div.textContent = 'Error loading Lets-Plot JS';
-                    document.getElementById("Rf20Ca").appendChild(div);
-                };
-                var e = document.getElementById("Rf20Ca");
-                e.appendChild(script);
-            })()
-        </script>
-        
-</div>
-<div class="cell-output cell-output-display" data-execution_count="2">
-<div>
-
-
-<table class="dataframe caption-top table table-sm table-striped small" data-border="1">
-<thead>
-<tr class="header">
-<th data-quarto-table-cell-role="th"></th>
-<th data-quarto-table-cell-role="th">Estimate</th>
-<th data-quarto-table-cell-role="th">Std. Error</th>
-<th data-quarto-table-cell-role="th">t value</th>
-<th data-quarto-table-cell-role="th">Pr(&gt;|t|)</th>
-<th data-quarto-table-cell-role="th">2.5%</th>
-<th data-quarto-table-cell-role="th">97.5%</th>
-</tr>
-<tr class="even">
-<th data-quarto-table-cell-role="th">Coefficient</th>
-<th data-quarto-table-cell-role="th"></th>
-<th data-quarto-table-cell-role="th"></th>
-<th data-quarto-table-cell-role="th"></th>
-<th data-quarto-table-cell-role="th"></th>
-<th data-quarto-table-cell-role="th"></th>
-<th data-quarto-table-cell-role="th"></th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<th data-quarto-table-cell-role="th">rel_year::-inf</th>
-<td>3.133615e-08</td>
-<td>5.155857e-09</td>
-<td>6.077778</td>
-<td>1.228051e-09</td>
-<td>2.123060e-08</td>
-<td>4.144171e-08</td>
-</tr>
-<tr class="even">
-<th data-quarto-table-cell-role="th">rel_year::-20.0</th>
-<td>-5.822583e-02</td>
-<td>3.580900e-02</td>
-<td>-1.626011</td>
-<td>1.039541e-01</td>
-<td>-1.284120e-01</td>
-<td>1.196035e-02</td>
-</tr>
-<tr class="odd">
-<th data-quarto-table-cell-role="th">rel_year::-19.0</th>
-<td>-6.032235e-03</td>
-<td>3.034072e-02</td>
-<td>-0.198816</td>
-<td>8.424072e-01</td>
-<td>-6.550051e-02</td>
-<td>5.343604e-02</td>
-</tr>
-<tr class="even">
-<th data-quarto-table-cell-role="th">rel_year::-18.0</th>
-<td>-6.152322e-03</td>
-<td>3.509400e-02</td>
-<td>-0.175310</td>
-<td>8.608370e-01</td>
-<td>-7.493709e-02</td>
-<td>6.263245e-02</td>
-</tr>
-<tr class="odd">
-<th data-quarto-table-cell-role="th">rel_year::-17.0</th>
-<td>-1.253329e-02</td>
-<td>2.483369e-02</td>
-<td>-0.504689</td>
-<td>6.137796e-01</td>
-<td>-6.120770e-02</td>
-<td>3.614111e-02</td>
-</tr>
-</tbody>
-</table>
-
-</div>
-</div>
-</div>
-<p>We can also inspect the model visually:</p>
-<div id="02cecf85" class="cell" data-execution_count="3">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>fit.iplot(figsize<span class="op">=</span> [<span class="dv">1200</span>, <span class="dv">400</span>], coord_flip<span class="op">=</span><span class="va">False</span>).show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display">
-   <div id="6vx4PG"></div>
-   <script type="text/javascript" data-lets-plot-script="plot">
-   
-   (function() {
-   // ----------
-   
-   const forceImmediateRender = false;
-   const responsive = false;
-   
-   let sizing = {
-       width_mode: "MIN",
-       height_mode: "SCALED",
-       width: null, 
-       height: null 
-   };
-   
-   const preferredWidth = document.body.dataset.letsPlotPreferredWidth;
-   if (preferredWidth !== undefined) {
-       sizing = {
-           width_mode: 'FIXED',
-           height_mode: 'SCALED',
-           width: parseFloat(preferredWidth)
-       };
-   }
-   
-   const containerDiv = document.getElementById("6vx4PG");
-   let fig = null;
-   
-   function renderPlot() {
-       if (fig === null) {
-           const plotSpec = {
-"data":{
-"Coefficient":["rel_year::-inf","rel_year::-20.0","rel_year::-19.0","rel_year::-18.0","rel_year::-17.0","rel_year::-16.0","rel_year::-15.0","rel_year::-14.0","rel_year::-13.0","rel_year::-12.0","rel_year::-11.0","rel_year::-10.0","rel_year::-9.0","rel_year::-8.0","rel_year::-7.0","rel_year::-6.0","rel_year::-5.0","rel_year::-4.0","rel_year::-3.0","rel_year::-2.0","rel_year::0.0","rel_year::1.0","rel_year::2.0","rel_year::3.0","rel_year::4.0","rel_year::5.0","rel_year::6.0","rel_year::7.0","rel_year::8.0","rel_year::9.0","rel_year::10.0","rel_year::11.0","rel_year::12.0","rel_year::13.0","rel_year::14.0","rel_year::15.0","rel_year::16.0","rel_year::17.0","rel_year::18.0","rel_year::19.0","rel_year::20.0"],
-"Estimate":[3.1336154385614316E-8,-0.058225830428307875,-0.006032234927073819,-0.006152321823044616,-0.012533291390358078,-0.034697646687571984,0.03782823509813382,2.1313917160670727E-4,-0.001126715299597404,0.026530150403993265,-0.026841661032949007,0.007378507861870395,0.002339834797924602,0.009000120872058582,0.032752325606101876,2.590054749810114E-4,-0.03932604815056286,0.005630463749865872,0.024642950554569255,0.0011694909183361548,1.3730784089051167,1.6021021728224514,1.6657198625728742,1.787463390698365,1.9149127993894604,2.059203374591944,2.147498987084652,2.2340156620423994,2.3275665402402823,2.346379162342313,2.501338364232591,2.5534424521820935,2.604402966374637,2.5785087385087646,2.7234332998351767,2.9097391805492303,2.859789608671048,2.9084076213203267,2.874142635033162,2.883271705034348,2.911965476671228],
-"2.5%":[2.1230597105659618E-8,-0.12841200821650414,-0.06550050908218519,-0.07493709211318267,-0.06120769527357155,-0.09311716263600808,-0.025495383931924756,-0.07125405101905641,-0.05398935186672268,-0.03741497239318647,-0.10584307362067508,-0.03825638019774319,-0.04116789683373459,-0.036431115878421974,-0.015536950103120277,-0.039086669483278796,-0.0853518499838525,-0.033306999223909256,-0.017109515663853027,-0.04801598733851546,1.2955886913146553,1.5030995980599993,1.5769579832123042,1.6884147616066425,1.8394048657211661,1.976379629874598,2.053168898827041,2.14670065062,2.244984139077684,2.263582148802893,2.4173363876587595,2.429880986702958,2.4658013197976087,2.4348096249932856,2.5982728527497314,2.7733306494427974,2.7292249965780955,2.793965532404381,2.7193726434490184,2.740249343642085,2.7768018524516176],
-"97.5%":[4.1441711665569015E-8,0.0119603473598884,0.05343603922803755,0.06263244846709343,0.036141112492855385,0.02372186926086412,0.1011518541281924,0.07168032936226981,0.05173592126752787,0.09047527320117299,0.05215975155477706,0.05301339592148398,0.04584756642958379,0.05443135762253913,0.08104160131532404,0.03960468043324082,0.0066997536827267876,0.044567926723641,0.06639541677299154,0.050354969175187766,1.450568126495578,1.7011047475849035,1.7544817419334442,1.8865120197900875,1.9904207330577546,2.1420271193092897,2.2418290753422627,2.3213306734647987,2.4101489414028805,2.429176175881733,2.585340340806422,2.6770039176612292,2.7430046129516654,2.7222078520242436,2.848593746920622,3.0461477116556632,2.9903542207640004,3.0228497102362724,3.0289126266173056,3.026294066426611,3.0471291008908388],
-"Model":["dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)","dep_var_hat ~i(rel_year,ref=-1.0)"]
-},
-"mapping":{
-"x":"Coefficient",
-"y":"Estimate",
-"color":"Model"
-},
-"data_meta":{
-"series_annotations":[{
-"type":"int",
-"column":"level_0"
-},{
-"type":"int",
-"column":"index"
-},{
-"type":"str",
-"column":"Coefficient"
-},{
-"type":"float",
-"column":"Estimate"
-},{
-"type":"float",
-"column":"Std. Error"
-},{
-"type":"float",
-"column":"t value"
-},{
-"type":"float",
-"column":"Pr(>|t|)"
-},{
-"type":"float",
-"column":"2.5%"
-},{
-"type":"float",
-"column":"97.5%"
-},{
-"type":"str",
-"column":"Model"
-}]
-},
-"guides":{
-"y":{
-"title":"Estimate and 95.0% Confidence Interval"
-}
-},
-"ggsize":{
-"width":1200.0,
-"height":400.0
-},
-"theme":{
-"axis_text_x":{
-"angle":0.0,
-"blank":false
-}
-},
-"kind":"plot",
-"scales":[],
-"layers":[{
-"geom":"point",
-"mapping":{
-},
-"position":{
-"name":"dodge",
-"width":0.5
-},
-"data_meta":{
-},
-"data":{
-}
-},{
-"geom":"errorbar",
-"mapping":{
-"ymin":"2.5%",
-"ymax":"97.5%"
-},
-"position":{
-"name":"dodge",
-"width":0.5
-},
-"data_meta":{
-},
-"width":0.05,
-"data":{
-}
-}],
-"metainfo_list":[],
-"spec_id":"1"
-};
-           window.letsPlotCall(function() { fig = LetsPlot.buildPlotFromProcessedSpecs(plotSpec, containerDiv, sizing); });
-       } else {
-           fig.updateView({});
-       }
-   }
-   
-   const renderImmediately = 
-       forceImmediateRender || (
-           sizing.width_mode === 'FIXED' && 
-           (sizing.height_mode === 'FIXED' || sizing.height_mode === 'SCALED')
-       );
-   
-   if (renderImmediately) {
-       renderPlot();
-   }
-   
-   if (!renderImmediately || responsive) {
-       // Set up observer for initial sizing or continuous monitoring
-       var observer = new ResizeObserver(function(entries) {
-           for (let entry of entries) {
-               if (entry.contentBoxSize && 
-                   entry.contentBoxSize[0].inlineSize > 0) {
-                   if (!responsive && observer) {
-                       observer.disconnect();
-                       observer = null;
-                   }
-                   renderPlot();
-                   if (!responsive) {
-                       break;
-                   }
-               }
-           }
-       });
-       
-       observer.observe(containerDiv);
-   }
-   
-   // ----------
-   })();
-   
-   </script>
-</div>
-</div>
-<p>To estimate a pooled effect, we need to slightly update the second stage formula:</p>
-<div id="f15e429d" class="cell" data-execution_count="4">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.did2s(</span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    df_het,</span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    yname<span class="op">=</span><span class="st">"dep_var"</span>,</span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    first_stage<span class="op">=</span><span class="st">"~ 0 | unit + year"</span>,</span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    second_stage<span class="op">=</span><span class="st">"~i(treat)"</span>,</span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    treatment<span class="op">=</span><span class="st">"treat"</span>,</span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    cluster<span class="op">=</span><span class="st">"state"</span></span>
-<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>fit.tidy().head()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display" data-execution_count="4">
-<div>
-
-
-<table class="dataframe caption-top table table-sm table-striped small" data-border="1">
-<thead>
-<tr class="header">
-<th data-quarto-table-cell-role="th"></th>
-<th data-quarto-table-cell-role="th">Estimate</th>
-<th data-quarto-table-cell-role="th">Std. Error</th>
-<th data-quarto-table-cell-role="th">t value</th>
-<th data-quarto-table-cell-role="th">Pr(&gt;|t|)</th>
-<th data-quarto-table-cell-role="th">2.5%</th>
-<th data-quarto-table-cell-role="th">97.5%</th>
-</tr>
-<tr class="even">
-<th data-quarto-table-cell-role="th">Coefficient</th>
-<th data-quarto-table-cell-role="th"></th>
-<th data-quarto-table-cell-role="th"></th>
-<th data-quarto-table-cell-role="th"></th>
-<th data-quarto-table-cell-role="th"></th>
-<th data-quarto-table-cell-role="th"></th>
-<th data-quarto-table-cell-role="th"></th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<th data-quarto-table-cell-role="th">treat::True</th>
-<td>2.230482</td>
-<td>0.024709</td>
-<td>90.271433</td>
-<td>0.0</td>
-<td>2.182052</td>
-<td>2.278911</td>
-</tr>
-</tbody>
-</table>
-
-</div>
+<pre><code>11.61158319474894</code></pre>
 </div>
 </div>
 

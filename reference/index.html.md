@@ -11,6 +11,7 @@ User facing estimation functions
 | [estimation.api.fepois.fepois](estimation.api.fepois.fepois.qmd#pyfixest.estimation.api.fepois.fepois) | Estimate Poisson regression model with fixed effects using the `ppmlhdfe` algorithm. |
 | [estimation.api.feglm.feglm](estimation.api.feglm.feglm.qmd#pyfixest.estimation.api.feglm.feglm) | Estimate GLM regression models with fixed effects. |
 | [estimation.api.quantreg.quantreg](estimation.api.quantreg.quantreg.qmd#pyfixest.estimation.api.quantreg.quantreg) | Fit a quantile regression model using the interior point algorithm from Portnoy and Koenker (1997). |
+| [estimation.post_estimation.savi.optimal_mixture_precision](estimation.post_estimation.savi.optimal_mixture_precision.qmd#pyfixest.estimation.post_estimation.savi.optimal_mixture_precision) | Compute the mixture precision that minimizes SAVI sequence width |
 | [did.estimation.did2s](did.estimation.did2s.qmd#pyfixest.did.estimation.did2s) | Estimate a Difference-in-Differences model using Gardner's two-step DID2S estimator. |
 | [did.estimation.lpdid](did.estimation.lpdid.qmd#pyfixest.did.estimation.lpdid) | Local projections approach to estimation. |
 | [did.estimation.event_study](did.estimation.event_study.qmd#pyfixest.did.estimation.event_study) | Estimate Event Study Model. |
