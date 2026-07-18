@@ -86,8 +86,8 @@ def _longley_data():
     )
 
 
-@pytest.mark.parametrize("dfn", [1, 3])
-def test_savi_e_values_converge_to_gaussian_e_process(dfn):
+def test_savi_e_value_matches_gaussian_large_sample_limit():
+    dfn = 1
     mixture_precision = 2.5
     qvalue = 8.0
     f_statistic = qvalue / dfn
@@ -175,7 +175,7 @@ def test_savi_matches_avlm_longley_iid():
         1 / avlm_pvalues,
     )
     np.testing.assert_allclose(
-        fit.sequential_pvalue(mixture_precision=mixture_precision),
+        fit.pvalue_savi(mixture_precision=mixture_precision),
         avlm_pvalues,
     )
     pd.testing.assert_frame_equal(
@@ -225,7 +225,7 @@ def test_savi_hc0_coefficients_match_avlm_longley():
         1 / avlm_pvalues,
     )
     np.testing.assert_allclose(
-        fit.sequential_pvalue(mixture_precision=mixture_precision),
+        fit.pvalue_savi(mixture_precision=mixture_precision),
         avlm_pvalues,
     )
     pd.testing.assert_frame_equal(

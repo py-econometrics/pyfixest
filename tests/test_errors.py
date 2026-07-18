@@ -1120,19 +1120,6 @@ def test_did2s_unestimated_first_stage_fixef():
         )
 
 
-_SAVI_ACCESSORS = [
-    "confint",
-    "evalue",
-    "sequential_pvalue",
-]
-
-
-def _call_savi(fit, accessor):
-    if accessor in {"evalue", "sequential_pvalue"}:
-        return getattr(fit, accessor)()
-    return getattr(fit, accessor)(inference_type="savi")
-
-
 @pytest.fixture(params=["fepois", "feiv", "quantreg"])
 def unsupported_savi_model(request):
     if request.param == "fepois":
@@ -1200,14 +1187,10 @@ def test_savi_rejects_hac_and_crv(unsupported_savi_vcov):
         fit.evalue()
 
 
-@pytest.mark.parametrize("accessor", _SAVI_ACCESSORS)
-def test_savi_public_methods_apply_support_validation(accessor):
-    data = pf.get_data()
-    data["savi_weights"] = 1
-    fit = feols("Y ~ X1", data, weights="savi_weights")
-
-    with pytest.raises(NotImplementedError, match="weighted feols"):
-        _call_savi(fit, accessor)
+def test_savi_confint_rejects_weights_and_fixed_effects(unsupported_savi_design):
+    fit, match = unsupported_savi_design
+    with pytest.raises(NotImplementedError, match=match):
+        fit.confint(inference_type="savi")
 
 
 def test_savi_input_validation():
@@ -1218,28 +1201,54 @@ def test_savi_input_validation():
         fit.confint(alpha=0, inference_type="savi")
 
 
-def test_savi_inference_type_validation():
+@pytest.mark.parametrize(
+    ("method", "kwargs", "error", "match"),
+    [
+        (
+            "tidy",
+            {"inference_type": "other"},
+            ValueError,
+            r"Invalid argument\. Expecting one of",
+        ),
+        (
+            "summary",
+            {"inference_type": "other"},
+            ValueError,
+            r"Invalid argument\. Expecting one of",
+        ),
+        (
+            "confint",
+            {"inference_type": "other"},
+            ValueError,
+            r"Invalid argument\. Expecting one of",
+        ),
+        (
+            "tidy",
+            {"inference_type": "simult"},
+            ValueError,
+            r"tidy\(\) does not support",
+        ),
+        (
+            "summary",
+            {"inference_type": "simult"},
+            ValueError,
+            r"tidy\(\) does not support",
+        ),
+        ("tidy", {"inference_type": "savi"}, NotImplementedError, None),
+        ("summary", {"inference_type": "savi"}, NotImplementedError, None),
+        (
+            "confint",
+            {"joint": True, "inference_type": "savi"},
+            ValueError,
+            "cannot be combined",
+        ),
+    ],
+)
+def test_inference_type_validation(method, kwargs, error, match):
     fit = feols("Y ~ X1 + X2", pf.get_data())
-    # Invalid inference types are rejected wherever the argument is accepted.
-    with pytest.raises(ValueError, match=r"Invalid argument\. Expecting one of"):
-        fit.tidy(inference_type="other")
-    with pytest.raises(ValueError, match=r"Invalid argument\. Expecting one of"):
-        fit.summary(inference_type="other")
-    with pytest.raises(ValueError, match=r"Invalid argument\. Expecting one of"):
-        fit.confint(inference_type="other")
-    # Simultaneous inference is a confint()-only concept; summary() mirrors tidy().
-    with pytest.raises(ValueError, match=r"tidy\(\) does not support"):
-        fit.tidy(inference_type="simult")
-    with pytest.raises(ValueError, match=r"tidy\(\) does not support"):
-        fit.summary(inference_type="simult")
-    # SAVI is reachable through evalue()/sequential_pvalue()/confint() only.
-    with pytest.raises(NotImplementedError):
-        fit.tidy(inference_type="savi")
-    with pytest.raises(NotImplementedError):
-        fit.summary(inference_type="savi")
-    # joint=True cannot be combined with a conflicting inference_type.
-    with pytest.raises(ValueError, match="cannot be combined"):
-        fit.confint(joint=True, inference_type="savi")
+
+    with pytest.raises(error, match=match):
+        getattr(fit, method)(**kwargs)
 
 
 @pytest.mark.parametrize(

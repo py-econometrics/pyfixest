@@ -78,6 +78,8 @@ website:
           file: how-to/demeaner-backends.qmd
         - text: "Marginal Effects & Hypothesis Testing"
           file: how-to/marginaleffects.qmd
+        - text: "When to Use Anytime-Valid Inference"
+          file: how-to/anytime-valid-inference.qmd
         - text: "Regression Decomposition"
           file: how-to/regression_decomposition.qmd
         - text: "Compare Stata & PyFixest"

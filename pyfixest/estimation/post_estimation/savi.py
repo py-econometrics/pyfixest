@@ -211,7 +211,7 @@ def _evalue(
     return _coefficient_evalues(model, mixture_precision)
 
 
-def _sequential_pvalue(
+def _pvalue_savi(
     model: ResultAccessorMixin,
     mixture_precision: float = 1.0,
 ) -> pd.Series:

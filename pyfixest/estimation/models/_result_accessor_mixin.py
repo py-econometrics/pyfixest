@@ -136,7 +136,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
 
         return _evalue(model=self, mixture_precision=mixture_precision)
 
-    def sequential_pvalue(
+    def pvalue_savi(
         self,
         mixture_precision: float = 1.0,
     ) -> pd.Series:
@@ -158,12 +158,12 @@ class ResultAccessorMixin(TidyColumnAccessors):
 
         data = pf.get_data()
         fit = pf.feols("Y ~ X1 + X2", data=data, vcov="HC1")
-        fit.sequential_pvalue()
+        fit.pvalue_savi()
         ```
         """
-        from pyfixest.estimation.post_estimation.savi import _sequential_pvalue
+        from pyfixest.estimation.post_estimation.savi import _pvalue_savi
 
-        return _sequential_pvalue(model=self, mixture_precision=mixture_precision)
+        return _pvalue_savi(model=self, mixture_precision=mixture_precision)
 
     def get_inference(self, alpha: float = 0.05) -> None:
         """

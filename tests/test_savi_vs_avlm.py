@@ -85,7 +85,7 @@ def test_savi_coefficient_inference_matches_avlm(
     )
 
     np.testing.assert_allclose(
-        fit.sequential_pvalue(
+        fit.pvalue_savi(
             mixture_precision=mixture_precision,
         ),
         np.asarray(r_results.rx2("pvalues")),

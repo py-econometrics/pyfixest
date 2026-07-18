@@ -31,11 +31,13 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ### Safe Anytime-Valid Inference (SAVI)
 
-We add support for safe anytime-valid inference (SAVI) for linear regression,
-following [Lindon et al (2026)](https://arxiv.org/abs/2210.08589).
+PyFixest now supports safe anytime-valid inference (SAVI) for linear
+regression, based on [Lindon et al.
+(2026)](https://doi.org/10.1080/01621459.2026.2692052).
 
-SAVI e-values, sequential p-values, and confidence sequences are available via
-`evalue()`, `sequential_pvalue()`, and `confint(inference_type="savi")`:
+Call `evalue()`, `pvalue_savi()`, and
+`confint(inference_type="savi")` for e-values, sequential p-values, and
+confidence sequences:
 
 ```{python}
 import pyfixest as pf
@@ -44,7 +46,7 @@ df = pf.get_data()
 fit = pf.feols("Y ~ X1 + X2", data=df, vcov="iid")
 
 fit.evalue()
-fit.sequential_pvalue()
+fit.pvalue_savi()
 fit.confint(inference_type="savi")
 
 mixture_precision = pf.optimal_mixture_precision(
