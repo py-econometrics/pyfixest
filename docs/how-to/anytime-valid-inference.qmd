@@ -278,11 +278,15 @@ positive.
 
 A test analyzed once at $\alpha = 0.05$ should reject in roughly 5 out of 100
 null experiments. The figure shows the first 100 of the 500 simulations; all
-500 are used in the summary table below. Each circle represents one experiment
-and becomes a cross on the first day its method reports p < 0.05. If daily
-monitoring preserved the 5% false positive rate, each panel would finish with
-about five crosses. The experiments occupy the same positions in both panels,
-so the methods are evaluated on the same data.
+500 are used in the summary table below. Each grey line is the estimated
+effect of one A/A experiment as its data accumulate: wide swings early, then a
+narrowing funnel around the true effect of zero. All three decision policies
+are evaluated on these same 100 lines. An orange cross marks the day naive
+daily peeking first reports p < 0.05, a blue cross marks the day SAVI does,
+and an orange diamond marks a rejection by the planned single analysis on day
+twenty. The crosses sit at the outer edge of the funnel: a policy that stops
+at the first significant result harvests the trajectories that happen to swing
+furthest from zero.
 
 ```{python}
 #| code-fold: true
@@ -300,100 +304,98 @@ fpr_daily_savi = (mirage["savi_p"] <= ALPHA).any(axis=1).mean()
 N_SHOWN = 100
 EVIDENCE_BAR = -np.log10(ALPHA)
 
-show_reg = mirage["regular_p"][:N_SHOWN]
-show_savi = mirage["savi_p"][:N_SHOWN]
-reg_stop = _stop_day(show_reg)
-savi_stop = _stop_day(show_savi)
+show_est = mirage["estimate"][:N_SHOWN] * 100
+reg_stop = _stop_day(mirage["regular_p"][:N_SHOWN])
+savi_stop = _stop_day(mirage["savi_p"][:N_SHOWN])
+final_reject = mirage["regular_p"][:N_SHOWN, -1] <= ALPHA
 
-dot_x = np.tile(np.arange(1, 11), 10)
-dot_y = np.repeat(np.arange(10, 0, -1), 10)
+mirage_days = np.arange(1, N_DAYS + 1)
+fig = go.Figure()
+for experiment in range(N_SHOWN):
+    fig.add_trace(
+        go.Scatter(
+            x=mirage_days,
+            y=show_est[experiment],
+            mode="lines",
+            line={"color": _rgba(NEUTRAL_GREY, 0.3), "width": 1},
+            name="One A/A experiment",
+            showlegend=experiment == 0,
+            hoverinfo="skip",
+        )
+    )
 
-
-def _mirage_trace(stop, day, color):
-    fired = (stop != 0) & (stop <= day)
-    status = [
-        f"False alarm on day {stop[i]}" if fired[i] else f"No false alarm by day {day}"
-        for i in range(N_SHOWN)
-    ]
-    return go.Scatter(
-        x=dot_x,
-        y=dot_y,
+naive_fired = np.flatnonzero(reg_stop > 0)
+savi_fired = np.flatnonzero(savi_stop > 0)
+oneshot_fired = np.flatnonzero(final_reject)
+fig.add_trace(
+    go.Scatter(
+        x=reg_stop[naive_fired],
+        y=show_est[naive_fired, reg_stop[naive_fired] - 1],
+        mode="markers",
+        marker={"color": ORDINARY_ORANGE, "size": 9, "symbol": "x"},
+        name=f"Naive daily peeking stops ({naive_fired.size} of {N_SHOWN})",
+        hovertemplate=(
+            "Stopped on day %{x}<br>Reported effect: %{y:.1f} pp<extra></extra>"
+        ),
+    )
+)
+fig.add_trace(
+    go.Scatter(
+        x=savi_stop[savi_fired],
+        y=show_est[savi_fired, savi_stop[savi_fired] - 1],
+        mode="markers",
+        marker={"color": SAVI_BLUE, "size": 11, "symbol": "x"},
+        name=f"SAVI stops ({savi_fired.size} of {N_SHOWN})",
+        hovertemplate=(
+            "Stopped on day %{x}<br>Reported effect: %{y:.1f} pp<extra></extra>"
+        ),
+    )
+)
+fig.add_trace(
+    go.Scatter(
+        x=np.full(oneshot_fired.size, N_DAYS),
+        y=show_est[oneshot_fired, -1],
         mode="markers",
         marker={
-            "size": 11,
-            "symbol": ["x" if value else "circle-open" for value in fired],
-            "color": [
-                color if value else _rgba(NEUTRAL_GREY, 0.45) for value in fired
-            ],
-            "line": {"width": 1.5},
+            "color": ORDINARY_ORANGE,
+            "size": 10,
+            "symbol": "diamond-open",
+            "line": {"width": 2},
         },
-        customdata=np.arange(1, N_SHOWN + 1),
-        text=status,
-        hovertemplate="Experiment %{customdata}<br>%{text}<extra></extra>",
-        showlegend=False,
+        name=f"Planned day-20 analysis rejects ({oneshot_fired.size} of {N_SHOWN})",
+        hovertemplate="Rejected on day 20<br>Estimate: %{y:.1f} pp<extra></extra>",
     )
-
-
-def _mirage_traces(day):
-    return [
-        _mirage_trace(reg_stop, day, ORDINARY_ORANGE),
-        _mirage_trace(savi_stop, day, SAVI_BLUE),
-    ]
-
-
-def _mirage_title(day):
-    n_reg = int(((reg_stop != 0) & (reg_stop <= day)).sum())
-    n_savi = int(((savi_stop != 0) & (savi_stop <= day)).sum())
-    return (
-        f"Day {day}: false alarms so far"
-        f"<br>Ordinary: {n_reg}/{N_SHOWN} · SAVI: {n_savi}/{N_SHOWN}"
-    )
-
-
-mirage_days = list(range(1, N_DAYS + 1))
-fig = make_subplots(
-    rows=2,
-    cols=1,
-    vertical_spacing=0.20,
-    subplot_titles=(
-        "Ordinary test, checked daily",
-        "SAVI, checked daily",
-    ),
 )
-for i, trace in enumerate(_mirage_traces(mirage_days[0])):
-    fig.add_trace(trace, row=i + 1, col=1)
-
-fig.frames = [
-    go.Frame(
-        data=_mirage_traces(day),
-        traces=[0, 1],
-        name=str(day),
-        layout={"title": {"text": _mirage_title(day)}},
-    )
-    for day in mirage_days
-]
-fig.update_xaxes(visible=False, range=[0.3, 10.7])
-fig.update_yaxes(visible=False, range=[0.4, 10.6])
-fig.add_annotation(
-    x=0.5,
-    y=-0.06,
-    xref="paper",
-    yref="paper",
-    text="○ no false alarm yet&nbsp;&nbsp;&nbsp;&nbsp;× false alarm",
-    showarrow=False,
-    font={"color": NEUTRAL_GREY},
+fig.add_hline(y=0, line_color="black", opacity=0.4)
+fig.add_vline(
+    x=N_DAYS,
+    line_dash="dash",
+    line_color=NEUTRAL_GREY,
+    opacity=0.6,
+    annotation_text="Planned end",
+    annotation_position="top left",
+    annotation_font_color=NEUTRAL_GREY,
 )
 fig.update_layout(
-    title=_mirage_title(mirage_days[0]),
+    title=(
+        "100 A/A experiments, three decision policies"
+        "<br>True effect is zero: every marked stop is a false positive"
+    ),
     title_font_size=16,
     template="plotly_white",
-    height=640,
-    updatemenus=PLAY_PAUSE,
-    sliders=_slider(mirage_days, active=0),
-    margin={"l": 45, "r": 30, "t": 120, "b": 155},
+    height=500,
+    xaxis_title="Day of experiment",
+    yaxis_title="Estimated effect (pp)",
+    legend={"orientation": "h", "y": -0.22},
+    margin={"l": 65, "r": 30, "t": 95, "b": 120},
 )
+fig.update_xaxes(dtick=2, range=[0.5, N_DAYS + 0.5])
 fig
 ```
+
+::: {.figure-caption}
+One hundred A/A experiments; the true effect is zero, so every marker is a false positive. Naive daily peeking (orange crosses) stops on the trajectories that swing furthest from zero, the planned day-20 analysis (orange diamonds) rejects about five per hundred, and SAVI (blue crosses) rarely fires.
+:::
 
 Across all `{python} N_SIMULATIONS` experiments:
 
@@ -497,6 +499,10 @@ fig.update_layout(
 )
 fig
 ```
+
+::: {.figure-caption}
+Estimated effects at the moment each rule first rejects, across all 500 A/A experiments. The gap around zero is the winner's curse: only extreme early estimates cross the significance boundary.
+:::
 
 The daily-peeking rule rejects in `{python} f"{naive_fire_rate:.0%}"` of these
 zero-effect experiments. The reported effects average
@@ -656,10 +662,8 @@ def _winner_traces(day):
             y=[-np.log10(winner.loc[peek_day, "regular_pvalue"])]
             if ordinary_crossed
             else [None],
-            mode="markers+text",
+            mode="markers",
             marker={"color": ORDINARY_ORANGE, "size": 10, "symbol": "diamond"},
-            text=["Ordinary p < 0.05"] if ordinary_crossed else [None],
-            textposition="bottom right",
             showlegend=False,
             hoverinfo="skip",
         ),
@@ -668,10 +672,8 @@ def _winner_traces(day):
             y=[-np.log10(winner.loc[savi_day, "savi_pvalue"])]
             if savi_crossed
             else [None],
-            mode="markers+text",
+            mode="markers",
             marker={"color": SAVI_BLUE, "size": 10, "symbol": "diamond"},
-            text=["SAVI p < 0.05"] if savi_crossed else [None],
-            textposition="top right",
             showlegend=False,
             hoverinfo="skip",
         ),
@@ -777,6 +779,10 @@ fig.update_xaxes(dtick=2)
 fig
 ```
 
+::: {.figure-caption}
+One representative experiment with a true lift twice the planned MDE. The ordinary p-value crosses 0.05 first (orange bar), but that is not a valid stopping point; the SAVI crossing (blue bar) is. Press play to follow the experiment day by day.
+:::
+
 The ordinary p-value falls below 0.05 on day `{python} peek_day`, when the
 estimated lift is `{python} peek_lift`. Because this is an unplanned interim
 analysis, the fixed-horizon test does not support a 5%-level decision on that
@@ -872,6 +878,10 @@ fig.update_layout(
 )
 fig
 ```
+
+::: {.figure-caption}
+Share of experiments that detect the planned 2 pp lift by each day. The ordinary test decides once, at the planned end; SAVI may stop on any day and keeps accruing detections after day twenty.
+:::
 
 At day twenty, the fixed-horizon test detects the effect in
 `{python} f"{oneshot_power:.0%}"` of experiments. SAVI has stopped in
@@ -1129,6 +1139,10 @@ fig.update_xaxes(dtick=2)
 fig
 ```
 
+::: {.figure-caption}
+The migration is certified once the confidence sequence fits inside the ±1 pp tube (blue bar). The narrower ordinary interval fits earlier (orange bar), but stopping there is not a valid certification. Press play to watch the intervals tighten.
+:::
+
 On day `{python} cert_day`, the confidence sequence `{python} cert_cs` lies
 inside the ±1 pp tolerance. Its time-uniform asymptotic coverage allows the team
 to stop and rule out effects larger than the tolerance.
@@ -1333,7 +1347,7 @@ fig.add_hline(
     line_dash="dot",
     line_color=NEUTRAL_GREY,
     annotation_text="True lift: 1 pp",
-    annotation_position="bottom right",
+    annotation_position="top right",
 )
 fig.update_layout(
     title="A year of a long term holdout, read weekly",
@@ -1342,11 +1356,16 @@ fig.update_layout(
     xaxis_title="Week of holdout",
     yaxis_title="Estimated lift",
     yaxis_tickformat=".1%",
+    yaxis_range=[-0.02, 0.032],
     legend={"orientation": "h", "y": -0.3},
     margin={"l": 70, "r": 35, "t": 70, "b": 120},
 )
 fig
 ```
+
+::: {.figure-caption}
+One simulated holdout, reviewed weekly for a year; the y-axis clips the very wide intervals of the first weeks. The confidence sequence remains wider than the ordinary interval - the price of staying quotable at every review.
+:::
 
 After a year, this holdout reports a confidence sequence of
 `{python} holdout_cs` and an ordinary interval of `{python} holdout_ci`. The
@@ -1388,10 +1407,10 @@ fig.add_hline(
     line_dash="dash",
     line_color="black",
     annotation_text="Simultaneous coverage target: 95%",
-    annotation_position="bottom left",
+    annotation_position="bottom right",
 )
 fig.update_layout(
-    title="Share of holdouts whose interval contained the truth at every read",
+    title="Did the interval contain the truth at every review?",
     template="plotly_white",
     height=430,
     xaxis_title="Week of holdout",
@@ -1404,6 +1423,10 @@ fig.update_layout(
 )
 fig
 ```
+
+::: {.figure-caption}
+Share of simulated holdouts whose interval contained the true lift at every review so far. Repeated reviews erode the ordinary interval's simultaneous coverage; the confidence sequence holds its 95% promise.
+:::
 
 By week 52, the ordinary interval has missed the true lift at least once in
 `{python} f"{1 - ci_always_covered[-1]:.0%}"` of the simulated holdouts. The
@@ -1522,7 +1545,7 @@ fig.add_vline(
     line_color=ORDINARY_ORANGE,
     opacity=0.7,
     annotation_text=f"Hour {rollback_hour}: roll back",
-    annotation_position="top left",
+    annotation_position="top right",
     annotation_font_color=ORDINARY_ORANGE,
 )
 fig.add_vline(
@@ -1530,8 +1553,8 @@ fig.add_vline(
     line_dash="dash",
     line_color=NEUTRAL_GREY,
     opacity=0.7,
-    annotation_text="Planned 2-day runtime: first valid fixed-sample decision",
-    annotation_position="top left",
+    annotation_text="Planned 2-day runtime",
+    annotation_position="bottom left",
     annotation_font_color=NEUTRAL_GREY,
 )
 fig.update_layout(
@@ -1542,11 +1565,16 @@ fig.update_layout(
     xaxis_range=[0.5, CANARY_MAX_HOURS + 0.5],
     yaxis_title="Estimated effect on conversion",
     yaxis_tickformat=".0%",
+    yaxis_range=[-0.085, 0.025],
     legend={"orientation": "h", "y": -0.3},
     margin={"l": 70, "r": 35, "t": 70, "b": 120},
 )
 fig
 ```
+
+::: {.figure-caption}
+A canary release that truly harms conversion. The confidence sequence starts wide, then falls entirely below the −1 pp boundary and triggers a rollback long before the planned two-day runtime ends.
+:::
 
 The sequence starts wide because one hour of data provides little information.
 After `{python} rollback_hour` hours it lies entirely below the -1 pp boundary,
@@ -1755,7 +1783,7 @@ fig.add_hline(
     line_dash="dash",
     line_color=NEUTRAL_GREY,
     annotation_text="ATE magnitude: 0.18",
-    annotation_position="top right",
+    annotation_position="bottom right",
     row=1,
     col=1,
 )
@@ -1777,6 +1805,10 @@ fig.update_yaxes(
 fig.update_xaxes(title_text="Day of experiment", dtick=2, row=2, col=1)
 fig
 ```
+
+::: {.figure-caption}
+The same experiments analyzed with and without a pre-treatment covariate. A predictive covariate narrows the confidence sequence (top) and raises the share of experiments that can stop by the planned end (bottom); the validity guarantee is unchanged.
+:::
 
 By day twenty, the median confidence-sequence half-width falls from
 `{python} f"{median_width['unadjusted'][-1]:.3f}"` without adjustment to
