@@ -135,6 +135,7 @@ def test_savi_matches_avlm_longley_iid():
     fit = feols("TOTEMP ~ GNP + UNEMP", _longley_data())
     mixture_precision = 2.5
 
+    # Test against hard-coded results from avlm.
     avlm_pvalues = np.array(
         [
             2.3994985366968640e-06,
