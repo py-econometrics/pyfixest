@@ -62,11 +62,12 @@ def test_integer_XY():
 
 
 def test_coef_update():
-    data = get_data()
-    data_subsample = data.sample(frac=0.5)
+    rng = np.random.default_rng(1234)
+    data = get_data().dropna(subset=["Y", "X1", "X2"])
+    data_subsample = data.sample(frac=0.5, random_state=1234)
     m = feols("Y ~ X1 + X2", data=data_subsample)
-    new_points_id = np.random.choice(
-        list(set(data.index) - set(data_subsample.index)), 5
+    new_points_id = rng.choice(
+        data.index.difference(data_subsample.index), 5, replace=False
     )
     X_new, y_new = (
         np.c_[
@@ -88,11 +89,12 @@ def test_coef_update():
 
 
 def test_coef_update_inplace():
-    data = get_data()
-    data_subsample = data.sample(frac=0.3)
+    rng = np.random.default_rng(1234)
+    data = get_data().dropna(subset=["Y", "X1", "X2"])
+    data_subsample = data.sample(frac=0.3, random_state=1234)
     m = feols("Y ~ X1 + X2", data=data_subsample)
-    new_points_id = np.random.choice(
-        list(set(data.index) - set(data_subsample.index)), 5
+    new_points_id = rng.choice(
+        data.index.difference(data_subsample.index), 5, replace=False
     )
     X_new, y_new = (
         np.c_[

@@ -498,6 +498,9 @@ def test_wald_test_R_q_column_consistency():
     with pytest.raises(ValueError):
         fit.wald_test(R=np.array([[1, 0]]), q="invalid type q")
 
+    with pytest.raises(ValueError, match="q must be a numeric scalar or array"):
+        fit.wald_test(R=np.eye(2), q="0")
+
     # Test with q being a one-dimensional array or a scalar.
     with pytest.raises(ValueError):
         fit.wald_test(R=np.array([[1, 0], [0, 1]]), q=np.array([[0, 1]]))
@@ -507,6 +510,14 @@ def test_wald_test_R_q_column_consistency():
         fit.wald_test(
             R=np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]]), q=np.array([[0, 1]])
         )
+
+
+def test_wald_test_rejects_rank_deficient_restrictions():
+    data = pf.get_data()
+    fit = feols("Y ~ X1 + X2", data)
+
+    with pytest.raises(ValueError, match="full row rank"):
+        fit.wald_test(R=np.array([[0, 1, 0], [0, 2, 0]]))
 
 
 def setup_feiv_instance():

@@ -12,8 +12,7 @@ How it works:
 
   The hook is configured to:
   - Build in release mode with symbols stripped (for performance)
-  - Exclude .pixi/ from source file scanning (it contains nested Python
-    environments that would confuse the file searcher)
+  - Watch only Rust sources and build configuration for changes
 
 This script is run by the `_setup` pixi task for environments that import
 pyfixest. The task is intentionally idempotent so it can run safely in each
@@ -26,7 +25,33 @@ See Also
 """
 
 import site
+from collections.abc import Iterator
 from pathlib import Path
+
+from maturin_import_hook.project_importer import DefaultProjectFileSearcher
+
+
+class PyfixestProjectFileSearcher(DefaultProjectFileSearcher):
+    """Restrict Maturin freshness checks to Rust build inputs."""
+
+    def __init__(self) -> None:
+        excluded_dirs = self.DEFAULT_SOURCE_EXCLUDED_DIR_NAMES | {".pixi"}
+        super().__init__(source_excluded_dir_names=excluded_dirs)
+
+    def get_source_paths(
+        self,
+        project_dir: Path,
+        all_path_dependencies: list[Path],
+        installed_package_root: Path,
+    ) -> Iterator[Path]:
+        """Yield Rust sources and build configuration files."""
+        source_paths = super().get_source_paths(
+            project_dir, all_path_dependencies, installed_package_root
+        )
+        for path in source_paths:
+            if path.suffix in {".rs", ".toml"} or path.name == "Cargo.lock":
+                yield path
+
 
 SITECUSTOMIZE_CONTENT = """\
 # <maturin_import_hook>
@@ -34,8 +59,8 @@ try:
     import maturin_import_hook
     import os
     import sys
-    from maturin_import_hook.project_importer import DefaultProjectFileSearcher
     from maturin_import_hook.settings import MaturinSettings
+    from scripts.setup_maturin_hook import PyfixestProjectFileSearcher
 
     # maturin needs CONDA_PREFIX (or VIRTUAL_ENV) to locate the environment.
     # When launched directly from PyCharm (not via pixi run), neither is set.
@@ -48,8 +73,7 @@ try:
     if env_bin not in os.environ.get("PATH", "").split(os.pathsep):
         os.environ["PATH"] = env_bin + os.pathsep + os.environ.get("PATH", "")
 
-    excluded_dirs = DefaultProjectFileSearcher.DEFAULT_SOURCE_EXCLUDED_DIR_NAMES | {".pixi"}
-    file_searcher = DefaultProjectFileSearcher(source_excluded_dir_names=excluded_dirs)
+    file_searcher = PyfixestProjectFileSearcher()
 
     maturin_import_hook.install(
         settings=MaturinSettings(release=True, strip=True, color=True),

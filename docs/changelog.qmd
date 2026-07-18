@@ -17,6 +17,18 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ## PyFixest 0.70.0 (In Development)
 
+### Inference Types
+
+- `tidy()`, `confint()`, and `summary()` gain an `inference_type` argument. For
+  `confint()` it takes `"regular"` (pointwise, the default) or `"simult"`
+  (simultaneous / joint intervals). The `confint(joint=True)` argument is
+  deprecated: it still works but now emits a `FutureWarning` and maps to
+  `inference_type="simult"`.
+
+  ```python
+  fit.confint(inference_type="simult")   # replaces fit.confint(joint=True)
+  ```
+
 ### GLM API and Behavior
 
 - `feglm()` now accepts `weights`, `weights_type`, and `offset`, and supports
@@ -45,6 +57,18 @@ As previously announced, we removed:
 - Removed the JAX demeaner backend and JAX solver.
 - Deprecated the SciPy and CuPy demeaner backends.
 - Deprecated `FeolsCompressed`.
+
+### Bug Fixes
+
+- Fixes `confint()` when `keep` or `drop` requests coefficients in an order
+  different from the model order. Previously, intervals could be associated
+  with the wrong coefficient labels, including for simultaneous confidence
+  intervals.
+- `did2s()` now raises an informative error when some fixed effect levels cannot be
+  estimated in the first stage regression (e.g. for always-treated units, which have
+  no not-yet-treated observations), instead of failing later with an opaque
+  broadcasting `ValueError` in the vcov computation
+  ([#1244](https://github.com/py-econometrics/pyfixest/issues/1244)).
 
 
 ## PyFixest 0.60.0

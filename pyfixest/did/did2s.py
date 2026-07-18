@@ -229,6 +229,14 @@ def _did2s_estimate(
 
     # demean data
     Y_hat = fit1.predict(newdata=data)
+    if np.isnan(Y_hat).any():
+        # levels present in the full data but absent from the first stage fit
+        # (fit on not-yet-treated observations only) predict to NaN
+        raise ValueError(
+            "First-stage predictions contain NaN values because some fixed effect "
+            "levels were not observed in the not-yet-treated first-stage sample. "
+            "Drop those observations before calling did2s()."
+        )
     _first_u = data[f"{yname}"].to_numpy().flatten() - Y_hat
     data[f"{yname}_hat"] = _first_u
 

@@ -10,7 +10,11 @@ from pyfixest.errors import EmptyVcovError
 
 if TYPE_CHECKING:
     from pyfixest.estimation.internals.families import InferenceDist
-from pyfixest.utils.dev_utils import _select_order_coefs
+from pyfixest.estimation.internals.literals import (
+    InferenceType,
+    _validate_literal_argument,
+)
+from pyfixest.utils.dev_utils import _select_coefnames_and_indices
 from pyfixest.utils.utils import simultaneous_crit_val
 
 
@@ -165,6 +169,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
     def tidy(
         self,
         alpha: float = 0.05,
+        inference_type: InferenceType = "regular",
     ) -> pd.DataFrame:
         """
         Tidy model outputs.
@@ -177,6 +182,9 @@ class ResultAccessorMixin(TidyColumnAccessors):
         alpha: Optional[float]
             The significance level for the confidence intervals. If None,
             computes a 95% confidence interval (`alpha = 0.05`).
+        inference_type : {"regular"}, optional
+            Type of coefficient-wise inference to report. Only `"regular"` is
+            currently available. Defaults to `"regular"`.
 
         Returns
         -------
@@ -184,6 +192,17 @@ class ResultAccessorMixin(TidyColumnAccessors):
             A tidy pd.DataFrame containing the regression results, including point
             estimates, standard errors, t-statistics, and p-values.
         """
+        inference_type = self._normalize_inference_type(inference_type)
+        if inference_type == "simult":
+            raise ValueError(
+                "tidy() does not support inference_type='simult'. Use "
+                "confint(inference_type='simult') for simultaneous intervals."
+            )
+        if inference_type == "savi":
+            raise NotImplementedError(
+                "inference_type='savi' is not available in tidy() yet."
+            )
+
         ub, lb = 1 - alpha / 2, alpha / 2
         try:
             self.get_inference(alpha=alpha)
@@ -210,6 +229,27 @@ class ResultAccessorMixin(TidyColumnAccessors):
             data["Sample"] = sample
         return pd.DataFrame(data).set_index("Coefficient")
 
+    def _normalize_inference_type(
+        self, inference_type: InferenceType, joint: bool = False
+    ) -> InferenceType:
+        """Validate `inference_type` and fold the deprecated `joint` flag into it."""
+        _validate_literal_argument(inference_type, InferenceType)
+
+        if joint:
+            warnings.warn(
+                "joint=True is deprecated. Use inference_type='simult' instead.",
+                FutureWarning,
+                stacklevel=3,
+            )
+            if inference_type not in ("regular", "simult"):
+                raise ValueError(
+                    "joint=True cannot be combined with "
+                    f"inference_type={inference_type!r}."
+                )
+            inference_type = "simult"
+
+        return inference_type
+
     def confint(
         self,
         alpha: float = 0.05,
@@ -219,6 +259,8 @@ class ResultAccessorMixin(TidyColumnAccessors):
         joint: bool = False,
         seed: int | None = None,
         reps: int = 10_000,
+        *,
+        inference_type: InferenceType = "regular",
     ) -> pd.DataFrame:
         r"""
         Fitted model confidence intervals.
@@ -229,8 +271,9 @@ class ResultAccessorMixin(TidyColumnAccessors):
             The significance level for confidence intervals. Defaults to 0.05.
             keep: str or list of str, optional
         joint : bool, optional
-            Whether to compute simultaneous confidence interval for joint null
-            of parameters selected by `keep` and `drop`. Defaults to False. See
+            Deprecated. Use `inference_type="simult"` instead. Whether to
+            compute simultaneous confidence intervals for the joint null of the
+            parameters selected by `keep` and `drop`. Defaults to False. See
             https://www.causalml-book.org/assets/chapters/CausalML_chap_4.pdf,
             Remark 4.4.1 for details.
         keep: str or list of str, optional
@@ -254,8 +297,13 @@ class ResultAccessorMixin(TidyColumnAccessors):
             The number of bootstrap iterations to run for joint confidence intervals.
             Defaults to 10_000. Only used if `joint` is True.
         seed : int, optional
-            The seed for the random number generator. Defaults to None. Only used if
-            `joint` is True.
+            The seed for the random number generator. Defaults to None. Only used
+            when `inference_type="simult"`.
+        inference_type : {"regular", "simult"}, optional
+            Type of confidence interval to compute. "regular" returns pointwise
+            intervals; "simult" returns simultaneous (joint) intervals for the
+            coefficients selected by `keep` and `drop`. Defaults to "regular".
+            Supersedes the deprecated `joint` argument. Keyword-only.
 
         Returns
         -------
@@ -276,43 +324,30 @@ class ResultAccessorMixin(TidyColumnAccessors):
         data = get_data()
         fit = feols("Y ~ C(f1)", data=data)
         fit.confint(alpha=0.10).head()
-        fit.confint(alpha=0.10, joint=True, reps=9999).head()
+        fit.confint(alpha=0.10, inference_type="simult", reps=9999).head()
         ```
         """
-        if keep is None:
-            keep = []
-        if drop is None:
-            drop = []
+        inference_type = self._normalize_inference_type(inference_type, joint=joint)
+        if inference_type == "savi":
+            raise NotImplementedError(
+                "inference_type='savi' is not available in confint() yet."
+            )
 
-        tidy_df = self.tidy()
-        if keep or drop:
-            if isinstance(keep, str):
-                keep = [keep]
-            if isinstance(drop, str):
-                drop = [drop]
-            idxs = _select_order_coefs(tidy_df.index.tolist(), keep, drop, exact_match)
-            coefnames = tidy_df.loc[idxs, :].index.tolist()
-        else:
-            coefnames = self._coefnames
+        coefnames, coef_indices = _select_coefnames_and_indices(
+            self._coefnames, keep, drop, exact_match
+        )
 
-        joint_indices = [i for i, x in enumerate(self._coefnames) if x in coefnames]
-        if not joint_indices:
-            raise ValueError("No coefficients match the keep/drop patterns.")
-
-        if not joint:
+        if inference_type == "regular":
             crit_val = self._inference_dist.crit_val(alpha, self._df_t)
         else:
+            joint_indices = sorted(coef_indices)
             D_inv = 1 / self._se[joint_indices]
             V = self._vcov[np.ix_(joint_indices, joint_indices)]
             C_coefs = (D_inv * V).T * D_inv
             crit_val = simultaneous_crit_val(C_coefs, reps, alpha=alpha, seed=seed)
 
-        ub = pd.Series(
-            self._beta_hat[joint_indices] + crit_val * self._se[joint_indices]
-        )
-        lb = pd.Series(
-            self._beta_hat[joint_indices] - crit_val * self._se[joint_indices]
-        )
+        ub = pd.Series(self._beta_hat[coef_indices] + crit_val * self._se[coef_indices])
+        lb = pd.Series(self._beta_hat[coef_indices] - crit_val * self._se[coef_indices])
 
         df = pd.DataFrame(
             {
