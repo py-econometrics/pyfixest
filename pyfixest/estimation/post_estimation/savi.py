@@ -65,9 +65,9 @@ def _savi_e_value(
 
     The formula is the g-prior/asymptotic t expression from Lindon, Ham,
     Tingley, and Bojinov (2026) for a restriction with numerator dimension
-    `dfn` and denominator degrees of freedom `dfd`. It is an asymptotic
-    approximation, not a finite-sample guarantee. For coefficient-wise t tests,
-    pass `t_statistic ** 2` as `f_statistic` and `dfn=1`.
+    `dfn` and denominator degrees of freedom `dfd`.
+    It For coefficient-wise t tests, pass `t_statistic ** 2` as `f_statistic`
+    and `dfn=1`.
     """
     f_statistic = np.asarray(f_statistic, dtype=float)
     g_ratio = mixture_precision / (mixture_precision + nobs)
@@ -84,13 +84,7 @@ def _savi_confidence_radius(
     nobs: float,
     dfd: float,
 ) -> float:
-    """Compute the coefficient-wise SAVI confidence-sequence radius.
-
-    Returns the half-width of the confidence sequence in standard-error units
-    (avlm's `t_radius`): the multiple of the standard error added to and
-    subtracted from the point estimate. Returns infinity when no finite radius
-    exists for the given inputs.
-    """
+    """Compute the coefficient-wise SAVI confidence-sequence radius."""
     g_ratio = mixture_precision / (mixture_precision + nobs)
     boundary = (alpha**2 * g_ratio) ** (1 / (dfd + 1))
     denominator = boundary - g_ratio
@@ -102,11 +96,8 @@ def _savi_confidence_radius(
 def optimal_mixture_precision(
     nobs: float, number_of_coefficients: float, alpha: float
 ) -> float:
-    """Compute the mixture precision that minimizes SAVI sequence width.
-
-    The returned precision minimizes the width of the coefficient-wise
-    `1 - alpha` SAVI confidence sequence at sample size `nobs`. It matches
-    `avlm::optimal_g`.
+    """Compute the mixture precision that minimizes SAVI sequence width
+    at a specified sample size `nobs`.
 
     Parameters
     ----------
