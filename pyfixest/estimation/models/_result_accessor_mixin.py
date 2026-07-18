@@ -119,7 +119,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
         heteroskedasticity robust (`hetero`, `HC1`, `HC2`, or `HC3`). With
         `HC2`/`HC3`, pyfixest's default small-sample correction scales the
         variance by `n / (n - k)`; pass `ssc(k_adj=False)` to reproduce avlm,
-        which applies no such correction. Inference is coefficient-wise; joint
+        which applies no such correction. Inference is by coefficient; joint
         linear restrictions are not yet supported.
 
         Examples
@@ -379,13 +379,11 @@ class ResultAccessorMixin(TidyColumnAccessors):
             intervals; "simult" returns simultaneous (joint) intervals for the
             coefficients selected by `keep` and `drop`; "savi" returns
             coefficient-wise asymptotic SAVI confidence sequences. Defaults to
-            "regular". Supersedes the deprecated `joint` argument. Keyword-only.
+            "regular". Supersedes the deprecated `joint` argument.
         mixture_precision: float, optional
-            When `inference_type="savi"`, controls the mixing weight of the
+            Only relevant for `inference_type="savi"`. Controls the mixing weight of the
             prior in the SAVI e-value. Larger values produce wider confidence
-            sequences early on but narrow faster as the sample grows. Must
-            remain fixed during sequential monitoring. Defaults to 1. This
-            argument is keyword-only. Use
+            sequences early on but narrow faster as the sample grows. Defaults to 1. Use
             `pyfixest.optimal_mixture_precision()`
             to minimize confidence-sequence width at a target sample size.
 
@@ -402,8 +400,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
         heteroskedasticity robust (`hetero`, `HC1`, `HC2`, or `HC3`). With
         `HC2`/`HC3`, pyfixest's default small-sample correction scales the
         variance by `n / (n - k)`; pass `ssc(k_adj=False)` to reproduce avlm,
-        which applies no such correction. Direct `FixestMulti.confint()` calls
-        provide regular inference only.
+        which applies no such correction.
 
         Examples
         --------

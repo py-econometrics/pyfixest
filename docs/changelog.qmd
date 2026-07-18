@@ -57,8 +57,6 @@ mixture_precision = pf.optimal_mixture_precision(
 fit.confint(inference_type="savi", mixture_precision=mixture_precision)
 ```
 
-Inference is coefficient-wise; joint linear restrictions are not yet supported.
-
 ### GLM API and Behavior
 
 - `feglm()` now accepts `weights`, `weights_type`, and `offset`, and supports
