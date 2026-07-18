@@ -83,7 +83,9 @@ type(fit)
 
 The first part of the formula contains the dependent variable and "regular" covariates, while the second part contains fixed effects.
 
-`feols()` returns an instance of the `Fixest` class.
+`feols()` returns an instance of the [Feols](/reference/estimation.models.feols_.Feols.qmd)
+class. The `Feols` reference lists available methods and attributes, including
+model-level statistics such as adjusted R-squared (`._adj_r2`).
 
 ## Inspecting Model Results
 
