@@ -226,13 +226,17 @@ def feglm(
 
     Notes
     -----
-    After fitting, the returned object carries the post-estimation toolbox:
-    recompute inference with `vcov()`, read out results with `tidy()`, `coef()`,
-    `se()`, and `confint()`, form predictions with `predict()` (`type="response"`
-    or `"link"`), and recover the swept-out fixed effects with `fixef()`. See the
-    [Feglm](/reference/estimation.models.feglm_.Feglm.qmd) reference, or the
-    Post-Estimation Methods section of the function reference, for the complete
-    list of methods.
+    `Feglm` inherits from
+    [Feols](/reference/estimation.models.feols_.Feols.qmd). A GLM fit therefore
+    supports the same post-estimation methods as an OLS fit, among them
+    `vcov()`, `tidy()`, `coef()`, `confint()`, `predict()` (with
+    `type="response"` or `"link"`), `fixef()`, `wildboottest()` and `ritest()`.
+    See the Post-Estimation Methods section of the function reference for the
+    full list.
+
+    `predict()` does not support `se_fit=True` for GLMs. Coefficients are on the
+    link scale. For effects on the response scale, see the
+    [marginal effects guide](/how-to/marginaleffects.qmd).
 
     Examples
     --------

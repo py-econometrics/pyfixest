@@ -616,6 +616,26 @@ class Feols(ResultAccessorMixin):
         -------
         Feols
             An instance of class [Feols](/reference/estimation.models.feols_.Feols.qmd) with updated inference.
+
+        Examples
+        --------
+        Updates the variance estimator of a fitted model without refitting it.
+        The model is modified in place and returned.
+
+        ```{python}
+        import pyfixest as pf
+
+        fit = pf.feols("Y ~ X1 + X2 | f1", pf.get_data())
+        fit.vcov("iid").tidy()
+        ```
+
+        ```{python}
+        # switch to cluster-robust inference
+        fit.vcov({"CRV1": "f1"}).tidy()
+        ```
+
+        See [On Small Sample Corrections](/explanation/ssc.qmd) for how the
+        `ssc` adjustments interact with each estimator.
         """
         # Assuming `data` is the DataFrame in question
 
@@ -1707,6 +1727,25 @@ class Feols(ResultAccessorMixin):
         -------
         dict[str, dict[str, float]]
             A dictionary with the estimated fixed effects.
+
+        Examples
+        --------
+        Fixed effects are swept out during estimation and are not part of the
+        coefficient table. `fixef()` computes them. The result is keyed by
+        fixed effect term, then by level.
+
+        ```{python}
+        import pyfixest as pf
+
+        fit = pf.feols("Y ~ X1 + X2 | f1", pf.get_data())
+        fe = fit.fixef()
+
+        fe.keys()
+        ```
+
+        ```{python}
+        list(fe["C(f1)"].items())[:5]
+        ```
         """
         weights_sqrt = np.sqrt(self._weights).flatten()
 
@@ -1833,6 +1872,25 @@ class Feols(ResultAccessorMixin):
             Returns a pd.Dataframe with columns "fit", "se_fit" and CIs if argument "interval=prediction".
             Otherwise, returns a np.ndarray with the predicted values of the model or the prediction
             standard errors if argument "se_fit=True".
+
+        Examples
+        --------
+        In-sample predictions:
+
+        ```{python}
+        import pyfixest as pf
+
+        data = pf.get_data()
+        fit = pf.feols("Y ~ X1 + X2 | f1", data)
+        fit.predict()[:5]
+        ```
+
+        Pass `newdata` to predict out of sample. Fixed effect levels that do not
+        appear in the estimation sample return missing values.
+
+        ```{python}
+        fit.predict(newdata=data.head())
+        ```
         """
         if self._is_iv:
             raise NotImplementedError(
@@ -2179,6 +2237,32 @@ class Feols(ResultAccessorMixin):
         -------
         np.ndarray
             Updated coefficients.
+
+        Notes
+        -----
+        Updates the coefficients in closed form via the Sherman-Morrison
+        identity instead of refitting on the full sample. `X_new` has to include
+        the intercept column. Models with fixed effects are not supported.
+
+        Examples
+        --------
+        Fit on all but the last observation, then add it:
+
+        ```{python}
+        import numpy as np
+        import pyfixest as pf
+
+        data = pf.get_data().dropna()
+        fit = pf.feols("Y ~ X1 + X2", data.iloc[:-1])
+
+        last = data.iloc[[-1]]
+        X_new = np.column_stack(
+            [np.ones(1), last["X1"].to_numpy(), last["X2"].to_numpy()]
+        )
+        y_new = last["Y"].to_numpy()
+
+        fit.update(X_new, y_new)
+        ```
         """
         if self._has_fixef:
             raise NotImplementedError(

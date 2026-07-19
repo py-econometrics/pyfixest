@@ -88,6 +88,25 @@ def ssc(
     -------
     dict
         A dictionary with encoded info on how to form small sample corrections
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    data = pf.get_data()
+
+    # turn off both the k and the G adjustment
+    fit = pf.feols("Y ~ X1 | f1", data, vcov={"CRV1": "f1"})
+    fit_no_adj = pf.feols(
+        "Y ~ X1 | f1", data, vcov={"CRV1": "f1"}, ssc=pf.ssc(k_adj=False, G_adj=False)
+    )
+
+    pf.etable([fit, fit_no_adj])
+    ```
+
+    Defaults follow `fixest`. See
+    [On Small Sample Corrections](/explanation/ssc.qmd) for details.
     """
     deprecated_mapping = {
         "adj": "k_adj",
@@ -181,6 +200,34 @@ def get_ssc(
     ValueError
         If vcov_type is not "iid", "hetero", or "CRV", or if G_df is neither
         "conventional" nor "min".
+
+    Examples
+    --------
+    Called internally by the estimation functions. Use it directly to reproduce
+    an adjustment factor by hand.
+
+    ```{python}
+    import pyfixest as pf
+    from pyfixest.utils.utils import get_ssc
+
+    # cluster-robust adjustment: 1000 observations, 3 coefficients, 20 clusters
+    adj, k_used, G_used = get_ssc(
+        ssc_dict=pf.ssc(),
+        N=1000,
+        k=3,
+        k_fe=0,
+        k_fe_nested=0,
+        n_fe=0,
+        n_fe_fully_nested=0,
+        G=20,
+        vcov_sign=1,
+        vcov_type="CRV",
+    )
+    adj, k_used, G_used
+    ```
+
+    Configure the behaviour with [ssc()](/reference/utils.utils.ssc.qmd). See
+    [On Small Sample Corrections](/explanation/ssc.qmd) for the formulas.
     """
     k_adj = ssc_dict["k_adj"]
     k_fixef = ssc_dict["k_fixef"]
@@ -258,6 +305,23 @@ def get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Feols"):
     ValueError
         If beta_type is not '1', '2', or '3', or if error_type is not '1', '2', or '3',
         or if model is not 'Feols' or 'Fepois'.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    data = pf.get_data()
+    data.head()
+    ```
+
+    The data set contains a continuous outcome `Y`, covariates `X1` and `X2`,
+    fixed effects `f1`, `f2` and `f3`, an instrument `Z1`, and some missing
+    values. Set `model="Fepois"` for a count outcome.
+
+    ```{python}
+    pf.get_data(model="Fepois")["Y"].head()
+    ```
     """
     rng = np.random.default_rng(seed)
     G = rng.choice(list(range(10, 20))).astype("int64")

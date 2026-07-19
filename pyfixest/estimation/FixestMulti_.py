@@ -16,7 +16,34 @@ from pyfixest.estimation.plan_ import ParsedFormula
 
 
 class FixestMulti(TidyColumnAccessors):
-    """Results container holding every model fitted by one public-API call."""
+    """
+    Results container holding every model fitted by one public-API call.
+
+    Returned instead of a single model when the formula uses multiple estimation
+    syntax: several dependent variables, the stepwise operators (`sw`, `sw0`,
+    `csw`, `csw0`, `mvsw`), stepwise fixed effects, or a `split` / `fsplit`
+    sample split. Reporting methods such as `etable()`, `summary()` and
+    `coefplot()` apply to all fitted models at once. `fetch_model()` returns an
+    individual model.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    data = pf.get_data()
+    fits = pf.feols("Y ~ X1 | csw0(f1, f2)", data)
+
+    pf.etable(fits)
+    ```
+
+    Retrieve one of the fitted models to work with it on its own:
+
+    ```{python}
+    fit = fits.fetch_model(0)
+    fit.tidy()
+    ```
+    """
 
     def __init__(
         self,

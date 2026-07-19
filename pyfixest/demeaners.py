@@ -81,7 +81,25 @@ def _get_numba_demean() -> Callable[..., tuple[np.ndarray, bool]]:
 
 @dataclass(frozen=True, slots=True)
 class BaseDemeaner:
-    """Base configuration shared by all fixed-effects demeaners."""
+    """
+    Base configuration shared by all fixed-effects demeaners.
+
+    Holds the settings shared by all backends, currently `fixef_maxiter`. This
+    class is not passed to an estimation function directly. Use one of the
+    concrete demeaners instead:
+    [MapDemeaner](/reference/demeaners.MapDemeaner.qmd), the default, or
+    [LsmrDemeaner](/reference/demeaners.LsmrDemeaner.qmd). See
+    [Choosing a Demeaner Backend](/how-to/demeaner-backends.qmd) for a
+    comparison.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    pf.MapDemeaner(), pf.LsmrDemeaner()
+    ```
+    """
 
     fixef_maxiter: int = 10_000
     kind: ClassVar[str]
@@ -92,7 +110,27 @@ class BaseDemeaner:
 
 @dataclass(frozen=True, slots=True)
 class MapDemeaner(BaseDemeaner):
-    """Method of Alternating Projections (MAP) demeaner."""
+    """
+    Method of Alternating Projections (MAP) demeaner.
+
+    The default backend. Sweeps out the fixed effects by alternately projecting
+    on each of them until convergence. Fast and memory efficient for a small
+    number of low-dimensional fixed effects. Decrease `fixef_tol` if the fixed
+    effects are close to collinear and convergence is slow. See
+    [Choosing a Demeaner Backend](/how-to/demeaner-backends.qmd) for a
+    comparison with [LsmrDemeaner](/reference/demeaners.LsmrDemeaner.qmd).
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    data = pf.get_data()
+
+    fit = pf.feols("Y ~ X1 | f1 + f2", data, demeaner=pf.MapDemeaner(fixef_tol=1e-08))
+    fit.tidy()
+    ```
+    """
 
     fixef_tol: float = 1e-06
     backend: MapBackend = "rust"
@@ -150,6 +188,24 @@ class MapDemeaner(BaseDemeaner):
 @dataclass(frozen=True, slots=True)
 class LsmrDemeaner(BaseDemeaner):
     """Sparse LSMR demeaner.
+
+    Solves the demeaning problem as a single sparse least squares system via
+    LSMR instead of alternating projections. Usually faster when alternating
+    projections converge slowly, for example with many or highly overlapping
+    fixed effects. The `torch` backend can run on a GPU. See
+    [Choosing a Demeaner Backend](/how-to/demeaner-backends.qmd) for a
+    comparison with [MapDemeaner](/reference/demeaners.MapDemeaner.qmd).
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    data = pf.get_data()
+
+    fit = pf.feols("Y ~ X1 | f1 + f2", data, demeaner=pf.LsmrDemeaner())
+    fit.tidy()
+    ```
 
     Notes
     -----

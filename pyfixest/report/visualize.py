@@ -459,6 +459,23 @@ def qplot(
     -------
     object
         A matplotplit figure.
+
+    Examples
+    --------
+    Plots the coefficients of a quantile regression across quantiles, the
+    counterpart of `coefplot()` for `quantreg()`.
+
+    ```{python}
+    import pyfixest as pf
+
+    data = pf.get_data()
+    fit = pf.quantreg("Y ~ X1 + X2", data, quantile=[0.1, 0.25, 0.5, 0.75, 0.9])
+
+    pf.qplot(fit)
+    ```
+
+    See the [quantile regression tutorial](/tutorials/quantile-regression.qmd)
+    for details.
     """
     if rename_models is None:
         rename_models = {}

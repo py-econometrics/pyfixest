@@ -76,6 +76,31 @@ class Fepois(Feglm):
     _data: pd.DataFrame
         The data frame used in the estimation. None if arguments `lean = True` or
         `store_data = False`.
+
+    Examples
+    --------
+    `Fepois` is returned by
+    [fepois()](/reference/estimation.api.fepois.fepois.qmd) and is not
+    constructed directly. Post-estimation methods are inherited from
+    [Feols](/reference/estimation.models.feols_.Feols.qmd).
+
+    ```{python}
+    import pyfixest as pf
+
+    data = pf.get_data(model="Fepois")
+    fit = pf.fepois("Y ~ X1 + X2 | f1", data)
+
+    fit.tidy()
+    ```
+
+    Coefficients are on the log scale. Exponentiating gives incidence rate
+    ratios.
+
+    ```{python}
+    import numpy as np
+
+    np.exp(fit.coef())
+    ```
     """
 
     def __init__(

@@ -43,6 +43,29 @@ def factor_interaction(
     FactorValues
         The encoded factor values, ready for use in a formulaic model matrix.
 
+    Examples
+    --------
+    Implements the `i()` operator and is used by writing `i(...)` in a formula
+    rather than by calling it directly. Expands a categorical variable into
+    indicators, optionally dropping a reference level and interacting it with a
+    second variable. Commonly used for event study specifications. See the
+    [formula syntax tutorial](/tutorials/formula-syntax.qmd).
+
+    ```{python}
+    import pyfixest as pf
+
+    data = pf.get_data()
+
+    fit = pf.feols("Y ~ i(f1, ref=0)", data)
+    fit.tidy().head()
+    ```
+
+    Interacting with a continuous variable gives group-specific slopes.
+
+    ```{python}
+    pf.feols("Y ~ i(f1, X2, ref=0)", data).tidy().head()
+    ```
+
     Notes
     -----
     Naming convention (matches R fixest)::

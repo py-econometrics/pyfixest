@@ -48,8 +48,6 @@ website:
       - icon: github
         href: https://github.com/py-econometrics/pyfixest/
     left:
-      - text: "PyFixest"
-        file: pyfixest.md
       - text: "Getting Started"
         file: getting-started.qmd
       - text: "Function Reference"

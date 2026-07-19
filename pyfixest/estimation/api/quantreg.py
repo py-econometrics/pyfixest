@@ -173,12 +173,15 @@ def quantreg(
 
     Notes
     -----
-    After fitting, the returned object carries the post-estimation toolbox:
-    recompute inference with `vcov()`, read out results with `tidy()`, `coef()`,
-    `se()`, and `confint()`, and form predictions with `predict()`. See the
-    [Quantreg](/reference/estimation.quantreg.quantreg_.Quantreg.qmd) reference,
-    or the Post-Estimation Methods section of the function reference, for the
-    complete list of methods.
+    `Quantreg` inherits from
+    [Feols](/reference/estimation.models.feols_.Feols.qmd). A quantile
+    regression fit therefore supports the same post-estimation methods as an OLS
+    fit, among them `vcov()`, `tidy()`, `coef()`, `confint()` and `predict()`.
+    See the Post-Estimation Methods section of the function reference for the
+    full list.
+
+    Fixed effects are not yet supported. Multiway clustering is not supported
+    for the cluster-robust variance estimator.
 
     Examples
     --------

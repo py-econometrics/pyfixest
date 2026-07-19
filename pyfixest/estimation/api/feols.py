@@ -191,14 +191,20 @@ def feols(
 
     Notes
     -----
-    After fitting, the returned object carries the post-estimation toolbox.
-    Recompute inference without refitting via `vcov()`; read out results with
-    `tidy()`, `coef()`, `se()`, `confint()`, and `predict()`; recover the swept-out
-    fixed effects with `fixef()`; and reach for `wildboottest()`, `ritest()`,
-    `wald_test()`, or `decompose()` for alternative inference and mediation
-    analysis. See the [Feols](/reference/estimation.models.feols_.Feols.qmd)
-    reference, or the Post-Estimation Methods section of the function reference,
-    for the complete list.
+    Post-estimation methods are defined on
+    [Feols](/reference/estimation.models.feols_.Feols.qmd). All other model
+    classes inherit from it:
+    [Feiv](/reference/estimation.models.feiv_.Feiv.qmd),
+    [Feglm](/reference/estimation.models.feglm_.Feglm.qmd),
+    [Fepois](/reference/estimation.models.fepois_.Fepois.qmd) and
+    [Quantreg](/reference/estimation.quantreg.quantreg_.Quantreg.qmd). The same
+    methods are therefore available independently of which estimation function
+    was called. Exceptions are documented with the respective function.
+
+    See the Post-Estimation Methods section of the function reference for the
+    full list. Commonly used are `vcov()`, `tidy()`, `coef()`, `se()`,
+    `confint()`, `predict()`, `fixef()`, `wildboottest()`, `ritest()` and
+    `decompose()`.
 
     Examples
     --------
