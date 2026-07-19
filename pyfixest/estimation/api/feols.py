@@ -189,6 +189,17 @@ def feols(
         [Feiv](/reference/estimation.models.feiv_.Feiv.qmd) class (when using instrumental variables), or
         [FixestMulti](/reference/estimation.FixestMulti_.FixestMulti.qmd) class for multiple models specified via `fml`.
 
+    Notes
+    -----
+    After fitting, the returned object carries the post-estimation toolbox.
+    Recompute inference without refitting via `vcov()`; read out results with
+    `tidy()`, `coef()`, `se()`, `confint()`, and `predict()`; recover the swept-out
+    fixed effects with `fixef()`; and reach for `wildboottest()`, `ritest()`,
+    `wald_test()`, or `decompose()` for alternative inference and mediation
+    analysis. See the [Feols](/reference/estimation.models.feols_.Feols.qmd)
+    reference, or the Post-Estimation Methods section of the function reference,
+    for the complete list.
+
     Examples
     --------
     As in `fixest`, the [feols()](/reference/estimation.api.feols.feols.qmd) function can be used to

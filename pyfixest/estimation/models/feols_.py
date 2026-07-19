@@ -2167,18 +2167,18 @@ class Feols(ResultAccessorMixin):
 
         Parameters
         ----------
-            X : np.ndarray
-                Covariates for new data points. Users expected to ensure conformability
-                with existing data.
-            y : np.ndarray
-                Outcome values for new data points
-            inplace : bool, optional
-                Whether to update the model object in place. Defaults to False.
+        X_new : np.ndarray
+            Covariates for new data points. Users expected to ensure conformability
+            with existing data.
+        y_new : np.ndarray
+            Outcome values for new data points.
+        inplace : bool, optional
+            Whether to update the model object in place. Defaults to False.
 
         Returns
         -------
         np.ndarray
-            Updated coefficients
+            Updated coefficients.
         """
         if self._has_fixef:
             raise NotImplementedError(

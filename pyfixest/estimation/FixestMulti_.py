@@ -81,13 +81,10 @@ class FixestMulti(TidyColumnAccessors):
         """
         Return a list of all fitted models.
 
-        Parameters
-        ----------
-            None
-
         Returns
         -------
-            A list of all fitted models of types Feols or Fepois.
+        list
+            A list of all fitted models of types Feols, Fepois, or Feiv.
         """
         return list(self.all_fitted_models.values())
 

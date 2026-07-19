@@ -23,17 +23,33 @@ def factor_interaction(
     """
     Fixest-style i() operator for categorical encoding with interactions.
 
-    Args:
-        data: The categorical variable
-        var2: Optional second variable for interaction (continuous or categorical)
-        ref: Reference level to drop from data
-        ref2: Reference level to drop from var2 (if categorical)
-        bin: Dict mapping new_level -> [old_levels] for binning
+    Parameters
+    ----------
+    data : array-like
+        The categorical variable to encode.
+    var2 : array-like, optional
+        Optional second variable to interact with (continuous or categorical).
+    ref : Hashable, optional
+        Reference level to drop from `data`.
+    ref2 : Hashable, optional
+        Reference level to drop from `var2` (only if `var2` is categorical).
+    bin : dict, optional
+        Mapping of `new_level -> [old_levels]` for binning `data`.
+    bin2 : dict, optional
+        Mapping of `new_level -> [old_levels]` for binning `var2`.
 
-    Naming convention (matches R fixest):
-        i(cyl)           -> cyl::4, cyl::6, cyl::8
-        i(cyl, ref=4)    -> cyl::6, cyl::8
-        i(cyl, wt)       -> cyl::4:wt, cyl::6:wt, cyl::8:wt
+    Returns
+    -------
+    FactorValues
+        The encoded factor values, ready for use in a formulaic model matrix.
+
+    Notes
+    -----
+    Naming convention (matches R fixest)::
+
+        i(cyl)            -> cyl::4, cyl::6, cyl::8
+        i(cyl, ref=4)     -> cyl::6, cyl::8
+        i(cyl, wt)        -> cyl::4:wt, cyl::6:wt, cyl::8:wt
         i(cyl, wt, ref=4) -> cyl::6:wt, cyl::8:wt
     """
     # Try to get variable names from Series.name attribute

@@ -186,6 +186,16 @@ def fepois(
         An instance of the [Fepois](/reference/estimation.models.fepois_.Fepois.qmd) class
         or an instance of class [FixestMulti](/reference/estimation.FixestMulti_.FixestMulti.qmd) for multiple models specified via `fml`.
 
+    Notes
+    -----
+    After fitting, the returned object carries the post-estimation toolbox:
+    recompute inference with `vcov()`, read out results with `tidy()`, `coef()`,
+    `se()`, and `confint()`, form predictions with `predict()`, and recover the
+    swept-out fixed effects with `fixef()`. See the
+    [Fepois](/reference/estimation.models.fepois_.Fepois.qmd) reference, or the
+    Post-Estimation Methods section of the function reference, for the complete
+    list of methods.
+
     Examples
     --------
     The `fepois()` function estimates Poisson models with the same formula interface

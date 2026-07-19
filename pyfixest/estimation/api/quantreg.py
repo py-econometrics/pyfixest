@@ -171,6 +171,15 @@ def quantreg(
     object
         An instance of the [Quantreg](/reference/estimation.quantreg.quantreg_.Quantreg.qmd) class or [FixestMulti](/reference/estimation.FixestMulti_.FixestMulti.qmd) class for multiple models specified via `fml`.
 
+    Notes
+    -----
+    After fitting, the returned object carries the post-estimation toolbox:
+    recompute inference with `vcov()`, read out results with `tidy()`, `coef()`,
+    `se()`, and `confint()`, and form predictions with `predict()`. See the
+    [Quantreg](/reference/estimation.quantreg.quantreg_.Quantreg.qmd) reference,
+    or the Post-Estimation Methods section of the function reference, for the
+    complete list of methods.
+
     Examples
     --------
     The following example regresses `Y` on `X1` and `X2` at the median (0.5 quantile):

@@ -23,24 +23,24 @@ def ssc(
 
     Parameters
     ----------
-        k_adj : bool, default True
-            If True, applies a small sample correction of (N-1) / (N-k) where N
-            is the number of observations and k is the number of estimated
-            coefficients excluding any fixed effects projected out by either
-            `feols()` or `fepois()`.
-        k_fixef : str, default "none"
-            Equal to 'none': the fixed effects parameters are discarded when
-            calculating k in (N-1) / (N-k).
-        G_adj : bool, default True
-            If True, a cluster correction G/(G-1) is performed, with G the number
-            of clusters. This argument is only relevant for clustered errors.
-        G_df : str, default "conventional"
-            Controls how "G" is computed for multiway clustering if G_adj = True.
-            Note that the covariance matrix in the multiway clustering case is of
-            the form V = V_1 + V_2 - V_12. If "conventional", then each summand G_i
-            is multiplied with a small sample adjustment G_i / (G_i - 1). If "min",
-            all summands are multiplied with the same value, min(G) / (min(G) - 1).
-            This argument is only relevant for clustered errors.
+    k_adj : bool, default True
+        If True, applies a small sample correction of (N-1) / (N-k) where N
+        is the number of observations and k is the number of estimated
+        coefficients excluding any fixed effects projected out by either
+        `feols()` or `fepois()`.
+    k_fixef : str, default "none"
+        Equal to 'none': the fixed effects parameters are discarded when
+        calculating k in (N-1) / (N-k).
+    G_adj : bool, default True
+        If True, a cluster correction G/(G-1) is performed, with G the number
+        of clusters. This argument is only relevant for clustered errors.
+    G_df : str, default "conventional"
+        Controls how "G" is computed for multiway clustering if G_adj = True.
+        Note that the covariance matrix in the multiway clustering case is of
+        the form V = V_1 + V_2 - V_12. If "conventional", then each summand G_i
+        is multiplied with a small sample adjustment G_i / (G_i - 1). If "min",
+        all summands are multiplied with the same value, min(G) / (min(G) - 1).
+        This argument is only relevant for clustered errors.
 
     Details
     -------

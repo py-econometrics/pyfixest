@@ -58,10 +58,9 @@ def feglm(
     """
     Estimate GLM regression models with fixed effects.
 
-    Supported families: [logit](/reference/estimation.models.felogit_.Felogit.qmd),
-    [probit](/reference/estimation.models.feprobit_.Feprobit.qmd),
-    [gaussian](/reference/estimation.models.fegaussian_.Fegaussian.qmd),
-    and [poisson](/reference/estimation.models.fepois_.Fepois.qmd).
+    Supported families: `logit`, `probit`, and `gaussian` (see
+    [Feglm](/reference/estimation.models.feglm_.Feglm.qmd)), and `poisson`
+    (see [Fepois](/reference/estimation.models.fepois_.Fepois.qmd)).
 
     References
     ----------
@@ -222,10 +221,18 @@ def feglm(
     -------
     object
         An instance of the [Feglm](/reference/estimation.models.feglm_.Feglm.qmd) class
-        (or one of its subclasses: [Felogit](/reference/estimation.models.felogit_.Felogit.qmd),
-        [Feprobit](/reference/estimation.models.feprobit_.Feprobit.qmd),
-        [Fegaussian](/reference/estimation.models.fegaussian_.Fegaussian.qmd)) or an instance of
-        class [FixestMulti](/reference/estimation.FixestMulti_.FixestMulti.qmd) for multiple models specified via `fml`.
+        (a family-specific subclass for `logit`, `probit`, or `gaussian`) or an
+        instance of class [FixestMulti](/reference/estimation.FixestMulti_.FixestMulti.qmd) for multiple models specified via `fml`.
+
+    Notes
+    -----
+    After fitting, the returned object carries the post-estimation toolbox:
+    recompute inference with `vcov()`, read out results with `tidy()`, `coef()`,
+    `se()`, and `confint()`, form predictions with `predict()` (`type="response"`
+    or `"link"`), and recover the swept-out fixed effects with `fixef()`. See the
+    [Feglm](/reference/estimation.models.feglm_.Feglm.qmd) reference, or the
+    Post-Estimation Methods section of the function reference, for the complete
+    list of methods.
 
     Examples
     --------

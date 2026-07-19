@@ -104,8 +104,8 @@ def iplot(
 
     Parameters
     ----------
-    models : A supported model object (Feols, Fepois, Feiv, FixestMulti) or a list of
-            Feols, Fepois & Feiv models.
+    models : Feols, Fepois, Feiv, FixestMulti, or list
+        A fitted model object, or a list of Feols, Fepois, and Feiv models.
     figsize : tuple or None, optional
         The size of the figure. If None, the default size is used.
     alpha : float
@@ -292,8 +292,8 @@ def coefplot(
 
     Parameters
     ----------
-    models : A supported model object (Feols, Fepois, Feiv, FixestMulti) or a list of
-            Feols, Fepois & Feiv models.
+    models : Feols, Fepois, Feiv, FixestMulti, or list
+        A fitted model object, or a list of Feols, Fepois, and Feiv models.
     figsize : tuple or None, optional
         The size of the figure. If None, the default size is used.
     alpha : float
@@ -444,8 +444,8 @@ def qplot(
 
     Parameters
     ----------
-    models : A supported model object (Feols, Fepois, Feiv, FixestMulti) or a list of
-            Feols, Fepois & Feiv models.
+    models : Feols, Fepois, Feiv, FixestMulti, or list
+        A fitted model object, or a list of Feols, Fepois, and Feiv models.
     figsize : tuple or None, optional
         The size of the figure. If None, the default size is (10, 6).
     rename_models : dict, optional
