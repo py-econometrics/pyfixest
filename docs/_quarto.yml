@@ -8,8 +8,6 @@ project:
     - "*.ipynb"
     - "*.md"
     - "!quarto_example/"
-  post-render:
-    - _scripts/generate_llms_md.py
 
 execute:
   freeze: auto
@@ -26,6 +24,9 @@ metadata-files:
   - _sidebar.yml
 
 website:
+  title: "PyFixest"
+  description: "Fast high-dimensional fixed effects regression in Python, closely mirroring the syntax of the R package fixest."
+  llms-txt: true
   navbar:
     page_navigation: true
     favicon: "figures/pyfixest-logo.png"
@@ -78,6 +79,8 @@ website:
           file: how-to/demeaner-backends.qmd
         - text: "Marginal Effects & Hypothesis Testing"
           file: how-to/marginaleffects.qmd
+        # - text: "When to Use Anytime-Valid Inference"
+        #  file: how-to/anytime-valid-inference.qmd
         - text: "Regression Decomposition"
           file: how-to/regression_decomposition.qmd
         - text: "Compare Stata & PyFixest"
@@ -132,6 +135,7 @@ quartodoc:
         - estimation.api.fepois.fepois
         - estimation.api.feglm.feglm
         - estimation.api.quantreg.quantreg
+        - estimation.post_estimation.savi.optimal_mixture_precision
         - did.estimation.did2s
         - did.estimation.lpdid
         - did.estimation.event_study
@@ -165,7 +169,6 @@ quartodoc:
         - did.visualize.panelview
         - report.summary
         - report.etable
-        - report.dtable
         - report.coefplot
         - report.iplot
     - title: Formula Parsing & Model Matrix
