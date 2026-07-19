@@ -120,7 +120,7 @@ This method covers diagnostic tests related with IV regression. We currently hav
 
 The following is an example usage of this method:
 
-    ::: {#e19624d0 .cell execution_count=1}
+    ::: {#0d0a987e .cell execution_count=1}
     ``` {.python .cell-code}
     import numpy as np
     import pandas as pd
@@ -184,7 +184,7 @@ The following is an example usage of this method:
     ::: {.cell-output .cell-output-display}
     ```{=html}
 
-            <div id="M1pZ8K"></div>
+            <div id="ojleAg"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -195,7 +195,7 @@ The following is an example usage of this method:
                 (function() {
                     var script = document.createElement("script");
                     script.type = "text/javascript";
-                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.8.2/js-package/distr/lets-plot.min.js";
+                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.11.0/js-package/distr/lets-plot.min.js";
                     script.onload = function() {
                         window.letsPlotCall = function(f) {f();};
                         window.letsPlotCallQueue.forEach(function(f) {f();});
@@ -208,9 +208,9 @@ The following is an example usage of this method:
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("M1pZ8K").appendChild(div);
+                        document.getElementById("ojleAg").appendChild(div);
                     };
-                    var e = document.getElementById("M1pZ8K");
+                    var e = document.getElementById("ojleAg");
                     e.appendChild(script);
                 })()
             </script>
@@ -221,7 +221,7 @@ The following is an example usage of this method:
     ::: {.cell-output .cell-output-display}
     ```{=html}
 
-            <div id="ANKc00"></div>
+            <div id="AyvwpG"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -232,7 +232,7 @@ The following is an example usage of this method:
                 (function() {
                     var script = document.createElement("script");
                     script.type = "text/javascript";
-                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.8.2/js-package/distr/lets-plot.min.js";
+                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.11.0/js-package/distr/lets-plot.min.js";
                     script.onload = function() {
                         window.letsPlotCall = function(f) {f();};
                         window.letsPlotCallQueue.forEach(function(f) {f();});
@@ -245,9 +245,9 @@ The following is an example usage of this method:
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("ANKc00").appendChild(div);
+                        document.getElementById("AyvwpG").appendChild(div);
                     };
-                    var e = document.getElementById("ANKc00");
+                    var e = document.getElementById("AyvwpG");
                     e.appendChild(script);
                 })()
             </script>
