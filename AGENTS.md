@@ -253,9 +253,10 @@ the same bar, whether it is a function, a method or a class:
   and print the result are enough. Keep examples fast (small `pf.get_data()`
   samples, few bootstrap `reps`). Skip the example only when runtime is
   prohibitive, and say so.
-- Vignette link when a relevant how-to exists, as
-  `[guide](/how-to/<feature>.qmd)`. Inference methods point at the standard
-  errors guide, `decompose` at the decomposition vignette.
+- Vignette link when a relevant guide exists, as
+  `[guide](/how-to/<feature>.qmd)`. Inference methods point at the
+  standard-errors guide (`/tutorials/standard-errors.qmd`), `decompose` at the
+  decomposition vignette.
 - Paper citation with a link whenever an econometric method is implemented, in
   the function that implements it. `Feols.decompose` cites Gelbach (2016),
   `quantreg` cites Portnoy and Koenker (1997). Mirror the paper's notation in
@@ -265,9 +266,16 @@ Result classes (`Feols`, `Fepois`, `Feiv`, ...) are obtained through the
 estimation functions, so their example fits a model and calls a method instead
 of constructing the class.
 
-Examples follow the style of the existing docstrings: go straight to the
-`{python}` chunk and keep any explanation in short comments inside the code.
-Do not narrate the example in prose.
+Examples go straight to the `{python}` chunk and keep any explanation in short
+comments inside the code. Do not narrate the example in prose — the long
+narrated Examples in `feols` and `fepois` predate this rule; don't copy their
+style for new entries.
+
+Check that an example actually runs before handing off: the minimum is
+executing its body in `pixi run python`; the full check is
+`pixi run docs-build` followed by
+`QUARTO_PYTHON=.pixi/envs/docs/bin/python3 quarto render docs/reference/<page>.qmd`
+(quarto ignores the `python:` key in `_quarto.yml` for single-file renders).
 
 ## Commands
 
