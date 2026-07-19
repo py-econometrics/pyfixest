@@ -120,7 +120,7 @@ This method covers diagnostic tests related with IV regression. We currently hav
 
 The following is an example usage of this method:
 
-    ::: {#0d0a987e .cell execution_count=1}
+    ::: {#1151d671 .cell execution_count=1}
     ``` {.python .cell-code}
     import numpy as np
     import pandas as pd
@@ -184,7 +184,7 @@ The following is an example usage of this method:
     ::: {.cell-output .cell-output-display}
     ```{=html}
 
-            <div id="ojleAg"></div>
+            <div id="gRrqtg"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -208,9 +208,9 @@ The following is an example usage of this method:
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("ojleAg").appendChild(div);
+                        document.getElementById("gRrqtg").appendChild(div);
                     };
-                    var e = document.getElementById("ojleAg");
+                    var e = document.getElementById("gRrqtg");
                     e.appendChild(script);
                 })()
             </script>
@@ -221,7 +221,7 @@ The following is an example usage of this method:
     ::: {.cell-output .cell-output-display}
     ```{=html}
 
-            <div id="AyvwpG"></div>
+            <div id="uKj5ao"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -245,9 +245,9 @@ The following is an example usage of this method:
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("AyvwpG").appendChild(div);
+                        document.getElementById("uKj5ao").appendChild(div);
                     };
-                    var e = document.getElementById("AyvwpG");
+                    var e = document.getElementById("uKj5ao");
                     e.appendChild(script);
                 })()
             </script>
