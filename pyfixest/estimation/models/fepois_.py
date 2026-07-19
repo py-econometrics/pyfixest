@@ -92,15 +92,6 @@ class Fepois(Feglm):
 
     fit.tidy()
     ```
-
-    Coefficients are on the log scale. Exponentiating gives incidence rate
-    ratios.
-
-    ```{python}
-    import numpy as np
-
-    np.exp(fit.coef())
-    ```
     """
 
     def __init__(
