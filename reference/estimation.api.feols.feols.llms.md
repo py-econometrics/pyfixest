@@ -1,7 +1,7 @@
-# estimation.api.feols.feols
+# feols
 
 ``` python
-estimation.api.feols.feols(
+feols(
     fml,
     data,
     vcov=None,
@@ -61,6 +61,12 @@ Returns an object of type [Feols](../reference/estimation.models.feols_.Feols.ll
 | Name | Type | Description |
 |----|----|----|
 |  | object | An instance of the [Feols](../reference/estimation.models.feols_.Feols.llms.md) class, [Feiv](../reference/estimation.models.feiv_.Feiv.llms.md) class (when using instrumental variables), or [FixestMulti](../reference/estimation.FixestMulti_.FixestMulti.llms.md) class for multiple models specified via `fml`. |
+
+## Notes
+
+Post-estimation methods are defined on [Feols](../reference/estimation.models.feols_.Feols.llms.md). All other model classes inherit from it: [Feiv](../reference/estimation.models.feiv_.Feiv.llms.md), [Feglm](../reference/estimation.models.feglm_.Feglm.llms.md), [Fepois](../reference/estimation.models.fepois_.Fepois.llms.md) and [Quantreg](../reference/estimation.quantreg.quantreg_.Quantreg.llms.md). The same methods are therefore available independently of which estimation function was called. Exceptions are documented with the respective function.
+
+See the Post-Estimation Methods section of the function reference for the full list. Commonly used are `vcov()`, `tidy()`, `coef()`, `se()`, `confint()`, `predict()`, `fixef()`, `wildboottest()`, `ritest()` and `decompose()`.
 
 ## Examples
 
@@ -420,5 +426,5 @@ fit_D.ccv(treatment = "D", cluster = "group_id")
 
 |      | Estimate             | Std. Error | t value  | Pr(\>\|t\|) | 2.5%      | 97.5%    |
 |------|----------------------|------------|----------|-------------|-----------|----------|
-| CCV  | 0.016087657906364097 | 0.227634   | 0.070673 | 0.944437    | -0.462154 | 0.494329 |
+| CCV  | 0.016087657906364097 | 0.302481   | 0.053186 | 0.95817     | -0.619401 | 0.651577 |
 | CRV1 | 0.016088             | 0.13378    | 0.120254 | 0.905614    | -0.264974 | 0.29715  |

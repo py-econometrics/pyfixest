@@ -289,5 +289,5 @@ That shared syntax makes it easy to move between linear, Poisson, and binary-res
 ## Where to Go Next
 
 - [Difference-in-Differences](../tutorials/difference-in-differences.llms.md): richer DiD estimators and event studies.
-- [Standard Errors & Inference](../tutorials/standard-errors.llms.md): clustered inference, randomization inference, and wild bootstrap.
+- [Standard Errors & Inference](standard-errors.qmd): clustered inference, randomization inference, and wild bootstrap.
 - [How-To: Variance Reduction in AB Tests](../how-to/panel_variance_reduction.llms.md): AB testing workflows with controls and panel structure.

@@ -1,32 +1,62 @@
-# estimation.FixestMulti\_.FixestMulti
+# FixestMulti
 
 ``` python
-estimation.FixestMulti_.FixestMulti(config, parsed, data, context)
+FixestMulti(config, parsed, data, context)
 ```
 
 Results container holding every model fitted by one public-API call.
+
+Returned instead of a single model when the formula uses multiple estimation syntax: several dependent variables, the stepwise operators (`sw`, `sw0`, `csw`, `csw0`, `mvsw`), stepwise fixed effects, or a `split` / `fsplit` sample split. Reporting methods such as `etable()`, `summary()` and `coefplot()` apply to all fitted models at once. `fetch_model()` returns an individual model.
+
+## Examples
+
+``` python
+import pyfixest as pf
+
+data = pf.get_data()
+fits = pf.feols("Y ~ X1 | csw0(f1, f2)", data)
+
+pf.etable(fits)
+```
+
+[TABLE]
+
+Retrieve one of the fitted models to work with it on its own:
+
+``` python
+fit = fits.fetch_model(0)
+fit.tidy()
+```
+
+    Model:  Y ~ X1
+
+|             | Estimate  | Std. Error | t value    | Pr(\>\|t\|)  | 2.5%      | 97.5%     |
+|-------------|-----------|------------|------------|--------------|-----------|-----------|
+| Coefficient |           |            |            |              |           |           |
+| Intercept   | 0.918518  | 0.111821   | 8.214166   | 6.661338e-16 | 0.699086  | 1.137950  |
+| X1          | -1.000086 | 0.084735   | -11.802468 | 0.000000e+00 | -1.166366 | -0.833806 |
 
 ## Attributes
 
 | Name | Description |
 |----|----|
-| [FixestFormulaDict](#pyfixest.estimation.FixestMulti_.FixestMulti.FixestFormulaDict) | Parsed formula dict keyed by fixed-effects spec. |
+| [FixestMulti.FixestFormulaDict](#pyfixest.estimation.FixestMulti_.FixestMulti.FixestFormulaDict) | Parsed formula dict keyed by fixed-effects spec. |
 
 ## Methods
 
 | Name | Description |
 |----|----|
-| [confint](#pyfixest.estimation.FixestMulti_.FixestMulti.confint) | Obtain confidence intervals for the fitted models. |
-| [fetch_model](#pyfixest.estimation.FixestMulti_.FixestMulti.fetch_model) | Fetch a model of class Feols from the Fixest class. |
-| [tidy](#pyfixest.estimation.FixestMulti_.FixestMulti.tidy) | Return the results of an estimation using `feols()` as a tidy Pandas DataFrame. |
-| [to_list](#pyfixest.estimation.FixestMulti_.FixestMulti.to_list) | Return a list of all fitted models. |
-| [vcov](#pyfixest.estimation.FixestMulti_.FixestMulti.vcov) | Update regression inference “on the fly”. |
-| [wildboottest](#pyfixest.estimation.FixestMulti_.FixestMulti.wildboottest) | Run a wild cluster bootstrap for all regressions in the Fixest object. |
+| [FixestMulti.confint](#pyfixest.estimation.FixestMulti_.FixestMulti.confint) | Obtain confidence intervals for the fitted models. |
+| [FixestMulti.fetch_model](#pyfixest.estimation.FixestMulti_.FixestMulti.fetch_model) | Fetch a model of class Feols from the Fixest class. |
+| [FixestMulti.tidy](#pyfixest.estimation.FixestMulti_.FixestMulti.tidy) | Return the results of an estimation using `feols()` as a tidy Pandas DataFrame. |
+| [FixestMulti.to_list](#pyfixest.estimation.FixestMulti_.FixestMulti.to_list) | Return a list of all fitted models. |
+| [FixestMulti.vcov](#pyfixest.estimation.FixestMulti_.FixestMulti.vcov) | Update regression inference “on the fly”. |
+| [FixestMulti.wildboottest](#pyfixest.estimation.FixestMulti_.FixestMulti.wildboottest) | Run a wild cluster bootstrap for all regressions in the Fixest object. |
 
-### confint
+### FixestMulti.confint
 
 ``` python
-estimation.FixestMulti_.FixestMulti.confint()
+confint()
 ```
 
 Obtain confidence intervals for the fitted models.
@@ -37,10 +67,10 @@ Obtain confidence intervals for the fitted models.
 |----|----|----|
 |  | pandas.Series | A pd.Series with coefficient names and confidence intervals. The key indicates which models the estimated statistic derives from. |
 
-### fetch_model
+### FixestMulti.fetch_model
 
 ``` python
-estimation.FixestMulti_.FixestMulti.fetch_model(i, print_fml=True)
+fetch_model(i, print_fml=True)
 ```
 
 Fetch a model of class Feols from the Fixest class.
@@ -58,10 +88,10 @@ Fetch a model of class Feols from the Fixest class.
 |------|-----------------|-------------|
 |      | A Feols object. |             |
 
-### tidy
+### FixestMulti.tidy
 
 ``` python
-estimation.FixestMulti_.FixestMulti.tidy()
+tidy()
 ```
 
 Return the results of an estimation using `feols()` as a tidy Pandas DataFrame.
@@ -72,24 +102,24 @@ Return the results of an estimation using `feols()` as a tidy Pandas DataFrame.
 |----|----|----|
 |  | pandas.DataFrame or str | A tidy DataFrame with the following columns: - fml: the formula used to generate the results - Coefficient: the names of the coefficients - Estimate: the estimated coefficients - Std. Error: the standard errors of the estimated coefficients - t value: the t-values of the estimated coefficients - Pr(\>\|t\|): the p-values of the estimated coefficients - 2.5%: the lower bound of the 95% confidence interval - 97.5%: the upper bound of the 95% confidence interval If `type` is set to “markdown”, the resulting DataFrame will be returned as a markdown-formatted string with three decimal places. |
 
-### to_list
+### FixestMulti.to_list
 
 ``` python
-estimation.FixestMulti_.FixestMulti.to_list()
+to_list()
 ```
 
 Return a list of all fitted models.
 
 #### Returns
 
-| Name | Type                                                  | Description |
-|------|-------------------------------------------------------|-------------|
-|      | A list of all fitted models of types Feols or Fepois. |             |
+| Name | Type | Description                                                  |
+|------|------|--------------------------------------------------------------|
+|      | list | A list of all fitted models of types Feols, Fepois, or Feiv. |
 
-### vcov
+### FixestMulti.vcov
 
 ``` python
-estimation.FixestMulti_.FixestMulti.vcov(vcov, vcov_kwargs=None)
+vcov(vcov, vcov_kwargs=None)
 ```
 
 Update regression inference “on the fly”.
@@ -109,10 +139,10 @@ By calling vcov() on a “Fixest” object, all inference procedures applied to 
 |------|-----------------------------------------------------------|-------------|
 |      | An instance of the "Fixest" class with updated inference. |             |
 
-### wildboottest
+### FixestMulti.wildboottest
 
 ``` python
-estimation.FixestMulti_.FixestMulti.wildboottest(
+wildboottest(
     reps,
     cluster=None,
     param=None,

@@ -1,7 +1,7 @@
-# report.etable
+# etable
 
 ``` python
-report.etable(
+etable(
     models,
     type='gt',
     signif_code=None,
@@ -33,7 +33,7 @@ This function uses the maketables package internally to create publication-ready
 
 | Name | Type | Description | Default |
 |----|----|----|----|
-| models | A supported model object (Feols, Fepois, Feiv, FixestMulti) or a list of | Feols, Fepois & Feiv models. The models to be summarized in the table. | *required* |
+| models | Feols, Fepois, Feiv, FixestMulti, or list | A fitted model object, or a list of Feols, Fepois, and Feiv models. The models to be summarized in the table. | *required* |
 | type | str | Type of output. Either “df” for pandas DataFrame, “md” for markdown, “gt” for great_tables, “tex” for LaTeX table, or “typst” for Typst table. Default is “gt”. | `'gt'` |
 | signif_code | list | Significance levels for the stars. Default is None, which sets \[0.001, 0.01, 0.05\]. Note that stars are only rendered if `coef_fmt` includes `*` on a statistic token, for example `b*` or `b:.3f*`. | `None` |
 | coef_fmt | str | The format of the coefficient (b), standard error (se), t-stats (t), and p-value (p). Default is inherited from maketables. To render significance stars, include `*` on the relevant token, following maketables syntax, for example `"b:.3f* \n (se:.3f)"` with 3 decimal places. Spaces , parentheses `()`, brackets `[]`, newlines `\n` are supported. For further available formatting rules, see `maketables.ETable`. | `None` |

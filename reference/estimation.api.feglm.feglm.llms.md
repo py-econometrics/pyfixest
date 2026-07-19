@@ -1,7 +1,7 @@
-# estimation.api.feglm.feglm
+# feglm
 
 ``` python
-estimation.api.feglm.feglm(
+feglm(
     fml,
     data,
     family,
@@ -31,7 +31,7 @@ estimation.api.feglm.feglm(
 
 Estimate GLM regression models with fixed effects.
 
-Supported families: [logit](../reference/estimation.models.felogit_.Felogit.llms.md), [probit](../reference/estimation.models.feprobit_.Feprobit.llms.md), [gaussian](../reference/estimation.models.fegaussian_.Fegaussian.llms.md), and [poisson](../reference/estimation.models.fepois_.Fepois.llms.md).
+Supported families: `logit`, `probit`, and `gaussian` (see [Feglm](../reference/estimation.models.feglm_.Feglm.llms.md)), and `poisson` (see [Fepois](../reference/estimation.models.fepois_.Fepois.llms.md)).
 
 ## References
 
@@ -72,7 +72,13 @@ Supported families: [logit](../reference/estimation.models.felogit_.Felogit.llms
 
 | Name | Type | Description |
 |----|----|----|
-|  | object | An instance of the [Feglm](../reference/estimation.models.feglm_.Feglm.llms.md) class (or one of its subclasses: [Felogit](../reference/estimation.models.felogit_.Felogit.llms.md), [Feprobit](../reference/estimation.models.feprobit_.Feprobit.llms.md), [Fegaussian](../reference/estimation.models.fegaussian_.Fegaussian.llms.md)) or an instance of class [FixestMulti](../reference/estimation.FixestMulti_.FixestMulti.llms.md) for multiple models specified via `fml`. |
+|  | object | An instance of the [Feglm](../reference/estimation.models.feglm_.Feglm.llms.md) class (a family-specific subclass for `logit`, `probit`, or `gaussian`) or an instance of class [FixestMulti](../reference/estimation.FixestMulti_.FixestMulti.llms.md) for multiple models specified via `fml`. |
+
+## Notes
+
+`Feglm` inherits from [Feols](../reference/estimation.models.feols_.Feols.llms.md). A GLM fit therefore supports the same post-estimation methods as an OLS fit, among them `vcov()`, `tidy()`, `coef()`, `confint()`, `predict()` (with `type="response"` or `"link"`), `fixef()`, `wildboottest()` and `ritest()`. See the Post-Estimation Methods section of the function reference for the full list.
+
+`predict()` does not support `se_fit=True` for GLMs. Coefficients are on the link scale. For effects on the response scale, see the [marginal effects guide](../how-to/marginaleffects.llms.md).
 
 ## Examples
 

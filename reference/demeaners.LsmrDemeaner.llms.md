@@ -1,7 +1,7 @@
-# demeaners.LsmrDemeaner
+# LsmrDemeaner
 
 ``` python
-demeaners.LsmrDemeaner(
+LsmrDemeaner(
     fixef_maxiter=1000,
     backend='within',
     precision='float64',
@@ -15,6 +15,24 @@ demeaners.LsmrDemeaner(
 ```
 
 Sparse LSMR demeaner.
+
+Solves the demeaning problem as a single sparse least squares system via LSMR instead of alternating projections. Usually faster when alternating projections converge slowly, for example with many or highly overlapping fixed effects. The `torch` backend can run on a GPU. See [Choosing a Demeaner Backend](../how-to/demeaner-backends.llms.md) for a comparison with [MapDemeaner](../reference/demeaners.MapDemeaner.llms.md).
+
+## Examples
+
+``` python
+import pyfixest as pf
+
+data = pf.get_data()
+
+fit = pf.feols("Y ~ X1 | f1 + f2", data, demeaner=pf.LsmrDemeaner())
+fit.tidy()
+```
+
+|             | Estimate  | Std. Error | t value    | Pr(\>\|t\|) | 2.5%   | 97.5%    |
+|-------------|-----------|------------|------------|-------------|--------|----------|
+| Coefficient |           |            |            |             |        |          |
+| X1          | -0.919255 | 0.059997   | -15.321564 | 0.0         | -1.037 | -0.80151 |
 
 ## Notes
 
@@ -38,18 +56,13 @@ If a *string* value is incompatible with the chosen backend, a `UserWarning` is 
 
 | Name | Description |
 |----|----|
-| [demean](#pyfixest.demeaners.LsmrDemeaner.demean) | Demean `x` by the fixed effects in `flist` via LSMR. |
-| [with_tol](#pyfixest.demeaners.LsmrDemeaner.with_tol) | Overwrite LSMR tolerances (used for IWLS acceleration). |
+| [LsmrDemeaner.demean](#pyfixest.demeaners.LsmrDemeaner.demean) | Demean `x` by the fixed effects in `flist` via LSMR. |
+| [LsmrDemeaner.with_tol](#pyfixest.demeaners.LsmrDemeaner.with_tol) | Overwrite LSMR tolerances (used for IWLS acceleration). |
 
-### demean
+### LsmrDemeaner.demean
 
 ``` python
-demeaners.LsmrDemeaner.demean(
-    x,
-    flist,
-    weights=None,
-    cached_preconditioner=None,
-)
+demean(x, flist, weights=None, cached_preconditioner=None)
 ```
 
 Demean `x` by the fixed effects in `flist` via LSMR.
@@ -66,10 +79,10 @@ Demean `x` by the fixed effects in `flist` via LSMR.
 |----|----|----|
 |  | tuple\[np.ndarray, bool, Preconditioner \| None\] | The demeaned array, a convergence flag, and the within preconditioner actually used during the solve. The third element is `None` for non-within backends, when `preconditioner='off'` was requested, or when the single-FE MAP fallback path was taken inside `demean_within` — in those cases no preconditioner participated in the solve. Callers (e.g. the `DemeanCache`) can cache the returned instance to amortise setup across subsequent solves on the same design. |
 
-### with_tol
+### LsmrDemeaner.with_tol
 
 ``` python
-demeaners.LsmrDemeaner.with_tol(tol)
+with_tol(tol)
 ```
 
 Overwrite LSMR tolerances (used for IWLS acceleration).

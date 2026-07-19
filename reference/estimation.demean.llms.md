@@ -1,7 +1,7 @@
-# estimation.demean
+# demean
 
 ``` python
-estimation.demean(x, flist, weights, tol=1e-06, maxiter=10000)
+demean(x, flist, weights, tol=1e-06, maxiter=10000)
 ```
 
 Demean an array.
@@ -57,7 +57,7 @@ print(np.linalg.lstsq(X_demeaned, Y_demeaned, rcond=None)[0])
 print(pf.feols(fml, data).coef())
 ```
 
-    [-6.70687387]
+    [-6.70174687]
     Coefficient
-    treat   -6.706874
+    treat   -6.701747
     Name: Estimate, dtype: float64

@@ -1,7 +1,7 @@
-# estimation.api.fepois.fepois
+# fepois
 
 ``` python
-estimation.api.fepois.fepois(
+fepois(
     fml,
     data,
     vcov=None,
@@ -61,6 +61,12 @@ Estimate Poisson regression model with fixed effects using the `ppmlhdfe` algori
 | Name | Type | Description |
 |----|----|----|
 |  | object | An instance of the [Fepois](../reference/estimation.models.fepois_.Fepois.llms.md) class or an instance of class [FixestMulti](../reference/estimation.FixestMulti_.FixestMulti.llms.md) for multiple models specified via `fml`. |
+
+## Notes
+
+`Fepois` inherits from [Feglm](../reference/estimation.models.feglm_.Feglm.llms.md), which inherits from [Feols](../reference/estimation.models.feols_.Feols.llms.md). A Poisson fit therefore supports the same post-estimation methods as an OLS fit, among them `vcov()`, `tidy()`, `coef()`, `confint()`, `predict()`, `fixef()`, `wildboottest()` and `ritest()`. See the Post-Estimation Methods section of the function reference for the full list.
+
+`predict()` does not support `se_fit=True` for Poisson models.
 
 ## Examples
 

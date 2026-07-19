@@ -1,7 +1,7 @@
-# estimation.models.fepois\_.Fepois
+# Fepois
 
 ``` python
-estimation.models.fepois_.Fepois(
+Fepois(
     FixestFormula,
     data,
     ssc_dict,
@@ -56,25 +56,57 @@ The method implements the algorithm from Stata’s `ppmlhdfe` module.
 | weights_type | Optional\[str\] | Type of weights variable. |
 | \_data | pd.DataFrame | The data frame used in the estimation. None if arguments `lean = True` or `store_data = False`. |
 
+## Examples
+
+`Fepois` is returned by [fepois()](../reference/estimation.api.fepois.fepois.llms.md) and is not constructed directly. Post-estimation methods are inherited from [Feols](../reference/estimation.models.feols_.Feols.llms.md).
+
+``` python
+import pyfixest as pf
+
+data = pf.get_data(model="Fepois")
+fit = pf.fepois("Y ~ X1 + X2 | f1", data)
+
+fit.tidy()
+```
+
+|             | Estimate  | Std. Error | t value   | Pr(\>\|t\|) | 2.5%      | 97.5%    |
+|-------------|-----------|------------|-----------|-------------|-----------|----------|
+| Coefficient |           |            |           |             |           |          |
+| X1          | 0.001864  | 0.040712   | 0.045784  | 0.963482    | -0.077930 | 0.081658 |
+| X2          | -0.014261 | 0.010903   | -1.307958 | 0.190888    | -0.035631 | 0.007109 |
+
+Coefficients are on the log scale. Exponentiating gives incidence rate ratios.
+
+``` python
+import numpy as np
+
+np.exp(fit.coef())
+```
+
+    Coefficient
+    X1    1.001866
+    X2    0.985840
+    Name: Estimate, dtype: float64
+
 ## Methods
 
 | Name | Description |
 |----|----|
-| [get_fit](#pyfixest.estimation.models.fepois_.Fepois.get_fit) | Fit via Feglm IRLS, then add Poisson-specific post-fit summary stats. |
-| [predict](#pyfixest.estimation.models.fepois_.Fepois.predict) | Return predicted values from regression model. |
+| [Fepois.get_fit](#pyfixest.estimation.models.fepois_.Fepois.get_fit) | Fit via Feglm IRLS, then add Poisson-specific post-fit summary stats. |
+| [Fepois.predict](#pyfixest.estimation.models.fepois_.Fepois.predict) | Return predicted values from regression model. |
 
-### get_fit
+### Fepois.get_fit
 
 ``` python
-estimation.models.fepois_.Fepois.get_fit()
+get_fit()
 ```
 
 Fit via Feglm IRLS, then add Poisson-specific post-fit summary stats.
 
-### predict
+### Fepois.predict
 
 ``` python
-estimation.models.fepois_.Fepois.predict(
+predict(
     newdata=None,
     atol=1e-06,
     btol=1e-06,

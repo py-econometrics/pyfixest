@@ -1,7 +1,7 @@
-# estimation.models.feglm\_.Feglm
+# Feglm
 
 ``` python
-estimation.models.feglm_.Feglm(
+Feglm(
     FixestFormula,
     data,
     ssc_dict,
@@ -30,29 +30,65 @@ estimation.models.feglm_.Feglm(
 
 Base class for the estimation of a fixed-effects GLM model.
 
+Returned by [feglm()](../reference/estimation.api.feglm.feglm.llms.md). Fixed effects are handled via iteratively reweighted least squares with demeaning, following Stammann (2018), [arXiv:1707.01815](https://arxiv.org/pdf/1707.01815). The family is set with the `family` argument and implemented by a subclass. `poisson` dispatches to [Fepois](../reference/estimation.models.fepois_.Fepois.llms.md).
+
+## Examples
+
+``` python
+import numpy as np
+import pyfixest as pf
+
+data = pf.get_data()
+data["Y_bin"] = np.where(data["Y"] > 0, 1, 0)
+
+fit = pf.feglm("Y_bin ~ X1 + X2 | f1", data, family="logit")
+fit.tidy()
+```
+
+|             | Estimate  | Std. Error | t value   | Pr(\>\|t\|)  | 2.5%      | 97.5%     |
+|-------------|-----------|------------|-----------|--------------|-----------|-----------|
+| Coefficient |           |            |           |              |           |           |
+| X1          | -1.016344 | 0.109325   | -9.296552 | 0.000000e+00 | -1.230617 | -0.802071 |
+| X2          | -0.165899 | 0.028450   | -5.831291 | 5.500026e-09 | -0.221660 | -0.110139 |
+
+Coefficients are on the link scale. For effects on the response scale, use `marginaleffects`. See the [marginal effects guide](../how-to/marginaleffects.llms.md).
+
+``` python
+from marginaleffects import avg_slopes
+
+avg_slopes(fit, variables="X1")
+```
+
+shape: (1, 3)
+
+| term | contrast | estimate  |
+|------|----------|-----------|
+| str  | str      | f64       |
+| "X1" | "dY/dX"  | -1.016344 |
+
 ## Methods
 
 | Name | Description |
 |----|----|
-| [get_fit](#pyfixest.estimation.models.feglm_.Feglm.get_fit) | Fit the GLM via IRLS and write results onto self.\* attributes. |
-| [predict](#pyfixest.estimation.models.feglm_.Feglm.predict) | Return predicted values from regression model. |
-| [prepare_model_matrix](#pyfixest.estimation.models.feglm_.Feglm.prepare_model_matrix) | Prepare model inputs for estimation. |
-| [resid](#pyfixest.estimation.models.feglm_.Feglm.resid) | Return residuals from a fitted GLM. |
-| [residualize](#pyfixest.estimation.models.feglm_.Feglm.residualize) | Residualize v and X by flist using weights. |
-| [to_array](#pyfixest.estimation.models.feglm_.Feglm.to_array) | Turn estimation DataFrames to np arrays. |
+| [Feglm.get_fit](#pyfixest.estimation.models.feglm_.Feglm.get_fit) | Fit the GLM via IRLS and write results onto self.\* attributes. |
+| [Feglm.predict](#pyfixest.estimation.models.feglm_.Feglm.predict) | Return predicted values from regression model. |
+| [Feglm.prepare_model_matrix](#pyfixest.estimation.models.feglm_.Feglm.prepare_model_matrix) | Prepare model inputs for estimation. |
+| [Feglm.resid](#pyfixest.estimation.models.feglm_.Feglm.resid) | Return residuals from a fitted GLM. |
+| [Feglm.residualize](#pyfixest.estimation.models.feglm_.Feglm.residualize) | Residualize v and X by flist using weights. |
+| [Feglm.to_array](#pyfixest.estimation.models.feglm_.Feglm.to_array) | Turn estimation DataFrames to np arrays. |
 
-### get_fit
+### Feglm.get_fit
 
 ``` python
-estimation.models.feglm_.Feglm.get_fit()
+get_fit()
 ```
 
 Fit the GLM via IRLS and write results onto self.\* attributes.
 
-### predict
+### Feglm.predict
 
 ``` python
-estimation.models.feglm_.Feglm.predict(
+predict(
     newdata=None,
     atol=1e-06,
     btol=1e-06,
@@ -87,18 +123,18 @@ Return a flat np.array with predicted values of the regression model. If new fix
 |----|----|----|
 |  | Union\[np.ndarray, pd.DataFrame\] | Returns a pd.Dataframe with columns “fit”, “se_fit” and CIs if argument “interval=prediction”. Otherwise, returns a np.ndarray with the predicted values of the model or the prediction standard errors if argument “se_fit=True”. |
 
-### prepare_model_matrix
+### Feglm.prepare_model_matrix
 
 ``` python
-estimation.models.feglm_.Feglm.prepare_model_matrix()
+prepare_model_matrix()
 ```
 
 Prepare model inputs for estimation.
 
-### resid
+### Feglm.resid
 
 ``` python
-estimation.models.feglm_.Feglm.resid(type='response')
+resid(type='response')
 ```
 
 Return residuals from a fitted GLM.
@@ -115,18 +151,18 @@ Return residuals from a fitted GLM.
 |------|------------|--------------------------------------------|
 |      | np.ndarray | A flat array with the requested residuals. |
 
-### residualize
+### Feglm.residualize
 
 ``` python
-estimation.models.feglm_.Feglm.residualize(v, X, flist, weights, tol)
+residualize(v, X, flist, weights, tol)
 ```
 
 Residualize v and X by flist using weights.
 
-### to_array
+### Feglm.to_array
 
 ``` python
-estimation.models.feglm_.Feglm.to_array()
+to_array()
 ```
 
 Turn estimation DataFrames to np arrays.

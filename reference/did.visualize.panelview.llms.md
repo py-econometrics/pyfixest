@@ -1,7 +1,7 @@
-# did.visualize.panelview
+# panelview
 
 ``` python
-did.visualize.panelview(
+panelview(
     data,
     unit,
     time,

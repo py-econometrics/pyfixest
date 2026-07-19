@@ -128,10 +128,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
           <div class="collapse navbar-collapse" id="navbarCollapse">
             <ul class="navbar-nav navbar-nav-scroll me-auto">
   <li class="nav-item">
-    <a class="nav-link active" href="./pyfixest.html" aria-current="page"> 
-<span class="menu-text">PyFixest</span></a>
-  </li>  
-  <li class="nav-item">
     <a class="nav-link" href="./getting-started.html"> 
 <span class="menu-text">Getting Started</span></a>
   </li>  
@@ -318,7 +314,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <figcaption>Project Chat</figcaption>
 </figure>
 </div>
-<p><a href="https://pyfixest.org/pyfixest.html">Docs</a> · <a href="https://pyfixest.org/quickstart.html">Quickstart</a> · <a href="https://pyfixest.org/reference/">Function &amp; API Reference</a> · <a href="https://deepwiki.com/py-econometrics/pyfixest">DeepWiki</a> · <a href="https://github.com/py-econometrics/pyfixest/tree/master/benchmarks">Benchmarks</a> · <a href="https://pyfixest.org/contributing.html">Contributing</a> · <a href="https://pyfixest.org/changelog.html">Changelog</a></p>
+<p><a href="https://pyfixest.org/pyfixest.html">Docs</a> · <a href="https://pyfixest.org/getting-started.html">Quickstart</a> · <a href="https://pyfixest.org/reference/">Function &amp; API Reference</a> · <a href="https://deepwiki.com/py-econometrics/pyfixest">DeepWiki</a> · <a href="https://github.com/py-econometrics/pyfixest/tree/master/benchmarks">Benchmarks</a> · <a href="https://pyfixest.org/contributing.html">Contributing</a> · <a href="https://pyfixest.org/changelog.html">Changelog</a></p>
 <p><code>PyFixest</code> is a Python package for fast high-dimensional fixed effects regression.</p>
 <p>The package aims to mimic the syntax and functionality of <a href="https://sites.google.com/site/laurentrberge/">Laurent Bergé’s</a> formidable <a href="https://github.com/lrberge/fixest">fixest</a> package as closely as Python allows. If you know <code>fixest</code> well, the goal is that you won’t have to read the docs to get started! In particular, this means that all of <code>fixest's</code> defaults are mirrored by <code>PyFixest</code>.</p>
 <p>For questions on <code>PyFixest</code>, head over to our <a href="https://github.com/py-econometrics/pyfixest/discussions">GitHub discussions</a>, or join our <a href="https://discord.gg/gBAydeDMVK">Discord server</a>.</p>
@@ -402,7 +398,7 @@ RMSE: 1.441   R2: 0.609   R2 Within: 0.2</code></pre>
 <p><code>PyFixest</code> also supports multiple estimation syntax:</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(<span class="st">"Y + Y2 ~ X1 | csw0(f1, f2)"</span>, data<span class="op">=</span>data, vcov<span class="op">=</span>{<span class="st">"CRV1"</span>: <span class="st">"group_id"</span>})</span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>fit.etable()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>For more examples, see the <a href="https://pyfixest.org/quickstart.html">quickstart</a>, the <a href="https://pyfixest.org/formula-syntax.html">formula syntax tutorial</a>, and the <a href="https://pyfixest.org/poisson-glm.html">Poisson &amp; GLMs tutorial</a>.</p>
+<p>For more examples, see the <a href="https://pyfixest.org/getting-started.html">quickstart</a>, the <a href="https://pyfixest.org/tutorials/formula-syntax.html">formula syntax tutorial</a>, and the <a href="https://pyfixest.org/tutorials/poisson-glm.html">Poisson &amp; GLMs tutorial</a>.</p>
 </section>
 <section id="benchmarks" class="level2">
 <h2 class="anchored" data-anchor-id="benchmarks">Benchmarks</h2>
@@ -415,10 +411,10 @@ RMSE: 1.441   R2: 0.609   R2 Within: 0.2</code></pre>
 <section id="learn-more" class="level2">
 <h2 class="anchored" data-anchor-id="learn-more">Learn More</h2>
 <ul>
-<li><a href="https://pyfixest.org/quickstart.html">Quickstart</a></li>
+<li><a href="https://pyfixest.org/getting-started.html">Quickstart</a></li>
 <li><a href="https://pyfixest.org/reference/">Function &amp; API Reference</a></li>
-<li><a href="https://pyfixest.org/difference-in-differences.html">Difference-in-Differences</a></li>
-<li><a href="https://pyfixest.org/quantile-regression.html">Quantile Regression</a></li>
+<li><a href="https://pyfixest.org/tutorials/difference-in-differences.html">Difference-in-Differences</a></li>
+<li><a href="https://pyfixest.org/tutorials/quantile-regression.html">Quantile Regression</a></li>
 <li><a href="https://pyfixest.org/changelog.html">Changelog</a></li>
 <li><a href="https://pyfixest.org/contributing.html">Contributing</a></li>
 </ul>

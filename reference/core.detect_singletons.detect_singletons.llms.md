@@ -1,7 +1,7 @@
-# core.detect_singletons.detect_singletons
+# detect_singletons
 
 ``` python
-core.detect_singletons.detect_singletons(ids)
+detect_singletons(ids)
 ```
 
 Detect singleton fixed effects in a dataset.
@@ -25,3 +25,25 @@ This function iterates over the columns of a 2D numpy array representing fixed e
 The algorithm iterates over columns to identify fixed effects. After each column is processed, it updates the record of non-singleton rows. This approach accounts for the possibility that removing an observation in one column can lead to the emergence of new singletons in subsequent columns.
 
 For performance reasons, the input array should be in column-major order. Operating on a row-major array can lead to significant performance losses.
+
+## Examples
+
+Each row is an observation, each column a fixed effect. Only the last observation is alone in both of its groups.
+
+``` python
+import numpy as np
+from pyfixest.core.detect_singletons import detect_singletons
+
+ids = np.array([[0, 0], [0, 0], [1, 1], [1, 1], [2, 2]])
+detect_singletons(ids)
+```
+
+    array([False, False, False, False,  True])
+
+Dropping a singleton can create new singletons, so detection cascades across columns. Here all observations are singletons.
+
+``` python
+detect_singletons(np.array([[0, 0], [0, 1], [1, 2], [2, 2]]))
+```
+
+    array([ True,  True,  True,  True])

@@ -61,7 +61,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </style>
 
 
-<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" integrity="sha384-ZvpUoO/+PpLXR1lu4jmpXWu80pZlYUAfxl5NsBMWOEPSjUn/6Z/hRTt8+pR6L4N2" crossorigin="anonymous"></script><script src="../site_libs/quarto-nav/quarto-nav.js"></script>
 <script src="../site_libs/quarto-nav/headroom.min.js"></script>
 <script src="../site_libs/clipboard/clipboard.min.js"></script>
 <script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
@@ -106,6 +106,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   }
 }</script>
 <!-- Cloudflare Web Analytics --><script defer="" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon="{&quot;token&quot;: &quot;bfa3a9287252444c8aa02b664fea7f09&quot;}"></script><!-- End Cloudflare Web Analytics -->
+<script src="https://cdn.jsdelivr.net/npm/requirejs@2.3.6/require.min.js" integrity="sha384-c9c+LnTbwQ3aujuU7ULEPVvgLs+Fn6fJUvIGTsuu1ZcCf11fiEubah0ttpca4ntM sha384-6V1/AdqZRWk1KAlWbKBlGhN7VG4iE/yAZcO6NZPMF8od0vukrvr0tg4qY6NSrItx" crossorigin="anonymous"></script>
+
+<script type="application/javascript">define('jquery', [],function() {return window.jQuery;})</script>
 
 
 </head>
@@ -127,10 +130,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </button>
           <div class="collapse navbar-collapse" id="navbarCollapse">
             <ul class="navbar-nav navbar-nav-scroll me-auto">
-  <li class="nav-item">
-    <a class="nav-link" href="../pyfixest.html"> 
-<span class="menu-text">PyFixest</span></a>
-  </li>  
   <li class="nav-item">
     <a class="nav-link" href="../getting-started.html"> 
 <span class="menu-text">Getting Started</span></a>
@@ -301,7 +300,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/estimation.formula.parse.Formula.html">Formula Parsing &amp; Model Matrix</a></li><li class="breadcrumb-item"><a href="../reference/estimation.formula.factor_interaction.factor_interaction.html">estimation.formula.factor_interaction.factor_interaction</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/estimation.formula.parse.Formula.html">Formula Parsing &amp; Model Matrix</a></li><li class="breadcrumb-item"><a href="../reference/estimation.formula.factor_interaction.factor_interaction.html">factor_interaction</a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
     </div>
@@ -322,7 +321,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
         <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
             <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
- <span class="menu-text">Estimation Functions</span></a>
+ <span class="menu-text">Estimation</span></a>
           <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
@@ -331,67 +330,25 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../reference/estimation.api.feols.feols.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.api.feols.feols</span></a>
+ <span class="menu-text">feols</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../reference/estimation.api.fepois.fepois.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.api.fepois.fepois</span></a>
+ <span class="menu-text">fepois</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../reference/estimation.api.feglm.feglm.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.api.feglm.feglm</span></a>
+ <span class="menu-text">feglm</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../reference/estimation.api.quantreg.quantreg.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.api.quantreg.quantreg</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.post_estimation.savi.optimal_mixture_precision.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.post_estimation.savi.optimal_mixture_precision</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/did.estimation.did2s.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">did.estimation.did2s</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/did.estimation.lpdid.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">did.estimation.lpdid</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/did.estimation.event_study.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">did.estimation.event_study</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.post_estimation.multcomp.bonferroni.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.post_estimation.multcomp.bonferroni</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.post_estimation.multcomp.rwolf.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.post_estimation.multcomp.rwolf</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.post_estimation.multcomp.wyoung.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.post_estimation.multcomp.wyoung</span></a>
+ <span class="menu-text">quantreg</span></a>
   </div>
 </li>
       </ul>
@@ -399,7 +356,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
         <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
             <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
- <span class="menu-text">Estimation Classes</span></a>
+ <span class="menu-text">Difference-in-Differences</span></a>
           <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
@@ -407,74 +364,32 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/demeaners.BaseDemeaner.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">demeaners.BaseDemeaner</span></a>
+  <a href="../reference/did.estimation.event_study.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">event_study</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/demeaners.MapDemeaner.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">demeaners.MapDemeaner</span></a>
+  <a href="../reference/did.estimation.did2s.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">did2s</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/demeaners.LsmrDemeaner.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">demeaners.LsmrDemeaner</span></a>
+  <a href="../reference/did.estimation.lpdid.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">lpdid</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.models.feols_.Feols.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.models.feols_.Feols</span></a>
+  <a href="../reference/did.saturated_twfe.SaturatedEventStudy.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">SaturatedEventStudy</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.models.fepois_.Fepois.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.models.fepois_.Fepois</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.models.feiv_.Feiv.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.models.feiv_.Feiv</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.models.feglm_.Feglm.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.models.feglm_.Feglm</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.models.felogit_.Felogit.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.models.felogit_.Felogit</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.models.feprobit_.Feprobit.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.models.feprobit_.Feprobit</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.models.fegaussian_.Fegaussian.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.models.fegaussian_.Fegaussian</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.FixestMulti_.FixestMulti.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.FixestMulti_.FixestMulti</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.quantreg.quantreg_.Quantreg.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.quantreg.quantreg_.Quantreg</span></a>
+  <a href="../reference/did.visualize.panelview.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">panelview</span></a>
   </div>
 </li>
       </ul>
@@ -482,7 +397,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
         <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
             <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true">
- <span class="menu-text">Summarize and Visualize</span></a>
+ <span class="menu-text">Multiple Hypothesis Testing</span></a>
           <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
@@ -490,32 +405,20 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/did.visualize.panelview.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">did.visualize.panelview</span></a>
+  <a href="../reference/estimation.post_estimation.multcomp.bonferroni.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">bonferroni</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/report.summary.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">report.summary</span></a>
+  <a href="../reference/estimation.post_estimation.multcomp.rwolf.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">rwolf</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/report.etable.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">report.etable</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/report.coefplot.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">report.coefplot</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/report.iplot.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">report.iplot</span></a>
+  <a href="../reference/estimation.post_estimation.multcomp.wyoung.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">wyoung</span></a>
   </div>
 </li>
       </ul>
@@ -523,7 +426,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
         <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
             <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true">
- <span class="menu-text">Formula Parsing &amp; Model Matrix</span></a>
+ <span class="menu-text">Estimation Classes</span></a>
           <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
@@ -531,20 +434,38 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.formula.parse.Formula.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.formula.parse.Formula</span></a>
+  <a href="../reference/estimation.models.feols_.Feols.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Feols</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.formula.model_matrix.ModelMatrix.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.formula.model_matrix.ModelMatrix</span></a>
+  <a href="../reference/estimation.models.fepois_.Fepois.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Fepois</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.formula.factor_interaction.factor_interaction.html" class="sidebar-item-text sidebar-link active">
- <span class="menu-text">estimation.formula.factor_interaction.factor_interaction</span></a>
+  <a href="../reference/estimation.models.feiv_.Feiv.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Feiv</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.models.feglm_.Feglm.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Feglm</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.FixestMulti_.FixestMulti.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">FixestMulti</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.quantreg.quantreg_.Quantreg.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Quantreg</span></a>
   </div>
 </li>
       </ul>
@@ -552,7 +473,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
         <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
             <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true">
- <span class="menu-text">Misc / Utilities</span></a>
+ <span class="menu-text">Post-Estimation Methods</span></a>
           <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true" aria-label="Toggle section">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
@@ -560,32 +481,321 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <ul id="quarto-sidebar-section-5" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.demean.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.demean</span></a>
+  <a href="../reference/estimation.models.feols_.Feols.tidy.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Feols.tidy</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.models.feols_.Feols.coef.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Feols.coef</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.models.feols_.Feols.se.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Feols.se</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.models.feols_.Feols.tstat.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Feols.tstat</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.models.feols_.Feols.pvalue.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Feols.pvalue</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.models.feols_.Feols.confint.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Feols.confint</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.models.feols_.Feols.resid.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Feols.resid</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.models.feols_.Feols.vcov.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Feols.vcov</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.models.feols_.Feols.predict.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Feols.predict</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.models.feols_.Feols.fixef.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Feols.fixef</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.models.feols_.Feols.get_performance.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Feols.get_performance</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.models.feols_.Feols.wald_test.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Feols.wald_test</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.models.feols_.Feols.wildboottest.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Feols.wildboottest</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.models.feols_.Feols.ritest.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Feols.ritest</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.models.feols_.Feols.ccv.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Feols.ccv</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.models.feols_.Feols.decompose.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Feols.decompose</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.models.feols_.Feols.update.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Feols.update</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.models.feols_.Feols.evalue.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Feols.evalue</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.models.feols_.Feols.pvalue_savi.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Feols.pvalue_savi</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" role="navigation" aria-expanded="true">
+ <span class="menu-text">Summarize and Visualize</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-6" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/report.summary.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">summary</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/report.etable.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">etable</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/report.coefplot.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">coefplot</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/report.iplot.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">iplot</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/report.qplot.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">qplot</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-7" role="navigation" aria-expanded="true">
+ <span class="menu-text">Data Sets</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-7" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-7" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/utils.utils.get_data.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">get_data</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/utils.dgps.get_ivf_data.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">get_ivf_data</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/utils.dgps.get_bartik_data.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">get_bartik_data</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/utils.dgps.get_encouragement_data.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">get_encouragement_data</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/utils.dgps.get_twin_data.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">get_twin_data</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/utils.dgps.get_worker_panel.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">get_worker_panel</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/utils.dgps.get_motherhood_event_study_data.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">get_motherhood_event_study_data</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-8" role="navigation" aria-expanded="true">
+ <span class="menu-text">Formula Parsing &amp; Model Matrix</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-8" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-8" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.formula.parse.Formula.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Formula</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.formula.model_matrix.ModelMatrix.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">ModelMatrix</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.formula.factor_interaction.factor_interaction.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text">factor_interaction</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-9" role="navigation" aria-expanded="true">
+ <span class="menu-text">Demeaning</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-9" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-9" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.demean.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">demean</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/demeaners.BaseDemeaner.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">BaseDemeaner</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/demeaners.MapDemeaner.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">MapDemeaner</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/demeaners.LsmrDemeaner.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">LsmrDemeaner</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/core.demean.Preconditioner.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Preconditioner</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-10" role="navigation" aria-expanded="true">
+ <span class="menu-text">Misc / Utilities</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-10" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-10" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../reference/core.detect_singletons.detect_singletons.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">core.detect_singletons.detect_singletons</span></a>
+ <span class="menu-text">detect_singletons</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../reference/utils.utils.ssc.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">utils.utils.ssc</span></a>
+ <span class="menu-text">ssc</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../reference/utils.utils.get_ssc.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">utils.utils.get_ssc</span></a>
+ <span class="menu-text">get_ssc</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.post_estimation.savi.optimal_mixture_precision.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">optimal_mixture_precision</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../reference/estimation.deprecated.model_matrix_fixest_.model_matrix_fixest.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.deprecated.model_matrix_fixest_.model_matrix_fixest</span></a>
+ <span class="menu-text">model_matrix_fixest</span></a>
   </div>
 </li>
       </ul>
@@ -597,25 +807,353 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <!-- margin-sidebar -->
     
 <!-- main -->
-<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/estimation.formula.parse.Formula.html">Formula Parsing &amp; Model Matrix</a></li><li class="breadcrumb-item"><a href="../reference/estimation.formula.factor_interaction.factor_interaction.html">estimation.formula.factor_interaction.factor_interaction</a></li></ol></nav></header>
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/estimation.formula.parse.Formula.html">Formula Parsing &amp; Model Matrix</a></li><li class="breadcrumb-item"><a href="../reference/estimation.formula.factor_interaction.factor_interaction.html">factor_interaction</a></li></ol></nav>
+<div class="quarto-title">
+<h1 class="title">factor_interaction</h1>
+</div>
 
 
 
+<div class="quarto-title-meta">
 
-<section id="pyfixest.estimation.formula.factor_interaction.factor_interaction" class="level1">
-<h1>estimation.formula.factor_interaction.factor_interaction</h1>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>estimation.formula.factor_interaction.factor_interaction(</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    data,</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    var2<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">*</span>,</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    ref<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    ref2<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="bu">bin</span><span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    bin2<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>factor_interaction(data, var2<span class="op">=</span><span class="va">None</span>, <span class="op">*</span>, ref<span class="op">=</span><span class="va">None</span>, ref2<span class="op">=</span><span class="va">None</span>, <span class="bu">bin</span><span class="op">=</span><span class="va">None</span>, bin2<span class="op">=</span><span class="va">None</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Fixest-style i() operator for categorical encoding with interactions.</p>
-<p>Args: data: The categorical variable var2: Optional second variable for interaction (continuous or categorical) ref: Reference level to drop from data ref2: Reference level to drop from var2 (if categorical) bin: Dict mapping new_level -&gt; [old_levels] for binning</p>
-<p>Naming convention (matches R fixest): i(cyl) -&gt; cyl::4, cyl::6, cyl::8 i(cyl, ref=4) -&gt; cyl::6, cyl::8 i(cyl, wt) -&gt; cyl::4:wt, cyl::6:wt, cyl::8:wt i(cyl, wt, ref=4) -&gt; cyl::6:wt, cyl::8:wt</p>
+<section id="parameters" class="level2 doc-section doc-section-parameters">
+<h2 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters">Parameters</h2>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 7%">
+<col style="width: 13%">
+<col style="width: 67%">
+<col style="width: 11%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>data</td>
+<td>array - like</td>
+<td>The categorical variable to encode.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td>var2</td>
+<td>array - like</td>
+<td>Optional second variable to interact with (continuous or categorical).</td>
+<td><code>None</code></td>
+</tr>
+<tr class="odd">
+<td>ref</td>
+<td>Hashable</td>
+<td>Reference level to drop from <code>data</code>.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="even">
+<td>ref2</td>
+<td>Hashable</td>
+<td>Reference level to drop from <code>var2</code> (only if <code>var2</code> is categorical).</td>
+<td><code>None</code></td>
+</tr>
+<tr class="odd">
+<td>bin</td>
+<td>dict</td>
+<td>Mapping of <code>new_level -&gt; [old_levels]</code> for binning <code>data</code>.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="even">
+<td>bin2</td>
+<td>dict</td>
+<td>Mapping of <code>new_level -&gt; [old_levels]</code> for binning <code>var2</code>.</td>
+<td><code>None</code></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="returns" class="level2 doc-section doc-section-returns">
+<h2 class="doc-section doc-section-returns anchored" data-anchor-id="returns">Returns</h2>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 8%">
+<col style="width: 15%">
+<col style="width: 76%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td></td>
+<td>FactorValues</td>
+<td>The encoded factor values, ready for use in a formulaic model matrix.</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="examples" class="level2 doc-section doc-section-examples">
+<h2 class="doc-section doc-section-examples anchored" data-anchor-id="examples">Examples</h2>
+<p>Implements the <code>i()</code> operator and is used by writing <code>i(...)</code> in a formula rather than by calling it directly. Expands a categorical variable into indicators, optionally dropping a reference level and interacting it with a second variable. Commonly used for event study specifications. See the <a href="../tutorials/formula-syntax.html">formula syntax tutorial</a>.</p>
+<div id="43d8088f" class="cell" data-execution_count="1">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> pf.get_data()</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(<span class="st">"Y ~ i(f1, ref=0)"</span>, data)</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>fit.tidy().head()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+
+        <div id="ePCfWQ"></div>
+        <script type="text/javascript" data-lets-plot-script="library">
+            if(!window.letsPlotCallQueue) {
+                window.letsPlotCallQueue = [];
+            };
+            window.letsPlotCall = function(f) {
+                window.letsPlotCallQueue.push(f);
+            };
+            (function() {
+                var script = document.createElement("script");
+                script.type = "text/javascript";
+                script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.11.0/js-package/distr/lets-plot.min.js";
+                script.onload = function() {
+                    window.letsPlotCall = function(f) {f();};
+                    window.letsPlotCallQueue.forEach(function(f) {f();});
+                    window.letsPlotCallQueue = [];
+                    
+                };
+                script.onerror = function(event) {
+                    window.letsPlotCall = function(f) {};    // noop
+                    window.letsPlotCallQueue = [];
+                    var div = document.createElement("div");
+                    div.style.color = 'darkred';
+                    div.textContent = 'Error loading Lets-Plot JS';
+                    document.getElementById("ePCfWQ").appendChild(div);
+                };
+                var e = document.getElementById("ePCfWQ");
+                e.appendChild(script);
+            })()
+        </script>
+        
+</div>
+<div class="cell-output cell-output-display">
+
+        <div id="RvDuS3"></div>
+        <script type="text/javascript" data-lets-plot-script="library">
+            if(!window.letsPlotCallQueue) {
+                window.letsPlotCallQueue = [];
+            };
+            window.letsPlotCall = function(f) {
+                window.letsPlotCallQueue.push(f);
+            };
+            (function() {
+                var script = document.createElement("script");
+                script.type = "text/javascript";
+                script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.11.0/js-package/distr/lets-plot.min.js";
+                script.onload = function() {
+                    window.letsPlotCall = function(f) {f();};
+                    window.letsPlotCallQueue.forEach(function(f) {f();});
+                    window.letsPlotCallQueue = [];
+                    
+                };
+                script.onerror = function(event) {
+                    window.letsPlotCall = function(f) {};    // noop
+                    window.letsPlotCallQueue = [];
+                    var div = document.createElement("div");
+                    div.style.color = 'darkred';
+                    div.textContent = 'Error loading Lets-Plot JS';
+                    document.getElementById("RvDuS3").appendChild(div);
+                };
+                var e = document.getElementById("RvDuS3");
+                e.appendChild(script);
+            })()
+        </script>
+        
+</div>
+<div class="cell-output cell-output-display" data-execution_count="1">
+<div>
+
+
+<table class="dataframe caption-top table table-sm table-striped small" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">Estimate</th>
+<th data-quarto-table-cell-role="th">Std. Error</th>
+<th data-quarto-table-cell-role="th">t value</th>
+<th data-quarto-table-cell-role="th">Pr(&gt;|t|)</th>
+<th data-quarto-table-cell-role="th">2.5%</th>
+<th data-quarto-table-cell-role="th">97.5%</th>
+</tr>
+<tr class="even">
+<th data-quarto-table-cell-role="th">Coefficient</th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">Intercept</th>
+<td>-0.486859</td>
+<td>0.319489</td>
+<td>-1.523869</td>
+<td>1.278682e-01</td>
+<td>-1.113830</td>
+<td>0.140112</td>
+</tr>
+<tr class="even">
+<th data-quarto-table-cell-role="th">f1::1.0</th>
+<td>2.544288</td>
+<td>0.430799</td>
+<td>5.905979</td>
+<td>4.848718e-09</td>
+<td>1.698881</td>
+<td>3.389695</td>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">f1::2.0</th>
+<td>-1.634681</td>
+<td>0.451825</td>
+<td>-3.617948</td>
+<td>3.123025e-04</td>
+<td>-2.521351</td>
+<td>-0.748011</td>
+</tr>
+<tr class="even">
+<th data-quarto-table-cell-role="th">f1::3.0</th>
+<td>-0.463981</td>
+<td>0.465731</td>
+<td>-0.996241</td>
+<td>3.193818e-01</td>
+<td>-1.377939</td>
+<td>0.449978</td>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">f1::4.0</th>
+<td>-1.762712</td>
+<td>0.455041</td>
+<td>-3.873741</td>
+<td>1.143851e-04</td>
+<td>-2.655693</td>
+<td>-0.869731</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+</div>
+</div>
+<p>Interacting with a continuous variable gives group-specific slopes.</p>
+<div id="16394719" class="cell" data-execution_count="2">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>pf.feols(<span class="st">"Y ~ i(f1, X2, ref=0)"</span>, data).tidy().head()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="2">
+<div>
+
+
+<table class="dataframe caption-top table table-sm table-striped small" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">Estimate</th>
+<th data-quarto-table-cell-role="th">Std. Error</th>
+<th data-quarto-table-cell-role="th">t value</th>
+<th data-quarto-table-cell-role="th">Pr(&gt;|t|)</th>
+<th data-quarto-table-cell-role="th">2.5%</th>
+<th data-quarto-table-cell-role="th">97.5%</th>
+</tr>
+<tr class="even">
+<th data-quarto-table-cell-role="th">Coefficient</th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">Intercept</th>
+<td>-0.163916</td>
+<td>0.071887</td>
+<td>-2.280195</td>
+<td>0.022813</td>
+<td>-0.304987</td>
+<td>-0.022844</td>
+</tr>
+<tr class="even">
+<th data-quarto-table-cell-role="th">f1::1.0:X2</th>
+<td>-0.118795</td>
+<td>0.096590</td>
+<td>-1.229891</td>
+<td>0.219037</td>
+<td>-0.308346</td>
+<td>0.070755</td>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">f1::2.0:X2</th>
+<td>-0.193556</td>
+<td>0.106548</td>
+<td>-1.816610</td>
+<td>0.069586</td>
+<td>-0.402647</td>
+<td>0.015535</td>
+</tr>
+<tr class="even">
+<th data-quarto-table-cell-role="th">f1::3.0:X2</th>
+<td>-0.173543</td>
+<td>0.114664</td>
+<td>-1.513488</td>
+<td>0.130482</td>
+<td>-0.398562</td>
+<td>0.051476</td>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">f1::4.0:X2</th>
+<td>-0.055993</td>
+<td>0.108040</td>
+<td>-0.518260</td>
+<td>0.604395</td>
+<td>-0.268012</td>
+<td>0.156027</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+</div>
+</div>
+</section>
+<section id="notes" class="level2 doc-section doc-section-notes">
+<h2 class="doc-section doc-section-notes anchored" data-anchor-id="notes">Notes</h2>
+<p>Naming convention (matches R fixest)::</p>
+<pre><code>i(cyl)            -&gt; cyl::4, cyl::6, cyl::8
+i(cyl, ref=4)     -&gt; cyl::6, cyl::8
+i(cyl, wt)        -&gt; cyl::4:wt, cyl::6:wt, cyl::8:wt
+i(cyl, wt, ref=4) -&gt; cyl::6:wt, cyl::8:wt</code></pre>
 
 
 </section>

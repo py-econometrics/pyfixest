@@ -1,7 +1,7 @@
-# estimation.models.feiv\_.Feiv
+# Feiv
 
 ``` python
-estimation.models.feiv_.Feiv(
+Feiv(
     FixestFormula,
     data,
     ssc_dict,
@@ -84,24 +84,51 @@ Inherits from the Feols class. Users should not directly instantiate this class,
 |------|------------|--------------------------------------|
 |      | ValueError | If Z is not a two-dimensional array. |
 
+## Examples
+
+`Feiv` is returned by [feols()](../reference/estimation.api.feols.feols.llms.md) when the formula includes an IV part, i.e. `depvar ~ exog | fe | endog ~ instrument`.
+
+``` python
+import pyfixest as pf
+
+fit = pf.feols("Y ~ X2 | f1 | X1 ~ Z1", pf.get_data())
+fit.tidy()
+```
+
+|             | Estimate  | Std. Error | t value   | Pr(\>\|t\|) | 2.5%      | 97.5%     |
+|-------------|-----------|------------|-----------|-------------|-----------|-----------|
+| Coefficient |           |            |           |             |           |           |
+| X2          | -0.174227 | 0.017599   | -9.899554 | 0.0         | -0.208764 | -0.139689 |
+| X1          | -0.992187 | 0.104775   | -9.469663 | 0.0         | -1.197801 | -0.786574 |
+
+The first stage F-statistic is stored on the fitted object.
+
+``` python
+fit._f_stat_1st_stage
+```
+
+    647.2703851604904
+
+See the [instrumental variables tutorial](../tutorials/instrumental-variables.llms.md) for details.
+
 ## Methods
 
 | Name | Description |
 |----|----|
-| [IV_Diag](#pyfixest.estimation.models.feiv_.Feiv.IV_Diag) | Implement IV diagnostic tests. |
-| [IV_weakness_test](#pyfixest.estimation.models.feiv_.Feiv.IV_weakness_test) | Implement IV weakness test (F-test). |
-| [demean](#pyfixest.estimation.models.feiv_.Feiv.demean) | Demean instruments and endogeneous variable. |
-| [drop_multicol_vars](#pyfixest.estimation.models.feiv_.Feiv.drop_multicol_vars) | Drop multicollinear variables in matrix of instruments Z. |
-| [eff_F](#pyfixest.estimation.models.feiv_.Feiv.eff_F) | Compute Effective F stat (Olea and Pflueger 2013). |
-| [first_stage](#pyfixest.estimation.models.feiv_.Feiv.first_stage) | Implement First stage regression. |
-| [get_fit](#pyfixest.estimation.models.feiv_.Feiv.get_fit) | Fit a IV model using a 2SLS estimator. |
-| [to_array](#pyfixest.estimation.models.feiv_.Feiv.to_array) | Transform estimation DataFrames to arrays. |
-| [wls_transform](#pyfixest.estimation.models.feiv_.Feiv.wls_transform) | Transform variables for WLS estimation. |
+| [Feiv.IV_Diag](#pyfixest.estimation.models.feiv_.Feiv.IV_Diag) | Implement IV diagnostic tests. |
+| [Feiv.IV_weakness_test](#pyfixest.estimation.models.feiv_.Feiv.IV_weakness_test) | Implement IV weakness test (F-test). |
+| [Feiv.demean](#pyfixest.estimation.models.feiv_.Feiv.demean) | Demean instruments and endogeneous variable. |
+| [Feiv.drop_multicol_vars](#pyfixest.estimation.models.feiv_.Feiv.drop_multicol_vars) | Drop multicollinear variables in matrix of instruments Z. |
+| [Feiv.eff_F](#pyfixest.estimation.models.feiv_.Feiv.eff_F) | Compute Effective F stat (Olea and Pflueger 2013). |
+| [Feiv.first_stage](#pyfixest.estimation.models.feiv_.Feiv.first_stage) | Implement First stage regression. |
+| [Feiv.get_fit](#pyfixest.estimation.models.feiv_.Feiv.get_fit) | Fit a IV model using a 2SLS estimator. |
+| [Feiv.to_array](#pyfixest.estimation.models.feiv_.Feiv.to_array) | Transform estimation DataFrames to arrays. |
+| [Feiv.wls_transform](#pyfixest.estimation.models.feiv_.Feiv.wls_transform) | Transform variables for WLS estimation. |
 
-### IV_Diag
+### Feiv.IV_Diag
 
 ``` python
-estimation.models.feiv_.Feiv.IV_Diag(statistics=None)
+IV_Diag(statistics=None)
 ```
 
 Implement IV diagnostic tests.
@@ -120,7 +147,7 @@ This method covers diagnostic tests related with IV regression. We currently hav
 
 The following is an example usage of this method:
 
-    ::: {#1151d671 .cell execution_count=1}
+    ::: {#8d6bd3ca .cell execution_count=3}
     ``` {.python .cell-code}
     import numpy as np
     import pandas as pd
@@ -181,80 +208,6 @@ The following is an example usage of this method:
     print("Effective F stat :", F_stat_eff_pf)
     ```
 
-    ::: {.cell-output .cell-output-display}
-    ```{=html}
-
-            <div id="gRrqtg"></div>
-            <script type="text/javascript" data-lets-plot-script="library">
-                if(!window.letsPlotCallQueue) {
-                    window.letsPlotCallQueue = [];
-                };
-                window.letsPlotCall = function(f) {
-                    window.letsPlotCallQueue.push(f);
-                };
-                (function() {
-                    var script = document.createElement("script");
-                    script.type = "text/javascript";
-                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.11.0/js-package/distr/lets-plot.min.js";
-                    script.onload = function() {
-                        window.letsPlotCall = function(f) {f();};
-                        window.letsPlotCallQueue.forEach(function(f) {f();});
-                        window.letsPlotCallQueue = [];
-                        
-                    };
-                    script.onerror = function(event) {
-                        window.letsPlotCall = function(f) {};    // noop
-                        window.letsPlotCallQueue = [];
-                        var div = document.createElement("div");
-                        div.style.color = 'darkred';
-                        div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("gRrqtg").appendChild(div);
-                    };
-                    var e = document.getElementById("gRrqtg");
-                    e.appendChild(script);
-                })()
-            </script>
-            
-    ```
-    :::
-
-    ::: {.cell-output .cell-output-display}
-    ```{=html}
-
-            <div id="uKj5ao"></div>
-            <script type="text/javascript" data-lets-plot-script="library">
-                if(!window.letsPlotCallQueue) {
-                    window.letsPlotCallQueue = [];
-                };
-                window.letsPlotCall = function(f) {
-                    window.letsPlotCallQueue.push(f);
-                };
-                (function() {
-                    var script = document.createElement("script");
-                    script.type = "text/javascript";
-                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.11.0/js-package/distr/lets-plot.min.js";
-                    script.onload = function() {
-                        window.letsPlotCall = function(f) {f();};
-                        window.letsPlotCallQueue.forEach(function(f) {f();});
-                        window.letsPlotCallQueue = [];
-                        
-                    };
-                    script.onerror = function(event) {
-                        window.letsPlotCall = function(f) {};    // noop
-                        window.letsPlotCallQueue = [];
-                        var div = document.createElement("div");
-                        div.style.color = 'darkred';
-                        div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("uKj5ao").appendChild(div);
-                    };
-                    var e = document.getElementById("uKj5ao");
-                    e.appendChild(script);
-                })()
-            </script>
-            
-    ```
-    :::
-
     ::: {.cell-output .cell-output-stdout}
     ```
     (Unadjusted) F stat : 52.81535560457474
@@ -263,10 +216,10 @@ The following is an example usage of this method:
     :::
     :::
 
-### IV_weakness_test
+### Feiv.IV_weakness_test
 
 ``` python
-estimation.models.feiv_.Feiv.IV_weakness_test(iv_diag_statistics=None)
+IV_weakness_test(iv_diag_statistics=None)
 ```
 
 Implement IV weakness test (F-test).
@@ -286,58 +239,58 @@ This method covers hetero-robust and clustered-robust F statistics. It produces 
 |--------------------|------|--------------------------------|---------|
 | iv_diag_statistics | list | List of IV weakness statistics | `None`  |
 
-### demean
+### Feiv.demean
 
 ``` python
-estimation.models.feiv_.Feiv.demean()
+demean()
 ```
 
 Demean instruments and endogeneous variable.
 
-### drop_multicol_vars
+### Feiv.drop_multicol_vars
 
 ``` python
-estimation.models.feiv_.Feiv.drop_multicol_vars()
+drop_multicol_vars()
 ```
 
 Drop multicollinear variables in matrix of instruments Z.
 
-### eff_F
+### Feiv.eff_F
 
 ``` python
-estimation.models.feiv_.Feiv.eff_F()
+eff_F()
 ```
 
 Compute Effective F stat (Olea and Pflueger 2013).
 
-### first_stage
+### Feiv.first_stage
 
 ``` python
-estimation.models.feiv_.Feiv.first_stage()
+first_stage()
 ```
 
 Implement First stage regression.
 
-### get_fit
+### Feiv.get_fit
 
 ``` python
-estimation.models.feiv_.Feiv.get_fit()
+get_fit()
 ```
 
 Fit a IV model using a 2SLS estimator.
 
-### to_array
+### Feiv.to_array
 
 ``` python
-estimation.models.feiv_.Feiv.to_array()
+to_array()
 ```
 
 Transform estimation DataFrames to arrays.
 
-### wls_transform
+### Feiv.wls_transform
 
 ``` python
-estimation.models.feiv_.Feiv.wls_transform()
+wls_transform()
 ```
 
 Transform variables for WLS estimation.

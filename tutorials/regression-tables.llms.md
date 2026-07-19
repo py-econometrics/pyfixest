@@ -476,12 +476,12 @@ DTable(
 |  | Blue collar |  | White collar |  | Blue collar |  | White collar |  |
 |  | Mean | Std. Dev. | Mean | Std. Dev. | Mean | Std. Dev. | Mean | Std. Dev. |
 | stats |  |  |  |  |  |  |  |  |
-| Wage | 0.03 | 2.19 | -0.29 | 2.28 | -0.19 | 2.33 | -0.04 | 2.39 |
-| Wealth | -0.46 | 5.79 | -0.61 | 5.45 | -0.14 | 5.42 | -0.08 | 5.71 |
-| Age | 1.04 | 0.80 | 1.09 | 0.80 | 1.03 | 0.81 | 1.01 | 0.82 |
-| Years of Schooling | -0.01 | 3.09 | -0.41 | 2.88 | 0.18 | 3.29 | -0.22 | 2.94 |
+| Wage | -0.20 | 2.21 | -0.04 | 2.47 | -0.13 | 2.32 | -0.14 | 2.23 |
+| Wealth | -0.73 | 5.23 | -0.56 | 5.65 | 0.12 | 5.75 | -0.08 | 5.71 |
+| Age | 1.09 | 0.80 | 1.02 | 0.82 | 0.99 | 0.81 | 1.08 | 0.80 |
+| Years of Schooling | 0.09 | 3.00 | -0.56 | 3.01 | -0.07 | 3.23 | 0.03 | 2.93 |
 | nobs |  |  |  |  |  |  |  |  |
-| Number of observations | 224.00 |  | 258.00 |  | 241.00 |  | 274.00 |  |
+| Number of observations | 253.00 |  | 256.00 |  | 243.00 |  | 245.00 |  |
 |  |  |  |  |  |  |  |  |  |
 
 You can also use custom aggregation functions to compute further statistics or affect how statistics are presented. Pyfixest provides two such functions `mean_std` and `mean_newline_std` which compute the mean and standard deviation and display both the same cell (either with line break between them or not). This allows to have more compact tables when you want to show statistics for many characteristcs in the columns.
@@ -523,15 +523,15 @@ DTable(
 |                        | EU     |       |           | US     |       |           |
 |                        | N      | Mean  | Std. Dev. | N      | Mean  | Std. Dev. |
 | Blue collar            |        |       |           |        |       |           |
-| Wage                   | 224.00 | 0.03  | 2.19      | 241.00 | -0.19 | 2.33      |
-| Wealth                 | 224.00 | -0.46 | 5.79      | 241.00 | -0.14 | 5.42      |
-| Age                    | 224.00 | 1.04  | 0.80      | 241.00 | 1.03  | 0.81      |
-| Years of Schooling     | 224.00 | -0.01 | 3.09      | 241.00 | 0.18  | 3.29      |
+| Wage                   | 253.00 | -0.20 | 2.21      | 243.00 | -0.13 | 2.32      |
+| Wealth                 | 253.00 | -0.73 | 5.23      | 243.00 | 0.12  | 5.75      |
+| Age                    | 253.00 | 1.09  | 0.80      | 243.00 | 0.99  | 0.81      |
+| Years of Schooling     | 253.00 | 0.09  | 3.00      | 243.00 | -0.07 | 3.23      |
 | White collar           |        |       |           |        |       |           |
-| Wage                   | 258.00 | -0.29 | 2.28      | 274.00 | -0.04 | 2.39      |
-| Wealth                 | 258.00 | -0.61 | 5.45      | 274.00 | -0.08 | 5.71      |
-| Age                    | 258.00 | 1.09  | 0.80      | 274.00 | 1.01  | 0.82      |
-| Years of Schooling     | 258.00 | -0.41 | 2.88      | 274.00 | -0.22 | 2.94      |
+| Wage                   | 256.00 | -0.04 | 2.47      | 245.00 | -0.14 | 2.23      |
+| Wealth                 | 256.00 | -0.56 | 5.65      | 245.00 | -0.08 | 5.71      |
+| Age                    | 256.00 | 1.02  | 0.82      | 245.00 | 1.08  | 0.80      |
+| Years of Schooling     | 256.00 | -0.56 | 3.01      | 245.00 | 0.03  | 2.93      |
 |                        |        |       |           |        |       |           |
 
 And you can again export descriptive statistics tables also to LaTex:

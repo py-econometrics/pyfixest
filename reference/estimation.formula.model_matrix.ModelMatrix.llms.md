@@ -1,17 +1,14 @@
-# estimation.formula.model_matrix.ModelMatrix
+# ModelMatrix
 
 ``` python
-estimation.formula.model_matrix.ModelMatrix(
-    model_matrix,
-    drop_rows,
-    drop_singletons=True,
-    drop_intercept=False,
-)
+ModelMatrix(model_matrix, drop_rows, drop_singletons=True, drop_intercept=False)
 ```
 
 A wrapper around formulaic.ModelMatrix for the specification of PyFixest models.
 
 This class organizes and processes model matrices for econometric estimation, extracting dependent and independent variables, fixed effects, instrumental variables, and weights. It handles missing data, singleton observations, and ensures proper formatting for estimation procedures.
+
+An internal API. Instances are built by the `prepare_model_matrix` step of the fit pipeline from a materialized `formulaic.ModelMatrix` and are not constructed directly. There is therefore no standalone example. Formulas are written as strings and passed to [feols()](../reference/estimation.api.feols.feols.llms.md). See the [formula syntax tutorial](../tutorials/formula-syntax.llms.md) for the syntax.
 
 ## Attributes
 

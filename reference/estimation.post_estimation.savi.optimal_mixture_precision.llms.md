@@ -1,11 +1,7 @@
-# estimation.post_estimation.savi.optimal_mixture_precision
+# optimal_mixture_precision
 
 ``` python
-estimation.post_estimation.savi.optimal_mixture_precision(
-    nobs,
-    number_of_coefficients,
-    alpha,
-)
+optimal_mixture_precision(nobs, number_of_coefficients, alpha)
 ```
 
 Compute the mixture precision that minimizes SAVI sequence width at a specified sample size `nobs`.

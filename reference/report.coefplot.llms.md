@@ -1,7 +1,7 @@
-# report.coefplot
+# coefplot
 
 ``` python
-report.coefplot(
+coefplot(
     models,
     alpha=0.05,
     figsize=None,
@@ -28,7 +28,7 @@ Plot model coefficients with confidence intervals.
 
 | Name | Type | Description | Default |
 |----|----|----|----|
-| models | A supported model object (Feols, Fepois, Feiv, FixestMulti) or a list of | Feols, Fepois & Feiv models. | *required* |
+| models | Feols, Fepois, Feiv, FixestMulti, or list | A fitted model object, or a list of Feols, Fepois, and Feiv models. | *required* |
 | figsize | tuple or None | The size of the figure. If None, the default size is used. | `None` |
 | alpha | float | The significance level for the confidence intervals. | `0.05` |
 | yintercept | float or None | The value at which to draw a horizontal line on the plot. Default is 0. | `0` |

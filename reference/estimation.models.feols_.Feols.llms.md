@@ -1,7 +1,7 @@
-# estimation.models.feols\_.Feols
+# Feols
 
 ``` python
-estimation.models.feols_.Feols(
+Feols(
     FixestFormula,
     data,
     ssc_dict,
@@ -117,72 +117,21 @@ Users should not directly instantiate this class, but rather use the [feols()](.
 
 | Name | Description |
 |----|----|
-| [add_fixest_multi_context](#pyfixest.estimation.models.feols_.Feols.add_fixest_multi_context) | Enrich Feols object. |
-| [ccv](#pyfixest.estimation.models.feols_.Feols.ccv) | Compute the Causal Cluster Variance following Abadie et al (QJE 2023). |
-| [decompose](#pyfixest.estimation.models.feols_.Feols.decompose) | Implement the Gelbach (2016) decomposition method for mediation analysis. |
-| [demean](#pyfixest.estimation.models.feols_.Feols.demean) | Demean the dependent variable and covariates by the fixed effect(s). |
-| [drop_multicol_vars](#pyfixest.estimation.models.feols_.Feols.drop_multicol_vars) | Detect and drop multicollinear variables. |
-| [fixef](#pyfixest.estimation.models.feols_.Feols.fixef) | Compute the coefficients of (swept out) fixed effects for a regression model. |
-| [get_fit](#pyfixest.estimation.models.feols_.Feols.get_fit) | Fit an OLS model. |
-| [plot_ritest](#pyfixest.estimation.models.feols_.Feols.plot_ritest) | Plot the distribution of the Randomization Inference Statistics. |
-| [predict](#pyfixest.estimation.models.feols_.Feols.predict) | Predict values of the model on new data. |
-| [prepare_model_matrix](#pyfixest.estimation.models.feols_.Feols.prepare_model_matrix) | Prepare model matrices for estimation. |
-| [ritest](#pyfixest.estimation.models.feols_.Feols.ritest) | Conduct Randomization Inference (RI) test against a null hypothesis of |
-| [to_array](#pyfixest.estimation.models.feols_.Feols.to_array) | Convert estimation data frames to np arrays. |
-| [update](#pyfixest.estimation.models.feols_.Feols.update) | Update coefficients for new observations using Sherman-Morrison formula. |
-| [vcov](#pyfixest.estimation.models.feols_.Feols.vcov) | Compute covariance matrices for an estimated regression model. |
-| [wald_test](#pyfixest.estimation.models.feols_.Feols.wald_test) | Conduct Wald test. |
-| [wildboottest](#pyfixest.estimation.models.feols_.Feols.wildboottest) | Run a wild cluster bootstrap based on an object of type “Feols”. |
-| [wls_transform](#pyfixest.estimation.models.feols_.Feols.wls_transform) | Transform model matrices for WLS Estimation. |
+| [Feols.ccv](#pyfixest.estimation.models.feols_.Feols.ccv) | Compute the Causal Cluster Variance following Abadie et al (QJE 2023). |
+| [Feols.decompose](#pyfixest.estimation.models.feols_.Feols.decompose) | Implement the Gelbach (2016) decomposition method for mediation analysis. |
+| [Feols.fixef](#pyfixest.estimation.models.feols_.Feols.fixef) | Compute the coefficients of (swept out) fixed effects for a regression model. |
+| [Feols.plot_ritest](#pyfixest.estimation.models.feols_.Feols.plot_ritest) | Plot the distribution of the Randomization Inference Statistics. |
+| [Feols.predict](#pyfixest.estimation.models.feols_.Feols.predict) | Predict values of the model on new data. |
+| [Feols.ritest](#pyfixest.estimation.models.feols_.Feols.ritest) | Conduct Randomization Inference (RI) test against a null hypothesis of |
+| [Feols.update](#pyfixest.estimation.models.feols_.Feols.update) | Update coefficients for new observations using Sherman-Morrison formula. |
+| [Feols.vcov](#pyfixest.estimation.models.feols_.Feols.vcov) | Compute covariance matrices for an estimated regression model. |
+| [Feols.wald_test](#pyfixest.estimation.models.feols_.Feols.wald_test) | Conduct Wald test. |
+| [Feols.wildboottest](#pyfixest.estimation.models.feols_.Feols.wildboottest) | Run a wild cluster bootstrap based on an object of type “Feols”. |
 
-### add_fixest_multi_context
+### Feols.ccv
 
 ``` python
-estimation.models.feols_.Feols.add_fixest_multi_context(
-    depvar,
-    Y,
-    _data,
-    _ssc_dict,
-    _k_fe,
-    fval,
-    store_data,
-)
-```
-
-Enrich Feols object.
-
-Enrich an instance of `Feols` Class with additional attributes set in the `FixestMulti` class.
-
-#### Parameters
-
-| Name | Type | Description | Default |
-|----|----|----|----|
-| FixestFormula | FixestFormula | The formula(s) used for estimation encoded in a `FixestFormula` object. | *required* |
-| depvar | str | The dependent variable of the regression model. | *required* |
-| Y | pd.Series | The dependent variable of the regression model. | *required* |
-| \_data | pd.DataFrame | The data used for estimation. | *required* |
-| \_ssc_dict | dict | A dictionary with the sum of squares and cross products matrices. | *required* |
-| \_k_fe | int | The number of fixed effects. | *required* |
-| fval | str | The fixed effects formula. | *required* |
-| store_data | bool | Indicates whether to save the data used for estimation in the object | *required* |
-
-#### Returns
-
-| Name | Type | Description |
-|------|------|-------------|
-|      | None |             |
-
-### ccv
-
-``` python
-estimation.models.feols_.Feols.ccv(
-    treatment,
-    cluster=None,
-    seed=None,
-    n_splits=8,
-    pk=1,
-    qk=1,
-)
+ccv(treatment, cluster=None, seed=None, n_splits=8, pk=1, qk=1)
 ```
 
 Compute the Causal Cluster Variance following Abadie et al (QJE 2023).
@@ -217,15 +166,15 @@ fit = pf.feols("Y ~ D", data=data, vcov={"CRV1": "group_id"})
 fit.ccv(treatment="D", pk=0.05, qk=0.5, n_splits=8, seed=123).head()
 ```
 
-|      | Estimate            | Std. Error | t value  | Pr(\>\|t\|) | 2.5%      | 97.5%    |
-|------|---------------------|------------|----------|-------------|-----------|----------|
-| CCV  | 0.09634519083565235 | 0.21827    | 0.441404 | 0.664177    | -0.362223 | 0.554913 |
-| CRV1 | 0.096345            | 0.13931    | 0.691588 | 0.49802     | -0.196334 | 0.389025 |
+|      | Estimate             | Std. Error | t value  | Pr(\>\|t\|) | 2.5%      | 97.5%    |
+|------|----------------------|------------|----------|-------------|-----------|----------|
+| CCV  | 0.022224473082108603 | 0.225936   | 0.098366 | 0.922729    | -0.45245  | 0.496899 |
+| CRV1 | 0.022224             | 0.126093   | 0.176254 | 0.862062    | -0.242688 | 0.287137 |
 
-### decompose
+### Feols.decompose
 
 ``` python
-estimation.models.feols_.Feols.decompose(
+decompose(
     param=None,
     x1_vars=None,
     decomp_var=None,
@@ -299,26 +248,10 @@ gb.etable()
 res = fit.decompose(decomp_var="x1", combine_covariates={"g1": re.compile("x2[1-2]"), "g2": re.compile("x23")})
 ```
 
-### demean
+### Feols.fixef
 
 ``` python
-estimation.models.feols_.Feols.demean()
-```
-
-Demean the dependent variable and covariates by the fixed effect(s).
-
-### drop_multicol_vars
-
-``` python
-estimation.models.feols_.Feols.drop_multicol_vars()
-```
-
-Detect and drop multicollinear variables.
-
-### fixef
-
-``` python
-estimation.models.feols_.Feols.fixef(atol=1e-06, btol=1e-06)
+fixef(atol=1e-06, btol=1e-06)
 ```
 
 Compute the coefficients of (swept out) fixed effects for a regression model.
@@ -338,24 +271,35 @@ This method creates the following attributes: - `_alpha` (pd.DataFrame): A DataF
 |----|----|----|
 |  | dict\[str, dict\[str, float\]\] | A dictionary with the estimated fixed effects. |
 
-### get_fit
+#### Examples
+
+Fixed effects are swept out during estimation and are not part of the coefficient table. `fixef()` computes them. The result is keyed by fixed effect term, then by level.
 
 ``` python
-estimation.models.feols_.Feols.get_fit()
+import pyfixest as pf
+
+fit = pf.feols("Y ~ X1 + X2 | f1", pf.get_data())
+fe = fit.fixef()
+
+fe.keys()
 ```
 
-Fit an OLS model.
-
-#### Returns
-
-| Name | Type | Description |
-|------|------|-------------|
-|      | None |             |
-
-### plot_ritest
+    dict_keys(['C(f1)'])
 
 ``` python
-estimation.models.feols_.Feols.plot_ritest(plot_backend='lets_plot')
+list(fe["C(f1)"].items())[:5]
+```
+
+    [('0.0', np.float64(0.4837574151832394)),
+     ('1.0', np.float64(3.0661419612921605)),
+     ('2.0', np.float64(-1.0947871507593956)),
+     ('3.0', np.float64(0.33109523121756435)),
+     ('4.0', np.float64(-1.2872533793542074))]
+
+### Feols.plot_ritest
+
+``` python
+plot_ritest(plot_backend='lets_plot')
 ```
 
 Plot the distribution of the Randomization Inference Statistics.
@@ -373,10 +317,10 @@ Plot the distribution of the Randomization Inference Statistics.
 |  | A lets_plot or matplotlib figure with the distribution of the Randomization |  |
 |  | Inference Statistics. |  |
 
-### predict
+### Feols.predict
 
 ``` python
-estimation.models.feols_.Feols.predict(
+predict(
     newdata=None,
     atol=1e-06,
     btol=1e-06,
@@ -410,18 +354,32 @@ Return a flat np.array with predicted values of the regression model. If new fix
 |----|----|----|
 |  | Union\[np.ndarray, pd.DataFrame\] | Returns a pd.Dataframe with columns “fit”, “se_fit” and CIs if argument “interval=prediction”. Otherwise, returns a np.ndarray with the predicted values of the model or the prediction standard errors if argument “se_fit=True”. |
 
-### prepare_model_matrix
+#### Examples
+
+In-sample predictions:
 
 ``` python
-estimation.models.feols_.Feols.prepare_model_matrix()
+import pyfixest as pf
+
+data = pf.get_data()
+fit = pf.feols("Y ~ X1 + X2 | f1", data)
+fit.predict()[:5]
 ```
 
-Prepare model matrices for estimation.
+    array([ 1.84475454, -0.17106206,  0.46970178, -0.74191438, -1.52651336])
 
-### ritest
+Pass `newdata` to predict out of sample. Fixed effect levels that do not appear in the estimation sample return missing values.
 
 ``` python
-estimation.models.feols_.Feols.ritest(
+fit.predict(newdata=data.head())
+```
+
+    array([ 1.80731416,         nan,         nan,  1.84475484, -0.17106194])
+
+### Feols.ritest
+
+``` python
+ritest(
     resampvar,
     cluster=None,
     reps=100,
@@ -483,32 +441,58 @@ fit.ritest("X1", reps=1000, store_ritest_statistics=True)
     97.5% (Pr(>|t|))                         0.0
     dtype: object
 
-### to_array
+### Feols.update
 
 ``` python
-estimation.models.feols_.Feols.to_array()
-```
-
-Convert estimation data frames to np arrays.
-
-### update
-
-``` python
-estimation.models.feols_.Feols.update(X_new, y_new, inplace=False)
+update(X_new, y_new, inplace=False)
 ```
 
 Update coefficients for new observations using Sherman-Morrison formula.
 
+#### Parameters
+
+| Name | Type | Description | Default |
+|----|----|----|----|
+| X_new | np.ndarray | Covariates for new data points. Users expected to ensure conformability with existing data. | *required* |
+| y_new | np.ndarray | Outcome values for new data points. | *required* |
+| inplace | bool | Whether to update the model object in place. Defaults to False. | `False` |
+
 #### Returns
 
-| Name | Type       | Description          |
-|------|------------|----------------------|
-|      | np.ndarray | Updated coefficients |
+| Name | Type       | Description           |
+|------|------------|-----------------------|
+|      | np.ndarray | Updated coefficients. |
 
-### vcov
+#### Notes
+
+Updates the coefficients in closed form via the Sherman-Morrison identity instead of refitting on the full sample. `X_new` has to include the intercept column. Models with fixed effects are not supported.
+
+#### Examples
+
+Fit on all but the last observation, then add it:
 
 ``` python
-estimation.models.feols_.Feols.vcov(vcov, vcov_kwargs=None, data=None)
+import numpy as np
+import pyfixest as pf
+
+data = pf.get_data().dropna()
+fit = pf.feols("Y ~ X1 + X2", data.iloc[:-1])
+
+last = data.iloc[[-1]]
+X_new = np.column_stack(
+    [np.ones(1), last["X1"].to_numpy(), last["X2"].to_numpy()]
+)
+y_new = last["Y"].to_numpy()
+
+fit.update(X_new, y_new)
+```
+
+    array([ 0.88955689, -0.99519687, -0.17661729])
+
+### Feols.vcov
+
+``` python
+vcov(vcov, vcov_kwargs=None, data=None)
 ```
 
 Compute covariance matrices for an estimated regression model.
@@ -527,10 +511,40 @@ Compute covariance matrices for an estimated regression model.
 |----|----|----|
 |  | Feols | An instance of class [Feols](../reference/estimation.models.feols_.Feols.llms.md) with updated inference. |
 
-### wald_test
+#### Examples
+
+Updates the variance estimator of a fitted model without refitting it. The model is modified in place and returned.
 
 ``` python
-estimation.models.feols_.Feols.wald_test(R=None, q=None, distribution='F')
+import pyfixest as pf
+
+fit = pf.feols("Y ~ X1 + X2 | f1", pf.get_data())
+fit.vcov("iid").tidy()
+```
+
+|             | Estimate  | Std. Error | t value    | Pr(\>\|t\|) | 2.5%      | 97.5%     |
+|-------------|-----------|------------|------------|-------------|-----------|-----------|
+| Coefficient |           |            |            |             |           |           |
+| X1          | -0.949526 | 0.066373   | -14.305943 | 0.0         | -1.079777 | -0.819274 |
+| X2          | -0.174225 | 0.017596   | -9.901590  | 0.0         | -0.208755 | -0.139695 |
+
+``` python
+# switch to cluster-robust inference
+fit.vcov({"CRV1": "f1"}).tidy()
+```
+
+|             | Estimate  | Std. Error | t value    | Pr(\>\|t\|)  | 2.5%      | 97.5%     |
+|-------------|-----------|------------|------------|--------------|-----------|-----------|
+| Coefficient |           |            |            |              |           |           |
+| X1          | -0.949526 | 0.066557   | -14.266314 | 1.221245e-14 | -1.085650 | -0.813401 |
+| X2          | -0.174225 | 0.018409   | -9.464130  | 2.267890e-10 | -0.211876 | -0.136575 |
+
+See [On Small Sample Corrections](../explanation/ssc.llms.md) for how the `ssc` adjustments interact with each estimator.
+
+### Feols.wald_test
+
+``` python
+wald_test(R=None, q=None, distribution='F')
 ```
 
 Conduct Wald test.
@@ -580,10 +594,10 @@ print(f"Python p_stat: {p_stat}")
     Python f_stat: 126.40650474043508
     Python p_stat: 2.505309282813844e-29
 
-### wildboottest
+### Feols.wildboottest
 
 ``` python
-estimation.models.feols_.Feols.wildboottest(
+wildboottest(
     reps,
     cluster=None,
     param=None,
@@ -654,11 +668,3 @@ fit.wildboottest(
     impose_null            True
     ssc                       1
     dtype: object
-
-### wls_transform
-
-``` python
-estimation.models.feols_.Feols.wls_transform()
-```
-
-Transform model matrices for WLS Estimation.

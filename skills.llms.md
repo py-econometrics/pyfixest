@@ -108,6 +108,8 @@ Model objects support:
 - `.ritest(resampvar, reps, ...)` — Randomization inference
 - `.decompose(param, x1_vars, type, ...)` — Gelbach (2016) decomposition
 - `.wald_test(R, q)` — Linear hypothesis testing
+- `.update(X_new, y_new)` — Online coefficient update (Sherman-Morrison)
+- `.evalue()` / `.pvalue_savi()` — Anytime-valid (SAVI) e-values and sequential p-values
 - `.first_stage()` — First-stage results (IV only)
 - `.IV_Diag()` — IV diagnostic tests (IV only)
 
@@ -136,6 +138,8 @@ For IV models, show first and second stage together: `pf.etable([fit._model_1st_
 ## Utilities
 
 - `pf.get_data(N, seed)` — Generate example dataset for testing.
+- `pf.get_ivf_data()`, `pf.get_bartik_data()`, `pf.get_encouragement_data()` — IV example datasets.
+- `pf.get_twin_data()`, `pf.get_worker_panel()`, `pf.get_motherhood_event_study_data()` — Panel and event-study datasets.
 - `pf.ssc(k_adj, k_fixef, G_adj, G_df)` — Configure small sample corrections.
 
 ## etable Basics

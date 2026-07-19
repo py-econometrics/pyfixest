@@ -1,7 +1,7 @@
-# did.estimation.lpdid
+# lpdid
 
 ``` python
-did.estimation.lpdid(
+lpdid(
     data,
     yname,
     idname,
@@ -33,7 +33,7 @@ Estimate a Difference-in-Differences / Event Study Model via the Local Projectio
 | pre_window | int | The number of periods before the treatment to include in the estimation. Default is the minimum relative year in the data. | `None` |
 | post_window | int | The number of periods after the treatment to include in the estimation. Default is the maximum relative year in the data. | `None` |
 | never_treated | int | Value in gname indicating units never treated. Default is 0. | `0` |
-| att | bool | If True, estimates the pooled average treatment effect on the treated (ATT). Default is False. | `True` |
+| att | bool | If True, estimates the pooled average treatment effect on the treated (ATT). Default is True. | `True` |
 | xfml | str | Formula for the covariates. Not yet supported. | `None` |
 
 ## Returns

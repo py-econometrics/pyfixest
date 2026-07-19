@@ -1,7 +1,7 @@
-# did.estimation.event_study
+# event_study
 
 ``` python
-did.estimation.event_study(
+event_study(
     data,
     yname,
     idname,
@@ -16,7 +16,7 @@ did.estimation.event_study(
 
 Estimate Event Study Model.
 
-This function allows for the estimation of treatment effects using different estimators. Currently, it supports “twfe” for the two-way fixed effects estimator and “did2s” for Gardner’s two-step DID2S estimator. Other estimators are in development.
+This function allows for the estimation of treatment effects using different estimators. It supports “twfe” for the two-way fixed effects estimator, “did2s” for Gardner’s two-step DID2S estimator, and “saturated” for a saturated event-study specification with cohort-specific effects.
 
 ## Parameters
 

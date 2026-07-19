@@ -1,7 +1,7 @@
-# estimation.deprecated.model_matrix_fixest\_.model_matrix_fixest
+# model_matrix_fixest
 
 ``` python
-estimation.deprecated.model_matrix_fixest_.model_matrix_fixest(
+model_matrix_fixest(
     FixestFormula,
     data,
     drop_singletons=False,

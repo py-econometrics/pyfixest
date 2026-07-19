@@ -104,7 +104,7 @@ Now that we’ve fit our first regression, we can jump right into one of the nex
 |----|----|
 | [OLS with Fixed Effects](tutorials/ols-fixed-effects.llms.md) | We provide more examples of fixed effects designs, including twin studies, worker-firm panels, and difference-in-differences models. We also provide some intuition on how the demeaning behind `PyFixest` works via the Frisch-Waugh-Lovell Theorem. |
 | [Formula Syntax](tutorials/formula-syntax.llms.md) | We explain `PyFixest`’s formula interface in all of its detail, including special operators as `i()` for interactions and multiple estimation syntax. |
-| [Standard Errors & Inference](tutorials/standard-errors.llms.md) | Here we showcase different options to conduct inference with `PyFixest`, via iid, heteroskedastic, cluster robust errors, and more. |
+| [Standard Errors & Inference](tutorials/standard-errors.qmd) | Here we showcase different options to conduct inference with `PyFixest`, via iid, heteroskedastic, cluster robust errors, and more. |
 | [Regression Tables](tutorials/regression-tables.llms.md) | We show how to produce publication-ready tables via the `pf.etable()` function and `maketables`. |
 | [Difference-in-Differences](tutorials/difference-in-differences.llms.md) | TWFE, Gardner’s two-stage DID2S, local projections, and event study designs with heterogeneous treatment effects. |
 | [Quantile Regression](tutorials/quantile-regression.llms.md) | Interior-point quantile regression: model the full conditional distribution, not just the mean, with an example from software observability (p99 latency). |

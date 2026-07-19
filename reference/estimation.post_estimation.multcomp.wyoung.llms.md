@@ -1,13 +1,7 @@
-# estimation.post_estimation.multcomp.wyoung
+# wyoung
 
 ``` python
-estimation.post_estimation.multcomp.wyoung(
-    models,
-    param,
-    reps,
-    seed,
-    sampling_method='wild-bootstrap',
-)
+wyoung(models, param, reps, seed, sampling_method='wild-bootstrap')
 ```
 
 Compute the Westfall-Young adjusted p-values for multiple hypothesis testing.

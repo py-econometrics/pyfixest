@@ -1,15 +1,7 @@
-# did.estimation.did2s
+# did2s
 
 ``` python
-did.estimation.did2s(
-    data,
-    yname,
-    first_stage,
-    second_stage,
-    treatment,
-    cluster,
-    weights=None,
-)
+did2s(data, yname, first_stage, second_stage, treatment, cluster, weights=None)
 ```
 
 Estimate a Difference-in-Differences model using Gardner’s two-step DID2S estimator.

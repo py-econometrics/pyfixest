@@ -1,7 +1,7 @@
-# estimation.api.quantreg.quantreg
+# quantreg
 
 ``` python
-estimation.api.quantreg.quantreg(
+quantreg(
     fml,
     data,
     vcov='nid',
@@ -55,6 +55,12 @@ Fit a quantile regression model using the interior point algorithm from Portnoy 
 | Name | Type | Description |
 |----|----|----|
 |  | object | An instance of the [Quantreg](../reference/estimation.quantreg.quantreg_.Quantreg.llms.md) class or [FixestMulti](../reference/estimation.FixestMulti_.FixestMulti.llms.md) class for multiple models specified via `fml`. |
+
+## Notes
+
+`Quantreg` inherits from [Feols](../reference/estimation.models.feols_.Feols.llms.md). A quantile regression fit therefore supports the same post-estimation methods as an OLS fit, among them `vcov()`, `tidy()`, `coef()`, `confint()` and `predict()`. See the Post-Estimation Methods section of the function reference for the full list.
+
+Fixed effects are not yet supported. Multiway clustering is not supported for the cluster-robust variance estimator.
 
 ## Examples
 

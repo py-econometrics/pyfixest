@@ -1,13 +1,7 @@
-# estimation.post_estimation.multcomp.rwolf
+# rwolf
 
 ``` python
-estimation.post_estimation.multcomp.rwolf(
-    models,
-    param,
-    reps,
-    seed,
-    sampling_method='wild-bootstrap',
-)
+rwolf(models, param, reps, seed, sampling_method='wild-bootstrap')
 ```
 
 Compute Romano-Wolf adjusted p-values for multiple hypothesis testing.

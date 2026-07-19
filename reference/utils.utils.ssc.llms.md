@@ -1,17 +1,19 @@
-# utils.utils.ssc
+# ssc
 
 ``` python
-utils.utils.ssc(
-    k_adj=True,
-    k_fixef='nonnested',
-    G_adj=True,
-    G_df='min',
-    *args,
-    **kwargs,
-)
+ssc(k_adj=True, k_fixef='nonnested', G_adj=True, G_df='min', *args, **kwargs)
 ```
 
 Set the small sample correction factor applied in `get_ssc()`.
+
+## Parameters
+
+| Name | Type | Description | Default |
+|----|----|----|----|
+| k_adj | bool | If True, applies a small sample correction of (N-1) / (N-k) where N is the number of observations and k is the number of estimated coefficients excluding any fixed effects projected out by either `feols()` or `fepois()`. | `True` |
+| k_fixef | str | Equal to ‘none’: the fixed effects parameters are discarded when calculating k in (N-1) / (N-k). | `"none"` |
+| G_adj | bool | If True, a cluster correction G/(G-1) is performed, with G the number of clusters. This argument is only relevant for clustered errors. | `True` |
+| G_df | str | Controls how “G” is computed for multiway clustering if G_adj = True. Note that the covariance matrix in the multiway clustering case is of the form V = V_1 + V_2 - V_12. If “conventional”, then each summand G_i is multiplied with a small sample adjustment G_i / (G_i - 1). If “min”, all summands are multiplied with the same value, min(G) / (min(G) - 1). This argument is only relevant for clustered errors. | `"conventional"` |
 
 ## Details
 
@@ -42,3 +44,23 @@ If G_df = “min”, then V += \[V x min(G) / (min(G) - 1) for i in \[1, 2, 12\]
 | Name | Type | Description |
 |----|----|----|
 |  | dict | A dictionary with encoded info on how to form small sample corrections |
+
+## Examples
+
+``` python
+import pyfixest as pf
+
+data = pf.get_data()
+
+# turn off both the k and the G adjustment
+fit = pf.feols("Y ~ X1 | f1", data, vcov={"CRV1": "f1"})
+fit_no_adj = pf.feols(
+    "Y ~ X1 | f1", data, vcov={"CRV1": "f1"}, ssc=pf.ssc(k_adj=False, G_adj=False)
+)
+
+pf.etable([fit, fit_no_adj])
+```
+
+[TABLE]
+
+Defaults follow `fixest`. See [On Small Sample Corrections](../explanation/ssc.llms.md) for details.

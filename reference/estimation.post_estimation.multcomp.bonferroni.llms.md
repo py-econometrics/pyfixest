@@ -1,7 +1,7 @@
-# estimation.post_estimation.multcomp.bonferroni
+# bonferroni
 
 ``` python
-estimation.post_estimation.multcomp.bonferroni(models, param)
+bonferroni(models, param)
 ```
 
 Compute Bonferroni adjusted p-values for multiple hypothesis testing.
@@ -12,7 +12,7 @@ For each model, it is assumed that tests to adjust are of the form â€œparam = 0â
 
 | Name | Type | Description | Default |
 |----|----|----|----|
-| models | A supported model object (Feols, Fepois, Feiv, FixestMulti) or a list of | Feols, Fepois & Feiv models. | *required* |
+| models | Feols, Fepois, Feiv, FixestMulti, or list | A fitted model object, or a list of Feols, Fepois, and Feiv models. | *required* |
 | param | str | The parameter for which the p-values should be adjusted. | *required* |
 
 ## Returns

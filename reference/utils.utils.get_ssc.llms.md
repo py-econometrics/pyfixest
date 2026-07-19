@@ -1,7 +1,7 @@
-# utils.utils.get_ssc
+# get_ssc
 
 ``` python
-utils.utils.get_ssc(
+get_ssc(
     ssc_dict,
     N,
     k,
@@ -43,3 +43,31 @@ Compute small sample adjustment factors.
 | Name | Type | Description |
 |----|----|----|
 |  | ValueError | If vcov_type is not “iid”, “hetero”, or “CRV”, or if G_df is neither “conventional” nor “min”. |
+
+## Examples
+
+Called internally by the estimation functions. Use it directly to reproduce an adjustment factor by hand.
+
+``` python
+import pyfixest as pf
+from pyfixest.utils.utils import get_ssc
+
+# cluster-robust adjustment: 1000 observations, 3 coefficients, 20 clusters
+adj, k_used, G_used = get_ssc(
+    ssc_dict=pf.ssc(),
+    N=1000,
+    k=3,
+    k_fe=0,
+    k_fe_nested=0,
+    n_fe=0,
+    n_fe_fully_nested=0,
+    G=20,
+    vcov_sign=1,
+    vcov_type="CRV",
+)
+adj, k_used, G_used
+```
+
+    (array([1.05474318]), 3, np.int64(19))
+
+Configure the behaviour with [ssc()](../reference/utils.utils.ssc.llms.md). See [On Small Sample Corrections](../explanation/ssc.llms.md) for the formulas.
