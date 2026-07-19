@@ -6,6 +6,10 @@ Task-oriented guides that show you how to accomplish specific goals with PyFixes
 
 ##### Marginal Effects and Hypothesis Tests via `marginaleffects`
 
+##### When to Use Anytime-Valid Inference
+
+A practical guide to anytime-valid inference in randomized experiments, early stopping, and decisions based on interim results.
+
 ##### How much do Covariates Matter?
 
 ##### Choosing a Demeaner Backend
