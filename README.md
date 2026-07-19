@@ -14,7 +14,7 @@
 [chat-badge]: https://img.shields.io/discord/1259933360726216754.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2&style=flat-square
 [chat-url]: https://discord.gg/gBAydeDMVK
 
-[Docs](https://pyfixest.org/pyfixest.html) · [Quickstart](https://pyfixest.org/quickstart.html) · [Function & API Reference](https://pyfixest.org/reference/) · [DeepWiki](https://deepwiki.com/py-econometrics/pyfixest) · [Benchmarks](https://github.com/py-econometrics/pyfixest/tree/master/benchmarks) · [Contributing](https://pyfixest.org/contributing.html) · [Changelog](https://pyfixest.org/changelog.html)
+[Docs](https://pyfixest.org/pyfixest.html) · [Quickstart](https://pyfixest.org/getting-started.html) · [Function & API Reference](https://pyfixest.org/reference/) · [DeepWiki](https://deepwiki.com/py-econometrics/pyfixest) · [Benchmarks](https://github.com/py-econometrics/pyfixest/tree/master/benchmarks) · [Contributing](https://pyfixest.org/contributing.html) · [Changelog](https://pyfixest.org/changelog.html)
 
 `PyFixest` is a Python package for fast high-dimensional fixed effects regression.
 
@@ -122,7 +122,7 @@ fit = pf.feols("Y + Y2 ~ X1 | csw0(f1, f2)", data=data, vcov={"CRV1": "group_id"
 fit.etable()
 ```
 
-For more examples, see the [quickstart](https://pyfixest.org/quickstart.html), the [formula syntax tutorial](https://pyfixest.org/formula-syntax.html), and the [Poisson & GLMs tutorial](https://pyfixest.org/poisson-glm.html).
+For more examples, see the [quickstart](https://pyfixest.org/getting-started.html), the [formula syntax tutorial](https://pyfixest.org/tutorials/formula-syntax.html), and the [Poisson & GLMs tutorial](https://pyfixest.org/tutorials/poisson-glm.html).
 
 ## Benchmarks
 
@@ -134,10 +134,10 @@ Runtime comparisons are hardware-dependent, especially for GPU backends. For the
 
 ## Learn More
 
-- [Quickstart](https://pyfixest.org/quickstart.html)
+- [Quickstart](https://pyfixest.org/getting-started.html)
 - [Function & API Reference](https://pyfixest.org/reference/)
-- [Difference-in-Differences](https://pyfixest.org/difference-in-differences.html)
-- [Quantile Regression](https://pyfixest.org/quantile-regression.html)
+- [Difference-in-Differences](https://pyfixest.org/tutorials/difference-in-differences.html)
+- [Quantile Regression](https://pyfixest.org/tutorials/quantile-regression.html)
 - [Changelog](https://pyfixest.org/changelog.html)
 - [Contributing](https://pyfixest.org/contributing.html)
 

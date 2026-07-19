@@ -171,6 +171,18 @@ def quantreg(
     object
         An instance of the [Quantreg](/reference/estimation.quantreg.quantreg_.Quantreg.qmd) class or [FixestMulti](/reference/estimation.FixestMulti_.FixestMulti.qmd) class for multiple models specified via `fml`.
 
+    Notes
+    -----
+    `Quantreg` inherits from
+    [Feols](/reference/estimation.models.feols_.Feols.qmd). A quantile
+    regression fit therefore supports the same post-estimation methods as an OLS
+    fit, among them `vcov()`, `tidy()`, `coef()`, `confint()` and `predict()`.
+    See the Post-Estimation Methods section of the function reference for the
+    full list.
+
+    Fixed effects are not yet supported. Multiway clustering is not supported
+    for the cluster-robust variance estimator.
+
     Examples
     --------
     The following example regresses `Y` on `X1` and `X2` at the median (0.5 quantile):

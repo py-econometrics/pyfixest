@@ -189,6 +189,23 @@ def feols(
         [Feiv](/reference/estimation.models.feiv_.Feiv.qmd) class (when using instrumental variables), or
         [FixestMulti](/reference/estimation.FixestMulti_.FixestMulti.qmd) class for multiple models specified via `fml`.
 
+    Notes
+    -----
+    Post-estimation methods are defined on
+    [Feols](/reference/estimation.models.feols_.Feols.qmd). All other model
+    classes inherit from it:
+    [Feiv](/reference/estimation.models.feiv_.Feiv.qmd),
+    [Feglm](/reference/estimation.models.feglm_.Feglm.qmd),
+    [Fepois](/reference/estimation.models.fepois_.Fepois.qmd) and
+    [Quantreg](/reference/estimation.quantreg.quantreg_.Quantreg.qmd). The same
+    methods are therefore available independently of which estimation function
+    was called. Exceptions are documented with the respective function.
+
+    See the Post-Estimation Methods section of the function reference for the
+    full list. Commonly used are `vcov()`, `tidy()`, `coef()`, `se()`,
+    `confint()`, `predict()`, `fixef()`, `wildboottest()`, `ritest()` and
+    `decompose()`.
+
     Examples
     --------
     As in `fixest`, the [feols()](/reference/estimation.api.feols.feols.qmd) function can be used to

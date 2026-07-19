@@ -63,8 +63,8 @@ def etable(
 
     Parameters
     ----------
-    models : A supported model object (Feols, Fepois, Feiv, FixestMulti) or a list of
-            Feols, Fepois & Feiv models.
+    models : Feols, Fepois, Feiv, FixestMulti, or list
+        A fitted model object, or a list of Feols, Fepois, and Feiv models.
         The models to be summarized in the table.
     type : str, optional
         Type of output. Either "df" for pandas DataFrame, "md" for markdown,
@@ -291,8 +291,8 @@ def summary(
 
     Parameters
     ----------
-    models : A supported model object (Feols, Fepois, Feiv, FixestMulti) or a list of
-            Feols, Fepois & Feiv models.
+    models : Feols, Fepois, Feiv, FixestMulti, or list
+        A fitted model object, or a list of Feols, Fepois, and Feiv models.
     digits : int, optional
         The number of decimal places to round the summary statistics to. Default is 3.
     inference_type : {"regular"}, optional

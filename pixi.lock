@@ -27845,7 +27845,7 @@ packages:
 - pypi: ./
   name: pyfixest
   version: 0.60.0
-  sha256: eb5ac98d82813940d1a79b87a978f24020f61e501639b5d541da3523dccf111f
+  sha256: 4e34273739ab7a3fced395e1011351dcd445eb431dc877ee352f2448c456648a
   requires_dist:
   - formulaic>=1.1.0
   - joblib>=1.4.2

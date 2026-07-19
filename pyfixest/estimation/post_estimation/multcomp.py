@@ -22,8 +22,8 @@ def bonferroni(models: ModelInputType, param: str) -> pd.DataFrame:
 
     Parameters
     ----------
-    models : A supported model object (Feols, Fepois, Feiv, FixestMulti) or a list of
-            Feols, Fepois & Feiv models.
+    models : Feols, Fepois, Feiv, FixestMulti, or list
+        A fitted model object, or a list of Feols, Fepois, and Feiv models.
     param : str
         The parameter for which the p-values should be adjusted.
 

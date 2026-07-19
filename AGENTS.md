@@ -26,9 +26,10 @@ Edit the workflow only in `.agents/feature-pr.md`.
 | `pyfixest/estimation/api/` | Public entry points, one module per function: `feols`, `fepois`, `feglm`, `quantreg`; shared input checks in `api/utils.py` |
 | `pyfixest/estimation/models/` | Model/result classes (`Feols`, `Feiv`, `Fepois`, `Feglm`, …); modules end in `_` (`feols_.py`) |
 | `pyfixest/estimation/internals/` | Shared estimation internals: `vcov_utils.py`, `solvers.py`, `collinearity.py`, `separation.py`, `literals.py` |
-| `pyfixest/estimation/post_estimation/` | Post-estimation features (`ritest`, `ccv`, `decomposition`, `prediction`, `multcomp`); model classes only hold thin wrapper methods |
+| `pyfixest/estimation/post_estimation/` | Post-estimation features (`ritest`, `ccv`, `decomposition`, `prediction`, `multcomp`); model classes hold only wrapper methods free of numerics |
 | `pyfixest/estimation/formula/` | Formula parsing and model-matrix construction (wraps formulaic) |
-| `pyfixest/estimation/` root | `config.py` (`EstimationConfig`), `plan_.py` (`parse_formula`, `fit_one`), `runner.py`, `FixestMulti_.py` (pure container for multiple estimation) |
+| `pyfixest/estimation/` root | `config.py` (`EstimationConfig`), `plan_.py` (`parse_formula`, `fit_one`), `runner.py`, `FixestMulti_.py` (pure container for multiple estimation); backend subpackages `numba/` and `torch/`; `deprecated/`. Root-level `feols_.py`/`feiv_.py`/`fepois_.py` are compat shims — the real classes live in `models/` |
+| `pyfixest/demeaners.py` | Public demeaner configs (`BaseDemeaner`, `MapDemeaner`, `LsmrDemeaner`) behind the `demeaner=` argument; own quartodoc section |
 | `pyfixest/core/` | Python wrappers and `_core_impl.pyi` type stubs for the Rust extension |
 | `src/` | Rust kernels (PyO3), registered in `src/lib.rs` |
 | `pyfixest/did/`, `pyfixest/report/`, `pyfixest/utils/` | DiD estimators; `etable`/plots; data utilities and DGPs (`utils/dgps.py`) |
@@ -38,8 +39,9 @@ Edit the workflow only in `.agents/feature-pr.md`.
 Estimation flow: `feols()` builds an `EstimationConfig` → `parse_formula`
 (`plan_.py`) expands multiple-estimation syntax → `FixestMulti` holds the models →
 `runner.run_estimation` / `plan_.fit_one` drive each model through
-`prepare_model_matrix → demean → to_array → wls_transform → drop_multicol_vars →
-get_fit → vcov`. Post-estimation happens via methods on the fitted model.
+`prepare_model_matrix → get_fit → vcov → get_inference`, where `get_fit` runs
+`demean → to_array → drop_multicol_vars → wls_transform` before solving.
+Post-estimation happens via methods on the fitted model.
 
 ## Where new code goes
 
@@ -56,11 +58,14 @@ method; put the meat/bread math in `internals/vcov_utils.py` (or a Rust kernel);
 thread through `FixestMulti.vcov()` and quantreg if applicable; wire ssc via
 `_make_ssc_kwargs`. Template: the NW/DK HAC path.
 
-**New user-facing function** — own module in `estimation/api/`; export through
+**New estimation entry point** — own module in `estimation/api/`; export through
 `estimation/api/__init__.py` and `pyfixest/__init__.py` (`__all__`,
 `_lazy_imports`, `_direct_module_imports`); add to the quartodoc `contents` list
 in `docs/_quarto.yml`. Keep the signature order consistent with siblings:
-`fml, data, vcov, …, copy_data, store_data, lean, …`.
+`fml, data, vcov, …, copy_data, store_data, lean, …`. User-facing functions that
+are *not* estimation entry points (`rwolf`, `bonferroni`, `wyoung`) instead live
+in `post_estimation/` and are exported through `estimation/__init__.py` plus the
+top-level `_lazy_imports`.
 
 **New Rust kernel** — `src/<topic>.rs` with a function named `_<name>_rs`;
 register in `src/lib.rs`; add a typed stub to `pyfixest/core/_core_impl.pyi`;
@@ -86,12 +91,27 @@ the paper should recognize it in the code:
 
 - Name objects after the econometrics they represent — `scores`, `meat`,
   `bread`, `u_hat`, `clustid` — and mirror the source paper's notation where it
-  has one. Cite the paper (with a link) in the docstring of the function that
-  implements it, as `Feols.decompose` does for Gelbach (2016).
-- One function, one named task, kept short. The fit pipeline is the model:
-  `prepare_model_matrix → demean → wls_transform → drop_multicol_vars →
-  get_fit`, each step a small named unit. If a function's name or docstring
-  summary needs an "and", split it.
+  has one. Matrix products use the `t` prefix for transpose: `tZX` is Z'X,
+  `tZZinv` is (Z'Z)^-1. Cite the paper (with a link) in the docstring of the
+  function that implements it, as `Feols.decompose` does for Gelbach (2016).
+- Methods orchestrate; numbers happen in functions. A model method validates
+  inputs, unpacks `self._` state into locals, calls a standalone module-level
+  function that operates on arrays, and assigns the results back to `self._`
+  attributes. The numerical function never touches `self` — that seam is what
+  makes it testable against a reference. `Feols.get_fit` →
+  `internals/fit_.fit_ols` is the template.
+- Numerical functions return a small result dataclass (`OlsFit`, `IvFit`,
+  `ClusterPrep`; frozen and slotted where possible) whose Attributes docstring
+  states each array's shape — not a tuple, not a dict. Internal calls pass
+  arguments by keyword: `fit_ols(X=self._X, Y=self._Y, solver=self._solver)`.
+- One function, one named task, kept short — most functions in the codebase are
+  under ~30 code lines. If a function's name or docstring summary needs an
+  "and", split it. The fit pipeline is the model: `prepare_model_matrix →
+  get_fit → vcov`, with `get_fit` stepping through `demean → to_array →
+  drop_multicol_vars → wls_transform`, each step a small named unit. Sanctioned
+  exceptions to "short": a single solver iteration loop (IRLS, LSMR,
+  Frisch–Newton — splitting it hurts readability and `torch.compile`) and
+  validation-heavy user-facing methods. Split logic, not loops.
 - Performance-critical code — per-observation or per-cluster hot loops that
   NumPy cannot vectorize — is written and optimized in Rust under `src/` (the
   demean, CRV1-meat, and HAC-meat kernels are the pattern), not micro-optimized
@@ -112,13 +132,19 @@ Naming and layout:
 Signatures and typing:
 - `from __future__ import annotations`; PEP 604 unions (`str | None`); typed
   option enums as `Literal` aliases in `internals/literals.py`.
+- In docstring Parameters sections, spell types as in the signature
+  (`str | None`, not `Optional[str]`). Older docstrings mix spellings — don't
+  copy them.
 - mypy runs on `pyfixest/` only; `NDArray[np.float64]` in the `.pyi` stubs.
 
 Docstrings (ruff enforces the NumPy convention):
 - Required on public functions/methods/classes; not required in `tests/`.
 - User-facing API docstrings carry full Parameters/Returns and an Examples
   section with executable ```{python} chunks — quartodoc renders and runs them.
-- Cross-link classes as `[Feols](/reference/estimation.models.feols_.Feols.qmd)`.
+- Cross-link classes as `[Feols](/reference/estimation.models.feols_.Feols.qmd)`
+  and vignettes as `[guide](/tutorials/standard-errors.qmd)` — always
+  root-relative with a `.qmd` extension. A few older docstrings use relative
+  paths or `.html`; don't copy them.
 - Inline code references use single backticks.
 
 Errors, warnings, optional dependencies:
@@ -166,6 +192,10 @@ note in `tests/conftest.py`, the lazy-numba note in `ritest.py`) — no narratio
   the API: the demean kernel (`test_demean.py`), formula parser
   (`test_formula_parse.py`), HAC meat (`test_hac_meat.py`) — not thin wrappers or
   getters.
+- When a change fits an existing parametrized matrix, extend it — add a formula
+  to the module-level list or a case to the matrix — rather than writing a new
+  test function. `test_errors.py`'s one-function-per-error style predates this
+  rule; don't copy it.
 - Style: module-level formula lists fed to `pytest.mark.parametrize`; seeded
   DGP fixtures (module-scoped when expensive); explicit `rtol`/`atol` constants
   at the top of the file with a comment justifying them.
@@ -201,13 +231,43 @@ incomplete change. What to touch depends on the surface:
 - New class or function: register it in the quartodoc `contents`
   (`docs/_quarto.yml`); `pixi run docs-build` regenerates `docs/_sidebar.yml` and
   the reference pages.
-- Vignette: add a `docs/how-to/<feature>.qmd` when the feature is a workflow a
-  user would want a guide for, and register it in the `_quarto.yml` navbar; extend
-  the nearest existing vignette instead when the feature only widens one (a new
-  vcov type → the inference / standard-errors how-to). The Conley and
-  decomposition features are the model.
+- Vignette: add a `docs/how-to/<feature>.qmd` (hyphenated filename) when the
+  feature is a workflow a user would want a guide for, and register it in the
+  `_quarto.yml` navbar; extend the nearest existing vignette instead when the
+  feature only widens one (a new vcov type → the standard-errors guide,
+  `docs/tutorials/standard-errors.qmd`). The Conley and decomposition features
+  are the model.
 - Never hand-edit `docs/reference/**` — it is generated by quartodoc and
-  gitignored.
+  gitignored. Reference display names are shortened by a custom renderer
+  (`docs/_renderer.py`); the `docs-build` task runs quartodoc from `docs/` so it
+  can import it.
+
+Every entry in the quartodoc reference (`contents` in `docs/_quarto.yml`) meets
+the same bar, whether it is a function, a method or a class:
+
+- Description: say what the object does and when to use it, not just what it
+  returns. A one-line summary is not enough for a user-facing entry.
+- At least one executable example: an `Examples` section with a `{python}` chunk,
+  which quartodoc runs into the page. This includes getters and accessors
+  (`coef()`, `se()`, a `get_*` data generator), where two lines that fit a model
+  and print the result are enough. Keep examples fast (small `pf.get_data()`
+  samples, few bootstrap `reps`). Skip the example only when runtime is
+  prohibitive, and say so.
+- Vignette link when a relevant how-to exists, as
+  `[guide](/how-to/<feature>.qmd)`. Inference methods point at the standard
+  errors guide, `decompose` at the decomposition vignette.
+- Paper citation with a link whenever an econometric method is implemented, in
+  the function that implements it. `Feols.decompose` cites Gelbach (2016),
+  `quantreg` cites Portnoy and Koenker (1997). Mirror the paper's notation in
+  the code (see "House style").
+
+Result classes (`Feols`, `Fepois`, `Feiv`, ...) are obtained through the
+estimation functions, so their example fits a model and calls a method instead
+of constructing the class.
+
+Examples follow the style of the existing docstrings: go straight to the
+`{python}` chunk and keep any explanation in short comments inside the code.
+Do not narrate the example in prose.
 
 ## Commands
 

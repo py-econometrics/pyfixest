@@ -37,6 +37,42 @@ class SaturatedEventStudy(DID):
     display_warning: bool
         Whether to display (some) warning messages.
 
+    Notes
+    -----
+    Fits a fully saturated event study that interacts every treatment cohort
+    with every relative period. Each cohort has its own set of event time
+    effects, which avoids the comparisons between already-treated units that
+    bias static two-way fixed effects under heterogeneous treatment effects
+    (Sun and Abraham 2021,
+    [Journal of Econometrics](https://doi.org/10.1016/j.jeconom.2020.09.006)).
+
+    Examples
+    --------
+    Returned by [event_study()](/reference/did.estimation.event_study.qmd) with
+    `estimator="saturated"`. `aggregate()` aggregates the cohort-specific
+    effects by event time.
+
+    ```{python}
+    import pyfixest as pf
+
+    data = pf.get_motherhood_event_study_data()
+
+    fit = pf.event_study(
+        data,
+        yname="log_earnings",
+        idname="unit",
+        tname="year",
+        gname="g",
+        estimator="saturated",
+    )
+    fit.aggregate().head()
+    ```
+
+    `iplot_aggregate()` plots the aggregated effects.
+
+    ```{python}
+    fit.iplot_aggregate()
+    ```
     """
 
     def __init__(

@@ -22,7 +22,39 @@ from pyfixest.utils.dev_utils import DataFrameType
 
 
 class Feglm(Feols):
-    "Base class for the estimation of a fixed-effects GLM model."
+    """
+    Base class for the estimation of a fixed-effects GLM model.
+
+    Returned by [feglm()](/reference/estimation.api.feglm.feglm.qmd). Fixed
+    effects are handled via iteratively reweighted least squares with demeaning,
+    following Stammann (2018),
+    [arXiv:1707.01815](https://arxiv.org/pdf/1707.01815). The family is set with
+    the `family` argument and implemented by a subclass. `poisson` dispatches to
+    [Fepois](/reference/estimation.models.fepois_.Fepois.qmd).
+
+    Examples
+    --------
+    ```{python}
+    import numpy as np
+    import pyfixest as pf
+
+    data = pf.get_data()
+    data["Y_bin"] = np.where(data["Y"] > 0, 1, 0)
+
+    fit = pf.feglm("Y_bin ~ X1 + X2 | f1", data, family="logit")
+    fit.tidy()
+    ```
+
+    Coefficients are on the link scale. For effects on the response scale, use
+    `marginaleffects`. See the
+    [marginal effects guide](/how-to/marginaleffects.qmd).
+
+    ```{python}
+    from marginaleffects import avg_slopes
+
+    avg_slopes(fit, variables="X1")
+    ```
+    """
 
     def __init__(
         self,

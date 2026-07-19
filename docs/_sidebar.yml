@@ -7,35 +7,64 @@ website:
       - reference/estimation.api.fepois.fepois.qmd
       - reference/estimation.api.feglm.feglm.qmd
       - reference/estimation.api.quantreg.quantreg.qmd
-      - reference/estimation.post_estimation.savi.optimal_mixture_precision.qmd
+      section: Estimation
+    - contents:
+      - reference/did.estimation.event_study.qmd
       - reference/did.estimation.did2s.qmd
       - reference/did.estimation.lpdid.qmd
-      - reference/did.estimation.event_study.qmd
+      - reference/did.saturated_twfe.SaturatedEventStudy.qmd
+      - reference/did.visualize.panelview.qmd
+      section: Difference-in-Differences
+    - contents:
       - reference/estimation.post_estimation.multcomp.bonferroni.qmd
       - reference/estimation.post_estimation.multcomp.rwolf.qmd
       - reference/estimation.post_estimation.multcomp.wyoung.qmd
-      section: Estimation Functions
+      section: Multiple Hypothesis Testing
     - contents:
-      - reference/demeaners.BaseDemeaner.qmd
-      - reference/demeaners.MapDemeaner.qmd
-      - reference/demeaners.LsmrDemeaner.qmd
       - reference/estimation.models.feols_.Feols.qmd
       - reference/estimation.models.fepois_.Fepois.qmd
       - reference/estimation.models.feiv_.Feiv.qmd
       - reference/estimation.models.feglm_.Feglm.qmd
-      - reference/estimation.models.felogit_.Felogit.qmd
-      - reference/estimation.models.feprobit_.Feprobit.qmd
-      - reference/estimation.models.fegaussian_.Fegaussian.qmd
       - reference/estimation.FixestMulti_.FixestMulti.qmd
       - reference/estimation.quantreg.quantreg_.Quantreg.qmd
       section: Estimation Classes
     - contents:
-      - reference/did.visualize.panelview.qmd
+      - reference/estimation.models.feols_.Feols.tidy.qmd
+      - reference/estimation.models.feols_.Feols.coef.qmd
+      - reference/estimation.models.feols_.Feols.se.qmd
+      - reference/estimation.models.feols_.Feols.tstat.qmd
+      - reference/estimation.models.feols_.Feols.pvalue.qmd
+      - reference/estimation.models.feols_.Feols.confint.qmd
+      - reference/estimation.models.feols_.Feols.resid.qmd
+      - reference/estimation.models.feols_.Feols.vcov.qmd
+      - reference/estimation.models.feols_.Feols.predict.qmd
+      - reference/estimation.models.feols_.Feols.fixef.qmd
+      - reference/estimation.models.feols_.Feols.get_performance.qmd
+      - reference/estimation.models.feols_.Feols.wald_test.qmd
+      - reference/estimation.models.feols_.Feols.wildboottest.qmd
+      - reference/estimation.models.feols_.Feols.ritest.qmd
+      - reference/estimation.models.feols_.Feols.ccv.qmd
+      - reference/estimation.models.feols_.Feols.decompose.qmd
+      - reference/estimation.models.feols_.Feols.update.qmd
+      - reference/estimation.models.feols_.Feols.evalue.qmd
+      - reference/estimation.models.feols_.Feols.pvalue_savi.qmd
+      section: Post-Estimation Methods
+    - contents:
       - reference/report.summary.qmd
       - reference/report.etable.qmd
       - reference/report.coefplot.qmd
       - reference/report.iplot.qmd
+      - reference/report.qplot.qmd
       section: Summarize and Visualize
+    - contents:
+      - reference/utils.utils.get_data.qmd
+      - reference/utils.dgps.get_ivf_data.qmd
+      - reference/utils.dgps.get_bartik_data.qmd
+      - reference/utils.dgps.get_encouragement_data.qmd
+      - reference/utils.dgps.get_twin_data.qmd
+      - reference/utils.dgps.get_worker_panel.qmd
+      - reference/utils.dgps.get_motherhood_event_study_data.qmd
+      section: Data Sets
     - contents:
       - reference/estimation.formula.parse.Formula.qmd
       - reference/estimation.formula.model_matrix.ModelMatrix.qmd
@@ -43,9 +72,16 @@ website:
       section: Formula Parsing & Model Matrix
     - contents:
       - reference/estimation.demean.qmd
+      - reference/demeaners.BaseDemeaner.qmd
+      - reference/demeaners.MapDemeaner.qmd
+      - reference/demeaners.LsmrDemeaner.qmd
+      - reference/core.demean.Preconditioner.qmd
+      section: Demeaning
+    - contents:
       - reference/core.detect_singletons.detect_singletons.qmd
       - reference/utils.utils.ssc.qmd
       - reference/utils.utils.get_ssc.qmd
+      - reference/estimation.post_estimation.savi.optimal_mixture_precision.qmd
       - reference/estimation.deprecated.model_matrix_fixest_.model_matrix_fixest.qmd
       section: Misc / Utilities
     id: reference

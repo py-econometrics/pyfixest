@@ -35,6 +35,22 @@ def get_ivf_data(N=2000, seed=1234):
     -------
     pandas.DataFrame
         Columns: ``earnings``, ``num_children``, ``ivf_success``.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    data = pf.get_ivf_data()
+
+    # OLS is biased by unobserved career ambition, IV recovers the true -0.15
+    pf.etable(
+        [
+            pf.feols("earnings ~ num_children", data),
+            pf.feols("earnings ~ 1 | num_children ~ ivf_success", data),
+        ]
+    )
+    ```
     """
     # --- DGP parameters ---
     true_effect = -0.15  # causal effect of num_children on earnings
@@ -100,6 +116,22 @@ def get_bartik_data(N=300, seed=1234):
     -------
     pandas.DataFrame
         Columns: ``wages``, ``immigration``, ``log_population``, ``bartik_instrument``.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    data = pf.get_bartik_data()
+
+    # OLS is attenuated by unobserved local demand, IV recovers the true -0.3
+    pf.etable(
+        [
+            pf.feols("wages ~ immigration + log_population", data),
+            pf.feols("wages ~ log_population | immigration ~ bartik_instrument", data),
+        ]
+    )
+    ```
     """
     # --- DGP parameters ---
     true_effect = -0.3  # causal effect of immigration on wages
@@ -167,6 +199,20 @@ def get_encouragement_data(N=4000, seed=1234):
     -------
     pandas.DataFrame
         Columns: ``revenue``, ``assigned_treatment``, ``adopted_feature``, ``user_type``.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    data = pf.get_encouragement_data()
+
+    # instrument take-up with the randomized encouragement, LATE is 2.0
+    fit = pf.feols(
+        "revenue ~ 1 | user_type | adopted_feature ~ assigned_treatment", data
+    )
+    fit.summary()
+    ```
     """
     # --- DGP parameters ---
     true_late = 2.0  # LATE: causal effect of adoption on revenue for compliers
@@ -496,6 +542,22 @@ def get_twin_data(N_pairs=500, seed=42):
     pd.DataFrame
         Columns: twin_pair_id, twin_id, ability, educ, age, experience,
         log_wage.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    data = pf.get_twin_data()
+
+    # OLS is biased upward by ability, twin-pair FE recover the true 0.08
+    pf.etable(
+        [
+            pf.feols("log_wage ~ educ", data),
+            pf.feols("log_wage ~ educ | twin_pair_id", data),
+        ]
+    )
+    ```
     """
     rng = np.random.default_rng(seed)
 
@@ -559,6 +621,21 @@ def get_worker_panel(N_workers=500, N_firms=50, N_years=11, seed=42):
     pd.DataFrame
         Columns: worker_id, firm_id, year, female, experience, tenure,
         log_wage, worker_fe, firm_fe.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    data = pf.get_worker_panel()
+
+    # two-way worker and firm fixed effects, as in AKM
+    fit = pf.feols("log_wage ~ experience + tenure | worker_id + firm_id", data)
+    fit.summary()
+    ```
+
+    The true effects are returned as the columns `worker_fe` and `firm_fe`, so
+    estimates can be compared against them.
     """
     rng = np.random.default_rng(seed)
 
@@ -642,6 +719,17 @@ def get_motherhood_event_study_data(
     -------
     pd.DataFrame
         Columns: unit, country, region, year, g, treat, rel_year, log_earnings
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    data = pf.get_motherhood_event_study_data()
+    data.head()
+    ```
+
+    `g` is the year of first birth and `rel_year` the event time.
     """
     rng = np.random.default_rng(seed)
 

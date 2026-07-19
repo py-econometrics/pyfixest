@@ -21,7 +21,31 @@ from pyfixest.estimation.formula.utils import (
 
 @dataclass(kw_only=True, frozen=True, slots=True)
 class Formula:
-    """A formulaic-compliant formula."""
+    """
+    A formulaic-compliant formula.
+
+    Splits a fixest-style formula into second stage, fixed effects and, for IV
+    models, first stage. Use `parse()` instead of calling the class directly.
+    `parse()` also expands the multiple estimation operators (`sw`, `sw0`,
+    `csw`, `csw0`, `mvsw`) into one `Formula` per model. This is an internal
+    API. Formulas are written as strings and passed to `feols()`. See the
+    [formula syntax tutorial](/tutorials/formula-syntax.qmd).
+
+    Examples
+    --------
+    ```{python}
+    from pyfixest.estimation.formula.parse import Formula
+
+    fml = Formula.parse("Y ~ X1 + X2 | f1 + f2")[0]
+    fml.second_stage, fml.fixed_effects
+    ```
+
+    Stepwise syntax expands into one formula per estimated model.
+
+    ```{python}
+    Formula.parse("Y ~ X1 + csw(X2, X3)")
+    ```
+    """
 
     # second and first stage are formulas **excluding** fixed effects
     _second_stage: str

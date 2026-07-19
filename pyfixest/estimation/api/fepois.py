@@ -186,6 +186,18 @@ def fepois(
         An instance of the [Fepois](/reference/estimation.models.fepois_.Fepois.qmd) class
         or an instance of class [FixestMulti](/reference/estimation.FixestMulti_.FixestMulti.qmd) for multiple models specified via `fml`.
 
+    Notes
+    -----
+    `Fepois` inherits from
+    [Feglm](/reference/estimation.models.feglm_.Feglm.qmd), which inherits from
+    [Feols](/reference/estimation.models.feols_.Feols.qmd). A Poisson fit
+    therefore supports the same post-estimation methods as an OLS fit, among
+    them `vcov()`, `tidy()`, `coef()`, `confint()`, `predict()`, `fixef()`,
+    `wildboottest()` and `ritest()`. See the Post-Estimation Methods section of
+    the function reference for the full list.
+
+    `predict()` does not support `se_fit=True` for Poisson models.
+
     Examples
     --------
     The `fepois()` function estimates Poisson models with the same formula interface

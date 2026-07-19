@@ -8,6 +8,11 @@ project:
     - "*.ipynb"
     - "*.md"
     - "!quarto_example/"
+    # Draft outlines: excluded from the site and llms.txt until finished.
+    # (Both open with an explicit "outline" callout.) Delete the matching line
+    # to publish one. Complete-but-unlinked pages are left to render normally.
+    - "!tutorials/standard-errors.qmd"
+    - "!how-to/surrogate-indices-experimental-selection.qmd"
 
 execute:
   freeze: auto
@@ -43,8 +48,6 @@ website:
       - icon: github
         href: https://github.com/py-econometrics/pyfixest/
     left:
-      - text: "PyFixest"
-        file: pyfixest.md
       - text: "Getting Started"
         file: getting-started.qmd
       - text: "Function Reference"
@@ -125,65 +128,132 @@ quartodoc:
   parser: numpy
   rewrite_all_pages: True
   sidebar: _sidebar.yml
+  renderer:
+    style: _renderer.py
+  options:
+    signature_name: short
 
   sections:
-    - title: Estimation Functions
+    - title: Estimation
       desc: |
-        User facing estimation functions
+        User-facing estimation functions. Everything in this reference is
+        available under the `pf.` namespace after `import pyfixest as pf`.
       contents:
         - estimation.api.feols.feols
         - estimation.api.fepois.fepois
         - estimation.api.feglm.feglm
         - estimation.api.quantreg.quantreg
-        - estimation.post_estimation.savi.optimal_mixture_precision
+    - title: Difference-in-Differences
+      desc: |
+        Difference-in-differences and event-study estimators, plus panel
+        treatment visualization.
+      contents:
+        - did.estimation.event_study
         - did.estimation.did2s
         - did.estimation.lpdid
-        - did.estimation.event_study
+        - did.saturated_twfe.SaturatedEventStudy
+        - did.visualize.panelview
+    - title: Multiple Hypothesis Testing
+      desc: |
+        Family-wise error-rate corrections for multiple hypothesis testing.
+      contents:
         - estimation.post_estimation.multcomp.bonferroni
         - estimation.post_estimation.multcomp.rwolf
         - estimation.post_estimation.multcomp.wyoung
     - title: Estimation Classes
       desc: |
-        Details on Methods and Attributes
+        Fitted-model classes returned by the estimation functions. Users do not
+        construct these directly; they are the objects `feols()`, `fepois()`,
+        `feglm()`, and `quantreg()` return.
       contents:
-        - demeaners.BaseDemeaner
-        - demeaners.MapDemeaner
-        - demeaners.LsmrDemeaner
-        - estimation.models.feols_.Feols
+        - name: estimation.models.feols_.Feols
+          exclude:
+            - prepare_model_matrix
+            - demean
+            - to_array
+            - wls_transform
+            - drop_multicol_vars
+            - get_fit
+            - get_inference
+            - add_fixest_multi_context
         - estimation.models.fepois_.Fepois
         - estimation.models.feiv_.Feiv
         - estimation.models.feglm_.Feglm
-        - estimation.models.felogit_.Felogit
-        - estimation.models.feprobit_.Feprobit
-        - estimation.models.fegaussian_.Fegaussian
         - estimation.FixestMulti_.FixestMulti
         - estimation.quantreg.quantreg_.Quantreg
         #- did.did.DID
         #- did.did2s.DID2s
         #- did.lpdid.LPDID
         #- did.twfe.TWFE
+    - title: Post-Estimation Methods
+      desc: |
+        Methods available on a fitted model object, e.g. the result of a call to
+        `feols()`. Defined on `Feols` and shared by `Fepois`, `Feglm`, `Feiv`, and
+        `Quantreg` through inheritance.
+      contents:
+        - estimation.models.feols_.Feols.tidy
+        - estimation.models.feols_.Feols.coef
+        - estimation.models.feols_.Feols.se
+        - estimation.models.feols_.Feols.tstat
+        - estimation.models.feols_.Feols.pvalue
+        - estimation.models.feols_.Feols.confint
+        - estimation.models.feols_.Feols.resid
+        - estimation.models.feols_.Feols.vcov
+        - estimation.models.feols_.Feols.predict
+        - estimation.models.feols_.Feols.fixef
+        - estimation.models.feols_.Feols.get_performance
+        - estimation.models.feols_.Feols.wald_test
+        - estimation.models.feols_.Feols.wildboottest
+        - estimation.models.feols_.Feols.ritest
+        - estimation.models.feols_.Feols.ccv
+        - estimation.models.feols_.Feols.decompose
+        - estimation.models.feols_.Feols.update
+        - estimation.models.feols_.Feols.evalue
+        - estimation.models.feols_.Feols.pvalue_savi
     - title: Summarize and Visualize
       desc: |
-        Post-Processing of Estimation Results
+        Summary tables and coefficient plots for fitted models.
       contents:
-        - did.visualize.panelview
         - report.summary
         - report.etable
         - report.coefplot
         - report.iplot
+        - report.qplot
+    - title: Data Sets
+      desc: |
+        Synthetic data generators used throughout the documentation and tests.
+      contents:
+        - utils.utils.get_data
+        - utils.dgps.get_ivf_data
+        - utils.dgps.get_bartik_data
+        - utils.dgps.get_encouragement_data
+        - utils.dgps.get_twin_data
+        - utils.dgps.get_worker_panel
+        - utils.dgps.get_motherhood_event_study_data
     - title: Formula Parsing & Model Matrix
       desc: |
-        Internal APIs for formula parsing and model matrix construction
+        Internal APIs for formula parsing and model matrix construction.
       contents:
         - estimation.formula.parse.Formula
         - estimation.formula.model_matrix.ModelMatrix
         - estimation.formula.factor_interaction.factor_interaction
-    - title: Misc / Utilities
+    - title: Demeaning
       desc: |
-        PyFixest internals and utilities
+        Fixed-effects demeaning: the `demean()` workhorse and the configurable
+        backends. See the [Choosing a Demeaner Backend](/how-to/demeaner-backends.qmd)
+        guide for how to pick one.
       contents:
         - estimation.demean
+        - demeaners.BaseDemeaner
+        - demeaners.MapDemeaner
+        - demeaners.LsmrDemeaner
+        - core.demean.Preconditioner
+    - title: Misc / Utilities
+      desc: |
+        Other PyFixest internals and utilities.
+      contents:
         - core.detect_singletons.detect_singletons
         - utils.utils.ssc
         - utils.utils.get_ssc
+        - estimation.post_estimation.savi.optimal_mixture_precision
         - estimation.deprecated.model_matrix_fixest_.model_matrix_fixest

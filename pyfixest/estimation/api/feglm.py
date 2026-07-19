@@ -58,10 +58,9 @@ def feglm(
     """
     Estimate GLM regression models with fixed effects.
 
-    Supported families: [logit](/reference/estimation.models.felogit_.Felogit.qmd),
-    [probit](/reference/estimation.models.feprobit_.Feprobit.qmd),
-    [gaussian](/reference/estimation.models.fegaussian_.Fegaussian.qmd),
-    and [poisson](/reference/estimation.models.fepois_.Fepois.qmd).
+    Supported families: `logit`, `probit`, and `gaussian` (see
+    [Feglm](/reference/estimation.models.feglm_.Feglm.qmd)), and `poisson`
+    (see [Fepois](/reference/estimation.models.fepois_.Fepois.qmd)).
 
     References
     ----------
@@ -222,10 +221,22 @@ def feglm(
     -------
     object
         An instance of the [Feglm](/reference/estimation.models.feglm_.Feglm.qmd) class
-        (or one of its subclasses: [Felogit](/reference/estimation.models.felogit_.Felogit.qmd),
-        [Feprobit](/reference/estimation.models.feprobit_.Feprobit.qmd),
-        [Fegaussian](/reference/estimation.models.fegaussian_.Fegaussian.qmd)) or an instance of
-        class [FixestMulti](/reference/estimation.FixestMulti_.FixestMulti.qmd) for multiple models specified via `fml`.
+        (a family-specific subclass for `logit`, `probit`, or `gaussian`) or an
+        instance of class [FixestMulti](/reference/estimation.FixestMulti_.FixestMulti.qmd) for multiple models specified via `fml`.
+
+    Notes
+    -----
+    `Feglm` inherits from
+    [Feols](/reference/estimation.models.feols_.Feols.qmd). A GLM fit therefore
+    supports the same post-estimation methods as an OLS fit, among them
+    `vcov()`, `tidy()`, `coef()`, `confint()`, `predict()` (with
+    `type="response"` or `"link"`), `fixef()`, `wildboottest()` and `ritest()`.
+    See the Post-Estimation Methods section of the function reference for the
+    full list.
+
+    `predict()` does not support `se_fit=True` for GLMs. Coefficients are on the
+    link scale. For effects on the response scale, see the
+    [marginal effects guide](/how-to/marginaleffects.qmd).
 
     Examples
     --------
