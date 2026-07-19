@@ -3,6 +3,12 @@ ignore:
   - "pyfixest/utils/dgps.py"
   - "pyfixest/utils/_exceptions.py"
 
+flags:
+  tests-nojit:
+    paths:
+      - "pyfixest/estimation/numba/*"
+    carryforward: true
+
 coverage:
   status:
     project:
