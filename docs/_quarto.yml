@@ -8,11 +8,10 @@ project:
     - "*.ipynb"
     - "*.md"
     - "!quarto_example/"
-    # Draft pages: hidden from the navbar and excluded from the site and llms.txt
-    # until finished. Delete the matching line to publish one.
+    # Draft outlines: excluded from the site and llms.txt until finished.
+    # (Both open with an explicit "outline" callout.) Delete the matching line
+    # to publish one. Complete-but-unlinked pages are left to render normally.
     - "!tutorials/standard-errors.qmd"
-    - "!tutorials/poisson-glm.qmd"
-    - "!how-to/anytime-valid-inference.qmd"
     - "!how-to/surrogate-indices-experimental-selection.qmd"
 
 execute:
@@ -131,6 +130,8 @@ quartodoc:
   parser: numpy
   rewrite_all_pages: True
   sidebar: _sidebar.yml
+  renderer:
+    style: _renderer.py
   options:
     signature_name: short
 
