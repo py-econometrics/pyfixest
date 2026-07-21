@@ -75,19 +75,6 @@ fit.tidy()
 | X1          | 0.001864  | 0.040712   | 0.045784  | 0.963482    | -0.077930 | 0.081658 |
 | X2          | -0.014261 | 0.010903   | -1.307958 | 0.190888    | -0.035631 | 0.007109 |
 
-Coefficients are on the log scale. Exponentiating gives incidence rate ratios.
-
-``` python
-import numpy as np
-
-np.exp(fit.coef())
-```
-
-    Coefficient
-    X1    1.001866
-    X2    0.985840
-    Name: Estimate, dtype: float64
-
 ## Methods
 
 | Name | Description |

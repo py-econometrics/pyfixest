@@ -6,7 +6,7 @@ MapDemeaner(fixef_maxiter=10000, fixef_tol=1e-06, backend='rust')
 
 Method of Alternating Projections (MAP) demeaner.
 
-The default backend. Sweeps out the fixed effects by alternately projecting on each of them until convergence. Fast and memory efficient for a small number of low-dimensional fixed effects. Decrease `fixef_tol` if the fixed effects are close to collinear and convergence is slow. See [Choosing a Demeaner Backend](../how-to/demeaner-backends.llms.md) for a comparison with [LsmrDemeaner](../reference/demeaners.LsmrDemeaner.llms.md).
+The default backend. Sweeps out the fixed effects by alternately projecting on each of them until convergence. See [Choosing a Demeaner Backend](../how-to/demeaner-backends.llms.md) for when to use which backend.
 
 ## Examples
 

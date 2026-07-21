@@ -51,21 +51,6 @@ fit.tidy()
 | X1          | -1.016344 | 0.109325   | -9.296552 | 0.000000e+00 | -1.230617 | -0.802071 |
 | X2          | -0.165899 | 0.028450   | -5.831291 | 5.500026e-09 | -0.221660 | -0.110139 |
 
-Coefficients are on the link scale. For effects on the response scale, use `marginaleffects`. See the [marginal effects guide](../how-to/marginaleffects.llms.md).
-
-``` python
-from marginaleffects import avg_slopes
-
-avg_slopes(fit, variables="X1")
-```
-
-shape: (1, 3)
-
-| term | contrast | estimate  |
-|------|----------|-----------|
-| str  | str      | f64       |
-| "X1" | "dY/dX"  | -1.016344 |
-
 ## Methods
 
 | Name | Description |

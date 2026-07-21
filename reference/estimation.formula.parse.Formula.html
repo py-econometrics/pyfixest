@@ -833,14 +833,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>Splits a fixest-style formula into second stage, fixed effects and, for IV models, first stage. Use <code>parse()</code> instead of calling the class directly. <code>parse()</code> also expands the multiple estimation operators (<code>sw</code>, <code>sw0</code>, <code>csw</code>, <code>csw0</code>, <code>mvsw</code>) into one <code>Formula</code> per model. This is an internal API. Formulas are written as strings and passed to <code>feols()</code>. See the <a href="../tutorials/formula-syntax.html">formula syntax tutorial</a>.</p>
 <section id="examples" class="level2 doc-section doc-section-examples">
 <h2 class="doc-section doc-section-examples anchored" data-anchor-id="examples">Examples</h2>
-<div id="d5b01d63" class="cell" data-execution_count="1">
+<div id="c1f90b85" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.estimation.formula.parse <span class="im">import</span> Formula</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>fml <span class="op">=</span> Formula.parse(<span class="st">"Y ~ X1 + X2 | f1 + f2"</span>)[<span class="dv">0</span>]</span>
 <span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>fml.second_stage, fml.fixed_effects</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 
-        <div id="5Dlcit"></div>
+        <div id="8YEY5K"></div>
         <script type="text/javascript" data-lets-plot-script="library">
             if(!window.letsPlotCallQueue) {
                 window.letsPlotCallQueue = [];
@@ -851,7 +851,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
             (function() {
                 var script = document.createElement("script");
                 script.type = "text/javascript";
-                script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.11.0/js-package/distr/lets-plot.min.js";
+                script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.8.2/js-package/distr/lets-plot.min.js";
                 script.onload = function() {
                     window.letsPlotCall = function(f) {f();};
                     window.letsPlotCallQueue.forEach(function(f) {f();});
@@ -864,9 +864,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                     var div = document.createElement("div");
                     div.style.color = 'darkred';
                     div.textContent = 'Error loading Lets-Plot JS';
-                    document.getElementById("5Dlcit").appendChild(div);
+                    document.getElementById("8YEY5K").appendChild(div);
                 };
-                var e = document.getElementById("5Dlcit");
+                var e = document.getElementById("8YEY5K");
                 e.appendChild(script);
             })()
         </script>
@@ -874,7 +874,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <div class="cell-output cell-output-display">
 
-        <div id="84aI1H"></div>
+        <div id="qSUrCv"></div>
         <script type="text/javascript" data-lets-plot-script="library">
             if(!window.letsPlotCallQueue) {
                 window.letsPlotCallQueue = [];
@@ -885,7 +885,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
             (function() {
                 var script = document.createElement("script");
                 script.type = "text/javascript";
-                script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.11.0/js-package/distr/lets-plot.min.js";
+                script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.8.2/js-package/distr/lets-plot.min.js";
                 script.onload = function() {
                     window.letsPlotCall = function(f) {f();};
                     window.letsPlotCallQueue.forEach(function(f) {f();});
@@ -898,9 +898,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                     var div = document.createElement("div");
                     div.style.color = 'darkred';
                     div.textContent = 'Error loading Lets-Plot JS';
-                    document.getElementById("84aI1H").appendChild(div);
+                    document.getElementById("qSUrCv").appendChild(div);
                 };
-                var e = document.getElementById("84aI1H");
+                var e = document.getElementById("qSUrCv");
                 e.appendChild(script);
             })()
         </script>
@@ -911,7 +911,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 <p>Stepwise syntax expands into one formula per estimated model.</p>
-<div id="1ab2a8bc" class="cell" data-execution_count="2">
+<div id="c7692fd7" class="cell" data-execution_count="2">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>Formula.parse(<span class="st">"Y ~ X1 + csw(X2, X3)"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="2">
 <pre><code>[Formula(_second_stage='Y ~ X1 + X2', _fixed_effects=None, _first_stage=None),

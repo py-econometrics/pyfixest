@@ -16,7 +16,7 @@ LsmrDemeaner(
 
 Sparse LSMR demeaner.
 
-Solves the demeaning problem as a single sparse least squares system via LSMR instead of alternating projections. Usually faster when alternating projections converge slowly, for example with many or highly overlapping fixed effects. The `torch` backend can run on a GPU. See [Choosing a Demeaner Backend](../how-to/demeaner-backends.llms.md) for a comparison with [MapDemeaner](../reference/demeaners.MapDemeaner.llms.md).
+Solves the demeaning problem as a single sparse least squares system with LSMR instead of alternating projections. See [Choosing a Demeaner Backend](../how-to/demeaner-backends.llms.md) for when to use which backend.
 
 ## Examples
 
