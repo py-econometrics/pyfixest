@@ -114,11 +114,9 @@ class MapDemeaner(BaseDemeaner):
     Method of Alternating Projections (MAP) demeaner.
 
     The default backend. Sweeps out the fixed effects by alternately projecting
-    on each of them until convergence. Fast and memory efficient for a small
-    number of low-dimensional fixed effects. Decrease `fixef_tol` if the fixed
-    effects are close to collinear and convergence is slow. See
-    [Choosing a Demeaner Backend](/how-to/demeaner-backends.qmd) for a
-    comparison with [LsmrDemeaner](/reference/demeaners.LsmrDemeaner.qmd).
+    on each of them until convergence. See
+    [Choosing a Demeaner Backend](/how-to/demeaner-backends.qmd) for when to use
+    which backend.
 
     Examples
     --------
@@ -189,12 +187,10 @@ class MapDemeaner(BaseDemeaner):
 class LsmrDemeaner(BaseDemeaner):
     """Sparse LSMR demeaner.
 
-    Solves the demeaning problem as a single sparse least squares system via
-    LSMR instead of alternating projections. Usually faster when alternating
-    projections converge slowly, for example with many or highly overlapping
-    fixed effects. The `torch` backend can run on a GPU. See
-    [Choosing a Demeaner Backend](/how-to/demeaner-backends.qmd) for a
-    comparison with [MapDemeaner](/reference/demeaners.MapDemeaner.qmd).
+    Solves the demeaning problem as a single sparse least squares system with
+    LSMR instead of alternating projections. See
+    [Choosing a Demeaner Backend](/how-to/demeaner-backends.qmd) for when to use
+    which backend.
 
     Examples
     --------

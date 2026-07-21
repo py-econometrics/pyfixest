@@ -44,16 +44,6 @@ class Feglm(Feols):
     fit = pf.feglm("Y_bin ~ X1 + X2 | f1", data, family="logit")
     fit.tidy()
     ```
-
-    Coefficients are on the link scale. For effects on the response scale, use
-    `marginaleffects`. See the
-    [marginal effects guide](/how-to/marginaleffects.qmd).
-
-    ```{python}
-    from marginaleffects import avg_slopes
-
-    avg_slopes(fit, variables="X1")
-    ```
     """
 
     def __init__(
