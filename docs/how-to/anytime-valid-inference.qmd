@@ -11,19 +11,19 @@ toc-location: left
 
 ## Decisions based on interim A/B-test results
 
-Your team has finished a new feature and wants to test it with an A/B
-test. Before launch, you choose the primary KPI, the smallest effect worth
+The team has finished a new feature and wants to test it with an A/B
+test. Before launch, the team chooses the primary KPI, the smallest effect worth
 detecting, and a 5% false-positive rate. Given the expected traffic and
 baseline conversion rate, a power calculation implies a runtime of twenty
 days.
 
 While the decision on acceptance or rejection of the feature is scheduled for day twenty, it
 is often the case that interim results are visible the whole time on the experimentation platform
-that your company uses, be it built inhouse, or supplied by GrowthBook, Eppo, Statsig, or any other
+that the company uses, be it built in-house, or supplied by GrowthBook, Eppo, Statsig, or any other
 platform vendor. It is common that the platform recomputes the treatment effect estimate and p-value each morning, and that everyone in the team has access to the dashboard and can monitor test results
 before the end of the scheduled runtime of 20 days.
 
-On day one, we peek for the first time: The p-value is 0.15. On day two, it falls to 0.08. On day three, it falls below 0.05 for the first time, and stays there throughout day eight. By now, the team begins discussing whether to ship before the scheduled decision on day 20.
+On day one, the team peeks for the first time: The p-value is 0.15. On day two, it falls to 0.08. On day three, it falls below 0.05 for the first time, and stays there throughout day eight. By now, the team begins discussing whether to ship before the scheduled decision on day 20.
 
 The p-value on the dashboard, however, was not calibrated for a discretionary day-three or
 day-eight decision to accept or reject the feature. Its 5% false-positive rate is a property of one prespecified analysis: to fit the model once, on day twenty, and reject if $p \leq 0.05$.
@@ -33,13 +33,13 @@ $\min_{t \leq 20} p_t \leq 0.05$.
 
 If the twenty daily analyses were independent, at least one of them would
 fall below 0.05 with probability $1 - (1 - 0.05)^{20} \approx 0.64$ if the true treatment effect was 0. The cumulative analyses are of course correlated -
-because each one reuses the data from earlier days. Therefore, the computed 64% mark an upper bound. In a simulation below, we estimate the false-positive
+because each one reuses the data from earlier days. Therefore, the computed 64% marks an upper bound. The simulation below estimates the false-positive
 rate for these correlated analyses. The main takeaway is that the 5% guarantee applies to the
-prespecified single analysis / decision on day 20, but not to the rule that rejects after the first
+prespecified fixed-time analysis / decision on day 20, but not to the rule that rejects after the first
 daily p-value is observed at or below 0.05.
 
 ::: {.callout}
-Opening the experimentation platform and "peeking" at the experiment's interim-results in itself is not a problem and does not change the pointwise calibration of that day's p-value. The pointwise 5% guarantee is **not covered** by a decision rule that uses any interim threshold crossing to
+Opening the experimentation platform and "peeking" at the experiment's interim results in itself is not a problem and does not change the pointwise calibration of that day's p-value. The pointwise 5% guarantee **does not apply** to a decision rule that uses any interim threshold crossing to
 stop, ship, roll back, or extend the experiment.
 :::
 
@@ -48,29 +48,29 @@ accumulating data when any review may trigger a decision.
 
 ## What SAVI changes
 
-Safe anytime-valid inference (SAVI) replaces the ordinary p-value and
-confidence interval with sequential counterparts calibrated for repeated
+Safe anytime-valid inference (SAVI) replaces the fixed-time p-value and
+confidence interval with SAVI counterparts calibrated for repeated
 monitoring. In the large randomized experiments considered here, a 5% SAVI
 test satisfies, under the method's assumptions, an asymptotic bound of 5% on
-the probability that the sequential p-value is at or below 0.05 at any review.
+the probability that the SAVI p-value is at or below 0.05 at any review.
 The review schedule therefore does not need to be chosen before launch. A
 prespecified rule that rejects the zero-effect null the first time the SAVI
 p-value is at or below 0.05 has asymptotic type-I error of at most 5%. The
-sequential p-value has an interval companion, the **confidence sequence**: a
+SAVI p-value has an interval companion, the **confidence sequence**: a
 sequence of intervals that contains the true effect at every review
 simultaneously, with asymptotic probability of at least 95%.
 
 At the sample sizes used here, the SAVI confidence sequences are wider than
-ordinary confidence intervals, and the sequential p-values are typically
-larger. Fundamtenally, this is because the SAVI statistics are calibrated across all possible stopping points than one prespecified date. Nevertheless, despite being generally "more conservative", a lift well above the pre-specified / assumed minimally detectable effect (MDE) can still cross the 0.05 threshold before day twenty and therefore lead to faster acceptance. On the other hand, SAVI will detect a lift lift near or below
-the MDE value typically after the time horizon set by the fixed-sample power analysis.
+fixed-time confidence intervals, and the SAVI p-values are typically
+larger. Fundamentally, this is because the SAVI statistics are calibrated across all possible stopping points rather than at one prespecified date. Nevertheless, despite being generally "more conservative", a lift well above the pre-specified / assumed minimally detectable effect (MDE) can still cross the 0.05 threshold before day twenty and therefore lead to faster acceptance. On the other hand, SAVI will detect a lift near or below
+the MDE value typically after the time horizon set by the fixed-time power analysis.
 
-In this section, we simulate several scenarios to illustrate the usefulness of SAVI inference
+In this section, several scenarios are simulated to illustrate the usefulness of SAVI inference
 for real-world use cases often encountered in tech companies.
 
-The first set of simulations use sequential p-values to measure false positives
-under daily stopping and relate effect size to stopping time under fixed-sample and SAVI
-inference. For the second set of simulations, the **confidence sequences are the product**: we illustrate how to use confidence sequences to qualify that a Java-to-Kotlin rewrite does no harm, to report correct inferences on weekly holdout results,^[This is also useful for AA baseline randomization that checks if your AB testing platforms randomization process works correctly. Under fixed sample inference, you will inevitably find non-null and statistically significant treatment effects; SAVI reduces the risk of this.] and make hourly rollback decisions for a canary release. A final simulation studies regression adjustment with SAVI inference.
+The first set of simulations uses fixed-time and SAVI p-values to measure false positives
+under daily stopping and relate effect size to stopping time under fixed-time and SAVI
+inference. For the second set of simulations, the **confidence sequences are the product**: the simulations illustrate how to use confidence sequences to qualify that a Java-to-Kotlin rewrite does no harm, to report correct inferences on weekly holdout results,^[This is also useful for A/A baseline randomization that checks if an A/B testing platform's randomization process works correctly. Under fixed-time inference, teams will inevitably find non-null and statistically significant treatment effects; SAVI reduces the risk of this.] and make hourly rollback decisions for a canary release. A final simulation studies regression adjustment with SAVI inference.
 
 All simulations use `PyFixest`'s implementation of the linear-model method of
 [Lindon et al. (2026)](https://doi.org/10.1080/01621459.2026.2692052), which
@@ -277,32 +277,32 @@ def _slider(days, active):
 
 ## Scenario 1: false positives from daily stopping
 
-We simulate 500 A/A experiments with a zero treatment effect and apply three
-decision rules to each one:
+The simulation runs 500 A/A experiments with a zero treatment effect and
+applies three decision rules to each one:
 
-1. Use the "ordinary" p-value for the prespecified decision on day twenty.
-2. Recompute the "ordinary" p-value every day and stop the first time it is at or
+1. The simulation uses the fixed-time p-value for the prespecified decision on day twenty.
+2. The simulation recomputes the fixed-time p-value every day and stops the first time it is at or
    below 0.05.
-3. Apply the same daily stopping rule with the "SAVI" p-value.
+3. The simulation applies the same daily stopping rule with the SAVI p-value.
 
 Each experiment runs for twenty days, with 200 new users per arm each day.
 Conversion is 10% in both arms, so the true treatment effect is zero and every
 rejection is a false positive.
 
 The figure shows only the first 100 experiments; the table below uses all 500. Each
-grey line traces one lift estimate that is each day updated with incoming data in percentage
-points. Estimates vary most during the first few days but stabilize as more data accumulates.
+grey line traces one lift estimate, in percentage points, that is updated each day
+with incoming data. Estimates vary most during the first few days but stabilize as more data accumulates.
 
 The markers show what each of the three policies would decide on each experiment.
-An orange cross marks the first day the "ordinary" daily p-value is at or below 0.05. A blue
-cross marks the first day the "SAVI" p-value is at or below 0.05. Last, an orange
-diamond marks a rejection by the "ordinary" test on its prespecified analysis
+An orange cross marks the first day the fixed-time daily p-value is at or below 0.05. A blue
+cross marks the first day the SAVI p-value is at or below 0.05. Last, an orange
+diamond marks a rejection by the fixed-time test on its prespecified analysis
 day, day twenty. Note that a path can have more than one marker because all three
 policies are applied to every experiment.
 
 Rejections occur when an estimate is large relative to its standard error.
-Stopping at the first "ordinary" p-value below 0.05 therefore selects large early
-deviations, including paths that later move back toward zero. The "SAVI" p-value
+Stopping at the first fixed-time p-value below 0.05 therefore selects large early
+deviations, including paths that later move back toward zero. The SAVI p-value
 is calibrated for the whole sequence of daily checks rather than for any
 single one, which is why the figure contains far fewer blue crosses.
 
@@ -356,7 +356,7 @@ fig.add_trace(
         mode="markers",
         marker={"color": ORDINARY_ORANGE, "size": 9, "symbol": "x"},
         name=(
-            f"Ordinary daily stop "
+            f"Fixed-time daily stop "
             f"({ordinary_daily_rejected.size}/{N_SHOWN})"
         ),
         hovertemplate=(
@@ -419,7 +419,7 @@ fig
 ```
 
 ::: {.figure-caption}
-Effect paths for 100 simulated A/A experiments. With a true effect of zero, every marked rejection is a false positive. Orange crosses show the first day the ordinary p-value falls to 0.05 or below under the daily stopping rule. Orange diamonds show rejections from the prespecified day-twenty analysis, and blue crosses show the first SAVI rejection.
+Effect paths for 100 simulated A/A experiments. With a true effect of zero, every marked rejection is a false positive. Orange crosses show the first day the fixed-time p-value falls to 0.05 or below under the daily stopping rule. Orange diamonds show rejections from the prespecified day-twenty analysis, and blue crosses show the first SAVI rejection.
 :::
 
 Across all `{python} N_SIMULATIONS` experiments:
@@ -430,8 +430,8 @@ Across all `{python} N_SIMULATIONS` experiments:
 pd.DataFrame(
     {
         "Decision rule": [
-            "Ordinary test, prespecified day-20 analysis",
-            "Ordinary p-value, stop at first p ≤ 0.05",
+            "Fixed-time test, prespecified day-20 analysis",
+            "Fixed-time p-value, stop at first p ≤ 0.05",
             "SAVI p-value, stop at first p ≤ 0.05",
         ],
         "False-positive rate": [
@@ -443,18 +443,18 @@ pd.DataFrame(
 )
 ```
 
-An ordinary analysis performed only on day twenty rejects
+A fixed-time analysis performed only on day twenty rejects
 `{python} f"{fpr_planned_analysis:.1%}"` of the time, close to the intended 5%.
-Checking the ordinary p-value daily and stopping at the first rejection raises
+Checking the fixed-time p-value daily and stopping at the first rejection raises
 the rate to `{python} f"{fpr_daily_ordinary:.0%}"`. This is below the 64%
 upper bound from above because the twenty analyses reuse the same accumulating
 data and are not independent. It is nevertheless several times the specified 5%.
-"SAVI" rejects `{python} f"{fpr_daily_savi:.1%}"` of the same null experiments. This rate
+SAVI rejects `{python} f"{fpr_daily_savi:.1%}"` of the same null experiments. This rate
 does not need to equal 5%: under the method's assumptions, the probability of a false
 rejection at any time is asymptotically at most 5%, so the probability of
 rejecting by day twenty is also at most 5% and can be lower.
 
-While we are at it, we also want to point out that discretionary early stopping further inflates the absolute effect reported at rejection. Estimates are noisiest in the first days, and conditioning on a first p-value below 0.05 selects unusually large estimates. For each experiment that
+The simulation also shows that discretionary early stopping further inflates the absolute effect reported at rejection. Estimates are noisiest in the first days, and conditioning on a first p-value below 0.05 selects unusually large estimates. For each experiment that
 rejects, the second plot records the estimate on its first rejection day;
 experiments that never reject are omitted.
 
@@ -489,7 +489,7 @@ for est, base, color, label in [
         ordinary_daily_at_stop,
         1,
         ORDINARY_ORANGE,
-        "Ordinary p-value stopping",
+        "Fixed-time p-value stopping",
     ),
     (savi_at_stop, 0, SAVI_BLUE, "SAVI"),
 ]:
@@ -518,7 +518,7 @@ fig.update_layout(
     yaxis={
         "tickmode": "array",
         "tickvals": [0, 1],
-        "ticktext": ["SAVI", "Ordinary p-value<br>stopping"],
+        "ticktext": ["SAVI", "Fixed-time p-value<br>stopping"],
         "range": [-0.5, 1.5],
     },
     legend={"orientation": "h", "y": -0.3},
@@ -531,7 +531,7 @@ fig
 Estimated effects at the first rejection, among experiments that reject within twenty days. Non-rejecting experiments are omitted.
 :::
 
-The daily ordinary-p-value stopping rule rejects in
+The daily fixed-time p-value stopping rule rejects in
 `{python} f"{ordinary_daily_rejection_rate:.0%}"` of the simulated experiments
 with null effects. Among the experiments that reject, the estimated effect at the stopping time
 averages `{python} f"{ordinary_daily_mean_abs:.1f}"` pp in absolute value even
@@ -545,13 +545,13 @@ rejection still selects unusually large absolute point estimates.
 
 ## Scenario 2: effect size and stopping time
 
-Suppose that at 20 days of runtime, our experiment was powered to detect a lift from 10% to 12% with 80% power. In this simulation, we set the true conversion in the treatment arm to 14%, a true lift twice the hypothesized minimally detectable effect (MDE), and compares the SAVI stopping day with the prespecified decision on day twenty. We will see that if the true lift is above the MDE, on average SAVI inference will allow us to stop the experiment earlier than the fixed runtime of 20 days.
+At a runtime of 20 days, the experiment was powered to detect a lift from 10% to 12% with 80% power. In this simulation, the true conversion in the treatment arm is set to 14%, a true lift twice the hypothesized minimally detectable effect (MDE), and the simulation compares the SAVI stopping day with the prespecified fixed-time decision on day twenty. The simulation shows that if the true lift is above the MDE, on average SAVI inference will allow the team to stop the experiment earlier than the fixed runtime of 20 days.
 
-The top panel in the figure below tracks the estimated lift together with an ordinary 95%
-confidence interval and a 95% SAVI confidence sequence; while the "ordinary" interval has
+The top panel in the figure below tracks the estimated lift together with a fixed-time 95%
+confidence interval and a 95% SAVI confidence sequence; while the fixed-time interval has
 pointwise coverage at a prespecified analysis time, the confidence
 sequence has time-uniform asymptotic coverage. The bottom panel shows the
-ordinary and SAVI p-values on a $-\log_{10}(p)$ scale, since the raw p-values
+fixed-time and SAVI p-values on a $-\log_{10}(p)$ scale, since the raw p-values
 soon become too small to plot next to the 0.05 line; the horizontal line
 corresponds to $p=0.05$.
 
@@ -634,7 +634,7 @@ def _effect_path_traces(day):
             y=seen["cs_lower"],
             fill="tonexty",
             fillcolor=_rgba(SAVI_BLUE, 0.15),
-            name="95% confidence sequence",
+            name="95% SAVI confidence sequence",
             **band,
         ),
         go.Scatter(x=seen["day"], y=seen["ci_upper"], showlegend=False, **band),
@@ -643,7 +643,7 @@ def _effect_path_traces(day):
             y=seen["ci_lower"],
             fill="tonexty",
             fillcolor=_rgba(ORDINARY_ORANGE, 0.18),
-            name="95% confidence interval",
+            name="95% fixed-time confidence interval",
             **band,
         ),
         go.Scatter(
@@ -654,7 +654,7 @@ def _effect_path_traces(day):
             marker={"color": SAVI_BLUE, "size": 5},
             showlegend=False,
             hovertemplate=(
-                f"Day {day}<br>Confidence sequence: "
+                f"Day {day}<br>SAVI confidence sequence: "
                 f"[{current['cs_lower']:.1%}, {current['cs_upper']:.1%}]"
                 "<extra></extra>"
             ),
@@ -667,7 +667,7 @@ def _effect_path_traces(day):
             marker={"color": ORDINARY_ORANGE, "size": 4},
             showlegend=False,
             hovertemplate=(
-                f"Day {day}<br>Ordinary interval: "
+                f"Day {day}<br>Fixed-time interval: "
                 f"[{current['ci_lower']:.1%}, {current['ci_upper']:.1%}]"
                 "<extra></extra>"
             ),
@@ -685,7 +685,7 @@ def _effect_path_traces(day):
             y=np.minimum(-np.log10(seen["regular_pvalue"]), EVIDENCE_CAP),
             mode="lines+markers",
             line={"color": ORDINARY_ORANGE, "dash": "dot"},
-            name="Ordinary p-value",
+            name="Fixed-time p-value",
             customdata=seen["regular_pvalue"],
             hovertemplate="Day %{x}<br>p = %{customdata:.4f}<extra></extra>",
         ),
@@ -745,7 +745,7 @@ def _effect_path_traces(day):
             line={"color": ORDINARY_ORANGE, "dash": "dot", "width": 1.5},
             showlegend=False,
             hovertemplate=(
-                f"Day {peek_day}: ordinary p-value below 0.05;"
+                f"Day {peek_day}: fixed-time p-value below 0.05;"
                 " daily first-crossing rule is not calibrated at 5%"
                 "<extra></extra>"
             ),
@@ -770,7 +770,7 @@ def _effect_path_title(day):
     if day < peek_day:
         decision = "Continue"
     elif day < savi_day:
-        decision = "Ordinary p < 0.05; daily rule is not calibrated at 5%"
+        decision = "Fixed-time p < 0.05; daily rule is not calibrated at 5%"
     else:
         decision = "SAVI boundary reached; reject at the anytime-valid 5% level"
     return f"Day {day} of {N_DAYS} · {users:,} users<br>{decision}"
@@ -815,7 +815,7 @@ fig.add_vline(
     line_dash="dash",
     line_color=NEUTRAL_GREY,
     opacity=0.7,
-    annotation_text="Prespecified fixed-sample analysis: day 20",
+    annotation_text="Prespecified fixed-time analysis: day 20",
     annotation_position="top left",
     annotation_font_color=NEUTRAL_GREY,
     row=2,
@@ -843,13 +843,13 @@ fig
 ```
 
 ::: {.figure-caption}
-One simulated experiment with a true lift of 4 pp. The orange and blue vertical lines mark the first ordinary and SAVI p-values at or below 0.05. The evidence axis is capped at 4 so that the $p = 0.05$ line remains visible.
+One simulated experiment with a true lift of 4 pp. The orange and blue vertical lines mark the first fixed-time and SAVI p-values at or below 0.05. The evidence axis is capped at 4 so that the $p = 0.05$ line remains visible.
 :::
 
-The ordinary p-value falls below 0.05 on day `{python} peek_day`, when the
+The fixed-time p-value falls below 0.05 on day `{python} peek_day`, when the
 estimated lift is `{python} peek_lift`. Stopping at this first crossing uses
 the event $\min_{t \leq 20} p_t \leq 0.05$, for which the fixed-time p-values
-do not provide 5% type-I error control. Using fixed-sample inference, we should
+do not provide 5% type-I error control. Using fixed-time inference, the team should
 not stop here, but only after 20 days.
 
 With SAVI, the p-value falls below 0.05 on day `{python} savi_day`, after
@@ -858,7 +858,7 @@ daily reviews and the lower confidence-sequence endpoint excludes zero before da
 the team can ship `{python} days_saved` days early. The confidence sequence at that
 review is `{python} savi_cs`.
 
-Note that SAVI will not always lead to earlier stopping. If the true lift is smaller than the MDE, the SAVI p-value may not fall below 0.05 before day twenty, and the confidence sequence may still include zero at that time. To estimate how the ratio of true to hypotesized effect size changes the stopping-time distribution, we simulate lifts of 1, 2, and 4 percentage points for forty days:
+Note that SAVI will not always lead to earlier stopping. If the true lift is smaller than the MDE, the SAVI p-value may not fall below 0.05 before day twenty, and the confidence sequence may still include zero at that time. To estimate how the ratio of true to hypothesized effect size changes the stopping-time distribution, the simulation uses lifts of 1, 2, and 4 percentage points for forty days:
 
 ```{python}
 #| code-fold: true
@@ -919,7 +919,7 @@ fig.add_trace(
         y=oneshot_curve,
         mode="lines+markers",
         line={"shape": "hv", "dash": "dash", "color": ORDINARY_ORANGE},
-        name="Fixed test: 2 pp, day 20",
+        name="Fixed-time test: 2 pp, day 20",
         hovertemplate="Day %{x}<br>Detected: %{y:.0%}<extra></extra>",
     )
 )
@@ -968,10 +968,10 @@ fig
 ```
 
 ::: {.figure-caption}
-Share of SAVI experiments with a positive rejection by each day, for true lifts of 1, 2, and 4 pp. The fixed-test curve reports power for a true 2 pp lift at its prespecified decision time, day twenty.
+Share of SAVI experiments with a positive rejection by each day, for true lifts of 1, 2, and 4 pp. The fixed-time curve reports power for a true 2 pp lift at its prespecified decision time, day twenty.
 :::
 
-At day twenty, the fixed-horizon test detects the effect in
+At day twenty, the fixed-time test detects the effect in
 `{python} f"{oneshot_power:.0%}"` of experiments when the true lift is the
 planned 2 pp. By then, SAVI has produced a positive rejection in
 `{python} f"{larger_savi_detection[N_DAYS - 1]:.0%}"` of experiments with a
@@ -986,24 +986,24 @@ past day twenty. By day forty, those shares are
 In this design, many 4 pp effects cross the SAVI boundary before day twenty.
 Effects at the 2 pp planning value frequently need longer, and 1 pp effects
 need even longer still. At the planning value, SAVI has a lower rejection probability
-by day twenty than the fixed-horizon test because its boundary accounts for
+by day twenty than the fixed-time test because its boundary accounts for
 continued monitoring.
 
 ## Scenario 3: certify a backend migration from Java to Kotlin
 
 The backend team has rewritten a backend service from Java to Kotlin.^[All the cool kids do it because Kotlin has coroutines.] Before the test is launched, it is agreed that the migration is
-safe to ship when the estimated effect on conversion lies strictly between -1 and +1 pp. Our object of interest is therefore not a point estimate / lift, but a confidence interval.
+safe to ship when the estimated effect on conversion lies strictly between -1 and +1 pp. The object of interest is therefore not a point estimate / lift, but a confidence interval.
 
 The team checks the interval once per day and agrees to accept the new Kotlin backend
-as soon as the whole interval is inside the acceptance range of +1/-1pp.
-Once again, we are faced with a discretionary decision rule of "peek every day and stop if".
-As before, it holds that the usual 95% confidence interval is only valid for one
+as soon as the whole interval is inside the acceptance range of ±1 pp.
+Once again, the team is faced with a discretionary decision rule: "peek every day and stop if the interval is inside the range."
+As before, it holds that the usual 95% fixed-time confidence interval is only valid for one
 prespecified analysis day; it is not calibrated for checking every day and
 stopping when the interval first falls inside the range. A SAVI confidence
 sequence is instead designed for such a workflow: it provides simultaneous asymptotic
 coverage across all daily reviews.
 
-Because our engineering team is competent, we once again simulate a true treatment effect of 0 and send 2,000 users per arm per day to the Java and
+Because the engineering team is competent, the simulation once again assumes a true treatment effect of 0 and sends 2,000 users per arm per day to the Java and
 Kotlin implementations.
 
 ```{python}
@@ -1096,7 +1096,7 @@ def _backend_traces(day):
             y=seen["cs_lower"],
             fill="tonexty",
             fillcolor=_rgba(SAVI_BLUE, 0.15),
-            name="95% confidence sequence",
+            name="95% SAVI confidence sequence",
             **band,
         ),
         go.Scatter(x=seen["day"], y=seen["ci_upper"], showlegend=False, **band),
@@ -1105,7 +1105,7 @@ def _backend_traces(day):
             y=seen["ci_lower"],
             fill="tonexty",
             fillcolor=_rgba(ORDINARY_ORANGE, 0.18),
-            name="95% confidence interval",
+            name="95% fixed-time confidence interval",
             **band,
         ),
         go.Scatter(
@@ -1116,7 +1116,7 @@ def _backend_traces(day):
             marker={"color": SAVI_BLUE, "size": 5},
             showlegend=False,
             hovertemplate=(
-                f"Day {day}<br>Confidence sequence: "
+                f"Day {day}<br>SAVI confidence sequence: "
                 f"[{current['cs_lower']:.2%}, {current['cs_upper']:.2%}]"
                 "<extra></extra>"
             ),
@@ -1129,7 +1129,7 @@ def _backend_traces(day):
             marker={"color": ORDINARY_ORANGE, "size": 4},
             showlegend=False,
             hovertemplate=(
-                f"Day {day}<br>Ordinary interval: "
+                f"Day {day}<br>Fixed-time interval: "
                 f"[{current['ci_lower']:.2%}, {current['ci_upper']:.2%}]"
                 "<extra></extra>"
             ),
@@ -1159,7 +1159,7 @@ def _backend_traces(day):
             line={"color": ORDINARY_ORANGE, "dash": "dot", "width": 2},
             showlegend=False,
             hovertemplate=(
-                f"Day {ci_cert_day}: ordinary interval first enters range;"
+                f"Day {ci_cert_day}: fixed-time interval first enters range;"
                 " first-entry rule lacks time-uniform 95% coverage"
                 "<extra></extra>"
             ),
@@ -1171,7 +1171,7 @@ def _backend_traces(day):
             line={"color": SAVI_BLUE, "dash": "dot", "width": 2},
             showlegend=False,
             hovertemplate=(
-                f"Day {cert_day}: confidence sequence first enters range;"
+                f"Day {cert_day}: SAVI confidence sequence first enters range;"
                 " SAVI certification rule triggered<extra></extra>"
             ),
         ),
@@ -1181,9 +1181,9 @@ def _backend_traces(day):
 def _backend_title(day):
     users = int(backend_path.loc[day, "users"])
     if day == cert_day:
-        decision = "CS inside ±1 pp: certification rule met"
+        decision = "SAVI confidence sequence inside ±1 pp: certification rule met"
     elif day >= ci_cert_day:
-        decision = "Ordinary interval inside tolerance; continue"
+        decision = "Fixed-time interval inside tolerance; continue"
     else:
         decision = "Tolerance not met; keep collecting"
     return f"Day {day} · {users:,} users<br>{decision}"
@@ -1236,16 +1236,16 @@ fig
 ```
 
 ::: {.figure-caption}
-The blue vertical line marks the first day the confidence sequence lies entirely inside the -1 to +1 pp acceptance range. The orange line marks the first day the ordinary confidence interval does the same.
+The blue vertical line marks the first day the SAVI confidence sequence lies entirely inside the -1 to +1 pp acceptance range. The orange line marks the first day the fixed-time confidence interval does the same.
 :::
 
-On day `{python} cert_day`, the confidence sequence `{python} cert_cs` lies
+On day `{python} cert_day`, the SAVI confidence sequence `{python} cert_cs` lies
 inside the ±1 pp tolerance. Its time-uniform asymptotic coverage allows the team
 to stop and rule out effects larger than the tolerance.
 
-For the selected path, the ordinary interval enters the tolerance on day
-`{python} ci_cert_day`, earlier than the confidence sequence on day
-`{python} cert_day`. An ordinary interval provides pointwise 95% coverage when
+For the selected path, the fixed-time interval enters the tolerance on day
+`{python} ci_cert_day`, earlier than the SAVI confidence sequence on day
+`{python} cert_day`. A fixed-time interval provides pointwise 95% coverage when
 the analysis time is fixed independently of the results. Here, however, the
 team selects the first day on which the interval fits inside the acceptance
 range. Repeated checks make it more likely that sampling variation produces a
@@ -1254,8 +1254,8 @@ favorable interval on at least one day. As a result, the first-entry rule does n
 
 A run certifies by day thirty if its interval first lies entirely inside the
 ±1 pp acceptance range during the 30-day monitoring window. Among those runs,
-the median first-certification day is `{python} median_ci_cert` for the ordinary
-rule and `{python} median_cs_cert` for the confidence sequence. The shares of
+the median first-certification day is `{python} median_ci_cert` for the fixed-time
+rule and `{python} median_cs_cert` for the SAVI confidence sequence. The shares of
 simulation runs meeting that criterion are `{python} f"{ci_cert_rate:.0%}"` and
 `{python} f"{cs_cert_rate:.0%}"`, respectively. In this simulation, every run
 certifies under both rules, so the median comparison uses all 100 migrations.
@@ -1263,7 +1263,7 @@ certifies under both rules, so the median comparison uses all 100 migrations.
 With a true null effect, the migration is genuinely acceptable because zero is
 strictly between -1 and +1 pp. The first simulation therefore measures how often
 and how quickly each rule certifies an acceptable migration. To measure false
-certification, we move the true effect to -1 pp, the smallest effect the team
+certification, the simulation moves the true effect to -1 pp, the smallest effect the team
 has defined as unacceptable. Since certification requires ruling out effects at
 or beyond the -1 pp boundary, any certification in this boundary case is an
 error.
@@ -1302,8 +1302,8 @@ false_cert_cs = boundary_cs_certified.mean()
 pd.DataFrame(
     {
         "Stopping rule": [
-            "Ordinary interval: certify at first entry",
-            "Confidence sequence: certify at first entry",
+            "Fixed-time interval: certify at first entry",
+            "SAVI confidence sequence: certify at first entry",
         ],
         "False certification rate": [
             f"{false_cert_ci:.0%}",
@@ -1314,20 +1314,20 @@ pd.DataFrame(
 ```
 
 With a true effect of -1 pp and daily certification over thirty days, the
-ordinary-interval rule certifies `{python} f"{false_cert_ci:.0%}"` of 100
-simulations; the confidence-sequence rule certifies
+fixed-time interval rule certifies `{python} f"{false_cert_ci:.0%}"` of 100
+simulations; the SAVI confidence-sequence rule certifies
 `{python} f"{false_cert_cs:.0%}"`. Since the -1 pp boundary lies outside the
-open acceptance range, these certifications are false. If the confidence
+open acceptance range, these certifications are false. If the SAVI confidence
 sequence contains the true -1 pp effect on every day, it cannot lie strictly
 inside the -1 to +1 pp acceptance range. False certification therefore
-requires the confidence sequence to miss the true effect, which has asymptotic
-probability at most 5% under the method's assumptions. With only 100 simulated
-migrations, each false certification changes the estimated rate by one
+requires the SAVI confidence sequence to miss the true effect. That miss event has
+asymptotic probability at most 5% under the method's assumptions. With only 100
+simulated migrations, each false certification changes the estimated rate by one
 percentage point, so the reported rates are only rough estimates.
 
 Failing to reject a zero effect would not certify the migration either. A
 non-significant p-value can still be consistent with effects outside the
-acceptance range. Certification requires the full confidence sequence to lie
+acceptance range. Certification requires the full SAVI confidence sequence to lie
 inside that range.
 
 ## Scenario 4: monitor a long-term holdout
@@ -1342,15 +1342,15 @@ estimates the effect of assignment to the year-long release policy. The
 reporting target then is simultaneous coverage across all 52 weekly business
 reviews.
 
-Each ordinary confidence interval has 95% pointwise coverage at a fixed review
+Each fixed-time confidence interval has 95% pointwise coverage at a fixed review
 time, but the collection of weekly intervals does not have 95% simultaneous
 coverage. As the number of reviews grows, so does the probability that at least
-one interval misses the true effect. A 95% confidence sequence is constructed
+one interval misses the true effect. A 95% SAVI confidence sequence is constructed
 to contain the true effect at every review with asymptotic probability of at
 least 95%, under the method's assumptions and regardless of the monitoring
 schedule.
 
-Below, we simulate such a holdout and assume that the shipped features lift conversion from
+Below, the team simulates such a holdout and assumes that the shipped features lift conversion from
 10% to 11%. Each week adds 500 users per arm, and the team reviews the result
 weekly for a year. The figure shows the simulation whose week-52 estimate is
 closest to the median week-52 estimate across 100 simulations.
@@ -1431,7 +1431,7 @@ fig.add_trace(
         y=holdout_path["cs_lower"],
         fill="tonexty",
         fillcolor=_rgba(SAVI_BLUE, 0.15),
-        name="95% confidence sequence",
+        name="95% SAVI confidence sequence",
         **band,
     )
 )
@@ -1449,7 +1449,7 @@ fig.add_trace(
         y=holdout_path["ci_lower"],
         fill="tonexty",
         fillcolor=_rgba(ORDINARY_ORANGE, 0.18),
-        name="95% confidence interval",
+        name="95% fixed-time confidence interval",
         **band,
     )
 )
@@ -1494,13 +1494,13 @@ fig
 ```
 
 ::: {.figure-caption}
-One simulated holdout, reviewed weekly for a year; the y-axis clips the very wide intervals of the first weeks. The confidence sequence is constructed for simultaneous coverage across all reviews, while the ordinary interval is calibrated for one prespecified review.
+One simulated holdout, reviewed weekly for a year; the y-axis clips the very wide intervals of the first weeks. The SAVI confidence sequence is constructed for simultaneous coverage across all reviews, while the fixed-time interval is calibrated for one prespecified review.
 :::
 
-At week 52, the displayed path has a confidence sequence of
-`{python} holdout_cs` and an ordinary interval of `{python} holdout_ci`. To
-estimate simultaneous coverage, we use all
-`{python} HOLDOUT_SIMULATIONS` simulated holdouts and record whether each
+At week 52, the displayed path has a SAVI confidence sequence of
+`{python} holdout_cs` and a fixed-time interval of `{python} holdout_ci`. To
+estimate simultaneous coverage, the analysis uses all
+`{python} HOLDOUT_SIMULATIONS` simulated holdouts and records whether each
 interval has contained the true lift at every review so far:
 
 ```{python}
@@ -1513,7 +1513,7 @@ fig.add_trace(
         y=ci_ever_missed,
         mode="lines+markers",
         line={"color": ORDINARY_ORANGE, "dash": "dot"},
-        name="Ordinary 95% confidence interval",
+        name="Fixed-time 95% confidence interval",
         hovertemplate="Week %{x}<br>Missed at least once: %{y:.0%}<extra></extra>",
     )
 )
@@ -1523,7 +1523,7 @@ fig.add_trace(
         y=cs_ever_missed,
         mode="lines+markers",
         line_color=SAVI_BLUE,
-        name="95% confidence sequence",
+        name="95% SAVI confidence sequence",
         hovertemplate="Week %{x}<br>Missed at least once: %{y:.0%}<extra></extra>",
     )
 )
@@ -1550,12 +1550,12 @@ fig
 ```
 
 ::: {.figure-caption}
-We plot the share of simulated holdouts whose interval has missed the true lift at least once by each weekly review.
+The figure plots the share of simulated holdouts whose interval has missed the true lift at least once by each weekly review.
 :::
 
-By week 52, the ordinary interval has missed the true lift at least once in
+By week 52, the fixed-time interval has missed the true lift at least once in
 `{python} f"{1 - ci_always_covered[-1]:.0%}"` of the simulated holdouts. The
-confidence sequence did not miss in any of these 100 runs.
+SAVI confidence sequence did not miss in any of these 100 runs.
 
 ## Scenario 5: decide whether to roll back a canary deployment
 
@@ -1566,24 +1566,24 @@ very common practice in software engineering.
 A canary sends a small share of traffic to a new service version before a
 full rollout. If the version reduces conversion, hourly monitoring can limit
 the number of users exposed before rollback. In this simulation, the planned
-canary horizon is 48 hours. An ordinary confidence interval provides pointwise
-coverage for one prespecified look at the end of that horizon. But we do not want
-to only roll back after 48 hours! We want to check every hour if our release does
-any harm, and roll back in an agile fashion. For this, we need confidence sequences
+canary horizon is 48 hours. A fixed-time confidence interval provides pointwise
+coverage for one prespecified look at the end of that horizon. But the team does not want
+to only roll back after 48 hours! The team wants to check every hour if its release does
+any harm, and roll back in an agile fashion. For this, the team needs SAVI confidence sequences
 that are valid for looks at the data (and discretionary decisions) at any time during the canary.
 
-Before the launch, our team agrees that we will tolerate a conversion loss of no more than 1 pp, so -1 pp is the
-decision boundary. With 500 new users per arm each hour, we decide to:
+Before the launch, the team agrees that it will tolerate a conversion loss of no more than 1 pp, so -1 pp is the
+decision boundary. With 500 new users per arm each hour, the team decides to:
 
 - **Roll back** if the upper endpoint is below -1 pp; every effect compatible
   with the data implies a loss greater than 1 pp.
 - **Promote** if the lower endpoint is above -1 pp; a loss of 1 pp or more has
   been ruled out.
-- **Continue** while the sequence contains -1 pp.
+- **Continue** while the SAVI confidence sequence contains -1 pp.
 
-In our simulation, we reduce conversion from 10% to 7%, a true effect of
--3 pp which we would optimally roll back as quickly as possible. We record the first hour
-at which the confidence-sequence rule calls for rollback.
+In the simulation, conversion is reduced from 10% to 7%, a true effect of
+-3 pp which the team would optimally roll back as quickly as possible. The simulation records the first hour
+at which the SAVI confidence-sequence rule calls for rollback.
 
 ```{python}
 #| code-fold: true
@@ -1635,7 +1635,7 @@ fig.add_trace(
         y=canary_path["cs_lower"],
         fill="tonexty",
         fillcolor=_rgba(SAVI_BLUE, 0.15),
-        name="95% confidence sequence",
+        name="95% SAVI confidence sequence",
         **band,
     )
 )
@@ -1698,46 +1698,47 @@ fig
 ```
 
 ::: {.figure-caption}
-A canary with a true effect of -3 pp. Rollback occurs when the confidence sequence's upper endpoint falls below the -1 pp boundary.
+A canary with a true effect of -3 pp. Rollback occurs when the SAVI confidence sequence's upper endpoint falls below the -1 pp boundary.
 :::
 
-The sequence starts wide because one hour of data provides little information.
-After `{python} rollback_hour` hours, the confidence sequence is
+The SAVI confidence sequence starts wide because one hour of data provides little information.
+After `{python} rollback_hour` hours, the SAVI confidence sequence is
 `{python} rollback_cs`; its upper endpoint is below -1 pp, so the rollback rule
-fires. A fixed-horizon test planned for hour 48 would wait another
+fires. A fixed-time test planned for hour 48 would wait another
 `{python} hours_saved` hours before making the same decision.
 
-::: {.callout-note title="Why not just use fixed-sample intervals?"}
-A tempting shortcut is to compute the usual fixed-sample interval every hour and
+::: {.callout-note title="Why not just use fixed-time intervals?"}
+A tempting shortcut is to compute the usual fixed-time interval every hour and
 roll back whenever its upper endpoint drops below -1 pp. While it is true that such
 a rule catches bad releases earlier, it also rolls back too often when the new version is not
 actually harmful, because it gives itself 48 chances to find one bad-looking
 interval.
 :::
 
-## Regression adjustment can narrow the sequence
+## Regression adjustment can narrow the SAVI confidence sequence
 
 In many A/B tests, users differ before treatment: some were already more likely
 to convert, spend, or return. A pre-treatment metric that predicts the outcome
 can absorb part of that baseline variation. This does not change the treatment
 effect being estimated, as long as the metric was measured before treatment and
-is unaffected by treatment assignment, but it can make the interval narrower.
+is unaffected by treatment assignment, but it can make the SAVI confidence
+sequence narrower.
 This is variance reduction via regression adjustment.
 
 Lindon et al.'s method fits naturally here because it works with regression
-coefficients, not only raw differences in means. We can add the pre-treatment
+coefficients, not only raw differences in means. The team can add the pre-treatment
 metric to the regression and still use the same SAVI confidence sequence for the
 treatment coefficient. In the simulated design below, that adjustment narrows the
-median sequence and increases the share of experiments that reach the stopping
+median SAVI confidence sequence and increases the share of experiments that reach the stopping
 boundary by day twenty.
 
-We compare adjusted and unadjusted analyses over twenty days in 200
+The simulation compares adjusted and unadjusted analyses over twenty days in 200
 experiments with a true average treatment effect of 0.18. The data-generating
 process is nonlinear, heteroskedastic, and heavy-tailed, with a treatment
 effect that varies with the pre-experiment metric. The adjusted regression
 follows [Lin (2013)](https://doi.org/10.1214/12-AOAS583): it includes the
-centered pre-experiment metric and its interaction with treatment. Both regressions use robust standard errors, and neither includes the quadratic term or the changing residual scale used to generate the data, so both outcome models are misspecified. For each day, we record the
-median half-width of the confidence sequence (the distance from the point
+centered pre-experiment metric and its interaction with treatment. Both regressions use robust standard errors, and neither includes the quadratic term or the changing residual scale used to generate the data, so both outcome models are misspecified. For each day, the simulation records the
+median half-width of the SAVI confidence sequence (the distance from the point
 estimate to either endpoint) and the share of experiments that meet the
 stopping rule.
 
@@ -1875,7 +1876,7 @@ fig = make_subplots(
     shared_xaxes=True,
     vertical_spacing=0.15,
     subplot_titles=(
-        "Median 95% confidence-sequence half-width",
+        "Median 95% SAVI confidence-sequence half-width",
         "Share of experiments that can stop",
     ),
 )
@@ -1939,10 +1940,10 @@ fig
 ```
 
 ::: {.figure-caption}
-The same experiments analyzed with and without a pre-treatment covariate for regression adjustment. In this design, adjustment narrows the median confidence sequence (top) and raises the share of experiments that can stop by the planned runtime end (bottom). Under Lindon et al.'s method, both analyses have the same coefficient-wise asymptotic guarantee.
+The same experiments are analyzed with and without a pre-treatment covariate for regression adjustment. In this design, adjustment narrows the median SAVI confidence sequence (top) and raises the share of experiments that can stop by the end of the planned runtime (bottom). Under Lindon et al.'s method, both analyses have the same coefficient-wise asymptotic guarantee.
 :::
 
-By day twenty, the median confidence-sequence half-width falls from
+By day twenty, the median SAVI confidence-sequence half-width falls from
 `{python} f"{median_width['unadjusted'][-1]:.3f}"` without adjustment to
 `{python} f"{median_width['adjusted'][-1]:.3f}"` with adjustment. The adjusted
 analysis meets the stopping rule in
@@ -1957,13 +1958,13 @@ average effect of `{python} f"{ADJUSTMENT_EFFECT:.3f}"`. Both are close to the
 true value in these 200 simulations; the adjusted analysis is more precise
 because the covariate predicts the outcome.
 
-To check whether adjustment inflates false positives in this design, we repeat
-the simulation with an average treatment effect of zero. Across
+To check whether adjustment inflates false positives in this design, the
+simulation is repeated with an average treatment effect of zero. Across
 `{python} ADJUSTMENT_NULL_SIMULATIONS` experiments, the SAVI p-value fell below
 0.05 by day twenty in `{python} int(adjustment_null_rejections)` runs
 (`{python} f"{adjustment_null_rejection_rate:.1%}"`).
 
-## Apply SAVI in PyFixest
+## SAVI in PyFixest
 
 In `PyFixest`, SAVI inference following Lindon et al. (2026) is available as a post-estimation method via the `pvalue_savi`, `evalue`, and `confint` methods.
 ```{python}
@@ -1992,28 +1993,28 @@ mixture_precision = pf.optimal_mixture_precision(
 At a 5% threshold, the decision rule for `treated` has three equivalent forms:
 
 ```{python}
-# Rule 1: stop when the sequential p-value is at most 0.05.
+# Rule 1: the team stops when the SAVI p-value is at most 0.05.
 fit.pvalue_savi(
     mixture_precision=mixture_precision,
 ).loc["treated"]
 ```
 
 ```{python}
-# Rule 2: stop when the e-value is at least 20 (= 1 / 0.05).
+# Rule 2: the team stops when the SAVI e-value is at least 20 (= 1 / 0.05).
 fit.evalue(
     mixture_precision=mixture_precision,
 ).loc["treated"]
 ```
 
 ```{python}
-# Rule 3: stop when zero falls outside the confidence sequence.
+# Rule 3: the team stops when zero falls outside the SAVI confidence sequence.
 fit.confint(
     inference_type="savi",
     mixture_precision=mixture_precision,
 ).loc["treated"]
 ```
 
-Since the sequential p-value is `min(1, 1 / e_value)`, the three rules are
+Since the SAVI p-value is `min(1, 1 / e_value)`, the three rules are
 equivalent up to numerical rounding for the same coefficient,
-`mixture_precision`, and 5% threshold. A confidence sequence additionally
+`mixture_precision`, and 5% threshold. A SAVI confidence sequence additionally
 expresses the result and any practical tolerance on the effect-size scale.
