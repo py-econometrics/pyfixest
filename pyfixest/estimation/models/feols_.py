@@ -71,6 +71,7 @@ from pyfixest.utils.utils import (
 )
 
 decomposition_type = Literal["gelbach"]
+decomposition_inference = Literal["analytic", "bootstrap"]
 prediction_type = Literal["response", "link"]
 
 
@@ -1525,6 +1526,7 @@ class Feols(ResultAccessorMixin):
         nthreads: int | None = None,
         agg_first: bool | None = None,
         only_coef: bool = False,
+        inference: decomposition_inference = "analytic",
         digits=4,
     ) -> GelbachDecomposition:
         """
@@ -1562,7 +1564,8 @@ class Feols(ResultAccessorMixin):
             A dictionary that specifies which covariates to combine into groups.
             See the example for how to use this argument. Defaults to None.
         reps : int, optional
-            The number of bootstrap iterations to run. Defaults to 1000.
+            The number of bootstrap iterations to run when `inference="bootstrap"`.
+            Defaults to 1000.
         seed : int, optional
             An integer to set the random seed. Defaults to None.
         nthreads : int, optional
@@ -1577,6 +1580,10 @@ class Feols(ResultAccessorMixin):
         only_coef : bool, optional
             Indicates whether to compute inference for the decomposition. Defaults to False.
             If True, skips the inference step and only returns the decomposition results.
+        inference : str, optional
+            Inference method for the decomposition. Defaults to "analytic", which uses
+            HC1 delta-method analytical standard errors and confidence intervals.
+            Use "bootstrap" to compute percentile bootstrap confidence intervals.
         digits : int, optional
             The number of digits to round the results to. Defaults to 4.
 
@@ -1596,14 +1603,16 @@ class Feols(ResultAccessorMixin):
         data = gelbach_data(nobs = 1000)
         fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
 
-        # simple decomposition
-        gb = fit.decompose(decomp_var = "x1", reps = 10, nthreads = 1)
+        # simple decomposition with analytical inference
+        gb = fit.decompose(decomp_var = "x1")
         type(gb)
 
         gb.tidy()
-        gb = fit.decompose(decomp_var = "x1", reps = 10, nthreads = 1, x1_vars = ["x21"])
+        gb = fit.decompose(decomp_var = "x1", x1_vars = ["x21"])
         # combine covariates
-        gb = fit.decompose(decomp_var = "x1", reps = 10, nthreads = 1, combine_covariates = {"g1": ["x21", "x22"], "g2": ["x23"]})
+        gb = fit.decompose(decomp_var = "x1", combine_covariates = {"g1": ["x21", "x22"], "g2": ["x23"]})
+        # bootstrap inference
+        gb = fit.decompose(decomp_var = "x1", inference = "bootstrap", reps = 10, nthreads = 1)
         # supress inference
         gb = fit.decompose(decomp_var = "x1", reps = 10, nthreads = 1, combine_covariates = {"g1": ["x21", "x22"], "g2": ["x23"]}, only_coef = True)
         # print results
@@ -1644,6 +1653,8 @@ class Feols(ResultAccessorMixin):
             is_iv=self._is_iv,
             method=self._method,
             only_coef=only_coef,
+            inference=inference,
+            has_cluster=cluster is not None or self._is_clustered,
         )
 
         nthreads_int = -1 if nthreads is None else nthreads
@@ -1683,6 +1694,8 @@ class Feols(ResultAccessorMixin):
             combine_covariates=combine_covariates,
             agg_first=agg_first,
             only_coef=only_coef,
+            inference=inference,
+            weights_type=self._weights_type if self._has_weights else None,
             atol=1e-12,
             btol=1e-12,
         )
@@ -1690,11 +1703,11 @@ class Feols(ResultAccessorMixin):
         med.fit(
             X=X,
             Y=Y,
-            weights=self._weights,
+            weights=self._weights if self._has_weights else None,
             store=True,
         )
 
-        if not only_coef:
+        if not only_coef and inference == "bootstrap":
             med.bootstrap(rng=rng, B=reps)
 
         self.GelbachDecompositionResults = med
