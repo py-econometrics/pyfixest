@@ -46,6 +46,7 @@ from pyfixest.estimation.post_estimation.decomposition import (
     GelbachDecomposition,
     _decompose_arg_check,
 )
+from pyfixest.estimation.post_estimation.dfm_test import _dfm_heterogeneity_test
 from pyfixest.estimation.post_estimation.prediction import (
     _compute_prediction_error,
     _get_fixed_effects_prediction_component,
@@ -1060,6 +1061,134 @@ class Feols(ResultAccessorMixin):
             raise ValueError("Distribution must be F or chi2")
 
         return res
+
+    def dfm_heterogeneity_test(self, treatment: str) -> pd.Series:
+        """
+        Omnibus test for treatment effect heterogeneity (DFM 2019).
+
+        Tests whether the treatment effect varies systematically with
+        the covariates in the model. Under the null, the CATE does not
+        depend on X (homogeneous effect). Under the alternative, at
+        least one covariate modifies the treatment effect.
+
+        The method fits separate OLS in each arm, takes the coefficient
+        difference, and runs a joint chi-squared test on the slopes
+        using a sandwich variance.
+
+        The covariates tested for effect modification are the model's own
+        regressors (as they enter the design matrix, e.g. `np.log(x)` or
+        factor dummies), excluding the treatment and the intercept.
+
+        Parameters
+        ----------
+        treatment : str
+            Name of the binary treatment coefficient (must be 0/1 and present
+            among the model's coefficients).
+
+        Returns
+        -------
+        pd.Series
+            Series with keys "statistic" (chi-squared) and "pvalue". The
+            degrees of freedom equal the number of covariates tested.
+
+        Raises
+        ------
+        NotImplementedError
+            If the model is not plain OLS (e.g. IV, GLM, Poisson, quantile
+            regression), includes fixed effects, is weighted, or if the design
+            matrix was discarded (`lean=True`).
+        ValueError
+            If treatment is not in the model, or is not binary 0/1.
+
+        References
+        ----------
+        Ding, P., A. Feller, and L. Miratrix (2019): "Decomposing Treatment
+        Effect Variation," Journal of the American Statistical Association,
+        114, 304-317.
+
+        Examples
+        --------
+        ```{python}
+        import numpy as np
+        import pandas as pd
+        import pyfixest as pf
+
+        rng = np.random.default_rng(42)
+        n = 500
+        X1 = rng.standard_normal(n)
+        D = rng.binomial(1, 0.5, n)
+        # heterogeneous effect: tau(X1) = 1 + 2*X1
+        Y = 1.0 + 0.5 * X1 + D * (1.0 + 2.0 * X1) + rng.standard_normal(n)
+
+        data = pd.DataFrame({"Y": Y, "D": D, "X1": X1})
+        fit = pf.feols("Y ~ D + X1", data=data)
+        fit.dfm_heterogeneity_test(treatment="D")
+        ```
+        """
+        if type(self) is not Feols:
+            raise NotImplementedError(
+                "dfm_heterogeneity_test() is only supported for OLS models (Feols). "
+                "It is not valid for IV, GLM, or quantile regression."
+            )
+
+        if self._has_fixef:
+            raise NotImplementedError(
+                "dfm_heterogeneity_test() is not supported for models with fixed "
+                "effects. Fit a model without fixed effects to use this test."
+            )
+
+        if self._has_weights:
+            raise NotImplementedError(
+                "dfm_heterogeneity_test() is not supported for weighted models."
+            )
+
+        # The test refits OLS by arm on the model's design matrix. `lean=True`
+        # discards it, so fail with a clear message rather than an AttributeError.
+        if getattr(self, "_X", None) is None:
+            raise NotImplementedError(
+                "dfm_heterogeneity_test() needs the model matrix, which was "
+                "discarded because the model was fit with lean=True. Refit with "
+                "lean=False."
+            )
+
+        if treatment not in self._coefnames:
+            raise ValueError(
+                f"Variable '{treatment}' not found in the model's coefficients. "
+                f"Available: {self._coefnames}"
+            )
+
+        # Source y and the covariates from the fitted design matrix (columns
+        # aligned with self._coefnames) so transformed regressors and factor
+        # dummies are handled correctly and no dependence on self._data remains.
+        X = np.asarray(self._X)
+        treat_vec = X[:, self._coefnames.index(treatment)].ravel()
+        unique_vals = np.unique(treat_vec)
+        if not (len(unique_vals) == 2 and set(unique_vals) <= {0, 1}):
+            raise ValueError(
+                f"Treatment variable '{treatment}' must be binary (0/1). "
+                f"Found values: {unique_vals}"
+            )
+
+        y = np.asarray(self._Y).ravel()
+
+        # All covariates except the treatment. The intercept is added
+        # inside the standalone _dfm_heterogeneity_test function.
+        covar_idx = [
+            i
+            for i, c in enumerate(self._coefnames)
+            if c not in (treatment, "Intercept")
+        ]
+        if not covar_idx:
+            raise ValueError(
+                "Need at least one covariate (besides the treatment and "
+                "intercept) to test for heterogeneity."
+            )
+
+        X_covars = X[:, covar_idx]
+
+        result = _dfm_heterogeneity_test(y=y, treatment=treat_vec, X=X_covars)
+
+        return pd.Series({"statistic": result["statistic"], "pvalue": result["pvalue"]})
 
     def wildboottest(
         self,

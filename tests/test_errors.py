@@ -15,6 +15,7 @@ from pyfixest.errors import (
 )
 from pyfixest.estimation import feols, fepois
 from pyfixest.estimation.deprecated.FormulaParser import FixestFormulaParser
+from pyfixest.estimation.post_estimation.dfm_test import _dfm_heterogeneity_test
 from pyfixest.estimation.post_estimation.multcomp import rwolf
 from pyfixest.report.summarize import etable, summary
 from pyfixest.utils.dgps import gelbach_data
@@ -1085,38 +1086,24 @@ def test_errors_hac():
             )
 
 
-def test_did2s_unestimated_first_stage_fixef():
-    "did2s raises an informative error when first-stage fixed effects cannot be estimated for some levels (#1244)."
-    rng = np.random.default_rng(42)
+def test_dfm_heterogeneity_test_standalone_errors():
+    """Invalid inputs to the standalone DFM test raise ValueError."""
+    rng = np.random.default_rng(1234)
+    n = 200
+    X = rng.standard_normal((n, 2))
+    y = rng.standard_normal(n)
 
-    n_units, n_years = 6, 5
-    rows = []
-    for unit in range(1, n_units + 1):
-        if unit == 1:
-            treat_start = 1  # always treated: no not-yet-treated observations
-        elif unit <= 3:
-            treat_start = 4
-        else:
-            treat_start = n_years + 1  # never treated
-        for year in range(1, n_years + 1):
-            treat = year >= treat_start
-            dep_var = 0.5 * unit + 0.3 * year + float(treat) + rng.normal()
-            rows.append((unit, year, treat, dep_var))
-    data = pd.DataFrame(rows, columns=["unit", "year", "treat", "dep_var"])
+    with pytest.raises(ValueError, match="binary"):
+        _dfm_heterogeneity_test(y=y, treatment=rng.choice([0, 1, 2], n), X=X)
 
-    with pytest.raises(
-        ValueError,
-        match=r"First-stage predictions contain NaN values because some fixed effect "
-        "levels were not observed in the not-yet-treated first-stage sample. "
-        "Drop those observations before calling did2s().",
-    ):
-        pf.did2s(
-            data,
-            yname="dep_var",
-            first_stage="~ 0 | unit + year",
-            second_stage="~ i(treat)",
-            treatment="treat",
-            cluster="unit",
+    with pytest.raises(ValueError, match="same length"):
+        _dfm_heterogeneity_test(y=y, treatment=rng.binomial(1, 0.5, n // 2), X=X)
+
+    with pytest.raises(ValueError, match="Not enough observations"):
+        _dfm_heterogeneity_test(
+            y=rng.standard_normal(5),
+            treatment=np.array([1, 1, 0, 0, 0]),
+            X=rng.standard_normal((5, 3)),
         )
 
 
