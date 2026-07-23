@@ -67,8 +67,9 @@ website:
       section: Data Sets
     - contents:
       - reference/estimation.formula.parse.Formula.qmd
+      - reference/estimation.formula.model_matrix.create_model_matrix.qmd
       - reference/estimation.formula.model_matrix.ModelMatrix.qmd
-      - reference/estimation.formula.factor_interaction.factor_interaction.qmd
+      - reference/estimation.formula.transforms.factor_interaction.factor_interaction.qmd
       section: Formula Parsing & Model Matrix
     - contents:
       - reference/estimation.demean.qmd
@@ -82,7 +83,6 @@ website:
       - reference/utils.utils.ssc.qmd
       - reference/utils.utils.get_ssc.qmd
       - reference/estimation.post_estimation.savi.optimal_mixture_precision.qmd
-      - reference/estimation.deprecated.model_matrix_fixest_.model_matrix_fixest.qmd
       section: Misc / Utilities
     id: reference
   - id: dummy-sidebar

@@ -36,7 +36,7 @@ urls.Documentation = "https://pyfixest.com"
 urls.Tracker = "https://github.com/py-econometrics/pyfixest/issues"
 
 dependencies = [
-    "formulaic>=1.1.0",
+    "formulaic>=1.2.0,<1.3",
     "joblib>=1.4.2",
     "maketables>=0.1.0",
     "narwhals>=1.13.3",
