@@ -1750,21 +1750,12 @@ class Feols(ResultAccessorMixin):
 
         Examples
         --------
-        Fixed effects are swept out during estimation and are not part of the
-        coefficient table. `fixef()` computes them. The result is keyed by
-        fixed effect term, then by level.
-
         ```{python}
         import pyfixest as pf
 
         fit = pf.feols("Y ~ X1 + X2 | f1", pf.get_data())
-        fe = fit.fixef()
-
-        fe.keys()
-        ```
-
-        ```{python}
-        list(fe["C(f1)"].items())[:5]
+        fixed_effects = fit.fixef()
+        fixed_effects.head()
         ```
         """
         weights_sqrt = np.sqrt(self._weights).flatten()

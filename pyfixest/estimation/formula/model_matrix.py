@@ -341,6 +341,17 @@ def create_model_matrix(
         variables, fixed effects, instruments, weights, and metadata about
         dropped observations.
 
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+    from pyfixest.estimation.formula.model_matrix import create_model_matrix
+    from pyfixest.estimation.formula.parse import Formula
+
+    data = pf.get_data()
+    formula = Formula.parse("Y ~ X1 + f1 + f2")[0]
+    model_matrix = create_model_matrix(formula=formula, data=data)
+    ```
     """
     # Process input data
     data.reset_index(drop=True, inplace=True)  # Sanitise index
