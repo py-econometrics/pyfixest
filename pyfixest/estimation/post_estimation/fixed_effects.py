@@ -37,13 +37,15 @@ class FixedEffect:
         User-facing fixed-effect name. Interacted variables are joined with `^`,
         for example `firm^year`.
     codes : NDArray[np.int64]
-        Integer codes identifying the observed fixed-effect levels.
+        Integer codes identifying fixed-effect levels observed in the estimation
+        sample after singleton removal.
     values : tuple[NDArray[Any], ...]
         Original level values, stored as one array per fixed-effect component.
         Every array is aligned with `codes`.
     coefficients : NDArray[np.float64]
         Estimated coefficient indexed by fixed-effect code. Omitted reference
-        levels have coefficient zero.
+        levels have coefficient zero. Levels removed before estimation have
+        coefficient `NaN`.
     """
 
     fixed_effect: str
@@ -59,6 +61,27 @@ class FixedEffect:
 
 
 @dataclass(kw_only=True, frozen=True, slots=True)
+class FixedEffectCoefficientPositions:
+    """
+    Fixed-effect codes and their positions in the complete coefficient vector.
+
+    Attributes
+    ----------
+    observed_codes : NDArray[np.int64]
+        Encoded levels observed in the estimation sample, including an omitted
+        reference level.
+    coefficient_codes : NDArray[np.int64]
+        Encoded levels represented in the complete coefficient vector.
+    coefficient_indices : NDArray[np.int64]
+        Positions of those levels in the complete coefficient vector.
+    """
+
+    observed_codes: NDArray[np.int64]
+    coefficient_codes: NDArray[np.int64]
+    coefficient_indices: NDArray[np.int64]
+
+
+@dataclass(kw_only=True, frozen=True, slots=True)
 class FixedEffectContrastCoding:
     """
     Sparse dummy matrix and coefficient alignment for fixed effects.
@@ -67,15 +90,13 @@ class FixedEffectContrastCoding:
     ----------
     matrix : spmatrix
         Sparse one-hot encoded fixed-effect matrix used to estimate coefficients.
-    coefficient_codes : Mapping[str, NDArray[np.int64]]
-        Retained encoded levels for each fixed effect.
-    coefficient_indices : Mapping[str, NDArray[np.int64]]
-        Positions in the complete coefficient vector for each fixed effect.
+    coefficient_positions : Mapping[str, FixedEffectCoefficientPositions]
+        Observed and retained codes with their positions in the complete
+        coefficient vector, keyed by fixed effect.
     """
 
     matrix: spmatrix
-    coefficient_codes: Mapping[str, NDArray[np.int64]]
-    coefficient_indices: Mapping[str, NDArray[np.int64]]
+    coefficient_positions: Mapping[str, FixedEffectCoefficientPositions]
 
 
 def build_fixed_effects(
@@ -85,12 +106,11 @@ def build_fixed_effects(
 ) -> dict[str, FixedEffect]:
     """Build fixed-effect coefficient records keyed by encoded name."""
     fixed_effects: dict[str, FixedEffect] = {}
-    for fixed_effect_name in contrast_coding.coefficient_codes:
+    for fixed_effect_name, positions in contrast_coding.coefficient_positions.items():
         fixed_effect = _build_fixed_effect(
             name=fixed_effect_name,
             coefficients=fixed_effect_coefficients,
-            coefficient_codes=contrast_coding.coefficient_codes[fixed_effect_name],
-            coefficient_indices=contrast_coding.coefficient_indices[fixed_effect_name],
+            positions=positions,
             transform_state=transform_state,
         )
         fixed_effects[fixed_effect.fixed_effect] = fixed_effect
@@ -101,20 +121,22 @@ def build_fixed_effects(
 def _build_fixed_effect(
     name: str,
     coefficients: np.ndarray,
-    coefficient_codes: np.ndarray,
-    coefficient_indices: np.ndarray,
+    positions: FixedEffectCoefficientPositions,
     transform_state: Mapping[str, Any],
 ) -> FixedEffect:
     """Build the coefficient record for one fixed effect."""
     variable, codes, values = get_fixed_effect_encoding_data(name, transform_state)
-    # Map fixed effect codes to estimated coefficients
-    coefficient_by_code = np.zeros(codes.max() + 1, dtype=np.float64)
-    coefficient_by_code[coefficient_codes] = coefficients[coefficient_indices]
+    coefficient_by_code = np.full(codes.max() + 1, np.nan, dtype=np.float64)
+    coefficient_by_code[positions.observed_codes] = 0.0
+    coefficient_by_code[positions.coefficient_codes] = coefficients[
+        positions.coefficient_indices
+    ]
+    observed = np.isin(codes, positions.observed_codes)
     return FixedEffect(
         fixed_effect=name,
         variable=variable,
-        codes=codes,
-        values=values,
+        codes=codes[observed],
+        values=tuple(value[observed] for value in values),
         coefficients=coefficient_by_code,
     )
 
@@ -237,7 +259,7 @@ def get_fixed_effect_encoding_data(
 def get_fixed_effect_coefficient_positions(
     term: Term,
     model_spec: ModelSpec,
-) -> tuple[NDArray[np.int64], NDArray[np.int64]]:
+) -> FixedEffectCoefficientPositions:
     """
     Align one fixed-effect term's codes with positions in the coefficient vector.
 
@@ -246,18 +268,17 @@ def get_fixed_effect_coefficient_positions(
     `term`. The returned codes identify which encoded fixed-effect levels those
     entries represent.
 
-    For a full-rank term, every encoded level has a coefficient. For a
-    reduced-rank term, formulaic omits the reference level, so its code is absent
-    from the returned codes. The caller can therefore initialize coefficients for
-    all codes to zero and fill only the returned code-position pairs.
+    For a full-rank term, every encoded level observed in the estimation sample
+    has a coefficient. For a reduced-rank term, formulaic omits the reference
+    level, so its code is absent from `coefficient_codes` but remains in
+    `observed_codes`. Codes absent from `observed_codes`, such as singleton
+    levels removed before estimation, must not be treated as reference levels.
 
     Returns
     -------
-    coefficient_codes : NDArray[np.int64]
-        Encoded fixed-effect levels represented in the coefficient vector.
-    coefficient_indices : NDArray[np.int64]
-        Positions of this term's coefficients in the complete fixed-effect
-        coefficient vector.
+    FixedEffectCoefficientPositions
+        Observed codes, codes represented in the coefficient vector, and their
+        positions in that vector.
     """
     (factor,) = term.factors
     contrasts_state = model_spec.factor_contrasts[factor]
@@ -266,9 +287,10 @@ def get_fixed_effect_coefficient_positions(
         contrasts_state.levels,
         reduced_rank=len(coefficient_indices) < len(contrasts_state.levels),
     )
-    return (
-        np.asarray(coefficient_codes, dtype=np.int64),
-        np.asarray(coefficient_indices, dtype=np.int64),
+    return FixedEffectCoefficientPositions(
+        observed_codes=np.asarray(contrasts_state.levels, dtype=np.int64),
+        coefficient_codes=np.asarray(coefficient_codes, dtype=np.int64),
+        coefficient_indices=np.asarray(coefficient_indices, dtype=np.int64),
     )
 
 
@@ -291,17 +313,15 @@ def contrast_code_fixed_effects(
         context=context,
         transform_state=transform_state,
     )
-    coefficient_codes: dict[str, NDArray[np.int64]] = {}
-    coefficient_indices: dict[str, NDArray[np.int64]] = {}
+    coefficient_positions: dict[str, FixedEffectCoefficientPositions] = {}
     for fixed_effect_name, term in zip(
         fixed_effect_names, matrix.model_spec.terms, strict=True
     ):
-        codes, indices = get_fixed_effect_coefficient_positions(term, matrix.model_spec)
-        coefficient_codes[fixed_effect_name] = codes
-        coefficient_indices[fixed_effect_name] = indices
+        coefficient_positions[fixed_effect_name] = (
+            get_fixed_effect_coefficient_positions(term, matrix.model_spec)
+        )
 
     return FixedEffectContrastCoding(
         matrix=cast(scipy.sparse.spmatrix, matrix),
-        coefficient_codes=coefficient_codes,
-        coefficient_indices=coefficient_indices,
+        coefficient_positions=coefficient_positions,
     )

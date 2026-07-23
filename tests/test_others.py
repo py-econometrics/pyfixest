@@ -475,3 +475,25 @@ def test_fixef_interacted_labels():
     np.testing.assert_allclose(
         fit.predict(), fit.predict(newdata=df), rtol=1e-6, atol=1e-8
     )
+
+
+def test_fixef_excludes_singleton_levels_from_prediction():
+    """Singleton FE levels are unavailable, not zero-valued references."""
+    df = pd.DataFrame(
+        {
+            "Y": [1.0, 2.0, 2.0, 4.0, 3.0],
+            "X1": [0.0, 1.0, 0.0, 1.0, 2.0],
+            "g": ["a", "a", "b", "b", "c"],
+            "h": ["u", "u", "v", "v", "w"],
+        }
+    )
+
+    with pytest.warns(UserWarning, match="1 singleton fixed effect"):
+        fit = feols("Y ~ X1 | g^h", data=df)
+
+    prediction = fit.predict(newdata=df)
+    fixed_effects = fit.fixef()
+
+    assert np.isfinite(prediction[:-1]).all()
+    assert np.isnan(prediction[-1])
+    assert set(fixed_effects["level"]) == {"a,u", "b,v"}

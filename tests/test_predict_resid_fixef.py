@@ -141,6 +141,7 @@ def test_vs_fixest(data, fml):
     if not np.allclose(
         feols_mod.predict(newdata=data2)[0:5],
         stats.predict(r_fixest_ols, newdata=data2)[0:5],
+        equal_nan=True,
     ):
         raise ValueError("Predictions for OLS are not equal with newdata.")
 
