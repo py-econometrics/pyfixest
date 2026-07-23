@@ -78,7 +78,7 @@ def test_poisson_prediction_internally(data, weights, fml):
     [
         "Y~ X1 | f1",
         "Y~ X1 | f1 + f2",
-        # "Y~ X1 | X3^X4",
+        "Y~ X1 | X3^X4",
     ],
 )
 def test_vs_fixest(data, fml):
@@ -250,7 +250,7 @@ def test_predict_nas():
     [
         "Y~ X1 | f1",
         "Y~ X1 | f1 + f2",
-        # "Y~ X1 | X3^X4",
+        "Y~ X1 | X3^X4",
     ],
 )
 def test_new_fixef_level(data, fml):
