@@ -85,12 +85,9 @@ gaps, in the order they bite:
    `_lazy_imports`, `_direct_module_imports`), quartodoc `contents` in
    `docs/_quarto.yml`, a changelog entry in `docs/changelog.qmd`, and a
    signature whose order matches the siblings (`fml, data, vcov, …`).
-4. **Hot loops.** A per-observation or per-pair double loop in Python or
-   numba becomes a Rust kernel per the `src/nw.rs` template; the contributed
+4. **Hot loops.** A per-observation or per-pair double loop in Python or numba
+   becomes a Rust kernel in `src/`, alongside the existing ones; the contributed
    Python implementation is kept as the test reference, not the shipped path.
-   In fix mode this is usually the one structural rewrite worth doing; if it
-   exceeds the iteration budget, hand back a finding with the exact template
-   files instead.
 5. **Unsupported paths.** For each of: IV (`Feiv`), GLM/Poisson, quantreg,
    weights (`aweights`/`fweights`), fixed effects, multiple estimation
    (`FixestMulti`), `lean=True` / `store_data=False` — the feature either
