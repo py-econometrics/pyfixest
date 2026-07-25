@@ -27,6 +27,7 @@ from pyfixest.estimation.internals.literals import (
     _validate_literal_argument,
 )
 from pyfixest.estimation.internals.vcov_ import (
+    _jackknife_vcov,
     vcov_crv1,
     vcov_crv3_fast,
     vcov_hac,
@@ -798,14 +799,7 @@ class Feols(ResultAccessorMixin):
         #    beta_center = beta_hat
         # else:
         #    beta_center = np.mean(beta_jack, axis = 0)
-        beta_center = self._beta_hat
-
-        vcov_mat = np.zeros((self._k, self._k))
-        for ixg, _ in enumerate(clustid):
-            beta_centered = beta_jack[ixg, :] - beta_center
-            vcov_mat += np.outer(beta_centered, beta_centered)
-
-        return vcov_mat
+        return _jackknife_vcov(beta_jack=beta_jack, beta_center=self._beta_hat)
 
     def add_fixest_multi_context(
         self,
