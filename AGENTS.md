@@ -11,6 +11,17 @@ Two rules beat everything else:
 2. **Mirror the nearest existing implementation.** Almost every kind of change has
    an in-repo precedent. Find it and copy its structure before writing new code.
 
+**Known-stale precedents — do not mirror these.** Some rules below are newer
+than parts of the codebase. Where they disagree, the rule wins and the old code
+is a cleanup target, not a template:
+
+| Do not copy | Do this instead |
+|---|---|
+| `Literal` aliases in `models/feols_.py`, `internals/vcov_.py`, `demeaners.py`, `core/demean.py` (`prediction_type` duplicates `PredictionType`) | new aliases go in `internals/literals.py`, validated with `_validate_literal_argument` |
+| `assert` for input validation in `_check_vcov_input` | raise `ValueError` listing the allowed values |
+| `_support_*` flags | spell new ones `_supports_*` |
+| `test_errors.py`'s one-function-per-error style | extend an existing parametrized matrix |
+
 Two workflows live in `.agents/`; pick by task:
 
 - **`.agents/feature-pr.md`** — implement a feature or build a PR end to end.
@@ -28,8 +39,9 @@ preference this file does not encode (or contradicts), encode it as part of the
 same change. **Prefer a check over prose.** If the rule is mechanically
 detectable it belongs in a ruff rule or in `scripts/check_house_style.py`, and
 then it does *not* also belong here — a rule stated in two places drifts. This
-file stays under ~350 lines; when it grows past that, something in it has
-become checkable and should move.
+file stays at roughly its current length: adding a rule means deleting one,
+compressing one, or moving one to a check. It is read in full at the start of
+every session, so length is a running cost.
 
 ## Repo map
 
@@ -113,11 +125,20 @@ the paper should recognize it in the code:
   function that operates on arrays, and assigns the results back to `self._`
   attributes. The numerical function never touches `self` — that seam is what
   makes it testable against a reference. `Feols.get_fit` →
-  `internals/fit_.fit_ols` is the template.
+  `internals/fit_.fit_ols` is the template. As a rule of thumb, more than ~30
+  added lines in `estimation/models/` means the code is in the wrong file.
+- A feature never adds an overridable hook method to the model classes.
+  Per-model behavior is selected by a `_supports_*` flag, or by passing the
+  variant to the function as an argument — defining `_do_x()` on `Feols` and
+  overriding it in `Feiv` and `Feglm` spreads one feature's numerics across
+  three files and puts them out of reach of a reference test.
 - Numerical functions return a small result dataclass (`OlsFit`, `IvFit`,
   `ClusterPrep`; frozen and slotted where possible) whose Attributes docstring
   states each array's shape — not a tuple, not a dict. Internal calls pass
   arguments by keyword: `fit_ols(X=self._X, Y=self._Y, solver=self._solver)`.
+  Every attribute a dataclass sets is declared as a field — `field(init=False)`
+  for ones computed later; assigning `self._foo` in a method without declaring
+  it hides state from readers and from mypy.
 - One function, one named task, kept short — most functions in the codebase are
   under ~30 code lines. If a function's name or docstring summary needs an
   "and", split it. The fit pipeline is the model: `prepare_model_matrix →
@@ -133,10 +154,9 @@ the paper should recognize it in the code:
   demean, CRV1-meat, and HAC-meat kernels are the pattern), not micro-optimized
   in Python. Everything else stays plain, readable NumPy: do not trade clarity
   for speed outside a measured hot loop, and keep a NumPy reference
-  implementation around for testing the kernel. numba appears only in the
-  optional demean backend (`estimation/numba/`) and `ritest`; new features do
-  not add numba paths — a contributed numba kernel becomes a Rust kernel, with
-  the plain-NumPy version kept as the test reference.
+  implementation around for testing the kernel. A contributed numba kernel
+  becomes a Rust kernel, with the plain-NumPy version kept as the test
+  reference.
 
 Naming and layout:
 - One public function per `api/` module; model-class modules end in `_`
@@ -156,14 +176,13 @@ Signatures and typing:
   copy them.
 - Public estimation API: `fml` first, `data` second, typed `DataFrameType`
   (accepts pandas/polars/duckdb) and converted once at the boundary via
-  `_narwhals_to_pandas` — never `pd.DataFrame` in an `api/` signature.
+  `_narwhals_to_pandas`.
 - mypy runs on `pyfixest/` only; `NDArray[np.float64]` in the `.pyi` stubs.
 
 Docstrings (ruff enforces the NumPy convention):
 - Required on public functions/methods/classes; not required in `tests/`.
 - User-facing API docstrings carry full Parameters/Returns and an Examples
   section with executable ```{python} chunks — quartodoc renders and runs them.
-  Never doctest-style `>>>` examples.
 - Cross-link classes as `[Feols](/reference/estimation.models.feols_.Feols.qmd)`
   and vignettes as `[guide](/tutorials/standard-errors.qmd)` — always
   root-relative with a `.qmd` extension. A few older docstrings use relative
@@ -182,11 +201,9 @@ Errors, warnings, optional dependencies:
   (see `post_estimation/ritest.py`).
 
 Numerics and data:
-- RNG is always `np.random.default_rng(seed)`; never `np.random.seed` or the
-  legacy global `np.random.*` samplers — in library code, tests, and docs
-  alike. ruff `NPY002` enforces this; the files grandfathered in
-  `pyproject.toml` per-file-ignores keep their legacy streams because stored
-  references depend on the exact draws — do not extend that list.
+- RNG is always `np.random.default_rng(seed)` — one generator per test or DGP.
+  ruff `NPY002` enforces this; do not extend its grandfather list in
+  `pyproject.toml`.
 - Never mutate user input data. `copy_data=False` is the only sanctioned
   exception, and its side effects are spelled out in the docstring.
 - `store_data=False` and `lean=True` strip attributes
@@ -221,15 +238,15 @@ note in `tests/conftest.py`, the lazy-numba note in `ritest.py`) — no narratio
   getters.
 - When a change fits an existing parametrized matrix, extend it — add a formula
   to the module-level list or a case to the matrix — rather than writing a new
-  test function. `test_errors.py`'s one-function-per-error style predates this
-  rule; don't copy it.
-- Style: module-level `test_*` functions — no test classes, no `setup_method`,
-  no `# === section ===` banner comments; shared setup is a seeded DGP fixture
-  (module-scoped when expensive). Module-level formula lists fed to
-  `pytest.mark.parametrize`; explicit `rtol`/`atol` constants at the top of the
-  file with a comment justifying them. Import through the package
-  (`import pyfixest as pf`), never via `importlib` file loading — if the Rust
-  extension won't import, fix the environment (`pixi run`), not the import.
+  test function.
+- At least one test per feature calls `feols`/`fepois`/`feglm`/`quantreg` and
+  drives the feature through it. The wiring *is* the feature: a module tested
+  only in isolation can ship with a public entry point that raises. Where the PR
+  description shows a usage example, that exact call is a test.
+- Style: module-level `test_*` functions, no banner comments; shared setup is a
+  seeded DGP fixture (module-scoped when expensive). Module-level formula lists
+  fed to `pytest.mark.parametrize`; explicit `rtol`/`atol` constants at the top
+  of the file with a comment justifying them.
 - The bar for new econometrics is higher than "runs and has the right shape":
   exact known-value or brute-force cross-checks, edge cases (singleton
   clusters, collinearity, tiny samples), invalid-input tests, and at least one
@@ -240,15 +257,12 @@ note in `tests/conftest.py`, the lazy-numba note in `ritest.py`) — no narratio
   reference numbers in a test cite their generator the same way. Code adapted
   from elsewhere gets a provenance and license note in its docstring (see
   `tests/test_ccv.py`).
-- Reference packages and dependencies: if the reference implementation is on
-  conda-forge, add it as a dependency (R packages → `[tool.pixi.feature.r.dependencies]`
-  in `pyproject.toml`, test marked `against_r_core`) so CI runs the comparison
-  live. If it is *not* on conda-forge, either install it from CRAN via
-  `r_test_requirements.R` (repo root) and mark the test `against_r_extended` (that
-  suite runs locally only, not in CI), or ship a small script that produces the
-  reference values and hard-code those values into the test (commit the
-  generator under `tests/data/`, as the Stata `.do` files do). Both are fine;
-  reach for hard-coded values over a heavy or flaky live dependency.
+- Reference packages: on conda-forge → add as a dependency (R packages →
+  `[tool.pixi.feature.r.dependencies]`) and mark the test `against_r_core`, so
+  CI runs the comparison live. Not on conda-forge → either CRAN via
+  `r_test_requirements.R` with the test marked `against_r_extended` (local only),
+  or commit a generator under `tests/data/` and hard-code its values. Both are
+  fine; reach for hard-coded values over a heavy or flaky live dependency.
 
 ## Docs
 
@@ -285,10 +299,9 @@ the same bar, whether it is a function, a method or a class:
 - Description: say what the object does and when to use it, not just what it
   returns. A one-line summary is not enough for a user-facing entry.
 - At least one executable example: an `Examples` section with a `{python}` chunk,
-  which quartodoc runs into the page. This includes getters and accessors
-  (`coef()`, `se()`, a `get_*` data generator), where two lines that fit a model
-  and print the result are enough. Keep examples fast (small `pf.get_data()`
-  samples, few bootstrap `reps`). Skip the example only when runtime is
+  which quartodoc runs into the page. Getters and accessors (`coef()`, `se()`, a
+  `get_*` generator) included — two lines are enough. Keep examples fast (small
+  `pf.get_data()` samples, few `reps`); skip one only when runtime is
   prohibitive, and say so.
 - Vignette link when a relevant guide exists, as
   `[guide](/how-to/<feature>.qmd)`. Inference methods point at the
@@ -299,20 +312,14 @@ the same bar, whether it is a function, a method or a class:
   `quantreg` cites Portnoy and Koenker (1997). Mirror the paper's notation in
   the code (see "House style").
 
-Result classes (`Feols`, `Fepois`, `Feiv`, ...) are obtained through the
-estimation functions, so their example fits a model and calls a method instead
-of constructing the class.
-
-Examples go straight to the `{python}` chunk and keep any explanation in short
-comments inside the code. Do not narrate the example in prose — the long
-narrated Examples in `feols` and `fepois` predate this rule; don't copy their
-style for new entries.
-
-Check that an example actually runs before handing off: the minimum is
-executing its body in `pixi run python`; the full check is
-`pixi run docs-build` followed by
+Result-class examples (`Feols`, `Fepois`, `Feiv`, …) fit a model and call a
+method rather than constructing the class. Examples go straight to the
+`{python}` chunk with any explanation in short comments inside the code — do not
+narrate in prose (the long narrated Examples in `feols`/`fepois` predate this
+rule). Verify an example runs before handing off: at minimum execute its body in
+`pixi run python`; the full check is `pixi run docs-build` then
 `QUARTO_PYTHON=.pixi/envs/docs/bin/python3 quarto render docs/reference/<page>.qmd`
-(quarto ignores the `python:` key in `_quarto.yml` for single-file renders).
+(quarto ignores the `python:` key for single-file renders).
 
 ## Commands
 
