@@ -300,3 +300,38 @@ def test_public_feols_matches_legacy_behavior():
     fit = pf.feols("Y ~ X1 + X2 | f1 + f2", data)
     # If the planner regressed anything, coefficients would shift.
     assert abs(fit.coef().iloc[0] - (-0.9240461507764969)) < 1e-10
+
+
+# ---------------------------------------------------------------------------
+# The fit pipeline contract
+# ---------------------------------------------------------------------------
+
+_PIPELINE_MEMBERS = [
+    "prepare_model_matrix",
+    "_check_dependent_variable",
+    "get_fit",
+    "vcov",
+    "_vcov_data",
+    "get_inference",
+    "_post_inference_hook",
+    "_clear_attributes",
+]
+
+
+@pytest.mark.parametrize(
+    "model_cls",
+    sorted(
+        {e.model_cls for e in MODEL_REGISTRY.values()} | {Feiv},
+        key=lambda c: c.__name__,
+    ),
+)
+@pytest.mark.parametrize("member", _PIPELINE_MEMBERS)
+def test_model_classes_satisfy_the_fit_contract(model_cls, member):
+    """Every class `fit_one` can construct implements the full pipeline.
+
+    `fit_one` calls these unconditionally, so a class missing one would fail
+    only at run time, and only on the paths that reach it.
+    """
+    assert hasattr(model_cls, member), (
+        f"{model_cls.__name__} is missing {member!r}, which fit_one calls"
+    )

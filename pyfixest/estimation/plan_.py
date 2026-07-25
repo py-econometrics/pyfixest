@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
-from typing import Any
+from typing import Any, Protocol, runtime_checkable
 
 import pandas as pd
 
@@ -13,7 +13,6 @@ from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.vcov_utils import _get_vcov_type
 from pyfixest.estimation.models._model_init import ModelInit
 from pyfixest.estimation.models.fegaussian_ import Fegaussian
-from pyfixest.estimation.models.feglm_ import Feglm
 from pyfixest.estimation.models.feiv_ import Feiv
 from pyfixest.estimation.models.felogit_ import Felogit
 from pyfixest.estimation.models.feols_ import Feols
@@ -307,6 +306,52 @@ FittedModel = (
 )
 
 
+@runtime_checkable
+class FittableModel(Protocol):
+    """What `fit_one` requires of a model class.
+
+    A new estimator satisfies this and is driven by the runner without the
+    runner knowing which class it holds. The three underscored members are
+    hooks: `Feols` supplies defaults for all of them, so a subclass overrides
+    only the stages where it actually differs.
+    """
+
+    _X_is_empty: bool
+
+    def prepare_model_matrix(self) -> None:
+        "Build Y, X, the fixed effects and the weights from the formula and data."
+        ...
+
+    def _check_dependent_variable(self) -> None:
+        "Raise if the dependent variable violates the model's constraints."
+        ...
+
+    def get_fit(self) -> None:
+        "Solve for the coefficients and write the fit onto the model."
+        ...
+
+    def vcov(self, vcov: Any, vcov_kwargs: Any, data: Any) -> Any:
+        "Compute the variance-covariance matrix."
+        ...
+
+    @property
+    def _vcov_data(self) -> pd.DataFrame:
+        "The data frame `vcov()` reads cluster and time variables from."
+        ...
+
+    def get_inference(self) -> None:
+        "Turn the vcov into standard errors, t-statistics, p-values and intervals."
+        ...
+
+    def _post_inference_hook(self) -> None:
+        "Model-specific work once inference is available."
+        ...
+
+    def _clear_attributes(self) -> None:
+        "Drop the attributes that `lean` and `store_data=False` ask for."
+        ...
+
+
 def fit_one(
     spec: ModelSpec,
     *,
@@ -334,27 +379,17 @@ def fit_one(
     FIT: FittedModel = spec.model_cls(init, **spec.extras)
 
     FIT.prepare_model_matrix()
-    if isinstance(FIT, Feglm):
-        FIT._check_dependent_variable()
+    FIT._check_dependent_variable()
     FIT.get_fit()
     # if X is empty: no inference (empty X only as shorthand for demeaning)
     if not FIT._X_is_empty:
-        vcov_type = _get_vcov_type(vcov)
         FIT.vcov(
-            vcov=vcov_type,
+            vcov=_get_vcov_type(vcov),
             vcov_kwargs=vcov_kwargs,
-            data=FIT._data
-            if not isinstance(FIT, QuantregMulti)
-            else FIT.all_quantregs[FIT.quantiles[0]]._data,
-        )  # a little hacky, but works
-
+            data=FIT._vcov_data,
+        )
         FIT.get_inference()
-        if spec.method == "feols" and not FIT._is_iv:
-            FIT.get_performance()
-            if isinstance(FIT, Feols):
-                FIT.wald_test()
-        if isinstance(FIT, Feiv):
-            FIT.first_stage()
+        FIT._post_inference_hook()
     # delete large attributes
     FIT._clear_attributes()
 
