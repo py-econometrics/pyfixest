@@ -1,6 +1,9 @@
+from dataclasses import dataclass
+
 import numpy as np
 import pandas as pd
 from numpy.random import Generator
+from scipy.stats import t
 
 from pyfixest.estimation import feols
 
@@ -111,3 +114,128 @@ def _compute_CCV(
         )
 
     return vcov_ccv / n_adj
+
+
+@dataclass(frozen=True, slots=True)
+class CCVResult:
+    """Causal cluster variance inference for one treatment coefficient.
+
+    Attributes
+    ----------
+    estimate : float
+        Treatment coefficient from the full-sample fit.
+    se : float
+        Causal cluster variance standard error.
+    tstat : float
+        `estimate / se`.
+    pvalue : float
+        Two-sided p-value against a t distribution with G - 1 degrees of freedom.
+    conf_int : np.ndarray
+        Lower and upper confidence bound, shape (2,).
+    """
+
+    estimate: float
+    se: float
+    tstat: float
+    pvalue: float
+    conf_int: np.ndarray
+
+
+def compute_ccv(
+    *,
+    fml: str,
+    Y: np.ndarray,
+    X: np.ndarray,
+    W: np.ndarray,
+    data: pd.DataFrame,
+    treatment: str,
+    cluster_vec: np.ndarray,
+    tau_full: float,
+    vcov_crv1: float,
+    N: int,
+    n_splits: int,
+    pk: float,
+    qk: float,
+    rng: Generator,
+    level: float = 0.95,
+) -> CCVResult:
+    """Average the causal cluster variance over splits and build its inference.
+
+    Implements the estimator of Abadie, Athey, Imbens and Wooldridge (2023,
+    QJE), https://doi.org/10.1093/qje/qjac038 . The per-split variance comes
+    from `_compute_CCV`; this function averages it over `n_splits`
+    cross-fitting draws, mixes it with the CRV1 variance by `qk`, and turns
+    the result into a standard error, t-statistic, p-value and interval.
+
+    Parameters
+    ----------
+    fml : str
+        Formula of the regression model.
+    Y : np.ndarray
+        Dependent variable, shape (N,).
+    X : np.ndarray
+        Design matrix, shape (N, k).
+    W : np.ndarray
+        Binary treatment variable, shape (N,).
+    data : pd.DataFrame
+        Data used for the fit.
+    treatment : str
+        Name of the treatment variable.
+    cluster_vec : np.ndarray
+        Cluster identifier per observation, shape (N,).
+    tau_full : float
+        Treatment coefficient from the full-sample fit.
+    vcov_crv1 : float
+        CRV1 variance of the treatment coefficient.
+    N : int
+        Number of observations.
+    n_splits : int
+        Number of cross-fitting splits to average over.
+    pk : float
+        Share of sampled clusters.
+    qk : float
+        Share of sampled observations within each cluster.
+    rng : Generator
+        Random number generator.
+    level : float, optional
+        Confidence level for the interval. Defaults to 0.95.
+
+    Returns
+    -------
+    CCVResult
+        The point estimate and its CCV-based inference.
+    """
+    G = len(np.unique(cluster_vec))
+
+    vcov_splits = 0.0
+    for _ in range(n_splits):
+        vcov_splits += _compute_CCV(
+            fml=fml,
+            Y=Y,
+            X=X,
+            W=W,
+            rng=rng,
+            data=data,
+            treatment=treatment,
+            cluster_vec=cluster_vec,
+            pk=pk,
+            tau_full=tau_full,
+        )
+    vcov_splits /= n_splits
+    vcov_splits /= N
+
+    vcov_ccv = qk * vcov_splits + (1 - qk) * vcov_crv1
+
+    se = np.sqrt(vcov_ccv)
+    tstat = tau_full / se
+    df = G - 1
+    pvalue = 2 * (1 - t.cdf(np.abs(tstat), df))
+    z_se = np.abs(t.ppf((1 - level) / 2, df)) * se
+
+    return CCVResult(
+        estimate=tau_full,
+        se=se,
+        tstat=tstat,
+        pvalue=pvalue,
+        conf_int=np.array([tau_full - z_se, tau_full + z_se]),
+    )

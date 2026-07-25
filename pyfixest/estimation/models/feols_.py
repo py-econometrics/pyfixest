@@ -10,7 +10,7 @@ import pandas as pd
 from formulaic import Formula
 from scipy.sparse import csc_matrix, diags, spmatrix
 from scipy.sparse.linalg import lsqr
-from scipy.stats import chi2, f, t
+from scipy.stats import chi2, f
 
 from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import LsmrDemeaner, MapDemeaner
@@ -1315,94 +1315,48 @@ class Feols(ResultAccessorMixin):
             seed = np.random.randint(1, 100_000_000)
         rng = np.random.default_rng(seed)
 
-        depvar = self._depvar
-        fml = self._fml
-        xfml_list = fml.split("~")[1].split("+")
-        xfml_list = [x for x in xfml_list if x != treatment]
-        xfml = "" if not xfml_list else "+".join(xfml_list)
-
-        data = self._data
-        Y = self._Y.flatten()
-        W = data[treatment].to_numpy()
+        W = self._data[treatment].to_numpy()
         assert np.all(np.isin(W, [0, 1])), (
             "Treatment variable must be binary with values 0 and 1"
         )
-        X = self._X
-        cluster_vec = data[cluster].to_numpy()
-        unique_clusters = np.unique(cluster_vec)
 
-        tau_full = np.array(self.coef().xs(treatment))
-
-        N = self._N
-        G = len(unique_clusters)
-
+        # lazy loading to avoid circular import
         ccv_module = import_module("pyfixest.estimation.post_estimation.ccv")
-        _compute_CCV = ccv_module._compute_CCV
-
-        vcov_splits = 0.0
-        for _ in range(n_splits):
-            vcov_ccv = _compute_CCV(
-                fml=fml,
-                Y=Y,
-                X=X,
-                W=W,
-                rng=rng,
-                data=data,
-                treatment=treatment,
-                cluster_vec=cluster_vec,
-                pk=pk,
-                tau_full=tau_full,
-            )
-            vcov_splits += vcov_ccv
-
-        vcov_splits /= n_splits
-        vcov_splits /= N
 
         crv1_idx = self._coefnames.index(treatment)
-        vcov_crv1 = self._vcov[crv1_idx, crv1_idx]
-        vcov_ccv = qk * vcov_splits + (1 - qk) * vcov_crv1
+        res = ccv_module.compute_ccv(
+            fml=self._fml,
+            Y=self._Y.flatten(),
+            X=self._X,
+            W=W,
+            data=self._data,
+            treatment=treatment,
+            cluster_vec=self._data[cluster].to_numpy(),
+            tau_full=np.array(self.coef().xs(treatment)),
+            vcov_crv1=self._vcov[crv1_idx, crv1_idx],
+            N=self._N,
+            n_splits=n_splits,
+            pk=pk,
+            qk=qk,
+            rng=rng,
+        )
 
-        se = np.sqrt(vcov_ccv)
-        tstat = tau_full / se
-        df = G - 1
-        pvalue = 2 * (1 - t.cdf(np.abs(tstat), df))
-        alpha = 0.95
-        z = np.abs(t.ppf((1 - alpha) / 2, df))
-        z_se = z * se
-        conf_int = np.array([tau_full - z_se, tau_full + z_se])
-
-        res_ccv_dict: dict[str, float | np.ndarray] = {
-            "Estimate": tau_full,
-            "Std. Error": se,
-            "t value": tstat,
-            "Pr(>|t|)": pvalue,
-            "2.5%": conf_int[0],
-            "97.5%": conf_int[1],
-        }
-
-        res_ccv = pd.Series(res_ccv_dict)
-
+        res_ccv = pd.Series(
+            {
+                "Estimate": res.estimate,
+                "Std. Error": res.se,
+                "t value": res.tstat,
+                "Pr(>|t|)": res.pvalue,
+                "2.5%": res.conf_int[0],
+                "97.5%": res.conf_int[1],
+            }
+        )
         res_ccv.name = "CCV"
 
         res_crv1 = cast(pd.Series, self.tidy().xs(treatment))
         res_crv1.name = "CRV1"
 
         return pd.concat([res_ccv, res_crv1], axis=1).T
-
-        ccv_module = import_module("pyfixest.estimation.post_estimation.ccv")
-        _ccv = ccv_module._ccv
-
-        return _ccv(
-            data=data,
-            depvar=depvar,
-            treatment=treatment,
-            cluster=cluster,
-            xfml=xfml,
-            seed=seed,
-            pk=pk,
-            qk=qk,
-            n_splits=n_splits,
-        )
 
     def _model_matrix_one_hot(
         self, output="numpy"
