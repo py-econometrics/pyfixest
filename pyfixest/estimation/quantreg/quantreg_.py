@@ -135,6 +135,10 @@ class Quantreg(Feols):
             valid = ", ".join(self._method_map)
             raise ValueError(f"`method` must be one of {{{valid}}}") from exc
 
+    def _post_inference_hook(self) -> None:
+        "Quantile regression reports neither the OLS goodness of fit nor the joint F test."
+        return
+
     def to_array(self):
         "Turn estimation DataFrames to np arrays."
         self._Y, self._X, self._Z = (

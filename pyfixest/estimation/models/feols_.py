@@ -550,6 +550,25 @@ class Feols(ResultAccessorMixin):
 
         self._get_predictors()
 
+    # --- hooks driven by `plan_.fit_one` -----------------------------------
+    # The runner calls these at fixed points of the fit pipeline. Overriding
+    # them is how a model class varies the pipeline without the runner having
+    # to know which class it is holding.
+
+    def _check_dependent_variable(self) -> None:
+        "Validate the dependent variable before fitting. OLS accepts any numeric Y."
+        return
+
+    @property
+    def _vcov_data(self) -> pd.DataFrame:
+        "The data frame `vcov()` reads cluster and time variables from."
+        return self._data
+
+    def _post_inference_hook(self) -> None:
+        "Report goodness of fit and the joint F test once inference is available."
+        self.get_performance()
+        self.wald_test()
+
     def vcov(
         self,
         vcov: str | dict[str, str],

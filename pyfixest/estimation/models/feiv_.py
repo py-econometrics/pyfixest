@@ -140,6 +140,10 @@ class Feiv(Feols):
         self._supports_cluster_causal_variance = False
         self._support_decomposition = False
 
+    def _post_inference_hook(self) -> None:
+        "Run the first stage. IV models report no R2 and no joint F test."
+        self.first_stage()
+
     def wls_transform(self) -> None:
         "Transform variables for WLS estimation."
         super().wls_transform()

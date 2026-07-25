@@ -79,6 +79,10 @@ class Feglm(Feols):
         self._family = family
         self._inference_dist = family.inference_dist
 
+    def _post_inference_hook(self) -> None:
+        "GLMs report neither the OLS goodness of fit nor the joint F test."
+        return
+
     def prepare_model_matrix(self):
         "Prepare model inputs for estimation."
         super().prepare_model_matrix()

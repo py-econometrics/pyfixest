@@ -3,6 +3,7 @@ from __future__ import annotations
 import gc
 
 import numpy as np
+import pandas as pd
 from scipy.stats import norm
 
 from pyfixest.estimation.internals.literals import (
@@ -182,6 +183,19 @@ class QuantregMulti:
         [QuantReg.get_inference() for QuantReg in self.all_quantregs.values()]
 
         return self.all_quantregs
+
+    def _check_dependent_variable(self) -> None:
+        "Each child `Quantreg` validated its own Y when it was constructed."
+        return
+
+    @property
+    def _vcov_data(self) -> pd.DataFrame:
+        "The children all share one data frame; read it off the first quantile."
+        return self.all_quantregs[self.quantiles[0]]._data
+
+    def _post_inference_hook(self) -> None:
+        "Quantile regression reports neither the OLS goodness of fit nor the joint F test."
+        return
 
     def prepare_model_matrix(self):
         "Prepare model matrix. Placeholder, only needed due to structure of execution of FixestMulti class."
