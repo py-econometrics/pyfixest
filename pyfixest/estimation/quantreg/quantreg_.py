@@ -1,18 +1,15 @@
 import warnings
-from collections.abc import Callable, Mapping
+from collections.abc import Callable
 from functools import partial
-from typing import Any, cast
+from typing import cast
 
 import numpy as np
-import pandas as pd
 from scipy.linalg import cho_factor, solve_triangular
 
-from pyfixest.demeaners import AnyDemeaner
-from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.literals import (
     QuantregMethodOptions,
-    SolverOptions,
 )
+from pyfixest.estimation.models._model_init import ModelInit
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.quantreg.frisch_newton_ip import (
     frisch_newton_solver,
@@ -61,48 +58,15 @@ class Quantreg(Feols):
 
     def __init__(
         self,
-        FixestFormula: FixestFormula,
-        data: pd.DataFrame,
-        ssc_dict: dict[str, str | bool],
-        drop_singletons: bool,
-        drop_intercept: bool,
-        weights: str | None,
-        weights_type: str | None,
-        collin_tol: float,
-        lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
-        solver: SolverOptions = "np.linalg.solve",
-        demeaner: AnyDemeaner | None = None,
-        store_data: bool = True,
-        copy_data: bool = True,
-        lean: bool = False,
-        context: int | Mapping[str, Any] = 0,
-        sample_split_var: str | None = None,
-        sample_split_value: str | int | None = None,
+        init: ModelInit,
+        *,
         quantile: float = 0.5,
         method: QuantregMethodOptions = "fn",
         quantile_tol: float = 1e-06,
         quantile_maxiter: int | None = None,
         seed: int | None = None,
     ) -> None:
-        super().__init__(
-            FixestFormula=FixestFormula,
-            data=data,
-            ssc_dict=ssc_dict,
-            drop_singletons=drop_singletons,
-            drop_intercept=drop_intercept,
-            weights=weights,
-            weights_type=weights_type,
-            collin_tol=collin_tol,
-            lookup_demeaned_data=lookup_demeaned_data,
-            solver=solver,
-            store_data=store_data,
-            copy_data=copy_data,
-            lean=lean,
-            sample_split_var=sample_split_var,
-            sample_split_value=sample_split_value,
-            context=context,
-            demeaner=demeaner,
-        )
+        super().__init__(init)
 
         warnings.warn(
             """
@@ -122,12 +86,7 @@ class Quantreg(Feols):
         self._quantile_tol = quantile_tol
         self._quantile_maxiter = quantile_maxiter
 
-        self._model_name = (
-            FixestFormula.formula
-            if self._sample_split_var is None
-            else f"{FixestFormula.formula} (Sample: {self._sample_split_var} = {self._sample_split_value})"
-        )
-        # update with quantile name
+        # `Feols.__init__` already built the base name; add the quantile.
         self._model_name = f"{self._model_name} (q = {quantile})"
         self._model_name_plot = self._model_name
 

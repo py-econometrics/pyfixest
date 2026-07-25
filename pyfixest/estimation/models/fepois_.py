@@ -1,19 +1,11 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
-from typing import Any
-
 import numpy as np
 import pandas as pd
 from scipy.special import gammaln
 
-from pyfixest.core.demean import Preconditioner
-from pyfixest.demeaners import AnyDemeaner
-from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.families import POISSON
-from pyfixest.estimation.internals.literals import (
-    SolverOptions,
-)
+from pyfixest.estimation.models._model_init import ModelInit
 from pyfixest.estimation.models.feglm_ import Feglm
 from pyfixest.estimation.models.feols_ import (
     PredictionErrorOptions,
@@ -96,51 +88,18 @@ class Fepois(Feglm):
 
     def __init__(
         self,
-        FixestFormula: FixestFormula,
-        data: pd.DataFrame,
-        ssc_dict: dict[str, str | bool],
-        drop_singletons: bool,
-        drop_intercept: bool,
-        weights: str | None,
-        weights_type: str | None,
-        collin_tol: float,
-        lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
+        init: ModelInit,
+        *,
         tol: float,
         maxiter: int,
-        solver: SolverOptions = "np.linalg.solve",
-        demeaner: AnyDemeaner | None = None,
-        lookup_preconditioner: dict[frozenset[int], Preconditioner] | None = None,
-        context: int | Mapping[str, Any] = 0,
-        store_data: bool = True,
-        copy_data: bool = True,
-        lean: bool = False,
-        sample_split_var: str | None = None,
-        sample_split_value: str | int | None = None,
         separation_check: list[str] | None = None,
         offset: str | None = None,
     ):
         super().__init__(
-            FixestFormula=FixestFormula,
-            data=data,
-            ssc_dict=ssc_dict,
-            drop_singletons=drop_singletons,
-            drop_intercept=drop_intercept,
-            weights=weights,
-            weights_type=weights_type,
-            collin_tol=collin_tol,
-            lookup_demeaned_data=lookup_demeaned_data,
+            init,
             tol=tol,
             maxiter=maxiter,
-            solver=solver,
-            store_data=store_data,
-            copy_data=copy_data,
-            lean=lean,
-            sample_split_var=sample_split_var,
-            sample_split_value=sample_split_value,
             separation_check=separation_check,
-            context=context,
-            demeaner=demeaner,
-            lookup_preconditioner=lookup_preconditioner,
             family=POISSON,
         )
 

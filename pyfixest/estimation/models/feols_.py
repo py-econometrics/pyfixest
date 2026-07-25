@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import re
 import warnings
-from collections.abc import Mapping
 from importlib import import_module
 from typing import Any, Literal, cast
 
@@ -14,11 +13,10 @@ from scipy.sparse.linalg import lsqr
 from scipy.stats import chi2, f, t
 
 from pyfixest.core.demean import Preconditioner
-from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner, MapDemeaner
+from pyfixest.demeaners import LsmrDemeaner, MapDemeaner
 from pyfixest.errors import VcovTypeNotSupportedError
-from pyfixest.estimation.api.utils import _ALL_SAMPLE, _AllSampleSentinel
+from pyfixest.estimation.api.utils import _ALL_SAMPLE
 from pyfixest.estimation.formula import model_matrix as model_matrix_fixest
-from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
 from pyfixest.estimation.internals.demean_ import DemeanCache
 from pyfixest.estimation.internals.families import T_DIST, InferenceDist
@@ -26,7 +24,6 @@ from pyfixest.estimation.internals.fit_ import fit_ols
 from pyfixest.estimation.internals.literals import (
     PredictionErrorOptions,
     PredictionType,
-    SolverOptions,
     _validate_literal_argument,
 )
 from pyfixest.estimation.internals.vcov_ import (
@@ -44,6 +41,7 @@ from pyfixest.estimation.internals.vcov_utils import (
     prepare_cluster_state,
     run_crv_loop,
 )
+from pyfixest.estimation.models._model_init import ModelInit
 from pyfixest.estimation.models._result_accessor_mixin import ResultAccessorMixin
 from pyfixest.estimation.post_estimation.decomposition import (
     GelbachDecomposition,
@@ -89,30 +87,10 @@ class Feols(ResultAccessorMixin):
 
     Parameters
     ----------
-    Y : np.ndarray
-        Dependent variable, a two-dimensional numpy array.
-    X : np.ndarray
-        Independent variables, a two-dimensional numpy array.
-    weights : np.ndarray
-        Weights, a one-dimensional numpy array.
-    collin_tol : float
-        Tolerance level for collinearity checks.
-    coefnames : list[str]
-        Names of the coefficients (of the design matrix X).
-    weights_name : Optional[str]
-        Name of the weights variable.
-    weights_type : Optional[str]
-        Type of the weights variable. Either "aweights" for analytic weights or
-        "fweights" for frequency weights.
-    solver : str, optional.
-        The solver to use for the regression. Can be "np.linalg.lstsq",
-        "np.linalg.solve", "scipy.linalg.solve" and "scipy.sparse.linalg.lsqr".
-        Defaults to "scipy.linalg.solve".
-    context : int or Mapping[str, Any]
-        A dictionary containing additional context variables to be used by
-        formulaic during the creation of the model matrix. This can include
-        custom factorization functions, transformations, or any other
-        variables that need to be available in the formula environment.
+    init : ModelInit
+        The constructor arguments shared by every model class — formula, data,
+        weights, solver, demeaner, the sample split and the demean caches. The
+        planner builds it; see `pyfixest.estimation.models._model_init`.
 
     Attributes
     ----------
@@ -251,29 +229,10 @@ class Feols(ResultAccessorMixin):
 
     """
 
-    def __init__(
-        self,
-        FixestFormula: FixestFormula,
-        data: pd.DataFrame,
-        ssc_dict: dict[str, str | bool],
-        drop_singletons: bool,
-        drop_intercept: bool,
-        weights: str | None,
-        weights_type: str | None,
-        collin_tol: float,
-        lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
-        solver: SolverOptions = "np.linalg.solve",
-        demeaner: AnyDemeaner | None = None,
-        lookup_preconditioner: dict[frozenset[int], Preconditioner] | None = None,
-        store_data: bool = True,
-        copy_data: bool = True,
-        lean: bool = False,
-        context: int | Mapping[str, Any] = 0,
-        sample_split_var: str | None = None,
-        sample_split_value: str | int | float | _AllSampleSentinel | None = None,
-    ) -> None:
-        self._sample_split_value = sample_split_value
-        self._sample_split_var = sample_split_var
+    def __init__(self, init: ModelInit) -> None:
+        FixestFormula = init.FixestFormula
+        self._sample_split_value = init.sample_split_value
+        self._sample_split_var = init.sample_split_var
         self._model_name = (
             FixestFormula.formula
             if self._sample_split_var is None
@@ -285,39 +244,41 @@ class Feols(ResultAccessorMixin):
         self._inference_dist: InferenceDist = T_DIST
         self.FixestFormula = FixestFormula
 
+        data = init.data
         if self._sample_split_var is None:
             pass
         elif self._sample_split_value is _ALL_SAMPLE:
-            data = data.loc[data[sample_split_var].notnull()]
+            data = data.loc[data[self._sample_split_var].notnull()]
         else:
-            data = data.loc[data[self._sample_split_var] == sample_split_value]
+            data = data.loc[data[self._sample_split_var] == self._sample_split_value]
 
         data = data.reset_index(drop=True)
 
-        self._data = data.copy() if copy_data else data
-        self._ssc_dict = ssc_dict
-        self._drop_singletons = drop_singletons
-        self._drop_intercept = drop_intercept
-        self._weights_name = weights
-        self._weights_type = weights_type
-        self._has_weights = weights is not None
+        self._data = data.copy() if init.copy_data else data
+        self._ssc_dict = init.ssc_dict
+        self._drop_singletons = init.drop_singletons
+        self._drop_intercept = init.drop_intercept
+        self._weights_name = init.weights
+        self._weights_type = init.weights_type
+        self._has_weights = init.weights is not None
         self._offset_name: str | None = None
         self._offset: np.ndarray | None = None
-        self._collin_tol = collin_tol
-        self._solver = solver
-        if demeaner is None:
-            demeaner = MapDemeaner()
+        self._collin_tol = init.collin_tol
+        self._solver = init.solver
+        demeaner = init.demeaner if init.demeaner is not None else MapDemeaner()
         self._demeaner = demeaner
         if isinstance(demeaner, LsmrDemeaner):
             self._fixef_tol = max(demeaner.fixef_atol, demeaner.fixef_btol)
         else:
             self._fixef_tol = demeaner.fixef_tol
         self._fixef_maxiter = demeaner.fixef_maxiter
-        self._demean_cache = DemeanCache(lookup_demeaned_data, lookup_preconditioner)
-        self._store_data = store_data
-        self._copy_data = copy_data
-        self._lean = lean
-        self._context = capture_context(context)
+        self._demean_cache = DemeanCache(
+            init.lookup_demeaned_data, init.lookup_preconditioner
+        )
+        self._store_data = init.store_data
+        self._copy_data = init.copy_data
+        self._lean = init.lean
+        self._context = capture_context(init.context)
 
         self._support_crv3_inference = True
         self._support_hac_inference = True

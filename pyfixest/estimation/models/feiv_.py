@@ -1,17 +1,13 @@
 import warnings
-from collections.abc import Mapping
 from dataclasses import replace
 from importlib import import_module
-from typing import Any, Literal
 
 import numpy as np
-import pandas as pd
 
-from pyfixest.core.demean import Preconditioner
-from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner
-from pyfixest.estimation.formula.parse import Formula as FixestFormula
+from pyfixest.demeaners import LsmrDemeaner
 from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
 from pyfixest.estimation.internals.fit_ import fit_iv
+from pyfixest.estimation.models._model_init import ModelInit
 from pyfixest.estimation.models.feols_ import Feols
 
 
@@ -27,32 +23,10 @@ class Feiv(Feols):
 
     Parameters
     ----------
-    Y : np.ndarray
-        Dependent variable, a two-dimensional np.array.
-    X : np.ndarray
-        Independent variables, a two-dimensional np.array.
-    endgvar : np.ndarray
-        Endogenous Indenpendent variables, a two-dimensional np.array.
-    Z : np.ndarray
-        Instruments, a two-dimensional np.array.
-    weights : np.ndarray
-        Weights, a one-dimensional np.array.
-    coefnames_x : list
-        Names of the coefficients of X.
-    coefnames_z : list
-        Names of the coefficients of Z.
-    collin_tol : float
-        Tolerance for collinearity check.
-    solver: Literal["np.linalg.lstsq", "np.linalg.solve", "scipy.linalg.solve",
-        "scipy.sparse.linalg.lsqr"],
-        default is "scipy.linalg.solve". Solver to use for the estimation.
-    demeaner : Optional[AnyDemeaner]
-        Resolved typed demeaner configuration.
-    weights_name : Optional[str]
-        Name of the weights variable.
-    weights_type : Optional[str]
-        Type of the weights variable. Either "aweights" for analytic weights
-        or "fweights" for frequency weights.
+    init : ModelInit
+        The constructor arguments shared by every model class — formula, data,
+        weights, solver, demeaner, the sample split and the demean caches. The
+        planner builds it; see `pyfixest.estimation.models._model_init`.
 
     Attributes
     ----------
@@ -157,52 +131,8 @@ class Feiv(Feols):
     """
 
     # Constructor and methods implementation...
-    def __init__(
-        self,
-        FixestFormula: FixestFormula,
-        data: pd.DataFrame,
-        ssc_dict: dict[str, str | bool],
-        drop_singletons: bool,
-        drop_intercept: bool,
-        weights: str | None,
-        weights_type: str | None,
-        collin_tol: float,
-        lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
-        solver: Literal[
-            "np.linalg.lstsq",
-            "np.linalg.solve",
-            "scipy.linalg.solve",
-            "scipy.sparse.linalg.lsqr",
-        ] = "scipy.linalg.solve",
-        demeaner: AnyDemeaner | None = None,
-        lookup_preconditioner: dict[frozenset[int], Preconditioner] | None = None,
-        store_data: bool = True,
-        copy_data: bool = True,
-        lean: bool = False,
-        context: int | Mapping[str, Any] = 0,
-        sample_split_var: str | None = None,
-        sample_split_value: str | int | None = None,
-    ) -> None:
-        super().__init__(
-            FixestFormula=FixestFormula,
-            data=data,
-            ssc_dict=ssc_dict,
-            drop_singletons=drop_singletons,
-            drop_intercept=drop_intercept,
-            weights=weights,
-            weights_type=weights_type,
-            collin_tol=collin_tol,
-            lookup_demeaned_data=lookup_demeaned_data,
-            solver=solver,
-            store_data=store_data,
-            copy_data=copy_data,
-            lean=lean,
-            sample_split_var=sample_split_var,
-            sample_split_value=sample_split_value,
-            context=context,
-            demeaner=demeaner,
-            lookup_preconditioner=lookup_preconditioner,
-        )
+    def __init__(self, init: ModelInit) -> None:
+        super().__init__(init)
 
         self._is_iv = True
         self._support_crv3_inference = False

@@ -218,74 +218,75 @@ def test_iv_formula_resolves_each_spec_to_feiv():
 
 
 # ---------------------------------------------------------------------------
-# Method-specific model_kwargs
+# Method-specific constructor extras
 # ---------------------------------------------------------------------------
+
+
+def _first_spec(method: str, fml: str = "Y ~ X1", **overrides):
+    data = pf.get_data()
+    if method.startswith("quantreg"):
+        overrides.setdefault("quantile", 0.5)
+    cfg = _config(method, fml, data, **overrides)
+    return expand_specs(
+        config=cfg,
+        formula_dict=_parse(cfg.fml),
+        data=data,
+        splits=[_ALL_SAMPLE],
+        is_iv=False,
+        splitvar=None,
+        captured_context={},
+    )[0]
 
 
 @pytest.mark.parametrize(
     "method,must_have,must_not_have",
     [
-        # feols: demeaner yes; iwls / quantreg / accelerate no
-        ("feols", {"demeaner"}, {"tol", "maxiter", "offset", "accelerate", "quantile"}),
-        # fepois: demeaner + iwls + separation_check + offset; no accelerate, no quantile
+        # feols takes no extras at all
+        ("feols", set(), {"tol", "maxiter", "offset", "accelerate", "quantile"}),
+        # fepois: iwls + separation_check + offset; no accelerate, no quantile
         (
             "fepois",
-            {"demeaner", "tol", "maxiter", "separation_check", "offset"},
+            {"tol", "maxiter", "separation_check", "offset"},
             {"accelerate", "quantile"},
         ),
-        # feglm-logit: demeaner + iwls + separation_check + accelerate; no offset, no quantile
+        # feglm-logit: iwls + separation_check + accelerate; no offset, no quantile
         (
             "feglm-logit",
-            {"demeaner", "tol", "maxiter", "separation_check", "accelerate"},
+            {"tol", "maxiter", "separation_check", "accelerate"},
             {"offset", "quantile"},
         ),
-        # quantreg: quantile knobs only; no demeaner, no iwls, no separation_check
+        # quantreg: quantile knobs only
         (
             "quantreg",
             {"quantile", "method", "quantile_tol", "quantile_maxiter", "seed"},
-            {"demeaner", "tol", "maxiter", "separation_check", "offset", "accelerate"},
+            {"tol", "maxiter", "separation_check", "offset", "accelerate"},
         ),
     ],
 )
-def test_model_kwargs_filtered_by_method(method, must_have, must_not_have):
-    """`expand_specs` only threads kwargs the model class consumes."""
-    data = pf.get_data()
-    # quantreg needs a quantile value
-    overrides = {"quantile": 0.5} if method.startswith("quantreg") else {}
-    cfg = _config(method, "Y ~ X1", data, **overrides)
-    fd = _parse(cfg.fml)
-    specs = expand_specs(
-        config=cfg,
-        formula_dict=fd,
-        data=data,
-        splits=[_ALL_SAMPLE],
-        is_iv=False,
-        splitvar=None,
-        captured_context={},
-    )
-    kwargs = specs[0].model_kwargs
+def test_model_extras_filtered_by_method(method, must_have, must_not_have):
+    """`expand_specs` only threads the extras the model class consumes."""
+    extras = _first_spec(method).extras
     for key in must_have:
-        assert key in kwargs, f"{method} should have kwarg {key!r}"
+        assert key in extras, f"{method} should have extra {key!r}"
     for key in must_not_have:
-        assert key not in kwargs, f"{method} should not have kwarg {key!r}"
+        assert key not in extras, f"{method} should not have extra {key!r}"
 
 
-def test_cache_dicts_are_not_in_spec_kwargs():
-    """`lookup_demeaned_data` and `lookup_preconditioner` are runner-injected."""
-    data = pf.get_data()
-    cfg = _config("feols", "Y ~ X1 | f1", data)
-    fd = _parse(cfg.fml)
-    specs = expand_specs(
-        config=cfg,
-        formula_dict=fd,
-        data=data,
-        splits=[_ALL_SAMPLE],
-        is_iv=False,
-        splitvar=None,
-        captured_context={},
-    )
-    assert "lookup_demeaned_data" not in specs[0].model_kwargs
-    assert "lookup_preconditioner" not in specs[0].model_kwargs
+@pytest.mark.parametrize(
+    "method,threads_demeaner", [("feols", True), ("fepois", True), ("quantreg", False)]
+)
+def test_demeaner_threaded_only_when_consumed(method, threads_demeaner):
+    """The demeaner reaches `ModelInit` only for methods that declare the need."""
+    demeaner = pf.MapDemeaner()
+    spec = _first_spec(method, demeaner=demeaner)
+    assert (spec.init.demeaner is demeaner) == threads_demeaner
+
+
+def test_cache_fields_are_runner_injected():
+    """`lookup_demeaned_data` and `lookup_preconditioner` are left unset by the planner."""
+    spec = _first_spec("feols", "Y ~ X1 | f1")
+    assert spec.init.lookup_demeaned_data == {}
+    assert spec.init.lookup_preconditioner is None
 
 
 # ---------------------------------------------------------------------------

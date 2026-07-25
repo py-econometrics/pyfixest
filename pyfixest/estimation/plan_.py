@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any
 
 import pandas as pd
@@ -11,6 +11,7 @@ from pyfixest.estimation.api.utils import _ALL_SAMPLE, _AllSampleSentinel
 from pyfixest.estimation.config import EstimationConfig
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.vcov_utils import _get_vcov_type
+from pyfixest.estimation.models._model_init import ModelInit
 from pyfixest.estimation.models.fegaussian_ import Fegaussian
 from pyfixest.estimation.models.feglm_ import Feglm
 from pyfixest.estimation.models.feiv_ import Feiv
@@ -126,12 +127,12 @@ def _drop_singletons(fixef_rm: str) -> bool:
 class ModelSpec:
     """A single model to fit, with everything the runner needs to do it.
 
-    `model_kwargs` holds every constructor argument that doesn't
-    change over the course of the run. The cache dicts
-    (`lookup_demeaned_data` and, for non-quantreg methods,
-    `lookup_preconditioner`) are deliberately *not* in here —
-    the runner injects them at fit time so that specs sharing the
-    same `cache_key` can share the cache.
+    `init` holds the base constructor arguments and `extras` the ones
+    specific to this model class. Neither changes over the course of the
+    run. The cache fields on `init` (`lookup_demeaned_data` and
+    `lookup_preconditioner`) are deliberately left at their defaults —
+    the runner injects them at fit time so that specs sharing the same
+    `cache_key` can share the cache.
     """
 
     method: str
@@ -139,7 +140,8 @@ class ModelSpec:
     formula: FixestFormula
     fixef_key: str | None
     sample_split_value: Any
-    model_kwargs: dict[str, Any]
+    init: ModelInit
+    extras: dict[str, Any]
 
     @property
     def cache_key(self) -> tuple[Any, str | None]:
@@ -196,11 +198,13 @@ def expand_specs(
     ssc_dict = dict(config.ssc_dict) if config.ssc_dict else {}
     drop_singletons = _drop_singletons(config.fixef_rm)
 
+    extras = _build_model_extras(config=config, needs=needs)
+
     specs: list[ModelSpec] = []
     for sample_split_value in splits:
         for fixef_key in formula_dict:
             for formula in formula_dict[fixef_key]:
-                model_kwargs = _build_model_kwargs(
+                init = _build_model_init(
                     config=config,
                     needs=needs,
                     formula=formula,
@@ -218,13 +222,14 @@ def expand_specs(
                         formula=formula,
                         fixef_key=fixef_key,
                         sample_split_value=sample_split_value,
-                        model_kwargs=model_kwargs,
+                        init=init,
+                        extras=dict(extras),
                     )
                 )
     return specs
 
 
-def _build_model_kwargs(
+def _build_model_init(
     *,
     config: EstimationConfig,
     needs: frozenset[str],
@@ -235,58 +240,66 @@ def _build_model_kwargs(
     sample_split_value: Any,
     splitvar: str | None,
     captured_context: Mapping[str, Any],
-) -> dict[str, Any]:
-    """Compose the static constructor kwargs for one model.
+) -> ModelInit:
+    """Compose the base constructor arguments shared by every model class.
 
-    The cache dicts (`lookup_demeaned_data`, `lookup_preconditioner`)
-    are intentionally *not* set here — they're injected per
-    cache-block by the runner.
+    The cache fields (`lookup_demeaned_data`, `lookup_preconditioner`) are
+    intentionally left at their defaults — the runner fills them in per
+    cache-block via `dataclasses.replace`.
     """
-    kwargs: dict[str, Any] = {
-        "FixestFormula": formula,
-        "data": data,
-        "ssc_dict": ssc_dict,
-        "drop_singletons": drop_singletons,
-        "drop_intercept": config.drop_intercept,
-        "weights": config.weights,
-        "weights_type": config.weights_type,
-        "solver": config.solver,
-        "collin_tol": config.collin_tol,
-        "store_data": config.store_data,
-        "copy_data": config.copy_data,
-        "lean": config.lean,
-        "context": captured_context,
-        "sample_split_value": sample_split_value,
-        "sample_split_var": splitvar,
-    }
+    return ModelInit(
+        FixestFormula=formula,
+        data=data,
+        ssc_dict=ssc_dict,
+        drop_singletons=drop_singletons,
+        drop_intercept=config.drop_intercept,
+        weights=config.weights,
+        weights_type=config.weights_type,
+        solver=config.solver,
+        collin_tol=config.collin_tol,
+        demeaner=config.demeaner if "demeaner" in needs else None,
+        store_data=config.store_data,
+        copy_data=config.copy_data,
+        lean=config.lean,
+        context=captured_context,
+        sample_split_value=sample_split_value,
+        sample_split_var=splitvar,
+    )
 
-    if "demeaner" in needs:
-        kwargs["demeaner"] = config.demeaner
+
+def _build_model_extras(
+    *, config: EstimationConfig, needs: frozenset[str]
+) -> dict[str, Any]:
+    """Collect the constructor arguments specific to one model class.
+
+    Which groups apply is declared by `MODEL_REGISTRY[method].needs`.
+    """
+    extras: dict[str, Any] = {}
 
     if "iwls" in needs:
-        kwargs["tol"] = config.iwls_tol
-        kwargs["maxiter"] = config.iwls_maxiter
+        extras["tol"] = config.iwls_tol
+        extras["maxiter"] = config.iwls_maxiter
 
     if "separation_check" in needs:
-        kwargs["separation_check"] = config.separation_check
+        extras["separation_check"] = config.separation_check
 
     if "offset" in needs:
-        kwargs["offset"] = config.offset
+        extras["offset"] = config.offset
 
     if "accelerate" in needs:
-        kwargs["accelerate"] = config.accelerate
+        extras["accelerate"] = config.accelerate
 
     if "quantreg" in needs:
-        kwargs["quantile"] = config.quantile
-        kwargs["method"] = config.quantreg_method
-        kwargs["quantile_tol"] = config.quantile_tol
-        kwargs["quantile_maxiter"] = config.quantile_maxiter
-        kwargs["seed"] = config.seed
+        extras["quantile"] = config.quantile
+        extras["method"] = config.quantreg_method
+        extras["quantile_tol"] = config.quantile_tol
+        extras["quantile_maxiter"] = config.quantile_maxiter
+        extras["seed"] = config.seed
 
     if "quantreg_multi" in needs:
-        kwargs["multi_method"] = config.quantreg_multi_method
+        extras["multi_method"] = config.quantreg_multi_method
 
-    return kwargs
+    return extras
 
 
 FittedModel = (
@@ -310,12 +323,15 @@ def fit_one(
 
     Returns the fitted model.
     """
-    model_kwargs = dict(spec.model_kwargs)
-    model_kwargs["lookup_demeaned_data"] = lookup_demeaned_data
-    if "demeaner" in MODEL_REGISTRY[spec.method].needs:
-        model_kwargs["lookup_preconditioner"] = lookup_preconditioner
+    init = replace(
+        spec.init,
+        lookup_demeaned_data=lookup_demeaned_data,
+        lookup_preconditioner=lookup_preconditioner
+        if "demeaner" in MODEL_REGISTRY[spec.method].needs
+        else None,
+    )
 
-    FIT: FittedModel = spec.model_cls(**model_kwargs)
+    FIT: FittedModel = spec.model_cls(init, **spec.extras)
 
     FIT.prepare_model_matrix()
     if isinstance(FIT, Feglm):

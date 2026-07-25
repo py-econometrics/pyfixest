@@ -1,21 +1,15 @@
 from __future__ import annotations
 
 import gc
-import inspect
-from collections.abc import Mapping
-from typing import Any
 
 import numpy as np
-import pandas as pd
 from scipy.stats import norm
 
-from pyfixest.demeaners import AnyDemeaner
-from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.literals import (
     QuantregMethodOptions,
     QuantregMultiOptions,
-    SolverOptions,
 )
+from pyfixest.estimation.models._model_init import ModelInit
 from pyfixest.estimation.quantreg.quantreg_ import Quantreg
 from pyfixest.estimation.quantreg.utils import get_hall_sheather_bandwidth
 from pyfixest.utils.dev_utils import DataFrameType
@@ -26,44 +20,27 @@ class QuantregMulti:
 
     def __init__(
         self,
-        FixestFormula: FixestFormula,
-        data: pd.DataFrame,
+        init: ModelInit,
+        *,
         quantile: list[float],
-        ssc_dict: dict[str, str | bool],
-        drop_singletons: bool,
-        drop_intercept: bool,
-        weights: str | None,
-        weights_type: str | None,
-        collin_tol: float,
-        lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
-        solver: SolverOptions = "np.linalg.solve",
-        demeaner: AnyDemeaner | None = None,
-        store_data: bool = True,
-        copy_data: bool = True,
-        lean: bool = False,
-        context: int | Mapping[str, Any] = 0,
-        sample_split_var: str | None = None,
-        sample_split_value: str | int | None = None,
         method: QuantregMethodOptions = "fn",
         multi_method: QuantregMultiOptions = "cfm1",
         quantile_tol: float = 1e-06,
         quantile_maxiter: int | None = None,
         seed: int | None = None,
     ):
-        frame = inspect.currentframe()
-        if frame is None:
-            raise ValueError("The current frame is None.")
-        args, _, _, values = inspect.getargvalues(frame)
-        args_dict = {
-            arg: values[arg]
-            for arg in args
-            if arg not in ("self", "quantile", "multi_method")
-        }
-
         # initiate a list of Quantreg objects
         self.quantiles = quantile
         self.all_quantregs = {
-            q: Quantreg(**args_dict, quantile=q) for q in self.quantiles
+            q: Quantreg(
+                init,
+                quantile=q,
+                method=method,
+                quantile_tol=quantile_tol,
+                quantile_maxiter=quantile_maxiter,
+                seed=seed,
+            )
+            for q in self.quantiles
         }
         self.method = method
         self.multi_method = multi_method
