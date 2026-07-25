@@ -782,6 +782,16 @@ class Feols(ResultAccessorMixin):
                 "HAC inference is not supported for this model type."
             )
 
+        # `vcov_hetero` rescales the scores by 1/sqrt(w) for frequency weights;
+        # the HAC meat has no such correction, and there is no reference
+        # implementation to validate one against, so refuse rather than return
+        # a number nobody has checked.
+        if self._has_weights and self._weights_type == "fweights":
+            raise NotImplementedError(
+                "HAC inference (NW, DK) is not supported with `weights_type='fweights'`. "
+                "Use `weights_type='aweights'`, which is validated against R's fixest."
+            )
+
         # some data checks on input pandas df
         # time needs to be numeric or date else we cannot sort by time
         if not np.issubdtype(_data[_time_id], np.number) and not np.issubdtype(
