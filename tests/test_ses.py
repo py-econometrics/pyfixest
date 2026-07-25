@@ -236,6 +236,28 @@ def test_vcov_options_match_registry():
     assert set(get_args(VcovTypeOptions)) == set(VCOV_STRING_OPTIONS)
 
 
+@pytest.mark.parametrize(
+    ("vcov", "vcov_kwargs", "error"),
+    [
+        (["f1", "f2"], None, TypeError),  # a list is not a supported vcov shape
+        (42, None, TypeError),
+        ("bogus", None, ValueError),
+        ({"BOGUS": "f1"}, None, ValueError),
+        ({"CRV1": 1}, None, TypeError),
+        ({"CRV1": "f1+f2+f3"}, None, ValueError),  # at most twoway clustering
+        ({"CRV1": "f1", "CRV3": "f2"}, None, ValueError),
+        ("NW", None, ValueError),  # time_id is required, also when kwargs are absent
+        ("NW", {"lag": 2}, ValueError),
+        ("DK", None, ValueError),
+    ],
+)
+def test_vcov_input_validation(vcov, vcov_kwargs, error):
+    "Malformed vcov input raises at the boundary, not deeper in the dispatch."
+    fit = feols("Y ~ X1", data=get_data().dropna())
+    with pytest.raises(error):
+        fit.vcov(vcov, vcov_kwargs=vcov_kwargs)
+
+
 @pytest.mark.parametrize("detail", sorted(VCOV_REGISTRY))
 def test_vcov_registry_specs_are_dispatchable(detail):
     "Every spec resolves to either the cluster loop or an existing Feols method."
