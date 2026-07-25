@@ -1,7 +1,9 @@
 from typing import Any, Literal, get_args
 
 PredictionType = Literal["response", "link"]
-VcovTypeOptions = Literal["iid", "hetero", "HC1", "HC2", "HC3", "nid"]
+# Must stay in sync with the non-clustered entries of
+# `internals.vcov_utils.VCOV_REGISTRY`; `test_ses.py` asserts they match.
+VcovTypeOptions = Literal["iid", "hetero", "HC1", "HC2", "HC3", "NW", "DK", "nid"]
 WeightsTypeOptions = Literal["aweights", "fweights"]
 FixedRmOptions = Literal["singleton", "none"]
 FamilyOptions = Literal["logit", "probit", "gaussian", "poisson"]

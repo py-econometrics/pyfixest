@@ -37,6 +37,9 @@ from pyfixest.estimation.internals.vcov_ import (
     vcov_iid_ols,
 )
 from pyfixest.estimation.internals.vcov_utils import (
+    VCOV_CLUSTER_OPTIONS,
+    VCOV_REGISTRY,
+    VCOV_STRING_OPTIONS,
     _compute_bread,
     prepare_cluster_state,
     run_crv_loop,
@@ -637,20 +640,15 @@ class Feols(ResultAccessorMixin):
         See [On Small Sample Corrections](/explanation/ssc.qmd) for how the
         `ssc` adjustments interact with each estimator.
         """
-        # Assuming `data` is the DataFrame in question
+        if data is not None:
+            try:
+                data = _narwhals_to_pandas(data)
+            except TypeError as e:
+                raise TypeError(
+                    f"The data set must be a DataFrame type. Received: {type(data)}"
+                ) from e
 
-        data_to_check = data if data is not None else self._data
-        try:
-            data_to_check = _narwhals_to_pandas(data_to_check)
-        except TypeError as e:
-            raise TypeError(
-                f"The data set must be a DataFrame type. Received: {type(data)}"
-            ) from e
-
-        # assign estimated fixed effects, and fixed effects nested within cluster.
-
-        # deparse vcov input
-        _check_vcov_input(vcov=vcov, vcov_kwargs=vcov_kwargs, data=self._data)
+        _check_vcov_input(vcov=vcov, vcov_kwargs=vcov_kwargs)
 
         (
             self._vcov_type,
@@ -663,39 +661,9 @@ class Feols(ResultAccessorMixin):
             self._is_iv, self._tXZ, self._tZZinv, self._tZX, self._hessian
         )
 
-        if self._vcov_type == "iid":
-            self._ssc, self._df_k, self._df_t = get_ssc(
-                **self._make_ssc_kwargs(vcov_type="iid", G=1)
-            )
-            self._vcov = self._ssc * self._vcov_iid()
+        spec = VCOV_REGISTRY[self._vcov_type_detail]
 
-        elif self._vcov_type == "hetero":
-            # fixest:::vcov_hetero_internal: adj = ifelse(ssc$cluster.adj, n/(n - 1), 1)
-            self._ssc, self._df_k, self._df_t = get_ssc(
-                **self._make_ssc_kwargs(vcov_type="hetero", G=self._N)
-            )
-            self._vcov = self._ssc * self._vcov_hetero()
-
-        elif self._vcov_type == "HAC":
-            kw = vcov_kwargs or {}
-            self._lag = kw.get("lag")
-            self._time_id = kw.get("time_id")
-            self._panel_id = kw.get("panel_id")
-            self._ssc, self._df_k, self._df_t = get_ssc(
-                **self._make_ssc_kwargs(
-                    vcov_type="HAC",
-                    G=np.unique(self._data[self._time_id]).shape[0],
-                )  # number of unique time periods T used
-            )
-            self._vcov = self._ssc * self._vcov_hac()
-
-        elif self._vcov_type == "nid":
-            self._ssc, self._df_k, self._df_t = get_ssc(
-                **self._make_ssc_kwargs(vcov_type="hetero", G=self._N)
-            )
-            self._vcov = self._ssc * self._vcov_nid()
-
-        elif self._vcov_type == "CRV":
+        if spec.takes_cluster:
             prep = prepare_cluster_state(
                 data=data if data is not None else self._data,
                 clustervar=self._clustervar,
@@ -712,6 +680,17 @@ class Feols(ResultAccessorMixin):
                 make_ssc_kwargs=self._make_ssc_kwargs,
                 cluster_vcov=self._vcov_crv_cluster,
             )
+        else:
+            if spec.prepare is not None:
+                spec.prepare(self, vcov_kwargs)
+            assert spec.ssc_G is not None and spec.method_name is not None
+            self._ssc, self._df_k, self._df_t = get_ssc(
+                **self._make_ssc_kwargs(
+                    vcov_type=spec.ssc_vcov_type, G=spec.ssc_G(self)
+                )
+            )
+            self._vcov = self._ssc * getattr(self, spec.method_name)()
+
         # update p-value, t-stat, standard error, confint
         self.get_inference()
 
@@ -2319,62 +2298,56 @@ def _feols_input_checks(Y: np.ndarray, X: np.ndarray, weights: np.ndarray):
 def _check_vcov_input(
     vcov: str | dict[str, str],
     vcov_kwargs: dict[str, Any] | None,
-    data: pd.DataFrame,
+    data: pd.DataFrame | None = None,
 ):
     """
-    Check the input for the vcov argument in the Feols class.
+    Check the shape and option name of the vcov argument.
+
+    Validates everything that can be checked without a fitted model: the
+    argument's type, that the requested estimator exists in `VCOV_REGISTRY`,
+    and any estimator-specific `vcov_kwargs` requirements. Model-dependent
+    checks live in `_deparse_vcov_input`.
 
     Parameters
     ----------
-    vcov : Union[str, dict[str, str]]
+    vcov : str | dict[str, str]
         The vcov argument passed to the Feols class.
-    vcov_kwargs : Optional[dict[str, Any]]
+    vcov_kwargs : dict[str, Any] | None
         The vcov_kwargs argument passed to the Feols class.
-    data : pd.DataFrame
-        The data passed to the Feols class.
+    data : pd.DataFrame | None
+        Unused. Retained for backwards compatibility of the call signature.
 
     Returns
     -------
     None
     """
-    assert isinstance(vcov, (dict, str, list)), "vcov must be a dict, string or list"
     if isinstance(vcov, dict):
-        assert next(iter(vcov.keys())) in [
-            "CRV1",
-            "CRV3",
-        ], "vcov dict key must be CRV1 or CRV3"
-        assert isinstance(next(iter(vcov.values())), str), (
-            "vcov dict value must be a string"
+        if len(vcov) != 1:
+            raise ValueError(
+                f"The vcov dict must have exactly one key, but has {len(vcov)}."
+            )
+        detail, clustervar = next(iter(vcov.items()))
+        if detail not in VCOV_CLUSTER_OPTIONS:
+            raise ValueError(
+                f"The vcov dict key must be one of {VCOV_CLUSTER_OPTIONS}, but is '{detail}'."
+            )
+        if not isinstance(clustervar, str):
+            raise TypeError("The vcov dict value must be a string.")
+        if len(clustervar.split("+")) > 2:
+            raise ValueError("Not more than twoway clustering is supported.")
+    elif isinstance(vcov, str):
+        if vcov not in VCOV_STRING_OPTIONS:
+            raise ValueError(
+                f"vcov must be one of {VCOV_STRING_OPTIONS}, or a dict such as "
+                f"{{'CRV1': 'clustervar'}}, but is '{vcov}'."
+            )
+        spec = VCOV_REGISTRY[vcov]
+        if spec.check_kwargs is not None:
+            spec.check_kwargs(vcov_kwargs)
+    else:
+        raise TypeError(
+            f"vcov must be a string or a dict, but is of type {type(vcov)}."
         )
-        deparse_vcov = next(iter(vcov.values())).split("+")
-        assert len(deparse_vcov) <= 2, "not more than twoway clustering is supported"
-
-    if isinstance(vcov, list):
-        assert all(isinstance(v, str) for v in vcov), "vcov list must contain strings"
-        assert all(v in data.columns for v in vcov), (
-            "vcov list must contain columns in the data"
-        )
-    if isinstance(vcov, str):
-        assert vcov in [
-            "iid",
-            "hetero",
-            "HC1",
-            "HC2",
-            "HC3",
-            "NW",
-            "DK",
-            "nid",
-        ], (
-            "vcov string must be iid, hetero, HC1, HC2, HC3, NW, or DK, or for quantile regression, 'nid'."
-        )
-
-        # check that time_id is provided if vcov is NW or DK
-        if (
-            vcov in {"NW", "DK"}
-            and vcov_kwargs is not None
-            and "time_id" not in vcov_kwargs
-        ):
-            raise ValueError("Missing required 'time_id' for NW/DK vcov")
 
 
 def _deparse_vcov_input(vcov: str | dict[str, str], has_fixef: bool, is_iv: bool):
@@ -2404,43 +2377,23 @@ def _deparse_vcov_input(vcov: str | dict[str, str], has_fixef: bool, is_iv: bool
     """
     if isinstance(vcov, dict):
         vcov_type_detail = next(iter(vcov.keys()))
-        deparse_vcov = next(iter(vcov.values())).split("+")
-        if isinstance(deparse_vcov, str):
-            deparse_vcov = [deparse_vcov]
-        deparse_vcov = [x.replace(" ", "") for x in deparse_vcov]
-    elif isinstance(vcov, (list, str)):
+        clustervar = [x.replace(" ", "") for x in next(iter(vcov.values())).split("+")]
+    elif isinstance(vcov, str):
         vcov_type_detail = vcov
+        clustervar = None
     else:
-        raise TypeError("arg vcov needs to be a dict, string or list")
+        raise TypeError("arg vcov needs to be a dict or a string")
 
-    if vcov_type_detail == "iid":
-        vcov_type = "iid"
-        is_clustered = False
-    elif vcov_type_detail in ["hetero", "HC1", "HC2", "HC3"]:
-        vcov_type = "hetero"
-        is_clustered = False
-        if vcov_type_detail in ["HC2", "HC3"]:
-            if has_fixef:
-                raise VcovTypeNotSupportedError(
-                    "HC2 and HC3 inference types are not supported for regressions with fixed effects."
-                )
-            if is_iv:
-                raise VcovTypeNotSupportedError(
-                    "HC2 and HC3 inference types are not supported for IV regressions."
-                )
-    elif vcov_type_detail in ["NW", "DK"]:
-        vcov_type = "HAC"
-        is_clustered = False
+    spec = VCOV_REGISTRY.get(vcov_type_detail)
+    if spec is None:
+        raise ValueError(
+            f"vcov must be one of {tuple(VCOV_REGISTRY)}, but is '{vcov_type_detail}'."
+        )
+    if spec.check_model is not None:
+        spec.check_model(has_fixef, is_iv)
 
-    elif vcov_type_detail in ["CRV1", "CRV3"]:
-        vcov_type = "CRV"
-        is_clustered = True
-
-    elif vcov_type_detail == "nid":
-        vcov_type = "nid"
-        is_clustered = False
-
-    clustervar = deparse_vcov if is_clustered else None
+    if not spec.takes_cluster:
+        clustervar = None
 
     # loop over clustervar to change "^" to "_"
     if clustervar and "^" in clustervar:
@@ -2452,4 +2405,4 @@ def _deparse_vcov_input(vcov: str | dict[str, str], has_fixef: bool, is_iv: bool
             """
         )
 
-    return vcov_type, vcov_type_detail, is_clustered, clustervar
+    return spec.family, spec.detail, spec.takes_cluster, clustervar
