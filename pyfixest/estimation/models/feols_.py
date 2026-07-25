@@ -8,8 +8,7 @@ from typing import Any, Literal, cast
 import numpy as np
 import pandas as pd
 from formulaic import Formula
-from scipy.sparse import csc_matrix, diags, spmatrix
-from scipy.sparse.linalg import lsqr
+from scipy.sparse import csc_matrix, spmatrix
 from scipy.stats import chi2, f
 
 from pyfixest.core.demean import Preconditioner
@@ -48,6 +47,7 @@ from pyfixest.estimation.post_estimation.decomposition import (
     GelbachDecomposition,
     _decompose_arg_check,
 )
+from pyfixest.estimation.post_estimation.fixef import solve_fixef
 from pyfixest.estimation.post_estimation.prediction import (
     _compute_prediction_error,
     _get_fixed_effects_prediction_component,
@@ -64,7 +64,6 @@ from pyfixest.estimation.post_estimation.ritest import (
 from pyfixest.estimation.post_estimation.wald import _wald_statistic
 from pyfixest.utils.dev_utils import (
     DataFrameType,
-    _extract_variable_level,
     _narwhals_to_pandas,
 )
 from pyfixest.utils.utils import (
@@ -332,8 +331,8 @@ class Feols(ResultAccessorMixin):
 
         # set in fixef()
         self._fixef_dict: dict[str, dict[str, float]] = {}
-        self._alpha = None
-        self._sumFE = None
+        self._alpha: np.ndarray | None = None
+        self._sumFE: np.ndarray | None = None
 
         # set in get_performance()
         self._rmse = np.nan
@@ -1635,8 +1634,6 @@ class Feols(ResultAccessorMixin):
         list(fe["C(f1)"].items())[:5]
         ```
         """
-        weights_sqrt = np.sqrt(self._weights).flatten()
-
         blocked_transforms = ["i(", "^", "poly("]
         for bt in blocked_transforms:
             if bt in self._fml:
@@ -1652,58 +1649,25 @@ class Feols(ResultAccessorMixin):
                 "The fixef() method is currently not supported for IV models."
             )
 
-        depvars, rhs = self._fml.split("~")
-        covars, fixef_vars = rhs.split("|")
-
-        fixef_vars_list = fixef_vars.split("+")
-        fixef_vars_C = [f"C({x})" for x in fixef_vars_list]
-        fixef_fml = "+".join(fixef_vars_C)
-
-        Y, X = Formula(f"{depvars} ~ {covars}").get_model_matrix(
-            self._data, output="pandas", context=self._context
+        fe = solve_fixef(
+            fml=self._fml,
+            data=self._data,
+            context=self._context,
+            coefnames=self._coefnames,
+            beta_hat=self._beta_hat,
+            X_is_empty=self._X_is_empty,
+            is_glm=self._method == "fepois" or self._method.startswith("feglm"),
+            Y_hat_link=self._Y_hat_link,
+            offset=self._offset if self._offset_name is not None else None,
+            weights=self._weights,
+            has_weights=self._has_weights,
+            atol=atol,
+            btol=btol,
         )
-        Y = Y.to_numpy().flatten().astype(np.float64)
-        if self._X_is_empty:
-            uhat = Y.flatten()
-        else:
-            # drop intercept, potentially multicollinear vars
-            X = X[self._coefnames].to_numpy()
-            if self._method == "fepois" or self._method.startswith("feglm"):
-                # determine residuals from estimated linear predictor
-                # equation (5.2) in Stammann (2018) http://arxiv.org/abs/1707.01815
-                Y = self._Y_hat_link
-                # _Y_hat_link contains the offset as part of eta; subtract it so
-                # that _sumFE represents the pure FE contribution and predict()
-                # can add the offset back from newdata without double-counting.
-                if self._offset_name is not None:
-                    assert self._offset is not None
-                    Y = Y - self._offset.flatten()
-            uhat = (Y - X @ self._beta_hat).flatten()
-        D2 = Formula("-1+" + fixef_fml).get_model_matrix(self._data, output="sparse")
-        cols = D2.model_spec.column_names
 
-        if self._has_weights:
-            uhat *= weights_sqrt
-            weights_diag = diags(weights_sqrt, 0)
-            D2 = weights_diag.dot(D2)
-
-        alpha = lsqr(D2, uhat, atol=atol, btol=btol)[0]
-
-        res: dict[str, dict[str, float]] = {}
-        for i, col in enumerate(cols):
-            variable, level = _extract_variable_level(col)
-            # check if res already has a key variable
-            if variable not in res:
-                res[variable] = dict()
-                res[variable][level] = alpha[i]
-                continue
-            else:
-                if level not in res[variable]:
-                    res[variable][level] = alpha[i]
-
-        self._fixef_dict = res
-        self._alpha = alpha
-        self._sumFE = D2.dot(alpha)
+        self._fixef_dict = fe.fixef_dict
+        self._alpha = fe.alpha
+        self._sumFE = fe.sumFE
 
         return self._fixef_dict
 
