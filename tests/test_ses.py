@@ -1,7 +1,14 @@
+from typing import get_args
+
 import numpy as np
 import pytest
 
 from pyfixest.estimation import feols, fepois
+from pyfixest.estimation.internals.literals import VcovTypeOptions
+from pyfixest.estimation.internals.vcov_utils import (
+    VCOV_REGISTRY,
+    VCOV_STRING_OPTIONS,
+)
 from pyfixest.utils.utils import get_data, ssc
 
 
@@ -218,3 +225,25 @@ def run_crv3_poisson():
         vcov={"CRV3": "f1"},
         ssc=ssc(k_adj=False, G_adj=False),
     )
+
+
+def test_vcov_options_match_registry():
+    """`VcovTypeOptions` must list exactly the non-clustered registry entries.
+
+    The Literal is the type annotation on every public API's `vcov` argument;
+    this is what stops it drifting from the estimators actually implemented.
+    """
+    assert set(get_args(VcovTypeOptions)) == set(VCOV_STRING_OPTIONS)
+
+
+@pytest.mark.parametrize("detail", sorted(VCOV_REGISTRY))
+def test_vcov_registry_specs_are_dispatchable(detail):
+    "Every spec resolves to either the cluster loop or an existing Feols method."
+    spec = VCOV_REGISTRY[detail]
+    if spec.takes_cluster:
+        assert spec.method_name is None and spec.ssc_G is None
+    else:
+        assert spec.ssc_G is not None
+        assert callable(
+            getattr(feols("Y ~ X1", data=get_data().dropna()), spec.method_name)
+        )

@@ -1,5 +1,6 @@
 from collections.abc import Callable
 from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -14,9 +15,143 @@ from pyfixest.core.nw import (
 from pyfixest.core.nw import (
     nw_meat_time as _nw_meat_time_rs,
 )
-from pyfixest.errors import NanInClusterVarError
+from pyfixest.errors import NanInClusterVarError, VcovTypeNotSupportedError
 from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
 from pyfixest.utils.utils import get_ssc
+
+
+@dataclass(frozen=True)
+class VcovSpec:
+    """One user-facing `vcov` option and what the dispatcher needs for it.
+
+    Attributes
+    ----------
+    detail : str
+        The user-facing name, stored on the model as `_vcov_type_detail`.
+    family : str
+        The coarse estimator family, stored as `_vcov_type`. Several details
+        share a family: `HC1`, `HC2` and `HC3` are all `"hetero"`.
+    takes_cluster : bool
+        Whether the option is written as `{detail: clustervar}` rather than as
+        a bare string, and therefore clusters.
+    method_name : str | None
+        Name of the `Feols` method returning the unscaled vcov. `None` for
+        clustered specs, whose per-cluster loop runs in `run_crv_loop`.
+    ssc_family : str | None
+        The `vcov_type` handed to `get_ssc`. Defaults to `family`; only `nid`
+        differs, borrowing the `"hetero"` correction.
+    ssc_G : Callable[[Any], int] | None
+        Returns the `G` that `get_ssc` needs, given the fitted model.
+    prepare : Callable[[Any, dict | None], None] | None
+        Runs before the ssc and vcov computation to unpack `vcov_kwargs` onto
+        the model. Only the HAC estimators need it.
+    check_kwargs : Callable[[dict | None], None] | None
+        Validates `vcov_kwargs` at the API boundary, without a fitted model.
+    check_model : Callable[[bool, bool], None] | None
+        Validates the option against `(has_fixef, is_iv)` once the model is known.
+    """
+
+    detail: str
+    family: str
+    takes_cluster: bool = False
+    method_name: str | None = None
+    ssc_family: str | None = None
+    ssc_G: Callable[[Any], int] | None = None
+    prepare: Callable[[Any, dict | None], None] | None = None
+    check_kwargs: Callable[[dict | None], None] | None = None
+    check_model: Callable[[bool, bool], None] | None = None
+
+    @property
+    def ssc_vcov_type(self) -> str:
+        "The `vcov_type` to hand to `get_ssc`."
+        return self.ssc_family if self.ssc_family is not None else self.family
+
+
+def _G_one(model: Any) -> int:
+    return 1
+
+
+def _G_nobs(model: Any) -> int:
+    # fixest:::vcov_hetero_internal: adj = ifelse(ssc$cluster.adj, n/(n - 1), 1)
+    return model._N
+
+
+def _G_time_periods(model: Any) -> int:
+    "Count the distinct time periods T used by the HAC estimator."
+    return int(np.unique(model._data[model._time_id]).shape[0])
+
+
+def _prepare_hac(model: Any, vcov_kwargs: dict | None) -> None:
+    "Unpack the HAC keyword arguments onto the model."
+    kw = vcov_kwargs or {}
+    model._lag = kw.get("lag")
+    model._time_id = kw.get("time_id")
+    model._panel_id = kw.get("panel_id")
+
+
+def _require_time_id(vcov_kwargs: dict | None) -> None:
+    if not vcov_kwargs or "time_id" not in vcov_kwargs:
+        raise ValueError("Missing required 'time_id' for NW/DK vcov")
+
+
+def _reject_fixef_and_iv(has_fixef: bool, is_iv: bool) -> None:
+    if has_fixef:
+        raise VcovTypeNotSupportedError(
+            "HC2 and HC3 inference types are not supported for regressions with fixed effects."
+        )
+    if is_iv:
+        raise VcovTypeNotSupportedError(
+            "HC2 and HC3 inference types are not supported for IV regressions."
+        )
+
+
+VCOV_REGISTRY: dict[str, VcovSpec] = {
+    "iid": VcovSpec("iid", "iid", method_name="_vcov_iid", ssc_G=_G_one),
+    "hetero": VcovSpec("hetero", "hetero", method_name="_vcov_hetero", ssc_G=_G_nobs),
+    "HC1": VcovSpec("HC1", "hetero", method_name="_vcov_hetero", ssc_G=_G_nobs),
+    "HC2": VcovSpec(
+        "HC2",
+        "hetero",
+        method_name="_vcov_hetero",
+        ssc_G=_G_nobs,
+        check_model=_reject_fixef_and_iv,
+    ),
+    "HC3": VcovSpec(
+        "HC3",
+        "hetero",
+        method_name="_vcov_hetero",
+        ssc_G=_G_nobs,
+        check_model=_reject_fixef_and_iv,
+    ),
+    "NW": VcovSpec(
+        "NW",
+        "HAC",
+        method_name="_vcov_hac",
+        ssc_G=_G_time_periods,
+        prepare=_prepare_hac,
+        check_kwargs=_require_time_id,
+    ),
+    "DK": VcovSpec(
+        "DK",
+        "HAC",
+        method_name="_vcov_hac",
+        ssc_G=_G_time_periods,
+        prepare=_prepare_hac,
+        check_kwargs=_require_time_id,
+    ),
+    "nid": VcovSpec(
+        "nid", "nid", method_name="_vcov_nid", ssc_family="hetero", ssc_G=_G_nobs
+    ),
+    "CRV1": VcovSpec("CRV1", "CRV", takes_cluster=True),
+    "CRV3": VcovSpec("CRV3", "CRV", takes_cluster=True),
+}
+
+VCOV_STRING_OPTIONS: tuple[str, ...] = tuple(
+    k for k, spec in VCOV_REGISTRY.items() if not spec.takes_cluster
+)
+VCOV_CLUSTER_OPTIONS: tuple[str, ...] = tuple(
+    k for k, spec in VCOV_REGISTRY.items() if spec.takes_cluster
+)
 
 
 @dataclass
