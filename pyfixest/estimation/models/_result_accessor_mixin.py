@@ -149,6 +149,10 @@ class ResultAccessorMixin(TidyColumnAccessors):
     _adj_r2_within: float
     _vcov_type: str
 
+    def _require(self, *attrs: str, feature: str) -> None:
+        """Raise if `lean` or `store_data` removed state. Provided by the host class."""
+        raise NotImplementedError
+
     def _bind_report_methods(self):
         """Bind summary, coefplot, iplot, and etable from pyfixest.report as instance methods."""
         _module = import_module("pyfixest.report")
@@ -303,6 +307,8 @@ class ResultAccessorMixin(TidyColumnAccessors):
         fit._r2, fit._adj_r2, fit._r2_within
         ```
         """
+        self._require("_Y", "_Y_untransformed", "_u_hat", feature="get_performance()")
+
         Y_within = self._Y
         Y = self._Y_untransformed.to_numpy()
 
@@ -584,4 +590,5 @@ class ResultAccessorMixin(TidyColumnAccessors):
         fit.resid()[:5]
         ```
         """
+        self._require("_u_hat", "_weights", feature="resid()")
         return self._u_hat.flatten() / np.sqrt(self._weights.flatten())

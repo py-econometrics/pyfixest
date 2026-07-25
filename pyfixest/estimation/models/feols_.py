@@ -4,7 +4,7 @@ import re
 import warnings
 from collections.abc import Mapping
 from importlib import import_module
-from typing import Any, Literal, cast
+from typing import Any, ClassVar, Literal, cast
 
 import numpy as np
 import pandas as pd
@@ -15,7 +15,7 @@ from scipy.stats import chi2, f, t
 
 from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner, MapDemeaner
-from pyfixest.errors import VcovTypeNotSupportedError
+from pyfixest.errors import ModelAttributeStrippedError, VcovTypeNotSupportedError
 from pyfixest.estimation.api.utils import _ALL_SAMPLE, _AllSampleSentinel
 from pyfixest.estimation.formula import model_matrix as model_matrix_fixest
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
@@ -639,6 +639,8 @@ class Feols(ResultAccessorMixin):
         """
         # Assuming `data` is the DataFrame in question
 
+        if data is None:
+            self._require("_data", feature="vcov()")
         data_to_check = data if data is not None else self._data
         try:
             data_to_check = _narwhals_to_pandas(data_to_check)
@@ -696,6 +698,8 @@ class Feols(ResultAccessorMixin):
             self._vcov = self._ssc * self._vcov_nid()
 
         elif self._vcov_type == "CRV":
+            if data is None:
+                self._require("_data", feature="vcov() with clustered errors")
             prep = prepare_cluster_state(
                 data=data if data is not None else self._data,
                 clustervar=self._clustervar,
@@ -923,37 +927,72 @@ class Feols(ResultAccessorMixin):
         else:
             self._has_fixef = False
 
+    # Attributes dropped after fitting. `_require` checks against these, so the
+    # set a method needs and the set that was removed stay comparable.
+    _DATA_CLEARED: ClassVar[frozenset[str]] = frozenset({"_data"})
+    _LEAN_CLEARED: ClassVar[frozenset[str]] = frozenset(
+        {
+            "_data",
+            "_X",
+            "_Y",
+            "_Z",
+            "_Xd",
+            "_Yd",
+            "_Zd",
+            "_cluster_df",
+            "_tXZ",
+            "_tZy",
+            "_tZX",
+            "_weights",
+            "_scores",
+            "_tZZinv",
+            "_u_hat",
+            "_Y_hat_link",
+            "_Y_hat_response",
+            "_Y_untransformed",
+        }
+    )
+
     def _clear_attributes(self):
-        attributes = []
+        attributes: set[str] = set()
 
         if not self._store_data:
-            attributes += ["_data"]
+            attributes |= self._DATA_CLEARED
 
         if self._lean:
-            attributes += [
-                "_data",
-                "_X",
-                "_Y",
-                "_Z",
-                "_Xd",
-                "_Yd",
-                "_Zd",
-                "_cluster_df",
-                "_tXZ",
-                "_tZy",
-                "_tZX",
-                "_weights",
-                "_scores",
-                "_tZZinv",
-                "_u_hat",
-                "_Y_hat_link",
-                "_Y_hat_response",
-                "_Y_untransformed",
-            ]
+            attributes |= self._LEAN_CLEARED
 
         for attr in attributes:
             if hasattr(self, attr):
                 delattr(self, attr)
+
+        # The demeaned-data cache belongs to the runner and is shared across
+        # every model in a cache block; keeping a reference here pins it for as
+        # long as any one model lives. The preconditioner lookup is small and
+        # `preconditioner` exposes it, so that one stays.
+        self._demean_cache = DemeanCache(
+            lookup_preconditioner=self._demean_cache.lookup_preconditioner
+        )
+
+    def _require(self, *attrs: str, feature: str) -> None:
+        """Raise an informative error when `lean` or `store_data` removed state.
+
+        Post-estimation methods call this before touching an attribute that
+        `_clear_attributes` may have deleted, so the user gets the flag to
+        change rather than an `AttributeError` naming a private attribute.
+        """
+        for attr in attrs:
+            if hasattr(self, attr):
+                continue
+            flag = (
+                "lean=True"
+                if attr in self._LEAN_CLEARED and self._lean
+                else "store_data=False"
+            )
+            raise ModelAttributeStrippedError(
+                f"`{feature}` needs `{attr}`, which was dropped because the model "
+                f"was fitted with `{flag}`. Refit without it to use `{feature}`."
+            )
 
     def wald_test(self, R=None, q=None, distribution="F"):
         """
@@ -1152,6 +1191,7 @@ class Feols(ResultAccessorMixin):
 
         ```
         """
+        self._require("_data", feature="wildboottest()")
         if param is not None and param not in self._coefnames:
             raise ValueError(
                 f"Parameter {param} not found in the model's coefficients."
@@ -1333,6 +1373,7 @@ class Feols(ResultAccessorMixin):
         fit.ccv(treatment="D", pk=0.05, qk=0.5, n_splits=8, seed=123).head()
         ```
         """
+        self._require("_data", "_X", "_Y", feature="ccv()")
         assert self._supports_cluster_causal_variance, (
             "The model does not support the causal cluster variance estimator."
         )
@@ -1747,8 +1788,9 @@ class Feols(ResultAccessorMixin):
         list(fe["C(f1)"].items())[:5]
         ```
         """
-        weights_sqrt = np.sqrt(self._weights).flatten()
+        self._require("_data", "_weights", "_beta_hat", feature="fixef()")
 
+        weights_sqrt = np.sqrt(self._weights).flatten()
         blocked_transforms = ["i(", "^", "poly("]
         for bt in blocked_transforms:
             if bt in self._fml:
@@ -1892,6 +1934,7 @@ class Feols(ResultAccessorMixin):
         fit.predict(newdata=data.head())
         ```
         """
+        self._require("_X", "_Y_hat_link", feature="predict()")
         if self._is_iv:
             raise NotImplementedError(
                 "The predict() method is currently not supported for IV models."
@@ -2045,6 +2088,7 @@ class Feols(ResultAccessorMixin):
         fit.ritest("X1", reps=1000, store_ritest_statistics=True)
         ```
         """
+        self._require("_data", "_weights", feature="ritest()")
         resampvar = resampvar.replace(" ", "")
         resampvar_, h0_value, hypothesis, test_type = _decode_resampvar(resampvar)
 
