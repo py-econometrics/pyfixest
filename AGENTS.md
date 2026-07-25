@@ -24,10 +24,12 @@ not, point its rules/config file here instead of duplicating content.
 Edit workflows only in `.agents/`.
 
 This guide is maintained by ratchet: when maintainer feedback states a
-preference this file does not encode (or contradicts), update AGENTS.md — and
-the Phase 1 table in `.agents/align-pr.md` if the rule is mechanically
-checkable — as part of the same change. Prefer a lint rule over prose where
-one exists.
+preference this file does not encode (or contradicts), encode it as part of the
+same change. **Prefer a check over prose.** If the rule is mechanically
+detectable it belongs in a ruff rule or in `scripts/check_house_style.py`, and
+then it does *not* also belong here — a rule stated in two places drifts. This
+file stays under ~350 lines; when it grows past that, something in it has
+become checkable and should move.
 
 ## Repo map
 
@@ -328,6 +330,7 @@ pixi run -e lint prek run ruff-format --files <changed files>
 pixi run -e lint prek run ruff-check  --files <changed files>
 pixi run -e lint prek run mypy       --files <changed files>
 pixi run lint                                      # all hooks, all files
+pixi run check-style                               # house-style checks over the branch diff
 
 pixi run docs-render                               # full docs (runs quartodoc docs-build first)
 pixi task list                                     # everything else

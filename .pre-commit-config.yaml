@@ -43,6 +43,14 @@ repos:
       - id: ruff-format
         types_or: [jupyter, pyi, python]
 
+  - repo: local
+    hooks:
+      - id: house-style
+        name: house style (AGENTS.md)
+        entry: python scripts/check_house_style.py
+        language: python
+        types: [python]
+
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v2.1.0
     hooks:

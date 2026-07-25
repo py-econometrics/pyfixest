@@ -42,27 +42,26 @@ rewrite.
 
 ## Phase 1 — Mechanical audit
 
-Run the linters on the changed files first (`ruff-format`, `ruff-check`,
-`mypy`; commands in AGENTS.md → "Commands") — do not hand-report what they
-already catch. Then run each detector below over the **added lines** of the
-diff (`git diff "$MERGE_BASE" -- <paths> | grep '^+'`). Every hit is a
-finding; in fix mode, apply the stated fix. These detectors exist because real
-PRs broke each rule — keep the table in sync with AGENTS.md when rules change.
+This phase is automated. Run, in order:
 
-| AGENTS.md rule | Detect (added lines) | Fix |
-|---|---|---|
-| RNG via `default_rng` | `np\.random\.(seed\|randn\|normal\|uniform\|binomial\|choice)\(` | rewrite with `rng = np.random.default_rng(seed)`; one rng per test/DGP |
-| no test classes | `class Test` or `def setup_method` under `tests/` | flatten to module-level `test_*` functions + fixtures/`parametrize` |
-| no banner or narration comments | `# ?[-=~]{3,}` or comments restating the next line | delete; keep only constraint comments |
-| `{python}` examples, not doctests | `>>> ` inside `pyfixest/` docstrings | convert the Examples section to an executable ```{python} chunk |
-| no new numba paths | `import numba` outside `estimation/numba/` and `ritest.py` | structural finding → Phase 2 item 4 |
-| `DataFrameType` at the API boundary | `data: pd.DataFrame` in `estimation/api/` | `DataFrameType` + one `_narwhals_to_pandas` call at entry |
-| snake_case everywhere | camelCase identifiers or string defaults (`"mainVar"`) | rename |
-| package imports in tests | `spec_from_file_location` / `importlib.util` under `tests/` | import through the package; environment problems are fixed with `pixi run` |
-| rpy2 registration | new test file imports `rpy2` but is absent from `_rpy2_test_files` (`tests/conftest.py`) | add it, plus the right `against_r_*` marker |
-| no generated-file churn | diff touches `pixi.lock`, `Cargo.lock`, `docs/_freeze/**`, `coverage.xml`, `docs/reference/**` | drop from the branch |
-| `tests/data/` provenance | new file under `tests/data/` with no generator script in the diff | finding: request or write the `.do`/`.R`/`.py` generator |
-| public/private twin | public `f()` whose body is only `return _f(...)` with the same signature | merge into one function |
+```bash
+pixi run -e lint prek run ruff-check --files <changed>   # RNG, style, typing
+pixi run python scripts/check_house_style.py <changed>   # tree checks
+pixi run python scripts/check_house_style.py --diff "$MERGE_BASE"
+```
+
+Every hit is a finding; in fix mode, apply it. Do not hand-report what these
+already catch, and do not re-derive their rules here — `check_house_style.py`
+is the detector list, and its module docstring says how to extend it. When a
+review finding turns out to be mechanically detectable, add a check there
+rather than a row here.
+
+Two mechanical rules have no detector yet — check them by eye:
+
+- **Narration comments.** Comments restating the next line; keep only the ones
+  stating a constraint the code cannot.
+- **Public/private twin.** A public `f()` whose body is only `return _f(...)`
+  with the same signature is one function too many.
 
 ## Phase 2 — Structural audit (placement and wiring)
 
