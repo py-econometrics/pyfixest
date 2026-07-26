@@ -318,8 +318,6 @@ class Feols(ResultAccessorMixin):
 
         self._support_crv3_inference = True
         self._support_hac_inference = True
-        if self._weights_name is not None:
-            self._supports_wildboottest = False
         self._supports_wildboottest = True
         self._supports_cluster_causal_variance = True
         if self._has_weights or self._is_iv:
@@ -356,7 +354,6 @@ class Feols(ResultAccessorMixin):
         self._G: list[int] = []
         self._ssc = np.array([], dtype=np.float64)
         self._vcov = np.array([])
-        self.na_index = np.array([])  # initiated outside of the class
         self.n_separation_na = 0
 
         # set in get_inference()
@@ -872,62 +869,6 @@ class Feols(ResultAccessorMixin):
 
         return vcov_mat
 
-    def add_fixest_multi_context(
-        self,
-        depvar: str,
-        Y: pd.Series,
-        _data: pd.DataFrame,
-        _ssc_dict: dict[str, str | bool],
-        _k_fe: int,
-        fval: str,
-        store_data: bool,
-    ) -> None:
-        """
-        Enrich Feols object.
-
-        Enrich an instance of `Feols` Class with additional
-        attributes set in the `FixestMulti` class.
-
-        Parameters
-        ----------
-        FixestFormula : FixestFormula
-            The formula(s) used for estimation encoded in a `FixestFormula` object.
-        depvar : str
-            The dependent variable of the regression model.
-        Y : pd.Series
-            The dependent variable of the regression model.
-        _data : pd.DataFrame
-            The data used for estimation.
-        _ssc_dict : dict
-            A dictionary with the sum of squares and cross products matrices.
-        _k_fe : int
-            The number of fixed effects.
-        fval : str
-            The fixed effects formula.
-        store_data : bool
-            Indicates whether to save the data used for estimation in the object
-
-        Returns
-        -------
-        None
-        """
-        # some bookkeeping
-        self._fml = self.FixestFormula.formula
-        self._depvar = depvar
-        self._Y_untransformed = Y
-        self._data = pd.DataFrame()
-
-        if store_data:
-            self._data = _data
-
-        self._ssc_dict = _ssc_dict
-        self._k_fe = _k_fe  # type: ignore[assignment]
-        if fval != "0":
-            self._has_fixef = True
-            self._fixef = fval
-        else:
-            self._has_fixef = False
-
     def _clear_attributes(self):
         attributes = []
 
@@ -1386,12 +1327,7 @@ class Feols(ResultAccessorMixin):
             seed = np.random.randint(1, 100_000_000)
         rng = np.random.default_rng(seed)
 
-        depvar = self._depvar
         fml = self._fml
-        xfml_list = fml.split("~")[1].split("+")
-        xfml_list = [x for x in xfml_list if x != treatment]
-        xfml = "" if not xfml_list else "+".join(xfml_list)
-
         data = self._data
         Y = self._Y.flatten()
         W = data[treatment].to_numpy()
@@ -1459,21 +1395,6 @@ class Feols(ResultAccessorMixin):
         res_crv1.name = "CRV1"
 
         return pd.concat([res_ccv, res_crv1], axis=1).T
-
-        ccv_module = import_module("pyfixest.estimation.post_estimation.ccv")
-        _ccv = ccv_module._ccv
-
-        return _ccv(
-            data=data,
-            depvar=depvar,
-            treatment=treatment,
-            cluster=cluster,
-            xfml=xfml,
-            seed=seed,
-            pk=pk,
-            qk=qk,
-            n_splits=n_splits,
-        )
 
     def _model_matrix_one_hot(
         self, output="numpy"
@@ -2287,38 +2208,6 @@ class Feols(ResultAccessorMixin):
             self._N += X_new.shape[0]
 
         return beta_n_plus_1
-
-
-def _feols_input_checks(Y: np.ndarray, X: np.ndarray, weights: np.ndarray):
-    """
-    Perform basic checks on the input matrices Y and X for the FEOLS.
-
-    Parameters
-    ----------
-    Y : np.ndarray
-        FEOLS input matrix Y.
-    X : np.ndarray
-        FEOLS input matrix X.
-    weights : np.ndarray
-        FEOLS weights.
-
-    Returns
-    -------
-    None
-    """
-    if not isinstance(Y, (np.ndarray)):
-        raise TypeError("Y must be a numpy array.")
-    if not isinstance(X, (np.ndarray)):
-        raise TypeError("X must be a numpy array.")
-    if not isinstance(weights, (np.ndarray)):
-        raise TypeError("weights must be a numpy array.")
-
-    if Y.ndim != 2:
-        raise ValueError("Y must be a 2D array")
-    if X.ndim != 2:
-        raise ValueError("X must be a 2D array")
-    if weights.ndim != 2:
-        raise ValueError("weights must be a 2D array")
 
 
 def _check_vcov_input(

@@ -324,14 +324,24 @@ once.
   automatically only if `prek install` set up the git hook, which agents and fresh
   clones usually haven't done, so run them explicitly rather than relying on it.
   mypy is scoped to `pyfixest/`, not `tests/`.
-- Commit messages: one short, precise, imperative subject line that says what
-  changed — e.g. "Add transform building blocks", "Rewrite predict() and fixef()
-  to reuse stored ModelSpec", "Make `FixestMulti` a pure container". Target
-  ~50–60 chars, no trailing period, backtick code identifiers. Conventional
-  prefixes (`feat:`, `fix(scope):`, `docs:`, `refactor:`) are welcome but
-  optional — a plain imperative subject is equally house-style. Add a body only
-  when the *why* isn't obvious from the subject, and keep it to a line or two.
-  Don't hand-append `(#PR)`; GitHub adds it on squash-merge.
+- Commit subjects: a conventional prefix plus one short, precise, imperative
+  line that says what changed — e.g. `feat: add transform building blocks`,
+  `refactor: make FixestMulti a pure container`, `chore: remove dead code from
+  Feols`. Use `feat`, `fix`, `refactor`, `perf`, `test`, `docs`, `chore`,
+  `build`, `ci`; add a scope when it narrows usefully (`fix(vcov): ...`).
+  Target ~50–60 chars including the prefix, no trailing period, backtick code
+  identifiers. Don't hand-append `(#PR)`; GitHub adds it on squash-merge.
+- Commit bodies: add one only when the *why* isn't obvious from the subject,
+  and keep it to a line or two. Write plain English that a contributor reading
+  `git log` in a year can follow without opening the diff. Name the thing, then
+  say what is true of it, in the present tense and in ordinary words:
+  - "`_feols_input_checks` is never called" — not "has no callers".
+  - "`na_index` is only assigned, never read" — not "was only ever written".
+  - "the second `_supports_wildboottest = True` overwrites the first, so the
+    weights check above it never takes effect" — not "the guard was a no-op".
+
+  Prefer a longer plain sentence over a short cryptic one. If a phrase would
+  need a follow-up question to explain it, it is the wrong phrase.
 - Before handing off a PR, rewrite the branch into a few logically ordered,
   individually test-passing commits (helpers + tests → wiring + tests → API
   exposure + docs). The maintainer reviews commit by commit; see
