@@ -81,10 +81,13 @@ class Formula:
                 f"Received {len(self._formula.rhs)}:\n"
                 f"{self._formula}"
             )
-        if len(self.dependent.required_variables) > 1:
+        # Count terms, not source variables: `I(Y + Y2)` is one dependent
+        # expression evaluated from two columns.
+        dependent_terms = list(self.dependent)
+        if len(dependent_terms) > 1:
             raise FormulaSyntaxError(
-                f"Formula must have exactly one variable on the left hand side. "
-                f"Received: {self.dependent.required_variables}"
+                f"Formula must have exactly one term on the left hand side. "
+                f"Received: {[str(term) for term in dependent_terms]}"
             )
         if self.is_instrumental_variable:
             self._validate_instrumental_variable_specification()
