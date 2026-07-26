@@ -18,10 +18,6 @@ from pyfixest.estimation.formula.utils import _get_position_of_first_parenthesis
 
 # Known-broken behaviour, fixed by the follow-up PRs in this series. `strict`
 # means the marker has to be removed together with the fix.
-XFAIL_CARET = (
-    "`^` is replaced globally by a fixed-effect interaction operator, so "
-    "`(X1 + X2)^2` no longer expands to an interaction"
-)
 XFAIL_DEPENDENT_PLUS = (
     "any `+` on the left hand side is read as multiple dependent variables, "
     "including one nested inside a transform"
@@ -507,7 +503,6 @@ class TestCaretOperator:
             ("Y ~ (X1 + X2)^2 | f1^f2", "Y ~ X1 + X2 + X1:X2"),
         ],
     )
-    @pytest.mark.xfail(strict=True, reason=XFAIL_CARET)
     def test_caret_expands_like_power_outside_fixed_effects(
         self, formula, expected_second_stage
     ):
@@ -523,7 +518,6 @@ class TestCaretOperator:
             "Y ~ (X1 + X2 + f1)^3",
         ],
     )
-    @pytest.mark.xfail(strict=True, reason=XFAIL_CARET)
     def test_caret_matches_double_star(self, formula):
         """`^` is documented by formulaic as an alias for `**`."""
         assert (
@@ -562,7 +556,6 @@ class TestCaretOperator:
         )
         np.testing.assert_allclose(interacted.se().to_numpy(), manual.se().to_numpy())
 
-    @pytest.mark.xfail(strict=True, reason=XFAIL_CARET)
     def test_caret_power_estimates_interaction(self, test_data):
         """`(X1 + X2)^2` must estimate the interaction, not a `:2` term."""
         fit = pf.feols("Y ~ (X1 + X2)^2", test_data)

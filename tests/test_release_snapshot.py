@@ -56,10 +56,6 @@ RESID_REDEFINED_AFTER_RELEASE = {"glm-logit", "glm-probit-fe"}
 # in this series. `strict` means the marker has to be removed together with the
 # fix, so none of these can quietly stay broken.
 KNOWN_FAILURES = {
-    "ols-caret-power": (
-        "`^` is replaced globally by a fixed-effect interaction operator, so "
-        "`(X1 + X2)^2` no longer expands to an interaction"
-    ),
     "ols-identity-sum": (
         "any `+` on the left hand side is read as multiple dependent variables, "
         "including one nested inside a transform"
