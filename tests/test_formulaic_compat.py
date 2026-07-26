@@ -57,6 +57,29 @@ def test_hat_suffix_filtering(data: pd.DataFrame) -> None:
     assert "X2_hat" not in exog_vars
 
 
+def test_hat_suffix_filtering_with_transformed_endogenous(data: pd.DataFrame) -> None:
+    """Formulaic names generated terms after the endogenous term, not its variables."""
+    fit = pf.feols("Y ~ X1 + [np.exp(X2) ~ Z1]", data=data)
+
+    exog_terms = {str(term) for term in fit.FixestFormula.exogenous}
+
+    # `np.exp(X2)` generates `np.exp(X2)_hat`, never `X2_hat`.
+    assert exog_terms == {"1", "X1"}
+    assert fit.FixestFormula.second_stage == "Y ~ 1 + X1 + np.exp(X2)"
+    assert "np.exp(X2)" in fit.coef().index
+
+
+def test_transformed_endogenous_matches_precomputed_column(data: pd.DataFrame) -> None:
+    """Transforming the endogenous variable inline equals transforming it in the data."""
+    precomputed = data.assign(exp_X2=np.exp(data["X2"]))
+
+    inline = pf.feols("Y ~ X1 + [np.exp(X2) ~ Z1]", data=data)
+    column = pf.feols("Y ~ X1 + [exp_X2 ~ Z1]", data=precomputed)
+
+    np.testing.assert_allclose(inline.coef().to_numpy(), column.coef().to_numpy())
+    np.testing.assert_allclose(inline.se().to_numpy(), column.se().to_numpy())
+
+
 def test_multistage_access_guard_raises_loudly() -> None:
     """Malformed formulaic MULTISTAGE shape must fail before silent IV leakage."""
     malformed_rhs = formulaic.Formula("X1")
