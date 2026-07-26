@@ -477,6 +477,84 @@ class TestFormulaParse:
         assert "f1 + f2" in result
 
 
+class TestCaretOperator:
+    """`^` means FE interaction inside `|`, exponentiation everywhere else."""
+
+    @pytest.mark.parametrize(
+        "formula,expected_second_stage",
+        [
+            # Outside the fixed effects segment `^` is formulaic's `**` alias
+            # and expands to the interaction of the bracketed terms.
+            ("Y ~ (X1 + X2)^2", "Y ~ 1 + X1 + X2 + X1:X2"),
+            ("Y ~ (X1 + X2)^3", "Y ~ 1 + X1 + X2 + X1:X2"),
+            ("Y ~ X1 + (X2 + f1)^2", "Y ~ 1 + X1 + X2 + f1 + X2:f1"),
+            # ... which the fixed effects segment must not change.
+            ("Y ~ (X1 + X2)^2 | f1^f2", "Y ~ X1 + X2 + X1:X2"),
+        ],
+    )
+    def test_caret_expands_like_power_outside_fixed_effects(
+        self, formula, expected_second_stage
+    ):
+        parsed = Formula.parse(formula)
+        assert len(parsed) == 1
+        assert parsed[0].second_stage == expected_second_stage
+
+    @pytest.mark.parametrize(
+        "formula",
+        [
+            "Y ~ (X1 + X2)^2",
+            "Y ~ X1 + (X2 + f1)^2",
+            "Y ~ (X1 + X2 + f1)^3",
+        ],
+    )
+    def test_caret_matches_double_star(self, formula):
+        """`^` is documented by formulaic as an alias for `**`."""
+        assert (
+            Formula.parse(formula)[0].second_stage
+            == Formula.parse(formula.replace("^", "**"))[0].second_stage
+        )
+
+    @pytest.mark.parametrize(
+        "formula,expected_fixed_effects",
+        [
+            ("Y ~ X1 | f1^f2", "f1:f2"),
+            ("Y ~ X1 | f1 ^ f2", "f1:f2"),
+            ("Y ~ X1 | f1^f2^f3", "f1:f2:f3"),
+            ("Y ~ X1 | f1 + f2^f3", "f1 + f2:f3"),
+            # formulaic orders terms by interaction order, not by appearance.
+            ("Y ~ X1 | f1^f2 + f3", "f3 + f1:f2"),
+        ],
+    )
+    def test_caret_interacts_fixed_effects(self, formula, expected_fixed_effects):
+        parsed = Formula.parse(formula)
+        assert len(parsed) == 1
+        assert str(parsed[0].fixed_effects) == expected_fixed_effects
+        # `Formula.formula` renders the interaction back in fixest syntax.
+        assert parsed[0].formula.split("|")[
+            1
+        ].strip() == expected_fixed_effects.replace(":", "^")
+
+    def test_caret_fixed_effects_match_manual_interaction(self, test_data):
+        """`| f1^f2` must demean on the interacted group, not on f1 and f2."""
+        data = test_data.dropna().copy()
+        data["f1_f2"] = data["f1"].astype(str) + "_" + data["f2"].astype(str)
+        interacted = pf.feols("Y ~ X1 | f1^f2", data)
+        manual = pf.feols("Y ~ X1 | f1_f2", data)
+        np.testing.assert_allclose(
+            interacted.coef().to_numpy(), manual.coef().to_numpy()
+        )
+        np.testing.assert_allclose(interacted.se().to_numpy(), manual.se().to_numpy())
+
+    def test_caret_power_estimates_interaction(self, test_data):
+        """`(X1 + X2)^2` must estimate the interaction, not a `:2` term."""
+        fit = pf.feols("Y ~ (X1 + X2)^2", test_data)
+        assert list(fit.coef().index) == ["Intercept", "X1", "X2", "X1:X2"]
+        np.testing.assert_allclose(
+            fit.coef().to_numpy(),
+            pf.feols("Y ~ X1 + X2 + X1:X2", test_data).coef().to_numpy(),
+        )
+
+
 class TestValidation:
     """Tests for formula validation / error handling."""
 

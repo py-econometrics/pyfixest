@@ -10,16 +10,17 @@ from pyfixest.errors import FormulaSyntaxError
 def _str_split_by_sep(string: str, separator: str = "+") -> list[str]:
     """
     Split on top-level *separator*, skipping any occurrences nested inside
-    parentheses.  The main use-case is splitting formula terms on ``+``
-    without breaking apart multi-estimation operators like ``sw(a, b + c)``.
+    parentheses or brackets.  The main use-case is splitting formula terms on
+    ``+`` without breaking apart multi-estimation operators like
+    ``sw(a, b + c)`` or instrumental variable blocks like ``[X2 ~ Z1 + Z2]``.
     """
     args: list[str] = []
     depth = 0
     current: list[str] = []
     for c in string:
-        if c == "(":
+        if c in "([":
             depth += 1
-        elif c == ")":
+        elif c in ")]":
             depth -= 1
         elif c == separator and depth == 0:
             args.append("".join(current).strip())
@@ -83,7 +84,30 @@ _MULTIPLE_ESTIMATION_PATTERN = re.compile(
 def _preprocess(formula: str) -> str:
     formula = _preprocess_fixest_instrumental_variable(formula)
     formula = _preprocess_fixest_multiple_dependents(formula)
+    formula = _preprocess_fixest_fixed_effect_interactions(formula)
     return formula
+
+
+def _preprocess_fixest_fixed_effect_interactions(formula: str) -> str:
+    """Convert fixest-style fixed effect interactions to formulaic.
+    Y ~ X1 | f1^f2 will be converted to Y ~ X1 | f1:f2.
+
+    fixest reads `^` as "interact these fixed effects", while formulaic reads it
+    as exponentiation -- `(X1 + X2)^2` expands to `X1 + X2 + X1:X2`. The two
+    meanings only ever collide inside the fixed effects segment, so the rewrite
+    is restricted to it and `^` keeps its formulaic meaning everywhere else.
+    """
+    main, *fixed_effects = _str_split_by_sep(formula, separator="|")
+    if not fixed_effects:
+        return formula
+    return " | ".join(
+        [main, *(_replace_top_level(fe, "^", ":") for fe in fixed_effects)]
+    )
+
+
+def _replace_top_level(string: str, separator: str, replacement: str) -> str:
+    """Replace *separator* with *replacement* outside of parentheses and brackets."""
+    return replacement.join(_str_split_by_sep(string, separator=separator))
 
 
 def _preprocess_fixest_instrumental_variable(formula: str) -> str:

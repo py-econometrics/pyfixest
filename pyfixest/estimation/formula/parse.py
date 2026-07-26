@@ -22,9 +22,6 @@ from pyfixest.estimation.formula.formulaic_compat import (
     get_first_multistage_rhs,
     is_structured_formula,
 )
-from pyfixest.estimation.formula.transforms.fixed_effects_encoding import (
-    _FixedEffectsOperatorResolver,
-)
 from pyfixest.estimation.formula.utils import (
     _MULTIPLE_ESTIMATION_PATTERN,
     _get_position_of_first_parenthesis_pair,
@@ -35,7 +32,6 @@ from pyfixest.estimation.formula.utils import (
 
 _PARSER: Final[FormulaParser] = DefaultFormulaParser(
     feature_flags=FORMULAIC_FEATURE_FLAG,
-    operator_resolver=_FixedEffectsOperatorResolver(),
     include_intercept=True,
 )
 
