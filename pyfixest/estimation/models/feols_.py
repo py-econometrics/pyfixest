@@ -966,10 +966,9 @@ class Feols(ResultAccessorMixin):
             if hasattr(self, attr):
                 delattr(self, attr)
 
-        # The demeaned-data cache belongs to the runner and is shared across
-        # every model in a cache block; keeping a reference here pins it for as
-        # long as any one model lives. The preconditioner lookup is small and
-        # `preconditioner` exposes it, so that one stays.
+        # create a novel DemeanCache object with the preconditioner (which is still
+        # needed) but drops the demeaned variables in the dict - these are no longer
+        # needed
         self._demean_cache = DemeanCache(
             lookup_preconditioner=self._demean_cache.lookup_preconditioner
         )
