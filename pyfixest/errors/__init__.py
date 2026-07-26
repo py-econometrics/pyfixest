@@ -62,6 +62,10 @@ class FormulaSyntaxError(Exception):  # noqa: D101
     pass
 
 
+class ModelAttributeStrippedError(AttributeError):  # noqa: D101
+    pass
+
+
 __all__ = [
     "CovariateInteractionError",
     "DepvarIsNotNumericError",
@@ -74,6 +78,7 @@ __all__ = [
     "FormulaSyntaxError",
     "InstrumentsAsCovarsError",
     "MatrixNotFullRankError",
+    "ModelAttributeStrippedError",
     "NanInClusterVarError",
     "NonConvergenceError",
     "UnderDeterminedIVError",
