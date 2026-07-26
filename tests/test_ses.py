@@ -224,9 +224,7 @@ def test_cluster_on_interacted_fixed_effect():
     """`{"CRV1": "f1^f2"}` must find the materialized `f1_f2` column.
 
     Interacted fixed effects are written into the data as `f1_f2`, so the
-    cluster name needs the same rename. The membership test used to check the
-    list for an element equal to "^", so it never fired and the lookup raised
-    a bare KeyError.
+    cluster variables also need to be renamed / to match to find the column.
     """
     data = get_data().dropna().reset_index(drop=True)
     fit = feols("Y ~ X1 | f1^f2", data=data)
