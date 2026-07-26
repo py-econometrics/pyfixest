@@ -977,9 +977,8 @@ class Feols(ResultAccessorMixin):
     def _require(self, *attrs: str, feature: str) -> None:
         """Raise an informative error when `lean` or `store_data` removed state.
 
-        Post-estimation methods call this before touching an attribute that
-        `_clear_attributes` may have deleted, so the user gets the flag to
-        change rather than an `AttributeError` naming a private attribute.
+        Names the model attribute the post-estimation method needs, and the
+        flag that removed it.
         """
         for attr in attrs:
             if hasattr(self, attr):

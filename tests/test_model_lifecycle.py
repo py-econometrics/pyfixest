@@ -88,13 +88,41 @@ def test_clear_sets_cover_what_is_deleted(data):
     assert leftover == [], f"store_data=False left {leftover} in place"
 
 
-def test_demean_cache_is_released_but_preconditioner_survives(data):
+def test_demean_cache_is_released(data):
     """The shared demeaned-data cache must not be pinned by a fitted model."""
     fit = pf.feols(FML, data)
     assert fit._demean_cache.lookup_demeaned_data == {}
-    # the preconditioner lookup backs the public `preconditioner` property
-    assert isinstance(fit._demean_cache.lookup_preconditioner, dict)
-    assert fit.preconditioner is None or fit.preconditioner is not None
+
+
+def test_preconditioner_survives_the_cache_release(data):
+    """Releasing the demeaned data must not take the preconditioner with it.
+
+    The LSMR `within` backend builds a preconditioner on the first solve and
+    `Feols.preconditioner` hands it back so a later fit over the same design
+    can skip the setup phase. It is stored in the same cache object as the
+    demeaned data that `_clear_attributes` drops, so it needs its own check --
+    and it only exists for two or more fixed effects, where `within` does not
+    fall back to MAP.
+    """
+    demeaner = pf.LsmrDemeaner(backend="within")
+    fit = pf.feols("Y ~ X1 | f1 + f2", data, demeaner=demeaner)
+
+    assert fit._demean_cache.lookup_demeaned_data == {}
+    assert fit.preconditioner is not None
+
+    # the point of keeping it: it can be fed back into a later fit
+    reused = pf.feols(
+        "Y ~ X1 | f1 + f2",
+        data,
+        demeaner=pf.LsmrDemeaner(backend="within", preconditioner=fit.preconditioner),
+    )
+    np.testing.assert_allclose(fit.coef().to_numpy(), reused.coef().to_numpy())
+
+
+def test_single_fixed_effect_has_no_preconditioner(data):
+    """`within` runs MAP for one fixed effect, so there is nothing to preserve."""
+    fit = pf.feols("Y ~ X1 | f1", data, demeaner=pf.LsmrDemeaner(backend="within"))
+    assert fit.preconditioner is None
 
 
 def test_multiple_estimation_does_not_pin_the_cache(data):
