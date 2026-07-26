@@ -1942,7 +1942,7 @@ class Feols(ResultAccessorMixin):
             # be silently encoded as the reference level -> drop them to NaN instead,
             # matching how unseen fixed-effect levels are handled below.
             unseen = _rows_with_unseen_categories(
-                self._model_spec[_ModelMatrixKey.main].rhs, newdata
+                self._model_spec[_ModelMatrixKey.main].rhs, newdata, context
             )
             valid_idx = valid_idx[~unseen[valid_idx]]
             if self._has_fixef:

@@ -13,7 +13,7 @@ from pyfixest.estimation.formula.formulaic_compat import (
     FormulaicCompatibilityError,
     filter_multistage_endogenous_terms,
     get_first_multistage_lhs,
-    iter_model_spec_categorical_levels,
+    iter_i_categorical_levels,
 )
 
 
@@ -120,11 +120,7 @@ def test_encoder_state_guard_raises_loudly() -> None:
     )
 
     with pytest.raises(FormulaicCompatibilityError, match="encoder_state structure"):
-        list(
-            iter_model_spec_categorical_levels(
-                malformed_spec, pd.DataFrame({"f1": [1]})
-            )
-        )
+        list(iter_i_categorical_levels(malformed_spec, pd.DataFrame({"f1": [1]})))
 
 
 def test_contrasts_state_key_format(data: pd.DataFrame) -> None:
@@ -155,18 +151,40 @@ def test_fe_transform_state_has_encoding(data: pd.DataFrame) -> None:
     assert "__fixed_effect_encoding__" in enc_df.columns
 
 
-def test_model_spec_get_model_matrix_prediction_roundtrip(
-    data: pd.DataFrame,
-) -> None:
-    """Stored ModelSpec round-trips for i(), C(), FE, and interacted FE."""
-    for fml in [
+@pytest.mark.parametrize(
+    "fml",
+    [
         "Y ~ X1 + i(f1)",
         "Y ~ X1 + C(f1)",
         "Y ~ X1 | f1",
         "Y ~ X1 | f1^f2",
-    ]:
-        fit = pf.feols(fml, data=data)
-        pred = fit.predict(newdata=data.iloc[:20])
+        # Categorical factors whose levels are *evaluated* rather than read off
+        # a column: ModelSpec.factor_variables reports X2, not floor(X2).
+        "Y ~ X1 + C(np.floor(X2))",
+        "Y ~ C(np.floor(X2)):X1",
+        "Y ~ X1 + C(f1 + f2)",
+    ],
+)
+def test_model_spec_get_model_matrix_prediction_roundtrip(
+    data: pd.DataFrame, fml: str
+) -> None:
+    """Stored ModelSpec round-trips: seen rows predict, and match in-sample fits."""
+    fit = pf.feols(fml, data=data)
+    pred = fit.predict(newdata=data.iloc[:20])
 
-        assert pred.shape[0] == 20
-        assert np.all(np.isfinite(pred))
+    assert pred.shape[0] == 20
+    assert np.all(np.isfinite(pred))
+    # atol covers the lsqr tolerance used to recover fixed effects.
+    np.testing.assert_allclose(pred, fit.predict()[:20], atol=1e-4)
+
+
+def test_unseen_level_of_transformed_categorical_is_nan(data: pd.DataFrame) -> None:
+    """Only rows whose *evaluated* level is unseen are dropped to NaN."""
+    fit = pf.feols("Y ~ C(np.floor(X2))", data=data)
+
+    newdata = data.iloc[:20].copy()
+    newdata.loc[newdata.index[0], "X2"] = 1e6
+    pred = fit.predict(newdata=newdata)
+
+    assert np.isnan(pred[0])
+    assert np.all(np.isfinite(pred[1:]))

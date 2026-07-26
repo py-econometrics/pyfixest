@@ -1,11 +1,13 @@
-from typing import TYPE_CHECKING
+from collections.abc import Mapping
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
 from scipy.stats import t
 
 from pyfixest.estimation.formula.formulaic_compat import (
-    iter_model_spec_categorical_levels,
+    iter_i_categorical_levels,
+    rows_with_unseen_contrast_levels,
 )
 from pyfixest.estimation.formula.transforms.factor_interaction import (
     bin_mapping_state_key,
@@ -16,7 +18,9 @@ if TYPE_CHECKING:
 
 
 def _rows_with_unseen_categories(
-    rhs_spec: "formulaic.ModelSpec", newdata: pd.DataFrame
+    rhs_spec: "formulaic.ModelSpec",
+    newdata: pd.DataFrame,
+    context: Mapping[str, Any],
 ) -> np.ndarray:
     """
     Flag `newdata` rows that carry a categorical level not seen during fitting.
@@ -32,10 +36,8 @@ def _rows_with_unseen_categories(
     np.ndarray
         Boolean mask of length `len(newdata)`; True where a row must be dropped.
     """
-    mask = np.zeros(newdata.shape[0], dtype=bool)
-    for variable, levels, state in iter_model_spec_categorical_levels(
-        rhs_spec, newdata
-    ):
+    mask = rows_with_unseen_contrast_levels(rhs_spec, newdata, context)
+    for variable, levels, state in iter_i_categorical_levels(rhs_spec, newdata):
         column = newdata[variable]
         # For binned i() terms, apply the stored bin mapping before checking
         # so that valid raw levels (e.g. "a" -> "low") are not flagged unseen.
