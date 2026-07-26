@@ -69,12 +69,13 @@ def _get_single_multistage_block(rhs: formulaic.formula.Formula) -> Any:
 
 def filter_multistage_endogenous_terms(
     exogenous: formulaic.formula.Formula,
-    endogenous_variables: Iterable[Any],
+    endogenous_terms: Iterable[Any],
 ) -> formulaic.formula.SimpleFormula:
-    """Drop formulaic's generated ``<endogenous>_hat`` second-stage terms."""
-    # formulaic internal: MULTISTAGE renames endogenous vars to "<name>_hat" in
-    # the second-stage RHS. If formulaic changes the suffix, compat tests catch it.
-    generated_endogenous = {f"{variable}_hat" for variable in endogenous_variables}
+    """Drop formulaic's generated ``<endogenous term>_hat`` second-stage terms."""
+    # formulaic internal: MULTISTAGE renames each endogenous *term* to
+    # "<term>_hat" in the second-stage RHS -- `log(X2)` becomes `log(X2)_hat`,
+    # not `X2_hat`. If formulaic changes the suffix, compat tests catch it.
+    generated_endogenous = {f"{term}_hat" for term in endogenous_terms}
     terms = list(exogenous.root)
     missing = generated_endogenous - {str(term) for term in terms}
     if missing:

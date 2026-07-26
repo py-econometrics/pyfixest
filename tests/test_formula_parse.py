@@ -689,6 +689,12 @@ class TestEdgeCases:
         assert "Z1" in f.second_stage
         # assert f.first_stage == "Z1 ~ W1"
 
+    def test_iv_transformed_endogenous_in_second_stage(self):
+        """A transformed endogenous variable survives the _hat term filtering."""
+        f = Formula.parse("Y ~ X1 | log(Z1) ~ W1")[0]
+        assert f.second_stage == "Y ~ 1 + X1 + log(Z1)"
+        assert f.first_stage.startswith("log(Z1) ~")
+
     def test_iv_with_fe_endogenous_in_second_stage(self):
         """Endogenous variable should be in second_stage even with FE."""
         result = Formula.parse("Y ~ X1 | f1 | Z1 ~ W1")

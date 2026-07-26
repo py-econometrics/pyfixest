@@ -181,9 +181,7 @@ class Formula:
         """Exogenous aka covariates aka independent variables."""
         exogenous = self._right_hand_side
         if self.is_instrumental_variable:
-            exogenous = filter_multistage_endogenous_terms(
-                exogenous, self.endogenous.required_variables
-            )
+            exogenous = filter_multistage_endogenous_terms(exogenous, self.endogenous)
 
         if self.is_fixed_effects and exogenous.required_variables:
             # drop intercept for fixed effects regressions
