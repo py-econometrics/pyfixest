@@ -274,7 +274,7 @@ def get_ssc(
         else:
             raise ValueError("G_df is neither conventional nor min.")
 
-    df_t = N - df_k if vcov_type in ["iid", "hetero", "HAC-TS"] else G - 1
+    df_t = N - df_k if vcov_type in ["iid", "hetero"] else G - 1
     return np.array([adj_value * G_adj_value * vcov_sign]), df_k, df_t
 
 
