@@ -16,6 +16,21 @@ from pyfixest.errors import FormulaSyntaxError
 from pyfixest.estimation.formula.parse import Formula, _expand_all_multiple_estimation
 from pyfixest.estimation.formula.utils import _get_position_of_first_parenthesis_pair
 
+# Known-broken behaviour, fixed by the follow-up PRs in this series. `strict`
+# means the marker has to be removed together with the fix.
+XFAIL_CARET = (
+    "`^` is replaced globally by a fixed-effect interaction operator, so "
+    "`(X1 + X2)^2` no longer expands to an interaction"
+)
+XFAIL_DEPENDENT_PLUS = (
+    "any `+` on the left hand side is read as multiple dependent variables, "
+    "including one nested inside a transform"
+)
+XFAIL_TRANSFORMED_ENDOGENOUS = (
+    "the generated `_hat` term is named after the endogenous variable rather "
+    "than the endogenous term, so `log(X2)` looks for `X2_hat`"
+)
+
 # =============================================================================
 # Fixtures
 # =============================================================================
@@ -477,6 +492,87 @@ class TestFormulaParse:
         assert "f1 + f2" in result
 
 
+class TestCaretOperator:
+    """`^` means FE interaction inside `|`, exponentiation everywhere else."""
+
+    @pytest.mark.parametrize(
+        "formula,expected_second_stage",
+        [
+            # Outside the fixed effects segment `^` is formulaic's `**` alias
+            # and expands to the interaction of the bracketed terms.
+            ("Y ~ (X1 + X2)^2", "Y ~ 1 + X1 + X2 + X1:X2"),
+            ("Y ~ (X1 + X2)^3", "Y ~ 1 + X1 + X2 + X1:X2"),
+            ("Y ~ X1 + (X2 + f1)^2", "Y ~ 1 + X1 + X2 + f1 + X2:f1"),
+            # ... which the fixed effects segment must not change.
+            ("Y ~ (X1 + X2)^2 | f1^f2", "Y ~ X1 + X2 + X1:X2"),
+        ],
+    )
+    @pytest.mark.xfail(strict=True, reason=XFAIL_CARET)
+    def test_caret_expands_like_power_outside_fixed_effects(
+        self, formula, expected_second_stage
+    ):
+        parsed = Formula.parse(formula)
+        assert len(parsed) == 1
+        assert parsed[0].second_stage == expected_second_stage
+
+    @pytest.mark.parametrize(
+        "formula",
+        [
+            "Y ~ (X1 + X2)^2",
+            "Y ~ X1 + (X2 + f1)^2",
+            "Y ~ (X1 + X2 + f1)^3",
+        ],
+    )
+    @pytest.mark.xfail(strict=True, reason=XFAIL_CARET)
+    def test_caret_matches_double_star(self, formula):
+        """`^` is documented by formulaic as an alias for `**`."""
+        assert (
+            Formula.parse(formula)[0].second_stage
+            == Formula.parse(formula.replace("^", "**"))[0].second_stage
+        )
+
+    @pytest.mark.parametrize(
+        "formula,expected_fixed_effects",
+        [
+            ("Y ~ X1 | f1^f2", "f1:f2"),
+            ("Y ~ X1 | f1 ^ f2", "f1:f2"),
+            ("Y ~ X1 | f1^f2^f3", "f1:f2:f3"),
+            ("Y ~ X1 | f1 + f2^f3", "f1 + f2:f3"),
+            # formulaic orders terms by interaction order, not by appearance.
+            ("Y ~ X1 | f1^f2 + f3", "f3 + f1:f2"),
+        ],
+    )
+    def test_caret_interacts_fixed_effects(self, formula, expected_fixed_effects):
+        parsed = Formula.parse(formula)
+        assert len(parsed) == 1
+        assert str(parsed[0].fixed_effects) == expected_fixed_effects
+        # `Formula.formula` renders the interaction back in fixest syntax.
+        assert parsed[0].formula.split("|")[
+            1
+        ].strip() == expected_fixed_effects.replace(":", "^")
+
+    def test_caret_fixed_effects_match_manual_interaction(self, test_data):
+        """`| f1^f2` must demean on the interacted group, not on f1 and f2."""
+        data = test_data.dropna().copy()
+        data["f1_f2"] = data["f1"].astype(str) + "_" + data["f2"].astype(str)
+        interacted = pf.feols("Y ~ X1 | f1^f2", data)
+        manual = pf.feols("Y ~ X1 | f1_f2", data)
+        np.testing.assert_allclose(
+            interacted.coef().to_numpy(), manual.coef().to_numpy()
+        )
+        np.testing.assert_allclose(interacted.se().to_numpy(), manual.se().to_numpy())
+
+    @pytest.mark.xfail(strict=True, reason=XFAIL_CARET)
+    def test_caret_power_estimates_interaction(self, test_data):
+        """`(X1 + X2)^2` must estimate the interaction, not a `:2` term."""
+        fit = pf.feols("Y ~ (X1 + X2)^2", test_data)
+        assert list(fit.coef().index) == ["Intercept", "X1", "X2", "X1:X2"]
+        np.testing.assert_allclose(
+            fit.coef().to_numpy(),
+            pf.feols("Y ~ X1 + X2 + X1:X2", test_data).coef().to_numpy(),
+        )
+
+
 class TestValidation:
     """Tests for formula validation / error handling."""
 
@@ -604,12 +700,47 @@ class TestEdgeCases:
         result = Formula.parse("Y + Y2 + Y3 ~ X1")
         assert len(result) == 3
 
+    @pytest.mark.parametrize(
+        "formula,expected_second_stage",
+        [
+            ("I(Y + Y2) ~ X1", "I(Y + Y2) ~ 1 + X1"),
+            ("I(Y + Y2 + Y3) ~ X1", "I(Y + Y2 + Y3) ~ 1 + X1"),
+            ("log(Y + Y2) ~ X1", "log(Y + Y2) ~ 1 + X1"),
+        ],
+    )
+    @pytest.mark.xfail(strict=True, reason=XFAIL_DEPENDENT_PLUS)
+    def test_transformed_dependent_with_plus(self, formula, expected_second_stage):
+        """A `+` nested in a transform is not a multiple-dependent separator."""
+        result = Formula.parse(formula)
+        assert len(result) == 1
+        assert result[0].second_stage == expected_second_stage
+
+    @pytest.mark.xfail(strict=True, reason=XFAIL_DEPENDENT_PLUS)
+    def test_transformed_dependent_matches_precomputed_column(self, test_data):
+        """`I(Y + Y2)` estimates the summed outcome, not two separate models."""
+        data = test_data.dropna().copy()
+        data["Y_sum"] = data["Y"] + data["Y2"]
+
+        transformed = pf.feols("I(Y + Y2) ~ X1", data)
+        precomputed = pf.feols("Y_sum ~ X1", data)
+
+        np.testing.assert_allclose(
+            transformed.coef().to_numpy(), precomputed.coef().to_numpy()
+        )
+
     def test_iv_endogenous_in_second_stage(self):
         """Endogenous variable should be added to second_stage covariates."""
         result = Formula.parse("Y ~ X1 | Z1 ~ W1")
         f = result[0]
         assert "Z1" in f.second_stage
         # assert f.first_stage == "Z1 ~ W1"
+
+    @pytest.mark.xfail(strict=True, reason=XFAIL_TRANSFORMED_ENDOGENOUS)
+    def test_iv_transformed_endogenous_in_second_stage(self):
+        """A transformed endogenous variable survives the _hat term filtering."""
+        f = Formula.parse("Y ~ X1 | log(Z1) ~ W1")[0]
+        assert f.second_stage == "Y ~ 1 + X1 + log(Z1)"
+        assert f.first_stage.startswith("log(Z1) ~")
 
     def test_iv_with_fe_endogenous_in_second_stage(self):
         """Endogenous variable should be in second_stage even with FE."""
