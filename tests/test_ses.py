@@ -222,12 +222,7 @@ def run_crv3_poisson():
 
 @pytest.mark.parametrize("vcov", ["NW", "DK"])
 def test_hac_rejects_fweights(vcov):
-    """HAC has no frequency-weight correction, so it must refuse rather than guess.
-
-    `vcov_hetero` divides the scores by sqrt(w) for fweights; the HAC meat has
-    no equivalent and R fixest has no frequency weights to validate one
-    against, so the combination silently returned the aweights answer.
-    """
+    """HAC does not support frequency weights."""
     data = get_data().dropna().reset_index(drop=True)
     data["t"] = np.arange(len(data))
     data["unit"] = np.repeat(np.arange(len(data) // 10 + 1), 10)[: len(data)]
