@@ -782,6 +782,12 @@ class Feols(ResultAccessorMixin):
                 "HAC inference is not supported for this model type."
             )
 
+        # fweights not supported
+        if self._has_weights and self._weights_type == "fweights":
+            raise NotImplementedError(
+                "HAC inference (NW, DK) is not supported with `weights_type='fweights'`."
+            )
+
         # some data checks on input pandas df
         # time needs to be numeric or date else we cannot sort by time
         if not np.issubdtype(_data[_time_id], np.number) and not np.issubdtype(
