@@ -218,3 +218,24 @@ def run_crv3_poisson():
         vcov={"CRV3": "f1"},
         ssc=ssc(k_adj=False, G_adj=False),
     )
+
+
+def test_cluster_on_interacted_fixed_effect():
+    """`{"CRV1": "f1^f2"}` must find the materialized `f1_f2` column.
+
+    Interacted fixed effects are written into the data as `f1_f2`, so the
+    cluster name needs the same rename. The membership test used to check the
+    list for an element equal to "^", so it never fired and the lookup raised
+    a bare KeyError.
+    """
+    data = get_data().dropna().reset_index(drop=True)
+    fit = feols("Y ~ X1 | f1^f2", data=data)
+
+    with pytest.warns(UserWarning, match="replaced by"):
+        fit.vcov({"CRV1": "f1^f2"})
+
+    assert fit._clustervar == ["f1_f2"]
+
+    # identical to clustering on the materialized column directly
+    direct = feols("Y ~ X1 | f1^f2", data=data, vcov={"CRV1": "f1_f2"})
+    np.testing.assert_allclose(fit._vcov, direct._vcov)

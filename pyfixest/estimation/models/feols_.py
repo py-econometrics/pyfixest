@@ -2442,8 +2442,9 @@ def _deparse_vcov_input(vcov: str | dict[str, str], has_fixef: bool, is_iv: bool
 
     clustervar = deparse_vcov if is_clustered else None
 
-    # loop over clustervar to change "^" to "_"
-    if clustervar and "^" in clustervar:
+    # Interacted fixed effects are materialized as `f1_f2` columns, so a
+    # cluster variable written `f1^f2` has to be renamed to match.
+    if clustervar and any("^" in x for x in clustervar):
         clustervar = [x.replace("^", "_") for x in clustervar]
         warnings.warn(
             f"""
