@@ -688,6 +688,32 @@ class TestEdgeCases:
         result = Formula.parse("Y + Y2 + Y3 ~ X1")
         assert len(result) == 3
 
+    @pytest.mark.parametrize(
+        "formula,expected_second_stage",
+        [
+            ("I(Y + Y2) ~ X1", "I(Y + Y2) ~ 1 + X1"),
+            ("I(Y + Y2 + Y3) ~ X1", "I(Y + Y2 + Y3) ~ 1 + X1"),
+            ("log(Y + Y2) ~ X1", "log(Y + Y2) ~ 1 + X1"),
+        ],
+    )
+    def test_transformed_dependent_with_plus(self, formula, expected_second_stage):
+        """A `+` nested in a transform is not a multiple-dependent separator."""
+        result = Formula.parse(formula)
+        assert len(result) == 1
+        assert result[0].second_stage == expected_second_stage
+
+    def test_transformed_dependent_matches_precomputed_column(self, test_data):
+        """`I(Y + Y2)` estimates the summed outcome, not two separate models."""
+        data = test_data.dropna().copy()
+        data["Y_sum"] = data["Y"] + data["Y2"]
+
+        transformed = pf.feols("I(Y + Y2) ~ X1", data)
+        precomputed = pf.feols("Y_sum ~ X1", data)
+
+        np.testing.assert_allclose(
+            transformed.coef().to_numpy(), precomputed.coef().to_numpy()
+        )
+
     def test_iv_endogenous_in_second_stage(self):
         """Endogenous variable should be added to second_stage covariates."""
         result = Formula.parse("Y ~ X1 | Z1 ~ W1")

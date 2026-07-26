@@ -145,10 +145,12 @@ def _preprocess_fixest_multiple_dependents(formula: str) -> str:
     if "~" not in formula:
         raise FormulaSyntaxError("Formula must contain '~'.")
     dependent, rest = re.split(r"\s*~\s*", formula, maxsplit=1)
-    if "+" in dependent:
-        # Multiple dependent variables
+    # Only a top-level `+` separates dependents: `I(Y + Y2)` is a single
+    # transformed dependent, not two.
+    dependents = _str_split_by_sep(dependent, separator="+")
+    if len(dependents) > 1:
         formula_old = formula
-        formula = f"{_MultipleEstimationType.sw.name}({', '.join(_str_split_by_sep(dependent, separator='+'))}) ~ {rest}"
+        formula = f"{_MultipleEstimationType.sw.name}({', '.join(dependents)}) ~ {rest}"
         warnings.warn(
             "Specifiying multiple dependent variables with `+` is deprecated and will throw an error in a future version. "
             f"Instead of `{formula_old}` use `{formula}`",
