@@ -1759,8 +1759,18 @@ class Feols(ResultAccessorMixin):
         Predict values of the model on new data.
 
         Return a flat np.array with predicted values of the regression model.
-        If new fixed effect levels are introduced in `newdata`, predicted values
-        for such observations will be set to NaN.
+
+        NaN and singleton handling differs by branch and mirrors R's `fixest`:
+
+        - If `newdata` is None, predictions are returned for the estimation
+          sample only. Rows with NaNs and singleton fixed effect levels were
+          already dropped when the model was fit, so the result has length equal
+          to the number of observations used in estimation and contains no NaNs.
+        - If `newdata` is passed, one prediction is returned per row of
+          `newdata`. Rows that cannot be predicted return NaN: a NaN in a right
+          hand side covariate, or a fixed effect level not seen in the
+          estimation sample. In both cases `predict` warns about the affected
+          rows.
 
         Parameters
         ----------

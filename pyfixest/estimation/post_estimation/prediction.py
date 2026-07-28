@@ -74,6 +74,19 @@ def get_design_matrix_and_yhat(
             X = X[np.array(model._coefnames)[coef_idx]]
             X = X.to_numpy()
 
+            # Rows dropped by the model matrix have a NaN in a right hand side
+            # covariate and cannot be predicted. Warn, mirroring the unseen fixed
+            # effect level warning, so NaN predictions are not returned silently.
+            n_dropped = newdata.shape[0] - len(X_index)
+            if n_dropped > 0:
+                warnings.warn(
+                    f"{n_dropped} row(s) in newdata contain a NaN in a right hand "
+                    "side covariate and cannot be predicted; predictions for these "
+                    "observations will be NaN.",
+                    UserWarning,
+                    stacklevel=3,  # emit warning at `predict` caller
+                )
+
             # Initialize y_hat with NaNs, fill in only for valid (X_index) rows
             y_hat = np.full(newdata.shape[0], np.nan)
             y_hat[X_index] = X @ model._beta_hat[coef_idx]
