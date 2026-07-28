@@ -30,7 +30,7 @@ def test_predict_none_drops_nas_newdata_keeps_rows():
 
     # newdata=None: estimation sample only, NaN rows already dropped.
     assert len(pred_none) == fit._N
-    assert fit._N < data.shape[0]
+    assert data.shape[0] > fit._N
     assert not np.isnan(pred_none).any()
 
     # newdata=data: one prediction per input row.
