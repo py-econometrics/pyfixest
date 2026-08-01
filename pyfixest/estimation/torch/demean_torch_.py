@@ -238,6 +238,8 @@ def _make_demean_variant(
         tol: float = 1e-8,
         maxiter: int = 100_000,
     ) -> tuple[NDArray[np.float64], bool]:
+        if flist is None:
+            raise ValueError("flist cannot be None")
         return _demean_torch_on_device_impl(
             x,
             flist,

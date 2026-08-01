@@ -11,6 +11,7 @@ from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.families import GlmFamily
 from pyfixest.estimation.internals.fit_glm_ import fit_glm_irls
+from pyfixest.estimation.internals.literals import WeightsTypeOptions
 from pyfixest.estimation.internals.separation import check_for_separation
 from pyfixest.estimation.internals.vcov_ import vcov_iid_glm
 from pyfixest.estimation.models.feols_ import (
@@ -54,7 +55,7 @@ class Feglm(Feols):
         drop_singletons: bool,
         drop_intercept: bool,
         weights: str | None,
-        weights_type: str | None,
+        weights_type: WeightsTypeOptions,
         collin_tol: float,
         lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
         tol: float,
@@ -127,6 +128,10 @@ class Feglm(Feols):
     def prepare_model_matrix(self):
         "Prepare model inputs for estimation."
         super().prepare_model_matrix()
+        assert isinstance(self._Y, pd.DataFrame)
+        assert isinstance(self._X, pd.DataFrame)
+        if self._fe is not None:
+            assert isinstance(self._fe, pd.DataFrame)
 
         # check for separation
         na_separation: list[int] = []
@@ -145,6 +150,7 @@ class Feglm(Feols):
             )
 
         if na_separation:
+            assert isinstance(self._fe, pd.DataFrame)
             self._Y.drop(na_separation, axis=0, inplace=True)
             self._X.drop(na_separation, axis=0, inplace=True)
             self._fe.drop(na_separation, axis=0, inplace=True)
@@ -160,11 +166,17 @@ class Feglm(Feols):
 
             self.n_separation_na = len(na_separation)
             # possible to have dropped fixed effects level due to separation
-            self._k_fe = self._fe.nunique(axis=0) if self._has_fixef else None
+            if self._has_fixef:
+                assert isinstance(self._fe, pd.DataFrame)
+                self._k_fe = self._fe.nunique(axis=0)
+            else:
+                self._k_fe = pd.Series(dtype=int)
             self._n_fe = np.sum(self._k_fe > 1) if self._has_fixef else 0
 
     def to_array(self):
         "Turn estimation DataFrames to np arrays."
+        assert isinstance(self._Y, pd.DataFrame)
+        assert isinstance(self._X, pd.DataFrame)
         self._Y, self._X, self._Z = (
             self._Y.to_numpy(),
             self._X.to_numpy(),
@@ -173,6 +185,7 @@ class Feglm(Feols):
         if self._offset_df is not None:
             self._offset = self._offset_df.to_numpy().reshape((-1, 1))
         if self._fe is not None:
+            assert isinstance(self._fe, pd.DataFrame)
             self._fe = self._fe.to_numpy()
             if self._fe.ndim == 1:
                 self._fe = self._fe.reshape((self._N, 1))
@@ -180,11 +193,15 @@ class Feglm(Feols):
     def get_fit(self):
         "Fit the GLM via IRLS and write results onto self.* attributes."
         self.to_array()
+        assert isinstance(self._X, np.ndarray)
+        assert isinstance(self._Y, np.ndarray)
+        assert self._fe is None or isinstance(self._fe, np.ndarray)
+        fe = self._fe
 
         def _demean(
             v: np.ndarray, X: np.ndarray, weights: np.ndarray, tol: float
         ) -> tuple[np.ndarray, np.ndarray]:
-            return self.residualize(v=v, X=X, flist=self._fe, weights=weights, tol=tol)
+            return self.residualize(v=v, X=X, flist=fe, weights=weights, tol=tol)
 
         fit = fit_glm_irls(
             X=self._X,
@@ -278,7 +295,7 @@ class Feglm(Feols):
         self,
         v: np.ndarray,
         X: np.ndarray,
-        flist: np.ndarray,
+        flist: np.ndarray | None,
         weights: np.ndarray,
         tol: float,
     ) -> tuple[np.ndarray, np.ndarray]:
@@ -371,7 +388,8 @@ class Feglm(Feols):
 
     def _check_dependent_variable(self) -> None:
         "Validate the dependent variable according to the family's constraints."
-        self._family.check_y(self._Y)
+        assert isinstance(self._Y, pd.DataFrame)
+        self._family.check_y(self._Y.to_numpy())
 
 
 def _glm_input_checks(drop_singletons: bool, tol: float, maxiter: int):

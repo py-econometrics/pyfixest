@@ -15,7 +15,6 @@ from pyfixest.core.nw import (
     nw_meat_time as _nw_meat_time_rs,
 )
 from pyfixest.errors import NanInClusterVarError
-from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
 from pyfixest.utils.utils import get_ssc
 
 
@@ -32,7 +31,7 @@ class ClusterPrep:
 
 def prepare_cluster_state(
     *,
-    data: DataFrameType,
+    data: pd.DataFrame,
     clustervar: list[str],
     ssc_dict: dict,
     fixef: str | None,
@@ -127,8 +126,7 @@ def _compute_bread(
 
 def _get_cluster_df(data: pd.DataFrame, clustervar: list[str]):
     if not data.empty:
-        data_pandas = _narwhals_to_pandas(data)
-        cluster_df = data_pandas[clustervar].copy()
+        cluster_df = data[clustervar].copy()
     else:
         raise AttributeError(
             """The input data set needs to be stored in the model object if

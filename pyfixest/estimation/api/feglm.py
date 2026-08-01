@@ -31,7 +31,7 @@ from pyfixest.utils.utils import ssc as ssc_func
 
 def feglm(
     fml: str,
-    data: DataFrameType,  # type: ignore
+    data: DataFrameType,
     family: FamilyOptions,
     vcov: VcovTypeOptions | dict[str, str] | None = None,
     vcov_kwargs: dict[str, str | int] | None = None,

@@ -35,7 +35,7 @@ def _count_fixef_fully_nested_all(
     k_fe_nested_flag = np.zeros(all_fixef_array.size, dtype=np.bool_)
     n_fe_fully_nested = 0
 
-    for fi in nb.prange(all_fixef_array.size):
+    for fi in nb.prange(all_fixef_array.size):  # ty: ignore[not-iterable]
         this_fe_name = all_fixef_array[fi]
 
         found_in_cluster = False

@@ -1,7 +1,7 @@
 import functools
 import warnings
 from importlib import import_module
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import pandas as pd
@@ -10,6 +10,7 @@ from pyfixest.errors import EmptyVcovError
 
 if TYPE_CHECKING:
     from pyfixest.estimation.internals.families import InferenceDist
+    from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.internals.literals import (
     InferenceType,
     _validate_literal_argument,
@@ -154,19 +155,19 @@ class ResultAccessorMixin(TidyColumnAccessors):
         _module = import_module("pyfixest.report")
 
         _tmp = _module.summary
-        self.summary = functools.partial(_tmp, models=[self])
+        self.summary = functools.partial(_tmp, models=[cast("Feols", self)])
         self.summary.__doc__ = _tmp.__doc__
 
         _tmp = _module.coefplot
-        self.coefplot = functools.partial(_tmp, models=[self])
+        self.coefplot = functools.partial(_tmp, models=[cast("Feols", self)])
         self.coefplot.__doc__ = _tmp.__doc__
 
         _tmp = _module.iplot
-        self.iplot = functools.partial(_tmp, models=[self])
+        self.iplot = functools.partial(_tmp, models=[cast("Feols", self)])
         self.iplot.__doc__ = _tmp.__doc__
 
         _tmp = _module.etable
-        self.etable = functools.partial(_tmp, models=[self])
+        self.etable = functools.partial(_tmp, models=[cast("Feols", self)])
         self.etable.__doc__ = _tmp.__doc__
 
     def evalue(

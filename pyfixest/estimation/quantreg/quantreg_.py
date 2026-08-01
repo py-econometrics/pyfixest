@@ -12,6 +12,7 @@ from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.literals import (
     QuantregMethodOptions,
     SolverOptions,
+    WeightsTypeOptions,
 )
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.quantreg.frisch_newton_ip import (
@@ -67,7 +68,7 @@ class Quantreg(Feols):
         drop_singletons: bool,
         drop_intercept: bool,
         weights: str | None,
-        weights_type: str | None,
+        weights_type: WeightsTypeOptions,
         collin_tol: float,
         lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
         solver: SolverOptions = "np.linalg.solve",
@@ -178,6 +179,8 @@ class Quantreg(Feols):
 
     def to_array(self):
         "Turn estimation DataFrames to np arrays."
+        assert isinstance(self._Y, pd.DataFrame)
+        assert isinstance(self._X, pd.DataFrame)
         self._Y, self._X, self._Z = (
             self._Y.to_numpy(),
             self._X.to_numpy(),
@@ -196,6 +199,8 @@ class Quantreg(Feols):
     def get_fit(self) -> None:
         """Fit a quantile regression model using the interior point method."""
         self.to_array()
+        assert isinstance(self._X, np.ndarray)
+        assert isinstance(self._Y, np.ndarray)
         self.drop_multicol_vars()
 
         res = self._fit(X=self._X, Y=self._Y)
@@ -392,11 +397,15 @@ class Quantreg(Feols):
         return fn_res
 
     def _vcov_iid(self):
+        assert isinstance(self._X, np.ndarray)
+        assert isinstance(self._Y, np.ndarray)
         return vcov_iid_qreg(
             X=self._X, Y=self._Y, u_hat=self._u_hat, q=self._quantile, N=self._N
         )
 
     def _vcov_hetero(self):
+        assert isinstance(self._X, np.ndarray)
+        assert isinstance(self._Y, np.ndarray)
         return vcov_hetero_qreg(
             X=self._X, Y=self._Y, u_hat=self._u_hat, q=self._quantile, N=self._N
         )
@@ -409,6 +418,8 @@ class Quantreg(Feols):
         'nid' stands for 'non-iid'.
         For details, see page 80 in Koenker's "Quantile Regression" (2005) book.
         """
+        assert isinstance(self._X, np.ndarray)
+        assert isinstance(self._Y, np.ndarray)
         return vcov_nid_qreg(
             X=self._X,
             Y=self._Y,
@@ -429,6 +440,7 @@ class Quantreg(Feols):
                 "Multiway clustering is not (yet) supported for quantile regression."
             )
 
+        assert isinstance(self._X, np.ndarray)
         return vcov_crv1_qreg(
             X=self._X,
             u_hat=self._u_hat,

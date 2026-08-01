@@ -743,7 +743,7 @@ def _dict_to_list_of_formulas(unpacked: dict[str, list[str]]) -> list[str]:
 
     const_fml = "+".join(res["constant"]) if res["constant"] else ""
 
-    variable_fml = []
+    variable_fml: list[str] = []
     if res["variable"]:
         if variable_type in ["csw", "csw0"]:
             variable_fml = [
@@ -754,7 +754,7 @@ def _dict_to_list_of_formulas(unpacked: dict[str, list[str]]) -> list[str]:
         if variable_type in ["sw0", "csw0"]:
             variable_fml = ["0", *variable_fml]
 
-    fml_list = []
+    fml_list: list[str] = []
     if variable_fml:
         if const_fml:
             fml_list = [
@@ -770,9 +770,6 @@ def _dict_to_list_of_formulas(unpacked: dict[str, list[str]]) -> list[str]:
         fml_list.append(const_fml)
     else:
         raise AttributeError("Not a valid formula provided.")
-
-    if not isinstance(fml_list, list):
-        fml_list = [fml_list]
 
     return fml_list
 

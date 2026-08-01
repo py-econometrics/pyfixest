@@ -56,9 +56,9 @@ class Formula:
         if self._first_stage is not None:
             second_stage = formulaic.Formula(self._second_stage)
             first_stage = formulaic.Formula(self._first_stage)
-            exogenous = second_stage.rhs.required_variables
-            endogenous = first_stage.lhs.required_variables
-            instruments = first_stage.rhs.required_variables
+            exogenous = second_stage.rhs.required_variables  # ty: ignore[unresolved-attribute]
+            endogenous = first_stage.lhs.required_variables  # ty: ignore[unresolved-attribute]
+            instruments = first_stage.rhs.required_variables  # ty: ignore[unresolved-attribute]
             if len(endogenous) > 1:
                 raise FormulaSyntaxError(
                     "Multiple endogenous variables are currently not supported."
