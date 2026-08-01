@@ -26,7 +26,7 @@ def _get_estimation_method_name(fxst: Feols) -> str:
     if fxst._method == "feols":
         return "IV" if fxst._is_iv else "OLS"
     if "quantreg" in fxst._method:
-        return f"quantreg: q = {fxst._quantile}"  # type: ignore
+        return f"quantreg: q = {fxst._quantile}"  # ty: ignore[unresolved-attribute]
     if fxst._method in _METHOD_DISPLAY_NAMES:
         return _METHOD_DISPLAY_NAMES[fxst._method]
     raise ValueError(f"Unknown estimation method: {fxst._method}")

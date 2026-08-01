@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 import warnings
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -66,7 +66,9 @@ def get_design_matrix_and_yhat(
                 X = rhs_spec.get_model_matrix(newdata, context=context)
             else:
                 xfml = model._fml.split("|")[0].split("~")[1]
-                X = Formula(xfml).get_model_matrix(newdata, context=context)
+                X = Formula(xfml).get_model_matrix(
+                    newdata, context=cast(Mapping[str, Any] | None, context)
+                )
 
             X_index = X.index
 

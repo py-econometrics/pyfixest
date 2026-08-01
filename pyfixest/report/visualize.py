@@ -1,4 +1,5 @@
 import math
+from typing import cast
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -700,7 +701,7 @@ def _coefplot_matplotlib(
     models = df["fml"].unique()
     is_multi_model = len(models) > 1
 
-    colors = plt.cm.jet(np.linspace(0, 1, len(models)))
+    colors = plt.get_cmap("jet")(np.linspace(0, 1, len(models)))
     color_dict = dict(zip(models, colors, strict=False))
 
     # Calculate the positions for dodging
@@ -770,7 +771,7 @@ def _coefplot_matplotlib(
         ax.legend()
     plt.tight_layout()
     plt.close()
-    return f
+    return cast(plt.Figure, f)
 
 
 def _qplot(
@@ -807,7 +808,7 @@ def _qplot(
     k = len(coeffs)
 
     if nrow is not None:
-        assert nrow is not None  # for mypy, do people really do this?
+        assert nrow is not None  # narrow the type for the type checker
         rows, cols = nrow, math.ceil(k / nrow)
     else:
         assert ncol is not None
@@ -893,7 +894,7 @@ def _get_model_df(
             .merge(df_joint, on="Coefficient", how="left")
         )
 
-        df_joint_full["fml"] += " (joint CIs)"  # type: ignore[operator]
+        df_joint_full["fml"] += " (joint CIs)"
 
         if joint == "both":
             df_model = pd.concat([df_model, df_joint_full], axis=0)

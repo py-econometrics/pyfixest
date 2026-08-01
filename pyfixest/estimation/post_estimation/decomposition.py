@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
 from numpy.typing import NDArray
-from scipy.sparse import diags, hstack, spmatrix, vstack
+from scipy.sparse import csr_matrix, diags, hstack, spmatrix, vstack
 from scipy.sparse.linalg import lsqr
 from tqdm import tqdm
 
@@ -171,6 +171,10 @@ class GelbachDecomposition:
     X1_dict: dict[Any, Any] = field(init=False, default_factory=dict)
     X2_dict: dict[Any, Any] = field(init=False, default_factory=dict)
     Y_dict: dict[Any, Any] = field(init=False, default_factory=dict)
+    X: csr_matrix | None = field(init=False, default=None)
+    X1: csr_matrix | None = field(init=False, default=None)
+    X2: csr_matrix | None = field(init=False, default=None)
+    Y: np.ndarray | None = field(init=False, default=None)
 
     def __post_init__(self):
         x1_variables = (
@@ -190,10 +194,11 @@ class GelbachDecomposition:
 
         # Handle clustering setup if cluster_df is provided
         if self.cluster_df is not None and not self.only_coef:
-            self.unique_clusters = self.cluster_df.unique()
+            unique_clusters = np.asarray(self.cluster_df.unique())
+            self.unique_clusters = unique_clusters
             self.cluster_dict = {
                 cluster: self.cluster_df[self.cluster_df == cluster].index
-                for cluster in self.unique_clusters
+                for cluster in unique_clusters
             }
         else:
             self.unique_clusters = None
@@ -268,18 +273,18 @@ class GelbachDecomposition:
 
     def fit(
         self,
-        X: spmatrix,
+        X: np.ndarray | spmatrix,
         Y: np.ndarray,
         weights: np.ndarray | None = None,
         store: bool = True,
     ):
         "Fit Linear Mediation Model."
         if store:
-            self.X = X
+            self.X = csr_matrix(X)
             self.Y = Y
 
             self.X1 = self.X[:, ~self.mask]
-            self.X1 = hstack([np.ones((self.X1.shape[0], 1)), self.X1])
+            self.X1 = csr_matrix(hstack([np.ones((self.X1.shape[0], 1)), self.X1]))
             self.X2 = self.X[:, self.mask]
 
             if weights is not None:
@@ -337,14 +342,15 @@ class GelbachDecomposition:
         else:
             # need to compute X1, X2 in bootstrap sample
 
-            X1 = hstack([np.ones((X.shape[0], 1)), X[:, ~self.mask]])
-            X2 = X[:, self.mask]
+            X_csr = csr_matrix(X)
+            X1 = csr_matrix(hstack([np.ones((X.shape[0], 1)), X_csr[:, ~self.mask]]))
+            X2 = X_csr[:, self.mask]
 
             results = self.compute_gelbach(
                 X1=X1,
                 X2=X2,
                 Y=Y,
-                X=X,
+                X=X_csr,
                 agg_first=self.agg_first,
             )
 
@@ -441,22 +447,26 @@ class GelbachDecomposition:
                 self.unique_clusters, len(self.unique_clusters), replace=True
             ).tolist()
 
-            X = vstack([self.X_dict[g].tocsr() for g in idx_clusters])
+            X = csr_matrix(vstack([self.X_dict[g] for g in idx_clusters]))
             Y = np.concatenate([self.Y_dict[g] for g in idx_clusters])
 
         else:
             idx_rows: NDArray[np.int_] = rng.choice(self.N, self.N)
-            X = self.X.tocsr()[idx_rows, :]
-            Y = self.Y[idx_rows]
+            X_stored = self.X
+            Y_stored = self.Y
+            if X_stored is None or Y_stored is None:
+                raise RuntimeError("The decomposition must be fit before bootstrap().")
+            X = X_stored[idx_rows, :]
+            Y = Y_stored[idx_rows]
 
         return self.fit(X=X, Y=Y, store=False)
 
     def compute_gelbach(
         self,
-        X1: spmatrix,
-        X2: spmatrix,
+        X1: csr_matrix,
+        X2: csr_matrix,
         Y: np.ndarray,
-        X: spmatrix,
+        X: csr_matrix,
         agg_first: bool | None,
     ) -> tuple[
         np.ndarray,

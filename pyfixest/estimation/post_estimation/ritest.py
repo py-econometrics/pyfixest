@@ -1,4 +1,5 @@
 from importlib import import_module
+from typing import Any
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -30,14 +31,16 @@ from tqdm import tqdm
 # the slow path does not. We import lazily so the module loads cleanly even when
 # numba is not installed, and surface a clear error only when the fast path is
 # actually requested.
+nb: Any = None
 try:
-    import numba as nb
+    import numba
+
+    nb = numba
 
     from pyfixest.estimation.numba.demean_nb import demean
 
     _HAS_NUMBA = True
 except ImportError:
-    nb = None
     demean = None
     _HAS_NUMBA = False
 
@@ -254,6 +257,9 @@ def _run_ri(
     ri_coefs = np.zeros(reps)
 
     X_demean2 = np.ascontiguousarray(X_demean2)
+    demean_fn = demean
+    if demean_fn is None:
+        raise ImportError(_NUMBA_RITEST_ERROR)
 
     for i in range(reps):
         D2 = _resample(
@@ -263,7 +269,7 @@ def _run_ri(
             iterations=1,
         )
 
-        D2_demean = demean(D2, fval, weights)[0] if fval is not None else D2
+        D2_demean = demean_fn(D2, fval, weights)[0] if fval is not None else D2
 
         ri_coefs[i] = lstsq_numba(
             np.concatenate((D2_demean, X_demean2), axis=1), Y_demean
@@ -423,9 +429,10 @@ def _plot_ritest_pvalue(
         return plot.show()
 
     elif plot_backend == "matplotlib":
+        sample_stat_value = float(np.asarray(sample_stat).squeeze())
         plt.figure(figsize=(10, 6))
         sns.kdeplot(data=df, x="ri_stats", fill=True, color="blue", alpha=0.5)
-        plt.axvline(x=sample_stat, color="red", linestyle="--")
+        plt.axvline(x=sample_stat_value, color="red", linestyle="--")
         plt.title(title)
         plt.xlabel(x_lab)
         plt.ylabel(y_lab)
