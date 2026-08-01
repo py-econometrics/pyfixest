@@ -56,7 +56,7 @@ fit.ritest("X1", reps=1000, store_ritest_statistics=True)
 
     H0                                      X1=0
     ri-type                      randomization-c
-    Estimate                 -0.9929357698186863
+    Estimate                 -0.9929357698186858
     Pr(>|t|)                                 0.0
     Std. Error (Pr(>|t|))                    0.0
     2.5% (Pr(>|t|))                          0.0

@@ -119,7 +119,7 @@ Fixed-effects demeaning: the `demean()` workhorse and the configurable backends.
 | [BaseDemeaner](../reference/demeaners.BaseDemeaner.llms.md#pyfixest.demeaners.BaseDemeaner) | Base configuration shared by all fixed-effects demeaners. |
 | [MapDemeaner](../reference/demeaners.MapDemeaner.llms.md#pyfixest.demeaners.MapDemeaner) | Method of Alternating Projections (MAP) demeaner. |
 | [LsmrDemeaner](../reference/demeaners.LsmrDemeaner.llms.md#pyfixest.demeaners.LsmrDemeaner) | Sparse LSMR demeaner. |
-| [Preconditioner](../reference/core.demean.Preconditioner.llms.md#pyfixest.core.demean.Preconditioner) | Opaque handle to a pre-built within preconditioner (Additive Schwarz or |
+| [Preconditioner](../reference/core.demean.Preconditioner.llms.md#pyfixest.core.demean.Preconditioner) |  |
 
 ## Misc / Utilities
 

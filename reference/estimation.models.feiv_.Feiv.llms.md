@@ -107,7 +107,7 @@ The first stage F-statistic is stored on the fitted object.
 fit._f_stat_1st_stage
 ```
 
-    647.2703851604904
+    647.270385160491
 
 See the [instrumental variables tutorial](../tutorials/instrumental-variables.llms.md) for details.
 
@@ -147,7 +147,7 @@ This method covers diagnostic tests related with IV regression. We currently hav
 
 The following is an example usage of this method:
 
-    ::: {#92472e77 .cell execution_count=3}
+    ::: {#9a62b80f .cell execution_count=3}
     ``` {.python .cell-code}
     import numpy as np
     import pandas as pd
@@ -210,8 +210,8 @@ The following is an example usage of this method:
 
     ::: {.cell-output .cell-output-stdout}
     ```
-    (Unadjusted) F stat : 52.81535560457474
-    Effective F stat : 48.61288119858675
+    (Unadjusted) F stat : 52.81535560457512
+    Effective F stat : 48.61288119858717
     ```
     :::
     :::

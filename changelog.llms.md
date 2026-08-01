@@ -552,24 +552,24 @@ gb.tidy()
 
 |  | coefficients | ci_lower | ci_upper | panels |
 |----|----|----|----|----|
-| direct_effect | 1.412165 | 0.838176 | 1.940316 | Levels (units) |
-| full_effect | 1.041753 | 0.968154 | 1.096492 | Levels (units) |
-| explained_effect | 0.370412 | -0.208285 | 0.944014 | Levels (units) |
-| unexplained_effect | 1.041753 | 0.968154 | 1.096492 | Levels (units) |
-| x22 | 0.061930 | -0.323727 | 0.455988 | Levels (units) |
-| x23 | 0.308483 | 0.110461 | 0.492843 | Levels (units) |
+| direct_effect | 1.412165 | 0.669131 | 2.155997 | Levels (units) |
+| full_effect | 1.041753 | 0.987836 | 1.095245 | Levels (units) |
+| explained_effect | 0.370412 | -0.329896 | 1.079514 | Levels (units) |
+| unexplained_effect | 1.041753 | 0.987836 | 1.095245 | Levels (units) |
+| x22 | 0.061930 | -0.328181 | 0.509235 | Levels (units) |
+| x23 | 0.308483 | -0.001715 | 0.572093 | Levels (units) |
 | direct_effect | 1.000000 | 1.000000 | 1.000000 | Share of Full Effect |
-| full_effect | 0.737699 | 0.518398 | 1.265974 | Share of Full Effect |
-| explained_effect | 0.262301 | -0.265974 | 0.481602 | Share of Full Effect |
-| unexplained_effect | 0.737699 | 0.518398 | 1.265974 | Share of Full Effect |
-| x22 | 0.043855 | -0.398882 | 0.232137 | Share of Full Effect |
-| x23 | 0.218446 | 0.129711 | 0.255512 | Share of Full Effect |
-| direct_effect | 3.812414 | -1.814136 | 135.499288 | Share of Explained Effect |
-| full_effect | 2.812414 | -2.814136 | 134.499288 | Share of Explained Effect |
+| full_effect | 0.737699 | 0.499792 | 1.621960 | Share of Full Effect |
+| explained_effect | 0.262301 | -0.621960 | 0.500208 | Share of Full Effect |
+| unexplained_effect | 0.737699 | 0.499792 | 1.621960 | Share of Full Effect |
+| x22 | 0.043855 | -0.577821 | 0.240645 | Share of Full Effect |
+| x23 | 0.218446 | -0.044138 | 0.277313 | Share of Full Effect |
+| direct_effect | 3.812414 | -0.506437 | 14.951423 | Share of Explained Effect |
+| full_effect | 2.812414 | -1.506437 | 13.951423 | Share of Explained Effect |
 | explained_effect | 1.000000 | 1.000000 | 1.000000 | Share of Explained Effect |
-| unexplained_effect | 2.812414 | -2.814136 | 134.499288 | Share of Explained Effect |
-| x22 | 0.167192 | -22.829322 | 1.158331 | Share of Explained Effect |
-| x23 | 0.832808 | -0.158331 | 23.829322 | Share of Explained Effect |
+| unexplained_effect | 2.812414 | -1.506437 | 13.951423 | Share of Explained Effect |
+| x22 | 0.167192 | -1.645260 | 0.782862 | Share of Explained Effect |
+| x23 | 0.832808 | 0.217138 | 2.645260 | Share of Explained Effect |
 
 or produce a `GT` table:
 
@@ -585,24 +585,24 @@ gb.etable(
 |  | Initial Difference | Adjusted Difference | Explained Difference |
 | Levels (units) |  |  |  |
 | x1 | 1.412 | 1.042 | 0.370 |
-|  | \[0.838, 1.940\] | \[0.968, 1.096\] | \[-0.208, 0.944\] |
+|  | \[0.669, 2.156\] | \[0.988, 1.095\] | \[-0.330, 1.080\] |
 | x22 | \- | \- | 0.062 |
-|  | \- | \- | \[-0.324, 0.456\] |
+|  | \- | \- | \[-0.328, 0.509\] |
 | x23 | \- | \- | 0.308 |
-|  | \- | \- | \[0.110, 0.493\] |
+|  | \- | \- | \[-0.002, 0.572\] |
 | Share of Full Effect |  |  |  |
 | x1 | 1.000 | 0.738 | 0.262 |
-|  | \- | \[0.518, 1.266\] | \[-0.266, 0.482\] |
+|  | \- | \[0.500, 1.622\] | \[-0.622, 0.500\] |
 | x22 | \- | \- | 0.044 |
-|  | \- | \- | \[-0.399, 0.232\] |
+|  | \- | \- | \[-0.578, 0.241\] |
 | x23 | \- | \- | 0.218 |
-|  | \- | \- | \[0.130, 0.256\] |
+|  | \- | \- | \[-0.044, 0.277\] |
 | Share of Explained Effect |  |  |  |
 | x1 | \- | \- | 1.000 |
 | x22 | \- | \- | 0.167 |
-|  | \- | \- | \[-22.829, 1.158\] |
+|  | \- | \- | \[-1.645, 0.783\] |
 | x23 | \- | \- | 0.833 |
-|  | \- | \- | \[-0.158, 23.829\] |
+|  | \- | \- | \[0.217, 2.645\] |
 | Decomposition variable: x1. Control Variables: x21. CIs are computed using B = 10 bootstrap replications using iid sampling.Col 1: Adjusted Difference (by x21) - Coefficient on x1 in short regression. Col 2: Adjusted Difference - Coefficient on x1 in long regression. Col 3: Explained Difference - Difference in coefficients of x1 in short and long regression. Panel 1: Levels (units). Panel 2: Share of Full Effect: Levels normalized by coefficient of the short regression. Panel 3: Share of Explained Effect: Levels normalized by coefficient of the long regression. |  |  |  |
 
 As can be seen, we by default now return normalized (and not just absolute) effects.
@@ -663,8 +663,8 @@ toc = time.time()
 print(f"Rust backend took {toc-tic}.")
 ```
 
-    Numba backend took 3.897117853164673.
-    Rust backend took 4.400740146636963.
+    Numba backend took 4.865095615386963.
+    Rust backend took 5.107356786727905.
 
 Results are also matching =)
 
@@ -989,9 +989,9 @@ fit2.coef()[0:8]
 
   |           | 2.5%      | 97.5%     |
   |-----------|-----------|-----------|
-  | Intercept | 0.379236  | 1.178462  |
-  | D         | -1.759896 | -1.045337 |
-  | f1        | -0.014138 | 0.023687  |
+  | Intercept | 0.377276  | 1.180422  |
+  | D         | -1.761649 | -1.043585 |
+  | f1        | -0.014231 | 0.023779  |
 
 - Adds support for the causal cluster variance estimator by [Abadie et al. (QJE, 2023)](https://academic.oup.com/qje/article/138/1/1/6750017) for OLS via the `.ccv()` method.
 
@@ -1001,7 +1001,7 @@ fit2.coef()[0:8]
 
   |      | Estimate            | Std. Error | t value   | Pr(\>\|t\|) | 2.5%      | 97.5%     |
   |------|---------------------|------------|-----------|-------------|-----------|-----------|
-  | CCV  | -1.4026168622179935 | 0.262982   | -5.333503 | 0.000045    | -1.955122 | -0.850112 |
+  | CCV  | -1.4026168622179935 | 0.267886   | -5.235872 | 0.000056    | -1.965425 | -0.839809 |
   | CRV1 | -1.402617           | 0.205132   | -6.837621 | 0.000002    | -1.833584 | -0.97165  |
 
 ## PyFixest 0.16.0
