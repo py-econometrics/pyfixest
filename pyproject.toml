@@ -161,23 +161,37 @@ convention = "numpy"
 docstring-code-format = true
 docstring-code-line-length = 88
 
-[tool.mypy]
+[tool.ty]
 
-[[tool.mypy.overrides]]
-module = [
-    "pandas.*",
-    "numpy.*",
-    "scipy.*",
-    "numba.*",
-    "lets_plot.*",
-    "formulaic.*",
-    "wildboottest.*",
-    "tabulate.*",
-    "joblib.*",
-    "narwhals.*",
-    "tqdm.*",
-]
-ignore_missing_imports = true
+[tool.ty.analysis]
+# Keep optional and external imports equivalent to mypy's ignore_missing_imports.
+# Narrowed to the actual dependency list once the findings are cleared.
+allowed-unresolved-imports = ["**"]
+
+[tool.ty.environment]
+# Check against the oldest supported interpreter, even though the `ty` hook
+# resolves third-party packages from the py312 environment.
+python-version = "3.10"
+
+[tool.ty.src]
+include = ["pyfixest"]
+
+[tool.ty.terminal]
+error-on-warning = false
+output-format = "concise"
+
+[tool.ty.rules]
+# ty's default rules are stricter than the existing mypy baseline. Report the
+# current compatibility findings as warnings while they are migrated.
+call-non-callable = "warn"
+invalid-argument-type = "warn"
+invalid-assignment = "warn"
+invalid-return-type = "warn"
+no-matching-overload = "warn"
+not-iterable = "warn"
+not-subscriptable = "warn"
+unresolved-attribute = "warn"
+unsupported-operator = "warn"
 
 # --------------------------------------------------------------------------------------
 # pixi configuration
@@ -306,7 +320,11 @@ docs-preview = { cmd = "quarto preview docs", depends-on = ["docs-build"], env =
 # -- lint feature ----------------------------------------------------------------------
 
 [tool.pixi.feature.lint.dependencies]
+python = "~=3.12.0"
 prek = ">=0.3.4"
+
+[tool.pixi.feature.lint.pypi-dependencies]
+ty = "==0.0.64"
 
 [tool.pixi.feature.lint.tasks]
 lint = { cmd = "prek run --all-files", description = "Run all pre-commit hooks via prek" }

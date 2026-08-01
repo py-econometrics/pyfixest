@@ -135,7 +135,7 @@ Signatures and typing:
 - In docstring Parameters sections, spell types as in the signature
   (`str | None`, not `Optional[str]`). Older docstrings mix spellings — don't
   copy them.
-- mypy runs on `pyfixest/` only; `NDArray[np.float64]` in the `.pyi` stubs.
+- ty checks `pyfixest/` only; `NDArray[np.float64]` in the `.pyi` stubs.
 
 Docstrings (ruff enforces the NumPy convention):
 - Required on public functions/methods/classes; not required in `tests/`.
@@ -291,7 +291,8 @@ pixi run test-all                                  # everything
 
 pixi run -e lint prek run ruff-format --files <changed files>
 pixi run -e lint prek run ruff-check  --files <changed files>
-pixi run -e lint prek run mypy       --files <changed files>
+pixi install -e py312                              # once, so `ty` has types to read
+pixi run -e lint prek run ty                       # whole project, not file-scoped
 pixi run lint                                      # all hooks, all files
 
 pixi run docs-render                               # full docs (runs quartodoc docs-build first)
@@ -318,12 +319,12 @@ once.
 
 - Never commit to `master` (a pre-commit hook blocks it); branch first.
 - Run lint and type checks on the changed files before each commit: `ruff-format`,
-  then `ruff-check`, then `mypy` (commands under "Commands"). The same hooks gate
+  then `ruff-check`, then `ty` (commands under "Commands"). The same hooks gate
   the PR in CI, so a red check blocks the merge. `ruff-format` and `ruff-check
   --fix` rewrite files in place — stage the result before committing. These fire
   automatically only if `prek install` set up the git hook, which agents and fresh
   clones usually haven't done, so run them explicitly rather than relying on it.
-  mypy is scoped to `pyfixest/`, not `tests/`.
+  ty is scoped to `pyfixest/`, not `tests/`.
 - Commit subjects: a conventional prefix plus one short, precise, imperative
   line that says what changed — e.g. `feat: add transform building blocks`,
   `refactor: make FixestMulti a pure container`, `chore: remove dead code from
