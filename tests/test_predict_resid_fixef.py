@@ -78,7 +78,7 @@ def test_poisson_prediction_internally(data, weights, fml):
     [
         "Y~ X1 | f1",
         "Y~ X1 | f1 + f2",
-        "Y~ X1 | f1^f2",
+        "Y~ X1 | f1:f2",
     ],
 )
 def test_vs_fixest(data, fml):
@@ -92,14 +92,15 @@ def test_vs_fixest(data, fml):
     fepois_mod.fixef(atol=1e-12, btol=1e-12)
 
     # fixest estimation
+    r_fml = fml.replace("f1:f2", "f1^f2")
     r_fixest_ols = fixest.feols(
-        ro.Formula(fml),
+        ro.Formula(r_fml),
         data=data,
         se="hetero",
     )
 
     r_fixest_pois = fixest.fepois(
-        ro.Formula(fml),
+        ro.Formula(r_fml),
         data=data,
         se="hetero",
     )
@@ -173,7 +174,7 @@ def test_vs_fixest(data, fml):
     data_off["off"] = np.log(np.random.default_rng(0).uniform(0.5, 3.0, len(data_off)))
     fepois_mod_off = pf.fepois(fml=fml, data=data_off, offset="off")
     r_fixest_pois_off = fixest.fepois(
-        ro.Formula(fml), data=data_off, offset=ro.Formula("~off")
+        ro.Formula(r_fml), data=data_off, offset=ro.Formula("~off")
     )
     data2_off = data_off.copy()[1:500]
     if not np.allclose(
@@ -251,7 +252,7 @@ def test_predict_nas():
     [
         "Y~ X1 | f1",
         "Y~ X1 | f1 + f2",
-        "Y~ X1 | f1^f2",
+        "Y~ X1 | f1:f2",
     ],
 )
 def test_new_fixef_level(data, fml):
@@ -259,8 +260,9 @@ def test_new_fixef_level(data, fml):
 
     feols_mod = pf.feols(fml=fml, data=data, vcov="HC1")
     # fixest estimation
+    r_fml = fml.replace("f1:f2", "f1^f2")
     r_fixest_ols = fixest.feols(
-        ro.Formula(fml),
+        ro.Formula(r_fml),
         data=data,
         se="hetero",
     )

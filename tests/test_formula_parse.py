@@ -7,6 +7,8 @@ This module contains:
 - Part 3: Edge case tests
 """
 
+import warnings
+
 import formulaic
 import numpy as np
 import pytest
@@ -14,7 +16,10 @@ import pytest
 import pyfixest as pf
 from pyfixest.errors import FormulaSyntaxError
 from pyfixest.estimation.formula.parse import Formula, _expand_all_multiple_estimation
-from pyfixest.estimation.formula.utils import _get_position_of_first_parenthesis_pair
+from pyfixest.estimation.formula.utils import (
+    _get_position_of_first_parenthesis_pair,
+    _preprocess_fixed_effect_interactions,
+)
 
 # =============================================================================
 # Fixtures
@@ -477,6 +482,73 @@ class TestFormulaParse:
         assert "f1 + f2" in result
 
 
+class TestFixedEffectInteractions:
+    """Tests for canonical and legacy fixed-effect interaction syntax."""
+
+    def test_canonical_interaction_parses_without_warning(self):
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", DeprecationWarning)
+            parsed = Formula.parse("Y ~ X1 | f1:f2")[0]
+
+        assert str(parsed._formula.rhs[1]) == "1 + f1:f2"
+        assert parsed.formula == "Y ~ X1 | f1:f2"
+
+    def test_legacy_interaction_warns_once_and_is_canonical(self):
+        canonical = Formula.parse("Y ~ X1 | f1:f2")[0]
+
+        with pytest.warns(
+            DeprecationWarning,
+            match=r"Instead of `Y ~ X1 \| f1\^f2` use `Y ~ X1 \| f1:f2`",
+        ) as caught:
+            legacy = Formula.parse("Y ~ X1 | f1^f2")[0]
+
+        assert len(caught) == 1
+        assert legacy._formula.rhs[1] == canonical._formula.rhs[1]
+        assert legacy.formula == canonical.formula == "Y ~ X1 | f1:f2"
+
+    @pytest.mark.parametrize(
+        "fixed_effects,expected",
+        [
+            ("f1^f2^f3", "f1:f2:f3"),
+            ("f1^f2:f3 + f4^f5", "f1:f2:f3 + f4:f5"),
+        ],
+    )
+    def test_legacy_chained_and_mixed_interactions(self, fixed_effects, expected):
+        with pytest.warns(DeprecationWarning) as caught:
+            parsed = Formula.parse(f"Y ~ X1 | {fixed_effects}")[0]
+
+        assert len(caught) == 1
+        assert set(str(parsed.fixed_effects).split(" + ")) == set(expected.split(" + "))
+        assert "^" not in parsed.formula
+
+    def test_rewrite_is_scoped_to_top_level_fixed_effects(self):
+        formula = "Y^out ~ (X1 + X2)^2 + [X3 ~ (Z1 + Z2)^2] | I(f1^2) + f2^f3"
+
+        with pytest.warns(DeprecationWarning) as caught:
+            translated = _preprocess_fixed_effect_interactions(formula)
+
+        assert len(caught) == 1
+        assert translated == (
+            "Y^out ~ (X1 + X2)^2 + [X3 ~ (Z1 + Z2)^2] | I(f1^2) + f2:f3"
+        )
+
+    def test_formulaic_power_operators_match_outside_fixed_effects(self):
+        caret = Formula.parse("Y ~ (X1 + X2)^2 | f1:f2")[0]
+        double_star = Formula.parse("Y ~ (X1 + X2)**2 | f1:f2")[0]
+
+        assert caret._formula.rhs[0] == double_star._formula.rhs[0]
+        assert str(caret._formula.rhs[0]) == "1 + X1 + X2 + X1:X2"
+
+    def test_nested_fe_and_iv_power_expressions_are_untouched(self):
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", DeprecationWarning)
+            nested_fe = Formula.parse("Y ~ X1 | I(f1^2)")[0]
+            iv_power = Formula.parse("Y ~ X1 + [X2 ~ (Z1 + Z2)^2] | f1:f2")[0]
+
+        assert str(nested_fe.fixed_effects) == "I(f1 ^ 2)"
+        assert str(iv_power.instruments) == "1 + Z1 + Z2 + Z1:Z2"
+
+
 class TestValidation:
     """Tests for formula validation / error handling."""
 
@@ -573,6 +645,18 @@ def test_explicit_no_fe_iv_coefficients_match(test_data):
 
     assert np.allclose(fit_implicit.coef().values, fit_explicit.coef().values)
     assert np.allclose(fit_implicit.se().values, fit_explicit.se().values)
+
+
+def test_interacted_fixed_effect_matches_manual_interaction(test_data):
+    """Interacted fixed effects match an explicitly constructed group."""
+    data = test_data.dropna(subset=["Y", "X1", "f1", "f2"]).copy()
+    data["f1_f2"] = list(zip(data["f1"], data["f2"], strict=True))
+
+    interacted = pf.feols("Y ~ X1 | f1:f2", data=data, fixef_rm="none")
+    manual = pf.feols("Y ~ X1 | f1_f2", data=data, fixef_rm="none")
+
+    np.testing.assert_allclose(interacted.coef(), manual.coef())
+    np.testing.assert_allclose(interacted.se(), manual.se())
 
 
 # =============================================================================

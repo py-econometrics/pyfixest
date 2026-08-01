@@ -78,9 +78,9 @@ ols_fmls = [
 
 ols_but_not_poisson_fml = [
     ("log(Y) ~ X1"),
-    ("Y~X1|f2^f3"),
-    ("Y~X1|f1 + f2^f3"),
-    ("Y~X1|f2^f3^f1"),
+    ("Y~X1|f2:f3"),
+    ("Y~X1|f1 + f2:f3"),
+    ("Y~X1|f2:f3:f1"),
 ]
 
 empty_models = [
@@ -103,7 +103,7 @@ iv_fmls = [
     # "log(Y) ~ X2 + C(f1) | X1 ~ Z1",
     "Y ~ 1 | f1 | X1 ~ Z1",
     "Y ~ 1 | f1 + f3 | X1 ~ Z1",
-    "Y ~ 1 | f1^f2 | X1 ~ Z1",
+    "Y ~ 1 | f1:f2 | X1 ~ Z1",
     "Y ~  X2| f3 | X1 ~ Z1",
     # tests of overidentified models
     "Y ~ 1 | X1 ~ Z1 + Z2",
@@ -1480,6 +1480,7 @@ def _py_fml_to_r_fml(py_fml):
     syntax converter,
     i.e. 'Y1 + X2 ~ X' -> 'c(Y1, Y2) ~ X'
     """
+    py_fml = _fixed_effect_interactions_to_fixest(py_fml)
     py_fml = py_fml.replace(" ", "").replace("C(", "as.factor(")
 
     fml2 = py_fml.split("|")
@@ -1507,7 +1508,17 @@ def _c_to_as_factor(py_fml):
     # Use re.sub() to perform the replacement
     r_fml = re.sub(pattern, replacement, py_fml)
 
-    return r_fml
+    return _fixed_effect_interactions_to_fixest(r_fml)
+
+
+def _fixed_effect_interactions_to_fixest(fml):
+    """Translate PyFixest fixed-effect interactions to R fixest syntax."""
+    parts = fml.split("|")
+    for index, part in enumerate(parts[1:], start=1):
+        if "~" not in part:
+            parts[index] = part.replace(":", "^")
+            break
+    return "|".join(parts)
 
 
 def get_data_r(fml, data):
@@ -1617,7 +1628,7 @@ ssc_fmls = [
     "Y ~ X1 + X2 | f2",
     "Y ~ X1 + X2 | f1 + f2",
     "Y ~ X1 + X2 | f1 + f2 + f3",
-    "Y ~ X1 + X2 | f1^f2",
+    "Y ~ X1 + X2 | f1:f2",
 ]
 
 
@@ -1641,7 +1652,7 @@ def test_ssc(fml, dropna, weights, vcov, k_adj, G_adj, k_fixef, model):
         )
 
     r_kwargs = {
-        "fml": ro.Formula(fml),
+        "fml": ro.Formula(_fixed_effect_interactions_to_fixest(fml)),
         "vcov": vcov if vcov in ["iid", "hetero"] else ro.Formula(f"~{vcov}"),
         "data": df,
         "ssc": fixest.ssc(k_adj, k_fixef, False, G_adj, "min", "min"),
