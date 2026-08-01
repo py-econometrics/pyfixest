@@ -34,8 +34,8 @@ class FixedEffect:
         Internal encoded fixed-effect name used as the corresponding model-matrix
         column, for example `__fixed_effect__(firm)`.
     variable : str
-        User-facing fixed-effect name. Interacted variables are joined with `^`,
-        for example `firm^year`.
+        User-facing fixed-effect name. Interacted variables are joined with `:`,
+        for example `firm:year`.
     codes : NDArray[np.int64]
         Integer codes identifying fixed-effect levels observed in the estimation
         sample after singleton removal.
@@ -220,7 +220,7 @@ def warn_on_unseen_fixed_effect_levels(
             missing = newdata.loc[unseen, source_columns].drop_duplicates()
             warnings.warn(
                 f"{missing.shape[0]} unseen level(s) for fixed effect "
-                f"`{'^'.join(source_columns)}`: {missing.iloc[:20]}\n"
+                f"`{':'.join(source_columns)}`: {missing.iloc[:20]}\n"
                 "Predictions for affected observations will be NaN",
                 UserWarning,
                 stacklevel=3,
@@ -250,7 +250,7 @@ def get_fixed_effect_encoding_data(
         column for column in encoding.columns if column != FIXED_EFFECT_ENCODING
     ]
     return (
-        "^".join(value_columns),
+        ":".join(value_columns),
         encoding[FIXED_EFFECT_ENCODING].to_numpy(dtype=np.int64),
         tuple(encoding[column].to_numpy(copy=True) for column in value_columns),
     )

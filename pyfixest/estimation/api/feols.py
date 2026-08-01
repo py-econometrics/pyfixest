@@ -62,7 +62,7 @@ def feols(
         Syntax: "Y ~ X1 + X2 | FE1 + FE2 | X1 ~ Z1". "|" separates dependent variable,
         fixed effects, and instruments. Special syntax includes stepwise regressions,
         cumulative stepwise regression, multiple dependent variables,
-        interaction of variables (i(X1,X2)), and interacted fixed effects (fe1^fe2).
+        interaction of variables (i(X1,X2)), and interacted fixed effects (fe1:fe2).
 
     data : DataFrameType
         A pandas or polars dataframe containing the variables in the formula.

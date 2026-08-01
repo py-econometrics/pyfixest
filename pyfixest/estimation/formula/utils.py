@@ -10,16 +10,17 @@ from pyfixest.errors import FormulaSyntaxError
 def _str_split_by_sep(string: str, separator: str = "+") -> list[str]:
     """
     Split on top-level *separator*, skipping any occurrences nested inside
-    parentheses.  The main use-case is splitting formula terms on ``+``
-    without breaking apart multi-estimation operators like ``sw(a, b + c)``.
+    brackets. The main use-case is splitting formula terms on ``+`` without
+    breaking apart multi-estimation operators like ``sw(a, b + c)`` or
+    Formulaic multistage expressions like ``[x ~ z1 + z2]``.
     """
     args: list[str] = []
     depth = 0
     current: list[str] = []
     for c in string:
-        if c == "(":
+        if c in "([{":
             depth += 1
-        elif c == ")":
+        elif c in ")]}":
             depth -= 1
         elif c == separator and depth == 0:
             args.append("".join(current).strip())
@@ -82,7 +83,31 @@ _MULTIPLE_ESTIMATION_PATTERN = re.compile(
 
 def _preprocess(formula: str) -> str:
     formula = _preprocess_fixest_instrumental_variable(formula)
+    formula = _preprocess_fixed_effect_interactions(formula)
     formula = _preprocess_fixest_multiple_dependents(formula)
+    return formula
+
+
+def _preprocess_fixed_effect_interactions(formula: str) -> str:
+    """Translate legacy top-level fixed-effect interactions to Formulaic syntax."""
+    parts = _str_split_by_sep(formula, separator="|")
+    if len(parts) < 2:
+        return formula
+
+    fixed_effect_parts = _str_split_by_sep(parts[1], separator="^")
+    if len(fixed_effect_parts) == 1:
+        return formula
+
+    formula_old = formula
+    parts[1] = ":".join(fixed_effect_parts)
+    formula = " | ".join(parts)
+    warnings.warn(
+        "The `^` operator for fixed-effect interactions is deprecated and will "
+        "throw an error in a future version. "
+        f"Instead of `{formula_old}` use `{formula}`",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return formula
 
 

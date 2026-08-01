@@ -140,7 +140,7 @@ def test_model_spec_get_model_matrix_prediction_roundtrip(
         "Y ~ X1 + i(f1)",
         "Y ~ X1 + C(f1)",
         "Y ~ X1 | f1",
-        "Y ~ X1 | f1^f2",
+        "Y ~ X1 | f1:f2",
     ]:
         fit = pf.feols(fml, data=data)
         pred = fit.predict(newdata=data.iloc[:20])

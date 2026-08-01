@@ -85,7 +85,7 @@ def feglm(
         - Cumulative stepwise regression (csw, csw0)
         - Multiple dependent variables (Y1 + Y2 ~ X)
         - Interaction of variables (i(X1,X2))
-        - Interacted fixed effects (fe1^fe2)
+        - Interacted fixed effects (fe1:fe2)
         Compatible with formula parsing via the formulaic module.
 
     data : DataFrameType

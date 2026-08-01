@@ -265,12 +265,12 @@ def test_predict_newdata_poly_transform(fml):
 @pytest.mark.parametrize(
     "fml",
     [
-        "Y ~ X1 | f1^f2",
-        "Y ~ X1 + X2 | f1^f2",
+        "Y ~ X1 | f1:f2",
+        "Y ~ X1 + X2 | f1:f2",
     ],
 )
 def test_predict_newdata_fe_interaction(fml):
-    """Test predict(newdata=...) works for models with fixed-effect interactions (^)."""
+    """Test predict(newdata=...) works for fixed-effect interactions."""
     data = get_data(N=500, seed=42).dropna()
     newdata = data.iloc[:100]
 
@@ -461,12 +461,14 @@ def test_fixef_nan_fe_level_excluded():
 
 
 def test_fixef_interacted_labels():
-    """Interacted FEs decode to `g^h` keys with `val1,val2` level labels."""
+    """Interacted FEs decode to `g:h` keys with `val1,val2` level labels."""
     df = _fixef_test_data()
-    fit = feols("Y ~ X1 | g^h", data=df)
+    fit = feols("Y ~ X1 | g:h", data=df)
     coefficients = fit.fixef(atol=1e-12, btol=1e-12)
 
-    assert coefficients["variable"].unique().tolist() == ["g^h"]
+    assert fit._fml == "Y ~ X1 | g:h"
+    assert fit._fixef == "g:h"
+    assert coefficients["variable"].unique().tolist() == ["g:h"]
     levels = set(coefficients["level"])
     assert all("," in level for level in levels)
     observed = {f"{g},{h}" for g, h in zip(df["g"], df["h"], strict=True)}
@@ -475,6 +477,12 @@ def test_fixef_interacted_labels():
     np.testing.assert_allclose(
         fit.predict(), fit.predict(newdata=df), rtol=1e-6, atol=1e-8
     )
+
+    newdata = df.iloc[:2].copy()
+    newdata.iloc[0, newdata.columns.get_loc("g")] = "unseen"
+    with pytest.warns(UserWarning, match=r"fixed effect `g:h`"):
+        prediction = fit.predict(newdata=newdata)
+    assert np.isnan(prediction[0])
 
 
 def test_fixef_excludes_singleton_levels_from_prediction():
@@ -489,7 +497,7 @@ def test_fixef_excludes_singleton_levels_from_prediction():
     )
 
     with pytest.warns(UserWarning, match="1 singleton fixed effect"):
-        fit = feols("Y ~ X1 | g^h", data=df)
+        fit = feols("Y ~ X1 | g:h", data=df)
 
     prediction = fit.predict(newdata=df)
     fixed_effects = fit.fixef()
