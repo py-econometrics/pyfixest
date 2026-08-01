@@ -365,8 +365,9 @@ def create_model_matrix(
         }
         | {**capture_context(context)},
     )
-    drop_rows: set[int] = set(range(n_observations)).difference(
-        model_matrix[_ModelMatrixKey.main]["lhs"].index
+    drop_rows = _dropped_rows(
+        kept=model_matrix[_ModelMatrixKey.main]["lhs"].index,
+        n_observations=n_observations,
     )
     return ModelMatrix(
         model_matrix,
@@ -374,6 +375,17 @@ def create_model_matrix(
         drop_singletons=drop_singletons,
         drop_intercept=drop_intercept,
     )
+
+
+def _dropped_rows(kept: pd.Index, n_observations: int) -> set[int]:
+    """Row labels in `range(n_observations)` that `kept` does not contain.
+
+    `create_model_matrix` resets the data index beforehand, so row labels and
+    row positions coincide and the complement can be taken with a mask.
+    """
+    is_kept = np.zeros(n_observations, dtype=bool)
+    is_kept[kept.to_numpy()] = True
+    return set(np.flatnonzero(~is_kept).tolist())
 
 
 def _get_formulaic_formula(
