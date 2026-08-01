@@ -19,6 +19,9 @@ from pyfixest.errors import VcovTypeNotSupportedError
 from pyfixest.estimation.api.utils import _ALL_SAMPLE, _AllSampleSentinel
 from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
 from pyfixest.estimation.formula import model_matrix as model_matrix_fixest
+from pyfixest.estimation.formula.formulaic_compat import (
+    materialize_model_spec_with_unseen_mask,
+)
 from pyfixest.estimation.formula.model_matrix import _ModelMatrixKey
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
@@ -57,10 +60,7 @@ from pyfixest.estimation.post_estimation.fixed_effects import (
     predict_fixed_effects,
     warn_on_unseen_fixed_effect_levels,
 )
-from pyfixest.estimation.post_estimation.prediction import (
-    _compute_prediction_error,
-    _rows_with_unseen_categories,
-)
+from pyfixest.estimation.post_estimation.prediction import _compute_prediction_error
 from pyfixest.estimation.post_estimation.ritest import (
     _HAS_NUMBA,
     _decode_resampvar,
@@ -1860,16 +1860,14 @@ class Feols(ResultAccessorMixin):
             # Use na_action="drop" on each sub-spec separately because dependent variable
             # may not be available in newdata, then intersect indices so a NaN in *any* variable
             # (covariate or FE) marks the whole row as NaN in the output.
-            X_mm = self._model_spec[_ModelMatrixKey.main].rhs.get_model_matrix(
-                newdata, context=context, na_action="drop"
+            rhs_spec = self._model_spec[_ModelMatrixKey.main].rhs
+            X_mm, unseen = materialize_model_spec_with_unseen_mask(
+                rhs_spec, newdata, context
             )
             valid_idx = X_mm.index.to_numpy()
             # rows with a categorical level unseen during fitting (in C()/i()) would
             # be silently encoded as the reference level -> drop them to NaN instead,
             # matching how unseen fixed-effect levels are handled below.
-            unseen = _rows_with_unseen_categories(
-                self._model_spec[_ModelMatrixKey.main].rhs, newdata
-            )
             valid_idx = valid_idx[~unseen[valid_idx]]
             if self._has_fixef:
                 fe_spec = self._model_spec[_ModelMatrixKey.fixed_effects]

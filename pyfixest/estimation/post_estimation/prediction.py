@@ -1,50 +1,6 @@
-from typing import TYPE_CHECKING
-
 import numpy as np
 import pandas as pd
 from scipy.stats import t
-
-from pyfixest.estimation.formula.formulaic_compat import (
-    iter_model_spec_categorical_levels,
-)
-from pyfixest.estimation.formula.transforms.factor_interaction import (
-    bin_mapping_state_key,
-)
-
-if TYPE_CHECKING:
-    import formulaic
-
-
-def _rows_with_unseen_categories(
-    rhs_spec: "formulaic.ModelSpec", newdata: pd.DataFrame
-) -> np.ndarray:
-    """
-    Flag `newdata` rows that carry a categorical level not seen during fitting.
-
-    When a model matrix is rebuilt from a stored `ModelSpec`, both formulaic's
-    native `C()` and pyfixest's `i()` silently cast unseen categorical levels to
-    the reference level (an all-zero dummy row), which yields a finite-but-wrong
-    prediction. We mark those rows so the caller can return NaN for them - the
-    same outcome already used for unseen fixed-effect levels.
-
-    Returns
-    -------
-    np.ndarray
-        Boolean mask of length `len(newdata)`; True where a row must be dropped.
-    """
-    mask = np.zeros(newdata.shape[0], dtype=bool)
-    for variable, levels, state in iter_model_spec_categorical_levels(
-        rhs_spec, newdata
-    ):
-        column = newdata[variable]
-        # For binned i() terms, apply the stored bin mapping before checking
-        # so that valid raw levels (e.g. "a" -> "low") are not flagged unseen.
-        bin_key = bin_mapping_state_key(variable)
-        if bin_key in state:
-            column = column.replace(state[bin_key])
-        unseen = ~column.isin(levels) & column.notna()
-        mask |= unseen.to_numpy()
-    return mask
 
 
 def _get_prediction_se(model, X: np.ndarray) -> np.ndarray:
