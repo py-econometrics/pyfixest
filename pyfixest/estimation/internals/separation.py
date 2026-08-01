@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 import warnings
 from importlib import import_module
-from typing import Protocol
+from typing import Protocol, cast
 
 import numpy as np
 import pandas as pd
@@ -102,6 +102,12 @@ class _SeparationMethod(Protocol):
             Set of indices of separated observations.
         """
         ...
+
+
+class _PredictableModel(Protocol):
+    _data: pd.DataFrame
+
+    def predict(self) -> np.ndarray: ...
 
 
 def _check_for_separation_fe(
@@ -229,7 +235,9 @@ def _check_for_separation_ir(
         iteration += 1
         # regress U on X
         # TODO: check acceleration in ppmlhdfe's implementation: https://github.com/sergiocorreia/ppmlhdfe/blob/master/src/ppmlhdfe_separation_relu.mata#L135
-        fitted = feols(fml_separation, data=tmp, weights="omega")
+        fitted = cast(
+            _PredictableModel, feols(fml_separation, data=tmp, weights="omega")
+        )
         tmp["Uhat"] = pd.Series(
             data=fitted.predict(), index=fitted._data.index, name="Uhat"
         )

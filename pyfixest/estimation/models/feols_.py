@@ -4,7 +4,7 @@ import re
 import warnings
 from collections.abc import Mapping
 from importlib import import_module
-from typing import Any, Literal, cast
+from typing import Any, Literal, cast, overload
 
 import numpy as np
 import pandas as pd
@@ -27,9 +27,12 @@ from pyfixest.estimation.internals.literals import (
     PredictionErrorOptions,
     PredictionType,
     SolverOptions,
+    WeightsTypeOptions,
     _validate_literal_argument,
 )
 from pyfixest.estimation.internals.vcov_ import (
+    HacVcovTypeOptions,
+    HeteroVcovTypeOptions,
     vcov_crv1,
     vcov_crv3_fast,
     vcov_hac,
@@ -256,7 +259,7 @@ class Feols(ResultAccessorMixin):
         drop_singletons: bool,
         drop_intercept: bool,
         weights: str | None,
-        weights_type: str | None,
+        weights_type: WeightsTypeOptions,
         collin_tol: float,
         lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
         solver: SolverOptions = "np.linalg.solve",
@@ -315,6 +318,7 @@ class Feols(ResultAccessorMixin):
         self._copy_data = copy_data
         self._lean = lean
         self._context = capture_context(context)
+        self._lag: int | None = None
 
         self._support_crv3_inference = True
         self._support_hac_inference = True
@@ -329,6 +333,7 @@ class Feols(ResultAccessorMixin):
         self._fml = FixestFormula.formula
         self._has_fixef = False
         self._fixef = FixestFormula.fixed_effects
+        self._k_fe: pd.Series = pd.Series(dtype=int)
         # self._coefnames = None
         self._icovars = None
 
@@ -410,7 +415,7 @@ class Feols(ResultAccessorMixin):
             context=self._context,
         )
 
-        self._Y = model_matrix.dependent
+        self._Y: pd.DataFrame | np.ndarray = model_matrix.dependent
         self._Y_untransformed = model_matrix.dependent.copy()
         self._X = model_matrix.independent
         self._fe = model_matrix.fixed_effects
@@ -438,7 +443,11 @@ class Feols(ResultAccessorMixin):
         self._has_fixef = self._fe is not None
         self._fixef = self.FixestFormula.fixed_effects
 
-        self._k_fe = self._fe.nunique(axis=0) if self._has_fixef else None
+        if self._has_fixef:
+            assert isinstance(self._fe, pd.DataFrame)
+            self._k_fe = self._fe.nunique(axis=0)
+        else:
+            self._k_fe = pd.Series(dtype=int)
         self._n_fe = len(self._k_fe) if self._has_fixef else 0
 
         # update data
@@ -491,6 +500,9 @@ class Feols(ResultAccessorMixin):
     def demean(self):
         "Demean the dependent variable and covariates by the fixed effect(s)."
         if self._has_fixef:
+            assert isinstance(self._Y, pd.DataFrame)
+            assert isinstance(self._X, pd.DataFrame)
+            assert isinstance(self._fe, pd.DataFrame)
             self._Yd, self._Xd, _ = self._demean_cache.demean_yx(
                 self._Y,
                 self._X,
@@ -517,6 +529,8 @@ class Feols(ResultAccessorMixin):
 
     def to_array(self):
         "Convert estimation data frames to np arrays."
+        assert isinstance(self._Yd, pd.DataFrame)
+        assert isinstance(self._Xd, pd.DataFrame)
         self._Y, self._X = (
             self._Yd.to_numpy(),
             self._Xd.to_numpy(),
@@ -531,6 +545,7 @@ class Feols(ResultAccessorMixin):
 
     def drop_multicol_vars(self):
         "Detect and drop multicollinear variables."
+        assert isinstance(self._X, np.ndarray)
         if self._X.shape[1] > 0:
             (
                 self._X,
@@ -562,11 +577,14 @@ class Feols(ResultAccessorMixin):
         self.to_array()
         self.drop_multicol_vars()
         self.wls_transform()
+        assert isinstance(self._X, np.ndarray)
+        assert isinstance(self._Y, np.ndarray)
+        Y = self._Y
 
         if self._X_is_empty:
-            self._u_hat = self._Y
+            self._u_hat = Y
         else:
-            fit = fit_ols(X=self._X, Y=self._Y, solver=self._solver)
+            fit = fit_ols(X=self._X, Y=Y, solver=self._solver)
 
             self._Z = self._X
             self._tZX = fit.tZX
@@ -674,7 +692,7 @@ class Feols(ResultAccessorMixin):
 
         elif self._vcov_type == "HAC":
             kw = vcov_kwargs or {}
-            self._lag = kw.get("lag")
+            self._lag = cast(int | None, kw.get("lag"))
             self._time_id = kw.get("time_id")
             self._panel_id = kw.get("panel_id")
             self._ssc, self._df_k, self._df_t = get_ssc(
@@ -693,7 +711,7 @@ class Feols(ResultAccessorMixin):
 
         elif self._vcov_type == "CRV":
             prep = prepare_cluster_state(
-                data=data if data is not None else self._data,
+                data=data_to_check,
                 clustervar=self._clustervar,
                 ssc_dict=self._ssc_dict,
                 fixef=self._fixef,
@@ -755,13 +773,14 @@ class Feols(ResultAccessorMixin):
         return vcov_iid_ols(residuals=self._u_hat, bread=self._bread, N=self._N)
 
     def _vcov_hetero(self):
+        assert isinstance(self._X, np.ndarray)
         return vcov_hetero(
             scores=self._scores,
             X=self._X,
             tZX=self._tZX,
             weights=self._weights,
             weights_type=self._weights_type,
-            vcov_type_detail=self._vcov_type_detail,
+            vcov_type_detail=cast(HeteroVcovTypeOptions, self._vcov_type_detail),
             bread=self._bread,
             is_iv=self._is_iv,
             tXZ=self._tXZ,
@@ -801,7 +820,7 @@ class Feols(ResultAccessorMixin):
             time_arr=_time_arr,
             panel_arr=_panel_arr,
             lag=self._lag,
-            vcov_type_detail=self._vcov_type_detail,
+            vcov_type_detail=cast(HacVcovTypeOptions, self._vcov_type_detail),
             bread=self._bread,
             is_iv=self._is_iv,
             tXZ=self._tXZ,
@@ -827,6 +846,8 @@ class Feols(ResultAccessorMixin):
         )
 
     def _vcov_crv3_fast(self, clustid, cluster_col):
+        assert isinstance(self._X, np.ndarray)
+        assert isinstance(self._Y, np.ndarray)
         return vcov_crv3_fast(
             X=self._X,
             Y=self._Y,
@@ -1012,13 +1033,13 @@ class Feols(ResultAccessorMixin):
         reps: int,
         cluster: str | None = None,
         param: str | None = None,
-        weights_type: str | None = "rademacher",
-        impose_null: bool | None = True,
-        bootstrap_type: str | None = "11",
+        weights_type: str = "rademacher",
+        impose_null: bool = True,
+        bootstrap_type: str = "11",
         seed: int | None = None,
-        k_adj: bool | None = True,
-        G_adj: bool | None = True,
-        parallel: bool | None = False,
+        k_adj: bool = True,
+        G_adj: bool = True,
+        parallel: bool = False,
         return_bootstrapped_t_stats=False,
     ):
         """
@@ -1036,27 +1057,25 @@ class Feols(ResultAccessorMixin):
         param : Union[str, None], optional
             A string of length one, containing the test parameter of interest.
             Defaults to None.
-        weights_type : str, optional
+        weights_type : str
             The type of bootstrap weights. Options are 'rademacher', 'mammen',
             'webb', or 'normal'. Defaults to 'rademacher'.
-        impose_null : bool, optional
+        impose_null : bool
             Indicates whether to impose the null hypothesis on the bootstrap DGP.
             Defaults to True.
-        bootstrap_type : str, optional
+        bootstrap_type : str
             A string of length one to choose the bootstrap type.
             Options are '11', '31', '13', or '33'. Defaults to '11'.
-        seed : Union[int, None], optional
+        seed : int | None, optional
             An option to provide a random seed. Defaults to None.
-        k_adj : bool, optional
+        k_adj : bool
             Indicates whether to apply a small sample adjustment for the number
             of observations and covariates. Defaults to True.
-        G_adj : bool, optional
+        G_adj : bool
             Indicates whether to apply a small sample adjustment for the number
             of clusters. Defaults to True.
-        parallel : bool, optional
+        parallel : bool
             Indicates whether to run the bootstrap in parallel. Defaults to False.
-        seed : Union[str, None], optional
-            An option to provide a random seed. Defaults to None.
         return_bootstrapped_t_stats : bool, optional:
             If True, the method returns a tuple of the regular output and the
             bootstrapped t-stats. Defaults to False.
@@ -1173,6 +1192,7 @@ class Feols(ResultAccessorMixin):
             boot.get_tstat()
             boot.get_pvalue(pval_type="two-tailed")
             full_enumeration_warn = False
+            ssc = boot.small_sample_correction
 
         else:
             inference = f"CRV({cluster_list[0]})"
@@ -1206,6 +1226,7 @@ class Feols(ResultAccessorMixin):
                 warnings.warn(
                     "2^G < the number of boot iterations, setting full_enumeration to True."
                 )
+            ssc = boot.ssc
 
         if np.isscalar(boot.t_stat):
             boot.t_stat = np.asarray(boot.t_stat)
@@ -1219,7 +1240,7 @@ class Feols(ResultAccessorMixin):
             "bootstrap_type": bootstrap_type,
             "inference": inference,
             "impose_null": impose_null,
-            "ssc": boot.small_sample_correction if run_heteroskedastic else boot.ssc,
+            "ssc": ssc,
         }
 
         res_df = pd.Series(res)
@@ -1329,6 +1350,8 @@ class Feols(ResultAccessorMixin):
 
         fml = self._fml
         data = self._data
+        assert isinstance(self._Y, np.ndarray)
+        assert isinstance(self._X, np.ndarray)
         Y = self._Y.flatten()
         W = data[treatment].to_numpy()
         assert np.all(np.isin(W, [0, 1])), (
@@ -1338,7 +1361,7 @@ class Feols(ResultAccessorMixin):
         cluster_vec = data[cluster].to_numpy()
         unique_clusters = np.unique(cluster_vec)
 
-        tau_full = np.array(self.coef().xs(treatment))
+        tau_full = float(self.coef().xs(treatment))
 
         N = self._N
         G = len(unique_clusters)
@@ -1396,15 +1419,25 @@ class Feols(ResultAccessorMixin):
 
         return pd.concat([res_ccv, res_crv1], axis=1).T
 
+    @overload
     def _model_matrix_one_hot(
-        self, output="numpy"
+        self, output: Literal["numpy"] = "numpy"
+    ) -> tuple[np.ndarray, np.ndarray, list[str]]: ...
+
+    @overload
+    def _model_matrix_one_hot(
+        self, output: Literal["sparse"]
+    ) -> tuple[np.ndarray, spmatrix, list[str]]: ...
+
+    def _model_matrix_one_hot(
+        self, output: Literal["numpy", "sparse"] = "numpy"
     ) -> tuple[np.ndarray, np.ndarray | spmatrix, list[str]]:
         """
         Transform a model matrix with fixed effects into a one-hot encoded matrix.
 
         Parameters
         ----------
-        output : str, optional
+        output : Literal["numpy", "sparse"]
             The type of output. Defaults to "numpy", in which case the returned matrices
             Y and X are numpy arrays. If set to "sparse", the returned design matrix X will
             be sparse.
@@ -1718,7 +1751,10 @@ class Feols(ResultAccessorMixin):
                     Y = Y - self._offset.flatten()
             uhat = (Y - X @ self._beta_hat).flatten()
         D2 = Formula("-1+" + fixef_fml).get_model_matrix(self._data, output="sparse")
-        cols = D2.model_spec.column_names
+        model_spec = D2.model_spec
+        if model_spec is None:
+            raise ValueError("The fixed-effects model specification is missing.")
+        cols = model_spec.column_names
 
         if self._has_weights:
             uhat *= weights_sqrt
@@ -1842,6 +1878,8 @@ class Feols(ResultAccessorMixin):
             # note: no need to worry about fixed effects, as not supported with
             # prediction errors; will throw error later;
             # divide by sqrt(weights) as self._X is "weighted"
+            assert isinstance(self._X, np.ndarray)
+            assert isinstance(self._Y, np.ndarray)
             X = self._X
             X_index = np.arange(self._N)
             y_hat = (
@@ -1879,6 +1917,7 @@ class Feols(ResultAccessorMixin):
                 y_hat = np.exp(y_hat)
 
         if se_fit or interval == "prediction":
+            assert isinstance(X, np.ndarray)
             prediction_df = _compute_prediction_error(
                 model=self,
                 nobs=n_observations,
@@ -2060,6 +2099,8 @@ class Feols(ResultAccessorMixin):
 
         else:
             weights = self._weights.flatten()
+            assert isinstance(self._Y, np.ndarray)
+            assert isinstance(self._X, np.ndarray)
             fval_df = (
                 self._data[self._fixef.split("+")] if self._fixef is not None else None
             )

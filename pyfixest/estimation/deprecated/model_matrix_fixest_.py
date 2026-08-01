@@ -138,7 +138,7 @@ def model_matrix_fixest(
         fval, data = _fixef_interactions(fval=fval, data=data)
     _is_iv = fml_first_stage is not None
 
-    fml_kwargs = {
+    fml_kwargs: dict[str, Any] = {
         "fml_second_stage": fml_second_stage,
         **({"fml_first_stage": fml_first_stage} if _is_iv else {}),
         **({"fe": wrap_factorize(fval)} if fval is not None else {}),
@@ -353,9 +353,9 @@ def _get_columns_to_drop_and_check_ivars(
                 var2 = _i_ref.get("var2", "")
                 ref = _i_ref.get("ref", "")
 
-                if pd.api.types.is_categorical_dtype(  # type: ignore
-                    data[var2]  # type: ignore
-                ) or pd.api.types.is_object_dtype(data[var2]):  # type: ignore
+                if pd.api.types.is_categorical_dtype(
+                    data[var2]
+                ) or pd.api.types.is_object_dtype(data[var2]):
                     raise ValueError(
                         f"""
                         The second variable in the i() syntax cannot be of type "category" or "object", but

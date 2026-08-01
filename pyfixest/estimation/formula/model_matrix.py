@@ -74,7 +74,10 @@ class ModelMatrix:
         drop_intercept: bool = False,
     ) -> None:
         self._drop_intercept = drop_intercept
-        self._model_spec = model_matrix.model_spec
+        model_spec = model_matrix.model_spec
+        if model_spec is None:
+            raise ValueError("The formulaic model specification is missing.")
+        self._model_spec = model_spec
         self._collect_columns(model_matrix)
         self._collect_data(model_matrix)
         self._process(dropped_rows=drop_rows, drop_singletons=drop_singletons)
@@ -369,7 +372,7 @@ def create_model_matrix(
         model_matrix[_ModelMatrixKey.main]["lhs"].index
     )
     return ModelMatrix(
-        model_matrix,
+        model_matrix,  # ty: ignore[invalid-argument-type]
         drop_rows=drop_rows,
         drop_singletons=drop_singletons,
         drop_intercept=drop_intercept,
