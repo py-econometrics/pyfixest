@@ -164,9 +164,25 @@ docstring-code-line-length = 88
 [tool.ty]
 
 [tool.ty.analysis]
-# Keep optional and external imports equivalent to mypy's ignore_missing_imports.
-# Narrowed to the actual dependency list once the findings are cleared.
-allowed-unresolved-imports = ["**"]
+# Permit unresolved imports from optional and external dependencies.
+allowed-unresolved-imports = [
+    "maketables.**",
+    "matplotlib.**",
+    "pandas.**",
+    "numpy.**",
+    "scipy.**",
+    "seaborn.**",
+    "numba.**",
+    "torch.**",
+    "rpy2.**",
+    "lets_plot.**",
+    "formulaic.**",
+    "wildboottest.**",
+    "tabulate.**",
+    "joblib.**",
+    "narwhals.**",
+    "tqdm.**",
+]
 
 [tool.ty.environment]
 # Check against the oldest supported interpreter, even though the `ty` hook
@@ -177,21 +193,7 @@ python-version = "3.10"
 include = ["pyfixest"]
 
 [tool.ty.terminal]
-error-on-warning = false
 output-format = "concise"
-
-[tool.ty.rules]
-# ty's default rules are stricter than the existing mypy baseline. Report the
-# current compatibility findings as warnings while they are migrated.
-call-non-callable = "warn"
-invalid-argument-type = "warn"
-invalid-assignment = "warn"
-invalid-return-type = "warn"
-no-matching-overload = "warn"
-not-iterable = "warn"
-not-subscriptable = "warn"
-unresolved-attribute = "warn"
-unsupported-operator = "warn"
 
 # --------------------------------------------------------------------------------------
 # pixi configuration
