@@ -351,8 +351,11 @@ def _saturated_event_study(
     unit_id: str,
     cluster: str | None = None,
 ):
+    if cluster is None:
+        raise ValueError("Saturated event studies require a cluster variable.")
+
     ff = f"{outcome} ~ i(rel_time, first_treated_period, ref = -1, ref2=0) | {unit_id} + {time_id}"
-    m = feols(fml=ff, data=df, vcov={"CRV1": cluster})  # type: ignore
+    m = feols(fml=ff, data=df, vcov={"CRV1": cluster})
     res = m.tidy().reset_index()
     res = res.join(
         res["Coefficient"].str.extract(
