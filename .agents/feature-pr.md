@@ -160,9 +160,10 @@ for those. Review the full change against AGENTS.md:
    an option (they do not share docstrings); quartodoc `contents` in
    `docs/_quarto.yml` for a new class or function; and a `docs/how-to/*.qmd`
    vignette (navbar entry in `_quarto.yml`) when the feature warrants a guide.
-5. Run in order: targeted tests → the three lint hooks on changed files, one at
-   a time — `pixi run -e lint prek run ruff-format --files <changed>`, then the
-   same command with `ruff-check`, then with `mypy` → `pixi run test-py` if
+5. Run in order: targeted tests → the two file-scoped lint hooks, one at a time
+   — `pixi run -e lint prek run ruff-format --files <changed>`, then the same
+   command with `ruff-check`; run the full-project type check with
+   `pixi run -e lint prek run ty` → `pixi run test-py` if
    shared internals (`vcov_utils`, `plan_`, model classes, formula code) were
    touched.
 
