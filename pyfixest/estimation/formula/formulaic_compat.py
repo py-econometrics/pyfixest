@@ -2,15 +2,17 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterable, Iterator, Mapping
 from typing import TYPE_CHECKING, Any
 
 import formulaic
 import formulaic.formula
+import numpy as np
 import pandas as pd
 from formulaic.parser.types import Factor
 
 from pyfixest.estimation.formula.transforms.factor_interaction import (
+    bin_mapping_state_key,
     is_contrast_state_key,
     variable_from_contrast_state_key,
 )
@@ -95,28 +97,72 @@ def flatten_model_matrix(model_matrix: formulaic.ModelMatrix) -> list[pd.DataFra
     return list(model_matrix._flatten())
 
 
-def iter_model_spec_categorical_levels(
-    rhs_spec: ModelSpec, newdata: pd.DataFrame
-) -> Iterator[tuple[str, set[Any], dict[str, Any]]]:
-    """Yield categorical variable levels encoded in a formulaic ModelSpec."""
-    yield from _iter_documented_categorical_levels(rhs_spec, newdata)
-    yield from _iter_i_categorical_levels(rhs_spec, newdata)
+def materialize_model_spec_with_unseen_mask(
+    rhs_spec: ModelSpec,
+    newdata: pd.DataFrame,
+    context: Mapping[str, Any],
+) -> tuple[formulaic.ModelMatrix, np.ndarray]:
+    """Materialize a prediction matrix and flag unseen categorical levels."""
+    materializer = rhs_spec.get_materializer(newdata, context=context)
+    model_matrix = materializer.get_model_matrix(rhs_spec)
+    unseen = rows_with_unseen_contrast_levels(
+        rhs_spec, newdata, materializer.factor_cache
+    )
+    for variable, levels, state in iter_i_categorical_levels(rhs_spec, newdata):
+        column = newdata[variable]
+        bin_key = bin_mapping_state_key(variable)
+        if bin_key in state:
+            column = column.replace(state[bin_key])
+        unseen |= (~column.isin(levels) & column.notna()).to_numpy()
+    return model_matrix, unseen
 
 
-def _iter_documented_categorical_levels(
-    rhs_spec: ModelSpec, newdata: pd.DataFrame
-) -> Iterator[tuple[str, set[Any], dict[str, Any]]]:
+def rows_with_unseen_contrast_levels(
+    rhs_spec: ModelSpec,
+    newdata: pd.DataFrame,
+    evaluated_factors: Mapping[str, Any],
+) -> np.ndarray:
+    """
+    Flag `newdata` rows whose formulaic-encoded categorical level was not seen at fit time.
+
+    `ModelSpec.factor_contrasts` records the levels of the *evaluated* factor:
+    `C(np.floor(X2))` stores levels of `floor(X2)`, not of `X2`. The check can
+    therefore not be done on the factor's source columns, which is what
+    `ModelSpec.factor_variables` reports.
+
+    Formulaic's materializer caches each evaluated factor before contrast
+    encoding. Comparing those values with the fitted contrast levels avoids
+    confusing source columns such as `X2` with evaluated factors such as
+    `C(np.floor(X2))`.
+
+    Returns
+    -------
+    np.ndarray
+        Boolean mask of length `len(newdata)`; True where a row carries an
+        unseen (or missing) categorical level.
+    """
+    mask = np.zeros(newdata.shape[0], dtype=bool)
     for factor, contrast_state in rhs_spec.factor_contrasts.items():
-        levels = contrast_state.levels
-        for variable in rhs_spec.factor_variables.get(factor, set()):
-            variable_name = str(variable)
-            if variable_name in newdata.columns:
-                yield variable_name, set(levels), {}
+        evaluated_factor = evaluated_factors.get(factor.expr)
+        if evaluated_factor is None or not hasattr(evaluated_factor, "values"):
+            raise FormulaicCompatibilityError(
+                "formulaic materializer factor cache changed: expected an "
+                f"evaluated factor for '{factor.expr}'."
+            )
+        values = np.asarray(evaluated_factor.values)
+        if values.ndim != 1 or values.shape[0] != newdata.shape[0]:
+            raise FormulaicCompatibilityError(
+                "formulaic materializer factor cache changed: expected evaluated "
+                f"factor '{factor.expr}' to contain one value per data row."
+            )
+        mask |= ~pd.Series(values).isin(contrast_state.levels).to_numpy()
+    return mask
 
 
-def _iter_i_categorical_levels(
+def iter_i_categorical_levels(
     rhs_spec: ModelSpec, newdata: pd.DataFrame
 ) -> Iterator[tuple[str, set[Any], dict[str, Any]]]:
+    """Yield the levels pyfixest's `i()` transform recorded for each variable."""
     for _factor_expr, value in rhs_spec.encoder_state.items():
         kind, state = _unpack_encoder_state(value)
         if kind is not Factor.Kind.CATEGORICAL:
