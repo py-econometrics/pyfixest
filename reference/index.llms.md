@@ -105,8 +105,9 @@ Internal APIs for formula parsing and model matrix construction.
 |  |  |
 |----|----|
 | [Formula](../reference/estimation.formula.parse.Formula.llms.md#pyfixest.estimation.formula.parse.Formula) | A formulaic-compliant formula. |
+| [create_model_matrix](../reference/estimation.formula.model_matrix.create_model_matrix.llms.md#pyfixest.estimation.formula.model_matrix.create_model_matrix) | Create a ModelMatrix from a formula and data. |
 | [ModelMatrix](../reference/estimation.formula.model_matrix.ModelMatrix.llms.md#pyfixest.estimation.formula.model_matrix.ModelMatrix) | A wrapper around formulaic.ModelMatrix for the specification of PyFixest models. |
-| [factor_interaction](../reference/estimation.formula.factor_interaction.factor_interaction.llms.md#pyfixest.estimation.formula.factor_interaction.factor_interaction) | Fixest-style i() operator for categorical encoding with interactions. |
+| [factor_interaction](../reference/estimation.formula.transforms.factor_interaction.factor_interaction.llms.md#pyfixest.estimation.formula.transforms.factor_interaction.factor_interaction) | Fixest-style i() operator for categorical encoding with interactions. |
 
 ## Demeaning
 
@@ -118,7 +119,7 @@ Fixed-effects demeaning: the `demean()` workhorse and the configurable backends.
 | [BaseDemeaner](../reference/demeaners.BaseDemeaner.llms.md#pyfixest.demeaners.BaseDemeaner) | Base configuration shared by all fixed-effects demeaners. |
 | [MapDemeaner](../reference/demeaners.MapDemeaner.llms.md#pyfixest.demeaners.MapDemeaner) | Method of Alternating Projections (MAP) demeaner. |
 | [LsmrDemeaner](../reference/demeaners.LsmrDemeaner.llms.md#pyfixest.demeaners.LsmrDemeaner) | Sparse LSMR demeaner. |
-| [Preconditioner](../reference/core.demean.Preconditioner.llms.md#pyfixest.core.demean.Preconditioner) |  |
+| [Preconditioner](../reference/core.demean.Preconditioner.llms.md#pyfixest.core.demean.Preconditioner) | Opaque handle to a pre-built within preconditioner (Additive Schwarz or |
 
 ## Misc / Utilities
 
@@ -130,4 +131,3 @@ Other PyFixest internals and utilities.
 | [ssc](../reference/utils.utils.ssc.llms.md#pyfixest.utils.utils.ssc) | Set the small sample correction factor applied in `get_ssc()`. |
 | [get_ssc](../reference/utils.utils.get_ssc.llms.md#pyfixest.utils.utils.get_ssc) | Compute small sample adjustment factors. |
 | [optimal_mixture_precision](../reference/estimation.post_estimation.savi.optimal_mixture_precision.llms.md#pyfixest.estimation.post_estimation.savi.optimal_mixture_precision) | Compute the mixture precision that minimizes SAVI sequence width |
-| [model_matrix_fixest](../reference/estimation.deprecated.model_matrix_fixest_.model_matrix_fixest.llms.md#pyfixest.estimation.deprecated.model_matrix_fixest_.model_matrix_fixest) | Create model matrices for fixed effects estimation. |

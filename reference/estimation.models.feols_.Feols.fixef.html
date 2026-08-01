@@ -706,13 +706,19 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.formula.model_matrix.create_model_matrix.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">create_model_matrix</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../reference/estimation.formula.model_matrix.ModelMatrix.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">ModelMatrix</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.formula.factor_interaction.factor_interaction.html" class="sidebar-item-text sidebar-link">
+  <a href="../reference/estimation.formula.transforms.factor_interaction.factor_interaction.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">factor_interaction</span></a>
   </div>
 </li>
@@ -792,12 +798,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
  <span class="menu-text">optimal_mixture_precision</span></a>
   </div>
 </li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.deprecated.model_matrix_fixest_.model_matrix_fixest.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">model_matrix_fixest</span></a>
-  </div>
-</li>
       </ul>
   </li>
     </ul>
@@ -868,9 +868,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h2 class="doc-section doc-section-returns anchored" data-anchor-id="returns">Returns</h2>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 8%">
-<col style="width: 37%">
-<col style="width: 53%">
+<col style="width: 5%">
+<col style="width: 10%">
+<col style="width: 84%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -882,25 +882,23 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tbody>
 <tr class="odd">
 <td></td>
-<td>dict[str, dict[str, float]]</td>
-<td>A dictionary with the estimated fixed effects.</td>
+<td>pd.DataFrame</td>
+<td>A tidy DataFrame with columns <code>variable</code>, <code>code</code>, <code>level</code>, and <code>coefficient</code> containing the estimated fixed effects.</td>
 </tr>
 </tbody>
 </table>
 </section>
 <section id="examples" class="level2 doc-section doc-section-examples">
 <h2 class="doc-section doc-section-examples anchored" data-anchor-id="examples">Examples</h2>
-<p>Fixed effects are swept out during estimation and are not part of the coefficient table. <code>fixef()</code> computes them. The result is keyed by fixed effect term, then by level.</p>
-<div id="aaa7d0ef" class="cell" data-execution_count="1">
+<div id="c46f2439" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 + X2 | f1"</span>, pf.get_data())</span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>fe <span class="op">=</span> fit.fixef()</span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>fe.keys()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>fixed_effects <span class="op">=</span> fit.fixef()</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>fixed_effects.head()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 
-        <div id="u7rHxu"></div>
+        <div id="E6cT0F"></div>
         <script type="text/javascript" data-lets-plot-script="library">
             if(!window.letsPlotCallQueue) {
                 window.letsPlotCallQueue = [];
@@ -924,9 +922,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                     var div = document.createElement("div");
                     div.style.color = 'darkred';
                     div.textContent = 'Error loading Lets-Plot JS';
-                    document.getElementById("u7rHxu").appendChild(div);
+                    document.getElementById("E6cT0F").appendChild(div);
                 };
-                var e = document.getElementById("u7rHxu");
+                var e = document.getElementById("E6cT0F");
                 e.appendChild(script);
             })()
         </script>
@@ -934,7 +932,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <div class="cell-output cell-output-display">
 
-        <div id="8h0fke"></div>
+        <div id="wWWn0P"></div>
         <script type="text/javascript" data-lets-plot-script="library">
             if(!window.letsPlotCallQueue) {
                 window.letsPlotCallQueue = [];
@@ -958,26 +956,68 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                     var div = document.createElement("div");
                     div.style.color = 'darkred';
                     div.textContent = 'Error loading Lets-Plot JS';
-                    document.getElementById("8h0fke").appendChild(div);
+                    document.getElementById("wWWn0P").appendChild(div);
                 };
-                var e = document.getElementById("8h0fke");
+                var e = document.getElementById("wWWn0P");
                 e.appendChild(script);
             })()
         </script>
         
 </div>
 <div class="cell-output cell-output-display" data-execution_count="1">
-<pre><code>dict_keys(['C(f1)'])</code></pre>
+<div>
+
+
+<table class="dataframe caption-top table table-sm table-striped small" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">variable</th>
+<th data-quarto-table-cell-role="th">code</th>
+<th data-quarto-table-cell-role="th">level</th>
+<th data-quarto-table-cell-role="th">coefficient</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">0</th>
+<td>f1</td>
+<td>15</td>
+<td>15.0</td>
+<td>1.887085</td>
+</tr>
+<tr class="even">
+<th data-quarto-table-cell-role="th">1</th>
+<td>f1</td>
+<td>6</td>
+<td>6.0</td>
+<td>-0.254456</td>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">2</th>
+<td>f1</td>
+<td>1</td>
+<td>1.0</td>
+<td>3.066142</td>
+</tr>
+<tr class="even">
+<th data-quarto-table-cell-role="th">3</th>
+<td>f1</td>
+<td>19</td>
+<td>19.0</td>
+<td>1.123039</td>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">4</th>
+<td>f1</td>
+<td>13</td>
+<td>13.0</td>
+<td>2.013726</td>
+</tr>
+</tbody>
+</table>
+
 </div>
-</div>
-<div id="f06e580e" class="cell" data-execution_count="2">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="bu">list</span>(fe[<span class="st">"C(f1)"</span>].items())[:<span class="dv">5</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display" data-execution_count="2">
-<pre><code>[('0.0', np.float64(0.4837574151832394)),
- ('1.0', np.float64(3.0661419612921605)),
- ('2.0', np.float64(-1.0947871507593956)),
- ('3.0', np.float64(0.33109523121756435)),
- ('4.0', np.float64(-1.2872533793542074))]</code></pre>
 </div>
 </div>
 

@@ -706,13 +706,19 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.formula.model_matrix.create_model_matrix.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">create_model_matrix</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../reference/estimation.formula.model_matrix.ModelMatrix.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">ModelMatrix</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.formula.factor_interaction.factor_interaction.html" class="sidebar-item-text sidebar-link">
+  <a href="../reference/estimation.formula.transforms.factor_interaction.factor_interaction.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">factor_interaction</span></a>
   </div>
 </li>
@@ -792,12 +798,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
  <span class="menu-text">optimal_mixture_precision</span></a>
   </div>
 </li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.deprecated.model_matrix_fixest_.model_matrix_fixest.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">model_matrix_fixest</span></a>
-  </div>
-</li>
       </ul>
   </li>
     </ul>
@@ -828,19 +828,19 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>Formula(_second_stage, _fixed_effects<span class="op">=</span><span class="va">None</span>, _first_stage<span class="op">=</span><span class="va">None</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>Formula(_formula)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>A formulaic-compliant formula.</p>
 <p>Splits a fixest-style formula into second stage, fixed effects and, for IV models, first stage. Use <code>parse()</code> instead of calling the class directly. <code>parse()</code> also expands the multiple estimation operators (<code>sw</code>, <code>sw0</code>, <code>csw</code>, <code>csw0</code>, <code>mvsw</code>) into one <code>Formula</code> per model. This is an internal API. Formulas are written as strings and passed to <code>feols()</code>. See the <a href="../tutorials/formula-syntax.html">formula syntax tutorial</a>.</p>
 <section id="examples" class="level2 doc-section doc-section-examples">
 <h2 class="doc-section doc-section-examples anchored" data-anchor-id="examples">Examples</h2>
-<div id="3cfc68ba" class="cell" data-execution_count="1">
+<div id="6f450fdd" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.estimation.formula.parse <span class="im">import</span> Formula</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>fml <span class="op">=</span> Formula.parse(<span class="st">"Y ~ X1 + X2 | f1 + f2"</span>)[<span class="dv">0</span>]</span>
 <span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>fml.second_stage, fml.fixed_effects</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 
-        <div id="Iz6FTA"></div>
+        <div id="CnMENM"></div>
         <script type="text/javascript" data-lets-plot-script="library">
             if(!window.letsPlotCallQueue) {
                 window.letsPlotCallQueue = [];
@@ -864,9 +864,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                     var div = document.createElement("div");
                     div.style.color = 'darkred';
                     div.textContent = 'Error loading Lets-Plot JS';
-                    document.getElementById("Iz6FTA").appendChild(div);
+                    document.getElementById("CnMENM").appendChild(div);
                 };
-                var e = document.getElementById("Iz6FTA");
+                var e = document.getElementById("CnMENM");
                 e.appendChild(script);
             })()
         </script>
@@ -874,7 +874,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <div class="cell-output cell-output-display">
 
-        <div id="8H8I8V"></div>
+        <div id="iR9teR"></div>
         <script type="text/javascript" data-lets-plot-script="library">
             if(!window.letsPlotCallQueue) {
                 window.letsPlotCallQueue = [];
@@ -898,24 +898,23 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                     var div = document.createElement("div");
                     div.style.color = 'darkred';
                     div.textContent = 'Error loading Lets-Plot JS';
-                    document.getElementById("8H8I8V").appendChild(div);
+                    document.getElementById("iR9teR").appendChild(div);
                 };
-                var e = document.getElementById("8H8I8V");
+                var e = document.getElementById("iR9teR");
                 e.appendChild(script);
             })()
         </script>
         
 </div>
 <div class="cell-output cell-output-display" data-execution_count="1">
-<pre><code>('Y ~ X1 + X2', 'f1 + f2')</code></pre>
+<pre><code>('Y ~ X1 + X2', f1 + f2)</code></pre>
 </div>
 </div>
 <p>Stepwise syntax expands into one formula per estimated model.</p>
-<div id="057f1d4d" class="cell" data-execution_count="2">
+<div id="d5d8560d" class="cell" data-execution_count="2">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>Formula.parse(<span class="st">"Y ~ X1 + csw(X2, X3)"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="2">
-<pre><code>[Formula(_second_stage='Y ~ X1 + X2', _fixed_effects=None, _first_stage=None),
- Formula(_second_stage='Y ~ X1 + X2 + X3', _fixed_effects=None, _first_stage=None)]</code></pre>
+<pre><code>[Y ~ 1 + X1 + X2, Y ~ 1 + X1 + X2 + X3]</code></pre>
 </div>
 </div>
 </section>
@@ -930,26 +929,46 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </thead>
 <tbody>
 <tr class="odd">
+<td><a href="#pyfixest.estimation.formula.parse.Formula.dependent">Formula.dependent</a></td>
+<td>The dependent variable.</td>
+</tr>
+<tr class="even">
 <td><a href="#pyfixest.estimation.formula.parse.Formula.endogenous">Formula.endogenous</a></td>
 <td>Endogenous variables of an instrumental variable specification.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><a href="#pyfixest.estimation.formula.parse.Formula.exogenous">Formula.exogenous</a></td>
 <td>Exogenous aka covariates aka independent variables.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><a href="#pyfixest.estimation.formula.parse.Formula.first_stage">Formula.first_stage</a></td>
 <td>The first stage formula of an instrumental variable specification.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><a href="#pyfixest.estimation.formula.parse.Formula.fixed_effects">Formula.fixed_effects</a></td>
 <td>The fixed effects of a formula.</td>
 </tr>
+<tr class="even">
+<td><a href="#pyfixest.estimation.formula.parse.Formula.fixed_effects_wrapped">Formula.fixed_effects_wrapped</a></td>
+<td>Wrapped fixed effects for proper encoding.</td>
+</tr>
 <tr class="odd">
 <td><a href="#pyfixest.estimation.formula.parse.Formula.formula">Formula.formula</a></td>
-<td>Full fixest-style formula.</td>
+<td>The string representation of the formula.</td>
 </tr>
 <tr class="even">
+<td><a href="#pyfixest.estimation.formula.parse.Formula.instruments">Formula.instruments</a></td>
+<td>Instruments of an instrumental variable specification.</td>
+</tr>
+<tr class="odd">
+<td><a href="#pyfixest.estimation.formula.parse.Formula.is_fixed_effects">Formula.is_fixed_effects</a></td>
+<td>Boolean indicating whether the formula is a fixed effects specification.</td>
+</tr>
+<tr class="even">
+<td><a href="#pyfixest.estimation.formula.parse.Formula.is_instrumental_variable">Formula.is_instrumental_variable</a></td>
+<td>Boolean indicating whether the formula is an instrumental variable specification.</td>
+</tr>
+<tr class="odd">
 <td><a href="#pyfixest.estimation.formula.parse.Formula.second_stage">Formula.second_stage</a></td>
 <td>The second stage formula.</td>
 </tr>

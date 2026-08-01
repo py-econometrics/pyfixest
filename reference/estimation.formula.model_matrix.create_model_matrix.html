@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>estimation.deprecated.model_matrix_fixest_.model_matrix_fixest – PyFixest</title>
+<title>estimation.formula.model_matrix.create_model_matrix – PyFixest</title>
 <style>
 /* Default styles provided by pandoc.
 ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
@@ -300,7 +300,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/core.detect_singletons.detect_singletons.html">Misc / Utilities</a></li><li class="breadcrumb-item"><a href="../reference/estimation.deprecated.model_matrix_fixest_.model_matrix_fixest.html">model_matrix_fixest</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/estimation.formula.parse.Formula.html">Formula Parsing &amp; Model Matrix</a></li><li class="breadcrumb-item"><a href="../reference/estimation.formula.model_matrix.create_model_matrix.html">create_model_matrix</a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
     </div>
@@ -706,13 +706,19 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.formula.model_matrix.create_model_matrix.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text">create_model_matrix</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../reference/estimation.formula.model_matrix.ModelMatrix.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">ModelMatrix</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.formula.factor_interaction.factor_interaction.html" class="sidebar-item-text sidebar-link">
+  <a href="../reference/estimation.formula.transforms.factor_interaction.factor_interaction.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">factor_interaction</span></a>
   </div>
 </li>
@@ -792,12 +798,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
  <span class="menu-text">optimal_mixture_precision</span></a>
   </div>
 </li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.deprecated.model_matrix_fixest_.model_matrix_fixest.html" class="sidebar-item-text sidebar-link active">
- <span class="menu-text">model_matrix_fixest</span></a>
-  </div>
-</li>
       </ul>
   </li>
     </ul>
@@ -809,9 +809,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <!-- main -->
 <main class="content" id="quarto-document-content">
 
-<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/core.detect_singletons.detect_singletons.html">Misc / Utilities</a></li><li class="breadcrumb-item"><a href="../reference/estimation.deprecated.model_matrix_fixest_.model_matrix_fixest.html">model_matrix_fixest</a></li></ol></nav>
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/estimation.formula.parse.Formula.html">Formula Parsing &amp; Model Matrix</a></li><li class="breadcrumb-item"><a href="../reference/estimation.formula.model_matrix.create_model_matrix.html">create_model_matrix</a></li></ol></nav>
 <div class="quarto-title">
-<h1 class="title">model_matrix_fixest</h1>
+<h1 class="title">create_model_matrix</h1>
 </div>
 
 
@@ -828,24 +828,26 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>model_matrix_fixest(</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    FixestFormula,</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>create_model_matrix(</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    formula,</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    data,</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    drop_singletons<span class="op">=</span><span class="va">False</span>,</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    weights<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    drop_intercept<span class="op">=</span><span class="va">False</span>,</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    context<span class="op">=</span><span class="dv">0</span>,</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>Create model matrices for fixed effects estimation.</p>
-<p>This function processes the data and then calls <code>formulaic.Formula.get_model_matrix()</code> to create the model matrices.</p>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    weights<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    offset<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    drop_singletons<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    drop_intercept<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    ensure_full_rank<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    context<span class="op">=</span><span class="dv">0</span>,</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Create a ModelMatrix from a formula and data.</p>
+<p>This function constructs model matrices for econometric estimation by parsing formulas and extracting the necessary components (dependent/independent variables, fixed effects, instruments, weights) from the provided data.</p>
 <section id="parameters" class="level2 doc-section doc-section-parameters">
 <h2 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters">Parameters</h2>
 <table class="caption-top table">
 <colgroup>
+<col style="width: 6%">
+<col style="width: 10%">
+<col style="width: 78%">
 <col style="width: 4%">
-<col style="width: 16%">
-<col style="width: 75%">
-<col style="width: 3%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -857,45 +859,51 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </thead>
 <tbody>
 <tr class="odd">
-<td>FixestFormula</td>
-<td>A pyfixest.estimation.FormulaParser.FixestFormula object</td>
-<td>that contains information on the model formula, the formula of the first and second stage, dependent variable, covariates, fixed effects, endogenous variables (if any), and instruments (if any).</td>
+<td>formula</td>
+<td>Formula</td>
+<td>A Formula object specifying the model structure, including dependent and independent variables, fixed effects, and instrumental variables.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
 <td>data</td>
 <td>pd.DataFrame</td>
-<td>The input DataFrame containing the data.</td>
+<td>The input data containing all variables referenced in the formula. The index will be reset during processing.</td>
 <td><em>required</em></td>
+</tr>
+<tr class="odd">
+<td>weights</td>
+<td>str or None</td>
+<td>Column name in data to use as observation weights. Weights must be non-negative numeric values. If None, no weighting is applied.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="even">
+<td>offset</td>
+<td>str or None</td>
+<td>Column name in data to use as an offset (added to the linear predictor with a fixed coefficient of 1). Rows with NaN in the offset column are dropped together with NaN rows in the rest of the formula.</td>
+<td><code>None</code></td>
 </tr>
 <tr class="odd">
 <td>drop_singletons</td>
 <td>bool</td>
-<td>Whether to drop singleton fixed effects. Default is False.</td>
+<td>If True, observations that are singletons in any fixed effect category are dropped from the model.</td>
 <td><code>False</code></td>
-</tr>
-<tr class="even">
-<td>weights</td>
-<td>str or None</td>
-<td>A string specifying the name of the weights column in <code>data</code>. Default is None.</td>
-<td><code>None</code></td>
-</tr>
-<tr class="odd">
-<td>data</td>
-<td>pd.DataFrame</td>
-<td>The input DataFrame containing the data.</td>
-<td><em>required</em></td>
 </tr>
 <tr class="even">
 <td>drop_intercept</td>
 <td>bool</td>
-<td>Whether to drop the intercept from the model matrix. Default is False. If True, the intercept is dropped ex post from the model matrix created by formulaic.</td>
+<td>If True, the intercept column is removed from the independent variables and instruments matrices. The intercept is always removed when fixed effects are present, regardless of this parameter.</td>
 <td><code>False</code></td>
 </tr>
 <tr class="odd">
+<td>ensure_full_rank</td>
+<td>bool</td>
+<td>If True, formulaic will ensure the design matrix is full rank by dropping collinear columns.</td>
+<td><code>True</code></td>
+</tr>
+<tr class="even">
 <td>context</td>
 <td>int or Mapping[str, Any]</td>
-<td>A dictionary containing additional context variables to be used by formulaic during the creation of the model matrix. This can include custom factorization functions, transformations, or any other variables that need to be available in the formula environment.</td>
+<td>Additional context variables for formulaic during model matrix creation. Can be an integer (stack frame depth) or a dictionary of variables to make available in the formula environment (e.g., custom transformations).</td>
 <td><code>0</code></td>
 </tr>
 </tbody>
@@ -905,9 +913,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h2 class="doc-section doc-section-returns anchored" data-anchor-id="returns">Returns</h2>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 0%">
-<col style="width: 0%">
-<col style="width: 98%">
+<col style="width: 4%">
+<col style="width: 7%">
+<col style="width: 88%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -919,27 +927,25 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tbody>
 <tr class="odd">
 <td></td>
-<td>dict</td>
-<td>A dictionary with the following keys and value types: - ‘Y’ : pd.DataFrame The dependent variable. - ‘X’ : pd.DataFrame The Design Matrix. - ‘fe’ : Optional[pd.DataFrame] The model’s fixed effects. None if not applicable. - ‘endogvar’ : Optional[pd.DataFrame] The model’s endogenous variable(s), None if not applicable. - ‘Z’ : np.ndarray The model’s set of instruments (exogenous covariates plus instruments). None if not applicable. - ‘weights_df’ : Optional[pd.DataFrame] DataFrame containing weights, None if weights are not used. - ‘na_index’ : np.ndarray Array indicating rows droppled beause of NA values or singleton fixed effects. - ‘na_index_str’ : str String representation of ‘na_index’. - ’_icovars’ : Optional[list[str]] List of variables interacted with i() syntax, None if not applicable. - ‘X_is_empty’ : bool Flag indicating whether X is empty. - ‘model_spec’ : formulaic ModelSpec The model specification used to create the model matrices.</td>
+<td>ModelMatrix</td>
+<td>A ModelMatrix object containing the processed dependent and independent variables, fixed effects, instruments, weights, and metadata about dropped observations.</td>
 </tr>
 </tbody>
 </table>
 </section>
 <section id="examples" class="level2 doc-section doc-section-examples">
 <h2 class="doc-section doc-section-examples anchored" data-anchor-id="examples">Examples</h2>
-<div id="85964b83" class="cell" data-execution_count="1">
+<div id="49558df3" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.estimation.deprecated.model_matrix_fixest_ <span class="im">import</span> model_matrix_fixest</span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> pf.get_data()</span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 + f1 + f2"</span>, data<span class="op">=</span>data)</span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>FixestFormula <span class="op">=</span> fit.FixestFormula</span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>mm <span class="op">=</span> model_matrix_fixest(FixestFormula, data)</span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>mm</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.estimation.formula.model_matrix <span class="im">import</span> create_model_matrix</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.estimation.formula.parse <span class="im">import</span> Formula</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> pf.get_data()</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>formula <span class="op">=</span> Formula.parse(<span class="st">"Y ~ X1 + f1 + f2"</span>)[<span class="dv">0</span>]</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>model_matrix <span class="op">=</span> create_model_matrix(formula<span class="op">=</span>formula, data<span class="op">=</span>data)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 
-        <div id="aRL3uV"></div>
+        <div id="KP05rb"></div>
         <script type="text/javascript" data-lets-plot-script="library">
             if(!window.letsPlotCallQueue) {
                 window.letsPlotCallQueue = [];
@@ -963,9 +969,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                     var div = document.createElement("div");
                     div.style.color = 'darkred';
                     div.textContent = 'Error loading Lets-Plot JS';
-                    document.getElementById("aRL3uV").appendChild(div);
+                    document.getElementById("KP05rb").appendChild(div);
                 };
-                var e = document.getElementById("aRL3uV");
+                var e = document.getElementById("KP05rb");
                 e.appendChild(script);
             })()
         </script>
@@ -973,7 +979,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <div class="cell-output cell-output-display">
 
-        <div id="3GPuxf"></div>
+        <div id="RO8TW0"></div>
         <script type="text/javascript" data-lets-plot-script="library">
             if(!window.letsPlotCallQueue) {
                 window.letsPlotCallQueue = [];
@@ -997,59 +1003,15 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                     var div = document.createElement("div");
                     div.style.color = 'darkred';
                     div.textContent = 'Error loading Lets-Plot JS';
-                    document.getElementById("3GPuxf").appendChild(div);
+                    document.getElementById("RO8TW0").appendChild(div);
                 };
-                var e = document.getElementById("3GPuxf");
+                var e = document.getElementById("RO8TW0");
                 e.appendChild(script);
             })()
         </script>
         
 </div>
-<div class="cell-output cell-output-display" data-execution_count="1">
-<pre><code>{'Y':             Y
- 3    3.319513
- 4    0.134420
- 5   -0.278350
- 6   -1.519790
- 7   -2.072451
- ..        ...
- 995 -2.876714
- 996  1.430674
- 997 -0.494217
- 998 -1.047594
- 999  0.105551
- 
- [997 rows x 1 columns],
- 'X':       X1    f1    f2
- 3    1.0   1.0  10.0
- 4    2.0  19.0  20.0
- 5    2.0  13.0   3.0
- 6    1.0   2.0  16.0
- 7    0.0   2.0  23.0
- ..   ...   ...   ...
- 995  2.0  14.0  23.0
- 996  0.0  19.0  17.0
- 997  1.0   3.0   5.0
- 998  0.0  18.0  20.0
- 999  2.0   4.0  19.0
- 
- [997 rows x 3 columns],
- 'fe': None,
- 'endogvar': None,
- 'Z': None,
- 'weights_df': None,
- 'na_index': array([0, 1, 2]),
- 'na_index_str': '0,1,2',
- 'icovars': None,
- 'X_is_empty': False,
- 'model_spec': .fml_second_stage:
-     .lhs:
-         ModelSpec(formula=Y, materializer='pandas', materializer_params={}, ensure_full_rank=True, na_action=&lt;NAAction.DROP: 'drop'&gt;, output='pandas', cluster_by=&lt;ClusterBy.NONE: 'none'&gt;, structure=[EncodedTermStructure(term=Y, scoped_terms=[Y], columns=['Y'])], transform_state={}, encoder_state={'Y': (&lt;Kind.NUMERICAL: 'numerical'&gt;, {})})
-     .rhs:
-         ModelSpec(formula=X1 + f1 + f2, materializer='pandas', materializer_params={}, ensure_full_rank=True, na_action=&lt;NAAction.DROP: 'drop'&gt;, output='pandas', cluster_by=&lt;ClusterBy.NONE: 'none'&gt;, structure=[EncodedTermStructure(term=X1, scoped_terms=[X1], columns=['X1']), EncodedTermStructure(term=f1, scoped_terms=[f1], columns=['f1']), EncodedTermStructure(term=f2, scoped_terms=[f2], columns=['f2'])], transform_state={}, encoder_state={'X1': (&lt;Kind.NUMERICAL: 'numerical'&gt;, {}), 'f1': (&lt;Kind.NUMERICAL: 'numerical'&gt;, {}), 'f2': (&lt;Kind.NUMERICAL: 'numerical'&gt;, {})})}</code></pre>
 </div>
-</div>
-<p>.. deprecated:: This function will be deprecated in a future version. Use <code>pyfixest.estimation.formula.model_matrix.create_model_matrix()</code> with a <code>Formula</code> object instead. See https://pyfixest.org/reference/estimation.formula.model_matrix.ModelMatrix.html</p>
 
 
 </section>

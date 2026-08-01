@@ -34,7 +34,7 @@ Returns an object of type [Feols](../reference/estimation.models.feols_.Feols.ll
 
 | Name | Type | Description | Default |
 |----|----|----|----|
-| fml | str | A three-sided formula string using fixest formula syntax. Syntax: “Y ~ X1 + X2 \| FE1 + FE2 \| X1 ~ Z1”. “\|” separates dependent variable, fixed effects, and instruments. Special syntax includes stepwise regressions, cumulative stepwise regression, multiple dependent variables, interaction of variables (i(X1,X2)), and interacted fixed effects (fe1^fe2). | *required* |
+| fml | str | A three-sided formula string using fixest formula syntax. Syntax: “Y ~ X1 + X2 \| FE1 + FE2 \| X1 ~ Z1”. “\|” separates dependent variable, fixed effects, and instruments. Special syntax includes stepwise regressions, cumulative stepwise regression, multiple dependent variables, interaction of variables (i(X1,X2)), and interacted fixed effects (fe1:fe2). | *required* |
 | data | DataFrameType | A pandas or polars dataframe containing the variables in the formula. | *required* |
 | vcov | Union\[VcovTypeOptions, dict\[str, str\]\] | Type of variance-covariance matrix for inference. Options include “iid”, “hetero”, “HC1”, “HC2”, “HC3”, “NW” for Newey-West HAC standard errors, “DK” for Driscoll-Kraay HAC standard errors, or a dictionary for CRV1/CRV3 inference. Note that NW and DK require to pass additional keyword arguments via the `vcov_kwargs` argument. For time-series HAC, you need to pass the ‘time_id’ column. For panel-HAC, you need to add pass both ‘time_id’ and ‘panel_id’. See `vcov_kwargs` for details. | `None` |
 | vcov_kwargs | Optional\[dict\[str, any\]\] | Additional keyword arguments to pass to the vcov function. These keywoards include “lag” for the number of lag to use in the Newey-West (NW) and Driscoll-Kraay (DK) HAC standard errors. “time_id” for the time ID used for NW and DK standard errors, and “panel_id” for the panel identifier used for NW and DK standard errors. Currently, the the time difference between consecutive time periods is always treated as 1. More flexible time-step selection is work in progress. | `None` |
@@ -86,7 +86,7 @@ fit.summary()
     ###
 
     Estimation:  OLS
-    Dep. var.: Y, Fixed effects: f1 + f2
+    Dep. var.: Y, Fixed effects: f1+f2
     sample: None = all
     Inference:  iid
     Observations:  997
@@ -138,7 +138,7 @@ fit.vcov("iid").summary()
     ###
 
     Estimation:  OLS
-    Dep. var.: Y, Fixed effects: f1 + f2
+    Dep. var.: Y, Fixed effects: f1+f2
     sample: None = all
     Inference:  iid
     Observations:  997
@@ -152,7 +152,7 @@ fit.vcov("iid").summary()
     ###
 
     Estimation:  OLS
-    Dep. var.: Y, Fixed effects: f1 + f2
+    Dep. var.: Y, Fixed effects: f1+f2
     sample: None = all
     Inference:  iid
     Observations:  997
@@ -424,7 +424,7 @@ fit_D = pf.feols("Y ~ D", data = data)
 fit_D.ccv(treatment = "D", cluster = "group_id")
 ```
 
-|      | Estimate             | Std. Error | t value  | Pr(\>\|t\|) | 2.5%      | 97.5%    |
-|------|----------------------|------------|----------|-------------|-----------|----------|
-| CCV  | 0.016087657906364097 | 0.255509   | 0.062963 | 0.95049     | -0.520717 | 0.552892 |
-| CRV1 | 0.016088             | 0.13378    | 0.120254 | 0.905614    | -0.264974 | 0.29715  |
+|      | Estimate             | Std. Error | t value  | Pr(\>\|t\|) | 2.5%      | 97.5%   |
+|------|----------------------|------------|----------|-------------|-----------|---------|
+| CCV  | 0.016087657906364097 | 0.248254   | 0.064803 | 0.949045    | -0.505475 | 0.53765 |
+| CRV1 | 0.016088             | 0.13378    | 0.120254 | 0.905614    | -0.264974 | 0.29715 |

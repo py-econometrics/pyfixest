@@ -703,13 +703,19 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.formula.model_matrix.create_model_matrix.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">create_model_matrix</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../reference/estimation.formula.model_matrix.ModelMatrix.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">ModelMatrix</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.formula.factor_interaction.factor_interaction.html" class="sidebar-item-text sidebar-link">
+  <a href="../reference/estimation.formula.transforms.factor_interaction.factor_interaction.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">factor_interaction</span></a>
   </div>
 </li>
@@ -789,12 +795,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
  <span class="menu-text">optimal_mixture_precision</span></a>
   </div>
 </li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.deprecated.model_matrix_fixest_.model_matrix_fixest.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">model_matrix_fixest</span></a>
-  </div>
-</li>
       </ul>
   </li>
     </ul>
@@ -812,6 +812,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="pyfixest.core.demean.Preconditioner" class="level1">
 <h1>Preconditioner</h1>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>Preconditioner(data, build_time_seconds)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Opaque handle to a pre-built within preconditioner (Additive Schwarz or Diagonal Jacobi).</p>
+<p>Equality / hashing follow Python’s pyo3 defaults (object identity), in line with upstream <code>within._within.Preconditioner</code>. Pickle uses <code>postcard</code> round-tripping via <code>__reduce__</code>.</p>
 
 
 </section>

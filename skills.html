@@ -348,7 +348,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>  Example (cat × numeric): <span class="in">`Y ~ i(industry, exposure)`</span> creates industry-specific slopes on <span class="in">`exposure`</span>.</span>
 <span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>  Example (cat × cat): <span class="in">`Y ~ i(state, year, ref2=2000)`</span> creates state-by-year indicators with 2000 as the base year.</span>
 <span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Standard interactions work as well. <span class="in">`X1 * X2`</span> expands to <span class="in">`X1 + X2 + X1:X2`</span>, while <span class="in">`X1:X2`</span> is the interaction term only.</span>
-<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Interacted FEs: <span class="in">`"Y ~ X1 | FE1 ^ FE2"`</span> (creates a combined FE).</span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Interacted FEs: <span class="in">`"Y ~ X1 | FE1:FE2"`</span> (creates a combined FE).</span>
 <span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a><span class="fu">### Multiple Estimation Operators</span></span>
 <span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a></span>

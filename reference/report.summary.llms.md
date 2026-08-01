@@ -53,7 +53,7 @@ pf.summary([fit1, fit2, fit3])
     ###
 
     Estimation:  OLS
-    Dep. var.: Y, Fixed effects: f1 + f2
+    Dep. var.: Y, Fixed effects: f1+f2
     sample: None = all
     Inference:  iid
     Observations:  997
@@ -67,7 +67,7 @@ pf.summary([fit1, fit2, fit3])
     ###
 
     Estimation:  OLS
-    Dep. var.: Y, Fixed effects: f1 + f2 + f3
+    Dep. var.: Y, Fixed effects: f1+f2+f3
     sample: None = all
     Inference:  iid
     Observations:  997

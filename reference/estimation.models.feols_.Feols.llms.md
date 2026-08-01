@@ -89,7 +89,7 @@ Users should not directly instantiate this class, but rather use the [feols()](.
 | \_pvalue | np.ndarray | P-values associated with the t-statistics. |
 | \_conf_int | np.ndarray | Confidence intervals for the estimated coefficients. |
 | \_F_stat | Any | F-statistic for the model, set in get_Ftest(). |
-| \_fixef_dict | dict | dictionary containing fixed effects estimates. |
+| \_fixef_coefficients | dict\[str, pyfixest.estimation.post_estimation.fixed_effects.FixedEffect\] | Fixed effect estimates grouped by fixed effect. |
 | \_alpha | pd.DataFrame | A DataFrame with the estimated fixed effects. |
 | \_sumFE | np.ndarray | Sum of all fixed effects for each observation. |
 | \_rmse | float | Root mean squared error of the model. |
@@ -166,10 +166,10 @@ fit = pf.feols("Y ~ D", data=data, vcov={"CRV1": "group_id"})
 fit.ccv(treatment="D", pk=0.05, qk=0.5, n_splits=8, seed=123).head()
 ```
 
-|      | Estimate            | Std. Error | t value  | Pr(\>\|t\|) | 2.5%      | 97.5%    |
-|------|---------------------|------------|----------|-------------|-----------|----------|
-| CCV  | 0.18674453125710264 | 0.200257   | 0.932526 | 0.363405    | -0.233979 | 0.607468 |
-| CRV1 | 0.186745            | 0.100923   | 1.850358 | 0.080747    | -0.025288 | 0.398777 |
+|      | Estimate              | Std. Error | t value   | Pr(\>\|t\|) | 2.5%      | 97.5%    |
+|------|-----------------------|------------|-----------|-------------|-----------|----------|
+| CCV  | -0.011870188471165142 | 0.240695   | -0.049316 | 0.96121     | -0.517552 | 0.493812 |
+| CRV1 | -0.01187              | 0.179215   | -0.066234 | 0.947921    | -0.388387 | 0.364647 |
 
 ### Feols.decompose
 
@@ -269,32 +269,25 @@ This method creates the following attributes: - `_alpha` (pd.DataFrame): A DataF
 
 | Name | Type | Description |
 |----|----|----|
-|  | dict\[str, dict\[str, float\]\] | A dictionary with the estimated fixed effects. |
+|  | pd.DataFrame | A tidy DataFrame with columns `variable`, `code`, `level`, and `coefficient` containing the estimated fixed effects. |
 
 #### Examples
-
-Fixed effects are swept out during estimation and are not part of the coefficient table. `fixef()` computes them. The result is keyed by fixed effect term, then by level.
 
 ``` python
 import pyfixest as pf
 
 fit = pf.feols("Y ~ X1 + X2 | f1", pf.get_data())
-fe = fit.fixef()
-
-fe.keys()
+fixed_effects = fit.fixef()
+fixed_effects.head()
 ```
 
-    dict_keys(['C(f1)'])
-
-``` python
-list(fe["C(f1)"].items())[:5]
-```
-
-    [('0.0', np.float64(0.4837574151832394)),
-     ('1.0', np.float64(3.0661419612921605)),
-     ('2.0', np.float64(-1.0947871507593956)),
-     ('3.0', np.float64(0.33109523121756435)),
-     ('4.0', np.float64(-1.2872533793542074))]
+|     | variable | code | level | coefficient |
+|-----|----------|------|-------|-------------|
+| 0   | f1       | 15   | 15.0  | 1.887085    |
+| 1   | f1       | 6    | 6.0   | -0.254456   |
+| 2   | f1       | 1    | 1.0   | 3.066142    |
+| 3   | f1       | 19   | 19.0  | 1.123039    |
+| 4   | f1       | 13   | 13.0  | 2.013726    |
 
 ### Feols.plot_ritest
 

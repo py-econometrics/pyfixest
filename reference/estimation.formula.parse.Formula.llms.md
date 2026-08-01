@@ -1,7 +1,7 @@
 # Formula
 
 ``` python
-Formula(_second_stage, _fixed_effects=None, _first_stage=None)
+Formula(_formula)
 ```
 
 A formulaic-compliant formula.
@@ -17,7 +17,7 @@ fml = Formula.parse("Y ~ X1 + X2 | f1 + f2")[0]
 fml.second_stage, fml.fixed_effects
 ```
 
-    ('Y ~ X1 + X2', 'f1 + f2')
+    ('Y ~ X1 + X2', f1 + f2)
 
 Stepwise syntax expands into one formula per estimated model.
 
@@ -25,18 +25,22 @@ Stepwise syntax expands into one formula per estimated model.
 Formula.parse("Y ~ X1 + csw(X2, X3)")
 ```
 
-    [Formula(_second_stage='Y ~ X1 + X2', _fixed_effects=None, _first_stage=None),
-     Formula(_second_stage='Y ~ X1 + X2 + X3', _fixed_effects=None, _first_stage=None)]
+    [Y ~ 1 + X1 + X2, Y ~ 1 + X1 + X2 + X3]
 
 ## Attributes
 
 | Name | Description |
 |----|----|
+| [Formula.dependent](#pyfixest.estimation.formula.parse.Formula.dependent) | The dependent variable. |
 | [Formula.endogenous](#pyfixest.estimation.formula.parse.Formula.endogenous) | Endogenous variables of an instrumental variable specification. |
 | [Formula.exogenous](#pyfixest.estimation.formula.parse.Formula.exogenous) | Exogenous aka covariates aka independent variables. |
 | [Formula.first_stage](#pyfixest.estimation.formula.parse.Formula.first_stage) | The first stage formula of an instrumental variable specification. |
 | [Formula.fixed_effects](#pyfixest.estimation.formula.parse.Formula.fixed_effects) | The fixed effects of a formula. |
-| [Formula.formula](#pyfixest.estimation.formula.parse.Formula.formula) | Full fixest-style formula. |
+| [Formula.fixed_effects_wrapped](#pyfixest.estimation.formula.parse.Formula.fixed_effects_wrapped) | Wrapped fixed effects for proper encoding. |
+| [Formula.formula](#pyfixest.estimation.formula.parse.Formula.formula) | The string representation of the formula. |
+| [Formula.instruments](#pyfixest.estimation.formula.parse.Formula.instruments) | Instruments of an instrumental variable specification. |
+| [Formula.is_fixed_effects](#pyfixest.estimation.formula.parse.Formula.is_fixed_effects) | Boolean indicating whether the formula is a fixed effects specification. |
+| [Formula.is_instrumental_variable](#pyfixest.estimation.formula.parse.Formula.is_instrumental_variable) | Boolean indicating whether the formula is an instrumental variable specification. |
 | [Formula.second_stage](#pyfixest.estimation.formula.parse.Formula.second_stage) | The second stage formula. |
 
 ## Methods

@@ -19,29 +19,22 @@ This method creates the following attributes: - `_alpha` (pd.DataFrame): A DataF
 
 | Name | Type | Description |
 |----|----|----|
-|  | dict\[str, dict\[str, float\]\] | A dictionary with the estimated fixed effects. |
+|  | pd.DataFrame | A tidy DataFrame with columns `variable`, `code`, `level`, and `coefficient` containing the estimated fixed effects. |
 
 ## Examples
-
-Fixed effects are swept out during estimation and are not part of the coefficient table. `fixef()` computes them. The result is keyed by fixed effect term, then by level.
 
 ``` python
 import pyfixest as pf
 
 fit = pf.feols("Y ~ X1 + X2 | f1", pf.get_data())
-fe = fit.fixef()
-
-fe.keys()
+fixed_effects = fit.fixef()
+fixed_effects.head()
 ```
 
-    dict_keys(['C(f1)'])
-
-``` python
-list(fe["C(f1)"].items())[:5]
-```
-
-    [('0.0', np.float64(0.4837574151832394)),
-     ('1.0', np.float64(3.0661419612921605)),
-     ('2.0', np.float64(-1.0947871507593956)),
-     ('3.0', np.float64(0.33109523121756435)),
-     ('4.0', np.float64(-1.2872533793542074))]
+|     | variable | code | level | coefficient |
+|-----|----------|------|-------|-------------|
+| 0   | f1       | 15   | 15.0  | 1.887085    |
+| 1   | f1       | 6    | 6.0   | -0.254456   |
+| 2   | f1       | 1    | 1.0   | 3.066142    |
+| 3   | f1       | 19   | 19.0  | 1.123039    |
+| 4   | f1       | 13   | 13.0  | 2.013726    |

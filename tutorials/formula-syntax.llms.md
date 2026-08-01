@@ -86,10 +86,10 @@ We can add fixed effects behind the `|` operator: here we add two fixed effects 
 fit6 = pf.feols("Y ~ X1 + X2 | f1 + f2", data=data)
 ```
 
-We can interact two fixed effects via the `^` operator.
+We can interact two fixed effects via the `:` operator.
 
 ``` python
-fit7 = pf.feols("Y ~ X1 + X2 | f1^f2", data=data)
+fit7 = pf.feols("Y ~ X1 + X2 | f1:f2", data=data)
 ```
 
 For details on fixed effects regression, take a look at the [OLS with Fixed Effects](../tutorials/ols-fixed-effects.llms.md) vignette.
@@ -112,7 +112,7 @@ fit_iv.summary()
     ###
 
     Estimation:  IV
-    Dep. var.: Y, Fixed effects: f1 + f2
+    Dep. var.: Y, Fixed effects: f1+f2
     sample: None = all
     Inference:  iid
     Observations:  997
@@ -391,12 +391,12 @@ for dgp_name in ["simple", "difficult"]:
 
 |     | DGP       | Demeaner      | Separate fits (s) | Multiple estimation (s) | Speedup |
 |-----|-----------|---------------|-------------------|-------------------------|---------|
-| 0   | simple    | MAP (rust)    | 0.704             | 0.589                   | 1.20x   |
-| 1   | simple    | LSMR diagonal | 0.772             | 0.566                   | 1.36x   |
-| 2   | simple    | LSMR additive | 1.108             | 0.532                   | 2.08x   |
-| 3   | difficult | MAP (rust)    | 27.470            | 13.977                  | 1.97x   |
-| 4   | difficult | LSMR diagonal | 2.747             | 1.252                   | 2.19x   |
-| 5   | difficult | LSMR additive | 1.428             | 0.562                   | 2.54x   |
+| 0   | simple    | MAP (rust)    | 1.477             | 1.089                   | 1.36x   |
+| 1   | simple    | LSMR diagonal | 1.903             | 1.145                   | 1.66x   |
+| 2   | simple    | LSMR additive | 2.887             | 1.234                   | 2.34x   |
+| 3   | difficult | MAP (rust)    | 61.881            | 15.018                  | 4.12x   |
+| 4   | difficult | LSMR diagonal | 7.385             | 2.260                   | 3.27x   |
+| 5   | difficult | LSMR additive | 3.179             | 1.321                   | 2.41x   |
 
 Absolute timings depend on your machine, but the direction is the important part: multiple estimation avoids recomputing the same within-transform work for every formula.
 

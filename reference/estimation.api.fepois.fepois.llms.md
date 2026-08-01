@@ -33,7 +33,7 @@ Estimate Poisson regression model with fixed effects using the `ppmlhdfe` algori
 
 | Name | Type | Description | Default |
 |----|----|----|----|
-| fml | str | A two-sided formula string using fixest formula syntax. Syntax: “Y ~ X1 + X2 \| FE1 + FE2”. “\|” separates left-hand side and fixed effects. Special syntax includes: - Stepwise regressions (sw, sw0) - Cumulative stepwise regression (csw, csw0) - Multiple dependent variables (Y1 + Y2 ~ X) - Interaction of variables (i(X1,X2)) - Interacted fixed effects (fe1^fe2) Compatible with formula parsing via the formulaic module. | *required* |
+| fml | str | A two-sided formula string using fixest formula syntax. Syntax: “Y ~ X1 + X2 \| FE1 + FE2”. “\|” separates left-hand side and fixed effects. Special syntax includes: - Stepwise regressions (sw, sw0) - Cumulative stepwise regression (csw, csw0) - Multiple dependent variables (Y1 + Y2 ~ X) - Interaction of variables (i(X1,X2)) - Interacted fixed effects (fe1:fe2) Compatible with formula parsing via the formulaic module. | *required* |
 | data | DataFrameType | A pandas or polars dataframe containing the variables in the formula. | *required* |
 | vcov | Union\[VcovTypeOptions, dict\[str, str\]\] | Type of variance-covariance matrix for inference. Options include “iid”, “hetero”, “HC1”, “HC2”, “HC3”, “NW” for Newey-West HAC standard errors, “DK” for Driscoll-Kraay HAC standard errors, or a dictionary for CRV1/CRV3 inference. Note that NW and DK require to pass additional keyword arguments via the `vcov_kwargs` argument. For time-series HAC, you need to pass the ‘time_id’ column. For panel-HAC, you need to add pass both ‘time_id’ and ‘panel_id’. See `vcov_kwargs` for details. | `None` |
 | vcov_kwargs | Optional\[dict\[str, any\]\] | Additional keyword arguments to pass to the vcov function. These keywoards include “lag” for the number of lag to use in the Newey-West (NW) and Driscoll-Kraay (DK) HAC standard errors. “time_id” for the time ID used for NW and DK standard errors, and “panel_id” for the panel identifier used for NW and DK standard errors. Currently, the the time difference between consecutive time periods is always treated as 1. More flexible time-step selection is work in progress. | `None` |
@@ -83,7 +83,7 @@ fit.summary()
     ###
 
     Estimation:  Poisson
-    Dep. var.: Y, Fixed effects: f1 + f2
+    Dep. var.: Y, Fixed effects: f1+f2
     sample: None = all
     Inference:  iid
     Observations:  995

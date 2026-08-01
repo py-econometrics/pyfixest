@@ -59,7 +59,49 @@ fit.confint(inference_type="savi", mixture_precision=mixture_precision)
 - `feglm(family="gaussian")` now matches `pf.feols()` (and base R `lm`/`glm`) exactly. We slightly deviate from `fixest::feglm(family="gaussian")`, which uses slightly different small sample corrections between OLS and GLM with Gaussian link.
 - Logit and probit IRLS initialise at new values for better numerical stability.
 
+### Formula Parsing on `formulaic`
+
+Formula parsing no longer splits strings by hand. `feols()` and friends now hand the formula to `formulaic`, keep the resulting `ModelSpec`, and reuse it to build model matrices for `predict()` and `fixef()`. Most formula terms consequently use `formulaic`’s syntax and semantics directly. PyFixest still preprocesses its fixest-style multiple-estimation syntax and deprecated legacy spellings. Reusing the fitted `ModelSpec` removes a class of bugs where a model matrix was rebuilt from `newdata` with different encodings than the one it was fitted on.
+
+The required `formulaic` version is now `>=1.2.0,<1.3`.
+
+Behaviour that changed as a result:
+
+- **Model names are canonical `formulaic` formulas.** They now carry an explicit intercept, order terms by interaction order, and normalise whitespace:
+
+  ``` python
+  pf.feols("Y ~ sw(X2+X1, X1)", data)
+  # 0.60.0: ["Y ~ X2+X1", "Y ~ X1"]
+  # 0.70.0: ["Y ~ 1 + X2 + X1", "Y ~ 1 + X1"]
+  ```
+
+  Anything keyed on the old spelling needs updating – `rename_models` mappings in `etable()`, `coefplot()` and `iplot()`, and lookups into `FixestMulti.all_fitted_models`.
+
+- **Duplicate specifications collapse to one model.** Because names are canonical, a multiple-estimation expansion that produces the same model twice is now estimated and reported once:
+
+  ``` python
+  pf.feols("Y ~ csw0(X2, f3) + X2", data)
+  # 0.60.0: 3 models, including the duplicate "Y ~ X2 + X2"
+  # 0.70.0: 2 models
+  ```
+
+- **`fixef()` returns a `pd.DataFrame`** with columns `variable`, `code`, `level` and `coefficient`, instead of `dict[str, dict[str, float]]`. Replace `fit.fixef()["C(f1)"][level]` with a lookup on the frame. The estimates are unchanged, except that with two or more fixed effects the reference level of the second and later ones is now listed explicitly with a coefficient of `0` rather than omitted.
+
+- **Fixed-effect interactions use `:` as their canonical spelling.** Write `Y ~ X1 | f1:f2` to absorb the interaction of `f1` and `f2`. Formulas, model names, summaries, `fixef()` output and prediction messages all use `f1:f2`. The former `f1^f2` spelling remains accepted temporarily, but emits a `DeprecationWarning` and is immediately normalised to `f1:f2`.
+
+- **`predict(newdata=...)` works with `i()`, interacted fixed effects (`f1:f2`) and `poly()`.** These previously raised `NotImplementedError`; the stored `ModelSpec` now encodes `newdata` against the levels seen at fit time. Rows carrying a categorical level that was not seen during fitting return `NaN`, matching how unseen fixed effect levels were already handled. IV models still do not support `predict()`.
+
+- **Malformed formulas may raise `formulaic.errors.FormulaSyntaxError`** rather than `pyfixest.errors.FormulaSyntaxError`. The two are unrelated classes – neither inherits from the other, and neither is a `ValueError` – so code catching the pyfixest exception has to catch both.
+
+- **`pyfixest.estimation.formula.factor_interaction` moved** to `pyfixest.estimation.formula.transforms.factor_interaction`. The `i()` operator itself is unaffected; only the import path changed.
+
 ### Deprecations and Removals
+
+Formula syntax:
+
+- Using `^` for a fixed-effect interaction (`Y ~ X1 | f1^f2`) is deprecated in favour of `:` (`Y ~ X1 | f1:f2`). The old spelling still works and now emits a `DeprecationWarning`.
+- The fixest-style instrumental variable syntax `Y ~ X1 | X2 ~ Z1` is deprecated in favour of `formulaic`’s `Y ~ X1 + [X2 ~ Z1]`. The old spelling still works and now emits a `DeprecationWarning`.
+- Specifying multiple dependent variables with `+` (`Y + Y2 ~ X1`) is deprecated in favour of `sw(Y, Y2) ~ X1`. The old spelling still works and now emits a `DeprecationWarning`. A `+` nested inside a transform (`I(Y + Y2) ~ X1`) is a single dependent variable and is unaffected.
 
 As previously announced, we removed:
 
@@ -510,24 +552,24 @@ gb.tidy()
 
 |  | coefficients | ci_lower | ci_upper | panels |
 |----|----|----|----|----|
-| direct_effect | 1.412165 | 0.761410 | 2.055033 | Levels (units) |
-| full_effect | 1.041753 | 0.982117 | 1.081608 | Levels (units) |
-| explained_effect | 0.370412 | -0.255269 | 0.976515 | Levels (units) |
-| unexplained_effect | 1.041753 | 0.982117 | 1.081608 | Levels (units) |
-| x22 | 0.061930 | -0.329471 | 0.454828 | Levels (units) |
-| x23 | 0.308483 | 0.064129 | 0.527069 | Levels (units) |
+| direct_effect | 1.412165 | 0.838176 | 1.940316 | Levels (units) |
+| full_effect | 1.041753 | 0.968154 | 1.096492 | Levels (units) |
+| explained_effect | 0.370412 | -0.208285 | 0.944014 | Levels (units) |
+| unexplained_effect | 1.041753 | 0.968154 | 1.096492 | Levels (units) |
+| x22 | 0.061930 | -0.323727 | 0.455988 | Levels (units) |
+| x23 | 0.308483 | 0.110461 | 0.492843 | Levels (units) |
 | direct_effect | 1.000000 | 1.000000 | 1.000000 | Share of Full Effect |
-| full_effect | 0.737699 | 0.527537 | 1.331186 | Share of Full Effect |
-| explained_effect | 0.262301 | -0.331186 | 0.472463 | Share of Full Effect |
-| unexplained_effect | 0.737699 | 0.527537 | 1.331186 | Share of Full Effect |
-| x22 | 0.043855 | -0.427404 | 0.219392 | Share of Full Effect |
-| x23 | 0.218446 | 0.084141 | 0.257668 | Share of Full Effect |
-| direct_effect | 3.812414 | -3.167855 | 13.653739 | Share of Explained Effect |
-| full_effect | 2.812414 | -4.167855 | 12.653739 | Share of Explained Effect |
+| full_effect | 0.737699 | 0.518398 | 1.265974 | Share of Full Effect |
+| explained_effect | 0.262301 | -0.265974 | 0.481602 | Share of Full Effect |
+| unexplained_effect | 0.737699 | 0.518398 | 1.265974 | Share of Full Effect |
+| x22 | 0.043855 | -0.398882 | 0.232137 | Share of Full Effect |
+| x23 | 0.218446 | 0.129711 | 0.255512 | Share of Full Effect |
+| direct_effect | 3.812414 | -1.814136 | 135.499288 | Share of Explained Effect |
+| full_effect | 2.812414 | -2.814136 | 134.499288 | Share of Explained Effect |
 | explained_effect | 1.000000 | 1.000000 | 1.000000 | Share of Explained Effect |
-| unexplained_effect | 2.812414 | -4.167855 | 12.653739 | Share of Explained Effect |
-| x22 | 0.167192 | -1.310610 | 1.289883 | Share of Explained Effect |
-| x23 | 0.832808 | -0.289883 | 2.310610 | Share of Explained Effect |
+| unexplained_effect | 2.812414 | -2.814136 | 134.499288 | Share of Explained Effect |
+| x22 | 0.167192 | -22.829322 | 1.158331 | Share of Explained Effect |
+| x23 | 0.832808 | -0.158331 | 23.829322 | Share of Explained Effect |
 
 or produce a `GT` table:
 
@@ -543,24 +585,24 @@ gb.etable(
 |  | Initial Difference | Adjusted Difference | Explained Difference |
 | Levels (units) |  |  |  |
 | x1 | 1.412 | 1.042 | 0.370 |
-|  | \[0.761, 2.055\] | \[0.982, 1.082\] | \[-0.255, 0.977\] |
+|  | \[0.838, 1.940\] | \[0.968, 1.096\] | \[-0.208, 0.944\] |
 | x22 | \- | \- | 0.062 |
-|  | \- | \- | \[-0.329, 0.455\] |
+|  | \- | \- | \[-0.324, 0.456\] |
 | x23 | \- | \- | 0.308 |
-|  | \- | \- | \[0.064, 0.527\] |
+|  | \- | \- | \[0.110, 0.493\] |
 | Share of Full Effect |  |  |  |
 | x1 | 1.000 | 0.738 | 0.262 |
-|  | \- | \[0.528, 1.331\] | \[-0.331, 0.472\] |
+|  | \- | \[0.518, 1.266\] | \[-0.266, 0.482\] |
 | x22 | \- | \- | 0.044 |
-|  | \- | \- | \[-0.427, 0.219\] |
+|  | \- | \- | \[-0.399, 0.232\] |
 | x23 | \- | \- | 0.218 |
-|  | \- | \- | \[0.084, 0.258\] |
+|  | \- | \- | \[0.130, 0.256\] |
 | Share of Explained Effect |  |  |  |
 | x1 | \- | \- | 1.000 |
 | x22 | \- | \- | 0.167 |
-|  | \- | \- | \[-1.311, 1.290\] |
+|  | \- | \- | \[-22.829, 1.158\] |
 | x23 | \- | \- | 0.833 |
-|  | \- | \- | \[-0.290, 2.311\] |
+|  | \- | \- | \[-0.158, 23.829\] |
 | Decomposition variable: x1. Control Variables: x21. CIs are computed using B = 10 bootstrap replications using iid sampling.Col 1: Adjusted Difference (by x21) - Coefficient on x1 in short regression. Col 2: Adjusted Difference - Coefficient on x1 in long regression. Col 3: Explained Difference - Difference in coefficients of x1 in short and long regression. Panel 1: Levels (units). Panel 2: Share of Full Effect: Levels normalized by coefficient of the short regression. Panel 3: Share of Explained Effect: Levels normalized by coefficient of the long regression. |  |  |  |
 
 As can be seen, we by default now return normalized (and not just absolute) effects.
@@ -621,8 +663,8 @@ toc = time.time()
 print(f"Rust backend took {toc-tic}.")
 ```
 
-    Numba backend took 3.226900100708008.
-    Rust backend took 4.081827878952026.
+    Numba backend took 3.897117853164673.
+    Rust backend took 4.400740146636963.
 
 Results are also matching =)
 
@@ -947,9 +989,9 @@ fit2.coef()[0:8]
 
   |           | 2.5%      | 97.5%     |
   |-----------|-----------|-----------|
-  | Intercept | 0.378097  | 1.179601  |
-  | D         | -1.760914 | -1.044319 |
-  | f1        | -0.014192 | 0.023740  |
+  | Intercept | 0.379236  | 1.178462  |
+  | D         | -1.759896 | -1.045337 |
+  | f1        | -0.014138 | 0.023687  |
 
 - Adds support for the causal cluster variance estimator by [Abadie et al. (QJE, 2023)](https://academic.oup.com/qje/article/138/1/1/6750017) for OLS via the `.ccv()` method.
 
@@ -957,10 +999,10 @@ fit2.coef()[0:8]
   fit.ccv(treatment = "D", cluster = "group_id")
   ```
 
-  |      | Estimate           | Std. Error | t value   | Pr(\>\|t\|) | 2.5%      | 97.5%     |
-  |------|--------------------|------------|-----------|-------------|-----------|-----------|
-  | CCV  | -1.402616862217994 | 0.31141    | -4.504079 | 0.000275    | -2.056866 | -0.748368 |
-  | CRV1 | -1.402617          | 0.205132   | -6.837621 | 0.000002    | -1.833584 | -0.97165  |
+  |      | Estimate            | Std. Error | t value   | Pr(\>\|t\|) | 2.5%      | 97.5%     |
+  |------|---------------------|------------|-----------|-------------|-----------|-----------|
+  | CCV  | -1.4026168622179935 | 0.262982   | -5.333503 | 0.000045    | -1.955122 | -0.850112 |
+  | CRV1 | -1.402617           | 0.205132   | -6.837621 | 0.000002    | -1.833584 | -0.97165  |
 
 ## PyFixest 0.16.0
 
