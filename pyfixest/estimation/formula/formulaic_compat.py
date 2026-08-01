@@ -25,6 +25,11 @@ class FormulaicCompatibilityError(RuntimeError):
     """Raised when formulaic internals no longer match pyfixest expectations."""
 
 
+def terms_without_intercept(formula: formulaic.formula.Formula) -> Iterator[Any]:
+    """Yield formula terms excluding Formulaic's intercept term."""
+    return (term for term in formula if term != "1")
+
+
 def is_structured_formula(rhs: formulaic.formula.Formula) -> bool:
     """Return whether formulaic parsed an IV RHS as a StructuredFormula."""
     return isinstance(rhs, formulaic.formula.StructuredFormula)

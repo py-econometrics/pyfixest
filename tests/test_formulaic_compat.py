@@ -16,6 +16,7 @@ from pyfixest.estimation.formula.formulaic_compat import (
     get_first_multistage_lhs,
     iter_i_categorical_levels,
     rows_with_unseen_contrast_levels,
+    terms_without_intercept,
 )
 
 FORMULAIC_271 = "https://github.com/matthewwardrop/formulaic/issues/271"
@@ -50,6 +51,17 @@ def test_multistage_iv_parse_structure(data: pd.DataFrame) -> None:
     assert "Z1" in {str(v) for v in rhs.deps[0].rhs.required_variables}
 
 
+@pytest.mark.parametrize(
+    "formula, expected",
+    [("1", []), ("X1", ["X1"]), ("0 + X1", ["X1"])],
+)
+def test_terms_without_intercept(formula: str, expected: list[str]) -> None:
+    """Formulaic represents the intercept as the term `1`."""
+    terms = terms_without_intercept(formulaic.Formula(formula))
+
+    assert [str(term) for term in terms] == expected
+
+
 def test_hat_suffix_filtering(data: pd.DataFrame) -> None:
     """The _hat suffix from formulaic MULTISTAGE is filtered from exogenous."""
     fit = pf.feols("Y ~ X1 + [X2 ~ Z1]", data=data)
@@ -79,6 +91,19 @@ def test_transformed_endogenous_matches_precomputed_column(data: pd.DataFrame) -
 
     inline = pf.feols("Y ~ X1 + [np.exp(X2) ~ Z1]", data=data)
     column = pf.feols("Y ~ X1 + [exp_X2 ~ Z1]", data=precomputed)
+
+    np.testing.assert_allclose(inline.coef().to_numpy(), column.coef().to_numpy())
+    np.testing.assert_allclose(inline.se().to_numpy(), column.se().to_numpy())
+
+
+def test_multisource_endogenous_term_matches_precomputed_column(
+    data: pd.DataFrame,
+) -> None:
+    """One endogenous term may depend on multiple source columns."""
+    precomputed = data.assign(X1_plus_X2=data["X1"] + data["X2"])
+
+    inline = pf.feols("Y ~ 1 + [I(X1 + X2) ~ Z1]", data=data)
+    column = pf.feols("Y ~ 1 + [X1_plus_X2 ~ Z1]", data=precomputed)
 
     np.testing.assert_allclose(inline.coef().to_numpy(), column.coef().to_numpy())
     np.testing.assert_allclose(inline.se().to_numpy(), column.se().to_numpy())
